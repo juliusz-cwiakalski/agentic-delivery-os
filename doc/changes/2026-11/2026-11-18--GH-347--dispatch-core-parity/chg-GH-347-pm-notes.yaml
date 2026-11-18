@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
   specification: { started: null, completed: 2026-11-18T23:11:34.558Z }
   test_planning: { started: null, completed: 2026-11-18T23:20:16.717Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-18T23:35:01.047Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -192,4 +192,30 @@ notes:
       the plan drops these, AC-F9-2 coverage becomes unachievable and the DoR
       gate must reopen rather than accept a test-local reimplementation."
     type: risk
+    date: "2026-11-19"
+  - text: "Delivery planning complete: chg-GH-347-plan.yaml, 8 delivery phases, plan
+      validate verdict=valid tier=full readyForDevelopment=true, lint plan
+      valid. Ownership: 42/42 ACs and 50/50 TCs, zero orphans, zero
+      double-owned. Phase 1 is contract scaffolding (0 AC/0 TC) and also lands
+      TDR-0044..0049 plus the conditional index staging; phases 2-7 own the 42
+      ACs; phase 8 owns the changeset, plan validation, aggregate gate and doc
+      staging. The seam prerequisite is satisfied: claimDispatchLease exported
+      and mounted in phase 2, resolveDispatchLane (new app/dispatch-lane.ts)
+      mounted in phase 3, and one injected delay(ms, reason) with closed reasons
+      claim-fence, tracker-ladder, terminate-grace - no config key."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan-recorded deviations accepted (no scope invented): TC-LANE-003 and
+      AC-F1-2 are owned by phase 5 because the scenario is a restarted
+      iteration, although phase 3 implements the terminal append for pr-open
+      resume; the 82 mutation rows stay reviewer-executed with the planted
+      controls as the permanent non-vacuity proof (no mutation suite); two
+      test-plan path corrections and the child-process-receiver binding for the
+      no-shell scan; DispatchLaneFacts relocates from packages/cli/src/edge.ts
+      to packages/core/src/contracts/dispatch.ts because core cannot import CLI;
+      AC-F2-1's no-lane clause is closed non-vacuously by TC-LANE-002 in phase
+      3; the pmNotes field breaks two literal artifact constructions, both
+      declared, with the fixtures builder defaulting to complete; phase 8
+      authors one five-package minor changeset because version_impact is minor."
+    type: info
     date: "2026-11-19"

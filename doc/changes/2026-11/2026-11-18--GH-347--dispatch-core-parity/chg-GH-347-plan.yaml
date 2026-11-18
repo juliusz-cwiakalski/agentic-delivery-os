@@ -1,0 +1,1922 @@
+# GH-347 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change (there is no chg-GH-347-plan.md). `plan validate`, `plan diff`,
+# `plan overlap`, and `lint plan` read it directly. Extra phase data (goal,
+# obligations, AC/TC ownership, code areas, gate commands, done-artifact
+# expectations) rides in YAML comments so the parsed document stays
+# schema-strict; the plan declares phases and scope only — no `tasks` key and no
+# progress log. Progress is a pm-notes `notes:` entry naming the plan phase id,
+# the commit hash, and the gate result.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-347-spec.md (v1.3; F-1..F-9; API-1..API-7;
+#               DM-1..DM-9; NFR-1..NFR-11; NG-1..NG-12; RSK-1..RSK-11;
+#               DEC-1..DEC-11; §6 flows 1–5; §7.1 in-scope list; §8.5 backward
+#               compatibility and the deliberate behaviour changes; §17 the 42
+#               ACs; §18 the eight DoD items; §19 the outcome order; §25.1
+#               Appendix A doc impacts; §25.3 Appendix C proof boundary; §25.6
+#               Appendix F the NORMATIVE derivation ladder; §25.7 Appendix G
+#               the parity coverage matrix).
+#   - Tests:    ./chg-GH-347-test-plan.md (50 TCs in eleven stable-id groups —
+#               LANE 5, ADMIT 6, RESUME 4, TRACKER 4, TERM 6, LOOP 6, SPAWN 4,
+#               DERIVE 6, PARITY 6, SHELL 2, CONTRACT 1; 42/42 AC traceability,
+#               0 unmapped, 0 orphans; §5.2 scenario details; §6.1 fixture
+#               inventory (exists vs must-be-authored vs extended); §6.2 the
+#               fixture mechanisms; §7.1 the five production seams plus S-loop
+#               and S-exec; §7.2 the no-shell proof design; §7.3 the file map;
+#               §7.4 the 82-row mutation register M1..M82; §7.5 the gate battery;
+#               §7.6 non-functional verification; §8.2 assumptions 1–8; §8.3 the
+#               BINDING seam prerequisite).
+#   - PM record: ./chg-GH-347-pm-notes.yaml (delivery_mode autonomous; scope =
+#               ticket F1a gaps 1–10, gaps 11–12 → GH-354; rulings R1–R7; the
+#               staging note for TDR-0044..TDR-0049; the operational
+#               prerequisite that every primitive call carries BOTH
+#               PATH=$PWD/node_modules/.bin:$PATH and TMPDIR=$PWD/tmp/tmpdir
+#               because the commit primitive probes the bare `commitlint` name;
+#               the "BINDING for delivery_planning" note naming the seam exports
+#               and the injected delay(ms, reason) fact).
+#   - Decisions: doc/decisions/TDR-0044 (dispatch-owned durable lane record:
+#               kind `dispatch.lane`, schema `delivery.dispatch.lane.v1`, key
+#               `dispatch.lanes:<ref>`, append-only latest-wins, acquisition and
+#               terminal appends, no daemon adoption), TDR-0045 (atomic
+#               admission: the verdict decided inside the claim, the declared
+#               refusal set, no dispatch renewal, bounded fence wait; amends
+#               TDR-0026 DC-2/DC-3 for the dispatch caller only), TDR-0046
+#               (harness `terminate`: optional port member, capability gating,
+#               TERM→KILL inside `coordinator.kill-grace`, exact-identity reap,
+#               idempotence), TDR-0047 (in-process bounded loop: clean exit
+#               terminal, stall-only restart, one attempt record per terminal
+#               dispatch, the `lane.restart-budget` bound), TDR-0048 (total
+#               derivation ladder, the terminal pre-restart verdict set,
+#               arm-aware corroboration, the retired ledger no-work arm, the
+#               subsumed exit-0-no-artifact `failed` arm), TDR-0049 (`pm` agent
+#               through the binding seam, deterministic `ticket-<REF>` title,
+#               lifecycle prompt as data).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages, per-phase one-line summary, typed
+#               done-artifacts, leases, weightClass, interactions, tier; no
+#               tasks key, no progress log).
+#   - Precedent: ../2026-11/2026-11-18--GH-339--adapter-conformance-parity/
+#               chg-GH-339-plan.yaml (comment-carried phase data,
+#               one-commit-per-phase discipline, the COMMIT-BOUNDARY REALITY
+#               section, the SCOPE DECLARATION RULE, and spec reconciliation
+#               declared for STAGING ONLY in the release phase).
+#
+# PLAN SHAPE: eight phases, all `kind: delivery` (each edits the repository and
+#   takes the default `repo:main-tools` lease), zero `planning` phases. A planning
+#   phase would declare no scope to compute and this change has no design work
+#   left: the spec is complete at v1.3, the test plan is complete, and the six
+#   governing records are authored. `tier.phases` below lists the LIFECYCLE phase
+#   ids [1..11] (the ceremony tier engine's vocabulary), not this plan's eight
+#   phase ids; the two are different namespaces and the plan never renumbers the
+#   lifecycle.
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1):
+#   The six decision records are UNTRACKED in the worktree at plan time because
+#   the specification-phase completion commit (0aaf9c39) stages only the change
+#   folder:
+#     doc/decisions/TDR-0044-dispatch-owned-durable-lane-record.md
+#     doc/decisions/TDR-0045-dispatch-atomic-admission-verdicts.md
+#     doc/decisions/TDR-0046-harness-terminate-operation.md
+#     doc/decisions/TDR-0047-in-process-bounded-restart-loop.md
+#     doc/decisions/TDR-0048-total-derivation-ladder-and-corroboration.md
+#     doc/decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md
+#   Phase 1 declares those six EXACT paths so @coder lands them on the branch.
+#   VERIFIED AT PLAN TIME: the six `doc/decisions/00-index.md` ROWS ARE ALREADY
+#   COMMITTED on this branch (they landed in 0aaf9c39 together with the change
+#   folder, while the records themselves did not), and `git status --porcelain`
+#   shows no entry for the index. The index is therefore declared in phase 1 for
+#   CONDITIONAL STAGING ONLY — see the declared exception in the SCOPE
+#   DECLARATION RULE — so that a status row or a typo touch made while landing
+#   the six records stages with them and Appendix A's decision-record citation
+#   stays provable at DoD. Until phase 1 commits, the branch carries index rows
+#   pointing at uncommitted records; that is exactly the gap this phase closes.
+#   PHASE-1 DONE CRITERION (mechanical, re-run at DoD): after the phase-1
+#   commit, `git ls-files --error-unmatch` on each of the six paths exits 0 and
+#   `git status --porcelain -- doc/decisions` is empty, so no index row points at
+#   an untracked record. If the phase does not touch the index, `plan diff`
+#   reports at most an advisory `undeclared-missing` for it, never a validation
+#   failure.
+#
+# SCOPE DECLARATION RULE (binding on every phase, inherited from GH-338/GH-339):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   regression control is NOT declared: declaring it would only produce an
+#   advisory `plan diff` `undeclared-missing` for a file that needs no edit.
+#   ONE DECLARED EXCEPTION: `doc/decisions/00-index.md` in phase 1 is a
+#   CONDITIONAL-STAGING declaration (clean at plan time, may be touched while the
+#   six records land; never a licence to edit an unrelated row).
+#   TWO FURTHER DECLARED KINDS, stated so the rule and the declaration cannot
+#   contradict:
+#     (i)  A PINNED-SURFACE declaration. `tests/structure/inventory.json` and the
+#          `EXECUTABLE_ALLOWANCES` constant inside
+#          `tests/structure/content-inventory.test.ts`, plus
+#          `tests/fixtures/ports/v1-contract-inventory.json`, are the repository's
+#          file-set / executable-surface / contract-export pins. Every phase that
+#          creates a module or adds an exported name moves them in the SAME
+#          commit, exactly and non-vacuously (no wildcard, no allowance naming a
+#          symbol the file does not export). Where a phase adds no file and no
+#          export it does not declare them.
+#     (ii) A CONDITIONAL DELIVERED-EXPECTATION declaration, used only where a
+#          DELIVERED assertion encodes the pre-change behaviour that §8.5 names
+#          as a deliberate change. Such a file is declared by the phase that owns
+#          the change, and the rule is absolute: an assertion is UPDATED by
+#          citing the authorising clause (`§8.5`, `DEC-x`, or a ruling), NEVER
+#          deleted, renamed, relaxed, or reordered to make a run green. The
+#          per-file authorising clause is named in the phase's comment.
+#   A file edited by more than one phase (notably `packages/core/src/app/dispatch.ts`
+#   and `packages/cli/src/production.ts`) is declared by every phase that touches
+#   it. No phase claims exclusive ownership of a shared file; ownership is of
+#   CASES and ACs, not of paths.
+#
+# SEAM PREREQUISITE (BINDING; test plan §8.2 assumption 1 and §8.3; pm-notes
+#   "BINDING for delivery_planning"). AC-F9-2 requires every parity case to drive
+#   the SAME composed function production drives; a test-local reimplementation
+#   is rejected by TC-PARITY-002. The implementation therefore MUST export and
+#   composition-mount exactly these, and the plan names the owning phase:
+#     1. `claimDispatchLease` — the atomic live-lease verdict plus the bounded
+#        fence wait. Export home: `packages/core/src/app/queue.ts`, re-exported
+#        through `packages/core/src/app/index.ts` and the core root. Mounted at
+#        `DispatchComposition.claimLease` in `packages/cli/src/production.ts`.
+#        OWNED AND DECLARED BY PHASE 2.
+#     2. `resolveDispatchLane` — the newest recorded lane carrying a session
+#        identity (dispatch-owned newest-with-session plus the daemon resumable
+#        states, newest wins). Export home: NEW
+#        `packages/core/src/app/dispatch-lane.ts`. Mounted at
+#        `DispatchComposition.existingLane` in `packages/cli/src/production.ts`,
+#        replacing the delivered `laneFactsFor` closure. OWNED AND DECLARED BY
+#        PHASE 3.
+#     3. ONE injected `delay(ms, reason)` composition fact, with the closed
+#        reasons `claim-fence`, `tracker-ladder`, `terminate-grace`. Production
+#        binds a real timer; the battery injects a recorder that advances a
+#        virtual clock. It is used by (a) the admission fence wait (phase 2),
+#        (b) the tracker ladder (phase 4), and (c) the terminate grace
+#        (phase 5). The type/fact is declared in phase 1 (port + composition
+#        fact + production binding) and each consuming phase declares the same
+#        files at its touch point so the fact is never introduced twice.
+#   NO CONFIGURATION KEY is added for any of these (NFR-11). A key, a resolvable
+#   ambient timer, or a per-phase reimplementation is an escalation, not a
+#   delivery improvisation. If a phase believes one of the three is unnecessary,
+#   it STOPS and reports: dropping it makes AC-F9-2 unachievable and reopens the
+#   readiness gate rather than accepting a test-local seam.
+#
+# SEQUENCING (spec §19 "by outcome, so each contract is proven with the evidence
+#   that depends on it"), made concrete. Every phase is independently committable
+#   and gate-green at its own boundary; the aggregate `pnpm check` is phase 8's
+#   alone.
+#
+#   Phase 1  Layer and contract scaffolding: the `dispatch.lane` record kind,
+#            schema, key prefix, record type and read/append helpers; the
+#            OPTIONAL harness `terminate` port member and result type; the
+#            optional spawn `title` fact and its grammar helper; the `pmNotes`
+#            completeness vocabulary; the `delay(ms, reason)` fact and its
+#            production binding; the two seam export homes are prepared (phase 2
+#            and 3 fill them); the six TDRs land.
+#   Phase 2  Atomic admission: the verdict decided inside the claim, the declared
+#            refusal set, the bounded fence wait, no dispatch renewal, kind
+#            preservation, and the `claimDispatchLease` export/mount.
+#   Phase 3  Durable lane writes and recorded-attempt resume: active/terminal
+#            appends, `lane:append-failed` disclosure, the
+#            `resolveDispatchLane` export/mount, the newest-with-session rule,
+#            resume over `pr-open`, explicit fresh spawn, unknown-session
+#            failure.
+#   Phase 4  Tracker retry ladder, the `pmNotes` artifact fact, and the total
+#            derivation order including tracker-done `merged`, artifact
+#            `partial`, the retired ledger no-work arm, arm-aware corroboration,
+#            and the shared-derivation consequence.
+#   Phase 5  Stall termination and the in-process restart loop: `terminate` joins
+#            the closed operation set, capability declarations move, the engine
+#            decides TERM→KILL within the borrowed grace, the bounded loop
+#            restarts only stalls, and attempt/lane/restart cardinality holds.
+#   Phase 6  Spawn identity, title, and lifecycle prompt: the production
+#            composition supplies `pm` and the binding, the adapter renders one
+#            `--agent`/`--model` and one fresh `--title`, and the prompt is the
+#            lifecycle prompt parameterized by ref and base branch.
+#   Phase 7  The parity battery, the no-shell invariant, the daemon-path
+#            regression, and the closed-contract invariance pin.
+#   Phase 8  Release obligations: the single five-package minor changeset,
+#            plan validation, the aggregate gate, and the current-truth pages
+#            declared for STAGING ONLY (lifecycle phase 7 reconciles them).
+#
+#   WHY THIS ORDER AND NOT ANOTHER: phase 2 must precede phase 3 because a lane
+#   write only exists for an ADMITTED dispatch, so the admission verdict is the
+#   input to every lane case. Phase 3 must precede phase 4 because the artifact
+#   fact and the derivation ladder are read through the truth read a resumed or
+#   completed dispatch exposes. Phase 5 must precede phase 7 because the parity
+#   battery's stall arm needs the terminate decision and the loop. Phase 6 is
+#   independent of 4 and 5 but precedes 7 because the battery asserts `--agent`,
+#   `--title`, and the prompt on a fresh spawn. Phase 8 is last because the
+#   aggregate gate and the doc reconciliation range over the assembled change.
+#
+#   FOUR INVARIANTS WOULD CROSS A PHASE BOUNDARY; EACH IS PLACED WHOLE AND THE
+#   REASON IS STATED (test plan §8.3's warning, honoured rather than papered
+#   over):
+#     (a) TC-LANE-003 and its AC-F1-2 are OWNED BY PHASE 5, not phase 3. The
+#         case's scenario is a restarted iteration (`S-lane` + `S-loop`: active
+#         ordinal 1, active ordinal 2 with `restartsConsumed: 1`, then exactly one
+#         terminal) and only phase 5 has a loop to observe. Phase 3 STILL
+#         implements the terminal append, because AC-F3-1's `pr-open` lane must
+#         be terminally shaped before a resume can resolve it (TC-RESUME-101
+#         seeds it and phase 3's own AC-F1-3/TC-LANE-004 prove the append-failure
+#         disclosure). Keeping the case whole is preferred to splitting it; no
+#         AC is evidenced across the boundary.
+#     (b) AC-F2-1's "the loser appends no lane" clause is VACUOUS in phase 2
+#         (no lane writer is wired yet). The non-vacuous control is
+#         TC-LANE-002 in PHASE 3 ("every pre-session refusal appends no lane and
+#         no attempt"), run over the same admission refusals with the writer
+#         present. Phase 2 proves the load-bearing clauses (verdict, holder,
+#         exit, zero attempts, zero leases, no `fallback.internal`, no second
+#         claim); phase 3 closes the vacuity. This is the unavoidable
+#         consequence of the required admission-before-lane order and is stated
+#         rather than hidden.
+#     (c) The `terminate` CONTRACT and its IMPLEMENTATION are split at the
+#         property level, each half proven by its own gate: phase 1 adds the
+#         OPTIONAL port member and result type (a port double without it stays
+#         valid, asserted by the type probe), while phase 5 adds `terminate` to
+#         the CLOSED `HARNESS_OPERATIONS` set, moves both adapter capability
+#         declarations, implements the process-tree termination and the
+#         exact-identity reap, and proves capability gating. Adding the operation
+#         id in phase 1 would make the opencode declaration claim support for a
+#         member that does not exist yet and would force the Claude gap in the
+#         same commit, which is the terminate phase's work.
+#     (d) The `pmNotes` FACT is split the same way: phase 1 declares the closed
+#         completeness vocabulary (`complete` | `incomplete` | `absent`); phase 4
+#         adds the REQUIRED `pmNotes` member to the artifact facts and derives it
+#         from the delivered pm-notes classification (DM-3). Adding a required
+#         fact in phase 1 would break every artifact-facts constructor before the
+#         derivation can consume it; the vocabulary alone is inert and provable.
+#
+# AC OWNERSHIP (42/42; exactly one owning phase each; 0 orphans, 0 double-owned).
+#   "Owning phase" = the phase whose commit lands the case(s) that make the AC
+#   observable and gate-green. A test-plan row that names a second case for an
+#   AC (only the daemon-path observation and one vocabulary row) does not create
+#   a second owner: those are re-observations, named below.
+#   Phase 1 (0):  contract scaffolding; its evidence is the contract/type/pin
+#                 suites, and no AC is claimed by a declaration alone.
+#   Phase 2 (5):  AC-F2-1 (ADMIT-001), AC-F2-2 (ADMIT-002),
+#                 AC-F2-3 (ADMIT-003/004), AC-F2-4 (ADMIT-005),
+#                 AC-F2-5 (ADMIT-006).
+#   Phase 3 (7):  AC-F1-1 (LANE-001/002), AC-F1-3 (LANE-004),
+#                 AC-F1-4 (LANE-005), AC-F3-1 (RESUME-101),
+#                 AC-F3-2 (RESUME-102), AC-F3-3 (RESUME-103),
+#                 AC-F3-4 (RESUME-104).
+#   Phase 4 (9):  AC-F4-1..AC-F4-4 (TRACKER-001..004), AC-F8-1 (DERIVE-001),
+#                 AC-F8-2 (DERIVE-002), AC-F8-3 (DERIVE-003/004),
+#                 AC-F8-4 (DERIVE-005), AC-F8-5 (DERIVE-006). The test plan also
+#                 links TC-PARITY-006 to AC-F8-1..AC-F8-4 and TC-PARITY-001 to
+#                 AC-F8-5; those are the phase-7 daemon-path and 11-class
+#                 re-observations of the SAME shared derivation and are not the
+#                 sole evidence for any AC (see the TC map note).
+#   Phase 5 (12): AC-F1-2 (LANE-003), AC-F5-1 (TERM-001), AC-F5-2 (TERM-002),
+#                 AC-F5-3 (TERM-003/004 + LOOP-003), AC-F5-4 (TERM-005),
+#                 AC-F5-5 (TERM-006), AC-F6-1 (LOOP-001), AC-F6-2 (LOOP-002),
+#                 AC-F6-3 (LOOP-003), AC-F6-4 (LOOP-004), AC-F6-5 (LOOP-005),
+#                 AC-F6-6 (LOOP-006).
+#   Phase 6 (4):  AC-F7-1..AC-F7-4 (SPAWN-001..004).
+#   Phase 7 (5):  AC-F9-1 (PARITY-001), AC-F9-2 (PARITY-002),
+#                 AC-F9-3 (PARITY-003), AC-F9-4 (SHELL-001),
+#                 AC-F9-5 (SHELL-002 + PARITY-004).
+#   Phase 8 (0):  the release floor re-establishes evidence for the whole set; it
+#                 owns no AC and moves none. A reviewer who wants ownership to
+#                 move is asking for a plan revision, not a silent transfer.
+#   COUNT: 0 + 5 + 7 + 9 + 12 + 4 + 5 + 0 = 42.
+#   Per-feature reconciliation against spec §17: F-1 4 (3 in phase 3, 1 in
+#   phase 5), F-2 5 (phase 2), F-3 4 (phase 3), F-4 4 (phase 4), F-5 5
+#   (phase 5), F-6 6 (phase 5), F-7 4 (phase 6), F-8 5 (phase 4), F-9 5
+#   (phase 7) = 42.
+#
+# TC -> PHASE MAP (50 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the declaration that makes it green):
+#   Phase 1 (0)
+#   Phase 2 (6):   TC-ADMIT-001, TC-ADMIT-002, TC-ADMIT-003, TC-ADMIT-004,
+#                  TC-ADMIT-005, TC-ADMIT-006
+#   Phase 3 (8):   TC-LANE-001, TC-LANE-002, TC-LANE-004, TC-LANE-005 (4),
+#                  TC-RESUME-101, TC-RESUME-102, TC-RESUME-103, TC-RESUME-104 (4)
+#   Phase 4 (10):  TC-TRACKER-001..004 (4), TC-DERIVE-001..006 (6)
+#   Phase 5 (13):  TC-LANE-003 (1), TC-TERM-001..006 (6), TC-LOOP-001..006 (6)
+#   Phase 6 (4):   TC-SPAWN-001..004
+#   Phase 7 (9):   TC-PARITY-001..006 (6), TC-SHELL-001, TC-SHELL-002 (2),
+#                  TC-CONTRACT-001 (1)
+#   Phase 8 (0)
+#   COUNT: 0 + 6 + 8 + 10 + 13 + 4 + 9 + 0 = 50. 0 orphans (every id above), 0
+#   double-owned (each id appears once), 0 unmapped (the eleven group totals
+#   LANE 5 + ADMIT 6 + RESUME 4 + TRACKER 4 + TERM 6 + LOOP 6 + SPAWN 4 +
+#   DERIVE 6 + PARITY 6 + SHELL 2 + CONTRACT 1 = 50).
+#   TCs DELIBERATELY OWNED BY THE PHASE THAT ALSO OWNS THEIR FIXTURE:
+#     - TC-ADMIT-001..006 ↔ `tests/fixtures/dispatch/parity/{harness,process-runner,
+#       interleave}.ts` (phase 2 authors them).
+#     - TC-LANE-001/002/004/005 and TC-RESUME-101..104 ↔
+#       `tests/fixtures/dispatch/parity/lane.ts` (phase 3 authors it).
+#     - TC-TRACKER-001..004 and TC-DERIVE-001..006 ↔
+#       `tests/fixtures/dispatch/parity/pm-notes.ts` plus the extended
+#       `tests/fixtures/dispatch/truth.ts` (phase 4 authors both).
+#     - TC-LANE-003, TC-TERM-001..006, TC-LOOP-001..006 ↔
+#       `tests/fixtures/dispatch/parity/terminate.ts` plus the extended
+#       `tests/fixtures/dispatch/harness.ts` (phase 5 authors both).
+#     - TC-PARITY-001..006 ↔ `tests/fixtures/dispatch/parity/{evidence,seams}.ts`
+#       (phase 7 authors both; `harness.ts` is extended, not re-authored).
+#   FIXTURE-FIRST RULE: the shared parity fixture family is authored
+#   INCREMENTALLY at first need, never as one battery-phase drop. That is why the
+#   eight `tests/fixtures/dispatch/parity/*` modules are split across phases 2, 3,
+#   4, 5, and 7 instead of all landing in phase 7: a case never depends on a
+#   fixture committed after it, and the battery phase authors only the two
+#   fixtures only it consumes.
+#   SPLIT-FILE NOTE (a file touched by more than one phase; each id still has one
+#   owner):
+#     1. `packages/core/src/app/dispatch.ts` is edited in phases 1 (delay fact),
+#        2 (kind preservation/refusal path), 3 (lane writes/resume), 4
+#        (derivation wiring), and 5 (terminate decision/loop). Ownership is per
+#        case, never per file.
+#     2. `packages/cli/src/production.ts` is edited in phases 1 (delay binding),
+#        2 (claim mount), 3 (lane-resolver mount), 4 (ladder + pmNotes), 5
+#        (grace + loop bound), and 6 (agent/title/prompt supply).
+#     3. `tests/fixtures/dispatch/parity/harness.ts` is created in phase 2 and
+#        EXTENDED in phases 3, 4, 5, 6, and 7. The case that reads it belongs to
+#        the phase that extends it for that case.
+#     4. `tests/structure/inventory.json` is declared by phases 3, 4, and 6
+#        (each adds one package module); `tests/structure/content-inventory.test.ts`
+#        is declared by phases 1, 3, 4, and 6 (phase 1 adds exported names to
+#        existing files, so only the allowance moves and the file set does not).
+#        Phase 7 declares neither: it adds no package module.
+#   TEST-PLAN DEVIATIONS (declared, not silent):
+#     (a) §7.3 maps TC-LANE-003 to the lane/resume suite and TC-LANE-001..005 to
+#         phase 3 in the implied reading. Placement above moves ONLY TC-LANE-003
+#         (and AC-F1-2) to phase 5, because its scenario is a restarted
+#         iteration. Every other LANE and RESUME id stays where §7.3 puts it.
+#     (b) §7.4 says the 82-row mutation register is executed by the
+#         reviewer/fixer and is NOT committed as a permanent suite. The plan
+#         therefore carries NO mutation-harness phase: the register is allocated
+#         below to the owning cases, whose planted controls are the permanent
+#         non-vacuity proofs. "Any mutation harness" in the phase order is
+#         satisfied by allocation plus those controls, not by a new suite.
+#     (c) §7.2's no-shell surface list names `packages/adapters/src/host/spawn*.ts`.
+#         NO SUCH FILE EXISTS. The repository's single child-process site is
+#         `packages/adapters/src/host/index.ts` (spawn at the two call sites,
+#         `shell: false` on both, the idempotent TERM→KILL starter kill). Phase 7
+#         declares the REAL path; the surface-existence assertion would otherwise
+#         fail closed. This is a reported correction, not an invented path.
+#
+# MUTATION REGISTER ALLOCATION (§7.4, 82 rows; each row's owning case is named so
+#   no invariant is uncontrolled):
+#   M1..M11 (per parity arm)      → TC-PARITY-001 (phase 7), with M2 → also
+#                                   TC-DERIVE-001, M8 → TC-DERIVE-003, M9 →
+#                                   TC-DERIVE-005, M11 → TC-TRACKER-002 (phase 4).
+#   M12..M21 (admission paths)    → TC-ADMIT-001..006 (phase 2).
+#   M22..M26 (resume rules)       → TC-RESUME-101..104 (phase 3).
+#   M27..M33 (ladder bounds)      → TC-TRACKER-001..004 (phase 4).
+#   M34..M43 (terminate safety)   → TC-TERM-001..006 (phase 5).
+#   M44..M52 (loop decisions)     → TC-LOOP-001..006 (phase 5).
+#   M53..M59 (spawn facts)        → TC-SPAWN-001..004 (phase 6).
+#   M60..M72 (derivation arms)    → TC-DERIVE-001..006 (phase 4).
+#   M73..M79 (no-shell + battery) → TC-SHELL-001/002, TC-PARITY-002/003/005
+#                                   (phase 7).
+#   M80..M81 (daemon fork/ledger) → TC-PARITY-006 (phase 7).
+#   M82 (closed surface)          → TC-CONTRACT-001 (phase 7).
+#   NON-VACUITY STATEMENT (binding on every owning phase): a mutation that stops
+#   producing its NAMED failure is a BLOCKING finding; it is never repaired by
+#   deleting the mutation or relaxing the expected failure family.
+#
+# PARITY-COVERAGE MATRIX ALLOCATION (spec Appendix G, test plan §7.1/§7.3): the
+#   eleven class rows and the six production-seam rows are driven by the 11-class
+#   table in `tests/fixtures/dispatch/parity/evidence.ts` and asserted by
+#   TC-PARITY-001 (phase 7). Each seam is exercised through the function
+#   production uses: S-claim (phase 2), S-lane (phase 3), S-ladder (phase 4),
+#   S-terminate and S-loop (phase 5), S-spawn (phase 6), S-derive (phase 4, shared
+#   with the daemon path), S-exec (phase 7's guarded runner). No row may be
+#   satisfied by a seam reimplementation (TC-PARITY-002).
+#
+# PROOF BOUNDARY (spec Appendix C, NORMATIVE for phase 7): TC-PARITY-004 compares
+#   the fixture's `PARITY_PROOF_BOUNDARY` (eight proven ids, six not-proven ids in
+#   order) against spec Appendix C AND against the TEST PLAN's own §1.2 table —
+#   it reads `chg-GH-347-test-plan.md`, not a doc/spec page, so no documentation
+#   edit is needed for the drift check. A change to either side without the other
+#   fails by name (`proof boundary drift: item`).
+#
+# CODE-AREA / BOUNDARY RISKS (dependency-cruiser rules and pinned surfaces):
+#   - `packages/core/**` may NOT import `packages/adapters|cli|mcp|opencode/**`
+#     (matrix-core-importer). Every new core module below is core-only.
+#   - `packages/core/src/app/**` may NOT import `branding` or `state`
+#     (tier-app-allowed-set); it may import `domain`, `config`, and `#contracts`.
+#     The lane resolver, the claim, and the loop therefore talk to the store
+#     through the port types in `#contracts`, exactly as `app/daemon.ts` does.
+#   - `packages/core/src/domain/**` may import `#contracts` only
+#     (tier-domain-only-contracts). The ladder, the total derivation, and the
+#     prompt builder are pure and stay there.
+#   - `packages/core/src/state/**` may import `#contracts` only
+#     (tier-state-allowed-set). Phase 2's fence-wait helper, if it lands in
+#     `state/index.ts` as TDR-0045's touched-file list anticipates, receives the
+#     delay as injected data and imports nothing new.
+#   - `packages/adapters/**` may NOT import the core ROOT (subpath-undeclared);
+#     it imports `@delivery-os/core/contracts`. The `terminate` member and the
+#     spawn `title` fact are therefore declared in `contracts/harness.ts` and are
+#     reachable through the existing `./contracts` subpath — no new subpath.
+#   - `packages/cli/**` may NOT import `mcp|opencode`; it reaches core through the
+#     existing subpaths. `DispatchLaneFacts` currently lives in
+#     `packages/cli/src/edge.ts`; phase 3 RELOCATES its single definition to
+#     `packages/core/src/contracts/dispatch.ts` and re-exports it from
+#     `edge.ts` (an alias, no second definition), because core cannot import CLI.
+#     That relocation is the only type move in the change and is declared.
+#   - `tests/**` imports relative `packages/**/src/**` paths and is outside the
+#     package matrix; the parity fixtures are test-side only (no runtime import).
+#   - PINNED SURFACES moved exactly, never relaxed: `tests/structure/inventory.json`
+#     (file set), `EXECUTABLE_ALLOWANCES` in
+#     `tests/structure/content-inventory.test.ts` (per-file exports, no wildcard),
+#     `tests/fixtures/ports/v1-contract-inventory.json` (contract export list),
+#     `tests/structure/subpaths.test.ts` (NO new subpath; read-only control), and
+#     the error table (UNCHANGED: no row added, no row moved).
+#
+# DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
+#   declared by phase 8 for STAGING ONLY — this plan authors none of them, and
+#   reconciliation is NOT a delivery phase):
+#   - doc/spec/features/feature-dispatch-engine.md — rewrite the one-shot flow for
+#     the durable lane, recorded-attempt resume, atomic admission, tracker ladder,
+#     terminate, in-process loop, spawn identity/prompt, total derivation order,
+#     and arm-aware corroboration; expand the per-ref single-flight table with the
+#     atomic-claim and bounded-wait rules and the dispatch-vs-`queue claim`
+#     renewal difference; update the result-derivation bullets and the
+#     failure-token mapping; REPLACE the stale "the delivered session port exposes
+#     no kill operation" sentence (one-shot step 7).
+#   - doc/spec/features/feature-session-lifecycle-economics.md — REPLACE both
+#     stale "no kill operation" statements (the one-shot stall paragraph and the
+#     one-shot stall bullet) with the terminate contract and the
+#     no-second-session rule; record that an in-process restart appends
+#     `economics.restart` with `watchdog.liveness-stalled`; keep the budget,
+#     liveness, and prefill-safety statements.
+#   - doc/spec/features/feature-harness-adapters.md — add `terminate` to the
+#     harness operation set and capability declaration (grace, idempotence,
+#     process tree, exact-identity reap); add the fresh-spawn title fact; state
+#     that opencode supports terminate and Claude Code declares the gap; update
+#     the spawn-argument description for `--agent pm`, `--title ticket-<REF>`, and
+#     the lifecycle prompt.
+#   - doc/spec/features/feature-resident-daemon.md — state that `dispatch.lane` is
+#     a distinct dispatch-owned record, that `daemon.lane` is unchanged, and that
+#     daemon reconciliation never adopts or rewrites a dispatch lane.
+#   - doc/spec/features/feature-delivery-lifecycle.md — state that the typed
+#     dispatch lane is parity-complete for the eleven classes and the shell's
+#     supervision semantics, has no shell dependency, and that the shell remains
+#     the documented fallback until a separate handover.
+#   - doc/spec/features/feature-queue-ready.md AND
+#     doc/planning/oss-tooling/milestones/m1/commands/queue.md — record that the
+#     dispatch claim decides the same-ref/other-ref verdict inside the claim,
+#     waits out fence contention within the lease TTL, and never surfaces
+#     `fallback.internal`; keep the sibling `queue claim` renewal and repository
+#     exclusivity unchanged.
+#   - doc/spec/features/feature-scheduling-engine.md — the lease section notes the
+#     dispatch caller's no-renewal rule and the unchanged TTL/exclusivity
+#     (DISCOVERED AT PLAN TIME: TDR-0045's reference list names this page and the
+#     current-truth lease text lives here; no AC or TC changes).
+#   - doc/spec/features/feature-config-layer.md AND
+#     doc/planning/oss-tooling/milestones/m1/commands/config.md — record that no
+#     key is added; `lane.restart-budget` 3, `lane.liveness-interval` 30 000 ms,
+#     `coordinator.kill-grace` 20 000 ms, and `queue.lease-ttl` 90 000 ms are
+#     consumed by the dispatch lane and their defaults are unchanged.
+#   - doc/spec/features/feature-result-contract.md — confirm the eleven tokens,
+#     projections, exits, and error table are unchanged; record that the new lane
+#     record is not an error identity and that no row or domain kind is added.
+#   - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md — clarify
+#     `--resume-prompt` over a recorded attempt (including `pr-open`); state that
+#     the agent identity and title are internal and there is no new flag; keep the
+#     four-key text contract. `tests/checks/dispatch-doc-conformance.test.ts`
+#     pins phrases on this page that MUST be preserved while text is added.
+#   - doc/overview/glossary.md and doc/00-index.md — add dispatch lane, atomic
+#     admission, recorded-attempt resume, tracker retry ladder, corroborated
+#     stall, terminate, exact-identity reap, in-process restart, arm-aware
+#     corroboration, and parity battery; index the updated dispatch and harness
+#     pages. `doc/00-index.md` keeps its licence header and its
+#     `ados_distribution` marker.
+#   - doc/quality/test-specs/test-spec-dispatch-engine.md — DISCOVERED AT PLAN
+#     TIME: this page enumerates the dispatch suites and the coverage map; the new
+#     parity suites and the no-shell invariant must be named there. Documentation
+#     only; no AC, TC, contract, or behaviour change.
+#   - REVIEWED AND DELIBERATELY UNCHANGED (not declared, not edited):
+#     doc/spec/features/feature-supervise.md and
+#     doc/spec/features/feature-coordinator-supervision.md state coordinator-owned
+#     process management and its kill grace; the harness terminate member does not
+#     move coordinator supervision, and neither page carries the stale session-port
+#     sentence.
+#   Each reconciled page must cite the governing record: TDR-0044, TDR-0045,
+#   TDR-0046, TDR-0047, TDR-0048, TDR-0049.
+#
+# DOC-CONFORMANCE OBLIGATIONS (declared here so no phase improvises):
+#   - THIS CHANGE EDITS NO `.opencode/**` FILE. The prompts describe the shell
+#     lane, which remains on disk as the documented fallback (NG-7); the typed
+#     `dispatch` grammar is unchanged (no new command, flag, argument, or output
+#     key), so there is no prompt or command contract to restate. Therefore
+#     `tests/checks/prompt-conformance.test.ts` (the prompt scan) and
+#     `tests/checks/help-guide-coverage.test.ts` (help coverage) remain green with
+#     UNCHANGED inventories, and `PROMPT_REQUIRED_COMMANDS` does not move.
+#   - `dispatch` stays prompt-required with an unchanged grammar, so the HELP
+#     INVENTORY COUNT is unchanged. Only the reference-page TEXT moves
+#     (`doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`), in
+#     lifecycle phase 7, and `tests/checks/reference-page-parity.test.ts` stays
+#     green because the page and every see-also target remain present.
+#   - IF any phase finds it needs a `.opencode/**` edit or a help/grammar change,
+#     that is an ESCALATION, not a delivery edit: the prompt-conformance scan,
+#     the help-coverage scan, and the reference-page parity check then apply, the
+#     plan is revised before the edit, and the phase does not land it.
+#   - `tests/checks/doc-conformance.test.ts`, `tests/checks/dispatch-doc-conformance.test.ts`,
+#     and `tests/checks/reference-page-parity.test.ts` are re-run (NOT declared)
+#     after the phase-7 reconciliation; a stale-phrase scan for
+#     "no kill operation" on the two current-truth pages must return zero hits
+#     (DOD-6).
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Every command runs from the repository root with
+#     TMPDIR=$PWD/tmp/tmpdir (repo-local, git-ignored; never /tmp or $HOME).
+#   - PATH must carry $PWD/node_modules/.bin (pm-notes operational prerequisite):
+#     the commit primitive probes the bare `commitlint` name, so a PATH without
+#     it makes every lifecycle commit fail as commit.commitlint-failed.
+#   - The typed CLI does not run from an unbuilt workspace. Any `jaiship`
+#     invocation (plan validation, lint) is preceded by
+#     `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build`.
+#   - TARGETED GATES (per phase): the `bun test` lines named in each phase,
+#     `pnpm typecheck` only where a type surface moved, and
+#     `git diff --check` before every commit.
+#   - THE AGGREGATE `pnpm check` IS PHASE 8'S ALONE and is never substituted by a
+#     narrow pass. `bun run scripts/checks/no-shell-dispatch.ts` is a phase-7 gate
+#     and is also discovered by `bun test` through its own suite, so `pnpm check`
+#     runs it without a package.json or CI-topology change.
+#   - The branch-range commit-message gate
+#     (`./scripts/lint-commit-range.sh --base origin/main-tools`) is LIFECYCLE
+#     PHASE 9's gate (test plan §7.5), not a delivery-phase gate; its verdict is
+#     recorded as a pm-notes `notes:` entry (DOD-3).
+#   - Every phase boundary records its gate result and its commit hash as a
+#     pm-notes `notes:` entry naming the plan phase id.
+#
+# COMMIT CONVENTION (one commit per plan phase through the commit primitive;
+#   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
+#   phase 1  feat(GH-347): dispatch lane and harness contract scaffolding
+#   phase 2  feat(GH-347): atomic dispatch admission verdicts
+#   phase 3  feat(GH-347): durable lane writes and recorded-attempt resume
+#   phase 4  feat(GH-347): tracker ladder, pm-notes fact and total derivation
+#   phase 5  feat(GH-347): stall termination and in-process restart loop
+#   phase 6  feat(GH-347): dispatch spawn identity, title and lifecycle prompt
+#   phase 7  feat(GH-347): parity battery and no-shell invariant
+#   phase 8  chore(GH-347): release obligations and spec reconciliation
+#
+# DELIVERED EXPECTATIONS THE SPEC CHANGES (a DoR concern; every file below is
+#   declared by the phase that owns the change, and every edit cites its clause —
+#   an assertion is UPDATED, never deleted, renamed, relaxed, or reordered):
+#   1. tests/behaviour/dispatch-restart-budget.test.ts — TC-RESUME-002 becomes
+#      TC-LOOP-006 (a persisted count at/above the bound no longer refuses
+#      admission; only a stall produces `max-restarts`). Clause: §8.5, AC-F6-6,
+#      DEC-5, R5. Phase 5.
+#   2. tests/behaviour/dispatch-resume-economics.test.ts — an operator resume is
+#      never budget-refused. Clause: AC-F3-2, DEC-3. Phase 3 (conditional; only
+#      the budget-refusal expectation moves).
+#   3. tests/behaviour/dispatch-truth-derivation.test.ts and
+#      tests/behaviour/dispatch-token-closure.test.ts — tracker-done `merged`
+#      first, artifact `partial`, the retired ledger no-work arm, the subsumed
+#      exit-0-no-artifact `failed` arm, the unchanged exits. Clause: §8.5,
+#      Appendix F, DEC-6. Phase 4.
+#   4. tests/behaviour/dispatch-comparison.test.ts,
+#      tests/behaviour/dispatch-gate-evidence.test.ts, and
+#      tests/conformance/dispatch/dispatch-fixture.test.ts — conditional: only a
+#      case whose fixture input relied on the retired ledger no-work arm moves,
+#      and it cites DEC-6. Phase 4.
+#   5. tests/behaviour/dispatch-liveness.test.ts — a below-bound stall is now
+#      terminated and restarted, not "left to lane supervision". Clause: §8.5,
+#      DEC-4, DEC-5. Phase 5.
+#   6. tests/structure/harness-stream-contract.test.ts — EXTENDED with the
+#      terminate-capability assertion; the seven required members and the
+#      no-`kill`-alias assertion stay. Phase 5.
+#   7. tests/structure/dispatch-composition.test.ts — additive assertions for the
+#      two new seam mounts and the delay fact; nothing removed. Phases 3, 5.
+#   8. tests/checks/dispatch-doc-conformance.test.ts — its required phrases are
+#      PRESERVED; phase 8 declares the page, lifecycle phase 7 adds text.
+#   9. tests/fixtures/queue/single-flight/harness.ts — `dispatchClaim` is rewired
+#      to the atomic seam; its assertion set in the delivered suite is unchanged.
+#      Phase 2.
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
+#   1.  The eleven tokens, projections, exits, attempt-record schema version,
+#       error-table rows, and domain kinds are UNCHANGED; `state-unverified` is
+#       exit 2 and `partial` is exit 1 (NG-4, NFR-3).
+#   2.  No new configuration key and no default change: `lane.liveness-interval`
+#       30 000 ms, `lane.restart-budget` 3, `coordinator.kill-grace` 20 000 ms,
+#       `queue.lease-ttl` 90 000 ms (NFR-11).
+#   3.  No new CLI command, flag, argument, output key, help inventory entry, or
+#       rendered operator surface (NG-11, GH-354 boundary).
+#   4.  No new failure identity, error row, domain kind, or second error system;
+#       `harness.capability.gap` is reused for a missing terminate capability and
+#       the lane/terminate/tracker facts are bounded evidence references (spec §22).
+#   5.  `daemon.lane`, its state vocabulary, and daemon reconciliation ownership
+#       are untouched; the daemon family never reads or writes `dispatch.lane`
+#       (NG-6, TDR-0044).
+#   6.  The sibling `queue claim` renewal, repository exclusivity, its TTL, and
+#       stale takeover are unchanged; only the dispatch caller refuses and never
+#       renews (NG-5, TDR-0045).
+#   7.  The attempt record's shape is unchanged and gains no lane field; exactly
+#       one attempt record per classified dispatch, zero for a pre-session
+#       refusal, zero for a restarted iteration (DM-2, NFR-4).
+#   8.  Every harness process is a fixed argv with `shell: false`; the dispatch
+#       flow invokes no shell and no script path; a runner asked to use either
+#       fails by name (API-7, NFR-5).
+#   9.  Terminate signals only the session's process tree and the exact-identity
+#       reap (this lane's session id or `ticket-<REF>` title), NEVER a broad
+#       pattern; it is idempotent and honours the declared grace (API-5, NFR-6).
+#   10. The `"pm-notes"` corroboration source stays the phase ledger
+#       (`phasesComplete`); it is NOT re-pointed at the new `pmNotes` artifact
+#       fact; `falseSuccess` is never suppressed and no new incident kind is added
+#       (DEC-11, AC-F8-3).
+#   11. The parity battery is offline and deterministic: zero live network calls,
+#       zero real child processes, zero wall-clock assertions; the injected delay
+#       recorder is the only time source (NFR-1).
+#   12. No adapter is completed, converged, or "fixed"; THIS change edits the two
+#       harness adapters only additively for the terminate capability and the
+#       spawn-title rendering, and edits no provider adapter (github/gitlab/jira)
+#       at all.
+#
+# INCONSISTENCIES / DISCOVERIES (reported, not silently resolved):
+#   (a) The staging note's premise is stale in one direction: the six decision
+#       INDEX ROWS are committed (0aaf9c39) while the records are untracked.
+#       Phase 1 lands the records; the index is a conditional-staging declaration.
+#   (b) `DispatchLaneFacts` has no core home today; it is declared in
+#       `packages/cli/src/edge.ts` (~line 7025) and core cannot import CLI. Phase 3
+#       relocates the single definition to `packages/core/src/contracts/dispatch.ts`
+#       and re-exports it from `edge.ts`.
+#   (c) `resolveDispatchLane` has no delivered module; the behaviour is the
+#       `laneFactsFor` closure in `packages/cli/src/production.ts` (~2463-2490),
+#       which reads ONLY daemon lanes in `delivering|detached|preempted`. Phase 3
+#       extracts it, adds the dispatch-owned newest-with-session half, and mounts
+#       it at `existingLane`. This is the BINDING seam prerequisite.
+#   (d) Test plan §7.2 names `packages/adapters/src/host/spawn*.ts`; no such file
+#       exists. The real single child-process site is
+#       `packages/adapters/src/host/index.ts`. Phase 7 declares the real path.
+#       It also states R3 as "no exec/execSync/execFile/execFileSync/spawnSync
+#       import or call" and R4 as "every spawn( call site ... shell: false". The
+#       surface contains many legitimate `RegExp.prototype.exec` calls in
+#       `packages/cli/src/edge.ts` and three legitimate PORT-method `.spawn(` calls
+#       (`ports.harness.spawn`, `resolvedHarness.port.spawn`,
+#       `options.session.spawn`). Phase 7 binds R3/R4 to the child-process
+#       receiver/import and asserts both as false-positive controls, because a
+#       literal reading would force the allowlist open.
+#   (e) TC-LANE-003 is a loop scenario though §7.3 files it with lane/resume;
+#       placement is phase 5 (with AC-F1-2) for observability. See the
+#       sequencing block (a).
+#   (f) The pm-notes doc-risk text names `feature-harness-session-port.md`; no such
+#       page exists. The real current-truth page is
+#       `feature-harness-adapters.md` (also Appendix A's name), and this plan uses
+#       the real path.
+#   (g) `tests/structure/harness-stream-contract.test.ts` asserts the port has
+#       exactly seven required members and no `kill`/`abort` alias. An OPTIONAL
+#       `terminate` member does not violate it (the assertion is over a literal's
+#       keys), and phase 5 EXTENDS the suite with the capability assertion rather
+#       than weakening it.
+#   (h) `version_impact: minor` and any publishable-package edit mean exactly one
+#       five-package minor changeset (`tests/checks/privacy-release.test.ts`
+#       enforces it). Phase 8 authors
+#       `.changeset/gh-347-dispatch-core-parity-minor.md`.
+#   (i) No committed mutation harness: §7.4 makes the 82-row register a
+#       reviewer/fixer exercise, and the permanent non-vacuity proofs are the
+#       planted controls inside the owning cases. Allocation is stated above.
+#   (j) `tests/checks/dispatch-doc-conformance.test.ts` pins REQUIRED phrases on
+#       the dispatch reference page. The phase-7 reconciliation adds text and must
+#       preserve them; no test is edited to accommodate a rewrite.
+#   (k) There is no `doc/documentation-profile.md` (engineering-repo default), so
+#       no `doc/business/**` area is created or touched.
+#
+schemaVersion: delivery.plan.v1
+workItemRef: GH-347
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "The eleven tokens, any projection class, any exit code, the attempt-record schema version, any error-table row, or any domain kind moves (NG-4, NFR-3, AC-F8-5, TC-DERIVE-006, TC-CONTRACT-001)"
+    - "A configuration key or default is added or changed, including a lane-specific terminate-grace key in place of the borrowed coordinator.kill-grace (NFR-11, DEC-4)"
+    - "A CLI command, flag, argument, output key, help-inventory entry, or rendered operator surface is added, or a `.opencode/**` prompt is edited (NG-11, NG-1, the doc-conformance obligations)"
+    - "A new failure identity, error-table row, domain kind, or second error system appears, or a lane/terminate/tracker fact is emitted as an identity instead of a bounded evidence reference (spec §22)"
+    - "daemon.lane, its state vocabulary, or daemon reconciliation ownership changes, or the daemon family reads or writes dispatch.lane (NG-6, TDR-0044, AC-F1-4, TC-LANE-005)"
+    - "The sibling queue claim renews differently, repository exclusivity or its TTL changes, the dispatch path renews a live same-ref lease, or an admission outcome is contained as fallback.internal (NG-5, DEC-1, API-2, TC-ADMIT-001..006)"
+    - "A pre-session refusal appends an attempt, a lane, or a lease; a classified dispatch appends 2+ attempts; a restarted iteration appends a terminal lane or an attempt; or a resume replay writes an attempt (NFR-4, DM-2, TC-LANE-002/003, TC-LOOP-001/005)"
+    - "A seam is reimplemented in tests instead of imported from its production module, or `claimDispatchLease`, `resolveDispatchLane`, or the injected delay(ms, reason) fact is dropped, made non-injectable, or resolved from an ambient timer/configuration key (AC-F9-2, test plan §8.2/§8.3, TC-PARITY-002)"
+    - "The tracker ladder exceeds 5 attempts, changes 2/4/8/16 s, exceeds 30 s added latency, or exhaustion yields a success token; or a decisive artifact does not survive an unreadable tracker (API-4, NFR-2, AC-F4-1..AC-F4-4, TC-TRACKER-001..004)"
+    - "A stall is restarted on a clean exit; a decisive artifact outside the terminal pre-restart verdict set short-circuits a stall; an unverified stall consumes a slot; a terminate-incapable adapter starts a second session; or terminate signals by a broad pattern or an unrelated pid (AC-F5-1..AC-F5-5, AC-F6-1..AC-F6-6, NFR-6, TC-TERM-001..006, TC-LOOP-001..006)"
+    - "The `\"pm-notes\"` corroboration source is re-pointed at the pmNotes artifact fact, falseSuccess is suppressed, or a new incident kind/divergent shape appears (DEC-11, AC-F8-3, TC-DERIVE-004)"
+    - "A spawn omits `--agent pm`, renders more than one `--agent`/`--model`, omits `--title ticket-<REF>` on a fresh spawn, carries a title on a resume, or builds a constant prompt; or a role-less composition records a binding (API-6, DM-6, AC-F7-1..AC-F7-4, TC-SPAWN-001..004)"
+    - "The parity battery performs a live network call, starts a real child process, asserts wall-clock time, or its two runs differ in envelope, attempt count, or class coverage (NFR-1, AC-F9-3, TC-PARITY-003)"
+    - "A shell invocation or a script-path literal appears in the dispatch flow, a spawn omits `shell: false`, or the no-shell invariant's surface/list/allowlist is widened to silence a hit (API-7, NFR-5, AC-F9-4, AC-F9-5, TC-SHELL-001/002)"
+    - "A provider adapter (github/gitlab/jira) is edited, or an adapter is completed, converged, or changed to make a case pass (constraint 12, NG-4)"
+    - "A delivered assertion is deleted, renamed, relaxed, reordered, or skipped, or a delivered expectation is changed without citing the authorising clause (§8.5, DEC-x, or a ruling) (the delivered-expectations block, TC-LOOP-006, TC-RESUME-002)"
+    - "A pinned surface (inventory.json, content-inventory allowances, the ports contract inventory, subpaths) is relaxed instead of updated exactly, or a new suite is placed under an ignored path (RSK-8, NFR-10)"
+    - "The change folder leaves an index row pointing at an untracked decision record after phase 1, or the six TDRs are not committed on the branch (COMMIT-BOUNDARY REALITY, DOD-1)"
+    - "A phase boundary is not gate-green, or `pnpm check` is reported as green while a check was skipped, disabled, or made vacuous (DOD-2)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Layer and contract scaffolding (F-1/F-4/F-5/F-7/F-8 declarations,
+  # the two seam homes, the delay fact, and the six decision records).
+  #
+  # Goal: declare every additive contract surface the ten parity gaps need, with
+  # no behaviour wired yet, so each later phase fills one seam and proves it.
+  # This phase is first because (i) every later phase consumes one of these
+  # declarations, (ii) an additive contract change is the only thing that can be
+  # reviewed in isolation, and (iii) the six TDRs are the governing records and
+  # must be on the branch before the code they govern.
+  #
+  # Contract (TDR-0044, TDR-0046, TDR-0048, TDR-0049; spec DM-1, DM-3, DM-5,
+  #   DM-6, DM-8):
+  #   - `dispatch.lane`: kind `dispatch.lane`, payload schema
+  #     `delivery.dispatch.lane.v1`, key `dispatch.lanes:<ref>`, identity `ref`,
+  #     append-only, latest record per ref is the lane. Record fields exactly as
+  #     DM-1/TDR-0044: `schema`, `ref`, `repository`, `attemptId`, `sessionId`,
+  #     `harnessKind`, `owner: {processId, startedAt}`, `iterationOrdinal >= 1`,
+  #     `restartsConsumed >= 0`, `state: "active" | "terminal"`, optional
+  #     `lastToken`/`lastOutcome` present ONLY on a terminal record, `recordedAt`.
+  #     No prompt, transcript, diff, credential, or provider payload (NFR-7).
+  #   - The lane's append and read helpers live beside the delivered dispatch
+  #     record family (`app/dispatch-ledger.ts`), reading/writing through the
+  #     injected store port exactly as `daemon.ts` reads `daemon.lane`. They are
+  #     the ONLY writers of the kind; phase 3 calls them and the daemon family
+  #     never does.
+  #   - The OPTIONAL harness `terminate` port member and its result type
+  #     (`terminated`/`escalated`/`reaped` booleans, session handle, grace). It is
+  #     NOT yet a member of the closed `HARNESS_OPERATIONS` set: adding the id now
+  #     would make the opencode declaration claim a member that does not exist and
+  #     force the Claude gap early. A port double without the member stays valid.
+  #     Phase 5 adds the id, moves both declarations, implements it, and proves
+  #     capability gating.
+  #   - The optional fresh-spawn `title` member on `HarnessSpawnInput`, the
+  #     `ticket-` prefix constant, the title grammar pattern, and the pure
+  #     `spawnTitleFor(ref)` helper (validated against the work-item reference
+  #     grammar, bounded to a short single token). A resume carries none. Phase 6
+  #     renders it; phase 1 declares and validates it.
+  #   - The `pmNotes` completeness vocabulary: exactly `complete` | `incomplete`
+  #     | `absent`, where complete means a present document whose delivery phase
+  #     carries a non-null completion, absent means no document, and incomplete
+  #     means present but incomplete/unparseable/not complete — the fallible
+  #     direction is NEVER "finished". Phase 4 makes it a required artifact fact.
+  #   - The injected `delay(ms, reason)` fact with the closed reasons
+  #     `claim-fence`, `tracker-ladder`, `terminate-grace`, declared on the
+  #     dispatch ports and on the composition, with production binding a real
+  #     timer. No configuration key (NFR-11).
+  #
+  # Obligations:
+  #   1.1 Declare the lane kind/schema/prefix/record type and the
+  #       `dispatchLaneRecordKey` builder in `contracts/dispatch.ts`; re-export
+  #       through `contracts/index.ts`. Add `appendDispatchLane` and
+  #       `readDispatchLanes` to `app/dispatch-ledger.ts` (fenced append, verified
+  #       post-append read, latest-per-key fold), re-export through `app/index.ts`
+  #       and the core root. No engine call site yet.
+  #   1.2 Declare the optional `terminate` member + result type in
+  #       `contracts/harness.ts`; re-export through `contracts/index.ts`. Do NOT
+  #       add the operation id to `HARNESS_OPERATIONS` and do NOT edit either
+  #       adapter in this phase.
+  #   1.3 Declare the title fact + grammar/helper in `contracts/dispatch.ts` and
+  #       `domain/dispatch-identity.ts`; re-export. Keep the delivered
+  #       `HarnessSpawnInput` members additive-only.
+  #   1.4 Declare the `pmNotes` completeness vocabulary in `contracts/pm-notes.ts`;
+  #       re-export. Do NOT add the field to `DispatchArtifactFacts` yet.
+  #   1.5 Declare the delay fact (type + closed reasons) on the dispatch ports and
+  #       the composition, and bind the production timer in `production.ts`. No
+  #       consumer yet; phases 2, 4, and 5 consume it.
+  #   1.6 Move the three pinned surfaces exactly, in this commit: the file set is
+  #       unchanged (no new core module), but the executable allowances for
+  #       `contracts/dispatch.ts`, `contracts/harness.ts`, `contracts/pm-notes.ts`,
+  #       `app/dispatch-ledger.ts`, and `domain/dispatch-identity.ts` gain exactly
+  #       the new names (no wildcard), and
+  #       `tests/fixtures/ports/v1-contract-inventory.json` gains exactly the new
+  #       contract exports.
+  #   1.7 Author the structure/type halves this phase can prove: the lane record
+  #       declaration in `tests/structure/dispatch-contract.test.ts` (structure
+  #       half of TC-LANE-001, whose owner is phase 3) and the optional-member
+  #       type probes in `tests/types/harness.type-test.ts` (a port without
+  #       `terminate` and a spawn without `title` still type-check; a title is
+  #       validated to `ticket-<REF>`). No AC and no TC is claimed by phase 1.
+  #   1.8 Stage the six decision records and, conditionally, the decision index
+  #       (see COMMIT-BOUNDARY REALITY). Nothing else outside the change surface.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/dispatch.ts      (lane kind/schema/key/type,
+  #                                                  title prefix/pattern, delay
+  #                                                  reasons)
+  #   packages/core/src/contracts/harness.ts       (optional terminate member and
+  #                                                  result type, optional title)
+  #   packages/core/src/contracts/pm-notes.ts      (completeness vocabulary)
+  #   packages/core/src/contracts/index.ts         (re-exports)
+  #   packages/core/src/domain/dispatch-identity.ts (spawnTitleFor + validation)
+  #   packages/core/src/domain/index.ts            (re-export)
+  #   packages/core/src/app/dispatch-ledger.ts     (lane append/read helpers)
+  #   packages/core/src/app/dispatch.ts            (delay port fact type)
+  #   packages/core/src/app/index.ts               (re-export)
+  #   packages/core/src/index.ts                   (re-export)
+  #   packages/cli/src/edge.ts                     (composition delay fact)
+  #   packages/cli/src/production.ts               (real-timer delay binding)
+  #   tests/structure/dispatch-contract.test.ts
+  #   tests/structure/content-inventory.test.ts
+  #   tests/fixtures/ports/v1-contract-inventory.json
+  #   tests/types/harness.type-test.ts
+  #   doc/decisions/TDR-0044..TDR-0049 (six exact paths)
+  #   doc/decisions/00-index.md (conditional staging only)
+  #   packages/core/src/state/** is NOT touched: record kinds ride the existing
+  #   append-only ledger; no state-engine or boundary change is needed.
+  #
+  # Acceptance: no AC and no TC. Phase 1 is scaffolding; claiming an AC from a
+  #   declaration alone would be a false claim. Its exit criterion is the pin
+  #   equality, the type probes, and the six records committed.
+  #
+  # Gate (expected signal: exit 0; the lane kind/schema/key/record shape declared
+  # once and exported; a port double without `terminate` still valid; a spawn
+  # without `title` still valid; `ticket-<REF>` validated and a malformed title
+  # rejected by name; the allowance and contract-inventory equality holding in
+  # both directions; the six TDR paths tracked and `doc/decisions` clean):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-stream-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/port-contract-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/subpaths.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/decision-record.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Lane, terminate, title, pm-notes and delay contract scaffolding with the exact pinned-surface moves and the six decision records"
+    kind: delivery
+    summary: "feat(GH-347): dispatch lane and harness contract scaffolding"
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/contracts/pm-notes.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/dispatch-identity.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/dispatch-ledger.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/structure/dispatch-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/types/harness.type-test.ts
+        # Untracked at plan time (COMMIT-BOUNDARY REALITY). Six exact paths.
+        - doc/decisions/TDR-0044-dispatch-owned-durable-lane-record.md
+        - doc/decisions/TDR-0045-dispatch-atomic-admission-verdicts.md
+        - doc/decisions/TDR-0046-harness-terminate-operation.md
+        - doc/decisions/TDR-0047-in-process-bounded-restart-loop.md
+        - doc/decisions/TDR-0048-total-derivation-ladder-and-corroboration.md
+        - doc/decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md
+        # CONDITIONAL STAGING ONLY: rows are committed (0aaf9c39), file clean;
+        # declared so a status row or typo touch made while the six records land
+        # stages with them. Never a licence to edit an unrelated row.
+        - doc/decisions/00-index.md
+      folders:
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-1 commit (targeted contract, type, pin and decision-record suites green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Atomic admission (F-2; DEC-1; TDR-0045).
+  #
+  # Goal: a dispatch's admission verdict is decided atomically with the claim, so
+  # a race can never admit two invocations, mislabel store contention as
+  # `fallback.internal`, or renew another invocation's live same-ref lease.
+  #
+  # Contract (API-2, DM-7; TDR-0045 DC-1..DC-5):
+  #   - The claim observes the live lease under the fence and returns exactly one
+  #     of: claimed (with a lease identity), `queue.single-flight` (a live lease
+  #     recording the requested ref under ANY holder, exit 1, holder named in
+  #     `detail.holder`), `queue.lease-conflict` (a live lease on another ref in
+  #     the same repository, exit 1), `queue.precondition.unmet` reason
+  #     `owner-hold` before the fence, or a typed `state.*` failure at its row's
+  #     exit 2. The dispatch claim NEVER renews; the sibling `queue claim` renewal
+  #     is unchanged.
+  #   - Fence contention is WAITED on for a bounded period no greater than
+  #     `queue.lease-ttl` (90 000 ms) using the injected delay with reason
+  #     `claim-fence`, then re-decided from the observed lease. A fence that never
+  #     frees returns the `state.*` row, never a queue relabelling.
+  #   - The dispatch wrapper PRESERVES the claim's kind; it no longer hardcodes
+  #     `queue`, so `state.*` stays `state` and the queue identities stay
+  #     `queue`. No admission outcome is contained as `fallback.internal`.
+  #   - A refusal appends no lease, attempt, lane, or event, starts no session,
+  #     exits its mapped row's code, and the attempts read returns the
+  #     empty-history success.
+  #
+  # Seam (BINDING): `claimDispatchLease` is exported from
+  #   `packages/core/src/app/queue.ts`, re-exported through `app/index.ts` and the
+  #   core root, and MOUNTED at `DispatchComposition.claimLease` in
+  #   `production.ts`. The pre-claim predicate `dispatchAdmissionRefusal` keeps no
+  #   authority over the dispatch verdict; it is NOT deleted (the queue command and
+  #   its delivered controls still use it) but the dispatch mount no longer
+  #   consults it. No configuration key is added.
+  #   `resolveDispatchLane` is the other half of this prerequisite and is OWED BY
+  #   PHASE 3; no admission case consumes it, and phase 2 neither creates nor
+  #   edits it. The injected `delay(ms, reason)` fact this phase consumes was
+  #   declared in phase 1 and is used here with reason `claim-fence`.
+  #
+  # Obligations:
+  #   2.1 Add the path flag ("this caller may not renew") and the bounded fence
+  #       wait to the delivered claim in `app/queue.ts`, keeping the fence body's
+  #       lease fold, stale takeover, and `queue.lease-conflict` construction
+  #       (TDR-0045's implementation plan steps 1–2). Export `claimDispatchLease`
+  #       as the dispatch caller's entry point.
+  #   2.2 If the wait helper lands in `state/index.ts` (the decision record names
+  #       it), it receives the delay as injected data and imports no new module.
+  #   2.3 In `app/dispatch.ts`, preserve the claim's kind and code pair; map the
+  #       five declared admission outcomes; keep the owner-hold precondition before
+  #       the fence; keep the refusal path free of appends, spawn, and resume.
+  #   2.4 In `production.ts`, mount `claimDispatchLease` at `claimLease`, pass the
+  #       injected delay, and remove the dispatch verdict's dependence on the
+  #       pre-claim predicate.
+  #   2.5 Author `tests/conformance/dispatch/dispatch-parity-admission.test.ts`
+  #       for ADMIT-001..005 over the real store and the deterministic
+  #       two-invocation interleaving, and extend
+  #       `tests/behaviour/dispatch-single-flight.test.ts` for ADMIT-006 (sibling
+  #       renewal unchanged; dispatch never renews). Rewire the
+  #       `dispatchClaim` fixture helper to the atomic seam WITHOUT changing the
+  #       delivered suite's assertions.
+  #   2.6 Author the shared parity fixtures this phase first needs:
+  #       `tests/fixtures/dispatch/parity/harness.ts` (driver D1: one composed
+  #       production program per run, `run`/`observe()`/`dispose()`),
+  #       `tests/fixtures/dispatch/parity/process-runner.ts` (the guarded runner
+  #       for every injected child seam; records and refuses a shell/script path by
+  #       name; counts real starts), and
+  #       `tests/fixtures/dispatch/parity/interleave.ts` (the latch wired to the
+  #       fence wait, plus both orderings and the persistent-contention handle),
+  #       and forward the injected delay through
+  #       `tests/fixtures/dispatch/golden/harness.ts` for the command-level cases.
+  #   2.7 Each mutation row M12..M21 fails its named case with the named failure
+  #       family; a mutation that stops failing is blocking, never deleted.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/app/queue.ts      (atomic claim, no-renew flag, fence wait,
+  #                                        claimDispatchLease)
+  #   packages/core/src/state/index.ts    (bounded fence-wait helper, if homed here
+  #                                        per TDR-0045's touched-file list)
+  #   packages/core/src/app/dispatch.ts   (kind preservation, refusal mapping)
+  #   packages/core/src/app/index.ts      (export)
+  #   packages/core/src/index.ts          (export)
+  #   packages/cli/src/production.ts      (claim mount, delay wiring)
+  #   packages/cli/src/edge.ts            (composition claimLease/delay typing)
+  #   tests/conformance/dispatch/dispatch-parity-admission.test.ts (new)
+  #   tests/behaviour/dispatch-single-flight.test.ts (extend)
+  #   tests/fixtures/queue/single-flight/harness.ts (rewire dispatchClaim)
+  #   tests/fixtures/dispatch/golden/harness.ts (forward the injected delay)
+  #   tests/fixtures/dispatch/parity/harness.ts (new)
+  #   tests/fixtures/dispatch/parity/process-runner.ts (new)
+  #   tests/fixtures/dispatch/parity/interleave.ts (new)
+  #   Re-run as read-only controls: tests/behaviour/queue-claim-single-flight.test.ts,
+  #   queue-single-flight-purity.test.ts, dispatch-admission-preflight.test.ts,
+  #   dispatch-admission-diagnostics.test.ts, tests/structure/dispatch-composition.test.ts.
+  #
+  # Acceptance: AC-F2-1 (ADMIT-001), AC-F2-2 (ADMIT-002), AC-F2-3 (ADMIT-003 and
+  #   ADMIT-004), AC-F2-4 (ADMIT-005), AC-F2-5 (ADMIT-006). AC-F2-1's "no lane"
+  #   clause is proven non-vacuously by TC-LANE-002 in phase 3; see the sequencing
+  #   block (b). AC-F2-1's verdict/holder/exit/zero-attempt/no-fallback clauses are
+  #   fully proven here.
+  #
+  # Gate (expected signal: exit 0; exactly 1 admitted and 1 `queue.single-flight`
+  #   naming the holder in BOTH interleavings, 0 `fallback.internal`, 0
+  #   double-claim, 0 lost request, 0 leases and 0 attempts on the refusal,
+  #   cumulative fence wait <= 90 000, a persistent `state.lock.busy` keeping kind
+  #   `state` at exit 2, the sibling renewal still `renewed`):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-admission.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-single-flight.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/queue-claim-single-flight.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/queue-single-flight-purity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-admission-preflight.test.ts tests/behaviour/dispatch-admission-diagnostics.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Atomic dispatch admission: the verdict inside the claim, the declared refusal set with holder, the kind-preserving wrapper, and the bounded fence wait over the real store"
+    kind: delivery
+    summary: "feat(GH-347): atomic dispatch admission verdicts"
+    scope:
+      files:
+        - packages/core/src/app/queue.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/conformance/dispatch/dispatch-parity-admission.test.ts
+        - tests/behaviour/dispatch-single-flight.test.ts
+        - tests/fixtures/queue/single-flight/harness.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/dispatch/parity/process-runner.ts
+        - tests/fixtures/dispatch/parity/interleave.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/queue.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/parity/interleave.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-2 commit (the admission parity suite and the sibling-claim controls green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Durable lane writes and recorded-attempt resume (F-1, F-3; DEC-2,
+  # DEC-3; TDR-0044).
+  #
+  # Goal: a dispatch that acquires a session becomes resumable BEFORE its outcome
+  # is known, and a later `--resume-prompt` resolves the recorded lane instead of
+  # spawning fresh — including a finished `pr-open` attempt.
+  #
+  # Contract (DM-1, DM-2, API-3; TDR-0044):
+  #   - On every session acquisition (spawn or resume) exactly one `active` lane
+  #     record is appended for the ref with session identity, normalized
+  #     repository, attempt id, harness kind, owner `{processId, startedAt}`, a
+  #     1-based `iterationOrdinal`, `restartsConsumed`, and `recordedAt`. A
+  #     pre-session refusal appends none. The append happens as the handle is
+  #     acquired, before any outcome is known.
+  #   - On the dispatch's final classification exactly one `terminal` record is
+  #     appended carrying `lastToken` and `lastOutcome`. Records are append-only;
+  #     "the lane" is the latest record for the ref; no record is rewritten. A
+  #     restarted stalled iteration appends NO terminal record — its AC/TC
+  #     evidence is phase 5 (see the sequencing block (a)), and the writer already
+  #     makes the rule structural by appending the terminal record only from the
+  #     final-classification path.
+  #   - A failed lane append never changes the verdict and never silently claims
+  #     resumability: the attempt still lands with a bounded `lane:append-failed`
+  #     evidence reference.
+  #   - Resume resolution returns the newest recorded lane carrying a session
+  #     identity — the dispatch-owned newest-with-session record OR a daemon lane
+  #     in `delivering`/`detached`/`preempted`, newest wins — plus the resume mode
+  #     derived from adapter capability and the completed-phase position. A
+  #     resolved lane is resumed, never replaced by a fresh spawn; an operator
+  #     resume consumes no restart ordinal; an unknown session is a classified
+  #     failure (never a silent spawn); no lane means an explicit fresh spawn with
+  #     the fresh-spawn fact recorded.
+  #   - Pre-change state with no `dispatch.lane` records resolves "no lane" and
+  #     nothing is fabricated; pre-change attempt records and daemon lanes read
+  #     unchanged; the daemon family never reads or writes the dispatch lane.
+  #
+  # Seam (BINDING): `resolveDispatchLane` is exported from the NEW
+  #   `packages/core/src/app/dispatch-lane.ts` (dispatch-owned newest-with-session
+  #   + the daemon resumable states), re-exported through `app/index.ts` and the
+  #   core root, and MOUNTED at `DispatchComposition.existingLane` in
+  #   `production.ts`, replacing the `laneFactsFor` closure. `DispatchLaneFacts`
+  #   moves to `packages/core/src/contracts/dispatch.ts` with a CLI re-export (core
+  #   cannot import CLI). No configuration key.
+  #   `claimDispatchLease` is the other half and is PHASE 2's; this phase consumes
+  #   it through the composition unchanged. The injected `delay(ms, reason)` fact
+  #   was declared in phase 1; this phase adds no new reason.
+  #
+  # Obligations:
+  #   3.1 Wire the acquisition append and the terminal append into
+  #       `app/dispatch.ts` through the phase-1 helpers; carry the owner facts
+  #       (process id and declared start time) from the composition; append nothing
+  #       on a pre-session refusal.
+  #   3.2 Disclose a failed lane append as `lane:append-failed` on the attempt
+  #       without changing the token, and without exceeding the 16-ref bound.
+  #   3.3 Author the resolver in `app/dispatch-lane.ts` and mount it; delete the
+  #       `laneFactsFor` closure and its daemon-only filter. Relocate
+  #       `DispatchLaneFacts` and re-export it from `edge.ts`.
+  #   3.4 Implement the resume rules: recorded-lane resume over `pr-open`
+  #       (attach-continue where supported), no ordinal and no budget refusal for
+  #       an operator resume, explicit fresh spawn with a recorded fresh-spawn fact
+  #       when no lane exists, and a classified failure with exactly one attempt
+  #       when the adapter reports the session unknown.
+  #   3.5 Author `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`
+  #       for LANE-001/002/004/005 and RESUME-101..104 over the real store, and
+  #       author `tests/fixtures/dispatch/parity/lane.ts` (seeders/readers for
+  #       active and terminal dispatch lanes plus the daemon states, the
+  #       store wrapper that fails only `dispatch.lane` appends, and the
+  #       "lane exists before any attempt" probe).
+  #   3.6 Extend `tests/structure/dispatch-composition.test.ts` with the new mount
+  #       and extend `tests/fixtures/dispatch/parity/harness.ts` with the lane
+  #       observation; move `tests/structure/inventory.json` and the
+  #       `EXECUTABLE_ALLOWANCES` entry for the new module exactly.
+  #   3.7 Conditional delivered-expectation edit:
+  #       `tests/behaviour/dispatch-resume-economics.test.ts` only where a case
+  #       expects a budget refusal for an operator resume; the edit cites
+  #       AC-F3-2/DEC-3 and no assertion is relaxed.
+  #   3.8 Mutation rows M22..M26 fail their named cases.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/dispatch.ts  (DispatchLaneFacts relocation)
+  #   packages/core/src/app/dispatch-lane.ts   (NEW resolver)
+  #   packages/core/src/app/dispatch.ts        (acquisition/terminal appends,
+  #                                             resume consumption, lane evidence)
+  #   packages/core/src/app/dispatch-ledger.ts (lane read fold extension, if any)
+  #   packages/core/src/app/index.ts, packages/core/src/index.ts (exports)
+  #   packages/cli/src/production.ts           (existingLane mount, owner facts)
+  #   packages/cli/src/edge.ts                 (DispatchLaneFacts re-export)
+  #   tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts (new)
+  #   tests/fixtures/dispatch/parity/lane.ts   (new)
+  #   tests/fixtures/dispatch/golden/harness.ts (forward the lane seed options)
+  #   tests/fixtures/dispatch/parity/harness.ts (extend)
+  #   tests/structure/dispatch-composition.test.ts (extend)
+  #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
+  #   packages/core/src/state/** is NOT touched.
+  #
+  # Acceptance: AC-F1-1 (LANE-001/002), AC-F1-3 (LANE-004), AC-F1-4 (LANE-005),
+  #   AC-F3-1 (RESUME-101), AC-F3-2 (RESUME-102), AC-F3-3 (RESUME-103),
+  #   AC-F3-4 (RESUME-104). AC-F1-2 and TC-LANE-003 are phase 5's (restart
+  #   scenario); the terminal append is implemented here because a `pr-open`
+  #   lane must be terminally shaped before RESUME-101 can resolve it.
+  #
+  # Gate (expected signal: exit 0; one active lane at acquisition with the exact
+  #   DM-1 field set and no forbidden key; zero lanes and zero attempts for every
+  #   pre-session refusal; a failed append disclosed without changing the token; a
+  #   seeded terminal `pr-open` lane resumed with 0 spawn calls; no ordinal
+  #   consumed and no budget refusal on an operator resume; an explicit fresh spawn
+  #   when no lane exists; an unknown session a classified failure with exactly one
+  #   attempt; daemon lanes read unchanged and the dispatch lane invisible to the
+  #   daemon family):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Durable dispatch lane writes at acquisition and classification, append-failure disclosure, and recorded-attempt resume resolution including a finished pr-open lane"
+    kind: delivery
+    summary: "feat(GH-347): durable lane writes and recorded-attempt resume"
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/app/dispatch-lane.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/dispatch-ledger.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
+        - tests/fixtures/dispatch/parity/lane.ts
+        - tests/fixtures/dispatch/golden/harness.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/structure/dispatch-composition.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/behaviour/dispatch-resume-economics.test.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/dispatch-lane.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/parity/lane.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-3 commit (the lane/resume parity suite and the resume controls green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Tracker retry ladder, the pmNotes artifact fact, and the total
+  # derivation order (F-4, F-8; DEC-6, DEC-7, DEC-11; TDR-0048).
+  #
+  # Goal: a tracker outage is bounded, retried, and honest, and the derivation
+  # becomes ONE total order that yields all eleven classes — including
+  # tracker-done `merged` and artifact `partial` — shared unchanged by the
+  # one-shot and daemon paths.
+  #
+  # Contract (API-4, DM-3, DM-4, DM-8; Appendix F is NORMATIVE):
+  #   - Ladder: at most 5 attempts, waits `min(2 s * 2^(n-1), 30 s)` =
+  #     2/4/8/16 s, total added latency <= 30 000 ms, the delay INJECTED with
+  #     reason `tracker-ladder`; a successful attempt within the ladder is used;
+  #     exhaustion is named (`tracker:exhausted`) and never yields a
+  #     success-shaped fact. No config key.
+  #   - Artifact fact: `pmNotes` is a required tri-state (`complete` |
+  #     `incomplete` | `absent`) derived from the delivered pm-notes
+  #     read/classification; malformed or absent reads incomplete; the fallible
+  #     direction is never "finished".
+  #   - Total order (Appendix F(A)–(E)): pre-session refusal (no token) →
+  #     attempt-stage failure → spawn refusal `noop-lane-permission` →
+  #     tracker-done `merged` → blocking `blocked` → open PR (`pr-open` /
+  #     `pr-open-unverified`) → already-merged PR `merged` → commits + complete
+  #     pm-notes `finished` → commits + incomplete/absent pm-notes `partial` →
+  #     no commits + readable non-done non-blocked tracker
+  #     `noop-lane-nothing-to-do` → classifier token → `state-unverified` when
+  #     truth is undecidable. A done work item that also carries a blocking label
+  #     resolves `merged`. The phase-ledger no-work arm is RETIRED (a complete
+  #     ledger no longer produces nothing-to-do; `ledger.workRemaining` stays
+  #     carried but gates nothing). The typed-only exit-0-no-artifact `failed` arm
+  #     is SUBSUMED. A decisive artifact resolves on a COMPLETED session; at a
+  #     stall only the terminal pre-restart verdict set does (phase 5 applies it).
+  #   - Arm-aware corroboration: tracker-done `merged` and nothing-to-do are
+  #     corroborated by the tracker fact; the corroboration record's tri-state
+  #     shape is unchanged. The `"pm-notes"` source stays the phase ledger and is
+  #     NOT re-pointed (DEC-11): a divergent ledger still yields `finished`,
+  #     recorded as a delivered-evidence divergence, with `falseSuccess` never
+  #     suppressed and no new incident kind.
+  #   - One implementation, shared: `deriveDispatchResult` is called by the daemon
+  #     path too, so the daemon inherits the new arms (phase 7's TC-PARITY-006 is
+  #     the mandated regression observation).
+  #
+  # Obligations:
+  #   4.1 Author `domain/dispatch-tracker.ts`: the declared constants, the wait
+  #       function (cap at 30 000), and the ladder runner over an injected read
+  #       and the injected delay; export through `domain/index.ts`.
+  #   4.2 Add the required `pmNotes` member to `DispatchArtifactFacts` in
+  #       `domain/dispatch-result.ts` and derive it in `production.ts` from the
+  #       delivered pm-notes classification (`adapters/src/file/pm-notes-parser.ts`;
+  #       only a completeness projection is added; parse behaviour is unchanged).
+  #   4.3 Reorder and totalise the ladder in `domain/dispatch-result.ts` exactly as
+  #       Appendix F; retire the ledger no-work arm; subsume the exit-0-no-artifact
+  #       `failed` arm; keep every token, projection, and exit. Make success
+  #       corroboration ARM-AWARE in `app/dispatch.ts`
+  #       (`corroborationFactsOf` / `isDeliveredEvidence`): tracker-done `merged`
+  #       and nothing-to-do are corroborated by the tracker fact, the
+  #       corroboration record's tri-state shape is unchanged, and the
+  #       `"pm-notes"` source stays `phasesComplete` (DEC-11 — do NOT re-point it
+  #       at `pmNotes`). `falseSuccess` is never suppressed.
+  #   4.4 Wrap the production tracker read with the ladder in `production.ts`,
+  #       named in evidence by `tracker:exhausted` on exhaustion, and keep the
+  #       artifact read decisive on a completed session.
+  #   4.5 Author `tests/conformance/dispatch/dispatch-parity-tracker.test.ts` for
+  #       TRACKER-001..003; extend `tests/behaviour/dispatch-truth-derivation.test.ts`
+  #       (DERIVE-001/002/003/005/006 plus TRACKER-004's policy half) and
+  #       CREATE `tests/checks/dispatch-contract-invariance.test.ts` with
+  #       TRACKER-004's no-configuration-key assertion (the declared ladder
+  #       constants and the four consumed defaults; phase 7 extends the same file
+  #       for CONTRACT-001's full closed-surface pin); extend
+  #       `tests/behaviour/dispatch-token-closure.test.ts` (DERIVE-006),
+  #       `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts` and
+  #       `tests/behaviour/dispatch-false-success.test.ts` (DERIVE-004).
+  #   4.6 Author `tests/fixtures/dispatch/parity/pm-notes.ts` (real on-disk
+  #       documents: complete, incomplete, absent, malformed, and the
+  #       divergent-ledger document) and extend `tests/fixtures/dispatch/truth.ts`
+  #       with the `pmNotes` builders, `tracker({state: "done"})`, and the
+  #       divergent-ledger input. The `artifacts()` builder takes a `pmNotes`
+  #       override and defaults to `complete`, which preserves every delivered
+  #       expectation that relied on `finished`; a case needing `partial` passes
+  #       `incomplete` or `absent`. The ONLY two cases that construct artifact
+  #       facts as a literal are `dispatch-token-closure.test.ts` and
+  #       `dispatch-watch.test.ts`; both are declared here and gain the explicit
+  #       member. Every other case goes through the builder and needs no edit.
+  #   4.7 Move `tests/structure/inventory.json` and the allowance for the new
+  #       domain module exactly.
+  #   4.8 Conditional delivered-expectation edits (each cites §8.5/Appendix F/
+  #       DEC-6): `tests/behaviour/dispatch-comparison.test.ts`,
+  #       `tests/behaviour/dispatch-gate-evidence.test.ts`, and
+  #       `tests/conformance/dispatch/dispatch-fixture.test.ts` — only a case whose
+  #       fixture input relied on the retired ledger arm or the old blocked-first
+  #       order. No assertion is deleted or relaxed.
+  #   4.9 Mutation rows M1–M11's derivation links (M2, M8, M9, M11), M27..M33, and
+  #       M60..M72 fail their named cases.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/domain/dispatch-tracker.ts (NEW ladder)
+  #   packages/core/src/domain/dispatch-result.ts  (pmNotes fact, total order)
+  #   packages/core/src/domain/index.ts            (export)
+  #   packages/core/src/app/dispatch.ts            (derivation input wiring,
+  #                                                 arm-aware corroboration,
+  #                                                 exhaustion evidence)
+  #   packages/cli/src/production.ts               (ladder around the tracker read,
+  #                                                 pmNotes derivation)
+  #   packages/adapters/src/file/pm-notes-parser.ts (completeness projection only)
+  #   tests/checks/dispatch-contract-invariance.test.ts (NEW; TRACKER-004's
+  #                                                 no-key assertion, extended in
+  #                                                 phase 7 for CONTRACT-001)
+  #   tests/conformance/dispatch/dispatch-parity-tracker.test.ts (new)
+  #   tests/behaviour/dispatch-truth-derivation.test.ts (extend)
+  #   tests/behaviour/dispatch-token-closure.test.ts (extend)
+  #   tests/behaviour/dispatch-watch.test.ts (artifact-facts literal)
+  #   tests/behaviour/dispatch-delivered-evidence-divergence.test.ts (extend)
+  #   tests/behaviour/dispatch-false-success.test.ts (extend)
+  #   tests/behaviour/dispatch-comparison.test.ts (conditional)
+  #   tests/behaviour/dispatch-gate-evidence.test.ts (conditional)
+  #   tests/conformance/dispatch/dispatch-fixture.test.ts (conditional)
+  #   tests/fixtures/dispatch/truth.ts (extend)
+  #   tests/fixtures/dispatch/parity/pm-notes.ts (new)
+  #   tests/fixtures/dispatch/parity/harness.ts (extend)
+  #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
+  #   Re-run as read-only controls: tests/behaviour/dispatch-state-unverified.test.ts
+  #   (an unreadable tracker with NO decisive artifact still derives
+  #   `state-unverified`), tests/behaviour/dispatch-exit-projection.test.ts,
+  #   tests/structure/delivery-result-contract.test.ts.
+  #
+  # Acceptance: AC-F4-1 (TRACKER-001), AC-F4-2 (TRACKER-002), AC-F4-3
+  #   (TRACKER-003), AC-F4-4 (TRACKER-004), AC-F8-1 (DERIVE-001), AC-F8-2
+  #   (DERIVE-002), AC-F8-3 (DERIVE-003/004), AC-F8-4 (DERIVE-005), AC-F8-5
+  #   (DERIVE-006). The test plan's extra links TC-PARITY-006 and TC-PARITY-001
+  #   are phase-7 re-observations of the same shared derivation, not a second
+  #   owner (see the TC map note).
+  #
+  # Gate (expected signal: exit 0; exactly 5 attempts with waits
+  #   [2000,4000,8000,16000] and ladderWait(5) = 30000; exhaustion +
+  #   no decisive artifact = `state-unverified` at exit 2 with the exhaustion
+  #   named; exhaustion + a decisive artifact = the artifact token; a done+
+  #   blocking tracker = `merged`; commits+complete = `finished`, commits+
+  #   incomplete/absent/malformed = `partial`; no commits + readable tracker =
+  #   `noop-lane-nothing-to-do`; a complete ledger with commits is never
+  #   nothing-to-do; the divergent ledger still yields `finished` with
+  #   `falseSuccess: true` and the delivered divergence shape; 0 new tokens,
+  #   projections, exits, or config keys):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-tracker.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-token-closure.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-watch.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-delivered-evidence-divergence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-false-success.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-state-unverified.test.ts tests/behaviour/dispatch-exit-projection.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/dispatch-contract-invariance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/delivery-result-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Bounded tracker retry ladder with an injected delay, the pmNotes completeness artifact fact, and the total derivation order with tracker-done merged, artifact partial, and the retired ledger arm"
+    kind: delivery
+    summary: "feat(GH-347): tracker ladder, pm-notes fact and total derivation"
+    scope:
+      files:
+        - packages/core/src/domain/dispatch-tracker.ts
+        - packages/core/src/domain/dispatch-result.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/cli/src/production.ts
+        - packages/adapters/src/file/pm-notes-parser.ts
+        - tests/conformance/dispatch/dispatch-parity-tracker.test.ts
+        - tests/checks/dispatch-contract-invariance.test.ts
+        - tests/behaviour/dispatch-truth-derivation.test.ts
+        - tests/behaviour/dispatch-token-closure.test.ts
+        - tests/behaviour/dispatch-watch.test.ts
+        - tests/behaviour/dispatch-delivered-evidence-divergence.test.ts
+        - tests/behaviour/dispatch-false-success.test.ts
+        - tests/behaviour/dispatch-comparison.test.ts
+        - tests/behaviour/dispatch-gate-evidence.test.ts
+        - tests/conformance/dispatch/dispatch-fixture.test.ts
+        - tests/fixtures/dispatch/truth.ts
+        - tests/fixtures/dispatch/parity/pm-notes.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-result.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/truth.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-4 commit (the tracker/derivation parity suite and the delivered truth controls green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Stall termination and the in-process restart loop (F-1 terminal
+  # half, F-5, F-6; DEC-4, DEC-5; TDR-0046, TDR-0047).
+  #
+  # Goal: a corroborated terminal stall is terminated within a bounded grace and
+  # never leaks a silent second session, and one dispatch invocation reproduces
+  # the shell's bounded iterate-until-terminal table without burning a slot twice.
+  #
+  # Contract (API-5, DM-1 terminal half, DM-4(D), DM-5; TDR-0046, TDR-0047):
+  #   - `terminate` JOINS the closed harness operation set. The port member is
+  #     optional; a terminate-capable adapter declares and implements it; an
+  #     adapter without it declares a gap (`harness.capability.gap`) and is never
+  #     asked. The grace is the declared `coordinator.kill-grace` (20 000 ms
+  #     default), reused rather than duplicated, and waited through the injected
+  #     delay with reason `terminate-grace`.
+  #   - Terminate is idempotent: TERM to the session's process tree first, KILL
+  #     only after the grace, then an escaped-runtime reap matched ONLY by this
+  #     lane's session identity or its `ticket-<REF>` title. It reports
+  #     `terminated`/`escalated`/`reaped`; terminating an already-exited or
+  #     unknown session is success, not an error; zero unrelated processes are
+  #     signalled.
+  #   - Loop: a clean session exit is ALWAYS terminal (no restart, any harness
+  #     outcome, any bound). Only a corroborated liveness stall or a
+  #     harness-reported timeout is restart-eligible. At a stall, only the
+  #     terminal pre-restart verdict set {`merged` from tracker-done, `blocked`
+  #     from a blocking tracker state, `pr-open` from an open PR artifact}
+  #     short-circuits; a decisive artifact OUTSIDE it does NOT stop the stall.
+  #     Undecidable truth → `state-unverified` with NO slot. Below the bound one
+  #     ordinal is consumed with exactly one `economics.restart` reason
+  #     `watchdog.liveness-stalled`, the recorded session is resumed (a fresh
+  #     spawn only if no session was ever recorded), and the next iteration runs.
+  #     At/above the bound → `max-restarts` with the delivered exhaustion record.
+  #   - Cardinality: exactly one attempt record at the terminal classification
+  #     regardless of iteration count; a restarted iteration appends none; a
+  #     pre-session refusal appends none. A persisted count at/above the bound
+  #     NEVER refuses admission: one iteration runs; a clean exit keeps its
+  #     classification and only a stall in that iteration yields `max-restarts`.
+  #   - The lane's terminal half (AC-F1-2/TC-LANE-003) lands here: records in
+  #     order are active(1), active(2, restartsConsumed 1), then exactly one
+  #     terminal; no terminal record exists between the active records; "the
+  #     lane" resolves to the terminal record; a second identical run appends a
+  #     new pair without mutating the earlier prefix.
+  #
+  # Seams and the injected fact (BINDING): this phase CONSUMES the delivered
+  #   `claimDispatchLease` (phase 2) and `resolveDispatchLane` (phase 3) through
+  #   the composition without re-creating either, and consumes the injected
+  #   `delay(ms, reason)` fact (phase 1) with reason `terminate-grace`. The loop's
+  #   restart path resumes the recorded session through the same resolver, so a
+  #   restart never reimplements lane lookup. No configuration key.
+  #
+  # Obligations:
+  #   5.1 Add `terminate` to `HARNESS_OPERATIONS` in `contracts/harness.ts`; update
+  #       BOTH adapter capability declarations: opencode supports it, Claude Code
+  #       declares the gap. No other capability moves.
+  #   5.2 Implement the opencode terminate over the streaming starter in
+  #       `adapters/src/harness/opencode.ts` and the process-tree/exact-identity
+  #       signalling in `adapters/src/host/index.ts` (the repository's single
+  #       child-process site). Keep `shell: false` on every spawn.
+  #   5.3 Implement the engine decision in `app/dispatch.ts`: terminate before any
+  #       restart on a terminate-capable adapter; no second session on an
+  #       incapable one; terminate on clean exit is impossible; record the stall
+  #       verdict and terminate result as bounded evidence.
+  #   5.4 Implement the bounded loop and its accounting: one ordinal/one
+  #       `economics.restart` per restart, no attempt for a restarted iteration,
+  #       one attempt at the terminal classification, `restarts` = consumed
+  #       ordinals, the bound from `lane.restart-budget` (NOT
+  #       `coordinator.restart-budget`).
+  #   5.5 Change restart ADMISSION in `domain/dispatch-resume.ts` so a persisted
+  #       count at/above the bound does not refuse admission (TC-LOOP-006).
+  #   5.6 Add the stall-decision helper (the terminal pre-restart verdict set) to
+  #       `domain/dispatch-liveness.ts`; keep the delivered two-consecutive-
+  #       no-advance corroboration and the current-state (not latch) rule.
+  #   5.7 Author `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
+  #       for TERM-001, TERM-003..006, LOOP-001..005 and LANE-003; extend
+  #       `tests/behaviour/dispatch-liveness.test.ts` (TERM-002) and REWRITE
+  #       `tests/behaviour/dispatch-restart-budget.test.ts`'s TC-RESUME-002 into
+  #       TC-LOOP-006 (cite §8.5/AC-F6-6/DEC-5/R5; the old expectation is
+  #       superseded, not forgotten).
+  #   5.8 Author `tests/fixtures/dispatch/parity/terminate.ts` (the process-tree
+  #       model with per-pid signal logs, a capable double, an incapable double
+  #       that records any call as a violation) and extend
+  #       `tests/fixtures/dispatch/harness.ts` with an optional terminate member
+  #       plus a capability flag (existing behaviour stays the default).
+  #   5.9 Extend `tests/structure/harness-stream-contract.test.ts` with the
+  #       terminate-capability assertion; keep the seven required members and the
+  #       no-`kill`-alias assertion. Extend
+  #       `tests/structure/dispatch-composition.test.ts` with the grace wiring.
+  #   5.10 Conditional delivered-expectation edits: `tests/behaviour/dispatch-resume-economics.test.ts`
+  #        and `tests/structure/dispatch-composition.test.ts` only where an
+  #        expectation encodes admission-time budget refusal; each cites
+  #        §8.5/AC-F6-6/DEC-5.
+  #   5.11 Mutation rows M34..M43 (terminate) and M44..M52 (loop) fail their named
+  #        cases; M36/M37/M39/M41/M44/M48 are the load-bearing controls.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/harness.ts        (terminate in the closed set)
+  #   packages/adapters/src/harness/opencode.ts     (terminate implementation)
+  #   packages/adapters/src/harness/claude.ts       (declared terminate gap)
+  #   packages/adapters/src/host/index.ts           (process tree + exact reap)
+  #   packages/core/src/app/dispatch.ts             (terminate decision, loop,
+  #                                                  cardinality, terminal lane)
+  #   packages/core/src/domain/dispatch-liveness.ts (stall decision / verdict set)
+  #   packages/core/src/domain/dispatch-resume.ts   (at-bound admission)
+  #   packages/core/src/domain/index.ts
+  #   packages/cli/src/production.ts                (grace delay, loop bound, mount)
+  #   packages/cli/src/edge.ts                      (composition facts)
+  #   tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts (new)
+  #   tests/behaviour/dispatch-liveness.test.ts (extend)
+  #   tests/behaviour/dispatch-restart-budget.test.ts (rewrite TC-RESUME-002)
+  #   tests/behaviour/dispatch-resume-economics.test.ts (conditional)
+  #   tests/fixtures/dispatch/parity/terminate.ts (new)
+  #   tests/fixtures/dispatch/harness.ts (extend, additive)
+  #   tests/fixtures/dispatch/parity/harness.ts (extend)
+  #   tests/structure/harness-stream-contract.test.ts (extend)
+  #   tests/structure/dispatch-composition.test.ts (extend)
+  #   packages/core/src/state/** is NOT touched.
+  #
+  # Acceptance: AC-F1-2 (LANE-003), AC-F5-1 (TERM-001), AC-F5-2 (TERM-002),
+  #   AC-F5-3 (TERM-003/004 + LOOP-003), AC-F5-4 (TERM-005), AC-F5-5 (TERM-006),
+  #   AC-F6-1 (LOOP-001), AC-F6-2 (LOOP-002), AC-F6-3 (LOOP-003), AC-F6-4
+  #   (LOOP-004), AC-F6-5 (LOOP-005), AC-F6-6 (LOOP-006).
+  #
+  # Gate (expected signal: exit 0; signals ordered [SIGTERM, SIGKILL] with
+  #   SIGKILL at >= 20 000 ms of virtual time; 0 terminate on a clean exit and on
+  #   a cleared stall; a set member short-circuits and an outside artifact does
+  #   not; an incapable adapter acquires exactly 1 session; a second terminate is
+  #   success with no extra signal; 0 signals to unrelated pids; a below-bound
+  #   stall consumes exactly 1 ordinal and 1 economics.restart with 0 attempts;
+  #   at-bound yields max-restarts with 1 attempt; an unverified stall consumes 0
+  #   ordinals; a clean exit always 1 iteration; the envelope's `restarts` is the
+  #   consumed count; one terminal lane and no terminal between actives; 0 new
+  #   config keys):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-liveness.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-restart-budget.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/economics-restart-record.test.ts tests/behaviour/economics-exhaustion-record.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-contract.test.ts tests/structure/harness-stream-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Capability-gated terminate within the borrowed grace with exact-identity reap, the bounded in-process restart loop, one-attempt cardinality, and the terminal lane evidence"
+    kind: delivery
+    summary: "feat(GH-347): stall termination and in-process restart loop"
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/adapters/src/harness/claude.ts
+        - packages/adapters/src/host/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/domain/dispatch-liveness.ts
+        - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/domain/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+        - tests/behaviour/dispatch-liveness.test.ts
+        - tests/behaviour/dispatch-restart-budget.test.ts
+        - tests/behaviour/dispatch-resume-economics.test.ts
+        - tests/fixtures/dispatch/parity/terminate.ts
+        - tests/fixtures/dispatch/harness.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/structure/harness-stream-contract.test.ts
+        - tests/structure/dispatch-composition.test.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/harness/opencode.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/parity/terminate.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-5 commit (the stall/loop parity suite, the liveness/restart controls and the harness contract suites green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Spawn identity, title, and lifecycle prompt (F-7; DEC-8;
+  # TDR-0049).
+  #
+  # Goal: a production dispatch spawns the delivery lifecycle the way the shell
+  # lane does — the `pm` agent, a deterministic title, and the real lifecycle
+  # prompt — with no new flag and no operator override.
+  #
+  # Contract (API-6, DM-6; TDR-0049):
+  #   - A production dispatch supplies the caller agent identity `pm` through the
+  #     existing optional agent member; the delivered pure resolver produces the
+  #     single-seat binding; the adapter renders exactly one `--agent pm` and
+  #     exactly one `--model <seat model>` from the binding.
+  #   - A FRESH spawn carries exactly one `--title ticket-<REF>` for the
+  #     canonical reference; a RESUME carries none. The title is a composition
+  #     fact, validated against the work-item grammar and bounded; it is not a
+  #     CLI flag and the operator cannot override the agent or the title.
+  #   - The fresh prompt is the delivery-lifecycle prompt parameterized by ref and
+  #     the resolved base branch (state detection, resume sync, actions by state,
+  #     the eleven-phase lifecycle, merge authority), not a fixed sentence. A
+  #     resume uses the operator text when supplied, otherwise the lifecycle
+  #     prompt.
+  #   - A role-less composition stays role-less and records no binding; the
+  #     production dispatch is not role-less. The argv is fixed and never
+  #     shell-interpreted.
+  #
+  # Obligations:
+  #   6.1 Supply `pm`, the resolved binding, the title, and the lifecycle prompt
+  #       through the production composition in `production.ts` and the
+  #       composition typing in `edge.ts`. `PRODUCTION_OPENCODE_ARGS` may gain no
+  #       per-run value: the title/agent/model are per-spawn facts, not constants.
+  #   6.2 Author `domain/dispatch-prompt.ts`: the lifecycle prompt builder
+  #       parameterized by ref and base branch, exported through
+  #       `domain/index.ts`; the prompt's prose is implementation-decided
+  #       (Appendix D) but its required sections and interpolation are not.
+  #   6.3 Render the facts in `adapters/src/harness/opencode.ts`: one `--agent`,
+  #       one `--model`, one `--title` on a fresh spawn, no title on a resume.
+  #       Absent agent/binding remains role-less with unchanged output.
+  #   6.4 Author `tests/conformance/dispatch/dispatch-parity-spawn.test.ts` for
+  #       SPAWN-001..003 and extend `tests/structure/dispatch-help-inventory.test.ts`
+  #       for SPAWN-004 (role-less stays role-less; `--agent`/`--title` are
+  #       unknown options; the help inventory count is unchanged).
+  #   6.5 Extend `tests/fixtures/dispatch/parity/harness.ts` to expose the recorded
+  #       invocation args and prompt; extend `tests/types/harness.type-test.ts`
+  #       with the title member probes.
+  #   6.6 Move `tests/structure/inventory.json` and the allowance for the new
+  #       domain module exactly.
+  #   6.7 Mutation rows M53..M59 fail their named cases.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/domain/dispatch-prompt.ts (NEW lifecycle prompt; the
+  #                                               prompt text and its section
+  #                                               constants live here, not in the
+  #                                               contracts tier)
+  #   packages/core/src/domain/index.ts
+  #   packages/cli/src/production.ts             (pm/binding/title/prompt supply)
+  #   packages/cli/src/edge.ts                   (composition facts)
+  #   packages/adapters/src/harness/opencode.ts  (argv rendering)
+  #   tests/conformance/dispatch/dispatch-parity-spawn.test.ts (new)
+  #   tests/structure/dispatch-help-inventory.test.ts (extend)
+  #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
+  #   tests/fixtures/dispatch/parity/harness.ts (extend)
+  #   tests/types/harness.type-test.ts (extend)
+  #   packages/core/src/state/** is NOT touched.
+  #
+  # Acceptance: AC-F7-1 (SPAWN-001), AC-F7-2 (SPAWN-002), AC-F7-3 (SPAWN-003),
+  #   AC-F7-4 (SPAWN-004).
+  #
+  # Gate (expected signal: exit 0; exactly one `--agent pm`, one `--model
+  #   <seat>`, one `--title ticket-GH-347` on a fresh spawn and NO title on a
+  #   resume; a non-constant prompt containing the ref, the base branch, and the
+  #   lifecycle sections; a role-less composition records no binding and renders
+  #   unchanged args; `--agent`/`--title` rejected as unknown options; the help
+  #   inventory count unchanged; every spawn `shell: false`):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-spawn.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-help-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-resume-propagation.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Production spawn identity through the binding seam, the deterministic fresh-spawn ticket title with none on resume, and the ref/base-parameterized lifecycle prompt"
+    kind: delivery
+    summary: "feat(GH-347): dispatch spawn identity, title and lifecycle prompt"
+    scope:
+      files:
+        - packages/core/src/domain/dispatch-prompt.ts
+        - packages/core/src/domain/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/adapters/src/harness/opencode.ts
+        - tests/conformance/dispatch/dispatch-parity-spawn.test.ts
+        - tests/structure/dispatch-help-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/types/harness.type-test.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/dispatch-prompt.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-6 commit (the spawn parity suite, the help-inventory extension and the harness controls green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Parity battery, no-shell invariant, daemon regression, and the
+  # closed-contract pin (F-9; DEC-9; NFR-1, NFR-5, NFR-10).
+  #
+  # Goal: prove the whole change as ONE offline, deterministic battery that drives
+  # the production seams (never a reimplementation), and prove the typed flow
+  # invokes no shell.
+  #
+  # Contract (AC-F9-1..AC-F9-5, API-7, NFR-1, NFR-5; spec Appendix C):
+  #   - All eleven classes replay through the real derivation and the real command
+  #     path from declared fixtures, each asserted by token and exit.
+  #   - Every case names and exercises its production seam; TC-PARITY-002 rejects a
+  #     reimplementation by three independent mechanisms: import identity
+  #     (`seams.ts`), a forbidden-signature scan (a pre-read+claim pair, a local
+  #     timer retry, a local kill sequence, a local token ladder), and a planted
+  #     temp-copy control. No case may satisfy itself with a fixture-written
+  #     record (`controlled-repo.ts`'s provenance guard and no-ledger-writer
+  #     surface stay intact; the parity harness exposes no writer).
+  #   - Two consecutive runs are identical after temp-root normalization; zero
+  #     live network requests and zero real child starts; the injected delay
+  #     recorder and virtual clock are the only time source (no wall-clock
+  #     assertion anywhere).
+  #   - No shell: the guarded injected runner (authored in phase 2) records zero
+  #     shell invocations and zero script-path invocations across the whole sweep,
+  #     and the static invariant scans a DECLARED surface for `.sh`/`scripts/`/
+  #     `tools/`/`deliver-ticket` literals, `shell: true`, child-process
+  #     `exec`/`execSync`/`execFile`/`execFileSync`/`spawnSync`, and a
+  #     child-process `spawn(` without a literal `shell: false`. R3 and R4 MUST
+  #     target the child-process receiver/import, not any `.exec(`/`.spawn(`:
+  #     `packages/cli/src/edge.ts` legitimately calls `RegExp.prototype.exec`, and
+  #     the surface legitimately calls port methods named `spawn`
+  #     (`ports.harness.spawn`, `resolvedHarness.port.spawn`,
+  #     `options.session.spawn`). The rule therefore matches a `child_process`
+  #     import or a call on a `child_process` binding, and a `RegExp.exec` call
+  #     plus a port-object `.spawn(` call are asserted FALSE-POSITIVE controls. A
+  #     rule that flagged either would force the allowlist to be widened, which is
+  #     forbidden. The surface is
+  #     `packages/core/src/app/dispatch.ts`,
+  #     `packages/core/src/app/dispatch-*.ts`,
+  #     `packages/core/src/domain/dispatch-*.ts`,
+  #     `packages/core/src/domain/harness-spawn-env.ts`,
+  #     `packages/cli/src/commands/dispatch.ts`, `packages/cli/src/edge.ts`,
+  #     `packages/cli/src/production.ts`,
+  #     `packages/adapters/src/harness/opencode.ts`,
+  #     `packages/adapters/src/host/index.ts` (the REAL path; the test plan's
+  #     `host/spawn*.ts` does not exist), and
+  #     `packages/adapters/src/daemon/lane-executor.ts`. Every listed file must
+  #     exist and be reachable from the dispatch entry (non-vacuity); the line
+  #     allowlist starts EMPTY; one planted reference per rule must be reported by
+  #     rule name and `file:line`; the false-positive controls (`shell: false`, a
+  #     `scripts/checks` reference outside the surface, a `.md` mention) report
+  #     nothing.
+  #   - The proof boundary is PUBLISHED and drift-checked against spec Appendix C
+  #     and the TEST PLAN's §1.2 table (not a doc/spec page), eight proven ids and
+  #     six not-proven ids in order.
+  #   - The daemon path inherits the shared derivation: tracker-done `merged`,
+  #     artifact `partial`, and the retired ledger arm are observed through the
+  #     delivered lane harness (`createLaneExecutor`, `runSupervisionCycle`,
+  #     `recordDaemonDispatchResult`), so no new daemon fixture is needed.
+  #   - The closed contract surface is pinned: 0 new/changed tokens, projections,
+  #     exits, error rows, domain kinds, or schema versions; 0 new config keys;
+  #     the four consumed defaults unchanged.
+  #
+  # Obligations:
+  #   7.1 Author `tests/conformance/dispatch/dispatch-parity-battery.test.ts` for
+  #       PARITY-001..005 (11-class replay, seam/reimplementation detection, the
+  #       two-run determinism comparison, the boundary, record bounds/redaction)
+  #       and `tests/fixtures/dispatch/parity/evidence.ts` (the 11-row class table,
+  #       the mutation hooks, `PARITY_PROOF_BOUNDARY`, the canonicalizer) and
+  #       `tests/fixtures/dispatch/parity/seams.ts` (the import-identity manifest
+  #       and reimplementation-signature registry).
+  #   7.2 Extend `tests/conformance/dispatch/controlled-repo.ts` (accept the new
+  #       class rows without changing its `provenance()` guard or its no-ledger-
+  #       writer surface) and `tests/conformance/dispatch/dispatch-e2e.test.ts`
+  #       (the 11-row driver stays the single home).
+  #   7.3 Author `tests/conformance/dispatch/dispatch-parity-no-shell.test.ts`
+  #       (SHELL-001), `scripts/checks/no-shell-dispatch.ts` and
+  #       `tests/checks/no-shell-dispatch.test.ts` (SHELL-002).
+  #   7.4 Extend `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` with
+  #       PARITY-006. This TC is the phase-7 DAEMON REGRESSION; AC-F8-1..AC-F8-4
+  #       are owned by phase 4 via DERIVE-001..005, and PARITY-006 is an
+  #       additional shared-derivation observation, never the sole evidence for an
+  #       AC.
+  #   7.5 EXTEND `tests/checks/dispatch-contract-invariance.test.ts` (created in
+  #       phase 4 with TRACKER-004's no-key assertion) with CONTRACT-001's full
+  #       closed-surface pin, and extend `tests/behaviour/dispatch-additive-stability.test.ts`,
+  #       `tests/checks/error-table-sync.test.ts`,
+  #       `tests/behaviour/dispatch-exit-projection.test.ts`, and
+  #       `tests/structure/dispatch-token-home.test.ts`.
+  #   7.6 Extend `tests/behaviour/dispatch-privacy.test.ts` and
+  #       `tests/behaviour/dispatch-attempts-bounds.test.ts` with PARITY-005's
+  #       bounds/redaction half (lane key allowlist, owner shape, one session id,
+  #       no canary, <= 16 refs, deterministic truncation, single-line bounded
+  #       diagnostics).
+  #   7.7 The no-shell invariant is discovered by `bun test` through
+  #       `tests/checks/no-shell-dispatch.test.ts`; no package.json script, CI job,
+  #       or topology change is made.
+  #   7.8 Mutation rows M1..M11 (parity arms), M73..M79 (no-shell + battery), M80..
+  #       M81 (daemon), and M82 (closed surface) fail their named cases.
+  #
+  # Code areas (concrete):
+  #   scripts/checks/no-shell-dispatch.ts            (NEW static invariant)
+  #   tests/checks/no-shell-dispatch.test.ts         (NEW)
+  #   tests/checks/dispatch-contract-invariance.test.ts (extend; created in phase 4)
+  #   tests/conformance/dispatch/dispatch-parity-battery.test.ts (NEW)
+  #   tests/conformance/dispatch/dispatch-parity-no-shell.test.ts (NEW)
+  #   tests/conformance/dispatch/dispatch-daemon-lane.test.ts (extend)
+  #   tests/conformance/dispatch/dispatch-e2e.test.ts (extend)
+  #   tests/conformance/dispatch/controlled-repo.ts (extend)
+  #   tests/fixtures/dispatch/parity/evidence.ts (NEW)
+  #   tests/fixtures/dispatch/parity/seams.ts (NEW)
+  #   tests/fixtures/dispatch/parity/harness.ts (extend)
+  #   tests/behaviour/dispatch-privacy.test.ts (extend)
+  #   tests/behaviour/dispatch-attempts-bounds.test.ts (extend)
+  #   tests/behaviour/dispatch-additive-stability.test.ts (extend)
+  #   tests/behaviour/dispatch-exit-projection.test.ts (extend)
+  #   tests/structure/dispatch-token-home.test.ts (extend)
+  #   tests/checks/error-table-sync.test.ts (extend)
+  #   packages/** is NOT edited in this phase: the battery proves the delivered
+  #   implementation, and a case that needs a production change sends the work
+  #   back to its owning phase (a plan revision, never a battery-side patch).
+  #
+  # Acceptance: AC-F9-1 (PARITY-001), AC-F9-2 (PARITY-002), AC-F9-3 (PARITY-003),
+  #   AC-F9-4 (SHELL-001), AC-F9-5 (SHELL-002 + PARITY-004).
+  #
+  # Gate (expected signal: exit 0; 11/11 classes by token and exit; every row's
+  #   seam imported from its production module; the planted reimplementation
+  #   rejected by name; two runs byte-identical after normalization with
+  #   liveNetworkRequests = realChildStarts = shellInvocations =
+  #   scriptPathInvocations = 0; the boundary equal to Appendix C and the test
+  #   plan §1.2; the daemon token `merged` for done+blocked, `partial` for
+  #   incomplete pm-notes, no ledger-arm nothing-to-do; the closed surface
+  #   unchanged; the static invariant clean live and each planted rule failing by
+  #   name, with `shell: false` and out-of-surface references NOT reported):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/dispatch-contract-invariance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-privacy.test.ts tests/behaviour/dispatch-attempts-bounds.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-additive-stability.test.ts tests/behaviour/dispatch-exit-projection.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-token-home.test.ts tests/checks/error-table-sync.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Offline deterministic parity battery over the real production seams, the published proof boundary, the static no-shell invariant with its planted controls, the daemon-path regression, and the closed-contract pin"
+    kind: delivery
+    summary: "feat(GH-347): parity battery and no-shell invariant"
+    scope:
+      files:
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/checks/dispatch-contract-invariance.test.ts
+        - tests/conformance/dispatch/dispatch-parity-battery.test.ts
+        - tests/conformance/dispatch/dispatch-parity-no-shell.test.ts
+        - tests/conformance/dispatch/dispatch-daemon-lane.test.ts
+        - tests/conformance/dispatch/dispatch-e2e.test.ts
+        - tests/conformance/dispatch/controlled-repo.ts
+        - tests/fixtures/dispatch/parity/evidence.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/behaviour/dispatch-privacy.test.ts
+        - tests/behaviour/dispatch-attempts-bounds.test.ts
+        - tests/behaviour/dispatch-additive-stability.test.ts
+        - tests/behaviour/dispatch-exit-projection.test.ts
+        - tests/structure/dispatch-token-home.test.ts
+        - tests/checks/error-table-sync.test.ts
+      folders:
+        - tests/fixtures/dispatch/parity
+    interactions:
+      - kind: contract-file
+        target: scripts/checks/no-shell-dispatch.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-7 commit (the full dispatch battery, the no-shell invariant and the contract pin green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Release obligations: the changeset, plan validation, the aggregate
+  # gate, and the current-truth pages declared for STAGING ONLY (no AC, no TC;
+  # DOD-2, DOD-3, DOD-6).
+  #
+  # Goal: prove the WHOLE and declare the release. Nothing new is designed here.
+  #
+  # RESIDUAL SCOPE (phase order item (h)): no code or test scope remains unowned
+  #   after phase 7 — every AC and every TC has exactly one owning delivery phase.
+  #   The only residual work is the RELEASE act itself (the single five-package
+  #   changeset, plan validation and lint, the aggregate gate) and the doc pages
+  #   staged for lifecycle phase 7, which no delivery phase may reconcile. Phase 8
+  #   owns no AC and no TC by design.
+  #
+  # Release obligations:
+  #   8.1 Author `.changeset/gh-347-dispatch-core-parity-minor.md`: exactly ONE
+  #       new changeset, exactly the five fixed-group packages (core, adapters,
+  #       cli, mcp, opencode) at `minor`, a non-empty body, no testkit entry, no
+  #       version hand-edit, no lockfile change, and every pre-existing changeset
+  #       byte-identical. `version_impact: minor` (spec §19) and
+  #       `tests/checks/privacy-release.test.ts` enforce exactly this shape.
+  #   8.2 `plan validate GH-347` is valid at the delivered HEAD (build first) and
+  #       the verdict is recorded; `lint plan GH-347` is reported.
+  #   8.3 The current-truth pages listed below are reconciled by LIFECYCLE PHASE 7
+  #       (@doc-syncer). They are declared HERE for staging only — an untracked or
+  #       modified doc outside every declared scope is a stray the commit primitive
+  #       never stages. The sentence-level obligations are the DOC RECONCILIATION
+  #       HANDOFF in this file's header; nothing is left to discovery.
+  #   8.4 `tests/checks/doc-conformance.test.ts`,
+  #       `tests/checks/dispatch-doc-conformance.test.ts`,
+  #       `tests/checks/reference-page-parity.test.ts`, and (when a
+  #       redistributable page changes) `bash scripts/.tests/test-doc-distribution.sh`
+  #       are re-run after reconciliation. The stale-phrase scan must return ZERO
+  #       hits (DOD-6):
+  #         grep -rn "no kill operation" doc/spec/features/feature-dispatch-engine.md doc/spec/features/feature-session-lifecycle-economics.md
+  #   8.5 The aggregate `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check`
+  #       exits 0 through lint → format:check → typecheck → test →
+  #       check:boundaries → check:memory → prompt/help/exports, with the new
+  #       suites included in the `test` stage. No check is skipped, disabled, or
+  #       made vacuous (DOD-2).
+  #   8.6 Leave the branch for lifecycle phase 9's range-commit gate and phase 11's
+  #       pull request (merge authority stays outside this change).
+  #   8.7 The six TDRs are tracked on the branch and `doc/decisions` is clean
+  #       (COMMIT-BOUNDARY REALITY); no index row points at an untracked record.
+  #
+  # Gate (expected signal: exit 0 at every line; exactly one new five-package
+  #   minor changeset with pre-existing ones byte-identical; `plan validate` valid
+  #   and `readyForDevelopment=true`; `lint plan` valid; the doc-conformance,
+  #   reference-page and doc-distribution guards green; zero stale "no kill
+  #   operation" hits; the aggregate gate green):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts tests/checks/dispatch-doc-conformance.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH node_modules/.bin/jaiship plan validate GH-347
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH node_modules/.bin/jaiship lint plan GH-347
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch tests/checks/no-shell-dispatch.test.ts tests/checks/dispatch-contract-invariance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check   <-- the BINDING completion gate
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Single five-package minor changeset, plan validation and lint, the aggregate gate at the delivered HEAD, and the current-truth pages declared for lifecycle phase 7 reconciliation"
+    kind: delivery
+    summary: "chore(GH-347): release obligations and spec reconciliation"
+    scope:
+      files:
+        - .changeset/gh-347-dispatch-core-parity-minor.md
+        # Reconciled in lifecycle phase 7 (system_spec_update, @doc-syncer), not
+        # by this phase. Declared so the commit primitive can stage them; the
+        # required reconciliation per file is the header's handoff block.
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-session-lifecycle-economics.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-delivery-lifecycle.md
+        - doc/spec/features/feature-queue-ready.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m1/commands/config.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+      folders:
+        - doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity
+        - .changeset
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-347/dispatch-core-parity targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
+      pipelineId: "CI pipeline for the GH-347 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
+      trackerTransition: "in-review"
