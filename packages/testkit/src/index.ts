@@ -41,13 +41,22 @@ export {
 } from "./conformance/coverage.js";
 export { CONFORMANCE_FLOWS, findFlow } from "./conformance/flows.js";
 export {
+  HARNESS_CONFORMANCE_EXTENSION_SCENARIOS,
+  HARNESS_CONFORMANCE_FLOOR_SCENARIOS,
   HARNESS_CONFORMANCE_REGISTRY,
   HARNESS_CONFORMANCE_SCENARIOS,
+  HARNESS_REFUSAL_SCENARIO_MAP,
   type HarnessConformanceDeps,
+  type HarnessConformanceExtensionScenarioId,
+  type HarnessConformanceFacts,
+  type HarnessConformanceFloorScenarioId,
   type HarnessConformanceIo,
   type HarnessConformanceRegistration,
   type HarnessConformanceScenarioId,
+  type HarnessConformanceScenarioOutcome,
   harnessConformanceViolations,
+  resolveConformanceBinding,
+  runHarnessConformanceScenario,
 } from "./conformance/harness.js";
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
