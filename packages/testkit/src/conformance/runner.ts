@@ -541,6 +541,8 @@ const writeMemberFor = (
   if (operation === "transition-work-item") return client.transitionWorkItem;
   if (operation === "resolve-delivery-thread") return client.resolveDeliveryThread;
   if (operation === "merge-delivery-request") return client.mergeDeliveryRequest;
+  if (operation === "write-comment") return client.writeComment;
+  if (operation === "write-delivery-request") return client.createDeliveryRequest;
   return undefined;
 };
 

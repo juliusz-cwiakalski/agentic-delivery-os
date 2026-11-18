@@ -198,3 +198,34 @@ describe("TC-READMAP-010 a malformed 2xx carries the received status", () => {
     }
   });
 });
+
+describe("TC-BACKLOG-011 the seed preserves delivered open/closed and adds label awareness", () => {
+  const readIssue = async (payload: unknown) => {
+    const transport = createFixtureTransport([{ url: issueUrl, body: payload }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    return requireValue(await client.readWorkItem(ISSUE_NUMBER), "issue");
+  };
+
+  const payload = (state: string, labels?: readonly string[]): unknown => ({
+    number: ISSUE_NUMBER,
+    title: "Status regression issue",
+    state,
+    ...(labels === undefined ? {} : { labels: labels.map((name) => ({ name })) }),
+  });
+
+  test("an open issue resolves ready and a closed issue resolves done exactly as delivered", async () => {
+    expect((await readIssue(payload("open"))).status.deliveryState).toBe("ready");
+    expect((await readIssue(payload("closed"))).status.deliveryState).toBe("done");
+  });
+
+  test("labelled in-progress and review issues normalize to their aliases, never to ready", async () => {
+    const inProgress = await readIssue(payload("open", ["change", "in-progress"]));
+    expect(inProgress.status.deliveryState).toBe("in-progress");
+    expect(inProgress.status.deliveryState).not.toBe("ready");
+    expect(inProgress.labels).toEqual(["change", "in-progress"]);
+
+    const review = await readIssue(payload("open", ["review"]));
+    expect(review.status.deliveryState).toBe("in-review");
+    expect(review.status.deliveryState).not.toBe("ready");
+  });
+});

@@ -56,6 +56,53 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 3 complete (GitHub 9 supported / 0 declared gaps; the
+      carrier-free comment write and the DM-9 content write; the injected,
+      seeded workflow map driving read normalization and mapped transitions).
+      The load-bearing design resolution: the current-read precondition is
+      adapter-local INPUT data on the widened GithubClient.transitionWorkItem
+      input (`current: { deliveryState, labels? }`), so every refusal issues
+      zero provider requests while the write still resolves against a real read.
+      A label-swap write refuses on a done-resolving current read regardless of
+      labels, on an unavailable label signal, and when no current read is
+      supplied, each with a distinct detail; a declared non-terminal field-update
+      alias, an undeclared alias, and a non-GitHub mechanism are named refusals
+      with zero requests. A field-update row writes provider state only and
+      admits only the terminal done row, so the delivered closeout write stays
+      one PATCH with body exactly {\"state\":\"closed\"} and zero label requests.
+      The map validator implements TDR-0034 §1's seven rules, runs exactly once
+      at construction on the resolved map (pinned by a source scan), captures its
+      failure rather than throwing, and every operation then refuses with zero
+      provider requests; the seed is held to the same checks. Read resolution is
+      the declared four outcomes plus the label-swap case-collision refusal;
+      CLOSED on a closed issue stays native terminal truth. The seed is exported
+      additively for the phase-6 document drift check. Verification: G1
+      structure 1611 pass; G2 behaviour/providers 234 pass; G3 conformance 176
+      pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6 typecheck green; G7
+      secret-read boundary OK (5 allowlisted, unchanged); G8 fixture
+      sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10429 pass, 4 pre-existing skips,
+      0 fail; TC-DAEMON-121 green this run). Commit hash recorded in the phase-4
+      note (the phase-1/2 precedent). Pins moved in the same commit because the
+      change makes them false, outside the phase-3 declared list:
+      tests/behaviour/closeout-capabilities.test.ts (GitHub posture is now 9/0),
+      tests/behaviour/providers/github-landing.test.ts (TC-LAND-008 asserted the
+      content write was a gap with no member; it now asserts the supported
+      content write issues no landing), tests/conformance/live/live-entrypoint.test.ts
+      (a supported GitHub write-comment is now a live-read-only deferral; the
+      declared-gap half runs through a gap-declaring control), and
+      tests/conformance/broken-adapter-control.test.ts (the test-only wrapper
+      forwards the two new members and keeps its fail-closed control). Delivery
+      notes carried: N5 (the config-surface scan lives in
+      config-contract.test.ts plus config-default-positions.test.ts), N7 (no
+      read, label access, or label-signal refusal added to the field-update done
+      path), N11 (labelless-open-issue / labelless-closed-issue fixture keys).
+      Residual for lifecycle phase 7 (docs): feature-provider-client-seeds.md
+      line 169's two-row mapping sentence is now false; the reference behavior
+      document (plan phase 6) must state the current-read-as-input resolution
+      and the mechanism-scoped label rule."
+    type: info
+    date: "2026-11-18"
   - text: "Delivery handoff after plan phases 1-2 (this session). Phase 3 onward is
       NOT started: the tree is green and the two delivered phases are verified,
       and `phase complete GH-338 delivery` was deliberately NOT run because the

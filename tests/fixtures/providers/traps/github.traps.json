@@ -17,7 +17,7 @@
     {
       "trapName": "GH-ISSUE-TO-WORKITEM",
       "providerBehavior": "GitHub issue payloads carry labels, an optional assignee, open/closed state, an optional updated_at, issue links, and a state_reason on live closed issues.",
-      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20.",
+      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20. labelled `review`/`in-progress` issues resolve to `in-review`/`in-progress` by declared precedence, and an exact-case label equal to a declared `label-swap` token wins",
       "fixtureReference": "tests/fixtures/providers/github/issues.json#/issues"
     },
     {
@@ -187,6 +187,24 @@
       "providerBehavior": "An already-shaped request arrives with an Authorization header the CLI must not forward.",
       "expectedNormalizedOutcome": "The credential appears only as GH_TOKEN in the constructed child environment; argv carries no credential, the header is removed from the forwarded headers, and the isolated GH_CONFIG_DIR plus prompt suppression are present.",
       "fixtureReference": "tests/fixtures/providers/github/cli-argv.json#/routes/0"
+    },
+    {
+      "trapName": "GITHUB-COMMENT-CARRIER-FREE",
+      "providerBehavior": "A carrier-free human comment write reaches the issue comment surface with no metadata envelope and no declared carrier.",
+      "expectedNormalizedOutcome": "The recorded request body is exactly the human text, no envelope block or carrier marker is present, the declaration keeps empty carrier arrays, and the provider comment identity is returned.",
+      "fixtureReference": "tests/fixtures/providers/github/issue-writes.json#/comment/commentCreated"
+    },
+    {
+      "trapName": "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+      "providerBehavior": "A delivery-request create/update is a content write; the provider also exposes a landing surface that must never be used by it.",
+      "expectedNormalizedOutcome": "A create posts the head/base refs, title and body verbatim and returns the normalized delivery-request view; no landing request and no merge-state write occurs, and an update never creates.",
+      "fixtureReference": "tests/fixtures/providers/github/issue-writes.json#/contentWrite/pullCreated"
+    },
+    {
+      "trapName": "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+      "providerBehavior": "GitHub issues carry either a native state or lifecycle labels, and the declared map has a load-bearing precedence order.",
+      "expectedNormalizedOutcome": "The four-row seed is declared in precedence order; a closed issue resolves done regardless of labels, an exact-case label wins by declared precedence, a case collision with a declared label-swap token is a visible refusal, and an unknown or absent label resolves through the native-state row.",
+      "fixtureReference": "tests/fixtures/providers/github/workflow-map-cases.json#/seedRows"
     }
   ]
 }

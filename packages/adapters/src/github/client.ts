@@ -12,11 +12,14 @@ import {
   type CloseoutReverseDependentObservation,
   type CredentialPort,
   type DeliveryRequest,
+  type DeliveryStateAlias,
   type ExternalSystemInstance,
   type MergeDeliveryRequestInput,
   type MergeDeliveryRequestOutcome,
   type PipelineRun,
+  type ProviderQualifiedIdentity,
   STATUS_SOURCE_PIPELINE_LIMIT,
+  type WorkflowMap,
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import type {
@@ -38,6 +41,12 @@ import {
   normalizeThreadResolution,
   normalizeWorkItemObservation,
 } from "./normalize.js";
+import {
+  GITHUB_WORKFLOW_MAP_SEED,
+  type GithubTransitionCurrentRead,
+  planGithubTransition,
+  validateGithubWorkflowMap,
+} from "./workflow-map.js";
 
 /** The repository the read slice addresses (declared configuration data). */
 export type GithubRepositoryRef = {
@@ -54,6 +63,11 @@ export type GithubClientOptions = {
   readonly transport?: ProviderTransport;
   /** A short test override for the per-operation timeout; production omits it. */
   readonly timeoutMs?: number;
+  /**
+   * The injected issues transition map; absent means the declared seed. It is
+   * validated exactly once per construction on the resolved map.
+   */
+  readonly workflowMap?: WorkflowMap;
 };
 
 /** One flat closeout work-item write input (DM-5). */
@@ -62,6 +76,46 @@ export type GithubWriteWorkItemInput = {
   readonly add?: readonly string[];
   readonly remove?: readonly string[];
   readonly assignee?: "none";
+};
+
+/** One carrier-free human comment write (API-5); no metadata envelope. */
+export type GithubWriteCommentInput = {
+  readonly entityId: string;
+  readonly body: string;
+};
+
+/**
+ * The adapter-local two-variant content write (DM-9) for the existing
+ * `write-delivery-request` operation. A create never lands and never sets merge
+ * state; an update never creates.
+ */
+export type GithubDeliveryRequestWriteInput =
+  | {
+      readonly kind: "create";
+      readonly sourceRef: string;
+      readonly targetRef: string;
+      readonly title: string;
+      readonly body: string;
+      /** Absent means the provider default; never a fabricated `false`. */
+      readonly draft?: boolean;
+    }
+  | {
+      readonly kind: "update";
+      readonly deliveryRequest: ProviderQualifiedIdentity;
+      readonly title?: string;
+      readonly body?: string;
+    };
+
+/**
+ * The widened transition input. The core closeout write port keeps its
+ * `done`-only narrowing; this adapter-local widening adds the writable aliases
+ * and the current-read precondition a `label-swap` write must be resolved
+ * against with ZERO provider requests.
+ */
+export type GithubTransitionWorkItemInput = {
+  readonly entityId: string;
+  readonly deliveryState: DeliveryStateAlias;
+  readonly current?: GithubTransitionCurrentRead;
 };
 
 /** The read and closeout write operations the GitHub client implements. */
@@ -99,10 +153,17 @@ export type GithubClient = {
     readonly limit: number;
   }) => Promise<CloseoutReverseDependentObservation<readonly WorkItem[]>>;
   readonly writeWorkItem: (input: GithubWriteWorkItemInput) => Promise<ProviderWriteResult>;
-  readonly transitionWorkItem: (input: {
-    readonly entityId: string;
-    readonly deliveryState: "done";
-  }) => Promise<ProviderWriteResult>;
+  readonly transitionWorkItem: (
+    input: GithubTransitionWorkItemInput,
+  ) => Promise<ProviderWriteResult>;
+  /** One carrier-free human comment; returns the provider comment identity. */
+  readonly writeComment: (
+    input: GithubWriteCommentInput,
+  ) => Promise<ProviderWriteResult<{ readonly commentId: string }>>;
+  /** The delivery-request content write (DM-9): create or update, never a landing. */
+  readonly writeDeliveryRequest: (
+    input: GithubDeliveryRequestWriteInput,
+  ) => Promise<ProviderReadResult<DeliveryRequest>>;
   /**
    * The provider-side squash landing (DM-1). One request, never retried, no
    * representable force/bypass/auto-merge/queue/rebase/merge-commit strategy.
@@ -181,7 +242,20 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
   const repositoryPath = `/repos/${encodeURIComponent(options.repository.owner)}/${encodeURIComponent(options.repository.name)}`;
   const transport = options.transport ?? createGithubNativeTransport();
   const timeoutMs = options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS;
-  const context = { systemName: options.instance.instanceName };
+  // The map is validated exactly once, here, on the RESOLVED map (injected or
+  // seed) before the first operation. The factory has no failure channel, so a
+  // failure is captured: every operation refuses with zero provider requests.
+  const workflowMap = options.workflowMap ?? GITHUB_WORKFLOW_MAP_SEED;
+  const validation = validateGithubWorkflowMap(workflowMap);
+  const mapFailure =
+    validation.ok === true
+      ? undefined
+      : providerPayloadFailure(`GitHub workflow map is invalid: ${validation.detail}`);
+  const context = { systemName: options.instance.instanceName, workflowMap };
+  const invalidObservation = (): { readonly observation: "invalid"; readonly detail: string } => ({
+    observation: "invalid",
+    detail: mapFailure?.detail ?? "GitHub workflow map is invalid",
+  });
 
   const authorizedHeaders = (): ProviderReadResult<Readonly<Record<string, string>>> => {
     const auth = options.instance.authMethod;
@@ -327,6 +401,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
 
   return {
     readWorkItem: async (issueNumber) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/issues/${encodeURIComponent(String(issueNumber))}`,
       );
@@ -334,6 +409,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       return normalizeGithubIssue(response.value.body, context, response.value.status);
     },
     readDeliveryRequest: async (pullNumber) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/pulls/${encodeURIComponent(String(pullNumber))}`,
       );
@@ -341,6 +417,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       return normalizePullRequest(response.value.body, context);
     },
     readPipelineRun: async (commitSha, limit = STATUS_SOURCE_PIPELINE_LIMIT) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/commits/${encodeURIComponent(commitSha)}/check-runs?per_page=${encodeURIComponent(String(limit))}`,
       );
@@ -348,6 +425,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       return normalizeCheckRuns(response.value.body, context, commitSha);
     },
     listWorkItems: async (limit) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/issues?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
@@ -355,14 +433,17 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       return normalizeGithubIssueList(response.value.body, context);
     },
     listDeliveryRequests: async (limit) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
       if (!response.ok) return response;
       return normalizeGithubPullList(response.value.body, context);
     },
-    readWorkItemObservation: (entityId) => readObservation(entityId),
+    readWorkItemObservation: (entityId) =>
+      mapFailure === undefined ? readObservation(entityId) : Promise.resolve(invalidObservation()),
     findMergedDeliveryRequest: async (input) => {
+      if (mapFailure !== undefined) return invalidObservation();
       const response = await get(
         `${repositoryPath}/pulls?state=closed&per_page=${encodeURIComponent(String(input.limit))}&sort=updated&direction=desc`,
       );
@@ -423,6 +504,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           };
     },
     listBlockedByDependents: async (input) => {
+      if (mapFailure !== undefined) return invalidObservation();
       const headers = authorizedHeaders();
       if (!headers.ok) return { observation: "invalid", detail: headers.code };
       try {
@@ -448,6 +530,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       }
     },
     writeWorkItem: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
       let labels: readonly string[] | undefined;
       if (input.add !== undefined || input.remove !== undefined) {
         const current = await readObservation(input.entityId);
@@ -472,13 +555,90 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
         await send("PATCH", `${repositoryPath}/issues/${encodeURIComponent(input.entityId)}`, body),
       );
     },
-    transitionWorkItem: async (input) =>
-      writer(
-        await send("PATCH", `${repositoryPath}/issues/${encodeURIComponent(input.entityId)}`, {
-          state: "closed",
-        }),
-      ),
+    transitionWorkItem: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
+      // The plan performs no I/O: every refusal costs zero provider requests,
+      // and a `field-update` `done` write stays one state-only PATCH.
+      const plan = planGithubTransition({
+        map: workflowMap,
+        deliveryState: input.deliveryState,
+        ...(input.current === undefined ? {} : { current: input.current }),
+      });
+      if (!plan.ok) return providerPayloadFailure(plan.detail);
+      const path = `${repositoryPath}/issues/${encodeURIComponent(input.entityId)}`;
+      return writer(
+        plan.write.kind === "field-update"
+          ? await send("PATCH", path, { state: plan.write.nativeStatus })
+          : await send("PATCH", path, { labels: plan.write.labels }),
+      );
+    },
+    writeComment: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
+      const response = await send(
+        "POST",
+        `${repositoryPath}/issues/${encodeURIComponent(input.entityId)}/comments`,
+        { body: input.body },
+      );
+      if (!response.ok) return response;
+      const raw = isRecord(response.value) ? response.value.id : undefined;
+      const commentId =
+        typeof raw === "string" && raw.length > 0
+          ? raw
+          : typeof raw === "number" && Number.isFinite(raw)
+            ? String(raw)
+            : undefined;
+      if (commentId === undefined) {
+        return providerPayloadFailure("GitHub comment response has no identity");
+      }
+      return { ok: true, value: { commentId } };
+    },
+    writeDeliveryRequest: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
+      if (input.kind === "create") {
+        if (input.sourceRef.length === 0) {
+          return providerPayloadFailure(
+            "GitHub delivery-request create is missing the required sourceRef",
+          );
+        }
+        if (input.targetRef.length === 0) {
+          return providerPayloadFailure(
+            "GitHub delivery-request create is missing the required targetRef",
+          );
+        }
+        if (input.title.trim().length === 0) {
+          return providerPayloadFailure(
+            "GitHub delivery-request create is missing a non-empty title",
+          );
+        }
+        const created = await send("POST", `${repositoryPath}/pulls`, {
+          head: input.sourceRef,
+          base: input.targetRef,
+          title: input.title,
+          body: input.body,
+          ...(input.draft === undefined ? {} : { draft: input.draft }),
+        });
+        if (!created.ok) return created;
+        return normalizePullRequest(created.value, context);
+      }
+      if (!/^\d+$/.test(input.deliveryRequest.entityId)) {
+        return providerPayloadFailure("GitHub delivery-request update identity is not numeric");
+      }
+      if (input.title === undefined && input.body === undefined) {
+        return providerPayloadFailure("GitHub delivery-request update is missing title or body");
+      }
+      const updated = await send(
+        "PATCH",
+        `${repositoryPath}/pulls/${encodeURIComponent(input.deliveryRequest.entityId)}`,
+        {
+          ...(input.title === undefined ? {} : { title: input.title }),
+          ...(input.body === undefined ? {} : { body: input.body }),
+        },
+      );
+      if (!updated.ok) return updated;
+      return normalizePullRequest(updated.value, context);
+    },
     mergeDeliveryRequest: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
       const headers = authorizedHeaders();
       if (!headers.ok) return headers;
       const pullPath = `${repositoryPath}/pulls/${encodeURIComponent(input.deliveryRequest.entityId)}`;
@@ -550,6 +710,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       );
     },
     resolveDeliveryThread: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
       const response = await send("POST", "/graphql", {
         query:
           "mutation ResolveReviewThread($threadId: ID!) { resolveReviewThread(input: {threadId: $threadId}) { thread { isResolved } } }",

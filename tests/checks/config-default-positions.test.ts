@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type DefaultPositionManifest, resolveConfig } from "../../packages/core/src/index";
+import {
+  type DefaultPositionManifest,
+  PRODUCTION_CATALOG,
+  resolveConfig,
+} from "../../packages/core/src/index";
 import {
   checkConfigArtifacts,
   configArtifacts,
@@ -148,5 +152,19 @@ describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe("TC-BACKLOG-009 the shipped defaults carry no adapter or github node", () => {
+  test("no github- or adapter-named position exists in the packed defaults", () => {
+    const shipped = JSON.parse(
+      readFileSync(join(ROOT, "packages/core/dist/config/defaults-positions.json"), "utf8"),
+    ) as { positions: Record<string, number> };
+    expect(Object.keys(shipped.positions).filter((key) => /github|adapter/iu.test(key))).toEqual(
+      [],
+    );
+    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /github|adapter/iu.test(key))).toEqual(
+      [],
+    );
   });
 });

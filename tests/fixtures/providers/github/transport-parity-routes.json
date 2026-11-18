@@ -193,6 +193,90 @@
           }
         }
       ]
+    },
+    {
+      "name": "write-comment",
+      "member": "writeComment",
+      "argument": {
+        "entityId": "601",
+        "body": "Transport parity comment"
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601/comments",
+          "status": 201,
+          "body": {
+            "id": 9001
+          }
+        }
+      ]
+    },
+    {
+      "name": "write-delivery-request-create",
+      "member": "writeDeliveryRequest",
+      "argument": {
+        "kind": "create",
+        "sourceRef": "feat/GH-338/transport-parity-create",
+        "targetRef": "main-tools",
+        "title": "Transport parity create",
+        "body": "Parity create body"
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/repos/group-placeholder/project-placeholder/pulls",
+          "status": 201,
+          "body": {
+            "number": 620,
+            "title": "Transport parity create",
+            "state": "open",
+            "draft": false,
+            "merged": false,
+            "head": {
+              "ref": "feat/GH-338/transport-parity-create",
+              "sha": "7777777777777777777777777777777777777777"
+            },
+            "base": {
+              "ref": "main-tools"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "write-delivery-request-update",
+      "member": "writeDeliveryRequest",
+      "argument": {
+        "kind": "update",
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        },
+        "title": "Transport parity update",
+        "body": "Parity update body"
+      },
+      "requests": [
+        {
+          "method": "PATCH",
+          "path": "/repos/group-placeholder/project-placeholder/pulls/504",
+          "status": 200,
+          "body": {
+            "number": 504,
+            "title": "Transport parity update",
+            "state": "open",
+            "draft": false,
+            "merged": false,
+            "head": {
+              "ref": "feat/GH-338/transport-parity",
+              "sha": "1111111111111111111111111111111111111111"
+            },
+            "base": {
+              "ref": "main-tools"
+            }
+          }
+        }
+      ]
     }
   ]
 }

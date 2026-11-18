@@ -142,6 +142,12 @@ const invoke = async (
       return await client.readWorkItem(argument as number);
     case "writeWorkItem":
       return await client.writeWorkItem(argument as Parameters<GithubClient["writeWorkItem"]>[0]);
+    case "writeComment":
+      return await client.writeComment(argument as Parameters<GithubClient["writeComment"]>[0]);
+    case "writeDeliveryRequest":
+      return await client.writeDeliveryRequest(
+        argument as Parameters<GithubClient["writeDeliveryRequest"]>[0],
+      );
     case "transitionWorkItem":
       return await client.transitionWorkItem(
         argument as Parameters<GithubClient["transitionWorkItem"]>[0],
@@ -191,7 +197,7 @@ describe("TC-CLI-005 both transports produce identical views and failures", () =
     });
   }
 
-  test("the route table covers the seven operations whose members exist now", async () => {
+  test("the route table covers the operations whose members exist after the backlog phase", async () => {
     const members = routes().map((route) => route.name);
     expect(members).toEqual([
       "read-work-item",
@@ -201,6 +207,9 @@ describe("TC-CLI-005 both transports produce identical views and failures", () =
       "read-pipeline-run",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "write-comment",
+      "write-delivery-request-create",
+      "write-delivery-request-update",
     ]);
   });
 });

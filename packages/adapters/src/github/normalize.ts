@@ -16,16 +16,20 @@ import type {
   DeliveryThread,
   PipelineJobState,
   PipelineRun,
+  WorkflowMap,
   WorkItem,
   WorkItemRelation,
 } from "@delivery-os/core/contracts";
 import type { ProviderReadResult } from "../io/provider-transport.js";
 import { providerPayloadFailure } from "../io/provider-transport.js";
-import { resolveGithubReviewState, workItemStatusFor } from "./review-state.js";
+import { resolveGithubReviewState } from "./review-state.js";
+import { GITHUB_WORKFLOW_MAP_SEED, resolveGithubReadStatus } from "./workflow-map.js";
 
 /** The declared data a GitHub normalization run consumes. */
 export type GithubNormalizationContext = {
   readonly systemName: string;
+  /** The resolved transition map; absent means the declared seed. */
+  readonly workflowMap?: WorkflowMap;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -314,22 +318,32 @@ export const normalizeGithubIssue = (
   if (nativeStatus === undefined) {
     return providerPayloadFailure(`GitHub issue ${entityId} has no state`, httpStatus);
   }
-  const deliveryState = workItemStatusFor(nativeStatus);
-  if (deliveryState === undefined) {
-    return providerPayloadFailure(
-      `GitHub issue ${entityId} has unmapped state "${nativeStatus}"`,
-      httpStatus,
-    );
-  }
 
   const rawLabels = payload.labels;
-  const labels = Array.isArray(rawLabels)
+  const labelsAvailable = Array.isArray(rawLabels);
+  const labels = labelsAvailable
     ? rawLabels.flatMap((label) => {
         if (!isRecord(label)) return [];
         const name = stringField(label, "name");
         return name === undefined ? [] : [name];
       })
     : [];
+
+  // One map drives the read: terminal state first, exact-case label precedence,
+  // one case-collision refusal, then the native-state row. An unavailable label
+  // signal is never a read refusal.
+  const statusResolution = resolveGithubReadStatus({
+    map: context.workflowMap ?? GITHUB_WORKFLOW_MAP_SEED,
+    nativeStatus,
+    ...(labelsAvailable ? { labels } : {}),
+  });
+  if (!statusResolution.ok) {
+    return providerPayloadFailure(
+      `GitHub issue ${entityId}: ${statusResolution.detail}`,
+      httpStatus,
+    );
+  }
+  const deliveryState = statusResolution.row.deliveryState;
 
   const assigneeContainer = payload.assignee;
   const assignee =

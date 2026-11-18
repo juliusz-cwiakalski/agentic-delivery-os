@@ -31,6 +31,63 @@ export type RecordingTransport = ProviderTransport & {
   readonly requests: readonly ProviderRequest[];
 };
 
+/**
+ * A stateful, single-issue transport for read-after-write cases.
+ *
+ * The conformance mock tenant stays stateless and body-keyed; read-back and the
+ * current-read precondition are proven here instead. GET returns the current
+ * issue, PATCH applies the exact request body (state and/or labels) and returns
+ * the updated issue. Anything else is unfixtured.
+ */
+export type StatefulIssueTransport = ProviderTransport & {
+  readonly requests: readonly ProviderRequest[];
+  readonly current: () => Readonly<Record<string, unknown>>;
+};
+
+export type StatefulIssueOptions = {
+  readonly issueUrl: string;
+  readonly issue: Readonly<Record<string, unknown>>;
+};
+
+const appliedIssue = (
+  issue: Readonly<Record<string, unknown>>,
+  body: Record<string, unknown>,
+): Record<string, unknown> => {
+  const next: Record<string, unknown> = { ...issue };
+  if (typeof body.state === "string") next.state = body.state;
+  if (Array.isArray(body.labels)) {
+    next.labels = body.labels.map((name) => ({ name }));
+  }
+  return next;
+};
+
+export const createStatefulIssueTransport = (
+  options: StatefulIssueOptions,
+): StatefulIssueTransport => {
+  const requests: ProviderRequest[] = [];
+  let current: Record<string, unknown> = { ...options.issue };
+  return {
+    requests,
+    current: () => current,
+    send: async (request) => {
+      requests.push(request);
+      if (request.url !== options.issueUrl) {
+        throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
+      }
+      if (request.method === "GET") {
+        return { status: 200, body: current };
+      }
+      if (request.method === "PATCH") {
+        const parsed: unknown = request.body === undefined ? {} : JSON.parse(request.body);
+        if (!isRecord(parsed)) throw new Error("expected a JSON object write body");
+        current = appliedIssue(current, parsed);
+        return { status: 200, body: current };
+      }
+      throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
+    },
+  };
+};
+
 /** Read a committed JSON fixture from the repository root. */
 export const readJson = (relativePath: string): unknown => {
   const parsed: unknown = JSON.parse(readFileSync(join(process.cwd(), relativePath), "utf8"));

@@ -58,6 +58,7 @@ const EXPECTED_SURFACE: Readonly<Record<Provider, readonly string[]>> = {
     "GithubTransportPolicy",
     "GithubTransportPreference",
     "GithubTransportSelection",
+    "GITHUB_WORKFLOW_MAP_SEED",
     "normalizeDeployTrace",
     "probeGithubCli",
     "resolveGithubCliConfigDirectory",
@@ -180,6 +181,8 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       "transition-work-item",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "write-comment",
+      "write-delivery-request",
     ]);
     expect(ADAPTER_OPERATIONS.filter((operation) => operation.startsWith("list-"))).toEqual([]);
     const credentials: CredentialPort = {
@@ -216,6 +219,8 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       "readWorkItemObservation",
       "resolveDeliveryThread",
       "transitionWorkItem",
+      "writeComment",
+      "writeDeliveryRequest",
       "writeWorkItem",
     ]);
   });

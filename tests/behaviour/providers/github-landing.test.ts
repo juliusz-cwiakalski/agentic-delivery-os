@@ -242,11 +242,35 @@ describe("TC-LAND-007 a transport failure is classified, status-absent and not r
 });
 
 describe("TC-LAND-008 the content write never lands", () => {
-  test("write-delivery-request stays a declared gap with no landing member", () => {
-    expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps.map((gap) => gap.operation)).toContain(
+  test("write-delivery-request is supported and its content write issues no landing", async () => {
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toContain(
       "write-delivery-request",
     );
-    const { client } = clientFor([]);
-    expect(Object.keys(client)).not.toContain("writeDeliveryRequest");
+    const { client, transport } = clientFor([
+      {
+        method: "POST",
+        url: pullUrl.replace("/504", ""),
+        status: 201,
+        body: {
+          number: 610,
+          title: "Content write",
+          state: "open",
+          draft: false,
+          merged: false,
+          head: { ref: "feat/GH-338/content-write", sha: HEAD_SHA },
+          base: { ref: "main-tools" },
+        },
+      },
+    ]);
+    const result = await client.writeDeliveryRequest({
+      kind: "create",
+      sourceRef: "feat/GH-338/content-write",
+      targetRef: "main-tools",
+      title: "Content write",
+      body: "Content body",
+    });
+    expect(result.ok).toBe(true);
+    expect(transport.requests.some((request) => request.url.endsWith("/merge"))).toBe(false);
+    expect(transport.requests.some((request) => request.method === "PUT")).toBe(false);
   });
 });

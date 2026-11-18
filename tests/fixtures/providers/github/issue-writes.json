@@ -1,0 +1,163 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "comment": {
+    "commentCreated": {
+      "entityId": "601",
+      "body": "Carrier-free backlog comment",
+      "request": {
+        "method": "POST",
+        "path": "/repos/group-placeholder/project-placeholder/issues/601/comments",
+        "body": { "body": "Carrier-free backlog comment" }
+      },
+      "response": { "id": 9001 },
+      "expected": { "commentId": "9001" }
+    }
+  },
+  "contentWrite": {
+    "pullCreated": {
+      "input": {
+        "kind": "create",
+        "sourceRef": "feat/GH-338/backlog-content-write",
+        "targetRef": "main-tools",
+        "title": "Backlog content write",
+        "body": "Content body"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/repos/group-placeholder/project-placeholder/pulls",
+        "body": {
+          "head": "feat/GH-338/backlog-content-write",
+          "base": "main-tools",
+          "title": "Backlog content write",
+          "body": "Content body"
+        }
+      },
+      "response": {
+        "number": 610,
+        "title": "Backlog content write",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head": {
+          "ref": "feat/GH-338/backlog-content-write",
+          "sha": "1111111111111111111111111111111111111111"
+        },
+        "base": { "ref": "main-tools" }
+      },
+      "expected": {
+        "identity": { "systemName": "github", "entityId": "610" },
+        "sourceRef": "feat/GH-338/backlog-content-write",
+        "targetRef": "main-tools",
+        "reviewState": "open",
+        "threads": [],
+        "headSha": "1111111111111111111111111111111111111111",
+        "sourceHeadSha": "1111111111111111111111111111111111111111",
+        "mergeableState": "unknown"
+      }
+    },
+    "pullCreatedDefaultDraft": {
+      "input": {
+        "kind": "create",
+        "sourceRef": "feat/GH-338/draft-absent",
+        "targetRef": "main-tools",
+        "title": "Draft absent create",
+        "body": "Draft absent body"
+      },
+      "request": {
+        "method": "POST",
+        "path": "/repos/group-placeholder/project-placeholder/pulls",
+        "body": {
+          "head": "feat/GH-338/draft-absent",
+          "base": "main-tools",
+          "title": "Draft absent create",
+          "body": "Draft absent body"
+        },
+        "forbiddenKeys": ["draft"]
+      },
+      "response": {
+        "number": 611,
+        "title": "Draft absent create",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head": {
+          "ref": "feat/GH-338/draft-absent",
+          "sha": "2222222222222222222222222222222222222222"
+        },
+        "base": { "ref": "main-tools" }
+      }
+    },
+    "pullUpdated": {
+      "input": {
+        "kind": "update",
+        "deliveryRequest": { "systemName": "github", "entityId": "504" },
+        "title": "Updated title",
+        "body": "Updated body"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/repos/group-placeholder/project-placeholder/pulls/504",
+        "body": { "title": "Updated title", "body": "Updated body" }
+      },
+      "response": {
+        "number": 504,
+        "title": "Updated title",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head": {
+          "ref": "feat/GH-338/existing-request",
+          "sha": "3333333333333333333333333333333333333333"
+        },
+        "base": { "ref": "main-tools" }
+      }
+    },
+    "pullCreateMissingRef": {
+      "input": {
+        "kind": "create",
+        "sourceRef": "",
+        "targetRef": "main-tools",
+        "title": "Missing ref",
+        "body": "Body"
+      },
+      "mentions": ["sourceRef"]
+    },
+    "pullCreateMissingTargetRef": {
+      "input": {
+        "kind": "create",
+        "sourceRef": "feat/GH-338/missing-target",
+        "targetRef": "",
+        "title": "Missing target",
+        "body": "Body"
+      },
+      "mentions": ["targetRef"]
+    },
+    "pullCreateEmptyTitle": {
+      "input": {
+        "kind": "create",
+        "sourceRef": "feat/GH-338/empty-title",
+        "targetRef": "main-tools",
+        "title": "   ",
+        "body": "Body"
+      },
+      "mentions": ["title"]
+    },
+    "pullUpdateEmpty": {
+      "input": {
+        "kind": "update",
+        "deliveryRequest": { "systemName": "github", "entityId": "504" }
+      },
+      "mentions": ["title or body"]
+    }
+  },
+  "doneWrite": {
+    "doneWriteLabelless": {
+      "entityId": "601",
+      "expected": {
+        "method": "PATCH",
+        "body": { "state": "closed" },
+        "labelRequestCount": 0
+      }
+    }
+  }
+}

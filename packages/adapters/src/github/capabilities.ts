@@ -1,10 +1,10 @@
 /**
  * The GitHub seed's `AdapterContract` (GH-188 OQ-G GitHub row, GH-183 F-11).
  *
- * The closeout slice adds issue close, labels/assignee, and thread resolution;
- * the adapter completion adds the provider-side landing. Comment and
- * delivery-request writes remain declared gaps until the backlog slice closes
- * them. No envelope carriers.
+ * The adapter completion supports the whole closed operation set: the closeout
+ * slice contributes issue close, labels/assignee, and thread resolution; the
+ * milestone adds the provider-side landing, the carrier-free comment write, and
+ * the delivery-request content write. No envelope carriers, no declared gaps.
  */
 import type { AdapterContract } from "@delivery-os/core/contracts";
 
@@ -21,11 +21,10 @@ export const GITHUB_ADAPTER_CONTRACT: AdapterContract = {
       "transition-work-item",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "write-comment",
+      "write-delivery-request",
     ],
-    declaredGaps: [
-      { operation: "write-comment", reason: "adapter-not-implemented" },
-      { operation: "write-delivery-request", reason: "adapter-not-implemented" },
-    ],
+    declaredGaps: [],
     writableCarriers: [],
     readableCarriers: [],
   },

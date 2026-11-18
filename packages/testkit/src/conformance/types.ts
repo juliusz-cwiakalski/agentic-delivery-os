@@ -166,6 +166,14 @@ export type ConformanceAdapterClient = {
   readonly resolveDeliveryThread?: () => Promise<ConformanceAdapterWrite>;
   /** The provider-side landing; its normalized outcome is projection-compared. */
   readonly mergeDeliveryRequest?: () => Promise<ConformanceAdapterWrite>;
+  /** The carrier-free comment write; its normalized identity is projection-compared. */
+  readonly writeComment?: () => Promise<ConformanceAdapterWrite>;
+  /**
+   * The content-write create variant. The registry carries exactly one
+   * `write-delivery-request` step and this is its dispatch member; the update
+   * variant is proven by a direct client call, never a second step.
+   */
+  readonly createDeliveryRequest?: () => Promise<ConformanceAdapterWrite>;
 };
 
 /** Input passed to a test-only control write handler. */

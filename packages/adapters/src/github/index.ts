@@ -43,3 +43,8 @@ export {
   type GithubDeployTraceReader,
   normalizeDeployTrace,
 } from "./deploy-trace.js";
+/**
+ * The declared issues transition seed, exported additively so the adapter's
+ * reference behavior can be mechanically compared with the code it documents.
+ */
+export { GITHUB_WORKFLOW_MAP_SEED } from "./workflow-map.js";

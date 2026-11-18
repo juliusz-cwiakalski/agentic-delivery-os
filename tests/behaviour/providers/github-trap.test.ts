@@ -15,6 +15,7 @@ import {
   type GithubClient,
 } from "../../../packages/adapters/src/github/client";
 import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../../packages/adapters/src/github/review-state";
+import { GITHUB_WORKFLOW_MAP_SEED } from "../../../packages/adapters/src/github/workflow-map";
 import type {
   DeliveryRequest,
   ExternalSystemInstance,
@@ -645,6 +646,80 @@ const landingInput = {
   commitMessage: "Crafted squash message",
 };
 
+const ISSUE_WRITES = `${FIXTURES}/issue-writes.json`;
+const WORKFLOW_MAP_CASES = `${FIXTURES}/workflow-map-cases.json`;
+
+const commentCarrierFreeCheck = async (): Promise<void> => {
+  const comment = recordField(recordField(readJson(ISSUE_WRITES), "comment"), "commentCreated");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}${repoPath}/issues/601/comments`,
+      status: 201,
+      body: recordField(comment, "response"),
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = await client.writeComment({
+    entityId: String(comment.entityId),
+    body: String(comment.body),
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.value).toEqual(recordField(comment, "expected"));
+  const body = JSON.parse(transport.requests[0]?.body ?? "{}") as unknown;
+  expect(body).toEqual(recordField(recordField(comment, "request"), "body"));
+  const serialized = JSON.stringify(body);
+  expect(serialized).not.toContain("<!--");
+  expect(serialized).not.toContain("provenance");
+  expect(serialized).not.toContain("schema");
+};
+
+const contentWriteNeverLandsCheck = async (): Promise<void> => {
+  const created = recordField(recordField(readJson(ISSUE_WRITES), "contentWrite"), "pullCreated");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}${repoPath}/pulls`,
+      status: 201,
+      body: recordField(created, "response"),
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = await client.writeDeliveryRequest({
+    kind: "create",
+    sourceRef: "feat/GH-338/backlog-content-write",
+    targetRef: "main-tools",
+    title: "Backlog content write",
+    body: "Content body",
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(result.value.identity.entityId).toBe("610");
+    expect(result.value.sourceRef).toBe("feat/GH-338/backlog-content-write");
+  }
+  expect(transport.requests.some((request) => request.url.endsWith("/merge"))).toBe(false);
+  expect(transport.requests.some((request) => request.method === "PUT")).toBe(false);
+};
+
+const workflowMapSeedCheck = async (): Promise<void> => {
+  const rows = arrayField(readJson(WORKFLOW_MAP_CASES), "seedRows");
+  expect(GITHUB_WORKFLOW_MAP_SEED.states).toEqual(rows);
+  const transport = createFixtureTransport([
+    {
+      url: issueUrl(601),
+      body: {
+        number: 601,
+        title: "Seed precedence",
+        state: "open",
+        labels: [{ name: "change" }, { name: "review" }],
+      },
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const item = requireValue(await client.readWorkItem(601), "seed precedence");
+  expect(item.status.deliveryState).toBe("in-review");
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
@@ -716,6 +791,9 @@ const defaultAssertions: TrapAssertions = {
     expect(serialized).toContain("--hostname");
     expect(serialized).not.toContain("--paginate");
   },
+  "GITHUB-COMMENT-CARRIER-FREE": commentCarrierFreeCheck,
+  "GITHUB-CONTENT-WRITE-NEVER-LANDS": contentWriteNeverLandsCheck,
+  "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE": workflowMapSeedCheck,
   "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
     const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
     const result = await client.mergeDeliveryRequest(landingInput);
@@ -766,6 +844,63 @@ const defaultAssertions: TrapAssertions = {
   "GH-PAYLOAD-HTTP-STATUS": httpStatusTrapCheck,
 };
 
+const mutationsForNewTraps = [
+  {
+    trapName: "GITHUB-COMMENT-CARRIER-FREE",
+    assertion: async (): Promise<void> => {
+      const comment = recordField(recordField(readJson(ISSUE_WRITES), "comment"), "commentCreated");
+      const transport = createFixtureTransport([
+        {
+          method: "POST",
+          url: `${instance.baseUrl}${repoPath}/issues/601/comments`,
+          status: 201,
+          body: recordField(comment, "response"),
+        },
+      ]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      await client.writeComment({ entityId: "601", body: String(comment.body) });
+      const body = JSON.parse(transport.requests[0]?.body ?? "{}") as Record<string, unknown>;
+      // The mutated normalization claims a metadata envelope on a human comment.
+      expect(body.provenance).toBeDefined();
+    },
+  },
+  {
+    trapName: "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+    assertion: async (): Promise<void> => {
+      const created = recordField(
+        recordField(readJson(ISSUE_WRITES), "contentWrite"),
+        "pullCreated",
+      );
+      const transport = createFixtureTransport([
+        {
+          method: "POST",
+          url: `${instance.baseUrl}${repoPath}/pulls`,
+          status: 201,
+          body: recordField(created, "response"),
+        },
+      ]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      await client.writeDeliveryRequest({
+        kind: "create",
+        sourceRef: "feat/GH-338/backlog-content-write",
+        targetRef: "main-tools",
+        title: "Backlog content write",
+        body: "Content body",
+      });
+      // The mutated normalization lands the request.
+      expect(transport.requests.some((request) => request.method === "PUT")).toBe(true);
+    },
+  },
+  {
+    trapName: "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+    assertion: async (): Promise<void> => {
+      const rows = arrayField(readJson(WORKFLOW_MAP_CASES), "seedRows");
+      // The mutated seed reverses precedence.
+      expect(GITHUB_WORKFLOW_MAP_SEED.states).toEqual([...rows].reverse());
+    },
+  },
+];
+
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
   const guard = installThrowingFetchGuard();
   try {
@@ -813,6 +948,9 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-LANDING-ALREADY-MERGED-READBACK",
       "GITHUB-CLI-STATUS-RECOVERY",
       "GITHUB-CLI-CREDENTIAL-ABSENCE",
+      "GITHUB-COMMENT-CARRIER-FREE",
+      "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+      "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
     ]);
   });
 
@@ -839,6 +977,7 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       { trapName: "GITHUB-LIST-PAGE-LIMIT", assertion: () => mutatedListWorkItems(99) },
       { trapName: "GITHUB-ISSUE-RELATIONS-ABSENT", assertion: relationsPresent },
       { trapName: "GITHUB-PR-LIST-REVIEW-DEFAULT", assertion: trustedReviewPayload },
+      ...mutationsForNewTraps,
     ];
     for (const mutation of mutations) {
       const run = await runWithGuard({

@@ -244,10 +244,9 @@ export const EXPECTED_SEED_POSTURES = {
       "transition-work-item",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "write-comment",
+      "write-delivery-request",
     ],
-    gapReasons: {
-      "write-comment": "adapter-not-implemented",
-      "write-delivery-request": "adapter-not-implemented",
-    },
+    gapReasons: {},
   },
 } as const satisfies Readonly<Record<"jira" | "gitlab" | "github", ExpectedSeedPosture>>;

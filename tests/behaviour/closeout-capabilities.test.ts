@@ -47,7 +47,7 @@ describe("TC-CLOSE-054 Jira planner expansion", () => {
 });
 
 describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
-  test("GitHub supports the seven closeout-relevant operations and gaps two writes", () => {
+  test("GitHub supports the whole closed operation set and declares no gaps", () => {
     expect([...GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations]).toEqual([
       "read-work-item",
       "read-delivery-request",
@@ -56,11 +56,10 @@ describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
       "transition-work-item",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "write-comment",
+      "write-delivery-request",
     ]);
-    expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([
-      { operation: "write-comment", reason: "adapter-not-implemented" },
-      { operation: "write-delivery-request", reason: "adapter-not-implemented" },
-    ]);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([]);
   });
 
   test("GitLab declares every write including thread resolution as a gap", () => {
