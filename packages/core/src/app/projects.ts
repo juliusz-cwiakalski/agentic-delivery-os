@@ -25,9 +25,17 @@ import {
   type ProjectMemberOutcome,
   type ProjectsListData,
   type ProjectsListEntry,
+  type ReposHandoverGate,
   type ReposListData,
   type ReposListEntry,
 } from "../contracts/projects.js";
+import {
+  conditionStatuses,
+  type DispatchEvidenceWindow,
+  type DispatchGateEvaluation,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
+} from "../domain/dispatch-gate.js";
 
 /** The folded latest handover evidence for the project, or none. */
 export type HandoverEvidence = "authoritative" | "dual-run" | "none";
@@ -165,12 +173,16 @@ export const repoListEntry = (input: {
   readonly stateLocation: string;
   readonly daemonReachable: DaemonReachability;
   readonly handoverState: HandoverState;
+  readonly reversible: boolean;
+  readonly handoverGate: ReposHandoverGate;
 }): ReposListEntry => ({
   repoKey: input.repoKey,
   root: input.root,
   stateLocation: input.stateLocation,
   daemonReachable: input.daemonReachable,
   handoverState: input.handoverState,
+  reversible: input.reversible,
+  handoverGate: input.handoverGate,
 });
 
 /** Order flat rows by repo key ascending; the index's own order never leaks (F-7). */
@@ -181,11 +193,23 @@ export const orderRepoEntries = (entries: readonly ReposListEntry[]): readonly R
 
 /**
  * Project the delivered flat `projects.v1` data onto the renamed `repos.v1`
- * shape (F-7, DM-3). The mapping is field-for-field: every value is carried
- * unchanged and only the key's name moves. The alias never passes through this
- * projection, so the delivered payload stays byte-identical (C-2).
+ * shape (F-7, DM-3; GH-293 DM-4). The mapping is field-for-field: every value
+ * is carried unchanged and only the key's name moves, with the two additive
+ * fields resolved by the caller's read-time gate projection. The alias never
+ * passes through this projection, so the delivered payload stays byte-identical
+ * (C-2).
+ *
+ * The gate projection is optional so the library signature stays additive: a
+ * caller that supplies none gets the declared empty-window evaluation, which is
+ * the same derivation a `first-use` row reports and needs no store.
  */
-export const reposListDataOf = (data: ProjectsListData): ReposListData => ({
+export const reposListDataOf = (
+  data: ProjectsListData,
+  gateOf: (entry: ProjectsListEntry) => {
+    readonly reversible: boolean;
+    readonly handoverGate: ReposHandoverGate;
+  } = () => ({ reversible: false, handoverGate: emptyHandoverGate() }),
+): ReposListData => ({
   repos: orderRepoEntries(
     data.projects.map((entry) =>
       repoListEntry({
@@ -194,10 +218,55 @@ export const reposListDataOf = (data: ProjectsListData): ReposListData => ({
         stateLocation: entry.stateLocation,
         daemonReachable: entry.daemonReachable,
         handoverState: entry.handoverState,
+        ...gateOf(entry),
       }),
     ),
   ),
   hostIndexRevision: data.hostIndexRevision,
+});
+
+/**
+ * The declared empty-window evaluation a `first-use` row reports (GH-293 F-3,
+ * AC-F3-6, OQ-TP-4).
+ *
+ * No store is opened and no record is read: the value is the one production
+ * derivation — `conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(...)))`
+ * — over an empty window, so a gate-rule change moves this row exactly as it
+ * moves the summary, the handover decision, and every ready row. Truth is met,
+ * corroboration is met vacuously, coverage and floor are open, both counters are
+ * zero, and reversibility is `false` because the fold of no records is
+ * `dual-run`.
+ */
+export const emptyHandoverGate = (): ReposHandoverGate => {
+  const window = foldEvidenceWindow({
+    repository: "",
+    scope: "production",
+    attempts: [],
+    divergences: [],
+    windowEnd: "",
+  });
+  return reposHandoverGateOf({ window, evaluation: evaluateHandoverGate(window) });
+};
+
+/**
+ * Project one folded window and its evaluation onto the row's gate block
+ * (GH-293 F-3, DM-4, DM-7).
+ *
+ * The block carries no window-start, repository, or scope field: the row's own
+ * identity is the binding, and the fold's declared `production` scope is a
+ * declaration rather than a payload member. `truncation` is appended last and
+ * appears exactly when the bounded read omitted records, which is also the only
+ * way the verdict reads `unverifiable`.
+ */
+export const reposHandoverGateOf = (input: {
+  readonly window: DispatchEvidenceWindow;
+  readonly evaluation: DispatchGateEvaluation;
+}): ReposHandoverGate => ({
+  verdict: input.evaluation.verdict,
+  conditions: conditionStatuses(input.evaluation),
+  countedDeliveries: input.window.countedInWindow.length,
+  cleanDispatches: input.window.cleanDispatches,
+  ...(input.window.truncated === undefined ? {} : { truncation: input.window.truncated }),
 });
 
 /** The state-location classification the row read applies (DEC-8, AC-F3-5). */

@@ -10,9 +10,11 @@
  * it is not asserted here.
  */
 import { describe, expect, test } from "bun:test";
+import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
 
@@ -78,7 +80,87 @@ describe("TC-ATTEMPT-034 cell 1 delivered data shapes and order", () => {
         "verdict",
         "unmetConditions",
         "floor",
+        "cleanDispatches",
+        "consecutiveCleanDispatches",
+        "conditions",
       ]);
+      // The delivered sixteen-key literal stays a prefix: nothing moved.
+      expect(Object.keys(data ?? {}).slice(0, 16)).toEqual([
+        "repository",
+        "windowStart",
+        "windowStartReason",
+        "windowEnd",
+        "dayCount",
+        "countedDeliveries",
+        "countedEvidenceClass",
+        "excludedEvidenceClasses",
+        "incidents",
+        "divergences",
+        "coverage",
+        "corroboration",
+        "eligibility",
+        "verdict",
+        "unmetConditions",
+        "floor",
+      ]);
+      expect(Object.hasOwn(data ?? {}, "truncation")).toBe(false);
+      expect(Array.isArray((data as { readonly unmetConditions?: unknown }).unmetConditions)).toBe(
+        true,
+      );
+      expect(typeof (data as { readonly countedDeliveries?: unknown }).countedDeliveries).toBe(
+        "number",
+      );
+      expect(typeof (data as { readonly floor?: unknown }).floor).toBe("object");
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("the summary appends only, keeping truncation last when it binds", async () => {
+    const scenario = createCommandScenario({ gate: { max: 5 } });
+    try {
+      for (const attempt of buildAttempts(eligibleSpecs())) {
+        const appended = appendDispatchAttempt(
+          scenario.state.store,
+          scenario.state.fenceToken,
+          attempt,
+        );
+        if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
+      }
+      const result = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      const data = result.envelope?.data as Record<string, unknown> | undefined;
+      const keys = Object.keys(data ?? {});
+      expect(keys.at(-1)).toBe("truncation");
+      expect(keys.slice(0, 19)).toEqual([
+        "repository",
+        "windowStart",
+        "windowStartReason",
+        "windowEnd",
+        "dayCount",
+        "countedDeliveries",
+        "countedEvidenceClass",
+        "excludedEvidenceClasses",
+        "incidents",
+        "divergences",
+        "coverage",
+        "corroboration",
+        "eligibility",
+        "verdict",
+        "unmetConditions",
+        "floor",
+        "cleanDispatches",
+        "consecutiveCleanDispatches",
+        "conditions",
+      ]);
+      const truncation = (data as { readonly truncation?: Record<string, unknown> }).truncation;
+      expect(Object.keys(truncation ?? {})).toEqual(["bound", "omittedRecords"]);
     } finally {
       scenario.dispose();
     }
@@ -150,7 +232,140 @@ describe("TC-ATTEMPT-034 cell 1 delivered data shapes and order", () => {
         "noop",
         "verdict",
         "unmetConditions",
+        "conditions",
+        "reversible",
       ]);
+      expect(result.exit).toBe(1);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("the handover appends conditions and reversible after the delivered order", async () => {
+    const scenario = createCommandScenario({ gate: {} });
+    try {
+      for (const attempt of buildAttempts(eligibleSpecs())) {
+        const appended = appendDispatchAttempt(
+          scenario.state.store,
+          scenario.state.fenceToken,
+          attempt,
+        );
+        if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
+      }
+      const flip = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      expect(flip.exit, flip.stderr).toBe(0);
+      const flipKeys = Object.keys((flip.envelope?.data as Record<string, unknown>) ?? {});
+      expect(flipKeys).toEqual([
+        "repository",
+        "operation",
+        "recorded",
+        "noop",
+        "verdict",
+        "conditions",
+        "reversible",
+      ]);
+      expect(Object.hasOwn(flip.envelope?.data ?? {}, "unmetConditions")).toBe(false);
+
+      const replay = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      expect(replay.exit).toBe(0);
+      expect(Object.keys((replay.envelope?.data as Record<string, unknown>) ?? {})).toEqual([
+        "repository",
+        "operation",
+        "recorded",
+        "noop",
+        "verdict",
+        "conditions",
+        "reversible",
+      ]);
+
+      const revert = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "github.com/owner/repo",
+        "--revert",
+        "--json",
+      ]);
+      expect(revert.exit).toBe(0);
+      const revertData = revert.envelope?.data as Record<string, unknown> | undefined;
+      // The recorded revert now carries `verdict`, so nothing moves and
+      // `reversible` still follows `conditions`.
+      expect(Object.keys(revertData ?? {})).toEqual([
+        "repository",
+        "operation",
+        "recorded",
+        "noop",
+        "verdict",
+        "conditions",
+        "reversible",
+      ]);
+      expect(revertData?.verdict).toBeDefined();
+
+      const noop = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "github.com/owner/repo",
+        "--revert",
+        "--json",
+      ]);
+      expect(noop.exit).toBe(0);
+      expect(Object.keys((noop.envelope?.data as Record<string, unknown>) ?? {})).toEqual([
+        "repository",
+        "operation",
+        "recorded",
+        "noop",
+        "reversible",
+      ]);
+      expect(Object.hasOwn(noop.envelope?.data ?? {}, "truncation")).toBe(false);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("a truncated handover keeps truncation last after reversible", async () => {
+    const scenario = createCommandScenario({ gate: { max: 5 } });
+    try {
+      for (const attempt of buildAttempts(eligibleSpecs())) {
+        const appended = appendDispatchAttempt(
+          scenario.state.store,
+          scenario.state.fenceToken,
+          attempt,
+        );
+        if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
+      }
+      const result = await scenario.invoke([
+        "dispatch",
+        "handover",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      const data = result.envelope?.data as Record<string, unknown> | undefined;
+      expect(Object.keys(data ?? {})).toEqual([
+        "repository",
+        "operation",
+        "recorded",
+        "noop",
+        "verdict",
+        "unmetConditions",
+        "conditions",
+        "reversible",
+        "truncation",
+      ]);
+      expect(data?.verdict).toBe("unverifiable");
+      expect(Object.keys((data?.truncation as Record<string, unknown>) ?? {})).toEqual([
+        "bound",
+        "omittedRecords",
+      ]);
+      expect(result.exit).toBe(1);
     } finally {
       scenario.dispose();
     }

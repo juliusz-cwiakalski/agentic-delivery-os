@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297"]
-  related_decisions: ["TDR-0022", "ODR-0004"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293"]
+  related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031"]
 ---
 
 # Feature: Repositories and the Host Overview
@@ -163,18 +163,60 @@ and the conflicting identifier. It never adopts that state root.
   classification at exit `1` before the index is read.
 - **Envelope.** `data` carries exactly `repos` and `hostIndexRevision`; each entry
   carries exactly `repoKey`, `root`, `stateLocation`, `daemonReachable`
-  (`{ reachable }` or `{ reachable: false, reason }`), and `handoverState`.
-  Entries are ordered by `repoKey`. No new top-level envelope key exists. The
-  payload's `repoKey` is the checkout's project key: the host index keeps the
-  field name `projectKey`, and the record's contract name is `repoKey`.
+  (`{ reachable }` or `{ reachable: false, reason }`), `handoverState`,
+  `reversible`, and `handoverGate`. Entries are ordered by `repoKey`. No new
+  top-level envelope key exists. The payload's `repoKey` is the checkout's project
+  key: the host index keeps the field name `projectKey`, and the record's
+  contract name is `repoKey`.
+- **Gate block.** `reversible` is `true` exactly when the row's own repository's
+  latest folded handover operation is `authoritative` (the same rule the authority
+  document applies to `reversalAvailable`). `handoverGate` carries `verdict`
+  (`eligible`, `ineligible`, `unverifiable`), the four ordered `conditions`
+  (`truth`, `coverage`, `floor`, `corroboration`, each `{condition, status}` with
+  `status` in `met | open`), `countedDeliveries`, `cleanDispatches`, and
+  `truncation` only when the bounded read omitted records. The block is evaluated
+  at read time, for every `ready` row, over one bounded attempts read plus one
+  divergences read on the store the row pass already opened — no write, network
+  call, model call, cache, or scheduler.
+- **Repository binding.** The evaluation is bound to the row's own normalized
+  `host/owner/name` identity, resolved read-only and non-persisting through the
+  delivered identity policy (the persisted create-once binding recorded with that
+  checkout's git common directory, otherwise the checkout's configured VCS
+  remote). Records of another repository in the same store are excluded from
+  `countedDeliveries`, `conditions`, and `cleanDispatches`. The row's handover
+  fold is bound to the same resolved identity: `handoverState` and `reversible`
+  are folded over that repository's handover records only, so a store that
+  accumulated a second identity never reports another repository's authority as
+  this row's.
+- **Evidence scope.** The row folds the declared `production` scope (it counts
+  `pilot` attempts), the same scope `dispatch dual-run summary --repo` and the
+  handover decision use, so the row's `conditions` and `cleanDispatches` are
+  comparable with the summary's over the same ledger. The `controlled` scope
+  (which counts `controlled-proof`) stays available to controlled compositions and
+  fixtures and is never the row's scope. No scope key, flag, or configuration
+  member exists: the declaration is the delivered counting rule, not an input.
+- **Degraded evidence.** An unreadable, torn, or malformed attempts/divergences
+  ledger — and an unresolvable repository identity on a `ready` row — fails the
+  whole read as `repos.state-unavailable` at exit `2` with no row and no binding
+  written. A truncated attempts read is not a failure: the row reports
+  `verdict: "unverifiable"` with the `truncation` object over the visible window at
+  exit `0`. A `first-use` row reports the empty-window evaluation (`ineligible`;
+  `truth` met, `corroboration` met vacuously, `coverage` and `floor` open;
+  `countedDeliveries: 0`, `cleanDispatches: 0`, `reversible: false`) without
+  opening a store and without reading a record. That block is the one production
+  derivation over an empty window — the same fold, evaluation, and status
+  projection the ready rows, the summary, and the handover decision use — so a
+  gate-rule change moves it exactly as it moves those surfaces.
 - **Text.** A deterministic table with the columns `key`, `root`, `state`,
-  `daemon`, `handover`, sorted by repo key. The `daemon` cell carries the reason
-  token when unreachable, never a bare negative. Two runs over unchanged state
-  are byte-identical.
+  `daemon`, `handover`, sorted by repo key. The five columns are unchanged: the
+  gate detail is a JSON read, and the human per-condition view is the summary
+  text. The `daemon` cell carries the reason token when unreachable, never a bare
+  negative. Two runs over unchanged state are byte-identical.
 - **Exit projection.** `0` produced; `1` refused (unknown verb, an unusable
   state-directory override, or the invoking checkout's identity cannot be
-  read); `2` the host index or a project state location prevents an honest
-  answer. No other code is produced by the family.
+  read); `2` the host index, a project state location, or a row's gate
+  evaluation (an unreadable evidence ledger or an unresolvable row identity)
+  prevents an honest answer. No other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
   project-root creation, no migration, and no index or store-content write.
   Exactly two side effects are permitted: the create-once identity marker minted
@@ -223,7 +265,12 @@ scoping. The alias retires at the M3 boundary
 
 `engine` is produced only on agreement and `in-transition` only on a detected
 disagreement; a malformed document is distinct from an absent one. A present but
-unreadable state root is a state failure, never a fabricated handover value.
+unreadable state root is a state failure, never a fabricated handover value. On
+`repos list` the fold reads the row's own repository's records, bound to the
+identity the row's gate block resolves, so a store holding a second identity can
+never report another repository's authority as this row's; the
+`projects list --flat` alias keeps the delivered payload and its delivered
+cross-record fold.
 
 ## Daemon reachability
 
@@ -279,6 +326,9 @@ No automatic migration, migration command, or re-attribution exists.
   opened at the project root.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — the socket path derived
   from the project state root by the composing site.
+- [Engine-first Delivery Operations](../../guides/engine-first-operations.md) — the
+  operator routine that reads the `repos list` gate block and performs a
+  per-repository flip or reversal.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.
 - [Board](feature-board.md) — the fleet read that consumes this host index,
   per-repository state scope, and the `unbound` scope.

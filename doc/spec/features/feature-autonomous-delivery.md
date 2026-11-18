@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-11-14
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313", "GH-293"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -26,6 +26,15 @@ links:
 Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. It is delivered as the deterministic bash scripts and tool that `scripts/install.sh` declares — the `ADOS_DELIVERY_SCRIPTS` set (`opencode-session.sh`, `deliver-ticket.sh`, `lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`, `lint-commit-range.sh`) plus `tools/clean-merged-branches` — which wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, and branch hygiene, carry the pre-PR commit-range lint the lifecycle runs before PR creation, and — in Mode B — gate the merge on human approval.
 
 > **Canonical detail lives in the guide.** The full modes table, component-responsibility matrix, mermaid diagrams, recovery semantics, configuration, and troubleshooting are in [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) (the canonical modes guide) and [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) (canonical for Mode B operations). This spec names the capabilities, invariants, and the merge/liveness contracts; it does not restate the guide tables. Where the two describe the same machinery, they are kept consistent.
+
+> **Engine-first operating definition.** The regular delivery path is the typed
+> engine: `dispatch <ref>` appends real `pilot` attempt records, and the lifecycle
+> merge and closeout run through the engine primitives. The bash entry points this
+> page specifies remain the documented, still-executable fallback: they keep their
+> five-key delivery-summary tail, their exits, and the delivered authoritative-mode
+> deprecation pointer. No repository is flipped by this change; a flip is a
+> separate owner act executed with `dispatch handover <repo>` once the gate reads
+> eligible, and its reversal is `dispatch handover <repo> --revert`.
 
 > **Planned-scope precondition.** An unattended run assumes the milestone and every ticket attached to it already exist in the tracker, and that intake verified the attachment before delivery. The precondition is owned by the milestone-first operating rule in [milestone-management.md](../../guides/milestone-management.md); this spec does not enforce it and adds no milestone logic to the delivery scripts.
 
@@ -152,7 +161,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 | **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/finished/max-restarts/state-unverified/partial/noop-lane-permission/noop-lane-nothing-to-do. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
 | **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
-| **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before running `merge <ref>`. `merge` is the lifecycle merge path; the CEO does not use a platform merge command as the primary path. "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. `deliver-ticket.sh` and `ceo-loop.sh` remain retained: for a repository in `dual-run`, `deliver-ticket.sh` stays the per-ticket delivery engine and `ceo-loop.sh` stays the outer process supervisor; after a per-repository handover they print a deprecation pointer naming `dispatch` and remain executable as fallback. |
+| **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before running `merge <ref>`. `merge` is the lifecycle merge path; the CEO does not use a platform merge command as the primary path. "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. `deliver-ticket.sh` and `ceo-loop.sh` remain retained and executable: the typed engine is the regular delivery path, and for a repository in `dual-run` the scripts stay the documented fallback (`deliver-ticket.sh` the per-ticket script and `ceo-loop.sh` the outer process supervisor); after a per-repository handover they print a deprecation pointer naming `dispatch` and remain executable as fallback. |
 | **INV-DM-5** | **Liveness = multi-signal progress, not process-alive.** The session-tree signal (recursive message traffic across the parent + child sessions, read from the current `message`/`part` store on opencode 1.19.3; `session_message` is legacy and empty) is combined with a git/worktree-activity signal; if EITHER shows recent activity the session is healthy. A hung LLM stream (process alive, both signals silent) is *stalled*, not slow. |
 | **INV-DM-6** | **One ticket in flight per repo working tree.** Parallel deliveries in different repos / independent clones are allowed (tracking is keyed on the working tree). |
 

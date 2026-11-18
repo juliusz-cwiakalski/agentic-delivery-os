@@ -23,7 +23,8 @@ per-repository root, so two checkouts of different repositories never share
 phase state, queue entries, or lane leases - even when both use the same ref.
 
 `repos list` reports one row per checkout: the repo key, the checkout root,
-the state location, the daemon reachability, and the handover state. No manual
+the state location, the daemon reachability, the handover state, whether a flip
+is reversible, and the handover gate block evaluated at read time. No manual
 registry is required; the host index is discovered from the checkouts.
 
 This is the flat record set contract, delivered by M2-S18. The rename rule
@@ -48,7 +49,9 @@ and [../contracts.md](../contracts.md) for `repos.v1`.
 ## OUTPUT
 
 Text: a deterministic table with one row per checkout and the columns `key`,
-`root`, `state`, `daemon`, `handover`, sorted by repo key.
+`root`, `state`, `daemon`, `handover`, sorted by repo key. The five columns are
+unchanged: the gate detail is a JSON read, and the human per-condition view is
+the summary text.
 
 Envelope `data` carries:
 
@@ -60,7 +63,30 @@ Envelope `data` carries:
 | `repos[].stateLocation` | Per-repository state location |
 | `repos[].daemonReachable` | Daemon reachability, plus a degradation reason when false |
 | `repos[].handoverState` | `engine`, `shell`, or `in-transition` |
+| `repos[].reversible` | `true` exactly when the row's own latest folded handover operation is `authoritative` (the fold is bound to the row's resolved repository identity, like the gate block) |
+| `repos[].handoverGate` | Read-time gate block: `verdict` (`eligible`, `ineligible`, or `unverifiable`), the four ordered `conditions` (`truth`, `coverage`, `floor`, `corroboration`; each `{condition, status}` with `status` in `met \| open`), `countedDeliveries`, `cleanDispatches`, and `truncation` only when the bounded read omitted records |
 | `hostIndexRevision` | Revision of the host-level index that produced the list |
+
+The gate block is evaluated at read time for every `ready` row, over one bounded
+attempts read plus one divergences read on the store the row pass has already
+opened, bound to the row's own normalized `host/owner/name` identity (resolved
+read-only and non-persisting from the checkout) and folded at the declared
+`production` evidence scope — the same scope `dispatch dual-run summary --repo`
+and the handover decision use — so records of another repository in the same
+store are excluded. The row's handover fold rides the same binding:
+`handoverState` and `reversible` are folded over that repository's handover
+records only, so a store that accumulated a second identity never reports
+another repository's authority as this row's. A `first-use` row reports the
+declared empty-window evaluation (`ineligible`; `truth` met, `corroboration` met
+vacuously, `coverage` and `floor` open; `countedDeliveries: 0`,
+`cleanDispatches: 0`, `reversible: false`) without opening a store and without
+reading a record — the one production derivation over an empty window, so a
+gate-rule change moves it exactly as it moves the ready rows and the summary. An
+unreadable, torn, or malformed attempts/divergences ledger, and an unresolvable
+repository identity on a `ready` row, fail the whole read as
+`repos.state-unavailable` at exit `2` with no fabricated row; a truncated
+attempts read is not a failure and reports `verdict: "unverifiable"` with the
+`truncation` object.
 
 `<binary> repos list --json` returns `repos.v1` with `data.repos[]` exactly as
 tabulated above.
@@ -128,7 +154,7 @@ $ <binary> repos list --json
 |---|---|---|
 | `repos.identity-unreadable` | The invoking checkout's git metadata is unusable, or its identity marker is unreadable or inconsistent | 1 |
 | `repos.registry-corrupt` | The host index cannot be read; run discovery again | 2 |
-| `repos.state-unavailable` | A per-repository state location is missing or unreadable | 2 |
+| `repos.state-unavailable` | A per-repository state location is missing or unreadable, or a row's gate evaluation cannot be produced (an unreadable, torn, or malformed evidence ledger, or an unresolvable row identity) | 2 |
 
 The flat surface's error identities follow the surface, not the token: every
 failure of `repos list` and of the `projects list --flat` alias classifies under

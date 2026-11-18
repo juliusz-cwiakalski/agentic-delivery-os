@@ -288,10 +288,23 @@ Assert: `handover.data.conditions[]` carries one entry per condition, each with 
 ### SC-M2-S16-02 Engine dispatch corroboration accrues in the summary
 
 Given consecutive engine dispatches, when each completes with corroborated
-artefact and tracker truth, then the summary counts them as clean and the
-repository's evidence coverage grows by one per dispatch.
+artefact and tracker truth, then the summary counts it as one counted
+delivery and one clean dispatch, the repo's coverage gains a token only on
+its first appearance, and the clean streak grows until a non-clean counted
+dispatch breaks it.
 
-Assert: `data.cleanDispatches` grows by one per corroborated dispatch and `data.coverage` grows with it.
+Assert: `countedDeliveries` grows by one per counted dispatch; `coverage.present`
+gains a token only on first appearance (at most one per dispatch, at most
+eleven overall); `cleanDispatches` grows by one per corroborated dispatch;
+`consecutiveCleanDispatches` grows on a clean streak and resets to zero on a
+non-clean counted attempt.
+
+> Restated by GH-293. The original asserted that `data.coverage` "grows by one
+> per dispatch"; coverage is the eleven-token exposure **set**, so that is not
+> representable and a numeric counter would be a derived duplicate of
+> `coverage.present.length`. Forcing fact: coverage is a set. Story AC: AC1
+> (corroborated outcomes accrue) is preserved on the honest `cleanDispatches`
+> counter and the restated walk above. No story AC is weakened.
 
 ## M2-S17 Provider-aware peak pausing
 
@@ -534,7 +547,20 @@ Assert: a `queue.graph` event with `kind == "dependency-edge"` follows the remov
 ### SC-M2-S16-03 Shell path stays usable through an engine-first flip
 
 Given a repository flipped to engine-first delivery, when the shell entry
-point is invoked, then it still works, prints its deprecation pointer toward
-the engine, and the flip remains reversible per repository.
+point is invoked, then it still exits `0`, keeps its five-key summary tail,
+and prints the deprecation pointer toward the engine; reversibility is read
+from the engine surface, `true` before `--revert` and `false` after it, per
+repository.
 
-Assert: the shell entry point exits `0`, prints its deprecation pointer, and reports `data.reversible == true`.
+Assert: the shell entry point exits `0` and prints its deprecation pointer with
+the five-key tail unchanged; reversibility is read from the engine surface
+(`dispatch handover` data `reversible`, or the `repos list` row `reversible`)
+before (`true`) and after `--revert` (`false`), with per-repository isolation.
+
+> Restated by GH-293. The original asserted that the shell output reports
+> `data.reversible == true`; the shell summary is a pinned five-key **text tail
+> with no machine mode and no reversibility producer**, so that is not
+> representable without widening the contract the AC protects. Forcing fact: a
+> five-key text tail. Story AC: AC3 (shell usable and documented) and AC4
+> (per-repository reversible flip) are preserved on the engine surface. No
+> story AC is weakened.

@@ -80,6 +80,7 @@ Each card captures what the process solves, who it is for, its primary output, a
 - **Audience:** Every delivery team using ADOS day-to-day.
 - **Primary output:** Spec, plan, test plan, code, reconciled docs, and a merged PR — one per change.
 - **Guide:** [change-lifecycle.md](change-lifecycle.md)
+- **Engine-first operation:** [engine-first-operations.md](engine-first-operations.md) — the daily typed-engine routine, the handover gate and fleet row, flip and reversal, and the shell fallback.
 
 ### Meeting Management
 

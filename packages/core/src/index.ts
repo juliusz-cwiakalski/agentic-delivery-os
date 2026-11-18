@@ -96,6 +96,7 @@ export {
 } from "./app/dispatch-attempts.js";
 export {
   type DispatchGateRead,
+  type DispatchHandoverData,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
   handoverDispatchEvidence,
@@ -235,6 +236,7 @@ export {
   type DaemonProbeFacts,
   type DaemonSocketFact,
   daemonReasonFor,
+  emptyHandoverGate,
   type HandoverEvidence,
   orderProjectEntries,
   orderRepoEntries,
@@ -245,6 +247,7 @@ export {
   projectListEntry,
   projectMemberHealth,
   repoListEntry,
+  reposHandoverGateOf,
   reposListDataOf,
   resolveProjectGroupMember,
   selectDaemonReachability,
@@ -285,10 +288,10 @@ export {
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
   runSupervisionBattery,
-  type SupervisionBatteryInput,
-  type SupervisionBatteryResult,
   type SupervisionActingFact,
   type SupervisionAppendResult,
+  type SupervisionBatteryInput,
+  type SupervisionBatteryResult,
   type SupervisionClaimFact,
   type SupervisionClaimRefusal,
   type SupervisionEconomicsWritePort,
@@ -545,6 +548,7 @@ export {
   isAuthoritative,
   parseDispatchAuthorityText,
   parseDispatchAuthorityView,
+  reversibilityOf,
 } from "./domain/dispatch-authority.js";
 export {
   buildComparisonRecord,
@@ -563,6 +567,7 @@ export {
 } from "./domain/dispatch-comparison.js";
 export {
   COUNTED_EVIDENCE_CLASS,
+  conditionStatuses,
   countedEvidenceClass,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,

@@ -19,9 +19,19 @@ import {
   type MergeDryRunReport,
   type MergeReport,
   type MergeWaiverDeclaration,
+  QUEUE_REF_PATTERN,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandHandler } from "../index.js";
 import { renderDryRunHuman, renderMergeHuman } from "../output/merge-text.js";
+
+/**
+ * The one declared work-item-ref grammar this surface accepts.
+ *
+ * It is the delivered contract's own pattern (`QUEUE_REF_PATTERN`), so the
+ * command that validates a ref and the composition that resolves it cannot
+ * disagree: a prefix carrying a digit (`ABC2-12`) is the same ref in both.
+ */
+const CHANGE_REF_GRAMMAR = new RegExp(QUEUE_REF_PATTERN, "u");
 
 /** A resolved merge configuration, or a classified configuration failure. */
 export type MergeConfigRead =
@@ -113,7 +123,7 @@ export const createMergeCommandDefinition = (runtime: MergeCommandRuntime): Comm
       invocation.positionals.length !== 1 ||
       ref === undefined ||
       ref.length === 0 ||
-      !/^[A-Za-z][A-Za-z0-9]*-[0-9]+$/.test(ref) ||
+      !CHANGE_REF_GRAMMAR.test(ref) ||
       !validWaiverGrammar(invocation.flags)
     ) {
       return grammarFailure();

@@ -16,7 +16,7 @@ links:
 
 This guide defines the canonical change workflow for this repository. The PM agent (`@pm`) orchestrates the entire lifecycle, delegating to specialized agents at each phase.
 
-> Part of the [ADOS process map](ados-processes.md) — Change Delivery is the steady-state loop; [Decision Making](decision-making.md) is consulted on demand during artifact creation, and [Documentation Reconciliation](#7-system_spec_update) runs as phase 7.
+> Part of the [ADOS process map](ados-processes.md) — Change Delivery is the steady-state loop; [Decision Making](decision-making.md) is consulted on demand during artifact creation, and [Documentation Reconciliation](#7-system_spec_update) runs as phase 7. Engine-first operation is detailed in [Engine-first Delivery Operations](engine-first-operations.md).
 
 ## Principles
 
@@ -74,7 +74,7 @@ All lifecycle commits route through the `commit` primitive, directly or through 
 - Deterministic skeleton plus one constrained message call, with a marked template fallback
 - Breaking-change detection and classified failure identities
 
-Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. `deliver-ticket.sh` and `ceo-loop.sh` remain retained primary entry points.
+Lifecycle phase state is written only through the `phase` family (`phase list`, `phase complete`, `phase reopen`). No prompt hand-edits phase timestamps or the PR-URL field; the PR URL is a pm-notes `notes:` entry. The typed engine is the regular delivery path: `dispatch <ref>` appends real `pilot` attempts, and the lifecycle merge and closeout run through the engine primitives. The shell entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, `ceo-loop.sh`) are the documented, still-executable fallback, and their authoritative-mode deprecation pointer names `dispatch <ref>` and `dispatch handover <repo> --revert`. A repository is flipped only by a separate owner act (`dispatch handover <repo>`) once its gate reads eligible; nothing in the lifecycle flips one.
 
 ### Pure-Writer Agents
 

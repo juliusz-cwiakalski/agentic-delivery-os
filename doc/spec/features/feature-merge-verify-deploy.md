@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300"]
-  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293"]
+  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
     - "packages/core/src/contracts/verify-deploy.ts"
@@ -32,6 +32,27 @@ rebase-refresh when the request is behind its base, lands one squash commit,
 verifies the landing, and records the outcome. No daemon path fires a merge and
 no force operation exists in the mutation vocabulary.
 
+The production composition supplies the transaction's reads for real: the tracker
+work-item read, the check-run page, and the request-detail read run through the
+delivered provider adapters and credential seam, and the composition resolves its
+inputs from declared sources only — configuration from the resolved document's
+typed `merge` branch, the branch from the checkout's git facts, the base
+reference from the declared integration base, and the **owner principal** from the
+provider-resolved repository owner: the owner component of the checkout's
+normalized `host/owner/name` identity, resolved through the delivered identity
+policy with no new configuration key. The declared `merge` configuration keys stay
+exactly `gate-freshness`, `gates`, and `deploy-expectations`.
+
+The configuration document is resolved once per invocation, before the
+transaction reads anything. An absent document keeps the delivered defaults; a
+document that cannot be read or resolved is refused by its own classified
+identity instead of being replaced by an empty map — a malformed document is
+`config.file.malformed`, and an invalid `merge` value (a refused `merge.gates`
+set, or a `gate-freshness` that is not a finite non-negative number) is
+`config.value.invalid`. Each is a declared `config` row at its declared
+projection (exit `1`), reached before any provider read and before any
+verification or transaction append, and never the contained `fallback.internal`.
+
 `merge` is the lifecycle merge path. The coordinator verifies finalization with
 `verify change` and `phase list`, then runs `merge <ref>` for each ready item;
 the platform merge command (`gh pr merge`, `glab mr merge`) is not the primary
@@ -50,6 +71,13 @@ Refusals are classified errors at exit 1 (or exit 2 for platform faults and
 state-unverified): the text-mode summary keeps `result=refused` and names the
 failed gate or condition with inline evidence and a remediation hint. Scripted
 mode renders the shipped failure envelope (`error` + `runId`, no `data`).
+
+`<ref>` is the declared work-item-ref grammar
+(`^[A-Za-z][A-Za-z0-9]*-[0-9]+$`), the same `QUEUE_REF_PATTERN` the queue surface
+validates. A shape outside it is refused `input.value.rejected` at exit `1`
+before any read. The composition resolves a ref's work-item number through that
+same pattern, so a prefix carrying a digit (`ABC2-12`) resolves to issue `12`
+rather than being refused as unresolvable.
 
 ## Config-declared gate registry
 
@@ -107,6 +135,23 @@ evidence. When the freshness envelope is also violated, `merge.gates-stale` is
 primary and the probe observation rides as additional evidence.
 
 ## Classification and waivers
+
+Every failure the production composition emits carries the `domainKind` its
+resolved error-table row declares, and its exit is that row's declared
+projection: the state-read and read-fault constructors derive both the kind and
+the exit from the same resolved row, so `config.credential.missing` is a `config`
+refusal at `user-validation` (exit `1`), never the contained `fallback.internal`
+at exit `2`. The composition publishes its emittable failure-code set as one
+named exported constant, `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by
+construction over its refusal branches and a declaration only — it adds no row,
+kind, or exit. The configuration-read branch contributes its forwarded codes:
+they are declared in one tuple typed against the delivered configuration
+taxonomy, so a code the taxonomy does not declare cannot reach the declaration,
+and they are members of the emittable set like every other branch. A read fault
+the table already declares is expressed through that declared identity: a
+rejected credential is `provider.auth.rejected` at exit `1`, an unreachable or
+malformed provider answer is `provider.outage` at exit `2`, and a request or work
+item that does not resolve aborts as `merge.transaction-aborted` at exit `1`.
 
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and
@@ -167,6 +212,12 @@ with a declared existing platform identity, never a new `verify.deploy.*` fault
 row. Negative verdicts are classified errors at exit 1 with `runId` and no
 `data`; text mode keeps `verdict=` continuity.
 
+**Declared residual.** `verify deploy`'s production target resolution remains a
+stub: the command's delivered behaviour, its golden, and its error identities are
+unchanged, and engine-verified deploy target resolution is *not delivered*. An
+operator reading this page or the engine-first guide must treat deploy
+verification as a residual gap rather than an engine-verified capability.
+
 The reason↔identity map is total and bidirectional: absent executed-step
 evidence (including a created-never-ran pipeline, which keeps that reason) maps
 to `verify.deploy.trace-missing`, `status-stale` maps to
@@ -204,12 +255,18 @@ with no pattern widening.
   (65 536-byte machine data; 24-line/4 096-byte human summaries) with explicit
   `+N` marks.
 
+## Quality evidence
+
+The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The production composition's reachability and classification are covered by the merge-production-composition, merge-dry-run, merge-classification, and merge-classification-conformance suites; the delivered determinism, budget, bounds, state-write, idempotency, no-force, coordinator-only, privacy, and verify-gates rows of that specification are unchanged.
+
 ## Related
 
 [Verify Gates](feature-verify-gates.md) · [Owner-Gate SLA](feature-owner-gate-sla.md) ·
 [Configuration Layer](feature-config-layer.md) · [State Layer](feature-state-layer.md) ·
 [Adapter Ports](feature-adapter-ports.md) · [Closeout Transaction](feature-closeout.md) ·
-[Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md)
+[Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md) ·
+[Engine-first Delivery Operations](../../guides/engine-first-operations.md) ·
+[TDR-0031 — Engine-first evaluation surfaces](../../decisions/TDR-0031-engine-first-evaluation-surfaces.md)
 
 ## Scheduling engine reconciliation (GH-237)
 

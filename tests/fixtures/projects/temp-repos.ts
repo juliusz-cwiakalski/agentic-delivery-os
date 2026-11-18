@@ -11,6 +11,8 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DISPATCH_IDENTITY_MARKER_NAME } from "../../../packages/core/src/contracts/index";
+import { DISPATCH_IDENTITY_SCHEMA } from "../../../packages/core/src/domain/dispatch-identity";
 import { APPROVED_BASE, guardStateFixtureRoot } from "./state-scope";
 
 const GIT_ENVIRONMENT: Readonly<Record<string, string>> = {
@@ -104,4 +106,28 @@ export const nestedDirectory = (root: string, ...segments: readonly string[]): s
 /** Remove one fixture directory tree. */
 export const removeDirectory = (directory: string): void => {
   rmSync(directory, { recursive: true, force: true });
+};
+
+/**
+ * Declare the checkout's configured VCS remote (GH-293 DM-7).
+ *
+ * The row's own repository identity resolves through the configured remote when
+ * no persisted dispatch binding exists, so a fixture that wants a resolvable
+ * identity either writes the binding or adds this remote — never both
+ * implicitly.
+ */
+export const setOriginRemote = (root: string, url: string): void => {
+  git(root, ["remote", "add", "origin", url]);
+};
+
+/**
+ * Record one persisted create-once dispatch binding inside the checkout's git
+ * common directory (the first cell of the declared resolution order).
+ */
+export const writeDispatchIdentityBinding = (root: string, repository: string): void => {
+  const commonDir = join(root, ".git");
+  writeFileSync(
+    join(commonDir, DISPATCH_IDENTITY_MARKER_NAME),
+    `${JSON.stringify({ schema: DISPATCH_IDENTITY_SCHEMA, repository })}\n`,
+  );
 };
