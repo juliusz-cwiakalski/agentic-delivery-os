@@ -149,16 +149,21 @@
 #   entry's assertion and must never touch a delivered one. TC-FLOOR-001 asserts
 #   the prefix property, so a silent reorder or drop fails by name. Neither the
 #   plan nor any phase may describe these three suites as read-only or unedited.
-#   THE PREFIX NEEDS A FROZEN BASELINE, AND IT IS A COMMITTED PIN:
+#   THE PREFIX NEEDS A FROZEN BASELINE, AND IT IS A COMMITTED PIN PAIR:
 #   `tests/fixtures/pins/trap-names.json` holds one ordered name array per
 #   provider, captured from the DELIVERED suites BEFORE any append, committed in
 #   the same phase that appends (phase 1), and NEVER REGENERATED in this change.
-#   It is a tree-invariant golden, not a base-ref comparison (which
+#   `tests/fixtures/pins/trap-names.sha256` is its companion ANTI-REGENERATION
+#   DIGEST: the SHA-256 of the pin file's exact bytes, computed ONCE from the
+#   authored baseline in the same step of phase 1 and never regenerated either.
+#   The pair is a tree-invariant golden, not a base-ref comparison (which
 #   `.ai/rules/testing-strategy.md` forbids). TC-FLOOR-001 asserts each post-append
 #   array STARTS WITH the pinned array, that the added suffix equals exactly the
-#   appended catalog names, and that the pin's bytes are unchanged — so editing the
-#   pin to match a broken suite fails naming the file. Phases 1 and 3 declare it;
-#   phase 2 may read it but authors nothing there.
+#   appended catalog names, that the pin's bytes are unchanged, and that the
+#   recomputed digest equals the committed one — so editing the pin to match a
+#   broken suite requires editing the digest too, which review sees, and a
+#   regenerated or mismatched digest fails naming BOTH files. Phases 1 and 3
+#   declare both; phase 2 may read them but authors nothing there.
 #
 # SEQUENCING (spec §18 "by outcome, so each declaration lands with the evidence
 # that proves it"), made concrete. Two facts force the exact order:
@@ -772,7 +777,7 @@ tier:
     - "The shipped registry gains or loses a registration, the control adapter enters CONFORMANCE_ADAPTERS, or an adapter identity CONSTRUCT appears outside the enumerated permit list (AC-F4-3/AC-F4-4, DM-6, TC-REG-003/004)"
     - "The parity module authors a provider-name column key instead of deriving its columns from CONFORMANCE_ADAPTERS (DM-6, TDR-0039 §2, AC-F4-4, TC-REG-004)"
     - "The identity-construct allowlist grows beyond the enumerated permits, gains a wildcard or prefix entry, or the runner's pinned five comparisons become six (NFR-10, §24.3(14), TC-REG-004)"
-    - "A trap-catalog append lands without its append-only trap-suite assertion, a delivered trap assertion is removed, renamed, relaxed, or reordered, the delivered name list stops being a prefix of the extended array, or the frozen baseline `tests/fixtures/pins/trap-names.json` is regenerated to match an edited suite (TC-FLOOR-001, §7.3)"
+    - "A trap-catalog append lands without its append-only trap-suite assertion, a delivered trap assertion is removed, renamed, relaxed, or reordered, the delivered name list stops being a prefix of the extended array, or the frozen pin pair `tests/fixtures/pins/trap-names.json` + `tests/fixtures/pins/trap-names.sha256` is regenerated to match an edited suite, or the recomputed digest does not equal the committed one (TC-FLOOR-001, §7.3)"
     - "A pinned structural surface is relaxed instead of updated exactly: a wildcard allowance, a deleted assertion, a narrowed inventory, or a new suite placed under an ignored path (NFR-8, RSK-9, TC-FLOOR-004)"
     - "A delivered suite is made green by deleting or renaming an assertion, or a new case is skipped or environment-gated (test plan §3.4 no-skip rule, TC-FLOOR-001)"
     - "Credential material reaches a gate diagnostic, double state, fixture, or report; a fixture host stops being example-only; or the secret-read allowlist gains an entry (NFR-9, AC-F5-2, TC-FLOOR-005)"
@@ -886,15 +891,18 @@ phases:
   #       byte-frozen. A family whose posture will be `recorded-difference` (the
   #       status-less GitLab/Jira cells phase 3 accounts) still needs its stimulus
   #       fixture here — the evidence is phase 2's, the stimulus is this phase's.
-  #   1.6 CAPTURE THE FROZEN BASELINE FIRST, THEN APPEND (order is binding):
+  #   1.6 CAPTURE THE FROZEN PIN PAIR FIRST, THEN APPEND (order is binding):
   #       before touching any suite, write `tests/fixtures/pins/trap-names.json`
   #       with one ordered trap-name array per provider, read from the DELIVERED
-  #       suites as they stand. It is a golden of the pre-append state, committed
-  #       in this phase and NEVER REGENERATED in this change. Then extend the three
+  #       suites as they stand, and compute `tests/fixtures/pins/trap-names.sha256`
+  #       ONCE as the SHA-256 of that file's exact bytes. Both are a golden of the
+  #       pre-append state, committed in this phase and NEVER REGENERATED in this
+  #       change. Then extend the three
   #       provider trap suites APPEND-ONLY: a new assertion per appended entry and
   #       the exact ordered name array extended by exactly the appended names, with
-  #       the pinned delivered names a preserved prefix. Correcting the pin to match
-  #       an edited suite is the failure TC-FLOOR-001 names by file.
+  #       the pinned delivered names a preserved prefix. Correcting the pin — or
+  #       recomputing the digest to match an edited pin — is the failure
+  #       TC-FLOOR-001 names by file.
   #   1.7 Stage the four decision records and, conditionally, the decision index
   #       (see COMMIT-BOUNDARY REALITY). Nothing else outside the change surface.
   #
@@ -909,7 +917,9 @@ phases:
   # Gate (expected signal: exit 0; four class ids and six family ids compared as
   # exact sets, zero `tracker.` hits outside the one module, the two planted
   # literals failing by file+construct, the out-of-scope core copy passing, the pin
-  # file present with its three frozen arrays and its bytes never rewritten, EVERY
+  # PAIR present — the baseline with its three frozen arrays and bytes never
+  # rewritten, and the digest equal to the recomputed SHA-256 of that baseline
+  # BEFORE any append — EVERY
   # appended catalog entry replayed green by its provider suite through a NEW
   # assertion, each suite's exact ordered name array equal to the PINNED names
   # followed by exactly the appended names, and the inventory/allowance equality
@@ -953,6 +963,10 @@ phases:
         # The FROZEN BASELINE for the prefix assertion, captured from the delivered
         # suites BEFORE the append and never regenerated in this change.
         - tests/fixtures/pins/trap-names.json
+        # Its ANTI-REGENERATION DIGEST: the SHA-256 of the baseline's exact bytes,
+        # computed ONCE from the authored pin in the same step and never
+        # regenerated. The pair is what makes the pin edit mechanically visible.
+        - tests/fixtures/pins/trap-names.sha256
         # Untracked at plan time (COMMIT-BOUNDARY REALITY).
         - doc/decisions/TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md
         - doc/decisions/TDR-0037-tracker-error-taxonomy-delivered-identities.md
@@ -1043,9 +1057,13 @@ phases:
   #       `carrier-absent`         the adapter's declared carrier arrays
   #                                (`writableCarriers`/`readableCarriers`, a subset
   #                                of the closed `CARRIER_KINDS`), plus the carrier
-  #                                step's PARTICIPATION — and the participation half
-  #                                is observed ONLY on the pair whose operation IS
-  #                                the carrier step (`comment-provenance.carrier-roundtrip`
+  #                                step's PARTICIPATION. THE DECLARATION HALF IS
+  #                                OBSERVED ONCE PER ADAPTER FROM THE CAPABILITY
+  #                                DECLARATION AND COMPARED PER COLUMN — the same
+  #                                adapter-level value appears in each of that
+  #                                adapter's pair observations. The participation
+  #                                half is observed ONLY on the pair whose operation
+  #                                IS the carrier step (`comment-provenance.carrier-roundtrip`
   #                                on `write-comment`): there it is `executed`, or
   #                                skipped `capability-absent` /
   #                                `no-declared-carrier`. On EVERY other pair the
@@ -1258,6 +1276,9 @@ phases:
         # composition, state-resolution mechanism), the read's declared bound and
         # count presence, the carrier declaration plus the carrier-step
         # participation (scoped to `write-comment`), and the API-2 classification.
+        # `carrier-absent`'s declaration half is observed ONCE PER ADAPTER FROM THE
+        # CAPABILITY DECLARATION AND COMPARED PER COLUMN — the same adapter-level
+        # value appears in each of that adapter's pair observations.
         # It HOLDS the declared observations; it is not any single dimension's only
         # source, and no closed-operation view carries the pagination facts, which
         # is why those are declared evidence. Input to the gate only; never a
@@ -1475,6 +1496,9 @@ phases:
         # SCOPE DECLARATION RULE): this phase edits the three suites the frozen
         # baseline governs, so it must prove the delivered names were not disturbed.
         - tests/fixtures/pins/trap-names.json
+        # READ-PINNED too, and byte-identical: the digest that proves the baseline
+        # above was not regenerated. Recomputed and compared, never rewritten.
+        - tests/fixtures/pins/trap-names.sha256
       folders:
         - tests/fixtures/providers/github/families
         - tests/fixtures/providers/gitlab/families
