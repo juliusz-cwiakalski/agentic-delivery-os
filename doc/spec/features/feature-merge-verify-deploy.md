@@ -36,14 +36,22 @@ The production composition supplies the transaction's reads for real: the tracke
 work-item read, the check-run page, and the request-detail read run through the
 delivered provider adapters and credential seam, and the composition resolves its
 inputs from declared sources only — configuration from the resolved document's
-typed `merge` branch (an absent document keeps the delivered defaults; an
-unreadable or invalid document forwards its own classified identity rather than
-resolving an empty map), the branch from the checkout's git facts, the base
+typed `merge` branch, the branch from the checkout's git facts, the base
 reference from the declared integration base, and the **owner principal** from the
 provider-resolved repository owner: the owner component of the checkout's
 normalized `host/owner/name` identity, resolved through the delivered identity
 policy with no new configuration key. The declared `merge` configuration keys stay
 exactly `gate-freshness`, `gates`, and `deploy-expectations`.
+
+The configuration document is resolved once per invocation, before the
+transaction reads anything. An absent document keeps the delivered defaults; a
+document that cannot be read or resolved is refused by its own classified
+identity instead of being replaced by an empty map — a malformed document is
+`config.file.malformed`, and an invalid `merge` value (a refused `merge.gates`
+set, or a `gate-freshness` that is not a finite non-negative number) is
+`config.value.invalid`. Each is a declared `config` row at its declared
+projection (exit `1`), reached before any provider read and before any
+verification or transaction append, and never the contained `fallback.internal`.
 
 `merge` is the lifecycle merge path. The coordinator verifies finalization with
 `verify change` and `phase list`, then runs `merge <ref>` for each ready item;
@@ -63,6 +71,13 @@ Refusals are classified errors at exit 1 (or exit 2 for platform faults and
 state-unverified): the text-mode summary keeps `result=refused` and names the
 failed gate or condition with inline evidence and a remediation hint. Scripted
 mode renders the shipped failure envelope (`error` + `runId`, no `data`).
+
+`<ref>` is the declared work-item-ref grammar
+(`^[A-Za-z][A-Za-z0-9]*-[0-9]+$`), the same `QUEUE_REF_PATTERN` the queue surface
+validates. A shape outside it is refused `input.value.rejected` at exit `1`
+before any read. The composition resolves a ref's work-item number through that
+same pattern, so a prefix carrying a digit (`ABC2-12`) resolves to issue `12`
+rather than being refused as unresolvable.
 
 ## Config-declared gate registry
 
@@ -123,15 +138,20 @@ primary and the probe observation rides as additional evidence.
 
 Every failure the production composition emits carries the `domainKind` its
 resolved error-table row declares, and its exit is that row's declared
-projection: `config.credential.missing` is a `config` refusal at `user-validation`
-(exit `1`), never the contained `fallback.internal` at exit `2`. The composition
-publishes its emittable failure-code set as one named exported constant,
-`MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by construction over its refusal
-branches and a declaration only — it adds no row, kind, or exit. A read fault the
-table already declares is expressed through that declared identity: a rejected
-credential is `provider.auth.rejected` at exit `1`, an unreachable or malformed
-provider answer is `provider.outage` at exit `2`, and a request or work item that
-does not resolve aborts as `merge.transaction-aborted` at exit `1`.
+projection: the state-read and read-fault constructors derive both the kind and
+the exit from the same resolved row, so `config.credential.missing` is a `config`
+refusal at `user-validation` (exit `1`), never the contained `fallback.internal`
+at exit `2`. The composition publishes its emittable failure-code set as one
+named exported constant, `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by
+construction over its refusal branches and a declaration only — it adds no row,
+kind, or exit. The configuration-read branch contributes its forwarded codes:
+they are declared in one tuple typed against the delivered configuration
+taxonomy, so a code the taxonomy does not declare cannot reach the declaration,
+and they are members of the emittable set like every other branch. A read fault
+the table already declares is expressed through that declared identity: a
+rejected credential is `provider.auth.rejected` at exit `1`, an unreachable or
+malformed provider answer is `provider.outage` at exit `2`, and a request or work
+item that does not resolve aborts as `merge.transaction-aborted` at exit `1`.
 
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and

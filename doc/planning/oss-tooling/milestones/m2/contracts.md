@@ -38,9 +38,12 @@ work, not current truth.
   so a bare negative always carries a degradation reason; an invocation
   outside any git work tree uses the declared `unbound` scope and is never an
   error), `handoverState` (the handover state: `engine`, `shell`, or
-  `in-transition`), `reversible` (`true` exactly when the row's latest folded
+  `in-transition`), `reversible` (`true` exactly when the row's own latest folded
   handover operation is `authoritative` — the same rule the authority document
-  applies to `reversalAvailable`), and `handoverGate` (the read-time gate
+  applies to `reversalAvailable`, with the fold bound to the row's resolved
+  repository identity like the gate block, so a store that accumulated a second
+  identity never reports another repository's authority as this row's), and
+  `handoverGate` (the read-time gate
   block: `verdict` in `eligible | ineligible | unverifiable`, the four ordered
   `conditions` (`truth`, `coverage`, `floor`, `corroboration`; each
   `{condition, status}` with `status` in `met | open`), `countedDeliveries`,

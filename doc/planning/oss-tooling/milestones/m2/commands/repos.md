@@ -63,7 +63,7 @@ Envelope `data` carries:
 | `repos[].stateLocation` | Per-repository state location |
 | `repos[].daemonReachable` | Daemon reachability, plus a degradation reason when false |
 | `repos[].handoverState` | `engine`, `shell`, or `in-transition` |
-| `repos[].reversible` | `true` exactly when the latest folded handover operation is `authoritative` |
+| `repos[].reversible` | `true` exactly when the row's own latest folded handover operation is `authoritative` (the fold is bound to the row's resolved repository identity, like the gate block) |
 | `repos[].handoverGate` | Read-time gate block: `verdict` (`eligible`, `ineligible`, or `unverifiable`), the four ordered `conditions` (`truth`, `coverage`, `floor`, `corroboration`; each `{condition, status}` with `status` in `met \| open`), `countedDeliveries`, `cleanDispatches`, and `truncation` only when the bounded read omitted records |
 | `hostIndexRevision` | Revision of the host-level index that produced the list |
 
@@ -73,14 +73,20 @@ opened, bound to the row's own normalized `host/owner/name` identity (resolved
 read-only and non-persisting from the checkout) and folded at the declared
 `production` evidence scope — the same scope `dispatch dual-run summary --repo`
 and the handover decision use — so records of another repository in the same
-store are excluded. A `first-use` row reports the declared empty-window
-evaluation (`ineligible`; `truth` met, `corroboration` met vacuously, `coverage`
-and `floor` open; `countedDeliveries: 0`, `cleanDispatches: 0`,
-`reversible: false`) without opening a store. An unreadable, torn, or malformed
-attempts/divergences ledger, and an unresolvable repository identity on a `ready`
-row, fail the whole read as `repos.state-unavailable` at exit `2` with no
-fabricated row; a truncated attempts read is not a failure and reports
-`verdict: "unverifiable"` with the `truncation` object.
+store are excluded. The row's handover fold rides the same binding:
+`handoverState` and `reversible` are folded over that repository's handover
+records only, so a store that accumulated a second identity never reports
+another repository's authority as this row's. A `first-use` row reports the
+declared empty-window evaluation (`ineligible`; `truth` met, `corroboration` met
+vacuously, `coverage` and `floor` open; `countedDeliveries: 0`,
+`cleanDispatches: 0`, `reversible: false`) without opening a store and without
+reading a record — the one production derivation over an empty window, so a
+gate-rule change moves it exactly as it moves the ready rows and the summary. An
+unreadable, torn, or malformed attempts/divergences ledger, and an unresolvable
+repository identity on a `ready` row, fail the whole read as
+`repos.state-unavailable` at exit `2` with no fabricated row; a truncated
+attempts read is not a failure and reports `verdict: "unverifiable"` with the
+`truncation` object.
 
 `<binary> repos list --json` returns `repos.v1` with `data.repos[]` exactly as
 tabulated above.

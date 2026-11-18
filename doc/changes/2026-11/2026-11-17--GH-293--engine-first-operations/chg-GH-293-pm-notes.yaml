@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-18T02:42:16.756Z }
   dor_check: { started: null, completed: 2026-11-17T23:57:19.340Z }
   delivery: { started: null, completed: 2026-11-18T01:25:37.139Z }
-  system_spec_update: { started: null, completed: 2026-11-18T01:56:46.124Z }
+  system_spec_update: { started: null, completed: 2026-11-18T03:37:47.599Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -27,8 +27,8 @@ notes:
       taxonomy-typed, and exercised by the new composition cells. Test plan
       section 10.4 appended (the execution record is append-only): the seven
       group commits, the re-run verification batch, and the statement that the
-      two section 10.3 gaps are closed rather than restated. Case count unchanged
-      at 46. Verification: engine-first-doc-reconciliation 16/16,
+      two section 10.3 gaps are closed rather than restated. Case count
+      unchanged at 46. Verification: engine-first-doc-reconciliation 16/16,
       dispatch-doc-conformance + doc-conformance green (39/39 in the batch),
       doc-distribution no drift (96 docs), lint conforms, plan validate valid."
     type: "info"
@@ -38,30 +38,30 @@ notes:
       (projectExitCode over the row's projectionClass, as readFailure does), so
       the claim that every emitted failure's exit is its row's declared
       projection holds by construction instead of coinciding with a hard-coded
-      2. One helper (exitOfRow) serves both call sites; the absent-row case keeps
-      the containment default, exit 2. No emitted exit value moved today
+      2. One helper (exitOfRow) serves both call sites; the absent-row case
+      keeps the containment default, exit 2. No emitted exit value moved today
       (merge.state-unverified is platform-provider). Verification: pnpm
       typecheck green; merge-production-composition 8/8,
       merge-classification-conformance 7/7, error-table 126/126."
     type: "info"
     date: "2026-11-18"
-  - text: "REM-5 complete (F-12, F-14). Commit bf93d606. readProjectHandover
-      filters the folded handover truth to the row's resolved repository
-      identity before reversible and handoverState are read, using the same
-      resolution the gate block uses (one resolveRowRepository call per ready
-      row, reused by both, and none on the projects list path, so projects.v1
-      stays byte-identical); an unresolved identity keeps the delivered
-      cross-identity fold, which the gate path then refuses anyway.
-      emptyHandoverGate is now derived from the one pure empty-window fold
+  - text: "REM-5 complete (F-12, F-14). Commit bf93d606. readProjectHandover filters
+      the folded handover truth to the row's resolved repository identity before
+      reversible and handoverState are read, using the same resolution the gate
+      block uses (one resolveRowRepository call per ready row, reused by both,
+      and none on the projects list path, so projects.v1 stays byte-identical);
+      an unresolved identity keeps the delivered cross-identity fold, which the
+      gate path then refuses anyway. emptyHandoverGate is now derived from the
+      one pure empty-window fold
       (conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(empty)))) and
       serializes byte-identically to the literal it replaces (verdict,
       conditions, countedDeliveries, cleanDispatches in that order).
       Verification: pnpm typecheck green; repos-handover-gate 9/9,
-      repos-list-contract 7/7, projects-list-contract 11/11,
-      projects-flat-alias 6/6, engine-first-cross-surface 2/2; a scratch proof
-      (not committed) seeded foreign authoritative handover records before and
-      after the row's own and confirmed the row stays reversible false /
-      shell, while the row's own authoritative record flips it true."
+      repos-list-contract 7/7, projects-list-contract 11/11, projects-flat-alias
+      6/6, engine-first-cross-surface 2/2; a scratch proof (not committed)
+      seeded foreign authoritative handover records before and after the row's
+      own and confirmed the row stays reversible false / shell, while the row's
+      own authoritative record flips it true."
     type: "info"
     date: "2026-11-18"
   - text: "REM-4 complete (F-9, F-10, F-11). Commit 5ab62f80. One declared
@@ -81,9 +81,9 @@ notes:
       reflow of the REM-2 conformance case landed in this commit."
     type: "info"
     date: "2026-11-18"
-  - text: "REM-3 complete (F-4). Commit c4ff6d05. The truncated family is no
-      longer a byte-identical copy of the eligible family and the no-op spread
-      is gone: its ledger exceeds the composition's declared read bound
+  - text: "REM-3 complete (F-4). Commit c4ff6d05. The truncated family is no longer
+      a byte-identical copy of the eligible family and the no-op spread is gone:
+      its ledger exceeds the composition's declared read bound
       (DISPATCH_MAX_ATTEMPT_RECORDS + 5 identity-bound records, framed once
       through the delivered buildRecord/serializeRecord pair), so all three
       surfaces read one genuinely truncated window. The case asserts, on that
@@ -101,18 +101,18 @@ notes:
       MERGE_COMPOSITION_EMITTABLE_CODES: config.file.malformed and
       config.value.invalid are members, and the tuple is typed against the
       delivered ConfigErrorCode taxonomy so a code the taxonomy does not declare
-      cannot be forwarded (config.environment.unmapped and
-      config.warning.strict are excluded because this branch passes no
-      environment map and no strict flag). The conformance case's refusal-site
-      scan was widened from one helper's block to the whole composition (return
-      and code: literal sites) plus a dedicated case for the forwarded tuple,
-      with a source assertion that the forwarded value is typed. Three new
-      behaviour cells assert a malformed document (config.file.malformed) and an
-      invalid merge.gates / gate-freshness (config.value.invalid) each at exit 1,
-      never fallback.internal, with zero transport calls and zero records
-      appended. Row count, DOMAIN_KINDS, and exit classes unchanged.
-      Verification: merge-classification-conformance 7/7,
-      merge-production-composition 8/8, error-table 126/126, typecheck green."
+      cannot be forwarded (config.environment.unmapped and config.warning.strict
+      are excluded because this branch passes no environment map and no strict
+      flag). The conformance case's refusal-site scan was widened from one
+      helper's block to the whole composition (return and code: literal sites)
+      plus a dedicated case for the forwarded tuple, with a source assertion
+      that the forwarded value is typed. Three new behaviour cells assert a
+      malformed document (config.file.malformed) and an invalid merge.gates /
+      gate-freshness (config.value.invalid) each at exit 1, never
+      fallback.internal, with zero transport calls and zero records appended.
+      Row count, DOMAIN_KINDS, and exit classes unchanged. Verification:
+      merge-classification-conformance 7/7, merge-production-composition 8/8,
+      error-table 126/126, typecheck green."
     type: "info"
     date: "2026-11-18"
   - text: "REM-1 complete (F-1, F-3; documentation only). Commit 3744a27e.
@@ -126,11 +126,12 @@ notes:
       CONFIRMED, not re-authored: it already states the declared integration
       base. No member, row, kind, exit, or test assertion moved. Verification:
       engine-first-doc-reconciliation 16/16, doc-conformance 19/19,
-      merge-classification-conformance 7/7, doc-distribution no drift (96 docs)."
+      merge-classification-conformance 7/7, doc-distribution no drift (96
+      docs)."
     type: "info"
     date: "2026-11-18"
-  - text: "Review iteration 1 remediation closed as a batch: REM-1..REM-7
-      executed in the plan revision 1.4 remediation order, one commit per group
+  - text: "Review iteration 1 remediation closed as a batch: REM-1..REM-7 executed
+      in the plan revision 1.4 remediation order, one commit per group
       (3744a27e, 94396cbf, c4ff6d05, 5ab62f80, bf93d606, ecdc483e, c85f9753).
       Verification batch re-run after the last group: the thirteen declared
       change suites and the two declared controls pass (240 assertions-bearing
@@ -141,11 +142,11 @@ notes:
       DOMAIN_KINDS member, exit class, or configuration key; projects.v1 and
       projects list --flat unchanged (projects-flat-alias 6/6,
       projects-list-contract 11/11); no file under scripts/ changed (shell
-      untouched); no repository flipped. Findings with no remediation by
-      design: F-5 and F-6 are plan-declaration findings closed by plan revision
-      1.4 (it declares every changed path in the owning phase scope and records
-      the edge.ts gate.max wiring as phase 3 test-only wiring), and F-15/F-16
-      are the review's own no-action entries. The review gate stays FAIL until
+      untouched); no repository flipped. Findings with no remediation by design:
+      F-5 and F-6 are plan-declaration findings closed by plan revision 1.4 (it
+      declares every changed path in the owning phase scope and records the
+      edge.ts gate.max wiring as phase 3 test-only wiring), and F-15/F-16 are
+      the review's own no-action entries. The review gate stays FAIL until
       review iteration 2 re-verifies AC-F7-11 and AC-F6-10 against spec v1.5;
       review_fix is NOT marked complete and no PR was created."
     type: "retro"
