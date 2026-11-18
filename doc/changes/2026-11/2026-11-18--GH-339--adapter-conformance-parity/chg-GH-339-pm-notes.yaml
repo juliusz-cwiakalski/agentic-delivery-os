@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-18T12:38:56.574Z }
   dor_check: { started: null, completed: 2026-11-18T12:41:10.844Z }
   delivery: { started: null, completed: 2026-11-18T15:40:11.809Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-18T15:41:54.200Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -402,4 +402,43 @@ notes:
       rather than the plan's declared feat(...) summaries, because the lifecycle
       phase is dor_check at commit time; no message was hand-composed."
     type: info
+    date: "2026-11-18"
+  - text: "System documentation reconciled (lifecycle phase 7): nine current-truth
+      pages updated — feature-adapter-conformance (primary: parity matrix and
+      six-dimension basis, class-set register and five adjudications, gate with
+      the observation record and nine clause ids, four-class taxonomy and the
+      six-family/18-cell accounting, the stateful double, participation,
+      unchanged CI placement and artifact schema), feature-provider-client-seeds
+      (trap family wiring, appended four-field entries, the frozen pin pair,
+      corrected catalog and fixture counts), feature-adapter-ports (no port or
+      operation added), feature-adapter-reference-behavior (the declarations are
+      the parity bar), feature-result-contract (tracker class ids are
+      conformance-only), doc/spec/nonfunctional.md (NFR-TOOL-007),
+      feature-monorepo-scaffold-toolchain (conformance QA row),
+      doc/overview/glossary.md and doc/00-index.md. No spec-coverage gap and no
+      residual documentation gap; the two pages outside phase 6's original scope
+      were declared as discovered scope (plan discovery (m)). Landed as
+      4079cca3. Guards: doc-distribution no drift (96 in-scope docs),
+      doc-conformance 19 pass, reference-behavior 16 pass, content inventory 12
+      pass, error-table 149/149, help-guide fully covered, conformance suites
+      157 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (phase primitive defect, lifecycle phase 7): committing the
+      reconciled docs required `commit --phase delivery`, which short-circuits
+      to a no-op once `delivery` is completed. Reopening `delivery` and
+      committing worked (4079cca3), but the paired `phase complete delivery`
+      then reported `no-op / already-completed` while reading the PRE-reopen
+      completion, and it rewrote the pm-notes mirror with the registry's
+      `started` value in the `completed` field (15:10:39.032Z instead of
+      15:40:11.809Z), leaving the working tree contradicting both HEAD and the
+      registry. The registry stayed correct (delivery started 15:10:39.032Z,
+      completed 15:40:11.809Z), so the repair was restoring the committed bytes.
+      Two defects worth a follow-up ticket: (a) `phase complete` after a reopen
+      must not read the stale completion flag; (b) the phase-completion write
+      path must never put a started value into a completed field. Process note:
+      stage documentation under the phase that owns it BEFORE completing that
+      phase, or complete `system_spec_update` first and let the doc commit ride
+      it."
+    type: retro
     date: "2026-11-18"
