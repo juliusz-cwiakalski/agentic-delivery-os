@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M3: Harness and tracker integrations"
 phases:
   clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
-  specification: { started: null, completed: 2026-11-18T10:45:01.837Z }
+  specification: { started: null, completed: 2026-11-18T10:58:26.802Z }
   test_planning: { started: null, completed: 2026-11-18T10:45:12.486Z }
   delivery_planning: { started: null, completed: 2026-11-18T10:45:27.670Z }
   dor_check: { started: null, completed: null }
@@ -382,5 +382,23 @@ notes:
       plan (47/47 TCs, 27/27 ACs, both contract members declared once in Phase 2
       with a no-later-member rule, feature-closeout added to Phase 8, validate +
       lint both valid)."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check iteration 5: NOT_READY (1 major, 5 minor, 4 nit). All facets
+      pass except cross-artifact consistency and decision capture, both on the
+      single major: TDR-0032 still described a one-member carrier while the
+      settled design is two. Everything else was minor or nit."
+    type: info
+    date: "2026-11-18"
+  - text: "Iteration-5 remediation: TDR-0032 amended (A-4 — the caller supplies the
+      agent identity on its own additive optional member, the binding member
+      carries the resolver's return value, both in the contract phase, shipped
+      dispatch sets neither); spec nits (DoD clause 6 split into construction vs
+      invocation sites, section 1 qualified to the port boundary, Appendix C
+      figures refreshed); test plan (TC-011 empty-string rule, TC-047
+      absence-marker property, stale 41 figure); plan (harness-contract phase
+      rule narrowed to the harness surface, Phase-5 gate re-runs the Phase-4
+      propagation suite, agent-divergence reserved for a stated observed agent,
+      Phase 2.1 cites TDR-0032 A-4 beside DEC-16). validate + lint both valid."
     type: info
     date: "2026-11-18"
