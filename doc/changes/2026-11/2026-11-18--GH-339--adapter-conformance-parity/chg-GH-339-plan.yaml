@@ -1,0 +1,1313 @@
+# GH-339 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly. Extra phase data (goal, obligations, AC/TC ownership, gate commands)
+# rides in YAML comments so the parsed document stays schema-strict; the plan
+# declares phases and scope only — no `tasks` key and no progress log (progress
+# is a pm-notes `notes:` entry naming the plan phase id, the commit hash, and the
+# gate result).
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-339-spec.md (v1.1: F-1..F-5; 34 ACs AC-F1-1..AC-F5-3;
+#               API-1..API-5; DM-1..DM-7; NFR-1..NFR-11; NG-1..NG-11;
+#               DEC-1..DEC-6; RSK-1..RSK-11; §6 flows 1–5; §7.1 in-scope list;
+#               §8.3 data model; §17 criteria; §18 sequencing; §24.1 Appendix A
+#               doc impacts; §24.3 Appendix C deliberate non-decisions BINDING on
+#               this plan; §24.4 Appendix D fixture-decided details). v1.1 is the
+#               version that states the delivered status asymmetry as fact and
+#               gives AC-F2-2, AC-F2-3 and AC-F2-5 the recorded-difference
+#               escape; this plan never assumes a status-bearing classification
+#               a status-less adapter cannot produce.
+#   - Tests:    ./chg-GH-339-test-plan.md (v1.1: 61 TCs —
+#               TC-PARITY-001..008, TC-PMUT-001..011, TC-ART-001..002,
+#               TC-TAX-001..013, TC-DOUBLE-001..007, TC-DMUT-001..004,
+#               TC-REG-001..006, TC-GATE-001..004, TC-FLOOR-001..006; 34/34 AC
+#               coverage, 0 orphans; §7.1 suite map; §7.2 fixtures to author;
+#               §7.4 gate commands G1..G10 with G10 binding; §7.5 the mutation
+#               register M1..M42, M41 silent-pass and M42 unreachable-class;
+#               §7.6 the phase/file bindings this plan must carry; GAP-TP-1..8,
+#               OQ-TP-1..7). GAP-TP-1 (the five intersections are adjudicated
+#               during delivery, verdict unknown) and GAP-TP-3 (the delivered
+#               topology check cannot see an ADDED job) are the two gaps this
+#               plan must close by placement, not by prose.
+#   - PM record: ./chg-GH-339-pm-notes.yaml (milestone M3, delivery_mode
+#               autonomous, the binding "no adapter behaviour changes" and
+#               "adjudicate, never converge" expectations, the invariants the
+#               delivery may not widen, the TDR staging note, and the
+#               TMPDIR=$PWD/tmp/tmpdir convention).
+#   - Decisions: doc/decisions/TDR-0036 (parity matrix home
+#               `packages/testkit/src/conformance/parity.ts`, closed cell and
+#               class vocabularies, register shape and bijection, clause-tagged
+#               gate), TDR-0037 (four class ids over delivered identities, the
+#               total five-outcome rule, six families with declared outcomes,
+#               taxonomy home `tracker-error-taxonomy.ts`), TDR-0038 (double home
+#               `stateful-double.ts`, five declared effects, three named
+#               fail-closed failures, wiring through
+#               `RunConformanceInput.transportFactory`), TDR-0039 (five
+#               participation items, the seven-module bound set with the
+#               enumerated permit list INCLUDING the pinned five-comparison
+#               `runner.ts` derivation, and the composition-injected control
+#               through `RunConformanceInput.adapters`).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages, per-phase one-line summary, typed
+#               done-artifacts, leases, weightClass, interactions, tier; no
+#               tasks key, no progress log).
+#   - Precedent: ../2026-11/2026-11-17--GH-338--github-adapter-completion/
+#               chg-GH-338-plan.yaml (comment-carried phase data,
+#               one-commit-per-phase discipline, pin-move-in-one-commit, a
+#               release phase that declares the spec-reconciliation files for
+#               STAGING ONLY, and the SCOPE DECLARATION RULE).
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1):
+#   The four decision records are UNTRACKED in the worktree at plan time because
+#   a non-delivery phase completion stages only the change folder:
+#     doc/decisions/TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md
+#     doc/decisions/TDR-0037-tracker-error-taxonomy-delivered-identities.md
+#     doc/decisions/TDR-0038-simulated-stateful-tracker-double-declared-effects.md
+#     doc/decisions/TDR-0039-registration-only-adapter-extensibility-proof.md
+#   Phase 1 therefore declares those four exact paths so @coder commits them on
+#   the branch. Nothing else outside the change surface may be swept in.
+#   VERIFIED AT PLAN TIME, and it corrects the staging note's premise: the four
+#   `doc/decisions/00-index.md` ROWS ARE ALREADY COMMITTED on this branch
+#   (commit ef9afa59) and the file is clean (`git status --porcelain` shows no
+#   entry for it; `git show HEAD:doc/decisions/00-index.md` carries the TDR-0039
+#   row). The index is still declared in phase 1 because the owner instruction
+#   requires the five-file set to land together, and because the specs' §24.1
+#   "Decision index" obligation must be provable at DoD. Consequence, stated so
+#   nobody mistakes it for drift: if phase 1 does not touch the index,
+#   `plan diff` reports at most an ADVISORY `undeclared-missing` for it, never a
+#   validation failure. A coder who changes a TDR status row stages it there.
+#
+# SCOPE DECLARATION RULE (binding on every phase, inherited from GH-338):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   regression control (the TC-FLOOR-* suites, the delivered coverage and surface
+#   pins, `.github/workflows/**`, `scripts/checks/ci-topology.ts`,
+#   `tests/checks/{ci-checks,conformance-workflow}.test.ts`) is NOT declared:
+#   declaring it would only produce an advisory `plan diff`
+#   `undeclared-missing` for a file that needs no edit. Every file the test plan
+#   names as an assertion site to CREATE or EXTEND is declared by the phase that
+#   owns that half of the case.
+#
+# SEQUENCING (spec §18 "by outcome, so each declaration lands with the evidence
+# that proves it"), made concrete. Two facts force the exact order:
+#
+#   (a) The taxonomy must precede the gate, not merely precede the fixtures: the
+#       parity gate's THIRD comparison dimension is "the tracker error class
+#       resolved for that operation's family" (DM-1, AC-F1-5), so the parity
+#       engine cannot be authored without the class table and the total
+#       decision function. §18's "taxonomy and family vocabulary first — they
+#       are inputs to fixture authoring" is therefore also a hard build
+#       dependency of phase 2.
+#   (b) The family ACCOUNTING must follow the register: DM-4 makes
+#       `recorded-difference` a POSTURE that references a `registerId` resolving
+#       to an entry with `differenceClass: "failure-classification"`, and DM-2
+#       makes that register a phase-2 surface. An accounting cell written before
+#       the register exists is a dangling reference and TC-TAX-011 fails it by
+#       name. So the F-2 work spans two phases with the register between them:
+#       the VOCABULARY (which is what §18 requires first, and what fixture
+#       authoring consumes) lands in phase 1 together with the family stimuli
+#       and the catalog entries; the ACCOUNTING and the replay classification
+#       land in phase 3. Neither phase is optional and neither is a re-plan.
+#
+#   Phase 1  Tracker error taxonomy + six-family vocabulary + family stimuli +
+#            four-field catalog entries + the exact two-tree `tracker.` scan
+#            (F-2 vocabulary; AC-F2-1, AC-F2-8, AC-F2-9). TDRs land here.
+#   Phase 2  Parity matrix + difference register + parity gate + adjudication of
+#            the five non-reference supported intersections + artifact
+#            invariance (F-1, F-5 diagnostics; AC-F1-1..8, AC-F5-2, AC-F5-3).
+#   Phase 3  Per-adapter × per-family accounting + offline replay classification
+#            through the production clients, both posture arms on every run
+#            (F-2 evidence; AC-F2-2..7, AC-F2-10, AC-F2-11).
+#   Phase 4  Deterministic simulated stateful tracker double + its scenarios +
+#            the additive tenant extension (F-3; AC-F3-1..7).
+#   Phase 5  Registration-only participation contract + identity-free invariant
+#            + composition-injected synthetic control + the gate's CI-wiring and
+#            topology control (F-4, F-5 topology; AC-F4-1..5, AC-F5-1).
+#   Phase 6  Release obligations: regression floor, spec reconciliation staged
+#            for lifecycle phase 7, plan validation, aggregate gate
+#            (TC-FLOOR-001..006; no AC ownership).
+#
+# ADJUDICATION IS A DELIVERY ACT (GAP-TP-1, pm-notes binding expectation).
+#   PHASE 2 OWNS ALL FIVE adjudications, because phase 2 authors the matrix
+#   column and the register entry for each:
+#     1. GitLab `read-delivery-request`
+#     2. GitLab `read-pipeline-run`
+#     3. Jira   `read-work-item`
+#     4. Jira   `write-work-item`
+#     5. Jira   `transition-work-item`
+#   For each, phase 2 records EITHER `{kind: "same-as-reference"}` OR a
+#   `{kind: "declared-difference", differenceClass, registerId}` cell whose
+#   register entry carries class, non-empty rationale, resolvable evidence and an
+#   `adjudicatedBy` reference. THIS PLAN DOES NOT PRE-DECIDE ANY VERDICT and
+#   neither may the coder: the verdict is what the replay shows.
+#   Evidence homes (fixed, so the record and the artefacts cannot drift):
+#     - one evidence document per recorded difference:
+#       tests/fixtures/providers/conformance/parity/evidence/{differenceId}.json
+#     - the five-intersection record with provider, operation, chosen posture,
+#       the four dimension observations and the reference:
+#       tests/fixtures/providers/conformance/parity/adjudication.json
+#     - the declared matrix and register themselves:
+#       packages/testkit/src/conformance/parity.ts
+#   The five ADAPTER-LOCAL, status-less classification differences
+#   (`failure-classification` on GitLab `auth-shape`/`rate-limit`/`payload-shape`
+#   operations and the equivalent Jira cells) are authored by the SAME phase,
+#   for the same reason: a `recorded-difference` posture in phase 3 resolves to
+#   these entries, and phase 3 creates none. Their deciding structured field is
+#   `httpStatus` ABSENCE — delivered code, not a fixture choice (§24.4), which is
+#   why no phase may assert a status-bearing class on those two adapters.
+#   If an adjudication could only be `same-as-reference` by CHANGING an adapter,
+#   the coder STOPS and reports: that is adapter completion (NG-1, §24.3(1)) and
+#   TC-FLOOR-002 fails it by name.
+#
+# NO ADAPTER BEHAVIOUR CHANGE (NG-1, §24.3(1); pm-notes binding expectation):
+#   No phase may edit `packages/adapters/src/{github,gitlab,jira}/**`, their
+#   capability declarations, the closed operation set, the error table, the
+#   domain kinds, the projection classes, the exit-code map, the artifact, the
+#   flows/steps/assertion families, the skip-kind vocabulary, or any workflow
+#   file. Where a case needs to prove EXISTING adapter behaviour it replays the
+#   production client through an injected transport from `tests/**` — test-side
+#   only. A task that would need an adapter change is a STOP-AND-REPORT, never a
+#   quiet widening.
+#
+# GAP-TP-3 IS REAL WORK AND IS PLACED, NOT ASSUMED:
+#   `scripts/checks/ci-topology.ts` `validate()` asserts that the pinned
+#   BASH_JOBS/TS_JOBS ids are PRESENT and that the triggers target main-tools; it
+#   does NOT fail when a job is ADDED and no suite pins the workflow FILE SET.
+#   PHASE 5 authors the missing control as a NEW structure suite —
+#   `tests/structure/ci-topology-pin.test.ts` over
+#   `tests/fixtures/pins/workflow-topology.json` — asserting exact file-set,
+#   exact per-file job-id set, exact per-file trigger set, plus a pinned
+#   check-name inventory of `tests/checks/ci-checks.test.ts` and
+#   `tests/checks/conformance-workflow.test.ts`. Both delivered suites and
+#   `scripts/checks/ci-topology.ts` stay UNEDITED and no workflow file, job,
+#   trigger, permission, or upload moves. The control rides the EXISTING test
+#   topology: `tests/structure` is discovered by `bun test` inside the existing
+#   `ts-test` job (and also runs in `ts-exports`) — no new job, no new workflow,
+#   no new script.
+#   The residual "this change's diff touched no workflow file" half is
+#   REVIEW-VERIFIED (test plan §3.4/§10), never dressed up as a base-ref diff
+#   assertion, which `.ai/rules/testing-strategy.md` forbids.
+#
+# MUTATION CONTROLS ARE FIRST-CLASS (test plan §7.5; NFR-2): every gate rule and
+#   every mutation has exactly one home, never a catch-all task.
+#     - TC-PMUT-001..011 (M1..M11): PHASE 2, in `tests/conformance/parity-gate.test.ts`
+#       with typed mutation builders in
+#       `tests/fixtures/providers/conformance/parity/mutations.ts`. Each asserts
+#       the NAMED violation (provider, operation, clause of the closed clause
+#       set) AND a paired clean pass in the same case. Non-vacuity statement: a
+#       mutation that stops producing its named violation is a BLOCKING finding —
+#       it is never repaired by deleting the mutation or relaxing the expected
+#       clause.
+#     - M12/M13 (dimension divergence, falsified evidence): PHASE 2, the two
+#       adjudication arms of TC-PARITY-005/006, and TC-PARITY-008 runs four
+#       AC-F1-5 dimension mutations plus one AC-F1-6 falsified-evidence mutation
+#       on EVERY run from an arm registry independent of the record's contents, so
+#       neither arm can be deleted while the suite stays green.
+#     - TC-DMUT-001..004 (M29): PHASE 4, in `tests/conformance/stateful-double.test.ts`
+#       with typed case literals in
+#       `tests/fixtures/providers/conformance/stateful/invalid-effects.ts`. Each
+#       asserts a DISTINCT decode failure naming the offending declaration plus a
+#       paired valid baseline that decodes and applies. Same non-vacuity
+#       statement as above.
+#     - M16 (the two-tree literal scan), M20 (18 accounting-cell removals, dual
+#       posture, covered-on-a-gap), M21 (family wiring), M41 (silent-pass) and
+#       M42 (unreachable-class): PHASES 1 and 3 at their owning case.
+#     - M23..M28, M30..M40: the owning phase's own case (phases 4, 5, 6).
+#   The two-arm invariant is suite-level, not record-level: a run in which either
+#   posture arm executes zero times fails naming the missing arm (TC-TAX-013,
+#   TC-PARITY-008), so `everything is same-as-reference` and `everything is a
+#   declared difference` are both impossible states.
+#
+# TC -> PHASE MAP (61 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the declaration that makes it green):
+#   Phase 1 (4):   TC-TAX-001, TC-TAX-002, TC-TAX-009, TC-TAX-010
+#   Phase 2 (23):  TC-PARITY-001..008 (8), TC-PMUT-001..011 (11),
+#                  TC-ART-001, TC-ART-002 (2), TC-GATE-003, TC-GATE-004 (2)
+#   Phase 3 (9):   TC-TAX-003, TC-TAX-004, TC-TAX-005, TC-TAX-006, TC-TAX-007,
+#                  TC-TAX-008 (6), TC-TAX-011, TC-TAX-012, TC-TAX-013 (3)
+#   Phase 4 (11):  TC-DOUBLE-001..007 (7), TC-DMUT-001..004 (4)
+#   Phase 5 (8):   TC-REG-001..006 (6), TC-GATE-001, TC-GATE-002 (2)
+#   Phase 6 (6):   TC-FLOOR-001..006
+#   Count: 4 + 23 + 9 + 11 + 8 + 6 = 61.
+#   SPLIT-CASE NOTE (the files two phases touch; each id still has ONE owner):
+#   1. `tests/conformance/tracker-taxonomy.test.ts` is CREATED in phase 1 with the
+#      vocabulary, decision-rule and capability-structural cases (TAX-001/009/010)
+#      and EXTENDED in phase 3 with the six posture arms (TAX-003..008).
+#   2. `tests/checks/parity-gate-wiring.test.ts` is CREATED in phase 2 with
+#      GATE-003's diagnostics half (bounded detail, scalar-only values, resolving
+#      references, secret-free diagnostics with the canary and a paired detection
+#      positive) so GATE-003 is green at its owning phase's boundary, and is
+#      EXTENDED in phase 5 with GATE-001's discovery chain. GATE-003 stays owned
+#      by phase 2; GATE-001 by phase 5.
+#   Test plan §7.6's "TC-GATE-003, TC-GATE-004, TC-FLOOR-001..006 | Quality
+#   gates" row is read as a RE-RUN obligation, not as ownership: GATE-003/004 are
+#   owned by phase 2 because their assertion files are authored there and they
+#   cannot be green before the gate exists; phase 6 re-runs them as release
+#   evidence and declares no file for them.
+#
+# AC OWNERSHIP (34/34; exactly one owning phase each; every TC cited for an AC
+#   lives in that AC's owning phase, so no AC is satisfied across a phase
+#   boundary):
+#   Phase 1 (3):  AC-F2-1 (TAX-001/002), AC-F2-8 (TAX-009), AC-F2-9 (TAX-010)
+#   Phase 2 (10): AC-F1-1..AC-F1-8 (PARITY/PMUT/ART), AC-F5-2 (GATE-003),
+#                 AC-F5-3 (GATE-004)
+#   Phase 3 (8):  AC-F2-2..AC-F2-7 (TAX-003..008), AC-F2-10 (TAX-011/013),
+#                 AC-F2-11 (TAX-012)
+#   Phase 4 (7):  AC-F3-1..AC-F3-7 (DOUBLE/DMUT)
+#   Phase 5 (6):  AC-F4-1..AC-F4-5 (REG), AC-F5-1 (GATE-001/002)
+#   Phase 6 (0):  the release floor re-establishes evidence for the whole set; it
+#                 owns no AC and moves none. A reviewer who wants ownership to move
+#                 is asking for a plan revision, not a silent transfer.
+#   Count: 3 + 10 + 8 + 7 + 6 = 34.
+#
+# PINNED STRUCTURAL SURFACES (verified paths at plan time; RSK-9, NFR-8):
+#   - `tests/structure/inventory.json` holds the per-package source-file list
+#     (`"testkit": [... "src/conformance/*.ts" ...]`) and the file-set equality is
+#     asserted both directions by `tests/structure/content-inventory.test.ts`.
+#   - `EXECUTABLE_ALLOWANCES` is NOT a separate file: it is the declared constant
+#     at `tests/structure/content-inventory.test.ts` (line 30), listing each
+#     file's permitted executable exports. There is no
+#     `tests/structure/EXECUTABLE_ALLOWANCES` path; this plan declares the real
+#     home.
+#   - Every phase that ADDS a testkit module moves BOTH in the same commit, and
+#     lists exactly the new file's exported executable names with no wildcard. An
+#     allowance naming a symbol the file does not export fails by name; an
+#     inventory entry for a file that does not exist fails by name; a `*` in an
+#     allowance fails the no-wildcard assertion (TC-FLOOR-004).
+#   - `tests/structure/subpaths.test.ts` pins testkit's subpaths to
+#     `{ ".": "src/index.ts", "./commit": "src/commit/index.ts" }`. NO new subpath
+#     is added by this change, so that file is a read-only control and is
+#     deliberately NOT declared; class ids, the matrix, the taxonomy and the
+#     double are reachable through the existing root export.
+#
+# PROVIDER-IDENTITY SCAN — CONSTRUCT DEFINITION (forced, and declared here so the
+#   scan cannot be either vacuous or widened):
+#   AC-F4-4 / DM-6 name a seven-module bound set — `flows.ts`, `coverage.ts`,
+#   `artifact.ts`, `harness.ts`, `parity.ts`, `tracker-error-taxonomy.ts`, and the
+#   stateful double — and an enumerated permit list that includes the pinned
+#   `runner.ts` derivation with exactly five provider comparisons. The delivered
+#   `artifact.ts` already carries provider-SHAPED text inside its redaction
+#   table: `{ detail: "github token" }`, `{ detail: "gitlab token" }` (lines
+#   84-85) and `/avatars\.githubusercontent\.com|secure\.gravatar\.com/`
+#   (lines 91, 114). A naive substring scan would therefore fail on delivered,
+#   intentionally-unchanged code (AC-F1-8 forbids an artifact edit), and the
+#   allowlist may NOT grow to cover it (NFR-10, §24.3(14)).
+#   The only non-widening reading — and the one the spec's own §2.1 statement
+#   ("the flow registry, coverage gates, artifact module, and harness registry
+#   contain no adapter identity literal") presumes — is an IDENTITY CONSTRUCT:
+#   (i) a string-literal expression whose whole value is a registered provider
+#   identity (`"github"`, `"gitlab"`, `"jira"`), and (ii) a provider-discriminant
+#   comparison or branch (`addressing.provider === "…"`, `switch` on the same).
+#   Redaction-pattern labels and URL regexes are not identity constructs.
+#   Phase 5's scan binds that definition, and TC-REG-004 keeps it non-vacuous:
+#   seven planted full-value literals (one per bound module) and a sixth
+#   `addressing.provider === …` in `runner.ts` each fail naming file and
+#   construct; a wildcard or prefix allowance is rejected by assertion.
+#
+# RELEASE / VERSION IMPACT: `version_impact: none`. Testkit is private and
+#   dev-only, no publishable package changes, so NO changeset is authored — a
+#   `.changeset/*.md` file would claim a release that does not exist. That is a
+#   deliberate non-action, not an omission.
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Every command runs from the repository root with
+#     TMPDIR=$PWD/tmp/tmpdir (repo-local, git-ignored; never /tmp or $HOME).
+#     `bunfig.toml` ignores `tmp/**`, which is exactly why no new suite may live
+#     under an ignored path (TC-GATE-001 asserts the discovery chain).
+#   - G1 TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance
+#   - G2 TMPDIR=$PWD/tmp/tmpdir bun test tests/structure
+#   - G3 TMPDIR=$PWD/tmp/tmpdir bun test tests/checks
+#   - G4 TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers
+#   - G5 TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries
+#   - G6 TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+#   - G7 TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/ci-topology.ts
+#        (requires `origin/main-tools`; a missing base is an ERROR, never a
+#         SKIP, and never recorded as a pass)
+#   - G8 TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
+#   - G9 TMPDIR=$PWD/tmp/tmpdir git diff --check
+#   - G10 TMPDIR=$PWD/tmp/tmpdir pnpm check   <-- the BINDING completion gate
+#   G1..G9 are the narrow loop; G10 is never substituted by a narrow pass, and
+#   every phase records its boundary result as a pm-notes `notes:` entry. The
+#   operational prerequisite from clarify_scope still applies: the typed CLI does
+#   not run from an unbuilt workspace, so
+#   `TMPDIR=$PWD/tmp/tmpdir pnpm build` precedes every `jaiship` invocation.
+#
+# COMMIT CONVENTION (one commit per plan phase through the commit primitive;
+#   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
+#   phase 1  feat(GH-339): tracker error taxonomy and trap-family vocabulary
+#   phase 2  feat(GH-339): parity matrix, difference register and parity gate
+#   phase 3  feat(GH-339): family accounting and offline classification replay
+#   phase 4  feat(GH-339): simulated stateful tracker double
+#   phase 5  feat(GH-339): registration-only participation and topology control
+#   phase 6  chore(GH-339): release obligations and the regression floor
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec §24.3; do not reshape at delivery):
+#   1.  No adapter is completed or changed — no operation, capability flag, gap
+#       record, normalized-view field, or provider behaviour moves for GitHub,
+#       GitLab, or Jira (§24.3(1)). Test-side replay only.
+#   2.  No closed operation is added, removed, renamed, or retyped; the nine are
+#       the universe of parity (§24.3(2)).
+#   3.  No failure identity, error-table row, domain kind, projection class, or
+#       exit code is added; the four tracker class ids are conformance-only
+#       labels and are never emitted (§24.3(3)).
+#   4.  The `delivery.conformance.v1` schema, field set, closed statuses, skip
+#       kinds and bounds are unchanged; parity is NOT serialized into it
+#       (§24.3(4)) — `packages/testkit/src/conformance/artifact.ts` is a
+#       read-only control in every phase.
+#   5.  No workflow file, job, trigger, permission, or upload changes; the live
+#       tier stays read-only and outside the gate (§24.3(5)).
+#   6.  Flows, step ids, step count, assertion families, carrier behaviour, and
+#       the skip-kind vocabulary are unchanged; the double is additional
+#       evidence, not a new flow (§24.3(6)).
+#   7.  Trap-catalog entries stay exactly four fields; family wiring is separate
+#       data that references entry names (§24.3(7)).
+#   8.  The shipped registry stays exactly the three shipped provider contracts;
+#       the control adapter is composition-injected only (§24.3(8)).
+#   9.  Testkit stays runtime-neutral; fixture loading, the process-environment
+#       read, native fetch, the child-process substitution, and artifact writing
+#       stay under `tests/` (§24.3(9)).
+#   10. No CLI command, report, rendered surface, or operator configuration is
+#       introduced for parity (§24.3(10)).
+#   11. The provider trap suites are neither migrated nor retired (§24.3(11)).
+#   12. The initial adjudication records real delivered differences instead of
+#       converging them (§24.3(12)).
+#   13. The four class ids and the six families are closed; no family is added to
+#       cover a fixture gap (§24.3(13)).
+#   14. The runner's addressing-derived expected entity identity is the SINGLE
+#       pinned engine exception (five comparisons, recorded not approved); the
+#       allowlist does not grow for anything else (§24.3(14)).
+#   Plus: fixture-decided details stay fixture-decided (§24.4) — stimulus payload
+#   shapes, which operation a family exercises per adapter, effect operand names
+#   and values, double-backed response projections, violation wording beyond its
+#   named elements, and the serialized form of declared state. NOT fixture-decided:
+#   whether a difference is recorded, whether a family is accounted for, and
+#   whether an adapter's payload failures carry a structured status — that is
+#   delivered code (GitHub stamps it; GitLab and Jira do not).
+#
+# INCONSISTENCIES / DISCOVERIES (recorded, none blocking; see the DoR report):
+#   (a) The staging note says the decision-index rows are untracked. They are
+#       committed (ef9afa59) and clean; phase 1 still declares the index per the
+#       owner instruction, with the advisory-only consequence stated above.
+#   (b) `EXECUTABLE_ALLOWANCES` is a constant inside
+#       `tests/structure/content-inventory.test.ts`, not a standalone file; the
+#       real home is declared.
+#   (c) `artifact.ts` already carries provider-shaped redaction text inside the
+#       AC-F4-4 bound set; the identity-CONSTRUCT definition above is the only
+#       reading that neither fails delivered code nor widens the allowlist.
+#   (d) The test plan's §7.6 row puts TC-GATE-003/004 in the quality-gates phase;
+#       this plan owns them in phase 2 (their assertion file is authored there)
+#       and re-runs them in phase 6. Recorded, not silently changed.
+#   (e) DM-4's `recorded-difference` posture references a DM-2 register entry,
+#       which is why the F-2 evidence phase follows the F-1 register phase even
+#       though §18 lists the family vocabulary before the matrix. The vocabulary
+#       itself still lands first, as §18 requires.
+#   (f) TC-REG-002's pass criterion mentions "module fingerprint constants
+#       exported by each" of the seven bound modules. Taking that literally would
+#       require editing `flows.ts`, `coverage.ts`, `artifact.ts` and `harness.ts`
+#       to add constants — a direct contradiction of AC-F4-2 and §24.3(8) ("no
+#       lifecycle, port, flow-registry, coverage, runner, or artifact module is
+#       edited"). The plan binds the mechanism that does NOT edit them: the
+#       imported modules are identified by the data they already export (the flow
+#       registry, the artifact constants and caps, the harness registry), by the
+#       exact-set pins, and by the identity scan — no fingerprint constant is
+#       added to any delivered module.
+#   (g) `tests/structure/**` also runs in the `ts-exports` job, which does NOT
+#       fetch `origin/main-tools`; `ci-topology.validate()` fails closed when the
+#       base is missing. TC-GATE-002's item (iv) ("`ci-topology.validate(ROOT)`
+#       returns `[]`") is therefore satisfied by the DELIVERED suites that already
+#       assert it — `tests/checks/ci-checks.test.ts` (`validateTopology(ROOT)`,
+#       runs in `ts-test`, base fetched) and
+#       `tests/checks/conformance-workflow.test.ts`
+#       (`validateWorkflowRoot(process.cwd())`, base-free) — and the new structure
+#       pin asserts only base-INDEPENDENT facts (file set, job-id set, trigger
+#       set, check-name inventory). The plan does not put a base-dependent
+#       assertion into the structure tier, and does not add an environment branch
+#       or a skip to keep it green.
+#
+# DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
+#   declared by phase 6 for STAGING ONLY — this plan authors none of them):
+#   - doc/spec/features/feature-adapter-conformance.md — add the parity matrix and
+#     its gate (reference designation, cell vocabulary, difference classes,
+#     register, three-way consistency, bidirectional coverage), the tracker
+#     taxonomy and family accounting, the simulated double and its declared
+#     state/five-effect contract with the stateless default preserved, the
+#     registration-only participation contract with both proofs and the enumerated
+#     provider-identity allowlist (including the pinned runner derivation), the
+#     diagnostics and ordering guarantees, and the UNCHANGED CI-topology and
+#     artifact statements.
+#   - doc/spec/features/feature-provider-client-seeds.md — record that the trap
+#     catalogs feed conformance-level family accounting while keeping their
+#     four-field shape; state that delivered divergences are adjudicated in the
+#     parity register rather than silently normalized. No posture changes.
+#   - doc/spec/features/feature-adapter-reference-behavior.md — state that the
+#     reference behavior is the parity bar and name the matrix and register as the
+#     machine-readable record of deliberate difference; keep every delivered value.
+#   - doc/spec/features/feature-adapter-ports.md — confirm no port, operation,
+#     capability flag, or carrier change; parity is proven at the primitive
+#     boundary the ports define.
+#   - doc/spec/features/feature-result-contract.md — confirm no row, domain kind,
+#     projection class, or exit change; record that the tracker class vocabulary
+#     is conformance-only and never an emitted identity.
+#   - doc/overview/glossary.md and doc/00-index.md — add the new terms (parity
+#     matrix, declared difference, trap family, simulated double,
+#     registration-only participation) and index the updated conformance page.
+#   - Help/reference coverage is unaffected: no prompt-required command is added
+#     or changed (checked at plan time against the spec's §24.1 row).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-339
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "An adapter is completed, converged, or edited to make an intersection same-as-reference — including any edit under packages/adapters/src/{github,gitlab,jira}/** (NG-1, §24.3(1), TC-FLOOR-002)"
+    - "A closed operation, capability flag, gap reason, carrier kind, normalized-view field, error-table row, domain kind, projection class, or exit code moves (NG-4/NG-5, §24.3(2)(3), TC-FLOOR-003)"
+    - "The delivery.conformance.v1 schema, field set, closed statuses, skip kinds, bounds, or serialized bytes gain a parity field or a parity verdict (NG-6, §24.3(4), AC-F1-8, TC-ART-001)"
+    - "A workflow file, job, trigger, permission, or upload changes, or the parity gate stops being discovered by pnpm test inside the existing ts-test job (NG-7, §24.3(5), AC-F5-1, TC-GATE-001/002)"
+    - "The five non-reference supported intersections are adjudicated without an evidence-bearing record, or one is adjudicated before the replay that decides it (GAP-TP-1, AC-F1-4/AC-F1-6, TC-PARITY-007/008)"
+    - "A register entry lacks class, rationale, resolvable evidence, or adjudication, or its evidence shows reference-equal behavior, or two entries name one (adapter, operation) (AC-F1-4/AC-F1-6, TC-PARITY-004/006)"
+    - "A gate clause or an adjudication arm loses its falsifying mutation, or a mutation stops producing its named violation (NFR-2, test plan §7.5)"
+    - "A status-less adapter is credited with a status-bearing class it cannot produce, a recorded failure-classification difference is dropped, or either posture arm executes zero times in a run (AC-F2-2/3/5, DM-4, TC-TAX-003/004/006/013)"
+    - "A family is silent, holds both a fixture and a gap, or is covered by a fixture that does not replay to its declared outcome (AC-F2-10, NFR-4, TC-TAX-011/012/013)"
+    - "A trackable tracker.* literal appears in packages/testkit/src or packages/adapters/src outside packages/testkit/src/conformance/tracker-error-taxonomy.ts, or the scan's scope or single-file allowlist grows (AC-F2-1, NFR-3, TC-TAX-002)"
+    - "A trap-catalog entry gains a fifth field, a fixture reference stops resolving, or a family reference names no existing entry (NG-10, AC-F2-11, §24.3(7))"
+    - "The double reads a clock, randomness, an ambient counter, or an environment value, infers an effect from a URL/method/payload, or degrades an undeclared request, effect, or missing target to a no-op (NF-5, AC-F3-3/AC-F3-6, TC-DOUBLE-003/006/007)"
+    - "A committed stateless tenant, its projection, its step order, its skip kinds or reasons, or its diagnostics change; or a tenant is migrated rather than extended additively (AC-F3-5, §8.5, TC-DOUBLE-005)"
+    - "A live network call or a live child process occurs in the mock tier, or either guard is absent, disarmed, or asserted by the absence of an error instead of by its counter (NFR-1, AC-F3-4, TC-DOUBLE-004)"
+    - "The shipped registry gains or loses a registration, the control adapter enters CONFORMANCE_ADAPTERS, or an adapter identity literal appears outside the enumerated permit list (AC-F4-3/AC-F4-4, DM-6, TC-REG-003/004)"
+    - "The provider-identity allowlist grows beyond the enumerated permits, gains a wildcard or prefix entry, or the runner's pinned five comparisons become six (NFR-10, §24.3(14), TC-REG-004)"
+    - "A pinned structural surface is relaxed instead of updated exactly: a wildcard allowance, a deleted assertion, a narrowed inventory, or a new suite placed under an ignored path (NFR-8, RSK-9, TC-FLOOR-004)"
+    - "A delivered suite is made green by deleting or renaming an assertion, or a new case is skipped or environment-gated (test plan §3.4 no-skip rule, TC-FLOOR-001)"
+    - "Credential material reaches a gate diagnostic, double state, fixture, or report; a fixture host stops being example-only; or the secret-read allowlist gains an entry (NFR-9, AC-F5-2, TC-FLOOR-005)"
+    - "A violation lacks provider, operation, clause, or a resolving reference, exceeds 1024 detail characters, carries a non-scalar value, or two consecutive runs disagree on the set or its order (NFR-11, AC-F5-2/AC-F5-3, TC-GATE-003/004)"
+    - "A fourth tracker class id or a seventh family appears without a recorded extension (DM-3/DM-4, §24.3(13))"
+    - "TMPDIR=$PWD/tmp/tmpdir pnpm check is not green at a phase boundary (NFR-8)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Tracker error taxonomy and the six-family vocabulary (F-2
+  # declarations), with the family stimuli, the appended four-field catalog
+  # entries, and the exact two-tree `tracker.` scan IN ONE COMMIT.
+  #
+  # Goal: the failing side of a tracker interaction becomes a closed vocabulary
+  # that maps onto DELIVERED identities — never a second error system — and the
+  # six trap families become a closed set that fixture authoring consumes. This
+  # phase is first because (i) §18 makes the vocabulary an input to fixture
+  # authoring, (ii) phase 2's gate compares "the tracker error class resolved for
+  # that operation" as its third parity dimension, so the class table and the
+  # total decision function are a build dependency of the gate, and (iii) the
+  # `failure-classification` register entries phase 2 authors NAME these class ids.
+  #
+  # Contract (F-2, DM-3, DM-4; TDR-0037 is authority):
+  #   - Exactly four class ids: `tracker.capability.unsupported`,
+  #     `tracker.auth.rejected`, `tracker.transport.failed`,
+  #     `tracker.payload.invalid`. Each resolves to exactly one DELIVERED identity
+  #     (`provider.payload.invalid` for three; the capability-gap declaration for
+  #     the fourth) and each carries a declared structured discriminator: status
+  #     presence and value, or absence; operation membership.
+  #   - Classification is a TOTAL projection over five observable outcomes in a
+  #     FIXED order — capability gap, adapter refusal (zero provider requests), no
+  #     response, a READ's explicit 404, then any other status or undecodable
+  #     success. No prose input, no provider branch. A read's 404 stays
+  #     `provider.not-found` and is OUTSIDE the taxonomy; a WRITE's 404 stays the
+  #     payload class.
+  #   - The class ids are testkit-local labels: no error-table row, no domain
+  #     kind, no emitted failure code, no projection class, and no
+  #     normalized-view or artifact occurrence. They exist as string literals in
+  #     EXACTLY ONE module of the two scanned trees —
+  #     `packages/testkit/src/conformance/tracker-error-taxonomy.ts`.
+  #   - Six families, closed: `auth-shape` (singular, per TDR-0037 §3 — never the
+  #     plural spelling), `transport-failure`, `rate-limit`, `payload-shape`,
+  #     `workflow-state-mismatch`, `pagination-truncation`. The first five prove a
+  #     class; `pagination-truncation` is a bounded-observation assertion over the
+  #     declared page limit and truncation signal and is NOT an error class. The
+  #     family set and each family's declared outcome are exported from the SAME
+  #     module so the accounting keys and the fixture names have one source.
+  #   - The taxonomy table contains ZERO provider names. Per-adapter family data
+  #     lives in phase 3's accounting fixture (a permitted identity home), so the
+  #     taxonomy table stays inside DM-6's bound set and identity-free.
+  #
+  # Family stimuli and catalog entries (GAP-TP-8): author one committed stimulus
+  #   per family that no delivered provider fixture already produces, under
+  #   `tests/fixtures/providers/{provider}/families/{family}.json`, and append the
+  #   four-field catalog entries that reference them. Delivered trap names,
+  #   `fixtureReference`s, minima, and outcomes stay FROZEN; no delivered entry is
+  #   amended, migrated, or retired (NG-10, §24.3(7)(11)). Where an existing
+  #   provider fixture already produces the stimulus, the entry NAMES that fixture
+  #   and no new file is authored. The delivered `tests/behaviour/providers`
+  #   trap replays must stay green in this phase — an appended entry is replayed
+  #   by them, so its fixture and its declared normalized outcome land together.
+  #
+  # Obligations:
+  #   1.1 Author `tracker-error-taxonomy.ts`: the four-class table, the six-family
+  #       vocabulary with declared outcomes, the closed structured discriminator
+  #       set, and the total decision function. Runtime-neutral: no `node:*`/
+  #       `bun:*`, no ambient environment, clock, or randomness.
+  #   1.2 Export it through `packages/testkit/src/index.ts` (no new subpath) and
+  #       move BOTH pinned surfaces exactly: `tests/structure/inventory.json`
+  #       gains `src/conformance/tracker-error-taxonomy.ts` and
+  #       `EXECUTABLE_ALLOWANCES` in `tests/structure/content-inventory.test.ts`
+  #       gains exactly that file's exported executable names, no wildcard.
+  #   1.3 Author `tests/conformance/tracker-taxonomy.test.ts` with the cases this
+  #       phase owns: TAX-001 (exactly four ids, one identity each, zero provider
+  #       literals in the table, zero `tracker.` in the error table / domain kinds
+  #       / projection map / exit map, no class id ever returned as a `code`),
+  #       TAX-009 (the five-outcome order proven by an AMBIGUITY set, not by
+  #       membership — a refusal that would also present as a status-less failure
+  #       resolves to the refusal rule; a write 404 resolves to the payload class
+  #       while a read 404 resolves outside; swapping rules (2) and (3) flips the
+  #       ambiguity stimulus and fails naming it), TAX-010 (the capability class
+  #       proven by the delivered structural coverage gate plus the runtime
+  #       declared-gap encounter rule, with no family attached and no gapped
+  #       operation counted as failed).
+  #   1.4 Author `tests/checks/tracker-literal-scan.test.ts`: scope is EXACTLY
+  #       `packages/testkit/src/**` and `packages/adapters/src/**`; the allowlist
+  #       is EXACTLY the one taxonomy module; the live tree yields zero hits
+  #       outside it; each hit reports file plus construct (string-literal
+  #       expression). Assert scope and allowlist as exact collections, assert the
+  #       baseline is empty BEFORE mutating, plant a literal in an in-memory copy
+  #       of `packages/adapters/src/jira/client.ts` and of a testkit module (both
+  #       fail naming file and construct), and keep the opposite-direction control
+  #       that a copy of `packages/core/src/contracts/status.ts` carrying its eight
+  #       PRE-EXISTING `tracker.*` codes does NOT fail (the core/CLI/MCP vocabulary
+  #       is out of scope and unchanged).
+  #   1.5 Author the family stimuli that have no delivered equivalent and append
+  #       the four-field catalog entries that name them; keep the delivered
+  #       entries byte-frozen.
+  #   1.6 Stage the four decision records and the decision index (see
+  #       COMMIT-BOUNDARY REALITY). Nothing else outside the change surface.
+  #
+  # Acceptance: AC-F2-1 (TC-TAX-001, TC-TAX-002), AC-F2-8 (TC-TAX-009),
+  #   AC-F2-9 (TC-TAX-010). TAX-003..008 and TAX-011..013 are NOT claimed here:
+  #   their posture comes from phase 3's accounting, whose recorded-difference
+  #   cells resolve to phase 2's register.
+  #
+  # Gate (expected signal: exit 0; four class ids and six family ids compared as
+  # exact sets, zero `tracker.` hits outside the one module, the two planted
+  # literals failing by file+construct, the out-of-scope core copy passing, the
+  # appended catalog entries replaying green in the delivered trap suites, and
+  # the inventory/allowance equality holding in both directions):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/tracker-taxonomy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/tracker-literal-scan.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                        (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers             (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/fixture-sanitization.test.ts tests/checks/fixture-privacy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                 (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                               (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Tracker error taxonomy over delivered identities, the six-family vocabulary, family stimuli, appended four-field catalog entries, and the exact two-tree tracker literal scan"
+    kind: delivery
+    summary: "feat(GH-339): tracker error taxonomy and trap-family vocabulary"
+    scope:
+      files:
+        - packages/testkit/src/conformance/tracker-error-taxonomy.ts
+        - packages/testkit/src/index.ts
+        - tests/conformance/tracker-taxonomy.test.ts
+        - tests/checks/tracker-literal-scan.test.ts
+        # TAX-001's module/export pin half (test plan §7.1): the same file phase 4
+        # and phase 5 extend for the census and control-absence assertions.
+        - tests/structure/conformance-coverage.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        # Appended only: delivered names, fixtureReferences, minima and outcomes
+        # stay frozen and no delivered entry is amended (NG-10, §24.3(7)(11)).
+        - tests/fixtures/providers/traps/github.traps.json
+        - tests/fixtures/providers/traps/gitlab.traps.json
+        - tests/fixtures/providers/traps/jira.traps.json
+        # Untracked at plan time (COMMIT-BOUNDARY REALITY). The index rows are
+        # already committed (ef9afa59) and the file is clean; it is declared so
+        # the five-file set lands together and a status/typo touch stages here.
+        - doc/decisions/TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md
+        - doc/decisions/TDR-0037-tracker-error-taxonomy-delivered-identities.md
+        - doc/decisions/TDR-0038-simulated-stateful-tracker-double-declared-effects.md
+        - doc/decisions/TDR-0039-registration-only-adapter-extensibility-proof.md
+        - doc/decisions/00-index.md
+      folders:
+        # One stimulus per family that no delivered provider fixture already
+        # produces; example-only hosts, provenance marker, sanitized (NFR-9).
+        - tests/fixtures/providers/github/families
+        - tests/fixtures/providers/gitlab/families
+        - tests/fixtures/providers/jira/families
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/testkit/src/conformance/tracker-error-taxonomy.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Parity matrix, declared-difference register, parity gate, the five
+  # adjudications, and artifact invariance (F-1, F-5 diagnostics).
+  #
+  # Goal: switching trackers cannot change the lifecycle contract without a gate
+  # failing. One declared matrix relates every registered adapter to the reference
+  # adapter across the nine closed operations; every divergence is recorded,
+  # classed, evidenced and adjudicated; the gate is a pure validation over
+  # matrix + capability declarations + register + the observed mock-tier report.
+  #
+  # Contract (F-1, DM-1, DM-2, DM-7; TDR-0036 is authority):
+  #   - Matrix: one row per closed operation, one cell per registered adapter,
+  #     27 cells today. A cell is exactly `{kind: "same-as-reference"}`,
+  #     `{kind: "declared-difference", differenceClass, registerId}` or
+  #     `{kind: "gap", reason}` where `reason` is the adapter's OWN declared gap
+  #     reason (a reference to the declaration, never a copy, character-exact).
+  #     No free-text cell value exists.
+  #   - Reference adapter: ONE declared value (GitHub for M3). Its column is
+  #     uniformly `same-as-reference` and NO register entry may name it.
+  #   - Register: keyed by exactly `(adapter, operation)`; entry fields
+  #     `differenceId, adapter, operation, differenceClass, rationale, evidence,
+  #     adjudicatedBy`. Six closed classes: `identity-scheme`,
+  #     `pipeline-model`, `state-vocabulary`, `pagination-model`,
+  #     `carrier-absent`, `failure-classification`. Bidirectional bijection with
+  #     the cells: a difference without an entry fails, an entry naming no cell
+  #     fails, and two entries for one pair fail.
+  #   - The gate compares FOUR provider-independent dimensions and never byte
+  #     equality: (1) step participation; (2) applied assertion families and both
+  #     sides passing; (3) the tracker error class resolved for that operation's
+  #     family, or an explicit "not applicable because the accounting declares no
+  #     family" — never a silent skip; (4) declared absence and truncation
+  #     semantics. Violations are ordered deterministically, clause-tagged, and
+  #     each names provider, operation, clause and a resolving reference.
+  #   - The gate performs no I/O, reads no ambient input, spawns nothing, and is
+  #     re-runnable with the same result. Parity is NOT written into the artifact.
+  #
+  # ADJUDICATION (the five non-reference supported intersections): this phase
+  #   owns all five — GitLab `read-delivery-request`, GitLab `read-pipeline-run`,
+  #   Jira `read-work-item`, Jira `write-work-item`, Jira `transition-work-item`.
+  #   Evidence homes: `.../parity/evidence/{differenceId}.json` and
+  #   `.../parity/adjudication.json`. NO VERDICT IS PRE-DECIDED — see the header.
+  #   The state-vocabulary class is deliberately narrow: a difference is recorded
+  #   only when the adapter's DECLARED MAPPING cannot express the reference
+  #   behaviour (a different mechanism for the same alias, or a state the map has
+  #   no row for), never merely because two adapters spell rows differently.
+  #
+  # Obligations:
+  #   2.1 Author `parity.ts`: the declared matrix, the declared register, the
+  #       closed cell/class/kind/clause vocabularies, the reference designation,
+  #       and the one pure gate. Runtime-neutral, provider-name-free (identity
+  #       lives in the column KEYS and the register's operations, which are the
+  #       enumerated permits) and inside DM-6's seven-module bound set.
+  #   2.2 Adjudicate the five intersections from replay evidence and write the
+  #       evidence documents plus `adjudication.json`: provider, operation, chosen
+  #       posture, the four dimension observations, evidence/adjudication
+  #       reference. Author the `failure-classification` register entries the
+  #       status-less adapters need, with `httpStatus` ABSENCE as the deciding
+  #       structured field (§24.4: delivered code, not a fixture choice).
+  #   2.3 Author `tests/conformance/parity-gate.test.ts`: PARITY-001..008,
+  #       PMUT-001..011, GATE-004, plus GATE-003's violation-object assertions
+  #       over the induced violation set (its diagnostics/secret assertions live in
+  #       obligation 2.4's file, so GATE-003 has two sites and one owner). Every
+  #       mutation asserts its NAMED
+  #       violation AND a paired clean pass; PARITY-007 derives the intersection
+  #       set from the contracts and the matrix (never a hard-coded name list) and
+  #       compares it as a SET against the record; PARITY-008 runs four AC-F1-5
+  #       dimension mutations plus one AC-F1-6 falsified-evidence mutation on
+  #       every run from an arm registry independent of the record's contents and
+  #       reports the executed arm per intersection in the test name.
+  #   2.4 Create `tests/checks/parity-gate-wiring.test.ts` with GATE-003's
+  #       diagnostics half only (the wiring chain is phase 5's GATE-001): every
+  #       violation over a violation set spanning all clauses carries non-empty
+  #       provider, operation, clause from the closed clause set, a detail of at
+  #       most 1024 characters, scalar-only expected/received values, and a
+  #       reference that RESOLVES ON DISK; and no violation, serialized verdict or
+  #       thrown error contains credential material — asserted with the delivered
+  #       canary `conformance-canary-credential-value` plus a planted
+  #       provider-native marker, each with a PAIRED POSITIVE proving the detection
+  #       fires.
+  #   2.5 Author the typed mutation builders in
+  #       `tests/fixtures/providers/conformance/parity/mutations.ts` — typed
+  #       literal builders over the production shapes, so a mutation that stops
+  #       being a mutation is a compile error and not a passing no-op.
+  #   2.6 Create `tests/types/conformance-participation.type-test.ts` with the
+  #       CELL/ENTRY half only: a free-text cell value and a seventh class are not
+  #       representable. Phase 5 extends the same file with the participation and
+  #       refusal probes.
+  #   2.7 Extend `tests/conformance/artifact.test.ts` with ART-001 (exact
+  #       eleven-key set, closed status/skip sets, unchanged caps as exported
+  #       constants; adding `parity` at top level fails naming the key) and
+  #       ART-002 (zero class ids, zero cell kinds, zero difference ids in the
+  #       serialized bytes, PAIRED with a positive that the artifact does carry
+  #       the injected runId, schema id and nine step operations).
+  #   2.8 Move the pinned surfaces for the new module exactly
+  #       (`tests/structure/inventory.json`, `EXECUTABLE_ALLOWANCES`).
+  #       `packages/testkit/src/conformance/artifact.ts` is NOT edited: AC-F1-8
+  #       and §24.3(4) make it a read-only control.
+  #
+  # Acceptance: AC-F1-1 (PARITY-001/007), AC-F1-2 (002), AC-F1-3 (003),
+  #   AC-F1-4 (004), AC-F1-5 (005/008), AC-F1-6 (006/008), AC-F1-7 (PMUT-001..011),
+  #   AC-F1-8 (ART-001/002), AC-F5-2 (GATE-003), AC-F5-3 (GATE-004).
+  #
+  # Gate (expected signal: exit 0; the unmutated report yields `[]`, the matrix
+  # cell multiset is exactly 27 with set equality both directions, the reference
+  # column is nine `same-as-reference` cells with zero register entries, every
+  # intersection's executed arm is printed in the test name, every mutation names
+  # provider/operation/clause, the artifact key set is exactly eleven and its
+  # bytes contain no parity vocabulary):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/parity-gate.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/parity-gate-wiring.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/artifact.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                        (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                 (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                               (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Declared parity matrix over the nine closed operations, adjudicated difference register with evidence, the pure clause-tagged gate, and artifact invariance"
+    kind: delivery
+    summary: "feat(GH-339): parity matrix, difference register and parity gate"
+    scope:
+      files:
+        - packages/testkit/src/conformance/parity.ts
+        - packages/testkit/src/index.ts
+        - tests/conformance/parity-gate.test.ts
+        # Created here with GATE-003's diagnostics half so GATE-003 is green at
+        # this phase's boundary; phase 5 extends it with GATE-001's wiring chain.
+        - tests/checks/parity-gate-wiring.test.ts
+        - tests/conformance/artifact.test.ts
+        - tests/types/conformance-participation.type-test.ts
+        - tests/fixtures/providers/conformance/parity/adjudication.json
+        - tests/fixtures/providers/conformance/parity/mutations.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        # One evidence document per recorded difference, plus one deliberately
+        # reference-equal document used ONLY by the AC-F1-6 falsification.
+        - tests/fixtures/providers/conformance/parity/evidence
+    interactions:
+      - kind: contract-file
+        target: packages/testkit/src/conformance/parity.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/providers/conformance/parity/adjudication.json
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Per-adapter × per-family accounting and the offline replay
+  # classification (F-2 evidence).
+  #
+  # Goal: the taxonomy stops being a vocabulary and becomes a proven property of
+  # each adapter: every one of the six families is accounted for on every adapter
+  # as exactly one of `covered`, `gap-backed`, or `recorded-difference`, and every
+  # non-gap posture replays through the PRODUCTION client and satisfies its
+  # declared outcome. This phase owns the posture arms the test plan added in
+  # v1.1: a status-bearing adapter is held to the status-bearing class, and a
+  # status-less adapter to its evidence-backed `failure-classification` recorded
+  # difference — with BOTH arms executed on EVERY run.
+  #
+  # Why this phase follows phase 2 (and not phase 1): DM-4's
+  # `recorded-difference` posture references a DM-2 `registerId`. Writing the
+  # accounting before the register exists is a dangling reference and TC-TAX-011
+  # fails it by name. The VOCABULARY still landed first (phase 1), as §18
+  # requires; this phase adds per-adapter DATA and the replay that proves it, and
+  # creates NO register entry — entries are phase 2's.
+  #
+  # Contract (F-2, DM-4, DM-3; TDR-0037 is authority; spec v1.1 GAP-TP-2):
+  #   - Key set is exactly `providers(CONFORMANCE_ADAPTERS) × six families` = 18
+  #     cells, derived from the registry and the exported vocabulary constant, not
+  #     from a hard-coded name list. `auth-shape` is the first family id and the
+  #     singular spelling is the only one that exists anywhere.
+  #   - Exactly one posture per cell:
+  #       `covered` — >=1 existing catalog entry in THAT provider's catalog plus
+  #         >=1 resolvable fixture for an operation that adapter DECLARES
+  #         supported;
+  #       `gap-backed` — the family's operation appears in that adapter's
+  #         `declaredGaps` with the IDENTICAL reason;
+  #       `recorded-difference` — a `registerId` resolving to an entry with
+  #         `differenceClass: "failure-classification"`, and the REQUIRED posture
+  #         wherever the declared class is structurally unreachable (the
+  #         status-less `auth-shape`, `rate-limit` and `payload-shape` cells on
+  #         GitLab and Jira).
+  #     No cell holds a fixture AND a gap; an unaccounted family fails naming
+  #     adapter and family.
+  #   - Replay classification: for every accounted cell, the stimulus is replayed
+  #     through the production client factory with an injected transport, and the
+  #     observed outcome equals the declared one — a class for the five error
+  #     families, a bounded observation for `pagination-truncation`, the declared
+  #     skip with the exact reason for `gap-backed`, and the RECORDED class for
+  #     `recorded-difference`. The number of replays equals the number of
+  #     non-`gap-backed` postures, so the case cannot pass by replaying nothing.
+  #   - Suite-level arm invariant: over the four class-bearing families, at least
+  #     one `covered` arm and at least one `recorded-difference` arm execute on
+  #     EVERY run, asserted from an arm-mutation registry independent of the
+  #     accounting's contents. A run with zero executions of either arm fails
+  #     naming the missing arm. M41 (declare `covered` on a status-less adapter)
+  #     and M42 (record the unreachable class) are the two falsifying mutations.
+  #   - The class ids never appear in a normalized view, a failure `code`, the
+  #     artifact, or a diagnostic: classification is a testkit comparison, not an
+  #     emitted identity.
+  #
+  # Obligations:
+  #   3.1 Author `tests/fixtures/providers/conformance/families/accounting.json`:
+  #       18 cells, each with its posture, its operation, its catalog entry names,
+  #       and either the exact gap reason or the `registerId` with the RECORDED
+  #       class. Kept under `tests/fixtures` (a permitted identity home) so the
+  #       taxonomy table stays provider-free. Provenance marker, example-only
+  #       hosts, sanitized.
+  #   3.2 Author `tests/structure/conformance-family-accounting.test.ts`:
+  #       TAX-011 (18-cell set equality, per-posture field assertions, mutual
+  #       exclusion, the unreachable-class contradiction, and 18 parameterized
+  #       removal mutations each naming adapter and family) and TAX-012
+  #       (catalog↔family wiring bidirectional over the WIRED subset, reusing the
+  #       delivered `loadCatalogs`/`validateCatalogs` read-only; four-field shape,
+  #       resolving fixture references, no orphan, no double-wiring).
+  #   3.3 Extend `tests/conformance/tracker-taxonomy.test.ts` with TAX-003..008:
+  #       the `auth-shape` stimulus (401 and, separately, 403) per declared
+  #       posture; the transport stimulus with `Object.hasOwn(result,
+  #       "httpStatus") === false` (absence, not `undefined`) and the paired
+  #       status-bearing stimuli on GitHub; the rate-limit stimulus with a
+  #       prose-independence pair; the undecodable 2xx plus prose-contradicted
+  #       non-2xx pair; the workflow-state mismatch with the transport's recorded
+  #       request count UNCHANGED across the call (zero provider requests); and the
+  #       page-limited read as a bounded observation with exact-boundary cases
+  #       (limit-1, limit, limit+1), exactly one request, no retry, no new bound.
+  #       A credential-resolution stimulus stays `config.credential.missing` and is
+  #       reported OUTSIDE the taxonomy in both arms.
+  #   3.4 Author `tests/conformance/family-classification.test.ts`: TAX-013 —
+  #       one replay per non-`gap-backed` posture through the production clients,
+  #       the declared-outcome comparison, and the suite-level arm invariant with
+  #       its two falsifying mutations.
+  #   3.5 Correct a phase-1 stimulus ONLY where the replay shows it does not
+  #       produce its declared outcome: that is a FIXTURE correction, not a
+  #       requirement change, and the requirement (class, family, posture) never
+  #       moves to make a run green. A family whose posture is `covered` but whose
+  #       fixture is absent fails TAX-011 by name and never degrades to
+  #       `gap-backed` (GAP-TP-8).
+  #
+  # Acceptance: AC-F2-2 (TAX-003), AC-F2-3 (TAX-004), AC-F2-4 (TAX-005),
+  #   AC-F2-5 (TAX-006), AC-F2-6 (TAX-007), AC-F2-7 (TAX-008),
+  #   AC-F2-10 (TAX-011/013), AC-F2-11 (TAX-012).
+  #
+  # Gate (expected signal: exit 0; 18 accounting cells with set equality, the
+  # wired catalog subset equal in both directions, every non-gap posture replayed
+  # with its declared outcome, both arms executed and reported, a status-less
+  # adapter's recorded class equal to the observed one, and zero `test.skip`):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/conformance-family-accounting.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/family-classification.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/tracker-taxonomy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers             (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/fixture-sanitization.test.ts tests/checks/fixture-privacy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                 (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                               (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Per-adapter x per-family accounting over the six closed families and offline replay classification with both posture arms executed on every run"
+    kind: delivery
+    summary: "feat(GH-339): family accounting and offline classification replay"
+    scope:
+      files:
+        - tests/fixtures/providers/conformance/families/accounting.json
+        - tests/structure/conformance-family-accounting.test.ts
+        - tests/conformance/family-classification.test.ts
+        # Created in phase 1; extended here with the posture arms (TAX-003..008).
+        - tests/conformance/tracker-taxonomy.test.ts
+        # Declared for FIXTURE corrections only (obligation 3.5): a stimulus that
+        # does not produce its declared outcome is corrected, the requirement never
+        # moves. Delivered entries stay four-field and byte-frozen.
+        - tests/fixtures/providers/traps/github.traps.json
+        - tests/fixtures/providers/traps/gitlab.traps.json
+        - tests/fixtures/providers/traps/jira.traps.json
+      folders:
+        - tests/fixtures/providers/github/families
+        - tests/fixtures/providers/gitlab/families
+        - tests/fixtures/providers/jira/families
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/providers/conformance/families/accounting.json
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The deterministic simulated stateful tracker double and its
+  # scenarios (F-3).
+  #
+  # Goal: write-then-read becomes provable INSIDE the offline mock tier. The
+  # double is a purely in-memory implementation of the EXISTING transport seam:
+  # declared initial state, the delivered route table, and one declared effect per
+  # route drawn from a closed five-effect vocabulary, so a later read observes what
+  # an earlier write declared. Flows, step ids, assertion families, step count and
+  # registrations do not move; the delivered stateless replay stays the DEFAULT.
+  #
+  # Contract (F-3, DM-5, API-3, API-4; TDR-0038 is authority):
+  #   - Five effects, closed: `set-field`, `reset-field`, `replace-collection`,
+  #     `append-entry`, `mark-resolved`. Every identity is DECLARED: resource
+  #     identities from the tenant, created-entry identities from a declared
+  #     sequence, ordering by declaration order. A route with no declared effect
+  #     performs NO state change and returns its declared body (the delivered
+  #     behavior). Absence of declared initial state means the delivered stateless
+  #     replay.
+  #   - Determinism is structural: no clock, randomness, or ambient counter, so the
+  #     same declared input and request order produce identical canonicalized state
+  #     and identical normalized reads.
+  #   - Failure is closed and loud: an undeclared request (the delivered
+  #     `unfixtured provider request {METHOD} {URL}` message preserved), an
+  #     undeclared effect, or an effect naming a missing resource fails naming
+  #     method, URL and effect; never a silent no-op and never a live call.
+  #   - The tenant document gains the extension ADDITIVELY: an optional declared
+  #     initial state and an optional per-route effect. Malformed or
+  #     out-of-vocabulary declarations are rejected by NAME at decode time. The
+  #     three committed stateless tenants are NOT edited and NOT migrated; the
+  #     stateful scenarios are separate documents.
+  #   - Testkit placement keeps runtime neutrality: fixture loading and both guards
+  #     stay under `tests/`; the double imports no `node:*`/`bun:*` module and
+  #     reads no environment, clock, or randomness.
+  #
+  # Obligations:
+  #   4.1 Author `stateful-double.ts` (`createStatefulTenantTransport({ tenant,
+  #       initialState })`): declared state, matched-route effects, declared
+  #       identity and ordering, the three named fail-closed refusals. Export it
+  #       through `packages/testkit/src/index.ts` (no new subpath) and move BOTH
+  #       pinned surfaces exactly.
+  #   4.2 Extend the tenant data model ADDITIVELY in
+  #       `packages/testkit/src/conformance/types.ts` (optional declared initial
+  #       state on `MockTenant`, optional `effect` on `MockTenantRoute`) and in
+  #       `mock-tenant.ts` (decode the new members by name, reject malformed and
+  #       out-of-vocabulary values, and keep `createMockTenantTransport`
+  #       state-free as the default). No existing member is removed, retyped, or
+  #       made required.
+  #   4.3 Author `tests/conformance/stateful-double.test.ts`: DOUBLE-001..007 (the
+  #       write-then-read consequence plus the UNCHANGED flow/step/registration
+  #       census; replay-and-compare against the committed golden; the three
+  #       fail-closed refusals with unchanged state and no fallback; both guard
+  #       counters at zero with an ARMING positive — an attempted `fetch` and an
+  #       attempted `Bun.spawn` each throw naming the call; the stateless tenants
+  #       deep-equal to their delivered golden and a write-shaped body on an
+  #       effect-less route leaving state unchanged; runtime neutrality; each of
+  #       the five effects proven with the declared append identity asserted on
+  #       both calls and three no-inference negatives) and DMUT-001..004 (the four
+  #       malformed declarations, each with a paired valid baseline).
+  #   4.4 Author the stateful fixture namespace: per-provider declared initial
+  #       state plus per-route effects, the canonicalized sorted-key state golden,
+  #       and `invalid-effects.ts` as TYPED case literals (never committed invalid
+  #       JSON, so a mutation cannot silently stop being one).
+  #   4.5 Extend the census golden in `tests/structure/conformance-coverage.test.ts`
+  #       (three flows, fourteen steps with their exact delivered values, one
+  #       registration per shipped provider) and prove the double module is IN the
+  #       scanned file list: `tests/conformance/support/testkit-source-scan.ts`
+  #       gains the observable file-list export the inclusion assertion needs
+  #       (test-side only), and `tests/conformance/live/live-entrypoint.test.ts`
+  #       asserts the ambient scan covers the new module and reports zero hits.
+  #
+  # Acceptance: AC-F3-1 (DOUBLE-001/007), AC-F3-2 (002), AC-F3-3 (003),
+  #   AC-F3-4 (004), AC-F3-5 (005), AC-F3-6 (006), AC-F3-7 (DMUT-001..004).
+  #
+  # Gate (expected signal: exit 0; the read observes the declared consequence, two
+  # replays equal each other AND the committed golden, every undeclared
+  # request/effect/missing target failing by method+URL+effect with unchanged
+  # state, both guard counters read as 0 after the run with the arming positive
+  # firing, the three stateless tenants deep-equal to the delivered golden, the
+  # five-effect set exactly five, the census golden unchanged, and the ambient
+  # scan listing the double module with zero hits):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/stateful-double.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/conformance-coverage.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/live/live-entrypoint.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries                        (G5)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/fixture-sanitization.test.ts tests/checks/fixture-privacy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                 (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                               (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Deterministic runtime-neutral simulated stateful tracker double with a closed five-effect vocabulary, additive tenant state, committed state goldens and fail-closed refusals"
+    kind: delivery
+    summary: "feat(GH-339): simulated stateful tracker double"
+    scope:
+      files:
+        - packages/testkit/src/conformance/stateful-double.ts
+        - packages/testkit/src/conformance/types.ts
+        - packages/testkit/src/conformance/mock-tenant.ts
+        - packages/testkit/src/index.ts
+        - tests/conformance/stateful-double.test.ts
+        - tests/structure/conformance-coverage.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        # The scanned-file-list export the inclusion assertion reads (test-side).
+        - tests/conformance/support/testkit-source-scan.ts
+        - tests/conformance/live/live-entrypoint.test.ts
+        - tests/fixtures/providers/conformance/stateful/invalid-effects.ts
+      folders:
+        # Separate documents from the committed stateless tenants, which stay
+        # byte-identical: {provider}/tenant.json and the sorted-key state golden.
+        - tests/fixtures/providers/conformance/stateful
+    interactions:
+      - kind: contract-file
+        target: packages/testkit/src/conformance/stateful-double.ts
+        role: producer
+      - kind: contract-file
+        target: packages/testkit/src/conformance/types.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Registration-only participation contract, the identity-free
+  # invariant, the composition-injected synthetic control, and the gate's
+  # CI-wiring and topology control (F-4, F-5 topology half).
+  #
+  # Goal: adding an adapter becomes a MECHANICAL property. A new adapter supplies
+  # exactly five declared items and requires no lifecycle, port, flow-registry,
+  # coverage, runner, or artifact edit; a synthetic control proves it by producing
+  # a GREEN run with a complete matrix column and full family accounting while the
+  # shipped registry stays exactly the three shipped contracts.
+  #
+  # Contract (F-4, API-5, DM-6; TDR-0039 is authority):
+  #   - The five items: (a) a contract drawn from the closed operation set;
+  #     (b) one registration binding a client builder over tenant, credential port
+  #     and injected transport; (c) one parity-matrix column; (d) one mock-tenant
+  #     fixture set; (e) one trap catalog. Nothing else — no lifecycle port, phase
+  #     hook, flow, step id, assertion family, coverage rule, runner branch, or
+  #     artifact field. A sixth requirement is a DECISION, never a delivery
+  #     improvisation, and is refused by name.
+  #   - The identity-free invariant covers the SEVEN bound modules (flow registry,
+  #     coverage gates, artifact, harness registry, parity engine, taxonomy table,
+  #     double) and its permit list is ENUMERATED EXACTLY: the registration list
+  #     (`adapters.ts`), the matrix column keys, provider fixtures under
+  #     `tests/fixtures/`, the provider-tagged addressing types and derived
+  #     read-failure union (`types.ts`), the addressing decode
+  #     (`mock-tenant.ts`), and ONE pinned engine exception in `runner.ts` with
+  #     exactly FIVE provider comparisons recorded by construct. The allowlist is
+  #     compared as an exact `(file, construct)` collection with count equality;
+  #     no wildcard, no prefix.
+  #     The construct definition is bound in the header (see PROVIDER-IDENTITY
+  #     SCAN) — necessary because the delivered `artifact.ts` redaction table
+  #     carries provider-SHAPED text that is not an identity construct, and the
+  #     permit list may not grow to cover it (NFR-10, §24.3(14)).
+  #   - "No module was edited to add the control" is PROOF-BY-CONSTRUCTION plus
+  #     review (the suite may not assert a diff against a moving base ref,
+  #     TDR-0039 §3, `.ai/rules/testing-strategy.md`): the control's run cannot be
+  #     green without the seam, and §10 of the test plan records the
+  #     review-verified touched-file list.
+  #   - GAP-TP-3 closes HERE: see the header block. The exact workflow file-set,
+  #     per-file job-id set, per-file trigger set and the two delivered suites'
+  #     check-name inventory are pinned by a NEW structure suite; the delivered
+  #     `scripts/checks/ci-topology.ts` is presence-only and stays UNEDITED.
+  #
+  # Obligations:
+  #   5.1 Author `participation.ts`: the declared five-item participation record
+  #       (exactly five, keyed and orderable) and the closed refusal vocabulary
+  #       for an out-of-set operation, a lifecycle hook, and a per-adapter runner
+  #       branch. Provider-free; exported through the root index (no new subpath);
+  #       move BOTH pinned surfaces exactly.
+  #   5.2 Author `tests/structure/registration-participation.test.ts`: REG-001
+  #       (exactly five declared items, a sixth refused by name), REG-004 (the
+  #       seven-module identity scan with its exact allowlist, the five pinned
+  #       runner comparisons, and seven planted-literal mutations plus a sixth
+  #       comparison), REG-005 (three independent refusals — an out-of-set
+  #       operation against the closed set, a lifecycle hook at the type AND value
+  #       level, and a per-adapter runner branch — plus the unchanged nine-operation
+  #       order).
+  #   5.3 Extend `tests/types/conformance-participation.type-test.ts` with the
+  #       participation and refusal probes: the registration type accepts exactly
+  #       `{ provider, contract, buildClient, writeHandler? }` and a
+  #       `@ts-expect-error` probe proves `lifecyclePhase`, `port`, and
+  #       `phaseHook` are not assignable.
+  #   5.4 Author `tests/conformance/control-registration.test.ts`: REG-002 (the
+  #       control injected through `RunConformanceInput.adapters` supplies only
+  #       the five items and produces `passed`, every closed operation executed or
+  #       declared-gap skipped with the exact reason, a nine-cell column that
+  #       agrees with its declaration, six family postures, and
+  #       `CONFORMANCE_ADAPTERS` neither containing it before nor after) and
+  #       REG-006 (each of the five items removed in turn produces a DISTINCT
+  #       named failure). Nothing control-specific is checked — the DELIVERED
+  #       runner and coverage gates run over the injected adapter, which is what
+  #       makes the proof non-vacuous. "The imported modules are the committed
+  #       ones" is asserted WITHOUT editing any of them (discovery (f)): through
+  #       the data they already export, the exact-set pins, and the identity scan.
+  #       No fingerprint constant is added to `flows.ts`, `coverage.ts`,
+  #       `artifact.ts`, `harness.ts`, or `runner.ts`.
+  #   5.5 Author the control's own fixture namespace
+  #       (`tests/fixtures/providers/conformance/control/`: tenant set, trap
+  #       catalog, column data). It is deliberately OUTSIDE
+  #       `tests/fixtures/providers/traps/`, whose loader validates every
+  #       `*.traps.json` as a provider and applies minima, so the three-provider
+  #       scan and its minima stay untouched (test plan OQ-TP-7).
+  #   5.6 Extend `tests/structure/conformance-coverage.test.ts` with the
+  #       control-ABSENCE assertion only (REG-003: the shipped registry is exactly
+  #       `["github","gitlab","jira"]` as a SET, the declaration scan still
+  #       resolves both directions, and the control's provider id appears nowhere).
+  #   5.7 Extend `tests/checks/parity-gate-wiring.test.ts` (created in phase 2
+  #       with GATE-003's diagnostics half) with GATE-001: the `ts-test`
+  #       job runs exactly `pnpm test` with no path filter and no extra flag; the
+  #       `test` script is exactly `bun test`; `bunfig.toml`'s discovery root is
+  #       `.` and no `pathIgnorePatterns` entry matches any new suite path (each new
+  #       suite's relative path evaluated against the patterns); and the gate
+  #       actually ran over the PRODUCTION matrix in this run (verdict `[]` over
+  #       the exported production value, identity-compared) with a non-zero
+  #       executed-step count in the double-backed suite.
+  #   5.8 Author `tests/structure/ci-topology-pin.test.ts` over
+  #       `tests/fixtures/pins/workflow-topology.json`: GATE-002 — the workflow
+  #       FILE set equals the pinned five names exactly; per file the JOB-ID set
+  #       equals the pinned set (equality, not presence — this is the control
+  #       GAP-TP-3 says does not exist); per file the `on:` trigger keys and values
+  #       equal the pinned set; and the CHECK-NAME inventory of
+  #       `tests/checks/ci-checks.test.ts` and
+  #       `tests/checks/conformance-workflow.test.ts` equals the pinned list, so a
+  #       weakened or deleted workflow assertion fails by name.
+  #       BASE-DEPENDENCE IS RESPECTED, NOT HIDDEN (discovery (g)): this suite runs
+  #       in BOTH `ts-test` and `ts-exports`, and `ts-exports` does not fetch
+  #       `origin/main-tools`, while `ci-topology.validate()` fails closed without
+  #       it. GATE-002's item (iv) is therefore satisfied by the DELIVERED suites
+  #       that already assert it (`ci-checks.test.ts`'s `validateTopology(ROOT)`
+  #       under `ts-test`, `conformance-workflow.test.ts`'s
+  #       `validateWorkflowRoot(process.cwd())` which needs no base) and by G7; the
+  #       new structure pin asserts ONLY the base-independent exact sets and the
+  #       inventory. The suite must not add a base-dependent equality assertion, an
+  #       environment branch, or a skip. `origin/main-tools` must be present for
+  #       G7; a missing base there is an ERROR, never a SKIP.
+  #
+  # Acceptance: AC-F4-1 (REG-001), AC-F4-2 (REG-002/006, with the review-verified
+  #   residue recorded in §10), AC-F4-3 (REG-003), AC-F4-4 (REG-004),
+  #   AC-F4-5 (REG-005), AC-F5-1 (GATE-001/002, with the diff half
+  #   review-verified).
+  #
+  # Gate (expected signal: exit 0; exactly five participation items, the seven
+  # bound modules clean with the allowlist equal in both directions and the runner
+  # exception exactly five comparisons, seven planted literals and a sixth
+  # comparison each failing by file+construct, the control green with a nine-cell
+  # column and six postures while the shipped registry stays three, five distinct
+  # named failures for the five removals, the workflow file/job/trigger sets equal
+  # to the pins with a `purge-cache`-style addition failing by file+job, and the
+  # two delivered workflow suites' inventories unchanged):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/registration-participation.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/ci-topology-pin.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/conformance-coverage.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/control-registration.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/parity-gate-wiring.test.ts tests/checks/ci-checks.test.ts tests/checks/conformance-workflow.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/ci-topology.ts           (G7)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                 (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                               (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Five-item registration-only participation contract, provider-identity-free bound-set scan with its exact allowlist, composition-injected synthetic control, and the workflow file/job/trigger equality control"
+    kind: delivery
+    summary: "feat(GH-339): registration-only participation and topology control"
+    scope:
+      files:
+        - packages/testkit/src/conformance/participation.ts
+        - packages/testkit/src/index.ts
+        - tests/structure/registration-participation.test.ts
+        - tests/conformance/control-registration.test.ts
+        - tests/checks/parity-gate-wiring.test.ts
+        - tests/structure/ci-topology-pin.test.ts
+        # Created in phase 2 with the cell/entry probe; extended here with the
+        # participation and refusal probes.
+        - tests/types/conformance-participation.type-test.ts
+        # Phase 4 created the census extension; this phase adds the
+        # control-absence assertion (REG-003) to the same delivered suite.
+        - tests/structure/conformance-coverage.test.ts
+        - tests/fixtures/providers/conformance/parity/identity-scan-allowlist.json
+        - tests/fixtures/pins/workflow-topology.json
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        # The control's own namespace: deliberately outside
+        # tests/fixtures/providers/traps/ so the three-provider catalog scan and
+        # its minima are untouched.
+        - tests/fixtures/providers/conformance/control
+    interactions:
+      - kind: contract-file
+        target: packages/testkit/src/conformance/participation.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/pins/workflow-topology.json
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Release obligations: the regression floor, the aggregate gate, and
+  # the spec-reconciliation files declared for STAGING ONLY (TC-FLOOR-001..006;
+  # no AC ownership; NFR-6, NFR-8, §24.1).
+  #
+  # Goal: prove the WHOLE and declare the release. Nothing new is designed here.
+  # The floor is what makes the "no adapter change", "no contract change", "no
+  # topology change", "pins updated exactly", "fixture hygiene unchanged" and
+  # "aggregate gate green" obligations mechanical instead of aspirational. A floor
+  # failure is remediated in the phase that OWNS the failing case (its scope is
+  # already there) or re-planned — never by deleting or renaming an assertion
+  # (test plan §3.4 no-skip rule, §7.4 triage rules 2 and 4).
+  #
+  # Floor (delivered suites re-run as controls; the files are NOT declared because
+  # this phase authors none of them — SCOPE DECLARATION RULE):
+  #   - FLOOR-001: the delivered conformance, harness, live-entrypoint, coverage
+  #     and workflow suites stay green with unchanged check-name inventories;
+  #     3 flows / 14 steps / three skip kinds unchanged.
+  #   - FLOOR-002: the three capability postures are SET-and-REASON equal to the
+  #     delivered ones — GitHub nine supported and zero gaps; GitLab
+  #     `read-delivery-request` + `read-pipeline-run` supported with seven
+  #     `adapter-not-implemented`; Jira three supported, `write-comment`
+  #     `adapter-not-implemented`, five `provider-unsupported`. This is the case
+  #     that makes "no adapter completion" mechanical: an intersection "fixed" by
+  #     implementing an operation fails here naming the operation and reason.
+  #   - FLOOR-003: the nine closed operations in order, the port-contract
+  #     inventory, `ERROR_TABLE` count and code set with zero `tracker.*` rows,
+  #     `DOMAIN_KINDS`, the projection and exit maps, the carrier vocabulary, and
+  #     the `DeliveryThread`/`DeliveryRequest` field sets are all unchanged.
+  #   - FLOOR-004: the pinned inventory and allowance surfaces are updated EXACTLY
+  #     and non-vacuously (both directions, no wildcard, no allowance naming a
+  #     symbol the file does not export), and the file-set, executable-discipline,
+  #     exports-discipline, exports-parity, testkit-exclusion, ambient-globals and
+  #     runtime-apis-confinement checks are green.
+  #   - FLOOR-005: every new fixture carries a provenance marker, example-only
+  #     hosts and no credential material; the planted-secret canary is still
+  #     caught; the secret-read allowlist has its delivered entry count and ZERO
+  #     new entries.
+  #   - FLOOR-006: `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 through
+  #     lint -> format -> typecheck -> test -> boundaries -> memory ->
+  #     prompt/help/exports parity, with the new suites included in the `test`
+  #     stage. Recorded as a pm-notes `notes:` entry.
+  #
+  # Release obligations:
+  #   6.1 NO changeset: `version_impact: none`, testkit is private, and no
+  #       publishable package changes. Authoring one would claim a release that
+  #       does not exist.
+  #   6.2 `plan validate GH-339` is valid at the delivered HEAD (build first:
+  #       `TMPDIR=$PWD/tmp/tmpdir pnpm build`), and the verdict is recorded.
+  #   6.3 The doc/spec files listed below are reconciled by LIFECYCLE PHASE 7
+  #       (@doc-syncer). They are declared HERE for staging only — an untracked or
+  #       modified doc outside every declared scope is a stray the commit primitive
+  #       never stages. The sentence-level obligations are the DOC RECONCILIATION
+  #       HANDOFF block in this file's header; nothing is left to discovery.
+  #   6.4 Leave the pull request open against main-tools for human review
+  #       (lifecycle phase 11; merge authority stays outside this change).
+  #
+  # Gate (expected signal: exit 0 at every line; postures set-and-reason equal,
+  # error-table and operation counts unchanged, inventory/allowance equality in
+  # both directions, sanitization findings empty with the canary still caught, the
+  # doc-distribution guard green for the reconciled pages, `plan validate` valid,
+  # and the aggregate gate green):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                       (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                        (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                           (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers              (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries                       (G5)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                  (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/ci-topology.ts           (G7)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh     (G8)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship plan validate GH-339
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                      (G10, binding)
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Regression floor, exact pinned-surface and fixture-hygiene proofs, plan validation, spec reconciliation staged for lifecycle phase 7, and the aggregate gate at the delivered HEAD"
+    kind: delivery
+    summary: "chore(GH-339): release obligations and the regression floor"
+    scope:
+      files:
+        # Reconciled in lifecycle phase 7 (system_spec_update, @doc-syncer), not
+        # by this phase. Declared so the commit primitive can stage them; the
+        # required reconciliation per file is the header's handoff block.
+        - doc/spec/features/feature-adapter-conformance.md
+        - doc/spec/features/feature-provider-client-seeds.md
+        - doc/spec/features/feature-adapter-reference-behavior.md
+        - doc/spec/features/feature-adapter-ports.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+      folders:
+        - doc/changes/2026-11/2026-11-18--GH-339--adapter-conformance-parity
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-339/adapter-conformance-parity targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
+      pipelineId: "CI pipeline for the GH-339 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
+      trackerTransition: "in-review"
