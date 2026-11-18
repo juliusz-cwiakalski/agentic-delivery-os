@@ -56,6 +56,30 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Delivery handoff after plan phases 1-2 (this session). Phase 3 onward is
+      NOT started: the tree is green and the two delivered phases are verified,
+      and `phase complete GH-338 delivery` was deliberately NOT run because the
+      Definition of Done requires all seven plan phases. Load-bearing finding for
+      the phase-3 coder: spec §8.4.1 and TDR-0034 §3.2 require a `label-swap`
+      write to be resolved against the issue's current read AND to refuse with
+      ZERO provider requests (TC-BACKLOG-004/006 assert request count 0, zero
+      label reads, zero label writes), while §3.2 also says such a write 'reads
+      the current label set'. Both hold only if the current-read precondition is
+      adapter-local INPUT data on the widened `transitionWorkItem` input (e.g. an
+      optional `current: { deliveryState, labels? }` fact the caller supplies),
+      not a read the adapter issues. That reading keeps the delivered
+      `done` field-update path byte-identical (it needs no precondition), keeps
+      the refusals at zero requests, and makes the read/write symmetry cases
+      writable. It must be documented in the phase-6 reference behavior. Also
+      unresolved for phase 3: the terminal-read refusal, the unavailable-signal
+      refusal and the non-terminal `field-update` refusal must be distinguished
+      by detail text; the map validator's seven TDR-0034 §1 rules run once per
+      construction with a captured (never thrown) failure; and the
+      GH-ISSUE-TO-WORKITEM trap outcome amendment is the ONE declared delivered
+      catalog amendment, owned by phase 3. Remaining plan phases and their gates
+      are unchanged in chg-GH-338-plan.yaml."
+    type: risk
+    date: "2026-11-18"
   - text: "Plan phase 2 boundary gate result: TMPDIR=$PWD/tmp/tmpdir pnpm check —
       lint, format, typecheck, boundaries, memory, prompt conformance, help
       coverage and exports parity green; bun test 10354 pass / 4 pre-existing
