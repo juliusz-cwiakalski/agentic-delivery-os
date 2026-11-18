@@ -1391,7 +1391,7 @@ export type MergeCommandComposition = {
     | { readonly ok: true; readonly request: DeliveryRequest }
     | { readonly ok: false; readonly code: string }
   >;
-  readonly ownerPrincipal?: string;
+  readonly ownerPrincipal?: string | undefined;
   readonly baseRef?: string;
   readonly branch?: string;
   readonly nowIso: () => string;

@@ -167,7 +167,14 @@ export type MergeFailureEvidence = {
 /** One classified merge failure. */
 export type MergeFailure = {
   readonly code: string;
-  readonly domainKind: "merge" | "state" | "provider";
+  /**
+   * The `domainKind` the resolved error-table row declares for the code
+   * (TDR-0031 D7). `config` is an already-declared `DOMAIN_KINDS` member this
+   * type now admits, so a `config.credential.missing` read failure is classified
+   * `config` at its declared `user-validation` projection (exit `1`) instead of
+   * being contained as `fallback.internal` at exit `2`.
+   */
+  readonly domainKind: "merge" | "state" | "provider" | "config";
   readonly exit: 0 | 1 | 2;
   readonly evidence: MergeFailureEvidence;
 };
@@ -269,21 +276,42 @@ const gateFailureFor = (
 
 const stateFailure = (
   reason: MergeStateReadReason,
-  domainKind: "state" | "merge",
   detail?: string,
-): MergeFailure => ({
-  code: "merge.state-unverified",
-  domainKind,
-  exit: 2,
-  evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
-});
+): MergeFailure => {
+  // The kind comes from the resolved row, never from the call site: a
+  // `merge.state-unverified` failure declared as `state` would be the very
+  // kind/code contradiction that is contained as `fallback.internal`.
+  const row = ERROR_TABLE.find((entry) => entry.code === "merge.state-unverified");
+  const declaredKind = row?.domainKind as MergeFailure["domainKind"] | undefined;
+  const domainKind: MergeFailure["domainKind"] = declaredKind ?? "merge";
+  return {
+    code: "merge.state-unverified",
+    domainKind,
+    exit: 2,
+    evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
+  };
+};
 
-const readFailure = (code: string): MergeFailure => ({
-  code,
-  domainKind: "provider",
-  exit: 2,
-  evidence: { detail: code },
-});
+const readFailure = (code: string): MergeFailure => {
+  // The classification is read from the resolved error-table row, never
+  // hard-coded: a kind/code pair that contradicts the table is exactly the
+  // containment (`fallback.internal`, exit 2) this restoration removes.
+  const row = ERROR_TABLE.find((entry) => entry.code === code);
+  if (row === undefined) {
+    return { code, domainKind: "provider", exit: 2, evidence: { detail: code } };
+  }
+  const kind =
+    row.domainKind === "merge" ||
+    row.domainKind === "state" ||
+    row.domainKind === "provider" ||
+    row.domainKind === "config"
+      ? row.domainKind
+      : "provider";
+  // `success` is unreachable for a failure row; `platform-provider` keeps its
+  // exit `2`, and the two user-facing classes project exit `1`.
+  const exit = row.projectionClass === "platform-provider" ? 2 : 1;
+  return { code, domainKind: kind, exit, evidence: { detail: code } };
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -331,7 +359,7 @@ export const runMergeTransaction = async (input: {
   // landing and without requiring a fresh verification (DEC-12, NFR-9).
   const transactions = ports.readTransactions();
   if (!transactions.ok) {
-    return refused(stateFailure(transactions.reason, "state", transactions.code));
+    return refused(stateFailure(transactions.reason, transactions.code));
   }
   const latestTransaction = transactions.records.at(-1);
   if (latestTransaction !== undefined) {
@@ -370,12 +398,12 @@ export const runMergeTransaction = async (input: {
   // 2. The freshness envelope over the newest verification record.
   const verification = ports.readVerification();
   if (!verification.ok) {
-    return refused(stateFailure(verification.reason, "merge", verification.code));
+    return refused(stateFailure(verification.reason, verification.code));
   }
   const record = verification.records.at(-1);
   const head = await ports.readHead();
   if (head === undefined) {
-    return refused(stateFailure("unreadable", "merge", "head-unresolved"));
+    return refused(stateFailure("unreadable", "head-unresolved"));
   }
   const envelope = evaluateMergeFreshness({
     record,
@@ -387,7 +415,7 @@ export const runMergeTransaction = async (input: {
     effectiveGateSet: gateSetIdentity,
   });
   if (!envelope.ok && envelope.kind === "state-unverified") {
-    return refused(stateFailure(envelope.reason, "merge"));
+    return refused(stateFailure(envelope.reason));
   }
 
   // 3. One bounded probe: one work-item read, one check-run page, one
@@ -888,7 +916,7 @@ const runDryRun = async (input: {
   const { changeRef, config, ports } = input;
   const head = await ports.readHead();
   if (head === undefined) {
-    return refused(stateFailure("unreadable", "merge", "head-unresolved"));
+    return refused(stateFailure("unreadable", "head-unresolved"));
   }
   const workItem = await ports.readWorkItem();
   if (!workItem.ok) return refused(readFailure(workItem.code));
@@ -966,7 +994,7 @@ const runDryRun = async (input: {
     trackerPosture: { labels: posture.labels, ownerLabels: posture.ownerLabels },
   };
   const appended = ports.appendVerification(record);
-  if (!appended.ok) return refused(stateFailure("unreadable", "state", appended.code));
+  if (!appended.ok) return refused(stateFailure("unreadable", appended.code));
 
   const authorizations: MergeDryRunAuthorization[] = [];
   for (const declaration of input.declarations) {

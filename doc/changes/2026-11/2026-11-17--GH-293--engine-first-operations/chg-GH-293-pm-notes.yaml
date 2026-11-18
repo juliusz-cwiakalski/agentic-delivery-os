@@ -18,8 +18,38 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 5 complete (production merge composition on real reads and
+      declared sources, with error-table-derived classification). Commit
+      4c1a5f9e. The composition performs real tracker, check-run, and
+      request-detail reads through the delivered adapters and credential seam;
+      configuration comes from the resolved document's `merge` branch (the
+      document's own classified failure is forwarded, absent keeps the delivered
+      defaults), branch from the checkout's git facts, the base reference from
+      the declared integration base, and the owner principal from the owner
+      component of the checkout's normalized identity (resolved through the
+      delivered policy, no new key). `MERGE_COMPOSITION_EMITTABLE_CODES` is
+      exported and total over the refusal branches; `MergeFailure.domainKind`
+      admits the already-declared `config` kind and both `readFailure` and
+      `stateFailure` derive kind and exit from the resolved row, so a missing
+      credential is `config.credential.missing` at exit 1 and no legitimate
+      failure reaches `fallback.internal`. Verification: `pnpm typecheck` green;
+      merge-production-composition 6/6, merge-classification-conformance 6/6,
+      the four delivered merge controls green, error-table + content-inventory
+      green — 186/186 across the declared gate set. Deviations: (a) the
+      composition's provider read faults are mapped onto declared identities
+      (401/403 -> `provider.auth.rejected`, other payload/transport faults ->
+      `provider.outage`, 404/absent request -> `merge.transaction-aborted`), as
+      OQ-TP-6 requires, so the adapter's undeclared `provider.payload.invalid` /
+      `provider.not-found` never becomes an emitted pair; (b) the emittable set
+      spans the declared kinds it can emit (config, provider, merge) because the
+      state-read branch is the declared `merge.state-unverified` row, and a
+      `state.*` member would name a code the composition never emits;
+      (c) `packages/cli/src/edge.ts` widened `MergeCommandComposition.ownerPrincipal`
+      to admit `undefined` so the lazily resolved principal typechecks."
+    type: "info"
+    date: "2026-11-18"
   - text: "Plan phase 4 complete (repos list read-time gate evaluation bound to
-      each row's own repository identity). Commit pending. The flat row carries
+      each row's own repository identity). Commit 16531a5d. The flat row carries
       the five delivered fields plus `reversible` then `handoverGate`; the
       evaluation rides a repos-only row pass over the store the row pass already
       opened (one bounded attempts + one divergences read), folds the declared

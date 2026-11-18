@@ -165,7 +165,9 @@ import {
   type DaemonReachability,
   type DaemonSettings,
   DELIVERY_RESULT_TOKENS,
+  type DeliveryRequest,
   type DeliveryResultToken,
+  type WorkItem,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
@@ -271,7 +273,28 @@ import { workingNameEnvironmentVariable } from "./entrypoint.js";
 import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
 
-const PROVIDER_FAILURE = "config.credential.missing";
+/**
+ * The production merge composition's declared emittable failure codes (GH-293
+ * F-7, DM-6; TDR-0031 D9).
+ *
+ * Exhaustive by construction over this composition's refusal branches: every
+ * member is a code the delivered error table already declares, one member per
+ * branch, and the classification conformance suite ranges over this declaration
+ * rather than a hand-picked list. The set is a declaration, never a row source:
+ * it adds no row, kind, or exit.
+ */
+export const MERGE_COMPOSITION_EMITTABLE_CODES = [
+  "config.credential.missing",
+  "provider.auth.rejected",
+  "provider.outage",
+  "merge.transaction-aborted",
+  "merge.state-unverified",
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.landing-unverified",
+] as const;
 
 /**
  * The tracker-family tokens the truth read derives, resolved from the one
@@ -349,11 +372,6 @@ const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
     uninstall: async () => refuse(),
   };
 };
-
-const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code: string }> => ({
-  ok: false,
-  code: PROVIDER_FAILURE,
-});
 
 /** The declared truth-read credential reference (names only, never material). */
 const githubReadReference: CredentialReference = {
@@ -1476,17 +1494,166 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       readSuiteMap,
     });
 
-    const merge = createMergeCommandRuntime({
+    /** The declared integration base the checkout's base reference resolves to. */
+    const mergeBaseRef = CLOSEOUT_INTEGRATION_BASE;
+    /** The checkout's own current branch, read from its git facts. */
+    const mergeBranch = resolvedRepositoryFacts.head.branch;
+
+    /**
+     * The provider-resolved repository owner (GH-293 DEC-13, TDR-0031 D8): the
+     * owner component of the checkout's normalized `host/owner/name` identity,
+     * resolved through the delivered identity policy with no new configuration
+     * key and no persistence on this path.
+     */
+    const mergeOwnerPrincipalOf = (): string | undefined => {
+      const repository = resolveProductionRepository(undefined, { persist: false });
+      if (repository === undefined) return undefined;
+      const parts = repository.split("/");
+      return parts.length === 3 ? parts[1] : undefined;
+    };
+
+    /**
+     * One declared configuration resolution for the merge branch (GH-293 F-6).
+     *
+     * An absent document keeps the delivered defaults; an unreadable or invalid
+     * document forwards its own classified code rather than silently resolving
+     * `{}`. The declared keys stay exactly `gate-freshness`, `gates`, and
+     * `deploy-expectations`.
+     */
+    let mergeConfigurationCache:
+      | { readonly ok: true; readonly values: Readonly<Record<string, ConfigValue>> }
+      | { readonly ok: false; readonly code: string; readonly detail?: string }
+      | undefined;
+    const mergeConfiguration = ():
+      | { readonly ok: true; readonly values: Readonly<Record<string, ConfigValue>> }
+      | { readonly ok: false; readonly code: string; readonly detail?: string } => {
+      if (mergeConfigurationCache !== undefined) return mergeConfigurationCache;
+      const acquired = acquireProjectConfiguration(gitRootForConfig());
+      if (!acquired.ok) {
+        mergeConfigurationCache = { ok: false, code: acquired.error.code };
+        return mergeConfigurationCache;
+      }
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) {
+        mergeConfigurationCache = { ok: false, code: resolved.error.code };
+        return mergeConfigurationCache;
+      }
+      mergeConfigurationCache = { ok: true, values: resolved.value.values };
+      return mergeConfigurationCache;
+    };
+
+    /**
+     * Map one adapter read failure onto the composition's declared identities
+     * (GH-293 F-7, OQ-TP-6). Every mapped code is a member of the declaration
+     * above; a read fault never reaches `fallback.internal`.
+     */
+    const mergeReadCodeOf = (read: {
+      readonly code: string;
+      readonly httpStatus?: number;
+    }): string => {
+      if (read.code === "config.credential.missing") return "config.credential.missing";
+      if (read.code === "provider.auth.rejected") return "provider.auth.rejected";
+      if (read.code === "provider.outage") return "provider.outage";
+      if (read.code === "provider.payload.invalid") {
+        return read.httpStatus === 401 || read.httpStatus === 403
+          ? "provider.auth.rejected"
+          : "provider.outage";
+      }
+      // An absent request or work item cannot be resolved: the transaction
+      // aborts cleanly before any landing mutation, and a re-run with a valid
+      // reference converges (the declared `merge.transaction-aborted` meaning).
+      if (read.code === "provider.not-found") return "merge.transaction-aborted";
+      return "provider.outage";
+    };
+
+    const mergeWorkItem = async (
+      changeRef: string,
+    ): Promise<{ readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }> => {
+      const issueNumber = /^[A-Za-z]+-([0-9]+)$/u.exec(changeRef)?.[1];
+      if (issueNumber === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      const read = await client.readWorkItem(Number(issueNumber));
+      return read.ok ? { ok: true, item: read.value } : { ok: false, code: mergeReadCodeOf(read) };
+    };
+
+    const mergeCheckRuns = async (
+      sha: string,
+    ): Promise<
+      | {
+          readonly ok: true;
+          readonly items: readonly PipelineRun[];
+          readonly pageItemCount: number;
+          readonly sha?: string;
+        }
+      | { readonly ok: false; readonly code: string }
+    > => {
+      const read = await client.readPipelineRun(sha, VERIFY_GATES_CI_RUN_LIMIT);
+      return read.ok
+        ? { ok: true, items: read.value.items, pageItemCount: read.value.pageItemCount, sha }
+        : { ok: false, code: mergeReadCodeOf(read) };
+    };
+
+    const mergeRequestDetail = async (): Promise<
+      | { readonly ok: true; readonly request: DeliveryRequest }
+      | { readonly ok: false; readonly code: string }
+    > => {
+      if (target === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT);
+      if (!open.ok) return { ok: false, code: mergeReadCodeOf(open) };
+      const match =
+        mergeBranch === undefined
+          ? undefined
+          : open.value.items.find((item) => item.sourceRef === mergeBranch);
+      if (match !== undefined) return { ok: true, request: match };
+      // The convergence case: an already-merged request for the branch's ref.
+      const changeRef = mergeBranch === undefined ? undefined : /([A-Za-z]+-[0-9]+)/u.exec(mergeBranch)?.[1];
+      if (changeRef !== undefined) {
+        const merged = await client.findMergedDeliveryRequest({
+          workItemRef: changeRef,
+          limit: TRUTH_PROVIDER_LIMIT,
+        });
+        if (merged.observation === "observed") return { ok: true, request: merged.value };
+      }
+      return { ok: false, code: "merge.transaction-aborted" };
+    };
+
+    const mergeRuntimeBase = createMergeCommandRuntime({
       store,
       git: createGitMergeSeam({ cwd }),
-      values: () => ({}),
-      readWorkItem: credentialRefusal,
-      readCheckRuns: credentialRefusal,
-      readRequestDetail: credentialRefusal,
+      values: () => {
+        const configuration = mergeConfiguration();
+        return configuration.ok ? configuration.values : {};
+      },
+      readWorkItem: mergeWorkItem,
+      readCheckRuns: mergeCheckRuns,
+      readRequestDetail: mergeRequestDetail,
+      // Resolved lazily from the checkout's identity policy: the owner component
+      // of the normalized `host/owner/name`, never a configuration key.
+      get ownerPrincipal() {
+        return mergeOwnerPrincipalOf();
+      },
+      baseRef: mergeBaseRef,
+      ...(mergeBranch === undefined ? {} : { branch: mergeBranch }),
       nowIso,
       nowMs,
       newFenceToken,
     });
+
+    // The configuration document is resolved once per invocation, so its own
+    // classified failure is forwarded before the transaction reads anything.
+    const merge = {
+      readConfig: (changeRef: string) => {
+        const configuration = mergeConfiguration();
+        if (!configuration.ok) {
+          return {
+            ok: false as const,
+            code: configuration.code,
+            ...(configuration.detail === undefined ? {} : { detail: configuration.detail }),
+          };
+        }
+        return mergeRuntimeBase.readConfig(changeRef);
+      },
+      createPorts: mergeRuntimeBase.createPorts,
+    };
 
     const closeout = createCloseoutComposition({
       workspaceId,

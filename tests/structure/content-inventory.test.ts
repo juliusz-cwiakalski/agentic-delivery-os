@@ -2243,6 +2243,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "cli/src/help/prompt-required-commands.ts": ["PROMPT_REQUIRED_COMMANDS"],
   "cli/src/production.ts": [
+    "MERGE_COMPOSITION_EMITTABLE_CODES",
     "createProductionComposer",
     "createSupervisionEconomicsWritePort",
     "SUPERVISION_EXHAUSTION_QUESTION_OPTIONS",
