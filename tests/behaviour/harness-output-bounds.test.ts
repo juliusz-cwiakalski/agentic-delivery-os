@@ -131,3 +131,98 @@ describe("TC-HARN-026 output bounds", () => {
     expect(human).toContain("run=run-bounds");
   });
 });
+
+/**
+ * TC-HARNESS-030 (GH-335 half) — the new refusal renders are measured on
+ * serialized UTF-8 bytes and rendered lines, and the identity, observed value,
+ * and remediation hint survive every render (NFR-4).
+ */
+const REFUSALS = [
+  {
+    code: "harness.version.unsupported",
+    summary: "observed 2.1.7 is outside the supported window",
+    harness: { kind: "opencode", observedVersion: "2.1.7", versionVerdict: "outside" },
+  },
+  {
+    code: "harness.version.unknown",
+    summary: "the harness version could not be determined",
+    harness: { kind: "opencode", observedVersion: null, versionVerdict: "indeterminate" },
+  },
+  {
+    code: "harness.mode.unavailable",
+    summary: "requested managed-background-service is unavailable",
+    harness: {
+      kind: "opencode",
+      observedVersion: "2.3.2",
+      versionVerdict: "inside",
+      mode: "managed-background-service",
+    },
+  },
+  {
+    code: "harness.profile.model-unrepresentable",
+    summary: "seat seat-judgment declares an unrepresentable model",
+    harness: {
+      kind: "opencode",
+      observedVersion: "2.3.2",
+      versionVerdict: "inside",
+      mode: "per-invocation-private-server",
+    },
+  },
+] as const;
+
+const renderRefusal = async (refusal: (typeof REFUSALS)[number]) => {
+  const { runCli } = await import("../../packages/cli/src/index");
+  const { SYNTHETIC_BRAND, bufferSink } = await import("../golden/helpers");
+  const command = {
+    handler: () => ({
+      error: {
+        kind: "harness",
+        code: refusal.code,
+        summary: refusal.summary,
+        detail: { harness: refusal.harness },
+      },
+    }),
+  };
+  const out = bufferSink();
+  const err = bufferSink();
+  const exit = await runCli(
+    ["synthetic", "--verbose"],
+    { stdout: out, stderr: err },
+    {
+      brand: SYNTHETIC_BRAND,
+      clock: { now: () => 0 },
+      newRunId: () => "run-bounds-refusal",
+      secrets: [],
+      program: { commands: { synthetic: command } },
+    },
+  );
+  return { exit, text: `${out.value}${err.value}` };
+};
+
+describe("TC-HARNESS-030 refusal renders stay bounded", () => {
+  test("every refusal render keeps its identity, observed value, and hint within bounds", async () => {
+    for (const refusal of REFUSALS) {
+      const { text } = await renderRefusal(refusal);
+      const bytes = Buffer.byteLength(text, "utf8");
+      const lines = text.split("\n").length;
+      expect(bytes).toBeGreaterThan(0);
+      expect(bytes).toBeLessThan(HARNESS_TELEMETRY_MAX_HUMAN_BYTES);
+      expect(lines).toBeLessThanOrEqual(HARNESS_TELEMETRY_MAX_HUMAN_LINES + 1);
+      expect(text).toContain(refusal.code);
+    }
+  });
+
+  test("an over-bound observed value is dropped whole, never clipped", async () => {
+    const { text } = await renderRefusal({
+      code: "harness.version.unsupported",
+      summary: "over-bound observed value",
+      harness: {
+        kind: "opencode",
+        observedVersion: `2.${"1".repeat(80)}.7`,
+        versionVerdict: "outside",
+      },
+    });
+    expect(text).toContain("harness.version.unsupported");
+    expect(text).not.toContain("1".repeat(80));
+  });
+});

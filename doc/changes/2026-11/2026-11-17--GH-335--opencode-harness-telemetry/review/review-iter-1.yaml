@@ -1,0 +1,330 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-335
+branch: feat/GH-335/opencode-harness-telemetry
+status: FAIL
+summary: >
+  The change is broad, mostly well-built, and its offline suites are green (spot-run
+  241 tests / 0 fail across 24 suites; plan+capsule validators green). Three blocking
+  defects remain. (1) The recorded live observation — the sole evidence for AC-F5-6 and
+  AC-F3-1's live half — is a raw `opencode run --agent coder --model …` invocation
+  (an argv convention the plan explicitly forbids for this record) that never ran a
+  harness-port spawn and never ran the delivered capture; the capture scope is the
+  recorded dispatch-attempt union, and a raw CLI run records no attempt, so the
+  delivered capture would return `skipped-gap`, not the narrated row. The record yet
+  claims both criteria "met" with "no deferral", breaching DoD clause 1. (2) The
+  production composition mounts neither `createHarnessProfilePort` nor
+  `resolveHarnessAdmissionBinding`; the only mounting caller is a test fixture, so the
+  delivered production port refuses a caller-supplied `agent` without a binding
+  instead of resolving it, and the plan's own escalation trigger ("the resolution rule
+  has no production call site and only a test-built fixture proves it") has fired.
+  (3) The two resolution helpers swap the two refusal identities: a present empty
+  `agent` resolves to `provider.profile.invalid` through the admission helper
+  (DEC-17 requires `config.value.invalid`), while an `unassigned` named agent resolves
+  to `config.value.invalid` through the port wrapper (AC-F3-4 requires
+  `provider.profile.invalid` naming agent/profile/seats). Both are demonstrated
+  empirically. Seven minor and four informational findings follow; none of the
+  declared gaps in pm-notes breaches the spec, though two gap descriptions are
+  inaccurate.
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 1
+  low: 6
+  info: 4
+spec_compliance: FAIL
+plan_compliance: FAIL
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-live-observation.md:18-102
+    message: >
+      AC-F5-6 and the live half of AC-F3-1 are claimed "met" on evidence that does not
+      satisfy either. The record's own section 2 states the observation is "not a
+      dispatch run" and shows `opencode run --agent coder --model deepseek/deepseek-flash`
+      — a direct harness-CLI invocation, i.e. the argv convention plan 8.12 and DoD
+      clause 4 forbid ("supplied on the input contract's agent-identity member, not
+      through an environment variable or an argv convention"). No harness-port spawn
+      (HarnessSessionPort.spawn) ran, no resolved binding was produced, and no capture
+      was executed: section 4's row table is a narrated projection ("the capture
+      produces one row with:"), not observed capture output. Because the delivered
+      capture scope is the union of session identities held by the work item's recorded
+      dispatch attempts (DM-8), a raw CLI run leaves no attempt record and the delivered
+      capture would return skipped-gap/session-attribution-unavailable, not the row
+      described. The seat value `coder-seat` is asserted nowhere the store or an
+      executed capture produced it. The record states "No deferral is claimed", so DoD
+      clause 1's accepted-deferral escape is not available.
+    suggestion: >
+      Either (a) run the observation through the delivered path — a harness-port spawn
+      with `agent: "coder"` (and the binding the composition resolves), record the attempt,
+      run the closeout/extractor capture, and paste the actual landed-row output (including
+      seat, resolvedModel, harnessVersion, tokens) and the state read — or (b) record an
+      owner/PM-accepted deferral in the change's evidence with the exact boundary, and
+      stop claiming AC-F5-6 / AC-F3-1's live half as met (spec §17.2 clause 1 and 4).
+      The narrated row table must not stand as evidence.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1151,2832-2835
+    message: >
+      `createProductionComposer`'s `dispatchComposition` hands out plain `harnessFor(...)`
+      ports (`harnesses: { opencode: harnessFor("opencode", dispatchVersionGate), … }`)
+      and supplies neither `harnessAgent` nor `harnessBinding`; `createHarnessProfilePort`
+      (production.ts:1151) and `resolveHarnessAdmissionBinding` (production.ts:1087) are
+      referenced only by `tests/fixtures/harness/propagation-harness.ts` and by each other.
+      Consequently a caller that supplies `agent` on the delivered production port receives
+      a `config.value.invalid` refusal from the adapter ("reached the adapter without a
+      resolved single-seat binding") instead of the resolver's single-seat binding, so
+      AC-F3-1's offline "the composition passes the supplied agent identity to the
+      resolver" is proven only by a test-built fixture. This is exactly the state the plan
+      declares an escalation trigger against ("so the resolution rule has no production
+      call site and only a test-built fixture proves it", plan tier.escalationTriggers) and
+      contradicts DM-4/§8.2/DEC-16 ("the composition passes it to the pure resolution
+      function"). DEC-15 is not breached — the shipped dispatch supplies no agent and binds
+      nothing — but DEC-15 does not license an unmounted resolution call site.
+    suggestion: >
+      Mount the resolution call site in the production composition: wrap the opencode
+      session port with `createHarnessProfilePort({ port, profile, selection, resolve:
+      resolveBinding })` using the nominated profile/selection, so a caller-supplied `agent`
+      is resolved and a role-less call is an unchanged passthrough (preserving DEC-15). Add
+      a composition-level test that drives the production-composed port with an agent and
+      asserts one resolved `--agent`/`--model` pair (and no pair when no agent is supplied).
+    suppressed: false
+  - id: F-3
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1087-1205
+    message: >
+      The two profile-resolution helpers swap the refusal identities. Verified by execution:
+      `resolveHarnessAdmissionBinding({ agent: "", profile, selection, profileName: "p" })`
+      returns `provider.profile.invalid` ("agent  has no seat …"), whereas DEC-17 / AC-F3-1
+      require `config.value.invalid` naming the agent-identity field for a present empty or
+      whitespace-only identity; and `createHarnessProfilePort(...).spawn({ …, agent:
+      "writer" })` on a multi-seat profile with no assigned seat returns
+      `config.value.invalid` ("agent writer resolved no seat before the port call"), whereas
+      AC-F3-4 requires `provider.profile.invalid` naming the agent, the profile, and the
+      declared seats. The wrappers partially mask this (the port wrapper runs
+      `harnessAgentIdentityViolation` before resolution, so the empty-string case is right at
+      the wrapper), but the admission helper has no such check, and the port wrapper's
+      unassigned branch is wrong. Because the helpers are currently unmounted (F-2), the
+      contradiction is latent in production but present in exported, documented-as-the-call-
+      site code.
+    suggestion: >
+      In `resolveHarnessAdmissionBinding`, check `harnessAgentIdentityViolation(agent)` first
+      and return `config.value.invalid` naming the `agent`-identity field; keep `unassigned`
+      → `provider.profile.invalid` with agent/profile/declared-seats in the bounded summary.
+      In `createHarnessProfilePort`'s `bind`, delegate an `unassigned` resolution to the same
+      `provider.profile.invalid` mapping (agent, profile, seats) instead of
+      `config.value.invalid`; keep `config.value.invalid` only for the invalid identity and
+      the (contract-violation) unresolvable case. Add oracles for both paths driven through
+      the mounted composition.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: observability
+    location: packages/core/src/contracts/closeout.ts:562-568; packages/core/src/contracts/harness-telemetry.ts:228-238; packages/cli/src/edge.ts:2490-2500
+    message: >
+      The capture computes `absences`, `unattributedAttempts`, and `attemptTruncation`
+      (harness-telemetry.ts:214-218, adapter populates them) but neither
+      `CloseoutTelemetryDisclosure` (captured/degraded/failed/warnings/sessionTruncation)
+      nor the durable `HarnessCaptureOutcomeRecord` projects them; `captureTelemetry`
+      (domain/closeout.ts:1627) and the edge's `buildTelemetry` outcome drop them, and the
+      compaction checkpoint (domain/closeout.ts:2448-2470) carries only the identity-cap
+      `sessionTruncation`. So after closeout no reader can see that an attempt was
+      unattributed, that the attempt ledger was truncated, or that held sessions were
+      absent — an all-absent capture renders as `{captured: 0, degraded: 0, failed: 0,
+      warnings: []}`. This is the capture-envelope's declared data (AC-F5-5/AC-F6-2 are
+      satisfied at the `HarnessTelemetryCapture` return, which the docs cite), so it is not
+      an AC breach, but it repeats the GH-291 F-2 "accounting never surfaces durably"
+      class.
+    suggestion: >
+      Add bounded `absences` (count + closed reasons), `unattributedAttempts`, and
+      `attemptTruncation` to `CloseoutTelemetryDisclosure` and to
+      `HarnessCaptureOutcomeRecord` (and the state parse/append), projecting them in
+      `captureTelemetry` and the edge outcome; add a closeout test that asserts an absent
+      and an unattributed attempt survive into the applied payload and the durable record.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:975-980,1042-1066; packages/core/src/domain/harness-registry.ts:130
+    message: >
+      `modeOrigin` never reaches the production attempt record. `ProductionHarnessFacts`
+      carries no `modeOrigin`; `createHarnessAdmission` calls `resolveHarnessInstance`
+      without one, so `resolveHarnessInstance` always stamps `modeOrigin: "defaults"`
+      (harness-registry.ts:130) even when `harness.mode` is configured; and
+      `dispatch.ts` therefore writes no `modeOrigin` on the attempt. The config layer
+      resolves the origin correctly (`resolveHarnessSettings`, tested), but DM-3 / plan 8.6
+      ("the mode with its origin") is not observable on the recorded attempt, and the
+      instance's value would misreport a configured mode if anyone read it.
+    suggestion: >
+      Add `modeOrigin` to `ProductionHarnessFacts`, thread `settings.modeOrigin` through
+      `createHarnessAdmission` into `resolveHarnessInstance`, and let the attempt record carry
+      it; add an assertion that a configured `harness.mode` yields `modeOrigin: "configured"`
+      on the attempt (not only on the settings).
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:220-230,389-440
+    message: >
+      Spec §8.3 states the observed agent/model comes from per-message values "with
+      `session_v2.agent` as the baseline and `agent-switched` / `model-switched` events as
+      transitions", and plan 5.1 repeats it, but `messageSql` reads only `type = 'assistant'`
+      and never applies the switch-event rows (the fixture builder emits no switch rows
+      either). For an assistant message whose `data.agent`/`data.model` is absent after a
+      mid-session switch, the code falls back to the stale session baseline (or reports
+      absence) rather than the switched value, which can mis-scope a group's seat claim. The
+      practical impact is narrow (per-message agent/model are present on the observed
+      assistant rows), and TDR-0035's prose omits the switch-event source, so this is also a
+      spec/TDR inconsistency.
+    suggestion: >
+      Either implement the transition (read `agent-switched`/`model-switched` rows in `seq`
+      order and update the running baseline before grouping; add a switch fixture and oracle),
+      or reconcile §8.3 and plan 5.1 to the delivered single-source derivation with an owner-
+      accepted erratum. Do not leave the spec asserting a source the code never reads.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/adapters/src/harness/telemetry-opencode.ts:415-420,437; packages/cli/src/edge.ts:2110-2125
+    message: >
+      The `version-drift` warning (§10/DM-9: the session-stored version vs the dispatch-probed
+      installed version, "a divergence is warned") is never produced in production: the
+      extractor only emits it when `options.pinnedVersion` is supplied, and the production
+      construction (`createOpencodeTelemetryExtractor`) never passes the probed version
+      (`pinnedVersion` appears only in tests). The row's `harnessVersion` is also stamped
+      from `session_v2.version` verbatim, without the "normalized" step AC-F5-1 names.
+    suggestion: >
+      Thread the dispatch admission's `observedVersion` into the telemetry extractor as
+      `pinnedVersion` for the delivery run, and normalize the stored version through
+      `normalizeHarnessVersion` (null + warning when it does not parse) before stamping; add
+      a drift oracle on the production composition path.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:237-258
+    message: >
+      `durationsOf` calls `new Date(start).toISOString()` / `new Date(end).toISOString()`
+      with no range guard. A stored timestamp outside ±8.64e15 ms (or otherwise unrepresentable)
+      throws RangeError, which the extractor's outer `catch` converts into a whole-capture
+      `harness.telemetry.extraction-failed`, dropping every row for the delivery instead of
+      classifying that one pair as `duration-absent`. This is the same defect GH-291 F-4 fixed
+      in `telemetry-ingest.ts`.
+    suggestion: >
+      Range-guard the timestamp pair (finite and within the Date bounds) and return the
+      explicit `duration-absent` absence for an out-of-range pair; add a decode test with an
+      absurd timestamp asserting absence, no throw, and rows still landing.
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: high
+    category: api-contract
+    location: packages/adapters/src/harness/index.ts:20-25; tests/fixtures/harness/propagation-harness.ts:10-13
+    message: >
+      `OpencodeBindingSeams` is exported from `opencode.ts:138` but not re-exported from the
+      `@delivery-os/adapters/harness` barrel, yet `tests/fixtures/harness/propagation-harness.ts`
+      imports it from that barrel. It works only because the import is `type`-only and tests are
+      not typechecked (`pnpm typecheck` covers packages + `tests/types` only), so a future
+      typecheck of tests or any adopter typing its seams against the subpath would fail. The
+      pm-notes gap says "tests import it from the module", which is inaccurate (they import from
+      the barrel).
+    suggestion: >
+      Re-export `type OpencodeBindingSeams` from `packages/adapters/src/harness/index.ts` (and the
+      root adapters barrel if the options type is public), then make the fixture import from the
+      barrel resolve for real; correct the pm-notes gap wording.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/adapters/src/harness/review-deferrals.ts:28-33
+    message: >
+      The F-11 deferral text still says "Parentless sessions without a work-item port are a
+      bounded store-level warning", i.e. a store-wide scan over parentless sessions. The GH-335
+      extractor no longer scans the store at all — it reads only held identities (NG-11 forbids
+      a store-wide scan) — so the shipped code-comment now describes behaviour the extractor does
+      not perform.
+    suggestion: >
+      Restate F-11 as "Parentless sessions are reached only through a held identity's parent links;
+      a held identity the readable store does not hold is a classified absence" (or mark the
+      deferral superseded by GH-335) so the record matches the delivered read discipline.
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml:496-503
+    message: >
+      Two of the three declared gaps are inaccurately described. "doc/00-index.md was conditional
+      on a new feature page and none was created" reads as "untouched", but doc/00-index.md was
+      changed (five descriptor rows: adapter-conformance, telemetry-v2, closeout, harness
+      adapters, dispatch engine) — the conditional *new-page row* was simply not needed, which is
+      fine. "the plan's declared tests/fixtures/harness/scenarios/ folder was not added" is
+      imprecise: the folder already exists (pre-existing `classification.ts`, `stream.ts`); what
+      was not added is a new file under it (the extension executor supplies facts inline).
+      Neither gap breaches the spec; only the wording is wrong.
+    suggestion: >
+      Correct the two gap descriptions when pm-notes is next edited by its owner; no code change.
+    suppressed: false
+  - id: F-12
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/structure/harness-probe-construction-site.test.ts:70-85
+    message: >
+      The "a second CONSTRUCTION site fails" test copies all of `packages/` into a temp dir and
+      its `finally` block is empty (a comment only), so every run leaks a `packages/` tree under
+      the temp root instead of removing it.
+    suggestion: >
+      `rmSync(copy, { recursive: true, force: true })` in the `finally`.
+    suppressed: false
+  - id: F-13
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/harness-telemetry-extraction-failure.test.ts
+    message: >
+      TC-HARNESS-024 declares five damaged-store variants (nonexistent path, permission-denied,
+      not-a-database, torn schema, unrecognised generation) but the suite exercises two doubles
+      (opener refusal + torn schema); the unrecognised-generation case lives in TC-HARNESS-028.
+      The classification oracle is met, but the traceability is looser than the test plan states.
+    suggestion: >
+      Either note in the test plan that the three open-failure variants collapse onto one opener
+      double, or add the distinct doubles. Non-blocking.
+    suppressed: false
+  - id: F-14
+    severity: info
+    confidence: medium
+    category: reliability
+    location: packages/cli/src/production.ts:2112-2126
+    message: >
+      `dispatchHarnessFacts` is composition-instance mutable state written by the admission and
+      read lazily by the port gate; with one dispatch per process this is safe, but concurrent
+      dispatches on one composer could observe each other's verdict. Not a spec breach (the
+      binding is passed as per-spawn data), recorded as a latent hazard.
+    suggestion: >
+      Prefer passing the per-run facts through the dispatch ports (as the binding is) instead of a
+      closure-shared `let`, or document the single-dispatch-per-composition invariant.
+    suppressed: false
+reviewed_at: 2026-11-18T00:00:00Z
+next_step: CALL_CODER

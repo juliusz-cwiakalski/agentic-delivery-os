@@ -74,3 +74,27 @@ describe("TC-HARN-030 goldens and determinism", () => {
     expect(canonicalHarnessJson(original)).toBe(canonicalHarnessJson(original));
   });
 });
+
+/**
+ * TC-HARNESS-029 (GH-335 half) — byte-identical repeat output over identical
+ * injected facts, across both observed store generations (NFR-7).
+ */
+describe("TC-HARNESS-029 repeat captures are byte-identical", () => {
+  test("two captures of one store are identical, and the generation does not change the field set", async () => {
+    const { canonicalHarnessJson } = await import("../../packages/core/src/domain/index");
+    const { extractOpencode } = await import("../fixtures/harness/telemetry-attempts");
+    const { buildOpencodeStore } = await import("../fixtures/harness/opencode-store/build");
+    for (const generation of ["current", "legacy"] as const) {
+      const store = buildOpencodeStore({ generation, variant: "full" });
+      const first = extractOpencode({ store });
+      const second = extractOpencode({ store });
+      expect(first.ok && second.ok).toBe(true);
+      if (!first.ok || !second.ok) continue;
+      expect(canonicalHarnessJson(second.value)).toBe(canonicalHarnessJson(first.value));
+      const keys = Object.keys(first.value.records[0] ?? {}).sort();
+      expect(keys).toEqual(Object.keys(second.value.records[0] ?? {}).sort());
+      expect(keys).toContain("durations");
+      expect(keys).toContain("seat");
+    }
+  });
+});

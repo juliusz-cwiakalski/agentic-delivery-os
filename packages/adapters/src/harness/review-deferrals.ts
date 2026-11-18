@@ -28,7 +28,7 @@ export const HARNESS_REVIEW_DEFERRALS: readonly HarnessReviewDeferral[] = [
     finding: "F-11",
     status: "resolved",
     reason:
-      "Parentless sessions without a work-item port are a bounded store-level warning; only the capturing delivery's own unattributable/invalid sessions are failed sessions.",
+      "Parentless sessions are reached only through a held identity's parent links; a held identity the readable store does not hold is a classified absence, and the extractor performs no store-wide scan (GH-335 DM-8, NG-11).",
     ownerStory: "GH-240",
     revisitTrigger: "a store that exposes a delivery port for parentless sessions",
   },

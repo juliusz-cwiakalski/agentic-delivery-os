@@ -75,16 +75,16 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   });
 
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
-    expect(baseline.rows).toHaveLength(146);
+    expect(baseline.rows).toHaveLength(150);
     // The captured baseline predates both GH-299's `metrics` row and the two
     // supervise rows, so the delivered comparison excludes both kinds.
     const live = entries.filter(
       (entry) => entry.domainKind !== "supervise" && entry.domainKind !== "metrics",
     );
-    expect(live).toHaveLength(146);
+    expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
     // The three new rows are appended after every delivered row: no reordering.
-    expect(entries.slice(0, 146).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
+    expect(entries.slice(0, 150).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
   });
 
   test("the identity is exact — no family or prefix widening", () => {

@@ -9,6 +9,7 @@
  * shared bound reference injected by composition.
  */
 import {
+  DEFAULT_HARNESS_MODE,
   ECONOMICS_SOURCED_SIGNAL_KINDS,
   type EconomicsSourcedSignalReading,
   HARNESS_LIFECYCLE_CAPABILITIES,
@@ -36,6 +37,10 @@ import {
   type HarnessSpawnStarter,
   type HarnessSpawnStream,
   type HarnessSpawnStreamOptions,
+  type HarnessMode,
+  type HarnessModeOrigin,
+  type HarnessSeatBinding,
+  type HarnessVersionVerdict,
   type HarnessVersionWarning,
   type TelemetryIngestSink,
 } from "@delivery-os/core/contracts";
@@ -94,7 +99,63 @@ export type OpencodeHarnessOptions = {
   readonly telemetrySinkFor?: (input: {
     readonly workItemRef: string;
   }) => TelemetryIngestSink | undefined;
+  /**
+   * The evaluated supported-window verdict and the normalized version the
+   * resolution produced (GH-335 F-1). The production composition always supplies
+   * both; an adapter constructed without them is a delivered test double, never
+   * a production path, and keeps its delivered spawn behaviour.
+   */
+  readonly versionVerdict?: HarnessVersionVerdict;
+  readonly observedVersion?: string | null;
+  /** The resolved integration mode and its origin (GH-335 F-2, TDR-0042). */
+  readonly mode?: HarnessMode;
+  readonly modeOrigin?: HarnessModeOrigin;
+  /**
+   * The evaluated gate, read at each spawn/attach (GH-335 F-1).
+   *
+   * The composition supplies this when the dispatch admission resolved the
+   * facts for the run, so the adapter can never fall back to "inside" on a
+   * refused run. The coordinator and engine lanes supply none and keep their
+   * delivered behaviour.
+   */
+  readonly versionGate?: () => {
+    readonly verdict: HarnessVersionVerdict;
+    readonly observedVersion: string | null;
+    readonly mode: HarnessMode;
+  };
+  /**
+   * The injected pure binding seams (GH-335 F-3, TDR-0040).
+   *
+   * The adapter maps the caller-supplied agent identity and the resolved
+   * single-seat binding onto the honoured surface; the rules themselves are the
+   * core domain's and are injected by composition, so no second copy of the
+   * mapping, the expressibility predicate, or the identity check lives here.
+   */
+  readonly bindingSeams?: OpencodeBindingSeams;
 };
+
+/** The injected pure binding seams the composition supplies. */
+export type OpencodeBindingSeams = {
+  readonly identityViolation: (agent?: string) => OpencodeIdentityViolation | undefined;
+  readonly expressibility: (binding: HarnessSeatBinding) => OpencodeExpressibility;
+  readonly invocationArgs: (binding: HarnessSeatBinding) => readonly string[];
+  readonly environmentRecords: (binding: HarnessSeatBinding) => Readonly<Record<string, string>>;
+};
+
+export type OpencodeIdentityViolation = {
+  readonly code: "config.value.invalid";
+  readonly field: string;
+  readonly summary: string;
+};
+
+export type OpencodeExpressibility =
+  | { readonly ok: true }
+  | {
+      readonly ok: false;
+      readonly code: "harness.profile.model-unrepresentable";
+      readonly seat: string;
+      readonly summary: string;
+    };
 
 const DEFAULT_TIMEOUT_MS = 300_000;
 const DEFAULT_HANDLE_TIMEOUT_MS = 60_000;
@@ -309,6 +370,8 @@ type SessionRecord = {
   readonly handle: HarnessSessionHandle;
   readonly descriptor: HarnessSpawnInput["descriptor"];
   readonly completion: Promise<HarnessEvidence>;
+  /** The single-seat binding the spawn was resolved for (TDR-0040 A-4). */
+  readonly binding?: HarnessSeatBinding;
 };
 
 /** Build the opencode session port over injected I/O seams. */
@@ -316,6 +379,112 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   const sessions = new Map<string, SessionRecord>();
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const capabilities = options.capabilities ?? OPENCODE_CAPABILITIES;
+  const mode = options.mode ?? DEFAULT_HARNESS_MODE;
+  /**
+   * The pre-session gate (GH-335 F-1, F-2): evaluated before any session-bearing
+   * process, any lease, and any attempt record. The gate is read at each call so
+   * a composition-resolved verdict reaches the adapter for its own run; an
+   * adapter constructed without one is a delivered test double and keeps its
+   * delivered spawn behaviour.
+   */
+  const preSessionRefusal = (): HarnessResult<never> | undefined => {
+    const versionVerdict = options.versionGate?.().verdict ?? options.versionVerdict ?? "inside";
+    if (versionVerdict === "outside") {
+      return failure("harness.version.unsupported", {
+        summary: `observed harness version ${options.versionGate?.().observedVersion ?? options.observedVersion ?? "unknown"} is outside the supported window`,
+      });
+    }
+    if (versionVerdict === "indeterminate") {
+      return failure("harness.version.unknown", {
+        summary: "the harness version could not be determined",
+      });
+    }
+    const resolvedMode = options.versionGate?.().mode ?? mode;
+    if (resolvedMode !== DEFAULT_HARNESS_MODE) {
+      return failure("harness.mode.unavailable", {
+        summary: `requested mode ${resolvedMode} is unavailable; the available mode is ${DEFAULT_HARNESS_MODE}`,
+      });
+    }
+    return undefined;
+  };
+
+  /**
+   * The per-spawn binding check (GH-335 F-3, TDR-0040): the caller supplies one
+   * agent identity or none, and the composition supplies the resolver's single
+   * seat. A named agent that arrives without a resolved binding is a contract
+   * violation and never becomes a silent spawn; an unrepresentable resolved
+   * model refuses before any seam sees a descriptor.
+   */
+  const bindingOf = (input: {
+    readonly agent?: string;
+    readonly binding?: HarnessSeatBinding;
+  }): HarnessResult<HarnessSeatBinding | undefined> => {
+    if (options.bindingSeams === undefined) {
+      if (input.agent === undefined && input.binding === undefined)
+        return { ok: true, value: undefined };
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: "config.value.invalid",
+          field: "binding",
+          summary: "the composition supplied no binding seams for a named agent",
+        },
+      };
+    }
+    const violation = options.bindingSeams.identityViolation(input.agent);
+    if (violation !== undefined) {
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: "config.value.invalid",
+          field: violation.field,
+          summary: violation.summary,
+        },
+      };
+    }
+    if (input.binding === undefined) {
+      if (input.agent === undefined) return { ok: true, value: undefined };
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: "config.value.invalid",
+          field: "binding",
+          summary: `agent ${input.agent} reached the adapter without a resolved single-seat binding`,
+        },
+      };
+    }
+    const expressibility = options.bindingSeams.expressibility(input.binding);
+    if (!expressibility.ok) {
+      return failure("harness.profile.model-unrepresentable", {
+        field: "seat",
+        summary: expressibility.summary,
+      });
+    }
+    return { ok: true, value: input.binding };
+  };
+
+  /** The binding's invocation pair, appended once per invocation. */
+  const bindingArgsFor = (binding: HarnessSeatBinding | undefined): readonly string[] =>
+    binding === undefined || options.bindingSeams === undefined
+      ? []
+      : options.bindingSeams.invocationArgs(binding);
+
+  /** Build the child environment with the binding's declared record map. */
+  const environmentFor = (
+    descriptor: HarnessSpawnInput["descriptor"],
+    binding: HarnessSeatBinding | undefined,
+  ) => {
+    const records =
+      binding === undefined || options.bindingSeams === undefined
+        ? undefined
+        : options.bindingSeams.environmentRecords(binding);
+    const context =
+      records === undefined || Object.keys(records).length === 0 ? undefined : { record: records };
+    return options.buildEnvironment(descriptor, context);
+  };
 
   /** The stream options a spawn, resume, or deliver hands to the starter as data. */
   const streamOptions = (
@@ -337,11 +506,16 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     args: readonly string[],
     stdin: string,
   ): Promise<HarnessResult<HarnessSessionHandle>> => {
-    const environment = options.buildEnvironment(input.descriptor);
+    const refusal = preSessionRefusal();
+    if (refusal !== undefined) return refusal;
+    const resolved = bindingOf(input);
+    if (!resolved.ok) return resolved;
+    const binding = resolved.value;
+    const environment = environmentFor(input.descriptor, binding);
     if (!environment.ok) return environment;
     const stream = options.starter(
       options.command,
-      args,
+      [...args, ...bindingArgsFor(binding)],
       streamOptions(input.descriptor.workDirectory, environment.value, stdin),
     );
     const sink = options.telemetrySinkFor?.({ workItemRef: input.workItemRef });
@@ -371,6 +545,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: input.descriptor,
       completion: outcome.completion,
+      ...(binding === undefined ? {} : { binding }),
     });
     return { ok: true, value: handle };
   };
@@ -391,6 +566,8 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     if (!capabilities.supportedOperations.includes("resume")) {
       return gap("resume");
     }
+    const refusal = preSessionRefusal();
+    if (refusal !== undefined) return refusal;
     const record = sessions.get(input.handle.sessionId);
     const descriptor = record?.descriptor ?? input.descriptor;
     if (descriptor === undefined) {
@@ -398,11 +575,19 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
         summary: `session ${input.handle.sessionId} has no declared execution environment`,
       });
     }
-    const environment = options.buildEnvironment(descriptor);
+    // A resume continues the binding its spawn declared; a caller-supplied
+    // binding is the same single seat and never adds one (TC-HARNESS-016).
+    const resolved = bindingOf({
+      ...(input.agent === undefined ? {} : { agent: input.agent }),
+      ...(input.binding === undefined ? {} : { binding: input.binding }),
+    });
+    if (!resolved.ok) return resolved;
+    const binding = resolved.value ?? record?.binding;
+    const environment = environmentFor(descriptor, binding);
     if (!environment.ok) return environment;
     const stream = options.starter(
       options.command,
-      [...(options.resumeArgs ?? []), input.handle.sessionId],
+      [...(options.resumeArgs ?? []), ...bindingArgsFor(binding), input.handle.sessionId],
       streamOptions(descriptor.workDirectory, environment.value, input.prompt),
     );
     const outcome = await acquireFromStream(
@@ -434,6 +619,14 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
         handle,
         descriptor: record.descriptor,
         completion: outcome.completion,
+        ...(binding === undefined ? {} : { binding }),
+      });
+    } else if (binding !== undefined) {
+      sessions.set(input.handle.sessionId, {
+        handle,
+        descriptor,
+        completion: outcome.completion,
+        binding,
       });
     }
     return { ok: true, value: handle };

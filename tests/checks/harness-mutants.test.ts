@@ -3,7 +3,7 @@
  * copy of one production module with one guard disabled; the corresponding
  * oracle must fail by name. A passing mutant fails this meta-check.
  */
-import { afterEach, describe, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -209,7 +209,11 @@ describe("TC-HARN-029 named guard mutants", () => {
           now: () => "2026-11-06T00:00:00Z",
           onStatement: (sql: string) => statements.push(sql),
         })
-        .extract({ workItemRef: "GH-233", runId: "run" });
+        .extract({
+          workItemRef: "GH-233",
+          runId: "run",
+          heldSessionIds: built.heldSessionIds,
+        });
     } catch {
       // The mutant write is rejected by the read-only seam; the statement log
       // still names it.
@@ -224,13 +228,10 @@ describe("TC-HARN-029 named guard mutants", () => {
       "full-scan",
       (text) =>
         text
+          .replace("WHERE id = ? LIMIT 1", "")
           .replace(
-            "FROM part JOIN message ON message.id = part.message_id WHERE part.session_id = ? AND message.agent = ? AND message.model = ?",
-            "FROM part JOIN message ON message.id = part.message_id WHERE 1 = 1",
-          )
-          .replace(
-            "GROUP BY part.tool ORDER BY calls DESC, part.tool ASC LIMIT ?",
-            "GROUP BY part.tool ORDER BY calls DESC, part.tool ASC",
+            "WHERE session_id = ? AND type = 'assistant' ORDER BY seq LIMIT ",
+            "ORDER BY seq LIMIT ",
           ),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
@@ -250,10 +251,13 @@ describe("TC-HARN-029 named guard mutants", () => {
         now: () => "2026-11-06T00:00:00Z",
         onStatement: (sql: string) => statements.push(sql),
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     const scan = statements.find(
-      (sql) =>
-        sql.includes("FROM part") && (!sql.includes("LIMIT") || !sql.includes("session_id = ?")),
+      (sql) => sql.includes("FROM session_v2") && !sql.includes("WHERE"),
     );
     if (scan === undefined) passed("full-scan");
   });
@@ -262,11 +266,7 @@ describe("TC-HARN-029 named guard mutants", () => {
     const mutant = await loadMutant(
       "packages/adapters/src/harness/telemetry-opencode.ts",
       "cost-zero",
-      (text) =>
-        text.replace(
-          '} else if (recordCost === null) {\n            warnings.push({ reason: "cost-missing", field: "cost" });\n          }',
-          '} else if (recordCost === null) {\n            warnings.push({ reason: "cost-missing", field: "cost" });\n            recordCost = 0;\n          }',
-        ),
+      (text) => text.replace("cost: group.cost,", "cost: group.cost ?? 0,"),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
     const built = store.buildOpencodeStore({ variant: "missing-cost" });
@@ -286,7 +286,11 @@ describe("TC-HARN-029 named guard mutants", () => {
         storePath: built.path,
         now: () => "2026-11-06T00:00:00Z",
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     const fabricated = result.value?.records.find((record) => record.cost === 0);
     if (fabricated === undefined) passed("cost-zero");
   });
@@ -297,12 +301,12 @@ describe("TC-HARN-029 named guard mutants", () => {
       "drift-hard-fail",
       (text) =>
         text.replace(
-          'warnings.push({ reason: "optional-field-absent", field });\n              return null;',
-          'throw new Error("optional-field-absent");',
+          'warnings.push({ reason: "duration-absent", field: "durations" });',
+          'throw new Error("duration-absent");',
         ),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
-    const built = store.buildOpencodeStore({ variant: "no-optional-column" });
+    const built = store.buildOpencodeStore({ variant: "inverted-timestamps" });
     temporary.push(`${built.directory}/opencode.db`);
     const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
     const module = (await import(mutant.url)) as {
@@ -316,7 +320,11 @@ describe("TC-HARN-029 named guard mutants", () => {
         storePath: built.path,
         now: () => "2026-11-06T00:00:00Z",
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     if (result.ok) passed("drift-hard-fail");
   });
 
@@ -507,5 +515,560 @@ describe("TC-HARN-029 named guard mutants", () => {
       (entry) => entry.file === mutant.path && entry.message.includes("opencode"),
     );
     if (violation === undefined) passed("harness-literal");
+  });
+});
+
+/**
+ * TC-HARNESS-038 — the GH-335 disabling-mutant set: each named honesty rule is
+ * disabled in a temp copy and the prohibited observable must appear. A mutant
+ * that produces nothing fails this meta-check (test plan §4.2 rule 7).
+ */
+type Gh335Mutant = {
+  readonly name: string;
+  readonly source: string;
+  readonly transform: (text: string) => string;
+  readonly prohibited: (url: string) => Promise<boolean>;
+};
+
+const load = async (mutant: Gh335Mutant) => {
+  const loaded = await loadMutant(mutant.source, `gh335-${mutant.name}`, mutant.transform);
+  return loaded.url;
+};
+
+const GH335_MUTANTS: readonly Gh335Mutant[] = [
+  {
+    name: "accept-outside-window",
+    source: "packages/core/src/domain/harness-version-window.ts",
+    transform: (text) =>
+      text.replace("return window.includes(`${major}.${minor}`);", "return true;"),
+    prohibited: async (url) => {
+      const module = await import(url);
+      return module.evaluateHarnessVersion("opencode v2.1.7").verdict === "inside";
+    },
+  },
+  {
+    name: "probe-substring-match",
+    source: "packages/core/src/domain/harness-version-window.ts",
+    transform: (text) =>
+      text.replace(
+        "if (match === null) return undefined;",
+        'if (line.includes("2.3.2")) return "2.3.2";',
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      return module.normalizeHarnessVersion("garbage 2.3.2") !== undefined;
+    },
+  },
+  {
+    name: "stamp-raw-probe-line",
+    source: "packages/core/src/domain/harness-version-window.ts",
+    transform: (text) => text.replace("return `${major}.${minor}.${patch}`;", "return line;"),
+    prohibited: async (url) => {
+      const module = await import(url);
+      return String(module.evaluateHarnessVersion("opencode v2.3.2").observedVersion).includes(
+        "opencode",
+      );
+    },
+  },
+  {
+    name: "ignore-probe-deadline",
+    source: "packages/core/src/domain/harness-registry.ts",
+    transform: (text) =>
+      text.replace("deadlineMs: HARNESS_VERSION_PROBE_TIMEOUT_MS,", "deadlineMs: 0,"),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const seen: number[] = [];
+      await module.resolveHarnessInstance({
+        kind: "opencode",
+        registrations: [
+          {
+            kind: "opencode",
+            create: (input: unknown) => ({
+              kind: "opencode",
+              observedVersion: null,
+              capabilities: {},
+              ...(input as object),
+            }),
+          },
+        ],
+        versionProbe: async (input: { deadlineMs: number }) => {
+          seen.push(input.deadlineMs);
+          return { status: "answered", stdout: "opencode v2.3.2" };
+        },
+        now: () => 0,
+      });
+      return seen[0] !== 5000;
+    },
+  },
+  {
+    name: "fabricate-version-on-failure",
+    source: "packages/core/src/domain/harness-registry.ts",
+    transform: (text) =>
+      text.replace(
+        "  } catch {\n    evaluation = indeterminateHarnessVersion();\n  }",
+        '  } catch {\n    evaluation = { verdict: "inside", observedVersion: "2.3.2", requirement: "proceed" };\n  }',
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const result = await module.resolveHarnessInstance({
+        kind: "opencode",
+        registrations: [
+          {
+            kind: "opencode",
+            create: (input: { observedVersion: string | null }) => ({
+              kind: "opencode",
+              observedVersion: input.observedVersion,
+              capabilities: {},
+            }),
+          },
+        ],
+        versionProbe: async () => {
+          throw new Error("probe failed");
+        },
+        now: () => 0,
+      });
+      return result.ok && result.value.observedVersion !== null;
+    },
+  },
+  {
+    name: "collapse-unknown-into-unsupported",
+    source: "packages/cli/src/production.ts",
+    transform: (text) =>
+      text.replace('code: "harness.version.unknown",', 'code: "harness.version.unsupported",'),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const refusal = module.harnessFactsRefusal({
+        kind: "opencode",
+        observedVersion: null,
+        versionVerdict: "indeterminate",
+        mode: "per-invocation-private-server",
+      });
+      return refusal?.code !== "harness.version.unknown";
+    },
+  },
+  {
+    name: "config-window-widens",
+    source: "packages/core/src/contracts/harness.ts",
+    transform: (text) => text.replace('minors: ["2.3", "2.2"],', 'minors: ["2.3", "2.2", "2.1"],'),
+    prohibited: async (url) => {
+      const module = await import(url);
+      return module.HARNESS_SUPPORTED_VERSION_WINDOW.minors.includes("2.1");
+    },
+  },
+  {
+    name: "fallback-to-default-mode",
+    source: "packages/cli/src/production.ts",
+    transform: (text) => text.replace("if (!availability.available) {", "if (false) {"),
+    prohibited: async (url) => {
+      const module = await import(url);
+      return (
+        module.harnessFactsRefusal({
+          kind: "opencode",
+          observedVersion: "2.3.2",
+          versionVerdict: "inside",
+          mode: "managed-background-service",
+        }) === undefined
+      );
+    },
+  },
+  {
+    name: "ambient-wins-over-record",
+    source: "packages/core/src/domain/harness-spawn-env.ts",
+    transform: (text) =>
+      text.replace(
+        "input.record?.[entry.name] ?? input.parentEnvironment[entry.name]",
+        "input.parentEnvironment[entry.name] ?? input.record?.[entry.name]",
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const built = module.buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: { ...fixtureParent, HARNESS_MODEL: "ambient-model" },
+        credentials: credentialPort,
+        record: { HARNESS_MODEL: "resolved-model" },
+      });
+      return built.ok && built.value.HARNESS_MODEL === "ambient-model";
+    },
+  },
+  {
+    name: "forward-undeclared-record",
+    source: "packages/core/src/domain/harness-spawn-env.ts",
+    transform: (text) =>
+      text.replace(
+        "  const environment: Record<string, string> = {};",
+        "  const environment: Record<string, string> = { ...(input.record ?? {}) };",
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const built = module.buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: fixtureParent,
+        credentials: credentialPort,
+        record: { UNDECLARED_RECORD: "leak" },
+      });
+      return built.ok && Object.hasOwn(built.value, "UNDECLARED_RECORD");
+    },
+  },
+  {
+    name: "per-seat-env-family",
+    source: "packages/core/src/domain/harness-profile-propagation.ts",
+    transform: (text) =>
+      text.replace(
+        "binding.envName === undefined ? {} : { [binding.envName]: binding.resolvedModel };",
+        "({ OC_SEAT_MODEL: binding.resolvedModel } as Readonly<Record<string, string>>);",
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const records = module.bindingEnvironmentRecords({
+        agent: "coder",
+        seat: "seat-judgment",
+        resolvedModel: "zai/glm-5#judgment",
+      });
+      return Object.keys(records).some((key) => key.startsWith("OC_"));
+    },
+  },
+  {
+    name: "partial-profile",
+    source: "packages/core/src/domain/harness-profile-propagation.ts",
+    transform: (text) =>
+      text.replace(
+        "const resolvedModel = selection.seatModels[seatName] ?? seat.model;",
+        'const resolvedModel = "";',
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const resolution = module.resolveBinding(
+        {
+          seats: {
+            sole: { model: "zai/glm-5", pacingClass: "execution", capability: "text-only" },
+          },
+          agentOverrides: { coder: "sole" },
+        },
+        { agentOverrides: { coder: "sole" }, seatModels: { sole: "zai/glm-5" } },
+        "coder",
+      );
+      return resolution.outcome === "binding" && resolution.binding.resolvedModel === "";
+    },
+  },
+  {
+    name: "overwrite-observed-with-resolved",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        "model: group.model ?? HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,",
+        "model: bindsThisGroup ? (binding?.resolvedModel ?? '') : (group.model ?? ''),",
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore();
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({
+          workItemRef: "GH-335",
+          runId: "r",
+          heldSessionIds: build.heldSessionIds,
+          bindings: {
+            [build.heldSessionIds[0]]: {
+              agent: "agent-a",
+              seat: "s",
+              resolvedModel: "synthetic/other#v",
+            },
+          },
+        });
+      if (!captured.ok) return false;
+      const row = captured.value.records.find(
+        (entry: { sessionId: string; model: string }) => entry.sessionId === "ses_root",
+      );
+      return row !== undefined && row.model === "synthetic/other#v";
+    },
+  },
+  {
+    name: "zero-cost-as-absence",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace("cost: group.cost,", "cost: group.cost === 0 ? null : group.cost,"),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore({
+        variant: "reported-zero-cost",
+      });
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      if (!captured.ok) return false;
+      return captured.value.records.some(
+        (row: { sessionId: string; cost: number | null }) =>
+          row.sessionId === "ses_root" && row.cost === null,
+      );
+    },
+  },
+  {
+    name: "missing-cost-as-zero",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) => text.replace("cost: group.cost,", "cost: group.cost ?? 0,"),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore({
+        variant: "missing-cost",
+      });
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      if (!captured.ok) return false;
+      return captured.value.records.some((row: { cost: number | null }) => row.cost === 0);
+    },
+  },
+  {
+    name: "derive-duration-from-capture",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        "const durations = durationsOf(entry.session);",
+        'const durations = { status: "sourced" as const, start: options.now(), end: options.now(), elapsedMs: 0 };',
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore({
+        variant: "inverted-timestamps",
+      });
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      if (!captured.ok) return false;
+      return captured.value.records.some(
+        (row: { sessionId: string; durations?: { status: string } }) =>
+          row.sessionId === "ses_root" && row.durations?.status === "sourced",
+      );
+    },
+  },
+  {
+    name: "work-item-column-query",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace("WHERE id = ? LIMIT 1", "WHERE id = ? AND work_item_ref = ? LIMIT 1"),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore();
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      return !captured.ok;
+    },
+  },
+  {
+    name: "part-tool-query",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        "const generation = detectGeneration(handle);",
+        'const generation = detectGeneration(handle);\n      handle.query("SELECT tool FROM part LIMIT 1");',
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore();
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      return !captured.ok;
+    },
+  },
+  {
+    name: "legacy-only-extractor",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        'if (tables.has("session_v2") && tables.has("session_message")) return "current";',
+        'if (false && tables.has("session_v2")) return "current";',
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore();
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      return !captured.ok || captured.value.records.length === 0;
+    },
+  },
+  {
+    name: "current-only-extractor",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        'if (tables.has("session") && tables.has("message")) return "legacy";',
+        'if (false && tables.has("session")) return "legacy";',
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore({
+        generation: "legacy",
+      });
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: build.heldSessionIds });
+      return !captured.ok || captured.value.records.length === 0;
+    },
+  },
+  {
+    name: "zero-row-as-pass",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        'if (groups.length === 0) {\n            failedSessions.push({ sessionId: entry.session.id, reason: "no-usage-fact" });\n            continue;\n          }',
+        "if (groups.length === 0) {\n            continue;\n          }",
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore({
+        variant: "empty-session",
+      });
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: ["ses_empty"] });
+      return captured.ok && captured.value.failedSessions.length === 0;
+    },
+  },
+  {
+    name: "absence-as-capture-failure",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        'absences.push({ sessionId: heldId, reason: "session-not-in-store" });',
+        'failedSessions.push({ sessionId: heldId, reason: "session-capture-failed" });',
+      ),
+    prohibited: async (url) => {
+      const build = (await import("../fixtures/harness/opencode-store/build")).buildOpencodeStore();
+      const module = await import(url);
+      const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: (path: string) => adapters.createBunSqliteStoreOpener()(path),
+          storePath: build.path,
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: ["ses_absent"] });
+      return captured.ok && captured.value.failedSessions.length > 0;
+    },
+  },
+  {
+    name: "capture-failure-as-absence",
+    source: "packages/adapters/src/harness/telemetry-opencode.ts",
+    transform: (text) =>
+      text.replace(
+        'if (!opened.ok) return failure("the opencode session store could not be opened read-only");',
+        "if (!opened.ok) return { ok: true, value: { workItemRef, runId, capturedAt: options.now(), records: [], agents: [], models: [], failedSessions: [], warnings: [], absences: [] } };",
+      ),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const captured = module
+        .createOpencodeTelemetryExtractor({
+          opener: () => ({ ok: false }),
+          storePath: "/synthetic/absent.db",
+          now: () => "2026-11-18T00:00:00.000Z",
+        })
+        .extract({ workItemRef: "GH-335", runId: "r", heldSessionIds: ["ses"] });
+      return captured.ok;
+    },
+  },
+  {
+    name: "ignore-missing-scenario",
+    source: "packages/testkit/src/conformance/harness.ts",
+    transform: (text) =>
+      text.split("if (!registration.extensionScenarios.includes(scenario)) {").join("if (false) {"),
+    prohibited: async (url) => {
+      const module = await import(url);
+      const mutantRegistry = module.HARNESS_CONFORMANCE_REGISTRY.map(
+        (entry: { kind: string; extensionScenarios: readonly string[] }) => ({
+          ...entry,
+          extensionScenarios: [],
+        }),
+      );
+      return module.harnessConformanceViolations(mutantRegistry).length === 0;
+    },
+  },
+];
+
+describe("TC-HARNESS-038 the GH-335 disabling-mutant set", () => {
+  for (const mutant of GH335_MUTANTS) {
+    test(`mutant ${mutant.name} produces its prohibited observable`, async () => {
+      const url = await load(mutant);
+      const prohibited = await mutant.prohibited(url);
+      if (!prohibited) passed(mutant.name);
+    });
+  }
+
+  test("the mutant set names every declared disabling rule", () => {
+    expect(GH335_MUTANTS.map((mutant) => mutant.name).sort()).toEqual(
+      [
+        "accept-outside-window",
+        "probe-substring-match",
+        "stamp-raw-probe-line",
+        "ignore-probe-deadline",
+        "fabricate-version-on-failure",
+        "collapse-unknown-into-unsupported",
+        "config-window-widens",
+        "fallback-to-default-mode",
+        "ambient-wins-over-record",
+        "forward-undeclared-record",
+        "per-seat-env-family",
+        "partial-profile",
+        "overwrite-observed-with-resolved",
+        "zero-cost-as-absence",
+        "missing-cost-as-zero",
+        "derive-duration-from-capture",
+        "work-item-column-query",
+        "part-tool-query",
+        "legacy-only-extractor",
+        "current-only-extractor",
+        "zero-row-as-pass",
+        "absence-as-capture-failure",
+        "capture-failure-as-absence",
+        "ignore-missing-scenario",
+      ].sort(),
+    );
   });
 });

@@ -67,7 +67,7 @@ describe("TC-ERR-001 spawn failure classifies as dispatch.session.spawn-failed",
     const row = entries.find((entry) => entry.code === "dispatch.session.spawn-failed");
     expect(row).toBeDefined();
     expect(DOMAIN_KINDS).toContain("dispatch");
-    expect(HARNESS_FAILURE_CODES).toHaveLength(9);
+    expect(HARNESS_FAILURE_CODES).toHaveLength(13);
     expect(DELIVERY_RESULT_TOKENS).toHaveLength(11);
     expect(entries.some((entry) => entry.code.includes("detail"))).toBe(false);
     const doc = readFileSync(

@@ -1097,6 +1097,50 @@ export const ERROR_TABLE = [
     summary: "The harness store could not be read for telemetry extraction.",
   },
   {
+    code: "harness.version.unsupported",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Install or select a harness line inside the declared supported window, then retry the dispatch.",
+    projectionClass: "user-validation",
+    summary: "The installed harness version is outside the supported window.",
+  },
+  {
+    code: "harness.version.unknown",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Verify the harness answers its version surface with the declared product line, then retry the dispatch; no version was fabricated.",
+    projectionClass: "user-validation",
+    summary: "The installed harness version could not be determined.",
+  },
+  {
+    code: "harness.mode.unavailable",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Set the harness mode to the delivered default or unset it, then retry the dispatch; no runtime fallback is applied.",
+    projectionClass: "user-validation",
+    summary: "The requested harness integration mode is not the available mode.",
+  },
+  {
+    code: "harness.profile.model-unrepresentable",
+    domainKind: "harness",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the named seat's model as provider/model[#variant] within the adapter's declared bound, then retry the dispatch.",
+    projectionClass: "user-validation",
+    summary: "A seat's resolved model cannot be expressed on the honoured surface.",
+  },
+  {
     code: "retro.evidence.malformed-entry",
     domainKind: "retro",
     category: "platform",

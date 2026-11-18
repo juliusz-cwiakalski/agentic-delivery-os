@@ -73,6 +73,7 @@ describe("TC-NFR-006 no secret, prompt, transcript, or payload leaks", () => {
           "ref",
           "repository",
           "schema",
+          "sessionIds",
           "startedAt",
           "token",
         ].sort(),

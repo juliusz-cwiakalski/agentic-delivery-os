@@ -65,6 +65,7 @@ import {
   type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
   type CloseoutSessionFacts,
+  type HarnessAbsenceReason,
   type CloseoutStateRuntime,
   type CloseoutStep,
   type CloseoutStepId,
@@ -1658,8 +1659,33 @@ const captureTelemetry = async (
     const captured = await input.telemetry.extract({
       workItemRef: input.plan.workItemRef,
       runId,
+      // GH-335 DM-8: capture cites the union the caller resolved from the work
+      // item's recorded attempts; an empty union yields zero rows and the
+      // caller's own `skipped-gap` disclosure.
+      heldSessionIds: input.sessions?.sessionIds ?? [],
+      ...(input.sessions?.bindings === undefined ? {} : { bindings: input.sessions.bindings }),
+      ...(input.sessions?.unattributedAttempts === undefined
+        ? {}
+        : { unattributedAttempts: input.sessions.unattributedAttempts }),
+      ...(input.sessions?.attemptTruncation === undefined
+        ? {}
+        : { attemptTruncation: input.sessions.attemptTruncation }),
+      ...(input.sessions?.observedVersion === undefined || input.sessions.observedVersion === null
+        ? {}
+        : { pinnedVersion: input.sessions.observedVersion }),
     });
     if (!captured.ok) return failed(captured.error.code);
+    // The capture's bounded facts survive into the durable outcome (F-4).
+    const absenceCounts = new Map<HarnessAbsenceReason, number>();
+    for (const absence of captured.value.absences ?? []) {
+      absenceCounts.set(absence.reason, (absenceCounts.get(absence.reason) ?? 0) + 1);
+    }
+    const absences =
+      absenceCounts.size === 0
+        ? undefined
+        : [...absenceCounts]
+            .map(([reason, count]) => ({ reason, count }))
+            .sort((left, right) => (left.reason < right.reason ? -1 : 1));
     const appended = input.telemetry.append(captured.value);
     const degraded = captured.value.records.filter((record) => record.warnings.length > 0).length;
     const warnings = [
@@ -1676,6 +1702,13 @@ const captureTelemetry = async (
       ...(captured.value.sessionTruncation === undefined
         ? {}
         : { sessionTruncation: captured.value.sessionTruncation }),
+      ...(absences === undefined ? {} : { absences }),
+      ...(captured.value.unattributedAttempts === undefined
+        ? {}
+        : { unattributedAttempts: captured.value.unattributedAttempts }),
+      ...(captured.value.attemptTruncation === undefined
+        ? {}
+        : { attemptTruncation: captured.value.attemptTruncation }),
     };
   } catch {
     return failed("capture-runtime");

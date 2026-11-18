@@ -12,12 +12,17 @@
  */
 import {
   HARNESS_KINDS,
+  HARNESS_ABSENCE_REASONS,
+  HARNESS_OBSERVED_AXES,
+  HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
   HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX,
   HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
   HARNESS_TELEMETRY_RECORD_KEY_PREFIX,
   HARNESS_TELEMETRY_RECORD_KIND,
   HARNESS_TELEMETRY_SCHEMA_ID,
   type HarnessCaptureOutcomeRecord,
+  type HarnessObservedAxis,
+  type HarnessTelemetryDurations,
   type HarnessTelemetryAppendReport,
   type HarnessTelemetryRecord,
   type StateAppendOutcome,
@@ -98,6 +103,26 @@ const payloadFor = (record: HarnessTelemetryRecord): StateJsonValue => ({
   cost: record.cost,
   capturedAt: record.capturedAt,
   warnings: record.warnings.map((warning) => ({ reason: warning.reason, field: warning.field })),
+  // GH-335 additive fields. The declared empty-string placeholder in
+  // `agent`/`model` survives this projection unchanged: the absence signal is
+  // `absentObservedAxes`, never the field's emptiness.
+  ...(record.seat === undefined ? {} : { seat: record.seat }),
+  ...(record.resolvedModel === undefined ? {} : { resolvedModel: record.resolvedModel }),
+  ...(record.durations === undefined
+    ? {}
+    : record.durations.status === "sourced"
+      ? {
+          durations: {
+            status: "sourced",
+            start: record.durations.start,
+            end: record.durations.end,
+            elapsedMs: record.durations.elapsedMs,
+          },
+        }
+      : { durations: { status: "absent", reason: record.durations.reason } }),
+  ...(record.absentObservedAxes === undefined
+    ? {}
+    : { absentObservedAxes: [...record.absentObservedAxes] }),
 });
 
 const recordFrom = (
@@ -117,7 +142,17 @@ const recordFrom = (
   }
   if (value.harnessVersion !== null && !isNonEmptyString(value.harnessVersion))
     return torn(location);
-  if (!isNonEmptyString(value.agent) || !isNonEmptyString(value.model)) return torn(location);
+  const absentAxes = parseAbsentAxes(value.absentObservedAxes);
+  if (absentAxes === undefined) return torn(location);
+  const agentOk =
+    isNonEmptyString(value.agent) ||
+    (value.agent === HARNESS_OBSERVED_ABSENCE_PLACEHOLDER && absentAxes.includes("agent"));
+  const modelOk =
+    isNonEmptyString(value.model) ||
+    (value.model === HARNESS_OBSERVED_ABSENCE_PLACEHOLDER && absentAxes.includes("model"));
+  if (!agentOk || !modelOk) return torn(location);
+  if (parseDurations(value.durations) === null) return torn(location);
+  if (!parseSeat(value.seat) || !parseSeat(value.resolvedModel)) return torn(location);
   if (!isNonEmptyString(value.treeRoot)) return torn(location);
   if (!Array.isArray(value.parentChain) || !value.parentChain.every(isNonEmptyString)) {
     return torn(location);
@@ -144,6 +179,42 @@ const recordFrom = (
   return ok(value as unknown as HarnessTelemetryRecord);
 };
 
+/** Parse the closed observed-axis marker; `[]` when absent, `undefined` when malformed. */
+const parseAbsentAxes = (value: unknown): readonly HarnessObservedAxis[] | undefined => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const axes: HarnessObservedAxis[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") return undefined;
+    if (!(HARNESS_OBSERVED_AXES as readonly string[]).includes(entry)) return undefined;
+    if (axes.includes(entry as HarnessObservedAxis)) return undefined;
+    axes.push(entry as HarnessObservedAxis);
+  }
+  return axes;
+};
+
+/** Parse the duration facts; absent is a valid explicit value. */
+const parseDurations = (value: unknown): HarnessTelemetryDurations | undefined | null => {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) return null;
+  if (value.status === "absent" && value.reason === "duration-absent") {
+    return { status: "absent", reason: "duration-absent" };
+  }
+  if (value.status !== "sourced") return null;
+  if (!isNonEmptyString(value.start) || !isNonEmptyString(value.end)) return null;
+  if (typeof value.elapsedMs !== "number" || !Number.isFinite(value.elapsedMs)) return null;
+  return {
+    status: "sourced",
+    start: value.start,
+    end: value.end,
+    elapsedMs: value.elapsedMs,
+  };
+};
+
+/** Parse one optional seat/resolved-model member: absent, null, or a non-empty string. */
+const parseSeat = (value: unknown): boolean =>
+  value === undefined || value === null || isNonEmptyString(value);
+
 const captureFrom = (
   value: unknown,
   location: StateSafeLocation,
@@ -157,6 +228,41 @@ const captureFrom = (
   }
   if (!isNonEmptyString(value.capturedAt)) return torn(location);
   if (!Array.isArray(value.warnings)) return torn(location);
+  if (value.absences !== undefined) {
+    if (!Array.isArray(value.absences) || value.absences.length === 0) return torn(location);
+    for (const absence of value.absences) {
+      if (!isRecord(absence)) return torn(location);
+      if (
+        typeof absence.reason !== "string" ||
+        !(HARNESS_ABSENCE_REASONS as readonly string[]).includes(absence.reason)
+      ) {
+        return torn(location);
+      }
+      if (
+        typeof absence.count !== "number" ||
+        !Number.isInteger(absence.count) ||
+        absence.count <= 0
+      ) {
+        return torn(location);
+      }
+    }
+  }
+  if (
+    value.unattributedAttempts !== undefined &&
+    (typeof value.unattributedAttempts !== "number" ||
+      !Number.isInteger(value.unattributedAttempts) ||
+      value.unattributedAttempts < 0)
+  ) {
+    return torn(location);
+  }
+  if (value.attemptTruncation !== undefined) {
+    if (!isRecord(value.attemptTruncation)) return torn(location);
+    if (value.attemptTruncation.truncated !== true) return torn(location);
+    for (const key of ["omitted", "cap"]) {
+      const field = value.attemptTruncation[key];
+      if (typeof field !== "number" || !Number.isInteger(field) || field < 0) return torn(location);
+    }
+  }
   return ok(value as unknown as HarnessCaptureOutcomeRecord);
 };
 
@@ -285,6 +391,26 @@ const capturePayload = (record: HarnessCaptureOutcomeRecord): StateJsonValue => 
   degraded: record.degraded,
   failed: record.failed,
   warnings: record.warnings.map((warning) => ({ reason: warning.reason, field: warning.field })),
+  ...(record.absences === undefined
+    ? {}
+    : {
+        absences: record.absences.map((absence) => ({
+          reason: absence.reason,
+          count: absence.count,
+        })),
+      }),
+  ...(record.unattributedAttempts === undefined
+    ? {}
+    : { unattributedAttempts: record.unattributedAttempts }),
+  ...(record.attemptTruncation === undefined
+    ? {}
+    : {
+        attemptTruncation: {
+          truncated: true,
+          omitted: record.attemptTruncation.omitted,
+          cap: record.attemptTruncation.cap,
+        },
+      }),
   capturedAt: record.capturedAt,
 });
 

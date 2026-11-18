@@ -221,6 +221,10 @@ describe("the production composer builds a real harness session port", () => {
       };
 
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: home,
           PATH: "/synthetic/bin:/synthetic/usr/bin",
@@ -451,6 +455,7 @@ const observeTruth = async (scenario: TruthScenario): Promise<TruthObservation> 
     };
 
     const program = createProductionComposer({
+      harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
       environment: {
         HOME: home,
         PATH: "/synthetic/bin:/synthetic/usr/bin",
@@ -768,6 +773,7 @@ const createProductionHarness = (input: {
     };
   };
   const program = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: {
       HOME: home,
       PATH: "/synthetic/bin:/synthetic/usr/bin",

@@ -1,0 +1,118 @@
+version: 1
+iteration: 5
+mode: local
+work_item_ref: GH-335
+branch: feat/GH-335/opencode-harness-telemetry
+status: PASS
+summary: >
+  Final re-review of head 2b58d401 (third renumber pass on merge 1e554edc) against the sync+renumber that
+  answered iteration 4: verdict PASS. F-1 is closed — the four harness records are TDR-0040 seat/spawn,
+  TDR-0041 envelope detail, TDR-0042 integration mode and TDR-0043 adapter contract; origin/main-tools still
+  tops out at TDR-0039, no TDR-004x pre-existed, there are zero duplicate ids in the tree and in the
+  hypothetical merge, every front-matter id equals its filename, index and register agree, and GH-338's
+  0032-0035 and GH-339's 0036-0039 are byte-identical to the base. F-2 is closed — merge-tree HEAD
+  origin/main-tools exits 0 with a clean tree against 1e7ecf07 (b6051586) and again against the
+  mid-review base move to 3bbd9466 (664e787a), PR #357 heads 2b58d401 and reports MERGEABLE. F-3 is closed —
+  review/ and readiness-review/ are byte-identical to the pre-sync state and each file cites exactly the ids
+  it reviewed; five stale path strings survive only inside that frozen history. The seven conflicts and four
+  auto-merged files carry both parents' content, and production.ts still carries both GH-338's transport
+  selection and GH-335's harness composition mount (five changed lines vs the branch parent, all TDR id
+  comments). Gates: lint, format, typecheck, boundaries, memory, prompt-conformance, help-guide, exports,
+  doc-distribution, the 49-commit range gate and plan validate/lint all PASS; bun test ran 10964 tests across
+  1366 files with 10959 pass / 4 skip / 1 fail where the failure (TC-EXIT-002, clean-tree) is the
+  second concurrent pnpm check writing .mutant-* into this checkout and passes 15/15 in isolation and
+  102/102 in the co-scheduled mutant group. main-tools moved during the review to 3bbd9466 (PR #362,
+  docs-only, no decision record) — reported explicitly, no fresh id collision. Six non-blocking findings:
+  two low (pm-notes history compresses the 0031->0033->0037->0041 path; the clean-tree assertion is coupled
+  to tree-writing mutant suites) and four info.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documentation-accuracy
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml:343
+    message: >
+      The second-collision note now says the envelope record "was renumbered TDR-0031 -> TDR-0041" for the
+      GH-293 collision and line 367 repeats "after the TDR-0031 to TDR-0041 renumbering", while line 591
+      correctly says the same record went "0031 to 0033 earlier today". The actual path was
+      0031 -> 0033 -> 0037 -> 0041; each sync's id substitution rewrote the previous note, so the narrative
+      now skips 0037 and misattributes 0041 to the first round. Narrative only: the decisions list and every
+      live artifact cite 0040-0043 correctly.
+    suggestion: >
+      On the next pm-notes touch, state the chain once (0031 -> 0033 -> 0037 -> 0041) and leave historical
+      notes unrewritten in later syncs.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: test-isolation
+    location: tests/checks/exit-code-literals.test.ts:65
+    message: >
+      TC-EXIT-002 asserts `git status --porcelain` is empty, while several suites write temporary mutants
+      into the source tree (telemetry-mutants `.mutant-telemetry-*`, action/spend-mutants `.mutant-*`,
+      metrics-mutants `.metrics-mutant-*`, and this change's expanded harness-mutants `.__mutant_*`, +584
+      lines). Any second process in the same checkout makes the gate fail at random: two simultaneous
+      `pnpm check` runs here each failed exactly one such environment-coupled assertion, differently
+      (TC-EXIT-002 in mine, TC-BIN-055's real-home snapshot in the duplicate). Both pass in isolation
+      (15/15 and 11/11) and the co-scheduled mutant group passes 102/102 in one process.
+    suggestion: >
+      Write mutants to a temp root as coordinator-mutants and privacy-support already do, or scope the
+      assertion to `git status -- <scanned paths>`; then the suite measures the change rather than the
+      machine.
+    suppressed: false
+  - id: F-3
+    severity: info
+    confidence: high
+    category: bookkeeping
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml:620
+    message: >
+      The post-first-sync gate note records "10791 pass / 4 skip / 0 fail across 1359 files"; this head
+      measures 10964 tests across 1366 files (10959 pass / 4 skip plus the isolation-only flake). Carry-over
+      of iteration-4 F-6, now further out of date.
+    suggestion: Correct on the next touch; the iteration-5 run supersedes it.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/checks/decision-record.test.ts; scripts/checks/
+    message: >
+      No repository invariant checks decision-id uniqueness, so the third id collision was again found only by
+      manually listing doc/decisions/** and diffing against the base. The shipped decision-record test pins a
+      fixed four-id list and cannot detect a collision. Carry-over of iteration-4 F-4.
+    suggestion: >
+      Add a check beside memory-lint that front-matter ids are unique across doc/decisions/**, that id equals
+      filename, and that index rows and directory agree in both directions; wire it into pnpm check.
+    suppressed: false
+  - id: F-5
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/decisions/00-index.md
+    message: >
+      The index omits ODR-0002 and ODR-0003 rows. Identical on origin/main-tools (1e7ecf07 and 3bbd9466), so
+      pre-existing and outside this change's scope; noted so the next index edit does not inherit it silently.
+    suggestion: Add the two missing rows in a separate housekeeping change.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: carry-over
+    location: iteration-3/4 findings
+    message: >
+      Informational residuals remain open and ungraded: Phase-10 scope under-declaration and the missing
+      Phase-10 evidence note, the memoisation comment overclaim, the self-escaping single-home source guard,
+      the spec 1.4 revision-log DEC-count clause, the unreachable fifth refusal shape, DM-10's missing
+      stored-stamp clause, and the documentary nits.
+    suggestion: none
+    suppressed: true
+reviewed_at: 2026-11-18T21:58:00Z
+next_step: PROCEED

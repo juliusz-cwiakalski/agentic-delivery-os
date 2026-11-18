@@ -9,12 +9,22 @@
  * no adapter constructed and no silent default.
  */
 import {
+  DEFAULT_HARNESS_MODE,
   HARNESS_KINDS,
+  HARNESS_VERSION_PROBE_TIMEOUT_MS,
   type HarnessInstance,
   type HarnessKind,
+  type HarnessMode,
+  type HarnessModeOrigin,
   type HarnessResult,
+  type HarnessVersionProbe,
   type HarnessVersionWarning,
 } from "#contracts";
+import {
+  evaluateHarnessVersion,
+  type HarnessVersionEvaluation,
+  indeterminateHarnessVersion,
+} from "./harness-version-window.js";
 
 /** The injected factory for one configured harness kind. */
 export type HarnessAdapterRegistration = {
@@ -26,8 +36,8 @@ export type HarnessAdapterRegistration = {
   }) => HarnessInstance;
 };
 
-/** The injected version probe. */
-export type HarnessVersionProbe = () => Promise<string>;
+/** The injected version probe is the pinned contract seam (OQ-10, §4.4a). */
+export type { HarnessVersionProbe } from "#contracts";
 
 /** Return every registration/vocabulary drift, naming the harness. */
 export const harnessRegistryViolations = (
@@ -62,13 +72,22 @@ const failure = (
  * Resolve one instance from a configured kind.
  *
  * `configurationPath` names the configuration key for classified failures; the
- * default is the harness branch's kind path.
+ * default is the harness branch's kind path. The version probe is invoked
+ * exactly once with the declared deadline and the injected clock by reference;
+ * `timed-out` and a rejection both yield an indeterminate version, and there is
+ * no retry. The evaluation verdict and the resolved mode are carried on the
+ * instance, so every consumer reads one verdict.
  */
 export const resolveHarnessInstance = async (input: {
   readonly kind: string;
   readonly configurationPath?: string;
   readonly registrations: readonly HarnessAdapterRegistration[];
   readonly versionProbe: HarnessVersionProbe;
+  /** The injected clock, passed to the probe by reference (NFR-2, §4.4a). */
+  readonly now: () => number;
+  /** The resolved integration mode; the delivered default when absent. */
+  readonly mode?: HarnessMode;
+  readonly modeOrigin?: HarnessModeOrigin;
 }): Promise<HarnessResult<HarnessInstance>> => {
   const configurationPath = input.configurationPath ?? "harness.kind";
   const registration = input.registrations.find((entry) => entry.kind === input.kind);
@@ -80,20 +99,35 @@ export const resolveHarnessInstance = async (input: {
       `harness kind ${input.kind} is not a declared harness`,
     );
   }
-  let observedVersion: string | null = null;
-  let versionWarning: HarnessVersionWarning | undefined;
+  let evaluation: HarnessVersionEvaluation;
   try {
-    const probed = await input.versionProbe();
-    if (probed.length === 0) throw new Error("empty version");
-    observedVersion = probed;
+    const outcome = await input.versionProbe({
+      deadlineMs: HARNESS_VERSION_PROBE_TIMEOUT_MS,
+      now: input.now,
+    });
+    evaluation =
+      outcome.status === "answered"
+        ? evaluateHarnessVersion(outcome.stdout)
+        : indeterminateHarnessVersion();
   } catch {
-    observedVersion = null;
-    versionWarning = "version-probe-failed";
+    evaluation = indeterminateHarnessVersion();
   }
+  const observedVersion = evaluation.observedVersion;
+  // `observedVersion === null` always rides the delivered probe warning.
+  const versionWarning: HarnessVersionWarning | undefined =
+    observedVersion === null ? "version-probe-failed" : undefined;
   const instance = registration.create({
     kind: registration.kind,
     observedVersion,
     ...(versionWarning === undefined ? {} : { versionWarning }),
   });
-  return { ok: true, value: instance };
+  return {
+    ok: true,
+    value: {
+      ...instance,
+      versionVerdict: evaluation.verdict,
+      mode: input.mode ?? DEFAULT_HARNESS_MODE,
+      modeOrigin: input.modeOrigin ?? "defaults",
+    },
+  };
 };

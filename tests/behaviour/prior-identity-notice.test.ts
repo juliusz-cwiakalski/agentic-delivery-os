@@ -142,6 +142,10 @@ describe("TC-BIN-041 repeat resolutions add nothing; a second program emits its 
     try {
       const environment = { PATH: process.env.PATH, HOME: home.root };
       const composer = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment,
         cwd: checkout.root,
         homeDirectory: home.root,

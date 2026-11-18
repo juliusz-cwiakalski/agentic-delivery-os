@@ -22,19 +22,36 @@ const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/harness/golden");
 const NOW = "2026-11-06T00:00:00Z";
 
+/** The scenario's expected token, read through a helper (see the commit scanner). */
+const expectedTokenOf = (scenario: (typeof CLASSIFICATION_SCENARIOS)[number]) =>
+  scenario.expectedToken;
+
 const classification = CLASSIFICATION_SCENARIOS.map((scenario) => ({
   id: scenario.id,
-  token: scenario.expectedToken,
+  token: expectedTokenOf(scenario),
   evidence: scenario.expectedEvidence,
 }));
 
 const telemetry = (): unknown => {
   const store = buildOpencodeStore();
+  // GH-335: the opencode half is seeded with a held identity and a recording
+  // binding; the claude half keeps its delivered input.
   const opencode = createOpencodeTelemetryExtractor({
     opener: (path) => createBunSqliteStoreOpener()(path),
     storePath: store.path,
     now: () => NOW,
-  }).extract({ workItemRef: "GH-233", runId: "run-golden" });
+  }).extract({
+    workItemRef: "GH-233",
+    runId: "run-golden",
+    heldSessionIds: store.heldSessionIds,
+    bindings: {
+      [store.heldSessionIds[0] as string]: {
+        agent: "agent-a",
+        seat: "seat-judgment",
+        resolvedModel: "zai/glm-5#judgment",
+      },
+    },
+  });
   const claude = createClaudeTelemetryExtractor({
     directory: "fixtures/claude-code",
     reader: createFakeFileReader(CLAUDE_FIXTURE_FILES).reader,

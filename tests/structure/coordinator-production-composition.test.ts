@@ -21,6 +21,10 @@ describe("coordinator production composition", () => {
       mkdirSync(join(checkout, ".git"), { recursive: true });
       mkdirSync(home, { recursive: true });
       const composer = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: home },
         cwd: checkout,
         homeDirectory: home,

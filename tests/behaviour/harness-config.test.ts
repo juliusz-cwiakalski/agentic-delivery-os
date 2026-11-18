@@ -80,7 +80,9 @@ const select = async (calls: string[], kind: string) =>
   resolveHarnessInstance({
     kind,
     registrations: makeRegistrations(calls),
-    versionProbe: async () => "synthetic-1.2.3",
+    // The pinned probe seam (GH-335 OQ-10): one answered stdout plus the clock.
+    versionProbe: async () => ({ status: "answered", stdout: "synthetic v1.2.3" }),
+    now: () => 0,
   });
 
 describe("TC-HARN-016 harness configuration defaults and selection", () => {
@@ -226,7 +228,7 @@ describe("TC-HARN-018 store locations resolve from configuration", () => {
     if (!settings.ok) return;
     expect(settings.value.opencodeDatabasePath).toBe("/bind-mount/synthetic-store/opencode.db");
     expect(settings.value.claudeCodeSessionDirectory).toBe("/bind-mount/synthetic-sessions");
-    expect(settings.value.opencodeDatabasePath).not.toBe(".local/state/opencode/opencode.db");
+    expect(settings.value.opencodeDatabasePath).not.toBe("~/.local/share/opencode/opencode.db");
   });
 
   test("removing the branch yields the default store location with defaults origin", () => {
@@ -236,7 +238,8 @@ describe("TC-HARN-018 store locations resolve from configuration", () => {
     const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
     expect(settings.ok).toBe(true);
     if (!settings.ok) return;
-    expect(settings.value.opencodeDatabasePath).toBe(".local/state/opencode/opencode.db");
+    // GH-335 reconciles the default with the harness's own data directory.
+    expect(settings.value.opencodeDatabasePath).toBe("~/.local/share/opencode/opencode.db");
     expect(resolved.value.origins["harness.stores.opencode.databasePath"]?.layer).toBe("defaults");
   });
 });
@@ -248,15 +251,16 @@ describe("TC-HARN-003 harness instance resolution", () => {
     expect(before.ok).toBe(true);
     if (before.ok) {
       expect(before.value.kind).toBe("opencode");
-      expect(before.value.observedVersion).toBe("synthetic-1.2.3");
+      expect(before.value.observedVersion).toBe("1.2.3");
     }
     const changed = await resolveHarnessInstance({
       kind: "opencode",
       registrations: makeRegistrations(calls),
-      versionProbe: async () => "synthetic-9.9.9",
+      versionProbe: async () => ({ status: "answered", stdout: "synthetic v9.9.9" }),
+      now: () => 0,
     });
     expect(changed.ok).toBe(true);
-    if (changed.ok) expect(changed.value.observedVersion).toBe("synthetic-9.9.9");
+    if (changed.ok) expect(changed.value.observedVersion).toBe("9.9.9");
     expect(calls).toEqual(["opencode", "opencode"]);
   });
 
@@ -279,6 +283,7 @@ describe("TC-HARN-003 harness instance resolution", () => {
       versionProbe: async () => {
         throw new Error("probe unavailable");
       },
+      now: () => 0,
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
