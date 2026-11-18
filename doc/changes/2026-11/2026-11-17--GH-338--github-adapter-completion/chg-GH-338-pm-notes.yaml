@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-17T23:34:10.150Z }
   dor_check: { started: null, completed: 2026-11-17T23:39:09.787Z }
   delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: 2026-11-18T05:04:39.587Z }
+  system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -56,18 +56,17 @@ decisions:
 open_questions: []
 blockers: []
 notes:
-  - text: "Plan phase 8 remediation commit:
-      48a915a329f413c79efd7d3317b495c34fb2f1ea (this entry carries the hash the
-      phase-8 note names, per the phase-4..7 convention). The commit landed 24
-      files — including the new
+  - text: "Plan phase 8 remediation commit: 48a915a329f413c79efd7d3317b495c34fb2f1ea
+      (this entry carries the hash the phase-8 note names, per the phase-4..7
+      convention). The commit landed 24 files — including the new
       tests/fixtures/providers/github/cli-process-edge.json and
       review/review-iter-1.md — with zero scope drift and an empty
       untracked-not-staged set. Its subject is primitive-derived
-      (`messageSource: template`, `transport: none`), so it reads
-      `docs(GH-338): update doc/changes/...` instead of the plan's declared
-      phase-8 subject, the same deviation phases 1-7 recorded. `delivery` stays
-      open: the re-review gate (`review-iter-2`) is next and `phase complete
-      GH-338 delivery` has deliberately not been recorded."
+      (`messageSource: template`, `transport: none`), so it reads `docs(GH-338):
+      update doc/changes/...` instead of the plan's declared phase-8 subject,
+      the same deviation phases 1-7 recorded. `delivery` stays open: the
+      re-review gate (`review-iter-2`) is next and `phase complete GH-338
+      delivery` has deliberately not been recorded."
     type: info
     date: "2026-11-18"
   - text: "Plan phase 8 complete (remediation: CLI host identity, absolute isolated
@@ -81,18 +80,18 @@ notes:
       `api.` strip), exported additively through `./github`;
       `GithubCliTransportOptions.hostname` is REQUIRED, the `request.url` host
       derivation is deleted, and composition computes the value ONCE from the
-      declared instance `baseUrl`. D2/M-1: the isolated base is absolute in every
-      case (the injected `TMPDIR` when absolute, otherwise `os.tmpdir()`), with
-      `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` on `<base>/jaiship-gh-config`,
+      declared instance `baseUrl`. D2/M-1: the isolated base is absolute in
+      every case (the injected `TMPDIR` when absolute, otherwise `os.tmpdir()`),
+      with `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` on `<base>/jaiship-gh-config`,
       `XDG_STATE_HOME` on `<base>/jaiship-gh-state`, `XDG_CACHE_HOME` on
       `<base>/jaiship-gh-cache`, and `HOME` never forwarded; the delivered
       `.local/state/gh/device-id` residue was deleted from the worktree, never
       staged, and no `.gitignore` rule was added (the mechanism is fixed, so an
-      ignore rule would hide a regression). D3/M-2: the check tier injects `PATH`
-      itself — arm A carries a recording `gh` stub (exactly one probe per
+      ignore rule would hide a regression). D3/M-2: the check tier injects
+      `PATH` itself — arm A carries a recording `gh` stub (exactly one probe per
       composing invocation, no degradation line, none on a self-description
-      path), arm B carries a `PATH` with no `gh` at all (zero spawns, exactly one
-      `provider.cli.unavailable` line, the command still succeeds) — so no
+      path), arm B carries a `PATH` with no `gh` at all (zero spawns, exactly
+      one `provider.cli.unavailable` line, the command still succeeds) — so no
       launcher, composition, or policy code changed and no configuration surface
       was invented. D4/m-1: the write-side 404 is REMOVED, not implemented —
       DM-9/F-6/NFR-4 are restated to the delivered uniform write classification
@@ -100,8 +99,8 @@ notes:
       structured `httpStatus`; `provider.not-found` is read-scoped), the
       reference-behavior write row states it, and TC-BACKLOG-002 asserts it over
       the new `pullUpdateNotFound` fixture row (one request, no retry). D5/m-2:
-      AC-F6-4/DM-6 (change folder), TDR-0034 C-6/§3.2 and its label-safety metric
-      line, the reference-behavior mapping paragraph and the test plan's
+      AC-F6-4/DM-6 (change folder), TDR-0034 C-6/§3.2 and its label-safety
+      metric line, the reference-behavior mapping paragraph and the test plan's
       TC-BACKLOG-005/§1.1 are restated to the delivered preservation semantics
       (one issue `PATCH` carrying the computed target set; never a single-token
       array; never an undeclared removal), with the current-read-as-input
@@ -111,51 +110,52 @@ notes:
       status-shaped body line can never override the real status;
       `cli-status-blocks.json` gains the `body-with-status-line` case plus its
       rationale. 8.9: TDR-0031 item 8 now states the one additive optional
-      `GithubClientOptions.workflowMap` member and its status-block open question
-      is closed; N12 and m-3/n-4/n-6 stay @pm bookkeeping (no historical note was
-      rewritten), and m-5 stays a recorded SCOPE_DEVIATION with `.changeset/**`
-      untouched. 8.10: the reference-behavior document gains the host-mapping
-      table and the absolute child-environment row, and the drift fixture/test
-      gain the host rows plus their extraction-count and non-vacuity assertions;
-      spec v1.3 (F-6/DM-9/NFR-4/AC-F6-4) and test plan v1.3 (§1, §4, GAP-TP-3,
-      the TC-CLI-002/003/004 and TC-BACKLOG-002/005 rows, TC-CLI-014/015,
-      TC-BIN-057) are recorded in their own revision tables. Pinned surfaces
-      moved exactly and non-vacuously: `EXPECTED_SURFACE` for `./github` and both
-      per-file executable allowances gain `githubCliHostname`; the
-      `node:child_process` site set stays the declared thirteen.
-      Verification, all from the repository root with TMPDIR=$PWD/tmp/tmpdir: G6
-      typecheck exit 0; G2 behaviour/providers 286 pass 0 fail; G3 conformance
-      183 pass 0 fail; G1 structure 1628 pass 0 fail; G4 checks 1177 pass 0 fail
-      (TC-DAEMON-121 green under full load — no isolation re-run needed); G5
-      boundaries 152 pass 0 fail; G7 secret-read-boundary OK (425 production
-      files, 5 allowlisted entries, unchanged); G8 fixture
-      sanitization/privacy 11 pass and doc-conformance + decision-record 23 pass;
-      `bash scripts/.tests/test-doc-distribution.sh` no drift (95 in-scope docs);
-      `jaiship plan validate GH-338` verdict=valid tier=full
-      readyForDevelopment=true; G9 `git diff --check` clean; `git status
-      --porcelain` shows no `.local/` entry and `.local/` is absent from the
-      worktree; G10 `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 (10507 pass, 4
-      pre-existing skips, 0 fail) with depcruise, ambient-globals,
+      `GithubClientOptions.workflowMap` member and its status-block open
+      question is closed; N12 and m-3/n-4/n-6 stay @pm bookkeeping (no
+      historical note was rewritten), and m-5 stays a recorded SCOPE_DEVIATION
+      with `.changeset/**` untouched. 8.10: the reference-behavior document
+      gains the host-mapping table and the absolute child-environment row, and
+      the drift fixture/test gain the host rows plus their extraction-count and
+      non-vacuity assertions; spec v1.3 (F-6/DM-9/NFR-4/AC-F6-4) and test plan
+      v1.3 (§1, §4, GAP-TP-3, the TC-CLI-002/003/004 and TC-BACKLOG-002/005
+      rows, TC-CLI-014/015, TC-BIN-057) are recorded in their own revision
+      tables. Pinned surfaces moved exactly and non-vacuously:
+      `EXPECTED_SURFACE` for `./github` and both per-file executable allowances
+      gain `githubCliHostname`; the `node:child_process` site set stays the
+      declared thirteen. Verification, all from the repository root with
+      TMPDIR=$PWD/tmp/tmpdir: G6 typecheck exit 0; G2 behaviour/providers 286
+      pass 0 fail; G3 conformance 183 pass 0 fail; G1 structure 1628 pass 0
+      fail; G4 checks 1177 pass 0 fail (TC-DAEMON-121 green under full load — no
+      isolation re-run needed); G5 boundaries 152 pass 0 fail; G7
+      secret-read-boundary OK (425 production files, 5 allowlisted entries,
+      unchanged); G8 fixture sanitization/privacy 11 pass and doc-conformance +
+      decision-record 23 pass; `bash scripts/.tests/test-doc-distribution.sh` no
+      drift (95 in-scope docs); `jaiship plan validate GH-338` verdict=valid
+      tier=full readyForDevelopment=true; G9 `git diff --check` clean; `git
+      status --porcelain` shows no `.local/` entry and `.local/` is absent from
+      the worktree; G10 `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 (10507 pass,
+      4 pre-existing skips, 0 fail) with depcruise, ambient-globals,
       workspace-entrypoints, memory-lint, prompt-conformance,
       help-guide-coverage and exports-parity green. Four touched files were then
-      re-formatted with `biome format --write` on exactly those files (line-break
-      only; `biome format packages tests` reports no drift afterwards) and G1/G2/
-      G3 plus the whole suite inside G10 were re-run at the final tree, so the
-      recorded counts are post-format. Deviations: (1) the commit primitive
-      produced a deterministic template subject (`messageSource: template`,
-      `transport: none`) rather than the plan's declared phase-8 subject, exactly
-      as phases 1-7 did; no message was composed by hand. (2) Two superseded
-      clauses still carried the old 'no full-array replace' wording after the
-      first remediation pass — TDR-0034's label-safety metric line (named by
-      obligation 8.8) and test plan §1.1 — and were restated in this phase; both
-      live inside the phase-8 declared scope or the change folder. No AC,
-      operation, cap, error identity, configuration surface, or pinned allowance
-      moved, and AC ownership is unchanged: phase 8 re-establishes the evidence
-      for AC-F2-1, AC-F2-3 and AC-F2-4 (TC-CLI-014/015 plus the repinned TC-CLI-
-      002/003 oracles) and for AC-F6-1 and AC-F6-4 (TC-BACKLOG-002/005 wording),
-      and re-verified AC-F2-2, AC-F2-5, AC-F8-3, AC-F8-6, NFR-2, NFR-3 and NFR-9
-      as controls. Residual: the re-review (`review-iter-2`) is the next gate;
-      `phase complete GH-338 delivery` is deliberately NOT recorded here."
+      re-formatted with `biome format --write` on exactly those files
+      (line-break only; `biome format packages tests` reports no drift
+      afterwards) and G1/G2/ G3 plus the whole suite inside G10 were re-run at
+      the final tree, so the recorded counts are post-format. Deviations: (1)
+      the commit primitive produced a deterministic template subject
+      (`messageSource: template`, `transport: none`) rather than the plan's
+      declared phase-8 subject, exactly as phases 1-7 did; no message was
+      composed by hand. (2) Two superseded clauses still carried the old 'no
+      full-array replace' wording after the first remediation pass — TDR-0034's
+      label-safety metric line (named by obligation 8.8) and test plan §1.1 —
+      and were restated in this phase; both live inside the phase-8 declared
+      scope or the change folder. No AC, operation, cap, error identity,
+      configuration surface, or pinned allowance moved, and AC ownership is
+      unchanged: phase 8 re-establishes the evidence for AC-F2-1, AC-F2-3 and
+      AC-F2-4 (TC-CLI-014/015 plus the repinned TC-CLI- 002/003 oracles) and for
+      AC-F6-1 and AC-F6-4 (TC-BACKLOG-002/005 wording), and re-verified AC-F2-2,
+      AC-F2-5, AC-F8-3, AC-F8-6, NFR-2, NFR-3 and NFR-9 as controls. Residual:
+      the re-review (`review-iter-2`) is the next gate; `phase complete GH-338
+      delivery` is deliberately NOT recorded here."
     type: info
     date: "2026-11-18"
   - text: "Review iteration 1 = FAIL (review/review-iter-1.md). One blocker and two

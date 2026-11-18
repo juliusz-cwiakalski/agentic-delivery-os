@@ -3,12 +3,12 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-338"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024", "TDR-0025"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, cross-repository change, harness-adapter, steer, supervise, and delivery-metrics terms used across the repository."
 ---
@@ -372,7 +372,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Vacuous green | A pipeline with zero jobs, zero runs, or only skipped runs that appears green but never performed effective work; explicitly not a pass. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Non-vacuous surface | At least one commit and at least one changed file reported by the delivery request; absent counts are unknown, never non-empty. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | `branch-mismatch` | A definitive failure in which the open-PR page contains one or more open requests but none has a `sourceRef` equal to the checkout branch. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
-| `provider.not-found` | An additive adapter-local read-result code for HTTP 404; it is not an error-table code. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
+| `provider.not-found` | An additive adapter-local read-result code for HTTP 404; it is not an error-table code. It is read-scoped: a write classifies any non-2xx, 404 included, as `provider.payload.invalid` with the structured `httpStatus`. | Verify Gates | [feature-verify-gates.md](../spec/features/feature-verify-gates.md) |
 | Owner-gate SLA | The pinned aging policy for owner gates: escalation at 24 h, a pre-agreed default at 72 h where policy permits, one default per gate kind/class, and no silent state. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
 | `slaState` | A gate's SLA posture: `fresh`, `escalated`, or `default-applied`; unknown age projects as `escalated` with the age declared unknown. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |
 | Pre-agreed default | Exactly one decision per defaultable gate kind/class, held as policy-as-data before expiry and never invented at runtime. | Owner-gate SLA | [feature-owner-gate-sla.md](../spec/features/feature-owner-gate-sla.md) |

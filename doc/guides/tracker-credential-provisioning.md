@@ -39,6 +39,16 @@ CLI configuration directory, suppresses prompts, and never falls back to an
 operator's stored login. Compose the adapter with its documented API-only policy
 to remove the CLI dependency entirely.
 
+Two properties of that invocation are worth knowing when you audit it. It targets
+your instance's declared host identity rather than its REST endpoint, so the cloud
+instance calls `github.com` and a GitHub Enterprise instance keeps its own host.
+Its child environment is absolute in every case: `GH_CONFIG_DIR` and
+`XDG_CONFIG_HOME` share an isolated config root, `XDG_STATE_HOME` and
+`XDG_CACHE_HOME` are isolated beside it, `HOME` is never forwarded, and the base
+is your injected `TMPDIR` when it is absolute and the operating system's temporary
+directory otherwise. A composing invocation therefore writes nothing into your
+working directory.
+
 Because `export` places the token in the process environment, treat the value as
 readable by same-user processes and by `/proc`. Do not run the export in a shell
 whose history is shared, and do not paste a token into a command line. The
