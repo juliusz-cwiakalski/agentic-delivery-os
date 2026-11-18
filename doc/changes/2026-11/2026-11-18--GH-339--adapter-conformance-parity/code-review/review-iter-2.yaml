@@ -48,11 +48,12 @@ verification:
     - "bun test tests/structure/registration-participation conformance-family-accounting + conformance/stateful-double artifact -> 62 pass / 0 fail"
     - "bun test tests/checks/{tracker-literal-scan,parity-gate-wiring,privacy-release} -> 19 pass / 0 fail"
     - "bun test tests/boundaries -> 152 pass / 0 fail (parity.ts adapter-contract value imports are the same allowed testkit->adapters edge as adapters.ts)"
-    - "bun test tests/conformance tests/structure tests/checks -> broad run launched; result appended in the section head when it completes (targeted suites above already cover every remediation path)"
+    - "bun test tests/conformance tests/structure tests/checks -> 3186 pass / 0 fail across 338 files (345s)"
   environmental_notes: >
-    The broad conformance+structure+checks run was executed last; its result is
-    recorded in the accompanying report. The review writer creates only the
-    untracked code-review/ directory and modifies no tracked file.
+    The broad conformance+structure+checks run passed 3186/0; the earlier
+    iteration-1 license-audit working-tree race did not recur. The review writer
+    creates only the untracked code-review/ directory (review-iter-2.yaml) and
+    modifies no tracked file.
 iteration_1_disposition:
   - id: F-1
     severity: major
