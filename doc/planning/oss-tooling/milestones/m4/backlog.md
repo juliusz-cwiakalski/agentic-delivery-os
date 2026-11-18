@@ -3,13 +3,20 @@
 Canonical scope for M4. Ticket references are added when the story tickets are
 created (after plan approval).
 
-### M4-S1 Installable, versioned binary
+### M4-S1 Installable, versioned binary — **delivered (GH-346)**
 - Goal: The tool is a product artifact, not a checkout.
-- Tasks: self-contained build; `install`/`upgrade`/`uninstall`/`--version`
-  with build identity; compatibility check between installed binary and
-  repository state version; documented cadence (install release -> deliver
-  iterations -> decide -> re-install); dev builds kept out of the delivery
-  path.
+- Delivered: the additive `build:binary` artifact with a compile-time build
+  identity and the corrected compiled re-entry path; the composed `install`
+  family (`install`, `status`, `rollback`, `uninstall`, `purge`) owning the
+  artifact, its single rollback slot, the `install.record.v1` record, and the
+  managed `PATH` block; the admission/dev-build gates; the read-only
+  state-format compatibility check; the always-printed purge residual set and
+  the four zero-write dry-runs; the guarded shell installer and the reporting
+  shell uninstaller; and the documented cadence, upgrade, rollback, and
+  removal story.
+- Surfaces now owned by the family: the binary, the slot, the record, and the
+  managed `PATH` block; the shell installers keep repository artifacts and the
+  legacy launcher step.
 - AC: clean-profile install works; delivery runs while the repository is dirty
   or mid-change; upgrade is explicit, reversible, version-reported.
 - Depends on: M4-S1a (binary seed, delivered), M3.

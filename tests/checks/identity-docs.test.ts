@@ -383,3 +383,26 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
     }
   });
 });
+
+describe("GH-346 TC-INST-110 the guide's lifecycle requirement table is carried here too", () => {
+  test("every declared lifecycle fact is present in the local install guide", () => {
+    // The requirement list is the same one the GH-346 documentation case owns;
+    // this suite keeps the delivered identity-docs guard on the same page.
+    const guide = read(GUIDE);
+    for (const fact of [
+      "install a release",
+      "Admissible installation origins",
+      "deleted after merge",
+      "install.dev-build",
+      "Upgrade is installing a different compiled artifact",
+      "single step back",
+      "purge would additionally delete",
+      "--add-to-path",
+      "One owner per artifact class",
+      "install.identity.not-owning",
+    ]) {
+      expect({ fact, present: guide.includes(fact) }).toEqual({ fact, present: true });
+    }
+    expect(guide).not.toContain("no uninstall path exists");
+  });
+});
