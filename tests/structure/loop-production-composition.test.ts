@@ -61,9 +61,17 @@ describe("TC-SPAWN-004 the binding is the delivered per-spawn resolution", () =>
       });
       const program = composer(SYNTHETIC_BRAND);
       expect(program.commands.loop).toBeDefined();
-      expect(program.commands.loop?.flags).toEqual(["--foreground", "--fresh-budget"]);
-      // The incremental verb surface: the family is mounted but not advertised.
-      expect([...PROMPT_REQUIRED_COMMANDS]).not.toContain("loop");
+      // The FINAL five-verb grammar's flag set (phase 7).
+      expect(program.commands.loop?.flags).toEqual([
+        "--foreground",
+        "--fresh-budget",
+        "--mode",
+        "--lines",
+      ]);
+      // After the phase-7 repin the family is prompt-required AND composed (a
+      // registered extra would be dropped, so this is the composed set).
+      expect([...PROMPT_REQUIRED_COMMANDS]).toContain("loop");
+      expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("loop");
     } finally {
       removeRoot(root);
     }

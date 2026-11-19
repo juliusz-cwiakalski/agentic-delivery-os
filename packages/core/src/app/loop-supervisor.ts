@@ -326,7 +326,9 @@ export const loopLeaseOf = (read: LoopCoordinatorRead): CoordinatorLease | null 
 export const absentSessionFacts = (): LoopSessionFacts => ({
   sessionId: null,
   liveness: "absent",
-  harnessKind: "opencode",
+  // No harness name is fabricated here: the closed vocabulary lives in the
+  // composition and in config defaults, never in core (TC-HARN-028).
+  harnessKind: "",
   pid: null,
   processStartTimeMs: null,
   title: null,

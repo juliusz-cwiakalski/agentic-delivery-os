@@ -866,3 +866,26 @@ notes:
       reported with this phase."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 9 commit hash: c9b4824b (release obligations). This second
+      phase-9 commit is the GATE REMEDIATION the aggregate run named, and each
+      item is a PIN UPDATE, never a relaxation: the loop stop fold's harness-kind
+      default carries no harness literal (TC-HARN-028); the state-additivity
+      baseline and the event additivity inventory gain exactly the two loop
+      record kinds and the one loop state module (TC-EVT-073/074, TC-SUP-046,
+      TC-XCTR-003); the port-contract inventory gains the loop contract module and
+      its exports (TC-PORT-001); the event-taxonomy allowance names the loop log
+      events as non-kinds (TC-EVT-006); the command-composition seam lists the
+      loop command module (TC-BOUND-002); the install/supervise/entrypoint family
+      pins move 26 -> 27 with `loop` last and `install` immediately before it
+      (TC-INST-100, TC-SUP-096, TC-ENTRY-009/004, install-family-surface); and the
+      phase-2 composition case now states the post-repin truth. DISCOVERY
+      (reported, not silently widened): the plan's pinned-surface list named FOUR
+      surfaces, but adding a family and two record kinds also forces these SEVEN
+      additional closed-surface pins, which the plan did not enumerate. Also
+      environmental: this machine sets `commit.gpgsign=true`, so the synthetic
+      fixture repositories used by `ci-baseline-parity`, `forbidden-literals`
+      (docs-scope lifetime), `TC-BIN-072` and `TC-BIN-084` cannot commit; the
+      aggregate run that follows uses GIT_CONFIG_* to disable signing for the
+      fixture commits only (no repository config is changed)."
+    type: info
+    date: "2026-11-19"

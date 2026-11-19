@@ -67,6 +67,16 @@ const NON_TAXONOMY_GROUPS: Readonly<Record<string, KindGroupAllowance>> = {
     reason: "pm-notes field vocabulary",
     objects: [["completed", "started"]],
   },
+  // The loop stop transitions (`requested`/`cleared`) are a durable-record
+  // vocabulary, not event kinds.
+  "packages/core/src/contracts/loop.ts": {
+    reason: "loop log event vocabulary (release/stop are log events, not kinds)",
+    arrays: [["release", "stop"]],
+  },
+  "packages/core/src/domain/loop-status.ts": {
+    reason: "loop stop fold discriminant",
+    kindValues: ["cleared"],
+  },
   // A merge-transaction result discriminant, not an event kind.
   "packages/core/src/domain/merge-transaction.ts": {
     reason: "merge-transaction result discriminant",
