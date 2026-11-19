@@ -9,7 +9,7 @@
 # the commit hash, and the gate result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-347-spec.md (v1.6; F-1..F-9; API-1..API-7;
+#   - Spec:     ./chg-GH-347-spec.md (v1.7; F-1..F-9; API-1..API-7;
 #               DM-1..DM-9; NFR-1..NFR-11; NG-1..NG-12; RSK-1..RSK-11;
 #               DEC-1..DEC-11; §6 flows 1–5; §7.1 in-scope list; §8.5 backward
 #               compatibility and the deliberate behaviour changes; §17 the 42
@@ -17,7 +17,8 @@
 #               Appendix A doc impacts; §25.3 Appendix C proof boundary; §25.6
 #               Appendix F the NORMATIVE derivation ladder; §25.7 Appendix G
 #               the parity coverage matrix).
-#   - Tests:    ./chg-GH-347-test-plan.md (v0.4 FINAL; 50 TCs in eleven
+#   - Tests:    ./chg-GH-347-test-plan.md (v0.6 at the phase-10 boundary;
+#               v0.5 at the review, v0.4 when this plan was authored; 50 TCs in eleven
 #               stable-id groups —
 #               LANE 5, ADMIT 6, RESUME 4, TRACKER 4, TERM 6, LOOP 6, SPAWN 4,
 #               DERIVE 6, PARITY 6, SHELL 2, CONTRACT 1; 42/42 AC traceability,
@@ -65,15 +66,18 @@
 #               section, the SCOPE DECLARATION RULE, and spec reconciliation
 #               declared for STAGING ONLY in the release phase).
 #
-# PLAN SHAPE: nine phases, all `kind: delivery` (each edits the repository and
+# PLAN SHAPE: ten phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. A planning
 #   phase would declare no scope to compute and this change has no design work
-#   left: the spec is complete at v1.6, the test plan is complete (v0.4), the six
-#   governing records are authored, and phase 9 is the review-iteration-1
-#   remediation appended after review iteration 1 = FAIL (it owns no AC and no TC
-#   and re-establishes evidence for findings B1, B2, M1–M6 and m1–m6). `tier.phases`
+#   left: the spec is complete at v1.7, the test plan is complete (v0.6 at the
+#   phase-10 boundary), the six governing records are authored, phase 9 is the
+#   review-iteration-1 remediation appended after review iteration 1 = FAIL (it
+#   owns no AC and no TC and re-establishes evidence for findings B1, B2, M1–M6
+#   and m1–m6), and phase 10 is the review-iteration-2 remediation appended after
+#   review iteration 2 = FAIL (it closes N1/N2, corrects N3/N4, owns no AC and no
+#   TC, and reopens no decision). `tier.phases`
 #   below lists the LIFECYCLE phase ids [1..11] (the ceremony tier engine's
-#   vocabulary), not this plan's nine phase ids; the two are different namespaces
+#   vocabulary), not this plan's ten phase ids; the two are different namespaces
 #   and the plan never renumbers the lifecycle.
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
@@ -168,8 +172,8 @@
 # SEQUENCING (spec §19 "by outcome, so each contract is proven with the evidence
 #   that depends on it"), made concrete. Every phase is independently committable
 #   and gate-green at its own boundary; the aggregate `pnpm check` is phase 8's
-#   alone among the phases that author the change, and phase 9 re-runs it because
-#   remediation invalidates the HEAD phase 8 measured.
+#   alone among the phases that author the change, and phases 9 and 10 re-run it
+#   because each remediation invalidates the HEAD the previous boundary measured.
 #
 #   Phase 1  Layer and contract scaffolding: the `dispatch.lane` record kind,
 #            schema, key prefix, record type and read/append helpers; the
@@ -213,6 +217,13 @@
 #            the five non-vacuous controls, and the three restored delivered
 #            assertions. Owns no AC and no TC; re-establishes evidence for the
 #            ACs the review found unimplemented or unproven. No decision reopened.
+#   Phase 10 Review-iteration-2 remediation: the terminate-capability declaration
+#            reaches the engine through each production session port and the
+#            composition edge, the unconfirmed-termination branch is EXERCISED
+#            (not only implemented), the closed arm-set count is aligned to the
+#            code's 16 ids, and the terminate seam/runner comments stop
+#            overstating what is proven. Owns no AC and no TC; re-establishes
+#            AC-F5-4's evidence in production. No decision reopened.
 #
 #   WHY THIS ORDER AND NOT ANOTHER: phase 2 must precede phase 3 because a lane
 #   write only exists for an ADMITTED dispatch, so the admission verdict is the
@@ -226,7 +237,11 @@
 #   assembled change. Phase 9 is appended LAST because a review finding is only
 #   closed by a commit that post-dates the review that raised it, and because its
 #   evidence must be re-measured over the remediated tree rather than inherited
-#   from the HEAD the review rejected.
+#   from the HEAD the review rejected. Phase 10 follows for the same reason:
+#   review iteration 2 rejected the HEAD phase 9 produced, so its evidence must
+#   post-date that review. Phase 10 follows for the same reason: review
+#   iteration 2 rejected the HEAD phase 9 produced, so its evidence must post-date
+#   that review.
 #
 #   FIVE INVARIANTS WOULD CROSS A PHASE BOUNDARY; EACH IS PLACED WHOLE AND THE
 #   REASON IS STATED (test plan §8.3's warning, honoured rather than papered
@@ -332,7 +347,12 @@
 #                 3, 4, 5, 6 and 7). It owns no AC and moves none: every one of
 #                 those ACs keeps the owner named above and its case keeps its
 #                 stable id.
-#   COUNT: 0 + 5 + 6 + 9 + 13 + 4 + 5 + 0 + 0 = 42.
+#   Phase 10 (0): the review-iteration-2 remediation re-establishes AC-F5-4's
+#                 evidence IN PRODUCTION (the declaration reaches the engine
+#                 through the mounted session port) and strengthens AC-F8-5's
+#                 closed-set statement. Under its EXISTING owners: AC-F5-4 with
+#                 phase 5, AC-F8-5 with phase 4. It owns no AC and moves none.
+#   COUNT: 0 + 5 + 6 + 9 + 13 + 4 + 5 + 0 + 0 + 0 = 42.
 #   Per-feature reconciliation against spec §17: F-1 4 (3 in phase 3, 1 in
 #   phase 5), F-2 5 (phase 2), F-3 4 (3 in phase 3, 1 in phase 5), F-4 4
 #   (phase 4), F-5 5 (phase 5), F-6 6 (phase 5), F-7 4 (phase 6), F-8 5
@@ -353,7 +373,8 @@
 #                  TC-CONTRACT-001 (1)
 #   Phase 8 (0)
 #   Phase 9 (0)
-#   COUNT: 0 + 6 + 7 + 10 + 14 + 4 + 9 + 0 + 0 = 50. 0 orphans (every id above),
+#   Phase 10 (0)
+#   COUNT: 0 + 6 + 7 + 10 + 14 + 4 + 9 + 0 + 0 + 0 = 50. 0 orphans (every id above),
 #   0 double-owned (each id appears once), 0 unmapped (the eleven group totals
 #   LANE 5 + ADMIT 6 + RESUME 4 + TRACKER 4 + TERM 6 + LOOP 6 + SPAWN 4 +
 #   DERIVE 6 + PARITY 6 + SHELL 2 + CONTRACT 1 = 50).
@@ -387,13 +408,15 @@
 #   owner):
 #     1. `packages/core/src/app/dispatch.ts` is edited in phases 1 (delay fact),
 #        2 (kind preservation/refusal path), 3 (lane writes/resume), 4
-#        (derivation wiring), 5 (terminate decision/loop), and 9 (capability
-#        gating, carried stall/termination refs, the 16-slice disclosure order).
+#        (derivation wiring), 5 (terminate decision/loop), 9 (capability
+#        gating, carried stall/termination refs, the 16-slice disclosure order),
+#        and 10 (the gate reads the typed port declaration instead of casting).
 #        Ownership is per case, never per file.
 #     2. `packages/cli/src/production.ts` is edited in phases 1 (delay binding),
 #        2 (claim mount), 3 (lane-resolver mount), 4 (ladder + pmNotes), 5
-#        (grace + loop bound), 6 (agent/title/prompt supply), and 9 (the resolved
-#        base branch).
+#        (grace + loop bound), 6 (agent/title/prompt supply), 9 (the resolved
+#        base branch), and 10 (the composition-edge declaration fallback and the
+#        terminate seam's `signalProcess`).
 #     3. `tests/fixtures/dispatch/parity/harness.ts` is created in phase 2 and
 #        EXTENDED in phases 3, 4, 5, 6, and 7. The case that reads it belongs to
 #        the phase that extends it for that case.
@@ -437,6 +460,26 @@
 #        `tests/fixtures/dispatch/parity/{terminate,process-runner,seams,cases}.ts`
 #        (R4/R7/R8 extensions; group ownership is unchanged and no phase edits
 #        another phase's row). No AC and no TC changes owner.
+#    10. Phase 10 (review-iteration-2 remediation) re-declares files owned by
+#        earlier phases for the SAME reason, each editing a different assertion
+#        or a different seam: `packages/core/src/contracts/harness.ts` (the
+#        OPTIONAL capability member the port holds no declaration for),
+#        `packages/core/src/app/dispatch.ts` (the gate's read),
+#        `packages/cli/src/production.ts` (the composition guarantee and the
+#        terminate seam), `packages/adapters/src/harness/{opencode,claude}.ts`
+#        (each adapter's own declaration; phase 5 authored the terminate
+#        implementation, not the declaration), the
+#        `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts` /
+#        `tests/fixtures/dispatch/parity/{terminate,process-runner}.ts`
+#        extensions of phase 5/9 rows, `tests/structure/dispatch-composition.test.ts`
+#        (phase 9's production-wiring suite gains the declaration assertion),
+#        and `tests/behaviour/harness-opencode-resume-stream.test.ts` (phase 9's
+#        real-adapter suite gains the port-declaration assertion).
+#        `tests/behaviour/harness-claude-session.test.ts` is newly declared for
+#        the claude port declaration. Group and case ownership are unchanged.
+#        `tests/behaviour/dispatch-truth-derivation.test.ts` is phase 4's
+#        TC-DERIVE-006 suite; phase 10 corrects only its local arm-set mirror.
+#        No AC and no TC changes owner.
 #
 # TEST-PLAN DEVIATIONS (declared, not silent):
 #     (a) §7.3 maps TC-LANE-003 to the lane/resume suite and TC-LANE-001..005 to
@@ -514,14 +557,26 @@
 #                                                             →  3 to phase 7
 #
 #   PHASE TOTALS (sum = 90): phase 1 = 0; phase 2 = 10; phase 3 = 4;
-#   phase 4 = 22; phase 5 = 24; phase 6 = 6; phase 7 = 24; phase 8 = 0.
-#   Check: 0+10+4+22+24+6+24+0 = 90. Every row M1–M90 appears exactly once in
+#   phase 4 = 22; phase 5 = 24; phase 6 = 6; phase 7 = 24; phase 8 = 0;
+#   phase 9 = 0; phase 10 = 0.
+#   Check: 0+10+4+22+24+6+24+0+0+0 = 90. Every row M1–M90 appears exactly once in
 #   the allocation, and every row's named case is reachable at its phase.
 #   PHASE 9 RE-ARMS ROWS; IT ALLOCATES NONE. The register stays 90 rows and the
 #   per-phase totals above are unchanged: review remediation makes the rows named
 #   in phase 9's block FAIL AGAIN at their existing owning cases (they pass
 #   against the reviewed HEAD, which is the defect). Phase 9 adds no row, moves
 #   no row, and takes no case ownership.
+#   PHASE 10 RE-ARMS ONE ROW; IT ALLOCATES NONE. M42 ("start a second session on
+#   a terminate-incapable adapter", owning cases TC-TERM-005/007, allocated to
+#   phase 5) becomes non-vacuous in PRODUCTION: before this phase the gate was fed
+#   only by doubles, so the row passed against a production path that restarted.
+#   Phase 10 adds no row (R13/R14 ask for none), moves no row, and takes no case
+#   ownership: the register stays 90 rows M1–M90 and the per-phase totals above
+#   sum to 90. The review's two register-completeness residuals (no row hoists the
+#   classifier arm above the artifact arms; no row exercises the
+#   unconfirmed-termination branch) remain test-plan-owner follow-ups and are NOT
+#   resolved by adding a row here — a new row would change the declared 90-row
+#   arithmetic this plan's acceptance rests on.
 #   NON-VACUITY STATEMENT (binding on every owning phase): a mutation that stops
 #   producing its NAMED failure is a BLOCKING finding; it is never repaired by
 #   deleting the mutation or relaxing the expected failure family.
@@ -2976,4 +3031,361 @@ phases:
         role: producer
     doneArtifacts:
       pipelineId: "CI pipeline for the GH-347 phase-9 commit (the remediation's targeted suites, the re-armed mutation rows and the aggregate gate green at the remediated HEAD)"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Review-iteration-2 remediation (N1 blocker, N2 major, N3/N4 info;
+  # R13–R16).
+  #
+  # Goal: close N1 in PRODUCTION — the terminate-capability declaration must
+  # reach the engine through the mounted session port, not only through a test
+  # double; close N2 by EXERCISING the unconfirmed-termination branch and
+  # correcting the pm-note that overstates it; correct N3/N4 as doc/comment and
+  # closed-set accuracy. NO decision is reopened: DM-5, TDR-0046, Appendix F(D)
+  # and AC-F5-4 are implemented exactly as written; the defect is that the
+  # production composition never feeds the gate its input.
+  #
+  # FINDING MAP (code-review/review-iter-2.yaml; iteration 2 = FAIL):
+  #   N1 (blocker, spec-compliance; location packages/core/src/app/dispatch.ts:
+  #     658-666 with packages/cli/src/production.ts:3117-3126 and
+  #     packages/adapters/src/harness/{claude,opencode}.ts): `declaresTerminate`
+  #     reads `port.capabilities.supportedOperations` and defaults to CAPABLE when
+  #     the declaration is absent. Neither production adapter's session port
+  #     exposes `capabilities` (`createClaudeSession`, claude.ts:157-233;
+  #     `createOpencodeSession`, opencode.ts:429,696+; `capabilities` is only a
+  #     local there), `createHarnessProfilePort` merely spreads the port, and the
+  #     dispatch `harnesses` map (production.ts:3117-3126) mounts them as-is. So
+  #     the claude-code adapter, which DECLARES the terminate gap
+  #     (CLAUDE_CAPABILITIES, claude.ts:29-41), is classified capable: a
+  #     below-bound stall consumes an ordinal, appends `economics.restart`, runs a
+  #     second iteration whose `resume` is a declared gap, and ends
+  #     `failed`/exit 1 "spawn failed before a session existed" with
+  #     `evidenceRefs: ["harness:spawn-failed"]` instead of terminal
+  #     `state-unverified`/exit 2 carrying `liveness:stalled`. The gate is real
+  #     only for doubles that attach the declaration (fixture terminate.ts:
+  #     189-233). AC-F5-4, F-5 and DM-5 fail on this production path.
+  #   N2 (major, test-coverage; location stall-loop.test.ts:359-420 +
+  #     fixture terminate.ts:310-340): the `!terminationConfirmed` half of the
+  #     gate (dispatch.ts:1169-1189,1247 — `terminated.value.terminated === false`
+  #     or a rejected terminate) is implemented but NEVER exercised. TC-TERM-005/
+  #     007 prove the `!terminateCapable` half; the second-stall case proves
+  #     re-signalling; no fixture returns `{terminated:false}` or rejects, so the
+  #     pm-note claim that "an UNCONFIRMED termination stops the restart too, with
+  #     the incapable below-bound pair" is overstated (verification integrity).
+  #   N3 (info, test-coverage; location chg-GH-347-test-plan.md:1329): the test
+  #     plan and the derivation test's local membership set call the closed arm
+  #     set "14 ids"; the code's closed set
+  #     (`DISPATCH_RESULT_ARM_IDS`, packages/core/src/domain/dispatch-result.ts:
+  #     117-137) has 16 — `restart-budget` and `undecidable` are returned by real
+  #     arms and are absent from the 25 derivation rows. No behavioural impact.
+  #   N4 (info, code-quality; location production.ts:548 + opencode.ts:126 and
+  #     tests/fixtures/dispatch/parity/process-runner.ts:8-9): `signalProcess` is
+  #     implemented and declared in the terminate seam but never called (the
+  #     adapter uses `signalTree`, which already falls back kill(-pid)→kill(pid)
+  #     in production); `reaped` is reported as "an exact-identity target was
+  #     MATCHED" (opencode.ts:767), not an act performed; the process-runner
+  #     header still says "`realChildStarts` counts zero by construction",
+  #     although it is now a live permitted-start counter.
+  #
+  # REMEDIATION TASKS (transcribed from the review's `remediation.tasks`, with
+  #   the file, the change, and the clause each task cites):
+  #
+  #   R13 [N1, B2] packages/cli/src/production.ts (dispatch `harnesses` map,
+  #      ~3117-3126) + packages/core/src/app/dispatch.ts:658-666
+  #     change: attach each mounted adapter's capability declaration to the
+  #       dispatch session port (opencode: OPENCODE_CAPABILITIES; claude-code:
+  #       CLAUDE_CAPABILITIES), or add `capabilities` to the dispatch port
+  #       contract and require the composition to supply it. Keep the fail-open
+  #       default only for ports that explicitly opt in; do not let a production
+  #       port reach the engine undeclared. Add a regression driving a
+  #       claude-shaped port (no terminate member, declared gap) through a
+  #       below-bound stall with an outside-set decisive artifact: one iteration,
+  #       zero economics.restart, terminal state-unverified exit 2 with
+  #       liveness:stalled evidence.
+  #     clause: "AC-F5-4; F-5 'On an adapter that declares no terminate
+  #       capability ... starts no second session'; DM-5 'its absence, together
+  #       with a declared gap, means the operation is unsupported'; DEC-4;
+  #       Appendix F(D)."
+  #
+  #   R14 [N2] tests/fixtures/dispatch/parity/terminate.ts +
+  #      tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #     change: add a fixture option so terminate reports `{terminated:false}`
+  #       (or rejects), and a case asserting one iteration, zero
+  #       economics.restart, terminal state-unverified exit 2, and
+  #       `terminate:failed` in the attempt evidence. Correct the PM note that
+  #       claims the incapable pair proves the unconfirmed branch.
+  #     clause: "F-5/F(D) 'an unconfirmed termination starts no second session';
+  #       AC-F5-4."
+  #
+  #   R15 [N3] chg-GH-347-test-plan.md:1329 +
+  #      tests/behaviour/dispatch-truth-derivation.test.ts:565-600
+  #     change: align the closed-arm-set count to the code's 16 ids and either
+  #       add rows/armId assertions for `restart-budget`/`undecidable` or state
+  #       they are loop/read-failure arms proven elsewhere.
+  #     clause: "AC-F8-5; TC-DERIVE-006 step 2."
+  #
+  #   R16 [N4, m3 residual] packages/cli/src/production.ts:548 /
+  #      packages/adapters/src/harness/opencode.ts:126 /
+  #      tests/fixtures/dispatch/parity/process-runner.ts:8-9 + package.json
+  #     change: drop or use `signalProcess`; reword `reaped` as matched or
+  #       perform a real reap; fix the process-runner header; optionally add
+  #       `check:no-shell` to the aggregate `check` chain so the CLI main() is
+  #       exercised.
+  #     clause: "NFR-5; AC-F9-5 clarity."
+  #
+  # DESIGN DECISIONS (stated, so @coder does not re-derive or improvise):
+  #   D1 (R13 shape). Promote the declaration onto the PORT TYPE as an OPTIONAL
+  #      member (`HarnessSessionPort.capabilities?: HarnessCapabilityDeclaration`)
+  #      and let each adapter return its own declaration; the gate then reads the
+  #      typed member. This is the review's stronger option ("a port cannot reach
+  #      the engine undeclared"), it keeps ONE source (the adapter's constant),
+  #      and it removes the cast. The optional member is required for source
+  #      compatibility: a port double without it stays valid
+  #      (tests/types/harness-stream.type-test.ts and
+  #      tests/structure/harness-stream-contract.test.ts already pin that, and
+  #      NEITHER file is edited). The fail-open default STAYS, and is DECLARED as
+  #      a limitation: an undeclared port is treated as capable. It is now
+  #      reachable only by an explicitly undeclared double, because every
+  #      production adapter declares and the composition never mounts an
+  #      undeclared port (D2 fills an absence).
+  #   D2 (production guarantee). The adapters' own declaration must pass through
+  #      `createHarnessProfilePort`'s spread and the raw claude entry unchanged —
+  #      that is the primary mechanism. At the composition edge, fill an ABSENT
+  #      declaration from the adapter's exported constant and NEVER override a
+  #      declaration the port reports (the opencode adapter resolves an injected
+  #      override at opencode.ts:429; shadowing it would separate the declaration
+  #      from the implementation that reads it). Do NOT throw: a throw would add
+  #      an error path the contract does not name and would trip the
+  #      "second error system" escalation.
+  #   D3 (R14 fixture shape). The double still declares capabilities (that is
+  #      what makes the gate non-vacuous) and the fixture's local two-field
+  #      capability literal becomes a real `HarnessCapabilityDeclaration` derived
+  #      from `OPENCODE_CAPABILITIES` (terminate removed for the incapable case,
+  #      and a full claude-shaped declaration for the claude case). The
+  #      intersection type in terminate.ts:213-216 would otherwise stop being
+  #      assignable to `HarnessSessionPort` once the member is typed. The new
+  #      `terminateConfirms: false` branch signals TERM, waits the CONFIGURED
+  #      grace through the injected delay, does NOT escalate, and reports
+  #      `{terminated:false, escalated:false, reaped:false}` — the unconfirmed
+  #      fact the gate must honour.
+  #   D4 (R15 shape). Keep `DISPATCH_RESULT_ARM_IDS` module-internal: exporting
+  #      it would add an exported name, move the `domain/dispatch-result.ts`
+  #      content-inventory allowance, and contradict its own "never a contract"
+  #      doc comment. The test mirrors the 16 ids locally (a comment names the
+  #      module constant as the source) and states that `restart-budget` and
+  #      `undecidable` are the loop/bound arm and the read-failure arm proven by
+  #      TC-LOOP-002/TC-LOOP-006 and TC-LOOP-007. The test plan row gets the same
+  #      statement.
+  #   D5 (test-plan version). R15 edits the test plan, so it advances 0.5 → 0.6
+  #      with a NEW changelog row (the 0.5 row is historical and is not
+  #      rewritten). No case, AC link, or register row changes.
+  #   D6 (R16 optional half DECLINED in-phase). Wiring `check:no-shell` into the
+  #      aggregate `check` chain is the review's OPTIONAL item and is NOT done
+  #      here: `package.json`'s `check` string is pinned VERBATIM by three
+  #      delivered suites (tests/checks/ci-checks.test.ts:700,
+  #      tests/checks/privacy-ci-wiring.test.ts:28,
+  #      tests/checks/license-ci-binding.test.ts:22), so the wiring moves a
+  #      pinned surface and the CI topology and is a plan revision. `package.json`
+  #      is therefore NOT declared by this phase and the m3 low residual ("the
+  #      CLI main() is not in `pnpm check`") persists, recorded rather than
+  #      papered over.
+  #   D7 (`signalProcess` + `reaped`). REMOVE the unused `signalProcess` seam
+  #      (production.ts:548 and the seam type at opencode.ts:126): the adapter
+  #      signals through `signalTree`, whose production binding already falls
+  #      back from kill(-pid) to kill(pid), so a second signalling path would be
+  #      an unproven route to the same act. `reaped` KEEPS its name and its
+  #      observed-boolean behaviour (renaming a contract member is a contract
+  #      change and an escalation); its type comment and the adapter's report
+  #      site say "an exact-identity target was matched", which is what the
+  #      boolean has always meant.
+  #   D8 (no spec edit). The spec at v1.7 already states the required
+  #      behaviour; this phase corrects wiring, evidence, and two doc/comment
+  #      statements. If a task appears to need a spec change, STOP and report.
+  #   D9 (doc page). NO current-truth page is edited here. The review's m1
+  #      reference-page note (the incapable-adapter terminal outcome and the
+  #      resume-clears fact) is routed to lifecycle phase 7 by the pm-notes
+  #      append; `@doc-syncer` re-runs after this commit.
+  #
+  # OBLIGATIONS:
+  #   10.1 `packages/core/src/contracts/harness.ts`: add the OPTIONAL
+  #        `capabilities?: HarnessCapabilityDeclaration` member to
+  #        `HarnessSessionPort` with a doc comment naming the engine gate, the
+  #        absent-means-undeclared rule, the retained fail-open default, and the
+  #        production obligation to declare. It is a TYPE MEMBER only: no export,
+  #        no required member, no pin move.
+  #   10.2 `packages/adapters/src/harness/claude.ts`: `createClaudeSession`
+  #        returns `capabilities: CLAUDE_CAPABILITIES` on its port. Claude's
+  #        declaration omits `terminate`, which is the whole point of N1.
+  #   10.3 `packages/adapters/src/harness/opencode.ts`: the returned port carries
+  #        the RESOLVED `capabilities` (the same binding its terminate/resume/
+  #        session-list gates read at :713/:615/:817), so declaration and
+  #        implementation can never diverge. R16: drop `signalProcess` from the
+  #        seam type (:126); reword the `reaped` report (:767) as a matched
+  #        exact-identity target.
+  #   10.4 `packages/core/src/app/dispatch.ts`: `declaresTerminate` reads
+  #        `port.capabilities?.supportedOperations` (cast removed); the
+  #        absent-declaration default STAYS capable; the comment names the
+  #        production obligation and the regression that holds it.
+  #   10.5 `packages/cli/src/production.ts`: the dispatch `harnesses` map
+  #        guarantees a declaration reaches the engine per D2 (fill absent, never
+  #        override; import `OPENCODE_CAPABILITIES` beside the existing
+  #        `CLAUDE_CAPABILITIES` import). R16: delete `signalProcess` (:548).
+  #   10.6 `tests/fixtures/dispatch/parity/terminate.ts`: full capability
+  #        declarations per D3; add `terminateConfirms?: boolean` (default true)
+  #        and a `harnessKind?: "opencode" | "claude-code"` shaper (default
+  #        opencode) so the case can be claude-shaped. No delivered row is
+  #        changed; the option defaults preserve today's behaviour.
+  #   10.7 `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`:
+  #        (a) N2 case — unconfirmed termination (outside-set decisive artifact,
+  #        readable truth, below bound): one acquisition, zero
+  #        `economics.restart`, terminal `state-unverified` at exit 2,
+  #        `liveness:stalled` AND `terminate:failed` in the attempt evidence, one
+  #        spawn, zero resumes. It is an ADDITIONAL `test(...)` inside the
+  #        EXISTING TC-TERM-005 describe ("a terminate-incapable adapter starts
+  #        no second session" — the no-second-session gate) and its differing
+  #        title names the unconfirmed fact; NO TC id is created, so the 50-case
+  #        map is unchanged; (b) the R13 claude-shaped below-bound case (same
+  #        outcome on a claude-shaped port with a declared terminate gap), an
+  #        ADDITIONAL `test(...)` inside the EXISTING TC-TERM-007 describe. (b) is
+  #        END-TO-END CONFIRMATION, not the pre-fix-failing regression: the double
+  #        already declared, so it passes against the reviewed HEAD. The pre-fix
+  #        failures are 10.8's wiring assertions — say so in the case comments and
+  #        do not claim a pre-fix failure the case does not have. The test plan's
+  #        TC-TERM-005 row is NOT rewritten for (a) (R14 does not ask for it and
+  #        10.10's edit is R15's alone): the case is an additional observation of
+  #        the same normative clause, and its title states the premise.
+  #   10.8 The N1 regression, in the suites that construct the REAL things:
+  #        (a) `tests/behaviour/harness-claude-session.test.ts` — the port from
+  #        `makeClaude(...)` reports `CLAUDE_CAPABILITIES`, its
+  #        `supportedOperations` excludes `terminate`, and the port exposes no
+  #        `terminate` member. Fails against the reviewed HEAD (undefined).
+  #        (b) `tests/behaviour/harness-opencode-resume-stream.test.ts` — the port
+  #        from `makePort(...)` reports `OPENCODE_CAPABILITIES` including
+  #        `terminate`, and an injected `capabilities` override is the value the
+  #        port reports (single source with 10.3). Fails against the reviewed
+  #        HEAD.
+  #        (c) `tests/structure/dispatch-composition.test.ts` — the production
+  #        dispatch composition mounts BOTH session ports WITH a declaration and
+  #        the claude-code declaration excludes `terminate`. Use the suite's
+  #        established production-source assertion style (it already pins
+  #        `existingLane`, `delay`, and `terminateWait` this way) and pair it with
+  #        (a)/(b), which are the behavioural half; do not rest the regression on
+  #        a string match alone.
+  #   10.9 `tests/behaviour/dispatch-truth-derivation.test.ts`: per D4, the local
+  #        membership set becomes the 16 ids, with a comment naming
+  #        `DISPATCH_RESULT_ARM_IDS` as the source and an assertion that the
+  #        mirrored set has 16 entries; state that `restart-budget` and
+  #        `undecidable` are loop/bound and read-failure arms proven by
+  #        TC-LOOP-002/TC-LOOP-006 and TC-LOOP-007. The 25 rows, the 10-token
+  #        assertion, and every delivered expectation stay unchanged.
+  #   10.10 `chg-GH-347-test-plan.md`: correct line 1329 to the 16-id closed set
+  #        with the same loop/read-failure statement, and add the v0.6 changelog
+  #        row per D5. No case id, AC link, fixture row, or register row changes.
+  #   10.11 `tests/fixtures/dispatch/parity/process-runner.ts`: replace the
+  #        "counts zero by construction" header with the live permitted-start
+  #        semantics (a composed run observes an intercepted start at 0; a
+  #        permitted-start control observes 1). Comment only.
+  #   10.12 `chg-GH-347-pm-notes.yaml`: a NOTES APPEND through the notes
+  #        primitive that (i) corrects the unconfirmed-termination claim to name
+  #        the new TC-TERM-005 unconfirmed case as the proof, (ii) records that N1 is
+  #        closed in production with the adapter-port and composition assertions
+  #        as the regression, (iii) records the D6 declined aggregate-chain
+  #        wiring and the persisting m3 residual, and (iv) routes the m1
+  #        reference-page note to the lifecycle-7 doc pass. Never a hand edit of
+  #        an existing note, a timestamp, or the phase state.
+  #
+  # ORDER: 10.1 → 10.4 is one wiring chain (contract member → adapter
+  #   declarations → typed gate); 10.5 closes the composition edge; 10.6 → 10.8
+  #   prove it (fixture, engine case, wiring assertions); 10.9/10.10 correct the
+  #   closed-set statement; 10.11/10.12 close the cleanliness findings. ONE
+  #   commit, one gate.
+  #
+  # SCOPE NOTES (binding):
+  #   - NO PINNED SURFACE MOVES. The optional member is a type member, not an
+  #     export, so `tests/structure/inventory.json`, the content-inventory
+  #     allowances, `tests/fixtures/ports/v1-contract-inventory.json`, and the
+  #     subpath list stay byte-identical. An export appearing anyway is an
+  #     ESCALATION, not a silent edit.
+  #   - NO contract token, projection class, exit code, error-table row, domain
+  #     kind, attempt-schema version, configuration key, or default changes
+  #     (NG-4, NFR-3, NFR-11). `capabilities` is data the adapter already owns.
+  #   - NO delivered assertion is deleted, renamed, relaxed, or reordered. 10.6's
+  #     option defaults and 10.9's set extension ADD coverage; 10.11 is a comment.
+  #   - `packages/cli/src/edge.ts`, `packages/core/src/domain/dispatch-result.ts`
+  #     and both adapter capability CONSTANTS are NOT edited: the constants are
+  #     the single source the ports and the composition reference.
+  #   - No provider adapter (github/gitlab/jira), no daemon family, no
+  #     `.opencode/**` prompt, and no `package.json` (D6).
+  #
+  # ACCEPTANCE: NO AC and NO TC. Phase 10 owns none and moves none, so the plan's
+  #   arithmetic is unchanged: AC ownership 0+5+6+9+13+4+5+0+0+0 = 42/42 and the
+  #   TC map 0+6+7+10+14+4+9+0+0+0 = 50/50, with 0 orphans, 0 double-owned, 0
+  #   unmapped. What the phase does is RE-ESTABLISH PRODUCTION EVIDENCE for
+  #   AC-F5-4 (owner: phase 5) and strengthen AC-F8-5's closed-set statement
+  #   (owner: phase 4). A reviewer who wants an owner to move is asking for a plan
+  #   revision, not a silent transfer.
+  #
+  # MUTATION ROWS RE-ARMED: M42 ("start a second session on a terminate-incapable
+  #   adapter", owning cases TC-TERM-005/007) becomes non-vacuous for the
+  #   production composition; the register stays 90 rows M1–M90 and the per-phase
+  #   allocation is unchanged (phase 10 allocates none and takes no case
+  #   ownership). R13/R14 add no row; the two register-completeness residuals stay
+  #   with the test-plan owner (see the header's phase-10 mutation note).
+  #
+  # Gate (expected signal: exit 0 at every line; the adapter ports declare, the
+  #   production composition never mounts an undeclared port, the unconfirmed
+  #   branch is exercised, the 16-id mirror holds, and the aggregate gate is green
+  #   at the HEAD this phase produces):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-claude-session.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/behaviour/dispatch-token-closure.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-battery.test.ts tests/conformance/dispatch/dispatch-parity-no-shell.test.ts tests/conformance/dispatch/dispatch-parity-spawn.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts tests/structure/harness-stream-contract.test.ts tests/structure/harness-contract.test.ts tests/structure/harness-neutrality.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/dispatch-contract-invariance.test.ts tests/checks/no-shell-dispatch.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/dispatch-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check   <-- the BINDING boundary gate
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Review-iteration-2 remediation: the terminate-capability declaration reaching the engine through every production session port, the exercised unconfirmed-termination branch, the 16-id closed arm set, and the terminate-seam/runner comment corrections"
+    kind: delivery
+    summary: "fix(GH-347): review-iteration-2 remediation"
+    scope:
+      files:
+        # R13 — the port contract half (OPTIONAL type member, not an export).
+        - packages/core/src/contracts/harness.ts
+        # R13 — each adapter declares on its own port (single source).
+        - packages/adapters/src/harness/claude.ts
+        # R13 + R16 — the opencode declaration, signalProcess removal, reaped wording.
+        - packages/adapters/src/harness/opencode.ts
+        # R13 — the gate reads the typed member instead of casting.
+        - packages/core/src/app/dispatch.ts
+        # R13 + R16 — the composition guarantee and the unused seam removal.
+        - packages/cli/src/production.ts
+        # R14 — the fixture option and the full declaration shape.
+        - tests/fixtures/dispatch/parity/terminate.ts
+        # R14 + R13 — the unconfirmed case and the claude-shaped below-bound case.
+        - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+        # R13 — the pre-fix-failing adapter-port declarations.
+        - tests/behaviour/harness-claude-session.test.ts
+        - tests/behaviour/harness-opencode-resume-stream.test.ts
+        # R13 — the production-composition wiring regression.
+        - tests/structure/dispatch-composition.test.ts
+        # R15 — the 16-id closed-set mirror.
+        - tests/behaviour/dispatch-truth-derivation.test.ts
+        # R15 — the same statement in the test plan and its v0.6 changelog row.
+        - doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-test-plan.md
+        # R16 — the live-counter header.
+        - tests/fixtures/dispatch/parity/process-runner.ts
+        # R14/D9 — the PM-note correction is a notes APPEND, declared so the
+        # commit primitive can stage it.
+        - doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-pm-notes.yaml
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-10 commit (the adapter-port and composition declaration assertions, the unconfirmed-termination case, the 16-id mirror and the aggregate gate green at the HEAD this phase produces)"
       trackerTransition: "in-review"

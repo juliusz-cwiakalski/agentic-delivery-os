@@ -122,8 +122,6 @@ export type OpencodeHarnessOptions = {
     }[];
     /** Signal a matched runtime's own tree (the group it leads), then the runtime. */
     readonly signalTree: (pid: number, signal: "SIGTERM" | "SIGKILL") => boolean;
-    /** Signal one exact-identity process that is outside this lane's tree. */
-    readonly signalProcess: (pid: number, signal: "SIGTERM" | "SIGKILL") => boolean;
   };
   /**
    * The evaluated supported-window verdict and the normalized version the
@@ -694,6 +692,10 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   };
 
   return {
+    // GH-347 AC-F5-4: the port reports the RESOLVED declaration its own
+    // terminate/resume/session-list gates read, so the declaration and the
+    // implementation cannot diverge.
+    capabilities,
     spawn: (input) =>
       run(
         input,
@@ -758,9 +760,10 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       if (escalated) {
         for (const pid of survivors) tree.signalTree(pid, "SIGKILL");
       }
-      // Every reported boolean is an OBSERVED act: the terminal signal was
-      // issued to a matched tree, the escalation ran, and the exact-identity
-      // reap predicate matched this lane's runtime(s).
+      // Every reported boolean is an OBSERVED fact: the terminal signal was
+      // issued to a matched tree, the escalation ran, and `reaped` reports that
+      // this lane's exact identity (session id or `ticket-<REF>` title) was
+      // MATCHED in the runtime table — a match, not an OS reap act.
       const value: HarnessTerminateResult = {
         terminated: termSignals > 0,
         escalated,

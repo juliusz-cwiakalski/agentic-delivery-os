@@ -5,15 +5,17 @@
  * (`harnessSpawnRunner`, the streaming starter built from it, and the git
  * child runner). It records each invocation and fails the run BY NAME when the
  * executable is a shell or an argument is a script path. It never starts a real
- * process: `realChildStarts` counts zero by construction, and the only starts
- * it observes are the injected seams.
+ * process: `realChildStarts` is a LIVE counter of permitted starts, so a
+ * composed run observes an intercepted start at 0 and a permitted-start control
+ * observes 1.
  */
+
+import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
 import type {
   HarnessSpawnRunner,
   HarnessSpawnRunnerResult,
   HarnessSpawnStarter,
 } from "../../../../packages/core/src/contracts/index";
-import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
 import { streamStarterFromRunner } from "../../harness/harness-io";
 
 /** The shell executables the guard refuses outright (basename match). */

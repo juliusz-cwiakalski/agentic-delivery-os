@@ -571,11 +571,17 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
       expect(derivation.armId, `${row.id} ${row.arm}`).toBe(row.declaredArm);
     }
     // Every arm id the table observes is one of the declared closed set: no
-    // input reaches two arms and no arm is invented.
+    // input reaches two arms and no arm is invented. This mirrors
+    // `DISPATCH_RESULT_ARM_IDS` in `packages/core/src/domain/dispatch-result.ts`
+    // (module-internal, never a contract); the canonical set has 16 ids.
+    // `restart-budget` and `undecidable` are not derivation inputs reachable
+    // from this table: they are the loop/bound arm (TC-LOOP-002/TC-LOOP-006) and
+    // the read-failure arm (TC-LOOP-007), proven there.
     const declared = new Set([
       "spawn-failure",
       "resume-uneconomical",
       "resume-unreadable",
+      "restart-budget",
       "harness-unreadable",
       "spawn-refused",
       "tracker-done",
@@ -587,7 +593,9 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
       "commits-incomplete",
       "nothing-to-do",
       "classifier",
+      "undecidable",
     ]);
+    expect(declared.size).toBe(16);
     for (const row of rows) {
       expect(declared.has(row.declaredArm), `${row.id} ${row.declaredArm}`).toBe(true);
     }

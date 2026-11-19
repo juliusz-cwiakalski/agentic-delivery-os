@@ -155,6 +155,10 @@ export const createClaudeSession = (options: ClaudeHarnessOptions): HarnessSessi
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
+    // GH-347 AC-F5-4: the adapter's own declaration rides its port, so the
+    // engine's terminate gate reads the real gap (no `terminate` operation)
+    // instead of falling back to "capable" on an undeclared port.
+    capabilities: CLAUDE_CAPABILITIES,
     spawn: async (input) => {
       const environment = options.buildEnvironment(input.descriptor);
       if (!environment.ok) return environment;

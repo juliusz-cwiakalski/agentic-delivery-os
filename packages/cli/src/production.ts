@@ -70,6 +70,7 @@ import {
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
   mapCoordinatorNewTurn,
+  OPENCODE_CAPABILITIES,
 } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
 import {
@@ -209,6 +210,7 @@ import {
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
+  type HarnessCapabilityDeclaration,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
   type HarnessExecutionEnvironmentDescriptor,
@@ -545,9 +547,28 @@ const productionTerminateTree = {
     if (signals.signal(-pid, signal).ok) return true;
     return signals.signal(pid, signal).ok;
   },
-  signalProcess: (pid: number, signal: "SIGTERM" | "SIGKILL"): boolean =>
-    createNodeProcessPort().signal(pid, signal).ok,
 };
+
+/**
+ * Guarantee a declaration reaches the engine from the composition edge
+ * (GH-347 AC-F5-4, F-5, DM-5; review N1).
+ *
+ * The adapter's own declaration is the single source and passes through the
+ * composition unchanged. This edge fills an ABSENT declaration from the
+ * adapter's exported constant and NEVER overrides one the port reports: the
+ * opencode adapter resolves an injected override, and shadowing it would
+ * separate the declaration from the implementation that reads it. It never
+ * throws — an undeclared port is filled, not refused.
+ */
+const harnessWithDeclaration = (
+  port: HarnessSessionPort,
+  declaration: HarnessCapabilityDeclaration,
+): HarnessSessionPort =>
+  port.capabilities === undefined ? { ...port, capabilities: declaration } : port;
+
+/** The declaration each configured harness kind exports as its single source. */
+const harnessDeclaration = (kind: HarnessKind): HarnessCapabilityDeclaration =>
+  kind === "opencode" ? OPENCODE_CAPABILITIES : CLAUDE_CAPABILITIES;
 
 /** The declared harness kinds, used to validate a persisted lane fact. */
 const harnessKindOf = (value: string | undefined): HarnessKind | undefined =>
@@ -2408,59 +2429,65 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         assembleLiveness: assembleHarnessLiveness,
         now: nowIso,
       };
-      return kind === "opencode"
-        ? createOpencodeSession({
-            ...common,
-            starter: harnessSpawnStarter,
-            command: "opencode",
-            // The gate reads the facts the dispatch admission resolved for this
-            // run, so a refusal cannot be bypassed by the adapter's default.
-            ...(gate === undefined ? {} : { versionGate: gate }),
-            // The binding's surface mapping is injected: the adapter owns no
-            // second copy of the rules (GH-335 F-3, TDR-0040).
-            bindingSeams: {
-              identityViolation: harnessAgentIdentityViolation,
-              expressibility: evaluateModelExpressibility,
-              invocationArgs: bindingInvocationArgs,
-              environmentRecords: bindingEnvironmentRecords,
-            },
-            spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
-            resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
-            listArgs: PRODUCTION_OPENCODE_ARGS.list,
-            // GH-347 DEC-4: the declared grace is waited through the one
-            // injected delay fact with reason `terminate-grace`.
-            terminateWait: (ms) => dispatchDelay(ms, "terminate-grace"),
-            // GH-347 AC-F5-5, TDR-0046 DC-2/DC-3: the process-tree seam is
-            // bound HERE, at the composition edge, so the adapter carries no
-            // ambient process access.
-            terminateTree: productionTerminateTree,
-            telemetrySinkFor: ({ workItemRef }) => {
-              const resolution = resolveProductionHarnessSettings();
-              if (!resolution.ok) return undefined;
-              return createProductionTelemetrySink({
-                store,
-                workItemRef,
-                // The invoking command's audit run id: every step record joins
-                // the audit ledger instead of carrying an invented identity.
-                runId: invocation?.runId ?? TELEMETRY_RUN_ID_UNAVAILABLE,
-                environment,
-                environmentPrefix: brand.environmentPrefix,
-                treeRoot: cwd,
-                repository: cwd,
-                nowIso,
-                newFenceToken,
-                sessionTotals: createOpencodeSessionTotalsReader({
-                  opener: createBunSqliteStoreOpener(),
-                  storePath: resolution.settings.opencodeDatabasePath,
-                }),
-              });
-            },
-          })
-        : createClaudeSession({
-            ...common,
-            command: "claude",
-            headlessArgs: ["--print", "--output-format", "json"],
-          });
+      const adapter =
+        kind === "opencode"
+          ? createOpencodeSession({
+              ...common,
+              starter: harnessSpawnStarter,
+              command: "opencode",
+              // The gate reads the facts the dispatch admission resolved for this
+              // run, so a refusal cannot be bypassed by the adapter's default.
+              ...(gate === undefined ? {} : { versionGate: gate }),
+              // The binding's surface mapping is injected: the adapter owns no
+              // second copy of the rules (GH-335 F-3, TDR-0040).
+              bindingSeams: {
+                identityViolation: harnessAgentIdentityViolation,
+                expressibility: evaluateModelExpressibility,
+                invocationArgs: bindingInvocationArgs,
+                environmentRecords: bindingEnvironmentRecords,
+              },
+              spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
+              resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
+              listArgs: PRODUCTION_OPENCODE_ARGS.list,
+              // GH-347 DEC-4: the declared grace is waited through the one
+              // injected delay fact with reason `terminate-grace`.
+              terminateWait: (ms) => dispatchDelay(ms, "terminate-grace"),
+              // GH-347 AC-F5-5, TDR-0046 DC-2/DC-3: the process-tree seam is
+              // bound HERE, at the composition edge, so the adapter carries no
+              // ambient process access.
+              terminateTree: productionTerminateTree,
+              telemetrySinkFor: ({ workItemRef }) => {
+                const resolution = resolveProductionHarnessSettings();
+                if (!resolution.ok) return undefined;
+                return createProductionTelemetrySink({
+                  store,
+                  workItemRef,
+                  // The invoking command's audit run id: every step record joins
+                  // the audit ledger instead of carrying an invented identity.
+                  runId: invocation?.runId ?? TELEMETRY_RUN_ID_UNAVAILABLE,
+                  environment,
+                  environmentPrefix: brand.environmentPrefix,
+                  treeRoot: cwd,
+                  repository: cwd,
+                  nowIso,
+                  newFenceToken,
+                  sessionTotals: createOpencodeSessionTotalsReader({
+                    opener: createBunSqliteStoreOpener(),
+                    storePath: resolution.settings.opencodeDatabasePath,
+                  }),
+                });
+              },
+            })
+          : createClaudeSession({
+              ...common,
+              command: "claude",
+              headlessArgs: ["--print", "--output-format", "json"],
+            });
+      // GH-347 AC-F5-4 (review N1): the composition edge guarantees the
+      // adapter's own declaration reaches the engine. An absent declaration is
+      // filled from the adapter's exported constant; a present one is never
+      // overridden.
+      return harnessWithDeclaration(adapter, harnessDeclaration(kind));
     };
 
     const phaseSummary = (changeRef: string): DispatchPhaseLedger => {

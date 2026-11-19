@@ -9,6 +9,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  CLAUDE_CAPABILITIES,
+  createClaudeSession,
+} from "../../../packages/adapters/src/harness/index";
+import {
   readDispatchAttempts,
   readDispatchLanes,
 } from "../../../packages/core/src/app/dispatch-ledger";
@@ -35,6 +39,17 @@ import {
   readOk,
   tracker,
 } from "../../fixtures/dispatch/truth";
+import {
+  assembleLiveness,
+  CLAUDE_COMMAND,
+  CLAUDE_HEADLESS_ARGS,
+  classifier,
+  createFakeCredentialPort,
+  declaredBuildEnvironment,
+  output,
+  runnerResult,
+  TIMEOUT_MS,
+} from "../../fixtures/harness/harness-io";
 
 const STALL_LIVENESS = [
   sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
@@ -78,6 +93,8 @@ const build = (input: {
   readonly restartBudget?: number;
   readonly restartCount?: number;
   readonly terminateCapable?: boolean;
+  readonly harnessKind?: "opencode" | "claude-code";
+  readonly terminateConfirms?: boolean;
   readonly title?: string;
   readonly advanceOnDelay?: (ms: number) => void;
 }) => {
@@ -91,6 +108,10 @@ const build = (input: {
       input.advanceOnDelay?.(ms);
     },
     ...(input.terminateCapable === undefined ? {} : { terminateCapable: input.terminateCapable }),
+    ...(input.harnessKind === undefined ? {} : { harnessKind: input.harnessKind }),
+    ...(input.terminateConfirms === undefined
+      ? {}
+      : { terminateConfirms: input.terminateConfirms }),
     ...(input.title === undefined ? {} : { title: input.title }),
   });
   const scenario = createCommandScenario({
@@ -354,6 +375,44 @@ describe("TC-TERM-005 a terminate-incapable adapter starts no second session", (
       scenario.dispose();
     }
   });
+
+  test("an unconfirmed termination also starts no second session", async () => {
+    // GH-347 F-5/F(D), AC-F5-4 (review N2): a capable adapter whose terminate
+    // reports `terminated: false` leaves the termination UNCONFIRMED, so the
+    // engine starts no second session — no ordinal, no `economics.restart`, and
+    // terminal `state-unverified` at exit 2 with the stall and termination
+    // evidence. This is the unconfirmed half of the no-second-session gate; the
+    // incapable pair above proves the `!terminateCapable` half.
+    const { scenario, stallPort } = build({
+      label: "term-005-unconfirmed",
+      iterations: [stallScript(), cleanScript()],
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      readsSequence: [outsideSetReads(), readsFrom()],
+      restartBudget: 3,
+      restartCount: 0,
+      terminateCapable: true,
+      terminateConfirms: false,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.restarts).toBe(0);
+      expect(attemptsOf(scenario)).toHaveLength(1);
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:stalled");
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("terminate:failed");
+      expect(restartsOf(scenario)).toHaveLength(0);
+      // No second session: one acquire, one spawn, zero resumes; the terminate
+      // was asked exactly once, at the declared grace.
+      expect(stallPort.acquisitions()).toBe(1);
+      expect(stallPort.calls.filter((call) => call === "spawn")).toHaveLength(1);
+      expect(stallPort.calls.filter((call) => call === "resume")).toHaveLength(0);
+      expect(stallPort.terminateCalls).toHaveLength(1);
+      expect(stallPort.terminateCalls[0]?.graceMs).toBe(20_000);
+    } finally {
+      scenario.dispose();
+    }
+  });
 });
 
 describe("TC-TERM-007 an incapable adapter never starts a second session", () => {
@@ -385,6 +444,93 @@ describe("TC-TERM-007 an incapable adapter never starts a second session", () =>
       expect(stallPort.acquisitions()).toBe(1);
       expect(stallPort.terminateCalls).toHaveLength(0);
       expect(stallPort.violations).toEqual([]);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("a claude-shaped port with a declared terminate gap is terminal state-unverified", async () => {
+    // END-TO-END CONFIRMATION, not the pre-fix-failing regression: the double
+    // already carried its declaration on the reviewed HEAD, so this case passes
+    // there. The pre-fix failures are held by the adapter-port declaration
+    // assertions (harness-claude-session, harness-opencode-resume-stream) and the
+    // production-composition assertion, which the reviewed HEAD fails (R13).
+    const { scenario, stallPort } = build({
+      label: "term-007-claude-shaped-below-bound",
+      iterations: [stallScript(), cleanScript()],
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      readsSequence: [outsideSetReads(), readsFrom()],
+      restartBudget: 3,
+      restartCount: 0,
+      terminateCapable: false,
+      harnessKind: "claude-code",
+    });
+    try {
+      expect(stallPort.port.capabilities?.supportedOperations).not.toContain("terminate");
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.restarts).toBe(0);
+      expect(attemptsOf(scenario)).toHaveLength(1);
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:stalled");
+      expect(restartsOf(scenario)).toHaveLength(0);
+      expect(stallPort.calls.filter((call) => call === "spawn")).toHaveLength(1);
+      expect(stallPort.calls.filter((call) => call === "resume")).toHaveLength(0);
+      expect(stallPort.acquisitions()).toBe(1);
+      expect(stallPort.terminateCalls).toHaveLength(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("the PRODUCTION claude adapter declaration stops a below-bound stall before any second session", async () => {
+    // R13 (review N1): the port here is the object the production composition
+    // mounts — createClaudeSession's own port, not the fixture double — and its
+    // real declaration (CLAUDE_CAPABILITIES, with the terminate gap) is what the
+    // engine's gate reads. A harness-reported stall below the bound is therefore
+    // terminal `state-unverified` at exit 2 with no ordinal and no second
+    // session. On the reviewed HEAD this port carried no declaration, the gate
+    // defaulted to capable, an ordinal was consumed and the resume gap ended
+    // `failed` at exit 1.
+    let spawnInvocations = 0;
+    const port = createClaudeSession({
+      command: CLAUDE_COMMAND,
+      runner: async () => {
+        spawnInvocations += 1;
+        return runnerResult(output("cc_stall", "complete"), 0, { timedOut: true });
+      },
+      buildEnvironment: declaredBuildEnvironment(createFakeCredentialPort()),
+      classify: classifier,
+      assembleLiveness,
+      now: () => "2026-11-08T10:00:00.000Z",
+      timeoutMs: TIMEOUT_MS,
+      headlessArgs: CLAUDE_HEADLESS_ARGS,
+    });
+    expect(port.capabilities).toBe(CLAUDE_CAPABILITIES);
+    expect(port.capabilities?.supportedOperations).not.toContain("terminate");
+    const scenario = createCommandScenario({
+      label: "term-007-production-claude",
+      harnessPort: port,
+      readsSequence: [outsideSetReads(), readsFrom()],
+      livenessIntervalMs: 30_000,
+      killGraceMs: 20_000,
+      laneOwner: { processId: 4242, startedAt: "2026-11-08T10:00:00.000Z" },
+      restartBudget: 3,
+      restartCount: 0,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.restarts).toBe(0);
+      expect(attemptsOf(scenario)).toHaveLength(1);
+      // The claude adapter declares no liveness source, so the stall evidence is
+      // the honest `unknown` verdict beside the harness-reported timeout; the
+      // regression's subject is the declaration reaching the gate, not liveness
+      // corroboration.
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:unknown");
+      expect(restartsOf(scenario)).toHaveLength(0);
+      expect(spawnInvocations).toBe(1);
     } finally {
       scenario.dispose();
     }

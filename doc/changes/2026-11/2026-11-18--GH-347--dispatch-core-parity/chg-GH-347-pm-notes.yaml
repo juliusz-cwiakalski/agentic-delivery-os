@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-19T06:20:11.995Z }
   delivery_planning: { started: null, completed: 2026-11-19T00:20:05.234Z }
   dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
-  delivery: { started: null, completed: 2026-11-19T06:20:28.993Z }
+  delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: 2026-11-19T06:20:20.389Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -909,4 +909,107 @@ notes:
       states it BEFORE starting the code edit and reopen them together; that
       would have collapsed this cycle into one."
     type: retro
+    date: "2026-11-19"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml). 16 of 18
+      iteration-1 findings resolved (B1, M1-M6, m1-m6 verified fixed; i1-i4
+      accepted as-is). One NEW BLOCKER and one new major: (N1/B2) the
+      terminate-capability gate is inert in production because no production
+      session port carries a capability declaration (production.ts:3117-3126,
+      claude.ts, opencode.ts all lack 'capabilities'), so the Claude Code
+      adapter, which declares the terminate gap, is classified capable; a
+      below-bound stall then consumes an ordinal and the second iteration's
+      resume (a declared gap) ends failed/exit 1 instead of terminal
+      state-unverified/exit 2. (N2) the unconfirmed-termination branch is
+      implemented but never exercised - no fixture returns terminated:false or
+      rejects, so the PM note's claim that the incapable pair proves it is
+      overstated. Infos: the closed arm set is 16 ids in the code but 14 in the
+      test plan/test comment; the signalProcess seam is unused and a
+      process-runner header comment is stale."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-2 remediation routing (R13-R16 in the review record):
+      R13 attaches the real capability declarations to the production session
+      ports and adds a Claude-shaped regression; R14 adds a non-confirming
+      terminate fixture and case so the unconfirmed-termination branch is
+      exercised; R15 corrects the arm-id count to the canonical 16 in the test
+      plan and the test; R16 addresses the unused seam, the reaped meaning and
+      the stale header. Executed as plan phase 10 under a reopened delivery,
+      then the docs are re-checked (the capability wiring is a documented
+      claim), then review iteration 3. The three recorded residuals stay
+      deferred to their owners (TDR-0046, @test-plan-writer, the m1 page
+      owner)."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (review iteration 2): the B2 fix shipped a gate that read a field
+      no production object carries. The unit-shaped test proved the gate's logic
+      with a fixture that DOES carry the field, so it passed while production
+      could never take the gate. This is the same class as iteration 1: a test
+      proving the shape rather than the wiring. Process fix: any new port field
+      a decision depends on must be asserted on a PRODUCTION-composed object,
+      not only on a double."
+    type: retro
+    date: "2026-11-19"
+  - text: "CORRECTION to the plan-phase-9 R3/R4 note (review iteration 2, N2/R14):
+      the claim that the incapable below-bound pair proves the UNCONFIRMED
+      termination branch is WITHDRAWN. The incapable pair (TC-TERM-005/007)
+      proves only the `!terminateCapable` half. The unconfirmed half
+      (`terminated:false`, or a rejected terminate) is now exercised by the
+      additional TC-TERM-005 case 'an unconfirmed termination also starts no
+      second session' over the new non-confirming fixture option
+      (terminateConfirms:false): one acquisition, zero economics.restart,
+      terminal state-unverified at exit 2, with liveness:stalled AND
+      terminate:failed in the attempt evidence, one terminate call at the
+      declared 20s grace. The phase-9 sentence stays as written history."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-2 R13 (N1) is closed in PRODUCTION. HarnessSessionPort
+      gains an OPTIONAL typed `capabilities` member (a type member only: no new
+      export, no pinned surface moved); createClaudeSession returns
+      CLAUDE_CAPABILITIES (its terminate gap included), createOpencodeSession
+      returns its RESOLVED declaration (terminate included; an injected override
+      is reported verbatim), declaresTerminate reads the typed member with no
+      cast, and the dispatch composition's `harnesses` map fills an ABSENT
+      declaration and never overrides a present one. Evidence on
+      PRODUCTION-composed objects: harness-claude-session.test.ts and
+      harness-opencode-resume-stream.test.ts assert the real ports report their
+      declarations (the reviewed HEAD's ports expose none); the new TC-TERM-007
+      production-composed case drives createClaudeSession's own port through a
+      below-bound stall and asserts one spawn, zero economics.restart, no
+      ordinal, terminal state-unverified at exit 2 with the honest liveness
+      evidence (the claude adapter declares no liveness source, so the stall is
+      the harness-reported timeout and the verdict is liveness:unknown); and
+      dispatch-composition.test.ts asserts both mounts pass through
+      harnessWithDeclaration with the claude declaration excluding terminate.
+      The fail-open default stays, now reachable only by an explicitly
+      undeclared double."
+    type: info
+    date: "2026-11-19"
+  - text: "R15 (N3) and R16 (N4) closed. The test plan advances 0.5 -> 0.6: TC-DERIVE-006
+      step 2 states the canonical 16-id closed arm set (matching
+      DISPATCH_RESULT_ARM_IDS) and names restart-budget as the loop/bound arm
+      (TC-LOOP-002/TC-LOOP-006) and undecidable as the read-failure arm
+      (TC-LOOP-007); the delivered test mirrors the 16 ids locally, names the
+      module constant as the source, asserts the mirror has 16 entries, and keeps
+      the 25 rows, the 10-token assertion and every delivered expectation
+      unchanged. The mutation register stays 90 rows (M1-M90); plan phase 10
+      re-arms M42 for the production composition and adds or removes no row.
+      R16 removes the unused non-tree `signalProcess` seam from the production
+      terminate seam and the adapter seam type, documents `reaped` as 'the
+      exact-identity target was MATCHED' (not an OS reap act) in the adapter and
+      the result type, and replaces the process-runner header's 'counts zero by
+      construction' with the live permitted-start semantics."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan-phase-10 DECLINED and ROUTED items. D6: wiring `check:no-shell`
+      into the aggregate `check` chain is NOT done - package.json's `check`
+      string is pinned verbatim by tests/checks/ci-checks.test.ts,
+      privacy-ci-wiring.test.ts and license-ci-binding.test.ts, so the wiring is
+      a pinned-surface move and a plan revision; package.json is untouched and
+      the m3 low residual (the CLI main() is not in `pnpm check`) persists,
+      recorded rather than papered over. D9: no current-truth page is edited in
+      phase 10; the m1 reference-page note (the incapable-adapter terminal
+      outcome and the resume-clears fact) and the `reaped` wording on the
+      harness page are routed to lifecycle phase 7 for @doc-syncer. The adapter
+      and contract-type wording in code now state the matched meaning."
+    type: decision
     date: "2026-11-19"

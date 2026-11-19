@@ -5,7 +5,10 @@
  * TC-OCS-030..034. Hermetic: every stream fact is injected.
  */
 import { describe, expect, test } from "bun:test";
-import { createOpencodeSession } from "../../packages/adapters/src/harness/index";
+import {
+  createOpencodeSession,
+  OPENCODE_CAPABILITIES,
+} from "../../packages/adapters/src/harness/index";
 import type { HarnessSessionPort } from "../../packages/core/src/contracts/index";
 import {
   assembleLiveness,
@@ -300,7 +303,6 @@ const createTreeDouble = (options: { readonly stubborn?: readonly number[] } = {
       }
       return delivered;
     },
-    signalProcess: (pid: number, signal: "SIGTERM" | "SIGKILL"): boolean => signalOne(pid, signal),
     /** A resumed stream is a NEW live process tree of the same identity. */
     revive: (): void => {
       for (const process of processes) process.live = true;
@@ -452,5 +454,30 @@ describe("GH-347 the production adapter terminate implements the declared contra
       expect(unknown.value).toEqual({ terminated: true, escalated: false, reaped: false });
     }
     expect(tree.signals).toEqual([]);
+  });
+});
+
+describe("GH-347 the opencode port carries its resolved capability declaration", () => {
+  test("the port reports OPENCODE_CAPABILITIES, terminate included", () => {
+    // R13 (review N1): the engine's terminate gate reads the session port's
+    // declaration, so the adapter's own declaration must ride the port. On the
+    // reviewed HEAD the port exposed none and the gate fell through to
+    // "capable".
+    const port = makePort(fakeFor({ lines: [] }));
+    expect(port.capabilities).toBe(OPENCODE_CAPABILITIES);
+    expect(port.capabilities?.supportedOperations).toContain("terminate");
+  });
+
+  test("a composed override is the declaration the port reports (one source with the gates)", () => {
+    // The adapter resolves an injected declaration once and its own terminate/
+    // resume/session-list gates read that binding; the port must report the same
+    // resolved value, never the default.
+    const override = {
+      ...OPENCODE_CAPABILITIES,
+      supportedOperations: ["spawn", "deliver", "resume", "collect", "session-list"] as const,
+    };
+    const port = makePort(fakeFor({ lines: [] }), { capabilities: override });
+    expect(port.capabilities).toBe(override);
+    expect(port.capabilities?.supportedOperations).not.toContain("terminate");
   });
 });

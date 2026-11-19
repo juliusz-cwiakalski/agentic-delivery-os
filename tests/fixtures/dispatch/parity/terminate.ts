@@ -9,8 +9,13 @@
  * model; the incapable double declares no member and records any call as a
  * violation.
  */
+import {
+  CLAUDE_CAPABILITIES,
+  OPENCODE_CAPABILITIES,
+} from "../../../../packages/adapters/src/harness/index";
 import type {
   DispatchDelay,
+  HarnessCapabilityDeclaration,
   HarnessEvidence,
   HarnessLivenessReport,
   HarnessResult,
@@ -159,7 +164,35 @@ export type StallPortOptions = {
   readonly delay: DispatchDelay;
   /** `true` implements terminate; `false` declares no member and records calls. */
   readonly terminateCapable?: boolean;
+  /**
+   * The declaration shape the port reports (GH-347 AC-F5-4, review N1): the
+   * opencode shape by default, or the full Claude Code declaration whose
+   * terminate gap is the whole point of the gate.
+   */
+  readonly harnessKind?: "opencode" | "claude-code";
+  /**
+   * Whether a capable terminate CONFIRMS the termination (default `true`). A
+   * `false` value models the normative unconfirmed branch (F-5/F(D)): the
+   * terminal signal is issued and the declared grace is waited, no escalation
+   * runs, and the report is an explicit non-confirmation.
+   */
+  readonly terminateConfirms?: boolean;
   readonly title?: string;
+};
+
+/** The declaration a port of this shape reports (GH-347 DM-5, AC-F5-4). */
+const declarationFor = (input: {
+  readonly harnessKind: "opencode" | "claude-code";
+  readonly terminateCapable: boolean;
+}): HarnessCapabilityDeclaration => {
+  if (input.harnessKind === "claude-code") return CLAUDE_CAPABILITIES;
+  if (input.terminateCapable) return OPENCODE_CAPABILITIES;
+  return {
+    ...OPENCODE_CAPABILITIES,
+    supportedOperations: OPENCODE_CAPABILITIES.supportedOperations.filter(
+      (operation) => operation !== "terminate",
+    ),
+  };
 };
 
 export type StallPort = {
@@ -207,7 +240,7 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
     acquisitions += 1;
     polls = 0;
     handle = {
-      harnessKind: "opencode",
+      harnessKind: options.harnessKind ?? "opencode",
       sessionId,
       treeRoot: `${8800 + iteration}`,
       workItemRef: "GH-347",
@@ -226,18 +259,15 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
     return { ok: true, value: handle };
   };
 
-  const port: HarnessSessionPort & {
-    readonly capabilities: { readonly supportedOperations: readonly string[] };
-  } = {
+  const port: HarnessSessionPort = {
     // The declaration the engine reads to decide capability (GH-347 DM-5,
     // AC-F5-4): an incapable adapter omits `terminate`, so the engine starts no
-    // second session and never has to ask.
-    capabilities: {
-      supportedOperations:
-        options.terminateCapable === false
-          ? ["spawn", "deliver", "resume", "collect", "session-list"]
-          : ["spawn", "deliver", "resume", "collect", "session-list", "terminate"],
-    },
+    // second session and never has to ask. The declaration is the adapter's own
+    // full shape, not a two-field local literal.
+    capabilities: declarationFor({
+      harnessKind: options.harnessKind ?? "opencode",
+      terminateCapable: options.terminateCapable !== false,
+    }),
     spawn: async () => {
       calls.push("spawn");
       return open("ses-loop-1");
@@ -313,6 +343,15 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
     ): Promise<HarnessResult<HarnessTerminateResult>> => {
       calls.push("terminate");
       terminateCalls.push(input);
+      // The unconfirmed branch (F-5/F(D), AC-F5-4; review N2): the terminal
+      // signal is issued and the declared grace is waited, but the runtime's
+      // exit is never observed, so no escalation runs and the report is an
+      // explicit non-confirmation. Nothing is remembered as a terminated fact.
+      if (options.terminateConfirms === false) {
+        options.model.signalTree(Number(input.handle.treeRoot), TERM);
+        await options.delay(input.graceMs, "terminate-grace");
+        return { ok: true, value: { terminated: false, escalated: false, reaped: false } };
+      }
       const pid = Number(input.handle.treeRoot);
       // Idempotent PER ACQUISITION: a repeated call before a resume reports the
       // same terminal facts and signals nothing further (GH-347 AC-F5-5,

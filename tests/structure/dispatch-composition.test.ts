@@ -750,6 +750,36 @@ describe("GH-347 the terminate grace, the restart append and the caller scope", 
   });
 });
 
+describe("GH-347 the production composition mounts a declared session port per harness", () => {
+  test("both mounts pass through the declaration guarantee; claude declares the terminate gap", async () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    // R13 (review N1, plan D2): both configured kinds are built by
+    // `harnessFor` and returned through the declaration guarantee, so no
+    // production session port reaches the engine undeclared.
+    expect(production).toContain("harnessWithDeclaration(adapter, harnessDeclaration(kind))");
+    expect(production).toContain("const harnessDeclaration = (kind: HarnessKind)");
+    expect(production).toContain(
+      'kind === "opencode" ? OPENCODE_CAPABILITIES : CLAUDE_CAPABILITIES',
+    );
+    // The wrapper still wraps the opencode port (per-spawn resolution) and the
+    // claude mount is the adapter port itself; both flow through `harnessFor`.
+    expect(production).toContain("opencode: createHarnessProfilePort({");
+    expect(production).toContain('"claude-code": harnessFor("claude-code")');
+    // The fill direction: an absent declaration is filled, a present one wins.
+    expect(production).toContain("capabilities === undefined");
+    expect(production).toContain("capabilities: declaration");
+    // R16: the unused non-tree signalling seam is gone.
+    expect(production).not.toContain("signalProcess");
+    // The declarations the composition references. The behavioural half — the
+    // real ports reporting these values — is asserted in the adapter suites.
+    const { CLAUDE_CAPABILITIES, OPENCODE_CAPABILITIES } = await import(
+      "../../packages/adapters/src/harness/index"
+    );
+    expect(CLAUDE_CAPABILITIES.supportedOperations).not.toContain("terminate");
+    expect(OPENCODE_CAPABILITIES.supportedOperations).toContain("terminate");
+  });
+});
+
 describe("the production composition supplies and orders the preflight", () => {
   test("production wires the preflight and the engine invokes it before claimLease", () => {
     const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");

@@ -653,15 +653,13 @@ const corroborationFactsOf = (reads: DispatchTruthReads): CorroborationFacts => 
  * absent `terminate` operation means the engine starts no second session. A
  * port that declares nothing keeps the delivered restart behaviour — the
  * default direction is never "incapable", which would silently stop restarting
- * on a capable adapter.
+ * on a capable adapter. That fail-open default is reachable only by an
+ * explicitly undeclared double: every production adapter declares on its port
+ * and the production composition never mounts an undeclared port, held by the
+ * adapter-port declaration suite and the dispatch-composition wiring suite.
  */
 const declaresTerminate = (port: HarnessSessionPort): boolean => {
-  const declaration = (
-    port as {
-      readonly capabilities?: { readonly supportedOperations?: readonly string[] };
-    }
-  ).capabilities;
-  const operations = declaration?.supportedOperations;
+  const operations = port.capabilities?.supportedOperations;
   return operations === undefined ? true : operations.includes("terminate");
 };
 
