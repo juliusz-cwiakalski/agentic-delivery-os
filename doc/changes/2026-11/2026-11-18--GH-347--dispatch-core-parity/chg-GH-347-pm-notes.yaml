@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-19T07:47:29.914Z }
   quality_gates: { started: null, completed: 2026-11-19T08:12:23.840Z }
   dod_check: { started: null, completed: 2026-11-19T08:13:55.967Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-19T08:55:08.540Z }
 decisions:
   - text: "Scope is the ticket body plus the CEO parity-gap analysis comment of
       2026-11-18, which explicitly splits the work: GH-347 (F1a) owns gaps 1-10
@@ -1124,9 +1124,10 @@ notes:
       commits over origin/main-tools with a clean tree."
     type: info
     date: "2026-11-19"
-  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/364
-      - base main-tools, head feat/GH-347/dispatch-core-parity at dc615e35, not
-      draft, no auto-merge, 37 commits, 120 files, +22000/-918. First state is
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/364 - base
+      main-tools, head feat/GH-347/dispatch-core-parity at dc615e35, not draft,
+      no auto-merge, 37 commits, 120 files, +22000/-918. First state is
       CONFLICTING/DIRTY because main-tools advanced one commit after the fork
       with GH-346 (#363, d1fff222), which overlaps four files:
       doc/decisions/00-index.md, doc/overview/glossary.md,
@@ -1138,30 +1139,58 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "Branch synced with origin/main-tools at d1fff222 (GH-346, PR #363) by
-      merge commit 3888c3f0 (parents dc615e35 and d1fff222); nothing was
-      rebased or force-pushed. Four conflicts, all resolved by integrating both
-      sides: (1) doc/decisions/00-index.md keeps the GH-346 rows TDR-0044..0048
-      and carries the GH-347 rows as TDR-0049..0054, in ascending id order, with
-      no row dropped; (2) doc/overview/glossary.md keeps both term sets and the
-      union of both frontmatter link sets; (3) feature-result-contract.md carries
-      GH-346 and GH-347 in related_changes and leaves the eleven-token taxonomy,
-      the projections, the exits and the error table exactly as delivered; (4)
-      packages/cli/src/production.ts composes GH-346's install family runtime and
-      GH-347's dispatch composition together. ID COLLISION RESOLVED BY
-      RENUMBERING: both branches independently allocated TDR-0044..0048, so the
-      six GH-347 records moved 0044..0049 -> 0049..0054 (file names, frontmatter
-      ids, headings, index rows, spec/plan/test-plan/pm-notes/readiness
-      references, spec/features pages, glossary rows and code comments all
-      updated; GH-346's records and references are untouched). The documented
-      rule is that decision numbers are never reused and the next number is
-      highest + 1, and GH-346 itself renumbered TDR-0036..TDR-0040 ->
-      TDR-0044..0048 on the same ground. Verification after the merge: pnpm
-      typecheck pass; 180 tests pass across the dispatch composition, install
-      structure and the two harness behaviour suites; 322 tests pass across the
+      merge commit 3888c3f0 (parents dc615e35 and d1fff222); nothing was rebased
+      or force-pushed. Four conflicts, all resolved by integrating both sides:
+      (1) doc/decisions/00-index.md keeps the GH-346 rows TDR-0044..0048 and
+      carries the GH-347 rows as TDR-0049..0054, in ascending id order, with no
+      row dropped; (2) doc/overview/glossary.md keeps both term sets and the
+      union of both frontmatter link sets; (3) feature-result-contract.md
+      carries GH-346 and GH-347 in related_changes and leaves the eleven-token
+      taxonomy, the projections, the exits and the error table exactly as
+      delivered; (4) packages/cli/src/production.ts composes GH-346's install
+      family runtime and GH-347's dispatch composition together. ID COLLISION
+      RESOLVED BY RENUMBERING: both branches independently allocated
+      TDR-0044..0048, so the six GH-347 records moved 0044..0049 -> 0049..0054
+      (file names, frontmatter ids, headings, index rows,
+      spec/plan/test-plan/pm-notes/readiness references, spec/features pages,
+      glossary rows and code comments all updated; GH-346's records and
+      references are untouched). The documented rule is that decision numbers
+      are never reused and the next number is highest + 1, and GH-346 itself
+      renumbered TDR-0036..TDR-0040 -> TDR-0044..0048 on the same ground.
+      Verification after the merge: pnpm typecheck pass; 180 tests pass across
+      the dispatch composition, install structure and the two harness behaviour
+      suites; 322 tests pass across the
       decision/doc/error-table/content-inventory checks; 238 tests pass across
-      the dispatch-structure and entrypoint structure/behaviour suites; 123 tests
-      pass across the port-inventory, supervision-imports and install error
-      domain suites; git diff --check clean. Merge authority stays with the
-      CEO/human; the PR is updated, not merged."
+      the dispatch-structure and entrypoint structure/behaviour suites; 123
+      tests pass across the port-inventory, supervision-imports and install
+      error domain suites; git diff --check clean. Merge authority stays with
+      the CEO/human; the PR is updated, not merged."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-sync gates at head 3ad96f3a (the merged head): aggregate
+      TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check exit 0
+      in ~25m32s - lint 3102 files (0 errors; 126 warnings / 37 infos), format
+      2956 files, build 6 projects, typecheck 6/6 plus the types project, test
+      11303 pass / 4 skip / 0 fail over 11307 tests in 1397 files, boundaries
+      485 modules with no violations (ambient-globals 236 clean, workspace
+      entrypoints match, secret-read boundary 451 files clean), memory 0 errors,
+      prompt-conformance 5 clean, help coverage complete, exports-parity 5.
+      Range gate: VERDICT PASS, base origin/main-tools, merge-base d1fff222,
+      head 3ad96f3a, 39 commits, 0 offending, commitlint repository-local. The
+      four documentation guards 41/41. The stale-phrase scan returns zero hits.
+      The TDR references are consistent with the renumbering (GH-346 owns
+      0044-0048, the dispatch records are 0049-0054)."
+    type: info
+    date: "2026-11-19"
+  - text: "PR #364 final state: MERGEABLE, mergeStateStatus BLOCKED pending review
+      and checks (not conflicts), head 3ad96f3a, 39 commits, checks 47/47 pass,
+      not draft, no review decision, no auto-merge. The body was regenerated for
+      the renumbered TDRs (0049-0054), the sync evidence and the post-sync gate
+      numbers. Nothing was merged, approved or rewritten. Merge authority stays
+      with the CEO/human. Cosmetic residuals recorded, not fixed because they
+      are historical records: the range typo 'TDR-0049..0049' appears in
+      pm-notes:200, code-review/review-iter-1.yaml and
+      readiness-review/readiness-iter-1.md; those review/readiness records
+      correctly cite the ids in force when they were written."
     type: info
     date: "2026-11-19"
