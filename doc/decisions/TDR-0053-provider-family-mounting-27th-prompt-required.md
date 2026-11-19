@@ -5,7 +5,7 @@ status: Proposed
 created: 2026-11-19
 decision_date: null
 last_updated: 2026-11-19
-summary: "GH-350: the provider family (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, `migrate legacy`) is mounted as the twenty-seventh and last prompt-required family, appended after `install`. `install` stays the twenty-sixth, `supervise` stays the twenty-fifth, and every delivered ordinal is unchanged; what moves is the family count 26 → 27 and the tail: `install` stops being last and `provider` becomes the last member. The declared conformance surface moves in one change — prompt-required membership, one family help entry plus seven member entries, a coverage row in both directions, the M1 reference page completed to carry `--help`/`--version`, and every pinned count/tail assertion — and reachability is proven through the production composition with a negative control, because the delivered tests drove `createConfigProgram`/`runCli` and never `runEntrypoint`, which is how an unreachable family stayed green. Internal-only and partial-mount alternatives are rejected: they falsify the ticket's 'complete and document' and 'offline verification' operator claims and split one reference page across two truths."
+summary: "GH-350: the provider family (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, `migrate legacy`) is mounted as the twenty-seventh and last prompt-required family, appended after `install`. `install` stays the twenty-sixth, `supervise` stays the twenty-fifth, and every delivered ordinal is unchanged; what moves is the family count 26 → 27 and the tail: `install` stops being last and `provider` becomes the last member. The command definition is delivered but the family is neither mounted nor composed in production, so the change adds both membership and the `ProviderComposition` seam the config program already consumes. The declared conformance surface moves in one change — prompt-required membership, the six-runtime production composition seam, one family help entry plus seven member entries, a coverage row in both directions, the M1 reference page completed to carry `--help`/`--version`, and every pinned count/tail assertion — and reachability is proven through the production composition with a negative control, because the delivered tests drove `createConfigProgram`/`runCli` and never `runEntrypoint`, which is how an unreachable family stayed green. Internal-only and partial-mount alternatives are rejected: they falsify the ticket's 'complete and document' and 'offline verification' operator claims and split one reference page across two truths."
 owners: ["Juliusz Ćwiąkalski"]
 service: "delivery-os provider policy: CLI composition, help inventory, and reference documentation"
 decision_scope: repo
@@ -37,7 +37,7 @@ governance:
   performers:
     - "@spec-writer (carry the mount, the count movement, and the reachability AC into the change spec)"
     - "@test-plan-writer (reachability case, negative control, count/tail oracles)"
-    - "@coder (membership, help entries, coverage row, reference page, composition guard)"
+    - "@coder (membership, production composition seam, help entries, coverage row, reference page)"
     - "@doc-syncer (CLI entrypoint page, glossary, index, install-lifecycle count sites)"
   informed:
     - "M4-S7 prompts that call the provider family"
@@ -91,7 +91,7 @@ links:
 
 ## Context
 
-- **FACT:** `packages/cli/src/commands/provider.ts` exports `createProviderCommandDefinition` and the whole provider grammar (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`), with its tests. The family is **registered** in the command layer — `packages/cli/src/edge.ts:4978` assigns `commands.provider` inside `createConfigProgram` — and is composed by the production composer, because `packages/cli/src/production.ts:4574` builds its program through `createConfigProgram(configured)`.
+- **FACT:** `packages/cli/src/commands/provider.ts` exports `createProviderCommandDefinition` and the delivered provider grammar (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`), with its tests. The command definition therefore exists, but the family is **neither mounted nor composed** in production: `createConfigProgram` registers it only when it is handed a `provider` seam (`packages/cli/src/edge.ts:4978`, inside `if (options.provider !== undefined)`), and the production composition builds its `configured` options with **no** `provider` key (`packages/cli/src/production.ts:4347-4574`). Executed 2026-11-19, `createProductionComposer(...)(brand)` composes **27** commands and `provider` is not among them; the one non-declared command it does compose is `config`.
 - **FACT:** The family is **not mounted** in the production entrypoint. `packages/cli/src/entrypoint.ts` composes through `selectPromptRequiredProgram`, which copies exactly `PROMPT_REQUIRED_COMMANDS` and drops every extra registration. `provider` is absent from that set (`packages/cli/src/help/prompt-required-commands.ts`, 26 names, `install` last).
 - **FACT:** The consequence is observable on the built artifact: `jaiship --help` lists 43 commands and no `provider`; `jaiship provider quota` answers `fallback.invocation` ("unexpected argument"); `jaiship provider --help` answers `unknown flag "--help"` (readiness review iteration 1, B1, observed 2026-11-19).
 - **FACT:** `packages/cli/src/help.ts` has **zero** provider entries, and `tests/fixtures/help-guide/coverage.json` has no provider row, so `pnpm check:help` neither knows nor requires the family. `scripts/checks/help-guide-coverage.ts` iterates `PROMPT_REQUIRED_COMMANDS` only.
@@ -105,13 +105,13 @@ links:
 
 ## Problem Framing (Clarified)
 
-The question is not "should the provider family be reachable" — the ticket, the flip's verification bar, and three acceptance criteria already require it. The delivery proves the family was built to be reachable (`createConfigProgram` registers it; help pages exist for the family conceptually; a reference page exists) and then withheld by one declarative list. The residual question is therefore narrow and mechanical:
+The question is not "should the provider family be reachable" — the ticket, the flip's verification bar, and three acceptance criteria already require it. The delivery proves the family was built and then never wired: the command definition exists, the config program can register it, a reference page exists — and yet production supplies neither the family's runtimes nor a declarative entry. The residual question is therefore narrow and mechanical:
 
 1. **Where in the order?** Two positions are defensible: append as the twenty-seventh and last, or insert before `install` and push `install` to twenty-seventh. They are not equivalent in cost. `install`'s ordinal ("the twenty-sixth prompt-required family") is stated in five delivered pages and pinned in the documentation-conformance table; `supervise`'s ("25th") is pinned there as a **guard against over-correction**. Appending after `install` leaves every delivered ordinal true and moves exactly two things — the count and the tail. Inserting before `install` renumbers a delivered family for no operator benefit and falsifies prose that GH-346 deliberately made true.
-2. **What does "mounted" cost?** A mounted family is not one array entry. It is membership, a help entry per invocation path, a coverage inventory row in both directions, a reference page that satisfies the gate, and every pinned count. This cost is enumerable, and §5 enumerates it. Naming it is the point: the GH-346 precedent is that an undeclared conformance surface is discovered as breakage.
-3. **How is reachability proven so this cannot recur?** The delivered defect is not missing code; it is a **vacuous proof**. Tests exercised the command layer and the composition, and never the composition **as the entrypoint restricts it**. Any acceptance criterion that does not go through `runEntrypoint` reproduces the defect. The proof therefore needs two arms — positive (every member answers through the production composition) and negative (the filter still rejects an unmounted family) — so the test fails by name if either the mount or the filter changes.
+2. **What does "mounted" cost?** A mounted family is not one array entry. It is membership, a help entry per invocation path, a coverage inventory row in both directions, a reference page that satisfies the gate, every pinned count, and — for this family — the `ProviderComposition` seam in the production composition, because the definition exists without the runtimes. This cost is enumerable, and §5 enumerates it. Naming it is the point: the GH-346 precedent is that an undeclared conformance surface is discovered as breakage.
+3. **How is reachability proven so this cannot recur?** The delivered defect has two halves — a composition gap (no membership, no production seam) and a **vacuous proof**: tests exercised the command layer and the composition, and never the composition **as the entrypoint restricts it**. Any acceptance criterion that does not go through `runEntrypoint` reproduces the defect. The proof therefore needs two arms — positive (every member answers through the production composition) and negative (the filter still rejects an unmounted family) — so the test fails by name if either the mount or the filter changes.
 
-The framing that follows: **mount the whole family as the twenty-seventh and last member, pay the enumerated conformance cost in one change, and prove reachability through the entrypoint with a negative control.** Alternatives that keep the family internal, mount a subset, or renumber `install` are rejected below on the ticket's own claims or on delivered-prose falsification.
+The framing that follows: **mount the whole family as the twenty-seventh and last member, add the `ProviderComposition` seam production is missing, pay the enumerated conformance cost in one change, and prove reachability through the entrypoint with a negative control.** Alternatives that keep the family internal, mount a subset, or renumber `install` are rejected below on the ticket's own claims or on delivered-prose falsification.
 
 ## Constraints (Hard Requirements)
 
@@ -145,9 +145,9 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 
 ### C-5: Provider stays identity-neutral
 
-- **Statement:** The family is composed for both executable identities with no new role fact and no new refusal; no ownership question is opened, and no pre-freeze namespace becomes creatable through a provider member.
+- **Statement:** The family is composed for both executable identities with no new role fact and no new refusal; no ownership question is opened, and no pre-freeze namespace becomes creatable through a provider member. Identity neutrality is about **identity**, not about writes: no member gains a bin declaration, a role fact, or an identity-specific refusal, and every member's write set is the same under either bin. The members that only read (`quota`, `parks list`, `watch status`, `simulate`) write nothing under either bin; `resolve` writes only its delivered park and announcement records; `profile resolve` writes only the delivered profile-target record when the delivered lifecycle appends one; `migrate` writes only the files its delivered `--write` path names.
 - **Source:** Prior decision (TDR-0044 §3 ownership rule); GH-320 §8.5 declared-divergence discipline; change spec `NG-11`.
-- **Verification:** Review — no bin declaration changes; `install.identity.not-owning` untouched; a provider invocation under the alias writes nothing.
+- **Verification:** Review — no bin declaration changes; `install.identity.not-owning` untouched; each member's write set is identical under either bin (read-only members write nothing; `resolve` only its park/announcement records; `profile resolve` only its profile-target record; `migrate` only under `--write`).
 - **Negotiable:** no.
 
 ### C-6: The mount adds no new error identity and no new state kind
@@ -167,7 +167,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 2. **Truth of the delivered ordinals** — the composition's order is documented and pinned; a mount that renumbers a delivered family converts a mechanical change into a documentation rewrite with a falsehood window.
 3. **One conformance surface, declared once** — membership plus help plus coverage plus count is a bounded, enumerable diff; leaving the family internal is an unbounded "why can't I run this" support cost.
 4. **Non-vacuity of the proof** — a test that cannot fail is worse than no test, because it certifies the thing that is broken.
-5. **Minimum product-surface widening** — the family already exists and already documents itself; the widening is membership, not new capability.
+5. **Minimum product-surface widening** — the family already exists and already documents itself; the widening is membership plus the composition seam that supplies its delivered runtimes, not new capability.
 
 **Operational drivers:**
 
@@ -183,14 +183,14 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 - **Decider / Approver:** Juliusz Ćwiąkalski — human acceptance at the GH-350 PR review. The AI does not accept this R2 record.
 - **Contributors:** `@readiness-reviewer` (the observed artifact behaviour and the vacuous cases); `@pm` (ticket scope); `@decision-advisor` (analysis and this record).
 - **Required reviewers:** `@readiness-reviewer`, `@reviewer`, human owner.
-- **Performers:** `@spec-writer` (mount, count movement, reachability AC); `@test-plan-writer` (reachability + negative control + count/tail oracles); `@coder` (membership, help, coverage, page, composition guard); `@doc-syncer` (page set).
+- **Performers:** `@spec-writer` (mount, count movement, reachability AC); `@test-plan-writer` (reachability + negative control + count/tail oracles); `@coder` (membership, production composition seam, help, coverage, page); `@doc-syncer` (page set).
 - **Informed:** M4-S7 prompt rewrite, M4-S8 wrapper rewrite, flip evidence owners, future family authors.
 
 ## Evidence, Assumptions & Unknowns
 
 | Item | Label | Source | Impact if false | Confidence |
 |---|---|---|---|---|
-| `provider` is registered in the command layer but dropped by `selectPromptRequiredProgram` | FACT | `packages/cli/src/edge.ts:4978`; `packages/cli/src/production.ts:4574`; `packages/cli/src/entrypoint.ts` (`selectPromptRequiredProgram`), read 2026-11-19 | The mount would need new registration code, not just membership | High |
+| The command definition exists but the family is neither mounted nor composed in production: `configured` carries no `provider` key and the entrypoint's filter copies only the declared set | FACT | `packages/cli/src/edge.ts:4978` (guarded by `options.provider !== undefined`); `packages/cli/src/production.ts:4347-4574`; executed composer: 27 commands, no `provider`, `config` the only non-declared member; `packages/cli/src/entrypoint.ts` (`selectPromptRequiredProgram`), 2026-11-19 | The mount would be membership alone; it is not — it also carries the `ProviderComposition` wiring | High |
 | The built binary answers `unknown flag "--help"` / `fallback.invocation` for the family | FACT | GH-350 readiness iteration 1, B1, `node_modules/.bin/jaiship` observations, 2026-11-19 | If the family were reachable, this record would be unnecessary | High |
 | `help.ts` holds no provider entry and `coverage.json` no provider row | FACT | `packages/cli/src/help.ts`; `tests/fixtures/help-guide/coverage.json`, read 2026-11-19 | The conformance cost would be lower by two artefacts | High |
 | The M1 provider page lacks both `--help` and `--version` | FACT | `doc/planning/oss-tooling/milestones/m1/commands/provider.md`, read 2026-11-19 | The page would already satisfy the gate and C-3 would shrink | High |
@@ -205,13 +205,13 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 
 ## Mental Models & Techniques Used
 
-- **First principles:** what must be true for an operator to run `provider resolve`? The command must be composed, the composition must include it, and the composition the binary uses must be the one that includes it. The first two are delivered; the third is the single missing fact.
+- **First principles:** what must be true for an operator to run `provider resolve`? The command definition must exist, the production composition must supply its runtimes, and the composed program the binary selects must include it. The first is delivered as a definition only; the other two are missing — production hands `createConfigProgram` no `provider` seam, and the declarative set has no entry. Membership alone would make the filter throw on a declared-but-uncomposed member, so both the seam and the entry are required.
 - **Inversion:** how does this fail? By mounting the array entry and forgetting the help entry (gate fails), by mounting help and forgetting the page's `--help` (gate fails), by mounting everything and renumbering `install` (five pages become false), by proving reachability through `createConfigProgram` (the test passes and the binary still refuses), or by mounting a subset (the family's page documents two truths). Each failure maps to a constraint or a matrix row.
-- **5 Whys:** why is the family unreachable? It is absent from the declarative set. Why? Because it was written before the set was the entrypoint's contract. Why did nobody notice? Because the tests drove the command layer. Why did the tests drive the command layer? Because there was no case or oracle that required the entrypoint. Why? Because reachability was assumed from registration. The fifth answer is the defect class this record closes with a negative control.
+- **5 Whys:** why is the family unreachable? It is absent from the declarative set, and production never supplies the `provider` seam, so the composed program has no family. Why? Because its only registration path is a conditional arm (`options.provider !== undefined`) that production does not satisfy. Why did nobody notice? Because the tests drove the command layer. Why did the tests drive the command layer? Because there was no case or oracle that required the entrypoint. Why? Because reachability was assumed from a registration arm that production never takes. The fifth answer is the defect class this record closes with a negative control.
 - **Second-order thinking:** appending after `install` keeps every delivered ordinal true forever; inserting earlier would make ordinals a function of mount history and invite the next author to renumber again.
 - **Systems thinking:** the count lives in one declaration and in ~20 derived assertions, two fixtures, one byte baseline, and six documentation pages. A mount is therefore a *propagation* task; the record's job is to enumerate the propagation so it is not discovered as breakage.
 - **Boundary thinking:** what this record does **not** decide: the ref source for budget evaluation (TDR-0054), the fixture schema (TDR-0050), the migration grammar (TDR-0051), the watch freshness rule (TDR-0052), and the budget semantics (TDR-0049). The mount carries them; it does not re-decide them.
-- **KISS:** one array entry, eight help entries, one coverage row, one page edit, and mechanical count propagation — no new abstraction, no generated inventory.
+- **KISS:** one array entry, one six-runtime composition seam, eight help entries, one coverage row, one page edit, and mechanical count propagation — no new abstraction, no generated inventory.
 
 ## Alternatives Considered
 
@@ -230,8 +230,8 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only for the mounted subset; no
 ### Alternative 0 — Leave the Family Internal (Status Quo)
 
 - **Eligibility:** Not eligible (fails C-1).
-- **Summary:** Keep `provider` registered but non-prompt-required, as `config` and `db` are.
-- **Constraint compliance:** Fails C-1 by construction — extras are dropped from the composed program, so every member answers the containment identity.
+- **Summary:** Keep `provider` unmounted and uncomposed, exactly as it is today; `config` is the only command the production composition carries outside the declared set.
+- **Constraint compliance:** Fails C-1 by construction — the family is not composed, so every member answers the containment identity.
 - **Driver fit:** Best on 5; worst on 1, 4, 7.
 - **Pros:** Zero conformance cost; nothing moves.
 - **Cons:** The ticket's operator claims stay false; `simulate` and `migrate` would be delivered into a surface nobody can invoke; the flip's F2 evidence has no command to point at.
@@ -240,8 +240,8 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only for the mounted subset; no
 ### Alternative 1 — Mount as the Twenty-Seventh and Last, Appended After `install` (chosen)
 
 - **Eligibility:** Eligible (passes C-1 … C-6).
-- **Summary:** `provider` joins `PROMPT_REQUIRED_COMMANDS` after `install`; the family and its seven member paths gain help entries; the coverage inventory gains a command row and the existing M1 page row; the page gains `--help`/`--version` and the two new members; every pinned count and the tail move, and only the tail moves.
-- **Constraint compliance:** C-1 by membership; C-2 because the filter is untouched and a negative control proves it; C-3 with the matrix in §5 landed in one change; C-4 because appending leaves `supervise` 25th and `install` 26th; C-5 because no bin declaration, role fact, or refusal changes; C-6 because no error row or record kind is added.
+- **Summary:** `provider` joins `PROMPT_REQUIRED_COMMANDS` after `install`; the production composition gains the six-runtime `ProviderComposition` seam and registers the family unconditionally in the same shape as `install`; the family and its seven member paths gain help entries; the coverage inventory gains a command row and the existing M1 page row; the page gains `--help`/`--version` and the two new members; every pinned count and the tail move, and only the tail moves.
+- **Constraint compliance:** C-1 by membership plus the production `provider` seam — neither alone suffices, because a declared-but-uncomposed member makes the filter throw; C-2 because the filter is untouched and a negative control proves it; C-3 with the matrix in §5 landed in one change; C-4 because appending leaves `supervise` 25th and `install` 26th; C-5 because no bin declaration, role fact, or refusal changes; C-6 because no error row or record kind is added.
 - **Driver fit:** Best on 1, 2, 3, 5, 6, 8; good on 4 (see §6) and 7.
 - **Pros:** Every delivered ordinal stays true; one mechanical tail move; one page (not two); the conformance cost is enumerated before delivery.
 - **Cons:** `install` stops being last, so five "and last"/tail assertions and the alias help baseline move; the family becomes part of the product surface that later changes must not break.
@@ -298,7 +298,7 @@ The family's declared invocation paths, each of which must reach its handler and
 
 ### 2. Composition
 
-- `provider` joins `PROMPT_REQUIRED_COMMANDS` **after** `install`. The composition already registers the command (`edge.ts:4978` inside `createConfigProgram`), so the change is membership plus a guard, not new wiring. The production composer must register the family **unconditionally**, in the same shape `install` is registered, so a configuration failure produces a typed refusal from the handler rather than a missing family. Two failure classes stay distinct exactly as the entrypoint defines them: a **missing runtime** is a composition gap contained as `fallback.internal` at exit `2` (never answered by dropping the family), and a **data/configuration** condition is answered by the handler as a typed outcome.
+- `provider` joins `PROMPT_REQUIRED_COMMANDS` **after** `install`, and the production composition gains the family's wiring. Membership alone is not enough and would in fact break worse than it fixes: the command definition exists (`createProviderCommandDefinition`) but `createConfigProgram` registers it only when it receives a `provider` seam (`edge.ts:4978`, inside `if (options.provider !== undefined)`), while production's `configured` object carries no `provider` key — so the composed program has 27 commands and no family, and a declared-but-uncomposed member makes the filter throw and every provider invocation answer `fallback.internal`. The change therefore adds **both** membership and the six `ProviderComposition` seams (`clock`, `credentialPort`, `transport`, `sleep`, `stateStore`, `newFenceToken`) in the production composition, registering the family **unconditionally**, in the same shape `install` is registered (spread the composed commands, then add the family), so a configuration failure produces a typed refusal from the handler rather than a missing family. Phases 3, 5, and 6 extend that composition as the budget ref, `simulate`, and `migrate` handlers land. Two failure classes stay distinct exactly as the entrypoint defines them: a **missing runtime** is a composition gap contained as `fallback.internal` at exit `2` (never answered by dropping the family), and a **data/configuration** condition is answered by the handler as a typed outcome.
 - The filter is untouched. `selectPromptRequiredProgram` keeps copying exactly the declared set and keeps dropping extras. The mount adds a member; it does not add a bypass.
 
 ### 3. Help inventory and reference page
@@ -321,7 +321,7 @@ Every row below must move in the same change or `pnpm check` fails. "Old → new
 |---|---|---|---|
 | A1 | `packages/cli/src/help/prompt-required-commands.ts` | `[… "supervise", "install"]`, 26 names; comment "install … as the twenty-sixth and last" | `[… "supervise", "install", "provider"]`, 27 names; comment "`install` is the twenty-sixth; `provider` is the twenty-seventh and last" |
 | A2 | `packages/cli/src/help.ts` | 0 provider entries | 1 family entry (`["provider"]`) + 7 member entries (`provider resolve`, `provider quota`, `provider parks list`, `provider profile resolve`, `provider watch status`, `provider simulate`, `provider migrate legacy`); `seeAlso` = the M1 page on all 8 |
-| A3 | `packages/cli/src/production.ts` | provider registered only through `createConfigProgram(configured)` | the family is registered unconditionally in the production composition (same shape as `install`), no conditional arm |
+| A3 | `packages/cli/src/production.ts` | `configured` carries **no** `provider` key, so `createConfigProgram(configured)` composes 27 commands with the family absent (executed 2026-11-19); the only non-declared command composed is `config` | `configured` gains the six `ProviderComposition` seams (`clock`, `credentialPort`, `transport`, `sleep`, `stateStore`, `newFenceToken`) and the composed program gains the family **unconditionally** in the same shape as `install` (spread + add), no conditional arm; phases 3/5/6 extend the seam as the budget-ref, `simulate`, and `migrate` handlers land |
 | A4 | `scripts/checks/help-guide-coverage.ts` | no provider branch | **no change** — the default M1 root resolves the existing page; a branch would be a second mapping for no reason |
 | A5 | `tests/fixtures/help-guide/coverage.json` | `commands` 26 rows, ends `… "install"`; `referencePages` ends `… m4/commands/install.md` | `commands` 27 rows, ends `… "install", "provider"`; `referencePages` gains `doc/planning/oss-tooling/milestones/m1/commands/provider.md` |
 | A6 | `doc/planning/oss-tooling/milestones/m1/commands/provider.md` | no `--help`, no `--version`; synopsis without `--chain`, `simulate`, `migrate` | both strings present; synopsis and examples cover all seven members; budget ref rule and `watch-stale` documented |
@@ -348,7 +348,7 @@ Every row below must move in the same change or `pnpm check` fails. "Old → new
 | B16 | `tests/behaviour/entrypoint-two-bins.test.ts` | title "twenty-six families"; `PROMPT_REQUIRED_COMMANDS.length).toBe(26)`; `familyRows(...).length).toBe(26)` | "twenty-seven families"; `27` at both sites |
 | B17 | `tests/behaviour/install-family-surface.test.ts` | `families).toHaveLength(26)`; `families.at(-1)).toBe("install")` | 27; `at(-2)` = `"install"`, `at(-1)` = `"provider"` |
 | B18 | `tests/fixtures/entrypoint/alias-baseline.json` | `cells.help.stdout` `Commands` list has no `provider` line; provenance note ends at GH-346 | one `provider  …` line appended to `Commands`; provenance note gains the GH-350 clause; `capturedFrom` unchanged (still an ancestor) and every other cell byte-unchanged |
-| B19 | `tests/checks/help-guide-coverage-mutants.test.ts` | one mutant drops `"install"` from `coverage.commands` | gains a twin mutant dropping `"provider"`, so the new row can fail by name |
+| B19 | `tests/checks/help-guide-coverage-mutants.test.ts` | the base mutant drops `"merge"` from `coverage.commands`; the GH-346 block drops `"install"` | gains a `provider` mutant (dropping `"provider"` from `coverage.commands`) beside the `install` mutant, so the new row can fail by name |
 | B20 | `tests/behaviour/entrypoint-help-coverage.test.ts` | derives `HELP_TUPLES` from `allHelpEntries()` | **no edit** — 8 tuples appear automatically; the readiness review's "declared provider tuple" finding named a file with no tuple table |
 | B21 | `tests/fixtures/entrypoint/programs.ts` | `HELP_TUPLES` derived; `syntheticPromptProgram` derived from the set | **no edit** — both derive |
 | B22 | `tests/checks/doc-conformance.test.ts` | `feature-cli-entrypoint.md` row: `required` contains `"twenty-six families"`, `stale` has none for the count; `feature-metrics.md` row: `stale ["…","family count (25)"]`, `required ["…","family count (26)"]` | entrypoint row: `stale` gains `"twenty-six families"`, `required` carries `"twenty-seven families"`; metrics row: `stale` gains `"family count (26)"`, `required` carries `"family count (27)"`; **the `feature-supervise.md` row is untouched** (`stale ["65-member allowlist","26th family"]`, `required ["66-member allowlist","25th family"]`) |
@@ -407,7 +407,7 @@ Why this shape:
 
 The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk exceptions are taken. Two consequences are recorded rather than treated as exceptions: the conformance surface in §5 is the **priced cost** of reachability, stated before delivery so it cannot be discovered as breakage; and the alias help baseline is regenerated deliberately (one line, one cell), exactly as GH-346 did for `install`.
 
-**Reversal.** Removing `provider` from `PROMPT_REQUIRED_COMMANDS` and its eight help entries, coverage rows, and page edits restores the twenty-six-family surface with `install` last; a mounted family is a declarative membership, not a code path, so the reversal is one commit and no state, contract, or migration is involved.
+**Reversal.** Removing `provider` from `PROMPT_REQUIRED_COMMANDS`, its eight help entries, coverage rows and page edits, and the production `provider` seam restores the twenty-six-family surface with `install` last; the mount adds no code path, state, contract, or migration, so the reversal is one commit.
 
 ## Trade-offs & Consequences
 
@@ -421,7 +421,7 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 
 ### Negative Outcomes
 
-- The composed set grows 26 → 27, and roughly twenty pinned assertions, two fixtures, one byte baseline, and six documentation pages move. This is a real, enumerated diff, not a side effect.
+- The composed set grows 26 → 27, one production composition seam is added, and roughly twenty pinned assertions, two fixtures, one byte baseline, and six documentation pages move. This is a real, enumerated diff, not a side effect.
 - `install`'s "and last" statements must be reworded, and the alias help baseline is regenerated — a deliberate baseline edit on a byte-pinned artifact.
 - The provider page becomes a gated page: from now on, editing the surface requires editing the page, and the page's `--help`/`--version` presence is load-bearing.
 - Root help grows one line, so any operator tooling that parses the family list sees a new tail.
@@ -435,7 +435,7 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 ## Implementation Plan
 
 1. **Membership.** Append `provider` to `PROMPT_REQUIRED_COMMANDS`; correct its comment to "install twenty-sixth, provider twenty-seventh and last".
-2. **Composition guard.** Assert that the production composer registers `provider` unconditionally (the command layer already supplies the definition at `edge.ts:4978`); no conditional arm.
+2. **Composition.** Supply the six `ProviderComposition` seams (`clock`, `credentialPort`, `transport`, `sleep`, `stateStore`, `newFenceToken`) in production's `configured`, and add the family to the composed program unconditionally in the same shape as `install` (the command definition is delivered at `edge.ts:4978`); no conditional arm. Phases 3, 5, and 6 extend the composition as the budget ref, `simulate`, and `migrate` handlers land.
 3. **Help.** Add the family entry and the seven member entries with the five sections, `seeAlso` at the M1 page.
 4. **Coverage.** Add the `commands` and `referencePages` rows; extend the mutants suite with the provider twin.
 5. **Reference page.** Add `--help`/`--version`, the `--chain` flag, the two new members, the budget ref rule, the `watch-stale` condition, and the three new error rows.
@@ -456,7 +456,7 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 
 ## Confidence Rating
 
-**High.** The mount is a declarative membership over a command layer that already registers the family; the conformance surface is enumerated from the repository rather than assumed; and the defect class is proven (the artifact refuses today). The medium-confidence element is the reference-page home (M1 in place vs a new M4 page): the M1 default resolves today and no milestone boundary justifies a fork, but if the family's surface is later rewritten wholesale, the revisit trigger moves it.
+**High.** The mount is a declarative membership plus the composition seam over a delivered command definition; the conformance surface is enumerated from the repository rather than assumed; and the defect class is proven (the artifact refuses today, and the composed program demonstrably lacks the family). The medium-confidence element is the reference-page home (M1 in place vs a new M4 page): the M1 default resolves today and no milestone boundary justifies a fork, but if the family's surface is later rewritten wholesale, the revisit trigger moves it.
 
 ## References
 

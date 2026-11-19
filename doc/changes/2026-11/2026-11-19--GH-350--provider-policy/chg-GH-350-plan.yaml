@@ -8,30 +8,34 @@
 # plan phase id, the commit hash, and the test result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-350-spec.md (v1.2: F-1..F-8; **31** ACs
-#                AC-F1-1..AC-F8-5 — v1.2 adds AC-F8-5 (entrypoint reachability,
-#                one criterion with two arms) inside F-8, so the capability list
+#   - Spec:      ./chg-GH-350-spec.md (v1.3: F-1..F-8; **31** ACs
+#                AC-F1-1..AC-F8-5 — AC-F8-5 (entrypoint reachability, one
+#                criterion with two arms) sits inside F-8, so the capability list
 #                stays at eight; DM-1..DM-10; NFR-1..NFR-16; RSK-1..RSK-19;
-#                DEC-1..DEC-17 — DEC-16 adopts TDR-0053's mount and DEC-17
-#                adopts TDR-0054's work-item ref; no open question reaches
-#                delivery; §5.1 capability details; §6 flows 1-8; §7.1 in-scope;
-#                §8.1's invocation table with the ref precedence and the
-#                read-only-member exemption; §8.5 backward compatibility; §9's
+#                DEC-1..DEC-17 — DEC-16 adopts TDR-0053's mount (as corrected at
+#                DoR iteration 2: membership PLUS the six-seam `ProviderComposition`
+#                wiring) and DEC-17 adopts TDR-0054's work-item ref; no open
+#                question reaches delivery; §5.1 capability details; §6 flows
+#                1-8; §7.1 in-scope; §8.1's invocation table with the ref
+#                precedence and the read-only-member exemption; §8.5 backward
+#                compatibility and the corrected identity-neutral write set; §9's
 #                "three different things called migration"; §12 assumptions;
 #                §16 the affected components, the exact path map, the
-#                TWENTY-ONE-row documentation obligation table, the CLOSED PAGE
-#                SET statement, the count-bearing class rule and the new
-#                FAMILY-COUNT CLASS (ordinals stay, counts move, tails shift);
-#                §17 the 31 ACs with their ticket traceability; §18 the
-#                dependency-ordered rollout, the mount, and the "inert by
-#                default" adoption statement; §19's declaration that this change
-#                migrates NO state; Appendix A (precedence matrix), B (zone
-#                grammar, local evaluation, the DST rule and the one named
-#                expiry derivation), C (budget evaluation), D
-#                (`delivery.provider.simulate.v1`, including `workItemRef`),
-#                E (migration subset, mapping table, refusals), F (watch
-#                freshness), G (the three declared provider rows)).
-#   - Test plan: ./chg-GH-350-test-plan.md (v1.2: **108** cases in eleven blocks
+#                **22**-row documentation obligation table with the named moving
+#                sentences, the CLOSED PAGE SET statement, the count-bearing class
+#                rule and the FAMILY-COUNT CLASS (ordinals stay, counts move,
+#                tails shift); §17 the 31 ACs with their ticket traceability; §18
+#                the dependency-ordered rollout — simulation, migration, watch
+#                freshness, then **the family mount**, then the conformance and
+#                documentation sweep — and the "inert by default" adoption
+#                statement; §19's declaration that this change migrates NO state;
+#                Appendix A (precedence matrix), B (zone grammar, local
+#                evaluation, the DST rule and the one named expiry derivation), C
+#                (budget evaluation), D (`delivery.provider.simulate.v1`,
+#                including `workItemRef`), E (migration subset, mapping table,
+#                refusals), F (watch freshness), G (the three declared provider
+#                rows)).
+#   - Test plan: ./chg-GH-350-test-plan.md (v1.3: **108** cases in eleven blocks
 #                — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
 #                class-T paid-entry case), TC-CFG-001..011 (11),
 #                TC-INDEP-001..004 (4), TC-SIM-001..011 (11),
@@ -41,22 +45,29 @@
 #                coverage in both directions; §3.5 declared assertion bases and
 #                seams (BYTE/GIT/SPAWN/READ/ATOMIC/ORDER/FAULT/SEAM/CI/DOC plus
 #                VAC-TP-1, EMPTY-TP-1, SPEND-TP-1, NOEXEC-TP-1, DOC-TP-1 and
-#                v1.2's MOUNT-TP-1); §4.3 negative controls; §4.1 hermeticity;
+#                MOUNT-TP-1); §4.3 negative controls; §4.1 hermeticity;
 #                §5.1 the scenario index; §5.2 the details including 5.2.10
 #                (mount) and 5.2.11 (ref); §6.2 fixtures; §6.3 the numbered gate
-#                battery G1..G6; §7.1 the **24** new files; §7.2 the existing
-#                suites with the named assertion that moves in each; §7.3 the
-#                case-to-suite map (108 rows, one owner per case); §8.3's
-#                findings, of which OQ-TP-1/-2/-6/-8/-10 are carried below and
-#                none is open in a way that stops delivery).
+#                battery G1..G6; §7.1 the **25** new files (v1.3 adds
+#                `tests/checks/provider-coverage-mount.test.ts` as TC-CONFORM-006's
+#                owner); §7.2 the existing suites with the named assertion that
+#                moves in each — including the corrected control row, whose only
+#                control members are `help-guide-coverage.test.ts`,
+#                `reference-page-parity.test.ts`, `prompt-conformance.test.ts` and
+#                `ci-checks.test.ts`; §7.3 the case-to-suite map (108 rows, one
+#                owner per case); §8.3's findings, of which OQ-TP-1/-2/-6/-8/-10
+#                are carried below and none is open in a way that stops delivery).
 #   - PM record: ./chg-GH-350-pm-notes.yaml (milestone "M4: Jaiship-native
 #                delivery", story M4-S4; the eight binding decisions, all
 #                `Proposed` with owner acceptance at pull-request review).
 #   - DoR:       ./readiness-review/readiness-iter-1.md (iteration 1,
-#                `NOT_READY`, blocking B1..B7, six non-blocking findings; the
-#                remediation map below states where each blocking finding is
-#                answered in THIS plan, and every one of the six non-blocking
-#                findings is dispositioned).
+#                `NOT_READY`: blocking B1..B7, six non-blocking findings) and
+#                ./readiness-review/readiness-iter-2.md (iteration 2,
+#                `NOT_READY`: blocking D2-1..D2-4, major D2-5..D2-12). Both
+#                verdicts are TRACKED in the tree at plan time; the two
+#                remediation maps below state where every finding is answered in
+#                THIS plan or is dispositioned as an artifact-level matter.
+
 #   - Decisions: doc/decisions/ADR-0012 (zone domain, one `ProviderZonePort`,
 #                DST rule, three-pass cap, `provider.peak.zone-unknown`,
 #                `timezone` evidence), PDR-0006 (per-project = the delivered
@@ -193,8 +204,100 @@
 #        `syntheticPromptProgram()` and `HELP_TUPLES` from the declarative set and
 #        `allHelpEntries()`: it is a control here and is declared by no phase.
 #
-# COMMIT-BOUNDARY REALITY (binding on phase 1):
-#   EIGHT decision records are UNTRACKED in the worktree at plan time:
+# DOR ITERATION-2 REMEDIATION MAP (readiness-iter-2.md; spec v1.3, test plan v1.3):
+#   D2-1 — test plan §7.2's stale "no edit; the family count stays 26" control row
+#        contradicted the mount. TEST-PLAN ARTIFACT; v1.3 corrects it and this
+#        plan already declares `metrics-mounting.test.ts`,
+#        `entrypoint-two-bins.test.ts` and `entrypoint-composition.test.ts` as
+#        EDITED in phase 8, never as controls.
+#   D2-2 — spec §18's order versus the plan's simulate -> migrate -> watch ->
+#        mount. SPEC ARTIFACT; v1.3 adopts the plan's order (simulation,
+#        migration, watch freshness, **then the mount**) and states why. No phase
+#        moves.
+#   D2-3 — TDR-0053 and spec §2.1 claimed the family was already composed.
+#        RECORD/SPEC ARTIFACT (both corrected); the plan was already right and is
+#        now explicit: phase 8 declares BOTH membership and the six-seam
+#        `ProviderComposition` wiring (`clock`, `credentialPort`, `transport`,
+#        `sleep`, `stateStore`, `newFenceToken`) in `production.ts`, added
+#        unconditionally in the spread-and-add shape `install` uses, because
+#        `createConfigProgram` registers the definition only when a `provider`
+#        seam is supplied and production supplies none.
+#   D2-4 — the engine and metrics count sentences were unowned. ANSWERED HERE:
+#        `doc/spec/features/feature-provider-engine.md` is declared in PHASE 1
+#        (the vocabulary phase) and its five named sentences are the phase's
+#        obligation — "eight skip reasons" -> nine; "the closed eight-value set"
+#        -> the closed nine-value set with `budget-exhausted` in its declared
+#        precedence position; "the eight-field park allowlist" -> fourteen;
+#        "the closed eleven-field allowlist" -> seventeen; and "The provider kind
+#        carries five provider-engine error identities" -> sixteen rows while the
+#        ENGINE family's own count stays five (the page's other "five
+#        provider-engine rows/identities" statements stay accurate).
+#        `doc/spec/features/feature-metrics.md`'s family-count sentences ("the
+#        24-family mount with the family-count pins and the stale-count scan",
+#        "family-count pins read 24") move to 27 in PHASE 8 while `metrics`'s own
+#        "twenty-fourth prompt-required command family" ordinal STAYS.
+#        `doc/spec/features/feature-cli-entrypoint.md`'s count and its
+#        "`install` is the twenty-sixth **and last**" sentence move in PHASE 8.
+#        Each phase's comment names the sentences and the doc-conformance phrase
+#        row that pins them.
+#   D2-5 — the boundary rule path. DECIDED HERE: `.dependency-cruiser.cjs` IS
+#        declared, in the phases that add the two IMPORT-GRAPH rules — PHASE 5
+#        (a fixture read reachable only from the simulate composition) and PHASE 6
+#        (no child-process or shell capability in the migration module) — because
+#        the boundary harness copies the production config verbatim and a rule
+#        that is not in it cannot be exercised at all. The other two promised
+#        rules are NOT import-graph rules and get no dep-cruiser entry: the
+#        zone/`Intl` rule is the negative-fixture arm of
+#        `scripts/checks/ambient-globals.ts` (phase 2) and the
+#        provider-environment refusal is a catalog/structural emptiness assertion
+#        (`EMPTY-TP-1`, phases 1 and 4). TC-CONFORM-008's "four new rules" stays
+#        true: two dep-cruiser rules with boundary fixtures plus two check-level
+#        guard arms with injected negative fixtures.
+#   D2-6 — TC-MOUNT-003's mutation seam. DECLARED: the removal arm copies
+#        `packages/cli/src/entrypoint.ts` ITSELF into a temp module with a
+#        rewritten import of a provider-less declarative set and `?mutant=`
+#        cache-busting, and carries an unmutated control, so a rewrite that does
+#        not take effect fails the mutated arm by name (a copy of
+#        `prompt-required-commands.ts` alone cannot change selection because the
+#        constant is statically imported). Phase 8 states this; the mutation is
+#        case-local and never committed.
+#   D2-7 — TC-CONFORM-004's "maximal" fixture. DECLARED: a real budget park
+#        carries thirteen fields (`timezone` is a peak-writer field), so the
+#        maximal case CONSTRUCTS the fourteen-field object directly (or uses a
+#        chain park that unions `budget-exhausted` with `peak-window`) instead of
+#        asserting fourteen fields on a budget-only park. Phase 3 states this.
+#   D2-8 — TDR-0053 C-5's write-set overstatement. RECORD ARTIFACT (restated in
+#        v1.3 §8.5); no phase changes: the identity-neutrality obligation the plan
+#        carries is "no new bin declaration, no ownership refusal, and the
+#        read-only members (`quota`, `parks list`, `watch status`, `simulate`)
+#        write nothing", not "a provider invocation writes nothing".
+#   D2-9 — TC-MOUNT-008's owner and setup. DECLARED: the owner is
+#        `tests/checks/provider-alias-baseline.test.ts` (test plan v1.3 §7.1/§7.3
+#        agree), and the comparison is cell by cell against the committed baseline
+#        INCLUDING `git show <capturedFrom>:tests/fixtures/entrypoint/
+#        alias-baseline.json` for the provenance cell. Phase 8 states it.
+#   D2-10 — stale header facts. CORRECTED below: the tracked/untracked status is
+#        restated truthfully, phase 1 carries `readiness-iter-2.md`, and the
+#        documentation obligation table is 22 rows.
+#   D2-11 — test-plan wording items (30 vs 31 ACs, the OQ-TP-10 list, two control
+#        labels, TDR-0053 §5-B19's mutant description). TEST-PLAN/RECORD
+#        ARTIFACTS; no phase changes. The plan's own control list is corrected at
+#        D2-12.
+#   D2-12 — scope noise. CORRECTED below: `tests/checks/exports-parity.test.ts` is
+#        declared by NO phase (it packs each publishable package's declarations
+#        generically, so a new subpath needs no entry there) and
+#        `tests/structure/provider-surface.test.ts` is declared ONLY in phase 3,
+#        for TC-BUD-016's one-measurement-path scan arm — never for the new
+#        adapter subpath, which it does not police. Phase 8 also declares
+#        `tests/behaviour/entrypoint-composition.test.ts` for the removal of
+#        `provider` from `withExtras()`, which must stop listing a mounted family
+#        as an extra.
+
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1; status verified in the tree at
+# planning time — the iteration-1 header said "eight untracked", which is NO
+# LONGER true and is corrected here, DoR D2-10):
+#   ALL EIGHT decision records are TRACKED:
 #     doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
 #     doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
 #     doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
@@ -203,45 +306,64 @@
 #     doc/decisions/TDR-0052-watch-observation-freshness-and-stale-condition.md
 #     doc/decisions/TDR-0053-provider-family-mounting-27th-prompt-required.md
 #     doc/decisions/TDR-0054-provider-budget-work-item-ref-source.md
-#   `./readiness-review/readiness-iter-1.md` is untracked as well (the DoR
-#   verdict that reopened delivery planning), and `doc/decisions/00-index.md`
-#   carries the eight rows as a modification.
-#   The commit primitive stages only plan-declared scope plus the change folder,
-#   so a phase that declares nothing for them would leave them untracked and the
-#   change would ship without its binding design. Phase 1 therefore declares the
-#   eight exact paths, `doc/decisions/00-index.md`, the `doc/decisions/` folder,
-#   the readiness-review record and its folder. They land on the PHASE-1 DELIVERY
-#   COMMIT — the `commit` invocation carrying the phase-1 message, run at the
-#   phase-1 boundary, whose declared scope covers them (spec §16's
-#   `doc/decisions/` row and §18's "the decision records and their index rows
-#   ride a plan phase's authored scope, not a hand-commit").
+#   TDR-0053 and TDR-0054 were the only untracked records when the first version
+#   of this plan was authored; both are committed now (TDR-0054 in `4b1e56a0`,
+#   and TDR-0053 carries the iteration-2 Context FACT correction as an
+#   uncommitted modification at plan time). `doc/decisions/00-index.md` carries
+#   the eight rows as a modification. BOTH DoR verdict records are TRACKED:
+#   `./readiness-review/readiness-iter-1.md` (iteration 1) and
+#   `./readiness-review/readiness-iter-2.md` (iteration 2, the verdict this
+#   revision answers). Nothing in `doc/decisions/**` or `readiness-review/**` is
+#   untracked today.
+#   Phase 1 nevertheless DECLARES the eight exact paths,
+#   `doc/decisions/00-index.md`, the `doc/decisions/` folder, BOTH
+#   readiness-review records and that folder, because the commit primitive stages
+#   only plan-declared scope plus the change folder: a status touch, a record
+#   amendment (TDR-0053's correction is uncommitted), or a re-issued verdict must
+#   stage with the phase-1 commit instead of being dropped or landing on a
+#   folder-only lifecycle boundary. They land on the PHASE-1 DELIVERY COMMIT —
+#   the `commit` invocation carrying the phase-1 message, run at the phase-1
+#   boundary (spec §16's `doc/decisions/` row and §18's "the decision records and
+#   their index rows ride a plan phase's authored scope, not a hand-commit").
 #   They do NOT land on `phase complete delivery_planning`: that lifecycle
 #   boundary stages the change folder only, because
 #   `LIFECYCLE_PLAN_KINDS.delivery_planning = ["planning"]` matches no plan
 #   phase (every phase below is `kind: delivery`). The staging authority is
 #   phase 1's own declared scope. TC-CONFORM-010 asserts the eight records, the
 #   `Proposed` status and one index row each.
+
 #
 # SCOPE DECLARATION RULE (binding on every phase):
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
 #   gives the commit primitive staging authority. A file that is only RE-RUN as a
 #   delivered regression control is NOT declared. Controls this change re-runs
-#   and never edits: `tests/structure/metrics-mounting.test.ts` before phase 8,
-#   `tests/behaviour/entrypoint-help-coverage.test.ts` (derives its tuples),
-#   `tests/fixtures/entrypoint/programs.ts` (derives both `syntheticPromptProgram`
-#   and `HELP_TUPLES`), `tests/checks/ci-checks.test.ts`, the delivered
-#   spend-*/metrics-* behaviour suites behind TC-BUD-016's non-regression arm,
-#   the delivered `secret-read-boundary` check behind TC-INDEP-004,
-#   `packages/core/src/contracts/spend.ts` and `packages/cli/src/commands/spend.ts`
-#   (the ref pattern and the resolved-ref precedence the budget seam mirrors, both
-#   consumed as delivered), `packages/adapters/src/file/pm-context.ts` (the local
-#   delivery-context reader, consumed unchanged, spec §16), the boundary battery's
-#   own drivers (`tests/boundaries/boundaries.test.ts` and its fixture-coverage
-#   meta-check, which run whole while only the registry and the fixtures it lists
-#   are declared), `scripts/hooks/pre-opencode-iteration-zai.sh` (spec §16 marks
-#   it "Reference only — never executed, sourced, imported, or modified"), and
-#   `packages/cli/src/entrypoint.ts` (TDR-0053 C-2: the filter is untouched, a
-#   case-local mutation injects the removal and is never committed).
+#   and never edits: `tests/behaviour/entrypoint-help-coverage.test.ts` (derives
+#   its tuples from `allHelpEntries()`), `tests/fixtures/entrypoint/programs.ts`
+#   (derives both `syntheticPromptProgram` and `HELP_TUPLES`),
+#   `tests/checks/ci-checks.test.ts`, `tests/checks/help-guide-coverage.test.ts`
+#   and `tests/checks/reference-page-parity.test.ts` (both read the fixture and
+#   iterate the inventory), `tests/checks/prompt-conformance.test.ts`,
+#   `tests/checks/exports-parity.test.ts` (it packs each publishable package's
+#   declarations generically, so a new adapter subpath needs no entry there —
+#   verified, DoR D2-12), the delivered spend-*/metrics-* behaviour suites behind
+#   TC-BUD-016's non-regression arm, the delivered `secret-read-boundary` check
+#   behind TC-INDEP-004, `packages/core/src/contracts/spend.ts` and
+#   `packages/cli/src/commands/spend.ts` (the ref pattern and the resolved-ref
+#   precedence the budget seam mirrors, both consumed as delivered),
+#   `packages/adapters/src/file/pm-context.ts` (the local delivery-context reader,
+#   consumed unchanged, spec §16), the boundary battery's own drivers
+#   (`tests/boundaries/boundaries.test.ts` and its fixture-coverage meta-check,
+#   which run whole while only the registry and the fixtures it lists are
+#   declared), `scripts/hooks/pre-opencode-iteration-zai.sh` (spec §16 marks it
+#   "Reference only — never executed, sourced, imported, or modified"), and
+#   `packages/cli/src/entrypoint.ts` (TDR-0053 C-2: the filter is untouched; the
+#   TC-MOUNT-003 removal arm copies it into a temp module and is never committed).
+#   `tests/structure/provider-surface.test.ts` is declared ONLY in phase 3, for
+#   TC-BUD-016's one-measurement-path scan arm: it enumerates the jira/gitlab/
+#   github tracker clients and asserts nothing about the new adapter subpath (DoR
+#   D2-12), so no phase claims otherwise. The new subpath's export set is pinned by
+#   `tests/structure/content-inventory.test.ts` + `inventory.json` and by
+#   `tests/structure/subpaths.test.ts`'s declared-subpath list.
 #   DECLARED EXCEPTIONS (no phase declares them, and each is a decision rather
 #   than an omission): `scripts/checks/help-guide-coverage.ts` gains NO provider
 #   branch (TDR-0053 A4: the default M1 root already resolves the existing page),
@@ -270,7 +392,8 @@
 #   P5 fixture read / P6 migration reader / P8 unconditional registration),
 #   `packages/cli/src/commands/provider.ts`,
 #   `tests/structure/provider-contract.test.ts`,
-#   `tests/structure/provider-surface.test.ts`,
+#   `tests/structure/provider-surface.test.ts` (P3 ONLY, and only for TC-BUD-016's
+#   measurement-path scan arm — never for the new adapters subpath),
 #   `tests/checks/provider-evidence-bounds.test.ts`,
 #   `tests/checks/provider-hermetic.test.ts`,
 #   `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json`
@@ -278,11 +401,17 @@
 #   fixture reader, P6 migrate and source reader),
 #   `tests/golden/provider-parks-list.test.ts` and the
 #   `tests/fixtures/provider/golden/` folder (P2 `timezone`, P3 budget park),
-#   `tests/boundaries/fixture-registry.json`,
+#   `tests/boundaries/fixture-registry.json` (rule 1 P2, rule 4 P4, rule 2 P5,
+#   rule 3 P6) and `.dependency-cruiser.cjs` (P5 the fixture-read rule, P6 the
+#   no-child-process/shell rule — the only two of TC-CONFORM-008's four rules that
+#   are import-graph rules; DoR D2-5),
 #   `tests/behaviour/provider-budgets.test.ts` (P3 behaviour, P4 declaration),
-#   `tests/checks/doc-conformance.test.ts` (P1 counts, P2 zone pages, P4
-#   config-layer, P6 hook guide, P7 watch bound, P8 mount pages and mount
-#   ordinals, P9 the remaining rows),
+#   `tests/checks/doc-conformance.test.ts` (P1 counts and the engine page's
+#   vocabulary sentences, P2 zone pages, P4 config-layer, P6 hook guide, P7 watch
+#   bound, P8 mount pages, mount ordinals and the metrics/entrypoint sentences,
+#   P9 the remaining rows),
+#   `doc/spec/features/feature-provider-engine.md` (P1 the five vocabulary
+#   sentences, P2 the zone basis, P9 the budget/ref/announcement/CLI prose),
 #   `doc/spec/features/feature-metrics.md` (P1 counts, P8 family
 #   count, P9 gate-versus-alarm),
 #   `doc/spec/features/feature-install-lifecycle.md` (P1 counts, P8 family count),
@@ -290,10 +419,12 @@
 #   clause, P7 the `maxAgeSeconds` row),
 #   `doc/00-index.md` (P8 family count and inventory rows, P9 descriptions),
 #   `doc/planning/oss-tooling/cli-command-registry.md` (P2 UTC claim and five
-#   members, P8 count/tail and seven members), and the specification pages that
-#   carry claims from more than one phase (`feature-provider-engine.md`,
-#   `feature-provider-profiles.md`). Each such phase's comment names the half it
-#   owns; a later phase never re-states or re-moves an earlier phase's assertion.
+#   members, P8 count/tail and seven members),
+#   `doc/spec/features/feature-cli-entrypoint.md` (P8 only: the count, the
+#   "and last" sentence, the new paragraph, the composition and quality-evidence
+#   rows), and `doc/spec/features/feature-provider-profiles.md` (P2 zone basis,
+#   P9 watch members). Each such phase's comment names the half it owns; a later
+#   phase never re-states or re-moves an earlier phase's assertion.
 #
 # THE REGISTER MOVES ONCE, IN PHASE 1, AND NO LATER PHASE TOUCHES A COUNT:
 #   `provider.peak.zone-unknown`, `provider.budget.exceeded` and
@@ -378,28 +509,59 @@
 #   `entrypoint-two-bins.test.ts`) and TC-MOUNT-006 asserts the set is exactly the
 #   fixture's, so the hand-list omission is caught rather than repeated.
 #   `tests/behaviour/entrypoint-composition.test.ts` holds a literal `EXPECTED`
-#   array (not a derivation) and therefore moves in phase 8 as well; the suites
-#   that DO derive (`entrypoint-help-coverage.test.ts`,
-#   `tests/fixtures/entrypoint/programs.ts`) are controls and are declared by no
-#   phase.
+#   array (not a derivation) and therefore moves in phase 8 as well: the set
+#   becomes the 27 names, the drop-one mutant uses it, and `provider` is REMOVED
+#   from the suite's `withExtras()` arm, because a mounted family must stop being
+#   listed as a non-prompt-required extra (DoR D2-12). The suites that DO derive
+#   (`entrypoint-help-coverage.test.ts`, `tests/fixtures/entrypoint/programs.ts`)
+#   are controls and are declared by no phase.
+#   THE MOUNT IS NOT MEMBERSHIP ALONE (DoR D2-3): the production composition
+#   supplies the six `ProviderComposition` seams (`clock`, `credentialPort`,
+#   `transport`, `sleep`, `stateStore`, `newFenceToken`) and registers the family
+#   unconditionally, because `createConfigProgram` registers the definition only
+#   when a `provider` seam is supplied and production supplies none. Membership
+#   without the wiring would answer `fallback.internal` for all seven members.
+#   THE COUNT SENTENCES THE MOUNT OWNS ARE NAMED, NOT IMPLIED (DoR D2-4):
+#   `feature-cli-entrypoint.md`'s count and its "`install` is the twenty-sixth
+#   **and last**" sentence, `feature-install-lifecycle.md`'s two count sites,
+#   `feature-metrics.md`'s "24-family mount …" and "family-count pins read 24"
+#   sentences (all -> 27, while `metrics`'s own "twenty-fourth" ordinal and every
+#   other delivered ordinal stay), `doc/00-index.md`'s twenty-six-family set, and
+#   `doc/overview/glossary.md`'s family list. The ENGINE page's vocabulary counts
+#   are NOT this phase's: they move in phase 1 with the register (D2-4's other
+#   half).
+
 #
 # THE DOCUMENTATION RULE IS TRUTH-FIRST, NOT SWEEP-FIRST:
 #   A page moves in the phase whose delivery FALSIFIES its current text, or whose
 #   delivery completes the subject it documents: the count-bearing pages of the
-#   error register move with the register in phase 1; the pages that state the
+#   error register move with the register in phase 1, and SO DOES
+#   `feature-provider-engine.md`'s vocabulary half — its "eight skip reasons",
+#   "the closed eight-value set", "the eight-field park allowlist", "the closed
+#   eleven-field allowlist" and "five provider-engine error identities" sentences
+#   restate numbers phase 1 moves, and they are pinned by phase 1's phrase row
+#   (DoR D2-4); the pages that state the
 #   UTC-only basis and "non-UTC out of scope" (`feature-provider-engine.md`,
 #   `feature-provider-profiles.md`, `feature-peak-pausing.md`) move in phase 2,
 #   and `doc/planning/oss-tooling/cli-command-registry.md` loses its "UTC peak
 #   windows" sentence there too; `feature-config-layer.md` moves in phase 4 (the
 #   catalogue branch is its whole subject and completes it); the hook guide moves
 #   in phase 6 with the migration that replaces it; the family-count and
-#   tail-bearing pages move in phase 8 with the mount; and everything ADDITIVE —
+#   tail-bearing pages move in phase 8 with the mount, INCLUDING
+#   `feature-metrics.md`'s "24-family mount" and "family-count pins read 24"
+#   sentences and `feature-cli-entrypoint.md`'s count and "and last" sentence; and
+#   everything ADDITIVE —
 #   where no sentence is contradicted, only absent — moves in phase 9's sweep
 #   (the budget prose on the engine page, the watch members on the profiles page,
 #   the spend statement, the gate-versus-alarm paragraph, the nonfunctional row,
 #   the conditions guide, the model guide,
 #   the two indices' descriptions and the M4 pack), because an omission is not a
 #   falsehood and spreading additive prose across phases buys no truth.
+#   THE ENGINE PAGE THEREFORE MOVES IN THREE NAMED HALVES (P1 vocabulary, P2 zone
+#   basis, P9 budget/ref/announcement/CLI prose), each pinned by its own phrase
+#   row in the same commit; the metrics page likewise (P1 counts, P8 family count,
+#   P9 gate-versus-alarm). No half is optional and none may be re-stated by a
+#   later phase.
 #   A PAGE AND ITS PHRASE ROW MOVE IN THE SAME COMMIT: the doc-conformance phrase
 #   table is extended per phase for the pages that move in that phase and is never
 #   retrofitted — a row added later would assert prose a later page edit
@@ -474,9 +636,13 @@
 #   Phase 6 (18): TC-MIG-001..TC-MIG-015 (15), TC-CONFORM-005, TC-CONFORM-008,
 #                 TC-CONFORM-009
 #   Phase 7 (10): TC-WFRESH-001..TC-WFRESH-010
-#   Phase 8 (10): TC-MOUNT-001..TC-MOUNT-009 (9), TC-CONFORM-006
+#   Phase 8 (10): TC-MOUNT-001..TC-MOUNT-009 (9), TC-CONFORM-006 (owner
+#                 `tests/checks/provider-coverage-mount.test.ts` in test plan v1.3)
 #   Phase 9 (6): TC-CONFORM-007, TC-DOC-001..TC-DOC-005
 #   Count: 3 + 11 + 22 + 16 + 12 + 18 + 10 + 10 + 6 = 108.
+#   MOUNT-TP-1 / OQ-TP-10 is the reachability seam: TC-MOUNT-001..003 are phase 8's
+#   and their removal arm copies `entrypoint.ts` itself (DoR D2-6); TC-MOUNT-004's
+#   synthetic-extra-family drop is asserted by the same phase's structure suite.
 #   Ownership follows the phase that COMPLETES the case: TC-BUD-001 (a resolved
 #   configuration refuses an invalid child) is phase 4's while TC-BUD-002..017 are
 #   phase 3's; TC-REF-001/002/003/005 are phase 3's (the seam and the refusal)
@@ -527,6 +693,10 @@ tier:
     - "A phase boundary leaves the error-table counts, the result-code corpus or the two-segment allowlist between the old and the new value (provider rows 13 -> 16; the machine table entries AND `documentedRows` 164 -> 167, which are equal and must stay equal; the delivered-row metric 163 -> 166; the sync arithmetic `BASELINE_ROWS.length + 130` -> `+133`; the corpus 81 -> 84 at 59 true-positive / 25 false-positive; the allowlist unchanged at 66), or a count moves in more than one phase (AC-F8-1, DEC-14, NFR-15, test plan TR-10)"
     - "A count-bearing page (feature-result-contract.md, feature-ceremony-runner.md, feature-metrics.md, feature-install-lifecycle.md, or feature-supervise.md if it ever names a total) states an outgoing total, delivered-row count, allowlist size or `BASELINE_ROWS` arithmetic as current at any phase boundary, or a page's sentence moves without its number (spec §16's count-bearing class rule; AC-F8-3; TC-DOC-001)"
     - "A pinning suite or fixture still reads 26 after the mount phase, `PINNING_FILES` is hand-maintained instead of read from `tests/fixtures/metrics/mounting.ts`, the stale-detector class is not `2[3456]`, or any count/tail/pin site moves in a phase other than the mount phase (AC-F8-4, TDR-0053, TC-MOUNT-006/007)"
+    - "A mounted family is still listed as a non-prompt-required extra — `provider` left in `withExtras()` in `tests/behaviour/entrypoint-composition.test.ts` — so the extra-drop assertion certifies the pre-mount state (DoR D2-12, TC-MOUNT-005)"
+    - "A count sentence the register or the mount moves is left at its outgoing value on `feature-provider-engine.md` (skip reasons 8, the closed eight-value set, allowlist 8/11, five provider-engine rows for a sixteen-row kind), on `feature-metrics.md` (the 24-family mount, family-count pins read 24) or on `feature-cli-entrypoint.md` (26 families, `install` \"and last\"), or the engine page's sixteen-row sentence is over-corrected so the engine FAMILY stops reading five (AC-F8-3, DoR D2-4, TC-DOC-001/002)"
+    - "A boundary rule promised by TC-CONFORM-008 has no home in the production `.dependency-cruiser.cjs` the harness materialises, or a rule is re-homed into a suite the boundary meta-check cannot exercise (DoR D2-5, TC-CONFORM-008)"
+    - "A declared adapters subpath is missing from an enumeration that compares the manifest against a list (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`, `tests/boundaries/harness.ts`), or a subpath claim is attributed to a suite that does not police it (DoR D2-12)"
     - "A delivered ordinal moves — `supervise` renumbered from 25, `install` from 26, `steer` from 23 or `metrics` from 24 — or a page is over-corrected so its ordinal becomes the count (AC-F8-3, TDR-0053 C-4, TC-MOUNT-009)"
     - "The family is mounted at fewer than seven members, a help entry is added before the family is mounted (its `seeAlso` target would be unregistered and reference-page parity would fail), or the mount splits across phases (TDR-0053 C-3, AC-F8-5)"
     - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
@@ -554,14 +724,16 @@ defaultWeightClass: standard
 phases:
   # ---------------------------------------------------------------------------
   # Phase 1 — Declared provider vocabulary, the conformance register with its
-  # moved counts, the eight decision records and the DoR record (F-1, F-2, F-7
+  # moved counts, the eight decision records and the DoR records (F-1, F-2, F-7
   # contracts; F-8 register; DM-1, DM-2, DM-3, DM-8, DM-9; AC-F8-1, AC-F8-2;
   # DEC-8, DEC-14; NFR-5, NFR-15; TC-CONFORM-001, -002, -010).
   #
   # Goal: every closed set, evidence allowlist, declared bound and error identity
   # this change moves is declared ONCE, in the vocabulary everything else
-  # compiles and classifies against — and the change ships with its eight binding
-  # decision records and its DoR verdict instead of ten untracked files.
+  # compiles and classifies against — the pages that RESTATE those numbers move
+  # with it — and the change ships with its eight binding decision records and both
+  # DoR verdicts staged rather than at the mercy of the staging boundary.
+
   #
   # Contract: `packages/core/src/contracts/provider.ts` gains, additively and with
   # no member renamed or re-meant: the budget declaration and evaluation types
@@ -615,20 +787,44 @@ phases:
   # `tests/fixtures/provider/evidence/park-allowlist.json` and
   # `announcement-allowlist.json` and `toHaveLength(8)/(11)`; both move here to
   # fourteen and seventeen or the suite fails at this boundary.
+  # THE ENGINE PAGE'S FIVE VOCABULARY SENTENCES MOVE HERE (DoR D2-4): spec §16
+  # names them, and each is pinned by this phase's doc-conformance row:
+  #   - the summary's "eight skip reasons" -> nine;
+  #   - the chain-resolution sentence "the closed eight-value set" -> the closed
+  #     nine-value set with `budget-exhausted` in its declared precedence position;
+  #   - the parks sentence "the eight-field park allowlist" -> fourteen fields
+  #     (`timezone` plus the five budget fields);
+  #   - the announcements sentence "the closed eleven-field allowlist" ->
+  #     seventeen fields;
+  #   - the error-taxonomy sentence "The provider kind carries five provider-engine
+  #     error identities" -> the kind carries sixteen rows WHILE THE ENGINE
+  #     FAMILY'S OWN COUNT STAYS FIVE (five engine + four profile-selection + four
+  #     env-record + three added by this change). The page's OTHER "five
+  #     provider-engine rows/identities" statements (the contract-path, the
+  #     error-table-synchronization, the depends-on and the consumed-by lines)
+  #     stay accurate and are NOT rewritten — the engine family is still five.
+  #   The page's zone half is phase 2's and its budget/ref/announcement/CLI prose
+  #   is phase 9's; this phase owns the numbers only.
   # `feature-supervise.md` is NOT declared: its only restatement is the 66-member
   # allowlist, which does not move, and TC-DOC-001 asserts that `66` stays `66`.
   #
-  # Decision and DoR records: the eight untracked decision records,
-  # doc/decisions/00-index.md, the doc/decisions/ folder, the DoR verdict record
-  # `readiness-review/readiness-iter-1.md` and its folder are declared here and
-  # land on THIS PHASE'S DELIVERY COMMIT (COMMIT-BOUNDARY REALITY in the header).
+  # Decision and DoR records: the eight TRACKED decision records,
+  # doc/decisions/00-index.md, the doc/decisions/ folder, BOTH DoR verdict records
+  # (`readiness-iter-1.md` and `readiness-iter-2.md`) and that folder are declared
+  # here and land on THIS PHASE'S DELIVERY COMMIT (COMMIT-BOUNDARY REALITY in the
+  # header). TDR-0053 carries an uncommitted Context correction at plan time, so
+  # declaring it is load-bearing rather than a formality.
+
   #
   # Acceptance: AC-F8-1 (TC-CONFORM-001, TC-CONFORM-002), AC-F8-2 (TC-CONFORM-003
   # and -004 complete in phase 3; this phase moves the delivered closed-set
   # assertion, TC-PROV-001's `exactly eight and eleven fields` evidence
   # assertion, which becomes fourteen and seventeen, the evidence-allowlist
   # fixtures and the delivered export and bound-constant inventory),
-  # AC-F8-3's decision half (TC-CONFORM-010).
+  # AC-F8-3's two phase-1 halves — the decision half (TC-CONFORM-010) and the
+  # engine page's vocabulary sentences (DoR D2-4, pinned by this phase's
+  # doc-conformance row; the page's zone and budget halves complete in phases 2
+  # and 9).
   #
   # Gate (expected signal: exit 0 at every line; the sync script reports
   # entries=167 documented=167 in two-way agreement, the page's delivered-row
@@ -690,7 +886,12 @@ phases:
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-install-lifecycle.md
-        # The eight untracked decision records land on this phase's delivery
+        # The engine page's five vocabulary sentences (skip reasons 8 -> 9, the
+        # closed eight-value set -> nine, park allowlist 8 -> 14, announcement
+        # allowlist 11 -> 17, the error-taxonomy sentence); its zone half is
+        # phase 2's and its budget prose is phase 9's (DoR D2-4).
+        - doc/spec/features/feature-provider-engine.md
+        # The eight TRACKED decision records land on this phase's delivery
         # commit, with the index that already carries their rows.
         - doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
         - doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
@@ -701,9 +902,12 @@ phases:
         - doc/decisions/TDR-0053-provider-family-mounting-27th-prompt-required.md
         - doc/decisions/TDR-0054-provider-budget-work-item-ref-source.md
         - doc/decisions/00-index.md
-        # The DoR verdict record that reopened delivery planning (untracked at
-        # plan time; declared so it lands instead of being dropped).
+        # BOTH DoR verdicts are tracked; they are declared so a status touch or a
+        # re-issued verdict stages with phase 1 instead of landing on the
+        # folder-only lifecycle boundary. `readiness-iter-2.md` is the verdict
+        # this revision answers (DoR D2-10).
         - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-1.md
+        - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-2.md
       folders:
         - doc/decisions
         - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review
@@ -790,6 +994,18 @@ phases:
   #     `timezone`, so the parks-list and resolve goldens are regenerated as a
   #     declared delta here (phase 3 regenerates them again for a budget park).
   #
+  # THE NEW SUBPATH AND THE RULE PATH (DoR D2-5, D2-12): a declared adapters
+  # subpath must join the three enumerations that compare the manifest against
+  # their own lists (`tests/structure/subpaths.test.ts`,
+  # `scripts/checks/workspace-entrypoints.ts`, and `tests/boundaries/harness.ts`'s
+  # temp manifests) or those suites fail by name; it needs no
+  # `.dependency-cruiser.cjs` row (it reads `Intl`, a global, and imports no
+  # runtime module) and no `exports-parity` entry (that gate packs each
+  # publishable package's declarations generically). TC-CONFORM-008's zone/`Intl`
+  # rule is NOT a dependency-cruiser rule: it is the negative-fixture arm of
+  # `scripts/checks/ambient-globals.ts`, which this phase widens with `Intl`, and
+  # that is why the guard file is declared here.
+  #
   # Documentation half: feature-provider-engine.md (zone domain and default, the
   # port and the edge, the local-seconds rule, the one named expiry derivation and
   # the DST rule, the `timezone` evidence field, the removed UTC-only claim),
@@ -811,7 +1027,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-zone.test.ts tests/checks/provider-zone-refusal.test.ts tests/structure/provider-peak-rules-schema.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-window.test.ts tests/behaviour/peak-window-utc-clock.test.ts tests/behaviour/daemon-peak-window-isolation.test.ts tests/behaviour/provider-parks.test.ts tests/golden/provider-parks-list.test.ts
-  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries tests/structure/content-inventory.test.ts tests/checks/exports-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check
   #
@@ -855,10 +1071,18 @@ phases:
         - tests/behaviour/provider-parks.test.ts
         # TC-ZONE-010's ambient-neutrality arm joins the suite phase 1 moved.
         - tests/structure/provider-contract.test.ts
-        # The new adapters subpath's export set and its published-surface parity
-        # entry; the exact file set and executable allowance for the new module.
-        - tests/structure/provider-surface.test.ts
-        - tests/checks/exports-parity.test.ts
+        # THE NEW ADAPTERS SUBPATH JOINS THE THREE SUBPATH ENUMERATIONS (a
+        # declared subpath with no row fails these suites by name): the
+        # declared-subpath manifest test, the workspace-entrypoint check, and the
+        # boundary harness's temp manifests. The subpath's export set is pinned by
+        # the content inventory below — NOT by `provider-surface.test.ts` or
+        # `exports-parity.test.ts`, which do not police it (DoR D2-12) and are
+        # declared by no phase here. No dependency-cruiser row is added for this
+        # subpath: it reads `Intl` only (a global, not an import), so no runtime
+        # allowance applies.
+        - tests/structure/subpaths.test.ts
+        - scripts/checks/workspace-entrypoints.ts
+        - tests/boundaries/harness.ts
         - tests/checks/provider-hermetic.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
@@ -952,6 +1176,19 @@ phases:
   # that makes the declaration reachable from configuration lands in phase 4
   # exactly as §18 orders, so TC-BUD-001 (a resolved configuration refuses an
   # invalid child, naming the field, with no partial evaluation) is phase 4's.
+  # THE MAXIMAL-EVIDENCE CASE CONSTRUCTS ITS OBJECT (DoR D2-7): a real budget park
+  # carries THIRTEEN fields, because `timezone` is a peak writer's field, so
+  # TC-CONFORM-004's fourteen-field oracle is satisfied by constructing the
+  # maximal object directly (or by a chain park whose contributing kinds union
+  # `budget-exhausted` with `peak-window`) — never by asserting fourteen fields on
+  # a budget-only park. TC-BUD-015 stays the five-budget-field oracle; the declared
+  # allowlist size was phase 1's.
+  # `tests/structure/provider-surface.test.ts` is declared HERE for TC-BUD-016's
+  # one-measurement-path scan arm only: its TC-SURFACE-001 assertions enumerate the
+  # jira/gitlab/github tracker clients and stay byte-identical, and it asserts
+  # nothing about the new adapters subpath (DoR D2-12). `tests/checks/
+  # exports-parity.test.ts` is declared by no phase — it packs each publishable
+  # package's declarations generically.
   #
   # Acceptance: AC-F2-2 (TC-BUD-003, -004, -007, -008, -013, -014, -015),
   # AC-F2-3 (TC-BUD-005, -006, -010 class P, -017 class T), AC-F2-4 (TC-BUD-011,
@@ -1150,13 +1387,31 @@ phases:
   # phase 8, so the eight help entries (the family plus all seven members) land
   # THERE. This phase proves the member at the command layer, which is the
   # delivered pattern, and phase 8 converts it into the entrypoint proof.
+  # THE BOUNDARY RULE IS A DEPENDENCY-CRUISER RULE AND IS DECLARED HERE (DoR
+  # D2-5): TC-CONFORM-008's "fixture read reachable from the resolve composition"
+  # rule cannot be exercised by an assertion the boundary harness does not carry —
+  # the harness copies the PRODUCTION `.dependency-cruiser.cjs` verbatim and
+  # re-cruises with a probe, so a rule absent from that file has no failure mode.
+  # `.dependency-cruiser.cjs` therefore gains the forbidden edge (the fixture
+  # reader reachable from any composition but the simulate one) in this phase,
+  # with its `tests/boundaries/fixture-registry.json` entry and its fixture module
+  # under the declared `tests/boundaries/fixtures` folder. The alternative —
+  # re-homing the rule into `provider-composition-absence.test.ts` — was rejected:
+  # it would leave TC-CONFORM-008's four-rule promise partially unmet and make the
+  # boundary suite's own meta-check report a rule it cannot materialise. Phase 6
+  # declares the same file for the second import-graph rule (no child-process or
+  # shell capability in the migration module); the other two rules are check-level
+  # arms and get no dep-cruiser entry (phase 2's `Intl` guard; phases 1/4's
+  # provider-environment emptiness).
   #
   # Acceptance: AC-F5-1 (TC-SIM-001, -003, -005, -009, -011), AC-F5-2 (TC-SIM-002,
   # -006, TC-REF-004), AC-F5-3 (TC-SIM-004, -005, -006, -007, -008, -010).
   #
   # Gate (expected signal: exit 0 at every line; parity reports 0 decision
   # differences; two runs of one fixture are byte-identical; four throwing fakes
-  # are never called; the local-context seam count is zero in every arm):
+  # are never called; the local-context seam count is zero in every arm; the new
+  # dep-cruiser rule reports zero clean-tree violations and its fixture fails by
+  # name):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-simulate.test.ts tests/behaviour/provider-budget-ref.test.ts tests/checks/provider-simulate-cli.test.ts tests/golden/provider-simulate-golden.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-composition-absence.test.ts tests/boundaries tests/structure/content-inventory.test.ts
@@ -1186,12 +1441,13 @@ phases:
         # SIM-011's absence scan; phase 6 extends the same suite with the
         # migration halves.
         - tests/structure/provider-composition-absence.test.ts
-        - tests/structure/provider-surface.test.ts
         - tests/checks/provider-hermetic.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         # Rule 2 of the four new boundary rules: a fixture read reachable from
-        # the `resolve` composition fails a fixture by name.
+        # the `resolve` composition fails a fixture by name, and the rule lives in
+        # the production config the harness materialises (DoR D2-5).
+        - .dependency-cruiser.cjs
         - tests/boundaries/fixture-registry.json
       folders:
         - packages/adapters/src/file
@@ -1289,12 +1545,13 @@ phases:
         - tests/golden/provider-migrate-golden.test.ts
         # MIG-004's no-child-process/no-shell arm on the suite phase 5 created.
         - tests/structure/provider-composition-absence.test.ts
-        - tests/structure/provider-surface.test.ts
         - tests/checks/provider-hermetic.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         # Rule 3 of the four new boundary rules: a child-process or shell import
-        # in the migration module fails a fixture by name.
+        # in the migration module fails a fixture by name — and, like rule 2, it
+        # lives in the production config the harness materialises (DoR D2-5).
+        - .dependency-cruiser.cjs
         - tests/boundaries/fixture-registry.json
         - doc/guides/zai-peak-hours-hook.md
         - tests/checks/doc-conformance.test.ts
@@ -1413,10 +1670,18 @@ phases:
   # the filter changes.
   #
   # Contract: `provider` joins `PROMPT_REQUIRED_COMMANDS` AFTER `install` (26 ->
-  # 27 names; `install` stays the twenty-sixth and stops being last). The
-  # production composer registers the family UNCONDITIONALLY in the same shape as
-  # `install`, so a configuration failure is a typed handler outcome rather than a
-  # missing family; `selectPromptRequiredProgram` is untouched and still drops
+  # 27 names; `install` stays the twenty-sixth and stops being last).
+  # THE MOUNT IS MEMBERSHIP **PLUS** THE COMPOSITION WIRING (DoR D2-3, TDR-0053 as
+  # corrected, spec §2.1/§5-A3/§18): `createConfigProgram` assigns
+  # `commands.provider` only inside `if (options.provider !== undefined)` and the
+  # production `configured` object carries no `provider` key, so the composed
+  # program today has 27 commands with the family absent and membership alone would
+  # answer `fallback.internal` for every invocation. `packages/cli/src/production.ts`
+  # therefore supplies the six `ProviderComposition` seams — `clock`,
+  # `credentialPort`, `transport`, `sleep`, `stateStore`, `newFenceToken` — and
+  # registers the family UNCONDITIONALLY in the same spread-and-add shape `install`
+  # uses, so a configuration failure is a typed handler outcome rather than a
+  # missing family. `selectPromptRequiredProgram` is untouched and still drops
   # extras (a missing prompt-required member is still contained as
   # `fallback.internal` at exit 2). `packages/cli/src/help.ts` gains EIGHT entries
   # — one family entry plus the seven members (`resolve`, `quota`, `parks list`,
@@ -1426,12 +1691,17 @@ phases:
   # `tests/fixtures/help-guide/coverage.json` gains one `commands` row appended
   # after `install` AND one `referencePages` row for the M1 page (the pre-mount
   # inventory had neither, which is why the both-directions assertion was
-  # vacuous — DoR B6); `tests/checks/help-guide-coverage-mutants.test.ts` gains a
-  # TWIN mutant that drops `provider` so the new row can fail by name. The M1 page
+  # vacuous — DoR B6). The both-directions proof is now `tests/checks/
+  # provider-coverage-mount.test.ts` (TC-CONFORM-006's owner in test plan v1.3),
+  # which drives the fixture and the static help inventory in both directions and
+  # carries the two non-vacuous mutant arms (a dropped `commands` row and a
+  # dropped `referencePages` row); `tests/checks/help-guide-coverage-mutants.test.ts`
+  # keeps its own twin mutant that drops `provider`. The M1 page
   # (which `pageFor` already maps, no branch, no M4 page) gains `--help` and
   # `--version`, all seven members with usage/options/examples/exit codes/
   # see-also, the `--chain` flag, the budget ref rule, the `watch-stale`
   # condition, and the three new error rows.
+
   # THE COUNT AND TAIL MOVE HERE, ONCE, UNDER THE PROSE RULE (ordinals stay,
   # counts move, tails shift one place, stale class `2[345]` -> `2[3456]`):
   # `tests/fixtures/metrics/mounting.ts` (MOUNTED_FAMILIES appends `provider`;
@@ -1456,6 +1726,19 @@ phases:
   # derive (`entrypoint-help-coverage.test.ts`, `tests/fixtures/entrypoint/
   # programs.ts`) are controls and are declared by no phase (non-blocking DoR
   # finding 6).
+  # TWO OBLIGATIONS INSIDE THOSE SUITES, NAMED (DoR D2-12, D2-9):
+  #   - `tests/behaviour/entrypoint-composition.test.ts` moves its literal
+  #     `EXPECTED` set to the 27 names (with `provider` last) and uses that set for
+  #     its drop-one mutant, AND REMOVES `provider` FROM ITS `withExtras()` ARM: a
+  #     mounted family must stop being listed as a non-prompt-required extra, or
+  #     the extra-drop assertion certifies the pre-mount state.
+  #   - `tests/checks/provider-alias-baseline.test.ts` (TC-MOUNT-008's owner, as
+  #     §7.1/§7.3 now agree) compares the alias's rendered help CELL BY CELL
+  #     against the committed baseline and reads the provenance cell against
+  #     `git show <capturedFrom>:tests/fixtures/entrypoint/alias-baseline.json`,
+  #     so "the provenance note gained exactly the GH-350 clause" is an assertion
+  #     and not a hope.
+  #
   # MOUNT ORDERING, DECLARED: the mount lands AFTER phases 5 and 6 because
   # AC-F8-5's positive arm is seven member paths and EIGHT help surfaces,
   # TC-MOUNT-002 asserts a family entry listing exactly seven members, and spec
@@ -1474,18 +1757,30 @@ phases:
   # are the case-local removal of `provider` from the declarative set (containment
   # identity at exit 2, the summary naming the missing composition, a handler
   # count of zero) and a synthetic extra family being dropped with the selected
-  # keys equal to the declared set. The removal arm's injection point is declared
-  # by TDR-0053/OQ-TP-10: an injected declarative set or a temp-copy module
-  # imported in isolation; the arm is NEVER committed as a production change, and
-  # a case that cannot induce it fails naming the missing seam.
+  # keys equal to the declared set. THE REMOVAL ARM'S MECHANISM IS DECLARED (DoR
+  # D2-6): `selectPromptRequiredProgram` closes over a statically imported
+  # constant, so a copy of `prompt-required-commands.ts` alone cannot change
+  # selection — the arm copies `packages/cli/src/entrypoint.ts` ITSELF into a temp
+  # module with a rewritten import of a provider-less declarative set and `?mutant=`
+  # cache-busting, and carries an unmutated control, so a rewrite that does not
+  # take effect fails the mutated arm by name. The arm is NEVER committed as a
+  # production change, and a case that cannot induce it fails naming the missing
+  # seam.
   # DOCUMENTATION HALF (the family-count class; the closed page set is unchanged
   # in kind and grows by these members): `feature-cli-entrypoint.md` (count 26 ->
-  # 27, "and last" leaves `install`, a new paragraph names `provider` last, the
-  # non-prompt-required list drops `provider`, the composition table gains a row,
-  # the quality-evidence table a mount row), `feature-install-lifecycle.md` (its
-  # two mounted-count sites 26 -> 27 while its three "`install` is the
-  # twenty-sixth" ordinal statements STAY), `feature-metrics.md` (family count
-  # 26 -> 27; its gate-versus-alarm paragraph is phase 9's),
+  # 27; "`install` is the twenty-sixth **and last**" LOSES "and last"; a new
+  # paragraph states that `provider` is the twenty-seventh and last; the
+  # non-prompt-required list drops `provider`; the composition table gains a
+  # `provider` row and the quality-evidence table a provider mount row),
+  # `feature-install-lifecycle.md` (its two mounted-count sites 26 -> 27 while its
+  # three "`install` is the twenty-sixth" ordinal statements STAY),
+  # `feature-metrics.md` — ITS NAMED SENTENCES (DoR D2-4): the quality-evidence
+  # line "the 24-family mount with the family-count pins and the stale-count scan"
+  # becomes the **27-family** mount with the same pins and the widened stale-count
+  # scan, and every "family-count pins read 24" statement becomes 27, WHILE
+  # `metrics`'s OWN "twenty-fourth prompt-required command family" ordinal STAYS
+  # (it is a position, not a size) and its gate-versus-alarm paragraph remains
+  # phase 9's;
   # `doc/00-index.md` (the twenty-six-family set -> twenty-seven; its
   # "twenty-sixth `install` family" ordinal STAYS), `doc/overview/glossary.md`
   # (the family list ends `supervise`, `install`, `provider`),
@@ -1508,7 +1803,7 @@ phases:
   # in both bins; the coverage mutant fails by name; the alias baseline differs in
   # exactly one cell):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
-  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-entrypoint-reachability.test.ts tests/structure/provider-mounting.test.ts tests/checks/provider-alias-baseline.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-entrypoint-reachability.test.ts tests/checks/provider-coverage-mount.test.ts tests/structure/provider-mounting.test.ts tests/checks/provider-alias-baseline.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/entrypoint-bin.test.ts tests/structure/supervision-mounting.test.ts tests/structure/metrics-mounting.test.ts tests/structure/steer-mounting.test.ts tests/structure/board-mounting.test.ts tests/structure/events-production-composition.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/structure/daemon-production-composition.test.ts tests/structure/install-conformance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/entrypoint-two-bins.test.ts tests/behaviour/entrypoint-composition.test.ts tests/behaviour/repos-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/events-mount-help.test.ts tests/behaviour/ceremony-cli.test.ts tests/behaviour/install-family-surface.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/help-guide-coverage.test.ts tests/checks/help-guide-coverage-mutants.test.ts tests/checks/reference-page-parity.test.ts
@@ -1537,10 +1832,13 @@ phases:
         - tests/fixtures/metrics/mounting.ts
         - tests/fixtures/supervise/mounting.ts
         - tests/fixtures/entrypoint/alias-baseline.json
-        # The three new mount suites: the two-arm reachability proof, the
-        # structure suite that derives the pin set from the fixture, and the
-        # alias comparison.
+        # The four new mount suites: the two-arm reachability proof, the
+        # coverage both-directions proof with its two mutant arms (TC-CONFORM-006's
+        # owner), the structure suite that derives the pin set from the fixture,
+        # and the alias comparison against the committed baseline plus its
+        # `capturedFrom` provenance cell.
         - tests/checks/provider-entrypoint-reachability.test.ts
+        - tests/checks/provider-coverage-mount.test.ts
         - tests/structure/provider-mounting.test.ts
         - tests/checks/provider-alias-baseline.test.ts
         # Every PINNING_FILES member (derived from
