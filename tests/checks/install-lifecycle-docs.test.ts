@@ -66,6 +66,41 @@ export const guideViolations = (text: string | undefined): readonly string[] => 
 
 const read = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
 
+const SPEC_PAGE = "doc/spec/features/feature-install-lifecycle.md";
+
+/**
+ * The spec page's rollback declaration: five causes, the four missing-name
+ * record conditions plus the separate destination-shape cause.
+ */
+export const SPEC_ROLLBACK_REQUIRED = [
+  "There are **five causes**",
+  "Four are **missing-name** record conditions",
+  "**destination-shape** cause, not a record condition",
+  "not a compiled artifact at all — a delivered launcher, a symlink, or a foreign file",
+  "refuses before the daemon gate and any rename",
+] as const;
+
+/** The retired claim: the rollback precondition has only four missing-name causes. */
+export const SPEC_ROLLBACK_STALE = [
+  "The four causes are missing-name conditions",
+  "four causes",
+  "only *missing* names are refused",
+] as const;
+
+/** The spec page's claim rule: every declared cause present, every retired claim absent. */
+export const specRollbackViolations = (text: string | undefined): readonly string[] => {
+  if (text === undefined) return [`${SPEC_PAGE}: page does not exist`];
+  const failures: string[] = [];
+  for (const fact of SPEC_ROLLBACK_REQUIRED) {
+    if (!text.includes(fact)) failures.push(`${SPEC_PAGE}: missing required fact: ${fact}`);
+  }
+  for (const retired of SPEC_ROLLBACK_STALE) {
+    if (text.includes(retired))
+      failures.push(`${SPEC_PAGE}: retired statement present: ${retired}`);
+  }
+  return failures;
+};
+
 describe("TC-INST-110 the guide states the cadence and every declared operating fact", () => {
   test("the guide satisfies the declared requirement table", () => {
     expect(guideViolations(read(GUIDE))).toEqual([]);
@@ -87,6 +122,45 @@ describe("TC-INST-110 the guide states the cadence and every declared operating 
     const retiredDaemon = `${read(GUIDE)}\ndaemon: absent\n`;
     expect(guideViolations(retiredDaemon).join("\n")).toContain(
       "retired statement present: daemon: absent",
+    );
+  });
+});
+
+describe("TC-INST-110 (spec half) the rollback precondition declares all five causes", () => {
+  test("the spec page satisfies the declared cause table", () => {
+    expect(specRollbackViolations(read(SPEC_PAGE))).toEqual([]);
+  });
+
+  test("every declared phrase is non-vacuous in both directions", () => {
+    const text = read(SPEC_PAGE);
+    for (const fact of SPEC_ROLLBACK_REQUIRED) {
+      expect({ fact, present: text.includes(fact) }).toEqual({ fact, present: true });
+      expect(
+        specRollbackViolations(text.replaceAll(fact, "declared elsewhere")).join("\n"),
+      ).toContain(`missing required fact: ${fact}`);
+    }
+    for (const retired of SPEC_ROLLBACK_STALE) {
+      expect({ retired, present: text.includes(retired) }).toEqual({ retired, present: false });
+      expect(specRollbackViolations(`${text}\n${retired}\n`).join("\n")).toContain(
+        `retired statement present: ${retired}`,
+      );
+    }
+  });
+
+  test("the destination-shape cause is a separate cause, not a missing name", () => {
+    const withoutShape = read(SPEC_PAGE).replaceAll(
+      "not a compiled artifact at all — a delivered launcher, a symlink, or a foreign file",
+      "not the pair the swap inverts",
+    );
+    expect(specRollbackViolations(withoutShape).join("\n")).toContain(
+      "missing required fact: not a compiled artifact at all — a delivered launcher, a symlink, or a foreign file",
+    );
+    const oldClaim = read(SPEC_PAGE).replaceAll(
+      "There are **five causes**",
+      "The four causes are missing-name conditions",
+    );
+    expect(specRollbackViolations(oldClaim).join("\n")).toContain(
+      "retired statement present: The four causes are missing-name conditions",
     );
   });
 });

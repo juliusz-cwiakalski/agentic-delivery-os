@@ -1,0 +1,358 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-346
+branch: feat/GH-346/installable-versioned-binary
+status: FAIL
+summary: >-
+  The remediation commit d6afde09 closes all twelve iteration-1 findings on
+  inspection and by new, non-vacuous tests: the truncation flag is carried from
+  the enumeration into the verdict and a production-composition test drives 140
+  project roots, the artifact-tier timeouts are explicit, the PATH block is
+  written once per path with a typed refusal, the slot predicate now matches the
+  compiled-artifact predicate, the rollback refuses a non-artifact destination,
+  the dry-run prints the executed three-rename swap, and the shell guard reads a
+  bounded NUL-stripped probe. My own aggregate run is green — `pnpm check` exit
+  0, 10,739 pass / 4 skip / 0 fail in 1276.83 s, no artifact-tier timeout even
+  with concurrent host load — and `plan validate GH-346` reports valid/full/ready.
+  Two issues keep it from being mergeable: the new destination-shape rollback
+  refusal is a fifth cause that spec v1.8 (F-8, DEC-13) and the shipped
+  current-truth page (feature-install-lifecycle.md:194, :277) present as a closed
+  four-item list of missing-name conditions, and the newly added `mkdirp` in
+  `writeProfileText` computes the parent with `slice(0, lastIndexOf("/"))`, so a
+  separator-less relative `--shell-profile` creates a junk directory beside the
+  profile (reproduced: `.zshrc` -> stray `.zshr`). Four low findings and one
+  traceability note follow; the code itself is otherwise sound and the fix set is
+  small.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 4
+  info: 1
+spec_compliance: FAIL
+plan_compliance: PASS
+gate_results:
+  pnpm_check: >-
+    PASS — exit 0 on the current tree at d6afde09, run as
+    `TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm check`:
+    10,739 pass / 4 skip / 0 fail, 97,676 expect() calls, 1,342 files, 1,276.83 s.
+    lint, format:check, typecheck, build, check:boundaries (secret-read-boundary 441
+    files clean), check:memory (records=3 errors=0 advisories=0),
+    prompt-conformance (5 prompts clean), help-guide-coverage (all covered) and
+    exports-parity (5 publishables) all passed. No timeout, no skip-by-name, no
+    failure; the 4 skips are pre-existing platform skips.
+  host_load_note: >-
+    Two other bun processes ran at ~36% CPU on this host for most of the run and
+    no artifact-tier case timed out, so iteration-1 F-2's class (TC-BIN-068 at
+    5,010 ms under load) did not reproduce. Pass count moved 10,730 -> 10,739,
+    consistent with the added cases.
+  plan_validate: "PASS — `plan validate GH-346` => verdict=valid, artifact=yaml:chg-GH-346-plan.yaml, tier=full, readyForDevelopment=true."
+  verify_change: "PARTIAL — `verify change GH-346` => result=partial, missing review_fix, quality_gates, dod_check, pr_creation (expected: this review is the review_fix phase)."
+  plan_diff_note: >-
+    The F-9 plan-scope fix is present in the working tree but NOT committed
+    (`M chg-GH-346-plan.yaml`); the only other worktree entry is this untracked
+    `code-review/` folder. The plan edit must land before the PR.
+working_tree_note: >-
+  Reviewed tree = d6afde09 plus the PM-authored uncommitted plan edit (F-9
+  bookkeeping) and this review folder. No source file was modified by this
+  review.
+prior_findings_closed:
+  - id: F-1
+    status: CLOSED
+    evidence: >-
+      production.ts:4014 carries `enumeration.truncated` into
+      `InstallRuntime.stateRootsTruncated` (production.ts:4055; contract
+      packages/core/src/contracts/install.ts:300) and
+      commands/install.ts:186 prefers it over the length fallback. Test
+      TC-INST-045b (tests/behaviour/install-compatibility.test.ts:231) builds the
+      real `createProductionComposer` over 140 project roots and asserts
+      `truncated: true`, `judged: 128`, `roots` length 128 — the production path
+      that iteration 1 proved broken. AC-F7-3 / NFR-7 now hold.
+  - id: F-2
+    status: CLOSED
+    evidence: >-
+      tests/checks/artifact-grammar.test.ts:76,80,103,110,118,142 pass 120_000 to
+      beforeAll/afterAll/test; the argv matrix is four grammar shapes. My own gate
+      run under concurrent load was green with no timeout.
+  - id: F-3
+    status: CLOSED
+    evidence: >-
+      `applyPathBlock` (commands/install.ts:356-375) is the only writer, called
+      once on the agreement path (:525) and once on the replacing path (:638);
+      the boolean is honoured and a failure is a typed refusal, so no record can
+      claim a block that is not on disk; `writeProfileText` now mkdirp's the
+      parent (adapters/src/file/install-profile.ts:32-33). TC-INST-070a
+      (tests/checks/install-lifecycle-path.test.ts:109) asserts one write per
+      path, the created nested directory, and two refusal arms. The mkdirp
+      itself introduces a new defect: see F-15.
+  - id: F-4
+    status: CLOSED
+    evidence: >-
+      `slotCondition` (core/src/domain/install-replace.ts:332-352) now requires
+      regular, non-empty, executable and non-shebang — the same test as
+      `isCompiledArtifactAtPath` (adapters/src/file/install-destination.ts:232-241)
+      — and `slotReportOf` (commands/install.ts:256-266) feeds it a bounded shape
+      probe. TC-INST-021 asserts status `invalid` (launcher), `invalid` (0644
+      ELF), `present` (0755 ELF), so status and rollback agree for these arms.
+      Residual edge: F-17.
+  - id: F-5
+    status: CLOSED
+    evidence: >-
+      `rollbackPrecondition` takes `destinationIsArtifact`
+      (install-replace.ts:172,179) and refuses before the daemon gate:
+      `runRollback` computes the fact once (commands/install.ts:742), reuses it
+      for `destinationIsRunning` (:745) and passes it (:758); the refusal returns
+      before `daemonGate` (:801). TC-INST-021b asserts the refusal, unchanged
+      destination bytes and an unchanged slot digest. The behaviour is right; its
+      declaration is missing — see F-13.
+  - id: F-6
+    status: CLOSED
+    evidence: >-
+      commands/install.ts:766-768 print rename 1 (destination ->
+      `<slot>.rollback-tmp`), rename 2 (slot -> destination) and rename 3
+      (`<slot>.rollback-tmp` -> slot), matching the executed swap at :806-819.
+      tests/checks/install-lifecycle-dryrun.test.ts:147-148 assert rename 3 and
+      the temp path.
+  - id: F-7
+    status: CLOSED
+    evidence: >-
+      scripts/install.sh:976 declares `LAUNCHER_PROBE_BYTES=4096` and :1066-1068
+      read `head -c "${LAUNCHER_PROBE_BYTES}" ... | LC_ALL=C tr -d '\000'`. The
+      structural rule requires the probe constant
+      (tests/structure/install-launcher.test.ts:91) with a whole-file-read
+      negative control (:245-252), and
+      tests/checks/install-launcher-installer.test.ts:728 plants an 8 KiB
+      NUL-containing ELF fixture asserting exit 3, a `refusing:` line, no
+      "null byte" warning and byte-identical content.
+  - id: F-8
+    status: CLOSED
+    evidence: >-
+      packages/core/src/contracts/install.ts:25-29 now documents "the four
+      compatibility outcomes ... Truncation is a separate group-level flag, never
+      a per-root outcome."
+  - id: F-9
+    status: CLOSED
+    evidence: >-
+      The uncommitted plan edit adds doc/00-index.md,
+      doc/overview/architecture-overview.md, doc/overview/glossary.md,
+      doc/spec/nonfunctional.md, doc/quality/test-specs/test-spec-state-layer.md
+      and scripts/checks/forbidden-literals.registry.json to phase 6 scope with a
+      stated reason; `plan validate GH-346` is valid/full/ready. It is
+      uncommitted — must be committed before merge.
+  - id: F-10
+    status: CLOSED
+    evidence: >-
+      tests/checks/install-lifecycle-daemon.test.ts:192 adds `["rollback"]` to the
+      `--dry-run --stop-daemon` loop; the loop asserts `error === undefined`
+      (the seeded fixture makes the rollback plan producible, so the arm is not
+      vacuous), an empty ordered daemon log, an unchanged snapshot and
+      `daemon: unchecked`.
+  - id: F-11
+    status: CLOSED
+    evidence: >-
+      tests/checks/install-conformance-mutants.test.ts:69-83 define the named
+      rule `installHelpViolations`; :97 asserts the real `allHelpEntries()`
+      inventory is green; :103 and :107 inject two mutants and assert by name,
+      with the family count asserted independently of the filter that built the
+      fixture. The identity assertion was dropped. Residual: the rule is
+      test-local (no production gate owns the help-entry inventory) — see F-19.
+  - id: F-12
+    status: CLOSED
+    evidence: >-
+      packages/cli/src/output/install-text.ts:26-33 print `installed: unreadable`
+      for an unreadable record and `installed: absent` only when both are absent
+      (TC-INST-044b, tests/behaviour/install-compatibility.test.ts:163). The dead
+      `exitProjection` branch is removed; `runStatus` refuses not-accepted roots,
+      so no data payload can reach it.
+regression_checks:
+  record_block_consistency: >-
+    OK. `writeProfileText` is staged-and-renamed (all-or-nothing), both install
+    paths write the block before the record that names it, and a failed write
+    refuses before the record write, so the record never claims a block that is
+    not on disk. On the replacing path the refusal lands after the artifact swap
+    (see F-18).
+  destination_artifact_precondition_vs_crashed_install: >-
+    Not a capability regression. In the destination-absent window a rollback
+    already could not proceed (the first rename failed with an internal error);
+    it now refuses typedly with the remedy "install the artifact held in the
+    rollback slot", which is what actually recovers it. The candidate-artifact
+    case still proceeds because the arm keys on the destination's shape, never on
+    the running identity — verified by reading runRollback:742-758 and by the
+    passing involutive-rollback suite.
+  slot_predicate_present: >-
+    OK. A legitimate compiled slot (regular, non-empty, 0755, not `#!`) still
+    reads `present`; asserted directly in TC-INST-021 and exercised by the seeded
+    fixtures of the daemon and dry-run suites, and the crash-matrix/rollback
+    suites are green in my run.
+  timeouts: >-
+    OK, they do not mask a hang. The spawn helper keeps its own 120 s
+    `spawnSync` timeout, so a hung child is killed and then fails an assertion;
+    beforeAll's 120 s bounds a hung build. The change raises the ceiling the test
+    flaked against, it does not swallow failure.
+  spec_rules: >-
+    `daemon: unchecked` holds on all four dry-runs (DRY_RUN_DAEMON returned at
+    install.ts:488, :784, :891, :961 before `daemonGate` at :513, :801, :902,
+    :970); AC-F7-3's truncation requirement now holds (F-1); F-8's pair inversion
+    now has one undeclared extra refusal (F-13).
+findings:
+  - id: F-13
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/install-replace.ts:179
+    message: >-
+      The remediation adds a fifth rollback refusal: a readable record that names
+      both legs now still refuses with `install.record.unreadable` when the
+      destination holds no compiled artifact (launcher, symlink, foreign file or
+      nothing). The code is defensible from F-8's "the artifact at the
+      destination" clause, but the declaration is now false: spec v1.8 F-8
+      (chg-GH-346-spec.md:185) says "Its causes stay four **missing**-name record
+      conditions" and DEC-13 (:550) repeats it, and the shipped current-truth page
+      says at :194 "The four causes are missing-name conditions: [four]" while its
+      error row (:277) defines `install.record.unreadable` as "The install record
+      does not name the pair the rollback swap inverts" — which the delivered code
+      now emits when the record does name the pair. No test or gate covers the
+      page sentence (tests/checks/install-lifecycle-docs.test.ts:33 asserts only
+      that the identity string appears, never the closed cause list), so the drift
+      would ship silently.
+    suggestion: >-
+      Either report the arm under a declared cause (for example a
+      destination-shape cause sentence) and add it to the closed list, or amend
+      spec to v1.9 (F-8, DEC-13, AC-F8-2, §8.1's rollback and rollback-dry-run
+      rows, Appendix C.4/E) plus doc/spec/features/feature-install-lifecycle.md
+      :194 and the :277 row so the fifth condition is declared — and add a
+      docs-conformance phrase for it so it cannot drift again.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/adapters/src/file/install-profile.ts:27
+    message: >-
+      F-3's typed refusal for a failed profile write (`fallback.internal`,
+      commands/install.ts:366-373) is a new operator-visible outcome that spec
+      F-12 (spec:193) and the page do not declare; F-12 only states that the file
+      and marker "are recorded", which is now true only when the write succeeds.
+      The identity is also classed `internal` where the remedy is a user action
+      (fix permissions or pass another `--shell-profile`), so the exit class does
+      not match the other profile refusal (`install.shell-profile.unresolved`,
+      category `user`).
+    suggestion: >-
+      Add one sentence to F-12 and the page declaring the write-failure refusal
+      and its remedy, or reuse a `user`-class identity; keep the eleven-row
+      install domain unchanged either way.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/file/install-profile.ts:32
+    message: >-
+      New in d6afde09: `const parent = input.path.slice(0,
+      input.path.lastIndexOf("/"))` is wrong when the path has no separator —
+      `lastIndexOf` returns -1 and `slice(0, -1)` drops the last character, so the
+      parent becomes a non-empty bogus name. Reproduced against the real adapters
+      with a relative `--shell-profile`: `writeProfileText({path: ".zshrc"})`
+      wrote the profile and left a stray `.zshr` directory in the working
+      directory. Nothing upstream makes the path absolute (`resolveProfilePath`
+      only expands a leading `~/`), and the docs accept `<path>`, so this is
+      reachable and permanently litters the operator's cwd on a successful
+      install, uninstall or purge (the removal path calls the same writer).
+    suggestion: >-
+      Compute the parent defensively — `const index = input.path.lastIndexOf("/");
+      const parent = index > 0 ? input.path.slice(0, index) : undefined;` — and add
+      an arm to TC-INST-070a with a separator-less relative `--shell-profile`
+      asserting the profile is written and no sibling directory appears.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-16
+    severity: low
+    confidence: high
+    category: performance
+    location: packages/cli/src/commands/install.ts:259
+    message: >-
+      `slotReportOf` now reads the whole slot file to test the shebang: the
+      production `readBytes` is an unbounded `readFileSync(path)`
+      (packages/adapters/src/file/install-destination.ts:82-86), and the slot
+      holds a compiled artifact of roughly 112 MB. `install status`,
+      which was stat-only, now reads that file on every invocation, as does every
+      dry-run and every install/rollback completion payload.
+    suggestion: >-
+      Read a bounded prefix instead (for example `readBytes` plus a 2-byte
+      comparison on a bounded read, or a `readPrefix(path, n)` on the port) and
+      reuse it in `isCompiledArtifactAtPath`; the verdict needs two bytes, not the
+      artifact.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-17
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/commands/install.ts:259
+    message: >-
+      Residual of F-4 for the unreadable-but-executable slot: `probe` is true, so
+      `readBytes` is attempted, but if it returns `undefined` the code sets
+      `script: false` and `slotCondition` reports `present`, while
+      `isCompiledArtifactAtPath` returns false for the same file and `install
+      rollback` refuses it as `install.slot.invalid`. Status then claims a
+      rollback-ready slot that rollback rejects — the disagreement F-4 was meant
+      to remove, narrowed to a read failure (permissions, I/O error).
+    suggestion: >-
+      Treat an undefined prefix on the probe path as `script: true` (or add an
+      `unreadable` input to `slotCondition`) so the two predicates agree in every
+      branch; a unit-level test can inject a port whose `readBytes` returns
+      undefined.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-18
+    severity: low
+    confidence: high
+    category: reliability
+    location: packages/cli/src/commands/install.ts:638
+    message: >-
+      On the replacing path the block write moved to step 7, after the slot swap
+      and the destination rename, so a profile-write failure now aborts an install
+      whose artifact has already been replaced: the destination holds the new
+      artifact, the slot the old one, and no record was written. The state is the
+      tolerated step-7 shape and an agreement re-run repairs it, but the refusal
+      text ("the record was not updated and no block is claimed") does not say the
+      artifact was installed, so an operator can read it as "nothing happened".
+    suggestion: >-
+      Either write the block before staging (the block content does not depend on
+      the swap, so the failure becomes zero-write with the same typed refusal), or
+      add "the artifact was installed; re-run install to record it" to the
+      summary.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-19
+    severity: info
+    confidence: high
+    category: traceability
+    location: doc/changes/2026-11/2026-11-18--GH-346--installable-versioned-binary/chg-GH-346-test-plan.md
+    message: >-
+      The test plan (v1.6) still declares an exhaustive 84-case inventory
+      ("one arm rewritten, no case added"), but the tree now carries at least five
+      review-remediation cases it does not list: TC-INST-044b, TC-INST-045b,
+      TC-INST-021b, TC-INST-070a (three arms) and the NUL-fixture arm of
+      TC-INST-091. There is also no review-remediation phase in the plan and no
+      pm-notes entry for d6afde09 (`review_fix` is still `started: null`), so the
+      remediation work has no per-phase completion evidence.
+    suggestion: >-
+      Add the five cases to the test plan (or state that review-remediation cases
+      live outside the declared inventory), and record the remediation as a
+      pm-notes entry plus, if the pipeline requires one, a review-remediation
+      phase, once this gate passes.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-19T04:20:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

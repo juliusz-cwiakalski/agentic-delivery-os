@@ -2520,6 +2520,17 @@ phases:
         # give the commit primitive staging authority; the page states the delivered
         # truth and is unrelated to phase 6's own edits.
         - doc/spec/features/feature-install-lifecycle.md
+        # Phase-7 reconciliation outputs (code review F-9): the doc-sync pass corrected
+        # the landing-page row, the two overview pages, the nonfunctional page, the
+        # state-layer test spec and the forbidden-literal registry. Declared here so a
+        # strict plan/diff audit sees no undeclared scope rather than reporting a
+        # SCOPE_DEVIATION for files the change itself falsified.
+        - doc/00-index.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/spec/nonfunctional.md
+        - doc/quality/test-specs/test-spec-state-layer.md
+        - scripts/checks/forbidden-literals.registry.json
         - tests/checks/install-lifecycle-docs.test.ts
         # Owns the branding-seam page's scoped required phrase, its two stale
         # phrases and the two-scan-scope fact, AND the entrypoint page's scoped

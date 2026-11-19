@@ -24,7 +24,7 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 | `install --dry-run` | Prints the complete plan (running identity and artifact path, destination, the agreement outcome, the disposition, the slot, the record path, the profile file and block when `--add-to-path` is given, the compatibility advisories, and the daemon disposition `unchecked`) and writes nothing. A dry-run never evaluates the daemon guard: it neither reads nor stops the daemon, `install.daemon.running` cannot answer a dry-run, and the plan states `daemon: unchecked — a dry-run neither reads nor stops the daemon; a real run refuses a live holder unless --stop-daemon and otherwise stops it before the swap or removal`. |
 | `install status` | Read-only report: running identity, installed record, record condition, slot condition, target stability, the state-format verdict, and the managed PATH block. |
 | `install status --json` | The same facts under `install.status.v1`; the only surface that carries `builtAt` and the full commit. |
-| `install rollback` | Two renames in reverse order against the single slot, then the record update. The ordered refusals are `install.slot.absent`, `install.slot.invalid`, and `install.record.unreadable`, evaluated before any write and before the daemon stop. |
+| `install rollback` | Two renames in reverse order against the single slot, then the record update. The ordered refusals are `install.slot.absent`, `install.slot.invalid`, and `install.record.unreadable`, evaluated before any write and before any rename and before the daemon stop. `install.record.unreadable` has five causes: four missing-name record conditions (absent, unreadable, `current` naming no `previous` while a slot is present, the post-crash pair) and a separate destination-shape cause — the destination is not a compiled artifact (a launcher, a symlink, or a foreign file). |
 | `install uninstall` | Removes the artifact, the slot, the record, and the managed PATH block; always prints the residual set as what `purge` would additionally delete. |
 | `install purge` | Additionally removes the configuration and state roots; requires `--yes` even when the roots are absent. |
 
@@ -76,7 +76,7 @@ input** (an attempt is the delivered `fallback.invocation` grammar refusal).
 | `install.shell-profile.unresolved` | `--add-to-path` without `--shell-profile` and with no identifiable shell |
 | `install.migration.unavailable` | `--migrate` was supplied; M4-S2 owns the move |
 | `install.daemon.running` | A live daemon holds the artifact and `--stop-daemon` was not given |
-| `install.record.unreadable` | Rollback's record precondition is unmet (absent, unreadable, no `previous` name, or the post-crash pair) |
+| `install.record.unreadable` | Rollback's record precondition is unmet: an absent record, an unreadable record, a `current` naming no `previous` while a slot is present, the post-crash pair, or a destination that is not a compiled artifact (a launcher, a symlink, or a foreign file) |
 | `install.slot.absent` | Rollback found no slot |
 | `install.slot.invalid` | Rollback found a slot that is not a compiled artifact |
 | `install.purge.unconfirmed` | `install purge` without `--yes` |

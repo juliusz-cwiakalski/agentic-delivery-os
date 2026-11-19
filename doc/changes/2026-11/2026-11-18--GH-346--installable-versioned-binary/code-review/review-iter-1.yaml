@@ -1,0 +1,304 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-346
+branch: feat/GH-346/installable-versioned-binary
+status: FAIL
+summary: >-
+  The change is substantively complete and well tested: all six declared plan
+  phases carry pm-notes completion evidence (commit hash + test result), the
+  install family, record, replace/rollback, compatibility, removal, PATH block,
+  migration, daemon guard, shell guards and documentation all land with
+  non-vacuous suites, and typecheck plus every non-test gate component pass.
+  One genuine spec violation keeps it from being mergeable: the compatibility
+  enumeration's truncation flag is dropped by the production composition, so
+  `install status` can never report `truncated` on a machine with more than 128
+  judged roots, falsifying AC-F7-3/NFR-7 and the new spec page's own claim. The
+  aggregate gate is also at risk: the HEAD artifact-tier case TC-BIN-068 (twelve
+  spawns of a ~112 MB artifact) has no per-test timeout and exceeded Bun's 5 s
+  default under load. Several smaller correctness/consistency issues (double
+  PATH-block write with ignored failure, status/rollback slot-state
+  disagreement, rollback displacing a non-artifact destination into the slot,
+  misleading rollback plan text, shell guard reading the whole binary) should
+  also be fixed. The two failures the coder reported were re-checked: the
+  untracked spec page is now tracked (resolved); the prior-identity timeout was
+  not reproduced. NOTE: while this review ran, another process modified the same
+  working tree with an uncommitted remediation (17 files, including code fixes
+  for F-1/F-4/F-5 and tests for F-10); this review judges the committed HEAD
+  (`git diff main-tools...HEAD`), and the uncommitted edits are not part of it.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 4
+  low: 6
+  info: 1
+spec_compliance: FAIL
+plan_compliance: PASS
+gate_results:
+  typecheck: PASS
+  targeted_install_suites: "PASS on the clean HEAD tree at review start (130 pass / 0 fail across tests/behaviour/install-*, tests/checks/install-*, tests/structure/install-*, tests/structure/build-artifact-entry.test.ts)"
+  pnpm_check: "ATTEMPTED — failed at `bun test`; lint, format and typecheck passed before it. The run overlapped a concurrent uncommitted edit of this same worktree, so treat its failure counts as indicative, not a clean HEAD measurement."
+  pnpm_test: "10,730 pass / 4 skip / 3 fail at 1415 s. HEAD-attributable failure: TC-BIN-068 timed out at 5010.66 ms (default 5 s). The other two — TC-INST-021 (a status `rollback.state == invalid` assertion) and TC-INST-021b — are tests that do NOT exist at HEAD (added by the concurrent uncommitted edit) and are not attributable to the branch."
+  check_boundaries: PASS
+  check_prompt: PASS
+  check_help: PASS
+  check_memory: PASS
+  exports_parity: PASS
+  forbidden_literals: PASS
+  doc_distribution: PASS
+  known_failure_1_untracked_spec_page: "RESOLVED — doc/spec/features/feature-install-lifecycle.md is tracked (commit 3d5371ac)"
+  known_failure_2_prior_identity_timeout: "not reproduced; the observed artifact-tier timeout is TC-BIN-068 (F-2)"
+working_tree_note: >-
+  At review start the working tree was clean and equal to HEAD. During the long
+  gate run another process modified this same worktree with 17 uncommitted files
+  (code changes in packages/cli/src/commands/install.ts, packages/cli/src/production.ts,
+  packages/core/src/contracts/install.ts, packages/core/src/domain/install-replace.ts,
+  packages/adapters/src/file/install-profile.ts, scripts/install.sh, plus tests
+  and the plan). Those edits appear to remediate F-1, F-4, F-5, F-7, F-8, F-10
+  and F-11. This review judges HEAD only; do not attribute the uncommitted edits
+  (or the TC-INST-021/021b failures they introduce transiently) to the branch.
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:4007
+    message: >-
+      The production composition calls `enumerateStateRoots`, which already
+      slices its result to `INSTALL_MAX_JUDGED_ROOTS` and returns the real
+      `truncated` flag, but then forwards only `enumeration.roots` into
+      `InstallRuntime.stateRoots` (production.ts:4013). `stateFormatVerdict`
+      re-derives truncation as `stateRoots.length > 128`
+      (commands/install.ts:182), so on a machine with more than 128 judged roots
+      it always reports `truncated: false` and `judged: 128` even though more
+      roots exist. Reproduced with a scratch enumeration of 200 project roots:
+      `enumerate.truncated=true`, `verdict.truncated=false`,
+      `verdict.judged=128`. This violates AC-F7-3 and NFR-7 ("an exceeded cap is
+      reported as truncated together with the judged count") and falsifies
+      doc/spec/features/feature-install-lifecycle.md:205, which states the
+      verdict reports truncation. The existing test TC-INST-045 passes only
+      because it injects 141 roots directly, bypassing the production cap.
+    suggestion: >-
+      Carry the enumeration's `truncated` fact into `InstallRuntime` (for example
+      `stateRootsTruncated`) and use it in `stateFormatVerdict` (or pass the
+      uncapped root list and let the command cap and flag it), then add an
+      integration test that exercises the real produce-then-judge path over more
+      than 128 project directories through `createProductionComposer` or
+      `enumerateStateRoots`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/checks/artifact-grammar.test.ts:83
+    message: >-
+      At HEAD, TC-BIN-068 (six compiled-artifact spawns plus six `bun` source
+      runs of a ~112 MB artifact) uses Bun's default 5 s per-test timeout; the
+      spawn helper sets `timeout: 120_000`, but the `test()` itself has none. It
+      timed out at 5010.66 ms in the aggregate run (which also overlapped heavy
+      host load from concurrent agent checks). The test is fragile and can make
+      the repository's documented gate non-deterministically red; it should not
+      depend on host speed.
+    suggestion: >-
+      Pass an explicit generous timeout to the artifact-tier tests (for example
+      `test("...", () => {...}, 120_000)`, as TC-BIN-050 already does), and/or
+      shrink the matrix or reuse one compiled artifact; then re-run `pnpm check`
+      on an idle host to confirm green.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/install.ts:492
+    message: >-
+      On a replacing install with `--add-to-path` the managed PATH block is
+      written twice: once before the step-4 agreement branch (line 492) and again
+      at step 7 (line 608), contradicting the surrounding "written once per run"
+      comment. Both calls ignore `writeProfileText`'s boolean result, and
+      `writeProfileText` (adapters/src/file/install-profile.ts) does not
+      `mkdirp(dirname(path))` the way the record writer does. If the profile
+      cannot be written, the run still reports success and the install record
+      records a `pathBlock` that does not exist, contrary to AC-F12-1 ("exactly
+      one delimited block ... is appended, its file and marker are recorded").
+    suggestion: >-
+      Write the block once on each path (agreement vs replacing), check the
+      returned boolean and either refuse/report or omit the recorded block on
+      failure, and ensure an explicit `--shell-profile` directory is created or
+      the failure is reported typed.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/install.ts:252
+    message: >-
+      `slotReportOf` (and `slotCondition` in core/domain/install-replace.ts)
+      reports a slot `invalid` only when it is not a regular file or is empty.
+      A launcher script or a non-executable binary in the slot is reported
+      `present` (with a record-supplied identity if any), while `runRollback`
+      refuses the same slot with `install.slot.invalid` through
+      `isCompiledArtifactAtPath`. `install status` therefore claims a
+      rollback-ready slot that rollback will reject. TC-INST-021 plants a
+      launcher in the slot and asserts rollback's refusal but never asserts the
+      status result.
+    suggestion: >-
+      Apply the compiled-artifact predicate (regular, non-empty, executable,
+      not-a-script) to the slot in `slotReportOf`/`slotCondition` so status and
+      rollback agree, and add a status arm to TC-INST-021.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/commands/install.ts:773
+    message: >-
+      `runRollback` validates the slot but not the destination before displacing
+      it into the slot. Its swap is `destination -> tmp`, `slot -> destination`,
+      `tmp -> slot`; if the destination has been replaced by a launcher, symlink,
+      or foreign file, that object becomes the new slot. The spec's glossary and
+      security review say the rollback slot holds only a compiled artifact, so
+      this is a reachable invariant break (the next rollback then refuses it as
+      invalid). It is an operator-induced edge, not a normal-flow bug.
+    suggestion: >-
+      Require the destination to be a compiled artifact (or refuse/report typedly)
+      before moving it into the slot, or declare and document this state as a
+      reported unknown rather than silently promoting it.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/commands/install.ts:734
+    message: >-
+      The rollback dry-run plan prints "rename 1: destination -> slot (the
+      displaced artifact)" and "rename 2: slot -> destination (the restored
+      artifact)", but the implementation performs a three-rename swap through a
+      temp file (`destination -> *.rollback-tmp`, `slot -> destination`,
+      `*.rollback-tmp -> slot`). The printed two-rename sequence would overwrite
+      the slot's occupant, and the spec/TDR wording "two renames in reverse
+      order" does not describe the delivered algorithm.
+    suggestion: >-
+      Correct the plan text (and, if desired, the spec wording) to describe the
+      temp-based swap, or use an atomic exchange; keep the operator-facing plan
+      and the executed steps identical.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: reliability
+    location: scripts/install.sh:1059
+    message: >-
+      The new installer guard does `existing="$(cat "${install_path}")"` on
+      whatever is at the brand install path. For the delivered ~112 MB compiled
+      artifact this reads the whole binary into a shell variable and makes bash
+      emit `warning: command substitution: ignored null byte in input` to stderr
+      before the classified refusal. The guard test plants a NUL-free text
+      fixture, so this real-path behaviour is untested.
+    suggestion: >-
+      Use a bounded, byte-safe predicate (for example `head -c 4096` plus a
+      marker grep, or a shebang/marker check that does not read the whole file)
+      and add a NUL-containing binary fixture to TC-INST-091.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/core/src/contracts/install.ts:25
+    message: >-
+      The doc comment says "The five compatibility outcomes for one judged root"
+      while `INSTALL_STATE_FORMAT_OUTCOMES` has four members; spec v1.7 corrected
+      five to four and DEC-9 declares the four per-root outcomes plus a separate
+      `truncated` flag.
+    suggestion: Change the comment to "four compatibility outcomes".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-18--GH-346--installable-versioned-binary/chg-GH-346-plan.yaml
+    message: >-
+      The doc-sync commits (8e817841, 47626770) touch files no plan phase
+      declares in `scope.files`: doc/00-index.md,
+      doc/overview/architecture-overview.md, doc/overview/glossary.md,
+      doc/spec/nonfunctional.md, doc/quality/test-specs/test-spec-state-layer.md,
+      and scripts/checks/forbidden-literals.registry.json. They are consistent
+      reconciliation edits and all gates pass, but a strict plan/diff audit sees
+      a SCOPE_DEVIATION.
+    suggestion: >-
+      Declare these files in the plan phase that owns them (or state explicitly
+      that system_spec_update output is outside the delivery plan's phase scope),
+      so the plan-diff audit is clean.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/checks/install-lifecycle-daemon.test.ts:141
+    message: >-
+      AC-F11-1 requires the daemon port's ordered call log to be empty on all
+      four dry-run paths including `--dry-run --stop-daemon`. The daemon suite
+      covers install, uninstall, and purge; rollback is exercised only with no
+      daemon in install-lifecycle-dryrun.test.ts, so rollback's zero-daemon-action
+      claim is not asserted by any test (the code path is correct by inspection).
+    suggestion: >-
+      Add a rollback dry-run arm with a recording daemon and `--stop-daemon`
+      asserting an empty daemon log and `daemon: unchecked`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/checks/install-conformance-mutants.test.ts:88
+    message: >-
+      Two assertions in the conformance-mutant suite do not exercise a gate: the
+      "help-entry mutant" filters `install purge` out of `allHelpEntries` and then
+      asserts the filtered item is absent (it tests the test's own filter), and
+      `familyViolations([...slice(0,25), ...slice(25)])` is just the full array.
+      They add no mutation coverage.
+    suggestion: >-
+      Drive the real `runHelpGuideCoverage`/`allHelpEntries` path over an injected
+      fixture for the help-entry mutant and drop the slice/join identity
+      assertion.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/cli/src/output/install-text.ts:22
+    message: >-
+      The human `install status` renderer prints `installed: absent` for both an
+      absent and an unreadable record (the payload's `installed` is null in both),
+      while `record: unreadable` is printed on the next line; and the
+      `exitProjection` branch that maps a `not-accepted` status payload to
+      `user-validation` is unreachable because `runStatus` returns a typed
+      refusal, not the payload, when a root is not accepted.
+    suggestion: >-
+      Distinguish `absent` vs `unreadable` in the `installed` line, and remove or
+      rewire the dead exit-projection branch.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-19T01:05:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

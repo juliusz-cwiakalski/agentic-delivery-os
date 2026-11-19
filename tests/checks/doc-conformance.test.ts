@@ -768,12 +768,13 @@ const GH346_ROWS: readonly PageClaimRow[] = [
   },
   {
     page: "doc/planning/oss-tooling/milestones/m4/commands/install.md",
-    stale: ["no lifecycle"],
+    stale: ["no lifecycle", "The four causes are missing-name conditions"],
     required: [
       "install uninstall",
       "install.slot.absent",
       "install.purge.unconfirmed",
       "install.status.v1",
+      "a destination that is not a compiled artifact",
     ],
   },
 ];
