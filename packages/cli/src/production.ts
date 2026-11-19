@@ -8,7 +8,7 @@
  * command is claimed that is not composed.
  */
 import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, dirname } from "node:path";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -18,8 +18,10 @@ import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapter
 import {
   acquireFileConfig,
   createHostIndexAccess,
+  createNodeInstallFilePort,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
+  enumerateStateRoots,
   type FileSystemFacts,
   type HostIndexAccess,
   hostIndexDocumentPath,
@@ -52,11 +54,11 @@ import {
   createGitHubClient,
   createGithubCliTransport,
   createGithubNativeTransport,
-  githubCliHostname,
   type GithubChildRunner,
   type GithubClientOptions,
   type GithubTransportPolicy,
   type GithubTransportSelection,
+  githubCliHostname,
   probeGithubCli,
   resolveTransportSelection,
 } from "@delivery-os/adapters/github";
@@ -100,6 +102,7 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
+  detectPriorNamespace,
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   emptyHandoverGate,
@@ -224,6 +227,12 @@ import {
   HOST_INDEX_INITIAL_REVISION,
   type HostIndexEntry,
   IMPLEMENTED_TRACKER_KINDS,
+  INSTALL_MAX_JUDGED_ROOTS,
+  INSTALL_RECORD_FILE_NAME,
+  INSTALL_STATE_ROOT_PROJECTS_DIRECTORY,
+  type InstallArtifactIdentity,
+  type InstallDaemonPort,
+  type InstallRuntime,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   type PipelineRun,
@@ -275,6 +284,7 @@ import {
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import type { DaemonCommandRuntime } from "./commands/daemon.js";
+import { createInstallCommandDefinition } from "./commands/install.js";
 import type {
   ProjectGroupRuntimeRead,
   ProjectGroupWorkRead,
@@ -567,10 +577,27 @@ export type ProductionCompositionFacts = {
     readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
   };
   /**
-   * The running entry path (the bin supplies `process.argv[1]`), so the detached
-   * child and the installed unit name the same executable.
+   * The running entry path (the bin supplies the compiled artifact's real path
+   * or the delivered script path), so the detached child and the installed unit
+   * name the same executable.
    */
   readonly daemonEntry?: string;
+  /**
+   * The injected build identity (GH-346 DM-1). Absent in a workspace run, which
+   * is exactly the development run the install dev gate refuses.
+   */
+  readonly buildIdentity?: InstallArtifactIdentity;
+  /**
+   * The running artifact's real path (GH-346 D7, SEAM-TP-1): the declared
+   * composition fact steps 2 and 3 stage and verify. Production supplies
+   * `process.execPath` for a compiled run; the domain never reads it itself.
+   */
+  readonly runningArtifactPath?: string;
+  /**
+   * The owning-role fact (GH-346 D6, TDR-0044 §3): the primary bin declares
+   * `true`; the alias declares nothing, and an absent fact means NOT owning.
+   */
+  readonly ownsInstallation?: boolean;
   /** A pass-through supervisor seam so install is provable without a live systemd. */
   readonly supervisor?: SupervisorPort;
   /**
@@ -4548,6 +4575,107 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     if (!program.ok) {
       throw new Error(`brand resolution failed: ${program.error.field}:${program.error.code}`);
     }
+
+    /**
+     * The install family's runtime (GH-346 F-4, D6, D7).
+     *
+     * The family is registered unconditionally in both composed programs. Its
+     * one ownership fact arrives from the process edge, its running-artifact
+     * path and identity are declared composition facts (never ambient reads),
+     * and its daemon read and stop run through the delivered daemon runtime.
+     */
+    const installRuntime: InstallRuntime = (() => {
+      const absoluteInstallPath = brand.installPath.startsWith("~/")
+        ? `${homeDirectory}/${brand.installPath.slice(2)}`
+        : brand.installPath;
+      const installDirectory = dirname(absoluteInstallPath);
+      const configRoot = `${homeDirectory}/${brand.configDirectoryName}`;
+      const installFs = createNodeInstallFilePort();
+      const enumeration = enumerateStateRoots({
+        fs: installFs,
+        hostRoot,
+        projectsDirectory: `${hostRoot}/${INSTALL_STATE_ROOT_PROJECTS_DIRECTORY}`,
+        cap: INSTALL_MAX_JUDGED_ROOTS,
+      });
+      const stateRoots = enumeration.roots.map((entry) => entry.root);
+      const stateRootsTruncated = enumeration.truncated;
+      const daemonPort: InstallDaemonPort = {
+        status: async () => {
+          const read = await daemonRuntime.status({ live: false });
+          if (typeof read !== "object" || read === null || !("data" in read)) {
+            return { running: false };
+          }
+          const data = (read as { readonly data?: unknown }).data;
+          if (typeof data !== "object" || data === null) return { running: false };
+          const snapshot = data as {
+            readonly instance?: { readonly instanceId?: unknown; readonly pid?: unknown };
+            readonly heartbeat?: { readonly state?: unknown };
+          };
+          const running = snapshot.heartbeat?.state === "running";
+          const instance = snapshot.instance;
+          return running
+            ? {
+                running: true,
+                ...(typeof instance?.instanceId === "string"
+                  ? { instanceId: instance.instanceId }
+                  : {}),
+                ...(typeof instance?.pid === "number" ? { pid: instance.pid } : {}),
+              }
+            : { running: false };
+        },
+        stop: async () => {
+          const stopped = await daemonRuntime.stop({ mode: "drain" });
+          return typeof stopped === "object" && stopped !== null && "data" in stopped
+            ? { ok: true }
+            : { ok: false };
+        },
+      };
+      return {
+        homeDirectory,
+        destinationPath: absoluteInstallPath,
+        installDirectory,
+        slotPath: `${installDirectory}/${brand.binaryName}.previous`,
+        recordPath: `${configRoot}/${INSTALL_RECORD_FILE_NAME}`,
+        configRoot,
+        stateRoot: hostRoot,
+        stateRoots,
+        stateRootsTruncated,
+        acceptedStateSchemaVersion: STATE_SCHEMA_VERSION,
+        ...(facts.buildIdentity === undefined ? {} : { runningIdentity: facts.buildIdentity }),
+        runningArtifactPath: facts.runningArtifactPath ?? "",
+        ownsInstallation: facts.ownsInstallation === true,
+        invokedIdentity: brand.binaryName,
+        environment,
+        clock: { nowIso },
+        fs: installFs,
+        git: {
+          readCheckout: (directory) => {
+            const read = readCheckoutIdentity({ cwd: directory, io: nodeRepositoryIo() });
+            return read.kind === "resolved"
+              ? {
+                  kind: "resolved",
+                  checkoutRoot: read.checkoutRoot,
+                  gitDir: read.gitDir,
+                  commonDir: read.commonDir,
+                }
+              : read.kind === "unreadable"
+                ? { kind: "unreadable", checkoutRoot: read.checkoutRoot }
+                : { kind: "unbound" };
+          },
+        },
+        daemon: daemonPort,
+        priorNamespaceArtifacts: detectPriorNamespace({
+          homeDirectory,
+          exists: (path: string) => installFs.exists(path),
+        }),
+      };
+    })();
+    const installProgram = {
+      commands: {
+        ...program.program.commands,
+        install: createInstallCommandDefinition(installRuntime),
+      },
+    };
     // An invocation outside every checkout keeps the declared `unbound` scope,
     // its exit code, and nothing registered: only one bounded warning changes.
     // Maintenance warnings (a repaired state location, a preserved corrupt
@@ -4556,6 +4684,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       scope.value.outcome === "unbound"
         ? [UNBOUND_SCOPE_WARNING, ...maintenanceWarnings, ...compositionNotices]
         : [...maintenanceWarnings, ...compositionNotices];
-    return warnings.length === 0 ? program.program : withScopeWarnings(program.program, warnings);
+    return warnings.length === 0 ? installProgram : withScopeWarnings(installProgram, warnings);
   };
 };

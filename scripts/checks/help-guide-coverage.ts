@@ -14,6 +14,7 @@ import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-req
 export const COVERAGE_PATH = "tests/fixtures/help-guide/coverage.json";
 const PAGE_ROOT = "doc/planning/oss-tooling/milestones/m1/commands";
 const M2_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m2/commands";
+const M4_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m4/commands";
 
 export type CoverageInventory = {
   readonly schemaVersion: string;
@@ -42,6 +43,9 @@ const pageFor = (command: string): string => {
   if (command === "ceremony") return `${M2_PAGE_ROOT}/ceremony.md`;
   if (command === "retro") return `${M2_PAGE_ROOT}/retro.md`;
   if (command === "metrics") return `${M2_PAGE_ROOT}/metrics.md`;
+  // GH-346: a new family documents itself in its own milestone root; the M1
+  // snapshot root must never serve it.
+  if (command === "install") return `${M4_PAGE_ROOT}/install.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 

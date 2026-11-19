@@ -1,0 +1,298 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-346
+branch: feat/GH-346/installable-versioned-binary
+status: PASS
+summary: >-
+  Remediation commit 485e675d closes the two blocking iteration-2 findings and the
+  four low ones on inspection and by new, non-vacuous tests, and I re-verified the
+  two most error-prone fixes by running them: a bare `--shell-profile .zshrc` now
+  writes only `.zshrc` (no stray `.zshr`) and uninstall removes the block from that
+  same file, and the slot probe is a 2-byte bounded read of a 50 MB slot in 0.15 ms
+  with `readText`/`digest` never touching the slot. The fifth rollback cause is now
+  declared end-to-end in spec v1.9 (F-8, DEC-13, §8.1's rollback and rollback-dry-run
+  rows, Appendix C.4, Appendix E, AC-F8-2), the shipped page (`:194`, `:277`), the
+  guide, the M4 page and two phrase tables, and guarded by TC-INST-021b; the F-14
+  profile-write arm is declared in spec F-12 with its class and remedy. My own gate
+  run is green — `pnpm check` exit 0, 10,746 pass / 4 skip / 0 fail in 1,194.66 s,
+  matching the coder's count — and `plan validate GH-346` is valid/full/ready. Two
+  low, operator-facing residuals remain and do not block: the destination-shape arm
+  still prints the pair-inverted cause sentence (the spec now names a distinct fifth
+  cause), and the shipped page §3.10 still omits the F-14 write-failure arm. Both are
+  non-functional wording/completeness nits under correct, tested behaviour.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+gate_results:
+  pnpm_check: >-
+    PASS — exit 0 on the current tree at 0d9b9175, run by me as
+    `TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm check`:
+    10,746 pass / 4 skip / 0 fail, 97,728 expect() calls, 1,342 files, 1,194.66 s.
+    Sub-gates green: biome lint (2,979 files) and format (2,833 files); typecheck +
+    build; check:boundaries (ambient-globals 230 neutral-set files, workspace-entrypoints
+    matrices, secret-read-boundary 441 production files, 5 allowlisted, severity error);
+    check:memory (records=3 areas=8 errors=0 advisories=0); prompt-conformance (5 clean);
+    help-guide-coverage (all covered); exports-parity (5 publishables, attw pass).
+    No failure, no skip-by-name; the 4 skips are the pre-existing platform skips. My
+    count matches the coder's 10,746 / 4 / 0 exactly.
+  host_load_note: >-
+    A concurrent `scripts/deliver-ticket.sh GH-346` pipeline and sibling-worktree bun
+    processes were active on the host throughout; no artifact-tier case timed out and
+    the run completed in 1,194.66 s. The tree showed only the PM-owned pm-notes change
+    artifact as modified before and after the run, so the gate ran against a stable
+    source tree.
+  plan_validate: "PASS — `plan validate GH-346` => verdict=valid, artifact=yaml:chg-GH-346-plan.yaml, tier=full, readyForDevelopment=true."
+  plan_diff_note: >-
+    `plan diff GH-346` reported `input.value.rejected: repository diff for GH-346 could
+    not be read` (the tree carries the uncommitted PM pm-notes edit and a concurrent
+    delivery run). Not used for the verdict; `plan validate` carried the plan check.
+  verify_change: "PARTIAL — `verify change GH-346` => result=partial, missing review_fix, quality_gates, dod_check, pr_creation (expected: this review is the review_fix phase)."
+prior_findings_closed:
+  - id: F-13
+    status: CLOSED
+    evidence: >-
+      The fifth rollback cause is now declared end-to-end and guarded. Spec v1.9:
+      F-8 (spec:185) states the precondition requires "a compiled artifact sits at the
+      destination" and names five causes (four missing-name record conditions plus the
+      destination-shape arm) under the one identity, evaluated after the slot refusals
+      and before the daemon gate and any rename; DEC-13 (:550) repeats five causes with
+      a code-review-iteration-2 amendment entry; §8.1's rollback row (:377) and
+      rollback-dry-run row (:378) split "four missing-name ... plus the fifth
+      destination-shape refusal" and state the dry-run answers it at exit 0; Appendix
+      C.4 (:841) and Appendix E's `install.record.unreadable` row (:875) carry the
+      destination clause; AC-F8-2 (:647) adds the falsifiable arm. The shipped page
+      (feature-install-lifecycle.md:194) now says "There are **five causes** ... Four
+      are **missing-name** record conditions ... The fifth is a **destination-shape**
+      cause" and its error row (:277) reads "or the destination is not a compiled
+      artifact"; the guide (local-install.md:59) and the M4 page add the same. Two
+      phrase tables guard it: doc-conformance.test.ts GH346_ROWS (stale "The four
+      causes are missing-name conditions" + required "a destination that is not a
+      compiled artifact") and install-lifecycle-docs.test.ts SPEC_ROLLBACK_REQUIRED/
+      SPEC_ROLLBACK_STALE (spec half, non-vacuous both directions). TC-INST-021b
+      (tests/behaviour/install-replace.test.ts:284) plants a launcher at the
+      destination after two installs and asserts `install.record.unreadable` at exit 1,
+      unchanged destination bytes, unchanged slot digest, byte-identical record, and no
+      `.rollback-tmp` — the refusal occurs at commands/install.ts:779 before
+      `daemonGate` (:825) and before any rename (:831). Residual: the printed cause
+      sentence still misdescribes the arm — see F-20 (low, non-blocking).
+  - id: F-14
+    status: PARTIAL
+    evidence: >-
+      Spec F-12 (chg-GH-346-spec.md:193) now declares the profile-write failure arm:
+      `fallback.internal` (kind `fallback`, projection class `platform-provider`, exit
+      `2`), the class rationale (permissions/space, not a validation input), the remedy
+      (fix the profile's rights or pass another `--shell-profile`, then re-run install),
+      and the state left behind (replacing install: artifact installed, previous in the
+      slot when swapped; agreement run: destination untouched; record not updated and
+      no block claimed). The code matches: `internalFailure` (commands/install.ts:95)
+      returns `fallback.internal` with summary/`fallback`, and `applyPathBlock` (:371)
+      emits the declared statement. Keeping `internal` rather than a `user`-class
+      identity is within the finding's offered alternatives because the class is now
+      declared and justified. PARTIAL because the shipped current-truth page §3.10
+      (doc/spec/features/feature-install-lifecycle.md:240-242) still states the block
+      "is recorded" without the "only when the write succeeds" qualifier or the
+      `fallback.internal` refusal — the page half of F-14's suggestion was not applied.
+      See F-21 (low, non-blocking).
+  - id: F-15
+    status: CLOSED
+    evidence: >-
+      install-profile.ts:32 uses `dirname(input.path)` and skips mkdirp for `.` and `/`,
+      so a separator-less name has no parent to create. I reproduced it against the
+      built adapter: `writeProfileText({path:".zshrc"})` in a fresh cwd left exactly
+      `[".zshrc"]` with content written and no `.zshr`; a nested `./.config/zsh/.zshrc`
+      still created `./.config/zsh`; `dirname` maps `.zshrc`->`.`, `/`->`/`, `a`->`.`,
+      `~/x`->`~` (and `~/` is expanded before the writer by `resolveProfilePath`/
+      `expandHome`). TC-INST-070a (tests/checks/install-lifecycle-path.test.ts:169)
+      asserts the base dir after install is exactly `[.zshrc, home, state]`, no `.zshr`
+      exists, and uninstall removes the block from that same file.
+  - id: F-16
+    status: CLOSED
+    evidence: >-
+      The port method `readBytes` was replaced by `readPrefix(path, maxBytes)`
+      (contracts/install.ts:229) implemented with one bounded `readSync` at offset 0
+      (install-destination.ts:91-108). `INSTALL_PROBE_BYTES = 2` (:40) is used by
+      `isCompiledArtifactAtPath` (:257) and by `slotReportOf` (commands/install.ts:262).
+      I reproduced the bound: `readPrefix` returned exactly 2 bytes `[0x7f,0x45]` from a
+      50 MB `0755` file in 0.15 ms; missing and `000`-mode files returned `undefined`;
+      a `0755` shebang returned `isCompiledArtifactAtPath === false`. `grep` confirms no
+      `readBytes` remains and no `readText`/`digest` is ever called on `slotPath`;
+      `runStatus` (install.ts:708-742) reads the slot only via `slotReportOf` and never
+      digests the destination. TC-INST-021's third arm
+      (install-replace.test.ts:222) plants a 4 MiB+ slot, drives status plus all four
+      dry-runs, and asserts every slot `readPrefix` bound <= 4 while `readText`/`digest`
+      on the slot is the empty list, and that the adapter honours `readPrefix(_,2)`->2
+      and `(_,4)`->4.
+  - id: F-17
+    status: CLOSED
+    evidence: >-
+      `slotCondition` (core/domain/install-replace.ts:338) gained `unreadable?: boolean`
+      and returns `invalid` when set (:348). `slotReportOf` sets
+      `unreadable: probe && prefix === undefined` (install.ts:266), so an
+      executable-but-unreadable slot reports `invalid`, matching rollback's
+      `isCompiledArtifactAtPath` false -> `install.slot.invalid`. TC-INST-021's second
+      test (install-replace.test.ts:195) injects a port whose `readPrefix` returns
+      `undefined` for the slot and asserts both status `invalid` and rollback
+      `install.slot.invalid` agree — the exact branch-4 disagreement F-4 left.
+  - id: F-18
+    status: CLOSED
+    evidence: >-
+      Ordering kept; the refusal message is corrected. `applyPathBlock`
+      (install.ts:371) now takes `after: {artifactInstalled, slotSwapped}` and the
+      replacing-path call (:656) passes `{artifactInstalled:true, slotSwapped:
+      plannedPlan.slotSwap}`, producing "the artifact is now installed at <destination>
+      [and the previous artifact is in the rollback slot], but the managed PATH block
+      was not written ... re-run install to record the install". The replacing path
+      invokes it after the swap (:656), the agreement path passes `false/false` (:543)
+      and preserves "the destination is this artifact and is untouched". A test
+      (install-lifecycle-path.test.ts:194) drives the post-swap failure and asserts the
+      message contains "the artifact is now installed at <destination>", "the previous
+      artifact is in the rollback slot", "was not written", and "re-run install", plus
+      the tolerated step-7 shape (destination = new artifact, slot = old, no record).
+  - id: F-19
+    status: CLOSED
+    evidence: >-
+      Test plan v1.7 reconciles the delivered inventory: 88 cases (I re-counted §5.1's
+      rows and the §7.3 map, both 88 unique ids), 34/34 AC coverage, and the five
+      remediation cases recorded (TC-INST-021b, TC-INST-044b, TC-INST-045b, TC-INST-070a,
+      and TC-INST-091's NUL arm), with §3.4's "case ids in the tree with no row = 0".
+      OQ-TP-10 is marked Resolved against spec v1.9. The pending pm-notes entries for
+      iteration 1 and 2 are present in the working tree (to be committed by the
+      pipeline); the pipeline records review-fix via pm-notes rather than a plan phase,
+      so no plan review-remediation phase is required. OQ-TP-11/12 remain open and are
+      recorded non-blocking (see F-23).
+findings:
+  - id: F-20
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/core/src/domain/install-replace.ts:192
+    message: >-
+      The destination-shape arm still prints the pair-inversion cause sentence. The
+      precondition returns `cause: "pair-inverted"` for `destinationIsArtifact === false`
+      (install-replace.ts:179) and `rollbackCauseSentence("pair-inverted")` returns "the
+      record's current names an artifact other than the one at the destination" (:201).
+      So both `install rollback --dry-run` and the refusal (commands/install.ts:797,
+      :818) tell the operator the record mismatches the destination, while the spec
+      §8.1 rollback and rollback-dry-run rows (spec:377-378) and Appendix C.4 now
+      enumerate the fifth cause as "a destination that holds no compiled artifact at
+      all". No test pins the sentence — TC-INST-021b asserts only the identity, and the
+      dry-run test (install-lifecycle-dryrun.test.ts:168) asserts only that a "cause:"
+      line exists — so it can drift silently. It does not block: identity
+      `install.record.unreadable`, exit `1`, zero-write, no rename, and the remedy
+      ("install the artifact held in the rollback slot") are all correct and covered,
+      and no AC pins the sentence string; this is operator-facing wording only.
+    suggestion: >-
+      Add a distinct destination-shape cause (for example extend `RollbackRecordCause`
+      with `"destination-not-artifact"` and a sentence "the destination holds no
+      compiled artifact to displace into the slot") and assert it in TC-INST-021b's
+      dry-run and refusal text, or state in the spec that the two pair causes share one
+      sentence. Non-blocking for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-21
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-install-lifecycle.md:242
+    message: >-
+      The shipped current-truth page omits the F-14 profile-write failure arm. §3.10
+      (:242) says the block's file and marker "are recorded in the install record" and
+      is silent on the delivered `fallback.internal` refusal and the "recorded only when
+      the write succeeds" rule that spec F-12 now declares. The page is not false — it
+      describes the success path — but it does not state the delivered behaviour, so a
+      doc-truth reader sees an unconditional record claim. No phrase table guards the
+      page's §3.10 against this arm. Non-blocking: the normative declaration lives in
+      spec F-12, behaviour is correct and tested, and the page carries no contradicting
+      claim.
+    suggestion: >-
+      Add one sentence to §3.10: a failed block write is answered by `fallback.internal`
+      at exit `2`, the record is not updated, and the block is recorded only when the
+      write succeeds — mirroring spec F-12. Non-blocking for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-22
+    severity: info
+    confidence: high
+    category: traceability
+    location: doc/guides/local-install.md:59
+    message: >-
+      The fifth-cause declaration is phrase-guarded on the spec page
+      (install-lifecycle-docs.test.ts SPEC_ROLLBACK_*) and the M4 page
+      (doc-conformance.test.ts GH346_ROWS), but two surfaces are not: the guide's
+      destination-shape paragraph (local-install.md:59) is only covered by the generic
+      "install.record.unreadable" requirement, and the runtime cause sentence (F-20) has
+      no assertion at all. A future edit could drop either silently.
+    suggestion: >-
+      Add the guide's "the destination is not a compiled artifact at all" sentence to
+      GUIDE_REQUIREMENTS and, when F-20's sentence is fixed, assert it in TC-INST-021b.
+      Informational.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-23
+    severity: info
+    confidence: high
+    category: traceability
+    location: doc/changes/2026-11/2026-11-18--GH-346--installable-versioned-binary/chg-GH-346-test-plan.md:818
+    message: >-
+      OQ-TP-11 (the four remediation cases use a letter-suffix form, TC-INST-021b/044b/
+      045b/070a, rather than the next free three-digit sequence) and OQ-TP-12
+      (TC-INST-011/012 are owned by install-replace.test.ts, not the v1.6-mapped
+      install-admission suite) remain open. Both are explicitly recorded
+      "Non-blocking — no behaviour at stake" / "Non-blocking — map corrected"; neither
+      changes a delivered label or a verdict.
+    suggestion: >-
+      Resolve OQ-TP-11 as a permanent arm-suffix convention and OQ-TP-12 by confirming
+      no further suite split before the PR; neither is required for this merge.
+      Informational.
+    suppressed: false
+    published_url: null
+    published_at: null
+regression_checks:
+  readprefix_replaces_whole_read: >-
+    OK. `readBytes` is gone from the port and every production caller; `readPrefix` is
+    the only file-read method the slot path uses (`grep` finds no `readBytes` outside
+    unrelated harness telemetry, and no `readText`/`digest` on `slotPath`). The bounded
+    read is proven both by the injected-port counter in TC-INST-021 and by the adapter's
+    own honouring of the bound.
+  assume_unchanged_episode: >-
+    No source file was silently skipped. `git status --porcelain` was empty at review
+    start and now shows only the PM-owned `chg-GH-346-pm-notes.yaml` change artifact
+    (appended review-iteration notes, to be committed by the pipeline); no source or
+    test file differs from HEAD. `git ls-files -v`/`-t` show zero assume-unchanged or
+    skip-worktree entries, no repository script references `update-index`
+    /assume-unchanged, and `.git/info/exclude`/`core.excludesfile` hide nothing beyond
+    `tmp/`. All nine files of 485e675d are committed identically to the worktree, so the
+    earlier transient index manipulation left no hidden source delta. (The pm-notes
+    mtime post-dates the last commit while status was clean at start — consistent with a
+    transient assume-unchanged flag during the concurrent delivery run — but the flag is
+    clear now and nothing source-level is hidden.)
+  test_plan_id_drift: >-
+    Non-blocking. OQ-TP-11 (letter-suffix ids) and OQ-TP-12 (suite map) are open but
+    recorded non-blocking in the plan; no delivered label or verdict changes. They do
+    not affect merge.
+  fifth_cause_end_to_end: >-
+    Coherent except the operator-facing sentence. Spec F-8/DEC-13/§8.1 (both rows)/
+    C.4/E/AC-F8-2, the page (:194, :277), the guide (:59), the M4 page, and the two
+    phrase tables agree on five causes under `install.record.unreadable`, zero-write,
+    after the slot refusals and before the daemon gate and any rename; TC-INST-021b
+    guards it. The runtime `cause:` sentence for the destination-shape arm still names
+    the pair-inversion record condition (F-20) — operator-facing wording only; it does
+    not falsify an AC and does not block.
+  record_block_consistency: >-
+    OK, unchanged by this remediation. The block is staged-and-renamed, written before
+    the record that names it on both paths, and a failed write refuses before the record
+    write; the F-18 message now reports the post-swap state honestly.
+  gate_stability: >-
+    OK under concurrent host load; no artifact-tier timeout, pass count 10,746 matches
+    the coder's, consistent with the added remediation cases over iteration 2's 10,739.
+reviewed_at: 2026-11-19T03:38:00Z
+next_step: PROCEED

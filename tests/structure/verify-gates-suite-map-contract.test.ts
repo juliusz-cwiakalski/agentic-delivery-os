@@ -146,8 +146,8 @@ describe("TC-SCTR-003 the error table and its documented mirror are two-way sync
   test("the live sync check is green in both directions", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(153);
-    expect(result.counts.documentedRows).toBe(153);
+    expect(result.counts.sourceEntries).toBe(164);
+    expect(result.counts.documentedRows).toBe(164);
   });
 
   test("no delivered row is reworded", () => {

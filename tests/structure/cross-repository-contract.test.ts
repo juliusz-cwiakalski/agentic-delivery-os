@@ -35,13 +35,13 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { canonicalChangeRef, parseMemberRef } from "../../packages/core/src/domain/plan-members";
 import {
-  appendMergeGateVerification,
-  readMergeGateVerifications,
-} from "../../packages/core/src/state/index";
-import {
   planDocumentFromValidateData,
   validatePlan,
 } from "../../packages/core/src/domain/plan-validate";
+import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { runCloseoutCli } from "../fixtures/closeout/cli";
 import { consumeMemberCloseout, consumeMemberGates } from "../fixtures/closeout/legacy-consumer";
@@ -59,8 +59,8 @@ import {
 import {
   declaredMember,
   greenMemberReads,
-  memberGatesRuntime,
   type MemberGatesWorld,
+  memberGatesRuntime,
   runMemberGates,
 } from "../fixtures/cross-repository/facts";
 import { memberSpec, planYaml, twoMemberPlanYaml } from "../fixtures/cross-repository/plan";
@@ -501,6 +501,18 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       "retro.action-incomplete",
       "retro.closure-incomplete",
       "retro.wip-limit-exceeded",
+      // GH-346 appends the eleven install lifecycle rows.
+      "install.target.worktree",
+      "install.dev-build",
+      "install.state.incompatible",
+      "install.identity.not-owning",
+      "install.shell-profile.unresolved",
+      "install.migration.unavailable",
+      "install.daemon.running",
+      "install.record.unreadable",
+      "install.slot.absent",
+      "install.slot.invalid",
+      "install.purge.unconfirmed",
     ]);
     const delivered = entries.filter((entry) => !additive.has(entry.code));
     expect(delivered).toHaveLength(preChange.length);
@@ -521,8 +533,8 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
         .map((row) => (JSON.parse(row) as { readonly domainKind: string }).domainKind)
         .filter((kind) => kind !== "fallback"),
     );
-    expect([...DOMAIN_KINDS].sort()).toEqual([...preChangeKinds, "events"].sort());
-    expect(DOMAIN_KINDS).toHaveLength(preChangeKinds.size + 1);
+    expect([...DOMAIN_KINDS].sort()).toEqual([...preChangeKinds, "events", "install"].sort());
+    expect(DOMAIN_KINDS).toHaveLength(preChangeKinds.size + 2);
   });
 
   test("no member-specific identity string is invented in the contracts", () => {

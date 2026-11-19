@@ -18,6 +18,7 @@ import {
   type CredentialReference,
   FALLBACK_INTERNAL_CODE,
 } from "@delivery-os/core/contracts";
+import { type BuildIdentity, buildTokenOf, fallbackVersion } from "./build-identity.js";
 import {
   PROMPT_REQUIRED_COMMANDS,
   type PromptRequiredCommand,
@@ -98,6 +99,14 @@ export type EntrypointOptions = {
   readonly configuredWorkingName?: string;
   /** The composition root for prompt-required commands. */
   readonly composeProgram: EntrypointComposer;
+  /**
+   * The build identity injected by the compiled artifact (F-2, DM-1).
+   *
+   * Absent in every workspace run, test, and embedder, which keeps the
+   * delivered `0.0.0`/`dev` fallback verbatim. The injected object is the one
+   * identity source: it supersedes the delivered `version`/`build` inputs.
+   */
+  readonly buildIdentity?: BuildIdentity;
   readonly version?: string;
   readonly build?: string;
   readonly clock?: CliDependencies["clock"];
@@ -117,8 +126,8 @@ export type Entrypoint = {
   readonly composeProgram: EntrypointComposer;
 };
 
-const DEFAULT_VERSION = "0.0.0";
-const DEFAULT_BUILD = "dev";
+const DEFAULT_VERSION = fallbackVersion();
+const DEFAULT_BUILD = buildTokenOf(undefined);
 
 /**
  * Resolve the working name in declared order. A present, non-empty configured
@@ -191,8 +200,11 @@ const isGroupScopedInvocation = (command: string, argv: readonly string[]): bool
 /** Build the entrypoint surface without composing any command runtime. */
 export const createEntrypoint = (options: EntrypointOptions): Entrypoint => ({
   brand: resolveEntrypointBrand(options),
-  version: options.version ?? DEFAULT_VERSION,
-  build: options.build ?? DEFAULT_BUILD,
+  version: options.buildIdentity?.version ?? options.version ?? DEFAULT_VERSION,
+  build:
+    options.buildIdentity === undefined
+      ? (options.build ?? DEFAULT_BUILD)
+      : buildTokenOf(options.buildIdentity),
   composeProgram: options.composeProgram,
 });
 

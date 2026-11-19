@@ -71,3 +71,12 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0041](TDR-0041-harness-dispatch-outcome-envelope-detail.md) | TDR | Harness Dispatch-Outcome Disclosure on the Failure-Envelope `detail` Slot — One Declared `harness` Member (`kind`, `observedVersion`, `versionVerdict`, `mode`) on the Four Pre-Session Harness Refusals, Additive Within `delivery.result.v1` | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
 | [TDR-0042](TDR-0042-opencode-integration-mode.md) | TDR | opencode Integration Mode — One Declared Default Selected Never Inferred | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0043](TDR-0043-opencode-harness-adapter-contract.md) | TDR | opencode Harness Adapter Contract — Version Window, Mode, Propagation Reference, and Observed-Store Telemetry | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) | TDR | Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) | TDR | Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+
+Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.
