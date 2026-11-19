@@ -97,7 +97,27 @@ export const evaluateLoopVerdict = (input: LoopVerdictInput): LoopVerdictResult 
   // progressing delivery has not stalled (INV-DM-3, AC-F5-3).
   if (input.delivery === "in-progress") return progressing;
 
-  if (input.progress === "positive") return progressing;
+  if (input.progress === "positive") {
+    // The declared progressing cause is sourced progress POSITIVE WITHIN
+    // `coordinator.progress-bound` (F-5). An observation with no timestamp is
+    // treated as fresh (no age evidence exists), and a positive reading older
+    // than the bound is a STALE sourced signal: it must not claim the
+    // fresh-progress cause, and it must never be laundered into a kill either,
+    // so the kill-safe `unevaluable` arm reads it and the loop continues.
+    const freshAt = input.progressObservedAtMs ?? input.lastProgressAtMs;
+    const fresh = freshAt === null || input.nowMs - freshAt <= input.progressBoundMs;
+    if (fresh) return progressing;
+    return {
+      verdict: "unevaluable",
+      reason: LOOP_UNEVALUABLE_REASON,
+      evidence: evidenceCorpus({
+        traffic: input.progress,
+        delivery: input.delivery,
+        progressAgeMs,
+        windowMs,
+      }),
+    };
+  }
 
   const aged = progressAgeMs !== null && progressAgeMs >= windowMs;
   if (!aged || input.artifactAdvanced) return progressing;

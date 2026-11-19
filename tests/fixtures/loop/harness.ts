@@ -106,7 +106,12 @@ export type LoopHarnessOptions = {
     readonly observedAtMs: number | null;
   } | null;
   readonly delivery?: LoopDeliveryReading;
-  readonly artifactAdvanced?: boolean;
+  /**
+   * The artifact-advance model: `true` is a constant advance; an array is the
+   * instants of seeded advance records, compared against the supervisor's
+   * baseline exactly as production does (F-5).
+   */
+  readonly artifactAdvanced?: boolean | readonly number[];
   readonly killOutcome?: CoordinatorKillOutcome | "capability-gap";
   readonly killFailureReason?: CoordinatorKillFailureReason;
   readonly admissionState?: "admit" | "refuse" | "unevaluable";
@@ -134,6 +139,8 @@ export type LoopHarness = {
   readonly process: {
     readonly signals: readonly { readonly pid: number; readonly signal: string }[];
     readonly probes: number;
+    /** Every probe target, in call order (F-3's "never probe with 0" control). */
+    readonly probeTargets: readonly { readonly pid: number; readonly processStartTimeMs: number }[];
   };
   /** The recorded terminate calls, the admission decisions, and progress reads. */
   readonly verdicts: {
@@ -221,6 +228,7 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
     readsInHandler: 0,
   };
   const signals: { pid: number; signal: string }[] = [];
+  const probeTargets: { readonly pid: number; readonly processStartTimeMs: number }[] = [];
   let probes = 0;
   const aliveAnswers: Record<number, boolean | null> = { ...(options.alive ?? {}) };
   const startTimes: Record<number, number> = { ...(options.startTimes ?? {}) };
@@ -254,7 +262,7 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       ? { state: "positive" as CoordinatorProgressState, observedAtMs: 1_000_000 }
       : options.progressReading;
   let delivery: LoopDeliveryReading = options.delivery ?? "none";
-  const artifactAdvanced = options.artifactAdvanced ?? false;
+  const artifactAdvances: boolean | readonly number[] = options.artifactAdvanced ?? false;
   const kills: string[] = [];
   const admissions: { ordinal: number; budgetEpochId: string }[] = [];
   let progressReads = 0;
@@ -392,12 +400,43 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       capabilities,
       probe: (target) => {
         probes += 1;
+        probeTargets.push(target);
         const answer = aliveAnswers[target.pid];
         return answer === undefined ? false : answer;
       },
       ownIdentity: () => own,
     },
-    session: sessionPort.port,
+    session: {
+      ...sessionPort.port,
+      join: async () => {
+        const base = await sessionPort.port.join();
+        if (!base.ok) return base;
+        // A cross-process re-find joins the DURABLE newest loop.session; a fresh
+        // process has no in-memory facts, which is exactly what production seeds
+        // from the ledger (F-6).
+        const durable = readLoopRecords(guardedStore, LOOP_ID);
+        const newest = durable.ok ? durable.sessions[durable.sessions.length - 1] : undefined;
+        const current = sessionPort.facts();
+        const sessionId = current.sessionId ?? newest?.sessionId ?? base.sessionId;
+        const pid = current.pid ?? newest?.pid ?? base.pid;
+        const processStartTimeMs =
+          current.processStartTimeMs ?? newest?.processStartTimeMs ?? base.processStartTimeMs;
+        const harnessKind = current.harnessKind || newest?.harnessKind || base.harnessKind;
+        const title = current.title ?? newest?.title ?? base.title;
+        const alive = pid !== null && aliveAnswers[pid] === true;
+        if (alive) {
+          sessionPort.setFacts({
+            sessionId,
+            liveness: "alive",
+            harnessKind,
+            pid,
+            processStartTimeMs,
+            title,
+          });
+        }
+        return { ...base, sessionId, harnessKind, pid, processStartTimeMs, title };
+      },
+    },
     progress: {
       read: () => {
         progressReads += 1;
@@ -405,7 +444,11 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       },
     },
     corroborator: { read: () => delivery },
-    artifactAdvanced: () => artifactAdvanced,
+    artifactAdvanced: (sinceMs) => {
+      if (sinceMs === null) return false;
+      if (typeof artifactAdvances === "boolean") return artifactAdvances;
+      return artifactAdvances.some((at) => at > sinceMs);
+    },
     terminate: async () => {
       const outcome = options.killOutcome ?? "terminated";
       kills.push(outcome);
@@ -608,6 +651,9 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       signals,
       get probes() {
         return probes;
+      },
+      get probeTargets() {
+        return probeTargets;
       },
     },
     verdicts: {

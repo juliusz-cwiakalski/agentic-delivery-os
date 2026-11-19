@@ -140,13 +140,20 @@
 #               and spec reconciliation declared for STAGING ONLY in the release
 #               phase).
 #
-# PLAN SHAPE: nine phases, all `kind: delivery` (each edits the repository and
+# PLAN SHAPE: ten phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. The spec
 #   is complete at v1.4 and the test plan at revision 0.6, so no design work
-#   remains; a planning phase would declare no scope to compute. The nine phases
+#   remains; a planning phase would declare no scope to compute. The ten phases
 #   are the change's own ids; `tier.phases` below lists the LIFECYCLE phase ids
 #   [1..11] (the ceremony tier engine's vocabulary) and the two namespaces are
 #   never conflated.
+#   Phase 10 is the REVIEW-ITERATION-1 REMEDIATION phase, appended by the
+#   reopened delivery boundary: it restores evidence the reviewer already owns
+#   (review-iter-1 F-1, F-2, F-3, F-4, F-5, F-6, F-7, F-8). It owns NO acceptance
+#   criterion, NO case id, and NO mutation row: the AC ownership (41), the TC map
+#   (74) and the mutation register (120 rows, M1-M120) are unchanged, and every
+#   assertion it adds carries its planted in-case control rather than a new
+#   register row. Its scope is the fix surface the review named, nothing else.
 #
 # RECORDED AUTHORIZED DEVIATION (Option B) — binding, and NOT to be re-derived:
 #   "six phase-2 cases are proven at a narrower surface (D2 spawn/status/log-sink)
@@ -2814,3 +2821,150 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-348/loop-supervision targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
       pipelineId: "CI pipeline for the GH-348 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — REVIEW-ITERATION-1 REMEDIATION (review-iter-1.yaml; findings F-1,
+  # F-2, F-3, F-4, F-5, F-6, F-7, F-8). Appended by the reopened delivery
+  # boundary. NOT a design phase and NOT a scope extension: every task restores
+  # evidence the reviewer already owns, under a clause that already authorises it.
+  #
+  # Owns: 0 AC, 0 TC, 0 mutation rows. The three partitions are UNCHANGED —
+  #   AC ownership stays 41 (0+4+5+5+8+7+6+6+0 and this phase adds 0), the TC map
+  #   stays 74, and the mutation register stays 120 rows (M1-M120). Each new
+  #   assertion carries a planted in-case control, so no register row is needed.
+  #
+  # Verb surface at this boundary: NO change. The five-verb grammar, the flags,
+  #   the exits, the status block and the log bounds are exactly phase 7's; this
+  #   phase changes two production signals and the evidence that proves them.
+  #
+  # Goal: close the review's FAIL. The production composition must honour the
+  #   spec's own two-signal rule (a baseline-relative artifact signal), the
+  #   corroborator must read the NEWEST lane per ref, a cross-process re-find must
+  #   be joined AND observed with a null start time treated as unknown-liveness,
+  #   and AC-F8-4's pick-deliver-merge proof must run the real command runtime.
+  #
+  # Obligations (each cites the review task and the clause that authorises it):
+  #   10.1 F-1 BLOCKER — baseline-relative artifact advance (F-5 "no artifact
+  #        advance since that observation", AC-F5-1, DM-6). The port becomes
+  #        `artifactAdvanced(sinceMs: number | null) => boolean`; the supervisor
+  #        passes the last sourced-progress observation it holds (the same instant
+  #        the verdict uses as its baseline); production returns true only for a
+  #        `merge.transaction` or `blocker.answer` record whose `recordedAt` is
+  #        AFTER that instant. A prior merge therefore no longer suppresses a
+  #        later stuck verdict. New case: a seeded merge BEFORE the baseline still
+  #        reaches `stuck`; a control with an advance AFTER the baseline stays
+  #        `progressing`.
+  #   10.2 F-2 MAJOR — newest lane per ref (F-5 evidence-class table,
+  #        DM-6, AC-F5-7). Production reduces the dispatch lane records to the
+  #        newest per ref through the DELIVERED `latestDispatchLaneFor` helper
+  #        before classification, so a superseded `active` lane cannot pin
+  #        `in-progress`. New row: an older `active` superseded by `terminal`
+  #        reads `none` (D2), not `in-progress`.
+  #   10.3 F-3 MAJOR — observed re-find (F-6 "joined and observed", AC-F6-2,
+  #        AC-F6-4). `establishSession` returns the JOINED effect's facts instead
+  #        of the pre-read ones; production's `join` seeds from the durable newest
+  #        `loop.session` record and probes the recorded pid; a recorded pid with a
+  #        NULL process start time is unknown-liveness — never probed with `0`,
+  #        never replaced by a second spawn. New case: a re-find that does NOT
+  #        pre-set `session.read()` alive still joins, is observed live across a
+  #        cycle, and spawns nothing.
+  #   10.4 F-4 MAJOR — real-runtime pick-deliver-merge (AC-F8-4, Appendix C(b)).
+  #        The scenario drives `queue claim`, `dispatch` and `merge` through the
+  #        real composed command runtime over the delivered dispatch conformance
+  #        fixtures and asserts their REAL envelopes, the deliver leg's token, the
+  #        lane evidence the real dispatch appended, and zero shell invocations.
+  #        The proof level stays command-runtime and no further; the boundary
+  #        constant stays nine proven / six not-proven.
+  #   10.5 F-5 MINOR — the battery meta-case becomes falsifiable by name: it
+  #        executes every proven surface with a surface-specific observation and
+  #        rejects a planted off-boundary/empty row by name (AC-F8-1).
+  #   10.6 F-6 MINOR — the D1 re-observation asserts its claim unconditionally on
+  #        BOTH branches (the composed argv's `--agent ceo` / `--model` on success,
+  #        the delivered refusal identity otherwise) and drops the tautological
+  #        `toBeDefined` (AC-F2-4, AC-F8-1 non-vacuity; plan D-4).
+  #   10.7 F-7 MINOR — `delivery.loop.v1` projects the supervisor's last OBSERVED
+  #        progress state instead of a hardcoded null, and the golden asserts it
+  #        (API-4).
+  #   10.9 DELIVERED PIN UPDATE (declared at plan revision, reported): the new
+  #        `newestLanePerRef` export needs its row in the module inventory's
+  #        per-file executable allowance (`tests/structure/content-inventory.test.ts`).
+  #        A pin update, never a relaxation: no allowance entry is removed and the
+  #        inventory/glob equality still fails by name on an unlisted export.
+  #
+  #   10.8 F-8 MINOR — the verdict consults `progressBoundMs` as the declared
+  #        freshness bound for the positive-progress cause, and a stale positive
+  #        remains `progressing` because `stuck` requires a sourced ZERO (F-5,
+  #        AC-F5-2). A unit row proves the bound is read.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/app/loop-supervisor.ts       (port, baseline, join facts,
+  #                                                   progress projection)
+  #   packages/core/src/app/loop-corroborator.ts     (newest-lane-per-ref helper)
+  #   packages/core/src/index.ts                     (re-export the helper)
+  #   packages/core/src/domain/loop-verdict.ts       (progress-bound freshness)
+  #   packages/cli/src/production.ts                 (baseline comparison, newest
+  #                                                   lane per ref, durable join)
+  #   tests/fixtures/loop/harness.ts                 (baseline-aware advances,
+  #                                                   durable join basis)
+  #   tests/fixtures/loop/facts.ts                   (superseded-lane row)
+  #   tests/fixtures/loop/parity/e2e.ts              (real-runtime transcript)
+  #   tests/fixtures/loop/golden/status.ts           (progress golden)
+  #   tests/behaviour/loop-stuck.test.ts             (prior-merge + control)
+  #   tests/behaviour/loop-instance.test.ts          (observed re-find)
+  #   tests/behaviour/loop-status.test.ts            (progress projection)
+  #   tests/conformance/loop/loop-pick-deliver-merge.test.ts (real runtime)
+  #   tests/conformance/loop/loop-parity-battery.test.ts     (falsifiable meta)
+  #   tests/structure/loop-production-session.test.ts        (unconditional D1)
+  #   tests/structure/content-inventory.test.ts              (executable allowance)
+  #
+  # Acceptance: none claimed (0 AC, 0 TC, 0 mutation rows). The review record
+  #   (code-review/review-iter-1.yaml) is the task list, and lifecycle phase 8
+  #   (review_fix) re-reviews against it.
+  #
+  # Gate (expected signal: exit 0; every loop suite green including the three new
+  #   behaviour cases, the superseded-lane row, the real-runtime pick-deliver-merge
+  #   and the falsifiable battery meta-case; the pinned and invariant suites
+  #   unchanged and green; the aggregate `pnpm check` exit 0 at the phase HEAD):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-*.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop tests/structure/loop-*.test.ts tests/checks/loop-*.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/install-conformance.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/event-mount-guards.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/event-taxonomy-single-source.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/supervision-mounting.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Review-iteration-1 remediation: the baseline-relative artifact signal, the newest-lane-per-ref corroborator, the observed session re-find with unknown-liveness, and the real-command-runtime pick-deliver-merge proof (0 AC / 0 TC / 0 mutation rows)"
+    kind: delivery
+    summary: "fix(GH-348): review-iteration-1 remediation for the two-signal evidence and the real-runtime proof"
+    scope:
+      files:
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/app/loop-corroborator.ts
+        - packages/core/src/domain/loop-verdict.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/facts.ts
+        - tests/fixtures/loop/parity/e2e.ts
+        - tests/fixtures/loop/golden/status.ts
+        - tests/behaviour/loop-stuck.test.ts
+        - tests/behaviour/loop-instance.test.ts
+        - tests/behaviour/loop-status.test.ts
+        - tests/conformance/loop/loop-pick-deliver-merge.test.ts
+        - tests/conformance/loop/loop-parity-battery.test.ts
+        - tests/structure/loop-production-session.test.ts
+        # DELIVERED PIN UPDATE (obligation 10.9): the new corroborator selector's
+        # executable-allowance row.
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/loop-supervisor.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/e2e.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-10 remediation commit (every loop suite, the pinned/invariant suites, and the aggregate gate green at the phase HEAD)"

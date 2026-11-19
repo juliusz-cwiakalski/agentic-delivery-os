@@ -198,6 +198,26 @@ export const LOOP_VERDICT_ROWS: readonly {
     expected: "unevaluable",
   },
   {
+    id: "stale positive beyond progress-bound",
+    input: {
+      progress: "positive",
+      delivery: "none",
+      progressObservedAtMs: 100_000,
+      lastProgressAtMs: 100_000,
+    },
+    expected: "unevaluable",
+  },
+  {
+    id: "fresh positive within progress-bound",
+    input: {
+      progress: "positive",
+      delivery: "none",
+      progressObservedAtMs: 950_000,
+      lastProgressAtMs: 950_000,
+    },
+    expected: "progressing",
+  },
+  {
     id: "zero across the window with an artifact advance",
     input: {
       progress: "zero",
@@ -216,6 +236,27 @@ export const MAXIMAL_EVIDENCE_FIELDS = {
   progressAgeMs: 652_000,
   windowMs: 600_000,
 };
+
+/**
+ * A superseded-lane fixture (F-2): an older `active` lane whose owner is alive,
+ * followed by a newer `terminal` record for the SAME ref. The delivered
+ * reduction must keep only the terminal record, so the reading is `none` (D2)
+ * and not `in-progress` (D4) — a superseded lane may never veto a stuck verdict.
+ */
+export const SUPERSEDED_LANE_RECORDS = [
+  {
+    ref: "GH-348",
+    state: "active" as const,
+    owner: { processId: 4242 },
+    recordedAt: "2026-11-19T10:00:00.000Z",
+  },
+  {
+    ref: "GH-348",
+    state: "terminal" as const,
+    owner: { processId: 4242 },
+    recordedAt: "2026-11-19T10:05:00.000Z",
+  },
+] as const;
 
 /** The liveness vocabulary the lane facts use. */
 export const LANE_LIVENESS: readonly LaneLiveness[] = ["alive", "dead", "unreadable"];

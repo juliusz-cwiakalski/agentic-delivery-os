@@ -198,6 +198,7 @@ export {
   type LaneLiveness,
   LOOP_EVIDENCE_CLASSES,
   type LoopCoordinatorRead,
+  newestLanePerRef,
   type LoopDelay,
   type LoopDelayReason,
   type LoopEvidenceClass,

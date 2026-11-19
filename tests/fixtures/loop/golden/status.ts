@@ -67,3 +67,12 @@ export const LOOP_STATUS_GOLDEN_ABSENT = {
 
 /** The golden log header for a bounded read (API-5). */
 export const LOOP_LOG_GOLDEN_HEADER = "loop log  lines=0/50  bytes=0  truncated=no  unreadable=no";
+
+/**
+ * The progress projection (API-4): the recorded progress state the supervisor
+ * last OBSERVED. `null` before the first reading, never a fabricated token.
+ */
+export const LOOP_STATUS_PROGRESS_GOLDEN = {
+  observed: "positive",
+  beforeFirstReading: null,
+} as const;

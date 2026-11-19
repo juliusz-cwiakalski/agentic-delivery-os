@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-19T12:39:42.198Z }
   delivery_planning: { started: null, completed: 2026-11-19T12:40:00.372Z }
   dor_check: { started: null, completed: 2026-11-19T12:40:11.509Z }
-  delivery: { started: null, completed: 2026-11-19T16:17:21.129Z }
+  delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: 2026-11-19T16:56:32.286Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -653,6 +653,39 @@ notes:
       the documented override the lifecycle permits; it is not a silent skip.
       The readiness record stays in the change folder and the PR body reproduces
       the deviation line verbatim."
+    type: decision
+    date: "2026-11-19"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml). Diff scope
+      origin/main-tools..2c7b6252: 143 files, +18831/-360. 1 blocker, 3 majors,
+      4 minors, 1 info. F-1 blocker: the artifact-advance signal is 'any merge
+      or blocker record ever' with no baseline, so a repository that has ever
+      merged can never reach `stuck`; the battery masks it with an injected
+      constant (violates F-5/AC-F5-1/DM-6). F-3 major: cross-process re-find
+      joins but returns pre-read or absent facts, so the re-found session is not
+      observed, and a null start time probes with 0 and can spawn a second
+      session (F-6/AC-F6-2/AC-F6-4). F-2 major: the corroborator maps every
+      historical dispatch lane instead of the newest per ref, so a superseded
+      active lane pins in-progress (F-5 table). F-4 major: the AC-F8-4
+      pick-deliver-merge proof is tautological - it reads back fixture constants
+      through a stub rather than the real command runtime. Minors F-5
+      (near-tautological battery meta-case), F-6 (D1 re-observation asserts
+      nothing on success), F-7 (session.progress hardcoded null vs API-4), F-8
+      (progressBoundMs unused in the verdict); info F-9 (generic commit
+      subjects, acceptable). Verified green by the review: loop behaviour 87
+      pass, conformance/structure 34, pinned and invariant suites 47, and the
+      branch-range commit gate PASS over 37 commits with 0 offending. Contract
+      audit clean: no coordinator or config source edited, no new
+      identity/kind/key, boundary constant equals the published page, no
+      delivered assertion deleted or relaxed."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-1 remediation routing: the review record carries eight
+      ordered tasks, each naming file, change and authorising clause. They are
+      executed in a NEW plan phase 10 owned by the reopened delivery boundary;
+      the plan is amended to declare that scope and re-validated. After the code
+      lands the documentation phase is re-run if a documented claim changes,
+      then the change is re-reviewed. No decision is reopened: every task cites
+      the clause that already authorises it."
     type: decision
     date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their

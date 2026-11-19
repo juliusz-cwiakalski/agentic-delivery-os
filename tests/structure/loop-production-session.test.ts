@@ -119,12 +119,15 @@ describe("D1 re-observations through createProductionComposer -> runEntrypoint",
       // The D1 surface now reaches the family. A checkout with no configured CEO
       // seat refuses at the delivered provider identity before any session — the
       // same pre-session rule the D2 case asserts — and never silent-succeeds.
-      expect([0, 1, 2]).toContain(code);
       if (code === 0) {
         expect(invocations).toHaveLength(1);
-        expect(invocations[0]?.args).toContain("--agent");
-        expect(invocations[0]?.args).toContain("ceo");
+        const argv = invocations[0]?.args ?? [];
+        expect(argv.filter((arg) => arg === "--agent")).toHaveLength(1);
+        expect(argv[argv.indexOf("--agent") + 1]).toBe("ceo");
+        expect(argv.filter((arg) => arg === "--model")).toHaveLength(1);
+        expect(argv[argv.indexOf("--model") + 1]?.length ?? 0).toBeGreaterThan(0);
       } else {
+        expect(code).toBe(1);
         const error = envelope?.error as { code?: string } | undefined;
         expect(["provider.profile.invalid", "config.value.invalid"]).toContain(error?.code ?? "");
         expect(invocations).toHaveLength(0);
@@ -141,11 +144,17 @@ describe("D1 re-observations through createProductionComposer -> runEntrypoint",
         root,
         argv: ["loop", "start", "--foreground", "--json"],
       });
-      // No second resolver is mounted: the refusal (if any) is the DELIVERED
-      // provider/config identity, never a loop-specific one.
-      if (code !== 0) {
-        const error = envelope?.error as { code?: string } | undefined;
+      // The binding property is asserted on BOTH branches, so a loop-specific
+      // resolver could never slip through a successful start: the run either
+      // reached the delivered resolution (exit 0) or refused with a DELIVERED
+      // provider/config identity (never a loop-owned one).
+      expect([0, 1]).toContain(code);
+      const error = envelope?.error as { code?: string } | undefined;
+      if (code === 0) {
+        expect(error).toBeUndefined();
+      } else {
         expect(error?.code).not.toContain("loop");
+        expect(["provider.profile.invalid", "config.value.invalid"]).toContain(error?.code ?? "");
       }
     } finally {
       removeRoot(root);
@@ -161,7 +170,16 @@ describe("D1 re-observations through createProductionComposer -> runEntrypoint",
       });
       const text = JSON.stringify(envelope ?? {});
       expect(text).not.toContain("pre-opencode-iteration");
-      expect(code).toBeDefined();
+      // Reached the family: either the start ran, or it refused at a DELIVERED
+      // pre-session identity. The assertion is about the outcome it claims, not
+      // about the mere presence of an exit number.
+      const error = envelope?.error as { code?: string } | undefined;
+      if (code === 0) {
+        expect(error).toBeUndefined();
+      } else {
+        expect(code).toBe(1);
+        expect(["provider.profile.invalid", "config.value.invalid"]).toContain(error?.code ?? "");
+      }
     } finally {
       removeRoot(root);
     }

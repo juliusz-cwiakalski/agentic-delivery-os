@@ -16,6 +16,7 @@ import {
   dispatchEvidenceClass,
   evidenceClassContribution,
   LOOP_EVIDENCE_CLASSES,
+  newestLanePerRef,
 } from "../../packages/core/src/app/index";
 import {
   evaluateLoopVerdict,
@@ -26,6 +27,7 @@ import {
   LOOP_DECISION_ROWS,
   LOOP_VERDICT_ROWS,
   MAXIMAL_EVIDENCE_FIELDS,
+  SUPERSEDED_LANE_RECORDS,
 } from "../fixtures/loop/facts";
 import { createLoopHarness } from "../fixtures/loop/harness";
 
@@ -72,6 +74,46 @@ describe("TC-STUCK-001 all four conditions produce one verdict, one terminate, o
     // the second session are re-observed by phase 5's TC-BACKOFF-001 row A.
     expect(harness.verdicts.admissions).toHaveLength(1);
     expect(harness.verdicts.admissions[0]?.ordinal).toBe(1);
+  });
+});
+
+describe("F-1 the artifact-advance signal is BASELINE-relative (review-iter-1)", () => {
+  test("a merge BEFORE the progress baseline does not suppress a stuck verdict", async () => {
+    const harness = createLoopHarness({
+      label: "f1-prior-merge",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      // The only merge record predates the supervisor's baseline (it is seeded
+      // before the start clock advances), so nothing advanced SINCE it.
+      artifactAdvanced: [500_000],
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(0);
+    expect(harness.verdicts.kills).toEqual(["terminated"]);
+    const records = harness.coordinatorRecords();
+    if (records.ok) {
+      expect(records.stuck.filter((record) => record.verdict === "stuck").length).toBeGreaterThan(
+        0,
+      );
+    }
+  });
+
+  test("a merge AFTER the baseline keeps the verdict progressing (control)", async () => {
+    const harness = createLoopHarness({
+      label: "f1-post-merge",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      // 1_500_000 is after the acquisition baseline (1_000_000): the artifact
+      // genuinely advanced during the window, so no kill is licensed.
+      artifactAdvanced: [1_500_000],
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(0);
+    expect(harness.verdicts.kills).toHaveLength(0);
+    const records = harness.coordinatorRecords();
+    if (records.ok) expect(records.stuck).toHaveLength(0);
   });
 });
 
@@ -246,6 +288,24 @@ describe("TC-STUCK-010 the sixteen-row decision table is total", () => {
     for (const row of LOOP_DECISION_ROWS) {
       expect(corroborateDelivery(row.input), row.id).toBe(row.expected);
     }
+  });
+
+  test("a superseded active lane reads none (the newest per ref decides)", () => {
+    const newest = newestLanePerRef(SUPERSEDED_LANE_RECORDS);
+    expect(newest).toHaveLength(1);
+    expect(newest[0]?.state).toBe("terminal");
+    // The superseded `active` owner is alive; without the reduction this would
+    // read D4 in-progress and veto every stuck verdict for the ref.
+    const reading = corroborateDelivery({
+      storeReadable: true,
+      dispatchLanes: newest.map((lane) => ({
+        state: lane.state === "active" ? ("active" as const) : ("terminal" as const),
+        pid: lane.owner.processId,
+        liveness: "alive" as const,
+      })),
+      daemonLane: null,
+    });
+    expect(reading).toBe("none");
   });
 
   test("the evidence classes cover the declared contributions", () => {

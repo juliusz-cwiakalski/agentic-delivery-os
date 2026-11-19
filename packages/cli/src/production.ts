@@ -140,6 +140,7 @@ import {
   type LoopLogSink,
   type LoopSessionFacts,
   legacyStoreWarning,
+  newestLanePerRef,
   logByteLength,
   maintainHostIndex,
   normalizeDispatchRepositoryKey,
@@ -304,6 +305,7 @@ import {
   readChangeTransitionsTolerant,
   readCoordinatorRecords,
   readEconomicsRecords,
+  readLoopRecords,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
@@ -3889,20 +3891,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             const lanes = readDispatchLanes(store);
             const daemonRead = readDaemonLanes(store);
             const newestDaemon = daemonRead.ok ? daemonRead.latest : undefined;
+            // F-5's evidence-class table is defined over the NEWEST dispatch lane
+            // per ref; a superseded `active` record must not veto a stuck verdict.
+            // The reduction uses the delivered selector, not a second rule.
+            const newestPerRef = lanes.ok ? newestLanePerRef(lanes.records) : [];
             return corroborateDelivery({
               storeReadable: lanes.ok && daemonRead.ok,
-              dispatchLanes: lanes.ok
-                ? lanes.records.map((lane: { state: string; owner?: { processId?: number } }) => ({
-                    state: lane.state === "active" ? ("active" as const) : ("terminal" as const),
-                    pid: lane.owner?.processId ?? null,
-                    liveness:
-                      lane.owner?.processId === undefined
-                        ? ("unreadable" as const)
-                        : processPort.isAlive(lane.owner.processId)
-                          ? ("alive" as const)
-                          : ("dead" as const),
-                  }))
-                : [],
+              dispatchLanes: newestPerRef.map((lane) => ({
+                state: lane.state === "active" ? ("active" as const) : ("terminal" as const),
+                pid: lane.owner?.processId ?? null,
+                liveness:
+                  lane.owner?.processId === undefined
+                    ? ("unreadable" as const)
+                    : processPort.isAlive(lane.owner.processId)
+                      ? ("alive" as const)
+                      : ("dead" as const),
+              })),
               daemonLane:
                 newestDaemon === undefined
                   ? null
@@ -3919,12 +3923,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             });
           },
         },
-        artifactAdvanced: () => {
+        artifactAdvanced: (sinceMs) => {
+          // F-5: "no artifact advance SINCE that observation". A record can only
+          // advance the signal when its own recordedAt is after the baseline the
+          // supervisor holds; without a baseline no record is "since" it.
+          if (sinceMs === null) return false;
           const read = store.readRecords();
           if (!read.ok) return false;
-          return read.value.records.some(
-            (entry) => entry.kind === "merge.transaction" || entry.kind === "blocker.answer",
-          );
+          return read.value.records.some((entry) => {
+            if (entry.kind !== "merge.transaction" && entry.kind !== "blocker.answer") return false;
+            const recordedAt = (entry.payload as { readonly recordedAt?: unknown }).recordedAt;
+            if (typeof recordedAt !== "string") {
+              // An undatable artifact record cannot be proven to be after the
+              // baseline; treating it as an advance keeps the verdict kill-safe.
+              return true;
+            }
+            const at = Date.parse(recordedAt);
+            return Number.isFinite(at) && at > sinceMs;
+          });
         },
         terminate: async (graceMs) => {
           if (handle === null || handle.pid === undefined) {
@@ -4021,15 +4037,38 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             };
             return { ok: true, fresh: false, ...facts };
           },
-          join: async () => ({
-            ok: true,
-            fresh: false,
-            sessionId: recorded.sessionId ?? "",
-            harnessKind: recorded.harnessKind,
-            pid: recorded.pid,
-            processStartTimeMs: recorded.processStartTimeMs,
-            title: recorded.title,
-          }),
+          join: async () => {
+            // A cross-process re-find joins the DURABLE newest session, not the
+            // in-memory placeholder a fresh process starts with (F-6).
+            const durable = readLoopRecords(store, loopId);
+            const newest = durable.ok ? durable.sessions[durable.sessions.length - 1] : undefined;
+            const sessionId = recorded.sessionId ?? newest?.sessionId ?? "";
+            const pid = recorded.pid ?? newest?.pid ?? null;
+            const processStartTimeMs =
+              recorded.processStartTimeMs ?? newest?.processStartTimeMs ?? null;
+            const harnessKind = recorded.harnessKind || newest?.harnessKind || "";
+            const title = recorded.title ?? newest?.title ?? null;
+            const alive = pid !== null && processPort.isAlive(pid);
+            if (sessionId !== "" && alive) {
+              recorded = {
+                sessionId,
+                liveness: "alive",
+                harnessKind,
+                pid,
+                processStartTimeMs,
+                title,
+              };
+            }
+            return {
+              ok: true,
+              fresh: false,
+              sessionId,
+              harnessKind,
+              pid,
+              processStartTimeMs,
+              title,
+            };
+          },
         },
         log: logSink,
         delay: loopDelay,

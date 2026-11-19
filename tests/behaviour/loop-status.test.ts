@@ -10,6 +10,7 @@ import { describe, expect, test } from "bun:test";
 import {
   LOOP_STATUS_GOLDEN_ABSENT,
   LOOP_STATUS_GOLDEN_STOPPED,
+  LOOP_STATUS_PROGRESS_GOLDEN,
 } from "../fixtures/loop/golden/status";
 import { createLoopHarness } from "../fixtures/loop/harness";
 
@@ -69,5 +70,24 @@ describe("TC-VERB-004 the read-only verbs append nothing and read no handler con
     await harness.run(["loop", "status", "--json"]);
     await harness.run(["loop", "log", "--json"]);
     expect(harness.counters.appends).toBe(before);
+  });
+});
+
+describe("F-7 the projection carries the OBSERVED progress state (review-iter-1)", () => {
+  test("status projects the last observed progress, and null before any reading", async () => {
+    const harness = createLoopHarness({
+      label: "f7-progress",
+      progressReading: { state: "positive", observedAtMs: 1_000_000 },
+      cycles: 1,
+    });
+    const before = harness.dataOf(await harness.run(["loop", "status", "--json"]));
+    expect((before.session as { progress?: unknown }).progress).toBe(
+      LOOP_STATUS_PROGRESS_GOLDEN.beforeFirstReading,
+    );
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    const after = harness.dataOf(await harness.run(["loop", "status", "--json"]));
+    expect((after.session as { progress?: unknown }).progress).toBe(
+      LOOP_STATUS_PROGRESS_GOLDEN.observed,
+    );
   });
 });

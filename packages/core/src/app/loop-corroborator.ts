@@ -125,3 +125,17 @@ export const corroborateDelivery = (input: CorroboratorInput): LoopDeliveryReadi
   ];
   return foldDeliveryEvidence({ storeReadable: input.storeReadable, classes });
 };
+
+/**
+ * Reduce a lane record set to the NEWEST record per ref, in first-seen order
+ * (F-5's evidence-class table is defined over "the newest dispatch.lane record
+ * for every ref"). Ledger order is append order, so the last record for a ref
+ * wins; a superseded `active` lane can therefore never veto a stuck verdict.
+ */
+export const newestLanePerRef = <T extends { readonly ref: string }>(
+  records: readonly T[],
+): readonly T[] => {
+  const newest = new Map<string, T>();
+  for (const record of records) newest.set(record.ref, record);
+  return [...newest.values()];
+};

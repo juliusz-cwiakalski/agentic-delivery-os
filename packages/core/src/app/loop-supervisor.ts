@@ -52,6 +52,7 @@ import { evaluateLoopVerdict, observeProgress } from "../domain/loop-verdict.js"
 import {
   endedSessionRecord,
   freshSessionTitle,
+  type LoopSessionEffect,
   type LoopSessionFacts,
   type LoopSessionPort,
   loopSpawnPrompt,
@@ -208,8 +209,13 @@ export type LoopSupervisorPorts = {
   };
   /** The read-only delivery corroborator reading (F-5). */
   readonly corroborator: { readonly read: () => LoopDeliveryReading };
-  /** Whether a merge or blocker answer landed since the observation (F-5). */
-  readonly artifactAdvanced: () => boolean;
+  /**
+   * Whether a merge or blocker answer landed SINCE the given observation instant
+   * (F-5 "no artifact advance since that observation", DM-6). `null` is a
+   * baseline the supervisor does not hold yet: no record can be "since" it, so
+   * the signal reports false and the verdict stays conservative.
+   */
+  readonly artifactAdvanced: (sinceMs: number | null) => boolean;
   /** The delivered identity-verified termination over the injected port (F-5). */
   readonly terminate: (graceMs: number) => Promise<LoopTerminateOutcome>;
   /** The delivered restart-admission fold, recorded but not performed (phase 4). */
@@ -361,6 +367,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     coordinatorRead: LoopCoordinatorRead,
     live: LoopSessionFacts,
     degraded: readonly LoopDegradation[],
+    progress: CoordinatorProgressState | null,
   ): LoopStatusProjection => {
     const lease = loopLeaseOf(coordinatorRead);
     const running = lease !== null && lease.action !== "released";
@@ -388,7 +395,10 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         pid: live.liveness === "alive" ? live.pid : null,
       },
       recordedTitle: newestSession?.title ?? null,
-      recordedProgress: null,
+      // API-4: the projection carries the recorded title AND the progress state.
+      // The supervisor projects the last state it OBSERVED (null before its
+      // first reading), never a fabricated token.
+      recordedProgress: progress,
       restarts: {
         count: epochRestarts.length,
         bound: settings.restartBudget,
@@ -588,10 +598,22 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     const snapshot = ledger.read().loop;
     const recorded = snapshot.ok ? snapshot.sessions[snapshot.sessions.length - 1] : undefined;
 
+    /** The facts an effect established, so a join is OBSERVED, not pre-read. */
+    const factsOfEffect = (
+      effect: Extract<LoopSessionEffect, { readonly ok: true }>,
+    ): LoopSessionFacts => ({
+      sessionId: effect.sessionId,
+      liveness: "alive",
+      harnessKind: effect.harnessKind,
+      pid: effect.pid,
+      processStartTimeMs: effect.processStartTimeMs,
+      title: effect.title,
+    });
+
     if (facts.liveness === "alive") {
       const joined = await ports.session.join();
       if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
-      return { ok: true, facts, record: null };
+      return { ok: true, facts: factsOfEffect(joined), record: null };
     }
 
     if (recorded !== undefined && recorded.state === "active") {
@@ -601,18 +623,25 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         // Unknown-liveness: resume, never duplicate and never kill (AC-F6-5).
         const resumed = await ports.session.resume({ sessionId: recorded.sessionId, prompt });
         if (!resumed.ok) return { ok: false, failure: refusalFor(resumed.code) };
-        return { ok: true, facts: { ...facts, ...resumed, liveness: "alive" }, record: null };
+        return { ok: true, facts: factsOfEffect(resumed), record: null };
+      } else if (recorded.processStartTimeMs === null) {
+        // A recorded pid WITHOUT a platform start time cannot be identity-verified:
+        // that is unknown-liveness, never a `0` probe and never a second spawn
+        // beside a recorded live session (F-6, AC-F6-4).
+        const joined = await ports.session.join();
+        if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
+        return { ok: true, facts: factsOfEffect(joined), record: null };
       } else {
         const answer = ports.processPort.capabilities.alive
           ? ports.processPort.probe({
               pid: recorded.pid,
-              processStartTimeMs: recorded.processStartTimeMs ?? 0,
+              processStartTimeMs: recorded.processStartTimeMs,
             })
           : null;
         if (answer === true) {
           const joined = await ports.session.join();
           if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
-          return { ok: true, facts, record: null };
+          return { ok: true, facts: factsOfEffect(joined), record: null };
         }
       }
     }
@@ -626,6 +655,8 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
 
   /** The supervisor's own last sourced-progress observation (seeded at acquisition). */
   let lastProgressAtMs: number | null = null;
+  /** The last progress state this supervisor OBSERVED; null before the first read. */
+  let lastProgressState: CoordinatorProgressState | null = null;
   let cycleOrdinal = 0;
   let degradations: LoopDegradation[] = [];
   let exhaustion: string | null = null;
@@ -665,7 +696,11 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
 
     const reading = ports.progress.read(session.sessionId);
     const progressState: CoordinatorProgressState = reading === null ? "unknown" : reading.state;
+    lastProgressState = progressState;
     const delivery = ports.corroborator.read();
+    // The baseline the verdict measures the window from is also the baseline the
+    // artifact signal compares against (F-5, AC-F5-1).
+    const baselineAtMs = lastProgressAtMs ?? reading?.observedAtMs ?? null;
     const verdict = evaluateLoopVerdict({
       liveSession: session.liveness === "alive",
       progress: progressState,
@@ -674,7 +709,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       nowMs,
       stuckWindowMs: settings.stuckWindowMs,
       progressBoundMs: settings.progressBoundMs,
-      artifactAdvanced: ports.artifactAdvanced(),
+      artifactAdvanced: ports.artifactAdvanced(baselineAtMs),
       delivery,
     });
     lastProgressAtMs = observeProgress({
@@ -811,7 +846,13 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     const preflight = ledger.read();
     if (!preflight.loop.ok) return stateFailure(preflight.loop.code);
     if (isStopFolded(preflight.loop.stops)) {
-      const data = projection(preflight.loop, preflight.coordinator, absentSessionFacts(), []);
+      const data = projection(
+        preflight.loop,
+        preflight.coordinator,
+        absentSessionFacts(),
+        [],
+        lastProgressState,
+      );
       return { data: { ...data, state: "stopped", released: false } };
     }
     const claimed = claim({ freshBudget: input.freshBudget });
@@ -855,7 +896,13 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     facts = { ...facts, liveness: "absent" };
     release(identity);
     const snapshot = ledger.read();
-    const data = projection(snapshot.loop, snapshot.coordinator, facts, degradations);
+    const data = projection(
+      snapshot.loop,
+      snapshot.coordinator,
+      facts,
+      degradations,
+      lastProgressState,
+    );
     return { data: { ...data, state: "stopped", released: true } };
   };
 
@@ -900,7 +947,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       degraded.push("log-unavailable");
     }
     degraded.push(...degradations);
-    return { data: projection(loopRead, coordinatorRead, facts, degraded) };
+    return { data: projection(loopRead, coordinatorRead, facts, degraded, lastProgressState) };
   };
 
   /* ---------------------------------- log ---------------------------------- */

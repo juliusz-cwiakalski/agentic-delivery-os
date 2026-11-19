@@ -173,6 +173,7 @@ export {
   type LaneLiveness,
   LOOP_EVIDENCE_CLASSES,
   type LoopEvidenceClass,
+  newestLanePerRef,
 } from "./loop-corroborator.js";
 export {
   endedSessionRecord,

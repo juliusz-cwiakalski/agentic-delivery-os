@@ -192,3 +192,67 @@ describe("TC-INSTANCE-005 (phase-4 segment) takeover and unconfirmed termination
     );
   });
 });
+
+describe("F-3 a cross-process re-find is JOINED AND OBSERVED (review-iter-1)", () => {
+  test("a recorded live session is observed live without a pre-set alive read", async () => {
+    const harness = createLoopHarness({
+      label: "f3-refind-observed",
+      own: OWN,
+      // A FRESH process: no in-memory session facts at all.
+      session: {
+        facts: { sessionId: null, liveness: "absent", pid: null, processStartTimeMs: null },
+      },
+      progressReading: { state: "positive", observedAtMs: 1_000_000 },
+    });
+    // A dead lease holder left a live session behind: the re-find branch must
+    // probe the RECORDED pid + start time, join it, and OBSERVE it.
+    harness.seedFence({ action: "acquired", pid: 4000, processStartTimeMs: 4_000 });
+    harness.seedSession({ sessionId: "session-refound", pid: 4242, processStartTimeMs: 2_000 });
+    harness.setAlive(4000, false);
+    harness.setAlive(4242, true);
+
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(0);
+    expect(harness.counters.joins).toBe(1);
+    expect(harness.counters.spawns).toBe(0);
+    // Observed: the joined session is live, so no `live-facts-unknown` entry and
+    // the session id is the re-found one.
+    const status = await harness.run(["loop", "status", "--json"]);
+    const data = harness.dataOf(status);
+    expect(data.degraded).not.toContain("live-facts-unknown");
+    expect((data.session as { sessionId?: string }).sessionId).toBe("session-refound");
+  });
+
+  test("a recorded pid with a NULL start time is unknown-liveness and is never probed with 0", async () => {
+    const harness = createLoopHarness({
+      label: "f3-null-start",
+      own: OWN,
+      session: {
+        facts: { sessionId: null, liveness: "absent", pid: null, processStartTimeMs: null },
+      },
+    });
+    harness.seedFence({ action: "acquired", pid: 4000, processStartTimeMs: 4_000 });
+    harness.seedSession({
+      sessionId: "session-unverifiable",
+      pid: 4242,
+      processStartTimeMs: null,
+    });
+    harness.setAlive(4000, false);
+    harness.setAlive(4242, true);
+    const probesBefore = harness.process.probeTargets.length;
+
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(0);
+    // The unverifiable session was NEVER probed (and certainly not with 0), and
+    // it was never replaced by a second spawn.
+    const probes = harness.process.probeTargets.slice(probesBefore);
+    // The recorded SESSION identity (pid 4242, unknown start time) is never
+    // probed; only the dead lease holder was (the claim decision).
+    expect(probes.some((target) => target.pid === 4242)).toBe(false);
+    expect(harness.process.probeTargets.every((target) => target.processStartTimeMs !== 0)).toBe(
+      true,
+    );
+    expect(harness.counters.spawns).toBe(0);
+    expect(harness.counters.joins).toBe(1);
+  });
+});

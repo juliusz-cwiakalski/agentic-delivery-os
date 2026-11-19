@@ -30,6 +30,132 @@ import {
 } from "../../fixtures/loop/parity/seams";
 
 const ROOT = process.cwd();
+const STAMP = "2026-11-19T10:00:00.000Z";
+
+/**
+ * The registry gaps a case must be able to NAME: an unproven group, an absent
+ * seam, or an empty expectation. Exported so the planted control drives the very
+ * rule the delivery assertion uses (AC-F8-1 non-vacuity).
+ */
+export const surfaceGaps = (
+  rows: readonly {
+    readonly id: string;
+    readonly group: string;
+    readonly declaredSeam: string;
+    readonly expected: Readonly<Record<string, unknown>>;
+  }[],
+): string[] => {
+  const gaps: string[] = [];
+  for (const row of rows) {
+    if (!isProvenSurface(row.group)) gaps.push(`${row.id}: not a proven group`);
+    if (row.declaredSeam.length === 0) gaps.push(`${row.id}: no declared seam`);
+    if (Object.keys(row.expected).length === 0) gaps.push(`${row.id}: no expected observation`);
+  }
+  return gaps;
+};
+
+/**
+ * One surface-specific observation per proven surface. A surface whose run stops
+ * producing its observation fails BY NAME, so this meta-case cannot pass on a
+ * bare `exit <= 2`.
+ */
+const SURFACE_OBSERVATIONS: Readonly<
+  Record<string, () => Promise<{ readonly passed: boolean; readonly detail: string }>>
+> = {
+  verbs: async () => {
+    const harness = createLoopHarness({ label: "meta-verbs" });
+    const result = await harness.run(["loop", "status", "--json"]);
+    const data = harness.dataOf(result);
+    return {
+      passed: result.code === 0 && data.schemaVersion === "delivery.loop.v1",
+      detail: `status exit ${String(result.code)}`,
+    };
+  },
+  log: async () => {
+    const harness = createLoopHarness({ label: "meta-log" });
+    harness.logFs.append(`${STAMP} event=cycle seq=1`);
+    const data = harness.dataOf(await harness.run(["loop", "log", "--json"]));
+    return {
+      passed: data.schemaVersion === "delivery.loop.log.v1" && data.returnedLines === 1,
+      detail: `log lines ${String(data.returnedLines)}`,
+    };
+  },
+  spawn: async () => {
+    const harness = createLoopHarness({ label: "meta-spawn" });
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    return { passed: harness.counters.spawns === 1, detail: `spawns ${harness.counters.spawns}` };
+  },
+  stuck: async () => {
+    const harness = createLoopHarness({
+      label: "meta-stuck",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    const records = harness.coordinatorRecords();
+    const verdicts = records.ok
+      ? records.stuck.filter((entry) => entry.verdict === "stuck" && entry.phase === "verdict")
+      : [];
+    return { passed: verdicts.length === 1, detail: `stuck verdicts ${verdicts.length}` };
+  },
+  kill: async () => {
+    const harness = createLoopHarness({
+      label: "meta-kill",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      killOutcome: "forced",
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    return {
+      passed: harness.verdicts.kills.length === 1,
+      detail: `kills ${harness.verdicts.kills.join(",")}`,
+    };
+  },
+  "backoff-budget": async () => {
+    const harness = createLoopHarness({
+      label: "meta-backoff",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    const records = harness.coordinatorRecords();
+    const restarts = records.ok ? records.restarts.length : 0;
+    return { passed: restarts === 1, detail: `restarts ${restarts}` };
+  },
+  stop: async () => {
+    const harness = createLoopHarness({ label: "meta-stop" });
+    await harness.run(["loop", "stop", "--json"]);
+    const stops = harness.loopRecords().stops;
+    return {
+      passed: stops.length === 1 && stops[0]?.action === "requested",
+      detail: `stop records ${stops.length}`,
+    };
+  },
+  "single-instance": async () => {
+    const harness = createLoopHarness({
+      label: "meta-instance",
+      own: { pid: 9001, processStartTimeMs: 1_000 },
+    });
+    harness.seedFence({ action: "acquired", pid: 9001, processStartTimeMs: 1_000 });
+    harness.setAlive(9001, true);
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    return {
+      passed: result.code === 2 && harness.errorCodeOf(result) === "coordinator.already-running",
+      detail: `second start exit ${String(result.code)}`,
+    };
+  },
+  "no-shell": async () => {
+    const violations = scan(ROOT);
+    const prompt = loopPromptFor("loop-main");
+    return {
+      passed: violations.length === 0 && !prompt.includes("scripts/"),
+      detail: `scan violations ${violations.length}`,
+    };
+  },
+};
 
 describe("TC-BATTLE-001 every registry row executes and declares one proven seam", () => {
   test("every row names a proven surface and no row is off-boundary", () => {
@@ -43,32 +169,31 @@ describe("TC-BATTLE-001 every registry row executes and declares one proven seam
     expect(failures).toEqual([]);
   });
 
-  test("every registry row executes over the real command path", async () => {
-    // One representative run per group, driven over the D2 harness.
-    const runFor = async (group: string) => {
-      const harness = createLoopHarness({ label: `battery-${group}` });
-      const argv =
-        group === "stop"
-          ? ["loop", "stop", "--json"]
-          : group === "log"
-            ? ["loop", "log", "--json"]
-            : group === "verbs"
-              ? ["loop", "status", "--json"]
-              : ["loop", "start", "--foreground", "--json"];
-      const result = await harness.run(argv);
-      return result.code;
-    };
-    for (const group of [
-      "verbs",
-      "log",
-      "spawn",
-      "stuck",
-      "backoff-budget",
-      "stop",
-      "single-instance",
-    ]) {
-      expect(await runFor(group), group).toBeLessThanOrEqual(2);
+  test("every proven surface produces its OWN observation, or fails by name", async () => {
+    const failures: string[] = [];
+    for (const surface of LOOP_PROVEN_SURFACES) {
+      const observation = await SURFACE_OBSERVATIONS[surface]();
+      if (!observation.passed) failures.push(`${surface}: ${observation.detail}`);
     }
+    expect(failures).toEqual([]);
+  });
+
+  test("the meta-case is falsifiable: a planted off-boundary or empty row fails by name", () => {
+    const gaps = surfaceGaps([
+      ...LOOP_PARITY_CASES,
+      {
+        id: "planted-off-group",
+        group: "live-opencode",
+        declaredSeam: "S-none",
+        scenario: {},
+        expected: {},
+      },
+      { id: "planted-empty", group: "verbs", declaredSeam: "", scenario: {}, expected: {} },
+    ]);
+    expect(gaps).toContain("planted-off-group: not a proven group");
+    expect(gaps).toContain("planted-empty: no declared seam");
+    expect(gaps).toContain("planted-empty: no expected observation");
+    expect(surfaceGaps(LOOP_PARITY_CASES)).toEqual([]);
   });
 });
 

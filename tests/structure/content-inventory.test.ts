@@ -354,6 +354,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "dispatchEvidenceClass",
     "evidenceClassContribution",
     "foldDeliveryEvidence",
+    "newestLanePerRef",
   ],
   "core/src/app/loop-session.ts": [
     "endedSessionRecord",
