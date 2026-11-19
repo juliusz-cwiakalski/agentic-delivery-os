@@ -875,6 +875,97 @@
 #   failure is a BLOCKING finding; it is never repaired by deleting the row or
 #   relaxing the expected failure family.
 #
+# DELIVERED DEVIATIONS (reported; recorded at the post-delivery plan revision).
+#   No phase, AC, TC, or mutation row moves because of this block; it aligns the
+#   DECLARATIONS with what the delivery commits actually touched, and records the
+#   deviations the delivery agent reported at the phase boundaries.
+#
+#   D-1 COMMIT SUBJECTS. Every phase commit was created by the bare
+#       `jaiship commit GH-348` primitive. The primitive derives its subject from
+#       the plan-phase context of the CURRENT LIFECYCLE phase; because the
+#       lifecycle `delivery` phase was never started by the delivery agent (the
+#       caller owns that boundary) and no `--phase` flag was passed, the
+#       plan-phase summary in the COMMIT CONVENTION block above was unreachable,
+#       so every subject fell back to the primitive's path template
+#       `chore(GH-348): update <path>`. No message was hand-composed, nothing was
+#       staged by hand, and `git commit` was never invoked directly. The
+#       lifecycle `quality_gates` phase's branch-range gate
+#       (`scripts/lint-commit-range.sh`) remains the authority on whether those
+#       subjects pass, and the COMMIT CONVENTION summaries stay the intended
+#       subjects for any future re-cut. Authorising clause: the commit primitive
+#       owns message composition (AGENTS.md, "Lifecycle commits route through the
+#       `commit` primitive ... never hand-edit").
+#
+#   D-2 PINNED-SURFACE SET (see phase 7's obligation 7.9 and phase 9's 9.7). The
+#       header's "THREE PINNED HELP-INVENTORY SURFACES + THE M4 PAGE" block names
+#       four surfaces; adding a command family AND two additive record kinds
+#       forced further closed-surface pins. Each one is DECLARED in the scope of
+#       the phase whose commit touched it (phase 7: the family counters and the
+#       help/guide surface; phase 9: the additivity, inventory, contract,
+#       registry and alias pins). Every one is a PIN UPDATE: no assertion is
+#       deleted, renamed, relaxed, reordered, or skipped, every mutation control
+#       stays live, and the loop-removal control still fails by name.
+#       Authorising clause: spec §8.5 (a pin update, not a relaxation) and
+#       DOD-8/DEC-7.
+#
+#   D-3 FORMATTER-ONLY TOUCHES. The phases' formatter runs (`biome check --write`)
+#       normalised whitespace and line wrapping in test files that carry no loop
+#       change: phase 7 touched nineteen such files under `tests/checks/`, phase 8
+#       five under `tests/conformance/`. They are DECLARED in the scope of the
+#       phase that touched them, because the SCOPE DECLARATION RULE follows EDITS,
+#       and they are disclosed here as SEMANTICS-FREE: no assertion, fixture
+#       value, count, control, or expectation changed, and `git show --stat` shows
+#       whitespace-only hunks. Authorising clause: the scope rule itself (declare
+#       every path whose content the phase edits).
+#
+#   D-4 D1 RE-OBSERVATION SURFACE (phase 7's obligation 7.7). The D1 suite proves
+#       entrypoint REACHABILITY (the family is dropped by
+#       `selectPromptRequiredProgram` before this phase's repin and composed after
+#       it) and the DELIVERED pre-session refusal on `start`. The exact
+#       `--agent ceo` / `--model` argv stays proven at the D2/adapters surface,
+#       because a bare fixture checkout configures no CEO seat and this change
+#       adds no provider-profile fixture. Authorising clause: the ENTRYPOINT RULE
+#       and the recorded Option B deviation (R-34/R-35) — the D1 half is a
+#       labelled re-observation, not a new obligation or a redefinition of D1.
+#
+#   D-5 STOP-FOLD HOME. The durable-stop fold lives in `domain/loop-status.ts`
+#       (one definition, `foldLoopStop`/`isStopFolded`/`foldedStopMode`) rather
+#       than `state/loop.ts`, because the app tier may not import the state tier
+#       (DEC-2 tier matrix) and the supervisor needs the fold; `state/loop.ts`
+#       keeps the record reads/appends and the session fold. Authorising clause:
+#       tier/boundary constraint 11 (the DEC-2 matrix) plus the plan's own
+#       shared-file rule (a file edited by more than one phase is declared by
+#       EVERY phase that touches it); declared by phases 1 and 6.
+#
+#   D-6 FIXTURE-COMMIT SIGNING (environment, not code). This machine sets
+#       `commit.gpgsign=true`, and the synthetic fixture repositories used by
+#       `ci-baseline-parity`, `forbidden-literals` (docs-scope lifetime),
+#       `TC-BIN-072` and `TC-BIN-084` cannot commit without a signing key for
+#       their fixture identity. The final aggregate run therefore used
+#       `GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+#       GIT_CONFIG_VALUE_0=false` for those CHILD fixture commits only. No
+#       repository, global, or CI configuration is changed by this change, and
+#       the same suites pass unchanged wherever signing is available.
+#
+#   D-7 TWO GATE DEFECTS FIXED IN PHASE 9, both inside declared scope and both in
+#       `packages/cli/src/production.ts` (declared by phases 2, 3, 4, 5, 7 and 9).
+#       (a) The corroborator mount read a dot-chain (`daemon.latest.state`) that
+#       the error-table sync scan classified as an undeclared code; the value is
+#       bound to a local first, so the scan sees no code shape.
+#       (b) The loop composition resolved the coordinator settings a second time,
+#       changing the invalid-override configuration touch count from 2 to 3
+#       (TC-BIN-012); one cache per composition now feeds the coordinator and the
+#       loop profile. Neither is a behaviour change to a delivered surface: (a) is
+#       a binding style, (b) restores the delivered read economy
+#       (NFR-11 / AC-F1-5).
+#
+#   CHANGE-ARTIFACT NOTE. Every phase commit also carries this change folder's
+#       pm-notes evidence entry. The folder is declared by phase 9
+#       (`scope.folders`), the pm-notes ledger is a change artifact the commit
+#       primitive stages by design, and no phase claims it as authored source.
+#       Authorising clause: phase 9's folder declaration plus the pm-notes
+#       evidence discipline stated in the header.
+#
 schemaVersion: delivery.plan.v1
 workItemRef: GH-348
 tier:
@@ -1214,6 +1305,19 @@ phases:
   #       TC-CONTRACT-001 half re-fails at phase 8's closed-surface case; each row
   #       stays allocated once. A mutation that stops failing is blocking.
   #
+  #
+  #   2.9 DELIVERED EXPECTATION UPDATE (disclosed, not a relaxation). This phase
+  #       authors `tests/structure/loop-production-composition.test.ts` with the
+  #       then-TRUE assertion that `loop` is registered but NOT prompt-required.
+  #       Phase 7's repin (obligation 7.2) makes that assertion false, so the
+  #       phase-7 commit RESTATED it to assert the post-repin truth (`loop` present
+  #       in the inventory, last, and the FINAL five-verb flag set). The case id,
+  #       its phase-2 ownership, its D2 surface, and its import-identity assertions
+  #       do not move; only the prompt-required fact is restated. Authorising
+  #       clause: spec §8.5 and DOD-8 (the 26 -> 27 pin update lands in phase 7) and
+  #       this plan's INCREMENTAL VERB SURFACE block ("BEFORE THE REPIN the family
+  #       is NOT prompt-required ... The repin lands LAST, in phase 7").
+
   # Code areas (concrete):
   #   packages/core/src/contracts/harness.ts      (optional pid, both surfaces)
   #   packages/adapters/src/host/index.ts         (child pid on the stream)
@@ -1613,6 +1717,16 @@ phases:
   #       EXTEND `tests/behaviour/loop-log.test.ts` with those line assertions
   #       (it is authored in phase 2 and declared here for this extension).
   #
+  #
+  #   4.9 DELIVERED LEDGER WIRING (declared at plan revision): the edge gains the
+  #       stuck-append mount and the composition's corroborator /
+  #       artifact-advance / terminate / admission facts, and
+  #       `commands/index.ts` re-exports the loop supervisor types the edge and the
+  #       D2 harness import. These are the same engine-reuse seams obligations
+  #       4.1-4.3 name; they were absent from the plan's original file list and are
+  #       added by the post-delivery reconciliation. No behaviour, assertion, or
+  #       contract is implied beyond them.
+
   # Code areas (concrete):
   #   packages/core/src/app/loop-supervisor.ts   (verdict + terminate step)
   #   packages/core/src/app/loop-corroborator.ts (new: lane corroborator)
@@ -1680,6 +1794,10 @@ phases:
         - tests/fixtures/loop/facts.ts
         - tests/fixtures/loop/harness.ts
         - tests/fixtures/loop/parity/cases.ts
+        # DELIVERED (declared at plan revision): the ledger port's stuck append
+        # mount and the composition's corroborator/terminate/admission facts.
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/app/loop-corroborator.ts
@@ -1790,6 +1908,16 @@ phases:
   #       (dropping the delivered `coordinator.restart` record or the second session
   #       on row A).
   #
+  #
+  #   5.7 DELIVERED WIRING AND FOLD CORRECTION (declared at plan revision): the
+  #       edge gains the delivered restart append and the newest-restart-sequence
+  #       read the at-bound history reference needs, and
+  #       `tests/behaviour/loop-instance.test.ts`'s at-most-one-live-session
+  #       assertion now FOLDS per session id: append-only records never mutate, so
+  #       the raw record count is not the invariant. The assertion is CORRECTED,
+  #       never weakened — it still requires <= 1 live session and it additionally
+  #       asserts the replaced session identity differs from its successor.
+
   # Code areas (concrete):
   #   packages/core/src/app/loop-supervisor.ts   (restart step, cancellation)
   #   packages/core/src/domain/loop-backoff.ts   (schedule consumption/projection)
@@ -1845,6 +1973,11 @@ phases:
         - tests/fixtures/loop/harness.ts
         - tests/fixtures/loop/facts.ts
         - tests/fixtures/loop/parity/cases.ts
+        # DELIVERED (declared at plan revision): the edge's restart append and
+        # last-restart-sequence read, and the BACKOFF-001 live-session fold
+        # assertion corrected to fold per session id.
+        - packages/cli/src/edge.ts
+        - tests/behaviour/loop-instance.test.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/loop-backoff.ts
@@ -1930,6 +2063,17 @@ phases:
   #       M120 (spawning a replacement session during the immediate stop, leaving
   #       two live sessions).
   #
+  #
+  #   6.6 DELIVERED FOLD HOME AND WIRING (declared at plan revision; deviation
+  #       D-5). The durable-stop fold is authored ONCE in
+  #       `domain/loop-status.ts` (`foldLoopStop`, `isStopFolded`,
+  #       `foldedStopMode`) because the app tier may not import the state tier
+  #       (DEC-2 tier matrix) and the supervisor needs the fold; `state/loop.ts`
+  #       keeps the record reads/appends and the session fold. The edge gains the
+  #       stop append, and the app / state / root index barriers re-export the
+  #       moved types. `state/loop.ts` is therefore declared by phases 1, 2, 4 and
+  #       6, exactly as the shared-file rule requires.
+
   # Code areas (concrete):
   #   packages/core/src/state/loop.ts            (fold reader / transitions)
   #   packages/core/src/app/loop-supervisor.ts   (fold-before-claim, modes)
@@ -1972,6 +2116,14 @@ phases:
         - tests/behaviour/loop-stop.test.ts
         - tests/fixtures/loop/harness.ts
         - tests/fixtures/loop/parity/cases.ts
+        # DELIVERED (declared at plan revision): the edge's stop append and the
+        # index re-exports of the fold move (D-5).
+        - packages/cli/src/edge.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/domain/loop-status.ts
+        - packages/core/src/index.ts
+        - packages/core/src/state/index.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/state/loop.ts
@@ -2125,6 +2277,40 @@ phases:
   #       instance id) and M115 (`ceo_pid`/`ceo_session` from the recorded rather
   #       than the live session).
   #
+  #
+  #   7.9 DELIVERED PIN UPDATES BEYOND THE FOUR DECLARED SURFACES (deviation D-2;
+  #       declared at plan revision). Adding a family AND two additive record kinds
+  #       forces these further closed-surface pins. Each is a PIN UPDATE and every
+  #       control is preserved:
+  #       - the family counters move 26 -> 27 with `install` immediately before
+  #         `loop` in `tests/structure/{metrics-mounting,steer-mounting,
+  #         board-mounting,daemon-production-composition,
+  #         dispatch-attempts-composition,events-production-composition,
+  #         entrypoint-bin}.test.ts`,
+  #         `tests/behaviour/{repos-help,board-help,events-mount-help,
+  #         ceremony-cli}.test.ts`, and `tests/fixtures/supervise/mounting.ts`; the
+  #         mutation control that removes a family still fails by name;
+  #       - the BOUNDED LOG READ lands on `app/loop-supervisor.ts` together with the
+  #         domain/root export barriers it needs, and `domain/loop-prompt.ts` keeps
+  #         its content (its exported stop instruction becomes a FUNCTION so the
+  #         branding seam's no-exported-string rule holds; the prompt text is
+  #         unchanged);
+  #       - `tests/behaviour/{loop-backoff,loop-instance}.test.ts` carry the
+  #         delivered fold/expectation corrections described in 5.7 and 7.10;
+  #       - `tests/checks/no-shell-dispatch.test.ts` is declared because THIS
+  #         commit touched it (whitespace only); its SURFACE EXTENSION is phase 8's.
+  #       No assertion is deleted, renamed, relaxed, reordered, or skipped.
+  #
+  #   7.10 DELIVERED EXPECTATION UPDATE (disclosed, not a relaxation): this phase's
+  #        repin falsifies phase 2's "not prompt-required" assertion in
+  #        `tests/structure/loop-production-composition.test.ts`, so the case is
+  #        RESTATED here to assert the post-repin truth (`loop` in the inventory,
+  #        last, and the FINAL five-flag grammar). Authorising clause: spec §8.5 and
+  #        DOD-8 — the 26 -> 27 pin update lands in this commit — plus the
+  #        INCREMENTAL VERB SURFACE block ("phase 7 owns the FINAL grammar"). The
+  #        case id, its owner, its surface, and its import-identity assertions do
+  #        not move.
+
   # Code areas (concrete):
   #   packages/cli/src/commands/loop.ts            (complete grammar, log, status)
   #   packages/cli/src/output/loop-text.ts         (status block, log header)
@@ -2206,6 +2392,47 @@ phases:
         - tests/checks/install-conformance-mutants.test.ts
         - tests/structure/metrics-mounting.test.ts
         - tests/checks/reference-page-parity.test.ts
+        # DELIVERED (declared at plan revision): the bounded log read on the
+        # supervisor, the two export barriers, and the family-count pins
+        # (obligation 7.9).
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/domain/loop-prompt.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/ceremony-cli.test.ts
+        - tests/behaviour/events-mount-help.test.ts
+        - tests/behaviour/loop-backoff.test.ts
+        - tests/behaviour/loop-instance.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/fixtures/supervise/mounting.ts
+        - tests/structure/board-mounting.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/events-production-composition.test.ts
+        - tests/structure/steer-mounting.test.ts
+        # FORMATTER-ONLY touches (D-3): whitespace/wrapping, no semantic change.
+        - tests/checks/capsule-bounds.test.ts
+        - tests/checks/capsule-latency.test.ts
+        - tests/checks/capsule-mutants.test.ts
+        - tests/checks/capsule-privacy.test.ts
+        - tests/checks/coordinator-determinism.test.ts
+        - tests/checks/coordinator-mutants.test.ts
+        - tests/checks/daemon-bounds.test.ts
+        - tests/checks/daemon-determinism.test.ts
+        - tests/checks/daemon-hermetic.test.ts
+        - tests/checks/daemon-mutants.test.ts
+        - tests/checks/daemon-privacy.test.ts
+        - tests/checks/economics-determinism.test.ts
+        - tests/checks/engine-first-doc-reconciliation.test.ts
+        - tests/checks/memory-lint-derivable.test.ts
+        - tests/checks/memory-lint-index.test.ts
+        - tests/checks/memory-lint-performance.test.ts
+        - tests/checks/memory-lint-provenance.test.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - tests/checks/provider-profile-hermetic.test.ts
       folders:
         - doc/planning/oss-tooling/milestones/m4/commands
     interactions:
@@ -2323,6 +2550,17 @@ phases:
   #       M89 (a second state read per cycle) is PHASE 7's, because its named case
   #       TC-CONTRACT-003 is phase 7's (N-05).
   #
+  #
+  #   8.6 FORMATTER-ONLY DECLARATIONS (deviation D-3; declared at plan revision).
+  #       This commit's formatter run normalised whitespace and line wrapping in
+  #       five conformance files: `tests/conformance/daemon-mount/
+  #       real-reentry.test.ts` and `tests/conformance/dispatch/{controlled-repo,
+  #       dispatch-e2e,dispatch-fixture,dispatch-parity-spawn}`. They are declared
+  #       because the scope rule follows EDITS, and they are SEMANTICS-FREE: no
+  #       assertion, fixture value, count, or control changed, and the delivered
+  #       dispatch conformance suite stays green in substance (`git show --stat`
+  #       shows whitespace-only hunks).
+
   # Code areas (concrete):
   #   scripts/checks/no-shell-dispatch.ts              (EXTEND the surface)
   #   tests/checks/no-shell-dispatch.test.ts           (EXTEND assertions)
@@ -2385,6 +2623,12 @@ phases:
         - tests/checks/loop-privacy.test.ts
         - tests/fixtures/loop/harness.ts
         - packages/core/src/domain/loop-prompt.ts
+        # FORMATTER-ONLY touches (D-3): whitespace/wrapping, no semantic change.
+        - tests/conformance/daemon-mount/real-reentry.test.ts
+        - tests/conformance/dispatch/controlled-repo.ts
+        - tests/conformance/dispatch/dispatch-e2e.test.ts
+        - tests/conformance/dispatch/dispatch-fixture.test.ts
+        - tests/conformance/dispatch/dispatch-parity-spawn.test.ts
       folders:
         - tests/conformance/loop
     interactions:
@@ -2446,6 +2690,39 @@ phases:
   #       at an untracked record. (Both records are already tracked; this is a
   #       verification, not an authorship obligation.)
   #
+  #
+  #   9.7 DELIVERED PIN UPDATES AND TWO GATE FIXES (deviations D-2 and D-7;
+  #       declared at plan revision). All are pins or read-economy restorations,
+  #       never relaxations, and every mutation control stays live:
+  #       - `scripts/checks/forbidden-literals.registry.json` registers the new M4
+  #         page (the corpus scan resolves its baseline commit and would otherwise
+  #         fail closed on an unregistered user-facing doc);
+  #       - the module inventory and its per-file executable allowances gain the
+  #         loop modules (`tests/structure/inventory.json`,
+  #         `tests/structure/content-inventory.test.ts`);
+  #       - the state/event additivity baseline gains exactly the TWO loop record
+  #         kinds and the ONE loop state module (`tests/fixtures/events/
+  #         state-additivity-baseline.json`,
+  #         `tests/structure/event-additivity-inventory.test.ts`), and the
+  #         event-taxonomy allowance names the loop log events / stop fold as
+  #         non-kinds;
+  #       - the v1 port-contract inventory gains the loop contract module and its
+  #         exports (`tests/fixtures/ports/v1-contract-inventory.json`);
+  #       - the command-composition seam lists the loop command module
+  #         (`tests/structure/cli-edge-seam.test.ts`); the harness-neutrality
+  #         default carries no harness literal; the install / supervise /
+  #         entrypoint / help-coverage family pins move 26 -> 27 with `loop` last
+  #         and `install` immediately before it; the alias help baseline is
+  #         re-captured with the one new family line
+  #         (`tests/fixtures/entrypoint/alias-baseline.json`);
+  #       - `production.ts` binds the daemon-lane value to a local before the
+  #         corroborator call (the error-table sync shape check) and CACHES the
+  #         coordinator settings once per composition so the invalid-override
+  #         configuration touch count stays 2 (TC-BIN-012), restoring the delivered
+  #         read economy (NFR-11 / AC-F1-5).
+  #       Phase 2's `loop-production-composition` case is corrected here under
+  #       obligation 7.10's authorising clause.
+
   # Code areas (concrete):
   #   .changeset/gh-348-loop-supervision-minor.md  (new)
   #   doc/spec/features/feature-loop-supervision.md (new; STAGING ONLY)
@@ -2509,6 +2786,27 @@ phases:
         - doc/planning/oss-tooling/milestones/m4/README.md
         - doc/planning/oss-tooling/milestones/m4/flip-plan.md
         - doc/planning/oss-tooling/milestones/m4/backlog.md
+        # DELIVERED PIN UPDATES (obligation 9.7; D-2). Each is a pin, never a
+        # relaxation, and every mutation control stays live.
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/fixtures/entrypoint/alias-baseline.json
+        - tests/fixtures/events/state-additivity-baseline.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/event-additivity-inventory.test.ts
+        - tests/structure/event-taxonomy-single-source.test.ts
+        - tests/structure/supervision-mounting.test.ts
+        - tests/structure/install-conformance.test.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/structure/loop-production-composition.test.ts
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/behaviour/entrypoint-two-bins.test.ts
+        - tests/behaviour/install-family-surface.test.ts
+        - tests/checks/event-mount-guards.test.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/loop-supervisor.ts
       folders:
         - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision
         - .changeset
