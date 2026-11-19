@@ -2,8 +2,8 @@
  * TC-F1-014 — the delivered merge-suite split, asserted in both directions.
  *
  * The delivered population is sixteen `tests/behaviour/merge-*.test.ts` files.
- * EIGHT change with this delivery and each carries its declared post-change
- * obligation; the other EIGHT stay green unedited with their delivered assertion
+ * NINE change with this delivery and each carries its declared post-change
+ * obligation; the other SEVEN stay green unedited with their delivered assertion
  * inventories. Three token-absence scans prove no changed suite still asserts the
  * removed mechanism, and each suite's obligation is paired with a control that
  * fails by name.
@@ -43,6 +43,7 @@ const CHANGED = [
   "merge-refusal-surface",
   "merge-bounds",
   "merge-determinism",
+  "merge-probe",
 ] as const;
 
 const GREEN = [
@@ -51,7 +52,6 @@ const GREEN = [
   "merge-freshness",
   "merge-gate-set",
   "merge-privacy",
-  "merge-probe",
   "merge-production-composition",
   "merge-verification-record",
 ] as const;
@@ -74,16 +74,22 @@ const OBLIGATIONS: Record<(typeof CHANGED)[number], readonly string[]> = {
   "merge-bounds": ["new-red-jobs=", "MERGE_MAX_HUMAN_BYTES"],
   // Mechanically edited: the retired scenario name is gone.
   "merge-determinism": ["refusal-stale", "refusal-waiver"],
+  // Inverted: an undeclared red job is not evidence and the merge proceeds (AC-F3-3).
+  "merge-probe": [
+    "TC-MERGE-016",
+    "a red job the gate set does not declare is not gate evidence and the merge proceeds",
+    "AC-F3-3",
+    "expect(errorOf(result)).toBeUndefined()",
+  ],
 };
 
-/** The eight green suites' delivered assertion inventories. */
+/** The seven green suites' delivered assertion inventories. */
 const GREEN_INVENTORY: Record<(typeof GREEN)[number], readonly string[]> = {
   "merge-classification": ["TC-MERGE-017"],
   "merge-dry-run": ["TC-MERGE-028"],
   "merge-freshness": ["TC-MERGE-007"],
   "merge-gate-set": ["TC-MERGE-002", "TC-MERGE-003", "TC-MERGE-004"],
   "merge-privacy": ["TC-MERGE-034"],
-  "merge-probe": ["TC-MERGE-015", "TC-MERGE-016", "TC-MERGE-032"],
   "merge-production-composition": ["TC-ENGINE-050", "TC-ENGINE-051", "TC-ENGINE-052"],
   "merge-verification-record": ["TC-MERGE-005", "TC-MERGE-006"],
 };
@@ -117,12 +123,12 @@ describe("TC-F1-014 the delivered population is sixteen suites", () => {
     }
     expect([...CHANGED, ...GREEN].sort()).toEqual([...DELIVERED].sort());
     expect(new Set([...CHANGED, ...GREEN]).size).toBe(16);
-    expect(CHANGED).toHaveLength(8);
-    expect(GREEN).toHaveLength(8);
+    expect(CHANGED).toHaveLength(9);
+    expect(GREEN).toHaveLength(7);
   });
 });
 
-describe("TC-F1-014 the eight changed suites carry their post-change obligation", () => {
+describe("TC-F1-014 the nine changed suites carry their post-change obligation", () => {
   for (const suite of CHANGED) {
     test(`${suite}: carries its declared obligation`, () => {
       const text = sourceOf(suite);
@@ -156,7 +162,7 @@ describe("TC-F1-014 the eight changed suites carry their post-change obligation"
   });
 });
 
-describe("TC-F1-014 the eight green suites stay green unedited", () => {
+describe("TC-F1-014 the seven green suites stay green unedited", () => {
   for (const suite of GREEN) {
     test(`${suite}: keeps its delivered assertion inventory`, () => {
       const text = sourceOf(suite);
