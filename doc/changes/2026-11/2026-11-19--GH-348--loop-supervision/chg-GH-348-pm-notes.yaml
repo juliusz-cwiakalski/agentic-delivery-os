@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-19T19:26:16.328Z }
   system_spec_update: { started: null, completed: 2026-11-19T16:56:32.286Z }
   review_fix: { started: null, completed: 2026-11-19T19:25:45.916Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-19T20:07:55.357Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -736,6 +736,23 @@ notes:
       typecheck and exports-parity, left as recorded). Review checks: behaviour
       100, conformance/structure/checks 36, pinned 59, doc 25, exports-parity
       and depcruise clean, range gate PASS over 43 commits."
+    type: info
+    date: "2026-11-19"
+  - text: "QUALITY GATES (lifecycle phase 9) = PASS. Aggregate `pnpm check` at
+      commit 2bc865de: exit 0, 11439 pass / 0 fail / 4 skip across 11443 tests
+      and 1414 files; lint 0 errors (129 warnings / 49 infos), format:check
+      clean, typecheck 6 packages plus tests/types, boundaries clean (497
+      modules / 1571 deps), memory 0 errors, prompt-conformance and
+      help-guide-coverage green, exports-parity green for 5 publishables. Run
+      carried GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false and an isolated HOME (tmp/gate-home) after the
+      first run failed ONLY because a foreign artifact at ~/.jaiship/bin/jaiship
+      blocks the doc-distribution installer sandbox; that is owner-side machine
+      state, not repository drift, and the identical tree passed with an
+      isolated HOME. RANGE GATE: VERDICT PASS - 45 commits in range, 0 offending
+      commits, 0 distinct rules hit, mode none (not FAIL), resolved commitlint
+      binary node_modules/.bin/commitlint, origin repository-local, base
+      origin/main-tools, merge-base f802f71a."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
