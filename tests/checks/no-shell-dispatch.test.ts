@@ -42,6 +42,10 @@ const FIXED_SURFACE = [
   "packages/adapters/src/harness/opencode.ts",
   "packages/adapters/src/host/index.ts",
   "packages/adapters/src/daemon/lane-executor.ts",
+  // GH-348: the non-glob loop modules and the loop command module join the
+  // declared surface; the globbed loop modules are covered by the equality rule.
+  "packages/core/src/state/loop.ts",
+  "packages/cli/src/commands/loop.ts",
 ] as const;
 
 /** The declared entries the reachability guard starts from. */
@@ -199,9 +203,13 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
       readdirSync(join(ROOT, path))
         .filter((name) => name.startsWith(prefix) && name.endsWith(".ts"))
         .map((name) => `${path}/${name}`);
+    // GH-348: the loop globs join the same declared-equality rule, so a new
+    // loop module cannot be silently unscanned.
     const globbed = [
       ...directory("packages/core/src/app", "dispatch-"),
       ...directory("packages/core/src/domain", "dispatch-"),
+      ...directory("packages/core/src/app", "loop-"),
+      ...directory("packages/core/src/domain", "loop-"),
     ].sort();
     const declared = DISPATCH_FLOW_SURFACE.filter(
       (file) => !(FIXED_SURFACE as readonly string[]).includes(file),

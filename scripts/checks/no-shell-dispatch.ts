@@ -48,6 +48,18 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/adapters/src/harness/opencode.ts",
   "packages/adapters/src/host/index.ts",
   "packages/adapters/src/daemon/lane-executor.ts",
+  // GH-348: the loop supervision profile joins the declared surface, so a loop
+  // module can never be silently unscanned and no second invariant is authored.
+  "packages/core/src/app/loop-supervisor.ts",
+  "packages/core/src/app/loop-session.ts",
+  "packages/core/src/app/loop-corroborator.ts",
+  "packages/core/src/domain/loop-verdict.ts",
+  "packages/core/src/domain/loop-backoff.ts",
+  "packages/core/src/domain/loop-log.ts",
+  "packages/core/src/domain/loop-status.ts",
+  "packages/core/src/domain/loop-prompt.ts",
+  "packages/core/src/state/loop.ts",
+  "packages/cli/src/commands/loop.ts",
 ] as const;
 
 /**

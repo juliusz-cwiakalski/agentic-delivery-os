@@ -358,6 +358,30 @@ const VERBS_CASES: readonly LoopParityCase[] = [
   },
 ];
 
+const NO_SHELL_CASES: readonly LoopParityCase[] = [
+  {
+    id: "no-shell-static-scan",
+    group: "no-shell",
+    declaredSeam: "S-exec",
+    scenario: { surface: "declared-loop-files" },
+    expected: { violations: 0, plantedFailsByName: true },
+  },
+  {
+    id: "no-shell-prompt-scan",
+    group: "no-shell",
+    declaredSeam: "S-exec",
+    scenario: { prompt: "loop-declared" },
+    expected: { scriptPaths: 0, primitivesNamed: 4 },
+  },
+  {
+    id: "no-shell-runner",
+    group: "no-shell",
+    declaredSeam: "S-exec",
+    scenario: { shellInvocations: 0 },
+    expected: { invocations: 0 },
+  },
+];
+
 export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...SPAWN_CASES,
   ...LOG_CASES,
@@ -367,6 +391,7 @@ export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...BACKOFF_BUDGET_CASES,
   ...STOP_CASES,
   ...VERBS_CASES,
+  ...NO_SHELL_CASES,
 ];
 
 /** The rows of one proven surface, in declaration order. */

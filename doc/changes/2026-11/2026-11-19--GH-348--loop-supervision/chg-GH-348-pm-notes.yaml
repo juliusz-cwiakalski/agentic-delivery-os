@@ -817,3 +817,28 @@ notes:
   - text: "PLAN PHASE 7 commit hash: recorded after the commit."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 7 commit hash: 9722d454."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 8 complete (the offline deterministic conformance battery, the
+      permanent nine-proven/six-not-proven boundary with its mutation controls,
+      the extended no-shell declared surface, and the closed-surface invariance
+      and hygiene pins). Implemented: tests/fixtures/loop/parity/evidence.ts (the
+      ONLY source of LOOP_PARITY_PROOF_BOUNDARY, 9 proven and 6 not-proven in
+      order, plus the canonicalizer), parity/seams.ts (the import-identity
+      manifest, the forbidden-signature scan, and the planted control),
+      parity/e2e.ts (the pick-deliver-merge builder whose deliver leg is
+      `dispatch`, never `phase complete`), the two conformance suites, the
+      extended DISPATCH_FLOW_SURFACE (ten loop files) with the test's
+      declared-equality and reachability assertions extended, and the
+      invariance/hygiene pins with the INLINE baseline literal. Gates all exit 0:
+      the battery + pick-deliver-merge 11 pass; the extended no-shell suite 11
+      pass (clean over 32 surface files); the invariance and privacy checks 7
+      pass; the delivered dispatch conformance controls 103 pass unmodified;
+      pnpm typecheck; git diff --check. The phase commit hash is recorded in the
+      note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 8 commit hash: recorded after the commit."
+    type: info
+    date: "2026-11-19"
