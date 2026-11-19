@@ -17,6 +17,7 @@ import type {
   HarnessModeOrigin,
   HarnessOutcome,
   HarnessSeatBinding,
+  HarnessSessionHandle,
   HarnessVersionVerdict,
 } from "./harness.js";
 import type { CommandResultError } from "./result.js";
@@ -155,6 +156,24 @@ export const DISPATCH_CORROBORATION_SUFFICIENCY = {
   "state-unverified": [],
   "noop-lane-permission": [],
 } as const satisfies Readonly<Record<DeliveryResultToken, readonly DispatchCorroborationSource[]>>;
+
+/**
+ * The closed corroboration-arm vocabulary (GH-347 DM-4, TDR-0053; AC-F8-1,
+ * AC-F8-4). Exactly the two arms whose required evidence source changed: a
+ * tracker-done `merged` and a nothing-to-do result are corroborated by the
+ * tracker fact alone. Every other token keeps its token-keyed requirement.
+ */
+export const DISPATCH_CORROBORATION_ARMS = ["tracker-done-merged", "nothing-to-do"] as const;
+
+export type DispatchCorroborationArm = (typeof DISPATCH_CORROBORATION_ARMS)[number];
+
+/** The arm-keyed sufficiency entries; the only additions to the token map. */
+export const DISPATCH_CORROBORATION_ARM_SUFFICIENCY = {
+  "tracker-done-merged": ["tracker"],
+  "nothing-to-do": ["tracker"],
+} as const satisfies Readonly<
+  Record<DispatchCorroborationArm, readonly DispatchCorroborationSource[]>
+>;
 
 /** The four handover conditions, in evaluation order (DM-7). */
 export const DISPATCH_HANDOVER_CONDITIONS = [
@@ -543,3 +562,85 @@ export const DISPATCH_FLOOR_CONSECUTIVE_DATES = 7 as const;
 /** The default liveness cadence name; the value comes from configuration. */
 export const DISPATCH_LIVENESS_INTERVAL_KEY = "lane.liveness-interval" as const;
 export const DISPATCH_RESTART_BUDGET_KEY = "lane.restart-budget" as const;
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 — the dispatch-owned durable lane record, the fresh-spawn title     */
+/* fact, and the injected delay vocabulary. Data and types only.              */
+/* ------------------------------------------------------------------------- */
+
+/** The dispatch-owned durable lane record kind and its payload schema (DM-1). */
+export const DISPATCH_LANE_RECORD_KIND = "dispatch.lane" as const;
+export const DISPATCH_LANE_PAYLOAD_SCHEMA = "delivery.dispatch.lane.v1" as const;
+export const DISPATCH_LANE_KEY_PREFIX = "dispatch.lanes:" as const;
+
+/** The closed lane states: one active record per acquisition, one terminal per classification. */
+export const DISPATCH_LANE_STATES = ["active", "terminal"] as const;
+
+export type DispatchLaneState = (typeof DISPATCH_LANE_STATES)[number];
+
+/** The advisory owner facts carried on a lane record; never an exclusion mechanism. */
+export type DispatchLaneOwner = {
+  readonly processId: number;
+  readonly startedAt: string;
+};
+
+/**
+ * One durable dispatch lane record (DM-1, TDR-0049).
+ *
+ * Append-only; the latest record for a ref is the lane. `lastToken` and
+ * `lastOutcome` are present only on a terminal record. No prompt, transcript,
+ * diff, credential, or provider payload is carried.
+ */
+export type DispatchLaneRecord = {
+  readonly schema: typeof DISPATCH_LANE_PAYLOAD_SCHEMA;
+  readonly ref: string;
+  readonly repository: string;
+  readonly attemptId: string;
+  readonly sessionId: string;
+  readonly harnessKind: HarnessKind;
+  readonly owner: DispatchLaneOwner;
+  readonly iterationOrdinal: number;
+  readonly restartsConsumed: number;
+  readonly state: DispatchLaneState;
+  readonly lastToken?: DispatchToken;
+  readonly lastOutcome?: HarnessOutcome;
+  readonly recordedAt: string;
+};
+
+/** The per-ref lane record key; one key per ref, appended per state change. */
+export const dispatchLaneRecordKey = (ref: string): string => `${DISPATCH_LANE_KEY_PREFIX}${ref}`;
+
+/** The fresh-spawn title fact (DM-6, TDR-0054): `ticket-<REF>`, one short token. */
+export const DISPATCH_SPAWN_TITLE_PREFIX = "ticket-" as const;
+export const DISPATCH_MAX_SPAWN_TITLE_CHARS = 64 as const;
+/** Anchored grammar: the prefix plus the work-item reference grammar. */
+export const DISPATCH_SPAWN_TITLE_PATTERN = "^ticket-[A-Z][A-Z0-9]*-[0-9]+$" as const;
+
+/**
+ * The one injected delay fact (AC-F9-2, NFR-11).
+ *
+ * Production binds a real timer; the offline battery injects a recorder that
+ * advances a virtual clock. The closed reasons are the only call sites: the
+ * admission fence wait, the tracker retry ladder, and the terminate grace.
+ */
+export const DISPATCH_DELAY_REASONS = ["claim-fence", "tracker-ladder", "terminate-grace"] as const;
+
+export type DispatchDelayReason = (typeof DISPATCH_DELAY_REASONS)[number];
+
+export type DispatchDelay = (ms: number, reason: DispatchDelayReason) => Promise<void>;
+
+/**
+ * The delivered lane facts a resume admits against (GH-347 API-3, DM-1).
+ *
+ * Relocated here from the CLI edge because the resolver lives in core and core
+ * cannot import CLI; the CLI re-exports this one definition (no second shape).
+ * `restartCount` is the persisted restart total, never a charge.
+ */
+export type DispatchLaneFacts = {
+  readonly handle: HarnessSessionHandle;
+  readonly completedPhases: readonly string[];
+  readonly adapterSupportsResumeInjection: boolean;
+  readonly restartCount: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+};

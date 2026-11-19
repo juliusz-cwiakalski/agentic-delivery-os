@@ -533,3 +533,21 @@ describe("TC-ATTEMPT-034 cells 2-3 resolve additions and both blocks", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 CONTRACT-001 — exactly one new record kind, and no token moved.     */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-347 the dispatch record-kind surface gains exactly the lane kind", () => {
+  test("the dispatch-owned kinds are the four declared ones", () => {
+    const contracts = require("../../packages/core/src/contracts/index") as Record<string, unknown>;
+    expect(contracts.DISPATCH_ATTEMPT_RECORD_KIND).toBe("dispatch.attempt");
+    expect(contracts.DISPATCH_DIVERGENCE_RECORD_KIND).toBe("dispatch.divergence");
+    expect(contracts.DISPATCH_HANDOVER_RECORD_KIND).toBe("dispatch.handover");
+    expect(contracts.DISPATCH_LANE_RECORD_KIND).toBe("dispatch.lane");
+    expect(contracts.DISPATCH_LANE_PAYLOAD_SCHEMA).toBe("delivery.dispatch.lane.v1");
+    // The daemon lane is a DISTINCT kind and is unchanged.
+    expect(contracts.DAEMON_LANE_RECORD_KIND).toBe("daemon.lane");
+    expect(contracts.DAEMON_LANE_PAYLOAD_SCHEMA).toBe("delivery.daemon.lane.v1");
+  });
+});

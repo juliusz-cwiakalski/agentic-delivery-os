@@ -78,6 +78,12 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) | TDR | Dispatch-Owned Durable Lane Record — A Distinct `dispatch.lane` Kind, Acquisition-Time and Terminal Appends, and a Latest-Wins Per-Ref Resume Read | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0050](TDR-0050-dispatch-atomic-admission-verdicts.md) | TDR | Atomic Dispatch Admission — The Verdict Decided Inside the Claim, Declared Queue Verdicts, No Dispatch Renewal, and Repository Exclusivity Untouched | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0051](TDR-0051-harness-terminate-operation.md) | TDR | Harness `terminate` Operation — Capability-Gated Process-Tree Termination with TERM→KILL Inside the Declared Grace and an Exact-Identity Reap | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) | TDR | In-Process Bounded Restart Loop — Clean Exit Terminal, Stall-Only Restart, One Attempt Record per Terminal Dispatch, and the Delivered `lane.restart-budget` Bound | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0054](TDR-0054-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0057](TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0058](TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0059](TDR-0059-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
@@ -86,6 +92,10 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0062](TDR-0062-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.
+
+Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 

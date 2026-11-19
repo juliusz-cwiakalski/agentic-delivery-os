@@ -1,0 +1,417 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-347
+branch: feat/GH-347/dispatch-core-parity
+base: origin/main-tools (three-dot merge-base d8d762be)
+status: FAIL
+summary: >
+  Iteration 2, re-review after the review-iteration-1 remediation (plan
+  phase 9, commit 9742e6a). Ten of the twelve remediation tasks landed
+  materially: B1 is fixed (arms 4-7 now apply to every ended, non-stall
+  session, the derivation returns a closed `armId`, C11-C14 exercise arms 4-7
+  against non-clean classifier tokens that previously returned `failed`/
+  `partial`, and per-row disjointness is asserted); M1/M2 are fixed (the
+  production terminate signals the exact-identity tree with TERM, waits the
+  CONFIGURED grace through the injected delay, KILLs only a still-listed
+  survivor, reports observed booleans, and a resume clears the termination
+  fact so a later iteration is re-signalled); M3 is fixed (the stall-undecidable
+  predicate is total over an unreadable required read with no decisive
+  artifact); M4 is fixed (the determinism oracle compares full canonical
+  envelopes, attempt counts/tokens, lane counts, spawns/resumes/waits/
+  violations and class coverage, and the eight process-invoking rows are
+  declared and asserted); M5 is fixed (realChildStarts is a live counter with a
+  permitted-start control, the terminate double records unrelated-signal
+  violations with a planted broad-pattern control, the terminate seam joins
+  SEAM_MANIFEST, and NO_SHELL_ALLOWLIST is CONSULTED and empty by measurement);
+  M6 is fixed (all three delivered assertions restored with clauses). m1-m6 are
+  fixed with one low residual (the static invariant's CLI `main()` is still not
+  in the aggregate chain). M4's evidence-ref reservation and the m6 tmp guard
+  landed. One blocker remains and it is the headline of the remediation: the
+  terminate-capability gate the engine uses (`declaresTerminate`, reading the
+  session port's `capabilities`) is never fed a declaration by the production
+  composition. Neither production adapter's session port exposes
+  `capabilities` (verified empirically), so `declaresTerminate` defaults to
+  "capable" for every production dispatch: the claude-code adapter, which
+  declares the terminate gap, is classified capable and a below-bound stall
+  consumes an ordinal, appends `economics.restart`, and runs a second iteration
+  whose `resume` is a declared gap, ending `failed`/exit 1 "spawn failed" with
+  no stall evidence instead of terminal `state-unverified`/exit 2. The gate is
+  real only for test doubles that attach `capabilities`. A second gap is that
+  the "unconfirmed termination stops the restart" branch is implemented but
+  never exercised (no fixture returns `terminated:false` or throws), so the PM
+  note's claim that the incapable pair proves it is overstated. Verdict:
+  FAIL on AC-F5-4/F-5/DM-5 (B2 narrowed, not closed, in production).
+severity_breakdown:
+  blocker: 1
+  major: 1
+  minor: 0
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS_WITH_NOTES
+verification:
+  commits_reviewed: 29
+  diff_stat:
+    files: 117
+    insertions: 20339
+    deletions: 870
+    note: "origin/main-tools...HEAD (merge-base d8d762be). The remediation commit 9742e6a alone: 28 files, +2902/-159. After 9742e6a only 7 doc files changed (no code)."
+  tests_run:
+    - "bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/behaviour/dispatch-liveness.test.ts tests/checks/no-shell-dispatch.test.ts -> 54 pass / 0 fail"
+    - "bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts -> 29 pass / 0 fail"
+    - "bun test tests/conformance/dispatch/dispatch-parity-battery.test.ts tests/conformance/dispatch/dispatch-parity-no-shell.test.ts -> 15 pass / 0 fail"
+    - "bun test tests/checks/dispatch-contract-invariance.test.ts tests/structure/dispatch-contract.test.ts -> 24 pass / 0 fail"
+    - "bun test tests/behaviour/harness-opencode-resume-stream.test.ts -> 12 pass / 0 fail"
+    - "bun test tests/behaviour/dispatch-watch.test.ts tests/behaviour/dispatch-restart-budget.test.ts tests/structure/dispatch-composition.test.ts -> 34 pass / 0 fail"
+    - "static probe: createClaudeSession/createOpencodeSession ports have no own `capabilities`; claude declares no terminate op and exposes no terminate member -> declaresTerminate(default) === true for both production ports"
+  environment_notes: >
+    Working tree clean at review start. Review is read-only; it writes only this
+    record. The aggregate pnpm check was not re-run (reported exit 0 at 11140
+    pass / 0 fail by the PM); the targeted suites above were re-run and pass.
+    The blocker is a production-wiring gap absent from every suite, so a green
+    suite does not contradict it.
+acceptance_criteria:
+  - { id: "AC-F1-1", verdict: satisfied, evidence: "Active lane at acquisition (dispatch.ts:1035-1055); pre-session refusals return earlier. Untouched by remediation." }
+  - { id: "AC-F1-2", verdict: satisfied, evidence: "Terminal lane only when a session was held; restarted iterations append active only (dispatch.ts:830-860)." }
+  - { id: "AC-F1-3", verdict: satisfied, evidence: "m4 fixed: `lane:append-failed` is reserved FIRST in the attempt evidence (dispatch.ts:835-838) so resumability is never truncated away." }
+  - { id: "AC-F1-4", verdict: satisfied, evidence: "No-lane resolves undefined (dispatch-lane.ts); daemon family untouched." }
+  - { id: "AC-F2-1", verdict: satisfied, evidence: "Atomic admission interleave (both orderings) unchanged by remediation; suite green." }
+  - { id: "AC-F2-2", verdict: satisfied, evidence: "queue.lease-conflict pre-session; no attempt/lane/lease. Unchanged." }
+  - { id: "AC-F2-3", verdict: satisfied, evidence: "Bounded claim fence wait; state.lock.busy re-decides. Unchanged." }
+  - { id: "AC-F2-4", verdict: satisfied, evidence: "Pre-session refusal mapped exits, empty attempt read. Unchanged." }
+  - { id: "AC-F2-5", verdict: satisfied, evidence: "No dispatch renewal under any holder (queue.ts). Unchanged." }
+  - { id: "AC-F3-1", verdict: satisfied, evidence: "Recorded-lane resume incl. pr-open; cold-resume registration. Unchanged by remediation except resume clears termination (opencode.ts:682-691)." }
+  - { id: "AC-F3-2", verdict: satisfied, evidence: "Operator resume scope operator-resume; admitted at persisted bound (composition test :1044-1118)." }
+  - { id: "AC-F3-3", verdict: satisfied, evidence: "No-lane + --resume-prompt is an explicit fresh spawn. Unchanged." }
+  - { id: "AC-F3-4", verdict: satisfied, evidence: "Unknown session is a classified failure, one attempt, no spawn. Unchanged." }
+  - { id: "AC-F4-1", verdict: satisfied, evidence: "Five-attempt tracker ladder with injected delay. Unchanged." }
+  - { id: "AC-F4-2", verdict: satisfied, evidence: "Exhaustion -> tracker:exhausted identity; state-unverified without a decisive artifact. Unchanged." }
+  - { id: "AC-F4-3", verdict: satisfied, evidence: "B1 FIXED: arms 4-7 apply to every ended, non-stall session (dispatch-result.ts:317-417); C11 failed+open-PR -> pr-open, C12 failed+commits-complete -> finished, C13 premature-end+open-PR -> pr-open, C14 tool-failure+commits-complete -> finished (dispatch-truth-derivation.test.ts:444-486)." }
+  - { id: "AC-F4-4", verdict: satisfied, evidence: "No config key; injected delay; tracker module timer-free (contract-invariance pin). Unchanged." }
+  - { id: "AC-F5-1", verdict: satisfied, evidence: "m1 FIXED: terminate invoked before restart on a capable port and the stalled iteration's liveness/termination refs are CARRIED onto the terminal attempt (dispatch.ts:1343; dispatch-watch.test.ts:173-182; stall-loop :157-160)." }
+  - { id: "AC-F5-2", verdict: satisfied, evidence: "Clean exit / cleared stall invokes no terminate and no restart. Unchanged." }
+  - { id: "AC-F5-3", verdict: satisfied, evidence: "dispatchStallShortCircuit is exactly {merged, blocked, pr-open} (dispatch-liveness.ts:152-183)." }
+  - { id: "AC-F5-4", verdict: fail, evidence: "NARROWED, NOT CLOSED. The engine gate exists (dispatch.ts:1163-1262) and the fixture proves it (stall-loop TC-TERM-005/007), but the production session ports never carry `capabilities` (production.ts:3117-3126; opencode.ts/claude.ts return objects), so declaresTerminate (dispatch.ts:658-666) returns true for every production dispatch. The claude-code adapter, which DECLARES the terminate gap, is classified capable: a below-bound stall consumes an ordinal, appends economics.restart, and the second iteration's resume is a declared gap -> terminal `failed`/exit 1 with no stall evidence, not `state-unverified`/exit 2 with no ordinal. See N1." }
+  - { id: "AC-F5-5", verdict: satisfied, evidence: "M1 FIXED: opencode terminate signals the exact-identity tree with TERM, waits the CONFIGURED grace via terminateWait(input.graceMs), KILLs only a still-listed survivor, reports terminated/escalated/reaped from observed acts (opencode.ts:710-771); production binds productionTerminateTree (production.ts:536-552,2436) and terminateWait (:2432); the starter's 100 ms kill is untouched and unused by terminate. Proof over the injected tree double: harness-opencode-resume-stream.test.ts:331-455." }
+  - { id: "AC-F6-1", verdict: satisfied, evidence: "Below-bound corroborated stall consumes one ordinal, one economics.restart, resumes (stall-loop TC-LOOP-001)." }
+  - { id: "AC-F6-2", verdict: satisfied, evidence: "At/above bound -> max-restarts with exhaustion + one terminal attempt (TC-LOOP-002)." }
+  - { id: "AC-F6-3", verdict: satisfied, evidence: "M3 FIXED: dispatchStallUndecidable is total (dispatch-liveness.ts:189-205); TC-LOOP-007 tracker-readable + artifact-unreadable -> terminal state-unverified, no ordinal." }
+  - { id: "AC-F6-4", verdict: satisfied, evidence: "Clean exit always terminal; persisted-bound re-key narrowed to the timeout (dispatch-result.ts:239-255)." }
+  - { id: "AC-F6-5", verdict: satisfied, evidence: "Envelope restarts is the persisted total; one attempt per classified dispatch. Unchanged." }
+  - { id: "AC-F6-6", verdict: satisfied, evidence: "Persisted count >= bound admits one iteration; stall -> max-restarts; clean exit keeps classification (TC-LOOP-004)." }
+  - { id: "AC-F7-1", verdict: satisfied, evidence: "Exactly one --agent pm and one --model from the binding. Unchanged." }
+  - { id: "AC-F7-2", verdict: satisfied, evidence: "One --title ticket-<REF> fresh; resume no title; deterministic across refs. Unchanged." }
+  - { id: "AC-F7-3", verdict: satisfied, evidence: "m2 FIXED: buildLifecyclePrompt receives the RESOLVED dispatchBaseBranch (production.ts:2163-2168,3138) with the integration base as the declared fallback; non-default-base case proves it follows (parity-spawn.test.ts:104-112)." }
+  - { id: "AC-F7-4", verdict: satisfied, evidence: "Role-less records no binding/agent/title; CLI rejects --agent/--title. Unchanged." }
+  - { id: "AC-F8-1", verdict: satisfied, evidence: "Tracker-done -> merged; unreadable artifact/ledger do not degrade it. Unchanged." }
+  - { id: "AC-F8-2", verdict: satisfied, evidence: "done+blocking -> merged; blocking without done -> blocked. Unchanged." }
+  - { id: "AC-F8-3", verdict: satisfied, evidence: "commits+complete -> finished; commits+incomplete/absent -> partial; divergent-ledger finished keeps ledger corroboration + falseSuccess. Unchanged (C7/C8/C12/C14)." }
+  - { id: "AC-F8-4", verdict: satisfied, evidence: "No commits + readable non-done non-blocked tracker -> nothing-to-do; ledger arm retired. Unchanged (C9/X4)." }
+  - { id: "AC-F8-5", verdict: satisfied, evidence: "B1/m5 FIXED: closed `armId` (16-id tuple, dispatch-result.ts:117-137) returned by every arm; per-input disjointness asserted over 25 rows (dispatch-truth-derivation.test.ts:565-600); C10 rebuilt to match arm 9. Minor doc nit: test plan says '14 ids' vs the code's 16 (N3)." }
+  - { id: "AC-F9-1", verdict: satisfied, evidence: "11 classes replay through the real command path; each row one attempt and spawn/resume > 0 (battery :66-90)." }
+  - { id: "AC-F9-2", verdict: satisfied, evidence: "M5 FIXED: SEAM_MANIFEST gains the terminate entry (seams.ts:50-58), proving the production module/mount." }
+  - { id: "AC-F9-3", verdict: satisfied, evidence: "M4 FIXED: the determinism oracle compares full canonical envelopes, attemptCount/attemptTokens, laneCount, restarts, spawns, resumes, waits, violations, and 11/11 class coverage (battery :142-185); the `spawns >= 0` assertion is gone." }
+  - { id: "AC-F9-4", verdict: satisfied, evidence: "M4 second half: the eight process-invoking rows are DECLARED and asserted exactly; every declared row produced an argv (parity-no-shell :24-96); the guard refuses shell/script by name." }
+  - { id: "AC-F9-5", verdict: satisfied, evidence: "m3/M5 FIXED: detection covers default import / require / destructured require / dynamic import / alias / substituted template; the surface equals the dispatch globs and is reachable from the entries; NO_SHELL_ALLOWLIST is consulted and empty by measurement; realChildStarts is live. Low residual: the CLI main() is not in the aggregate chain (the bun suite is the gate)." }
+iteration_1_disposition:
+  - { id: "B1", verdict: "Resolved", evidence: "dispatch-result.ts:317-417 (artifact arms before the classifier token for every ended, non-stall session); C11-C14 dispatch-truth-derivation.test.ts:444-486." }
+  - { id: "B2", verdict: "Persist (narrowed) -> N1", evidence: "Engine + fixture gate implemented (dispatch.ts:1163-1262; stall-loop TC-TERM-005/007) but the production ports carry no capability declaration (production.ts:3117-3126; opencode.ts:696+; claude.ts:157-233; empirically `hasOwnProperty('capabilities')===false`), so declaresTerminate defaults to capable and claude restarts." }
+  - { id: "M1", verdict: "Resolved", evidence: "opencode.ts:710-771 (configured grace, no record.kill, exact-identity targets, observed booleans); production.ts:536-552,2432,2436; harness-opencode-resume-stream.test.ts:331-455." }
+  - { id: "M2", verdict: "Resolved", evidence: "opencode.ts:682-691 resume re-registers without `termination`; test :405-443 proves iteration 2 is re-signalled." }
+  - { id: "M3", verdict: "Resolved", evidence: "dispatch-liveness.ts:189-205; dispatch-liveness.test.ts:206-260; stall-loop TC-LOOP-007." }
+  - { id: "M4", verdict: "Resolved", evidence: "battery :142-185 (full snapshot); parity-no-shell :24-96 (declared 8 process rows)." }
+  - { id: "M5", verdict: "Resolved", evidence: "process-runner.ts:89-114,190-192 (live counter) + no-shell test :60-96 (permitted-start control); terminate.ts violations + planted broad-pattern control (stall-loop :511-545); seams.ts:50-58; NO_SHELL_ALLOWLIST consulted no-shell-dispatch.ts:264-283 + test :172-191." }
+  - { id: "M6", verdict: "Resolved", evidence: "token-closure.test.ts:206 (lastMessage 'no remaining work'); restart-budget.test.ts:81 (error.category 'user'); dispatch-composition.test.ts:1101-1105 (positive exit 2 + result state-unverified). No unclaused deletion in 9742e6a (every removed expect has a clause-bearing replacement)." }
+  - { id: "m1", verdict: "Resolved", evidence: "dispatch.ts:1343 carries liveness/termination refs; dispatch-watch.test.ts:173-182; stall-loop :157-160." }
+  - { id: "m2", verdict: "Resolved", evidence: "production.ts:2163-2168,3138; parity-spawn.test.ts:104-112 (release/2)." }
+  - { id: "m3", verdict: "Resolved (low residual)", evidence: "no-shell-dispatch.ts:1-20,141-190,257-283 (routes + glob + reachability); tests :195-216. Residual: CLI main() still not in `pnpm check` (the bun suite is the gate)." }
+  - { id: "m4", verdict: "Resolved", evidence: "dispatch.ts:835-838 reserves lane:append-failed first; :1466-1470 reserves tracker:exhausted first." }
+  - { id: "m5", verdict: "Resolved", evidence: "dispatch-result.ts:117-137 closed armId; dispatch-truth-derivation.test.ts:435-486,565-600 (C10 rebuilt, disjointness asserted)." }
+  - { id: "m6", verdict: "Resolved", evidence: "tests/checks/no-shell-dispatch.test.ts:328-329 mkdirSync(base,{recursive:true}) before mkdtempSync." }
+  - { id: "i1", verdict: "Persist (accepted, no action)", evidence: "Lane append still conditional on ports.laneOwner (dispatch.ts:1035+); production supplies an owner; unchanged." }
+  - { id: "i2", verdict: "Persist (accepted, no action)", evidence: "appendRestart === undefined treated as recorded; production composes it; unchanged." }
+  - { id: "i3", verdict: "Persist (accepted, no action)", evidence: "Derivation still does not read input.ledger; deliberate per §8.5 'ledger no-work arm retired'." }
+  - { id: "i4", verdict: "Persist (info, no action)", evidence: "Terminate fixture keys idempotence per acquisition and models a numeric treeRoot; production terminate never reads treeRoot, so the fixture-only shape is harmless. See N4." }
+findings:
+  - id: N1
+    severity: blocker
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/dispatch.ts:658-666 (with packages/cli/src/production.ts:3117-3126 and packages/adapters/src/harness/{claude,opencode}.ts)
+    message: >
+      The terminate-capability gate is inert in production. `declaresTerminate`
+      casts the session port and reads `port.capabilities.supportedOperations`,
+      returning TRUE when the declaration is absent. Neither production adapter's
+      session port exposes `capabilities`: `createClaudeSession` returns
+      {spawn,deliver,resume,collect,classify,liveness,listSessions} (claude.ts:157-233)
+      and `createOpencodeSession` returns the same, with `capabilities` only a local
+      variable (opencode.ts:429); `createHarnessProfilePort` merely spreads the port;
+      and the dispatch `harnesses` map mounts them raw (production.ts:3117-3126).
+      Verified statically: both ports have no own `capabilities`. Consequence: for
+      `dispatch --harness claude-code` (a documented `--harness` value; HARNESS_KINDS
+      includes it) the adapter that DECLARES the terminate gap (claude.ts:39-41,
+      CLAUDE_CAPABILITIES) is classified capable. A below-bound stall then:
+      terminationConfirmed = !(terminate !== undefined && true) = true (no terminate
+      member), so the `!terminateCapable || !terminationConfirmed` gate
+      (dispatch.ts:1247) does not fire; the loop consumes an ordinal, appends
+      `economics.restart`, and runs a second iteration whose `resume` is a declared
+      gap; the failed resume returns terminal `failed` / `spawn failed before a
+      session existed` at exit 1 with `evidenceRefs: ["harness:spawn-failed"]`
+      (dispatch.ts:1010-1028), dropping the stall and termination evidence. AC-F5-4
+      requires NO second session, NO ordinal, and terminal `state-unverified` at
+      exit 2 with the stall evidence; F-5 and DM-5 require the engine to honour the
+      declared gap; the docs (feature-dispatch-engine.md:83,93;
+      feature-session-lifecycle-economics.md:68,94) state "an adapter that declares
+      no terminate capability ... never causes a second session", which is false on
+      this path. The fixture proves the gate only because tests/fixtures/.../
+      terminate.ts:189-233 attaches a `capabilities` declaration the production
+      ports never carry.
+    suggestion: >
+      Attach each mounted adapter's capability declaration to the dispatch session
+      port at the composition edge: `opencode: { ...createHarnessProfilePort({...}),
+      capabilities: OPENCODE_CAPABILITIES }` and `"claude-code": { ...harnessFor(
+      "claude-code"), capabilities: CLAUDE_CAPABILITIES }` in production.ts:3117-3126.
+      Optionally promote `capabilities` onto the dispatch port type (or add a
+      composition-time assertion) so a port cannot reach the engine undeclared.
+      Then add a regression that drives a claude-shaped port (no terminate member,
+      declared gap) through a below-bound stall with an outside-set decisive
+      artifact and asserts one iteration, zero `economics.restart`, terminal
+      `state-unverified` exit 2 with `liveness:stalled` evidence. If the fail-open
+      default is kept on purpose for legacy doubles, state it as a declared
+      limitation and make the production ports always declare.
+  - id: N2
+    severity: major
+    confidence: high
+    category: test-coverage
+    location: tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts:359-420 (+ tests/fixtures/dispatch/parity/terminate.ts:310-340)
+    message: >
+      The normative "an unconfirmed termination also stops the restart" branch
+      (F-5/F(D); dispatch.ts:1169-1189,1247 — `terminated.value.terminated === false`
+      or a rejected terminate leaves `terminationConfirmed === false`) is implemented
+      but never exercised. The incapable pair (TC-TERM-005/007) proves the
+      `!terminateCapable` half; the second-stall case proves re-signalling. No fixture
+      returns `{terminated:false}` or rejects, so the `!terminationConfirmed` half is
+      untested. The PM note's claim "an UNCONFIRMED termination stops the restart too,
+      with the incapable below-bound pair" is therefore overstated (verification
+      integrity, as in iteration-1 M6), even though the code is present and simple.
+    suggestion: >
+      Add a fixture option (e.g. `terminateConfirms: false` returning
+      `{terminated:false,escalated:false,reaped:false}`, or a rejecting terminate) and
+      a case asserting one iteration, zero `economics.restart`, terminal
+      `state-unverified` at exit 2, and `terminate:failed` in the attempt evidence.
+      Correct the PM note to name that case as the proof.
+  - id: N3
+    severity: info
+    confidence: high
+    category: test-coverage
+    location: doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-test-plan.md:1329
+    message: >
+      The test plan and the disjointness test call the closed arm set "14 ids",
+      but the canonical set in dispatch-result.ts:117-137 has 16 entries
+      (`restart-budget` and `undecidable` are returned by real arms and are not
+      among the 25 rows). The test's local membership set is a 14-id subset, not the
+      true closed set. No behavioural impact; a doc/test-vs-code mismatch.
+    suggestion: >
+      Align the wording to 16 ids and either add rows/armId assertions for
+      `restart-budget` and `undecidable` or state explicitly that they are loop/
+      read-failure arms proven elsewhere. Export the closed set from the module if a
+      test-side mirror is desirable.
+  - id: N4
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/cli/src/production.ts:548 (+ packages/adapters/src/harness/opencode.ts:126, tests/fixtures/dispatch/parity/process-runner.ts:8-9)
+    message: >
+      `signalProcess` is implemented in the production terminate seam and declared
+      in the adapter's seam type, but the adapter terminate never calls it (it uses
+      `signalTree`, which already falls back from `kill(-pid)` to `kill(pid)` in
+      production). Also `reaped` is reported as `targets.length > 0` (exact-identity
+      MATCHED), not an act performed, and the process-runner header still says
+      "`realChildStarts` counts zero by construction" although the counter is now a
+      live permitted-start counter. Comments/doc only; no behavioural defect.
+    suggestion: >
+      Drop `signalProcess` or use it for the escaped non-leader case; reword
+      `reaped`/its doc as "matched" or perform and report a real reap; update the
+      runner header to the new live-counter semantics.
+dimensions:
+  spec_plan_compliance:
+    verdict: FAIL
+    notes: >
+      41 of 42 ACs are satisfied and evidence-backed. AC-F5-4 fails in production:
+      the capability gate is fed only by test doubles; the production ports carry no
+      declaration, so the claude-code adapter (declared terminate gap) is treated as
+      capable and a below-bound stall consumes an ordinal and appends
+      `economics.restart` before a resume that is a declared gap, ending `failed`/
+      exit 1 rather than terminal `state-unverified`/exit 2. Appendix F(C)/DM-4 are
+      now correctly reflected in the code (arms 4-7 ended-session, arm 8
+      clean-only, arm 9 non-clean classifier, arm 10 unreadable-with-no-decisive-
+      artifact), and C11-C14 prove it. F(D) is implemented but only the
+      incapable half is proven (N2). The plan's nine phases are all present; phase 9
+      scope matches its six code files plus the declared test/document scope. The
+      plan overstates the capability fix ("the terminate capability is read from the
+      adapter's own declaration") — true for doubles, not for production.
+  code_quality:
+    verdict: PASS_WITH_NOTES
+    notes: >
+      The derivation is now a clean total order with a compiler-closed arm id; the
+      production terminate is a genuine TERM->grace->KILL->exact-identity match with
+      observed booleans and a resume-cleared idempotence fact; the undecidable
+      predicate is total; the evidence-ref reservation is correct; detached:true
+      makes group signalling real (within the declared OS proof boundary). The
+      capability gate's fail-open default is the defect (N1) because it is
+      indistinguishable from an undeclared production port. The `signalProcess` seam
+      is unused and `reaped` means "matched" (N4). No concurrency, security, or
+      performance regression observed: `/proc` matching is exact-argv, no shell, no
+      broad pattern; the restart loop is budget-bounded.
+  closed_contract_surface:
+    verdict: PASS
+    notes: >
+      The remediation commit touched no contracts file; dispatch-contract-invariance
+      pins the 11 tokens/order, exits (state-unverified 2, partial 1, max-restarts 1,
+      blocked 0), the dispatch/queue error rows and projections, the attempt schema
+      version, the nine config branches, and the four unchanged defaults; the suite
+      re-ran green (24 pass). `DispatchDerivation.armId` is an additive optional
+      internal instrumentation field, not exported through the domain index and not
+      in the contract inventory; no token/projection/exit/error row/domain kind/
+      config key/attempt schema changed.
+  documentation:
+    verdict: PASS_WITH_NOTES
+    notes: >
+      Spec v1.7 and test plan v0.5 match the code: Appendix F(C) and DM-4 scope arms
+      4-7 to every ended, non-stall session, arm 8 clean-only, arm 9 the non-clean
+      classifier token, arm 10 unreadable-with-no-decisive-artifact; F(D) carries
+      the termination-capability gate; DM-5 records the delivered two-case terminate
+      booleans and notes TDR-0051 DC-4 owner reconciliation. The four re-verified
+      current-truth pages match the terminate implementation and the ended-session
+      order. The one over-claim is the capability sentence ("an adapter that declares
+      no terminate capability ... never causes a second session"): true of the
+      engine but false of production wiring (N1), because the declaration never
+      reaches the port. Test plan "14 ids" vs code 16 (N3).
+  no_shell_invariant:
+    verdict: PASS
+    notes: >
+      The static invariant now detects default import, require/require-
+      destructuring, dynamic import, aliases and substituted template paths, and the
+      declared surface equals the dispatch globs (a new dispatch-*.ts cannot be
+      silently unscanned) and is reachable from the declared entries. The
+      allowlist is consulted and empty by measurement (a supplied entry suppresses
+      exactly its own hit). The guarded runner is live: a composed dispatch observes
+      an intercepted start with realChildStarts 0, and a permitted-start control
+      observes 1. Low residual: main() is not in `pnpm check` (the bun suite is the
+      gate).
+delivered_assertion_disposition:
+  rule: "Every modified delivered assertion must cite a clause (plan §8.5/DEC/ruling) and be UPDATED, never deleted, renamed, relaxed, or reordered."
+  remediation_commit_reviewed: "9742e6a (28 files)"
+  deleted_assertions_audit: >
+    Every removed `expect(...)` in the remediation commit has a clause-bearing
+    replacement in the same commit: `dispatchStallUndecidable` -> total-predicate
+    matrix (dispatch-liveness.test.ts:206-260); `not.toBe('noop-lane-nothing-to-
+    do')`/`toBe('partial')` -> split into artifact-backed (finished) + classifier-
+    backed (partial) cases (token-closure.test.ts:93-140,171-205); the no-shell rule
+    assertions -> the same rule names in the expanded parameterized tests
+    (:237-297); the token+exit determinism projection -> full canonical snapshot
+    (battery :142-185); `spawns >= 0` deleted (was unconditionally true); the fresh-
+    unused-runner `realChildStarts===0` -> composed-run 0 with a live control;
+    `prompt contains 'main-tools'` -> CLOSEOUT_INTEGRATION_BASE + non-default case;
+    composition `run.exit===1` -> restored positive `exit 2` + `result
+    state-unverified`. The three M6 restorations are present (token-closure:206,
+    restart-budget:81, composition:1101-1105). Two fixture rows outside phase-9's
+    own files (dispatch-envelope partial case, dispatch-e2e partial drive row) were
+    updated with clauses to keep `partial` produced by the commits-incomplete arm
+    while the classifier half is added. No unclaused deletion, rename, relaxation or
+    reordering found.
+residuals_judgement:
+  - residual: "TDR-0051 DC-4 still says an already-exited or unknown session returns terminated:true; the adapter returns false for a known-but-gone runtime (still success)."
+    verdict: "Acceptable to defer"
+    owner: "TDR-0051 owner (decision-advisor / repository owner) at PR acceptance; the record is Proposed and spec v1.7 DM-5 records the delivered two-case semantics with the reconciliation noted."
+    note: "The engine treats terminated:false as unconfirmed and resolves terminal state-unverified, which is the conservative, spec-consistent outcome. No code change required for this change."
+  - residual: "No mutation row hoists the classifier arm above the artifact arms."
+    verdict: "Acceptable to defer"
+    owner: "test-plan owner (@test-plan-writer) as a register-completeness follow-up."
+    note: "C11-C14 would fail if the classifier arm were hoisted, so the ordering is non-vacuously proven; the mutation gap is a completeness nit, not an unproven behaviour."
+  - residual: "The m1 reference page omits the incapable-terminate outcome and the resume-clears fact."
+    verdict: "Acceptable to defer (editorial)"
+    owner: "doc owner (doc-syncer / owner) — the page is outside the writable root and contains no false claim."
+    note: "If N1 is fixed by attaching the declarations, the reference page should also mention the incapable-adapter terminal outcome; fold it into the same doc pass."
+remediation:
+  note: "Ordered for @coder. N1 is the gate; N2 should ride the same pass because it proves the same AC. N3/N4 are documentation/cleanliness."
+  tasks:
+    - id: R13
+      addresses: N1, B2
+      file: "packages/cli/src/production.ts (dispatch `harnesses` map, ~3117-3126) + packages/core/src/app/dispatch.ts:658-666"
+      change: >
+        Attach each mounted adapter's capability declaration to the dispatch session
+        port (opencode: OPENCODE_CAPABILITIES; claude-code: CLAUDE_CAPABILITIES), or
+        add `capabilities` to the dispatch port contract and require the composition
+        to supply it. Keep the fail-open default only for ports that explicitly opt
+        in; do not let a production port reach the engine undeclared. Add a
+        regression driving a claude-shaped port (no terminate member, declared gap)
+        through a below-bound stall with an outside-set decisive artifact: one
+        iteration, zero economics.restart, terminal state-unverified exit 2 with
+        liveness:stalled evidence.
+      clause: "AC-F5-4; F-5 'On an adapter that declares no terminate capability ... starts no second session'; DM-5 'its absence, together with a declared gap, means the operation is unsupported'; DEC-4; Appendix F(D)."
+    - id: R14
+      addresses: N2
+      file: "tests/fixtures/dispatch/parity/terminate.ts + tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts"
+      change: >
+        Add a fixture option so terminate reports `{terminated:false}` (or rejects),
+        and a case asserting one iteration, zero economics.restart, terminal
+        state-unverified exit 2, and `terminate:failed` in the attempt evidence.
+        Correct the PM note that claims the incapable pair proves the unconfirmed
+        branch.
+      clause: "F-5/F(D) 'an unconfirmed termination starts no second session'; AC-F5-4."
+    - id: R15
+      addresses: N3
+      file: "doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-test-plan.md:1329 + tests/behaviour/dispatch-truth-derivation.test.ts:565-600"
+      change: >
+        Align the closed-arm-set count to the code's 16 ids and either add
+        rows/armId assertions for `restart-budget`/`undecidable` or state they are
+        loop/read-failure arms proven elsewhere.
+      clause: "AC-F8-5; TC-DERIVE-006 step 2."
+    - id: R16
+      addresses: N4, m3 residual
+      file: "packages/cli/src/production.ts:548 / packages/adapters/src/harness/opencode.ts:126 / tests/fixtures/dispatch/parity/process-runner.ts:8-9 + package.json"
+      change: >
+        Drop or use `signalProcess`; reword `reaped` as matched or perform a real
+        reap; fix the process-runner header; optionally add `check:no-shell` to the
+        aggregate `check` chain so the CLI main() is exercised.
+      clause: "NFR-5; AC-F9-5 clarity."
+reviewed_at: 2026-11-19T08:15:00Z
+next_step: CALL_CODER
+reviewer_notes: |
+  Severity uses the change's own blocker/major/minor/info register (the iteration-1
+  vocabulary) for continuity; see `severity_breakdown`.
+
+  Verdict rationale: FAIL, because one normative acceptance criterion (AC-F5-4) is
+  still not met in production and the remediation's headline claim ("the
+  capability-gated no-second-session stall") is true only for test doubles. This is
+  the same class of defect as iteration-1's B2, narrowed but not closed: the gate
+  exists and the fixture proves it, but the production composition never gives the
+  engine a capability declaration to read, so the declared-incapable claude-code
+  adapter is classified capable. The failure is a wrong terminal result on a
+  documented `--harness` value (failed/exit 1 with no stall evidence instead of
+  state-unverified/exit 2) plus a spurious ordinal and economics.restart. The fix is
+  small (attach two declarations at the composition edge), which is why this is a
+  wiring blocker, not a redesign.
+
+  What is strong and should not be reworked: the artifact-first ladder is now the
+  correct total order and is proven exactly (C11-C14 with non-clean classifier
+  tokens; armId disjointness); the production terminate is a real TERM/grace/KILL/
+  exact-identity implementation over an injected tree seam with observed booleans
+  and a resume-cleared fact, and its test includes a genuine broad-pattern negative
+  control (a broad matcher demonstrably reaches pids 702/703); the determinism
+  oracle now compares envelopes, attempt counts, lane counts and class coverage; the
+  static no-shell invariant is materially stronger and its surface cannot rot; the
+  three M6 restorations are present with clauses.
+
+  Top three to fix first: N1 (production capability declaration -> the gate is
+  inert), N2 (unconfirmed-termination branch unproven; PM claim overstated), N3
+  (14-vs-16 arm-set doc/test mismatch).
+
+  Diff reviewed: 29 commits, 117 files, +20339 / -870 (three-dot). The remediation
+  commit 9742e6a alone is 28 files, +2902/-159; only 7 doc files changed after it, so
+  the reviewed code state is 9742e6a. Aggregate pnpm check was not re-run; the
+  targeted suites that exercise the remediation re-ran green (see `verification`).
+
+  Record path:
+  doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/code-review/review-iter-2.yaml.

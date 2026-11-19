@@ -5,18 +5,18 @@
  * dispatch over the same evidence, and a replay/resume appends none.
  */
 import { describe, expect, test } from "bun:test";
-import { runDispatch } from "../../../packages/core/src/app/dispatch";
-import { recordDaemonDispatchResult } from "../../../packages/core/src/app/daemon-dispatch-result";
-import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
-import { runSupervisionCycle } from "../../../packages/core/src/app/daemon-supervision";
-import { createLaneLaunchPlanner } from "../../../packages/core/src/domain/lane-launch-plan";
 import { createLaneExecutor } from "../../../packages/adapters/src/daemon/lane-executor";
+import { recordDaemonDispatchResult } from "../../../packages/core/src/app/daemon-dispatch-result";
+import { runSupervisionCycle } from "../../../packages/core/src/app/daemon-supervision";
+import { runDispatch } from "../../../packages/core/src/app/dispatch";
+import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
+import { createLaneLaunchPlanner } from "../../../packages/core/src/domain/lane-launch-plan";
+import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 import {
   COMPLETED_EVIDENCE,
   createDispatchState,
   createScriptedHarness,
 } from "../../fixtures/dispatch/harness";
-import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 
 const NOW = "2026-11-08T10:00:00.000Z";
 const repository = "github.com/owner/repo";
@@ -172,4 +172,121 @@ describe("TC-DAEMON-002 daemon lane matches one-shot classification and recordin
       state.dispose();
     }
   });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-PARITY-006 — the daemon path inherits the shared derivation (AC-F8-*)   */
+/* ------------------------------------------------------------------------- */
+
+import { deriveDispatchResult } from "../../../packages/core/src/domain/dispatch-result";
+import {
+  artifacts,
+  ledger as ledgerFacts,
+  prMerged,
+  prNone,
+  readOk,
+  tracker,
+} from "../../fixtures/dispatch/truth";
+
+describe("TC-PARITY-006 the daemon path inherits the shared derivation", () => {
+  const rows = [
+    {
+      label: "tracker-done",
+      reads: readsFrom({ tracker: readOk(tracker({ state: "done" })) }),
+      token: "merged",
+    },
+    {
+      label: "tracker-done-blocking",
+      reads: readsFrom({ tracker: readOk(tracker({ state: "done", blocking: true })) }),
+      token: "merged",
+    },
+    {
+      label: "already-merged-pr",
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prMerged() })),
+        phasesComplete: true,
+      }),
+      token: "merged",
+    },
+    {
+      label: "commits-complete",
+      reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }),
+      token: "finished",
+    },
+    {
+      label: "commits-incomplete",
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+      }),
+      token: "partial",
+    },
+    {
+      label: "complete-ledger-with-commits",
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "complete" })),
+        ledger: readOk(
+          ledgerFacts({ completed: 9, total: 9, progressed: false, workRemaining: false }),
+        ),
+      }),
+      token: "finished",
+    },
+  ] as const;
+
+  for (const row of rows) {
+    test(`${row.label}: the daemon token and the one-shot token agree`, async () => {
+      const state = createDispatchState(`daemon-parity-006-${row.label}`);
+      try {
+        const recorded = recordDaemonDispatchResult({
+          store: state.store,
+          fenceToken: state.fenceToken,
+          ref: "GH-239",
+          repository,
+          sessionId: "session-1",
+          spawnOrdinal: 1,
+          harnessKind: "opencode",
+          evidenceClass: "pilot",
+          handoverState: "dual-run",
+          evidence: COMPLETED_EVIDENCE,
+          collected: { ok: true },
+          reads: row.reads,
+          nowIso: NOW,
+          newDivergenceId: () => `DIV-${row.label}`,
+        });
+        expect(recorded.ok).toBe(true);
+        const daemon = readAttempts(state.store)[0];
+        expect(daemon?.token, row.label).toBe(row.token);
+        // The one-shot path over the very same facts.
+        const oneShot = deriveDispatchResult({
+          harness: {
+            ok: true,
+            value: { outcome: "completed", token: "finished", exitStatus: 0, spawnRefused: false },
+          },
+          artifacts: row.reads.artifacts,
+          ledger: row.reads.ledger,
+          tracker: row.reads.tracker,
+          restarts: { count: 0, bound: 3 },
+          handoverState: "dual-run",
+        });
+        expect(oneShot.token, row.label).toBe(daemon?.token);
+        if (row.label === "tracker-done" || row.label === "tracker-done-blocking") {
+          // The arm-aware tracker-only corroboration is inherited on the daemon
+          // path, and absent pm-notes/CI raise no false-success incident.
+          expect(daemon?.corroboration).toEqual({
+            pmNotes: "not-applicable",
+            tracker: "satisfied",
+            ci: "not-applicable",
+          });
+          expect(daemon?.falseSuccess).toBe(false);
+        }
+        if (row.label === "already-merged-pr") {
+          // This arm keeps the token-keyed requirement: all three sources are
+          // consulted, never the tracker-only triple.
+          expect(daemon?.corroboration.pmNotes).not.toBe("not-applicable");
+          expect(daemon?.corroboration.ci).not.toBe("not-applicable");
+        }
+      } finally {
+        state.dispose();
+      }
+    });
+  }
 });

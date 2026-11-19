@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
 import {
   createEnvironmentCredentialPort,
@@ -29,6 +29,7 @@ import {
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   preserveCorruptHostIndex,
+  projectPmNotesCompleteness,
   readCommittedConfigDocument,
   readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
@@ -71,6 +72,7 @@ import {
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
   mapCoordinatorNewTurn,
+  OPENCODE_CAPABILITIES,
 } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
 import {
@@ -81,13 +83,22 @@ import {
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
+import type {
+  HarnessAdapterRegistration,
+  HarnessBindingResolution,
+  HarnessProfileView,
+  HarnessSelectionView,
+} from "@delivery-os/core";
 import {
   type AuthorityEvidence,
   aggregateProjectMemberOutcomes,
   assembleHarnessLiveness,
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
   buildHarnessSpawnEnvironment,
+  buildLifecyclePrompt,
   type CoordinatorSettings,
-  claimQueueLease,
+  claimDispatchLease,
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
@@ -103,14 +114,16 @@ import {
   type DispatchTrackerFacts,
   type DispatchTruthReads,
   detectPriorNamespace,
-  dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   emptyHandoverGate,
+  evaluateHarnessModeAvailability,
+  evaluateModelExpressibility,
   evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
+  harnessAgentIdentityViolation,
   type LaneSettings,
   legacyStoreWarning,
   maintainHostIndex,
@@ -142,21 +155,26 @@ import {
   releaseQueueLease,
   reposHandoverGateOf,
   reposListDataOf,
+  resolveBinding,
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
+  resolveDispatchLane,
+  resolveHarnessInstance,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
   reversibilityOf,
+  runDispatchTrackerLadder,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
   selectProjectGroups,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  spawnTitleFor,
   stateScopeEnvironmentName,
   stateScopeRoots,
   suiteMapReadOfDocument,
@@ -167,26 +185,12 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
-import {
-  bindingEnvironmentRecords,
-  bindingInvocationArgs,
-  evaluateHarnessModeAvailability,
-  evaluateModelExpressibility,
-  harnessAgentIdentityViolation,
-  resolveBinding,
-  resolveHarnessInstance,
-} from "@delivery-os/core";
-import type {
-  HarnessAdapterRegistration,
-  HarnessBindingResolution,
-  HarnessProfileView,
-  HarnessSelectionView,
-} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type CommandFailureHarnessDetail,
   type ConfigErrorCode,
   type ConfigNodeOrigins,
   type ConfigPriorOutcome,
@@ -200,24 +204,25 @@ import {
   type DeliveryRequest,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchDelay,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
-  type CommandFailureHarnessDetail,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
+  type HarnessCapabilityDeclaration,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
-  type HarnessFailure,
   type HarnessExecutionEnvironmentDescriptor,
+  type HarnessFailure,
   type HarnessKind,
   type HarnessMode,
   type HarnessModeOrigin,
-  type HarnessSeatBinding,
   type HarnessResult,
+  type HarnessSeatBinding,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
@@ -318,7 +323,6 @@ import {
   createVerifyGatesCommandRuntime,
   type DispatchCommandRuntime,
   type DispatchComposition,
-  type DispatchLaneFacts,
   type ProviderComposition,
   type QueueComposition,
   resolveAgentIdentity,
@@ -548,6 +552,81 @@ const repositoryTargetOf = (originUrl: string | undefined): RepositoryTarget | u
 /** The production caller principal the handover/resolution records carry. */
 const DISPATCH_PRINCIPAL = LOCAL_CALLER_PRINCIPAL.kind;
 
+/** One entry of the host process table (the exact-identity reap's only input). */
+type ProductionProcessEntry = {
+  readonly pid: number;
+  readonly argv: readonly string[];
+};
+
+/**
+ * The host process table the terminate seam reads (GH-347 AC-F5-5, TDR-0051
+ * DC-3): `/proc` command lines on Linux, nothing elsewhere. It starts no
+ * process, runs no shell, and matches no name pattern — the adapter compares
+ * this lane's session id or its deterministic `ticket-<REF>` title against the
+ * argv elements.
+ */
+const readProductionProcessTable = (): readonly ProductionProcessEntry[] => {
+  if (process.platform !== "linux") return [];
+  let entries: string[];
+  try {
+    entries = readdirSync("/proc");
+  } catch {
+    return [];
+  }
+  const table: ProductionProcessEntry[] = [];
+  for (const entry of entries) {
+    const pid = Number(entry);
+    if (!Number.isInteger(pid) || pid <= 0 || pid === process.pid) continue;
+    try {
+      const argv = readFileSync(`/proc/${entry}/cmdline`, "utf8")
+        .split("\u0000")
+        .filter((value) => value.length > 0);
+      if (argv.length > 0) table.push({ pid, argv });
+    } catch {
+      // The process exited between the listing and the read; never fabricated.
+    }
+  }
+  return table;
+};
+
+/**
+ * The production terminate seam the opencode adapter receives (GH-347 AC-F5-5,
+ * TDR-0051 DC-2/DC-3). The tree signal reaches the group the runtime leads and
+ * falls back to the matched process only; it never widens the target.
+ */
+const productionTerminateTree = {
+  list: readProductionProcessTable,
+  signalTree: (pid: number, signal: "SIGTERM" | "SIGKILL"): boolean => {
+    // The delivered process port is the composition's one signalling seam; a
+    // negative pid addresses the group the runtime leads, and the direct pid is
+    // the fallback when it leads no group.
+    const signals = createNodeProcessPort();
+    if (signals.signal(-pid, signal).ok) return true;
+    return signals.signal(pid, signal).ok;
+  },
+};
+
+/**
+ * Guarantee a declaration reaches the engine from the composition edge
+ * (GH-347 AC-F5-4, F-5, DM-5; review N1).
+ *
+ * The adapter's own declaration is the single source and passes through the
+ * composition unchanged. This edge fills an ABSENT declaration from the
+ * adapter's exported constant and NEVER overrides one the port reports: the
+ * opencode adapter resolves an injected override, and shadowing it would
+ * separate the declaration from the implementation that reads it. It never
+ * throws — an undeclared port is filled, not refused.
+ */
+const harnessWithDeclaration = (
+  port: HarnessSessionPort,
+  declaration: HarnessCapabilityDeclaration,
+): HarnessSessionPort =>
+  port.capabilities === undefined ? { ...port, capabilities: declaration } : port;
+
+/** The declaration each configured harness kind exports as its single source. */
+const harnessDeclaration = (kind: HarnessKind): HarnessCapabilityDeclaration =>
+  kind === "opencode" ? OPENCODE_CAPABILITIES : CLAUDE_CAPABILITIES;
+
 /** The declared harness kinds, used to validate a persisted lane fact. */
 const harnessKindOf = (value: string | undefined): HarnessKind | undefined =>
   value !== undefined && (HARNESS_KINDS as readonly string[]).includes(value)
@@ -565,6 +644,14 @@ export type ProductionCompositionFacts = {
    * tests inject a fixed remote so composition is proven without a real origin.
    */
   readonly repositoryFacts?: { readonly originUrl?: string };
+  /**
+   * The RESOLVED base branch a dispatch's lifecycle prompt targets (GH-347
+   * AC-F7-3, DM-6). The composition is the resolution site: an embedder that
+   * knows its integration base supplies it, and the delivered integration base
+   * is the declared fallback. The prompt never carries a second hardcoded
+   * literal, and no configuration key is added.
+   */
+  readonly dispatchBaseBranch?: string;
   /**
    * The injected harness spawn runner. Production uses the host runner; tests
    * inject a recording runner so composition is proven without a harness process.
@@ -616,6 +703,18 @@ export type ProductionCompositionFacts = {
   readonly gitChildRunner?: GitChildRunner;
   /** The supervisor's own process id (the bin supplies `process.pid`). */
   readonly processId?: number;
+  /**
+   * The injected dispatch delay fact (GH-347 AC-F9-2). Production binds the
+   * real timer; the offline battery injects a recorder that advances a virtual
+   * clock, so no parity case waits on a wall clock.
+   */
+  readonly dispatchDelay?: DispatchDelay;
+  /**
+   * The injected composition clock (GH-347 driver D1): a fixed clock makes the
+   * battery deterministic without a wall-clock read. Production omits it and
+   * reads the system clock.
+   */
+  readonly clock?: { readonly nowMs: () => number; readonly nowIso: () => string };
   /**
    * The process signal subscription seam (the bin supplies the host process).
    */
@@ -1631,8 +1730,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (acquired.ok) emitConfigNotice(acquired.prior);
       return acquired;
     };
-    const nowIso = (): string => new Date().toISOString();
-    const nowMs = (): number => Date.now();
+    const nowIso = (): string => facts.clock?.nowIso() ?? new Date().toISOString();
+    const nowMs = (): number => facts.clock?.nowMs() ?? Date.now();
+    // The composition's declared start instant rides every lane owner fact.
+    const compositionStartedAt = nowIso();
+    // The one injected delay fact (GH-347 AC-F9-2): production binds the real
+    // timer; an offline composition injects its recorder.
+    const dispatchDelay: DispatchDelay =
+      facts.dispatchDelay ??
+      ((ms) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        }));
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
 
@@ -2140,6 +2249,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     /** The declared integration base the checkout's base reference resolves to. */
     const mergeBaseRef = CLOSEOUT_INTEGRATION_BASE;
+    /**
+     * The RESOLVED base branch the dispatch lifecycle prompt interpolates
+     * (GH-347 AC-F7-3, DM-6): the composition fact is the resolution, and the
+     * delivered integration base is the declared fallback. It never reads the
+     * constant at the prompt's own build site.
+     */
+    const dispatchBaseBranch =
+      facts.dispatchBaseBranch !== undefined && facts.dispatchBaseBranch.length > 0
+        ? facts.dispatchBaseBranch
+        : CLOSEOUT_INTEGRATION_BASE;
     /** The checkout's own current branch, read from its git facts. */
     const mergeBranch = resolvedRepositoryFacts.head.branch;
 
@@ -2384,52 +2503,65 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         assembleLiveness: assembleHarnessLiveness,
         now: nowIso,
       };
-      return kind === "opencode"
-        ? createOpencodeSession({
-            ...common,
-            starter: harnessSpawnStarter,
-            command: "opencode",
-            // The gate reads the facts the dispatch admission resolved for this
-            // run, so a refusal cannot be bypassed by the adapter's default.
-            ...(gate === undefined ? {} : { versionGate: gate }),
-            // The binding's surface mapping is injected: the adapter owns no
-            // second copy of the rules (GH-335 F-3, TDR-0040).
-            bindingSeams: {
-              identityViolation: harnessAgentIdentityViolation,
-              expressibility: evaluateModelExpressibility,
-              invocationArgs: bindingInvocationArgs,
-              environmentRecords: bindingEnvironmentRecords,
-            },
-            spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
-            resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
-            listArgs: PRODUCTION_OPENCODE_ARGS.list,
-            telemetrySinkFor: ({ workItemRef }) => {
-              const resolution = resolveProductionHarnessSettings();
-              if (!resolution.ok) return undefined;
-              return createProductionTelemetrySink({
-                store,
-                workItemRef,
-                // The invoking command's audit run id: every step record joins
-                // the audit ledger instead of carrying an invented identity.
-                runId: invocation?.runId ?? TELEMETRY_RUN_ID_UNAVAILABLE,
-                environment,
-                environmentPrefix: brand.environmentPrefix,
-                treeRoot: cwd,
-                repository: cwd,
-                nowIso,
-                newFenceToken,
-                sessionTotals: createOpencodeSessionTotalsReader({
-                  opener: createBunSqliteStoreOpener(),
-                  storePath: resolution.settings.opencodeDatabasePath,
-                }),
-              });
-            },
-          })
-        : createClaudeSession({
-            ...common,
-            command: "claude",
-            headlessArgs: ["--print", "--output-format", "json"],
-          });
+      const adapter =
+        kind === "opencode"
+          ? createOpencodeSession({
+              ...common,
+              starter: harnessSpawnStarter,
+              command: "opencode",
+              // The gate reads the facts the dispatch admission resolved for this
+              // run, so a refusal cannot be bypassed by the adapter's default.
+              ...(gate === undefined ? {} : { versionGate: gate }),
+              // The binding's surface mapping is injected: the adapter owns no
+              // second copy of the rules (GH-335 F-3, TDR-0040).
+              bindingSeams: {
+                identityViolation: harnessAgentIdentityViolation,
+                expressibility: evaluateModelExpressibility,
+                invocationArgs: bindingInvocationArgs,
+                environmentRecords: bindingEnvironmentRecords,
+              },
+              spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
+              resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
+              listArgs: PRODUCTION_OPENCODE_ARGS.list,
+              // GH-347 DEC-4: the declared grace is waited through the one
+              // injected delay fact with reason `terminate-grace`.
+              terminateWait: (ms) => dispatchDelay(ms, "terminate-grace"),
+              // GH-347 AC-F5-5, TDR-0051 DC-2/DC-3: the process-tree seam is
+              // bound HERE, at the composition edge, so the adapter carries no
+              // ambient process access.
+              terminateTree: productionTerminateTree,
+              telemetrySinkFor: ({ workItemRef }) => {
+                const resolution = resolveProductionHarnessSettings();
+                if (!resolution.ok) return undefined;
+                return createProductionTelemetrySink({
+                  store,
+                  workItemRef,
+                  // The invoking command's audit run id: every step record joins
+                  // the audit ledger instead of carrying an invented identity.
+                  runId: invocation?.runId ?? TELEMETRY_RUN_ID_UNAVAILABLE,
+                  environment,
+                  environmentPrefix: brand.environmentPrefix,
+                  treeRoot: cwd,
+                  repository: cwd,
+                  nowIso,
+                  newFenceToken,
+                  sessionTotals: createOpencodeSessionTotalsReader({
+                    opener: createBunSqliteStoreOpener(),
+                    storePath: resolution.settings.opencodeDatabasePath,
+                  }),
+                });
+              },
+            })
+          : createClaudeSession({
+              ...common,
+              command: "claude",
+              headlessArgs: ["--print", "--output-format", "json"],
+            });
+      // GH-347 AC-F5-4 (review N1): the composition edge guarantees the
+      // adapter's own declaration reaches the engine. An absent declaration is
+      // filled from the adapter's exported constant; a present one is never
+      // overridden.
+      return harnessWithDeclaration(adapter, harnessDeclaration(kind));
     };
 
     const phaseSummary = (changeRef: string): DispatchPhaseLedger => {
@@ -2527,40 +2659,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return Object.entries(foldPhaseState(ref, transitions.value.transitions).phases)
         .filter(([, state]) => state.completed !== null)
         .map(([phaseId]) => phaseId);
-    };
-
-    /**
-     * The delivered lane facts a resume admits against: the latest resumable
-     * daemon lane record's session, the folded phase ledger position, the
-     * adapter's resume-injection capability, and the recorded restart count.
-     */
-    const laneFactsFor = (ref: string, defaultKind: HarnessKind): DispatchLaneFacts | undefined => {
-      const lanes = readDaemonLanes(store);
-      if (!lanes.ok) return undefined;
-      const latest = [...lanes.records]
-        .reverse()
-        .find(
-          (lane) =>
-            lane.ref === ref &&
-            lane.sessionId !== undefined &&
-            (lane.state === "delivering" ||
-              lane.state === "detached" ||
-              lane.state === "preempted"),
-        );
-      if (latest?.sessionId === undefined) return undefined;
-      const kind = harnessKindOf(latest.harnessKind) ?? defaultKind;
-      const restarts = readEconomicsRecords(store, ref);
-      return {
-        handle: {
-          harnessKind: kind,
-          sessionId: latest.sessionId,
-          treeRoot: cwd,
-          workItemRef: ref,
-        },
-        completedPhases: completedPhaseIds(ref),
-        adapterSupportsResumeInjection: kind === "opencode",
-        restartCount: restarts.ok ? restarts.restarts.length : Math.max(0, latest.spawnOrdinal - 1),
-      };
     };
 
     /**
@@ -2808,7 +2906,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
       const branch = await readChangeBranch(changeRef);
       const pull = await readPullTruth(changeRef, "identity" in branch ? undefined : branch.branch);
-      const trackerRead = await readTrackerTruth(changeRef);
+      // The bounded tracker ladder (GH-347 API-4, DEC-7): five attempts with the
+      // declared waits through the injected delay; exhaustion is named, never a
+      // success-shaped fact.
+      const ladder = await runDispatchTrackerLadder({
+        read: async () => {
+          const attempt = await readTrackerTruth(changeRef);
+          return attempt.ok
+            ? { ok: true as const, value: attempt.value }
+            : { ok: false as const, reason: "tracker" as const, identity: attempt.identity };
+        },
+        delay: dispatchDelay,
+      });
+      const trackerRead = ladder.ok
+        ? { ok: true as const, value: ladder.value }
+        : { ok: false as const, identity: ladder.identity };
 
       let artifacts: DispatchRead<DispatchArtifactFacts>;
       if ("identity" in branch) {
@@ -2818,7 +2930,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       } else {
         const commits = await readBranchCommits(branch.branch, pull.value);
         artifacts = commits.ok
-          ? { ok: true, value: { branchCommits: commits.value, pr: pull.value.fact } }
+          ? {
+              ok: true,
+              value: {
+                branchCommits: commits.value,
+                pr: pull.value.fact,
+                pmNotes: projectPmNotesCompleteness(verifyRuntime.readPmNotes(changeRef)),
+              },
+            }
           : { ok: false, reason: "artifact", identity: commits.identity };
       }
 
@@ -3088,6 +3207,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       settings: HarnessSettings,
       lane: LaneSettings,
       repository: string,
+      killGraceMs: number,
     ): DispatchComposition => ({
       store,
       stateRoot: stateDirectory,
@@ -3114,7 +3234,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         workDirectory: cwd,
         environment: harnessEnvironmentEntries(settings),
       },
-      prompt: (ref) => `Deliver change ${ref} through the delivery lifecycle.`,
+      // GH-347 F-7, DEC-8: the fresh prompt is the delivery-lifecycle prompt
+      // parameterized by the ref and the RESOLVED base branch.
+      prompt: (ref) => buildLifecyclePrompt({ ref, baseBranch: dispatchBaseBranch }),
+      // The lifecycle agent identity is `pm` through the existing caller-agent
+      // member; the binding is the delivered pure resolution's single seat.
+      harnessAgent: () => "pm",
+      // The deterministic fresh-spawn title is a composition fact.
+      freshTitle: (ref) => spawnTitleFor(ref),
+      harnessBinding: () => {
+        const context = resolveProfileContext();
+        if (context === undefined) return undefined;
+        const resolved = resolveBinding(context.profile, context.selection, "pm");
+        return resolved.outcome === "binding" ? resolved.binding : undefined;
+      },
       evidenceClass: DISPATCH_DEFAULT_EVIDENCE_CLASS,
       repository: () => repository,
       readTruth: dispatchTruth,
@@ -3125,45 +3258,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // by default, so a fresh installation refuses `provider.profile.absent`
       // until it declares its profiles (the branch's fail-closed contract).
       nominate: nominationPredicate,
-      claimLease: (ref) => {
-        const hold = readOwnerHold();
-        if (hold.active) {
-          return {
-            ok: false,
-            code: "queue.precondition.unmet",
-            summary:
-              hold.reason === undefined
-                ? `reason=owner-hold; owner hold active (${hold.source})`
-                : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`,
-          };
-        }
-        // GH-292 F-4: the dispatch family's ONE admission predicate, before the
-        // claim, spawn, resume, attempt, or record. The dispatch path claims
-        // with the fixed holder `dispatch` and never renews, so any live
-        // same-ref lease is a running dispatch.
-        const refused = dispatchAdmissionRefusal(store, { ref, nowMs: nowMs() });
-        if (refused !== undefined) {
-          return {
-            ok: false,
-            code: refused.code,
-            ...(refused.summary === undefined ? {} : { summary: refused.summary }),
-            ...(refused.holder === undefined ? {} : { holder: refused.holder }),
-          };
-        }
-        const claimed = claimQueueLease(store, {
+      claimLease: (ref) =>
+        claimDispatchLease(store, {
           ref,
-          holder: "dispatch",
-          runner: "dispatch",
-          weightClass: "standard",
-          nowIso: nowIso(),
-          nowMs: nowMs(),
+          nowIso,
+          nowMs,
           fenceToken: newFenceToken(),
-          ownerHold: hold,
-        });
-        return claimed.ok
-          ? { ok: true, leaseId: claimed.value.lease.leaseId }
-          : { ok: false, code: claimed.code };
-      },
+          ownerHold: readOwnerHold(),
+          delay: dispatchDelay,
+        }),
       releaseLease: (ref) => {
         const released = releaseQueueLease(store, {
           ref,
@@ -3175,6 +3278,25 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return released.ok;
       },
       phaseLedger: phaseSummary,
+      killGraceMs,
+      appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt }) => {
+        const appended = appendEconomicsRestartEvent(store, newFenceToken(), {
+          schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+          workItemRef: ref,
+          runId,
+          sessionId,
+          ordinal,
+          reason,
+          recordedAt,
+        });
+        return appended.ok;
+      },
+      ...(ownProcessId > 0
+        ? { laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt } }
+        : {}),
+      // The one injected delay fact (GH-347 AC-F9-2): production binds the real
+      // timer; no configuration key and no ambient timer lives in the engine.
+      delay: dispatchDelay,
       // The lane policy is data: both the restart bound and the liveness cadence
       // come from the typed `lane` configuration branch.
       restartBudget: lane.restartBudget,
@@ -3184,7 +3306,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       livenessIntervalMs: lane.livenessIntervalMs,
       waitForCadence,
-      existingLane: (ref) => laneFactsFor(ref, settings.kind),
+      // The lane resolver seam (GH-347 API-3, AC-F9-2): the one function that
+      // resolves the newest recorded lane carrying a session identity.
+      existingLane: (ref) =>
+        resolveDispatchLane(store, {
+          ref,
+          defaultHarnessKind: settings.kind,
+          treeRoot: cwd,
+          completedPhases: completedPhaseIds,
+          // The adapter capability is a composition fact: the opencode adapter
+          // declares resume injection; the CLI keeps the literal.
+          supportsResumeInjection: (kind) => kind === "opencode",
+          restartCount: (target) => {
+            const restarts = readEconomicsRecords(store, target);
+            return restarts.ok ? restarts.restarts.length : 0;
+          },
+        }),
       ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
         const ensured = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
           schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
@@ -3209,7 +3346,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     /** Resolve the typed harness and lane configuration branches. */
     const resolveProductionHarnessSettings = ():
-      | { readonly ok: true; readonly settings: HarnessSettings; readonly lane: LaneSettings }
+      | {
+          readonly ok: true;
+          readonly settings: HarnessSettings;
+          readonly lane: LaneSettings;
+          readonly killGraceMs: number;
+        }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = gitRootForConfig();
       const acquired = acquireProjectConfiguration(gitRoot);
@@ -3229,9 +3371,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }),
       };
       const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
-      return lane.ok
-        ? { ok: true, settings: reconciled, lane: lane.value }
-        : { ok: false, code: lane.error.code };
+      const coordinatorSettings = resolveCoordinatorSettings(
+        resolved.value.values,
+        resolved.value.origins,
+      );
+      if (!lane.ok) return { ok: false, code: lane.error.code };
+      if (!coordinatorSettings.ok) return { ok: false, code: coordinatorSettings.error.code };
+      return {
+        ok: true,
+        settings: reconciled,
+        lane: lane.value,
+        killGraceMs: coordinatorSettings.value.killGraceMs,
+      };
     };
 
     // The dispatch run surface resolves the typed configuration per invocation,
@@ -3289,7 +3440,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             };
           }
           return createDispatchCommandRuntime(
-            dispatchComposition(resolution.settings, resolution.lane, repository),
+            dispatchComposition(
+              resolution.settings,
+              resolution.lane,
+              repository,
+              resolution.killGraceMs,
+            ),
           ).run.run(input);
         },
       },

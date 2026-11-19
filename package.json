@@ -23,7 +23,8 @@
     "pretest": "pnpm build",
     "check:prompt": "bun run scripts/checks/prompt-conformance.ts",
     "check:help": "bun run scripts/checks/help-guide-coverage.ts",
-    "check:memory": "bun run scripts/checks/memory-lint.ts"
+    "check:memory": "bun run scripts/checks/memory-lint.ts",
+    "check:no-shell": "bun run scripts/checks/no-shell-dispatch.ts"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

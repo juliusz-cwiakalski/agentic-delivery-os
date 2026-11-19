@@ -51,17 +51,31 @@ const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
       await repo.run({ reads: { artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone })) } });
       return;
     case "failed":
+      // GH-347: the typed-only exit-0-no-artifact arm is subsumed; `failed` is
+      // reachable from a reported failure. Clause: spec §8.5, Appendix F(C)(9).
       await repo.run({
-        reads: {
-          artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
-          ledger: readOk(ledger({ progressed: false })),
+        evidence: {
+          completionMarker: true,
+          exitStatus: 1,
+          timedOut: false,
+          spawnRefused: false,
+          failureReported: true,
+          toolFailure: false,
         },
+        reads: { artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) },
       });
       return;
     case "partial":
+      // GH-347 AC-F4-3, Appendix F(C) arms 6-7 before arm 9: a session that
+      // carries commits takes the artifact ladder, so the `partial` class is
+      // produced by the commits-with-INCOMPLETE-pm-notes arm. The same input
+      // with complete pm-notes resolves `finished` (the R2 row in
+      // dispatch-truth-derivation.test.ts proves that half).
       await repo.run({
         evidence: TOOL_FAILURE_EVIDENCE,
-        reads: { artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone })) },
+        reads: {
+          artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })),
+        },
       });
       return;
     case "max-restarts":
@@ -71,13 +85,16 @@ const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
       });
       return;
     case "state-unverified":
+      // GH-347: an unreadable ledger no longer gates the token, and an
+      // unreadable tracker does not degrade a decisive artifact, so this class
+      // needs BOTH the tracker and the artifact read to fail (§8.5, AC-F4-3).
       // An unreadable ledger cannot establish delivered evidence, so this class
-      // is exposure-only and owes no divergence (the delivered-evidence case is
-      // covered by its own suite).
+      // is exposure-only and owes no divergence (its own suite covers that).
       await repo.run({
         reads: {
           ledger: readFail("ledger", "ledger.read-unreadable"),
           tracker: readFail("tracker", "tracker.read-unreadable"),
+          artifacts: readFail("artifact", "artifact.read-unreadable"),
         },
       });
       return;
@@ -85,9 +102,11 @@ const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
       await repo.run({ evidence: SPAWN_REFUSED_EVIDENCE });
       return;
     case "noop-lane-nothing-to-do":
+      // GH-347: the ledger no-work arm is retired; the token needs no commits,
+      // no pull request, and a readable non-done non-blocked tracker (§8.5).
       await repo.run({
         reads: {
-          artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone })),
+          artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
           ledger: readOk(
             ledger({ completed: 9, total: 9, progressed: false, workRemaining: false }),
           ),

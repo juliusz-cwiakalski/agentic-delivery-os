@@ -7,7 +7,12 @@
  * two consecutive sourced evaluations with no advance. Absent readings keep
  * their declared absence reason and are never coerced to zero.
  */
-import type { EconomicsSourcedSignalAbsenceReason } from "#contracts";
+import { DELIVERY_RESULT_TOKENS, type EconomicsSourcedSignalAbsenceReason } from "#contracts";
+import type {
+  DispatchArtifactFacts,
+  DispatchRead,
+  DispatchTrackerFacts,
+} from "./dispatch-result.js";
 
 /** The four declared progress signals. */
 export const DISPATCH_LIVENESS_SIGNALS = [
@@ -130,4 +135,66 @@ export const evaluateDispatchLiveness = (input: {
   }
 
   return { verdict: "stalled", advancing: [], ...echo };
+};
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 — the stall decision (Appendix F(D), DM-4, TDR-0052).               */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The terminal pre-restart verdict set (DM-4): the ONLY truths that
+ * short-circuit a stall. A decisive artifact outside it (`finished`, `partial`,
+ * `noop-lane-nothing-to-do`) does not stop a stall.
+ */
+/** The three verdicts, taken from the ONE taxonomy (no second token list). */
+const [MERGED, BLOCKED, PR_OPEN] = DELIVERY_RESULT_TOKENS;
+
+export const DISPATCH_TERMINAL_PRE_RESTART_VERDICTS = [MERGED, BLOCKED, PR_OPEN] as const;
+
+export type DispatchTerminalPreRestartVerdict =
+  (typeof DISPATCH_TERMINAL_PRE_RESTART_VERDICTS)[number];
+
+/**
+ * Decide whether a current stall short-circuits.
+ *
+ * `merged` comes from a tracker-done work item (never from a visible PR),
+ * `blocked` from a blocking tracker state, and `pr-open` from an open
+ * pull-request artifact. Any other decisive artifact returns `undefined`, so the
+ * loop restarts (below the bound) instead of accepting it.
+ */
+export const dispatchStallShortCircuit = (input: {
+  readonly tracker: DispatchRead<DispatchTrackerFacts>;
+  readonly artifacts: DispatchRead<DispatchArtifactFacts>;
+}): DispatchTerminalPreRestartVerdict | undefined => {
+  if (input.tracker.ok) {
+    if (input.tracker.value.state === "done") return MERGED;
+    if (input.tracker.value.blocking || input.tracker.value.state === "delivery-blocked") {
+      return BLOCKED;
+    }
+  }
+  if (input.artifacts.ok && input.artifacts.value.pr.state === "open") return PR_OPEN;
+  return undefined;
+};
+
+/**
+ * Whether a stalled session's truth is undecidable (Appendix F(C)(10)/F(D)):
+ * "any required read unreadable and no decisive artifact".
+ *
+ * Both stall reads are required. An unreadable artifact read is undecidable
+ * unless a tracker-terminal short-circuit already decided the stall (the
+ * caller evaluates `dispatchStallShortCircuit` first). An unreadable tracker is
+ * undecidable only when no decisive artifact arm (Appendix F(C) 4-7) can
+ * decide: an open/merged pull request or a branch carrying commits.
+ */
+export const dispatchStallUndecidable = (input: {
+  readonly tracker: DispatchRead<DispatchTrackerFacts>;
+  readonly artifacts: DispatchRead<DispatchArtifactFacts>;
+}): boolean => {
+  if (!input.artifacts.ok) return true;
+  const artifacts = input.artifacts.value;
+  const decisiveArtifact =
+    artifacts.pr.state === "open" ||
+    artifacts.pr.state === "already-merged" ||
+    artifacts.branchCommits > 0;
+  return !input.tracker.ok && !decisiveArtifact;
 };

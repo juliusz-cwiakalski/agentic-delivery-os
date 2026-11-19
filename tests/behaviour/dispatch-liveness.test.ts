@@ -6,10 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  evaluateDispatchLiveness,
+  DISPATCH_LIVENESS_ABSENCE_REASONS,
   type DispatchLivenessReading,
+  dispatchStallShortCircuit,
+  dispatchStallUndecidable,
+  evaluateDispatchLiveness,
 } from "../../packages/core/src/domain/dispatch-liveness";
-import { DISPATCH_LIVENESS_ABSENCE_REASONS } from "../../packages/core/src/domain/dispatch-liveness";
 
 const CADENCE_MS = 30_000;
 
@@ -133,5 +135,123 @@ describe("TC-DISP-005 stall requires two sourced evaluations", () => {
     });
     expect(result.verdict).toBe("unknown");
     expect(result.unknownReason).toBe("all-absent");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-TERM-002 (pure half) and DM-4 — the terminal pre-restart verdict set.    */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-347 the terminal pre-restart verdict set is the only short-circuit", () => {
+  test("a tracker-done work item short-circuits as merged", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: true, value: { state: "done", blocking: false } },
+        artifacts: {
+          ok: true,
+          value: {
+            branchCommits: 0,
+            pr: { state: "none", url: null, mergeReady: false },
+            pmNotes: "absent",
+          },
+        },
+      }),
+    ).toBe("merged");
+  });
+
+  test("a blocking tracker short-circuits as blocked", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: true, value: { state: "delivery-blocked", blocking: true } },
+        artifacts: { ok: false, reason: "artifact" },
+      }),
+    ).toBe("blocked");
+  });
+
+  test("an open PR artifact short-circuits as pr-open", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: false, reason: "tracker" },
+        artifacts: {
+          ok: true,
+          value: {
+            branchCommits: 2,
+            pr: { state: "open", url: "https://example.test/1", mergeReady: true },
+            pmNotes: "complete",
+          },
+        },
+      }),
+    ).toBe("pr-open");
+  });
+
+  test("a decisive artifact OUTSIDE the set does not short-circuit", () => {
+    for (const pmNotes of ["complete", "incomplete", "absent"] as const) {
+      expect(
+        dispatchStallShortCircuit({
+          tracker: { ok: true, value: { state: "in-progress", blocking: false } },
+          artifacts: {
+            ok: true,
+            value: {
+              branchCommits: pmNotes === "absent" ? 0 : 2,
+              pr: { state: "none", url: null, mergeReady: false },
+              pmNotes,
+            },
+          },
+        }),
+        pmNotes,
+      ).toBeUndefined();
+    }
+  });
+
+  test("undecidable truth is any unreadable required read with no decisive artifact", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F6-3; Appendix F(C)(10)/F(D)
+    // "any required read unreadable and no decisive artifact"; review M3): the
+    // delivered assertion treated a READABLE tracker beside an unreadable
+    // artifact as decidable, so the stall restarted on truth it could not read.
+    // The artifact read is required for the stall decision; only a decisive
+    // artifact (Appendix F(C) arms 4-7) makes an unreadable tracker decidable.
+    const unreadableTracker = { ok: false as const, reason: "tracker" as const };
+    const unreadableArtifacts = { ok: false as const, reason: "artifact" as const };
+    const readableTracker = {
+      ok: true as const,
+      value: { state: "in-progress" as const, blocking: false },
+    };
+    const noArtifact = {
+      ok: true as const,
+      value: {
+        branchCommits: 0,
+        pr: { state: "none" as const, url: null, mergeReady: false },
+        pmNotes: "complete" as const,
+      },
+    };
+    const commitsArtifact = {
+      ok: true as const,
+      value: {
+        branchCommits: 2,
+        pr: { state: "none" as const, url: null, mergeReady: false },
+        pmNotes: "complete" as const,
+      },
+    };
+
+    expect(
+      dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: unreadableArtifacts }),
+    ).toBe(true);
+    // A readable NON-TERMINAL tracker beside an unreadable artifact is terminal
+    // state-unverified, never a restart.
+    expect(
+      dispatchStallUndecidable({ tracker: readableTracker, artifacts: unreadableArtifacts }),
+    ).toBe(true);
+    // An unreadable tracker with NO decisive artifact is undecidable.
+    expect(dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: noArtifact })).toBe(
+      true,
+    );
+    // A decisive artifact keeps the truth decidable even with no tracker.
+    expect(
+      dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: commitsArtifact }),
+    ).toBe(false);
+    // Readable truth with no decisive artifact is decidable.
+    expect(dispatchStallUndecidable({ tracker: readableTracker, artifacts: noArtifact })).toBe(
+      false,
+    );
   });
 });

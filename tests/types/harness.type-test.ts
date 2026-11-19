@@ -13,10 +13,14 @@ import type {
   HarnessLivenessKind,
   HarnessResumeInput,
   HarnessSeatBinding,
+  HarnessSessionPort,
   HarnessSpawnInput,
   HarnessTelemetryRecord,
+  HarnessTerminateInput,
+  HarnessTerminateResult,
 } from "../../packages/core/src/contracts/index";
 import type { HarnessCapabilityInspection } from "../../packages/core/src/domain/harness-capability";
+import { spawnTitleFor } from "../../packages/core/src/domain/dispatch-identity";
 
 const kind: HarnessKind = "opencode";
 const execution: HarnessExecutionKind = "host";
@@ -119,3 +123,99 @@ export type HarnessProbes = [
 ];
 
 export { rejectedSeatMap, spawnWithAgent, spawnWithoutMembers };
+
+/* GH-347: the ADDITIVE optional members — a port double without `terminate`
+ * and a spawn without `title` stay valid; a terminate-capable port is the same
+ * type, and the title helper yields a token (or the declared absence). */
+
+const phaseOneEvidence: HarnessEvidence = {
+  completionMarker: true,
+  exitStatus: 0,
+  timedOut: false,
+  spawnRefused: false,
+  failureReported: false,
+  toolFailure: false,
+};
+
+/** A port double that declares no terminate member: still a full port. */
+const portWithoutTerminate: HarnessSessionPort = {
+  spawn: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
+  deliver: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
+  resume: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
+  collect: async () => ({ ok: true, value: phaseOneEvidence }),
+  classify: () => ({ outcome: "completed", token: "finished", derivationClass: "verify" }),
+  liveness: async () => ({ ok: true, value: { readings: [] } }),
+  listSessions: async () => ({ ok: true, value: { handles: [] } }),
+};
+
+/** A port double that declares and implements terminate: the same type. */
+const portWithTerminate: HarnessSessionPort = {
+  ...portWithoutTerminate,
+  terminate: async (input: HarnessTerminateInput) => ({
+    ok: true,
+    value: {
+      terminated: true,
+      escalated: input.graceMs >= 0,
+      reaped: false,
+    },
+  }),
+};
+
+type SpawnTitleIsOptional = Expect<Equal<HarnessSpawnInput["title"], string | undefined>>;
+type TerminateResultIsThreeBooleans = Expect<
+  Equal<
+    HarnessTerminateResult,
+    { readonly terminated: boolean; readonly escalated: boolean; readonly reaped: boolean }
+  >
+>;
+type TitleHelperYieldsAStringOrNothing = Expect<
+  Equal<ReturnType<typeof spawnTitleFor>, string | undefined>
+>;
+
+/** A spawn without a title stays assignable; one with a title carries a plain token. */
+const spawnWithoutTitle: HarnessSpawnInput = {
+  workItemRef: "GH-347",
+  prompt: "synthetic",
+  descriptor,
+};
+const spawnWithTitle: HarnessSpawnInput = {
+  workItemRef: "GH-347",
+  prompt: "synthetic",
+  descriptor,
+  title: "ticket-GH-347",
+};
+
+/** A terminate report carries exactly the three declared booleans. */
+const terminateReport: HarnessTerminateResult = {
+  terminated: true,
+  escalated: true,
+  reaped: false,
+  // @ts-expect-error — no fourth member and no identity is carried.
+  code: "harness.terminate.failed",
+};
+
+/** A member that does not match the optional terminate signature is refused. */
+const portWithWrongTerminate: HarnessSessionPort = {
+  ...portWithoutTerminate,
+  // @ts-expect-error — terminate resolves a report, never a bare boolean.
+  terminate: async () => true,
+};
+
+/** A title is a string when present: never a structured object. */
+const titleAsString: string | undefined = spawnWithTitle.title;
+
+export type HarnessPhaseOneProbes = [
+  SpawnTitleIsOptional,
+  TerminateResultIsThreeBooleans,
+  TitleHelperYieldsAStringOrNothing,
+];
+
+export {
+  portWithoutTerminate,
+  portWithTerminate,
+  portWithWrongTerminate,
+  spawnWithTitle,
+  spawnWithoutTitle,
+  terminateReport,
+  titleAsString,
+};

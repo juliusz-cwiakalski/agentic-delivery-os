@@ -50,6 +50,22 @@ $ <binary> config --debug --json | head -20
 }
 ```
 
+## CONFIGURATION CONSUMED BY DISPATCH
+
+The typed dispatch lane adds no configuration key and changes no default. It
+consumes four delivered policy values as data:
+
+| Key | Default | Use |
+|---|---|---|
+| `lane.restart-budget` | `3` | The in-process restart bound. A non-positive value composes no restart policy, so the loop never auto-restarts. |
+| `lane.liveness-interval` | `30000` ms | The liveness evaluation cadence while evidence collection is pending. |
+| `coordinator.kill-grace` | `20000` ms | The terminate grace: TERM first, KILL only after the grace. |
+| `queue.lease-ttl` | `90000` ms | The lease staleness bound and the ceiling on the admission fence wait. |
+
+`coordinator.restart-budget` governs coordinator supervision and is not consumed
+by dispatch. The terminate grace reuses `coordinator.kill-grace` rather than
+duplicating a signalling constant.
+
 ## ERRORS
 
 `config.invalid` (fail closed, file and line named).

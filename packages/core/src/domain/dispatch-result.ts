@@ -13,8 +13,10 @@ import {
   DELIVERY_RESULT_TOKENS,
   HARNESS_OUTCOMES,
   type DeliveryResultToken,
+  type DispatchCorroborationArm,
   type DispatchHandoverState,
   type HarnessOutcome,
+  type PmNotesCompleteness,
   type ProjectionClass,
 } from "#contracts";
 
@@ -27,7 +29,7 @@ type DispatchToken = DeliveryResultToken;
  * pr-open-unverified, `f` failed, `mr` max-restarts, `su` state-unverified,
  * `np` noop-lane-permission, `nn` noop-lane-nothing-to-do.
  */
-const [m, b, po, pou, f, , mr, su, , np, nn] = DELIVERY_RESULT_TOKENS;
+const [m, b, po, pou, f, fin, mr, su, par, np, nn] = DELIVERY_RESULT_TOKENS;
 const [, , O_FAILED, O_REFUSED] = HARNESS_OUTCOMES;
 
 /** One injected truth read: the value, or a classified unreadable reason. */
@@ -47,10 +49,19 @@ export type DispatchPrFact = {
   readonly mergeReady: boolean;
 };
 
-/** The artifact read: branch commits plus the independently observed PR fact. */
+/**
+ * The artifact read: branch commits, the independently observed PR fact, and
+ * the required pm-notes completeness projection (GH-347 DM-3, TDR-0053).
+ *
+ * `complete` is a present document whose delivery phase carries a non-null
+ * completion; `absent` is no document; `incomplete` is present but incomplete,
+ * unparseable, or otherwise not complete. The fallible direction is never
+ * `complete`.
+ */
 export type DispatchArtifactFacts = {
   readonly branchCommits: number;
   readonly pr: DispatchPrFact;
+  readonly pmNotes: PmNotesCompleteness;
 };
 
 /** The phase-ledger fact, including whether this dispatch advanced it. */
@@ -101,6 +112,35 @@ export type DispatchTruthInput = {
   readonly resumeAdmission?: DispatchResumeAdmission;
 };
 
+/**
+ * The closed arm ids of the total ladder (GH-347 Appendix F, AC-F8-5).
+ *
+ * Module-internal by design: it instruments the one derivation for the
+ * per-input disjointness assertion and is never a contract, a token, or a
+ * projection. Each derivation return names exactly the ONE arm that produced
+ * it, so no two arms can claim the same input.
+ */
+const DISPATCH_RESULT_ARM_IDS = [
+  "spawn-failure",
+  "resume-uneconomical",
+  "resume-unreadable",
+  "restart-budget",
+  "harness-unreadable",
+  "spawn-refused",
+  "tracker-done",
+  "blocking",
+  "open-pr",
+  "open-pr-unverified",
+  "already-merged",
+  "commits-complete",
+  "commits-incomplete",
+  "nothing-to-do",
+  "classifier",
+  "undecidable",
+] as const;
+
+type DispatchResultArmId = (typeof DISPATCH_RESULT_ARM_IDS)[number];
+
 /** The pure derivation verdict: a token, its outcome, and its projection class. */
 export type DispatchDerivation = {
   readonly token: DispatchToken;
@@ -112,9 +152,21 @@ export type DispatchDerivation = {
   readonly urlResolved: boolean;
   readonly lastMessage: string;
   readonly missingArtifact?: "branch-commit" | "pull-request" | "ledger-progress";
+  /**
+   * The one closed ladder arm that produced this verdict (AC-F8-5
+   * disjointness). Instrumentation for the derivation's own proof; it is not a
+   * token, a projection, or a persisted field.
+   */
+  readonly armId?: string;
   /** The classified error identity for a derived failure, never prose. */
   readonly errorCode?: string;
   readonly readFailure?: DispatchReadFailure;
+  /**
+   * The closed corroboration arm, decided ONCE here at the two arm-aware
+   * branches (GH-347 DEC-6, TDR-0053) and passed unchanged to both evaluation
+   * sites. Absent for every other token, whose requirement is token-keyed.
+   */
+  readonly corroborationArm?: DispatchCorroborationArm;
 };
 
 const projectionOf = (value: DeliveryResultToken): ProjectionClass => {
@@ -132,8 +184,10 @@ const base = (
     readonly urlResolved?: boolean;
     readonly lastMessage: string;
     readonly missingArtifact?: DispatchDerivation["missingArtifact"];
+    readonly armId: DispatchResultArmId;
     readonly errorCode?: string;
     readonly readFailure?: DispatchReadFailure;
+    readonly corroborationArm?: DispatchCorroborationArm;
   },
 ): DispatchDerivation => ({
   token: fields.token,
@@ -143,9 +197,11 @@ const base = (
   handoverState: input.handoverState,
   urlResolved: fields.urlResolved ?? false,
   lastMessage: fields.lastMessage,
+  armId: fields.armId,
   ...(fields.missingArtifact === undefined ? {} : { missingArtifact: fields.missingArtifact }),
   ...(fields.errorCode === undefined ? {} : { errorCode: fields.errorCode }),
   ...(fields.readFailure === undefined ? {} : { readFailure: fields.readFailure }),
+  ...(fields.corroborationArm === undefined ? {} : { corroborationArm: fields.corroborationArm }),
 });
 
 /**
@@ -162,6 +218,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: f,
       outcome: O_FAILED,
       lastMessage: "spawn failed before a session existed",
+      armId: "spawn-failure",
       errorCode: "dispatch.session.spawn-failed",
     });
   }
@@ -172,6 +229,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         token: f,
         outcome: O_FAILED,
         lastMessage: "resume refused: the prefill re-pay is uneconomical",
+        armId: "resume-uneconomical",
         errorCode: "dispatch.resume-uneconomical",
       });
     }
@@ -179,24 +237,28 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: su,
       outcome: O_FAILED,
       lastMessage: "resume admission could not read its token or cost facts",
+      armId: "resume-unreadable",
       errorCode: "dispatch.state-unverified",
       readFailure: "state",
     });
   }
 
-  // The budget governs admission of a further attempt, never a session that
-  // already completed successfully: a completed session keeps its own
-  // classification instead of being re-keyed to a restart refusal.
-  const harnessCompleted = input.harness.ok && input.harness.value.outcome === HARNESS_OUTCOMES[0];
+  // GH-347 AC-F6-4/AC-F6-6, §8.5 "Persisted-bound re-key narrowed": the re-key
+  // fires ONLY for the restart-eligible harness-reported timeout (a terminal
+  // stall). A clean exit, a premature end, a tool failure, or a non-zero exit at
+  // the bound keeps its own classification; the loop remains the producer of
+  // `max-restarts` for the stall path (it records directly and never re-derives).
+  const restartEligibleTimeout = input.harness.ok && input.harness.value.outcome === "timed-out";
   if (
     input.restarts.bound > 0 &&
     input.restarts.count >= input.restarts.bound &&
-    !harnessCompleted
+    restartEligibleTimeout
   ) {
     return base(input, {
       token: mr,
       outcome: O_FAILED,
       lastMessage: `restart budget exhausted at ${input.restarts.count} of ${input.restarts.bound}`,
+      armId: "restart-budget",
       errorCode: "dispatch.restart-budget-exceeded",
     });
   }
@@ -206,6 +268,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: su,
       outcome: O_FAILED,
       lastMessage: `harness read unreadable (${input.harness.identity ?? "harness"})`,
+      armId: "harness-unreadable",
       errorCode: "dispatch.state-unverified",
       readFailure: "state",
     });
@@ -216,96 +279,162 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: np,
       outcome: O_REFUSED,
       lastMessage: "the harness refused before a session existed (spawn-refused)",
+      armId: "spawn-refused",
     });
   }
 
-  for (const read of [input.ledger, input.tracker, input.artifacts] as const) {
-    if (!read.ok) {
+  // GH-347 Appendix F — the ONE total order, shared unchanged by the one-shot
+  // and daemon paths. The tracker arms precede every artifact read, so an
+  // unreadable artifact or ledger never degrades a decisive tracker verdict.
+  const harness = input.harness.value;
+  if (input.tracker.ok) {
+    const tracker = input.tracker.value;
+    if (tracker.state === "done") {
       return base(input, {
-        token: su,
-        outcome: O_FAILED,
-        lastMessage: `truth read unreadable (${read.identity ?? read.reason})`,
-        errorCode: "dispatch.state-unverified",
-        readFailure: read.reason,
+        token: m,
+        outcome: harness.outcome,
+        lastMessage: "the tracker work item is done",
+        armId: "tracker-done",
+        corroborationArm: "tracker-done-merged",
+      });
+    }
+    if (tracker.blocking || tracker.state === "delivery-blocked") {
+      return base(input, {
+        token: b,
+        outcome: harness.outcome,
+        lastMessage: "the tracker reports a delivery-blocking state",
+        armId: "blocking",
       });
     }
   }
 
-  // Every read is readable from here; narrow for the rest of the derivation.
-  const harness = input.harness.value;
-  const ledger = input.ledger.ok ? input.ledger.value : undefined;
-  const tracker = input.tracker.ok ? input.tracker.value : undefined;
-  const artifacts = input.artifacts.ok ? input.artifacts.value : undefined;
-  if (ledger === undefined || tracker === undefined || artifacts === undefined) {
-    return base(input, {
-      token: su,
-      outcome: O_FAILED,
-      lastMessage: "truth read unreadable",
-      errorCode: "dispatch.state-unverified",
-      readFailure: "state",
-    });
-  }
+  // Appendix F(C) arms 4-7 are the DECISIVE ARTIFACT arms and apply to EVERY
+  // ENDED, non-stall session — never only to a `finished` classifier token
+  // (AC-F4-3: "completed session ... the artifact verdict is the result"; §8.5
+  // "After a completed session, derivation is artifact-first"). A harness-
+  // reported timeout IS a terminal stall (Appendix F(D)) and is the loop's
+  // decision, so it never takes an artifact arm.
+  const completedSession = harness.token === fin;
+  const stalledSession = harness.outcome === "timed-out";
 
-  if (tracker.blocking || tracker.state === "delivery-blocked") {
-    return base(input, {
-      token: b,
-      outcome: harness.outcome,
-      lastMessage: "the tracker reports a delivery-blocking state",
-    });
-  }
-
-  const pr = artifacts.pr;
-  if (pr.state === "already-merged") {
-    return base(input, {
-      token: m,
-      outcome: harness.outcome,
-      prUrl: pr.url ?? "",
-      urlResolved: pr.url !== null && pr.url.length > 0,
-      lastMessage: "the pull request is already merged (detection only)",
-    });
-  }
-
-  if (pr.state === "open") {
-    const resolved = pr.url !== null && pr.url.length > 0;
-    return base(input, {
-      token: resolved ? po : pou,
-      outcome: harness.outcome,
-      prUrl: resolved ? (pr.url as string) : "",
-      urlResolved: resolved,
-      lastMessage: resolved
-        ? "the pull request is open and awaits the coordinator's merge decision"
-        : "the pull request is open; its URL could not be resolved",
-    });
-  }
-
-  if (ledger.total > 0 && ledger.completed === ledger.total && !ledger.workRemaining) {
+  if (input.artifacts.ok) {
+    const artifacts = input.artifacts.value;
+    const pr = artifacts.pr;
+    if (stalledSession) {
+      // A harness-reported timeout belongs to the stall ladder (Appendix F(D)):
+      // this ladder yields only the shared classifier's token for it.
+      return base(input, {
+        token: harness.token,
+        outcome: harness.outcome,
+        lastMessage: `the shared classifier reported ${harness.outcome}`,
+        armId: "classifier",
+      });
+    }
+    if (pr.state === "open") {
+      const resolved = pr.url !== null && pr.url.length > 0;
+      return base(input, {
+        token: resolved ? po : pou,
+        outcome: harness.outcome,
+        prUrl: resolved ? (pr.url as string) : "",
+        urlResolved: resolved,
+        lastMessage: resolved
+          ? "the pull request is open and awaits the coordinator's merge decision"
+          : "the pull request is open; its URL could not be resolved",
+        armId: resolved ? "open-pr" : "open-pr-unverified",
+      });
+    }
+    if (pr.state === "already-merged") {
+      return base(input, {
+        token: m,
+        outcome: harness.outcome,
+        prUrl: pr.url ?? "",
+        urlResolved: pr.url !== null && pr.url.length > 0,
+        lastMessage: "the pull request is already merged (detection only)",
+        armId: "already-merged",
+      });
+    }
+    if (artifacts.branchCommits > 0) {
+      return artifacts.pmNotes === "complete"
+        ? base(input, {
+            token: fin,
+            outcome: harness.outcome,
+            lastMessage: "the branch carries commits and the pm-notes are complete",
+            armId: "commits-complete",
+          })
+        : base(input, {
+            token: par,
+            outcome: harness.outcome,
+            lastMessage: "the branch carries commits but the pm-notes are not complete",
+            armId: "commits-incomplete",
+          });
+    }
+    // Arm 8 is the ONE arm whose reading is a tracker judgement about a clean
+    // completion, not an artifact verdict: "nothing was attempted" is only
+    // observable when the session completed. A non-clean end keeps its own
+    // classifier token at arm 9 (Appendix F(C)(9)).
+    if (!completedSession) {
+      return base(input, {
+        token: harness.token,
+        outcome: harness.outcome,
+        lastMessage: `the shared classifier reported ${harness.outcome}`,
+        armId: "classifier",
+      });
+    }
+    // No commits and no pull request: the shell arm needs a READABLE, non-done,
+    // non-blocked tracker (already established above). An unreadable tracker
+    // never takes the arm.
+    if (!input.tracker.ok) {
+      return base(input, {
+        token: su,
+        outcome: O_FAILED,
+        lastMessage: `truth read unreadable (${input.tracker.identity ?? input.tracker.reason})`,
+        armId: "undecidable",
+        errorCode: "dispatch.state-unverified",
+        readFailure: input.tracker.reason,
+      });
+    }
     return base(input, {
       token: nn,
       outcome: harness.outcome,
       lastMessage: "the lane has no remaining work",
+      armId: "nothing-to-do",
+      corroborationArm: "nothing-to-do",
     });
   }
 
-  const noArtifact =
-    harness.outcome === HARNESS_OUTCOMES[0] &&
-    harness.exitStatus === 0 &&
-    artifacts.branchCommits === 0 &&
-    pr.state === "none" &&
-    !ledger.progressed;
-  if (noArtifact) {
+  // Arm 9 precedes arm 10: a non-clean end with no readable artifact keeps the
+  // shared classifier's token (its arm is exhaustive over the session outcome),
+  // and only a clean completion whose truth is unreadable is undecidable.
+  if (!completedSession) {
     return base(input, {
-      token: f,
-      outcome: O_FAILED,
-      lastMessage:
-        "the session exited 0 with no branch commit, no pull request, and no ledger progress",
-      missingArtifact: "branch-commit",
+      token: harness.token,
+      outcome: harness.outcome,
+      lastMessage: `the shared classifier reported ${harness.outcome}`,
+      armId: "classifier",
     });
   }
 
+  // The artifact read is unreadable and no tracker verdict decided the outcome.
+  // The disclosed reason follows the delivered unreadable-truth preference
+  // (tracker before artifact), so the failure identity named to the operator is
+  // the same one that decided undecidability.
+  if (!input.tracker.ok) {
+    return base(input, {
+      token: su,
+      outcome: O_FAILED,
+      lastMessage: `truth read unreadable (${input.tracker.identity ?? input.tracker.reason})`,
+      armId: "undecidable",
+      errorCode: "dispatch.state-unverified",
+      readFailure: input.tracker.reason,
+    });
+  }
   return base(input, {
-    token: harness.token,
-    outcome: harness.outcome,
-    lastMessage: `the shared classifier reported ${harness.outcome}`,
+    token: su,
+    outcome: O_FAILED,
+    lastMessage: `truth read unreadable (${input.artifacts.identity ?? input.artifacts.reason})`,
+    armId: "undecidable",
+    errorCode: "dispatch.state-unverified",
+    readFailure: input.artifacts.reason,
   });
 };
 

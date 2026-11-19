@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-15
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed), and the one-lifecycle cross-repository change: one spec, plan, test plan, and shared definition of done over a declared member set with a branch and pull request per member and one review flow."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310", "GH-347"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -156,6 +156,12 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - `@doc-syncer` reconciles affected current-truth docs and closes documentation gaps in-change, including first-authoring a missing feature spec when a modified feature area warrants one. It never modifies source code or change artifacts, and never creates a tracker ticket for documentation coverage handoff.
 - Phase definitions in `.opencode/agent/pm.md` are the operational source of truth for the phase list; the guide mirrors them.
 
+### Delivery execution lanes
+
+The eleven phases are executed by a session. The typed dispatch lane is the engine that runs one, and it is parity-complete for the eleven result classes and the shell's supervision semantics: a durable per-ref lane record, an atomic admission verdict, recorded-attempt resume, the tracker retry ladder, the stall termination, the in-process bounded restart loop, and the resolved spawn identity, title, and lifecycle prompt. It has no shell dependency: every harness process is a fixed argv with no shell and no script path, and the offline parity battery reproduces the eleven classes with no live network, no real child process, and no wall-clock assertion ([Dispatch Engine](feature-dispatch-engine.md)).
+
+The shell entry points remain the documented fallback and stay executable. Their retirement is a separate owner act, not a consequence of the typed lane reaching parity; until that act, a repository in `dual-run` keeps the shell as its authoritative path and the typed lane records evidence beside it ([Autonomous Delivery](feature-autonomous-delivery.md)).
+
 ## Non-Functional Requirements
 
 | ID | Category | Requirement | Threshold |
@@ -194,6 +200,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the 11-phase owner/agent table ("Delivery process").
 - **Sibling spec:** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation) are that spec's scope.
 - **Cross-repository surfaces:** [feature-plan-schema.md](feature-plan-schema.md) (the member declaration), [feature-scheduling-engine.md](feature-scheduling-engine.md) (per-member entries and ordering), [feature-verify-gates.md](feature-verify-gates.md) (the shared definition of done and review flow), and [feature-closeout.md](feature-closeout.md) (the per-member report).
+- **Execution lanes:** [feature-dispatch-engine.md](feature-dispatch-engine.md) (the typed lane that runs one session and its parity proof boundary) and [feature-harness-adapters.md](feature-harness-adapters.md) (the session port and the terminate operation).
 - **Finalization verification:** [feature-verify-change-and-exit-taxonomy.md](feature-verify-change-and-exit-taxonomy.md) — the read-only ledger verdict and delivery-result exit taxonomy used at `dod_check`.
 
 ## Merge-gate stage

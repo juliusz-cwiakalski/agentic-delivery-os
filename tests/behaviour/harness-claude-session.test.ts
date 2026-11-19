@@ -6,6 +6,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  CLAUDE_CAPABILITIES,
   createClaudeSession,
   createOpencodeSession,
 } from "../../packages/adapters/src/harness/index";
@@ -242,5 +243,22 @@ describe("TC-HARN-011 Claude Code headless session", () => {
     expect(facts.ok).toBe(true);
     if (!facts.ok) return;
     expect(port.classify(facts.value).outcome).toBe("premature-end");
+  });
+});
+
+describe("GH-347 the Claude port carries its own capability declaration", () => {
+  test("the port reports CLAUDE_CAPABILITIES with the terminate gap and no terminate member", () => {
+    // R13 (review N1): the engine's terminate gate reads the session port's
+    // declaration. The claude adapter DECLARES the gap, so the declaration must
+    // ride the object the composition mounts; on the reviewed HEAD the port
+    // exposed none and the gate fell through to "capable".
+    const { port } = makeClaude(() => runnerResult(completed));
+    expect(port.capabilities).toBe(CLAUDE_CAPABILITIES);
+    expect(port.capabilities?.supportedOperations).not.toContain("terminate");
+    expect(port.capabilities?.declaredGaps).toContainEqual({
+      capability: "terminate",
+      reason: "headless-mode-limitation",
+    });
+    expect(port.terminate).toBeUndefined();
   });
 });

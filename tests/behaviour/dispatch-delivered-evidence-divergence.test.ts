@@ -21,12 +21,23 @@ import { DISPATCH_READ_FAILURE_SOURCES } from "../../packages/core/src/domain/di
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE, SPAWN_REFUSED_EVIDENCE } from "../fixtures/dispatch/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
-import { ledger, readFail, readOk } from "../fixtures/dispatch/truth";
+import { artifacts, ledger, prNone, readFail, readOk, tracker } from "../fixtures/dispatch/truth";
 
 const REPOSITORY = "github.com/owner/repo";
 
+/**
+ * The delivered-but-unverifiable truth: BOTH the tracker and the artifact reads
+ * fail, so the truth is undecidable and the derivation yields
+ * `state-unverified`. (GH-347 AC-F4-3: a decisive artifact survives an
+ * unreadable tracker, so an unreadable tracker alone is no longer
+ * `state-unverified`; the clause is §8.5 "a decisive artifact survives an
+ * unreadable tracker".)
+ */
 const deliveredReads = () =>
-  readsFrom({ tracker: readFail("tracker", "config.credential.missing") });
+  readsFrom({
+    tracker: readFail("tracker", "config.credential.missing"),
+    artifacts: readFail("artifact", "artifact.read-unreadable"),
+  });
 
 const onlyDivergence = (store: StateStorePort) => {
   const read = readDispatchDivergences(store);
@@ -499,6 +510,84 @@ describe("TC-DIVREC-011 a failed attempt append leaves a standing open divergenc
         | { readonly divergences?: { readonly unresolved?: number } }
         | undefined;
       expect(afterData?.divergences?.unresolved).toBe(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-004 — R7: a divergent ledger still yields `finished` (AC-F8-3).  */
+/* ------------------------------------------------------------------------- */
+
+const divergentReads = (verifyOutcome: "partial" | null) =>
+  readsFrom({
+    artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "complete" })),
+    ledger: readOk(ledger({ completed: 5, total: 9, progressed: false, workRemaining: true })),
+    tracker: readOk(tracker()),
+    phasesComplete: false,
+    verifyOutcome: verifyOutcome === null ? null : "partial",
+  });
+
+describe("TC-DERIVE-004 a divergent ledger still yields finished; falseSuccess is never suppressed", () => {
+  test("row (a): no verify outcome — finished, pm-notes unsatisfied, falseSuccess true, zero divergences", async () => {
+    const scenario = createCommandScenario({
+      label: "derive-004-a",
+      evidence: COMPLETED_EVIDENCE,
+      reads: divergentReads(null),
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.envelope?.data?.result).toBe("finished");
+      const attempts = readDispatchAttempts(scenario.state.store);
+      if (!attempts.ok) throw new Error("attempt read failed");
+      expect(attempts.records).toHaveLength(1);
+      const attempt = attempts.records[0];
+      expect(attempt?.token).toBe("finished");
+      expect(attempt?.corroboration.pmNotes).toBe("unsatisfied");
+      expect(attempt?.falseSuccess).toBe(true);
+      expect(attempt?.comparison.class).toBe("not-applicable");
+      // The delivered-evidence divergence path is `state-unverified`-gated, so a
+      // `finished` produces exactly zero of that shape.
+      const divergences = onlyDivergence(scenario.state.store);
+      expect(
+        divergences.records.filter(
+          (record) =>
+            record.comparisonClass === "not-applicable" &&
+            record.engineToken === "state-unverified" &&
+            record.comparisonToken === null,
+        ),
+      ).toHaveLength(0);
+      expect(divergences.records).toHaveLength(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("row (b): a non-complete verify outcome appends one delivered verify-change record", async () => {
+    const scenario = createCommandScenario({
+      label: "derive-004-b",
+      evidence: COMPLETED_EVIDENCE,
+      reads: divergentReads("partial"),
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.envelope?.data?.result).toBe("finished");
+      const divergences = onlyDivergence(scenario.state.store);
+      expect(divergences.records).toHaveLength(1);
+      const record = divergences.records[0];
+      expect(record?.comparisonClass).toBe("verify-change");
+      expect(record?.engineToken).toBe("finished");
+      expect(record?.state).toBe("open");
+      // The delivered verify-change shape records the compared engine token,
+      // never a new incident kind or a new divergence class.
+      expect(record?.comparisonToken).toBe("finished");
+      const attempts = readDispatchAttempts(scenario.state.store);
+      if (!attempts.ok) throw new Error("attempt read failed");
+      expect(attempts.records[0]?.falseSuccess).toBe(true);
+      expect(attempts.records[0]?.corroboration.pmNotes).toBe("unsatisfied");
     } finally {
       scenario.dispose();
     }

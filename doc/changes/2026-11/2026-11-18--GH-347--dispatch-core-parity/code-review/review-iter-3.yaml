@@ -1,0 +1,214 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-347
+branch: feat/GH-347/dispatch-core-parity
+status: PASS
+verdict: PASS_WITH_NOTES
+summary: >-
+  Iteration 3 re-review after the review-iteration-2 remediation (plan phase 10,
+  commit 6ae1ae2d plus the pm-notes evidence append f9e66b68 and the five-page doc
+  re-verification 6bf6395f/2e15dec4/33d7d44e). The four iteration-2 findings are
+  closed in PRODUCTION: N1 (inert capability gate) now reads a declaration that the
+  production session ports actually carry, and a production-composed TC-TERM-007 case
+  drives createClaudeSession's own port through a below-bound stall to terminal
+  state-unverified at exit 2 with one spawn, zero restarts and no second session; N2
+  (unexercised unconfirmed-termination branch) is proven by the new terminateConfirms:false
+  case; N3 (14-vs-16 closed arm set) is corrected in both the test mirror and test plan
+  0.6; N4 (dead signalProcess seam / stale wording) is removed and corrected. The
+  iteration-1 findings that interact with phase 10 re-verify fixed: B2 (gate now
+  reachable in production), M1/M2 (declared-grace process-tree terminate and
+  resume-clears), M5 (the new cases are non-vacuous; realChildStarts is a live counter),
+  M6 (all three delivered assertions restored). Targeted suites (stall-loop, composition,
+  derivation, adapter declaration, parity battery, no-shell, token-closure,
+  restart-budget), the pinned-surface suites (inventory/invariance/stream contract/
+  exports parity), the doc-conformance/distribution suites, typecheck and the package
+  boundaries are all green; plan validate = valid (tier full, readyForDevelopment true).
+  No pinned surface moved; all ten plan phases carry pm-notes completion evidence. No
+  blocking, high or medium finding remains. Three info-level residuals persist (loose
+  "reap" wording on two current-truth pages plus the glossary; the 16-id mirror is a
+  local copy guarded only by a count assertion; and the documented fail-open default on
+  an undeclared port). None asserts anything false and none blocks merge.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+dispositions:
+  - finding: N1
+    verdict: Resolved
+    evidence: >-
+      Production proof verified end-to-end. createClaudeSession returns
+      capabilities: CLAUDE_CAPABILITIES (packages/adapters/src/harness/claude.ts:161);
+      CLAUDE_CAPABILITIES.supportedOperations = ["spawn","collect"] with no terminate
+      (claude.ts:29-53). createOpencodeSession returns its RESOLVED declaration
+      (packages/adapters/src/harness/opencode.ts:694-698) and OPENCODE_CAPABILITIES
+      includes terminate (opencode.ts:51-57). declaresTerminate reads the typed member
+      with no cast (packages/core/src/app/dispatch.ts:661-664). The composition fills an
+      ABSENT declaration and never overrides a present one
+      (packages/cli/src/production.ts:563-567, applied inside harnessFor at
+      production.ts:2488-2490, mounted at production.ts:3144-3153; the claude mount is
+      the adapter port itself). PRODUCTION-composed regression:
+      tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts TC-TERM-007
+      "the PRODUCTION claude adapter declaration stops a below-bound stall before any
+      second session" drives createClaudeSession's own port and asserts result
+      state-unverified, exit 2, restarts 0, attempts length 1, spawnInvocations 1
+      (no second session). Adapter-port declaration assertions:
+      tests/behaviour/harness-claude-session.test.ts (port.capabilities toBe
+      CLAUDE_CAPABILITIES, terminate absent), tests/behaviour/harness-opencode-resume-stream.test.ts
+      (toBe OPENCODE_CAPABILITIES; an injected override reported verbatim), and the
+      source-level composition assertion in tests/structure/dispatch-composition.test.ts.
+      Ran green. Double-only proof is no longer the sole evidence.
+  - finding: N2
+    verdict: Resolved
+    evidence: >-
+      The unconfirmed-termination branch is now exercised. Fixture option terminateConfirms:false
+      returns {terminated:false, escalated:false, reaped:false}
+      (tests/fixtures/dispatch/parity/terminate.ts:346-354); new case
+      "an unconfirmed termination also starts no second session"
+      (tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts, TC-TERM-005) asserts
+      result state-unverified, exit 2, restarts 0, one attempt carrying terminate:failed
+      and liveness:stalled, zero resumes, terminateCalls length 1 at graceMs 20_000. The
+      engine's gate (!terminateCapable || !terminationConfirmed, dispatch.ts:1245) fires
+      on terminationConfirmed === false. Ran green. PM note 56 withdraws the earlier
+      overstated claim.
+  - finding: N3
+    verdict: Resolved
+    evidence: >-
+      tests/behaviour/dispatch-truth-derivation.test.ts:577-600 mirrors the canonical
+      16-id set (restart-budget and undecidable included) with expect(declared.size).toBe(16)
+      and names DISPATCH_RESULT_ARM_IDS (packages/core/src/domain/dispatch-result.ts:123-140,
+      16 entries) as the source; the test plan advances to 0.6 (chg-GH-347-test-plan.md:1329,
+      0.6 revision row) stating 16 and naming the two non-table arms. Ran green.
+  - finding: N4
+    verdict: Resolved
+    evidence: >-
+      signalProcess is removed from the adapter seam type (packages/adapters/src/harness/opencode.ts:118-125)
+      and is absent from production (tests/structure/dispatch-composition.test.ts:772
+      asserts production does not contain it) — the fixture-local model.signalProcess is
+      its own process simulation, not a dangling production reference. reaped is documented
+      as the exact-identity MATCH, not an OS reap (opencode.ts:763-770; packages/core/src/contracts/harness.ts:517-526).
+      The process-runner header now states the live permitted-start counter semantics
+      (tests/fixtures/dispatch/parity/process-runner.ts:8-9).
+iteration_1_rechecks:
+  - finding: B2
+    verdict: Resolved
+    evidence: >-
+      The capability gate is now reachable in production because both production session
+      ports declare; a below-bound stall on the claude port stops before any second
+      session (production TC-TERM-007, exit 2 / one spawn / zero restarts).
+  - finding: M1
+    verdict: Resolved
+    evidence: >-
+      Terminate uses the declared grace via the injected wait (opencode.ts:754), signals
+      the matched tree first and KILLs only survivors (opencode.ts:751-762), matches by
+      exact identity (opencode.ts:744-748, exactIdentityTargets:194-203), and production
+      signals the group (production.ts:540-550, `-pid` then `pid` fallback).
+  - finding: M2
+    verdict: Resolved
+    evidence: >-
+      A resume re-registers the session record without copying `termination`
+      (opencode.ts:680-690), clearing the recorded fact so iteration 2+ is signalable; the
+      double mirrors it by deleting the id from its `terminated` set on resume
+      (tests/fixtures/dispatch/parity/terminate.ts:286-288).
+  - finding: M5
+    verdict: Resolved
+    evidence: >-
+      The new phase-10 cases are non-vacuous (they fail on the reviewed HEAD shape and
+      assert concrete numbers, not `>= 0`); realChildStarts is a live counter read as 1 by
+      the permitted-start control (tests/fixtures/dispatch/parity/process-runner.ts:192,
+      tests/conformance/dispatch/dispatch-parity-no-shell.test.ts:99-106); the terminate
+      model now pushes violations (tests/fixtures/dispatch/parity/terminate.ts:98,104).
+  - finding: M6
+    verdict: Resolved
+    evidence: >-
+      All three deleted assertions are restored — nothing-to-do lastMessage
+      (tests/behaviour/dispatch-token-closure.test.ts:206), restart-budget error.category
+      "user" (tests/behaviour/dispatch-restart-budget.test.ts:81), and the composition
+      operator-resume positive exit/result (tests/structure/dispatch-composition.test.ts
+      around :1133, run.exit 2 + result state-unverified).
+diff_totals:
+  full_change:
+    base: origin/main-tools (merge-base d8d762be)
+    files: 119
+    added: 21721
+    deleted: 918
+  remediation_slice:
+    base: 7a2cacef (iteration-2 HEAD)
+    files: 21
+    added: 1486
+    deleted: 152
+gates:
+  plan_validate: "valid (tier full, readyForDevelopment true)"
+  typecheck: clean
+  boundaries: "no dependency violations (469 modules); ambient-globals/workspace-entrypoints/secret-read-boundary OK"
+  targeted_suites: "stall-loop 32; adapter+composition+derivation 77; parity-battery/no-shell/token-closure/restart-budget 45; inventory/invariance/stream/exports 40; doc-conformance/reference-parity 40; all 0 fail"
+  doc_distribution: "no drift (96 in-scope docs)"
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-session-lifecycle-economics.md:9,68; doc/spec/features/feature-dispatch-engine.md:682; doc/overview/glossary.md:480-481
+    message: >-
+      Two current-truth pages and the glossary still use "exact-identity reap" wording
+      (the economics page bullet and frontmatter summary, and the dispatch page's
+      TDR-0051 link annotation), and the glossary Terminate/Exact-identity reap entries do
+      not state the match-not-OS-reap meaning or the port-carried declaration. The
+      harness-adapter page and the code already state that `reaped` reports the match.
+    suggestion: >-
+      Optional tightening: align the "reap" wording to "exact-identity match" on those
+      lines and add the match semantics to the glossary Terminate entry. Asserts nothing
+      false today (the adapter signals only exact-identity-matched runtimes and reports a
+      match), so this is cosmetic, not a blocker.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: test-coverage
+    location: tests/behaviour/dispatch-truth-derivation.test.ts:577-600
+    message: >-
+      The 16-id closed-arm mirror is a local copy of the module-internal
+      DISPATCH_RESULT_ARM_IDS; the test asserts the mirror's size is 16 and that each
+      row's declaredArm is a member, but does not assert identity-equality with the module
+      constant. A future 17th arm added without a corresponding row would not be caught by
+      the count assertion alone.
+    suggestion: >-
+      Optional: export the closed set from dispatch-result.ts and import it in the test, or
+      add a source-scan assertion that the mirror's member list equals the module's. No
+      behavioural impact; the current 16 ids match exactly.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:661-664
+    message: >-
+      declaresTerminate keeps a fail-open default: an absent `capabilities` member is
+      treated as terminate-capable. This is documented and now reachable only by an
+      explicitly undeclared double, but a future production adapter that forgets to declare
+      would silently be classified capable rather than refused.
+    suggestion: >-
+      Optional hardening: add a composition-time assertion (or a structure test over the
+      production adapter set) that every production session port carries a declaration,
+      so the fail-open default can never be reached from production. Accepted as a
+      declared limitation for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-19T07:46:33Z
+next_step: PROCEED

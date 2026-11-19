@@ -1,0 +1,1196 @@
+change_id: GH-347
+title: "M4-S9: Dispatch core parity — durable lane, resume, admission,
+  classifier (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
+  specification: { started: null, completed: 2026-11-19T06:20:03.852Z }
+  test_planning: { started: null, completed: 2026-11-19T06:20:11.995Z }
+  delivery_planning: { started: null, completed: 2026-11-19T00:20:05.234Z }
+  dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
+  delivery: { started: null, completed: 2026-11-19T07:40:27.717Z }
+  system_spec_update: { started: null, completed: 2026-11-19T07:40:18.018Z }
+  review_fix: { started: null, completed: 2026-11-19T07:47:29.914Z }
+  quality_gates: { started: null, completed: 2026-11-19T08:12:23.840Z }
+  dod_check: { started: null, completed: 2026-11-19T08:13:55.967Z }
+  pr_creation: { started: null, completed: 2026-11-19T08:55:08.540Z }
+decisions:
+  - text: "Scope is the ticket body plus the CEO parity-gap analysis comment of
+      2026-11-18, which explicitly splits the work: GH-347 (F1a) owns gaps 1-10
+      (durable per-ref lane record, session capture/restore, resume over a
+      recorded attempt, concurrency-safe admission, tracker retry ladder with
+      honest state-unverified, kill/stuck handling, in-process restart,
+      --agent/--title spawn args, merged-from-tracker-done and partial-from-
+      artifacts class semantics); gaps 11-12 (per-ref status/log/is-delivering/
+      last-message and the pre-iteration hook port) are F1b, tracked separately
+      as GH-354, and are OUT of scope here."
+    date: "2026-11-18"
+  - text: "The pre-iteration hook is retired, not ported: provider policy (GH-350)
+      replaces its purpose. This change adds only a bounded, documented removal
+      path if the delivered tree still references it; it adds no new hook
+      capability."
+    date: "2026-11-18"
+  - text: "The typed state-unverified exit code stays 2 (asserted in
+      tests/behaviour/dispatch-exit-projection.test.ts); the shell lane's 1 is
+      not a parity target."
+    date: "2026-11-18"
+  - text: "PM-decided (autonomous): proceed with F1a while its declared predecessor
+      F0 (GH-346, installable versioned binary) is still unstarted. Rationale:
+      the parity ACs are engine-local and do not consume the install path;
+      blocking would strand the flip's critical path. The PR body must state
+      that install-artifact claims are unverified and that F0 sequencing was
+      overridden deliberately. Merge conflicts against a future GH-346 are
+      handled by normal branch sync."
+    date: "2026-11-18"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope current state (read 2026-11-18 on d8d762be): the eleven
+      result tokens and their projection already exist as a closed taxonomy
+      (contracts/delivery-result.ts, domain/dispatch-result.ts); the one-shot
+      engine in app/dispatch.ts already carries admission, lease claim,
+      progress-based liveness, restart admission, and artifact-first derivation.
+      The parity gap is therefore wiring and semantics, not a new engine."
+    type: info
+    date: "2026-11-18"
+  - text: "Verified seams for the ten in-scope gaps: (1) DispatchAttemptRecord has
+      no lane/session-owner record; (2) adapters/harness/opencode.ts reads the
+      session id from the spawn stream but the one-shot path persists only the
+      attempt-record sessionIds, not a resumable lane; (3) laneFactsFor in
+      cli/src/production.ts:2463-2490 only reads daemon lanes in
+      delivering/detached/preempted, so a finished attempt is invisible to
+      resume; (4) admission is a pre-read plus a non-blocking store fence whose
+      busy kind is relabelled 'queue'; (5) the truth read is one bounded call
+      with no retry ladder; (6) the composed engine has no kill operation for a
+      stalled session; (7) restart budget is enforced across invocations, not
+      in-process; (8) spawn args are the constant PRODUCTION_OPENCODE_ARGS.spawn
+      with no --agent/--title and the prompt is a constant sentence; (9)
+      partial-from-artifacts is unreachable; (10) merged is only derived from an
+      already-merged PR, not from tracker-done."
+    type: info
+    date: "2026-11-18"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-dispatch-engine.md is the primary current-truth
+      surface (command grammar, one-shot flow, per-ref single-flight table,
+      result derivation, attempt record, daemon lane seam, restart admission).
+      Secondary: feature-delivery-lifecycle.md (dispatch as the typed lane),
+      feature-resident-daemon.md (lane record and supervision seam),
+      feature-harness-session-port.md (spawn args, resume, kill capability),
+      feature-auto-closeout/feature-merge-verify-deploy only if the classifier
+      truth inputs change, doc/overview/glossary.md for any new vocabulary such
+      as kill/intra-process restart, and doc/00-index.md."
+    type: risk
+    date: "2026-11-18"
+  - text: "Doc-conformance constraint: the dispatch spec currently states that the
+      session port exposes no kill operation and that a stalled lane is left to
+      supervision. Gap 6 changes that contract, so the spec, the port contract,
+      and the command help/reference page must move together; the change must
+      not leave a stale 'no kill operation' sentence behind."
+    type: risk
+    date: "2026-11-18"
+  - text: "Parity reference (scripts/deliver-ticket.sh on main-tools, read at
+      intake) for the authors: spawn command is `opencode run --agent pm
+      --session <id>` or `opencode run --agent pm --title ticket-<REF>` with the
+      default prompt (lines 1739-1745); tracker poll ladder is 5 attempts with
+      min(2*2^(n-1), 30s) backoff (1314-1355); tracker classification order is
+      closed->merged, blocked label->blocked, open PR->pr-open (1357-1390);
+      artifact ladder is open PR, merged PR, commits>0 with complete pm-notes
+      ->finished / incomplete pm-notes ->partial, no commits + permission
+      signature ->noop-lane-permission, no commits + reachable tracker
+      ->noop-lane-nothing-to-do, else none (1581-1634); decision table
+      (1648-1703) makes a clean exit terminal and only a stuck watchdog kill
+      restart-eligible, with max-restarts at iteration >= max (default 10); a
+      state-unverified classification does not burn a restart slot (1970-1982);
+      kill is kill_process_tree plus an escaped-runtime reap (1226-1272);
+      pr-open with an unresolved URL becomes pr-open-unverified (2110-2113)."
+    type: info
+    date: "2026-11-18"
+  - text: "Operational prerequisite: node_modules/.bin carries only the umbrella
+      `jaiship` (plus `delivery-os`); there is no standalone phase/plan/commit
+      binary, and `jaiship` fails from an unbuilt workspace. Every primitive
+      invocation in this change is preceded by `TMPDIR=$PWD/tmp/tmpdir pnpm
+      build`; gate commands keep the ticket's TMPDIR=$PWD/tmp/tmpdir convention.
+      PATH must ALSO carry node_modules/.bin: the commit primitive probes the
+      bare `commitlint` name (packages/adapters/src/file/ commitlint.ts execs
+      'commitlint', not a resolved path), so a PATH without node_modules/.bin
+      makes every lifecycle commit fail as commit.commitlint-failed with the
+      fallback summary 'commitlint rejected the message'."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (clarify_scope): the first transition attempt failed atomically
+      with commit.commitlint-failed. The generated template subject was valid
+      (`docs(GH-347): update
+      doc/changes/2026-11/2026-11-18--GH-347--dispatch-c…`, 72 chars, zero
+      commitlint problems when checked with an explicit binary path); the
+      failure was the probe's bare-name execFile with no node_modules/.bin on
+      PATH. Re-running the same command with PATH=$PWD/node_modules/.bin:$PATH
+      landed b144150e on the first attempt with no state left over from the
+      failed run (atomic rollback restored the untracked change folder and
+      appended no transition). Process note for later phases: every primitive
+      call in this change carries both PATH=$PWD/node_modules/.bin:$PATH and
+      TMPDIR=$PWD/tmp/tmpdir. The underlying probe defect is owned by M4-S3
+      ('PATH-safe commitlint probe'), not by GH-347."
+    type: retro
+    date: "2026-11-18"
+  - text: "Decision records authored by @decision-advisor for the precedent-setting
+      forks: TDR-0049 (dispatch-owned durable lane record), TDR-0050 (atomic
+      dispatch admission verdicts, amending TDR-0026 DC-2/DC-3 for the dispatch
+      caller), TDR-0051 (harness terminate operation), TDR-0052 (in-process
+      bounded restart loop and attempt cardinality), TDR-0053 (total derivation
+      ladder and arm-aware corroboration), TDR-0054 (spawn identity, title, and
+      lifecycle prompt). All status Proposed; owner acceptance happens at the PR
+      review gate. doc/decisions/00-index.md carries one row per record."
+    type: decision
+    date: "2026-11-18"
+  - text: "PM rulings applied to the spec after the independent record pass found
+      five defects: (R1) the ambiguous 'tracker-family' label becomes the closed
+      'terminal pre-restart verdict set' {tracker-done merged, blocked,
+      pr-open}; (R2) the delivered phase-ledger no-work arm is retired so one
+      token has one derivation, with the ledger narrowed to resume position and
+      the comparison progress fact; (R2a) the shared deriveDispatchResult blast
+      radius (the daemon path calls it too) must be declared; (R3) a decisive
+      artifact does not short-circuit a stall - only the terminal pre-restart
+      verdict set does, matching the shell decision table; (R4)
+      lane.restart-budget (3) is the dispatch lane bound,
+      coordinator.restart-budget (10) governs a different surface and is not
+      consumed, and coordinator.kill-grace is borrowed because no lane key
+      exists and no key may be added; (R5) a persisted restart count at or above
+      the bound never refuses admission - it only caps automatic restarts, so a
+      stalled first iteration produces max-restarts."
+    type: decision
+    date: "2026-11-19"
+  - text: "Staging note (GH-339 precedent): TDR-0049..TDR-0054 and the
+      doc/decisions/00-index.md rows live outside the change folder, so the
+      specification-phase completion commit stages only the change folder and
+      leaves them untracked by design. The implementation plan MUST declare the
+      six records in an early delivery phase's scope so @coder lands them on the
+      branch, and the DoD check must confirm they are committed before the PR.
+      Observed on landing: the specification completion (0aaf9c39) staged
+      doc/decisions/00-index.md as declared scope drift while the six TDR files
+      stayed untracked, so the branch carries index rows pointing at uncommitted
+      records until a delivery phase lands them. The plan must close that gap
+      and the DoD check must verify no index row points at an untracked record."
+    type: info
+    date: "2026-11-19"
+  - text: "Test plan complete: chg-GH-347-test-plan.md, 50 test cases in eleven
+      stable-id groups (LANE 5, ADMIT 6, RESUME 4, TRACKER 4, TERM 6, LOOP 6,
+      SPAWN 4, DERIVE 6, PARITY 6, SHELL 2, CONTRACT 1), 42/42 ACs mapped with
+      zero unmapped and zero orphans, 82 mutation rows M1-M82, 9 new suites plus
+      a no-shell check module and 8 parity fixtures, 15 extended suites and 4
+      extended fixtures. No parallel harness. The mandated daemon-path
+      regression (TC-PARITY-006) and the R7 divergent-ledger finished case
+      (TC-DERIVE-004) are both present."
+    type: info
+    date: "2026-11-19"
+  - text: "BINDING for delivery_planning (flagged by the test plan, §8.2/§8.3):
+      AC-F9-2 requires driving real production seams, so the implementation must
+      export and composition-mount claimDispatchLease and resolveDispatchLane,
+      and add one injected delay(ms, reason) composition fact used by the fence
+      wait, the tracker ladder, and the terminate grace - the delivered
+      waitForCadence/harnessSpawnStarter pattern, not a configuration key. If
+      the plan drops these, AC-F9-2 coverage becomes unachievable and the DoR
+      gate must reopen rather than accept a test-local reimplementation."
+    type: risk
+    date: "2026-11-19"
+  - text: "Delivery planning complete: chg-GH-347-plan.yaml, 8 delivery phases, plan
+      validate verdict=valid tier=full readyForDevelopment=true, lint plan
+      valid. Ownership: 42/42 ACs and 50/50 TCs, zero orphans, zero
+      double-owned. Phase 1 is contract scaffolding (0 AC/0 TC) and also lands
+      TDR-0049..0049 plus the conditional index staging; phases 2-7 own the 42
+      ACs; phase 8 owns the changeset, plan validation, aggregate gate and doc
+      staging. The seam prerequisite is satisfied: claimDispatchLease exported
+      and mounted in phase 2, resolveDispatchLane (new app/dispatch-lane.ts)
+      mounted in phase 3, and one injected delay(ms, reason) with closed reasons
+      claim-fence, tracker-ladder, terminate-grace - no config key."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan-recorded deviations accepted (no scope invented): TC-LANE-003 and
+      AC-F1-2 are owned by phase 5 because the scenario is a restarted
+      iteration, although phase 3 implements the terminal append for pr-open
+      resume; the 82 mutation rows stay reviewer-executed with the planted
+      controls as the permanent non-vacuity proof (no mutation suite); two
+      test-plan path corrections and the child-process-receiver binding for the
+      no-shell scan; DispatchLaneFacts relocates from packages/cli/src/edge.ts
+      to packages/core/src/contracts/dispatch.ts because core cannot import CLI;
+      AC-F2-1's no-lane clause is closed non-vacuously by TC-LANE-002 in phase
+      3; the pmNotes field breaks two literal artifact constructions, both
+      declared, with the fixtures builder defaulting to complete; phase 8
+      authors one five-package minor changeset because version_impact is minor."
+    type: info
+    date: "2026-11-19"
+  - text: "DoR gate iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md).
+      Facets: spec_completeness, decision_capture and plan_doc_update_coverage
+      PASS; ac_quality, plan_coverage, test_traceability,
+      cross_artifact_consistency, system_spec_consistency,
+      plan_code_area_coverage and dod_defined FAIL. Findings: 4 critical, 6
+      major, 7 minor, 2 nit (19 total). The four critical findings were
+      re-verified by the PM against the code: (1) the test plan asserts wrong
+      exits - the taxonomy projects blocked as success/0 and max-restarts as
+      user-validation/1, while TC-TERM-003/TC-DERIVE-002/M3 say blocked/1 and
+      TC-LOOP-002 says max-restarts/2; (2) plan phase 5 obligations 5.4 and 5.5
+      contradict on the shared admitDispatchRestart gate, whose third consumer
+      domain/daemon-peak-pause.ts is undeclared; (3) phase 4 cannot implement
+      arm-aware corroboration because the sufficiency map and its evaluator are
+      token-keyed and contracts/dispatch.ts, domain/dispatch-comparison.ts,
+      app/daemon-dispatch-result.ts and domain/dispatch-gate.ts are undeclared;
+      (4) phase 5 omits domain/dispatch-result.ts, whose persisted-count arm
+      re-keys any non-completed session at the bound to max-restarts, so AC-F6-4
+      and AC-F6-6 cannot hold and section 8.5's deliberate-change list omits
+      it."
+    type: info
+    date: "2026-11-19"
+  - text: "PM rulings for the DoR-iteration-1 remediation: (i) restarts is defined
+      once as the PERSISTED TOTAL after the dispatch (the delivered envelope
+      semantics TC-RESUME-102 already assumes); AC-F6-5, TC-LOOP-005 and M52
+      must all state that, and the invocation-scoped reading is rejected. (ii)
+      The R7 mechanism is stated truthfully: a finished cannot raise a
+      delivered-evidence divergence because that path is gated on token ===
+      state-unverified; the corroboration pm-notes source stays ledger-sourced
+      and falseSuccess stays true, and TC-DERIVE-004 must assert the concrete
+      record or its explicit absence instead of 'at most one'. (iii) DOD-1 is
+      restated as the PM-executed traceability review whose evidence is the
+      section 3.1 matrix plus the final gate log's per-case results; no phantom
+      coverage check is named. (iv) The persisted-count re-key narrowing is
+      added to section 8.5 and the plan's delivered-expectations block;
+      domain/dispatch-result.ts joins phase 5. (v) The parity proof boundary is
+      published on the dispatch current-truth page in phase 7, and TC-PARITY-004
+      drifts against that page plus the fixture constant, not against a
+      temporary change artifact. (vi) consumesRestartOrdinal stays but is
+      declared descriptive-only and never a budget charge, with an assertion
+      that neither resume mode charges an ordinal."
+    type: decision
+    date: "2026-11-19"
+  - text: "Reopened specification, test_planning and delivery_planning for the
+      DoR-iteration-1 remediation: specification owns findings 5, 6, 7, 11, 12,
+      17, 19 and the new section-8.5 bullet from finding 4; test_planning owns
+      findings 1, 8, 9, 10, 13, 14, 15 and 18 plus the finding-5/6 alignments;
+      delivery_planning owns findings 2, 3, 4 and 16. Remediation stays inside
+      the already-decided scope: no token, projection, exit, error row, domain
+      kind or configuration key moves, and no decision is reopened."
+    type: info
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 1): the author chain passed every claim because each
+      artifact was checked against its own vocabulary rather than against the
+      delivered code. Three of the four critical findings are the same class of
+      defect: an assertion or obligation that cites a value the delivered
+      implementation does not produce (a projected exit, a token-keyed map used
+      as if it were arm-keyed, a derivation arm in a file no phase declares).
+      The cheap process fix is to make every artifact state, for each numeric or
+      contractual claim it repeats, the delivered symbol it was read from - the
+      test plan's exit literals were the only place the two critical exit errors
+      could have been caught before the gate. Second lesson: a shared helper
+      named in a plan obligation must be declared with ALL of its consumers; the
+      restart gate has three and the plan named one."
+    type: retro
+    date: "2026-11-19"
+  - text: "RETRO (checkpoint commit): committing the readiness record with `jaiship
+      commit GH-347 --phase dor_check` also landed the dor_check transition,
+      because the `--phase` form runs the same atomic primitive as `phase
+      complete`; the registry briefly read dor_check completed while the verdict
+      was NOT_READY. Corrected with `phase reopen GH-347 dor_check` and a
+      recorded reason. Process note: `commit --phase <p>` is a completion, not a
+      plain commit. For a checkpoint that must not complete anything, either
+      reopen immediately afterwards (as here) or accept the plan-union staging
+      of a bare `commit <ref>`, which would also stage the six untracked TDRs."
+    type: retro
+    date: "2026-11-19"
+  - text: "DoR gate iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md).
+      0 critical, 5 major, 4 minor, 3 nit. The four iteration-1 criticals are
+      verified closed against the delivered code and every iteration-1 finding
+      is dispositioned; the remaining damage is mostly bookkeeping introduced by
+      the remediation: (1) the plan's mutation allocation still says 82 rows and
+      mis-maps M73/M80/M81/M82 while M83-M88 are unallocated, and cites spec
+      v1.4; (2) cases.ts is declared only in phase 7 although phases 2-6 author
+      the suites that must consume it, and the plan says six non-class rows
+      where the test plan has 17; (3) TC-DERIVE-006 still claims 30/30 inputs
+      yield a token although Appendix F(A)'s nine pre-session arms have no
+      token; (4) AC-F3-2's both-resume-modes clause has no case for
+      resume-prompt-reentry; (5) the test plan's R3/R4 and host/spawn*.ts
+      surface remain unachievable while only the plan carries the correction."
+    type: info
+    date: "2026-11-19"
+  - text: "PM rulings for the DoR-iteration-2 remediation (iteration 3 of 3; a
+      further NOT_READY escalates to the human): (i) the mutation allocation is
+      REGENERATED from the test plan's current 88-row register, one owning case
+      per row, lane rows to phases 3/5, M73 to phase 4, M85 to phase 7. (ii) The
+      registry moves to the earliest phase whose suites need it (phase 2), with
+      its row schema and class wiring there, every consuming suite declared by
+      the phase that authors it, the non-class row count set to the test plan's
+      17, and one group vocabulary used. (iii) TC-DERIVE-006 keeps only the
+      derivation-reachable arms (B and C); the nine pre-session rows are stated
+      as 'no token, typed pre-session refusal' and their evidence stays with the
+      command-level cases that already own them. (iv) A resume-prompt-reentry
+      row is added asserting no economics.restart record and an unchanged
+      restarts total, with a mutation that charges an ordinal on prompt-reentry.
+      (v) R3/R4 are rewritten to bind to the child_process receiver/import, with
+      RegExp.exec and port .spawn as false-positive controls, and the surface
+      names host/index.ts. (vi) TC-PARITY-006 asserts the daemon attempt's
+      corroboration and falseSuccess. (vii) The bogus delivered-expectation
+      claim about dispatch-liveness is removed. (viii) The operator-resume
+      admission change is added to section 8.5. (ix) AC-F8-4 gains the
+      no-false-success clause, with TC-DERIVE-005 asserting not-applicable
+      corroboration and a mutation. (x) Every version citation becomes v1.5, and
+      Appendix F is cited as 25.6."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 2): the remediation fixed the substance and broke
+      the bookkeeping. Two of the five majors exist because a number or a
+      mapping was restated by hand in a second document instead of being derived
+      from the source that owns it (82 vs 88 mutation rows; six vs 17 registry
+      rows), and one exists because a correction was made in the plan while the
+      test plan kept the old rule. Process fix for iteration 3: any count,
+      mapping, or rule that lives in two artifacts is regenerated from the
+      owning artifact in the same pass, and the plan never carries a correction
+      that the case it governs does not carry."
+    type: retro
+    date: "2026-11-19"
+  - text: "DoR gate iteration 3 = READY (readiness-review/readiness-iter-3.md). All
+      ten facets PASS; 0 critical, 0 major, 3 minor, 2 nit. The gate recomputed
+      every count from the artifacts rather than the hand-off: 42 ACs, 50 TCs,
+      53 links, 90 mutations M1-M90 contiguous with an exact-once allocation
+      summing 0/10/4/22/24/6/24/0, registry 29 = 11 class + 18 non-class across
+      the seven group names, plan validate valid/full/ readyForDevelopment=true,
+      lint plan valid. All twelve iteration-2 findings are dispositioned
+      Resolved. Delivery may start."
+    type: info
+    date: "2026-11-19"
+  - text: "Binding delivery notes from the three non-blocking iteration-3 minors
+      (all are artifact wording, no design change): (1) plan lines ~416-421,
+      ~836-844 and ~2226-2228 still describe the test plan's pre-v0.4 R3/R4 and
+      host/spawn*.ts as if unresolved; @coder must follow the v0.4 rules and the
+      host/index.ts path and treat that prose as stale. (2) TC-TERM-002's
+      engine-level half must be implemented in
+      tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts (the suite
+      phase 5 declares), not only in the pure-evaluator
+      dispatch-liveness.test.ts, otherwise AC-F5-2's no-terminate/no-restart
+      claim stays unproven and M38/M39 are vacuous. (3) TC-DERIVE-001 is
+      phase-4-owned; its phase-7 appearance is a re-observation, not a second
+      ownership. The two nits are historical-only: the pm-notes rulings mention
+      '17' and 'v1.5'; the artifacts correctly say 18 and v1.6."
+    type: decision
+    date: "2026-11-19"
+  - text: "Plan phase 1 complete - contract scaffolding and the six decision
+      records. Commit f7ba8ffa. Delivered: the dispatch.lane
+      kind/schema/key/record type and its append/read helpers; the optional
+      harness terminate member and result type (operation id deferred to phase
+      5); the spawn title fact, grammar, constant and spawnTitleFor; the pmNotes
+      completeness vocabulary; the injected delay(ms, reason) fact with its
+      three closed reasons and the production timer; the exact pinned-surface
+      moves. Gate: dispatch-contract 14 pass, the six other structure suites
+      green, typecheck green, diff clean; the six TDRs tracked and doc/decisions
+      clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 2 complete - atomic dispatch admission. Commit a8342b08.
+      Delivered: claimDispatchLease (a caller-scoped no-renew flag, the bounded
+      fence wait through the injected delay, kind-preserving refusal mapping)
+      and its composition mount; the pre-claim predicate no longer decides the
+      dispatch verdict. Gate: admission parity 9 pass, sibling/control suites 29
+      pass, composition 26 pass, typecheck and diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 3 complete - durable lane writes and recorded-attempt resume.
+      Commit 95f0a6cc. Delivered: the active/terminal lane appends with the
+      lane:append-failed disclosure; resolveDispatchLane (new
+      app/dispatch-lane.ts, newest-with-session over the dispatch lane plus the
+      daemon resumable states) and its mount, replacing the CLI laneFactsFor
+      closure; DispatchLaneFacts relocated to core contracts with a CLI
+      re-export; cold-resume session registration in the opencode adapter so a
+      recorded session can be collected. Gate: lane/resume 11 pass (15 after
+      TC-RESUME-102), resume controls green, inventories green, typecheck and
+      diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 4 complete - tracker ladder, pmNotes fact, total derivation,
+      arm-aware corroboration. Commit 10710928. Delivered: the 5-attempt
+      2/4/8/16 s ladder with the injected delay; the pmNotes
+      complete/incomplete/ absent artifact fact; the total derivation ladder
+      with tracker-done merged first, the retired ledger no-work arm, artifact
+      partial, and the subsumed exit-0-no-artifact failed arm; arm-aware
+      corroboration for exactly tracker-done merged and nothing-to-do, with the
+      evidence-window gate kept token-level by decision. Gate: tracker 7,
+      truth-derivation 26, delivered controls 109, invariance 8, inventories 23,
+      conformance dispatch 35, typecheck and diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 5 complete - terminate, in-process loop, caller-scoped restart
+      admission, narrowed persisted-count arm. Commit 29aa72ad. Delivered: the
+      terminate operation in the closed set, capability-gated, both adapter
+      declarations, the process-tree TERM->KILL and exact-identity reap over the
+      injected starter; the bounded in-process loop (clean exit terminal, stall
+      or harness timeout restart-eligible, the terminal pre-restart verdict set,
+      one attempt per terminal dispatch, one economics.restart per ordinal); the
+      caller-scoped admitDispatchRestart flag with a budget-consulting default,
+      the operator-resume path admitting, and recoverInterruptedLane keeping its
+      refusal; the persisted-count re-key narrowed to the timeout arm; the six
+      TDRs' lane terminal half. Gate: conformance dispatch 64 pass, control
+      suites 139 pass, typecheck and diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 6 complete - spawn identity, title, lifecycle prompt. Commit
+      6d6e208a. Delivered: production supplies the pm agent through the binding
+      seam, renders exactly one --agent/--model, one --title ticket-<REF> on a
+      fresh spawn and none on a resume; the ref/base-parameterized lifecycle
+      prompt in domain/dispatch-prompt.ts; opencode resume argv adjacency fixed
+      so --agent/--model no longer split --session from its id. Gate: spawn 10
+      pass, conformance dispatch all green, 148 pass across 14 files, typecheck
+      and diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 7 complete - parity battery, no-shell invariant, daemon
+      regression, closed-contract pin. Commit 2a3bc2f9. Delivered: cases.ts (29
+      rows = 11 class + 18 non-class across the seven group names, authored
+      incrementally from phase 2), the drift-checked PARITY_PROOF_BOUNDARY, the
+      no-shell static invariant over 22 surface files with its planted controls,
+      the daemon-path regression observation, and the closed-surface pin. Gate:
+      conformance dispatch 94 pass, checks 17 pass, the check binary clean,
+      controls 142 pass, typecheck and diff clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 8 complete - changeset, plan validation and lint, aggregate
+      gate, doc staging. Commit c2a43d12. Delivered: one five-package minor
+      changeset; doc pages declared for lifecycle phase 7 staging; a named
+      check:no-shell package script (not inserted into the pinned aggregate
+      chain) because the CI-topology invariant requires every
+      scripts/checks/*.ts to be wired. Gate: plan validate
+      valid/full/readyForDevelopment=true, lint plan valid, doc trio 28 pass,
+      doc-distribution no drift (96 docs), diff clean, and the aggregate
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 with 11127 tests, 0 fail."
+    type: info
+    date: "2026-11-19"
+  - text: "RETRO (delivery): the aggregate gate was green on the first full run, so
+      the planned eight-phase ordering and the per-phase targeted gates did
+      their job. Four discoveries changed code the plan had not named:
+      cold-resume session registration and resume argv adjacency in the opencode
+      adapter (both required for AC-F3-1/AC-F7-1 to be achievable at all), a
+      production check:no-shell package script mandated by the delivered
+      CI-topology invariant, and the guard that an unbounded restart budget
+      never auto-restarts. Each is disclosed and each is inside the declared
+      surface. The commit subjects came from the primitive's path-template
+      fallback rather than the plan's conventional summaries; content is exactly
+      the phase scope and no message was hand-composed. Phase 9's range gate is
+      the authority on whether those subjects pass."
+    type: retro
+    date: "2026-11-19"
+  - text: "Plan phase 1 (contract scaffolding) implemented before its commit: the
+      dispatch.lane kind/schema/key/record type and key builder, the optional
+      harness terminate member and result type, the spawn-title fact with the
+      ticket-<REF> grammar and pure helper, the pm-notes completeness
+      vocabulary, the injected delay(ms, reason) fact with the closed reasons
+      and the production real-timer binding, the exact pinned-surface moves
+      (executable allowances and the contract inventory), and the six TDR paths
+      staged with the conditional decision index. Gate results at this boundary:
+      dispatch-contract 14 pass; harness-contract, harness-stream-contract,
+      port-contract-inventory, content-inventory, subpaths and decision-record
+      suites green; pnpm typecheck green; git diff --check clean. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 2 (atomic admission) implemented before its commit: the
+      claim's live-lease verdict decided inside the fence (same-ref under any
+      holder refuses queue.single-flight naming the holder, other-ref refuses
+      queue.lease-conflict, never a renewal), the bounded claim-fence wait
+      through the injected delay (capped at queue.lease-ttl, a persistent state
+      failure keeping its state.* kind at exit 2), the refused-kind preservation
+      in the engine wrapper, and the production mount of claimDispatchLease in
+      place of the pre-claim predicate. Additive composition facts clock and
+      dispatchDelay were added for the deterministic battery (no CLI surface, no
+      config key). Gate results: the admission parity suite 9 pass; the five
+      sibling/control suites 29 pass; the composition suite green; typecheck
+      green; git diff --check clean. DELIVERED EXPECTATION UPDATES, each minimal
+      and authorised by AC-F2-3: the single-flight fixture claim seam is awaited
+      (the awaiting claim is the async bounded wait), so its six delivered call
+      sites await it and one conformance suite awaits the same helper; and
+      tests/structure/dispatch-composition.test.ts pins the
+      preflight-before-claim ordering against the awaited literal. No assertion
+      property was relaxed or removed. The phase commit hash is recorded in the
+      note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 3 (durable lane writes and recorded-attempt resume)
+      implemented before its commit: the active lane append at session
+      acquisition and the terminal lane append at final classification through
+      the phase-1 helpers (append-only, latest-wins, no rewrite), the
+      lane:append-failed disclosure that leaves the token unchanged, the new
+      resolver packages/core/src/app/dispatch-lane.ts (dispatch-owned
+      newest-with-session plus the delivered daemon resumable states, newest
+      wins) mounted at existingLane in place of the deleted CLI-local
+      laneFactsFor closure, the relocated DispatchLaneFacts contract type with a
+      CLI re-export (one definition), the explicit fresh-spawn
+      prompt-over-no-lane rule, and the advisory laneOwner composition fact.
+      Gate results: the lane/resume parity suite 11 pass; dispatch-resume and
+      dispatch-resume-economics green unchanged; the composition suite green
+      with the new mount assertion; content/port inventory suites green;
+      typecheck green; git diff --check clean. DEVIATION, reported:
+      packages/adapters/src/harness/opencode.ts gains one additive registration
+      on a successful COLD resume (a session recorded by an earlier process).
+      Without it the resumed handle's collect returns harness.session.unknown,
+      so AC-F3-1's recorded-attempt resume is unachievable through the real
+      adapter; the delivered adapter registered a resumed session only when this
+      process had spawned it or a binding was present. No contract, token,
+      projection, or identity changes. The phase commit hash is recorded in the
+      note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 4 (tracker ladder, pmNotes fact, total derivation, arm-aware
+      corroboration) implemented before its commit: the bounded ladder in
+      domain/dispatch-tracker.ts (5 attempts, min(2s*2^(n-1),30s), injected
+      delay, exhaustion identity tracker:exhausted) wired around the production
+      tracker read; the required pmNotes completeness fact on
+      DispatchArtifactFacts with the projection from the real document
+      (projectPmNotesCompleteness in the pm-notes parser); the ONE total order
+      in domain/dispatch-result.ts (tracker arms first, then the
+      COMPLETED-session artifact ladder gated on the classifier's finished
+      token, the ledger no-work arm retired, the exit-0-no-artifact failed arm
+      subsumed, the persisted-count arm left for phase 5); and arm-aware
+      corroboration decided ONCE on the derivation result (corroborationArm) and
+      passed unchanged by both evaluation sites (one-shot and daemon), with the
+      evidence-window gate pinned token-level through
+      windowCorroborationRequirement. Gate results: tracker parity suite 7 pass;
+      truth-derivation 26; the delivered
+      truth/token/watch/divergence/false-success controls 109 total; the new
+      contract-invariance check 8; inventory suites 23; all conformance dispatch
+      35; typecheck green; git diff --check clean. DELIVERED EXPECTATION
+      UPDATES, each minimal and clause-cited: TC-TRUTH-001 now expects
+      noop-lane-nothing-to-do (section 8.5 subsumed failed arm plus retired
+      ledger arm, AC-F8-4); TC-TRUTH-005/006 expect a decisive artifact to
+      survive an unreadable tracker and an unreadable ledger not to gate the
+      token (AC-F4-3, section 8.5); TC-DISP-012's rows re-stated for the retired
+      ledger arm and the shell arm (AC-F8-4); TC-EVID-003's fixture input moved
+      to a reported failure so it still reaches failed (section 8.5, Appendix
+      F(C)(9)); the delivered-evidence divergence fixture's reads made genuinely
+      undecidable (tracker AND artifact unreadable) under AC-F4-3; the two
+      artifact-facts literals (dispatch-token-closure, dispatch-watch) gained
+      the explicit pmNotes member; and the controlled-proof drive table rows for
+      failed, state-unverified and nothing-to-do were re-expressed under the
+      same clauses. No assertion was deleted, renamed, or relaxed. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 5 (stall termination, in-process loop, caller-scoped restart
+      admission, narrowed persisted-count arm) implemented before its commit:
+      terminate joins HARNESS_OPERATIONS as an optional capability-gated member
+      (the opencode adapter implements it over the retained streaming starter's
+      idempotent TERM->KILL and waits the declared grace through the injected
+      delay; the Claude Code adapter declares the gap and is never asked); the
+      engine owns the bounded loop (clean exit always terminal, stall-only
+      restart, the terminal pre-restart verdict set short-circuit, undecidable
+      truth with no slot, one ordinal and one economics.restart per restart, one
+      attempt at the terminal classification, active lane per acquisition and
+      one terminal lane); admitDispatchRestart gains the caller-scoped flag with
+      the budget-consulting DEFAULT (the operator-resume admission passes the
+      admitting scope, peak-pause recovery states the consulting scope
+      explicitly), and the derivation's persisted-count re-key is narrowed to
+      the restart-eligible harness timeout. Gate results: conformance dispatch
+      64 pass (incl. the new stall/loop suite 25); the sixteen control suites
+      139 pass; typecheck green; git diff --check clean. DELIVERED EXPECTATION
+      UPDATES, each clause-cited: dispatch-watch's below-bound stall case now
+      asserts terminate+resume in-process with one economics.restart (section
+      8.5, AC-F6-1, DEC-4/5); dispatch-restart-budget's TC-RESUME-002 is
+      rewritten as TC-LOOP-006 (section 8.5 operator-resume bullet,
+      AC-F3-2/AC-F6-6, DEC-5, R5); dispatch-token-closure's restart-budget row
+      is narrowed to the timeout arm (section 8.5, AC-F6-4/AC-F6-6, Appendix
+      F(D)); the composition's operator-resume refusal case now asserts
+      admission (AC-F3-2); its no-preflight control and the delivered-evidence
+      fixture use genuinely undecidable reads (AC-F4-3). No assertion was
+      deleted or relaxed. DEVIATIONS, reported: (1) the production terminate
+      path signals the session's direct child through the delivered starter and
+      reports reaped:false; the process-tree and exact-identity reap contract is
+      proven over the injected process-tree double, which is the declared proof
+      boundary (no OS-level reap exists in the host path). (2) The engine's loop
+      treats a composition with NO positive restart bound as no automatic
+      restart (a permanently stalled session must not spin), while
+      admitDispatchRestart keeps its delivered unbounded semantics for every
+      other caller. The phase commit hash is recorded in the note that follows
+      it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 6 (spawn identity, title, lifecycle prompt) implemented before
+      its commit: the production composition supplies the caller agent identity
+      pm and the delivered pure resolution's single-seat binding, the
+      deterministic fresh-spawn title as a COMPOSITION fact (spawnTitleFor,
+      never the engine's and never a flag), and the delivery-lifecycle prompt
+      parameterized by ref and the resolved base branch
+      (domain/dispatch-prompt.ts with five stable section markers, exported
+      through the domain and the core root); the opencode adapter renders
+      exactly one --agent/--model and one --title on a fresh spawn and none on a
+      resume. Gate results: the spawn parity suite 10 pass; all conformance
+      dispatch green; the harness spawn-env/resume-propagation controls and the
+      help-structure checks green (148 across 14 files); typecheck green; git
+      diff --check clean. DEVIATION, reported: the opencode resume argv now
+      keeps the session id ADJACENT to --session (the binding pair is appended
+      after it). The delivered argv put the binding pair between the flag and
+      its value, which was invisible while every dispatch was role-less and
+      breaks a resume as soon as the agent is supplied; the fix is additive and
+      preserves the resume-propagation contract (asserted green). The role-less
+      composition stays role-less: the title travels as a composition fact, so
+      an uncomposed run records no binding and renders no
+      --agent/--model/--title. The phase commit hash is recorded in the note
+      that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 7 (parity battery, no-shell invariant, daemon regression,
+      closed-contract pin) implemented before its commit: the single registry
+      now carries all 29 rows (11 class + 18 non-class across the seven declared
+      groups); the permanent PARITY_PROOF_BOUNDARY constant (eight proven ids,
+      six not-proven ids, in order) and the 11-class table live in
+      parity/evidence.ts; parity/seams.ts holds the import-identity manifest,
+      the forbidden-signature scan and the planted control; the battery suite
+      asserts the class replay, the seam identity, the two-run determinism (60
+      composed runs), the boundary self-consistency and its planted drifts, and
+      the record bounds/redaction; scripts/checks/no-shell-dispatch.ts scans the
+      22-file declared surface with the four anchored rules (R1 literal values,
+      R2 shell true, R3 the child_process receiver, R4 the literal shell:false)
+      and its suite proves each rule by name plus the RegExp.exec, port-spawn,
+      .sha and comment controls; the daemon-lane suite gains TC-PARITY-006 over
+      six rows with the attempt-level corroboration; the contract pin adds the
+      nine config branches, the dispatch/queue projections, the four record
+      kinds (including the lane kind and the unchanged daemon kind) and the
+      16-reference bound. Gate results: conformance dispatch 94 pass; the
+      no-shell/invariance checks 17 pass and the check binary exits clean over
+      22 surface files; the delivered
+      privacy/bounds/additive-stability/exit-projection/token-home and
+      error-table-sync suites 142 pass; typecheck green; git diff --check clean.
+      DISCOVERY, reported: the new short-circuit verdict set and the two
+      artifact arms initially carried token literals in production modules,
+      which the delivered one-token-home invariant rejects; they now reference
+      the taxonomy aliases, so no dispatch production module declares a token
+      literal. The proof boundary's PAGE publication and the constant-to-page
+      equality are lifecycle phase 7's check; this phase asserts only the
+      constant. The phase commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 8 (release obligations) delivered: one five-package minor
+      changeset (.changeset/gh-347-dispatch-core-parity-minor.md: core,
+      adapters, cli, mcp, opencode; no testkit entry; no pre-existing changeset
+      touched); plan validate verdict=valid tier=full readyForDevelopment=true
+      and lint plan valid at the delivered HEAD; the doc-distribution guard
+      green (96 in-scope docs, no drift); the doc-conformance,
+      dispatch-doc-conformance and reference-page-parity guards 28 pass; the
+      no-shell invariant clean over 22 surface files; git diff --check clean;
+      and the AGGREGATE TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH
+      pnpm check exits 0 (11127 tests, 0 fail, plus boundaries, memory,
+      prompt/help/exports and the new no-shell check). DOC STAGING ONLY: the
+      current-truth pages listed in the plan are declared for the commit
+      primitive and remain UNRECONCILED; the stale 'no kill operation' scan
+      still reports the four delivered sentences on feature-dispatch-engine.md
+      and feature-session-lifecycle-economics.md, so DOD-6's zero-hit scan and
+      the proof-boundary page publication are lifecycle phase 7's (@doc-syncer)
+      obligations, not this phase's. PLAN REVISION, declared: the phase scopes
+      gained the twelve files the delivery actually touched (the
+      state-additivity baseline pin in phase 1; the awaited-claim and
+      undecidable-read expectation updates in phase 2; the envelope/golden
+      expectation updates in phase 4; the provider-profile fixture in phase 6;
+      package.json and the no-shell check wiring in phase 7). package.json is
+      declared because the delivered CI-topology invariant requires every
+      scripts/checks/*.ts to be wired: a named 'check:no-shell' script was added
+      WITHOUT touching the pinned aggregate chain. No phase, AC, TC, mutation
+      row, or ownership moved. The phase commit hash is recorded in the note
+      that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "System documentation reconciled (lifecycle phase 7): fifteen
+      current-truth pages updated. feature-dispatch-engine: the durable
+      dispatch.lane record, recorded-attempt resume including pr-open, the
+      atomic in-claim admission with its declared verdicts and bounded fence
+      wait, the 5-attempt tracker ladder, terminate, the in-process stall ladder
+      and loop, spawn identity/title/lifecycle prompt, the one total derivation
+      order (tracker-done merged first, ledger no-work arm retired, artifact
+      partial, subsumed exit-0-no-artifact arm), arm-aware corroboration with
+      the token-level evidence-window gate, the expanded per-ref table plus the
+      dispatch-vs-queue-claim renewal difference, and the published 8-proven/
+      6-not-proven parity boundary; the stale no-kill sentence is gone.
+      feature-session-lifecycle-economics: both no-kill statements replaced by
+      the terminate contract and the no-second-session rule, the loop's
+      economics.restart, and the caller-scoped operator resume.
+      feature-harness-adapters: terminate in the operation set with its
+      capability declaration and the reaped:false disclosure, the title fact,
+      and the pm/title/lifecycle-prompt spawn description.
+      feature-resident-daemon: dispatch.lane distinct, daemon never adopts.
+      feature-delivery-lifecycle: the typed lane is parity-complete and the
+      shell remains the documented fallback. feature-queue-ready and
+      m1/commands/queue.md: in-claim dispatch verdict, bounded fence wait, no
+      fallback.internal, sibling unchanged. feature-scheduling-engine: dispatch
+      no-renewal with unchanged TTL/exclusivity. feature-config-layer and
+      m1/commands/config.md: no key added, four consumed defaults.
+      feature-result-contract: vocabulary and error table unchanged, the lane
+      record is not an identity. m1/commands/dispatch.md: --resume-prompt over a
+      recorded attempt, no new flag, four-key text contract. glossary and
+      00-index: new terms and re-indexing. test-spec-dispatch-engine: the parity
+      battery and no-shell level, suite list and coverage map. No spec-coverage
+      gap and no ticket created."
+    type: info
+    date: "2026-11-19"
+  - text: "Doc-sync gates: doc-conformance + dispatch-doc-conformance +
+      reference-page-parity 28 pass; doc-distribution no drift (96 in-scope
+      docs); the stale-phrase scan returns ZERO hits; git diff --check clean.
+      The doc-reading guards and the structure/checks suites were re-run green
+      as a safety net. No residual documentation gap."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml). 18 findings:
+      2 blockers, 6 major, 6 minor, 4 info. Diff reviewed: 114 files,
+      +17474/-861 over 23 commits. Blockers: (B1) the derivation returns the
+      classifier token for any non-finished session BEFORE consulting artifacts
+      (dispatch-result.ts:266-277), so a failed/tool-failure session that opened
+      a PR or committed with complete pm-notes does not resolve
+      pr-open/finished, contradicting Appendix F(C) arms 4-8 before arm 9,
+      AC-F4-3 and the artifact-first rule; untested because every C-row uses a
+      finished harness. (B2) a terminate-incapable adapter restarts a
+      below-bound stall (dispatch.ts:1129-1276) instead of starting no second
+      session as AC-F5-4 requires. Majors: M1 the production opencode terminate
+      is not the declared contract (starter kill with a fixed 100 ms escalation,
+      direct child only, no exact-identity reap, literal reaped:false); M2 the
+      terminated flag is inherited across resume; M3 the stall-undecidable
+      predicate requires both reads to fail; M4 the determinism oracle compares
+      only id/token/exit; M5 five non-vacuity controls cannot fail; M6 three
+      delivered assertions were deleted without an authorising clause."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-1 remediation routing: the review record's remediation
+      block carries twelve ordered tasks, each naming the file, the change and
+      the authorising clause (B1, B1+m5, B2 x2, M1+M2, M3, M4, M5, M6 and three
+      minor/info). They are executed in a new plan phase 9 owned by the reopened
+      delivery phase; the plan is amended to declare the remediation scope and
+      re-validated. After the code lands the documentation phase is re-run (the
+      production terminate and the derivation order are documented claims), then
+      the change is re-reviewed. No decision is reopened: every task cites the
+      clause that already authorises it."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (review iteration 1): the delivery was green on every gate it was
+      asked to run and still failed review on two contract violations. Both
+      blockers share one cause: a test asserted the shape of the decision
+      instead of the decision itself. The derivation case only exercised a
+      finished harness, so the artifact ladder's gate never saw a non-finished
+      session; the terminate-incapable case short-circuited on a tracker-done
+      verdict, so the restart path never ran. Process fix: for every branch the
+      spec orders, at least one case must exercise that branch with the input
+      that would take it, and a capability-gated path needs a case whose
+      capability is ABSENT and whose continuation is observed."
+    type: retro
+    date: "2026-11-19"
+  - text: "CORRECTION (review M6) to the phase-4 note's claim that 'No assertion was
+      deleted, renamed, or relaxed'. Review iteration 1 found three delivered
+      assertions deleted with no authorising clause, and the claim is wrong as
+      written: (1) expect(result.lastMessage).toContain('no remaining work') in
+      dispatch-token-closure.test.ts; (2)
+      expect(run.envelope?.data?.error?.category) .toBe('user') in
+      dispatch-restart-budget.test.ts; (3) expect(run.exit).toBe(1) in the
+      dispatch-composition operator-resume case. Phase 9 RESTORES all three (the
+      first two behaviours were unchanged; the third is restored positively as
+      state-unverified at exit 2, the taxonomy's projection for the admitted
+      resume's classification), and the stale 'a restart-budget refusal' test
+      name is renamed to describe the admission it now asserts. The claim 'no
+      assertion was deleted' therefore stands corrected to: three assertions
+      were deleted without a clause, and all three are restored with clauses."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 9 (review-iteration-1 remediation) implemented before its
+      commit. R1/R2: the artifact ladder's decisive arms 4-7 now apply to EVERY
+      ended, non-stall session (a harness-reported timeout stays on the stall
+      ladder, and arm 8 keeps the clean-completion fact), the derivation returns
+      a declared closed armId, TC-DERIVE-006 gains the four B1 rows and a
+      rebuilt C10 that actually matches arm 9, and per-input arm disjointness is
+      asserted (25 inputs, 10 tokens, arm ids checked). R3/R4: the terminate
+      capability is read from the adapter's own declaration (an undeclared port
+      keeps the delivered restart behaviour; an incapable one starts no second
+      session and returns a terminal state-unverified, and an UNCONFIRMED
+      termination stops the restart too), with the incapable below-bound pair
+      and a second-stall capable case. R5: the production opencode terminate now
+      signals each exact-identity process's tree with TERM, waits the CONFIGURED
+      grace through the injected delay, escalates to KILL only over a survivor
+      still listed, reports terminated/escalated/reaped from those acts, reaps
+      by session id or ticket-<REF> title only (a /proc read, no shell, no broad
+      pattern), and a resume clears the termination fact. The starter's 100 ms
+      probe kill is untouched and is never used by termination. R6: the
+      stall-undecidable predicate is 'any required read unreadable and no
+      decisive artifact'. R7: TC-PARITY-003 compares full canonical envelopes,
+      attempt counts and tokens, lane counts, spawns/resumes/waits/violations
+      and class coverage, and the registry's eight process-invoking rows are
+      declared and asserted in TC-SHELL-001. R8: realChildStarts is a live
+      guarded-runner counter (a fresh unused runner proves nothing; a composed
+      run does, and a permitted-start control observes 1), the terminate
+      double's model records a signal-discipline violation and carries a planted
+      broad-pattern control, the previously unconsulted NO_SHELL_ALLOWLIST is
+      now CONSULTED by `scan` and stays EMPTY (a supplied entry is proven to
+      suppress exactly its own hit, so 'empty' is a measurement of the
+      mechanism), and SEAM_MANIFEST gains the terminate entry. R9: the three
+      assertions above are restored. R10: the stalled iteration's
+      liveness/termination refs are carried onto the terminal attempt, and the
+      dispatch-watch liveness:stalled assertion is restored. R11: the prompt's
+      base branch is the RESOLVED composition fact (default = the delivered
+      integration base) with a non-default-base spawn case. R12: the no-shell
+      invariant also detects default imports, require/require-destructuring,
+      dynamic import, aliases and substituted template paths; the surface list
+      is guarded by glob equality and reachability from the declared entries;
+      the lane:append-failed / tracker:exhausted disclosure refs are RESERVED
+      ahead of the 16-slice; and the planted-control tmp parent is created
+      recursively."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 9 EVIDENCE (review-iteration-1 remediation). Plan phase id 9
+      (`fix(GH-347): review-iteration-1 remediation`) is implemented and landed
+      in commit 9742e6a871458bad4cc3ef659f60ecfeb599e070 (messageSource:
+      template — the primitive computed the subject; no message was
+      hand-composed and no --phase was passed, so the lifecycle delivery phase
+      stays open for the PM). Gate at that HEAD: truth-derivation +
+      token-closure 42 pass; watch + liveness + restart-budget 24 pass;
+      harness-opencode-resume-stream 12 pass; parity-stall-loop 29 pass;
+      parity-battery + parity-no-shell + parity-spawn 26 pass; no-shell +
+      contract-invariance 21 pass; dispatch-composition + dispatch-imports +
+      content-inventory 41 pass; the no-shell static invariant clean over 22
+      surface files; typecheck green; git diff --check clean; and the BINDING
+      aggregate `pnpm check` exit 0 at 11140 pass / 4 skip / 0 fail across 11144
+      tests in 1376 files (lint, format, typecheck, boundaries, memory,
+      prompt-conformance 5, help-guide coverage, exports-parity 5 publishables).
+      Stop-and-report check: the class-failed parity row and
+      dispatch-false-success.test.ts both KEEP `failed` (arm 8 keeps the
+      clean-completion fact), so the plan's STOP condition was not hit. Two
+      delivered fixture rows changed outside this phase's own file list, both as
+      a direct consequence of R1 and both updated with clauses: the phase-4
+      dispatch-envelope partial case and the phase-7 dispatch-e2e partial drive
+      row now declare incomplete pm-notes so the `partial` CLASS is still
+      produced by Appendix F(C)(7), while the commits-with-complete case
+      resolves `finished` (proved by R2's rows). Both paths are declared by the
+      plan (their authoring phases), so the commit primitive staged them with no
+      scope drift."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-remediation documentation re-verification: four current-truth pages
+      corrected - feature-dispatch-engine (the ended-session artifact-first
+      order, the total undecidable predicate, the termination-capability gate,
+      the exact-identity terminate with resume clearing the fact, the
+      composition-edge process-tree seam, the resolved base branch, the removal
+      of the false reaped:false claim, and the reserved disclosure refs),
+      feature-session-lifecycle-economics (exact-identity terminate, KILL only
+      after the configured grace over a still-listed target, resume clearing the
+      fact, the incapable/unconfirmed terminal outcome),
+      feature-harness-adapters (the injected terminateTree seam, exact-identity
+      match, observed booleans, no-seam false report, the starter kill is not
+      terminate), and test-spec-dispatch-engine (the ended-session rows and the
+      incapable-adapter case). Pages checked and unchanged: delivery-lifecycle,
+      resident-daemon, glossary (accurate), and the reference dispatch page
+      (outside the writable root, contains no false claim). Gates: doc trio 28
+      pass, doc-distribution no drift (96 docs), zero stale-phrase hits, git
+      diff --check clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Spec v1.7 and test plan v0.5 close the artifact gap the re-verification
+      found: Appendix F(C) and DM-4 now scope arms 4-7 to every ended, non-stall
+      session with arm 8 clean-completion-only and arm 9 the non-clean-end
+      classifier token; F-4, AC-F4-3, section 8.5 and the glossary say
+      ended-session; Appendix F(D) carries the termination-capability gate; DM-5
+      states the delivered two-case terminate booleans (unknown handle true;
+      known-but-gone false, both success). Test plan v0.5 corrects the
+      derivation input count from 21 to 25 and names C10 rebuilt plus C11-C14."
+    type: info
+    date: "2026-11-19"
+  - text: "Residuals recorded for the re-review and the owner gate, none a code
+      defect: (1) TDR-0051 DC-4 still says an already-exited session returns
+      terminated:true; the adapter returns false for a known-but-gone runtime
+      (still success), and the spec now records the delivered semantics with the
+      owner reconciliation noted - the record is Proposed and not accepted. (2)
+      The mutation register has no row that hoists the classifier arm above the
+      artifact arms; the new TC-DERIVE-006 C11-C14 rows would fail if it were
+      hoisted, so the case is non-vacuous, but the register gap is noted. (3)
+      The m1 reference page omits the incapable-terminate outcome and the
+      resume-clears fact; it contains no false claim and is outside the
+      doc-syncer's writable root."
+    type: risk
+    date: "2026-11-19"
+  - text: "RETRO (review remediation cycle): the second pass cost four artifact
+      reopenings (specification, test_planning, system_spec_update, delivery)
+      for one code fix. The expensive part was not the fix but the trailing
+      truth: the docs, the spec's normative table and the test plan's count each
+      had to catch up with a behaviour that changed in one commit. Process note:
+      when a remediation changes a documented contract, list every artifact that
+      states it BEFORE starting the code edit and reopen them together; that
+      would have collapsed this cycle into one."
+    type: retro
+    date: "2026-11-19"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml). 16 of 18
+      iteration-1 findings resolved (B1, M1-M6, m1-m6 verified fixed; i1-i4
+      accepted as-is). One NEW BLOCKER and one new major: (N1/B2) the
+      terminate-capability gate is inert in production because no production
+      session port carries a capability declaration (production.ts:3117-3126,
+      claude.ts, opencode.ts all lack 'capabilities'), so the Claude Code
+      adapter, which declares the terminate gap, is classified capable; a
+      below-bound stall then consumes an ordinal and the second iteration's
+      resume (a declared gap) ends failed/exit 1 instead of terminal
+      state-unverified/exit 2. (N2) the unconfirmed-termination branch is
+      implemented but never exercised - no fixture returns terminated:false or
+      rejects, so the PM note's claim that the incapable pair proves it is
+      overstated. Infos: the closed arm set is 16 ids in the code but 14 in the
+      test plan/test comment; the signalProcess seam is unused and a
+      process-runner header comment is stale."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-2 remediation routing (R13-R16 in the review record):
+      R13 attaches the real capability declarations to the production session
+      ports and adds a Claude-shaped regression; R14 adds a non-confirming
+      terminate fixture and case so the unconfirmed-termination branch is
+      exercised; R15 corrects the arm-id count to the canonical 16 in the test
+      plan and the test; R16 addresses the unused seam, the reaped meaning and
+      the stale header. Executed as plan phase 10 under a reopened delivery,
+      then the docs are re-checked (the capability wiring is a documented
+      claim), then review iteration 3. The three recorded residuals stay
+      deferred to their owners (TDR-0051, @test-plan-writer, the m1 page
+      owner)."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (review iteration 2): the B2 fix shipped a gate that read a field
+      no production object carries. The unit-shaped test proved the gate's logic
+      with a fixture that DOES carry the field, so it passed while production
+      could never take the gate. This is the same class as iteration 1: a test
+      proving the shape rather than the wiring. Process fix: any new port field
+      a decision depends on must be asserted on a PRODUCTION-composed object,
+      not only on a double."
+    type: retro
+    date: "2026-11-19"
+  - text: "CORRECTION to the plan-phase-9 R3/R4 note (review iteration 2, N2/R14):
+      the claim that the incapable below-bound pair proves the UNCONFIRMED
+      termination branch is WITHDRAWN. The incapable pair (TC-TERM-005/007)
+      proves only the `!terminateCapable` half. The unconfirmed half
+      (`terminated:false`, or a rejected terminate) is now exercised by the
+      additional TC-TERM-005 case 'an unconfirmed termination also starts no
+      second session' over the new non-confirming fixture option
+      (terminateConfirms:false): one acquisition, zero economics.restart,
+      terminal state-unverified at exit 2, with liveness:stalled AND
+      terminate:failed in the attempt evidence, one terminate call at the
+      declared 20s grace. The phase-9 sentence stays as written history."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-2 R13 (N1) is closed in PRODUCTION. HarnessSessionPort
+      gains an OPTIONAL typed `capabilities` member (a type member only: no new
+      export, no pinned surface moved); createClaudeSession returns
+      CLAUDE_CAPABILITIES (its terminate gap included), createOpencodeSession
+      returns its RESOLVED declaration (terminate included; an injected override
+      is reported verbatim), declaresTerminate reads the typed member with no
+      cast, and the dispatch composition's `harnesses` map fills an ABSENT
+      declaration and never overrides a present one. Evidence on
+      PRODUCTION-composed objects: harness-claude-session.test.ts and
+      harness-opencode-resume-stream.test.ts assert the real ports report their
+      declarations (the reviewed HEAD's ports expose none); the new TC-TERM-007
+      production-composed case drives createClaudeSession's own port through a
+      below-bound stall and asserts one spawn, zero economics.restart, no
+      ordinal, terminal state-unverified at exit 2 with the honest liveness
+      evidence (the claude adapter declares no liveness source, so the stall is
+      the harness-reported timeout and the verdict is liveness:unknown); and
+      dispatch-composition.test.ts asserts both mounts pass through
+      harnessWithDeclaration with the claude declaration excluding terminate.
+      The fail-open default stays, now reachable only by an explicitly
+      undeclared double."
+    type: info
+    date: "2026-11-19"
+  - text: "R15 (N3) and R16 (N4) closed. The test plan advances 0.5 -> 0.6:
+      TC-DERIVE-006 step 2 states the canonical 16-id closed arm set (matching
+      DISPATCH_RESULT_ARM_IDS) and names restart-budget as the loop/bound arm
+      (TC-LOOP-002/TC-LOOP-006) and undecidable as the read-failure arm
+      (TC-LOOP-007); the delivered test mirrors the 16 ids locally, names the
+      module constant as the source, asserts the mirror has 16 entries, and
+      keeps the 25 rows, the 10-token assertion and every delivered expectation
+      unchanged. The mutation register stays 90 rows (M1-M90); plan phase 10
+      re-arms M42 for the production composition and adds or removes no row. R16
+      removes the unused non-tree `signalProcess` seam from the production
+      terminate seam and the adapter seam type, documents `reaped` as 'the
+      exact-identity target was MATCHED' (not an OS reap act) in the adapter and
+      the result type, and replaces the process-runner header's 'counts zero by
+      construction' with the live permitted-start semantics."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan-phase-10 DECLINED and ROUTED items. D6: wiring `check:no-shell` into
+      the aggregate `check` chain is NOT done - package.json's `check` string is
+      pinned verbatim by tests/checks/ci-checks.test.ts,
+      privacy-ci-wiring.test.ts and license-ci-binding.test.ts, so the wiring is
+      a pinned-surface move and a plan revision; package.json is untouched and
+      the m3 low residual (the CLI main() is not in `pnpm check`) persists,
+      recorded rather than papered over. D9: no current-truth page is edited in
+      phase 10; the m1 reference-page note (the incapable-adapter terminal
+      outcome and the resume-clears fact) and the `reaped` wording on the
+      harness page are routed to lifecycle phase 7 for @doc-syncer. The adapter
+      and contract-type wording in code now state the matched meaning."
+    type: decision
+    date: "2026-11-19"
+  - text: "PLAN PHASE 10 EVIDENCE (review-iteration-2 remediation). Plan phase id 10
+      (`fix(GH-347): review-iteration-2 remediation`) is implemented and landed
+      in commit 6ae1ae2d89ab7a8c372f902eafdd186362096983 (16 files; the commit
+      primitive's template subject is the delivered `feat(GH-347): update
+      doc/changes/...` line because this commit was made without `--phase`).
+      Gate at that HEAD, exit 0 on every plan line: harness adapter suites 23
+      pass; stall/loop 32 pass; derivation + token-closure 42 pass; parity
+      battery/no-shell/spawn 26 pass; composition + harness contract 71 pass;
+      contract-invariance + no-shell 21 pass; content/port/dispatch structure 37
+      pass; `scripts/checks/no-shell-dispatch.ts` clean (22 surface files);
+      `pnpm typecheck` clean; `git diff --check` clean. The BINDING aggregate
+      `pnpm check` is green: lint/format/typecheck PASS, 11,147 pass / 4 skip /
+      0 fail across 1,376 files, boundaries, memory (records=3 areas=8
+      errors=0), prompt-conformance (5 clean), help-guide-coverage and
+      exports-parity (5 publishables) all PASS. R13: production session ports
+      declare (createClaudeSession -> CLAUDE_CAPABILITIES with the terminate
+      gap; createOpencodeSession -> its resolved declaration) and `harnessFor`
+      fills only an ABSENT declaration; the TC-TERM-007 production-composed case
+      drives createClaudeSession's own port through a below-bound stall to one
+      spawn, zero economics.restart and terminal state-unverified at exit 2; the
+      adapter suites and the composition source assertion hold the wiring. R14:
+      the TC-TERM-005 unconfirmed case proves the terminate:failed half. R15:
+      the 16-id mirror with its size assertion and test plan v0.6. R16:
+      signalProcess removed, `reaped` documented as the exact-identity match,
+      process-runner header live-counter semantics. No pinned surface moved; the
+      mutation register stays 90 rows and M42 is re-armed."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-phase-10 documentation re-verification: five pages reconciled - the
+      three current-truth feature pages (the capability declaration carried on
+      the port with the production obligation and the fail-open default, the
+      incapable/unconfirmed termination as a terminal state-unverified arm with
+      no ordinal, reaped as an exact-identity match, the resume-clears fact, the
+      composition fill), plus the m1 dispatch reference page (its termination
+      paragraph corrected from 'below the bound always consumes an ordinal' to
+      the confirmed-only rule, with the unconfirmed and incapable arms and the
+      matched-not-reaped wording) and the dispatch test spec (the optional
+      capabilities member, the unconfirmed-termination scenario and the
+      claude-shaped below-bound case in the existing structure). Gates: doc
+      suites 39 pass, doc-distribution no drift (96 docs), stale-phrase scan
+      clean on all five pages, git diff --check clean. No false claim remains on
+      the m1 page. One optional tightening stays open and is not a false claim:
+      the glossary Terminate entry lists terminated/escalated/reaped without the
+      match semantics or the port-carried declaration."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration 3 = PASS_WITH_NOTES (code-review/review-iter-3.yaml;
+      schema status PASS). 0 critical, 0 high, 0 medium, 0 low, 3 info. All four
+      iteration-2 findings resolved with production proof: N1 the production
+      adapters carry their capability declarations, declaresTerminate reads the
+      typed member, harnessWithDeclaration fills an absent declaration and never
+      overrides, and the production-composed TC-TERM-007 drives
+      createClaudeSession's own port through a below-bound stall to terminal
+      state-unverified with no second session; N2 the unconfirmed-termination
+      case exercises the terminate:failed half; N3 the 16-id canonical set; N4
+      the signalProcess removal and the matched-not-reaped wording. The
+      iteration-1 re-checks (B2, M1/M2, M5, M6) are all resolved. The reviewer's
+      independent run is green: plan validate valid, typecheck, boundaries (469
+      modules), the targeted suites (234 tests) and doc-distribution (96 docs).
+      Diff reviewed: 119 files, +21721/-918. Merged view: the change is accepted
+      with three informational notes."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration-3 info notes accepted as non-blocking and recorded for
+      the owner: (F1) three current-truth pages and the glossary still use
+      'exact-identity reap' wording and omit the match/port-carried nuance -
+      they assert nothing false (the adapter signals only exact-identity
+      matches), and a future doc touch can tighten it; (F2) the derivation test
+      mirrors the 16-id arm set with a size-16 assertion rather than identity
+      equality with DISPATCH_RESULT_ARM_IDS - today's ids match exactly, a
+      future arm without a row would not be caught; (F3) the fail-open default
+      for an undeclared port is retained, documented, and reachable only by an
+      explicitly undeclared double."
+    type: risk
+    date: "2026-11-19"
+  - text: "Quality gates (lifecycle phase 9) PASS. Aggregate TMPDIR=$PWD/tmp/tmpdir
+      PATH=$PWD/node_modules/.bin:$PATH pnpm check exit 0 in ~23m51s: biome lint
+      3057 files (0 errors; 114 warnings / 38 infos, pre-existing style
+      diagnostics), format:check 2911 files, build 6 projects, typecheck 6 of 6
+      plus the types project, test 11147 pass / 4 skip / 0 fail over 11151 tests
+      in 1376 files, check:boundaries (469 modules, 1482 dependencies, no
+      violations; ambient-globals 227 clean; workspace entrypoints match;
+      secret-read boundary 435 files with 5 allowlisted), check:memory records=3
+      areas=8 errors=0 advisories=0, prompt-conformance 5 clean, help-guide
+      coverage complete, exports-parity 5 publishables."
+    type: info
+    date: "2026-11-19"
+  - text: "Range lint gate (phase 9, required): ./scripts/lint-commit-range.sh
+      --base origin/main-tools exit 0. VERDICT: PASS - base origin/main-tools
+      (source=explicit), merge-base d8d762be, head a3ccfaeb, 35 commits in
+      range, 0 offending commits, 0 distinct rules hit, mode none (no MODE line
+      on a PASS), commitlint binary node_modules/.bin/commitlint
+      (origin=repository-local). Working tree clean after both gates."
+    type: info
+    date: "2026-11-19"
+  - text: "DoD check PASS. Nine of nine prerequisite phases are complete in the
+      verified registry (clarify_scope, specification, test_planning,
+      delivery_planning, dor_check, delivery, system_spec_update, review_fix,
+      quality_gates); only dod_check and pr_creation remain, by design. Plan
+      validation is valid/full/readyForDevelopment=true and lint plan is valid;
+      lint GH-347 conforms. Every declared plan phase 1-10 has a pm-notes
+      evidence entry naming its id, commit hash and gate result. The six TDRs
+      are tracked (git ls-files succeeds for each) and doc/decisions is clean.
+      The stale-phrase scan returns zero hits. The review (iteration 3) records
+      spec_compliance PASS and plan_compliance PASS with 0
+      critical/high/medium/low findings (3 info only), so all 42 ACs are
+      satisfied. Documentation is reconciled with no residual gap. Quality gates
+      are green and the range gate is PASS over 35 commits. The branch is 36
+      commits over origin/main-tools with a clean tree."
+    type: info
+    date: "2026-11-19"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/364 - base
+      main-tools, head feat/GH-347/dispatch-core-parity at dc615e35, not draft,
+      no auto-merge, 37 commits, 120 files, +22000/-918. First state is
+      CONFLICTING/DIRTY because main-tools advanced one commit after the fork
+      with GH-346 (#363, d1fff222), which overlaps four files:
+      doc/decisions/00-index.md, doc/overview/glossary.md,
+      doc/spec/features/feature-result-contract.md and
+      packages/cli/src/production.ts. Per the resume-sync instruction the branch
+      is synced with origin/main-tools, the four conflicts are resolved, the
+      affected gates and the range gate are re-run, and the PR is updated. Merge
+      authority stays with the CEO/human; nothing was merged."
+    type: info
+    date: "2026-11-19"
+  - text: "Branch synced with origin/main-tools at d1fff222 (GH-346, PR #363) by
+      merge commit 3888c3f0 (parents dc615e35 and d1fff222); nothing was rebased
+      or force-pushed. Four conflicts, all resolved by integrating both sides:
+      (1) doc/decisions/00-index.md keeps the GH-346 rows TDR-0044..0048 and
+      carries the GH-347 rows as TDR-0049..0054, in ascending id order, with no
+      row dropped; (2) doc/overview/glossary.md keeps both term sets and the
+      union of both frontmatter link sets; (3) feature-result-contract.md
+      carries GH-346 and GH-347 in related_changes and leaves the eleven-token
+      taxonomy, the projections, the exits and the error table exactly as
+      delivered; (4) packages/cli/src/production.ts composes GH-346's install
+      family runtime and GH-347's dispatch composition together. ID COLLISION
+      RESOLVED BY RENUMBERING: both branches independently allocated
+      TDR-0044..0048, so the six GH-347 records moved 0044..0049 -> 0049..0054
+      (file names, frontmatter ids, headings, index rows,
+      spec/plan/test-plan/pm-notes/readiness references, spec/features pages,
+      glossary rows and code comments all updated; GH-346's records and
+      references are untouched). The documented rule is that decision numbers
+      are never reused and the next number is highest + 1, and GH-346 itself
+      renumbered TDR-0036..TDR-0040 -> TDR-0044..0048 on the same ground.
+      Verification after the merge: pnpm typecheck pass; 180 tests pass across
+      the dispatch composition, install structure and the two harness behaviour
+      suites; 322 tests pass across the
+      decision/doc/error-table/content-inventory checks; 238 tests pass across
+      the dispatch-structure and entrypoint structure/behaviour suites; 123
+      tests pass across the port-inventory, supervision-imports and install
+      error domain suites; git diff --check clean. Merge authority stays with
+      the CEO/human; the PR is updated, not merged."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-sync gates at head 3ad96f3a (the merged head): aggregate
+      TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check exit 0
+      in ~25m32s - lint 3102 files (0 errors; 126 warnings / 37 infos), format
+      2956 files, build 6 projects, typecheck 6/6 plus the types project, test
+      11303 pass / 4 skip / 0 fail over 11307 tests in 1397 files, boundaries
+      485 modules with no violations (ambient-globals 236 clean, workspace
+      entrypoints match, secret-read boundary 451 files clean), memory 0 errors,
+      prompt-conformance 5 clean, help coverage complete, exports-parity 5.
+      Range gate: VERDICT PASS, base origin/main-tools, merge-base d1fff222,
+      head 3ad96f3a, 39 commits, 0 offending, commitlint repository-local. The
+      four documentation guards 41/41. The stale-phrase scan returns zero hits.
+      The TDR references are consistent with the renumbering (GH-346 owns
+      0044-0048, the dispatch records are 0049-0054)."
+    type: info
+    date: "2026-11-19"
+  - text: "PR #364 final state: MERGEABLE, mergeStateStatus BLOCKED pending review
+      and checks (not conflicts), head 3ad96f3a, 39 commits, checks 47/47 pass,
+      not draft, no review decision, no auto-merge. The body was regenerated for
+      the renumbered TDRs (0049-0054), the sync evidence and the post-sync gate
+      numbers. Nothing was merged, approved or rewritten. Merge authority stays
+      with the CEO/human. Cosmetic residuals recorded, not fixed because they
+      are historical records: the range typo 'TDR-0049..0049' appears in
+      pm-notes:200, code-review/review-iter-1.yaml and
+      readiness-review/readiness-iter-1.md; those review/readiness records
+      correctly cite the ids in force when they were written."
+    type: info
+    date: "2026-11-19"

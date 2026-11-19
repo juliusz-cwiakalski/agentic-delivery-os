@@ -136,3 +136,15 @@ export type PmNotesParseFailure = {
 export type PmNotesParseOutcome =
   | { readonly ok: true; readonly value: unknown }
   | { readonly ok: false; readonly parseFailure: PmNotesParseFailure };
+
+/**
+ * The closed artifact-completeness vocabulary (GH-347 DM-3, TDR-0053).
+ *
+ * `complete` is a present document whose delivery phase carries a non-null
+ * completion; `absent` is no document; `incomplete` is present but
+ * incomplete, unparseable, or otherwise not complete. The fallible direction is
+ * never `complete`.
+ */
+export const PM_NOTES_COMPLETENESS = ["complete", "incomplete", "absent"] as const;
+
+export type PmNotesCompleteness = (typeof PM_NOTES_COMPLETENESS)[number];
