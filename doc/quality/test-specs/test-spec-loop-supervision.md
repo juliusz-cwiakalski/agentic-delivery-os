@@ -66,19 +66,25 @@ the shipped binary cannot reach the family.
 ### Unit and contract tests
 
 - `tests/behaviour/loop-stuck.test.ts` — the pure two-signal rule: every stuck
-  condition, positive progress, the delivery veto, both unevaluable inputs, the
-  seeded observation, and the decision table over progress × artifact advance ×
-  delivery reading, then the integration arms (verdict/outcome pair, the
-  termination ordering and exact target set, the terminal unconfirmed
-  termination, and the bound formula at two interval settings).
+  condition, positive progress within `progress-bound`, the stale-positive
+  `unevaluable` arm, the delivery veto, both unreadable inputs, the seeded
+  observation, the baseline-relative artifact advance (a merge before the baseline
+  does not suppress a stuck verdict; a merge after it does), the newest-per-ref
+  reduction that stops a superseded `active` lane from vetoing, and the decision
+  table over progress × artifact advance × delivery reading, then the integration
+  arms (verdict/outcome pair, the termination ordering and exact target set, the
+  terminal unconfirmed termination, and the bound formula at two interval
+  settings).
 - `tests/behaviour/loop-backoff.test.ts` — the delay schedule at ordinals 1–10,
   the total-epoch bound, the cancellation rule, the at-bound exit and its
   derivable history reference, the durable next epoch under `--fresh-budget`, the
   clean-end path that consumes no ordinal, and the bounded restart evidence.
 - `tests/behaviour/loop-status.test.ts` — the fourteen-key block order, exactly
   three boolean keys, `loop_id=loop-main`, `restarts=<n>/<bound>`, live-only
-  `ceo_pid`/`ceo_session`, the empty-string rendering with no `none` token, and
-  the three golden worlds (running, stopped, absent identifiers).
+  `ceo_pid`/`ceo_session`, the empty-string rendering with no `none` token, the
+  three golden worlds (running, stopped, absent identifiers), and the machine
+  projection's `session.progress` (the last observed state, `null` before the
+  first reading).
 - `tests/behaviour/loop-log.test.ts` — the eleven-name event vocabulary, the line
   contract, the byte and line bounds, the rotation that keeps the newest data,
   the read nothing-creates rule, the unreadable-read marker, and the swallow rule
@@ -113,6 +119,8 @@ the shipped binary cannot reach the family.
   absence of a pre-iteration hook.
 - `tests/behaviour/loop-instance.test.ts` — the two-start interleaving in both
   directions, the liveness-first takeover, the join without a second spawn, the
+  cross-process re-find observed live without a pre-set alive read, the null
+  start-time session joined as unknown-liveness and never probed with `0`, the
   ended-session replacement, the pid-less resume with no title, the distinct
   `loop-main` identity against `coordinator-main`, the one-session invariant, and
   the undeclared-capability refusal.
@@ -140,9 +148,11 @@ the shipped binary cannot reach the family.
   script path and names the four primitives, the privacy scan finds no forbidden
   token in any line, and the proof boundary is the permanent constant.
 - `tests/conformance/loop/loop-pick-deliver-merge.test.ts` — the session drives
-  `queue claim` → `dispatch` → `merge` → `closeout` through the real command
-  runtime with zero shells, zero kills, zero restarts, and no `phase complete` on
-  the deliver leg.
+  `queue claim` → `dispatch` → `merge` through the real composed command runtime
+  over the delivered dispatch conformance fixtures, asserts the three real
+  envelopes, the lane evidence the real dispatch appended, zero shells, zero
+  kills, zero restarts, and no `phase complete` on the deliver leg, and keeps a
+  live pick-deliver-merge not proven so the nine/six boundary is unchanged.
 - `tests/checks/reference-page-parity.test.ts`, `tests/structure/metrics-mounting.test.ts`,
   `tests/checks/install-conformance-mutants.test.ts`, and the help-guide coverage
   inventory — the prompt-required set at 27 families with `loop` last, the M4
@@ -155,15 +165,18 @@ the shipped binary cannot reach the family.
   port, a scripted harness session, a recording delay seam, and the real command
   path.
 - `tests/fixtures/loop/facts.ts` — the shared fact builders (fence, restart,
-  stuck, session, stop, and lane facts) with fixed identifiers.
+  stuck, session, stop, and lane facts) with fixed identifiers, including the
+  verdict rows for fresh versus stale positive progress and the superseded-active
+  lane pair for the newest-per-ref reduction.
 - `tests/fixtures/loop/session.ts`, `tests/fixtures/loop/log-fs.ts` — the
   scripted session effects and the bounded log file-system double.
 - `tests/fixtures/loop/parity/{cases,seams,evidence,e2e}.ts` — the parity case
   registry, the forbidden-seam signatures and planted reimplementation, the
   permanent proof boundary and its canonicalizer, and the pick-deliver-merge
   transcript builder.
-- `tests/fixtures/loop/golden/status.ts` — the three status goldens, including the
-  absent-identifier world.
+- `tests/fixtures/loop/golden/status.ts` — the three status-block goldens,
+  including the absent-identifier world, and the progress projection golden
+  (`observed` after a reading, `null` before the first).
 - No fixture reads or writes the live workspace state directory, spawns a real
   child, or performs a network call.
 
@@ -209,9 +222,11 @@ the shipped binary cannot reach the family.
 
 - **Given** two concurrent starts, **when** they interleave, **then** exactly one
   is admitted and one is refused `coordinator.already-running` at exit 2.
-- **And** a takeover joins a live recorded session, replaces an ended one with
-  exactly one fresh session, resumes a pid-less `active` one exactly once without
-  a title, and never spawns a second session beside a recorded live one.
+- **And** a takeover joins a live recorded session and observes it live across
+  later cycles, joins a recorded pid with a null start time as unknown-liveness
+  without probing `0`, replaces an ended one with exactly one fresh session,
+  resumes a pid-less `active` one exactly once without a title, and never spawns a
+  second session beside a recorded live one.
 - **And** `loop-main` and `coordinator-main` neither exclude nor read each other.
 
 ### Scenario: Two-signal stuck detection and the delivery veto
@@ -222,11 +237,18 @@ the shipped binary cannot reach the family.
   loop-scoped identity, and the restart admission decision follows.
 - **And** a live delivery in progress makes the same quiet session `progressing`,
   with zero records and zero terminations, even after twenty virtual minutes.
+- **And** a prior merge record before the progress baseline does not suppress the
+  stuck verdict, while a merge after that baseline does; the artifact signal is
+  baseline-relative and an undatable record counts as an advance.
+- **And** a positive reading within `progress-bound` is `progressing`, while the
+  same reading older than the bound is `unevaluable`; `stuck` still requires a
+  sourced zero.
 - **And** an unreadable progress reading or an unreadable corroborator is
   `unevaluable`: one record, no kill, continued cycling.
-- **And** the corroborator consumes no start-time or age fact and writes nothing;
-  the sixteen-row class/fold decision is total, and the pid-reuse residual risk is
-  a delay, never a kill.
+- **And** the corroborator consumes the newest record per ref, so a superseded
+  `active` lane cannot contribute `in-progress`; it consumes no start-time or age
+  fact and writes nothing; the sixteen-row class/fold decision is total, and the
+  pid-reuse residual risk is a delay, never a kill.
 
 ### Scenario: Termination ordering and its terminal failure
 

@@ -126,9 +126,12 @@ does not produce while the lease fold is readable.
 
 The instance projection carries the lease instance and its pid; the session
 projection carries the live session id, alive flag, pid, the recorded title, and
-the recorded progress state; restarts carry count, bound, epoch, and last
-reason; the stop fact carries the folded request and mode; the verdict carries
-the newest persisted verdict, reason, and bounded evidence.
+the progress state the running supervisor **last observed** (`null` before its
+first reading, never a fabricated token); restarts carry count, bound, epoch, and
+last reason; the stop fact carries the folded request and mode; the verdict
+carries the newest persisted verdict, reason, and bounded evidence. The progress
+state appears only in the machine projection's `session.progress`; the human
+block has no progress key.
 
 ## 4. Engine reuse boundary
 
@@ -144,7 +147,7 @@ the coordinator's supervision cycle (TDR-0055).
 | Configuration | Yes | The six `coordinator.*` keys with their shipped defaults; no new key. |
 | Per-identity verified state read | Yes | `readCoordinatorRecords(store, loopId)`; record keys are identity-scoped, so a second identity's records are skipped rather than rejected. |
 | Supervision cycle | **No** | The loop runs its own cycle over the CEO session. |
-| Stuck predicate | **No** | The coordinator's artifact-evidence `evaluateStuck` is not used; the loop's two-signal rule applies (§6). |
+| Stuck predicate | **No** | The coordinator's artifact-evidence `evaluateStuck` is not used; the loop's two-signal rule applies (§7). |
 | Wake path and escalation | **No** | The loop publishes no question and no answer; budget exhaustion ends the loop with its own bounded summary instead of an owner escalation. |
 | `coordinator.iteration` records | **No** | The loop writes none; the delivered `iterationId` is a required string, not a foreign key. |
 
@@ -175,8 +178,9 @@ optional `pid` on the harness session handle. It is recorded on the loop's
 `loop.session` record together with the platform start time read at acquisition.
 When the adapter supplies none, the record carries `null` (never a fabricated
 number), `status` discloses `session-pid-unknown`, and the loop degrades
-conservatively: a recorded `active` session without a process identity is
-unknown-liveness (no stuck verdict) and is resumed rather than duplicated.
+conservatively: a recorded `active` session without a verifiable process identity
+(no pid, or a pid with no platform start time) is unknown-liveness (no stuck
+verdict) and is joined or resumed rather than duplicated.
 
 One `loop.session` record is appended per acquisition and one per state change
 (`active` → `ended`) — never one per cycle, so a quiet or continuously
@@ -199,8 +203,16 @@ spawning, and every arm is conservative:
 |---|---|
 | the current process holds a live session | join and observe; no spawn |
 | a recorded pid is alive **and** its platform start time read at acquisition still matches | join and observe; no spawn, and no reliance on a composition timestamp |
+| a recorded pid is present but its platform start time is `null` | unknown-liveness: joined with the recorded identity and never probed with `0`; no spawn |
 | the session is recorded `ended` | replaced by exactly one fresh session |
 | the session is recorded `active` with no process identity | unknown-liveness: resumed exactly once with the recorded session id and no title; never killed, never duplicated |
+
+A re-find seeds the established facts from the joined session — and, in the
+production composition, from the newest durable `loop.session` when the fresh
+process holds no in-memory facts — so the re-found session is observed live by
+later cycles rather than as an absent in-memory placeholder. A recorded `pid`
+without a platform start time cannot be identity-verified, so it takes the
+unknown-liveness join arm and is never replaced by a spawn.
 
 No path spawns a second session beside a recorded live one, so at most one CEO
 session exists at any observation point.
@@ -213,22 +225,31 @@ The verdict is a pure, total function over three injected fact sets.
    over a sourced `token-delta` reading of the recorded session. A positive delta
    is `positive`, a sourced zero is `zero`, and no source is `unknown`.
 2. **Artifact advance** — whether a `merge.transaction` or a blocker answer
-   record landed since the last sourced-progress observation.
+   record landed **after the same baseline instant the stuck window measures
+   from**: the last sourced-progress observation the running supervisor holds.
+   Before the supervisor holds a baseline, no record counts as "since" it, so the
+   signal reports no advance. A record with no parseable `recordedAt` counts as an
+   advance, so an undatable artifact can only delay a verdict, never cause a kill.
 3. **Delivery corroborator** — `in-progress`, `none`, or `unknown`, decided from
-   the delivered lane records and the process-port probe (§7.1).
+   the newest-per-ref lane records and the process-port probe (§7.1).
 
 `stuck` requires all of: a live session; sourced progress `zero` for at least
-`coordinator.stuck-window` (600 000 ms) measured from the last sourced-progress
-observation the running supervisor holds; no artifact advance since that
-observation; and a readable corroborator that reports `none`.
+`coordinator.stuck-window` (600 000 ms) measured from that baseline; no artifact
+advance since that baseline; and a readable corroborator that reports `none`. A
+`stuck` verdict always requires a sourced `zero`: a positive reading is never
+laundered into a kill.
 
 `progressing` when sourced progress is positive within
 `coordinator.progress-bound` (300 000 ms), or when the corroborator reports a
-delivery in progress.
+delivery in progress. A positive reading with no timestamp is treated as fresh
+because no age evidence exists. With no delivery corroborated in progress, a
+positive reading older than the bound is **stale**: it does not license
+`progressing`, and it is not a sourced zero, so it never licenses `stuck` either.
 
-`unevaluable` when the progress reading is `unknown` **or** the corroborator is
-unreadable. Nothing is killed; exactly one verdict record lands per expectation
-and the loop continues. An unreadable input is never laundered into a kill.
+`unevaluable` when the progress reading is `unknown`, the corroborator is
+unreadable, or a stale positive reading falls through the progressing causes.
+Nothing is killed; exactly one verdict record lands per expectation and the loop
+continues. An unreadable or stale input is never laundered into a kill.
 
 A supervisor that has only just started seeds the progress observation at its own
 session acquisition or first reading — never earlier — so a process restart can
@@ -243,7 +264,10 @@ readability, the newest `dispatch.lane` record for **every** ref that has one
 `daemon.lane` record (state, `processId` presence, liveness). It consumes **no**
 `startedAt` value, no age bound, and no start-time comparison.
 
-Each candidate lane contributes at most one class:
+The dispatch input is reduced to the **newest record per ref** before
+classification, so a superseded `active` lane is never classified and cannot veto
+a stuck verdict by contributing `in-progress`. Each candidate lane contributes at
+most one class:
 
 | # | Candidate | Contribution |
 |---|---|---|
@@ -473,11 +497,11 @@ publishes the same boundary in the same order.
 | `verbs` | All five verbs, their grammar, refusals, exits, payloads, and the status-key block. |
 | `log` | The line contract, rotation and retention bounds, and the bounded read. |
 | `spawn` | The CEO agent identity, the resolved seat model, the deterministic title, the fixed argv, and the pre-session refusals. |
-| `stuck` | The two-signal verdict, the corroborator veto under the evidence-class and fold tables, the unevaluable paths, and the window-to-restart bound formula at two interval settings. |
+| `stuck` | The two-signal verdict including the baseline-relative artifact advance, the stale-positive and unreadable `unevaluable` paths, the corroborator veto under the newest-per-ref evidence-class and fold tables, and the window-to-restart bound formula at two interval settings. |
 | `kill` | TERM-before-KILL within the grace, the exact target set, the identity-mismatch path, the terminal no-restart consequence, and idempotence. |
 | `backoff-budget` | The exact delay schedule, one ordinal per stuck restart, zero ordinals for a clean end, and the at-bound refusal with its exit. |
 | `stop` | The durable request surviving a simulated process restart and crash, the clearance, the idempotence, and both stop modes' latency bounds. |
-| `single-instance` | The two-start interleaving, the liveness-first takeover, session re-find without a second spawn, the distinct coordinator identity, and the session-uniqueness invariant. |
+| `single-instance` | The two-start interleaving, the liveness-first takeover, session re-find without a second spawn (the joined session observed live, and a recorded pid with a null start time joined as unknown-liveness and never probed with `0`), the distinct coordinator identity, and the session-uniqueness invariant. |
 | `no-shell` | The injected runner recording zero, the static invariant over the declared loop surface with its mutation control, and the prompt scan. |
 
 **Not proven (6):** `live-opencode`, `live-provider`, `os-termination`,
@@ -488,7 +512,7 @@ publishes the same boundary in the same order.
 | `live-opencode` | A real session's real message traffic, real resume after a real process exit, and real stdout framing. |
 | `live-provider` | A real profile selection against live quota, balance, or availability. |
 | `os-termination` | OS-level termination of a real child and a real escaped runtime; the battery proves the contract, ordering, grace, and exact-identity target selection, not kernel signal delivery. |
-| `real-pick-deliver-merge` | A real pick-deliver-merge outcome; the tracker, pull-request, CI, and merge effects are fixtures. |
+| `real-pick-deliver-merge` | A real tracker, pull-request, CI, and merge effect; the scenario drives the real composed command runtime and asserts its envelopes, but those external effects are fixtures and remain unproven. |
 | `long-run-loop` | Long-run behaviour under a real clock and real multi-minute delays; the battery injects time. |
 | `cross-process-race` | Race freedom beyond the state store's fence guarantee; the two-start interleaving is deterministic, not an arbitrary OS schedule. |
 
@@ -504,8 +528,11 @@ The pure rules (verdict, backoff, status block, log line) and the cycle cases
 live under `tests/behaviour/loop-*.test.ts`; the shipped composition is proven by
 `tests/structure/loop-production-composition.test.ts`,
 `loop-production-session.test.ts`, and `loop-imports.test.ts`; the parity battery
-and the pick-deliver-merge scenario live under `tests/conformance/loop/`; and
-`scripts/checks/no-shell-dispatch.ts` scans the declared loop surface.
+and the pick-deliver-merge scenario live under `tests/conformance/loop/`. That
+scenario drives the real composed command runtime over the delivered dispatch
+conformance fixtures and asserts its real envelopes, lane evidence, and zero
+shells; a live pick-deliver-merge remains not proven, so the nine/six boundary is
+unchanged. `scripts/checks/no-shell-dispatch.ts` scans the declared loop surface.
 
 ## Related
 
