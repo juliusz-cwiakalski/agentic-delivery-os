@@ -14,8 +14,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { createNodeInstallFilePort } from "../../packages/adapters/src/file/index";
+import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
+import type { InstallFilePort } from "../../packages/core/src/contracts/install";
 import {
   createFixtureArtifact,
   type FixtureArtifact,
@@ -187,6 +191,94 @@ describe("TC-INST-021 the slot never holds anything but a compiled artifact", ()
       target.dispose();
     }
   });
+
+  test("an executable slot whose probe bytes cannot be read is invalid in status and refused by rollback", async () => {
+    const target = freshScratch();
+    try {
+      mkdirSync(target.installDirectory, { recursive: true });
+      writeFileSync(target.slotPath, Buffer.from([0x7f, 0x45, 0x4c, 0x46]), { mode: 0o755 });
+      chmodSync(target.slotPath, 0o755);
+      const node = createNodeInstallFilePort();
+      const unreadablePrefix: InstallFilePort = {
+        ...node,
+        readPrefix: (path, maxBytes) =>
+          path === target.slotPath ? undefined : node.readPrefix(path, maxBytes),
+      };
+      const runtime = () =>
+        createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: running.path,
+          identity: fixtureIdentity(),
+          fs: unreadablePrefix,
+        });
+      expect((await invoke(runtime(), ["rollback"])).error?.code).toBe("install.slot.invalid");
+      const status = await invoke(runtime(), ["status"]);
+      expect((dataOf(status).rollback as { readonly state?: string }).state).toBe("invalid");
+    } finally {
+      target.dispose();
+    }
+  });
+
+  test("the slot probe reads a bounded prefix and no entry point reads the artifact whole", async () => {
+    const target = freshScratch();
+    try {
+      await invoke(runtimeFor(target), []);
+      // A slot far larger than any probe: no entry point may read it whole.
+      mkdirSync(dirname(target.slotPath), { recursive: true });
+      writeFileSync(
+        target.slotPath,
+        Buffer.concat([Buffer.from([0x7f, 0x45, 0x4c, 0x46]), Buffer.alloc(4 * 1024 * 1024)]),
+        { mode: 0o755 },
+      );
+      chmodSync(target.slotPath, 0o755);
+      const node = createNodeInstallFilePort();
+      const bounds: number[] = [];
+      const wholeReads: string[] = [];
+      const counting: InstallFilePort = {
+        ...node,
+        readPrefix: (path, maxBytes) => {
+          if (path === target.slotPath) bounds.push(maxBytes);
+          return node.readPrefix(path, maxBytes);
+        },
+        readText: (path) => {
+          if (path === target.slotPath) wholeReads.push(path);
+          return node.readText(path);
+        },
+        digest: (path) => {
+          if (path === target.slotPath) wholeReads.push(path);
+          return node.digest(path);
+        },
+      };
+      const runtime = () =>
+        createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: running.path,
+          identity: fixtureIdentity(),
+          fs: counting,
+          environment: { HOME: target.home },
+        });
+      const entries = [
+        { positionals: ["status"], flags: {} },
+        { positionals: [], flags: { "--dry-run": true } },
+        { positionals: ["rollback"], flags: { "--dry-run": true } },
+        { positionals: ["uninstall"], flags: { "--dry-run": true } },
+        { positionals: ["purge"], flags: { "--dry-run": true } },
+      ] as const;
+      for (const entry of entries) {
+        const label = `${entry.positionals.join(" ")} ${Object.keys(entry.flags).join(" ")}`.trim();
+        const outcome = await invoke(runtime(), entry.positionals, entry.flags);
+        expect({ label, code: outcome.error?.code }).toEqual({ label, code: undefined });
+      }
+      expect(bounds.length).toBeGreaterThan(0);
+      expect(bounds.filter((maxBytes) => maxBytes > 4)).toEqual([]);
+      expect(wholeReads).toEqual([]);
+      // The adapter honours the asked bound, so the counter is not the only guard.
+      expect(node.readPrefix(target.slotPath, 2)?.length).toBe(2);
+      expect(node.readPrefix(target.slotPath, 4)?.length).toBe(4);
+    } finally {
+      target.dispose();
+    }
+  });
 });
 
 describe("TC-INST-021b rollback refuses a destination that is not a compiled artifact", () => {
@@ -211,6 +303,8 @@ describe("TC-INST-021b rollback refuses a destination that is not a compiled art
         { mode: 0o755 },
       );
       const destinationBefore = readFileSync(target.destinationPath);
+      const recordBefore = readRecordText(target);
+      const before = snapshotTree(target.installDirectory);
       const dry = await invoke(runtimeFor(target), ["rollback"], { "--dry-run": true });
       expect(dry.error).toBeUndefined();
       expect((dataOf(dry).plan as readonly string[]).join("\n")).toContain(
@@ -218,8 +312,18 @@ describe("TC-INST-021b rollback refuses a destination that is not a compiled art
       );
       const refused = await invoke(runtimeFor(target), ["rollback"]);
       expect(refused.error?.code).toBe("install.record.unreadable");
+      // The declared fifth rollback cause is guarded: identity, exit digit, and
+      // zero writes, with the record naming both legs.
+      const resolution = resolveAppErrorCode("install.record.unreadable");
+      expect(resolution.ok).toBe(true);
+      if (resolution.ok) {
+        expect(projectExitCode(resolution.entry.projectionClass)).toBe(1);
+      }
       expect(readFileSync(target.destinationPath)).toEqual(destinationBefore);
       expect(digestOf(target.slotPath)).toBe(slotBefore);
+      expect(readRecordText(target)).toBe(recordBefore);
+      expect(snapshotTree(target.installDirectory)).toEqual(before);
+      expect(existsSync(`${target.slotPath}.rollback-tmp`)).toBe(false);
     } finally {
       target.dispose();
     }

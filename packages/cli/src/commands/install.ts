@@ -13,6 +13,7 @@
 
 import {
   classifyInstallDestination,
+  INSTALL_PROBE_BYTES,
   isCompiledArtifactAtPath,
   launcherTargetOf,
   readProfileText,
@@ -256,10 +257,15 @@ const writeRecord = (runtime: InstallRuntime, record: InstallRecord): boolean =>
 const slotReportOf = (runtime: InstallRuntime, read: InstallRecordRead): InstallSlotReport => {
   const stats = runtime.fs.stat(runtime.slotPath);
   const probe = stats?.kind === "file" && stats.size > 0 && stats.executable;
-  const bytes = probe ? runtime.fs.readBytes(runtime.slotPath) : undefined;
+  // The verdict needs the two shebang bytes, never the ~100 MB artifact: a
+  // bounded prefix read keeps `status` and every dry-run from touching it whole.
+  const prefix = probe ? runtime.fs.readPrefix(runtime.slotPath, INSTALL_PROBE_BYTES) : undefined;
   const condition = slotCondition({
     stats,
-    script: bytes !== undefined && bytes[0] === 0x23 && bytes[1] === 0x21,
+    script: prefix !== undefined && prefix[0] === 0x23 && prefix[1] === 0x21,
+    // The same unreadable bytes the rollback predicate refuses: `status` must
+    // not claim a rollback-ready slot that `rollback` answers `invalid`.
+    unreadable: probe && prefix === undefined,
     ...(read.kind === "record" && read.record.previous !== undefined
       ? { identity: read.record.previous }
       : {}),
@@ -352,6 +358,11 @@ const destinationFacts = (runtime: InstallRuntime) => {
  * Write the managed PATH block exactly once for the resolved profile, and
  * answer a typed refusal when the write fails. The caller never records a block
  * that is not on disk.
+ *
+ * The refusal declares its class plainly (`internal failure`, the reserved
+ * containment identity) because a profile write fails on permissions or space,
+ * not on an input the declared user-validation rows describe; it still names
+ * the operator remedy.
  */
 const applyPathBlock = (
   runtime: InstallRuntime,
@@ -360,15 +371,22 @@ const applyPathBlock = (
     readonly merged?: string;
     readonly block?: ReturnType<typeof renderPathBlock>;
   },
+  after: { readonly artifactInstalled: boolean; readonly slotSwapped: boolean },
 ): { readonly ok: true } | { readonly ok: false; readonly refusal: Refusal } => {
   if (profile.file === undefined || profile.block === undefined) return { ok: true };
   if (writeProfileText({ fs: runtime.fs, path: profile.file, text: profile.merged ?? "" })) {
     return { ok: true };
   }
+  const state = after.artifactInstalled
+    ? `the artifact is now installed at ${runtime.destinationPath}` +
+      (after.slotSwapped ? " and the previous artifact is in the rollback slot" : "")
+    : "the destination is this artifact and is untouched";
   return {
     ok: false,
     refusal: internalFailure(
-      `the managed PATH block could not be written to ${profile.file}; the record was not updated and no block is claimed`,
+      `internal failure: ${state}, but the managed PATH block was not written to ${profile.file}; ` +
+        "the record was not updated and no block is claimed — fix the profile's rights or pass " +
+        "another `--shell-profile`, then re-run install to record the install",
     ),
   };
 };
@@ -522,7 +540,10 @@ const runInstall = async (
   if (plannedPlan.agreement) {
     // The managed PATH block is written once on the agreement path, before the
     // reconciliation records it.
-    const block = applyPathBlock(runtime, profilePlan);
+    const block = applyPathBlock(runtime, profilePlan, {
+      artifactInstalled: false,
+      slotSwapped: false,
+    });
     if (!block.ok) return block.refusal;
     let reconciliation: InstallOutcome["reconciliation"];
     if (plannedPlan.reconcilesRecord) {
@@ -635,7 +656,10 @@ const runInstall = async (
       "the record write was injected to fail; both artifacts are valid and install status reports record-stale",
     );
   }
-  const block = applyPathBlock(runtime, profilePlan);
+  const block = applyPathBlock(runtime, profilePlan, {
+    artifactInstalled: true,
+    slotSwapped: plannedPlan.slotSwap,
+  });
   if (!block.ok) return block.refusal;
   const recordToWrite = replacingRecordOf({
     running,

@@ -325,8 +325,9 @@ export const provenanceOfAdmission = (
  * The slot's condition, reported even when its identity is not knowable.
  *
  * The condition uses the same compiled-artifact predicate the replace and the
- * rollback use: a regular, non-empty, executable file that is not a script. A
- * launcher or an identity-less file in the slot is `invalid`, so `status` and
+ * rollback use: a regular, non-empty, executable file that is not a script and
+ * whose probe bytes are readable. A launcher, an identity-less file, or a file
+ * whose bytes cannot be read for the probe is `invalid`, so `status` and
  * `rollback` never disagree about whether the slot is rollback-ready.
  */
 export const slotCondition = (input: {
@@ -335,6 +336,8 @@ export const slotCondition = (input: {
     | undefined;
   /** Whether the occupant begins with a shebang, which makes it a script. */
   readonly script?: boolean;
+  /** Whether the occupant's probe bytes could not be read at all. */
+  readonly unreadable?: boolean;
   readonly identity?: InstallArtifactIdentity;
 }): { readonly state: InstallSlotState; readonly identity?: InstallArtifactIdentity } => {
   if (input.stats === undefined) return { state: "absent" };
@@ -342,7 +345,8 @@ export const slotCondition = (input: {
     input.stats.kind !== "file" ||
     input.stats.size === 0 ||
     !input.stats.executable ||
-    input.script === true
+    input.script === true ||
+    input.unreadable === true
   )
     return { state: "invalid" };
   return input.identity === undefined

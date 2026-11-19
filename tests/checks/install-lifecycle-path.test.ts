@@ -3,7 +3,7 @@
  * (F-12, F-13; DM-5, OQ-TP-7, NG-1).
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createNodeInstallFilePort } from "../../packages/adapters/src/file/index";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
@@ -50,15 +50,18 @@ const invoke = async (
 };
 
 let running: FixtureArtifact;
+let other: FixtureArtifact;
 let base: InstallScratch;
 
 beforeAll(() => {
   running = createFixtureArtifact("path-running");
+  other = createFixtureArtifact("path-other");
   base = createInstallScratch("path-base");
 });
 
 afterAll(() => {
   removeFixtureArtifact(running);
+  removeFixtureArtifact(other);
   base.dispose();
 });
 
@@ -164,6 +167,75 @@ describe("TC-INST-070a the managed block is written once per path and its failur
     }
   });
 
+  test("a separator-less --shell-profile creates no stray sibling and removal targets the same file", async () => {
+    const target = fresh();
+    const previous = process.cwd();
+    try {
+      process.chdir(target.base);
+      const profile = ".zshrc";
+      const installed = await invoke(runtimeFor(target), [], {
+        "--add-to-path": true,
+        "--shell-profile": profile,
+      });
+      expect(installed.error).toBeUndefined();
+      // The bare name's parent is the working directory: no `.zshr` sibling.
+      expect(readdirSync(target.base).sort()).toEqual([profile, "home", "state"]);
+      expect(existsSync(join(target.base, ".zshr"))).toBe(false);
+      expect(readFileSync(join(target.base, profile), "utf8")).toContain(target.installDirectory);
+      const removed = await invoke(runtimeFor(target), ["uninstall"]);
+      expect(removed.error).toBeUndefined();
+      expect(readdirSync(target.base).sort()).toEqual([profile, "home", "state"]);
+      expect(readFileSync(join(target.base, profile), "utf8")).not.toContain(
+        "jaiship-install-path",
+      );
+    } finally {
+      process.chdir(previous);
+      target.dispose();
+    }
+  });
+
+  test("a profile write that fails after the swap says the artifact is installed", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.installDirectory, { recursive: true });
+      // A differing compiled artifact at the destination makes this a replacing run.
+      writeFileSync(target.destinationPath, readFileSync(other.path), { mode: 0o755 });
+      const node = createNodeInstallFilePort();
+      const profile = join(target.home, ".zshrc");
+      const failing: InstallFilePort = {
+        ...node,
+        writeStaged: (path, bytes, mode) =>
+          path === profile
+            ? { ok: false, reason: "the staged file could not be written" }
+            : node.writeStaged(path, bytes, mode),
+      };
+      const refused = await invoke(
+        createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: running.path,
+          identity: fixtureIdentity(),
+          environment: { HOME: target.home, SHELL: "/bin/zsh" },
+          fs: failing,
+        }),
+        [],
+        { "--add-to-path": true },
+      );
+      expect(refused.error?.code).toBe("fallback.internal");
+      const summary = refused.error?.summary ?? "";
+      expect(summary).toContain("internal failure");
+      expect(summary).toContain(`the artifact is now installed at ${target.destinationPath}`);
+      expect(summary).toContain("the previous artifact is in the rollback slot");
+      expect(summary).toContain(`was not written to ${profile}`);
+      expect(summary).toContain("re-run install");
+      // The tolerated step-7 shape: the swap landed, the record did not.
+      expect(readFileSync(target.destinationPath)).toEqual(readFileSync(running.path));
+      expect(readFileSync(target.slotPath)).toEqual(readFileSync(other.path));
+      expect(readRecordText(target)).toBeUndefined();
+    } finally {
+      target.dispose();
+    }
+  });
+
   test("a profile write that fails is a typed refusal and no block is recorded", async () => {
     const target = fresh();
     try {
@@ -191,7 +263,7 @@ describe("TC-INST-070a the managed block is written once per path and its failur
       );
       expect(refused.error?.code).toBe("fallback.internal");
       expect(refused.error?.summary).toContain(profile);
-      expect(refused.error?.summary).toContain("PATH block could not be written");
+      expect(refused.error?.summary).toContain("PATH block was not written");
       expect(existsSync(profile)).toBe(false);
       const record = JSON.parse(readRecordText(target) ?? "{}") as {
         readonly pathBlock?: unknown;

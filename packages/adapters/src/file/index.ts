@@ -100,6 +100,7 @@ export {
   createNodeInstallFilePort,
   INSTALL_ARTIFACT_MODE,
   INSTALL_DESTINATION_CLASSES,
+  INSTALL_PROBE_BYTES,
   type InstallDestinationClass,
   isCompiledArtifactAtPath,
   isLauncherAtPath,

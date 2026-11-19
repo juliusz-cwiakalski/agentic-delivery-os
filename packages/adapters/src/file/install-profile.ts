@@ -5,6 +5,7 @@
  * staged-and-renamed write. Nothing else outside the Jaiship namespaces and the
  * install directory is written, and only when the operator asked for it.
  */
+import { dirname } from "node:path";
 import type { InstallFilePort } from "@delivery-os/core/contracts";
 
 /** The profile file mode: the operator's own file, never tightened silently. */
@@ -29,8 +30,11 @@ export const writeProfileText = (input: {
   readonly path: string;
   readonly text: string;
 }): boolean => {
-  const parent = input.path.slice(0, input.path.lastIndexOf("/"));
-  if (parent.length > 0 && !input.fs.mkdirp(parent)) return false;
+  // A separator-less profile name (`.zshrc`) has no parent to create; slicing on
+  // the last separator would invent one (`.zshr`) and litter the working
+  // directory on a successful write.
+  const parent = dirname(input.path);
+  if (parent !== "." && parent !== "/" && !input.fs.mkdirp(parent)) return false;
   const staged = input.fs.writeStaged(
     input.path,
     new TextEncoder().encode(input.text),

@@ -226,7 +226,8 @@ export type InstallStagedWrite =
 export type InstallFilePort = {
   readonly stat: (path: string) => InstallFileStat | undefined;
   readonly readText: (path: string) => string | undefined;
-  readonly readBytes: (path: string) => Uint8Array | undefined;
+  /** Read at most the first `maxBytes` bytes of a file, or `undefined` when unreadable. */
+  readonly readPrefix: (path: string, maxBytes: number) => Uint8Array | undefined;
   /** Write `bytes` to a fresh temporary file beside `path` with `mode`. */
   readonly writeStaged: (path: string, bytes: Uint8Array, mode: number) => InstallStagedWrite;
   /** Copy `sourcePath` into a fresh temporary file beside `path` with `mode`. */

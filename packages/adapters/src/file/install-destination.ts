@@ -8,13 +8,16 @@
  */
 import { createHash } from "node:crypto";
 import {
+  closeSync,
   copyFileSync,
   existsSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
   readlinkSync,
+  readSync,
   renameSync,
   rmSync,
   statSync,
@@ -29,6 +32,12 @@ import type {
 
 /** The execute bit every staged artifact must carry. */
 export const INSTALL_ARTIFACT_MODE = 0o755;
+
+/**
+ * The bytes the artifact probe needs: the `#!` pair. An artifact is roughly
+ * 100 MB, so the probe never reads it whole.
+ */
+export const INSTALL_PROBE_BYTES = 2;
 
 let stagedCounter = 0;
 
@@ -79,11 +88,23 @@ export const createNodeInstallFilePort = (): InstallFilePort => ({
       return undefined;
     }
   },
-  readBytes: (path) => {
+  readPrefix: (path, maxBytes) => {
+    let descriptor: number | undefined;
     try {
-      return readFileSync(path);
+      descriptor = openSync(path, "r");
+      const buffer = Buffer.alloc(Math.max(1, maxBytes));
+      const read = readSync(descriptor, buffer, 0, buffer.length, 0);
+      return buffer.subarray(0, read);
     } catch {
       return undefined;
+    } finally {
+      if (descriptor !== undefined) {
+        try {
+          closeSync(descriptor);
+        } catch {
+          // The read outcome stands; a failing close changes no verdict here.
+        }
+      }
     }
   },
   writeStaged: (path, bytes, mode) => {
@@ -233,7 +254,7 @@ export const isCompiledArtifactAtPath = (fs: InstallFilePort, path: string): boo
   const stat = fs.stat(path);
   if (stat === undefined || stat.kind !== "file") return false;
   if (stat.size === 0 || !stat.executable) return false;
-  const prefix = fs.readBytes(path);
+  const prefix = fs.readPrefix(path, INSTALL_PROBE_BYTES);
   if (prefix === undefined) return false;
   return !(prefix[0] === 0x23 && prefix[1] === 0x21);
 };

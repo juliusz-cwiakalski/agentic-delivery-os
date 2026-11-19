@@ -3261,6 +3261,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createNodeInstallFilePort",
     "INSTALL_ARTIFACT_MODE",
     "INSTALL_DESTINATION_CLASSES",
+    "INSTALL_PROBE_BYTES",
     "isCompiledArtifactAtPath",
     "isLauncherAtPath",
     "LAUNCHER_TARGET_MARKER",
