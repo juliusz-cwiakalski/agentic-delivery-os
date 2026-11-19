@@ -1127,3 +1127,53 @@ notes:
       remains for the orchestrator, and the PR stays open for human review.
     type: info
     date: "2026-11-19"
+  - text: "Review-iteration-1 remediation, code half (2026-11-19; commit
+      a832c8617eb84d687a9ff76c9e6553da62489efa): B1, M1, M2, M3 and M5 fixed in
+      code and tests; M4 is the artifacts owners' correction and was not
+      touched (the probe work stands). B1: `packages/core/src/domain/closeout.ts`
+      compares the declared milestone against the provider's VERBATIM work-item
+      milestone title through ONE shared `normalizeMilestoneTitle` (whitespace
+      collapsed; `M<n>:` prefix canonicalized; the milestone number is kept, so
+      `M4: Jaiship-native delivery` matches the provider's prefixed title and
+      never `M5:`); `tests/fixtures/closeout/milestone.ts` now carries the
+      prefixed provider title, and a production-composition suite
+      (`tests/behaviour/closeout-milestone-production.test.ts` over
+      `tests/fixtures/closeout/production-composition.ts` driving the shipped
+      `createProductionComposer`) covers planFacts -> milestoneStep for
+      would-apply, withheld closure and a true mismatch. M1: `checksPostureOf`
+      in `packages/core/src/domain/merge-transaction.ts` now ranges over the
+      effective gate set's `required-ci-job` entries (declared set, `job ?? id`)
+      and never the raw page, so an undeclared failing job stays
+      `behind-unconfirmed` while a declared one refuses; TC-F2-003, TC-F2-004,
+      TC-F3-006 and a new AC-F3-3 pair declare the job (battery-surface) and
+      assert both arms. M2: the recorded `close-milestone` round trip
+      (TC-SYNC-002) now appends through `appendCloseoutOutcome` over a real
+      JSONL state store and reads back through `readCloseoutHistory` with no
+      `state.store.torn`/`state.keys.missing`, plus a failing control for a
+      second operand, a non-string operand and a name with no arm. M3:
+      TC-F4-011's second apply now observes the SAME open record with the first
+      run's folded ledger, asserting `satisfied` from the ledger, one close and
+      zero second appends, with the empty-ledger `would-apply` control. M5: the
+      `closeout` command's `exitProjection` excludes the
+      `milestone-sync-withheld` residue kind, so an otherwise-complete withheld
+      closure exits 0 while the residue item is still reported; any other
+      residue kind still exits 1 and `closeout.write.failed` still exits 2
+      (before this fix any applied-mode residue exited 1). GATES, all with
+      `TMPDIR=$PWD/tmp/tmpdir`, all exit 0: targeted milestone/probe/closeout
+      suites 130 pass / 0 fail across 10 files; `bun test tests/structure
+      tests/checks` 3270 pass / 0 fail across 352 files (530.76s); `bun test
+      tests/behaviour tests/golden` 7807 pass / 4 skip / 0 fail across 1038
+      files (1645.63s) — an earlier contended run flaked on three unrelated
+      5s timeouts (metrics-read-cost, watchdog-memory, prior-identity-notice),
+      each green in isolation and in the clean rerun; `pnpm typecheck` clean;
+      and `pnpm check` exit 0 — biome lint/format clean, 11645 pass / 4 skip /
+      0 fail across 1424 files (1993.59s), boundaries 485 modules with no
+      violations, memory 0 errors / 0 advisories, prompt conformance 5 clean,
+      help-guide coverage complete, exports parity OK. DEVIATION RECORDED: the
+      posture candidates are the gate set's declared `required-ci-job` entries
+      including battery-surface entries, because the merge freshness probe
+      re-evaluates only the merge projection; that keeps AC-F2-2's checks
+      posture reachable for a declared job while AC-F3-3 still excludes every
+      undeclared page job."
+    type: info
+    date: "2026-11-19"
