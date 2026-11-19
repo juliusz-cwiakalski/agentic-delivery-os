@@ -129,7 +129,11 @@ The matrix carries **80** AC→case links (41 + 39 extras), because 25 criteria 
 
 **Deliver-leg level (DoR R-03).** `AC-F8-4`'s deliver primitive is **`dispatch`** — the delivered jaiship replacement for `scripts/deliver-ticket.sh` — and never `phase complete`, which is a PM lifecycle transition and is not a delivery. `TC-BATTLE-006` drives the deliver leg through the real `dispatch` command runtime with its nested PM session doubled by the same scripted harness port, and asserts that envelope; the claim is proven at command-runtime level and no further. The nested PM session's *live* behaviour stays outside the boundary under the existing `live-opencode` not-proven id, so the boundary constant stays nine proven / six not-proven and no seventh id is added.
 
-**Phase-gate segments (DoR R-23).** Three cases span two phases, because the behaviour they observe is implemented in two phases. Each case asserts only its own segment, so every phase gate is green in isolation; the later segment is a labelled, cross-referenced observation. **AC ownership follows the phase landing the last segment**: `AC-F5-1` is owned by **phase 5** (its last observation is `TC-BACKOFF-001` row A) and `AC-F6-4` by **phase 6** (its last observation is `TC-STOP-005` row B). The delivery plan must recompute its AC ownership to 41/41 and its TC ownership to 74/74 with those two moves.
+**Phase-gate segments (DoR R-23, R-29, R-30).** Three cases span two phases, because the behaviour they observe is implemented in two phases; the table below also records the later passes' re-home and re-observation rows (the last three), which are not splits. Each case asserts only its own segment, so every phase gate is green in isolation; the later segment is a labelled, cross-referenced observation. **AC ownership follows the phase landing the last observation**: `AC-F5-1` is owned by **phase 5** (its last observation is `TC-BACKOFF-001` row A) and `AC-F6-4` by **phase 6** (its last observation is `TC-STOP-005` row B). **`AC-F2-2` is owned by phase 3** — its last observation is now `TC-PARITY-005`, which DoR R-29 re-homed to phase 3 as the ended-session replacement; `AC-F2-1` stays phase 2, because its fresh-spawn identity assertions are unaffected. The delivery plan must recompute its AC ownership to 41/41 and its TC ownership to 74/74 with those three moves.
+
+**Phase-3 re-home (DoR R-29).** `TC-PARITY-005` is not a split: it was narrowed from a phase-2 case with a phase-4/5 precondition to a single phase-3 case, and now asserts only the ended-session replacement path (one fresh spawn, zero resumes for the previous session id, a new session id). Its old phase-2 appearance — requiring a stuck verdict and a restart — was the R-29 defect. `TC-SPAWN-001` and `TC-SPAWN-005` stay phase 2, but their phase-2 execution is **D2 only**; their D1 (`runEntrypoint`) halves are labelled phase-7 re-observations, because `loop` is not prompt-required until the phase-7 repin (DoR R-30).
+
+**Index/matrix parity (DoR R-32).** The AC/NFR column of §5.1 mirrors the §3.1 matrix **verbatim**; if the two ever disagree, the matrix is authoritative and the index row is a defect. Recomputed from the index, the inventory is the same **69 AC-linked / 5 NFR-only**.
 
 | Case | Phase-owned segment (asserted here) | Later segment (asserted elsewhere) |
 |---|---|---|
@@ -137,6 +141,8 @@ The matrix carries **80** AC→case links (41 + 39 extras), because 25 criteria 
 | `TC-BACKOFF-001` | **Phase 5:** both rows — row A re-observes `TC-STUCK-001`'s episode (restart record + second session + ≤1 live session); row B is the contiguous-ordinal row | — |
 | `TC-INSTANCE-005` | **Phase 4:** at-most-one-session across takeover and unconfirmed termination (0 restarts, 0 spawns, released lease, ≤1 live `active` session) | **Phase 5, `TC-BACKOFF-001` row A:** the restart segment's ≤1-session assertion. **Phase 6, `TC-STOP-005` row B:** the `immediate`-stop segment's ≤1-session assertion |
 | `TC-STOP-005` | **Phase 6:** both modes, the latency bound, the unverifiable-identity path, and row B's ≤1-live-session snapshot | — |
+| `TC-PARITY-005` | **Phase 3:** the ended-session replacement (one fresh spawn, zero resumes for the previous session id, new session id) — re-homed, not split | — |
+| `TC-SPAWN-001`, `TC-SPAWN-005` | **Phase 2:** the D2 assertions only | **Phase 7:** the D1 `runEntrypoint` half, after the inventory repin |
 
 **Case inventory.** **74** cases across 10 groups. 0 orphan cases: **69** link at least one `AC-*`, and **5** link only the `NFR-*` contract they pin (`TC-CONTRACT-001`, `-002`, `-004`, `-005`, `-006`; see §3.3). `TC-CONTRACT-003` is AC-linked (AC-F1-5) and is not counted as NFR-only; the matrix is the single source of truth for both numbers.
 
@@ -215,7 +221,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - **D2 — in-process edge.** A `createTestEdge`-composed edge registering the `loop` command **and the `coordinator` family** (the production composition mounts both, so the identity-isolation case can drive each surface on its declared harness) → `runCli([...])`, the pattern proven by `tests/fixtures/coordinator/harness.ts`. Used for every cycle case; the store, the command definitions, the supervisor cycle, the projections, and the lease/budget/stuck folds are the production ones.
 - **D3 — pure domain.** The exported pure verdict, backoff schedule, log-line renderer, and status projection, called directly, for the table cases.
 
-`TC-VERB-001`…`005`, `TC-STOP-*`, `TC-INSTANCE-*`, `TC-LOG-*` default to D2. `TC-SPAWN-001`/`-002` run on both D1 and D2 (the argv is composed at the edge, so both must agree). `TC-BACKOFF-002`, `TC-STUCK-010`, `TC-CONTRACT-005` are D3. `TC-BATTLE-*` run the registry on D2 with D1 for the spawn rows.
+`TC-VERB-001`…`005`, `TC-STOP-*`, `TC-INSTANCE-*`, `TC-LOG-*` default to D2. `TC-SPAWN-001`/`-002`/`-005` run on **D2 at their phase boundary**; their D1 half is a labelled **phase-7 re-observation**, because the delivered entrypoint drops a family that is not prompt-required and `loop` joins `PROMPT_REQUIRED_COMMANDS` only in phase 7 (DoR R-30; §7.5 entrypoint rule). `TC-BACKOFF-002`, `TC-STUCK-010`, `TC-CONTRACT-005` are D3. `TC-BATTLE-*` run the registry on D2, with D1 for the spawn rows **only after the repin**.
 
 ## 5. Test Scenarios
 
@@ -229,7 +235,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-VERB-004` | `status` and `log` append nothing, create nothing, read no configuration in the handler, fall back to the shipped defaults, and effect no session | Integration | Behaviour | Critical | `AC-F1-5` | New |
 | `TC-VERB-005` | Every verb's exit is the delivered projection of the identity that produced it | Structure | Behaviour | High | `AC-F1-1` | New |
 | `TC-SPAWN-001` | A fresh spawn renders one `--agent ceo`, one resolved `--model`, and a fixed argv | Integration | Behaviour | Critical | `AC-F2-1` | New |
-| `TC-SPAWN-002` | Exactly one deterministic `ceo-loop-<stamp>` title on a fresh spawn, none on a resume, and it is the reap identity | Integration | Behaviour | Critical | `AC-F2-2` | New |
+| `TC-SPAWN-002` | Exactly one deterministic `ceo-loop-<stamp>` title on a fresh spawn, and it is the reap identity | Integration | Behaviour | Critical | `AC-F2-2` | New |
 | `TC-SPAWN-003` | Each pre-session provider/config/harness refusal is its delivered identity with a released lease and no session record | Integration | Behaviour | Critical | `AC-F2-3` | New |
 | `TC-SPAWN-004` | The binding is the delivered per-spawn resolution and nothing else | Structure | Behaviour | Critical | `AC-F2-4` | New |
 | `TC-SPAWN-005` | The additive handle `pid` is filled when the starter supplies one and absent otherwise | Structure | Behaviour | Critical | `AC-F2-2` | New |
@@ -264,7 +270,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-INSTANCE-003` | A recorded ended session is replaced by exactly one fresh session | Integration | Behaviour | Critical | `AC-F6-2` | New |
 | `TC-INSTANCE-004` | The `loop-main` identity and the `coordinator-main` identity do not exclude or read each other | Integration | Behaviour | Critical | `AC-F6-3` | New |
 | `TC-INSTANCE-005` | No more than one CEO session exists at any observation point across takeover and unconfirmed termination (phase-4 segment) | Integration | Behaviour | Critical | `AC-F6-4` | New |
-| `TC-INSTANCE-006` | A pid-less `active` session is resumed exactly once with no title and the same session id returned, never killed and never duplicated | Integration | Behaviour | Critical | `AC-F6-5` | New |
+| `TC-INSTANCE-006` | A pid-less `active` session is resumed exactly once with no title and the same session id returned, never killed and never duplicated | Integration | Behaviour | Critical | `AC-F6-5`, `AC-F2-2` | New |
 | `TC-INSTANCE-007` | An undeclared alive capability is `coordinator.process.capability-gap` before any record, while a missing start-time capability is admitted at the claim | Integration | Behaviour | High | `AC-F6-1` | New |
 | `TC-LOG-001` | Every event renders one bounded, ANSI-free, identifier-only line | Unit | Behaviour | Critical | `AC-F7-1` | New |
 | `TC-LOG-002` | A full scenario log carries no prompt, transcript, credential, environment value, model, or seat | Integration | Conformance | Critical | `AC-F7-1` | New |
@@ -283,7 +289,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-BATTLE-008` | The prompt-required inventory is repinned to 27 with `loop` last across all three pinned suites, and the removal control fails by name | Invariant | Checks | Critical | `AC-F1-1` | Extended (`install-conformance-mutants`, `metrics-mounting` + stale-pin set, `reference-page-parity` + M4 mapping, `coverage.json`, `mounting.ts`) |
 | `TC-CONTRACT-001` | The closed contract surface is unchanged against an in-suite literal baseline, and exactly three additive facts exist | Invariant | Checks | Critical | `NFR-7` | New |
 | `TC-CONTRACT-002` | Record, log, and diagnostic hygiene holds across the whole battery | Integration | Conformance | Critical | `NFR-10` | New |
-| `TC-CONTRACT-003` | One evaluation read per cycle, and zero extra reads or writes for the read-only verbs | Integration | Behaviour | Critical | `NFR-11` | New |
+| `TC-CONTRACT-003` | One evaluation read per cycle, and zero extra reads or writes for the read-only verbs | Integration | Behaviour | Critical | `AC-F1-5`, `NFR-11` | New |
 | `TC-CONTRACT-004` | Zero configuration keys are added and the six delivered keys are consumed with their shipped defaults | Structure | Checks | Critical | `NFR-7` | New |
 | `TC-CONTRACT-005` | The loop domain tier is pure: no ambient clock, timer, environment, I/O, or network | Structure | Behaviour | Critical | `NFR-1`, `NFR-11` | New |
 | `TC-CONTRACT-006` | The loop imports the delivered engine primitives and reimplements no lease, budget, kill, or lock | Structure | Behaviour | Critical | `NFR-7` | New |
@@ -291,7 +297,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-PARITY-002` | A grammar refusal exits 1, not the shell's usage 2 | Integration | Behaviour | Critical | `AC-F1-1` | New |
 | `TC-PARITY-003` | The restart budget is durable per epoch; only `--fresh-budget` resets it | Integration | Behaviour | Critical | `AC-F3-4` | New |
 | `TC-PARITY-004` | Stuck restarts back off while ordinary iterations use the collection interval | Integration | Behaviour | Critical | `AC-F3-2` | New |
-| `TC-PARITY-005` | A restart starts a fresh session; no context resume is attempted or claimed | Integration | Behaviour | Critical | `AC-F2-2` | New |
+| `TC-PARITY-005` | An ended session is replaced by a fresh session rather than resumed | Integration | Behaviour | Critical | `AC-F2-2` | New |
 | `TC-PARITY-006` | `log` returns the bounded supervision log, never a session transcript | Integration | Behaviour | Critical | `AC-F7-1`, `AC-F7-3` | New |
 | `TC-PARITY-007` | `stop` defaults to `drain`; `--mode immediate` is the additive opt-in | Integration | Behaviour | Critical | `AC-F4-4` | New |
 | `TC-PARITY-008` | No pre-iteration hook runs and no hook path is read | Integration | Behaviour | High | `AC-F2-1`, `AC-F1-1` | New |
@@ -470,18 +476,19 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Related IDs**: F-2, AC-F2-1, API-6, DM-4, NFR-9
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts` + `tests/structure/loop-production-session.test.ts`
+**Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-spawn` — the real path composition → `resolveHarnessAdmissionBinding` → adapter `bindingSeams.invocationArgs` → starter
-**Fixture mechanism**: the recording starter from `tests/fixtures/loop/session.ts`; a fixed profile/chain fixture; the guarded runner for the `shell:false` check.
+**Fixture mechanism**: the recording starter from `tests/fixtures/loop/session.ts`; a fixed profile/chain fixture; the guarded runner for the `shell:false` check. **Driver: D2 at the phase-2 boundary** (DoR R-30).
 
 **Preconditions**:
 - A fresh start with no recorded session and no folded stop.
 - A selected profile whose `ceo` seat resolves to `provider-a/model-large`.
 - The recording starter captures `{file, args, options}` and the prompt as data.
+- **The phase-2 boundary runs D2 only.** Until phase 7's inventory repin, `loop` is not prompt-required, so `runEntrypoint` drops the family and a D1 invocation would reach no command definition; the D1 half is deferred, not deleted (see the re-observation line below).
 
 **Steps**:
-1. Run `loop start --foreground` on D2 and on D1.
+1. Run `loop start --foreground` on **D2** (the in-process edge). This is the whole of the phase-2 execution.
 2. Read the recorded invocation, the argv, and the prompt.
 3. Count each flag and assert the value that follows it.
 
@@ -489,9 +496,9 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - Exactly one `--agent` with the value `ceo`; exactly one `--model` with the resolved seat model; exactly one title argument and no operator override (`--agent`/`--model`/`--title` are not CLI flags — see `TC-VERB-002`).
 - The argv is the harness command plus the delivered fixed arguments; `options.shell === false` at the call site; the guarded runner records 0 violations.
 - The prompt arrives as data (stdin), never as an argv element; it names the jaiship primitives and carries no script path.
-- Both drivers produce the same flag set (one `--agent`, one `--model`).
+- **PHASE-7 RE-OBSERVATION:** the same assertion is re-run through **D1** (`createProductionComposer` → `runEntrypoint`) only after the phase-7 inventory repin, when `loop` is prompt-required and the production entrypoint composes it. Until then D1 is not executed for this family, and this case asserts nothing about it.
 
-#### TC-SPAWN-002 - Exactly one deterministic `ceo-loop-<stamp>` title on a fresh spawn, none on a resume, and it is the reap identity
+#### TC-SPAWN-002 - Exactly one deterministic `ceo-loop-<stamp>` title on a fresh spawn, and it is the reap identity
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -502,7 +509,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-spawn` + `S-terminate` — the adapter's argv rendering and the terminate target selection
-**Fixture mechanism**: fixed clock (`2026-11-19T12:34:56.000Z`), the recording starter, and `createProcessTreeModel` from the GH-347 fixtures.
+**Fixture mechanism**: fixed clock (`2026-11-19T12:34:56.000Z`), the recording starter, and `createProcessTreeModel` from the GH-347 fixtures. **Driver: D2.**
 
 **Preconditions**:
 - Fixed clock and id sequence so the stamp is deterministic.
@@ -513,12 +520,12 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 2. Spawn fresh at a different fixed clock; assert the title changes only in the stamp.
 3. Assert the title matches `^ceo-loop-\d{8}-\d{6}$` and its length is ≤ 64.
 4. Drive a terminate for that session and read the target set the adapter computed.
-5. Read the `resume` invocation `TC-INSTANCE-006` recorded, and assert only its argv carries **no** `--title`. This step drives nothing: `TC-INSTANCE-006` is the sole driver of the one resume path (the pid-less re-find), and it owns the call count, the target session id and the returned handle.
+5. **Pointer only, no assertion:** the resume half of `AC-F2-2` ("a resume carries no title") is asserted by `TC-INSTANCE-006` on its recorded `resume` call. This case neither drives a resume nor reads the phase-3 session record.
 
 **Expected Outcome**:
 - Exactly one `--title` on a fresh spawn; the value is `ceo-loop-<UTC yyyymmdd-hhmmss>`; length ≤ 64; deterministic for a fixed clock; the title contains no space.
 - The reap target set is exactly `{sessionId, title}` — no name pattern, no prefix match; the two unrelated pids receive no signal.
-- The resume invocation driven by `TC-INSTANCE-006` carries no `--title` (asserted on that call's recorded argv, not on a hypothetical one), and `TC-PARITY-005`'s "zero resumes" holds only for the restart path — the two are distinct paths and neither is vacuous.
+- **No resume assertion here.** The no-title-on-resume property belongs to `TC-INSTANCE-006`, which owns the one resume path, its call count, its target session id, its argv and its returned handle. This case asserts the fresh-spawn title and the reap identity only.
 
 #### TC-SPAWN-003 - Each pre-session provider/config/harness refusal is its delivered identity with a released lease and no session record
 
@@ -581,25 +588,27 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Related IDs**: F-2, AC-F2-2, DM-3, NFR-7
 **Test Type(s)**: Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/loop-production-session.test.ts` + `tests/behaviour/loop-spawn.test.ts`
+**Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-spawn` — the delivered opencode adapter's handle construction
-**Fixture mechanism**: two starter doubles: one whose stream exposes a child pid (via `acquired()`), one that exposes none; the delivered `createClaudeSession`/`createOpenCodeSession` doubles already used by the delivered suites.
+**Fixture mechanism**: two starter doubles: one whose stream exposes a child pid (via `acquired()`), one that exposes none; the delivered `createClaudeSession`/`createOpenCodeSession` doubles already used by the delivered suites. **Driver: D2 at the phase-2 boundary** (DoR R-30).
 
 **Preconditions**:
 - `HarnessSessionHandle` and the streaming spawn seam carry the optional `pid`; the opencode adapter fills it from the host starter's child.
 - A starter that supplies `pid: 51234`; a starter that supplies nothing.
+- **The phase-2 boundary runs D2 only.** Until the phase-7 inventory repin, `loop` is not prompt-required, so the production entrypoint drops it; the D1 half is deferred, not deleted (see the re-observation line below).
 
 **Steps**:
-1. Spawn through the delivered adapter with the pid-supplying starter; assert the handle and the recorded session facts.
-2. Spawn with the pid-less starter; assert the handle and the session facts.
-3. Assert every pre-existing handle double in `tests/**` still typechecks and behaves (the delivered `coordinator-production-session.test.ts` is untouched and green).
+1. Spawn through the delivered adapter on **D2** with the pid-supplying starter; assert the handle and the recorded session facts.
+2. Spawn on **D2** with the pid-less starter; assert the handle and the session facts.
+3. Assert every pre-existing handle double in `tests/**` still typechecks and behaves (the delivered `coordinator-production-session.test.ts` is untouched and green as a gate read, not as a D1 run of this case).
 4. Assert no capability name was added.
 
 **Expected Outcome**:
 - Pid-present: `handle.pid === 51234` and the loop's `loop.session` record carries `pid: 51234`.
 - Pid-absent: `handle.pid === undefined` (the member is absent, not `0`, not `null`), the record carries `pid: null`, and no capability name appears in the harness capability vocabulary.
 - The delivered adapter's absence path is unchanged (an adapter that exposes nothing keeps its delivered behaviour).
+- **PHASE-7 RE-OBSERVATION:** the D1 half — the same two rows through `createProductionComposer` → `runEntrypoint`, in `tests/structure/loop-production-session.test.ts` — is exercised only after the phase-7 repin, when `loop` is prompt-required and the production entrypoint composes it. Until then this case asserts the D2 behaviour only.
 
 #### TC-SPAWN-006 - The session record carries the declared facts and is appended per acquisition and per state change only
 
@@ -700,13 +709,13 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-backoff.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-backoff` + `S-stop` — the cancellable wait and the stop fold
-**Fixture mechanism**: a cycle driver whose `beforeCycle` hook folds a stop during the recorded wait; a `signalHost` double that delivers `SIGTERM` at the same boundary.
+**Fixture mechanism**: a cycle driver whose `beforeCycle` hook folds a `requested` `loop.stop` record during the recorded wait; a `signalHost` double that delivers `SIGTERM` at the same boundary. **Driver: D2.**
 
 **Preconditions**:
 - A stuck restart reached **after a confirmed termination** (ruling `R3`: the restart record only exists downstream of a confirmation), with the restart record already appended (the ordinal is consumed before the wait).
 
 **Steps**:
-1. Row A: fold `loop stop --mode drain` at the wait boundary; assert the wait ended, no second spawn occurred, and the lease was released.
+1. Row A: fold a `requested`/`drain` `loop.stop` record at the wait boundary — **seeded, not invoked: the `loop stop` verb lands in phase 6** — then assert the wait ended, no second spawn occurred, and the lease was released.
 2. Row B: deliver a signal at the wait boundary; assert the same, plus the declared signal exit.
 
 **Expected Outcome**:
@@ -2274,32 +2283,36 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - Ordinary iteration: `collection-interval` with 30 000 ms.
 - Neither wait is 2 000 ms by default, and no wait is unrecorded. The shell's fixed pause is the divergence; the declared schedule is the assertion.
 
-#### TC-PARITY-005 - A restart starts a fresh session; no context resume is attempted or claimed
+#### TC-PARITY-005 - An ended session is replaced by a fresh session rather than resumed
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, AC-F2-2, §8.5 row 5, §7.3, DM-8
+**Related IDs**: F-2, F-6, AC-F2-2, §8.5 row 5, §7.3, DM-8
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts`
+**Target Layer / Location**: `tests/behaviour/loop-instance.test.ts`
 **Tags**: @backend, @loop, @parity, @offline
-**Seam**: `S-spawn` + `S-refind` — the restart spawn path
-**Fixture mechanism**: a restart after a stuck verdict; a recorded prior session whose context-token count is *below* the delivered limit (the shell would resume it).
+**Seam**: `S-refind` — the ended-session replacement branch of the session resolution
+**Fixture mechanism**: `createLoopHarness` with a recorded **`ended`** prior session and the recording session port from `tests/fixtures/loop/session.ts`, which records every `spawn` and `resume` with its argv. **Driver: D2.** No stuck verdict, no restart precondition, and no fold are involved — the divergence is the replacement decision alone.
+
+> **Phase and ownership (DoR R-29).** This case is owned by **phase 3**, the phase that implements the session re-find and the ended-session replacement. Its previous phase-2 appearance — where it required a stuck verdict and a restart, i.e. phase-4/5 behaviour — was the DoR R-29 defect; the case is now independent of both. The narrowed divergence is §8.5 row 5: **a replacement session starts fresh rather than resuming the previous session when the previous session ended.**
 
 **Preconditions**:
-- A recorded `ended` prior session with a readable context total below `coordinator.resume-context-limit` (100 000).
-- A stuck restart reached below the budget bound.
+- A recorded prior `loop.session` record in state `ended`, with a readable context total below `coordinator.resume-context-limit` (100 000) — the value that would tempt a context resume, so the assertion is not vacuous.
+- No live lease, no folded stop, and no in-flight session: the re-find resolves the recorded ended session before considering a spawn.
 
 **Steps**:
-1. Run the restart.
-2. Assert the spawn/resume calls and the new session record.
-3. Assert `coordinator.resume-context-limit` was not read on the spawn path.
+1. Run `loop start --foreground` on **D2** until the replacement acquisition is observable.
+2. Read the recorded `spawn` and `resume` invocations and the new session record.
+3. Assert the replacement shape and the absence of any resume for the previous session id.
+4. Assert `coordinator.resume-context-limit` was not read on the spawn path.
 
 **Expected Outcome**:
-- Exactly one fresh spawn with `--agent ceo`, one resolved `--model`, and one new `ceo-loop-<stamp>` title.
-- Zero resumes **on this restart path**; the new session id differs; the new session record is `active` with its own acquisition. The loop's only resume path is the pid-less re-find, and it is asserted exactly once by `TC-INSTANCE-006` — the two assertions are about different paths and neither is vacuous.
+- **Exactly one fresh spawn**, carrying one `--agent ceo`, one resolved `--model`, and exactly one `--title ceo-loop-<stamp>` — the fresh-spawn identity of a new session, not a resumed one.
+- **Zero `resume` calls, and specifically zero targeting the previous session id.** The new session id differs from the previous one, and the new `loop.session` record is `active` with its own acquisition (the prior record stays `ended`, unchanged).
 - No resume-mode field is claimed anywhere; `coordinator.resume-context-limit` is not read (a counting config read observes none on this path).
+- **The two distinct paths are not conflated:** this case proves that an *ended* session is replaced; `TC-INSTANCE-006` proves that a pid-less *active* session is resumed exactly once. Neither case asserts the other's path.
 - The divergence is asserted as intended: the typed surface has no total-context source, so a fresh start is the honest behaviour, and the deferred item's trigger is recorded in the spec (§7.3).
 
 #### TC-PARITY-006 - `log` returns the bounded supervision log, never a session transcript
@@ -2514,7 +2527,7 @@ New test hosts (**17**): `tests/behaviour/loop-{grammar,status,spawn,backoff,sto
 |------|--------------------|--------------|--------------|
 | `S-verb` | the `loop` command definition through `runCli`; the delivered projection for exits | `TC-VERB-001`, `-002`, `-005`, `TC-PARITY-002`, `TC-PARITY-009` | the grammar, the refusal producers, the projection table |
 | `S-status` | the status projection and text renderer, fed by the composition's resolved settings | `TC-VERB-003`, `TC-VERB-004`, `TC-INSTANCE-006` | the projection, the renderer, the key order (`stop_mode` after `stop_signal`), the empty-value rule, the composition-supplied bound |
-| `S-spawn` | the composition → `resolveHarnessAdmissionBinding` → adapter `bindingSeams.invocationArgs` → starter | `TC-SPAWN-001`…`-005`, `TC-PARITY-005`, `TC-PARITY-008` | the resolver, the adapter's argv rendering, the recorded invocation |
+| `S-spawn` | the composition → `resolveHarnessAdmissionBinding` → adapter `bindingSeams.invocationArgs` → starter | `TC-SPAWN-001`…`-005`, `TC-PARITY-008` | the resolver, the adapter's argv rendering, the recorded invocation |
 | `S-session-record` | the `loop.session` append/read fold | `TC-SPAWN-006`, `TC-INSTANCE-002`, `TC-INSTANCE-006` | the fold, the key, the reader |
 | `S-backoff` | the exported pure schedule + the inject delay + the delivered `evaluateCoordinatorRestartAdmission` | `TC-BACKOFF-001`…`-007`, `TC-PARITY-003`, `TC-PARITY-004` | the schedule data, the admission fold, the ordinal source |
 | `S-stop` | the `loop.stop` append/read fold and the mode decision | `TC-STOP-001`…`-007`, `TC-PARITY-007`, `TC-PARITY-010` | the fold, the identity scoping, the mode |
@@ -2522,7 +2535,7 @@ New test hosts (**17**): `tests/behaviour/loop-{grammar,status,spawn,backoff,sto
 | `S-corroborator` | the real lane read over the real store plus the delivered process-port liveness probe; **no** start-time or age fact | `TC-STUCK-003`, `-005`, `-009`, `-010` | the read path, the D1–D6/M1–M6 evidence classes, the F0–F3 fold, the pid-only owner rule |
 | `S-terminate` | the delivered adapter `terminate` / `killCoordinatorProcess` over the process-tree model | `TC-STUCK-007`, `-008`, `TC-STOP-005` | the ordering, the grace, the identity selection, idempotence |
 | `S-lease` | `decideCoordinatorClaim` mounted at the loop composition's claim | `TC-INSTANCE-001`, `-004`, `-007`, `TC-PARITY-001` | the fence, the liveness-first fold, the real store |
-| `S-refind` | the delivered per-identity read plus the loop's session resolution | `TC-INSTANCE-002`, `-003`, `-005`, `-006` | the resolution, the read, the single-session invariant |
+| `S-refind` | the delivered per-identity read plus the loop's session resolution | `TC-INSTANCE-002`, `-003`, `-005`, `-006`, `TC-PARITY-005` | the resolution, the read, the ended-session replacement (`TC-PARITY-005`, phase 3), the single-session invariant |
 | `S-log` | the real log renderer, the `log` read projection, and the injected sink | `TC-LOG-001`…`-007`, `TC-PARITY-006` | the renderer, the retention rule, the read bounds |
 | `S-exec` | the guarded injected runner (GH-347, reused), covering the nested `dispatch` leg's child seams | `TC-BATTLE-004`, `TC-BATTLE-005`, `TC-BATTLE-006`, `TC-STUCK-009` | the guard's refusals and counters, including the nested PM spawn |
 
@@ -2556,9 +2569,10 @@ Three complementary observations, one property. Their permanent contract is the 
 |----------|----------------|--------|
 | `TC-VERB-001`…`-005`, `TC-PARITY-002`, `TC-PARITY-009` (grammar half) | `tests/behaviour/loop-grammar.test.ts` | To implement (new) |
 | `TC-VERB-003`, `-004` | `tests/behaviour/loop-status.test.ts` + `tests/fixtures/loop/golden/status.ts` | To implement (new; three goldens including the absent-identifier world) |
-| `TC-SPAWN-001`…`-003`, `-006`, `TC-PARITY-005`, `TC-PARITY-008` | `tests/behaviour/loop-spawn.test.ts` | To implement (new) |
+| `TC-SPAWN-001`…`-003`, `-006`, `TC-PARITY-008` | `tests/behaviour/loop-spawn.test.ts` | To implement (new) |
+| `TC-PARITY-005` | `tests/behaviour/loop-instance.test.ts` (phase 3 — the ended-session replacement; re-homed by DoR R-29) | To implement (new) |
 | `TC-SPAWN-004` | `tests/structure/loop-production-composition.test.ts` | To implement (new) |
-| `TC-SPAWN-005` | `tests/structure/loop-production-session.test.ts` + `tests/behaviour/loop-spawn.test.ts` | To implement (new, both) |
+| `TC-SPAWN-005` | `tests/behaviour/loop-spawn.test.ts` (phase 2, D2); `tests/structure/loop-production-session.test.ts` (D1 half — **phase 7 only**, after the repin; DoR R-30) | To implement (new, both) |
 | `TC-BACKOFF-001`…`-007`, `TC-PARITY-003`, `TC-PARITY-004` | `tests/behaviour/loop-backoff.test.ts` | To implement (new) |
 | `TC-BACKOFF-002` (purity half), `TC-CONTRACT-005`, `-006` | `tests/structure/loop-imports.test.ts` + `tests/checks/loop-mutants.test.ts` | To implement (new, both) |
 | `TC-STOP-001`…`-007`, `TC-PARITY-007`, `TC-PARITY-010` | `tests/behaviour/loop-stop.test.ts` | To implement (new) |
@@ -2616,7 +2630,7 @@ Each row is a source mutation applied to the implementation; the named case must
 | M15 | Drop `--agent ceo` | `TC-SPAWN-001` | `args expected exactly one "--agent ceo", received 0` |
 | M16 | Drop `--model`, or render two | `TC-SPAWN-001` | `expected exactly one --model <seat>, received <0\|2>` |
 | M17 | Drop `--title`, or derive it from the wall clock | `TC-SPAWN-002` | `expected --title ceo-loop-<fixed stamp>` |
-| M18 | Carry a title on a resume | `TC-SPAWN-002` | `resume args must not contain --title` |
+| M18 | Carry a title on a resume | `TC-INSTANCE-006` | `resume args must not contain --title` |
 | M19 | Spawn a session on an unassigned seat | `TC-SPAWN-003` | `expected provider.profile.invalid at exit 1, received a session` |
 | M20 | Keep the lease on a pre-session refusal | `TC-SPAWN-003` | `lease fold expected released, received acquired` |
 | M21 | Mount a second resolver, or read a policy/quota fact | `TC-SPAWN-004` | `loop composition mounts an undeclared resolver <symbol>` |
@@ -2785,7 +2799,7 @@ Each row is a source mutation applied to the implementation; the named case must
 | M119 | Signal a session whose port declares no start-time identity, instead of returning the capability gap | `TC-STUCK-008` | `signals expected 0 on a start-time capability gap, received SIGTERM` |
 | M120 | Spawn a replacement session during the immediate stop (leaving two live sessions) | `TC-STOP-005` | `live active sessions expected <= 1 at step <n>, received 2` |
 
-Total: **120 mutations**, M1–M120 contiguous (4 pinned + 4 boundary + 6 verbs + 8 spawn + 5 session + 9 backoff + 8 stop + 9 stuck + 7 terminate + 7 instance + 8 log + 9 battery + 4 divergence + 5 economy/hygiene/purity + 8 spec-v1.1 ruling controls + 14 DoR-iteration-1 remediation controls + 5 DoR-iteration-2 remediation controls). Every load-bearing invariant named in §1 has at least one row, every row names the case that must fail, the two mandatory pin families are rows `M1`/`M2`/`M3`/`M4` and `M5`/`M6`/`M7`/`M8`, the four v1.1 rulings have their own controls `M94`–`M100` with the cross-file pin at `M101`, the DoR-iteration-1 findings are controlled at `M102`–`M115`, and the iteration-2 segment split and narrowing are controlled at `M116` (admission decision, phase 4), `M117` (restart record + second session, phase 5), `M118` (claim gate, R-24), `M119` (kill-path capability gap) and `M120` (immediate-stop session uniqueness).
+Total: **120 mutations**, M1–M120 contiguous (4 pinned + 4 boundary + 6 verbs + 8 spawn + 5 session + 9 backoff + 8 stop + 9 stuck + 7 terminate + 7 instance + 8 log + 9 battery + 4 divergence + 5 economy/hygiene/purity + 8 spec-v1.1 ruling controls + 14 DoR-iteration-1 remediation controls + 5 DoR-iteration-2 remediation controls). Every load-bearing invariant named in §1 has at least one row, every row names the case that must fail, the two mandatory pin families are rows `M1`/`M2`/`M3`/`M4` and `M5`/`M6`/`M7`/`M8`, the four v1.1 rulings have their own controls `M94`–`M100` with the cross-file pin at `M101`, the DoR-iteration-1 findings are controlled at `M102`–`M115`, and the iteration-2 segment split and narrowing are controlled at `M116` (admission decision, phase 4), `M117` (restart record + second session, phase 5), `M118` (claim gate, R-24), `M119` (kill-path capability gap) and `M120` (immediate-stop session uniqueness). **One row's named case moved at revision 0.5:** `M18` (carry a title on a resume) now names `TC-INSTANCE-006`, the case that owns the resume call, because `TC-SPAWN-002` no longer asserts the resume path (DoR R-26 residual). No row was added, removed or renumbered, so the register stays M1–M120 contiguous.
 
 ### 7.5 Gate battery
 
@@ -2799,12 +2813,14 @@ export PATH=$PWD/node_modules/.bin:$PATH
 
 **Phase-gate self-sufficiency rule (DoR R-23).** Every case asserts **only** behaviour that the plan phase owning it — or an earlier phase — implements. A case must never require a verb, a record, or a session effect that a later phase introduces, because each phase gate is executed **in isolation** and must be green on its own. When one AC spans two phases, the case is split into labelled segments (§3.1, "phase-gate segments"): the earlier phase asserts its segment, the later phase's case asserts the remainder, and AC ownership follows the phase landing the last segment. The three split cases are `TC-STUCK-001` (phase 4 → `TC-BACKOFF-001` row A, phase 5), `TC-INSTANCE-005` (phase 4 → `TC-BACKOFF-001` row A and `TC-STOP-005` row B) and `TC-STOP-005` (phase 6, carrying the stop segment). A reviewer checks the rule by asking, for every case, which phase implements the behaviour it asserts, and requiring that ordinal to be ≤ the owning phase's.
 
+**Entrypoint rule (DoR R-30).** A case that runs through `runEntrypoint` may assert **only** a command family that is prompt-required at that phase boundary, because the delivered entrypoint filters the composed program to `PROMPT_REQUIRED_COMMANDS` and drops extras. `loop` is not prompt-required until the phase-7 repin, so `TC-SPAWN-001` and `TC-SPAWN-005` execute on **D2** at phase 2 and carry their D1 (`createProductionComposer` → `runEntrypoint`) half as a labelled phase-7 re-observation. D1 is not redefined: it remains the composed production program through `runEntrypoint`; only the phase at which it can reach this family moves.
+
 **Gates per group (run during delivery, after the phase that owns the group):**
 
 | Group | Command |
 |-------|---------|
 | Verbs | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-grammar.test.ts tests/behaviour/loop-status.test.ts` |
-| Spawn | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-spawn.test.ts tests/structure/loop-production-composition.test.ts tests/structure/loop-production-session.test.ts` |
+| Spawn | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-spawn.test.ts tests/structure/loop-production-composition.test.ts` — **D2 suites only** at the phase-2/3 boundary (DoR R-30). `tests/structure/loop-production-session.test.ts` is the D1 half and joins the gate **at phase 7**, after the inventory repin makes `loop` prompt-required. |
 | Backoff | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-backoff.test.ts tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts` |
 | Stop | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stop.test.ts` |
 | Stuck | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stuck.test.ts` |
@@ -2916,6 +2932,7 @@ The three pinned help-inventory surfaces are therefore `tests/checks/install-con
 | 0.2 | 2026-11-19 | @test-plan-writer | Closed the four open questions against spec **v1.1** (spec §26 history row; pm-notes `PM rulings on the four open questions`). **R1** (`TC-VERB-003`): a third absent-identifier world whose golden proves a bare `key=` for all nine placeholder keys, a `none`-token scan over every block, and the note that `none` remains valid only as the F-5/DM-6 corroborator enum. **R2** (`TC-VERB-003`): `stop_mode` immediately after `stop_signal`, exactly three booleans, `stop_mode` values asserted per world. **R3** (`TC-STUCK-008`, `TC-STUCK-006`, `TC-BACKOFF-001`, `TC-INSTANCE-005`): the unconfirmed-termination path is terminal — one outcome record, lease released, exit 2, **0 restart records, 0 spawns** — with a second unconfirmed row (failed signal), the confirmed-only 652 000 ms bound, a confirmed-termination precondition on the restart case, and the at-most-one-session invariant extended across the path. **R4** (`TC-VERB-004`): a handler-scoped counting configuration double, a 0-handler-read assertion with the composition-supplied bound still rendered, and two fallback rows (acquisition and resolution failure use the shipped defaults at exit 0). **R5** (`TC-BATTLE-008`): three pinned surfaces — the reference-page-parity duplicated mapping must learn the M4 root and the stale-pin scan set must detect a planted 26-family pin. §8.3 replaced the four question entries with a closed disposition table (rule, owning spec section, asserting case); every deferred assertion is now resolved; registers M94–M101 added (93 → 101 mutations). No case was added or removed and no AC link changed: **74 cases, 41/41 ACs, 77 links (36 extras), 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**. |
 | 0.3 | 2026-11-19 | @test-plan-writer | DoR-iteration-1 remediation against spec **v1.2** (`readiness-review/readiness-iter-1.md`; pm-notes `PM rulings for the DoR-iteration-1 remediation`). **R-03 (deliver leg):** `dispatch` is named as the deliver primitive everywhere; `TC-BATTLE-006` drives it through the real command runtime with its nested PM session doubled by the same scripted port, asserts the dispatch envelope plus its attempt/lane records, and states the proof level as command-runtime-and-no-further; `phase complete` survives only as an explicit negation, and the boundary constant stays nine/six with `live-opencode` carrying the nested leg's live behaviour. §3.1 gains a "deliver-leg level" paragraph. **R-07:** `TC-INSTANCE-006` now asserts exactly one `resume` with the recorded session id, no `--title`, and the same id on the returned handle; the "resumed/observed" hedge is gone; `TC-SPAWN-002`'s resume row is bound to that case and AC-F2-2 gains the link. **R-10:** case inventory corrected to **69 AC-linked / 5 NFR-only** with one source of truth (the matrix). **R-11:** both new-suite counts corrected 16 → **17**. **R-12:** `TC-STUCK-004` asserts `progress-unreadable` present and `delivery-corroborator-unreadable` absent, so all five closed degradation values have an owner. **R-13:** `TC-VERB-002` gains the two required-flag refusal rows and the global-flag acceptance rows. **R-16:** `TC-CONTRACT-001`'s baseline is now a **committed literal inside `tests/checks/loop-contract-invariance.test.ts`** (no fixture file) and the coordinator-suite observation moves to the gate battery. **Spec-v1.2 alignment:** `TC-STUCK-010` rewritten as the exact 16-row table (D1–D6, M1–M6, F0–F3) plus the pid-reuse and live-shape observations and the start-time ban; `TC-STUCK-003` seeds a composition-shaped `startedAt` and arms a start-time probe; `TC-STUCK-009` asserts no `startedAt`/start-time/age read; `TC-STUCK-001`/`-008` assert `iterationId = <loopId>:<cycle ordinal>` and `killFailureReason` only on a failed kill; `TC-STUCK-006` asserts the bound **formula** at 30 000 and 60 000 ms plus the shipped 652 000 ms and a source-level literal ban; `TC-VERB-003` follows the status-key source table (`loop_id=loop-main` always, live-only `ceo_pid`/`ceo_session`, `restarts=0/<bound>`, a `none` scan scoped away from the enum); `TC-VERB-001` and `TC-BATTLE-006` use the declared clean-end cause; `TC-BACKOFF-004` asserts `epoch-<n>;restarts=<count>;seq=<sequence>`; `TC-INSTANCE-004`'s harness registers both families. Registers `M102`–`M115` added (101 → **115** mutations, contiguous). Counts: **74 cases (unchanged, none added), 41/41 ACs, 78 links (37 extras), 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 existing / 9 authored / 9 extended** (no new fixture). |
 | 0.4 | 2026-11-19 | @test-plan-writer | DoR-iteration-2 remediation against spec **v1.3** (`readiness-review/readiness-iter-2.md`; pm-notes `PM rulings for the DoR-iteration-2 remediation`). **R-23 segment split:** `TC-STUCK-001` is now the phase-4 segment — verdict record, termination, outcome record, and the restart **admission decision** (invoked exactly once with `ordinal: 1` and the epoch preconditions) — and the delivered `coordinator.restart` record plus the second session became a labelled **phase-5 re-observation row A of `TC-BACKOFF-001`** (`ordinal: 1`, ≤1 live session), with the pre-existing ordinal-2 row kept as row B. `TC-INSTANCE-005` is now the phase-4 segment (takeover + unconfirmed termination: 0 restarts, 0 spawns, released lease, ≤1 live `active` session) and no longer composes the restart or immediate-stop segments; the restart segment is re-observed in `TC-BACKOFF-001` row A and the stop segment in `TC-STOP-005` row B, which now asserts ≤1 live session and is cross-referenced from `TC-INSTANCE-005`. §3.1 gained the **phase-gate segment table** and the ownership consequence — **AC-F5-1 follows to phase 5** (its last observation is `TC-BACKOFF-001` row A) and **AC-F6-4 to phase 6** (its last observation is `TC-STOP-005` row B) — with the matrix links added so the move is machine-readable; §7.5 gained the **phase-gate self-sufficiency rule**. **R-24:** `TC-INSTANCE-007` row B is narrowed to the admission the delivered claim gate performs (no pre-claim start-time gap) and the start-time-capability gap moves to the kill path as `TC-STUCK-008` row E, which asserts the delivered `capability-gap` outcome, 0 signals and the terminal consequences without inventing an exit identity. **R-25:** the seam count is corrected to **13** with the §7.1 table named as the reference set. **R-26:** `TC-SPAWN-002` step 5 is a pointer only. **Spec v1.3 verified:** no contradiction — AC-F8-5's page/constant agreement and DOD-9's stale-statement grep were already stated as documentation-phase checks (§1.2, `TC-BATTLE-007`), and the coordinator page's pid reconciliation concerns the docs phase, not a case. Registers `M116`–`M120` added (115 → **120** mutations, contiguous). Counts: **74 cases (no case added), 41/41 ACs, 80 links (39 extras), 69 AC-linked / 5 NFR-only, 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 existing / 9 authored / 9 extended**. |
+| 0.5 | 2026-11-19 | @test-plan-writer | Human-authorized fourth pass: exactly five findings from `readiness-review/readiness-iter-3.md`, no new AC and no new case. **R-29 (option b):** `TC-PARITY-005` is narrowed to the **ended-session replacement** path — one fresh spawn (`--agent ceo`, one `--model`, one `--title`), zero `resume` calls for the previous session id, a new session id — with no stuck verdict and no restart precondition; retitled, re-homed to `tests/behaviour/loop-instance.test.ts`, and stated as **owned by phase 3** with its phase-2 appearance named as the R-29 defect. §3.1 states that **AC-F2-2's last observation is now phase 3, so AC-F2-2's owner becomes phase 3**, while **AC-F2-1 stays phase 2**; the phase-3 note and the segment table carry the re-home. **R-30:** the D1 (`runEntrypoint`) halves are removed from `TC-SPAWN-001` and `TC-SPAWN-005` phase-2 execution, which is **D2 only**; each case carries a labelled **PHASE-7 RE-OBSERVATION** line for the post-repin D1 half; §7.5 gains the entrypoint rule and §4 states the same boundary. D1 is not redefined and no driver was added. **R-26 residual:** `TC-SPAWN-002` no longer asserts the phase-3 resume path — step 5 is a pointer to `TC-INSTANCE-006` with no assertion of its own, the no-title assertion lives only in `TC-INSTANCE-006`, and the case title drops the resume claim. **R-32:** §5.1 gains `AC-F2-2` on `TC-INSTANCE-006`'s row and `AC-F1-5` on `TC-CONTRACT-003`'s, so the index recomputes to **69 AC-linked / 5 NFR-only**; §3.1 states the index mirrors the matrix verbatim. **N-06:** `TC-BACKOFF-003` row A seeds a `requested`/`drain` `loop.stop` record through the phase-1 reader at the wait boundary, explicitly **not** invoking the phase-6 verb. Register: `M18`'s named case moves to `TC-INSTANCE-006` (no row added or removed; **M1–M120 still contiguous**). Counts: **74 cases (none added or removed), 41/41 ACs, 80 links (39 extras), 69 AC-linked / 5 NFR-only, 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 / 9 / 9**. |
 
 ## 10. Test Execution Log
 
@@ -2930,3 +2947,4 @@ Populated during delivery. One row per case group; the battery is run whole befo
 | `DOD-6` coordinator suites | — | Not run | Run by the **Untouched delivered surfaces** gate (§7.5), not by a case: `bun test tests/behaviour/coordinator-*.test.ts tests/structure/coordinator-*.test.ts`. Kept out of `TC-CONTRACT-001` so the case spawns no child process (R-16, `NFR-1`). |
 | DoR-iteration-1 findings (R-03, R-07, R-10…R-13, R-16) | — | Closed | Remediated in revision 0.3: R-03 → `TC-BATTLE-006` + `M102`; R-07 → `TC-INSTANCE-006` + `M103`; R-10 → the corrected inventory sentence; R-11 → the 17-suite counts; R-12 → `TC-STUCK-004` + `M105`; R-13 → `TC-VERB-002` + `M104`; R-16 → the in-suite literal baseline plus this gate read. |
 | DoR-iteration-2 findings (R-23, R-24, R-25, R-26) | — | Closed | Remediated in revision 0.4: R-23 → the `TC-STUCK-001` phase-4 segment plus `TC-BACKOFF-001` row A (phase 5) and `TC-STOP-005` row B (phase 6), with `TC-INSTANCE-005` narrowed to its phase-4 segment, the §3.1 segment table and the §7.5 self-sufficiency rule, and AC-F5-1/AC-F6-4 ownership following; controls `M116`/`M117`/`M120`. R-24 → `TC-INSTANCE-007` row B narrowed and the gap moved to `TC-STUCK-008` row E; controls `M118`/`M119`. R-25 → thirteen seams. R-26 → `TC-SPAWN-002` step 5 is a pointer. |
+| DoR-iteration-3 findings (R-29, R-30, R-26 residual, R-32, N-06) | — | Closed | Remediated in revision 0.5, five findings only: R-29 → `TC-PARITY-005` narrowed to the ended-session replacement and owned by phase 3, so AC-F2-2 follows to phase 3 (stated in §3.1; the plan recomputes ownership). R-30 → D2-only phase-2 execution for `TC-SPAWN-001`/`-005` with a labelled phase-7 D1 re-observation, plus the §7.5 entrypoint rule. R-26 residual → `TC-SPAWN-002` step 5 is a pointer only; `M18` now names `TC-INSTANCE-006`. R-32 → the two index rows now mirror the matrix, so the index recomputes to 69/5. N-06 → `TC-BACKOFF-003` row A seeds the stop fold and does not invoke the phase-6 verb. |---
