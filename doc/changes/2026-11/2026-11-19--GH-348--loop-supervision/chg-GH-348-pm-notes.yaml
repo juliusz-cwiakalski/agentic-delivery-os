@@ -1133,3 +1133,57 @@ notes:
       push, no PR."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 11 complete (review-iteration-2 remediation) — commit
+      4336c402. Scope: the declared fix surface only; 0 AC, 0 TC and 0 mutation
+      rows are owned by it, so the partitions stay 41 ACs / 74 TCs / 120 rows
+      (M1-M120); each new assertion carries its planted in-case control. Fixes:
+      N-1 (BLOCKER; F-5/AC-F5-1/DM-6) the artifact instant is now resolved PER
+      KIND by a new pure helper `artifactAdvancedSince`/`artifactInstantOf`
+      (`recordedAt` for `merge.transaction`, `answeredAt` for `blocker.answer`),
+      with the undatable fallback narrowed to records that genuinely carry no
+      instant; production calls the helper. Four new cases drive REAL records
+      built by the delivered `appendBlockerAnswer`: the answer payload carries
+      `answeredAt` and no `recordedAt`, a PRIOR answer does not suppress a later
+      stuck verdict, an answer after the baseline IS an advance, and a null
+      baseline or an undatable record stays kill-safe. N-3 (MINOR; F-6/AC-F6-4/
+      AC-F6-5) `factsOfEffect` carries UNKNOWN liveness for an unverifiable
+      (null-start-time) join, and the cycle now observes the ESTABLISHMENT facts
+      (not a fresh port read), so the unknown-liveness fact is sticky; the new
+      case drives zero traffic past the window and asserts no verdict, no kill,
+      no spawn and `live-facts-unknown`. F-7 (MINOR; API-4, DM-1) the observed
+      progress is now DURABLE: `loop.session` gains the additive OPTIONAL
+      `progressState` field (absent before the first reading, never fabricated),
+      written on the acquisition record from the first reading and afterwards
+      only when the state CHANGES (never per cycle), with the `ended` record
+      carrying the last observed state; the projection reads the newest recorded
+      value, so a fresh-process `status` carries it (new two-supervisor case over
+      one state root, plus a null-before-first-reading case). DM-1's declared
+      field list stays accurate: the spec enumerates the record's fields and
+      §25.4 Appendix D leaves identifiers 'beyond the declared fields'
+      implementation-decided, so the additive optional member is inside that
+      latitude and the spec was NOT edited. N-2 (MINOR) the test plan's false
+      'doc-conformance enforces the page/constant boundary' claim is corrected to
+      name the actual mechanism (the lifecycle phase-7 one-off reconciliation
+      recorded in pm-notes), keeping AC-F8-5's documentation-phase scope; that is
+      the only test-plan edit. N-4 (INFO) `packages/core/src/app/index.ts` is
+      declared in this phase as a pre-existing contribution (phase 10's re-export;
+      no code change). One pin update rode along: the three new verdict-tier
+      exports' executable-allowance rows. Gate results: `bun test
+      tests/behaviour/loop-*.test.ts` 100 pass / 0 fail; `bun test
+      tests/conformance/loop tests/structure/loop-*.test.ts
+      tests/checks/loop-*.test.ts` 36 pass / 0 fail; pinned suites 47 pass / 0
+      fail; invariant suites 38 pass / 0 fail; `pnpm typecheck` green; `pnpm lint`
+      0 errors; `pnpm format:check` clean; `jaiship plan validate GH-348` ->
+      verdict=valid, tier=full, readyForDevelopment=true; `jaiship lint plan
+      GH-348` -> valid, errors=[]. Aggregate `pnpm check` at this HEAD: 11 437
+      pass / 2 fail over 1 414 files, where BOTH failures are 5-second test
+      timeouts in subprocess-spawning suites caused by a concurrent full-suite run
+      from another workspace on this machine (TC-INST-020 in
+      install-replace.test.ts and TC-SECRET-001 in privacy-literals.test.ts); each
+      passes in isolation (15 pass / 0 fail and 39 pass / 0 fail) and no loop
+      suite failed. The run also used an isolated HOME because another session
+      installed an artifact at ~/.jaiship/bin/jaiship that the doc-distribution
+      guard's sandbox install refuses to overwrite (documented environment fact,
+      not a change defect). No lifecycle transition, no push, no PR."
+    type: info
+    date: "2026-11-19"
