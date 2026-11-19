@@ -292,6 +292,49 @@
 #        `tests/behaviour/entrypoint-composition.test.ts` for the removal of
 #        `provider` from `withExtras()`, which must stop listing a mounted family
 #        as an extra.
+#
+# DOR ITERATION-3 CORRECTIONS (blocking N-1; N-3, N-6, N-8 and the harness note):
+#   N-1 — THE CONTRACTS-EXPORT INVENTORY WAS UNDECLARED. ANSWERED:
+#        `tests/fixtures/ports/v1-contract-inventory.json` and
+#        `tests/structure/port-contract-inventory.test.ts` pin the ENTIRE contracts
+#        surface in both directions (60 `provider.ts` and ~2903 `index.ts` exports
+#        committed), so every phase that adds, renames or retires a contract export
+#        falsifies them. Both files are now declared in PHASES 1, 2, 3, 5 and 7 —
+#        P1 the vocabulary names and barrel rows, P2 the `PROVIDER_PEAK_TIMEZONES`
+#        retirement and the zone/port names, P3 the budget-outcome and ref types,
+#        P5 the simulate fixture and block types, P7 the watch default bound — and
+#        each phase's comment states that the fixture and the suite move as ONE
+#        edit-set with the export change. They are named in the multi-phase
+#        ownership list for the same reason, and an escalation trigger forbids the
+#        opposite error. Phase 4 and 6 add no contracts export (the catalog branch
+#        and the migration module consume the declared types), so they declare
+#        neither file.
+#   N-3 — THE ENGINE PAGE'S ENUMERATED LISTS WOULD HAVE CONTRADICTED ITS COUNTS.
+#        ANSWERED: phase 1's `feature-provider-engine.md` obligation is now the
+#        WHOLE edit-set, not the five sentences — the reason table gains its ninth
+#        row, the park-cause enumeration gains `budget-exhausted` (seven -> eight),
+#        the announcement-code list gains the two budget codes (eleven ->
+#        thirteen), the MAX sentence's tie order gains `budget-exhausted` after
+#        `quota-exhausted` (five -> six), and the two allowlists' field lists name
+#        the added fields. One commit, one phrase row: the page is never
+#        internally inconsistent at a boundary.
+#   N-6 — STALE HEADER FACTS. CORRECTED: the "only page that states the FAMILY
+#        COUNT" claim is gone (six pages plus the changeset state it, and phase 8's
+#        scope is the list), and the "TDR-0053 carries an uncommitted modification"
+#        claim is gone (the worktree is clean; all eight records and both DoR
+#        verdicts are committed).
+#   N-8 — ONE DECLARED-BUT-UNNEEDED FILE. RESOLVED BY DROPPING IT:
+#        `tests/boundaries/harness.ts` is no longer declared. It only materialises
+#        throwaway temp manifests from its `ADAPTER_SUBPATHS` list, and no boundary
+#        fixture imports `@delivery-os/adapters/time-zone`, so the change does not
+#        edit it; the two enumerations that DO compare the live manifest
+#        (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`)
+#        stay declared and required.
+#   HARNESS NOTE — TC-MOUNT-003's copied `entrypoint.ts` must have EVERY relative
+#        import specifier rewritten to the repository source path (`./build-identity.js`,
+#        `./help.js`, `./index.js` and the declarative set), and the unmutated
+#        control uses the same copy machinery; phase 8 states it.
+
 
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1; status verified in the tree at
@@ -307,10 +350,9 @@
 #     doc/decisions/TDR-0053-provider-family-mounting-27th-prompt-required.md
 #     doc/decisions/TDR-0054-provider-budget-work-item-ref-source.md
 #   TDR-0053 and TDR-0054 were the only untracked records when the first version
-#   of this plan was authored; both are committed now (TDR-0054 in `4b1e56a0`,
-#   and TDR-0053 carries the iteration-2 Context FACT correction as an
-#   uncommitted modification at plan time). `doc/decisions/00-index.md` carries
-#   the eight rows as a modification. BOTH DoR verdict records are TRACKED:
+#   of this plan was authored; both are COMMITTED now and the worktree is clean
+#   for `doc/decisions/**` (no uncommitted amendment). `doc/decisions/00-index.md`
+#   carries the eight rows. BOTH DoR verdict records are TRACKED:
 #   `./readiness-review/readiness-iter-1.md` (iteration 1) and
 #   `./readiness-review/readiness-iter-2.md` (iteration 2, the verdict this
 #   revision answers). Nothing in `doc/decisions/**` or `readiness-review/**` is
@@ -318,8 +360,8 @@
 #   Phase 1 nevertheless DECLARES the eight exact paths,
 #   `doc/decisions/00-index.md`, the `doc/decisions/` folder, BOTH
 #   readiness-review records and that folder, because the commit primitive stages
-#   only plan-declared scope plus the change folder: a status touch, a record
-#   amendment (TDR-0053's correction is uncommitted), or a re-issued verdict must
+#   only plan-declared scope plus the change folder: a status touch, a re-issued
+#   verdict, or an owner-facing correction to a record must
 #   stage with the phase-1 commit instead of being dropped or landing on a
 #   folder-only lifecycle boundary. They land on the PHASE-1 DELIVERY COMMIT —
 #   the `commit` invocation carrying the phase-1 message, run at the phase-1
@@ -383,8 +425,17 @@
 #   A path edited by TWO OR MORE phases keeps ONE owner per assertion and names
 #   both halves at both ends. That applies here to
 #   `packages/core/src/contracts/provider.ts` (P1 vocabulary / P2 zone domain /
-#   P5 simulate fixture field), `packages/core/src/contracts/index.ts`
-#   (P1 new names / P2 retirement and zone names),
+#   P3 budget-outcome and ref types / P5 simulate fixture and block types /
+#   P7 watch default bound), `packages/core/src/contracts/index.ts`
+#   (P1 new names / P2 retirement and zone names / P3, P5 and P7 the new names'
+#   barrel rows),
+#   `tests/fixtures/ports/v1-contract-inventory.json` and
+#   `tests/structure/port-contract-inventory.test.ts` (P1, P2, P3, P5, P7 — the
+#   inventory pin is a TWO-WAY snapshot of the whole contracts surface (60
+#   `provider.ts` and ~2903 `index.ts` exports), so ANY phase that adds, renames
+#   or retires a contract export falsifies it; each of those phases declares both
+#   files and moves them as one edit-set with its export change, which is the only
+#   way the aggregate gate stays green at the boundary — N-1),
 #   `packages/core/src/provider/{validate,engine,index}.ts`,
 #   `packages/core/src/config/catalog.ts` (P2 stale comment / P4 budgets /
 #   P7 watch bound), `packages/cli/src/edge.ts`,
@@ -572,8 +623,12 @@
 #   counts and tail statements. `feature-supervise.md` is a MEMBER-BY-EXCEPTION:
 #   no phase edits it, its three `25th`-family ordinal statements stay
 #   byte-unchanged, and the phrase table's `stale: "26th family"` guard is kept
-#   exactly so an over-correction fails; the only page that states the FAMILY
-#   COUNT is `feature-metrics.md`, and that value moves 26 -> 27 in phase 8.
+#   exactly so an over-correction fails. THE PAGES THAT STATE THE FAMILY COUNT are
+#   `feature-cli-entrypoint.md`, `feature-install-lifecycle.md`,
+#   `feature-metrics.md`, `doc/00-index.md`, `doc/overview/glossary.md`,
+#   `doc/planning/oss-tooling/cli-command-registry.md` and
+#   `.changeset/install-lifecycle-minor.md`; every one of them moves 26 -> 27 in
+#   phase 8 (the changeset conditionally), and phase 8's scope is the list.
 #   `.changeset/install-lifecycle-minor.md` is declared with its condition: its
 #   "twenty-six prompt-required families" moves to twenty-seven IFF the changeset
 #   is still pending at delivery (it is pending today); a consumed changeset is
@@ -696,7 +751,8 @@ tier:
     - "A mounted family is still listed as a non-prompt-required extra — `provider` left in `withExtras()` in `tests/behaviour/entrypoint-composition.test.ts` — so the extra-drop assertion certifies the pre-mount state (DoR D2-12, TC-MOUNT-005)"
     - "A count sentence the register or the mount moves is left at its outgoing value on `feature-provider-engine.md` (skip reasons 8, the closed eight-value set, allowlist 8/11, five provider-engine rows for a sixteen-row kind), on `feature-metrics.md` (the 24-family mount, family-count pins read 24) or on `feature-cli-entrypoint.md` (26 families, `install` \"and last\"), or the engine page's sixteen-row sentence is over-corrected so the engine FAMILY stops reading five (AC-F8-3, DoR D2-4, TC-DOC-001/002)"
     - "A boundary rule promised by TC-CONFORM-008 has no home in the production `.dependency-cruiser.cjs` the harness materialises, or a rule is re-homed into a suite the boundary meta-check cannot exercise (DoR D2-5, TC-CONFORM-008)"
-    - "A declared adapters subpath is missing from an enumeration that compares the manifest against a list (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`, `tests/boundaries/harness.ts`), or a subpath claim is attributed to a suite that does not police it (DoR D2-12)"
+    - "A declared adapters subpath is missing from an enumeration that compares the live manifest against a list (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`), or a subpath claim is attributed to a suite that does not police it (DoR D2-12)"
+    - "A phase changes a contracts export — adds, renames or retires one — without moving `tests/fixtures/ports/v1-contract-inventory.json` and `tests/structure/port-contract-inventory.test.ts` in the SAME commit, so the two-way contracts inventory is falsified and `pnpm check` is red with the fix outside declared scope (N-1)"
     - "A delivered ordinal moves — `supervise` renumbered from 25, `install` from 26, `steer` from 23 or `metrics` from 24 — or a page is over-corrected so its ordinal becomes the count (AC-F8-3, TDR-0053 C-4, TC-MOUNT-009)"
     - "The family is mounted at fewer than seven members, a help entry is added before the family is mounted (its `seeAlso` target would be unregistered and reference-page parity would fail), or the mount splits across phases (TDR-0053 C-3, AC-F8-5)"
     - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
@@ -782,20 +838,43 @@ phases:
   # delivered count/membership suites (the sync script's arithmetic base and the
   # structural mirror's `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
+  # THE CONTRACTS-EXPORT INVENTORY MOVES WITH THE EXPORTS (N-1):
+  # `tests/structure/port-contract-inventory.test.ts` compares the ENTIRE
+  # contracts surface two-way against
+  # `tests/fixtures/ports/v1-contract-inventory.json` (60 `provider.ts` exports
+  # and ~2903 `index.ts` exports committed), so the names and barrel rows this
+  # phase adds falsify the fixture in BOTH directions — an added export is
+  # "undocumented in the inventory" and a stale inventory row is "missing from the
+  # source". Both files therefore move in THIS commit, as one edit-set with
+  # `contracts/provider.ts` and `contracts/index.ts`; a phase that moves one
+  # without the other leaves `pnpm check` red with the fix outside declared scope.
+  # The same pairing recurs in phases 2 (retirement), 3 (budget/ref types), 5
+  # (simulate types) and 7 (the watch default bound).
+
   # THE TWO EVIDENCE-ALLOWLIST FIXTURES (DoR B3): the evidence-bounds suite
   # asserts `PARK_EVIDENCE_FIELDS`/`ANNOUNCEMENT_EVIDENCE_FIELDS` are EQUAL to
   # `tests/fixtures/provider/evidence/park-allowlist.json` and
   # `announcement-allowlist.json` and `toHaveLength(8)/(11)`; both move here to
   # fourteen and seventeen or the suite fails at this boundary.
-  # THE ENGINE PAGE'S FIVE VOCABULARY SENTENCES MOVE HERE (DoR D2-4): spec §16
-  # names them, and each is pinned by this phase's doc-conformance row:
+  # THE ENGINE PAGE'S WHOLE VOCABULARY EDIT-SET MOVES HERE (DoR D2-4, N-3): spec
+  # §16 names the five count sentences, and this phase also moves the ENUMERATED
+  # LISTS those sentences count, because a page whose prose says "nine skip
+  # reasons" over a table of eight is self-contradictory — and no gate would read
+  # the contradiction until phase 9. ONE EDIT-SET, one commit:
   #   - the summary's "eight skip reasons" -> nine;
   #   - the chain-resolution sentence "the closed eight-value set" -> the closed
-  #     nine-value set with `budget-exhausted` in its declared precedence position;
+  #     nine-value set, AND the reason table beneath it gains the
+  #     `budget-exhausted` row in its declared precedence position;
   #   - the parks sentence "the eight-field park allowlist" -> fourteen fields
-  #     (`timezone` plus the five budget fields);
+  #     (`timezone` plus the five budget fields), AND the evidence-field list it
+  #     introduces names the six added fields;
   #   - the announcements sentence "the closed eleven-field allowlist" ->
-  #     seventeen fields;
+  #     seventeen fields, AND the enumerated announcement-code list gains
+  #     `provider.budget.parked` and `provider.budget.crossed` (eleven -> thirteen);
+  #   - the closed park-cause enumeration gains `budget-exhausted` (seven -> eight);
+  #   - the MAX sentence's fixed tie order becomes
+  #     `peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`,
+  #     `credential-missing`, `credential-rejected` (five -> six);
   #   - the error-taxonomy sentence "The provider kind carries five provider-engine
   #     error identities" -> the kind carries sixteen rows WHILE THE ENGINE
   #     FAMILY'S OWN COUNT STAYS FIVE (five engine + four profile-selection + four
@@ -803,8 +882,12 @@ phases:
   #     provider-engine rows/identities" statements (the contract-path, the
   #     error-table-synchronization, the depends-on and the consumed-by lines)
   #     stay accurate and are NOT rewritten — the engine family is still five.
-  #   The page's zone half is phase 2's and its budget/ref/announcement/CLI prose
-  #   is phase 9's; this phase owns the numbers only.
+  #   Every one of those moves is pinned by this phase's doc-conformance row, so
+  #   the pair (page + phrase) lands together and the page is never internally
+  #   inconsistent at a boundary.
+  #   The page's zone half is phase 2's and its budget/ref/announcement-meaning/CLI
+  #   prose is phase 9's — but the ENUMERATED LISTS and the tie order are this
+  #   phase's, because they are the things the counts count (N-3).
   # `feature-supervise.md` is NOT declared: its only restatement is the 66-member
   # allowlist, which does not move, and TC-DOC-001 asserts that `66` stays `66`.
   #
@@ -812,9 +895,10 @@ phases:
   # doc/decisions/00-index.md, the doc/decisions/ folder, BOTH DoR verdict records
   # (`readiness-iter-1.md` and `readiness-iter-2.md`) and that folder are declared
   # here and land on THIS PHASE'S DELIVERY COMMIT (COMMIT-BOUNDARY REALITY in the
-  # header). TDR-0053 carries an uncommitted Context correction at plan time, so
-  # declaring it is load-bearing rather than a formality.
-
+  # header). They are declared for staging authority, not because anything is
+  # untracked: the worktree is clean for `doc/decisions/**` and
+  # `readiness-review/**`, and a status touch or a re-issued verdict must still
+  # stage with the phase-1 commit.
   #
   # Acceptance: AC-F8-1 (TC-CONFORM-001, TC-CONFORM-002), AC-F8-2 (TC-CONFORM-003
   # and -004 complete in phase 3; this phase moves the delivered closed-set
@@ -832,7 +916,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-contract.test.ts tests/checks/provider-evidence-bounds.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
-  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/content-inventory.test.ts tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/doc-conformance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check
   #
   # Commit: feat(GH-350): provider vocabulary, error register and decision records
@@ -862,6 +946,15 @@ phases:
         # the same commit that first changes its exports (DoR B3).
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
+        # THE CONTRACTS-EXPORT INVENTORY MOVES AS ONE EDIT-SET WITH THE EXPORT
+        # CHANGE (N-1): `port-contract-inventory.test.ts` pins the entire
+        # contracts surface two-way against this fixture (60 `provider.ts` and
+        # ~2903 `index.ts` exports committed, and it fails in BOTH directions), so
+        # the new names and the barrel rows falsify it and `pnpm check` is red at
+        # this boundary unless both files move in the SAME commit. Declared again
+        # in phases 2, 3, 5 and 7, each time for the same reason.
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/result/code-corpora/true-positives.json
         # The count and arithmetic surface: the sync script's own arithmetic base
         # and the structural mirror's no-leftover scan gain the outgoing forms
@@ -994,17 +1087,31 @@ phases:
   #     `timezone`, so the parks-list and resolve goldens are regenerated as a
   #     declared delta here (phase 3 regenerates them again for a budget park).
   #
-  # THE NEW SUBPATH AND THE RULE PATH (DoR D2-5, D2-12): a declared adapters
-  # subpath must join the three enumerations that compare the manifest against
-  # their own lists (`tests/structure/subpaths.test.ts`,
-  # `scripts/checks/workspace-entrypoints.ts`, and `tests/boundaries/harness.ts`'s
-  # temp manifests) or those suites fail by name; it needs no
-  # `.dependency-cruiser.cjs` row (it reads `Intl`, a global, and imports no
-  # runtime module) and no `exports-parity` entry (that gate packs each
-  # publishable package's declarations generically). TC-CONFORM-008's zone/`Intl`
-  # rule is NOT a dependency-cruiser rule: it is the negative-fixture arm of
+  # THE NEW SUBPATH, THE CONTRACT INVENTORY AND THE RULE PATH (DoR D2-5, D2-12,
+  # N-1, N-8): a declared adapters subpath must join the TWO enumerations that
+  # compare the live manifest against their own lists —
+  # `tests/structure/subpaths.test.ts` (a subpath in the manifest but not in its
+  # list is an "extra") and `scripts/checks/workspace-entrypoints.ts` (the CLI
+  # imports the new subpath, and an undeclared edge fails by name). BOTH ARE
+  # DECLARED AND BOTH ARE REQUIRED. `tests/boundaries/harness.ts` is deliberately
+  # NOT declared: its `ADAPTER_SUBPATHS` list only materialises throwaway temp
+  # manifests, and NO boundary fixture imports `@delivery-os/adapters/time-zone`
+  # (the rules probe core/cli edges), so the file is not edited by this change —
+  # if a later fixture does import it, that fixture's phase declares the harness
+  # in the same commit (N-8). The subpath needs no `.dependency-cruiser.cjs` row
+  # (it reads `Intl`, a global, and imports no runtime module) and no
+  # `exports-parity` entry (that gate packs each publishable package's
+  # declarations generically). TC-CONFORM-008's zone/`Intl` rule is NOT a
+  # dependency-cruiser rule: it is the negative-fixture arm of
   # `scripts/checks/ambient-globals.ts`, which this phase widens with `Intl`, and
   # that is why the guard file is declared here.
+  # THE CONTRACTS-EXPORT INVENTORY MOVES WITH THE RETIREMENT (N-1): retiring
+  # `PROVIDER_PEAK_TIMEZONES` (and adding the zone names and the port type)
+  # falsifies `tests/fixtures/ports/v1-contract-inventory.json` in both
+  # directions, so the fixture and `tests/structure/port-contract-inventory.test.ts`
+  # move in THIS commit as one edit-set with `contracts/provider.ts` and
+  # `contracts/index.ts`.
+
   #
   # Documentation half: feature-provider-engine.md (zone domain and default, the
   # port and the edge, the local-seconds rule, the one named expiry derivation and
@@ -1027,7 +1134,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-zone.test.ts tests/checks/provider-zone-refusal.test.ts tests/structure/provider-peak-rules-schema.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-window.test.ts tests/behaviour/peak-window-utc-clock.test.ts tests/behaviour/daemon-peak-window-isolation.test.ts tests/behaviour/provider-parks.test.ts tests/golden/provider-parks-list.test.ts
-  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries tests/structure/subpaths.test.ts tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check
   #
@@ -1041,9 +1148,18 @@ phases:
       files:
         # Zone domain, default zone, the port type, the `timezone` declaration
         # field, and the retirement of `PROVIDER_PEAK_TIMEZONES`; the barrel and
-        # the inventory move with it (DoR B3).
+        # the two export inventories move with it (DoR B3, N-1).
         - packages/core/src/contracts/provider.ts
         - packages/core/src/contracts/index.ts
+        # THE CONTRACTS-EXPORT INVENTORY MOVES AS ONE EDIT-SET WITH THE EXPORT
+        # CHANGE (N-1): `port-contract-inventory.test.ts` compares the whole
+        # contracts surface two-way against this fixture (60 `provider.ts` and
+        # ~2903 `index.ts` exports committed), so retiring an exported name here
+        # falsifies it and `pnpm check` is red at this boundary unless both files
+        # move in the SAME commit. They are named in the multi-phase ownership
+        # list for exactly this reason.
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
         - packages/core/src/provider/peak.ts
         - packages/core/src/provider/peak-rules.ts
         - packages/core/src/provider/validate.ts
@@ -1071,18 +1187,23 @@ phases:
         - tests/behaviour/provider-parks.test.ts
         # TC-ZONE-010's ambient-neutrality arm joins the suite phase 1 moved.
         - tests/structure/provider-contract.test.ts
-        # THE NEW ADAPTERS SUBPATH JOINS THE THREE SUBPATH ENUMERATIONS (a
-        # declared subpath with no row fails these suites by name): the
-        # declared-subpath manifest test, the workspace-entrypoint check, and the
-        # boundary harness's temp manifests. The subpath's export set is pinned by
-        # the content inventory below — NOT by `provider-surface.test.ts` or
-        # `exports-parity.test.ts`, which do not police it (DoR D2-12) and are
-        # declared by no phase here. No dependency-cruiser row is added for this
-        # subpath: it reads `Intl` only (a global, not an import), so no runtime
-        # allowance applies.
+        # THE NEW ADAPTERS SUBPATH JOINS THE TWO SUBPATH ENUMERATIONS THAT COMPARE
+        # THE LIVE MANIFEST (a declared subpath with no row fails these suites by
+        # name): the declared-subpath manifest test (an unlisted manifest entry is
+        # an "extra") and the workspace-entrypoint check (an undeclared CLI edge
+        # fails). BOTH are required and both are declared. The subpath's export set
+        # is pinned by the content inventory below — NOT by
+        # `provider-surface.test.ts` or `exports-parity.test.ts`, which do not
+        # police it (DoR D2-12) and are declared by no phase here. No
+        # dependency-cruiser row is added for this subpath: it reads `Intl` only
+        # (a global, not an import), so no runtime allowance applies.
+        # `tests/boundaries/harness.ts` is NOT declared (N-8): its
+        # `ADAPTER_SUBPATHS` list only builds throwaway temp manifests, and no
+        # boundary fixture imports `@delivery-os/adapters/time-zone`, so the file
+        # is not edited here; a later fixture that does import it declares the
+        # harness in its own commit.
         - tests/structure/subpaths.test.ts
         - scripts/checks/workspace-entrypoints.ts
-        - tests/boundaries/harness.ts
         - tests/checks/provider-hermetic.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
@@ -1213,6 +1334,17 @@ phases:
     summary: "feat(GH-350): budget ceilings, the one-read projection and the ref seam"
     scope:
       files:
+        # The budget outcome/ref types reach their final shape with the evaluator
+        # that produces them (the declaration vocabulary itself was phase 1's);
+        # the barrel and the contracts-export inventory move with them (N-1).
+        - packages/core/src/contracts/provider.ts
+        - packages/core/src/contracts/index.ts
+        # The contracts-export inventory moves as ONE EDIT-SET with the export
+        # change: the fixture pins the whole contracts surface two-way, so a new
+        # or renamed budget/ref export falsifies it and the aggregate gate is red
+        # at this boundary unless both files move in the same commit (N-1).
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
         - packages/core/src/provider/budgets.ts
         - packages/core/src/provider/conditions.ts
         - packages/core/src/provider/chain.ts
@@ -1428,8 +1560,17 @@ phases:
         - packages/core/src/provider/simulate.ts
         - packages/core/src/provider/index.ts
         # The fixture's `workItemRef` field and the `simulation.workItemRef`
-        # disclosure (TDR-0054); the vocabulary half of this file is phases 1-2.
+        # disclosure (TDR-0054); the vocabulary half of this file is phases 1-2,
+        # and the simulate fixture/block types are new contract exports, so the
+        # barrel and the contracts-export inventory move with them (N-1).
         - packages/core/src/contracts/provider.ts
+        - packages/core/src/contracts/index.ts
+        # The contracts-export inventory moves as ONE EDIT-SET with the export
+        # change (N-1): the fixture pins the whole contracts surface two-way, so a
+        # new `simulate` fixture/block type falsifies it and the aggregate gate is
+        # red here unless both files move in the same commit.
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
         - packages/adapters/src/file/index.ts
         - packages/cli/src/commands/provider.ts
         - packages/cli/src/edge.ts
@@ -1634,6 +1775,13 @@ phases:
     scope:
       files:
         - packages/core/src/contracts/provider-profile.ts
+        # The watch bound's declared constant (`PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS
+        # = 900`, asserted by name in TC-WFRESH-001), the barrel row that re-exports
+        # it, and the contracts-export inventory in the same edit-set (N-1).
+        - packages/core/src/contracts/provider.ts
+        - packages/core/src/contracts/index.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/port-contract-inventory.test.ts
         - packages/core/src/provider/quota.ts
         - packages/core/src/provider/index.ts
         # The watch target's `maxAgeSeconds` declaration and its positivity
@@ -1758,14 +1906,20 @@ phases:
   # identity at exit 2, the summary naming the missing composition, a handler
   # count of zero) and a synthetic extra family being dropped with the selected
   # keys equal to the declared set. THE REMOVAL ARM'S MECHANISM IS DECLARED (DoR
-  # D2-6): `selectPromptRequiredProgram` closes over a statically imported
-  # constant, so a copy of `prompt-required-commands.ts` alone cannot change
-  # selection — the arm copies `packages/cli/src/entrypoint.ts` ITSELF into a temp
-  # module with a rewritten import of a provider-less declarative set and `?mutant=`
-  # cache-busting, and carries an unmutated control, so a rewrite that does not
-  # take effect fails the mutated arm by name. The arm is NEVER committed as a
-  # production change, and a case that cannot induce it fails naming the missing
-  # seam.
+  # D2-6, corrected at N-8): `selectPromptRequiredProgram` closes over a statically
+  # imported constant, so a copy of `prompt-required-commands.ts` alone cannot
+  # change selection — the arm copies `packages/cli/src/entrypoint.ts` ITSELF into
+  # a temp module and rewrites EVERY relative import specifier to the repository
+  # source path, not only the prompt-required set: the file also imports
+  # `./build-identity.js`, `./help.js` and `./index.js`, and a copy that leaves
+  # any of them relative resolves inside the temp directory (or fails to resolve)
+  # and the mutated arm would pass for the wrong reason. The mutated copy points
+  # its declarative-set import at a provider-less set and is loaded with `?mutant=`
+  # cache-busting; THE UNMUTATED CONTROL USES THE SAME COPY MACHINERY with the
+  # real set, so the only difference between the two arms is the set — a rewrite
+  # that does not take effect therefore fails the mutated arm by name. The arm is
+  # NEVER committed as a production change, and a case that cannot induce it fails
+  # naming the missing seam.
   # DOCUMENTATION HALF (the family-count class; the closed page set is unchanged
   # in kind and grows by these members): `feature-cli-entrypoint.md` (count 26 ->
   # 27; "`install` is the twenty-sixth **and last**" LOSES "and last"; a new
@@ -1891,12 +2045,15 @@ phases:
   #
   # Contract (documentation, spec §16's obligation table plus the closed page
   # set): the engine page gains the budget branch and its evaluation, the
-  # work-item ref rule and its precedence, the `budget-exhausted` members, the two
-  # budget announcements, the five budget evidence fields, the budget error row,
-  # the new tie order, the no-paid-escalation rule with the parked-versus-failed
+  # work-item ref rule and its precedence, the budget-announcement MEANING
+  # (severity, when each is raised), the five budget evidence fields' meaning,
+  # the budget error row's remediation prose,
+  # the no-paid-escalation rule with the parked-versus-failed
   # distinction, the two new CLI members, a sentence that the family is
   # prompt-required, and the gate-versus-alarm distinction (its zone half landed
-  # in phase 2); the profiles page gains `maxAgeSeconds`, the closed six-value
+  # in phase 2; its ENUMERATED LISTS, its counts and its tie order landed in
+  # phase 1 under N-3 and are NOT re-moved here); the profiles page gains
+  # `maxAgeSeconds`, the closed six-value
   # condition set, `watch-stale` and the three additive view fields; the spend page
   # states that the gate consumes the same fold, reports the same figures and
   # resolves its ref through the same local-context seam and pattern as an omitted
