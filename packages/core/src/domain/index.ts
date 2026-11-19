@@ -349,6 +349,18 @@ export {
   planDispatchResume,
 } from "./dispatch-resume.js";
 export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+  type OperatorLaneVerdict,
+} from "./dispatch-operator-view.js";
+export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
   renderDoctorHuman,

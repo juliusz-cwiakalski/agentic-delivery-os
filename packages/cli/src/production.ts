@@ -207,8 +207,10 @@ import {
   type DeliveryRequest,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  DISPATCH_PROBE_TOLERANCE_MS,
   type DispatchDelay,
   type DispatchLedgerVariant,
+  type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
@@ -311,6 +313,7 @@ import {
   createConfigProgram,
   createDispatchCommandRuntime,
   createDispatchGateRuntime,
+  createDispatchOperatorRuntime,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
   createPhaseCommitExtension,
@@ -770,11 +773,69 @@ export type ProductionCompositionFacts = {
    * can instrument reads without changing the state location.
    */
   readonly stateStoreWrap?: (store: StateStorePort) => StateStorePort;
+  /**
+   * The injected advisory owner-liveness probe (GH-354 API-10, DM-4).
+   *
+   * Production reads the host process table; the offline battery injects a
+   * faithful model so the tri-state mapping, the 5 000 ms start-instant
+   * tolerance, and the reused-pid rejection are observable without a kernel.
+   */
+  readonly ownerProbe?: DispatchOwnerProbe;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
 const UNBOUND_SCOPE_WARNING =
   "outside any git work tree: delivery state is not repository-scoped (unbound scope)";
+
+/**
+ * The process start instant in epoch milliseconds, read from the host's process
+ * table (Linux `/proc`). `undefined` means the table could not be read, which
+ * the probe reports as `unknown` rather than guessing.
+ */
+const processStartMs = (processId: number): number | undefined => {
+  try {
+    const stat = readFileSync(`/proc/${processId}/stat`, "utf8");
+    // Field 2 (`comm`) may contain spaces and is parenthesised; fields follow.
+    const closing = stat.lastIndexOf(")");
+    if (closing < 0) return undefined;
+    const fields = stat
+      .slice(closing + 2)
+      .trim()
+      .split(/\s+/u);
+    // After `comm`, fields[0] is field 3 (state); starttime is field 22.
+    const startTicks = Number(fields[19]);
+    if (!Number.isFinite(startTicks)) return undefined;
+    const bootLine = readFileSync("/proc/stat", "utf8")
+      .split("\n")
+      .find((line) => line.startsWith("btime "));
+    const bootSeconds = Number(bootLine?.slice("btime ".length));
+    if (!Number.isFinite(bootSeconds)) return undefined;
+    // `starttime` is in USER_HZ (100 on Linux): ticks / 100 s, then ms.
+    return bootSeconds * 1000 + startTicks * 10;
+  } catch {
+    return undefined;
+  }
+};
+
+/**
+ * The production owner probe (GH-354 API-10): alive-or-not from the process
+ * table plus the recorded start instant within the declared tolerance, so a
+ * reused process id is never reported live. An unreadable table is `unknown`,
+ * which never asserts staleness.
+ */
+const productionOwnerProbe: DispatchOwnerProbe = (owner) => {
+  try {
+    process.kill(owner.processId, 0);
+  } catch (error) {
+    const code = (error as { readonly code?: unknown }).code;
+    return code === "EPERM" ? "unknown" : "dead";
+  }
+  const observed = processStartMs(owner.processId);
+  if (observed === undefined) return "unknown";
+  const recorded = Date.parse(owner.startedAt);
+  if (!Number.isFinite(recorded)) return "unknown";
+  return Math.abs(observed - recorded) <= DISPATCH_PROBE_TOLERANCE_MS ? "live" : "dead";
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -3570,6 +3631,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ).run.run(input);
         },
       },
+      // The operator read surfaces (GH-354 DEC-7): the same single store, a
+      // persistence-disabled repository resolution, and the advisory probe.
+      // No configuration key is added.
+      ...createDispatchOperatorRuntime({
+        store,
+        resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),
+        probe: facts.ownerProbe ?? productionOwnerProbe,
+      }),
     };
 
     /**

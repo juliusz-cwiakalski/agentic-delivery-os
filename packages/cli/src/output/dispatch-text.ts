@@ -13,8 +13,10 @@ import {
   DISPATCH_MAX_HUMAN_LINES,
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
+  type DispatchDeliveringData,
   type DispatchEnvelopeData,
   type DispatchResolveData,
+  type DispatchStatusData,
   type DispatchSummaryData,
 } from "@delivery-os/core/contracts";
 import { projectExitCode } from "../projection.js";
@@ -168,3 +170,47 @@ export const renderDispatchHandoverText = (data: {
     `recorded=${data.recorded ? "true" : "false"}`,
     `noop=${data.noop ? "true" : "false"}`,
   ].join("\n")}\n`;
+
+/** `status` as the declared key=value set plus its lane facts (DM-5). */
+export const renderDispatchStatusText = (data: DispatchStatusData): string => {
+  const lane = data.lane;
+  const lines = [
+    `query=${data.query}`,
+    `ref=${data.ref}`,
+    `repository=${data.repository}`,
+    `delivering=${data.delivering ? "true" : "false"}`,
+    `stale=${data.stale ? "true" : "false"}`,
+    `marker=${data.marker}`,
+    `probe=${data.probe}`,
+    `pid=${data.pid === null ? "none" : String(data.pid)}`,
+    `sessionId=${data.sessionId ?? "none"}`,
+    ...(lane === null
+      ? []
+      : [
+          `attemptId=${lane.attemptId}`,
+          `harness=${lane.harness}`,
+          `iterationOrdinal=${lane.iterationOrdinal}`,
+          `restartsConsumed=${lane.restartsConsumed}`,
+          `ownerStartedAt=${lane.ownerStartedAt}`,
+          `lastToken=${lane.lastToken ?? "none"}`,
+          `lastOutcome=${lane.lastOutcome ?? "none"}`,
+          `recordedAt=${lane.recordedAt}`,
+        ]),
+  ];
+  return `${lines.join("\n")}\n`;
+};
+
+/** `is-delivering` as the declared key=value set. */
+export const renderDispatchDeliveringText = (data: DispatchDeliveringData): string => {
+  const lines = [
+    `query=${data.query}`,
+    `delivering=${data.delivering ? "true" : "false"}`,
+    `repository=${data.repository}`,
+    `ref=${data.ref ?? "none"}`,
+    ...(data.refs === undefined ? [] : [`refs=${data.refs.join(",") || "none"}`]),
+    ...(data.truncation === undefined
+      ? []
+      : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omitted}`]),
+  ];
+  return `${lines.join("\n")}\n`;
+};

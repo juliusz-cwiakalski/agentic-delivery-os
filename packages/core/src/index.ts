@@ -100,6 +100,13 @@ export {
   resolveDispatchLane,
 } from "./app/dispatch-lane.js";
 export {
+  type OperatorDeliveringRead,
+  type OperatorLaneReadFailure,
+  type OperatorStatusRead,
+  readOperatorDelivering,
+  readOperatorStatus,
+} from "./app/dispatch-lane-view.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverData,
   type DispatchHandoverResult,

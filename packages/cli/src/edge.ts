@@ -200,6 +200,8 @@ import {
   readDaemonLanes,
   readDispatchAttemptHistory,
   readDispatchAttempts,
+  readOperatorDelivering,
+  readOperatorStatus,
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
@@ -273,6 +275,7 @@ import {
   type BrandIdentity,
   CANONICAL_PHASE_IDS,
   CAPSULE_MAX_SESSIONS,
+  type CapabilityGapReason,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
@@ -317,6 +320,7 @@ import {
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchLaneFacts,
+  type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
   type DoctorCheckoutFacts,
@@ -335,10 +339,9 @@ import {
   type HarnessSeatBinding,
   type HarnessSessionPort,
   type HarnessTruncation,
+  type MergeDeliveryRequestInput,
   type MetricsReadSeams,
   type MetricsStateRead,
-  type CapabilityGapReason,
-  type MergeDeliveryRequestInput,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   type OwnerGateSlaDecisionRecord,
@@ -493,6 +496,8 @@ import {
   createDispatchCommandDefinition,
   type DispatchAttemptsRuntime,
   type DispatchCommandRuntime,
+  type DispatchDeliveringRuntime,
+  type DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import { createEventsCommandDefinition, type EventsCommandRuntime } from "./commands/events.js";
@@ -553,7 +558,12 @@ import {
 } from "./commands/supervise.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 
-export type { DispatchAttemptsRuntime, DispatchCommandRuntime } from "./commands/dispatch.js";
+export type {
+  DispatchAttemptsRuntime,
+  DispatchCommandRuntime,
+  DispatchDeliveringRuntime,
+  DispatchStatusRuntime,
+} from "./commands/dispatch.js";
 
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
@@ -7057,6 +7067,12 @@ export type DispatchComposition = {
     readonly max?: number;
     readonly resolveRepository: (repo: string) => string | undefined;
   };
+  /**
+   * The operator read surfaces' composition facts (GH-354 DEC-7). Additive and
+   * optional: a composition that supplies none keeps exactly the delivered
+   * dispatch family, and each query refuses `input.value.rejected`.
+   */
+  readonly operator?: DispatchOperatorComposition;
 };
 
 /**
@@ -7174,6 +7190,87 @@ export const createDispatchGateRuntime = (
               ),
           },
         }),
+  };
+};
+
+/**
+ * The operator read surfaces' composition facts (GH-354 DEC-7, API-6..API-10).
+ *
+ * Every fact is injected at the same edge that mounts `claimLease`,
+ * `existingLane`, and `attempts`. The store is the delivered state port; the
+ * repository resolver must resolve with persistence DISABLED, and the probe is
+ * the advisory owner-liveness observation.
+ */
+export type DispatchOperatorComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly resolveRepository: () => string | undefined;
+  readonly probe: DispatchOwnerProbe;
+};
+
+/**
+ * Build the operator read surfaces over the injected store and probe.
+ *
+ * A store failure keeps the store's own typed `state.*` code so the envelope's
+ * error-table row supplies the exit projection (`state.store.torn` → 2,
+ * `state.permission.denied` → 1). No surface answers around it.
+ */
+export const createDispatchOperatorRuntime = (
+  composition: DispatchOperatorComposition,
+): {
+  readonly status: DispatchStatusRuntime;
+  readonly delivering: DispatchDeliveringRuntime;
+} => {
+  const failureOf = (read: { readonly code: string }, summary: string) => ({
+    ok: false as const,
+    error: { kind: "state", code: read.code, summary },
+  });
+  return {
+    status: {
+      read: async (input) => {
+        const repository = composition.resolveRepository();
+        if (repository === undefined) {
+          return {
+            ok: false as const,
+            error: {
+              kind: "input",
+              code: "input.value.rejected",
+              summary: "repository identity is unresolvable",
+            },
+          };
+        }
+        const read = readOperatorStatus({
+          store: composition.store,
+          repository,
+          ref: input.ref,
+          probe: composition.probe,
+        });
+        if (!read.ok) return failureOf(read, `dispatch lane read failed (${read.code})`);
+        return { ok: true as const, data: read.data };
+      },
+    },
+    delivering: {
+      read: async (input) => {
+        const repository = composition.resolveRepository();
+        if (repository === undefined) {
+          return {
+            ok: false as const,
+            error: {
+              kind: "input",
+              code: "input.value.rejected",
+              summary: "repository identity is unresolvable",
+            },
+          };
+        }
+        const read = readOperatorDelivering({
+          store: composition.store,
+          repository,
+          ...(input.ref === undefined ? {} : { ref: input.ref }),
+          probe: composition.probe,
+        });
+        if (!read.ok) return failureOf(read, `dispatch lane read failed (${read.code})`);
+        return { ok: true as const, data: read.data };
+      },
+    },
   };
 };
 
@@ -7340,4 +7437,7 @@ export const createDispatchCommandRuntime = (
         nowIso: composition.nowIso,
         gate: composition.gate,
       })),
+  ...(composition.operator === undefined
+    ? {}
+    : createDispatchOperatorRuntime(composition.operator)),
 });

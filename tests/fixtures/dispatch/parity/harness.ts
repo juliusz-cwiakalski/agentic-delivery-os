@@ -29,6 +29,7 @@ import type {
   DispatchDelay,
   DispatchEnvelopeData,
   DispatchLaneRecord,
+  DispatchOwnerProbe,
   StateFenceHandle,
   StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
@@ -180,12 +181,26 @@ export type ParityHarnessOptions = {
   readonly onAppend?: (record: { readonly kind: string }) => void;
   /** The on-disk pm-notes fixture; defaults to a complete document. */
   readonly pmNotes?: PmNotesFixtureKind;
+  /**
+   * The advisory owner-liveness probe (GH-354 API-10). Absent keeps the
+   * delivered dispatch family's behaviour; the operator queries refuse when the
+   * composition supplies no probe.
+   */
+  readonly ownerProbe?: DispatchOwnerProbe;
+  /**
+   * An observability seam over the main state store (GH-354 §7.2). The composed
+   * program keeps using the returned port, so a case can count reads without
+   * changing the state location. Absent leaves the store exactly as opened.
+   */
+  readonly storeWrap?: (store: StateStorePort) => StateStorePort;
 };
 
 export type ParityHarness = {
   readonly brand: BrandIdentity;
   readonly home: string;
   readonly checkout: string;
+  /** The resolved state location the composition writes beside the ledger. */
+  readonly stateDirectory: string;
   readonly store: StateStorePort;
   readonly clock: ReturnType<typeof createDispatchClock>;
   readonly guarded: GuardedRunner;
@@ -384,17 +399,22 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     processId: options.processId ?? 4242,
     dispatchDelay: delay,
     clock: { nowMs: clock.nowMs, nowIso: clock.nowIso },
-    ...(options.onAppend === undefined
+    ...(options.ownerProbe === undefined ? {} : { ownerProbe: options.ownerProbe }),
+    ...(options.onAppend === undefined && options.storeWrap === undefined
       ? {}
       : {
-          stateStoreWrap: (opened: StateStorePort): StateStorePort => ({
-            ...opened,
-            append: (handle, request) => {
-              const outcome = opened.append(handle, request);
-              if (outcome.ok) options.onAppend?.({ kind: request.kind });
-              return outcome;
-            },
-          }),
+          stateStoreWrap: (opened: StateStorePort): StateStorePort => {
+            const wrapped = options.storeWrap?.(opened) ?? opened;
+            if (options.onAppend === undefined) return wrapped;
+            return {
+              ...wrapped,
+              append: (handle, request) => {
+                const outcome = wrapped.append(handle, request);
+                if (outcome.ok) options.onAppend?.({ kind: request.kind });
+                return outcome;
+              },
+            };
+          },
         }),
   })(brand);
 
@@ -513,6 +533,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     brand,
     home,
     checkout,
+    stateDirectory,
     store,
     clock,
     guarded,

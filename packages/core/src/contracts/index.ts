@@ -1143,6 +1143,53 @@ export {
   dispatchHandoverRecordKey,
   dispatchLaneRecordKey,
 } from "./dispatch.js";
+// The typed dispatch operator surface (GH-354 F-1..F-7, API-1..API-12,
+// DM-1..DM-7): the four query discriminators, the closed probe/marker/reason
+// vocabularies, the declared bounds, the four payloads, and the injected
+// owner-probe and artifact-family edges.
+export {
+  DISPATCH_LOG_DIRECTORY_PREFIX,
+  DISPATCH_LOG_FAMILY_BYTES,
+  DISPATCH_LOG_FILE_CAP_BYTES,
+  DISPATCH_LOG_MAX_HUMAN_BYTES,
+  DISPATCH_LOG_MAX_HUMAN_LINES,
+  DISPATCH_LOG_REASONS,
+  DISPATCH_LOG_RETAINED_FILES,
+  DISPATCH_LOG_SEGMENT_WIDTH,
+  DISPATCH_LOG_STREAM_KINDS,
+  DISPATCH_LOG_STREAM_WIDTH,
+  DISPATCH_LOG_TAIL_DEFAULT,
+  DISPATCH_LOG_TAIL_MAX,
+  DISPATCH_LOG_TAIL_MIN,
+  DISPATCH_LOG_TAIL_PATTERN,
+  DISPATCH_MAX_DELIVERING_REFS,
+  DISPATCH_MESSAGE_REASONS,
+  DISPATCH_OPERATOR_MARKERS,
+  DISPATCH_OPERATOR_PROBE_VALUES,
+  DISPATCH_OPERATOR_QUERIES,
+  DISPATCH_PROBE_TOLERANCE_MS,
+  DISPATCH_PROBE_VERDICTS,
+  DISPATCH_TRANSCRIPT_READ_CAP_CHARS,
+  type DispatchDeliveringData,
+  type DispatchLastMessageData,
+  type DispatchLogData,
+  type DispatchLogFileEntry,
+  type DispatchLogFileSystem,
+  type DispatchLogReason,
+  type DispatchLogStreamKind,
+  type DispatchMarkerState,
+  type DispatchMessageReason,
+  type DispatchOperatorData,
+  type DispatchOperatorLaneFacts,
+  type DispatchOperatorMarker,
+  type DispatchOperatorProbe,
+  type DispatchOperatorQuery,
+  type DispatchOperatorRefsTruncation,
+  type DispatchOperatorTruncation,
+  type DispatchOwnerProbe,
+  type DispatchProbeVerdict,
+  type DispatchStatusData,
+} from "./dispatch-operator.js";
 // The `delivery.doctor.v1` vocabulary (GH-224 F-2, DM-1..DM-8): constants and
 // types only; the pure aggregation lives in the core domain tier.
 export {

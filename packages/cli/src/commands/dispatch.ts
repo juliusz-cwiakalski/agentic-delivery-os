@@ -21,16 +21,20 @@ import {
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
   type DispatchAttemptsData,
+  type DispatchDeliveringData,
   type DispatchEnvelopeData,
   type DispatchResolveData,
+  type DispatchStatusData,
   type DispatchSummaryData,
   type ProjectionClass,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
   renderDispatchAttemptsText,
+  renderDispatchDeliveringText,
   renderDispatchHandoverText,
   renderDispatchResolveText,
+  renderDispatchStatusText,
   renderDispatchSummaryText,
   renderDispatchText,
   renderDispatchVerboseText,
@@ -150,6 +154,26 @@ export type DispatchAttemptsRuntime = {
   >;
 };
 
+/** The per-ref lane-view read surface (GH-354 API-1); composition supplies it. */
+export type DispatchStatusRuntime = {
+  readonly read: (input: {
+    readonly ref: string;
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchStatusData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
+
+/** The delivering-fold read surface (GH-354 API-3); both admissible forms. */
+export type DispatchDeliveringRuntime = {
+  readonly read: (input: {
+    readonly ref?: string;
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchDeliveringData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
+
 /** Everything the dispatch command family can be composed with. */
 export type DispatchCommandRuntime = {
   readonly run: DispatchRunRuntime;
@@ -157,6 +181,14 @@ export type DispatchCommandRuntime = {
   readonly resolve?: DispatchResolveRuntime;
   readonly handover?: DispatchHandoverRuntime;
   readonly attempts?: DispatchAttemptsRuntime;
+  readonly status?: DispatchStatusRuntime;
+  readonly delivering?: DispatchDeliveringRuntime;
+  /**
+   * The registered credential set the composition root already holds (the same
+   * value `blockers` and `steer` receive); the message composition redacts with
+   * it BEFORE bounding (GH-354 AC-F4-7, NFR-11).
+   */
+  readonly secrets?: readonly string[];
 };
 
 const REF_PATTERN = /^[A-Z]+-\d+$/;
@@ -202,6 +234,18 @@ const isAttemptsData = (data: unknown): data is DispatchAttemptsData =>
   Array.isArray((data as { readonly attempts?: unknown }).attempts) &&
   typeof (data as { readonly hasMore?: unknown }).hasMore === "boolean" &&
   (data as { readonly refSource?: unknown }).refSource !== undefined;
+
+/** The `query` discriminator of an operator payload, when there is one. */
+const queryOf = (data: unknown): string | undefined => {
+  if (typeof data !== "object" || data === null) return undefined;
+  const query = (data as { readonly query?: unknown }).query;
+  return typeof query === "string" ? query : undefined;
+};
+
+const isStatusData = (data: unknown): data is DispatchStatusData => queryOf(data) === "status";
+
+const isDeliveringData = (data: unknown): data is DispatchDeliveringData =>
+  queryOf(data) === "is-delivering";
 
 /** The parsed `attempts` request, or the grammar's refusal summary. */
 type AttemptsRequest =
@@ -261,6 +305,65 @@ const parseAttemptsRequest = (tokens: readonly string[]): AttemptsRequest => {
 const DELIVERED_FLAGS = ["--revert"] as const;
 const DELIVERED_VALUE_FLAGS = ["--harness", "--resume-prompt", "--repo", "--note"] as const;
 
+/**
+ * The operator forms, and the per-form flag vocabulary.
+ *
+ * The shared parser opts the whole family out of the unknown-flag branch, so the
+ * handler owns the identity. A flag declared for one form is NOT admitted on
+ * another: `--tail` belongs to `log` only, and the delivered forms keep the
+ * definition-wide vocabulary they already had.
+ */
+const OPERATOR_FORMS = ["status", "log", "is-delivering", "last-message"] as const;
+type OperatorForm = (typeof OPERATOR_FORMS)[number];
+
+const OPERATOR_FLAGS: Readonly<Record<OperatorForm, readonly string[]>> = {
+  status: [],
+  log: ["--tail"],
+  "is-delivering": [],
+  "last-message": [],
+};
+
+const isOperatorForm = (value: string | undefined): value is OperatorForm =>
+  value !== undefined && (OPERATOR_FORMS as readonly string[]).includes(value);
+
+/** The canonical reference shape every operator form shares (API-5). */
+const isCanonicalRef = (value: string | undefined): value is string =>
+  value !== undefined && REF_PATTERN.test(value);
+
+/** The parsed operator request, or the grammar's refusal summary. */
+type OperatorRequest =
+  | { readonly ok: true; readonly ref: string | undefined }
+  | { readonly ok: false; readonly summary: string };
+
+/**
+ * The operator family's grammar: the canonical `[A-Z]+-\d+` reference, the
+ * ref-less `is-delivering` form, and no third positional. Every refusal is
+ * decided here, before any runtime call (API-5, AC-F5-2).
+ */
+const parseOperatorRequest = (
+  form: OperatorForm,
+  positionals: readonly string[],
+): OperatorRequest => {
+  const [, ref, extra] = positionals;
+  if (extra !== undefined) {
+    return {
+      ok: false,
+      summary: `unexpected argument "${extra}"; dispatch ${form} takes at most one work item reference`,
+    };
+  }
+  if (form === "is-delivering" && ref === undefined) return { ok: true, ref: undefined };
+  if (ref === undefined) {
+    return { ok: false, summary: `missing work item reference for "dispatch ${form}"` };
+  }
+  if (!isCanonicalRef(ref)) {
+    return {
+      ok: false,
+      summary: `"${ref}" is not a canonical work item reference (expected letters-dash-digits, e.g. GH-354)`,
+    };
+  }
+  return { ok: true, ref };
+};
+
 /** Build the one dispatch command definition over the injected runtime. */
 export const createDispatchCommandDefinition = (
   runtime: DispatchCommandRuntime,
@@ -273,6 +376,8 @@ export const createDispatchCommandDefinition = (
     humanSuccess: true,
     exitProjection: (data) => {
       if (isSummaryData(data)) return "success";
+      if (queryOf(data) === "status") return "success";
+      if (isDeliveringData(data)) return data.delivering ? "success" : "user-validation";
       const handover = data as {
         readonly verdict?: unknown;
         readonly recorded?: unknown;
@@ -289,6 +394,8 @@ export const createDispatchCommandDefinition = (
     },
     humanText: (data, _brand, context) => {
       if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
+      if (isStatusData(data)) return renderDispatchStatusText(data);
+      if (isDeliveringData(data)) return renderDispatchDeliveringText(data);
       if (isSummaryData(data)) return renderDispatchSummaryText(data);
       if (isResolveData(data)) return renderDispatchResolveText(data);
       const envelope = data as Partial<DispatchEnvelopeData>;
@@ -318,14 +425,43 @@ export const createDispatchCommandDefinition = (
       // allowed set derives from this definition, so a flag added to the
       // vocabulary can never be refused here by drift.
       if (!isAttempts) {
-        const delivered = new Set([
-          ...(definition.flags ?? []),
-          ...(definition.requiresValue ?? []),
-        ]);
+        const operator = isOperatorForm(first);
+        const delivered = new Set(
+          operator
+            ? [...OPERATOR_FLAGS[first as OperatorForm]]
+            : [...(definition.flags ?? []), ...(definition.requiresValue ?? [])],
+        );
         const undeclared = argv.find((token) => token.startsWith("--") && !delivered.has(token));
         if (undeclared !== undefined) {
           return fallbackInvocation(`unknown flag "${undeclared}"`);
         }
+      }
+
+      if (isOperatorForm(first)) {
+        const request = parseOperatorRequest(first, positionals);
+        if (!request.ok) return failure("input.value.rejected", request.summary);
+
+        if (first === "status") {
+          if (runtime.status === undefined || request.ref === undefined) {
+            return failure("input.value.rejected");
+          }
+          const result = await runtime.status.read({ ref: request.ref });
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+
+        // `is-delivering` keeps both admissible forms: per-ref and repository-wide.
+        if (first === "is-delivering") {
+          if (runtime.delivering === undefined) return failure("input.value.rejected");
+          const result =
+            request.ref === undefined
+              ? await runtime.delivering.read({})
+              : await runtime.delivering.read({ ref: request.ref });
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+
+        // A query surface this composition does not supply refuses rather than
+        // answering an empty success (DEC-7, AC-F5-3).
+        return failure("input.value.rejected");
       }
 
       if (isAttempts) {
