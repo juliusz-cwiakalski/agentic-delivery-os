@@ -1,0 +1,1233 @@
+# GH-350 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the ONLY plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly. Extra phase data (goal, contract, AC/TC acceptance, authored scope,
+# gate commands, commit subject) rides in YAML comments so the parsed document
+# stays schema-strict: the plan declares phases and scope only — no `tasks` key,
+# no progress log. Plan-phase progress is a pm-notes `notes:` entry naming the
+# plan phase id, the commit hash, and the test result.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-350-spec.md (v1.1: F-1..F-8; 30 ACs
+#                AC-F1-1..AC-F8-4; DM-1..DM-10; NFR-1..NFR-16; RSK-1..RSK-19;
+#                DEC-1..DEC-15; no open question reaches delivery; §5.1
+#                capability details; §6 flows 1-8; §7.1 in-scope; §8.5 backward
+#                compatibility; §9's "three different things called migration";
+#                §12 assumptions; §16 the affected components, the exact path
+#                map, the THIRTEEN-row documentation obligation table and the
+#                count-bearing-page class rule; §17 the 30 ACs with their
+#                ticket-AC and ticket-task traceability and the per-AC
+#                verification intent; §18 the dependency-ordered rollout and
+#                the "inert by default" adoption statement; §19's declaration
+#                that this change migrates NO state; Appendix A (precedence
+#                matrix), B (zone grammar, local evaluation, DST rule),
+#                C (budget evaluation), D (`delivery.provider.simulate.v1`),
+#                E (migration subset, mapping table, refusals), F (watch
+#                freshness), G (the three declared provider rows).
+#   - Test plan: ./chg-GH-350-test-plan.md (v1.1: 93 cases — TC-ZONE-001..011
+#                (11), TC-BUD-001..016 (16), TC-CFG-001..011 (11),
+#                TC-INDEP-001..004 (4), TC-SIM-001..011 (11),
+#                TC-MIG-001..015 (15), TC-WFRESH-001..010 (10),
+#                TC-CONFORM-001..010 (10), TC-DOC-001..005 (5); 30/30 AC
+#                coverage in both directions; §3.5 declared assertion bases and
+#                seams (BYTE/GIT/SPAWN/READ/ATOMIC/ORDER/FAULT/SEAM/CI/DOC and
+#                the change's own VAC-TP-1, EMPTY-TP-1, SPEND-TP-1, NOEXEC-TP-1,
+#                DOC-TP-1); §4.3 negative controls; §4.1 hermeticity; §5.1 the
+#                scenario index; §5.2 the scenario details; §6.2 fixtures to
+#                author; §6.3 the numbered gate battery G1..G6 and the evidence
+#                shape; §7.1 the nineteen new files; §7.2 the existing suites
+#                the change forces to move, with the named assertion that
+#                moves in each; §7.3 the case-to-suite map (93 rows, one owner
+#                per case); §8.3's reported findings, of which four are
+#                non-blocking and none is open in a way that stops delivery).
+#   - PM record: ./chg-GH-350-pm-notes.yaml (milestone "M4: Jaiship-native
+#                delivery", story M4-S4; the six binding decisions
+#                ADR-0012/PDR-0006/TDR-0049/TDR-0050/TDR-0051/TDR-0052, all
+#                `Proposed` with owner acceptance at pull-request review; the
+#                clarify-scope and specification record).
+#   - Decisions: doc/decisions/ADR-0012 (zone domain, one `ProviderZonePort`,
+#                DST rule, three-pass cap, `provider.peak.zone-unknown`,
+#                `timezone` evidence), PDR-0006 (per-project = the delivered
+#                repository layers; no project key), TDR-0049 (one pure
+#                `evaluateBudgets` over one injected read-only
+#                `ProviderSpendTotalsPort`; window park vs ticket refusal; no
+#                counter; no paid escalation), TDR-0050 (`provider simulate`,
+#                strict `delivery.provider.simulate.v1`, `persist: false`,
+#                delivered payload plus one `simulation` block, parity not a
+#                second evaluator), TDR-0051 (assignment-only data reader,
+#                whole-run refusal, name-first credential firewall, validated
+#                proposal, create-only `--write`, declared hook posture),
+#                TDR-0052 (`maxAgeSeconds`, watch-only `watch-stale`, the `>=`
+#                predicate, the park clamp, no park from a stale reading).
+#   - Schema:    doc/spec/features/feature-plan-schema.md (scope keys
+#                files/folders/packages, per-phase one-line summary, typed
+#                done artifacts, leases, weightClass, interactions, tier; no
+#                tasks key, no progress log; a page and its phrase row are
+#                data, never execution).
+#   - Template:  doc/templates/implementation-plan-template.md.
+#   - Precedent: ./../2026-11-18--GH-346--installable-versioned-binary/chg-GH-346-plan.yaml
+#                (comment-carried phase data, one commit per plan phase, the
+#                untracked-decision-record staging pattern, the SCOPE
+#                DECLARATION RULE, the count-bearing-page class rule, the
+#                declared documentation window, the final-phase release and
+#                battery obligations) and ./../2026-11-16--GH-299--metrics-spend/chg-GH-299-plan.yaml.
+#   - Rules:     .ai/rules/typescript.md (strict typing, injected
+#                environment/clock/randomness, pure domain, adapters own I/O,
+#                injected fakes over `mock.module`), .ai/rules/testing-strategy.md
+#                (`bun:test` under `tests/**/*.test.ts`, layers
+#                structure/behaviour/checks/boundaries/golden, permanent suites
+#                assert the current tree and never a diff against a moving base
+#                branch, `pnpm check` is the aggregate gate),
+#                .ai/rules/bash.md (the two shell suites the boundary rules
+#                touch, if the coder reaches them), AGENTS.md (branch model:
+#                branch from and target `main-tools`; the supplementary
+#                commit-range gate; the doc-distribution obligation — this
+#                change ships no redistributable doc under doc/guides/, it
+#                corrects existing pages, and `bash
+#                scripts/.tests/test-doc-distribution.sh` runs in phase 8's
+#                battery as a control).
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1 — the untracked decision records):
+#   SIX decision records are UNTRACKED in the worktree at plan time:
+#     doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
+#     doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
+#     doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
+#     doc/decisions/TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md
+#     doc/decisions/TDR-0051-legacy-provider-profile-and-hook-migration.md
+#     doc/decisions/TDR-0052-watch-observation-freshness-and-stale-condition.md
+#   The commit primitive stages only plan-declared scope plus the change folder,
+#   so a phase that declares nothing for them would leave them untracked and the
+#   change would ship without its binding design. Phase 1 therefore declares the
+#   six exact paths plus doc/decisions/00-index.md and the doc/decisions/
+#   folder, and they land on the PHASE-1 DELIVERY COMMIT — the `commit`
+#   invocation carrying the phase-1 message, run at the phase-1 boundary, whose
+#   declared scope covers them (spec §16's `doc/decisions/` row and §18's
+#   "the decision records and their index rows ride a plan phase's authored
+#   scope, not a hand-commit").
+#   They do NOT land on `phase complete delivery_planning`: that lifecycle
+#   boundary stages the change folder only, because
+#   `LIFECYCLE_PLAN_KINDS.delivery_planning = ["planning"]` matches no plan
+#   phase (every phase below is `kind: delivery`). The staging authority is
+#   phase 1's own declared scope.
+#   Their index rows and the `Proposed` status are already committed in
+#   doc/decisions/00-index.md, so the index is declared for staging authority (a
+#   status/typo touch stages with them); if it needs no edit this phase produces
+#   one advisory `plan diff` `undeclared-missing` finding, which is
+#   observational and not a failure. TC-CONFORM-010 asserts the six records, the
+#   `Proposed` status and one index row each.
+#
+# SCOPE DECLARATION RULE (binding on every phase):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   delivered regression control is NOT declared. Controls this change re-runs
+#   and never edits: tests/structure/metrics-mounting.test.ts,
+#   tests/behaviour/entrypoint-two-bins.test.ts,
+#   tests/behaviour/entrypoint-composition.test.ts, tests/checks/ci-checks.test.ts,
+#   the delivered spend-*/metrics-* behaviour suites behind TC-BUD-016's
+#   non-regression arm, the delivered `secret-read-boundary` check behind
+#   TC-INDEP-004, the boundary battery's own drivers
+#   (tests/boundaries/boundaries.test.ts and its fixture-coverage meta-check,
+#   which run whole while only the registry and the fixtures it lists are
+#   declared), and `scripts/hooks/pre-opencode-iteration-zai.sh`, which spec §16
+#   marks "Reference only — never executed, sourced, imported, or modified".
+#   DECLARED EXCEPTIONS (no phase declares them, and each is a decision rather
+#   than an omission): `scripts/checks/help-guide-coverage.ts`,
+#   `tests/checks/help-guide-coverage.test.ts`,
+#   `tests/fixtures/help-guide/coverage.json`,
+#   `tests/checks/reference-page-parity.test.ts` and
+#   `packages/cli/src/help/prompt-required-commands.ts` are RE-RUN and never
+#   edited — this change adds no command family and no reference page, and the
+#   provider page is already registered under the M1 root, so the coverage
+#   inventory gains no row and the page-root mapping is unchanged (AC-F8-4). They
+#   appear in the phase-5, phase-6 and phase-8 gate commands as controls, never in
+#   a phase scope. Test plan §7.2 lists them among the suites that move; the only
+#   member-tuple move they carry is
+#   `tests/behaviour/entrypoint-help-coverage.test.ts`, which IS declared in
+#   phases 5 and 6, and the reference page's member sections, which are phase 8's.
+#   `tests/checks/ci-checks.test.ts` is the other declared control: no CI job is
+#   added and `error-table-sync` stays out of `pnpm check` (NFR-15).
+#   A path edited by TWO OR MORE phases keeps ONE owner per assertion and names
+#   both halves at both ends. That applies here to
+#   packages/core/src/contracts/provider.ts (P1 vocabulary / P2 zone domain),
+#   packages/core/src/provider/{validate,engine,index}.ts,
+#   packages/cli/src/edge.ts, packages/cli/src/commands/provider.ts,
+#   packages/cli/src/help.ts,
+#   packages/core/src/config/catalog.ts (P2 stale-comment correction / P4
+#   `provider.budgets` / P7 watch `maxAgeSeconds`),
+#   tests/structure/provider-contract.test.ts,
+#   tests/structure/provider-surface.test.ts,
+#   tests/checks/provider-evidence-bounds.test.ts,
+#   tests/checks/provider-hermetic.test.ts,
+#   tests/structure/content-inventory.test.ts + tests/structure/inventory.json,
+#   tests/boundaries/fixture-registry.json, tests/behaviour/provider-budgets.test.ts,
+#   tests/behaviour/entrypoint-help-coverage.test.ts,
+#   tests/checks/doc-conformance.test.ts and the specification pages that carry
+#   claims from more than one phase (feature-provider-engine.md,
+#   feature-provider-profiles.md, feature-metrics.md). Each such phase's comment
+#   names the half it owns; a later phase never re-states or re-moves an earlier
+#   phase's assertion.
+#
+# THE REGISTER MOVES ONCE, IN PHASE 1, AND NO LATER PHASE TOUCHES A COUNT:
+#   `provider.peak.zone-unknown`, `provider.budget.exceeded` and
+#   `provider.migrate.refused` are three additive rows of one register
+#   (spec F-8, DM-9, Appendix G; DEC-14 declares the arithmetic). The register is
+#   a closed two-way table the aggregate gate compares against the documented
+#   table and the fixtures, so a row cannot be added where its emitter is written
+#   without moving every count site and every count-bearing page in the SAME
+#   commit — and three emitters in three phases would stage the movement three
+#   times (164->165->166->167, corpus 81->82->83->84, `+130`->`+131`->`+132`->`+133`)
+#   across nine suites and five pages, which is exactly the staggered count move
+#   test plan TR-10 declares a gap. The rows are therefore declared ONCE, with
+#   the vocabulary they belong to, in phase 1 (spec §18's "contracts and the
+#   vocabulary first — nothing else can compile against an undeclared set"; the
+#   classifier resolves an identity only through the table, so the emitter phases
+#   read it, they do not move it).
+#   Phase 1 moves, as ONE edit-set: the three source rows
+#   (packages/core/src/contracts/error-table.ts), the three documented rows and
+#   the prose facts spec §16 binds to doc/spec/features/feature-result-contract.md
+#   (the `provider` kind at sixteen rows; the table at 167 in BOTH the machine and
+#   the documented table, because the sync check compares them two-way; the
+#   delivered-row count at 166, which is the page's own number and one below the
+#   table's; the arithmetic at `BASELINE_ROWS.length + 133`; the allowlist stated
+#   as explicitly unchanged at 66; and the corpus statement at 84 rows), one
+#   true-positive result-code corpus row per
+#   new code (tests/fixtures/result/code-corpora/true-positives.json, 81 -> 84),
+#   the three other COUNT-BEARING pages (feature-ceremony-runner.md,
+#   feature-metrics.md, feature-install-lifecycle.md — and feature-supervise.md
+#   is deliberately NOT in this set: its only restatement is the 66-member
+#   allowlist, which does not move, so editing it would make a false claim and
+#   TC-DOC-001 asserts its `66` stays `66`), the nine delivered count/membership
+#   suites, the arithmetic base in scripts/checks/error-table-sync.ts, the
+#   repo-wide no-leftover scan in tests/structure/error-table.test.ts (its
+#   `APPENDIX_D_FILES` list gains feature-install-lifecycle.md and its token
+#   pattern gains this change's outgoing forms `164`, `163` and
+#   `BASELINE_ROWS.length + 130`, so a page or suite left behind fails by name
+#   while the declared delta shapes `164 -> 167` must not trip it), and the
+#   count phrases of the delivered doc-conformance block.
+#   DECLARED IDENTITY WINDOW, stated rather than implied: two of the three rows
+#   are documented from phase 1 while their emitters land in phases 2 and 3 (the
+#   zone refusal) and phase 6 (the migration refusal). No delivered gate reads an
+#   emitter, so every phase boundary is green; the branch is unreleased for the
+#   whole window, so no operator meets a documented refusal the tool cannot
+#   produce; and the alternative — registering each row in its emitter's phase —
+#   is the staggered count move the class rule exists to forbid. The row's
+#   category, retryability, consequence, projection and remediation are complete
+#   at phase 1 because they are declaration data, not behaviour evidence; the
+#   behaviour evidence for each row is its own phase's case (TC-ZONE-003 in phase
+#   2, TC-CONFORM-001 in phase 1, TC-MIG-003/TC-MIG-013 in phase 6).
+#
+# PHASE ORDER, THE COUPLINGS, AND WHY THE BOUNDARIES ARE GREEN:
+#   Order follows spec §18 (contracts and the vocabulary, then the zone port and
+#   the pure arithmetic, then the budget evaluator and its totals projection,
+#   then the configuration branch and the per-repository evidence, then
+#   simulation, then migration, then watch freshness, then the conformance and
+#   documentation sweep). Five transfers are declared rather than discovered:
+#   (1) THE BUDGET DECLARATION VALIDATION SPLITS ACROSS PHASES 3 AND 4 — the
+#       fail-closed semantic rules are pure (`parseProviderBudgets` in
+#       packages/core/src/provider/validate.ts) and land with the evaluator, so
+#       TC-BUD-002..016 are phase 3's; the branch that makes them reachable from
+#       configuration is `provider.budgets` in the catalog and lands in phase 4
+#       exactly as §18 orders, so the declaration matrix through a resolved
+#       configuration (TC-BUD-001) is phase 4's. Splitting the other way (branch
+#       first) would let configuration accept an invalid budget for one phase,
+#       which is the fail-open state AC-F2-1 refuses.
+#   (2) THE PROVIDER MEMBER COUNT MOVES TWICE (5 -> 6 in phase 5, 6 -> 7 in
+#       phase 6). This is NOT the error-table class: the provider FAMILY count is
+#       unchanged at 26 (AC-F8-4), no page states a member count, and both moves
+#       are delivered assertions inside the same help-coverage and surface
+#       suites, each true at its commit. The family entrypoint list
+#       (packages/cli/src/help/prompt-required-commands.ts) is not edited by any
+#       phase: two members of an existing family change no family.
+#   (3) EVERY PHASE BOUNDARY IS GREEN. The gate command convention is
+#       `TMPDIR=$PWD/tmp/tmpdir pnpm check` (the ticket and test plan §6.1 require
+#       the TMPDIR prefix in every recorded gate command), run from the
+#       repository root at the phase boundary, with the phase's narrow tier run
+#       first for iteration. Tests are written INSIDE the phase that implements
+#       the behaviour they assert, in the same commit; no phase boundary carries
+#       a failing delivered suite, and no phase ships a case it cannot make
+#       green. A boundary that needs a later phase's code to be green is a plan
+#       defect, not a delivery allowance.
+#   (4) THE DOCUMENTATION RULE IS TRUTH-FIRST, NOT SWEEP-FIRST. A page moves in
+#       the phase whose delivery FALSIFIES its current text, or whose delivery
+#       completes the subject it documents: the count-bearing pages move with the
+#       register in phase 1; the three pages that currently state the UTC-only
+#       basis and "non-UTC out of scope" move in phase 2 (the phase that falsifies
+#       them); the config-layer page moves in phase 4 (the catalogue branch is its
+#       whole subject and completes it); and the hook guide moves in phase 6, with
+#       the migration that replaces it. Everything purely ADDITIVE — where no
+#       sentence on the page is contradicted, only absent — moves in the single
+#       phase-8 sweep, because an omission is not a falsehood and spreading
+#       additive prose across six phases buys no truth (the budget prose on the
+#       engine page, the watch members on the profiles page, the spend statement,
+#       the gate-versus-alarm paragraph, the nonfunctional row, the conditions
+#       guide, the model guide, the reference page, the two indices, the registry
+#       and the M4 pack). The split is load-bearing: leaving the UTC-only
+#       sentences to the sweep would keep three specification pages asserting a
+#       basis the change reverses from phase 2 to phase 8, and no gate reads those
+#       sentences before phase 8 — nothing would fail loudly enough to be noticed.
+#       Peak-pausing is COMPLETE at phase 2; the engine and profiles pages are
+#       corrected at phase 2 and completed at phase 8, with each half named at
+#       both ends.
+#   (5) A PAGE AND ITS PHRASE ROW MOVE IN THE SAME COMMIT. The doc-conformance
+#       phrase table (tests/checks/doc-conformance.test.ts) is extended per phase
+#       for the pages that move in that phase — counts in phase 1, the three
+#       zone-basis pages in phase 2, the config-layer page in phase 4, the hook
+#       guide in phase 6, the rest in phase 8 — and is never retrofitted: a row
+#       added later would assert prose that a later page edit contradicts. It is
+#       one artifact edited five times, each time with the pages it pins, which is
+#       the same one-edit-set discipline applied per truth event instead of per
+#       artifact.
+#   Two further orderings are stated: the daemon watcher's boundary consumers
+#   (packages/core/src/domain/daemon-peak-pause.ts and
+#   packages/core/src/app/daemon-supervision.ts) move WITH the boundary
+#   functions in phase 2, because AC-F1-2's "0 differences" is a property of the
+#   three surfaces sharing one function and the watcher's own second
+#   UTC-seconds computation would otherwise be the second boundary truth the
+#   change forbids; and the two adapters subpaths land with their first consumer
+#   (time-zone in phase 2, the fixture read in phase 5) so no subpath exists
+#   without an export-parity entry and an inventory row.
+#
+# NO NEW SURFACES (spec NG-11, §7.2, and the out-of-scope list; binding):
+#   This change adds NO command family (the provider family keeps its membership
+#   and gains two members), NO state record kind, NO store write path, NO
+#   environment variable, NO CLI flag outside the declared provider members, NO
+#   CI job, NO alarm kind, NO event topic, NO notification channel, NO state
+#   migration, NO vendored zone table, NO tz-database dependency, NO watch cache,
+#   timer, refresher or scheduler, and NO new secret-read allowlist entry. The
+#   provider catalog node declares no `env` or `flag` source (AC-F3-4,
+#   EMPTY-TP-1), so provider policy keeps five declaring layers and two empty
+#   projections. A phase that finds itself needing any of the above stops and
+#   escalates; it does not widen.
+#
+# AC OWNERSHIP (30/30; exactly one owning phase each; an earlier phase may
+#   produce partial evidence, which is additive and never transfers ownership):
+#   Phase 1 (2): AC-F8-1, AC-F8-2
+#   Phase 2 (3): AC-F1-1, AC-F1-2, AC-F1-3
+#   Phase 3 (4): AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5
+#   Phase 4 (7): AC-F2-1, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1, AC-F4-2
+#   Phase 5 (3): AC-F5-1, AC-F5-2, AC-F5-3
+#   Phase 6 (5): AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5
+#   Phase 7 (4): AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4
+#   Phase 8 (2): AC-F8-3, AC-F8-4
+#   Count: 2 + 3 + 4 + 7 + 3 + 5 + 4 + 2 = 30. No AC is unowned and none is
+#   claimed twice. AC-F8-1 and AC-F8-2 are phase 1's because the rows, the
+#   totals, the corpus and every closed set move there; AC-F8-3 and AC-F8-4 are
+#   phase 8's because they are the documentation-truth and the aggregate-gate
+#   verdicts over the whole change.
+#   GATE-EVIDENCE CASES (a case that supplies evidence for an AC owned by another
+#   phase never moves that ownership): TC-CONFORM-010 (six decisions + index
+#   rows) evidences AC-F8-3 from phase 1; TC-CONFORM-003/004 evidence AC-F8-2
+#   from phase 3; TC-CONFORM-005/006/008/009 evidence AC-F8-2/AC-F8-4 from phase
+#   6; TC-CONFORM-007 and the whole G1..G6 battery evidence AC-F8-4 from phase 8.
+#
+# TC -> PHASE MAP (93 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the capability that makes it green):
+#   Phase 1 (3): TC-CONFORM-001, TC-CONFORM-002, TC-CONFORM-010
+#   Phase 2 (11): TC-ZONE-001..TC-ZONE-011
+#   Phase 3 (17): TC-BUD-002..TC-BUD-016 (15), TC-CONFORM-003, TC-CONFORM-004
+#   Phase 4 (16): TC-CFG-001..TC-CFG-011 (11), TC-INDEP-001..TC-INDEP-004 (4),
+#                 TC-BUD-001
+#   Phase 5 (11): TC-SIM-001..TC-SIM-011
+#   Phase 6 (19): TC-MIG-001..TC-MIG-015 (15), TC-CONFORM-005, TC-CONFORM-006,
+#                 TC-CONFORM-008, TC-CONFORM-009
+#   Phase 7 (10): TC-WFRESH-001..TC-WFRESH-010
+#   Phase 8 (6): TC-CONFORM-007, TC-DOC-001..TC-DOC-005
+#   Count: 3 + 11 + 17 + 16 + 11 + 19 + 10 + 6 = 93.
+#   Ownership follows the phase that COMPLETES the case, which is why
+#   TC-BUD-001 (a resolved configuration refuses an invalid child) is phase 4's
+#   while TC-BUD-002..016 are phase 3's, and why TC-CONFORM-005 (the whole new
+#   surface is hermetic), TC-CONFORM-008 (every new boundary rule ships a failing
+#   fixture) and TC-CONFORM-009 (the declared inventory) are phase 6's — the
+#   migration module is the last surface each of them covers. Each of those three
+#   is asserted incrementally in the phases that precede it, and the incremental
+#   arms are named in those phases; the case id is not reused.
+#
+# CARRIED TEST-PLAN FINDINGS (recorded, not decided here; none blocks delivery
+#   and none authorises a widened surface):
+#   - OQ-TP-1 / SEAM-TP-1: the zone port, the totals port and the observation
+#     instant must be injectable in-process for the behaviour tier. This plan
+#     assumes they are, because every one of them is a construction input of the
+#     delivered engine or the composition (the same seam shape
+#     tests/fixtures/install/artifact.ts used for GH-346); a case that cannot
+#     resolve its seam fails by name rather than skipping.
+#   - OQ-TP-2 / SPEND-TP-1: if the delivered spend payload exposes no
+#     per-observation instants, TC-BUD-013's window arm narrows to the fold-level
+#     oracle and the narrowing is recorded in the test plan's §10 rather than
+#     papered over. No count, row or AC moves with the narrowing.
+#   - OQ-TP-6 / VAC-TP-1: NFR-6's "no park when `newestAtMs` is null and the
+#     measured figure is at or above the ceiling" is structurally unreachable
+#     (verified-empty measures 0 and `ceiling` is validated positive); phase 3
+#     asserts it as the structural implication, not as a behavioural pass, and
+#     the spec wording is not softened by the code.
+#   - OQ-TP-8: there is no `config validate` verb, so TC-MIG-009's "accepted by
+#     `config`" is asserted by the delivered validator in-process plus a composed
+#     `config` read over a scratch checkout carrying the proposal. Phase 6 states
+#     the same reading in its acceptance paragraph.
+#
+# RESOLVED OPEN QUESTIONS (test plan §8.3 — recorded as decisions, not as
+#   tasks): OQ-TP-3, OQ-TP-4, OQ-TP-5, OQ-TP-7 and OQ-TP-9 are RESOLVED by spec
+#   v1.1 and change no phase, scope or case (the five declaring layers and the
+#   two empty projections; the NFR-2/NFR-8 bindings and the one-spawn-increment
+#   pre-spawn bound; the five declared numeric caps; the 81 -> 84 corpus movement
+#   stated as declared values; `PROVIDER_ZONE_NAME_MAX_LENGTH = 64` and the
+#   63/64/65 boundary triple).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-350
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "A phase boundary leaves the error-table counts, the result-code corpus or the two-segment allowlist between the old and the new value (provider rows 13 -> 16; the machine AND documented table 164 -> 167; the delivered-row count 163 -> 166; the sync arithmetic `BASELINE_ROWS.length + 130` -> `+133`; the corpus 81 -> 84 at 59 true-positive / 25 false-positive; the allowlist unchanged at 66), or a count moves in more than one phase (AC-F8-1, DEC-14, NFR-15, test plan TR-10)"
+    - "A count-bearing page (feature-result-contract.md, feature-ceremony-runner.md, feature-metrics.md, feature-install-lifecycle.md, or feature-supervise.md if it ever names a total) states an outgoing total, delivered-row count, allowlist size or `BASELINE_ROWS` arithmetic as current at any phase boundary, or a page's sentence moves without its number (spec §16's count-bearing class rule; AC-F8-3; TC-DOC-001)"
+    - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
+    - "A page and the doc-conformance phrase that pins it move in different commits, or a phrase row is added for prose a later phase contradicts (the one-edit-set rule, applied per truth event)"
+    - "`Intl`, `TZ`, an ambient clock, an environment read, a filesystem read or a network read appears anywhere in packages/core/src/provider or in the provider tier the ambient-globals check scans, or a second workspace module reads zone data for provider policy (AC-F1-3, NFR-1, TC-ZONE-010)"
+    - "A budget evaluation writes state, performs more than one spend-totals read per evaluation at any budget count, opens a second measurement path, or lets a paid entry become selectable because a subscription entry is budget-parked (AC-F2-2, AC-F2-4, AC-F2-5, NFR-6, NFR-7, NFR-9, TC-BUD-007/010/016)"
+    - "A budget park carries a non-future, absent or guessed expiry, or a ticket-scope crossing is presented as a park (the fail-loud park invariant; AC-F2-3, NFR-6, DEC-7)"
+    - "A `provider simulate` run writes state, resolves a credential, performs a network call, spawns a child, echoes fixture content in a refusal, or carries a fixture value/secret/token/key field; or the payload's delivered resolve keys are renamed, removed, re-ordered or re-typed (AC-F5-1, AC-F5-2, AC-F5-3, NFR-10)"
+    - "A migration path executes, sources, word-splits, glob-expands, evaluates, emulates or shells out, reads an environment variable, or emits a partial proposal; or a canary credential value reaches any stdout, stderr, envelope, diagnostic, intermediate structure or written file (AC-F6-2, AC-F6-3, NFR-11, NFR-12, TC-MIG-004/005)"
+    - "`provider migrate legacy` is presented as the M4-S2 namespace migration or as the install lifecycle's `--migrate` flag, or any phase moves a name, path, state root or artifact (spec §9, §19; TC-MIG-015)"
+    - "The watch path gains a cache, snapshot retention, timer, background refresher, scheduler, daemon tick, command or quota freshness key; or a stale reading is reported `clear` or `provider-outage`; or a watch-derived park expires after `observedAt + maxAgeSeconds * 1000` (AC-F7-2, AC-F7-3, NFR-13, TC-WFRESH-006/008)"
+    - "`watch-stale` enters a park cause, condition kind, skip reason or announcement code, or a condition kind, park cause, skip reason, announcement code or evidence field is added, removed or renamed beyond DM-8's declared six/eight/nine/thirteen and fourteen/seventeen (AC-F8-2, NG-13)"
+    - "A per-project surface appears — a `provider.projects.*` key, state kind, command or error identity, a project registry, a host-store policy or cross-checkout inheritance — or the project identity is anything other than the repository checkout (AC-F3-2, AC-F3-3, NG-6, NG-16, PDR-0006)"
+    - "The change adds a surface the spec forbids: a command family, a state record kind, a store write path, an environment variable, a flag outside the declared provider members, a CI job, an alarm kind, an event topic, a notification channel, a vendored zone table, a tz-database dependency, or a new secret-read allowlist entry (NG-3, NG-7, NG-10, NG-11, NG-12, NFR-16)"
+    - "A source or fixture still states or implies `PROVIDER_PEAK_TIMEZONES = [\"UTC\"]`-only validation, a non-UTC window refused for being non-UTC, or a UTC basis for a declared local window, at a phase boundary after phase 2 (AC-F1-1, AC-F8-3, TC-ZONE-011)"
+    - "A guard ships without its failing negative control, a case is skipped, environment-gated or made green by weakening an oracle, or a new boundary rule has no failing fixture (test plan §4.3, TC-CONFORM-008)"
+    - "`TMPDIR=$PWD/tmp/tmpdir pnpm check` is not green at a phase boundary, a gate is recorded as PASS with an unresolved ERROR, or a phase commits a case it cannot make green (test plan §6.3)"
+    - "A phase declares a path it does not edit, or edits a path it does not declare, so the commit primitive loses staging authority for authored content (the SCOPE DECLARATION RULE)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Declared provider vocabulary, the conformance register with its
+  # moved counts, and the six decision records (F-1, F-2, F-7 contracts; F-8
+  # register; DM-1, DM-2, DM-3, DM-8, DM-9; AC-F8-1, AC-F8-2; DEC-8, DEC-14;
+  # NFR-5, NFR-15; TC-CONFORM-001, -002, -010).
+  #
+  # Goal: every closed set, evidence allowlist, declared bound and error identity
+  # this change moves is declared ONCE, in the vocabulary everything else
+  # compiles and classifies against — and the change ships with its six binding
+  # decision records instead of six untracked files.
+  #
+  # Contract: packages/core/src/contracts/provider.ts gains, additively and with
+  # no member renamed or re-meant: the budget declaration and evaluation types
+  # (`enabled`, `scope` = ticket|window, `basis` = cost|tokens, `ceiling`,
+  # `windowSeconds`, `entries`) and the budget outcome facts; the read-only
+  # `ProviderSpendTotalsPort` (per-scope `{ cost, tokens, newestAtMs }`, both
+  # bases returned for every scope so budgets on different bases share one read);
+  # `budget-exhausted` as condition kind (six), park cause (eight) and skip
+  # reason (nine); `provider.budget.parked` and `provider.budget.crossed` as
+  # announcement codes (thirteen); the tie order with `budget-exhausted` inserted
+  # after `quota-exhausted`; `PROVIDER_WATCH_CONDITIONS` as one closed six-value
+  # set including watch-only `watch-stale`; the five budget evidence fields
+  # (`budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`,
+  # `budgetCeiling`) AND the `timezone` evidence field, so the closed allowlists
+  # move 8 -> 14 and 11 -> 17 in ONE edit-set (spec §16's contract-surface table);
+  # and the five declared bound constants `PROVIDER_ZONE_NAME_MAX_LENGTH = 64`,
+  # `PROVIDER_SIMULATE_FIXTURE_MAX_BYTES = 65536`,
+  # `PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536`,
+  # `PROVIDER_MIGRATE_SOURCE_MAX_LINES = 2000`, `PROVIDER_MIGRATE_MAX_SOURCES = 64`.
+  # `PROVIDER_PEAK_TIMEZONES` is NOT touched here: the zone domain, the default
+  # zone, `ProviderZonePort`, the `timezone` declaration field and the
+  # retirement of the UTC-only set are phase 2's, because a contract that
+  # declared a widened domain while the validators still refused non-UTC would be
+  # two contradictory statements about one domain. The `timezone` EVIDENCE field
+  # is declared here because a closed allowlist is one set: `projectParkEvidence`
+  # projects only fields that are present, so declaring the field changes no
+  # emitted evidence until the peak writer supplies it in phase 2 — an admitted
+  # field with no writer is not a false claim, and splitting the allowlist would
+  # stagger the 14/17 movement the class rule forbids.
+  # The three error rows are declared with category `user`, `retryable: false`,
+  # consequence `not_landed`, projection `user-validation`, and a remediation,
+  # in packages/core/src/contracts/error-table.ts.
+  #
+  # Register edit-set (see the header): source rows, documented rows and the
+  # prose facts spec §16 binds to feature-result-contract.md, one true-positive
+  # corpus row per new code, the three other count-bearing pages, the nine
+  # delivered count/membership suites (the sync script's arithmetic base and the
+  # structural mirror's `APPENDIX_D_FILES` / no-leftover pattern among them), and
+  # the count phrases of the delivered doc-conformance block.
+  # `feature-supervise.md` is NOT declared: its only restatement is the 66-member
+  # allowlist, which does not move, and TC-DOC-001 asserts that `66` stays `66`.
+  #
+  # Decision records: the six untracked records, doc/decisions/00-index.md and
+  # the doc/decisions/ folder are declared here and land on THIS PHASE'S DELIVERY
+  # COMMIT (COMMIT-BOUNDARY REALITY in the header).
+  #
+  # Acceptance: AC-F8-1 (TC-CONFORM-001, TC-CONFORM-002), AC-F8-2
+  # (TC-CONFORM-003 and -004 complete in phase 3; this phase moves the delivered
+  # closed-set assertion, TC-PROV-001's `exactly eight and eleven fields` evidence
+  # assertion, which becomes fourteen and seventeen, and the delivered export and
+  # bound-constant inventory), AC-F8-3's decision half (TC-CONFORM-010).
+  #
+  # Gate (expected signal: exit 0 at every line; the sync script reports
+  # entries=167 documented=167 in two-way agreement, the page's delivered-row
+  # count at 166, 66 two-segment identities, arithmetic +133, corpus 84):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-contract.test.ts tests/checks/provider-evidence-bounds.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): provider vocabulary, error register and decision records
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Declared provider vocabulary, the conformance register with its moved counts, and the six decision records"
+    kind: delivery
+    summary: "feat(GH-350): provider vocabulary, error register and decision records"
+    scope:
+      files:
+        - packages/core/src/contracts/provider.ts
+        - packages/core/src/contracts/error-table.ts
+        # The delivered structural mirrors of the closed sets, the evidence
+        # allowlists and the export inventory. THIS phase owns the moved sizes
+        # (6/8/9/13, 14/17, the five bound constants, the tie order); PHASE 2
+        # adds TC-ZONE-010's zero-ambient-read arm to the same suite.
+        - tests/structure/provider-contract.test.ts
+        - tests/fixtures/provider/contract-inventory.json
+        # The declared allowlist lengths and their equality with the inventory
+        # fixture move here; PHASE 3 adds the emitted budget-field bounds arms.
+        - tests/checks/provider-evidence-bounds.test.ts
+        - tests/fixtures/result/code-corpora/true-positives.json
+        # The count and arithmetic surface: the sync script's own arithmetic base
+        # and leftover scan gain the outgoing forms (164 identities, 163
+        # delivered, `BASELINE_ROWS.length + 130`) so a page or suite left behind
+        # fails by name, and the declared delta shapes must not trip the scan.
+        - scripts/checks/error-table-sync.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/structure/supervision-error-family.test.ts
+        - tests/checks/supervision-error-socialization.test.ts
+        - tests/structure/ceremony-contract.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/behaviour/ceremony-nonregression.test.ts
+        # The delivered GH-346 block's count phrases move with the counts; PHASE
+        # 2, 4, 6 and 8 extend the same file for the pages they move.
+        - tests/checks/doc-conformance.test.ts
+        # Count-bearing pages: they move in the phase that moves the numbers,
+        # never in the phase-8 sweep.
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-ceremony-runner.md
+        - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-install-lifecycle.md
+        # The six untracked decision records land on this phase's delivery
+        # commit. The index already carries their rows and the `Proposed` status;
+        # it is declared so a status/typo touch stages with them.
+        - doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
+        - doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
+        - doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
+        - doc/decisions/TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md
+        - doc/decisions/TDR-0051-legacy-provider-profile-and-hook-migration.md
+        - doc/decisions/TDR-0052-watch-observation-freshness-and-stale-condition.md
+        - doc/decisions/00-index.md
+      folders:
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/provider.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Zone port, local-seconds peak arithmetic and one shared DST
+  # boundary across the engine gate, the profile gate and the daemon watcher
+  # (F-1; DM-1, DM-8; AC-F1-1, AC-F1-2, AC-F1-3; DEC-1, DEC-8, DEC-9; NFR-1,
+  # NFR-2, NFR-3, NFR-4, NFR-5; TC-ZONE-001..011).
+  #
+  # Goal: a peak window can be declared in the provider's own zone, the decision
+  # stays a pure function of injected facts, and every surface computes ONE
+  # boundary instant — or refuses by name instead of reinterpreting the zone.
+  #
+  # Contract: `provider.entries.<name>.peak.timezone` and
+  # `provider.profiles.profiles.<name>.peakWindows.windows[].timezone` admit the
+  # literal `UTC` (default, and the alias of `Etc/UTC`) or an IANA name matching
+  # the declared grammar bounded by `PROVIDER_ZONE_NAME_MAX_LENGTH` (63 and 64
+  # validate, 65 refuses). `PROVIDER_PEAK_TIMEZONES` retires; the validator
+  # decides grammar only and never asserts existence. `ProviderZonePort`
+  # (`isKnownZone`, `offsetSecondsAt`) lives in core contracts and is implemented
+  # once, at `packages/adapters/src/time-zone/`, which is the only workspace
+  # module that reads zone data for provider policy (no I/O, no network, no extra
+  # environment read beyond what `Intl` itself uses). `packages/adapters/
+  # package.json` publishes the subpath. Every composition injects the port;
+  # a composition that cannot supply it REFUSES a non-UTC declaration with
+  # `provider.peak.zone-unknown` at exit 1 (no UTC fallback, no bundled table),
+  # while a `UTC` declaration needs no port. The pure evaluator computes local
+  # seconds-of-day from the injected instant and the resolved offset, keeps the
+  # delivered non-negative buffer clamp and no-crossing rule read as local
+  # seconds, and resolves the expiry by bounded fixed-point iteration (at most
+  # three passes, last candidate used) under the declared rule: the earliest
+  # instant at or after the declared local end, a skipped local second resolving
+  # to the transition instant and a repeated local second to its first
+  # occurrence. `peakWindowOpenSeconds` and `peakWindowEndSeconds` keep their
+  # names and stay the single boundary truth; every window park and announcement
+  # carries `timezone` with the effective declared zone, including the `UTC`
+  # default, and cause, condition kind, skip reason and announcement code are
+  # unchanged.
+  # WATCHER HALF, DECLARED: packages/core/src/domain/daemon-peak-pause.ts
+  # currently derives the open/closed verdict from `utcSecondsOfDay` and builds
+  # the window end from UTC seconds — that is a second boundary computation and
+  # it becomes wrong the moment the basis widens. It therefore moves HERE, with
+  # the boundary functions, and packages/core/src/app/daemon-supervision.ts
+  # threads the zone facts through its declared peak ports. AC-F1-2's "0
+  # differences" (TC-ZONE-008) is not assertable otherwise.
+  # `packages/core/src/config/catalog.ts` is touched here for one reason only: its
+  # declared comment states the "UTC-only designation" as the rule, which this
+  # phase falsifies. The `provider.budgets` branch and the watch `maxAgeSeconds`
+  # key are phase 4's.
+  #
+  # Delivered assertions that MOVE (named, never deleted or loosened):
+  #   - tests/structure/provider-peak-rules-schema.test.ts — TC-PAUSE-011's
+  #     "a declared non-UTC zone literal is refused at validation" arm RETIRES:
+  #     the grammar now accepts an IANA name and existence is decided at the edge.
+  #     Its replacement refuses a malformed literal and a runtime-unknown zone.
+  #   - tests/behaviour/peak-window-utc-clock.test.ts — TC-PAUSE-090's docblock
+  #     and the arm asserting that "a declared non-UTC zone literal keeps the
+  #     evaluation instants on the UTC basis (the literal itself is refused at
+  #     validation)" become false: the UTC matrix stays byte-identical and the
+  #     non-UTC arm moves to the zone suite.
+  #   - tests/behaviour/provider-peak-window.test.ts — TC-PROV-011/012/013 extend
+  #     to the zone basis with the delivered UTC expectations preserved as the
+  #     compatibility arm.
+  #
+  # Documentation half: feature-provider-engine.md (zone domain and default, the
+  # port and the edge, the local-seconds rule and the DST rule, the `timezone`
+  # evidence field, the removed UTC-only claim), feature-provider-profiles.md
+  # (the zone domain replacing every "UTC only" statement), and
+  # feature-peak-pausing.md (COMPLETE here: the shared basis, the DST rule, the
+  # removed UTC-only declaration). Their phrase rows land in the same commit.
+  #
+  # Acceptance: AC-F1-1 (TC-ZONE-001, -002), AC-F1-2 (TC-ZONE-005, -006, -007,
+  # -008), AC-F1-3 (TC-ZONE-003, -004, -009, -010, -011).
+  #
+  # Gate (expected signal: exit 0 at every line; the DST matrix and the
+  # three-surface table report 0 differences; the ambient-globals guard exits 0):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-zone.test.ts tests/checks/provider-zone-refusal.test.ts tests/structure/provider-peak-rules-schema.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-peak-window.test.ts tests/behaviour/peak-window-utc-clock.test.ts tests/behaviour/daemon-peak-window-isolation.test.ts tests/behaviour/provider-parks.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): zone-aware peak windows and the shared DST boundary
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Zone port, local-seconds peak arithmetic and one shared DST boundary across the engine gate, the profile gate and the daemon watcher"
+    kind: delivery
+    summary: "feat(GH-350): zone-aware peak windows and the shared DST boundary"
+    scope:
+      files:
+        # Zone domain, default zone, the port type, the `timezone` declaration
+        # field, and the retirement of `PROVIDER_PEAK_TIMEZONES`. Phase 1 owns the
+        # budget/watch/evidence vocabulary in the same file.
+        - packages/core/src/contracts/provider.ts
+        - packages/core/src/provider/peak.ts
+        - packages/core/src/provider/peak-rules.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/index.ts
+        # The watcher's boundary consumer and its declared port threading (see
+        # the comment above): the second UTC-seconds computation disappears here,
+        # and the domain barrel row follows the watcher's new input fact.
+        - packages/core/src/domain/daemon-peak-pause.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/daemon-supervision.ts
+        - packages/core/src/config/catalog.ts
+        - packages/adapters/src/time-zone/index.ts
+        - packages/adapters/package.json
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/provider-peak-zone.test.ts
+        - tests/checks/provider-zone-refusal.test.ts
+        - tests/structure/provider-peak-rules-schema.test.ts
+        - tests/behaviour/peak-window-utc-clock.test.ts
+        - tests/behaviour/provider-peak-window.test.ts
+        - tests/behaviour/daemon-peak-window-isolation.test.ts
+        - tests/behaviour/provider-parks.test.ts
+        # TC-ZONE-010's ambient-neutrality arm joins the suite phase 1 moved.
+        - tests/structure/provider-contract.test.ts
+        # The new adapters subpath's export set (the factory, the port type and
+        # its helpers only) and its published-surface parity entry.
+        - tests/structure/provider-surface.test.ts
+        - tests/checks/exports-parity.test.ts
+        - tests/checks/provider-hermetic.test.ts
+        # The exact committed file set and the per-file executable allowance for
+        # the new adapters module; phases 3, 5 and 6 extend the same two files for
+        # their new modules.
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        # Rule 1 of the four new boundary rules: a zone or `Intl` reference in
+        # the provider tier fails a fixture by name.
+        - tests/boundaries/fixture-registry.json
+        - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-provider-profiles.md
+        - doc/spec/features/feature-peak-pausing.md
+        - tests/checks/doc-conformance.test.ts
+      folders:
+        - tests/boundaries/fixtures
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/provider.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/time-zone/index.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Budget evaluator, one-read spend-totals projection, budget
+  # conditions and the no-paid-escalation rule (F-2 pure side; DM-3, DM-4,
+  # DM-8; AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5; DEC-2, DEC-7, DEC-10; NFR-6,
+  # NFR-7, NFR-8, NFR-9; TC-BUD-002..016, TC-CONFORM-003, TC-CONFORM-004).
+  #
+  # Goal: a declared ceiling stops a spawn BEFORE it overspends, measured from
+  # the same figures the spend report measures, with no counter, no second truth
+  # and no fabricated expiry.
+  #
+  # Contract: one pure `evaluateBudgets` in packages/core/src/provider/budgets.ts
+  # compares each enabled budget governing the entry under evaluation against the
+  # injected clock and the injected totals facts: clear below the ceiling;
+  # PARKED for a `window` scope at or above it, with cause and condition kind
+  # `budget-exhausted` and an expiry of exactly
+  # `newestAtMs + windowSeconds * 1000` (strictly future because `newestAtMs <=
+  # now` and the window is positive, and honest because at that instant every
+  # counted observation has left the window and nothing accrues while parked);
+  # FAILED for a `ticket` scope at or above it, with no expiry, announced
+  # `provider.budget.crossed` at `warning`, skipped with reason
+  # `budget-exhausted`, and answered by the terminal `provider.budget.exceeded`
+  # ONLY when no later entry is eligible and no honest contributing park supplies
+  # an expiry. Verified-empty measures zero for every scope; a failed read refuses
+  # with the delivered `state.*` identity and is never reported clear. The five
+  # evidence fields are exactly `budgetName`, `budgetScope`, `budgetBasis`,
+  # `budgetMeasured`, `budgetCeiling`; DEC-10's cost-sparsity annotation rides the
+  # message and adds no sixth field. `conditions.ts` inserts `budget-exhausted`
+  # in exactly its declared tie position; `chain.ts` adds the skip reason, keeps
+  # the `chain-exhausted` union with the earliest contributing expiry, and refuses
+  # any paid substitution for a budget-parked subscription entry.
+  # One read, at the composition edge: packages/cli/src/edge.ts performs ONE
+  # verified ref-scoped spend read over the delivered `readSpendLedger` and
+  # projects, per declared budget, `{ cost, tokens, newestAtMs }` for its scope
+  # (ticket bounded by the ref's beginning; window by `now - windowSeconds`),
+  # both bases for every scope so budgets on different bases share one read, and
+  # performs NO read at all when nothing is declared or nothing is enabled. No
+  # adapters I/O subpath and no state read is added to core.
+  # Split with phase 4 (declared): the fail-closed semantic rules —
+  # `parseProviderBudgets` in packages/core/src/provider/validate.ts — land here
+  # with the evaluator, so TC-BUD-002..016 are this phase's; the catalog branch
+  # that makes the declaration reachable from configuration lands in phase 4
+  # exactly as §18 orders, so TC-BUD-001 (a resolved configuration refuses an
+  # invalid child, naming the field, with no partial evaluation) is phase 4's.
+  #
+  # Acceptance: AC-F2-2 (TC-BUD-003, -004, -007, -008, -013, -014, -015),
+  # AC-F2-3 (TC-BUD-005, -006, -010), AC-F2-4 (TC-BUD-010, -011, -012),
+  # AC-F2-5 (TC-BUD-009, -013, -016). NFR-6's unreachable third clause is
+  # asserted structurally (VAC-TP-1), never as a behavioural pass.
+  #
+  # Gate (expected signal: exit 0 at every line; the one-read counter reports 0
+  # reads with no budget and exactly 1 at 1, 3 and 8 budgets; the state snapshot
+  # is byte-identical):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-budgets.test.ts tests/checks/provider-budgets-cli.test.ts tests/structure/provider-budgets-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-chain-resolution.test.ts tests/checks/provider-evidence-bounds.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/spend-breakdown.test.ts tests/behaviour/metrics-burn-rate-config.test.ts tests/behaviour/metrics-alarms.test.ts   (controls: no edit)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): budget ceilings before spend
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Budget evaluator, one-read spend-totals projection, budget conditions and the no-paid-escalation rule"
+    kind: delivery
+    summary: "feat(GH-350): budget ceilings before spend"
+    scope:
+      files:
+        - packages/core/src/provider/budgets.ts
+        - packages/core/src/provider/conditions.ts
+        - packages/core/src/provider/chain.ts
+        - packages/core/src/provider/announcements.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/provider/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/provider-budgets.test.ts
+        - tests/checks/provider-budgets-cli.test.ts
+        - tests/structure/provider-budgets-contract.test.ts
+        # TC-BUD-012's chain-park union arm on the delivered suite.
+        - tests/behaviour/provider-chain-resolution.test.ts
+        # The emitted budget-field bounds arms; phase 1 moved the declared sizes.
+        - tests/checks/provider-evidence-bounds.test.ts
+        # TC-BUD-016's "exactly one measurement path" structural scan.
+        - tests/structure/provider-surface.test.ts
+        - tests/checks/provider-hermetic.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The `provider.budgets` configuration branch, its fail-closed
+  # validation reached from configuration, and the per-repository policy evidence
+  # (F-3, F-4; DM-2; AC-F2-1, AC-F3-1..4, AC-F4-1, AC-F4-2; DEC-3; NFR-14;
+  # TC-BUD-001, TC-CFG-001..011, TC-INDEP-001..004).
+  #
+  # Goal: "per-project overrides" is answered by the behaviour that already
+  # exists — the repository-owned layers — with one precedence matrix, exact
+  # origin evidence, a fail-closed invalid-layer refusal and the `CI=true`
+  # posture, and with a declared `provider.budgets` branch that a repository can
+  # declare; and a delivery's provider policy is shown to resolve from
+  # configuration alone with the legacy profile directory and hook absent or
+  # inert.
+  #
+  # Contract: `packages/core/src/config/catalog.ts` declares the
+  # `provider.budgets` record map (children `enabled` default true, `scope`,
+  # `basis`, `ceiling`, `windowSeconds`, `entries`) — the one provider key this
+  # phase adds — and `packages/core/src/config/defaults.ts` needs no edit because
+  # the branch is a catalog declaration, not a shipped override. The watch
+  # target's `maxAgeSeconds` is the other new provider key and it moves in phase
+  # 7 WITH the predicate that consumes it (TC-WFRESH-001 owns its positivity
+  # refusal and its default origin): declaring a bound in a phase whose code does
+  # not read it would let a configuration state a freshness limit that nothing
+  # honours, which is the fail-open shape this change refuses everywhere else. A repository
+  # declaration is validated before merge like every other layer, so an invalid
+  # repository budget or chain refuses with the delivered `provider.chain.invalid`
+  # or `config.*` identity naming the field and the file/line, and never falls
+  # back to the machine-global value. Five layers can declare a provider value
+  # (defaults, system, user-global, project-committed, project-local);
+  # environment and CLI carry no declared provider node, so a provider-shaped
+  # environment name refuses `config.environment.unmapped` and a provider-shaped
+  # flag refuses `config.key.unknown`, and the catalog keeps zero `env`/`flag`
+  # sources (EMPTY-TP-1). Record maps merge by child name, lists replace whole,
+  # `reset` removes inherited descendants, and every effective value reports its
+  # winning origin. Under `CI=true` the committed policy is in effect and
+  # project-local is reported `ci-disabled` with zero reads; a selected file
+  # occupies the project-committed slot and makes project-local
+  # `selected-config`. NO `provider.projects.*` surface exists and the
+  # multi-checkout case is a declared boundary (M4-S5).
+  # No production module reads the legacy profile directory,
+  # `~/.<priorWorkingName>/hooks/pre-opencode-iteration`, or an
+  # environment-variable convention as policy input; the migration command is the
+  # only surface that reads the legacy paths at all, and only by explicit
+  # invocation (phase 6).
+  # DELIVERED ASSERTION THAT MOVES (named, never deleted or loosened): the
+  # `feature-config-layer.md` page is its own subject and COMPLETES here — the
+  # budgets branch table, the `maxAgeSeconds` key, the widened zone value domain,
+  # and the per-repository clause with the precedence matrix, the origin
+  # evidence, the `CI=true` posture and the multi-checkout boundary. Its phrase
+  # row lands in the same commit, which is what lets TC-CFG-011 assert its
+  # documentation half here.
+  #
+  # Acceptance: AC-F2-1 (TC-BUD-001), AC-F3-1 (TC-CFG-001, -002, -003, -004),
+  # AC-F3-2 (TC-CFG-005, -006), AC-F3-3 (TC-CFG-007, -008, -009, -011),
+  # AC-F3-4 (TC-CFG-001, -005, -010), AC-F4-1 (TC-INDEP-001, -002, -003),
+  # AC-F4-2 (TC-INDEP-004).
+  #
+  # Gate (expected signal: exit 0 at every line; 5/5 local-over-committed
+  # winners; zero reads of either legacy path; the CI and workstation trees
+  # differ only by the declared skip):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-config-precedence.test.ts tests/checks/provider-legacy-reads.test.ts tests/structure/provider-legacy-absence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-budgets.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): budget configuration branch and per-repository policy evidence
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "The provider.budgets configuration branch, its fail-closed validation reached from configuration, and the per-repository policy evidence"
+    kind: delivery
+    summary: "feat(GH-350): budget configuration branch and per-repository policy evidence"
+    scope:
+      files:
+        - packages/core/src/config/catalog.ts
+        # TC-BUD-001's declaration matrix through a resolved configuration: the
+        # half that phase 3 could not complete without the branch.
+        - tests/behaviour/provider-budgets.test.ts
+        - tests/behaviour/provider-config-precedence.test.ts
+        - tests/checks/provider-legacy-reads.test.ts
+        - tests/structure/provider-legacy-absence.test.ts
+        # Rule 4 of the four new boundary rules: a provider-shaped environment
+        # name is refused, not projected.
+        - tests/boundaries/fixture-registry.json
+        - doc/spec/features/feature-config-layer.md
+        - tests/checks/doc-conformance.test.ts
+      folders:
+        - tests/boundaries/fixtures
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — `provider simulate`: strict versioned fixture, delivered-engine
+  # replay and zero-effect disclosure (F-5; DM-5, DM-6, DM-10; AC-F5-1..3;
+  # DEC-4, DEC-11; NFR-2, NFR-10; TC-SIM-001..011).
+  #
+  # Goal: the flip's verification bar becomes an executable surface — one
+  # operator-runnable replay of the DELIVERED engine over stated facts, with the
+  # zero-write fact disclosed on every payload.
+  #
+  # Contract: `provider simulate --fixture <path> [--json]` composes the delivered
+  # `createProviderEngine` with fixture-supplied seams and calls `resolve` with
+  # `persist: false`; NO routing, condition, park or announcement logic exists in
+  # the simulate path. The fixture is one strict JSON document under
+  # `delivery.provider.simulate.v1` declaring only facts: the instant (an
+  # explicit zone), an optional chain and profile selection, per-reference
+  # credential outcomes (`resolved` | `missing` | `rejected`, never a value), per
+  # entry quota transport results, spend telemetry state and points, and an
+  # optional per-zone step table. Policy comes from the resolved configuration,
+  # never from the fixture. Unknown keys, a missing required key, a wrong type, an
+  # unsupported version, or a body over
+  # `PROVIDER_SIMULATE_FIXTURE_MAX_BYTES = 65536` refuse with the delivered
+  # `input.value.rejected` BEFORE any read or evaluation, without echoing content;
+  # a missing `--fixture`, `--chain`, `--profile`, `--all` or a positional refuse
+  # through the delivered invocation identity. The payload's `data` is the
+  # delivered resolve payload in its delivered key order (`summary`, `chain`,
+  # `decision`, `skipped`, `parks`, `announcements`) followed by exactly one
+  # additive `simulation` object carrying `fixturePath`,
+  # `fixtureSchemaVersion`, `now`, `stateWrites: 0`, `inputs` and a bounded
+  # deterministic summary — no delivered key renamed, removed, re-ordered or
+  # re-typed. Exits mirror `resolve` (0 selected, 2 parked or fully skipped, 1
+  # fixture/invocation/classified defect) and NO `provider.simulate.*` row
+  # exists. DEC-11's default: a credential reference the chain needs and the
+  # document does not declare defaults to `resolved` and is disclosed in
+  # `inputs`. The bounded fixture read is a new module in the delivered
+  # `packages/adapters/src/file` subpath (its exact name is a delivery decision
+  # inside the declared folder); its export is registered in the subpath's
+  # `index.ts` and in the content inventory. `packages/cli/src/help.ts` gains the
+  # `provider simulate` entry (usage, options, examples, exit codes, see-also
+  # pointing at the existing provider page); the family list is NOT edited.
+  #
+  # Acceptance: AC-F5-1 (TC-SIM-001, -003, -005, -009, -011), AC-F5-2 (TC-SIM-002,
+  # -006), AC-F5-3 (TC-SIM-004, -005, -006, -007, -008, -010).
+  #
+  # Gate (expected signal: exit 0 at every line; parity reports 0 decision
+  # differences; two runs of one fixture are byte-identical; four throwing fakes
+  # are never called):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-simulate.test.ts tests/checks/provider-simulate-cli.test.ts tests/golden/provider-simulate-golden.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-composition-absence.test.ts tests/boundaries
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/entrypoint-help-coverage.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): provider simulate offline policy replay
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "provider simulate: strict versioned fixture, delivered-engine replay and zero-effect disclosure"
+    kind: delivery
+    summary: "feat(GH-350): provider simulate offline policy replay"
+    scope:
+      files:
+        - packages/core/src/provider/simulate.ts
+        - packages/core/src/provider/index.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/provider.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/provider-simulate.test.ts
+        - tests/checks/provider-simulate-cli.test.ts
+        - tests/golden/provider-simulate-golden.test.ts
+        # SIM-011's absence scan; phase 6 extends the same suite with the
+        # migration halves.
+        - tests/structure/provider-composition-absence.test.ts
+        - tests/structure/provider-surface.test.ts
+        - tests/checks/provider-hermetic.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        # Rule 2 of the four new boundary rules: a fixture read reachable from
+        # the `resolve` composition fails a fixture by name.
+        - tests/boundaries/fixture-registry.json
+        # The provider member tuple gains `simulate` (5 -> 6); phase 6 moves it
+        # 6 -> 7 with `migrate` and `migrate legacy`.
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+      folders:
+        - packages/adapters/src/file
+        - tests/boundaries/fixtures
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — `provider migrate legacy`: the assignment-only data reader, the
+  # credential firewall and the validated proposal (F-6; DM-7; AC-F6-1..5;
+  # DEC-5, DEC-13; NFR-11, NFR-12, NFR-16; TC-MIG-001..015, TC-CONFORM-005,
+  # -006, -008, -009).
+  #
+  # Goal: the bridge off the legacy shell policy is safe by construction — the
+  # files are parsed as DATA, every construct outside one declared subset refuses
+  # the whole run, and a credential value cannot reach any surface.
+  #
+  # Contract: `provider migrate legacy [--profiles-dir <dir>] [--hook <path>]
+  # [--write] [--json]` lives in the existing family as a two-level member.
+  # Default sources derive from the invoking identity's prior working name
+  # (`<home>/.<priorWorkingName>/config/profiles/` and
+  # `<home>/.<priorWorkingName>/hooks/pre-opencode-iteration`); the flags override
+  # them; an absent source is reported `absent`; neither present refuses
+  # `no-source`. The reader is bounded by the three declared caps, reads each
+  # source ONCE, and accepts exactly one grammar: blank lines, `#` comments, and
+  # `NAME=value` or `export NAME=value` with a single bare or quoted single-token
+  # value containing no whitespace, expansion character, operator or backslash.
+  # Nothing else is accepted: a function definition, compound command,
+  # `source`/`.`, `eval`, `set`/`unset`/`readonly`, heredoc, redirection, pipeline,
+  # command substitution, arithmetic expansion, array, multi-command line or
+  # expansion-bearing value refuses the WHOLE run with `provider.migrate.refused`
+  # at exit 1 and one closed reason — `no-source`, `unreadable-source`,
+  # `oversized-source`, `shell-construct`, `dynamic-value`, `target-exists`,
+  # `proposal-invalid` — naming the source path and line and never the content.
+  # Nothing is executed, sourced, word-split, glob-expanded, evaluated or shelled
+  # out; no environment is read; no network is used. The credential firewall is
+  # NAME-FIRST: a credential-shaped name is recognised before its value is
+  # examined, the rest of the line is discarded at the parse boundary without
+  # parsing or validating it, and the only representable credential artifact is a
+  # reference. Mapping is literal-to-literal under Appendix E's closed table; a
+  # recognised name whose value cannot be mapped, and every unrecognised name, is
+  # disclosed by name as `unmapped` and omitted. The proposal is validated by the
+  # delivered provider validator and configuration schema BEFORE output;
+  # `--write` creates at most one new project-committed document and refuses
+  # `target-exists` rather than reading for merge. The shipped hook (316 lines,
+  # `scripts/hooks/pre-opencode-iteration-zai.sh`) refuses as `shell-construct`
+  # with the documented remedy — declare the window, the quota endpoint and the
+  # credential reference in configuration and retire the hook from the path; it is
+  # never executed, sourced, imported or modified (spec §16 marks it
+  # "Reference only"), so no phase declares it.
+  # OQ-TP-8: "accepted by `config`" is asserted by the delivered validator
+  # in-process plus a composed `config` read over a scratch checkout carrying the
+  # proposal — there is no `config validate` verb and this phase does not invent
+  # one.
+  # Bounded source reads use the delivered `packages/adapters/src/file` subpath
+  # (a new module inside the declared folder; its name is a delivery decision).
+  # The report names sources, byte counts, mapped names, unmapped names, absent
+  # sources and the written path — names and counts only, never a value.
+  # `packages/cli/src/help.ts` gains `provider migrate` and `provider migrate
+  # legacy` (the provider member tuple moves 6 -> 7); the family list is not
+  # edited. The hook guide moves HERE, with the surface that replaces it.
+  #
+  # Acceptance: AC-F6-1 (TC-MIG-001, -002, -008, -012, -014), AC-F6-2 (TC-MIG-003,
+  # -004), AC-F6-3 (TC-MIG-005, -011), AC-F6-4 (TC-MIG-006, -007, -009, -010),
+  # AC-F6-5 (TC-MIG-013, -015). TC-CONFORM-005 (the whole new surface is
+  # hermetic), TC-CONFORM-006 (seven members, help both ways), TC-CONFORM-008
+  # (every new boundary rule has its failing fixture) and TC-CONFORM-009 (the
+  # declared inventory) COMPLETE here, because the migration module is the last
+  # surface each covers.
+  #
+  # Gate (expected signal: exit 0 at every line; 16/16 shell constructs refuse
+  # with empty stdout; the canary appears in zero captured bytes across nine
+  # surfaces; the migration tree snapshot is unchanged):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-migrate.test.ts tests/checks/provider-migrate-cli.test.ts tests/checks/provider-migrate-secrets.test.ts tests/golden/provider-migrate-golden.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-composition-absence.test.ts tests/boundaries
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/entrypoint-help-coverage.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): provider migrate legacy policy import
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "provider migrate legacy: the assignment-only data reader, the credential firewall and the validated proposal"
+    kind: delivery
+    summary: "feat(GH-350): provider migrate legacy policy import"
+    scope:
+      files:
+        - packages/core/src/provider/migrate.ts
+        - packages/core/src/provider/index.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/provider.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/provider-migrate.test.ts
+        - tests/checks/provider-migrate-cli.test.ts
+        - tests/checks/provider-migrate-secrets.test.ts
+        - tests/golden/provider-migrate-golden.test.ts
+        # MIG-004's no-child-process/no-shell arm on the suite phase 5 created.
+        - tests/structure/provider-composition-absence.test.ts
+        - tests/structure/provider-surface.test.ts
+        - tests/checks/provider-hermetic.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        # Rule 3 of the four new boundary rules: a child-process or shell import
+        # in the migration module fails a fixture by name.
+        - tests/boundaries/fixture-registry.json
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - doc/guides/zai-peak-hours-hook.md
+        - tests/checks/doc-conformance.test.ts
+      folders:
+        - packages/adapters/src/file
+        - tests/boundaries/fixtures
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Watch freshness: per-target `maxAgeSeconds`, the watch-only
+  # `watch-stale` condition and the evidence-bounded park clamp (F-7; DM-8;
+  # AC-F7-1..4; DEC-6, DEC-12; NFR-13; TC-WFRESH-001..010).
+  #
+  # Goal: an aged observation becomes a third, named state that is never a false
+  # clear and never a false outage, and no pause outlives the reading it came
+  # from.
+  #
+  # Contract: each watch target's `maxAgeSeconds` is declared in the catalog HERE
+  # — a positive integer with default 900 — and a non-positive, non-integer or
+  # coerced value refuses `config.value.invalid` naming the key (the declaration
+  # and the refusal land together, so no configuration can state a bound nothing
+  # enforces). The watch view's
+  # `condition` narrows to the declared six-value domain
+  # `PROVIDER_WATCH_CONDITIONS` (phase 1's set) — the delivered values keep their
+  # delivered meanings and `watch-stale` is WATCH-ONLY: it joins no park cause,
+  # condition kind, skip reason or announcement code, and never enters chain
+  # resolution or profile eligibility. The predicate is one pure function of the
+  # injected clock and the supplied observation instant:
+  # `ageSeconds = floor((nowMs - observedAtMs) / 1000)`, stale exactly when
+  # `ageSeconds >= maxAgeSeconds` (a negative age is treated as 0 and fresh). A
+  # stale view reports `watch-stale` with `observedAt`, `ageSeconds` and
+  # `maxAgeSeconds` beside the delivered `name`, `source` and `checkedAt` —
+  # `checkedAt` keeps its meaning ("when the command read"), `source` stays the
+  # delivered string and states the observed instant and the bound without
+  # claiming a transport or credential failure. A park derived from a watch
+  # observation expires no later than `observedAt + maxAgeSeconds * 1000`
+  # (`min(naturalExpiry, bound)`); when that instant is not strictly in the
+  # future, NO park is created and the observation is reported `watch-stale` (the
+  # delivered `reset_missing` failed-condition shape). The delivered live
+  # composition supplies the read instant as the observation instant, so its age
+  # is 0 and it is never stale; staleness is exercised by composition-supplied
+  # observations and by the clamp. No park cause, skip reason, announcement code,
+  # error identity, command, cache, timer, refresher, scheduler or quota
+  # freshness key is added, and the watch path still performs zero state writes.
+  # `packages/core/src/contracts/provider-profile.ts` narrows the view's
+  # `condition` and adds the three additive fields HERE, with the producer, so the
+  # declared shape is never ahead of its writer. No `production.ts` change is
+  # needed: the observation instant is the read instant the composition already
+  # supplies, so the injection lands in `packages/cli/src/edge.ts` alone.
+  #
+  # Acceptance: AC-F7-1 (TC-WFRESH-001, -002), AC-F7-2 (TC-WFRESH-003, -004,
+  # -010), AC-F7-3 (TC-WFRESH-005, -006, -008), AC-F7-4 (TC-WFRESH-007, -009).
+  #
+  # Gate (expected signal: exit 0 at every line; `bound - 1` fresh, `bound` and
+  # `bound + 1` stale; the live arm reports age 0 and never stale; the state
+  # snapshot is byte-identical):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-watch-freshness.test.ts tests/checks/provider-watch-cli.test.ts tests/structure/provider-watch-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-watch-status.test.ts tests/checks/provider-profile-evidence-bounds.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Commit: feat(GH-350): watch observation freshness and stale condition
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Watch freshness: per-target maxAgeSeconds, the watch-only watch-stale condition and the evidence-bounded park clamp"
+    kind: delivery
+    summary: "feat(GH-350): watch observation freshness and stale condition"
+    scope:
+      files:
+        - packages/core/src/contracts/provider-profile.ts
+        - packages/core/src/provider/quota.ts
+        - packages/core/src/provider/index.ts
+        # The watch target's `maxAgeSeconds` declaration and its positivity
+        # refusal (see the contract above): phase 4 owns the `provider.budgets`
+        # branch in the same file.
+        - packages/core/src/config/catalog.ts
+        - packages/cli/src/commands/provider.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/provider-watch-freshness.test.ts
+        - tests/checks/provider-watch-cli.test.ts
+        - tests/structure/provider-watch-contract.test.ts
+        # TC-PROFILE-020/045's view assertion gains the three fields on the
+        # delivered suite; the five delivered condition arms stay unchanged.
+        - tests/behaviour/provider-watch-status.test.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/provider-profile.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Conformance and documentation sweep: the remaining specification
+  # pages, the operator guides, the reference page, the indices, the milestone
+  # pack, the retired-claim set and the full gate battery (F-8; AC-F8-3, AC-F8-4;
+  # NFR-8, NFR-15, NFR-16; TC-CONFORM-007, TC-DOC-001..005).
+  #
+  # Goal: every page and guide this change touches states the delivered truth and
+  # nothing else, the retired claims are gone from a closed page set, and the
+  # whole change passes the declared battery — which is also this change's
+  # system-spec reconciliation and its release evidence.
+  #
+  # Contract (documentation, spec §16's obligation table): the engine page gains
+  # the budget branch and its evaluation, the `budget-exhausted` members, the two
+  # budget announcements, the five budget evidence fields, the budget error row,
+  # the new tie order, the no-paid-escalation rule, the two new CLI members and
+  # the gate-versus-alarm distinction (its zone half landed in phase 2); the
+  # profiles page gains `maxAgeSeconds`, the closed six-value condition set,
+  # `watch-stale` and the three additive view fields; the spend page states that
+  # the gate consumes the same fold and reports the same figures with one basis
+  # and no second measurement path; the metrics page gains the gate-versus-alarm
+  # distinction (its count half landed in phase 1) and keeps the family count 26;
+  # the nonfunctional page's provider row gains the zone/DST correctness, the
+  # budget read bound, the simulation purity and the migration no-execution
+  # guarantees; the conditions guide gains the zone basis and `timezone`,
+  # `budget-exhausted` as condition/cause/skip reason, the two announcements with
+  # their evidence, the terminal ticket refusal with its remedy, the watch
+  # conditions including `watch-stale` with age and bound, the no-paid-escalation
+  # rule, and the limit stated as at most one spawn increment above a ceiling
+  # before the next evaluation observes the new records with an explicit
+  # disclaimer that the gate is not a real-time cap; the model guide gains one
+  # pointer that the typed provider and profile branches are the canonical path;
+  # the provider reference page gains a section per member including `simulate`
+  # and `migrate` (with the two-level `migrate legacy`), each with usage, options,
+  # examples, exit codes and see-also, and keeps `--help` and `--version`; and
+  # `doc/00-index.md`, `doc/planning/oss-tooling/cli-command-registry.md` (which
+  # states "UTC peak windows" and the five delivered members as current truth, so
+  # it is a provider-fact page and joins the closed page set), and the M4 planning
+  # pack (the M4-S4 story marker in `milestones/m4/backlog.md` and the flip-plan
+  # F2 evidence pointer in `milestones/m4/flip-plan.md`) move together.
+  # The retired-claim set is closed and enforced in both directions: "UTC only",
+  # "non-UTC … not modeled", non-UTC windows "out of scope", provider policy
+  # depending on shell profiles or the hook, "no simulation surface", "watch
+  # cannot be stale", a hard real-time budget cap, and every outgoing count form
+  # (164, 163, +130) as a current value — while the declared delta lines
+  # (`164 -> 167`) must not trip the scan. Every phrase row for the pages moved
+  # in phases 1, 2, 4 and 6 is already in place; this phase adds the remaining
+  # rows and the closed page set, and drives both directions over injected copies.
+  # Release and spec-reconciliation obligations, declared as scope: this phase
+  # leaves `doc/spec/**`, the guides, the reference page and the indices in their
+  # delivered state (the `system_spec_update` lifecycle phase reconciles nothing
+  # further), runs the full G1..G6 battery, records one evidence note with the
+  # exact counts, and hands the branch to the pull request, which targets
+  # `main-tools` and STOPS OPEN with merge authority outside this change.
+  # `bash scripts/.tests/test-doc-distribution.sh` runs as a control: this change
+  # corrects existing pages and ships no new redistributable doc.
+  #
+  # Acceptance: AC-F8-3 (TC-DOC-001, -002, -003, -004, -005; TC-CONFORM-010
+  # already evidenced the decision half from phase 1), AC-F8-4 (TC-CONFORM-006's
+  # page arm and TC-CONFORM-007's aggregate battery; the family, bin, help and
+  # page-root invariants are re-run as controls).
+  #
+  # Gate — the test plan §6.3 battery, in order, from the repository root:
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #   TMPDIR=$PWD/tmp/tmpdir bun test 'tests/behaviour/provider-*.test.ts' 'tests/structure/provider-*.test.ts' 'tests/checks/provider-*.test.ts' 'tests/golden/provider-*.test.ts' 'tests/behaviour/peak-pause-*.test.ts' 'tests/behaviour/peak-window-*.test.ts' 'tests/behaviour/daemon-peak-window-*.test.ts'
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
+  #   TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base main-tools
+  # Expected signal: exit 0 at every line; the sync script reports 167 entries
+  # and 167 documented rows in two-way agreement, the page's delivered-row count
+  # at 166, 16 provider rows, 66 two-segment identities, arithmetic +133, and 84
+  # corpus rows (59 true-positive / 25 false-positive); the range gate
+  # reports PASS (a SKIP or an unresolved ERROR is recorded as itself, never
+  # rounded to PASS).
+  #
+  # Commit: docs(GH-350): provider policy specification truth and release evidence
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Conformance and documentation sweep: the remaining specification pages, the operator guides, the reference page, the indices, the milestone pack, the retired-claim set and the full gate battery"
+    kind: delivery
+    summary: "docs(GH-350): provider policy specification truth and release evidence"
+    scope:
+      files:
+        - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-provider-profiles.md
+        - doc/spec/features/feature-spend.md
+        - doc/spec/features/feature-metrics.md
+        - doc/spec/nonfunctional.md
+        - doc/guides/provider-conditions-and-parks.md
+        - doc/guides/opencode-model-configuration.md
+        - doc/planning/oss-tooling/milestones/m1/commands/provider.md
+        - doc/00-index.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m4/backlog.md
+        - doc/planning/oss-tooling/milestones/m4/flip-plan.md
+        # The GH-350 phrase block, the closed page set and the retired-claim list.
+        - tests/checks/doc-conformance.test.ts
