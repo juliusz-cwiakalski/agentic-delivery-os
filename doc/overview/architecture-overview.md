@@ -248,7 +248,9 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   registry, session compaction, the exit-review-gated milestone
   synchronization, and the change-capsule close. The transaction reports a
   bounded `residue[]` and exits 1 through the additive `attention` class when
-  judgment residue remains; human mode renders a `JUDGMENT RESIDUE` section and
+  judgment residue of an attention-raising kind remains, while the informational
+  withheld milestone closure is reported without selecting it; human mode renders
+  a `JUDGMENT RESIDUE` section and
   a capsule close summary. `createCloseoutComposition` in CLI edge bridges raw
   provider clients, the real git seam, `StateStorePort`, the capsule runtime, and
   resolved harness settings; `planFacts` reads issue, merged request, dependents,

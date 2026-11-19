@@ -44,13 +44,16 @@ retires the work item's queue entry with reason `landed` as a non-step
 disclosure; it changes no step outcome and no exit code.
 
 The milestone step never guesses a target. An absent or non-conforming
-declaration and a declaration that does not equal the observed attachment are
-`skipped-noop` with one residue item; a declaration of `none` is `skipped-gap`;
-an open attached ticket, an unknown record state, an unavailable read, or a page
-whose truncation marker says the set was not fully observed withholds closure as
-`skipped-noop` plus one `milestone-sync-withheld` residue item. A close that did
-not land gates at `closeout.write.failed`, exit 2, with no capsule close. Plan
-mode performs the read and renders the verdict with zero writes.
+declaration and a declaration whose canonical `M<n>: <title>` does not equal the
+observed attachment's are `skipped-noop` with one residue item; a declaration of
+`none` is `skipped-gap`; an open attached ticket, an unknown record state, an
+unavailable read, or a page whose truncation marker says the set was not fully
+observed withholds closure as `skipped-noop` plus one `milestone-sync-withheld`
+residue item. The withheld residue is informational: it is reported like any
+other item but does not raise the attention exit on its own, so an apply whose
+only residue is withheld closures exits 0; any other residue kind exits 1. A
+close that did not land gates at `closeout.write.failed`, exit 2, with no capsule
+close. Plan mode performs the read and renders the verdict with zero writes.
 
 ## OPTIONS
 
@@ -71,9 +74,10 @@ non-step `queueRemoval` block. Residue kinds are `unresolved-human-thread`,
 
 ## EXIT STATUS
 
-`0` sweep complete with no residue (or a clean dry run); `1` residue requires
-attention through the data-bearing `attention` class; `2` a platform fault or a
-failed write, including a milestone close that did not land
+`0` sweep complete with no residue, or an apply whose only residue is the
+informational `milestone-sync-withheld` items (still reported); `1` residue of any
+other kind requires attention through the data-bearing `attention` class; `2` a
+platform fault or a failed write, including a milestone close that did not land
 (`closeout.write.failed`).
 
 ## EXAMPLES

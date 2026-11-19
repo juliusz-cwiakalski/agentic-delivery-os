@@ -46,8 +46,10 @@ truth was not observed refuses `merge.landing-unverified` with consequence
 The refusal decision is total over the observed mergeability plus absence. A
 conflicting request refuses `merge.sync-required` with reason `dirty` and issues
 no landing call. A `not-mergeable` request is offered to the provider once, and
-its refusal is classified by one bounded re-read: a checks posture yields the
-effective required-job row, and any other reading yields `merge.sync-required`
+its refusal is classified by one bounded re-read: a checks posture over the
+effective gate set's declared `required-ci-job` entries yields
+the effective required-job row, and any other reading — including one whose only
+non-green job the gate set does not declare — yields `merge.sync-required`
 with reason `behind-unconfirmed`. An unknown or absent mergeability gets exactly
 one exact-head re-read; a still-unknown answer refuses
 `merge.mergeability-unknown`. No path performs an internal rebase or mutates the

@@ -174,7 +174,10 @@ queued, running, canceled, skipped, or failed — refuses on the
 `merge.gate.<gate-id>.failed` family with the delivered reason
 (`ci-pending`, `ci-canceled`, `ci-all-skipped`, `ci-failed`). A job the effective
 gate set does not declare is never gate evidence, and a check-run page for
-another SHA is not head evidence. When the freshness envelope is also violated,
+another SHA is not head evidence. The post-refusal checks posture reads that same
+declared set — every `required-ci-job` entry of the effective gate set, by
+`job ?? id` — so a non-green job the set does not declare produces no refusal and
+the refusal stays `behind-unconfirmed`. When the freshness envelope is also violated,
 `merge.gates-stale` is primary and the probe observation rides as additional
 evidence.
 
@@ -242,7 +245,7 @@ absence, and every path is bounded:
 |---|---|
 | `mergeable` | Proceed to the guarded landing. |
 | `conflicting` | `merge.sync-required` with reason `dirty`, exit 1; no landing call, no rebase, no head mutation. |
-| `not-mergeable` | Offer the guarded landing once — the provider is the authority on whether its protection rule blocks a behind, unstable, blocked, or draft request — and classify a refusal with exactly one bounded post-refusal re-read of the same request: a checks posture yields the effective required-job row with its delivered reason; any other re-read yields `merge.sync-required` with reason `behind-unconfirmed`, naming the observed provider state. |
+| `not-mergeable` | Offer the guarded landing once — the provider is the authority on whether its protection rule blocks a behind, unstable, blocked, or draft request — and classify a refusal with exactly one bounded post-refusal re-read of the same request: a checks posture over the effective gate set's declared `required-ci-job` entries yields the effective required-job row with its delivered reason; any other re-read, including one whose only non-green job the gate set does not declare, yields `merge.sync-required` with reason `behind-unconfirmed`, naming the observed provider state. |
 | `unknown` or absent | Exactly one bounded re-read of the same request, compared on the exact head: recovered reads classify by the rule above, a changed head refuses `merge.gates-stale`, and a still-unknown read refuses `merge.mergeability-unknown` at exit 2. The command never waits or polls. |
 | Landing fired, provider truth not observed | `merge.landing-unverified` at exit 2 with consequence `unknown`; a re-run re-verifies and never re-lands. |
 
