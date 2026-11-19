@@ -17,10 +17,11 @@
 #               impacts; §25.3 Appendix C query answer matrix and proof
 #               boundary; §25.4 Appendix D plan-pinned details and the TDR-0056
 #               authority.)
-#   - Tests:    ./chg-GH-354-test-plan.md (71 cases in twelve stable-id groups —
-#               MATRIX 2, STATUS 7, LOG 11, ISDEL 7, MSG 10, GRAMMAR 5,
+#   - Tests:    ./chg-GH-354-test-plan.md (v0.2, 72 cases in twelve stable-id
+#               groups — MATRIX 2, STATUS 8, LOG 11, ISDEL 7, MSG 10, GRAMMAR 5,
 #               PERSIST 11, RO 4, SHELL 4, CONTRACT 3, NFR 4, FIXTURE 3; 38/38
-#               AC traceability; §5.2 scenario details; §6.1 fixture inventory
+#               AC traceability across 83 links in 59 cases; §5.2 scenario
+#               details; §6.1 fixture inventory
 #               (exists vs must-be-authored vs extended; the nine new
 #               `tests/fixtures/dispatch/operator/*` modules); §6.2 the fixture
 #               mechanisms and the first-pull probe; §7.1 the six seams plus
@@ -65,30 +66,42 @@
 #   `kind: delivery` phases (ids 2..8). This brief calls the pre-delivery phase
 #   "phase 0"; it is `id: 1` here because the schema requires a positive integer
 #   id. Every later reference in this document numbers the PLAN's ids.
-#   The planning phase declares no code scope: it lands the governing record
-#   (TDR-0056) and its index row, which the delivery phases then implement.
+#   The planning phase declares no code scope: the governing record (TDR-0056)
+#   and its index row are already committed on this branch (see PHASE-1 STATUS
+#   below), so the phase is a declared, satisfied no-op and the delivery phases
+#   implement what the record governs.
 #   `tier.phases` below lists the LIFECYCLE phase ids [1..11] (the ceremony tier
 #   engine's vocabulary), not this plan's eight phase ids; the two are different
 #   namespaces and the plan never renumbers the lifecycle.
 #
-# COMMIT-BOUNDARY REALITY (binding on phase 1):
-#   TDR-0056 is UNTRACKED in the worktree at plan time:
-#     doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
-#     read-seam.md
-#   (verified: `git ls-files --error-unmatch` exits non-zero for that path).
-#   Phase 1 declares that EXACT path so the PM can land it with the commit
-#   primitive; the primitive refuses to stage an untracked file that is not
-#   inside a declared scope, so the declaration is what gives staging authority.
-#   VERIFIED AT PLAN TIME: the `doc/decisions/00-index.md` TDR-0056 ROW IS
-#   ALREADY COMMITTED (line 88 plus the binding note on line 98) and
-#   `git status --porcelain` shows no entry for the index. The index is therefore
-#   declared for CONDITIONAL STAGING ONLY — see the declared exception in the
-#   SCOPE DECLARATION RULE — so that a typo or a status touch made while the
-#   record lands stages with it and Appendix A's decision-record citation stays
-#   provable at DoD. Until phase 1 commits, the branch carries an index row
-#   pointing at an uncommitted record; that is exactly the gap this phase closes.
-#   PHASE-1 DONE CRITERION (mechanical, re-run at DoD): after the phase-1
-#   commit, `git ls-files --error-unmatch` on the TDR path exits 0 and
+# COMMIT-BOUNDARY REALITY — PHASE 1 IS SATISFIED AT PLAN TIME (binding):
+#   Plan phase 1 HAS ALREADY LANDED and carries NO committable work. Verified on
+#   this branch at plan time:
+#     - commit 86aa74e8 carries the governing record
+#       doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
+#       read-seam.md;
+#     - commit 5dd4dad4 carries the `doc/decisions/00-index.md` TDR-0056 ROW
+#       (line 88) and its binding note (line 98);
+#     - `git ls-files --error-unmatch <TDR path>` exits 0 (the path is tracked);
+#     - `git status --porcelain -- doc/decisions` is EMPTY (nothing staged,
+#       nothing untracked, no pending typo touch).
+#   CONSEQUENCE FOR DELIVERY (mechanical, not a judgement call): the coder MUST
+#   NOT invent a commit to "close" phase 1, MUST NOT re-edit the record, and
+#   MUST NOT restage the index. It records plan phase 1 as SATISFIED in a
+#   pm-notes `notes:` entry naming plan phase id 1, the landing commits
+#   (86aa74e8 for the record, 5dd4dad4 for the index row), and the two
+#   verification commands below with their results — then proceeds to phase 2.
+#   A satisfied phase-1 entry with NO commit hash of its own is CORRECT here: it
+#   is the declared no-op, not a missing phase. `run-plan` advances over it (a
+#   recorded `satisfied` verdict is skipped, and only the two verification
+#   commands are re-run), and `phase complete delivery_planning` is NOT blocked
+#   by a planning phase that authored nothing at delivery time.
+#   The phase's `scope.files` declaration is retained as the STAGING AUTHORITY
+#   for those exact paths: if a rebase, a revert, or a conflict ever drops the
+#   record or the index row, the coder may land it under this declaration. At
+#   plan time there is nothing to land.
+#   PHASE-1 VERIFICATION (mechanical; re-run at the boundary and again at DoD):
+#   `git ls-files --error-unmatch` on the TDR path exits 0 and
 #   `git status --porcelain -- doc/decisions` is empty.
 #   TWO UNTRACKED CHANGE ARTIFACTS ARE DELIBERATELY NOT DECLARED:
 #     ./chg-GH-354-test-plan.md and ./chg-GH-354-plan.yaml are the test-planning
@@ -103,8 +116,8 @@
 #   regression control is NOT declared: declaring it would only produce an
 #   advisory `plan diff` `undeclared-missing` for a file that needs no edit.
 #   ONE DECLARED EXCEPTION: `doc/decisions/00-index.md` in phase 1 is a
-#   CONDITIONAL-STAGING declaration (clean at plan time; never a licence to edit
-#   an unrelated row).
+#   CONDITIONAL-STAGING declaration for a phase that authors nothing (clean and
+#   committed at plan time; never a licence to edit an unrelated row).
 #   TWO FURTHER DECLARED KINDS, stated so the rule and the declaration cannot
 #   contradict:
 #     (i)  A PINNED-SURFACE declaration. `tests/structure/inventory.json` (the
@@ -126,6 +139,13 @@
 #          differently named core module in the surface would break the glob
 #          equality, and a differently named module outside it would be silently
 #          unscanned.
+#          A PIN DECLARED WITHOUT ITS SUITE RUN IS NOT A PIN. Every phase whose
+#          commit moves one of these surfaces runs the pinned-surface trio
+#          (`tests/structure/content-inventory.test.ts`,
+#          `tests/structure/port-contract-inventory.test.ts`,
+#          `tests/checks/no-shell-dispatch.test.ts`) in the SAME commit, beside
+#          `bun run scripts/checks/no-shell-dispatch.ts`; the trio is listed
+#          verbatim in the gates of phases 2, 3, 4, 5, and 7.
 #     (ii) A CONDITIONAL DELIVERED-EXPECTATION declaration, used only where a
 #          DELIVERED assertion encodes pre-change behaviour that this change
 #          deliberately moves (§8.5, §25.1). Such a file is declared by the phase
@@ -169,16 +189,38 @@
 #                 completed in PHASE 6.
 #     S-exec      the guarded injected process runner (zero shell, zero real
 #                 start). PHASE 7.
-#   The four operator composition facts (owner-liveness probe, transcript read,
-#   artifact-family root plus its filesystem edge, and the clock) are ADDITIVE
-#   and non-operator, mounted at the same CLI edge that mounts
-#   `claimLease`/`existingLane`/`attempts` today. No configuration key (NFR-5).
+#   The five operator composition facts (owner-liveness probe, transcript read,
+#   artifact-family root plus its filesystem edge, the clock, and the registered
+#   credential set) are ADDITIVE and non-operator, mounted at the same CLI edge
+#   that mounts `claimLease`/`existingLane`/`attempts` today. No configuration
+#   key (NFR-5).
+#     F-secrets   the registered credential VALUES: composed by the delivered
+#                 `registerEdgeSecrets(environment, secretKeys)` and carried as
+#                 `runtime.secrets` exactly as `blockers` and `steer` carry them
+#                 today (`readonly secrets: readonly string[]` on the command
+#                 runtime, `packages/cli/src/commands/{blockers,steer}.ts`).
+#                 `last-message` must REDACT BEFORE IT BOUNDS, so the message
+#                 composition takes this fact and applies the delivered `redact`
+#                 chokepoint's replace semantics
+#                 (`packages/cli/src/output/serialize.ts`, `[redacted]`) to the
+#                 transcript text BEFORE the 512-character cut: a credential
+#                 straddling that cut must not survive as a prefix (AC-F4-7,
+#                 NFR-8, TC-MSG-008). The fact is injected — the value set, or a
+#                 redact function the CLI edge supplies — because `core` never
+#                 imports `cli`; no second scrubber is written (TC-FIXTURE-001
+#                 rejects a local credential scrub by name). The set is a RUNTIME
+#                 fact on the same edge as `blockers`/`steer` — never a
+#                 configuration key (NFR-5), never persisted, never logged.
+#                 PHASE 5 composes it; PHASE 7 re-observes it under the privacy
+#                 sweep (TC-NFR-004).
 #
 # SEQUENCING (spec §19 "by outcome, so each fact is proven with the evidence that
 #   depends on it"), made concrete. Each phase is independently committable and
 #   gate-green at its own boundary:
-#     Phase 1  The governing record lands on the branch before the code it
-#              governs (and before any phase cites it in code comments).
+#     Phase 1  SATISFIED AT PLAN TIME — the governing record is already on the
+#              branch (86aa74e8) with its index row (5dd4dad4), before the code it
+#              governs. No committable work; the coder records the satisfied
+#              verdict and moves on.
 #     Phase 2  The lane view, the advisory probe, `status`, and `is-delivering`:
 #              the flip plan's ordering-safe half (F6 gates on these two), reading
 #              only state that already exists. Nothing here needs an artifact or a
@@ -197,7 +239,7 @@
 #              invariant with its planted control, closed-contract invariance, the
 #              12-row answer matrix (both modes, two consecutive runs), latency,
 #              privacy, the proof boundary, and seam identity. Needs all four
-#              queries and all four composition facts present.
+#              queries and all five composition facts present.
 #     Phase 8  Release obligations (the changeset, the plan validation, the
 #              aggregate gate) and the current-truth pages declared for STAGING
 #              ONLY. LAST, because the aggregate ranges over the assembled change.
@@ -244,11 +286,15 @@
 #                 AC-F3-2 (ISDEL-002), AC-F3-3 (ISDEL-003/004/007),
 #                 AC-F3-4 (ISDEL-005), AC-F3-5 (ISDEL-006).
 #   Phase 3 (4):  AC-F7-1 (PERSIST-001/002/003/004),
-#                 AC-F7-2 (PERSIST-010), AC-F7-3 (PERSIST-002/005/006/008/011),
+#                 AC-F7-2 (PERSIST-010),
+#                 AC-F7-3 (PERSIST-002/005/006/008/011 — the WRITE clause; the
+#                 PERSIST-005/006 read-back halves execute in phase 4 as that
+#                 boundary's cross-control and do NOT move this owner),
 #                 AC-F7-4 (PERSIST-003/007).
 #   Phase 4 (6):  AC-F2-1 (LOG-001/002/009), AC-F2-2 (LOG-003),
 #                 AC-F2-3 (LOG-004/005), AC-F2-4 (LOG-006),
-#                 AC-F2-5 (LOG-007/008), AC-F2-6 (LOG-002/009 + the phase-3
+#                 AC-F2-5 (LOG-007/008), AC-F2-6 (LOG-002/009 + the PERSIST-005/
+#                 006 READ-BACK halves executed here + the phase-3
 #                 PERSIST-005/006/007 writer cases as the same property's write
 #                 half).
 #   Phase 5 (7):  AC-F4-1 (MSG-001/010), AC-F4-2 (MSG-002), AC-F4-3 (MSG-003),
@@ -282,27 +328,65 @@
 #     - AC-F5-4's contract-invariance half is TC-CONTRACT-001 (phase 7). AC-F5-4
 #       stays owned by phase 6, which proves the no-token/no-append clause across
 #       the four queries (TC-GRAMMAR-005).
+#     - AC-F7-3's TC-PERSIST-005/006 evidence is SPLIT ACROSS TWO BOUNDARIES. The
+#       write-half assertions (file sizes, byte totals, concatenation equals the
+#       declared transformation, the exactly-filling LF rule, 0 in-place
+#       modification) are EXECUTED in PHASE 3's writer suite; the read-back halves
+#       (`dispatch log --tail` byte-identical reconstruction and the retention
+#       truncation fact) are EXECUTED in PHASE 4, the earliest boundary where the
+#       reader exists. CASE-ID OWNERSHIP DOES NOT MOVE: both ids stay phase 3's
+#       (the write half is what phase 3's commit makes observable and gate-green,
+#       and the test plan keeps the ids there), and the phase-4 execution is that
+#       boundary's cross-control over the same family. The write-half assertions
+#       are never relocated, relaxed, or dropped, and neither half substitutes for
+#       the other's evidence.
 #     - AC-F1-1..3, AC-F2-1/3/4, AC-F3-1/2/4, AC-F4-1/3/4 also carry TC-MATRIX-001
 #       rows. That case is phase 7's 12-row re-observation of the SAME payloads
 #       and exits; no AC changes owner.
 #
-# TC -> PHASE MAP (71 ids; every id owned by exactly one phase — the phase whose
-#   commit lands the case together with the declaration that makes it green):
-#   Phase 1 (0)
-#   Phase 2 (14):  TC-STATUS-001..007 (7), TC-ISDEL-001..007 (7)
+# TC -> PHASE MAP (72 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case's load-bearing half together with the declaration that
+#   makes it green):
+#   Phase 1 (0)   [satisfied at plan time; no committable work]
+#   Phase 2 (15):  TC-STATUS-001..008 (8), TC-ISDEL-001..007 (7)
 #   Phase 3 (10):  TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011
 #                  (009 is phase 4: its load-bearing half is the reader's tear
-#                  rule, so it is owned where it can be observable)
-#   Phase 4 (12):  TC-LOG-001..011 (11), TC-PERSIST-009 (1)
+#                  rule, so it is owned where it can be observable. 005 and 006
+#                  stay here: their WRITE half — segmentation, continuation, the
+#                  LF rule, 0 in-place modification — IS the observable this
+#                  boundary lands; their read-back halves are executed at phase 4
+#                  as that boundary's cross-control — see SPLIT CASES below)
+#   Phase 4 (12 + 2 read-back halves): TC-LOG-001..011 (11),
+#                  TC-PERSIST-009 (1), plus the READ-BACK halves of
+#                  TC-PERSIST-005/006 (executed here, ids stay phase 3's)
 #   Phase 5 (10):  TC-MSG-001..010
 #   Phase 6 (6):   TC-GRAMMAR-001..005 (5), TC-CONTRACT-002 (1)
 #   Phase 7 (19):  TC-RO-001..004 (4), TC-SHELL-001..004 (4),
 #                  TC-CONTRACT-001, TC-CONTRACT-003 (2), TC-NFR-001..004 (4),
 #                  TC-MATRIX-001, TC-MATRIX-002 (2), TC-FIXTURE-001..003 (3)
 #   Phase 8 (0)
-#   COUNT: 0 + 14 + 10 + 12 + 10 + 6 + 19 + 0 = 71. 0 orphans, 0 double-owned.
-#   Group totals reconciled: MATRIX 2 + STATUS 7 + LOG 11 + ISDEL 7 + MSG 10 +
-#   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 71.
+#   COUNT: 0 + 15 + 10 + 12 + 10 + 6 + 19 + 0 = 72. 0 orphans, 0 double-owned.
+#   The COUNT counts OWNED case ids only. Phase 4 additionally executes the
+#   READ-BACK HALVES of TC-PERSIST-005/006; those are assertion allocations at
+#   phase 4, never a second owner, so no id is counted twice and the total stays
+#   the test plan's 72.
+#   SPLIT CASES (one case id, ONE owning phase, two boundaries of ASSERTION):
+#   TC-PERSIST-005 and TC-PERSIST-006 each have a WRITE half that runs at the
+#   PHASE-3 boundary and a READ-BACK half that runs at the PHASE-4 boundary.
+#   The write half is phase 3's observable and phase 3's assertion set (every file
+#   <= 1 048 576 bytes including its LF, the concatenation equals the declared
+#   transformation, no byte dropped or duplicated at the exactly-filling boundary,
+#   the value that fits its bytes but not its LF starts the next file whole, 0
+#   in-place modification), executed in
+#   `tests/behaviour/dispatch-operator-artifact-writer.test.ts`. The read-back half
+#   (`dispatch log --tail 500`/`--tail 2` byte-identical reconstruction and the
+#   retention `tail`-scope truncation fact) needs a reader that does not exist
+#   until phase 4, so NO `dispatch log` step appears in the phase-3 gate. The ids
+#   stay PHASE 3's, exactly as the test plan's v0.2 phase labels record; phase 4
+#   runs the read-back halves as CROSS-CONTROLS and neither half substitutes for
+#   the other's evidence.
+#   Group totals reconciled: MATRIX 2 + STATUS 8 + LOG 11 + ISDEL 7 + MSG 10 +
+#   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 72.
 #   TC-CONTRACT-002's two halves: the help-entry count 5 -> 9 (phase 6) and the
 #   delivery-path regression re-run over the delivered parity battery (phase 7 as
 #   a read-only control). The case id has ONE owner (phase 6).
@@ -322,19 +406,39 @@
 #     status fold and probe (M1–M10)               -> 10 to phase 2
 #     artifact read (M11–M23, 13 rows): M11–M22   -> 12 to phase 4
 #                                      M23 (names TC-RO-001, phase 7) -> phase 7
-#     delivering fold (M24–M28)                    ->  5 to phase 2
+#     delivering fold (M24–M28): M24, M26, M27, M28 ->  4 to phase 2
+#                                      M25 (test plan v0.2 widened it to name
+#                                      TC-STATUS-008 and TC-ISDEL-006 — phase 2 —
+#                                      AND TC-MSG-006 — phase 5 — so the LAST
+#                                      boundary among them is phase 5)
+#                                                 ->  1 to phase 5
 #     message read (M29–M36)                       ->  8 to phase 5
 #     grammar and projection (M37–M41): M37, M38, M40, M41 -> 4 to phase 6
 #                                      M39 (names TC-CONTRACT-001, phase 7)
 #                                                    ->  1 to phase 7
-#     write path (M42–M53)                         -> 12 to phase 3
+#     write path (M42–M53): M42–M45, M47–M53    -> 11 to phase 3
+#                                      M46 (names TC-PERSIST-006, but its
+#                                      named failure is a READ-BACK —
+#                                      `reconstructed value expected 1200000
+#                                      bytes, received <n>` — so it is exercised
+#                                      where the reader exists)
+#                                                 ->  1 to phase 4
 #     read-only and no-shell (M54–M59)             ->  6 to phase 7
 #     contract/bounds/machinery (M60–M68): M64 and M65 (both name
 #       TC-CONTRACT-002, phase 6)                  ->  2 to phase 6
 #       M60, M61, M62, M63, M66, M67, M68          ->  7 to phase 7
-#   PHASE TOTALS (sum = 68): phase 1 = 0; phase 2 = 15; phase 3 = 12;
-#   phase 4 = 12; phase 5 = 8; phase 6 = 6; phase 7 = 15; phase 8 = 0.
-#   Check: 0+15+12+12+8+6+15+0 = 68, and every row M1–M68 appears exactly once.
+#   PHASE TOTALS (sum = 68): phase 1 = 0; phase 2 = 14; phase 3 = 11;
+#   phase 4 = 13; phase 5 = 9; phase 6 = 6; phase 7 = 15; phase 8 = 0.
+#   Check: 0+14+11+13+9+6+15+0 = 68, and every row M1–M68 appears exactly once.
+#   ROW-SPLIT NOTE: M46 follows its NAMED FAILURE, not the case's commit — its
+#   signal can only be observed through the reader, so it is exercised at the
+#   phase-4 boundary. Its write-side sibling M47 (`segment concatenation differs
+#   at byte <n>`, names TC-PERSIST-005) is written-side arithmetic and stays in
+#   phase 3. M46 and M47 therefore split exactly as TC-PERSIST-005/006 do.
+#   Other v0.2 widenings move nothing: M3 (TC-STATUS-006 + TC-ISDEL-007) stays in
+#   phase 2 and M33 (TC-MSG-008 + TC-MSG-010) stays in phase 5, because every case
+#   each row names is owned by that same phase. No row is duplicated and no row
+#   migrates away from its named cases' observable boundary.
 #   The register is executed by the reviewer/fixer and is NOT committed as a
 #   permanent suite; the permanent non-vacuity proofs are the planted controls
 #   inside the owning cases. NON-VACUITY STATEMENT (binding on every owning
@@ -419,9 +523,9 @@
 #      delivered `PRIVACY_CANARY` content document stays. Clause: DM-3,
 #      TC-MSG-010. Phase 5.
 #   7. tests/fixtures/dispatch/parity/{harness,lane,seams}.ts and
-#      tests/fixtures/dispatch/attempts-harness.ts — EXTENDED additively (four
+#      tests/fixtures/dispatch/attempts-harness.ts — EXTENDED additively (the
 #      operator facts on `observe()`, a repository-scoped and a daemon-lane seed,
-#      six `SEAM_MANIFEST` entries, a `storeWithReadFailure(store, kind)`
+#      six `SEAM_MANIFEST` entries, a `storeWithReadFailure(store, kind, code)`
 #      wrapper). No delivered default changes. Clause: test plan §6.1/§6.2.
 #      Phases 2..5, 7.
 #   NO OTHER DELIVERED ASSERTION MOVES. The delivery path's suites
@@ -512,9 +616,26 @@
 #       pnpm build
 #       bun test <the phase's exact new/edited suites>
 #       bun test <the delivered read-only controls named by the phase>
+#       bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
 #       bun run scripts/checks/no-shell-dispatch.ts
 #       bun run scripts/checks/exit-code-literals.ts
 #       git diff --check
+#   - THE PINNED-SURFACE SUITE IS NOT OPTIONAL WHERE A PIN MOVES. The trio
+#       bun test tests/structure/content-inventory.test.ts \
+#                tests/structure/port-contract-inventory.test.ts \
+#                tests/checks/no-shell-dispatch.test.ts
+#     runs at EVERY phase whose commit creates a module or moves a pinned surface
+#     — phases 2, 3, 4, 5, and 7 — and is listed verbatim in those phase gates.
+#     `content-inventory.test.ts` verifies `tests/structure/inventory.json` and
+#     the per-file `EXECUTABLE_ALLOWANCES`; `port-contract-inventory.test.ts`
+#     verifies `tests/fixtures/ports/v1-contract-inventory.json` both directions;
+#     `no-shell-dispatch.test.ts` verifies the `DISPATCH_FLOW_SURFACE` glob
+#     equality and `FIXED_SURFACE`. A commit that declares one of those files
+#     without running the suite that reads it is a BLOCKING boundary defect, not
+#     a note: the declaration is only meaningful if the pin is proven green in
+#     the SAME commit. `bun run scripts/checks/no-shell-dispatch.ts` stays in the
+#     battery as well (it runs the check itself; the suite proves the surface
+#     lists are coherent).
 #   - THE AGGREGATE IS PHASE 8'S:
 #       TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
 #     It is never substituted by a narrow pass and never reported green while a
@@ -534,7 +655,9 @@
 #
 # COMMIT CONVENTION (one commit per plan phase through the commit primitive;
 #   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
-#   phase 1  chore(GH-354): land TDR-0056 and its decision index row
+#   phase 1  NONE — SATISFIED AT PLAN TIME (record 86aa74e8, index row 5dd4dad4).
+#            No phase-1 commit is authored; the coder records the satisfied
+#            verdict in a pm-notes `notes:` entry and does not stage anything.
 #   phase 2  feat(GH-354): dispatch status and is-delivering over the lane view
 #   phase 3  feat(GH-354): per-stream dispatch stdout artifact write path
 #   phase 4  feat(GH-354): dispatch log stitched tail over the artifact family
@@ -621,7 +744,9 @@
 #       the plan's phase-5 scope names the new file so the coder does not need a
 #       plan revision to add it.
 #   (g) `doc/00-index.md` gains no entry (no new page) and is therefore NOT
-#       declared; only the `doc/decisions/00-index.md` ROW is touched, in phase 1.
+#       declared. The `doc/decisions/00-index.md` TDR-0056 ROW is committed
+#       (5dd4dad4) and clean; phase 1 declares it for conditional staging only
+#       and authors nothing.
 #   (h) There is no `doc/documentation-profile.md` (engineering-repo default), so
 #       no `doc/business/**` area is created or touched.
 #   (i) `version_impact: minor` and publishable-package edits mean exactly one
@@ -659,53 +784,58 @@ defaultWeightClass: standard
 phases:
   # ---------------------------------------------------------------------------
   # Phase 1 — The governing record (TDR-0056) and its decision index row.
+  # STATUS: SATISFIED AT PLAN TIME — NO COMMITTABLE WORK. Both paths are already
+  #   committed on this branch (the record at 86aa74e8, the index row at
+  #   5dd4dad4) and `git status --porcelain -- doc/decisions` is empty. The coder
+  #   records plan phase 1 as SATISFIED in a pm-notes `notes:` entry and proceeds
+  #   to phase 2; it authors nothing, commits nothing, and does not reopen the
+  #   record. The header's PHASE-1 STATUS section states why this is a satisfied
+  #   no-op rather than a missing phase.
   #
-  # Goal: put the binding design record on the branch before any delivery phase
-  # cites it in code, tests, or documentation. This is the plan's pre-delivery
-  # phase (called "phase 0" in the brief; `id: 1` because the schema requires a
-  # positive integer).
+  # Why the phase stays in the plan at all: TDR-0056 BINDS every later phase (it
+  #   is cited by the one-writer rule, the one-tear rule, the file-naming inputs,
+  #   the retention rule, and the message order), so its presence on the branch is
+  #   a precondition this plan states explicitly instead of assuming. Declaring
+  #   the exact paths keeps the STAGING AUTHORITY explicit for the case where a
+  #   rebase, a revert, or a conflict drops either one.
   #
-  # Why a planning phase exists at all: the record is UNTRACKED at plan time and
-  # the commit primitive refuses to stage an untracked file outside a declared
-  # scope. Declaring the exact path here is what gives the PM staging authority;
-  # a delivery phase would otherwise have to carry a decision record it does not
-  # govern.
-  #
-  # Obligations:
-  #   1.1 Commit `doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-
-  #       transcript-read-seam.md` on this branch (it is authored and reviewed;
-  #       status stays `Proposed` — the human owner accepts at PR review).
-  #   1.2 Stage `doc/decisions/00-index.md` CONDITIONALLY (its TDR-0056 row and
-  #       binding note are already committed; a touch made while landing the
-  #       record stages with it). Never edit an unrelated row.
-  #   1.3 Re-run the mechanical done criterion (see COMMIT-BOUNDARY REALITY):
-  #       `git ls-files --error-unmatch <TDR path>` exits 0 and
-  #       `git status --porcelain -- doc/decisions` is empty.
+  # Obligations (verification only — none authors a change):
+  #   1.1 `git ls-files --error-unmatch` on
+  #       `doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
+  #       read-seam.md` exits 0 and its status stays `Proposed` (the human owner
+  #       accepts at PR review).
+  #   1.2 `git status --porcelain -- doc/decisions` is empty: the index row and the
+  #       binding note are committed, nothing is pending, no stray edit exists.
+  #   1.3 Record the satisfied verdict — plan phase id 1, the two landing commits,
+  #       and both command results — as a pm-notes `notes:` entry. That entry IS
+  #       the phase-1 progress record; this plan carries none.
   #
   # Acceptance: NONE. A declaration alone evidences no AC and no TC. Phase 8's
   #   DoD check is where the record's citation becomes provable.
   #
-  # Gate (expected signal: exit 0, both paths tracked, the index clean):
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
+  # Gate (expected signal: exit 0, the record tracked, the index directory clean;
+  #   NO commit is authored and NO test suite is required):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (No test suite is required: the commit stages documents only. The
-  #   decision-record invariants — the index row, the header shape, the
-  #   `Proposed` status — are checked by `pnpm check` at the phase-8 aggregate.)
+  #   (No build and no suite: this phase edits nothing. The decision-record
+  #   invariants — the index row, the header shape, the `Proposed` status — are
+  #   checked by `pnpm check` at the phase-8 aggregate.)
   # ---------------------------------------------------------------------------
   - id: 1
-    title: "Land TDR-0056 and its decision index row (the plan's pre-delivery phase)"
+    title: "Land TDR-0056 and its decision index row (satisfied at plan time; no committable work)"
     kind: planning
-    summary: "chore(GH-354): land the governing decision record and its index row"
+    summary: "chore(GH-354): land TDR-0056 (satisfied at plan time)"
     scope:
       files:
-        # Untracked at plan time (COMMIT-BOUNDARY REALITY). Exact path.
+        # TRACKED at plan time (86aa74e8) and clean. Declared as the phase's
+        # STAGING AUTHORITY, not as pending work: at plan time nothing is
+        # staged and nothing is authored.
         - doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
-        # CONDITIONAL STAGING ONLY: the TDR-0056 row is already committed; the
-        # file is clean at plan time. Declared so a status/typo touch made while
-        # the record lands stages with it. Never a licence to edit an unrelated
-        # row.
+        # CONDITIONAL STAGING ONLY: the TDR-0056 row is committed (5dd4dad4) and
+        # the file is clean at plan time. Retained so a status/typo touch made
+        # while re-landing a dropped record stages with it. Never a licence to
+        # edit an unrelated row.
         - doc/decisions/00-index.md
 
   # ---------------------------------------------------------------------------
@@ -734,7 +864,11 @@ phases:
   #     truncation fact; exit 0 when any, 1 when none, `ref=null`). The JSON answer
   #     carries the boolean with NO `error` object (DEC-5).
   #   - A failed lane-store read keeps the store's typed `state.*` identity and is
-  #     never a fabricated `delivering=false` (DM-7).
+  #     never a fabricated `delivering=false` (DM-7); on `status` it is never a
+  #     fabricated `marker=absent` either. The failure is asserted with the NAMED
+  #     code and its row's projection, not the `state` kind: `state.store.torn` is
+  #     exit 2 and `state.permission.denied` is exit 1 (TC-STATUS-008, TC-ISDEL-006;
+  #     `TC-MSG-006` carries the same property on `last-message`).
   #
   # Code areas (concrete):
   #   packages/core/src/contracts/dispatch-operator.ts   (NEW: query payload
@@ -758,7 +892,7 @@ phases:
   #   packages/cli/src/edge.ts                (runtime read surfaces + refusals)
   #   packages/cli/src/production.ts           (lane view + probe supply)
   #   tests/fixtures/dispatch/operator/harness.ts (NEW: driver D1's operator
-  #                                                harness; the four facts arrive
+  #                                                harness; the five facts arrive
   #                                                over phases 2..5)
   #   tests/fixtures/dispatch/operator/matrix.ts  (NEW: row schema,
   #                                                `runMatrixCase`, the status and
@@ -778,7 +912,11 @@ phases:
   #                                                `delivering-fold`, `owner-probe`
   #                                                entries + forbidden signatures)
   #   tests/fixtures/dispatch/attempts-harness.ts (EXTEND: `storeWithReadFailure
-  #                                                (store, kind)`, read side)
+  #                                                (store, kind, code)`, read
+  #                                                side; the named `state.*`
+  #                                                code is what TC-STATUS-008,
+  #                                                TC-ISDEL-006 and TC-MSG-006
+  #                                                assert)
   #   tests/conformance/dispatch/dispatch-operator-status.test.ts (NEW)
   #   tests/conformance/dispatch/dispatch-operator-isdel.test.ts   (NEW)
   #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
@@ -791,7 +929,10 @@ phases:
   #     module's exports).
   #
   # Acceptance (12): AC-F1-1..AC-F1-7, AC-F3-1..AC-F3-5.
-  # Cases (14): TC-STATUS-001..007, TC-ISDEL-001..007.
+  # Cases (15): TC-STATUS-001..008, TC-ISDEL-001..007.
+  #   TC-STATUS-008 carries no AC id: it proves the typed `state.*` identity on the
+  #   same lane read `AC-F1-*` and `AC-F3-*` already range over (API-6, API-11,
+  #   DM-7, NFR-5), so it adds evidence without moving an owner.
   #
   # Run as read-only controls (NOT declared): tests/conformance/dispatch/
   #   dispatch-e2e.test.ts, dispatch-parity-lane-resume.test.ts,
@@ -802,16 +943,20 @@ phases:
   # Gate (expected signal: exit 0; the live/terminal/absent triple answers per
   #   Appendix C, `stale` only for active-and-dead, `probe=unknown` never stale,
   #   the 5 000 ms boundary selects dead at 5 001, zero foreign and zero daemon
-  #   lanes, exactly 1 lane read and 0 appends, the store write wrapper failing
-  #   only the lane read keeps its `state.*` identity):
+  #   lanes, exactly 1 lane read and 0 appends, the store read wrapper failing
+  #   only the lane read keeps its `state.*` identity with the NAMED code and row
+  #   projection — `state.store.torn` at exit 2, `state.permission.denied` at
+  #   exit 1, never `marker=absent`):
   #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
   #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-isdel.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-e2e.test.ts tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M1–M10 and M24–M28 are exercised at this boundary.)
+  #   (Mutation rows M1–M10, M24, M26, M27 and M28 are exercised at this boundary.
+  #   M25 is phase 5's: its v0.2 widening names TC-MSG-006.)
   # ---------------------------------------------------------------------------
   - id: 2
     title: "Lane-view fold, advisory owner probe, `dispatch status`, and `dispatch is-delivering`"
@@ -882,11 +1027,16 @@ phases:
   #     2 x 1 048 576 = 2 097 152 bytes); a third file's arrival removes the oldest
   #     best-effort AFTER the new file exists; a failed removal leaves the extra
   #     until the next append.
-  #   - File names derive from data the writer already holds (recorded time,
-  #     attempt identity, iteration ordinal, segment ordinal, zero-padded) so a
-  #     lexical sort equals creation order across a restart and across two
-  #     concurrent streams, with attempt identity breaking ties — no shared
-  #     counter, never mtime.
+  #   - File names derive from data the writer already holds — the stream's
+  #     recorded time, the attempt identity, the iteration ordinal, the
+  #     STREAM KIND (spawn | resume | deliver) or an explicit STREAM ORDINAL, and
+  #     the segment ordinal, zero-padded (spec F-7 v1.3, DEC-3, §25.4 Appendix D)
+  #     — so a lexical sort equals creation order across a restart and across two
+  #     concurrent streams, with the attempt identity breaking ties. The stream
+  #     kind/ordinal input is what separates two streams of the SAME attempt and
+  #     the SAME iteration recorded at the SAME instant, so they cannot collide on
+  #     one name. No shared counter, never mtime; the exact encoding is
+  #     implementation-decided but the input set is not.
   #   - ONE-SHOT SCOPE (PM ruling (b)/spec §8.5): a Claude Code lane opens no
   #     stream, so no directory and no sink. An absent sink keeps the delivered
   #     behaviour exactly.
@@ -945,6 +1095,16 @@ phases:
   #
   # Acceptance (4): AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4.
   # Cases (10): TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011.
+  #   TC-PERSIST-005/006 are split by boundary: THIS phase owns them and lands
+  #   their WRITE half — every file <= 1 048 576 bytes including its LF, the byte
+  #   totals, the concatenation equals the declared transformation, no byte
+  #   dropped or duplicated at the exactly-filling boundary, the value that fits
+  #   its bytes but not its LF starts the next file whole, and 0 in-place
+  #   modification — asserted in
+  #   `tests/behaviour/dispatch-operator-artifact-writer.test.ts`. Their READ-BACK
+  #   half (`dispatch log --tail …`) needs the reader and runs at the phase-4
+  #   boundary as that phase's cross-control. NO `dispatch log` step appears in
+  #   this phase's gate: the query does not exist yet.
   #   TC-PERSIST-005/006/007 also carry AC-F2-6, which phase 4 closes: the write
   #   half (cap by segmentation, continuation, retention set) is proven here, the
   #   read half (reconstruction, truncation fact) in phase 4. No AC changes owner.
@@ -954,8 +1114,10 @@ phases:
   #   `tests/behaviour/harness-opencode-resume-stream.test.ts`.
   #
   # Gate (expected signal: exit 0; every file <= 1 048 576 bytes including its
-  #   LF, the family <= 2 097 152 after a removal, a 1 200 000-byte value
-  #   reconstructed byte-identically, the file present at the stream's first
+  #   LF, the family <= 2 097 152 after a removal, a 1 200 000-byte value written
+  #   as a cap-sized segment plus a continued remainder with NO byte dropped or
+  #   duplicated (its byte-identical RECONSTRUCTION is phase 4's read-back
+  #   assertion, not this boundary's), the file present at the stream's first
   #   value, 0 files for a one-shot lane, 0600 on every file, a sink fault leaving
   #   the token/exit/records/evidence identical):
   #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
@@ -963,10 +1125,12 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-persist.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-artifact-writer.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-e2e.test.ts tests/conformance/dispatch/dispatch-parity-battery.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M42–M53 are exercised at this boundary.)
+  #   (Mutation rows M42–M45 and M47–M53 are exercised at this boundary. M46 is
+  #   phase 4's: its named failure is a read-back.)
   # ---------------------------------------------------------------------------
   - id: 3
     title: "Per-stream stdout artifact write path: binding, one-LF writer, segmentation, retention"
@@ -1084,12 +1248,18 @@ phases:
   #     allowances, the ports contract inventory.
   #
   # Acceptance (6): AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6.
-  # Cases (12): TC-LOG-001..011, TC-PERSIST-009.
+  # Cases (12 + 2 read-back halves): TC-LOG-001..011, TC-PERSIST-009, plus the
+  #   READ-BACK halves of TC-PERSIST-005/006 (their ids stay phase 3's).
   #   TC-LOG-003 proves the `--tail` clause of AC-F5-2, which PHASE 6 closes
   #   across all four forms; TC-LOG-003 is re-run there as a read-only control.
   #   TC-PERSIST-009 is owned here: the writer is phase 3's, but the assertion is
   #   the reader's tear rule ("a killed writer leaves at most one torn tail and
   #   the reader drops only that tail"), which only exists at this boundary.
+  #   The PERSIST-005/006 READ-BACK halves are the earliest boundary at which
+  #   `dispatch log --tail <n>` can run at all: byte-identical reconstruction,
+  #   `--tail 500`/`--tail 2` whole values, the retention `tail`-scope truncation
+  #   fact, 0 in-place modification. They are CROSS-CONTROLS over the family phase
+  #   3 produced; the write halves remain phase 3's evidence.
   #
   # Run as read-only controls (NOT declared): the phase-3 persist suites, the
   #   delivered dispatch parity battery, tests/behaviour/dispatch-additive-stability.test.ts.
@@ -1103,10 +1273,14 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-log.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-log-bounds.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-persist.test.ts tests/behaviour/dispatch-operator-artifact-writer.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M11–M22 are exercised at this boundary.)
+  #   (Mutation rows M11–M22 and M46 are exercised at this boundary. The phase-3
+  #   persist and artifact-writer suites run here as the write-half cross-controls
+  #   of TC-PERSIST-005/006, whose READ-BACK halves this boundary executes and
+  #   whose ids stay phase 3's.)
   # ---------------------------------------------------------------------------
   - id: 4
     title: "`dispatch log`: addressed-directory read, name-order stitch, torn-tail drop, bounds and closed absences"
@@ -1165,12 +1339,15 @@ phases:
   #   - NEVER a synthesized sentence: the query reads no attempt record, no
   #     derivation payload, and no envelope field (the delivered `lastMessage` is
   #     the classifier's bounded summary and must not appear).
-  #   - Composition order is FIXED: redact -> flatten -> bound -> mark. Registered
-  #     credential values are replaced FIRST (through the delivered chokepoint, so
-  #     a credential straddling the 512-character cut cannot survive as a prefix),
-  #     then flattened to one line, then bounded to 512 characters, then
-  #     `truncated` is set from the POST-redaction length. No general scrubbing is
-  #     claimed.
+  #   - Composition order is FIXED: redact -> flatten -> bound -> mark. The
+  #     REGISTERED CREDENTIAL SET — composition fact `F-secrets`, `runtime.secrets`
+  #     from the delivered `registerEdgeSecrets`, the same value `blockers` and
+  #     `steer` already receive — is injected into the message composition and
+  #     replaces registered values FIRST through the delivered `redact` chokepoint,
+  #     so a credential straddling the 512-character cut cannot survive as a
+  #     prefix; then the text is flattened to one line, then bounded to 512
+  #     characters, then `truncated` is set from the POST-redaction length. No
+  #     general scrubbing is claimed, and the set is never persisted or logged.
   #   - `final` is true exactly for a TERMINAL lane; an active lane answers the
   #     latest assistant text observed so far with `final=false` and may be
   #     partial (a live transcript can be mid-write); it is never presented as a
@@ -1199,8 +1376,12 @@ phases:
   #                                                  delivered opener and statement
   #                                                  recorder, bounded)
   #   packages/cli/src/commands/dispatch.ts, output/dispatch-text.ts (the
-  #     `available/final/reason/last_message` human key set), edge.ts,
-  #     production.ts
+  #     `available/final/reason/last_message` human key set)
+  #   packages/cli/src/edge.ts, packages/cli/src/production.ts (carry the
+  #     composition fact `F-secrets`: `runtime.secrets` from
+  #     `registerEdgeSecrets(environment, secretKeys)` next to the command's
+  #     existing read surfaces, injected into the message composition exactly as
+  #     `blockers`/`steer` receive it — a runtime fact, no configuration key)
   #   tests/fixtures/dispatch/operator/transcript.ts (NEW: the seam double —
   #                                                  final, partial/active,
   #                                                  session-unknown, no-message,
@@ -1244,10 +1425,13 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-message.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-message-composition.test.ts tests/behaviour/dispatch-operator-transcript-opencode.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-claude-session.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M29–M36 are exercised at this boundary.)
+  #   (Mutation rows M29–M36 and M25 are exercised at this boundary. M25's lane-read
+  #   failure is asserted here as TC-MSG-006 requires, beside the phase-2
+  #   TC-STATUS-008 / TC-ISDEL-006 controls.)
   # ---------------------------------------------------------------------------
   - id: 5
     title: "`dispatch last-message`: capability-gated transcript read seam, ordered ladder, and message composition"
@@ -1394,7 +1578,11 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M37, M38, M40, M41, M64, M65 are exercised at this boundary.)
+  #   (Mutation rows M37, M38, M40, M41, M64, M65 are exercised at this boundary.
+  #   This phase creates no package module and is expected to add no exported
+  #   contract name, so the pinned-surface trio is not part of this gate; if it
+  #   does add an exported name, the trio from GATE ENVIRONMENT runs in the SAME
+  #   commit and `tests/fixtures/ports/v1-contract-inventory.json` moves with it.)
   # ---------------------------------------------------------------------------
   - id: 6
     title: "Family grammar, `--json` discriminators, exit projections, the four help entries, and the reference page"
@@ -1520,6 +1708,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-log-bounds.test.ts tests/behaviour/dispatch-operator-artifact-writer.test.ts tests/behaviour/dispatch-operator-message-composition.test.ts tests/behaviour/dispatch-operator-transcript-opencode.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/behaviour/dispatch-privacy.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/operator-contract-invariance.test.ts tests/checks/operator-seam-identity.test.ts tests/checks/operator-proof-boundary.test.ts tests/checks/dispatch-operator-test-isolation.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts tests/structure/port-contract-inventory.test.ts tests/checks/no-shell-dispatch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
