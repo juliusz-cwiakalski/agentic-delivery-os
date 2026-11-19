@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-17
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types, battery-written only and refused by name on the operator path); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder` and `until` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297"]
-  related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297", "GH-347"]
+  related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030", "TDR-0045"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
     - "packages/core/src/contracts/queue-ready.ts"
@@ -258,15 +258,20 @@ than discovering work by hand.
   `truncated` on any drop; `lanes show <ref>` selects one lane or refuses
   `queue.entry.unobserved` at exit 1.
 - **Dispatch consumption.** The typed dispatch engine claims and releases the
-  same repository-exclusive lease for one-shot execution. Before the claim it
-  applies the dispatch family's per-ref admission predicate, so a live lease that
-  already records the requested ref is a clean pre-session refusal with
-  `queue.single-flight` and the holder at the envelope root, and a live lease on
-  another ref refuses `queue.lease-conflict`; neither appends a lease, attempt,
-  lane, or queue record, starts a session, nor publishes an event. After a
-  completed or aborted run the lease is released through the same path. A
-  one-shot `dispatch <ref>` reads and writes scheduling state with no daemon,
-  control socket, or background process, so dispatch keeps working daemon-down.
+  same repository-exclusive lease for one-shot execution. The claim itself decides
+  the dispatch family's per-ref verdict from the live lease it observes atomically
+  with its append, so a live lease that already records the requested ref is a
+  clean pre-session refusal with `queue.single-flight` and the holder at the
+  envelope root, and a live lease on another ref refuses `queue.lease-conflict`;
+  neither appends a lease, attempt, lane, or queue record, starts a session, nor
+  publishes an event. The dispatch caller passes the no-renewal flag, so a live
+  same-ref lease is a refusal under any holder — including its own — and never a
+  renewal. Fence contention is waited out through the injected delay within the
+  lease TTL and then re-decided; a fence that never frees returns its typed
+  `state.*` row. After a completed or aborted run the lease is released through the
+  same path. A one-shot `dispatch <ref>` reads and writes scheduling state with no
+  daemon, control socket, or background process, so dispatch keeps working
+  daemon-down.
 - **Additive vocabulary.** Six record kinds (`queue.entry`, `queue.dependency`,
   `queue.lease`, `queue.park`, `queue.incident`, `queue.removal`) plus the
   derived
@@ -503,16 +508,21 @@ intents, and every requester/state pair has exactly one outcome:
 The dispatch family claims with the fixed holder `dispatch` and never renews
 mid-flight, so a live lease that records the requested ref is by definition a
 dispatch that is already running; the second dispatch is refused regardless of
-the live holder identity. `queue claim` is the only path where `renewed` is
-reachable, and only for the same ref under the caller's own holder. The direct
+the live holder identity. The verdict is decided inside the claim, atomically with
+the claim's own append, so a live lease cannot slip between a check and the
+append; store-fence contention is a transient signal the dispatch claim waits out
+through the injected delay within the queue lease TTL before re-deciding, and a
+fence that never frees returns its typed `state.*` row. `queue claim` is the only
+path where `renewed` is reachable, and only for the same ref under the caller's
+own holder; its renewal, repository exclusivity, and TTL are unchanged. The direct
 `claimQueueLease` seam keeps its delivered same-holder/same-ref renewal, so the
 delivered lease controls hold with no assertion change.
 
 A lease whose heartbeat age has reached its TTL is not active: every path shares
 the same liveness predicate, so the delivered stale takeover applies instead of a
 refusal and a crashed session blocks a ref for no longer than the TTL. A refusal
-mutates nothing — no lease, attempt, lane, or queue record and no event — because
-it happens before the fence and before any append.
+mutates nothing — no lease, attempt, lane, or queue record and no event —
+because the refusing claim appends nothing and starts no session.
 
 The refusal names the holder at the failure-envelope root: an additive optional,
 command-declared `detail` object whose only member is `holder` — the live lease's

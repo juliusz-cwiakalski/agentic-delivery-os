@@ -690,3 +690,41 @@ notes:
       that follows it."
     type: info
     date: "2026-11-19"
+  - text: "System documentation reconciled (lifecycle phase 7): fifteen current-truth
+      pages updated. feature-dispatch-engine: the durable dispatch.lane record,
+      recorded-attempt resume including pr-open, the atomic in-claim admission
+      with its declared verdicts and bounded fence wait, the 5-attempt tracker
+      ladder, terminate, the in-process stall ladder and loop, spawn
+      identity/title/lifecycle prompt, the one total derivation order
+      (tracker-done merged first, ledger no-work arm retired, artifact partial,
+      subsumed exit-0-no-artifact arm), arm-aware corroboration with the
+      token-level evidence-window gate, the expanded per-ref table plus the
+      dispatch-vs-queue-claim renewal difference, and the published 8-proven/
+      6-not-proven parity boundary; the stale no-kill sentence is gone.
+      feature-session-lifecycle-economics: both no-kill statements replaced by the
+      terminate contract and the no-second-session rule, the loop's
+      economics.restart, and the caller-scoped operator resume.
+      feature-harness-adapters: terminate in the operation set with its capability
+      declaration and the reaped:false disclosure, the title fact, and the
+      pm/title/lifecycle-prompt spawn description. feature-resident-daemon:
+      dispatch.lane distinct, daemon never adopts. feature-delivery-lifecycle: the
+      typed lane is parity-complete and the shell remains the documented fallback.
+      feature-queue-ready and m1/commands/queue.md: in-claim dispatch verdict,
+      bounded fence wait, no fallback.internal, sibling unchanged.
+      feature-scheduling-engine: dispatch no-renewal with unchanged
+      TTL/exclusivity. feature-config-layer and m1/commands/config.md: no key
+      added, four consumed defaults. feature-result-contract: vocabulary and error
+      table unchanged, the lane record is not an identity. m1/commands/dispatch.md:
+      --resume-prompt over a recorded attempt, no new flag, four-key text
+      contract. glossary and 00-index: new terms and re-indexing.
+      test-spec-dispatch-engine: the parity battery and no-shell level, suite list
+      and coverage map. No spec-coverage gap and no ticket created."
+    type: info
+    date: "2026-11-19"
+  - text: "Doc-sync gates: doc-conformance + dispatch-doc-conformance +
+      reference-page-parity 28 pass; doc-distribution no drift (96 in-scope docs);
+      the stale-phrase scan returns ZERO hits; git diff --check clean. The
+      doc-reading guards and the structure/checks suites were re-run green as a
+      safety net. No residual documentation gap."
+    type: info
+    date: "2026-11-19"

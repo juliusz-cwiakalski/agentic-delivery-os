@@ -3,28 +3,42 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution with the pinned supported-version window and declared integration mode evaluated once before the lease, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the port-boundary caller-supplied agent identity and single-seat binding, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, the dispatch family's per-ref single-flight admission predicate that refuses any live same-ref lease with `queue.single-flight` and names the holder at the envelope root, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution with the pinned supported-version window and declared integration mode evaluated once before the lease, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the dispatch-owned durable per-ref `dispatch.lane` record appended at each session acquisition and at the terminal classification with latest-wins reads and recorded-attempt resume (a recorded `pr-open` attempt included), the dispatch family's atomic per-ref admission decided inside the claim with the declared same-ref/other-ref verdicts and a bounded fence wait, spawn or resume through the harness session port with the caller agent identity `pm`, the single-seat binding, the deterministic `ticket-<REF>` title, and the ref-parameterized delivery-lifecycle prompt, handle acquisition before completion, the five-attempt tracker retry ladder, progress-based liveness with a bounded in-process restart loop that terminates a corroborated stall through the capability-gated `terminate` operation before any restart, the one total derivation ladder shared with the daemon path including the retired ledger no-work arm, the subsumed exit-0-no-artifact failure arm, the tracker-done `merged` arm, the artifact `partial` arm, and arm-aware corroboration, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, the published parity proof boundary, the CLI-independent bash fallback authority read, and the offline parity battery that proves all eleven classes with no shell dependency."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293", "GH-335"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293", "GH-335", "GH-347"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0044", "TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048", "TDR-0049"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
+    - "packages/core/src/contracts/harness.ts"
+    - "packages/core/src/contracts/pm-notes.ts"
     - "packages/core/src/contracts/delivery-result.ts"
     - "packages/core/src/contracts/error-table.ts"
     - "packages/core/src/contracts/queue.ts"
     - "packages/core/src/contracts/result.ts"
     - "packages/core/src/app/dispatch.ts"
+    - "packages/core/src/app/dispatch-lane.ts"
+    - "packages/core/src/app/dispatch-ledger.ts"
     - "packages/core/src/app/dispatch-gate.ts"
+    - "packages/core/src/app/queue.ts"
     - "packages/core/src/app/daemon-dispatch-result.ts"
+    - "packages/core/src/domain/dispatch-result.ts"
+    - "packages/core/src/domain/dispatch-liveness.ts"
+    - "packages/core/src/domain/dispatch-prompt.ts"
+    - "packages/core/src/domain/dispatch-resume.ts"
+    - "packages/core/src/domain/dispatch-tracker.ts"
     - "packages/core/src/domain/lane-launch-plan.ts"
+    - "packages/adapters/src/harness/opencode.ts"
+    - "packages/adapters/src/harness/claude.ts"
     - "packages/adapters/src/file/dispatch-identity.ts"
+    - "packages/adapters/src/file/pm-notes-parser.ts"
     - "packages/adapters/src/repo/index.ts"
     - "packages/cli/src/commands/dispatch.ts"
     - "packages/cli/src/output/dispatch-text.ts"
     - "packages/cli/src/production.ts"
+    - "scripts/checks/no-shell-dispatch.ts"
     - "scripts/lib/dispatch-authority.sh"
 ---
 
@@ -32,19 +46,21 @@ links:
 
 ## Overview
 
-The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, validates its input, runs the admission preflight, applies the per-ref single-flight admission predicate, claims the repository's queue lease, spawns or resumes the lifecycle session through the delivered harness session port, watches it with progress-based liveness, classifies the terminal outcome through the shared harness classifier, and derives the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Every dispatch that reaches classification appends one durable attempt record, so the engine accrues dual-run evidence beside the bash stack.
+The dispatch engine is the typed per-ticket delivery path. One invocation resolves a harness, validates its input, runs the admission preflight, claims the repository's queue lease atomically with the dispatch family's per-ref verdict, spawns or resumes the lifecycle session through the delivered harness session port, appends one active `dispatch.lane` record at each session acquisition, watches the session with progress-based liveness, terminates a corroborated stall through the capability-gated harness `terminate` operation, and runs a bounded in-process restart loop before classifying the terminal outcome through the shared harness classifier and deriving the final delivery token from artifact, ledger, tracker, and CI truth rather than from an exit code. Exactly one durable attempt record is appended at the terminal classification, so the engine accrues dual-run evidence beside the bash stack.
 
 A repository is either `dual-run` (bash authoritative, dispatch evidence only) or `authoritative` (dispatch primary, bash fallback). Authority changes only through a recorded, reversible handover that evaluates the four-condition evidence gate. The derived per-repository authority view is a plain file the bash entry points read without invoking the typed CLI, so the fallback keeps working when the typed stack is unavailable.
 
-`dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, and attempt-record ledger serve one-shot dispatches and daemon-driven lanes.
+`dispatch` is part of the prompt-required CLI composition and has root help, command help, and reference-page coverage. The same harness session port, classifier, truth derivation, attempt-record ledger, and lane resolver serve one-shot dispatches and daemon-driven lanes, and the dispatch flow invokes no shell and no script path.
 
-The shipped production composition wires the one-shot run path with its admission preflight, the attempt read side, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the resume lane and restart-budget facts, and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
+The typed dispatch lane is parity-complete for the eleven result classes and the shell's supervision semantics: the durable lane, the atomic admission verdict, recorded-attempt resume, the tracker retry ladder, the stall termination, the in-process bounded restart loop, and the resolved spawn identity, title, and lifecycle prompt. It has no shell dependency, and the shell entry points remain the documented fallback until a separate handover.
+
+The shipped production composition wires the one-shot run path with its admission preflight, the durable lane resolver and writer, the atomic dispatch claim, the injected delay, the restart ledger append, the spawn identity and title, the lifecycle prompt, the attempt read side, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
 
 ## Command grammar
 
 | Invocation | Purpose |
 |---|---|
-| `dispatch <ref> [--harness <name>] [--resume-prompt <text>]` | Run one dispatch, or resume the existing lane with operator guidance. |
+| `dispatch <ref> [--harness <name>] [--resume-prompt <text>]` | Run one dispatch — one or more session iterations in a bounded loop — or resume the recorded lane with operator guidance. |
 | `dispatch attempts [--ref <ref>] [--limit <n>]` | Read one work item's recorded attempts, newest first, as a bounded digest or the `attempts.v1` machine envelope. |
 | `dispatch dual-run summary --repo <repo>` | Report the evidence window, class coverage, divergences, corroboration, and the four-condition verdict. |
 | `dispatch dual-run resolve <divergence-id> --note <text>` | Append a bounded resolution to an open divergence. |
@@ -52,19 +68,54 @@ The shipped production composition wires the one-shot run path with its admissio
 
 A work-item reference matches `[A-Z]+-\d+`. The harness resolves from `--harness` when supplied and from the typed harness configuration otherwise; an unknown harness name is an input refusal. Grammar runs before any runtime call, and the handler returns data or a classified failure rather than choosing an exit digit.
 
-Refusals before any session attempt exists are: an unknown harness, rejected input, a provider profile nomination refusal (the delivery cannot nominate a profile), an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), a pre-session harness admission refusal (an out-of-window or indeterminate version, an unavailable integration mode, or an unreadable harness resolution), an active owner hold, a conflicting lease on another ref, a live lease that already records the requested ref (the per-ref single-flight refusal), and the port-boundary profile refusals (an unrepresentable seat model, a named agent the profile assigns no seat, and a present empty or invalid agent identity). Each emits the classified top-level error envelope with its mapped identity and exit and appends no attempt record; the nomination refusal and the admission preflight are the two whose exit can be `2` (the nomination when every candidate is ineligible, `provider.profile.unavailable`), and the per-ref refusal names the live holder in the envelope-root `detail`. The version and mode refusals run before the lease claim; the port-boundary profile refusals run at spawn or resume after the lease is claimed and released, and still append no attempt record. Every other failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
+Refusals before any session attempt exists are: an unknown harness, rejected input, a provider profile nomination refusal (the delivery cannot nominate a profile), an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), a pre-session harness admission refusal (an out-of-window or indeterminate version, an unavailable integration mode, or an unreadable harness resolution), an active owner hold, a conflicting lease on another ref, a live lease that already records the requested ref (the atomic per-ref admission refusal), and the port-boundary profile refusals (an unrepresentable seat model, a named agent the profile assigns no seat, and a present empty or invalid agent identity). Each emits the classified top-level error envelope with its mapped identity and exit and appends no lease, attempt, lane, or queue record; the nomination refusal and the admission preflight are the two whose exit can be `2` (the nomination when every candidate is ineligible, `provider.profile.unavailable`), and the per-ref refusal names the live holder in the envelope-root `detail`. The version and mode refusals run before the lease claim; the port-boundary profile refusals run at spawn or resume after the lease is claimed and released, and still append no attempt record. Every other failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
 
 ## One-shot dispatch
 
-1. **Resolve the harness.** The flag wins over configuration; the selected adapter supplies spawn, resume, observe, collect, and liveness capabilities and its declared gaps. For the opencode delivery harness the resolution also runs the single bounded version probe and evaluates the pinned window and the declared integration mode before the lease claim; an outside or indeterminate version refuses `harness.version.unsupported` or `harness.version.unknown`, and a requested non-default mode refuses `harness.mode.unavailable`.
-2. **Nominate the provider profile.** Immediately after input validation and before the credential preflight, the owner-hold gate, and the lease/single-flight predicates, the nomination resolves through the delivered profile seam and records `providerProfile` on the attempt record and on the daemon lane record ([Provider Peak Pausing](feature-peak-pausing.md)). A delivery that cannot nominate is refused pre-session with the resolve identity for its shape (`provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied` at exit `1`; `provider.profile.unavailable` at exit `2` with the eligibility list) — no lease, spawn, resume, attempt, lane, or queue record, and no event. A composed daemon supervision claim nominates through the same predicate before the claim.
+1. **Resolve the harness.** The flag wins over configuration; the selected adapter supplies spawn, resume, observe, collect, liveness, its declared `terminate` capability, and its declared gaps. For the opencode delivery harness the resolution also runs the single bounded version probe and evaluates the pinned window and the declared integration mode before the lease claim; an outside or indeterminate version refuses `harness.version.unsupported` or `harness.version.unknown`, and a requested non-default mode refuses `harness.mode.unavailable`.
+2. **Nominate the provider profile.** Immediately after input validation and before the credential preflight, the owner-hold gate, and the lease claim, the nomination resolves through the delivered profile seam and records `providerProfile` on the attempt record and on the daemon lane record ([Provider Peak Pausing](feature-peak-pausing.md)). A delivery that cannot nominate is refused pre-session with the resolve identity for its shape (`provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied` at exit `1`; `provider.profile.unavailable` at exit `2` with the eligibility list) — no lease, spawn, resume, attempt, lane, or queue record, and no event. A composed daemon supervision claim nominates through the same predicate before the claim.
 3. **Run the admission preflight.** After the harness resolves, input validates, and the nomination records, the preflight resolves the declared truth-read credential and performs one bounded work-item read. A refusal here is pre-session: no lease, spawn, resume, or record.
-4. **Admit and claim the lease.** Before any claim, the dispatch family's per-ref admission predicate reads live lease truth for the requested ref. A live lease that records the requested ref — whichever holder — is refused with `queue.single-flight` at exit `1` and the holder at the envelope root; a live lease on another ref refuses `queue.lease-conflict`; a stale lease is taken over with its incident evidence; no live lease claims. An active owner hold refuses `queue.precondition.unmet` with reason `owner-hold` before the claim. Every refusal here is pre-session and opens no lease, spawn, resume, attempt, lane, or queue record and publishes no event. Otherwise the scheduling engine claims the repository-exclusive lease for the reference.
-5. **Spawn or resume.** A fresh run spawns through the harness session port. A spawn or resume whose caller supplies an agent identity carries exactly one resolved single-seat binding (the agent identity, the seat, and that seat's resolved model), which the opencode adapter expresses as one `--agent` and one `--model`; a role-less run carries neither member, binds nothing, and is disclosed as an unresolved seat. An opencode spawn returns its handle as soon as the first identified stream line arrives, before the session completes, and a resume acquires the same way while preserving the existing session identity; a Claude Code spawn returns its handle when the bounded one-shot invocation completes. `--resume-prompt` resolves the existing lane, records the resume mode (`attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection), and continues from the phase-ledger position. Completed phases are skipped idempotently. Resumes never re-nominate: a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable.
-6. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
-7. **Admit restarts and resumes.** Restart admission delegates to the delivered restart-budget gate with the bound from `lane.restart-budget` and the persisted restart count. At or above the bound, an attempt whose session has not completed refuses `dispatch.restart-budget-exceeded` with result token `max-restarts`, outcome `failed`, exit `1`, one attempt record, the delivered terminal exhaustion record, and a typed escalation; a completed harness session keeps its own classification and is never re-keyed to a restart refusal by an already-reached bound. Resume economics delegates to the delivered admission: attach-and-continue consumes no restart ordinal, an uneconomical prefill re-pay refuses `dispatch.resume-uneconomical` with token `failed`, outcome `failed`, exit `1`, and one attempt record, and unreadable token or cost facts refuse rather than admit. A stall that is still current when evidence collection resolves is routed through the same restart-admission gate: at or above the bound the attempt is the restart-budget refusal with no second spawn; below the bound the stall is recorded and left to lane supervision, because the delivered session port exposes no kill operation and the command never leaks a silent second session.
-8. **Classify and derive truth.** The shared classifier yields a harness outcome and token; truth derivation then decides the final token from branch commits, PR state and URL, ledger progress, tracker state, and CI. A success claim is never accepted on an exit code alone.
-9. **Record and render.** One attempt record is appended under the state fence, and the command renders either the four-key bash-continuity text (which gains one bounded `detail:` prose line in verbose human mode) or the machine envelope.
+4. **Admit and claim the lease atomically.** The dispatch claim decides the per-ref verdict inside the claim, from the live lease the claim observes atomically with its append: a live lease that records the requested ref — whichever holder — refuses `queue.single-flight` at exit `1` with the holder at the envelope root; a live lease on another ref refuses `queue.lease-conflict`; a stale lease is taken over with its incident evidence; no live lease claims. Store-fence contention (`state.lock.busy`) is a transient signal: the claim waits it out through the injected delay with reason `claim-fence`, in bounded steps whose cumulative wait never exceeds the queue lease TTL, and re-decides from the observed lease. A fence that never frees returns its typed `state.*` row, never a queue relabelling and never an internal containment identity. The dispatch claim uses the fixed holder `dispatch` and never renews, so a live same-ref lease under any holder is a refusal rather than a renewal. An active owner hold refuses `queue.precondition.unmet` with reason `owner-hold` before the fence. Every refusal here is pre-session and opens no lease, spawn, resume, attempt, lane, or queue record and publishes no event. Otherwise the scheduling engine claims the repository-exclusive lease for the reference.
+5. **Spawn or resume.** A fresh spawn receives the caller agent identity `pm`, the resolved single-seat binding (the agent identity, the seat, and that seat's resolved model), the deterministic title `ticket-<REF>`, and the delivery-lifecycle prompt parameterized by the work-item reference and the resolved base branch. The adapter renders exactly one `--agent pm`, one `--model <seat model>`, and one `--title ticket-<REF>` for a fresh spawn, and no title for a resume. A role-less composition supplies neither the agent nor the binding, binds nothing, renders no title, records no binding, and is disclosed as an unresolved seat. The prompt is built, never constant: two references produce different prompts, and every prompt carries the five stable lifecycle sections (`state-detection`, `resume-sync`, `actions-by-state`, `eleven-phase-lifecycle`, `merge-authority`) with the reference and base branch interpolated. An opencode spawn returns its handle as soon as the first identified stream line arrives, before the session completes; a resume acquires the same way while preserving the existing session identity; a Claude Code spawn returns its handle when the bounded one-shot invocation completes.
+6. **Resolve a recorded attempt on `--resume-prompt`.** The lane resolver returns the newest recorded lane for the ref that carries a session identity — dispatch-owned (`dispatch.lanes:<ref>`) in any state, or a daemon lane in `delivering`, `detached`, or `preempted` — and the newest record wins, with the dispatch-owned record winning a timestamp tie. A recorded `pr-open` attempt is therefore resumable. A resolved lane is resumed, never replaced by a fresh spawn, and the recorded resume mode is `attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection; completed phases are skipped idempotently. The operator resume is admitted regardless of the persisted restart bound, consumes no restart ordinal, and never re-nominates: a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable. An unknown session is a classified failure, never a silent fresh spawn. With no recorded lane, the operator text is an explicit fresh spawn, never a fabricated resume.
+7. **Append the durable lane record at acquisition.** Each successful acquisition — the first iteration and every restarted iteration — appends one `dispatch.lane` record with `state: "active"`, the session identity, the normalized repository, the attempt identity, the harness kind, the advisory owner facts (`processId` and `startedAt`), the 1-based iteration ordinal, the restarts consumed so far, and the recorded time. Records are append-only and the latest record for the ref is the lane; a differing record for the same ref is a new append, never a rewrite. No prompt, transcript, diff, credential, or provider payload is carried. A failed lane append leaves the token unchanged and is disclosed as a bounded `lane:append-failed` evidence reference.
+8. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
+9. **Terminate a stall, then decide the next iteration.** A stall that is still current when collection resolves, or a harness-reported timeout, is restart-eligible; a clean session exit is always terminal. Before any restart decision the stalled session is terminated when the adapter declares the capability: TERM reaches the session's process tree first, KILL only after the declared grace, an escaped runtime is reaped only by exact identity (this lane's session id or its `ticket-<REF>` title), and the operation is idempotent — an already-exited or unknown session is success. The grace is the declared `coordinator.kill-grace` (default 20 000 ms), reused rather than duplicated, and the wait is the injected delay with reason `terminate-grace`. An adapter that declares no terminate capability is never asked, produces `harness.capability.gap` by name if it is, and never causes a second session. The stall ladder then runs in the order below.
+10. **Classify and derive truth.** The shared classifier yields a harness outcome and token; the one total derivation decides the final token from tracker state, PR state and URL, branch commits, pm-notes completeness, ledger progress, and CI. A success claim is never accepted on an exit code alone.
+11. **Record and render.** One attempt record is appended under the state fence at the terminal classification, the terminal `dispatch.lane` record carrying `state: "terminal"`, `lastToken`, and `lastOutcome` is appended when the dispatch held a session, and the command renders either the four-key bash-continuity text (which gains one bounded `detail:` prose line in verbose human mode) or the machine envelope.
+
+### Stall ladder
+
+The stall decision is a total, ordered ladder and it is not the completed-session derivation ladder (TDR-0047):
+
+1. **Terminal pre-restart verdict set.** Exactly three truths short-circuit a stall without a restart: `merged` from a tracker-done work item, `blocked` from a blocking tracker state, and `pr-open` from an open pull-request artifact. A decisive artifact outside the set — `finished`, `partial`, `noop-lane-nothing-to-do` — does not stop a stall.
+2. **Undecidable truth.** An unreadable tracker and an unreadable artifact resolve `state-unverified` at exit `2`, consume no ordinal, and start no second session.
+3. **Below the bound.** One ordinal is consumed, exactly one `economics.restart` record is appended with reason `watchdog.liveness-stalled`, and the recorded session is resumed for the next iteration. A fresh spawn happens only when no session was ever recorded.
+4. **At or above the bound.** The attempt is `max-restarts` with the delivered terminal exhaustion record, the stall and termination evidence, and no second spawn.
+
+An admitted iteration at or above a persisted count still runs once; only a stall in it produces `max-restarts`, and a clean exit keeps its own classification. A composition with no positive bound composes no restart policy, so the loop never restarts automatically: it classifies the stall `max-restarts` instead of spinning on a permanently stalled session.
+
+### Spawn identity, title, and lifecycle prompt
+
+The spawn facts are supplied by the production composition as data, and no new
+CLI flag, argument, or output key exposes them (TDR-0049):
+
+- **Agent identity.** The caller agent identity is `pm`, supplied through the
+  delivered optional agent member; the single-seat binding is the delivered pure
+  resolver's output for that identity. A role-less composition supplies neither.
+- **Title.** A fresh spawn carries the deterministic `ticket-<REF>` title — the
+  `ticket-` prefix plus the work-item reference grammar, one short single token.
+  The title is deterministic across runs and references, and a resume carries
+  none.
+- **Prompt.** The fresh prompt is the delivery-lifecycle prompt built for the
+  reference and the resolved base branch. It is a built document, never a
+  constant sentence, and it carries the five stable sections named above. A resume
+  with operator text uses that text verbatim; an automatic restart re-enters with
+  the lifecycle prompt.
+
+An unknown or malformed reference yields no title at all rather than a malformed
+one: the prefix and the work-item reference grammar together produce the title
+only when the result is a well-formed single token within its declared bound.
 
 ## Admission preflight
 
@@ -85,8 +136,9 @@ The 404 summary states that the provider reported the work item absent for this 
 
 ## Per-ref single-flight admission
 
-The dispatch family's admission predicate is the per-ref guard over live lease
-truth, evaluated before `claimLease`, spawn, resume, and any record. It is one
+The dispatch family's per-ref verdict is decided **inside** the claim, from live
+lease truth observed atomically with the claim's own append, so a live same-ref
+lease can never slip past a separate pre-claim read (TDR-0045). It is one
 predicate shared by `dispatch <ref>` and a composed daemon supervision claim,
 because both claim with a fixed holder and never renew mid-flight:
 
@@ -94,15 +146,26 @@ because both claim with a fixed holder and never renew mid-flight:
 |---|---|---|
 | records the requested ref, any holder | `queue.single-flight`, exit `1`, envelope-root `detail.holder` | none |
 | records another ref | `queue.lease-conflict`, exit `1` | none |
-| no live lease | claimed | the dispatch proceeds |
-| stale lease (heartbeat age at or beyond `queue.lease-ttl`) | taken over with incident evidence | the dispatch proceeds |
+| no live lease | claimed; one `acquired` record | the dispatch proceeds |
+| stale lease (heartbeat age at or beyond `queue.lease-ttl`) | taken over with incident evidence; one `taken-over` record | the dispatch proceeds |
 
 A same-ref lease is by definition a dispatch that is already running, so the
 second dispatch is refused even when the live holder identity matches the
-requester's; the dispatch path never renews a lease whose recorded ref would have
-to change. A lease at or over its TTL is not active: the delivered stale-takeover
-path applies on every path, so a crashed session blocks a ref for no longer than
-the TTL. A refusal appends no lease, attempt, lane, or queue record, starts no
+requester's. The dispatch claim never renews a lease whose recorded ref would have
+to change, and it never renews its own live same-ref lease: it passes the
+no-renewal flag, so any live same-ref lease is a refusal. A lease at or over its
+TTL is not active: the delivered stale-takeover path applies on every path, so a
+crashed session blocks a ref for no longer than the TTL.
+
+Store-fence contention is transient, not an outcome. When the claim observes the
+typed `state.lock.busy` row it waits through the injected delay with reason
+`claim-fence` — the only time source is that injected fact — in bounded steps
+whose cumulative wait is never greater than the queue lease TTL, and re-decides
+from the lease it then observes. A fence that never frees returns its typed
+`state.*` row at that row's projection, never a `queue` relabelling and never an
+internal containment identity. The dispatch claim's outcome is always one of the
+declared verdicts; `fallback.internal` is never surfaced for an admission
+outcome. A refusal appends no lease, attempt, lane, or queue record, starts no
 session, and publishes no event.
 
 The refusal names the holder at the failure-envelope root: an additive optional,
@@ -115,24 +178,102 @@ row's projection class (`user-validation` → `1`), and the row is retryable onc
 the holding lane ends.
 
 The sibling `queue claim` path keeps its holder-aware outcomes, because it claims
-with the caller's own holder: a live same-ref lease under the caller's holder
-returns `renewed` and starts no session, another holder's same-ref lease refuses
-`queue.single-flight`, and a lease on any other ref refuses the delivered
-`queue.lease-conflict`. The scheduling engine's per-pass single-flight (one action
-per repository per pass) and its `repo-free` readiness condition are unchanged and
-are different controls.
+with the caller's own holder and is the only path where renewal exists: a live
+same-ref lease under the caller's holder returns `renewed` and starts no session,
+another holder's same-ref lease refuses `queue.single-flight`, and a lease on any
+other ref refuses the delivered `queue.lease-conflict`. Its own-holder renewal,
+repository exclusivity, and its TTL are unchanged. The scheduling engine's
+per-pass single-flight (one action per repository per pass) and its `repo-free`
+readiness condition are unchanged and are different controls.
+
+## Durable per-ref lane record
+
+`dispatch.lane` (`delivery.dispatch.lane.v1`, key `dispatch.lanes:<ref>`) is the
+dispatch-owned durable lane record and the resumable artifact (TDR-0044). It
+mirrors the daemon lane's shape without sharing its kind, its states, or its
+ownership:
+
+| Field | Meaning |
+|---|---|
+| `schema` | `delivery.dispatch.lane.v1`. |
+| `ref`, `repository` | The work-item reference and the normalized `host/owner/name` repository identity. |
+| `attemptId`, `sessionId`, `harnessKind` | The attempt the lane belongs to, the held session identity, and the harness the session runs on. |
+| `owner` | The advisory `{ processId, startedAt }` facts of the writing composition; never an exclusion mechanism. |
+| `iterationOrdinal` | The 1-based iteration within this dispatch; `1` for the first acquisition. |
+| `restartsConsumed` | The restart ordinals this dispatch consumed before this record. |
+| `state` | `active` at each session acquisition, `terminal` at the final classification. |
+| `lastToken`, `lastOutcome` | Present only on a terminal record. |
+| `recordedAt` | The recorded instant. |
+
+Exactly one active record is appended at each session acquisition — the first
+iteration and every restarted iteration — and one terminal record at the
+dispatch's final classification. A restarted stalled iteration appends no attempt
+record and no terminal lane record. A record with no held session is never
+appended, and a pre-session refusal appends none. The composition supplies the
+advisory owner facts; a composition that supplies none writes no lane record, so
+the shipped production composition always supplies its own process id and start
+instant. The kind is append-only and
+latest-wins per ref: a differing record for the same ref is a new append, never a
+rewrite, and only an identical replay is a noop. The record carries no prompt,
+transcript, diff, credential, or provider payload, and at most one owner object
+and one session identity.
+
+The record is dispatch-owned. The daemon family never reads or writes
+`dispatch.lane`; `daemon.lane`, its state vocabulary, and daemon reconciliation
+ownership are unchanged, and daemon reconciliation never adopts or rewrites a
+dispatch lane ([Resident Dispatch Daemon](feature-resident-daemon.md)).
+
+Resume resolves the newest recorded lane for the ref that carries a session
+identity. A dispatch lane is a candidate in any state, so a recorded `pr-open`
+attempt is resumable; a daemon lane is a candidate only in `delivering`,
+`detached`, or `preempted`. An unreadable lane source contributes no candidate
+rather than fabricating a session from a partial read, so a ref with no readable
+candidate resolves the classified "no lane" outcome, and a pre-change state with
+no `dispatch.lane` records simply resolves "no lane".
 
 ## Result derivation and exit projection
 
-Result derivation is artifact-first:
+Derivation is one total order — the same derivation, with no second mode, is
+called by the one-shot path and by the daemon path (TDR-0048). First match wins:
 
-- An exit-0 session with no branch commit, no PR, and no ledger progress is `failed`; the missing artifact is named.
-- An open PR is `pr-open`; an open PR whose URL cannot be resolved is the result token `pr-open-unverified`. The independent tracker comparison token for either is `pr-open`, and URL resolution is the comparison's `urlResolved` attribute (`false` for `pr-open-unverified`). URL resolution never changes the compared token and never creates a divergence.
-- An independently observed merged PR or branch is `merged` as already-merged detection only.
-- A tracker state that blocks delivery is `blocked`.
-- A lane with nothing left to do is `noop-lane-nothing-to-do`, derived outside the shared classifier.
-- A harness spawn refusal before a session exists is a recorded attempt with token `noop-lane-permission` and outcome `refused`; from the harness path the token means spawn-refused, never a lane-permission policy verdict.
-- A failed ledger, tracker, artifact, or state read that prevents a verdict is `state-unverified` at exit `2`.
+1. A spawn failure before a session existed is `failed` with
+   `dispatch.session.spawn-failed` and one attempt record.
+2. A resume refused as uneconomical is `failed`; unreadable resume-admission
+   facts are `state-unverified`.
+3. The narrowed persisted-bound re-key: a harness-reported timeout at or above a
+   positive bound is `max-restarts`. A clean exit, a premature end, a tool
+   failure, or any other non-zero exit at the bound keeps its own classification
+   and is never re-keyed by an already-reached bound.
+4. A spawn refusal before a session existed is a recorded attempt with token
+   `noop-lane-permission` and outcome `refused`; from the harness path the token
+   means spawn-refused, never a lane-permission policy verdict.
+5. A readable tracker whose native state is done is `merged`, corroborated by the
+   tracker fact alone and with no visible pull request required. This arm precedes
+   the blocking arm, so a done work item that also carries a blocking label
+   resolves `merged`.
+6. A readable tracker that is blocking or in a delivery-blocked state is
+   `blocked`.
+7. A non-completed session that reached no decisive tracker arm uses the shared
+   classifier's token: a reported failure or non-zero exit is `failed`; a tool
+   failure or premature end is `partial`.
+8. An open pull request is `pr-open`; an open pull request whose URL cannot be
+   resolved is `pr-open-unverified`. The independent tracker comparison token for
+   either is `pr-open`, and URL resolution is the comparison's `urlResolved`
+   attribute (`false` for `pr-open-unverified`). URL resolution never changes the
+   compared token and never creates a divergence.
+9. An independently observed already-merged pull request is `merged` as
+   already-merged detection only.
+10. Branch commits above zero with complete pm-notes is `finished`; branch commits
+    above zero with incomplete or absent pm-notes is `partial`, carrying its
+    harness outcome.
+11. No branch commits, no open or already-merged pull request, and a readable
+    non-done non-blocked tracker is `noop-lane-nothing-to-do`, corroborated by the
+    tracker fact alone. This is the only arm that produces the token: the retired
+    phase-ledger no-work arm no longer derives it, so a complete ledger with
+    commits resolves `finished` or `partial` and a complete ledger with no commits
+    takes this arm only under the shell condition.
+12. Truth undecidable — a required read unreadable and no decisive artifact — is
+    `state-unverified` at exit `2`.
 
 The closed eleven-token vocabulary and projection are unchanged:
 
@@ -152,6 +293,54 @@ The closed eleven-token vocabulary and projection are unchanged:
 
 `partial` always carries its harness `outcome`; the machine envelope therefore always carries `outcome` beside `result`.
 
+The artifact read carries a required `pmNotes` completeness fact — `complete`
+when the change's pm-notes document exists and its delivery phase carries a
+non-null completion, `absent` when there is no document, and `incomplete` when
+the document is present but incomplete, unparseable, or otherwise not complete.
+The fallible direction is never `complete`. The fact is projected from the
+delivered pm-notes read and adds no external read, file-probe rule, or
+configuration key.
+
+### Arm-aware corroboration
+
+Success corroboration is arm-aware for exactly two arms, and every other token
+keeps its token-keyed requirement (TDR-0048): a `merged` reached from a
+tracker-done work item, and `noop-lane-nothing-to-do`, each require the tracker
+fact and nothing else. The closed requirement map is data — `merged` requires
+`pm-notes`, `tracker`, and `ci`; `pr-open`, `pr-open-unverified`, and `blocked`
+require `tracker`; `finished` and `noop-lane-nothing-to-do` require `pm-notes`;
+`failed`, `partial`, `max-restarts`, `state-unverified`, and
+`noop-lane-permission` require nothing and satisfy corroboration vacuously.
+
+The one derivation decides the arm at its two arm-aware branches and passes it
+unchanged to both evaluation sites (the one-shot path and the daemon-path attempt
+producer); the corroboration record's tri-state shape is unchanged. The
+evidence-window gate reads an attempt record, which carries no arm, so it stays
+**token-level** by decision: adding an arm discriminator to the persisted attempt
+record would be an attempt-schema change. A token-level window reading can
+therefore be stricter than the dispatch-time arm-aware claim, and that difference
+is declared rather than reconciled by changing the record.
+
+The `"pm-notes"` corroboration source stays the phase ledger (`phasesComplete`)
+and is deliberately not re-pointed at the `pmNotes` artifact fact. A `finished`
+reached with a divergent ledger carries `corroboration.pmNotes ===
+"unsatisfied"` and `falseSuccess === true`; the delivered-evidence divergence
+record is not produced for a `finished` (that path is gated on
+`state-unverified`); no new incident kind is added and `falseSuccess` is never
+suppressed.
+
+### Tracker retry ladder
+
+A tracker read is retried through a bounded ladder: at most five attempts, with
+the wait before attempt `n + 1` equal to `min(2 000 ms * 2^(n-1), 30 000 ms)` —
+2 000, 4 000, 8 000, and 16 000 ms between the five attempts — for at most 30 000
+ms of added latency. No configuration key is added. A read that succeeds within
+the ladder is used; exhaustion yields the bounded `tracker:exhausted` evidence
+reference and never a success-shaped fact from a failed read. Exhaustion resolves
+`state-unverified` unless a decisive artifact resolves the outcome at arms 8–10.
+The delay function is injected, so production uses a real timer and the offline
+battery advances a virtual clock.
+
 ### Failure-token mapping
 
 Every dispatch failure identity pins one result token, one engine outcome, one exit, an attempt-record policy, and a comparison treatment. No row adds a token or changes a projection or derivation class.
@@ -167,6 +356,8 @@ Every dispatch failure identity pins one result token, one engine outcome, one e
 | Credential or admission-read refusal before a spawn | none | none (the top-level error carries the mapped identity) | none | 1 or 2 per the admission table | none |
 
 All five recorded failure classes count for class coverage as exposure, make no success claim, create no divergence, and block nothing. The post-spawn collection failure is attempt-stage because a session existed; the engine records the unevaluable attempt at exit `2` instead of returning it unrecorded, and it is not one of the seven pre-session refusal kinds.
+
+No failure class here adds an error identity. A missing `terminate` capability is not a failure identity: an adapter that declares no terminate capability is never asked, and one that is asked returns the delivered `harness.capability.gap` by name. The lane record, the terminate result, the stall verdict, and tracker exhaustion are recorded as bounded attempt evidence references — `lane:append-failed`, `terminate:terminated`/`terminate:escalated`/`terminate:reaped`/`terminate:failed`, `liveness:<verdict>`, `tracker:exhausted`, `economics:exhaustion`, and `economics:restart-failed` — never as identities and never as a new error row or domain kind.
 
 ### Text and machine output
 
@@ -210,12 +401,20 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |
 | Bounds | At most 16 bounded evidence references; no prompt, transcript, diff, credential, or raw provider payload. |
 
+The attempt record's shape is unchanged by the lane: it gains no lane field, and
+the durable lane record is the resumable artifact. The record is appended once at
+the dispatch's terminal classification; a restarted stalled iteration appends
+none, and a pre-session refusal appends none.
+
 The composition mounts the profile wrapper on the opencode port, so a
 caller-supplied agent identity is resolved by the pure resolver and supplied as the
-invocation's one `--agent`/`--model` pair; a role-less call passes through
-unchanged. The shipped generic dispatch supplies no caller agent identity (DEC-15),
-so its spawns are role-less, record no binding, and are disclosed as an unresolved
-seat; a role-less run is never evidence of profile propagation.
+invocation's one `--agent`/`--model` pair. The shipped production dispatch
+supplies the caller agent identity `pm`: the binding is resolved from the selected
+profile context, recorded on the attempt when it resolved, and rendered as
+exactly one `--agent pm` and one `--model`. A composition that supplies no agent
+identity is role-less, renders neither `--agent` nor `--title`, records no
+binding, and is disclosed as an unresolved seat; a role-less run is never
+evidence of profile propagation.
 
 `token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A comparison divergence is appended when the outcome is `mismatch`; the delivered-evidence case below is the one additional, explicitly shaped divergence. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
 
@@ -354,15 +553,29 @@ Repository identity is rename-invariant and scoped to the checkout. The first su
 
 The production composition supplies the real harness session port for the configured kind. It builds opencode over the host streaming spawn starter for spawn, resume, and deliver and the host one-shot runner for read-only session listing, with the deny-by-default environment builder and the shared classifier/liveness assembly; the Claude Code adapter supplies its declared spawn and collect capabilities over the one-shot runner. A healthy opencode spawn or resume returns its session handle as soon as the first identified stream line arrives, so the watch observes liveness and progress while the session is still running and collection resolves at process close. No default whole-session process cap applies to an opencode spawn or resume; the one-shot runner's bounded listing timeout is listing-only, and a handle-acquisition bound (60 s by default) refuses an opencode spawn or resume that never identifies its session. Dispatch spawns through the port and never branches on harness kind outside the adapter.
 
-The production composition also resolves the `lane` policy branch and composes the resume path: the latest resumable daemon lane record supplies the existing session handle, the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, and the verified economics records supply the restart count. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
+The production composition also resolves the `lane` policy branch and composes the run path end to end: the newest recorded lane carrying a session identity supplies the existing session handle on `--resume-prompt` (a dispatch lane in any state, or a resumable daemon lane), the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, the verified economics records supply the persisted restart count, the atomic dispatch claim supplies the lease, the composition's lane owner facts and the store supply the durable lane record, the injected delay binds the real timer for the fence wait, the tracker ladder, and the terminate grace, the composition supplies the `pm` agent identity, the resolved binding, and the `ticket-<REF>` title, and `coordinator.kill-grace` supplies the terminate grace. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
+
+Every dispatch-flow process is started with a fixed argv and no shell, and no script path appears in the flow (API-7, NFR-5). The static invariant is the named package script `check:no-shell` (`bun run scripts/checks/no-shell-dispatch.ts`), which scans a declared dispatch-flow surface file list with an empty allowlist and four named rules — a script-path literal, a `shell: true`, a shell-capable child-process import or call, and a child-process `spawn` without a literal `shell: false` — and is also discovered by `bun test` through its own suite.
 
 The daemon lane seam supplies `createLaneLaunchPlanner`: a pure planner that returns the lifecycle prompt and only the declared environment variable names, resolving no secret value and reading no parent environment. It composes `createLaneExecutor` over the selected session port and execution-environment descriptor, so a daemon can claim, start, record, observe, collect, and resume lanes. An unavailable planner or declared capability gap leaves the daemon in honest `supervise-only` mode.
 
 The lane seam is factory-proven: the daemon composition composes it when a lane composition is supplied, and the daemon-lane conformance suite drives the planner, executor, and daemon-path attempt record. The production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238); this feature proves the seam and the daemon-path attempt producer, not a production daemon that launches lanes.
 
-The daemon path hands the same lane observation and collection evidence to `recordDaemonDispatchResult`, which derives the outcome and token through the same shared classifier and truth derivation, builds the same comparison and corroboration records, and appends exactly one attempt record through the same ledger. A daemon-driven attempt therefore agrees with a one-shot dispatch over the same evidence, and a replay or resume of the same attempt appends no second record.
+The daemon path hands the same lane observation and collection evidence to `recordDaemonDispatchResult`, which derives the outcome and token through the same shared classifier and truth derivation, builds the same comparison and corroboration records, and appends exactly one attempt record through the same ledger. `recordDaemonDispatchResult` consumes the derivation's own `corroborationArm`, so a daemon-driven attempt inherits arm-aware corroboration without re-deriving it, and the daemon path inherits the tracker-done `merged` arm, the artifact `partial` arm, and the retired ledger no-work arm. A daemon-driven attempt therefore agrees with a one-shot dispatch over the same evidence, and a replay or resume of the same attempt appends no second record.
 
 A one-shot `dispatch <ref>` works from state alone with no daemon, no socket, and no resident process.
+
+## Parity proof boundary
+
+The offline parity battery replays all eleven result classes through the real command path and the real derivation, and it proves the admission interleaving, the recorded-attempt resume, the tracker ladder, the terminate contract, the in-process loop, the spawn identity, and the no-shell invariant. It proves the contract, not the world outside it. The machine-checked source of the boundary is the permanent fixture constant `PARITY_PROOF_BOUNDARY` (`tests/fixtures/dispatch/parity/evidence.ts`); this page publishes the same list, and neither a change artifact nor the test plan is a source.
+
+**Proven (eight, in declared order):** `claim`, `lane`, `spawn`, `ladder`, `terminate`, `loop`, `class-coverage`, `no-shell`.
+
+**Not proven (six, in declared order):** `live-opencode`, `live-provider`, `os-termination`, `real-lifecycle-outcome`, `cross-process-race`, `long-run-outage`.
+
+The not-proven list is deliberate. The battery does not prove live opencode behaviour (a real session's resume after a real process exit, real stdout framing, real prefill timing), live provider behaviour (real reads, throttling, authentication failure shapes), OS-level process-tree termination of a real child and a real escaped runtime — it proves the terminate contract and the exact-identity selection, not kernel signal delivery, so the shipped opencode terminate reports `reaped: false` — a real lifecycle-agent outcome or a real merge, cross-process race freedom beyond the state store's fence guarantee (the two-invocation interleaving is deterministic, not an arbitrary OS schedule), or long-run retry behaviour under a real 30-second outage (the injected delay advances a virtual clock).
+
+Whole-change parity means the eleven classes and the shell's supervision semantics are reproduced by the typed lane, which invokes no shell and no script path; the shell entry points stay on disk as the documented fallback and their retirement is a separate owner act.
 
 ## Bash fallback
 
@@ -393,6 +606,8 @@ The read side adds no row either: `dispatch attempts` maps its malformed request
 
 The admission refusals and resolve failures add no `dispatch` row. An admission refusal carries an existing `provider`, `config`, or `input` identity (the admission table above); the nomination refusal reuses the profile resolve identities (`provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied`, `provider.profile.unavailable`) and adds no identity of its own; a resolve store failure carries the failing `state` identity with `kind: "state"`; and an absent divergence identifier is `input.value.rejected` with `kind: "input"`. The engine's local result error-kind union admits the existing `provider` and `config` kinds; `DOMAIN_KINDS` and the error-table row count are unchanged.
 
+The lane record, the terminate result, the restart loop, the tracker ladder, and the parity battery add no identity either. A missing terminate capability reuses the delivered `harness.capability.gap`, a durable `dispatch.lane` record is state, not an error identity, and no domain kind, error row, or projection moves.
+
 ## Bounds and configuration
 
 | Bound | Value |
@@ -410,24 +625,30 @@ The admission refusals and resolve failures add no `dispatch` row. An admission 
 | Unresolved divergence ids in a summary | 20 |
 | Evidence classes | `pilot`, `controlled-proof`, `smoke`, `fixture` |
 | Exposure floor | 20 counted dispatches or 7 consecutive UTC dates |
+| Tracker retry ladder | 5 attempts; waits `min(2 000 ms * 2^(n-1), 30 000 ms)`; ≤ 30 000 ms added |
+| Fresh-spawn title | `ticket-<REF>`, at most 64 characters, one token |
+| Admission fence wait | bounded steps of at most 1 000 ms, cumulative ≤ `queue.lease-ttl` (90 000 ms default) |
+| Terminate grace | `coordinator.kill-grace`, 20 000 ms default |
+| Restart bound | `lane.restart-budget`, 3 default |
+| Liveness cadence | `lane.liveness-interval`, 30 000 ms default |
 
-Configuration reuses the delivered harness branch and the `lane` policy keys: `lane.liveness-interval` (default `30000` ms) is the liveness cadence and `lane.restart-budget` (default `3`) is the restart bound; both are resolved from the typed configuration branch and read as policy data. Dispatch introduces no new configuration key and reads no ambient environment outside the injected harness descriptor and credential seam.
+Configuration reuses the delivered harness branch and the `lane` policy keys: `lane.liveness-interval` (default `30000` ms) is the liveness cadence and `lane.restart-budget` (default `3`) is the restart bound; both are resolved from the typed configuration branch and read as policy data. The terminate grace borrows `coordinator.kill-grace` (default `20000` ms) because it is a signalling grace with identical semantics, and the fence wait is bounded by `queue.lease-ttl` (default `90000` ms). Dispatch introduces no new configuration key and reads no ambient environment outside the injected harness descriptor and credential seam. The in-process loop consumes the dispatch lane's own `lane.restart-budget`; `coordinator.restart-budget` governs coordinator supervision and is not consumed by dispatch.
 
 The delivered state read verifies the JSONL ledger once. The attempt fold retains the newest 5,000 attempt records and declares the omitted count as `truncation: { bound, omittedRecords }`, so the bound is enforced on the returned evidence set rather than by a store-side scan limit. A truncated read is declared and makes eligibility unverifiable rather than eligible, and summary and handover evaluation make no model or provider call.
 
 ## Quality evidence
 
-The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, clean-accrual, conditions-projection, handover-conditions, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the fleet row's additive fields and read-time evaluation are covered by the repos handover-gate, repos-list-contract, projects-flat-alias, engine-first-cross-surface, and engine-first-no-flip suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
+The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth-derivation, token-closure, liveness, watch, evidence, gate, handover, clean-accrual, conditions-projection, handover-conditions, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the GH-347 parity battery is covered by the parity admission, lane-resume, tracker, stall-loop, spawn, no-shell, and battery suites under `tests/conformance/dispatch/`, with the whole-battery registry in `tests/fixtures/dispatch/parity/cases.ts` and the permanent proof boundary in `tests/fixtures/dispatch/parity/evidence.ts`; the no-shell invariant is the `no-shell-dispatch` check suite and the named `check:no-shell` package script; the fleet row's additive fields and read-time evaluation are covered by the repos handover-gate, repos-list-contract, projects-flat-alias, engine-first-cross-surface, and engine-first-no-flip suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
 
 ## Related
 
 - [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md) — the prompt-required composition that includes `dispatch`.
 - [Result Contract and Error Table](feature-result-contract.md) — the envelope, the four dispatch rows, and the exit projection.
-- [Harness Adapters](feature-harness-adapters.md) — the session port, both delivery adapters, and the shared classifier.
+- [Harness Adapters](feature-harness-adapters.md) — the session port with its optional `terminate`, both delivery adapters, the spawn title rendering, and the shared classifier.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — lane supervision and the daemon-side attempt-record producer; a composed supervision claim belongs to this admission family.
 - [Provider Peak Pausing](feature-peak-pausing.md) — the admission nomination the engine records and the window-end recovery the daemon routes through this engine's restart budget.
-- [Scheduling Engine](feature-scheduling-engine.md) — the repository lease dispatch claims and releases, the per-ref admission predicate's outcome table, and the holder-naming refusal.
-- [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the restart-budget gate and resume-economics admission.
+- [Scheduling Engine](feature-scheduling-engine.md) — the repository lease dispatch claims and releases, the in-claim per-ref verdict table, and the holder-naming refusal.
+- [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the restart-budget gate, resume-economics admission, the terminate contract, and the `economics.restart` record the loop appends.
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) — the delivery-result vocabulary and the verify-change comparison baseline.
 - [Dispatch reference page](../../planning/oss-tooling/milestones/m1/commands/dispatch.md)
 - [Attempt read-side reference page](../../planning/oss-tooling/milestones/m2/commands/attempts.md)
@@ -444,5 +665,11 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [TDR-0016 — Additive harness streaming spawn seam](../../decisions/TDR-0016-harness-streaming-spawn-seam.md)
 - [TDR-0026 — Queue lifecycle removal and single-flight](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md)
 - [TDR-0027 — Command failure envelope detail slot](../../decisions/TDR-0027-command-failure-envelope-detail-slot.md)
+- [TDR-0044 — Dispatch-owned durable lane record](../../decisions/TDR-0044-dispatch-owned-durable-lane-record.md) — the lane kind, its fields, its ownership boundary, and recorded-attempt resume.
+- [TDR-0045 — Dispatch atomic admission verdicts](../../decisions/TDR-0045-dispatch-atomic-admission-verdicts.md) — the in-claim same-ref/other-ref verdict, the no-renewal rule, and the bounded fence wait.
+- [TDR-0046 — Harness terminate operation](../../decisions/TDR-0046-harness-terminate-operation.md) — the capability-gated terminate contract, its grace, and the exact-identity reap.
+- [TDR-0047 — In-process bounded restart loop](../../decisions/TDR-0047-in-process-bounded-restart-loop.md) — the one-invocation loop, the stall ladder, and one terminal attempt record.
+- [TDR-0048 — Total derivation ladder and corroboration](../../decisions/TDR-0048-total-derivation-ladder-and-corroboration.md) — the total order, the pm-notes artifact fact, and arm-aware corroboration.
+- [TDR-0049 — Dispatch spawn identity, title, and prompt](../../decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md) — the `pm` identity, the `ticket-<REF>` title, and the built lifecycle prompt.
 
-**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), and `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation).
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation), and `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/` (the durable lane, atomic admission, recorded-attempt resume, tracker ladder, terminate, the in-process loop, spawn identity, the total derivation, and the parity battery).

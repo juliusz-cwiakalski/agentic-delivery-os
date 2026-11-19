@@ -2,14 +2,14 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "TDR-0045", "TDR-0046"]
 ---
 
 # Feature: Configuration Layer and Inspection
@@ -420,6 +420,17 @@ policy data: resolving the branch starts no supervisor.
 
 The lane keys `lane.liveness-interval` and `lane.restart-budget` are neither
 reused nor aliased. See [Coordinator Supervision](feature-coordinator-supervision.md).
+
+The typed dispatch lane adds no configuration key and changes no default. It
+consumes four delivered values as policy data: `lane.restart-budget` (default
+`3`) as the in-process restart bound, `lane.liveness-interval` (default
+`30000` ms) as the liveness cadence, `coordinator.kill-grace` (default
+`20000` ms) as the terminate grace, and `queue.lease-ttl` (default `90000` ms) as
+the lease staleness bound and the ceiling on the admission fence wait. The
+terminate grace borrows the coordinator's signalling constant rather than adding a
+lane-specific duplicate, and `coordinator.restart-budget` stays a coordinator
+value that dispatch does not read. See [Dispatch Engine](feature-dispatch-engine.md)
+and [Scheduling Engine](feature-scheduling-engine.md).
 
 ## The poll configuration branch
 

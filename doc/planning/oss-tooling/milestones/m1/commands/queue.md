@@ -372,17 +372,22 @@ has exactly one outcome:
 | `queue claim` | no live lease | `claimed` (one `acquired` record) |
 | `queue claim` | stale lease | `taken-over` + incident evidence |
 
-A refusal appends nothing and publishes no event; it happens before any
-claim, spawn, resume, attempt, or record. The holder is named through the
-additive optional command-declared `detail` object on the failure-envelope
-root (`detail.holder`, single line, ≤ 128 characters, identifiers only);
-`CommandResultError` keeps exactly its six fields, and `error.detail` is not
-a placement (TDR-0027). Stale means heartbeat age at or over the lease TTL,
-so a crashed session keeps the delivered stale takeover on every path
-instead of refusing. Renewal is narrowed to one (repository, ref, holder): a
-same-holder claim for a different ref refuses `queue.lease-conflict`, and
-the lease's recorded ref is never rewritten. The direct
-`claimQueueLease` seam keeps its delivered same-holder/same-ref renewal.
+A refusal appends nothing and publishes no event. For the dispatch family the
+verdict is decided **inside** the claim, from the live lease observed atomically
+with the claim's own append, so no second dispatch can slip between a check and
+the claim; store-fence contention is waited out through the injected delay within
+the lease TTL and then re-decided, and a fence that never frees returns its typed
+`state.*` row. An admission outcome is always one of the declared verdicts and is
+never surfaced as `fallback.internal`. The holder is named through the additive
+optional command-declared `detail` object on the failure-envelope root
+(`detail.holder`, single line, ≤ 128 characters, identifiers only);
+`CommandResultError` keeps exactly its six fields, and `error.detail` is not a
+placement (TDR-0027). Stale means heartbeat age at or over the lease TTL, so a
+crashed session keeps the delivered stale takeover on every path instead of
+refusing. Renewal is narrowed to one (repository, ref, holder): a same-holder
+claim for a different ref refuses `queue.lease-conflict`, and the lease's
+recorded ref is never rewritten. The direct `claimQueueLease` seam keeps its
+delivered same-holder/same-ref renewal, and the dispatch caller never renews.
 
 ## HELP
 

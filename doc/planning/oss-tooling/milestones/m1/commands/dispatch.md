@@ -24,22 +24,56 @@ the bash stack.
 Spawns or resumes the lifecycle session for one change through the configured
 harness adapter, watches it with progress-based liveness, classifies the outcome
 through the shared classifier, and derives the result from artifact, tracker,
-ledger, and CI truth rather than from an exit code. An exit-0 session with no
-branch commit, no pull request, and no ledger progress is `failed`; unreadable
-truth is `state-unverified`.
+ledger, and CI truth rather than from an exit code. One invocation owns a bounded
+loop of session iterations. The derivation is one total order: a spawn failure is
+`failed`, a resume refused as uneconomical is `failed`, a tracker-done work item
+is `merged` (corroborated by the tracker fact alone), a blocking tracker state is
+`blocked`, an open pull request is `pr-open` or `pr-open-unverified`, an
+already-merged pull request is `merged`, commits with complete pm-notes are
+`finished`, commits with incomplete or absent pm-notes are `partial`, and no
+commits with no pull request and a readable non-done non-blocked tracker is
+`noop-lane-nothing-to-do`. Unreadable truth is `state-unverified`; an exit-0
+session with no decisive artifact and an unreadable tracker is never a success.
+
+A fresh spawn runs as the `pm` agent with the deterministic `ticket-<REF>` title
+and the delivery-lifecycle prompt built for the reference and the base branch.
+Those three facts are internal composition facts: they add no flag, argument, or
+output key, and a resume carries no title.
 
 The watch polls the harness liveness source at the `lane.liveness-interval`
 cadence while collection is pending and carries the previous observation, so a
 stall needs two consecutive sourced evaluations with no advance. A stall is a
 current-state verdict, not a latch: a later `progressing` observation clears it.
-A stall that is still current when evidence collection resolves, at or above
-`lane.restart-budget`, is the restart-budget refusal (`max-restarts`) with the
-terminal exhaustion record; below the bound it is recorded as liveness evidence
-and left to lane supervision. A session that completed is never re-keyed to
-`max-restarts` by an already-reached bound, because the budget governs admission
-of a further attempt rather than the classification of a finished session. The
-delivered session port exposes no kill operation, so the one-shot command never
-starts a second session for the same attempt: a stall is never silently leaked.
+A stall that is still current when evidence collection resolves, or a
+harness-reported timeout, is restart-eligible; a clean session exit is always
+terminal and is never re-keyed to `max-restarts` by an already-reached bound.
+Before any restart decision the stalled session is terminated through the
+capability-gated harness `terminate` operation: TERM reaches the session's own
+process tree, KILL follows only after the declared grace
+(`coordinator.kill-grace`), an escaped runtime is reaped only by exact identity,
+and an adapter that declares no terminate capability is never asked. Below
+`lane.restart-budget` the command consumes one restart ordinal, appends one
+`economics.restart` with reason `watchdog.liveness-stalled`, and resumes the
+recorded session in-process for the next iteration; at or above the bound it
+records the restart-budget refusal (`max-restarts`) with the terminal exhaustion
+record. One invocation owns the whole loop and appends exactly one attempt
+record, so the one-shot command never leaves a stalled session running beside a
+second one.
+
+Every session acquisition appends one active `dispatch.lane` record and the final
+classification appends one terminal record carrying the token and outcome. The
+record is append-only and the latest record for the ref is the lane, so a
+recorded attempt — including a `pr-open` attempt — is the resumable artifact
+rather than a fresh spawn. A pre-session refusal appends no lease, lane, attempt,
+or queue record.
+
+The dispatch claim decides the per-ref verdict inside the claim: a live lease
+that already records the requested ref refuses `queue.single-flight` with the
+holder at the failure-envelope root, a live lease on another ref refuses
+`queue.lease-conflict`, a stale lease is taken over with incident evidence, and no
+live lease claims. Store-fence contention is waited out within the lease TTL and
+then re-decided. The dispatch caller never renews; the sibling `queue claim`
+keeps its own-holder renewal and repository exclusivity unchanged.
 
 Dual-run keeps the bash stack authoritative. A repository moves to
 engine-authoritative only when the evidence-based handover bar is met. The bar is
@@ -128,8 +162,16 @@ existing `tracker.credential-unavailable` check keeps parity through tests.
 - `<ref>` - work item reference.
 - `--harness <name>` - harness adapter (opencode, claude-code); default from
   configuration.
-- `--resume-prompt <text>` - resume the existing lane with guidance instead of
-  spawning fresh; the resume mode and prefill cost are recorded.
+- `--resume-prompt <text>` - resume the recorded attempt with guidance instead of
+  spawning fresh. The resolver returns the newest recorded lane for the ref that
+  carries a session identity (a dispatch-owned lane in any state, including a
+  recorded `pr-open` attempt, or a resumable daemon lane), and the attempted
+  resume records the resume mode and prefill cost. An unknown session is a
+  classified failure, never a silent fresh spawn; with no recorded lane the text
+  is an explicit fresh spawn. An operator resume is admitted regardless of the
+  persisted restart bound and consumes no restart ordinal. There is no new flag:
+  the agent identity (`pm`), the deterministic `ticket-<REF>` title, and the
+  lifecycle prompt are internal composition facts, and the grammar is unchanged.
 - `--repo <repo>` - repository identity for `dual-run summary` and `handover`.
 - `--note <text>` - bounded resolution note for `dual-run resolve`.
 - `--revert` - revert a recorded handover to dual-run.
