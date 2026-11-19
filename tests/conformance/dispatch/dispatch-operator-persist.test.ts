@@ -8,7 +8,7 @@
  * reader does not exist at this boundary.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createNodeDispatchLogFileSystem } from "../../../packages/adapters/src/file/dispatch-logs";
 import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
@@ -16,6 +16,7 @@ import {
   DISPATCH_LOG_FILE_CAP_BYTES,
   type HarnessExecutionEnvironmentDescriptor,
 } from "../../../packages/core/src/contracts/index";
+import { createGuardedRunner } from "../../fixtures/dispatch/parity/process-runner";
 import {
   createArtifactObservation,
   createOperatorHarness,
@@ -284,6 +285,99 @@ describe("TC-PERSIST the artifact write path", () => {
       }
     } finally {
       obs.dispose();
+    }
+  });
+
+  test("TC-PERSIST-009 a killed writer leaves at most one torn tail and the reader drops only that tail", async () => {
+    const obs = createArtifactObservation({
+      label: "persist-009",
+      wrapFs: (root) =>
+        createRecordingLogFs({ familyRoot: root, truncateAppend: { path: "p0001", at: 4 } }).fs,
+      scripts: [{ values: [sessionLine("ses-torn"), "BEFORE-1", "BEFORE-2", "HALF-TORN-VALUE"] }],
+    });
+    const reader = createOperatorHarness({
+      label: "persist-009-reader",
+      artifactRoot: obs.familyRoot,
+    });
+    try {
+      const spawned = await obs.session.spawn({
+        workItemRef: OPERATOR_REF,
+        prompt: "go",
+        descriptor: DESCRIPTOR,
+        streamContext: { attemptId: "attempt-torn", iterationOrdinal: 1 },
+      });
+      expect(spawned.ok).toBe(true);
+      if (!spawned.ok) return;
+      await obs.session.collect({ handle: spawned.value });
+
+      const [name] = obs.fileNames();
+      const text = obs.fileText(name as string);
+      // Exactly one unterminated tail: the file ends mid-record.
+      expect(text.endsWith("\n")).toBe(false);
+      expect(text).toContain("BEFORE-1\nBEFORE-2\n");
+
+      const answer = await reader.run(["dispatch", "log", OPERATOR_REF, "--tail", "3", "--json"]);
+      expect(answer.exit).toBe(0);
+      const data = answer.data as Record<string, unknown>;
+      const lines = data.lines as readonly string[];
+      expect(lines).toEqual([sessionLine("ses-torn"), "BEFORE-1", "BEFORE-2"]);
+      expect(answer.stdout).not.toContain("HALF-TORN-VALUE");
+      // The reader repaired nothing: the file's bytes are unchanged.
+      expect(obs.fileText(name as string)).toBe(text);
+    } finally {
+      reader.dispose();
+      obs.dispose();
+    }
+  });
+
+  test("TC-PERSIST-011 the artifact holds only the declared transformation and no log content reaches any record", async () => {
+    const familyRoot = join(process.cwd(), "tmp", "tmpdir", "gh354-persist-011-family");
+    rmSync(familyRoot, { recursive: true, force: true });
+    const stdoutLines = [
+      sessionLine("ses-canary"),
+      "STDOUT-CANARY-1",
+      "CREDENTIAL-CANARY-1",
+      stepFinishLine(),
+    ];
+    const guarded = createGuardedRunner({
+      session: () => ({
+        sessionId: "ses-canary",
+        stdout: stdoutLines.join("\n"),
+        status: 0,
+        timedOut: false,
+      }),
+    });
+    const h = createOperatorHarness({
+      label: "persist-011",
+      artifactRoot: familyRoot,
+      guarded,
+    });
+    try {
+      const run = await h.run(["dispatch", OPERATOR_REF, "--json"]);
+      expect(run.envelope?.error).toBeUndefined();
+      const directory = join(familyRoot, OPERATOR_REF);
+      const names = readdirSync(directory).sort((left, right) => left.localeCompare(right, "en"));
+      expect(names.length).toBeGreaterThan(0);
+      // The declared transformation: each printed value followed by one LF.
+      const text = names.map((name) => readFileSync(join(directory, name), "utf8")).join("");
+      for (const line of stdoutLines) expect(text).toContain(line);
+      // No record, evidence list, or envelope carries the stdout canary.
+      for (const record of h.records()) {
+        expect(JSON.stringify(record)).not.toContain("STDOUT-CANARY-1");
+      }
+      expect(run.stdout).not.toContain("STDOUT-CANARY-1");
+      const beforeBytes = names.map((name) => readFileSync(join(directory, name), "utf8"));
+      // The request returns only the requested tail, never the whole file.
+      const answer = await h.run(["dispatch", "log", OPERATOR_REF, "--tail", "1", "--json"]);
+      const data = answer.data as Record<string, unknown>;
+      expect((data.lines as readonly string[]).length).toBe(1);
+      // The family's file set and bytes are unchanged by the read.
+      const after = readdirSync(directory).sort((left, right) => left.localeCompare(right, "en"));
+      expect(after).toEqual(names);
+      expect(names.map((name) => readFileSync(join(directory, name), "utf8"))).toEqual(beforeBytes);
+    } finally {
+      h.dispose();
+      rmSync(familyRoot, { recursive: true, force: true });
     }
   });
 

@@ -193,6 +193,7 @@ import {
   type QueueRemovalMutationResult,
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
+  dispatchLogByteLength,
   queueRemovalForCloseout,
   rankBlockerQuestions,
   readActiveLeases,
@@ -200,6 +201,7 @@ import {
   readDaemonLanes,
   readDispatchAttemptHistory,
   readDispatchAttempts,
+  readDispatchLog,
   readOperatorDelivering,
   readOperatorStatus,
   readOutboxEffects,
@@ -317,9 +319,12 @@ import {
   type DaemonClockPort,
   type DeliveryRequest,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  DISPATCH_LOG_MAX_HUMAN_LINES,
+  DISPATCH_MAX_MACHINE_BYTES,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchLaneFacts,
+  type DispatchLogFileSystem,
   type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
@@ -497,6 +502,7 @@ import {
   type DispatchAttemptsRuntime,
   type DispatchCommandRuntime,
   type DispatchDeliveringRuntime,
+  type DispatchLogRuntime,
   type DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
@@ -562,6 +568,7 @@ export type {
   DispatchAttemptsRuntime,
   DispatchCommandRuntime,
   DispatchDeliveringRuntime,
+  DispatchLogRuntime,
   DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 
@@ -7205,6 +7212,9 @@ export type DispatchOperatorComposition = {
   readonly store: DispatchPorts["store"];
   readonly resolveRepository: () => string | undefined;
   readonly probe: DispatchOwnerProbe;
+  /** The artifact family's root and edge (GH-354 API-7); absent = uncomposed. */
+  readonly artifactRoot?: string;
+  readonly artifactFs?: DispatchLogFileSystem;
 };
 
 /**
@@ -7219,6 +7229,7 @@ export const createDispatchOperatorRuntime = (
 ): {
   readonly status: DispatchStatusRuntime;
   readonly delivering: DispatchDeliveringRuntime;
+  readonly log?: DispatchLogRuntime;
 } => {
   const failureOf = (read: { readonly code: string }, summary: string) => ({
     ok: false as const,
@@ -7271,6 +7282,38 @@ export const createDispatchOperatorRuntime = (
         return { ok: true as const, data: read.data };
       },
     },
+    ...(composition.artifactRoot === undefined || composition.artifactFs === undefined
+      ? {}
+      : {
+          log: {
+            read: async (input: { readonly ref: string; readonly tail: number }) => ({
+              ok: true as const,
+              data: readDispatchLog({
+                familyRoot: composition.artifactRoot as string,
+                ref: input.ref,
+                tail: input.tail,
+                fs: composition.artifactFs as DispatchLogFileSystem,
+                maxLines: DISPATCH_LOG_MAX_HUMAN_LINES,
+                maxBytes: DISPATCH_MAX_MACHINE_BYTES,
+                measureBytes: (candidate: readonly string[]) =>
+                  dispatchLogByteLength(
+                    JSON.stringify({
+                      query: "log",
+                      ref: input.ref,
+                      available: true,
+                      tail: input.tail,
+                      lines: candidate,
+                      truncation: {
+                        scope: "bytes",
+                        bound: DISPATCH_MAX_MACHINE_BYTES,
+                        omittedLines: 99999,
+                      },
+                    }),
+                  ),
+              }),
+            }),
+          },
+        }),
   };
 };
 

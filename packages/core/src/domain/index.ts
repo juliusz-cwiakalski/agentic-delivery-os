@@ -364,6 +364,7 @@ export {
   boundDispatchLogLines,
   cutAtByteCap,
   type DispatchLogNameInput,
+  dispatchLogByteLength,
   dispatchLogFileName,
   dispatchLogTimestamp,
   type DispatchLogWrite,

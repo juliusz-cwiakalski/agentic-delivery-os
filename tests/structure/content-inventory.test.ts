@@ -257,6 +257,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "dispatchLogsFamilyRoot",
     "dispatchLogsRefDirectory",
   ],
+  "core/src/app/dispatch-log-tail.ts": ["readDispatchLog"],
   "core/src/domain/dispatch-log.ts": [
     "boundDispatchLogLines",
     "cutAtByteCap",
@@ -389,6 +390,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchAttemptsText",
     "renderDispatchDeliveringText",
     "renderDispatchHandoverText",
+    "renderDispatchLogText",
     "renderDispatchResolveText",
     "renderDispatchStatusText",
     "renderDispatchSummaryText",

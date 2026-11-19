@@ -82,6 +82,13 @@ export const SEAM_MANIFEST: readonly SeamManifestEntry[] = [
     mountedIn: "packages/cli/src/edge.ts",
   },
   {
+    // GH-354 S-tail: the addressed-directory stitched tail reader.
+    seam: "artifact-tail",
+    symbol: "readDispatchLog",
+    module: "packages/core/src/app/dispatch-log-tail",
+    mountedIn: "packages/cli/src/edge.ts",
+  },
+  {
     // GH-354 S-sink: the per-stream stdout artifact sink.
     seam: "log-sink",
     symbol: "createDispatchLogSink",

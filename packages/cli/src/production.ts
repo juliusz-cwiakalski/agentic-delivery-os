@@ -3674,6 +3674,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         store,
         resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),
         probe: facts.ownerProbe ?? productionOwnerProbe,
+        artifactRoot: dispatchLogRoot,
+        artifactFs: dispatchLogFs,
       }),
     };
 

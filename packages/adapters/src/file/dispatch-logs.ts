@@ -75,6 +75,7 @@ export const createNodeDispatchLogFileSystem = (): DispatchLogFileSystem => ({
       return undefined;
     }
   },
+  exists: (path) => existsSync(path),
   list: (directory) => {
     try {
       const entries: DispatchLogFileEntry[] = [];

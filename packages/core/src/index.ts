@@ -107,6 +107,10 @@ export {
   readOperatorStatus,
 } from "./app/dispatch-lane-view.js";
 export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./app/dispatch-log-tail.js";
+export {
   createDispatchLogSink,
   type DispatchLogSinkInput,
   dispatchLogsDirectoryName,
@@ -742,6 +746,7 @@ export {
   boundDispatchLogLines,
   cutAtByteCap,
   type DispatchLogNameInput,
+  dispatchLogByteLength,
   dispatchLogFileName,
   dispatchLogTimestamp,
   type DispatchLogWrite,

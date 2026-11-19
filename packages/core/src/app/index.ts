@@ -111,6 +111,10 @@ export {
   readOperatorStatus,
 } from "./dispatch-lane-view.js";
 export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./dispatch-log-tail.js";
+export {
   createDispatchLogSink,
   type DispatchLogSinkInput,
   dispatchLogsDirectoryName,

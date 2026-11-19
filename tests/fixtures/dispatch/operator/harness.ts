@@ -29,6 +29,7 @@ import {
 } from "../../../../packages/core/src/domain/index";
 import { countStore, type StoreCounters } from "../attempts-harness";
 import { createParityHarness, PARITY_REPOSITORY } from "../parity/harness";
+import type { GuardedRunner } from "../parity/process-runner";
 import {
   type LaneSeed,
   seedDaemonLane,
@@ -86,6 +87,8 @@ export type OperatorHarnessOptions = {
   readonly artifactFs?: DispatchLogFileSystem;
   /** A store wrapper around the counted store (the read-failure rows). */
   readonly wrap?: (store: StateStorePort) => StateStorePort;
+  /** A shared guarded runner (the scripted session's stdout is injected there). */
+  readonly guarded?: GuardedRunner;
 };
 
 export type OperatorHarness = {
@@ -168,16 +171,22 @@ export const createRecordingLogFs = (options: {
   readonly inner?: DispatchLogFileSystem;
   /** Fail the listed operation on a path containing this fragment. */
   readonly fail?: {
-    readonly op: "create" | "append" | "remove" | "read" | "list";
+    readonly op: "create" | "append" | "remove" | "read" | "list" | "exists";
     readonly path: string;
   };
   /** Serve this text on read regardless of the file's bytes (in-flight append). */
   readonly readOverride?: (path: string) => string | undefined;
+  /**
+   * Kill the writer mid-value: on the Nth append to the named path, write only
+   * the first half of the text and refuse the rest, so the file ends mid-line.
+   */
+  readonly truncateAppend?: { readonly path: string; readonly at: number };
 }): RecordingLogFs => {
   const inner = options.inner ?? createNodeDispatchLogFileSystem();
   const records: LogFsRecord[] = [];
   const violations: LogFsViolation[] = [];
   const mutations: { readonly op: "create" | "remove"; readonly path: string }[] = [];
+  const appendCounts = new Map<string, number>();
   const root = options.familyRoot;
 
   const allowed = (path: string): boolean => path === root || path.startsWith(`${root}/`);
@@ -207,6 +216,15 @@ export const createRecordingLogFs = (options: {
         records.push({ op: "append", path, text });
         if (!allowed(path)) return refuse("append", path);
         if (fails("append", path)) return false;
+        const truncation = options.truncateAppend;
+        if (truncation !== undefined && path.includes(truncation.path)) {
+          appendCounts.set(path, (appendCounts.get(path) ?? 0) + 1);
+          if (appendCounts.get(path) === truncation.at) {
+            const half = text.slice(0, Math.floor(text.length / 2));
+            inner.append(path, half);
+            return false;
+          }
+        }
         return inner.append(path, text);
       },
       remove: (path) => {
@@ -241,6 +259,15 @@ export const createRecordingLogFs = (options: {
         }
         if (fails("list", directory)) return undefined;
         return inner.list(directory);
+      },
+      exists: (path) => {
+        records.push({ op: "exists", path });
+        if (!allowed(path)) {
+          refuse("exists", path);
+          return false;
+        }
+        if (fails("exists", path)) return false;
+        return inner.exists(path);
       },
       read: (path) => {
         records.push({ op: "read", path });
@@ -278,6 +305,9 @@ export const createOperatorHarness = (options: OperatorHarnessOptions = {}): Ope
     ...(options.extraRefs === undefined ? {} : { extraRefs: options.extraRefs }),
     ownerProbe: probe,
     ...(options.secrets === undefined ? {} : { secrets: options.secrets }),
+    ...(options.artifactRoot === undefined ? {} : { artifactRoot: options.artifactRoot }),
+    ...(options.artifactFs === undefined ? {} : { artifactFs: options.artifactFs }),
+    ...(options.guarded === undefined ? {} : { guarded: options.guarded }),
     storeWrap: (opened) => {
       const counted = countStore(opened);
       counters = counted.counters as OperatorCounters;
@@ -357,6 +387,8 @@ export type ArtifactObservationOptions = {
   readonly ref?: string;
   readonly scripts: readonly ScriptedStream[];
   readonly artifactFs?: DispatchLogFileSystem;
+  /** Build the edge once the family root is known (recording/fault variants). */
+  readonly wrapFs?: (familyRoot: string) => DispatchLogFileSystem;
   readonly now?: string;
   /** Called at each stream's first pull (the creation-order probe). */
   readonly onFirstPull?: (invocation: {
@@ -404,7 +436,7 @@ export const createArtifactObservation = (
   const firstPullListings: string[][] = [];
   const logFs = createRecordingLogFs({
     familyRoot,
-    ...(options.artifactFs === undefined ? {} : { inner: options.artifactFs }),
+    inner: options.wrapFs?.(familyRoot) ?? options.artifactFs ?? createNodeDispatchLogFileSystem(),
   });
   const streams = createScriptedStreams({
     scripts: options.scripts,

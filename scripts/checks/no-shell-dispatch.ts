@@ -33,6 +33,7 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/core/src/app/dispatch-lane.ts",
   "packages/core/src/app/dispatch-lane-view.ts",
   "packages/core/src/app/dispatch-log-sink.ts",
+  "packages/core/src/app/dispatch-log-tail.ts",
   "packages/core/src/domain/dispatch-operator-view.ts",
   "packages/core/src/domain/dispatch-log.ts",
   "packages/core/src/domain/dispatch-attempts.ts",

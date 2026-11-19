@@ -230,6 +230,8 @@ export type DispatchLogFileSystem = {
   readonly mode: (path: string) => number | undefined;
   /** The names inside one directory, or `undefined` when it cannot be listed. */
   readonly list: (directory: string) => readonly DispatchLogFileEntry[] | undefined;
+  /** Whether a path exists (the `no-log` / `unreadable` distinction). */
+  readonly exists: (path: string) => boolean;
   /** The file's text, or `undefined` when it cannot be read. */
   readonly read: (path: string) => string | undefined;
 };

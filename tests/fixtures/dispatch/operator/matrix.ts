@@ -73,10 +73,27 @@ const delivering = (
   expected,
 });
 
+const log = (
+  id: string,
+  state: OperatorMatrixState,
+  projection: ProjectionClass,
+  expected: OperatorMatrixEntry["expected"],
+): OperatorMatrixEntry => ({
+  id,
+  group: "LOG",
+  query: "log GH-354",
+  state,
+  mode: "json",
+  precondition: `${state} lane for GH-354 with the declared artifact family state`,
+  projection,
+  expected,
+});
+
 /**
  * The declared rows. Phase 2 declares the six `status` combinations, both
  * `is-delivering` forms, and both output modes of the per-ref negative answer;
- * later phases append their own rows and never rewrite these.
+ * phase 4 appends the three `log` combinations. Later phases append their own
+ * rows and never rewrite these.
  */
 export const OPERATOR_MATRIX: readonly OperatorMatrixEntry[] = [
   status("MATRIX-STATUS-LIVE-JSON", "live", "json", (data) => [
@@ -142,6 +159,19 @@ export const OPERATOR_MATRIX: readonly OperatorMatrixEntry[] = [
       ...mismatch("refs", at(data, "refs"), ["GH-354"]),
     ],
   ),
+  log("MATRIX-LOG-LIVE-JSON", "live", "success", (data) => [
+    ...mismatch("query", at(data, "query"), "log"),
+    ...mismatch("available", at(data, "available"), true),
+  ]),
+  log("MATRIX-LOG-TERMINAL-JSON", "terminal", "success", (data) => [
+    ...mismatch("query", at(data, "query"), "log"),
+    ...mismatch("tail", at(data, "tail"), 50),
+  ]),
+  log("MATRIX-LOG-ABSENT-JSON", "absent", "success", (data) => [
+    ...mismatch("available", at(data, "available"), false),
+    ...mismatch("reason", at(data, "reason"), "no-log"),
+    ...mismatch("lines", at(data, "lines"), []),
+  ]),
   delivering(
     "MATRIX-ISDEL-REPOLESS-ABSENT-JSON",
     "absent",

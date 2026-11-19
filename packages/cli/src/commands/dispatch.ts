@@ -20,9 +20,14 @@ import {
   type CommandFailureHarnessDetail,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
+  DISPATCH_LOG_TAIL_DEFAULT,
+  DISPATCH_LOG_TAIL_MAX,
+  DISPATCH_LOG_TAIL_MIN,
+  DISPATCH_LOG_TAIL_PATTERN,
   type DispatchAttemptsData,
   type DispatchDeliveringData,
   type DispatchEnvelopeData,
+  type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
   type DispatchSummaryData,
@@ -33,6 +38,7 @@ import {
   renderDispatchAttemptsText,
   renderDispatchDeliveringText,
   renderDispatchHandoverText,
+  renderDispatchLogText,
   renderDispatchResolveText,
   renderDispatchStatusText,
   renderDispatchSummaryText,
@@ -174,6 +180,17 @@ export type DispatchDeliveringRuntime = {
   >;
 };
 
+/** The bounded `log` read surface (GH-354 API-2); the tail is pre-validated. */
+export type DispatchLogRuntime = {
+  readonly read: (input: {
+    readonly ref: string;
+    readonly tail: number;
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchLogData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
+
 /** Everything the dispatch command family can be composed with. */
 export type DispatchCommandRuntime = {
   readonly run: DispatchRunRuntime;
@@ -183,6 +200,7 @@ export type DispatchCommandRuntime = {
   readonly attempts?: DispatchAttemptsRuntime;
   readonly status?: DispatchStatusRuntime;
   readonly delivering?: DispatchDeliveringRuntime;
+  readonly log?: DispatchLogRuntime;
   /**
    * The registered credential set the composition root already holds (the same
    * value `blockers` and `steer` receive); the message composition redacts with
@@ -246,6 +264,21 @@ const isStatusData = (data: unknown): data is DispatchStatusData => queryOf(data
 
 const isDeliveringData = (data: unknown): data is DispatchDeliveringData =>
   queryOf(data) === "is-delivering";
+
+const isLogData = (data: unknown): data is DispatchLogData => queryOf(data) === "log";
+
+/**
+ * The `--tail` value: a canonical decimal in 1..500, REFUSED rather than clamped
+ * (AC-F2-2). `undefined` is the declared default; a malformed value is a refusal.
+ */
+const parseTail = (value: unknown): number | undefined | null => {
+  if (value === undefined) return DISPATCH_LOG_TAIL_DEFAULT;
+  if (typeof value !== "string") return null;
+  if (!new RegExp(`^${DISPATCH_LOG_TAIL_PATTERN}$`, "u").test(value)) return null;
+  const parsed = Number(value);
+  if (parsed < DISPATCH_LOG_TAIL_MIN || parsed > DISPATCH_LOG_TAIL_MAX) return null;
+  return parsed;
+};
 
 /** The parsed `attempts` request, or the grammar's refusal summary. */
 type AttemptsRequest =
@@ -370,7 +403,7 @@ export const createDispatchCommandDefinition = (
 ): CommandDefinition => {
   const definition: CommandDefinition = {
     flags: [...DELIVERED_FLAGS],
-    requiresValue: [...DELIVERED_VALUE_FLAGS],
+    requiresValue: [...DELIVERED_VALUE_FLAGS, "--tail"],
     positionals: { max: 3 },
     acceptsAnyFlag: true,
     humanSuccess: true,
@@ -378,6 +411,7 @@ export const createDispatchCommandDefinition = (
       if (isSummaryData(data)) return "success";
       if (queryOf(data) === "status") return "success";
       if (isDeliveringData(data)) return data.delivering ? "success" : "user-validation";
+      if (isLogData(data)) return data.reason === "unreadable" ? "user-validation" : "success";
       const handover = data as {
         readonly verdict?: unknown;
         readonly recorded?: unknown;
@@ -396,6 +430,7 @@ export const createDispatchCommandDefinition = (
       if (isAttemptsData(data)) return renderDispatchAttemptsText(data);
       if (isStatusData(data)) return renderDispatchStatusText(data);
       if (isDeliveringData(data)) return renderDispatchDeliveringText(data);
+      if (isLogData(data)) return renderDispatchLogText(data);
       if (isSummaryData(data)) return renderDispatchSummaryText(data);
       if (isResolveData(data)) return renderDispatchResolveText(data);
       const envelope = data as Partial<DispatchEnvelopeData>;
@@ -429,7 +464,7 @@ export const createDispatchCommandDefinition = (
         const delivered = new Set(
           operator
             ? [...OPERATOR_FLAGS[first as OperatorForm]]
-            : [...(definition.flags ?? []), ...(definition.requiresValue ?? [])],
+            : [...DELIVERED_FLAGS, ...DELIVERED_VALUE_FLAGS],
         );
         const undeclared = argv.find((token) => token.startsWith("--") && !delivered.has(token));
         if (undeclared !== undefined) {
@@ -459,11 +494,27 @@ export const createDispatchCommandDefinition = (
           return result.ok ? { data: result.data } : { error: result.error };
         }
 
+        // `log` takes the family's one value flag; the value is validated here
+        // before any artifact read (AC-F2-2, AC-F5-2).
+        if (first === "log") {
+          if (runtime.log === undefined || request.ref === undefined) {
+            return failure("input.value.rejected");
+          }
+          const tail = parseTail(flags["--tail"]);
+          if (tail === null || tail === undefined) {
+            return failure(
+              "input.value.rejected",
+              `"--tail" must be a canonical decimal in ${DISPATCH_LOG_TAIL_MIN}..${DISPATCH_LOG_TAIL_MAX}`,
+            );
+          }
+          const result = await runtime.log.read({ ref: request.ref, tail });
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+
         // A query surface this composition does not supply refuses rather than
         // answering an empty success (DEC-7, AC-F5-3).
         return failure("input.value.rejected");
       }
-
       if (isAttempts) {
         if (runtime.attempts === undefined) return failure("input.value.rejected");
         const request = parseAttemptsRequest(argv);

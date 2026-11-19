@@ -11,10 +11,12 @@ import {
   type DeliveryResultToken,
   DISPATCH_MAX_HUMAN_BYTES,
   DISPATCH_MAX_HUMAN_LINES,
+  DISPATCH_LOG_MAX_HUMAN_BYTES,
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
   type DispatchDeliveringData,
   type DispatchEnvelopeData,
+  type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
   type DispatchSummaryData,
@@ -213,4 +215,32 @@ export const renderDispatchDeliveringText = (data: DispatchDeliveringData): stri
       : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omitted}`]),
   ];
   return `${lines.join("\n")}\n`;
+};
+
+/**
+ * `log` as the RAW tail plus at most one `truncation=` line (DEC-8, §8.5).
+ *
+ * The human byte bound (32 768 bytes) is applied here, after the machine
+ * selection, so the scope names the bound that actually bound. `omitted` is the
+ * total dropped: the runtime's own omission plus the human-bound drop.
+ */
+export const renderDispatchLogText = (data: DispatchLogData): string => {
+  if (!data.available) return `reason=${data.reason ?? "no-log"}\n`;
+  const lines = [...data.lines];
+  let omitted = data.truncation?.omittedLines ?? 0;
+  const humanBytes = (candidate: readonly string[]): number =>
+    candidate.reduce((total, line) => total + utf8Bytes(line) + 1, 0);
+  let droppedByHuman = 0;
+  while (lines.length > 0 && humanBytes(lines) > DISPATCH_LOG_MAX_HUMAN_BYTES) {
+    lines.shift();
+    droppedByHuman += 1;
+  }
+  omitted += droppedByHuman;
+  const fact =
+    droppedByHuman > 0
+      ? `truncation=scope:bytes,bound:${DISPATCH_LOG_MAX_HUMAN_BYTES},omitted:${omitted}`
+      : data.truncation === undefined
+        ? undefined
+        : `truncation=scope:${data.truncation.scope},bound:${data.truncation.bound},omitted:${data.truncation.omittedLines}`;
+  return `${[...lines, ...(fact === undefined ? [] : [fact])].join("\n")}${lines.length === 0 && fact === undefined ? "" : "\n"}`;
 };

@@ -190,6 +190,7 @@ export const boundDispatchLogLines = (input: {
   readonly truncation?: DispatchOperatorTruncation;
 } => {
   const all = [...input.lines];
+  if (all.length === 0) return { lines: [] };
   const requested = Math.max(0, input.requested);
   const lineBound = Math.min(requested, input.maxLines ?? Number.MAX_SAFE_INTEGER);
   const selected = all.slice(Math.max(0, all.length - lineBound));
@@ -199,9 +200,11 @@ export const boundDispatchLogLines = (input: {
   const kept = [...selected];
   while (kept.length > 0 && measure(kept) > byteBound) kept.shift();
   const byteBounded = kept.length < selected.length;
-  const omitted = all.length - kept.length;
 
-  if (omitted === 0) return { lines: kept };
+  // A fact exists only when the answer is SHORTER than the requested count: a
+  // window that satisfies the request is not a truncation (AC-F2-5).
+  if (kept.length >= requested) return { lines: kept };
+  const omitted = requested - kept.length;
   if (byteBounded) {
     return { lines: kept, truncation: { scope: "bytes", bound: byteBound, omittedLines: omitted } };
   }
