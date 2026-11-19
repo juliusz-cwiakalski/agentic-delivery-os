@@ -8,8 +8,9 @@
 # naming the plan phase id, the commit hash, and the gate result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-349-spec.md (**v1.9** — the phase-5 sweep reconciliation; its §2.1
-#               merge-reconciliation note covers BOTH upstream merges — F-1..F-7; 46 ACs —
+#   - Spec:     ./chg-GH-349-spec.md (**v2.4** — the review-corrected current truth; its
+#               §2.1 merge-reconciliation note covers BOTH upstream merges — F-1..F-7;
+#               46 ACs —
 #               AC-F1-1..9, AC-F2-1..6, AC-F3-1..4, AC-F4-1..9, AC-F5-1..7,
 #               AC-F6-1..6, AC-F7-1..5; API-1..7; DM-1..9; NFR-1..13; NG-1..11;
 #               RSK-1..12; DEC-1..8; §18 sequencing; §24.1 Appendix A doc
@@ -78,8 +79,8 @@
 #               matrix's 27→30 move (not counted in the eighteen), three previously
 #               unclassified scan hits were classified, and the unreproducible raw
 #               hit count was replaced by "the pin set is the claim" with the
-#               reproducible 2 135-file population. **v1.8/v1.9 are the MERGE
-#               RECONCILIATIONS** and are binding on this plan. The branch moved
+#               reproducible 2 135-file population. **v1.8–v2.4 are the MERGE and
+#               REVIEW RECONCILIATIONS** and are binding on this plan. The branch moved
 #               TWICE: PR #357 added four `harness` identities (149 → **153**)
 #               and PR #363 (the GH-346 install lifecycle) added eleven `install`
 #               identities (153 → **164**); GH-349's delta is unchanged at +3, so
@@ -90,14 +91,20 @@
 #               for PR #357, TDR-0044 → TDR-0049 for PR #363, TDR-0049 → **TDR-0055**
 #               for PR #364; 0044 now names the install lifecycle record and
 #               0049–0054 the GH-347 dispatch records — content unchanged
-#               throughout). v1.9
-#               also adds §24.9 Pin classification (the three kinds this plan
-#               mirrors) and the two phase-5 pin classifications. The rollout
+#               throughout). v1.9 also adds §24.9 Pin classification (the three
+#               kinds this plan mirrors) and the two phase-5 pin classifications;
+#               v2.0–v2.2 restate the second merge's figures and correct the
+#               supervision live count and the legacy-token row; v2.3 records the
+#               third renumbering (TDR-0055); and **v2.4 applies the two review
+#               corrections** — the merge-suite split is **nine changed / seven
+#               green** (`merge-probe` is claimed, since the probe now classifies
+#               every declared not-green job) and the withheld residue is
+#               INFORMATIONAL (it does not raise the attention exit). The rollout
 #               section declares the release changeset (five fixed packages at
 #               `minor`, `testkit` excluded). No acceptance criterion was added or
 #               changed. See the **MERGE RECONCILIATION** and
 #               **DELIVERED-SCOPE CORRECTIONS** blocks below.
-#   - Tests:    ./chg-GH-349-test-plan.md (**v1.11** — 88 TCs —
+#   - Tests:    ./chg-GH-349-test-plan.md (**v1.14** — 88 TCs —
 #               TC-F1-001..014 (14), TC-F2-001..008 (8), TC-F3-001..006 (6),
 #               TC-F4-001..015 (15), TC-F5-001..008 (8), TC-F6-001..012 (12),
 #               TC-F7-001..006 (6), TC-SYNC-001..011 (11), TC-FLOOR-001..008 (8);
@@ -105,7 +112,7 @@
 #               merge-suite, consumer-sweep and documentation rows; §7.2 fixtures
 #               to author; §7.3 extended-vs-authored sets (incl. the two closeout
 #               goldens); §7.4 gate battery G1..G12 with G12 binding; §7.5 the
-#               **126-row** mutation register M1..M126; §7.6 the phase/file
+#               **127-row** mutation register M1..M127; §7.6 the phase/file
 #               bindings this plan must carry, including the TEN obligations
 #               (i)..(x) **plus obligation (0)** (phase 1's changeset-and-pin
 #               duty, v1.10), the TC-SYNC-010 documentation row and the OQ-1
@@ -150,11 +157,14 @@
 #               above), **116 → 123 in v1.10** (M117 zero added changesets,
 #               M118 two, M119 a patch bump, M120 a sixth package or `testkit`,
 #               M121 an empty body, M122 a modified pre-existing changeset file,
-#               M123 a hand-edited version), and **123 → 126 in v1.11**, which
-#               adds the two missed enforcing pins as mutations only (M124 a flat
+#               M123 a hand-edited version), **123 → 126 in v1.11** (M124 a flat
 #               conformance-step count left at fourteen; M125 a hand-trimmed
 #               inventory missing an export; M126 a hand-expanded inventory
-#               carrying an export no module has) with no TC added or removed.
+#               carrying an export no module has), and **126 → 127 in v1.14**
+#               (M127 — the withheld residue must not raise `attention`, and the
+#               informational rule must not be extended to another residue kind).
+#               v1.12 reconciled the second merge and v1.13 the third
+#               renumbering; none of them added or removed a TC.
 #               The two earlier added ids remain: **TC-SYNC-009** (the tenth
 #               operation's EIGHTEEN enforcing pins of Appendix H, each asserted
 #               at ten, plus the transport typecheck and the posture content) and
@@ -324,9 +334,10 @@
 #   **167/166/68/`+133`**; the phase-1 commit's 152 was the pre-merge truth. See
 #   MERGE RECONCILIATION below, which supersedes every absolute count in this
 #   block and adds the release changeset. (The vectors above are also superseded:
-#   the TC vector is now [3, 23, 7, 9, 20, 12, 14] = 88 and the register is 126.)
+#   the TC vector is now [3, 23, 7, 9, 20, 12, 14] = 88 and the register is 127.)
 #
-# MERGE RECONCILIATION (spec v1.8, test plan v1.10; merge commit 1bd66293 —
+# MERGE RECONCILIATION (spec v1.8, extended by v2.0–v2.4; test plan v1.10, extended
+#   by v1.12–v1.14; merge commit 1bd66293 —
 #   a COUNT/IDENTITY reconciliation, not a requirement change):
 #   The integration branch merged upstream work (`origin/main-tools` PR #357,
 #   merge commit `1bd66293`), and two facts moved under this change:
@@ -407,7 +418,7 @@
 #   delta requires it; `plan diff` shows them `within` at phase 2 and may show an
 #   ADVISORY `undeclared-missing` in phase 5. Nothing else moves: the AC vector is
 #   [0, 15, 4, 7, 9, 6, 5] (46), the TC vector is [3, 23, 7, 9, 20, 12, 14] (88),
-#   the pin count stays EIGHTEEN, the register stays 126, and every other phase's
+#   the pin count stays EIGHTEEN, the register stays 127, and every other phase's
 #   scope is unchanged. The DoR verdict stands.
 #
 # PHASE 5 IN PROGRESS (delivery planning reopened; declaration correction only):
@@ -520,6 +531,36 @@
 #     projection.
 #   The reviewers' six minors and two infos live in the review artifact and are not
 #   restated here; none of them changes a scope declaration.
+#
+# REVIEW-1 REMEDIATION SCOPE (review-2 finding **N2**, major · plan-compliance ·
+#   owner: plan owner · commit `a832c861`):
+#   The remediation above was BEHAVIOURALLY IN-SPEC and only its DECLARATION was
+#   incomplete. The REVIEW-1 note claimed the repairs sat "inside already-declared
+#   phase scope"; SIX PATHS DID NOT:
+#     packages/cli/src/commands/closeout.ts
+#     tests/behaviour/closeout-attention-exit.test.ts
+#     tests/behaviour/closeout-idempotency.test.ts
+#     tests/behaviour/closeout-milestone-production.test.ts
+#     tests/fixtures/closeout/production-composition.ts
+#     tests/fixtures/capsule/mutants.ts
+#   All six are now declared in **phase 5** with the review-1 obligation each
+#   carries (M5/5.4a for the exit projection, the exit proof and the residue
+#   mutant; M3 for ledger-terminal idempotency; B1/5.4b for the end-to-end
+#   composition case and its fixture), so the declaration matches what was
+#   actually edited and `plan diff` has authority over every remediation path.
+#   THE UNION CHECK WAS RE-RUN over the whole commit (`a832c861`, twelve paths),
+#   not just the reported six: the other six were ALREADY declaration-covered by
+#   some phase and needed no addition — `packages/core/src/domain/closeout.ts`,
+#   `tests/behaviour/closeout-milestone-sync.test.ts` and
+#   `tests/fixtures/closeout/milestone.ts` (phase 5),
+#   `packages/core/src/domain/merge-transaction.ts` and
+#   `tests/behaviour/merge-refusal-taxonomy.test.ts` (phase 2), and
+#   `tests/behaviour/merge-required-job-probe.test.ts` (phase 3). No path in the
+#   commit remains undeclared by every phase.
+#   NO REQUIREMENT CHANGED: 46 ACs, 88 TCs, the eighteen operation pins and every
+#   other phase's file count are unchanged; phase 5 grows 70 → 76 by exactly the
+#   six paths above. The behaviour was reviewed as in-spec in review-iter-2, so
+#   this block corrects the DECLARATION and records nothing new about the code.
 #
 # PIN CLASSIFICATION (three kinds) — the lesson from phases 1, 2 and 5:
 #   A "pin" in this repository is not one thing, and a plan that declares only
@@ -1442,7 +1483,7 @@ tier:
     - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; one of the EIGHTEEN Appendix H operation pins is left at nine, or its POSTURE CONTENT is wrong (GitHub supported without `close-milestone` or with a non-empty gap list, GitLab not `adapter-not-implemented`, Jira not `provider-unsupported`, `EXPECTED_SEED_POSTURES` not 9→10 / 7→8 / 6→7, a missing tenth `WRITE_METHODS` arm, or a missing `operationLabel` case); a merge golden outside the four declared paths moves or a retired golden is left present; a closeout golden is left at twelve step lines; the legacy-token set loses `149`/`148`/`+115` or a planted-stale control; `milestone-state` or `close-milestone` enters the trap-family vocabulary; or a fixture is regenerated to go green (§24.3 C17, NFR-6, spec v1.6 B1b/B1d, TC-FLOOR-001, TC-FLOOR-005, TC-SYNC-001, TC-SYNC-009, M78/M91/M100/M102/M104/M108/M112..M116/M117..M123/M124..M126)"
     - "A type or a closed set is widened/appended without its delivered state-layer validator in the same commit — `landing.shaOnBase`'s widening without `packages/core/src/state/merge.ts`, or the seventh recorded closeout operation name without its arm in `packages/core/src/state/closeout.ts` — so the first record written by the new path reads back as torn state (spec v1.5 N2a/N2b, Appendix H, AC-F1-2/AC-F4-5, TC-F1-012/TC-SYNC-002, M105/M106)"
     - "`tests/behaviour/providers/**` is described as unchanged by obligation while `github-cli-transport`, `github-landing`, `github-collection` or `provider-capabilities` must move, or one of those FOUR provider-path items is declared read-only (spec v1.6 B1c/M2, test plan §7.6(x), TC-SYNC-009)"
-    - "The release changeset is wrong in any way: zero added `.changeset/*.md` while the diff is publishable, two added files, a `patch` bump on any of the five fixed packages, a sixth package or `@delivery-os/testkit` present, an empty body, a modified pre-existing changeset file, or a hand-edited package `version` instead of letting changesets own the bump (NFR-6/NFR-12, test plan v1.11 TC-SYNC-011 + §7.6(0), M117..M123)"
+    - "The release changeset is wrong in any way: zero added `.changeset/*.md` while the diff is publishable, two added files, a `patch` bump on any of the five fixed packages, a sixth package or `@delivery-os/testkit` present, an empty body, a modified pre-existing changeset file, or a hand-edited package `version` instead of letting changesets own the bump (NFR-6/NFR-12, test plan v1.14 TC-SYNC-011 + §7.6(0), M117..M123)"
     - "An operation-count prose page (`feature-provider-client-seeds.md`, `doc/spec/nonfunctional.md`, `doc/overview/architecture-overview.md`) is left at nine; a page-wide `nine`→`ten` substitution also moves the nine clause ids or the `status` nine-section statement; those pages are asserted in the additive or milestone phase instead of the documentation phase; the delivered-check-bound reference-behavior page is moved a phase late instead of with the operation; or `feature-adapter-conformance.md` is treated as a carrier instead of registry-bound prose (spec v1.5 M2, spec v1.6 N10, Appendix E item 7, test plan v1.8, TC-SYNC-010/TC-SYNC-009, M109/M111)"
     - "`landing.shaOnBase` reports a locally derived `true` with no answering read, loses its `unknown` rendering, rejects a legacy boolean record, or widens past `boolean` | `\"unknown\"` (spec v1.3 M3, DM-3, AC-F1-2, TC-F1-011/TC-F1-012, M96)"
     - "Phase 5 starts before the owner's OQ-1 answer is recorded, or a delivery phase treats a global PDR-0005 reading as a local degradation instead of a specification revision and scope reduction (spec v1.3 OQ-1/RSK-2/Appendix G-6, test plan §7.6 precondition)"
@@ -1547,7 +1588,8 @@ phases:
   #   planted-stale control gains a stale-`149` and a stale-`+115` case so the
   #   extension cannot pass vacuously — without it a stale total outside the seven
   #   suites and two pages would stop being caught. `152`/`151`/`+118` are NOT
-  #   added to the legacy set: they never landed on the base (test plan v1.10).
+  #   added to the legacy set: they never landed on the base (test plan v1.10,
+  #   retained through v1.14).
   #   TWO-PHASE FILE DECLARED HERE AND IN PHASE 5 (spec v1.5 N1b; M110):
   #   `tests/behaviour/ceremony-nonregression.test.ts` carries the IDENTITY TOTAL
   #   in this commit (149 → **167**) and the STEP COUNT (12 → 13) in the step
@@ -1559,7 +1601,7 @@ phases:
   #
   # Obligations:
   #   1.0 **AUTHOR THE RELEASE CHANGESET AND ITS BASELINE PIN, WITH THE CASE — a
-  #       RELEASE-METADATA obligation, NOT a version bump** (test plan v1.10
+  #       RELEASE-METADATA obligation, NOT a version bump** (test plan v1.14
   #       TC-SYNC-011; §7.6 obligation (0)). Add exactly ONE file,
   #       `.changeset/gh-349-merge-closeout-queue-repair-minor.md`, whose front
   #       matter declares exactly the FIVE fixed packages at `minor` —
@@ -1700,7 +1742,7 @@ phases:
         - tests/structure/supervision-error-family.test.ts
         # The exact `DeliveryRequest` key-set probe gains `title`.
         - tests/types/delivery-thread.type-test.ts
-        # RELEASE METADATA (test plan v1.10 TC-SYNC-011; obligation 1.0). The
+        # RELEASE METADATA (test plan v1.14 TC-SYNC-011; obligation 1.0). The
         # delivery's SINGLE added changeset — five fixed packages at `minor`,
         # `testkit` absent, non-empty body — plus its case and its pre-change
         # baseline pin (64 file names with digests and the five package versions).
@@ -2806,6 +2848,25 @@ phases:
         - tests/types/forbidden-acts.type-test.ts
         - tests/behaviour/closeout-milestone-sync.test.ts
         - tests/behaviour/closeout-milestone-write-failure.test.ts
+        # REVIEW-1 REMEDIATION SCOPE (review-2 N2; commit a832c861). Six paths the
+        # remediation changed and no phase declared. The BEHAVIOUR is in-spec
+        # (no requirement, criterion or AC changed); only the declaration was
+        # incomplete. Each is tied to the review-1 obligation it carries:
+        #   - the closeout command's EXIT PROJECTION (the informational withheld
+        #     residue ⇒ exit 0; other residue ⇒ 1; gated failure ⇒ 2) — M5 / 5.4a;
+        - packages/cli/src/commands/closeout.ts
+        #   - the production exit-projection proof for the withheld case — M5 / 5.4a;
+        - tests/behaviour/closeout-attention-exit.test.ts
+        #   - ledger-terminal idempotency (the second apply folds the ledger rather
+        #     than starting from an already-closed observation) — M3;
+        - tests/behaviour/closeout-idempotency.test.ts
+        #   - the end-to-end milestone composition case — B1 / 5.4b;
+        - tests/behaviour/closeout-milestone-production.test.ts
+        #   - the production composition fixture the case drives — B1 / 5.4b;
+        - tests/fixtures/closeout/production-composition.ts
+        #   - the capsule residue mutant used to exercise the informational kind
+        #     against another residue kind — M5 / 5.4a.
+        - tests/fixtures/capsule/mutants.ts
         # The thirteenth step's count pins and its TWO golden files (spec v1.5
         # N1b): 2 files, 12→13 step lines, plus the four count-pinning suites and
         # ceremony-nonregression's STEP half.
