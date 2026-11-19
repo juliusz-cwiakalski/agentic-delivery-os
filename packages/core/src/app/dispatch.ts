@@ -305,6 +305,12 @@ export type DispatchPorts = {
   /** The composition-resolved single-seat binding for this run (TDR-0040 A-4). */
   readonly harnessBinding?: HarnessSeatBinding;
   /**
+   * The fresh-spawn title, supplied as a COMPOSITION fact (GH-347 DM-6,
+   * TDR-0049). A role-less composition supplies none, so it stays role-less; a
+   * resume never carries one.
+   */
+  readonly spawnTitle?: string;
+  /**
    * The advisory lane owner facts (GH-347 DM-1, TDR-0044): the composition's
    * process id and the declared start instant. Absent keeps the lane write off
    * (a direct composition that never gained a lane), never a fabricated owner.
@@ -952,6 +958,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           workItemRef: ports.ref,
           prompt: spawnPrompt ?? ports.prompt,
           descriptor: ports.descriptor,
+          ...(ports.spawnTitle === undefined ? {} : { title: ports.spawnTitle }),
           ...propagation,
         });
       })();

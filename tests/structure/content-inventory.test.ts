@@ -293,6 +293,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/lane-launch-plan.ts": ["createLaneLaunchPlanner", "planLaneLaunch"],
   "core/src/app/daemon-dispatch-result.ts": ["daemonAttemptId", "recordDaemonDispatchResult"],
+  "core/src/domain/dispatch-prompt.ts": [
+    "DISPATCH_LIFECYCLE_SECTION_TITLES",
+    "DISPATCH_LIFECYCLE_SECTIONS",
+    "buildLifecyclePrompt",
+    "lifecyclePromptSectionsPresent",
+  ],
   "core/src/domain/dispatch-tracker.ts": [
     "DISPATCH_TRACKER_EXHAUSTED_IDENTITY",
     "DISPATCH_TRACKER_LADDER_ATTEMPTS",

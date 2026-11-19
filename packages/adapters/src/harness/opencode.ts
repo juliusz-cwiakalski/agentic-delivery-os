@@ -597,9 +597,21 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     const binding = resolved.value ?? record?.binding;
     const environment = environmentFor(descriptor, binding);
     if (!environment.ok) return environment;
+    // GH-347 API-6: the session id stays ADJACENT to `--session`; the binding's
+    // `--agent`/`--model` pair is appended after it, never between the flag and
+    // its value.
+    const resumeBase = options.resumeArgs ?? [];
+    const resumeArgv = resumeBase.includes("--session")
+      ? [
+          ...resumeBase.flatMap((arg) =>
+            arg === "--session" ? [arg, input.handle.sessionId] : [arg],
+          ),
+          ...bindingArgsFor(binding),
+        ]
+      : [...resumeBase, ...bindingArgsFor(binding), input.handle.sessionId];
     const stream = options.starter(
       options.command,
-      [...(options.resumeArgs ?? []), ...bindingArgsFor(binding), input.handle.sessionId],
+      resumeArgv,
       streamOptions(descriptor.workDirectory, environment.value, input.prompt),
     );
     const outcome = await acquireFromStream(
@@ -642,7 +654,17 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   };
 
   return {
-    spawn: (input) => run(input, options.spawnArgs ?? [], input.prompt),
+    spawn: (input) =>
+      run(
+        input,
+        [
+          ...(options.spawnArgs ?? []),
+          // GH-347 API-6: exactly one deterministic `--title` on a fresh spawn;
+          // a resume never carries one.
+          ...(input.title === undefined ? [] : ["--title", input.title]),
+        ],
+        input.prompt,
+      ),
     deliver: resume,
     resume,
     terminate: async (input) => {

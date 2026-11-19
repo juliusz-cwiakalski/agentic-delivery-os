@@ -141,6 +141,7 @@
     "src/domain/dispatch-gate.ts",
     "src/domain/dispatch-identity.ts",
     "src/domain/dispatch-liveness.ts",
+    "src/domain/dispatch-prompt.ts",
     "src/domain/dispatch-result.ts",
     "src/domain/dispatch-resume.ts",
     "src/domain/dispatch-tracker.ts",

@@ -259,6 +259,44 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
   const home = mkdtempSync(join(BASE, `${options.label ?? "gh347-parity"}-`));
   const checkoutRoot = makeCheckout(home, "checkout", options.originUrl ?? GITHUB_ORIGIN);
   const checkout = checkoutRoot.directory;
+  // The parity profile declares the `pm` seat with an EXPRESSIBLE model
+  // (`provider/model`), so the production agent supply resolves the one seat.
+  mkdirSync(join(checkout, brand.configDirectoryName), { recursive: true });
+  writeFileSync(
+    join(checkout, brand.configDirectoryName, "config.yaml"),
+    `provider:
+  defaultChain: default
+  credentials:
+    provider-a:
+      sourceKey:
+        style: literal
+        name: PROVIDER_A_KEY
+  entries:
+    provider-a:
+      class: subscription
+  chains:
+    default:
+      entries:
+        - provider-a
+      allowPaidFallback: false
+  profiles:
+    tiers:
+      build: {}
+    profiles:
+      base:
+        tier: build
+        providers:
+          - provider-a
+        seats:
+          pm:
+            model: provider-a/model-large
+            pacingClass: judgment
+            capability: text-only
+    preferenceChain:
+      base: base
+      fallbacks: []
+`,
+  );
   const stateDirectory = projectScopeFor({
     cwd: checkout,
     hostRoot: join(home, brand.stateDirectoryName),
@@ -490,4 +528,51 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     releaseFence,
     dispose: () => rmSync(home, { recursive: true, force: true }),
   };
+};
+
+/* ------------------------------------------------------------------------- */
+/* The spawn rows (GH-347 F-7, TDR-0049).                                     */
+/* ------------------------------------------------------------------------- */
+
+/** A fresh production spawn: one --agent pm, one --model, one fresh --title. */
+export const spawnFreshObservation = async (
+  options: { readonly ref?: string } = {},
+): Promise<ParityObservation> => {
+  const ref = options.ref ?? "GH-347";
+  const h = createParityHarness({ label: `spawn-fresh-${ref}`, ref });
+  try {
+    await h.run(["dispatch", ref, "--json"]);
+    return h.observe();
+  } finally {
+    h.dispose();
+  }
+};
+
+/** A resume: the recorded lane resumes with NO title. */
+export const spawnResumeObservation = async (): Promise<ParityObservation> => {
+  const h = createParityHarness({ label: "spawn-resume" });
+  try {
+    // The lane is seeded through the real append, exactly as a prior run leaves it.
+    const { appendDispatchLane } = await import("../../../../packages/core/src/app/dispatch-ledger");
+    const appended = appendDispatchLane(h.store, "seed-spawn", {
+      schema: "delivery.dispatch.lane.v1",
+      ref: "GH-347",
+      repository: PARITY_REPOSITORY,
+      attemptId: "attempt-seed-spawn",
+      sessionId: "ses-spawn-1",
+      harnessKind: "opencode",
+      owner: { processId: 4242, startedAt: h.clock.nowIso() },
+      iterationOrdinal: 1,
+      restartsConsumed: 0,
+      state: "terminal",
+      lastToken: "pr-open",
+      lastOutcome: "completed",
+      recordedAt: h.clock.nowIso(),
+    });
+    if (!appended.ok) throw new Error("spawn lane seed failed");
+    await h.run(["dispatch", "GH-347", "--resume-prompt", "continue", "--json"]);
+    return h.observe();
+  } finally {
+    h.dispose();
+  }
 };

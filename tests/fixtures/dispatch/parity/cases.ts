@@ -9,7 +9,7 @@
  * A suite consumes its entry's `scenario` builder; no suite re-expresses a
  * scenario and no scenario is written twice.
  */
-import type { ParityObservation } from "./harness";
+import { spawnFreshObservation, spawnResumeObservation, type ParityObservation } from "./harness";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
 import {
   resumeOverPrOpen,
@@ -174,6 +174,20 @@ export const PARITY_CASES: readonly ParityCase[] = [
     declaredSeam: "terminate",
     scenario: () => terminateExactIdentity(),
     expected: { token: "merged", exit: 0 },
+  },
+  {
+    id: "spawn-fresh",
+    group: "spawn",
+    declaredSeam: "spawn",
+    scenario: () => spawnFreshObservation(),
+    expected: { token: "finished" },
+  },
+  {
+    id: "spawn-resume",
+    group: "spawn",
+    declaredSeam: "spawn",
+    scenario: () => spawnResumeObservation(),
+    expected: {},
   },
   {
     id: "tracker-outage-with-artifact",

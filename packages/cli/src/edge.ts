@@ -6988,6 +6988,8 @@ export type DispatchComposition = {
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
   /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
   readonly laneOwner?: DispatchPorts["laneOwner"];
+  /** The fresh-spawn title fact (GH-347 DM-6); absent keeps the run role-less. */
+  readonly spawnTitle?: (ref: string) => string | undefined;
   /** The borrowed terminate grace (GH-347 DEC-4). */
   readonly killGraceMs?: number;
   /** The delivered `economics.restart` append (GH-347 F-6). */
@@ -7268,6 +7270,12 @@ export const createDispatchCommandRuntime = (
         ...(harnessBinding === undefined ? {} : { harnessBinding }),
         ...(composition.laneOwner === undefined ? {} : { laneOwner: composition.laneOwner }),
         ...(composition.killGraceMs === undefined ? {} : { killGraceMs: composition.killGraceMs }),
+        ...(composition.spawnTitle === undefined
+          ? {}
+          : (() => {
+              const title = composition.spawnTitle?.(input.ref);
+              return title === undefined ? {} : { spawnTitle: title };
+            })()),
         ...(composition.appendRestart === undefined
           ? {}
           : { appendRestart: composition.appendRestart }),

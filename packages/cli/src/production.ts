@@ -142,8 +142,10 @@ import {
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
+  buildLifecyclePrompt,
   resolveDispatchLane,
   runDispatchTrackerLadder,
+  spawnTitleFor,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
@@ -3055,7 +3057,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         workDirectory: cwd,
         environment: harnessEnvironmentEntries(settings),
       },
-      prompt: (ref) => `Deliver change ${ref} through the delivery lifecycle.`,
+      // GH-347 F-7, DEC-8: the fresh prompt is the delivery-lifecycle prompt
+      // parameterized by the ref and the resolved base branch.
+      prompt: (ref) => buildLifecyclePrompt({ ref, baseBranch: CLOSEOUT_INTEGRATION_BASE }),
+      // The lifecycle agent identity is `pm` through the existing caller-agent
+      // member; the binding is the delivered pure resolution's single seat.
+      harnessAgent: () => "pm",
+      // The deterministic fresh-spawn title is a composition fact.
+      spawnTitle: (ref) => spawnTitleFor(ref),
+      harnessBinding: () => {
+        const context = resolveProfileContext();
+        if (context === undefined) return undefined;
+        const resolved = resolveBinding(context.profile, context.selection, "pm");
+        return resolved.outcome === "binding" ? resolved.binding : undefined;
+      },
       evidenceClass: DISPATCH_DEFAULT_EVIDENCE_CLASS,
       repository: () => repository,
       readTruth: dispatchTruth,

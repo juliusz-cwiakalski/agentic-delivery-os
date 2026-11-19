@@ -499,3 +499,26 @@ notes:
       commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 6 (spawn identity, title, lifecycle prompt) implemented before
+      its commit: the production composition supplies the caller agent identity
+      pm and the delivered pure resolution's single-seat binding, the
+      deterministic fresh-spawn title as a COMPOSITION fact (spawnTitleFor,
+      never the engine's and never a flag), and the delivery-lifecycle prompt
+      parameterized by ref and the resolved base branch (domain/dispatch-prompt.ts
+      with five stable section markers, exported through the domain and the core
+      root); the opencode adapter renders exactly one --agent/--model and one
+      --title on a fresh spawn and none on a resume. Gate results: the spawn
+      parity suite 10 pass; all conformance dispatch green; the harness
+      spawn-env/resume-propagation controls and the help-structure checks green
+      (148 across 14 files); typecheck green; git diff --check clean. DEVIATION,
+      reported: the opencode resume argv now keeps the session id ADJACENT to
+      --session (the binding pair is appended after it). The delivered argv put
+      the binding pair between the flag and its value, which was invisible while
+      every dispatch was role-less and breaks a resume as soon as the agent is
+      supplied; the fix is additive and preserves the resume-propagation contract
+      (asserted green). The role-less composition stays role-less: the title
+      travels as a composition fact, so an uncomposed run records no binding and
+      renders no --agent/--model/--title. The phase commit hash is recorded in
+      the note that follows it."
+    type: info
+    date: "2026-11-19"

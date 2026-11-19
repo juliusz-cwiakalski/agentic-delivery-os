@@ -323,6 +323,14 @@ export {
   deriveDispatchResult,
 } from "./dispatch-result.js";
 export {
+  buildLifecyclePrompt,
+  DISPATCH_LIFECYCLE_SECTION_TITLES,
+  DISPATCH_LIFECYCLE_SECTIONS,
+  type DispatchLifecyclePromptInput,
+  type DispatchLifecycleSection,
+  lifecyclePromptSectionsPresent,
+} from "./dispatch-prompt.js";
+export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
   DISPATCH_TRACKER_LADDER_ATTEMPTS,
   DISPATCH_TRACKER_LADDER_BASE_MS,
