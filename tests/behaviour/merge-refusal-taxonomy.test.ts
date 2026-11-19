@@ -11,6 +11,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   ERROR_TABLE,
+  MERGE_DEFAULT_GATE_ENTRIES,
+  MERGE_GATE_SET_SCHEMA_VERSION,
   MERGE_SYNC_REQUIRED_REASONS,
   type PipelineRun,
 } from "../../packages/core/src/contracts/index";
@@ -59,19 +61,46 @@ const pageWith = (
   sha: MERGE_HEAD,
 });
 
+/** The shipped set plus ONE declared required job (a `required-ci-job` entry). */
+const gateSetDeclaring = (job: string) => ({
+  schemaVersion: MERGE_GATE_SET_SCHEMA_VERSION,
+  entries: [
+    ...MERGE_DEFAULT_GATE_ENTRIES,
+    { id: "ci-required-job", recipe: "required-ci-job", surface: "battery", job },
+  ],
+});
+
+/** The gate-set identity carrying the one declared job, in declaration order. */
+const gateSetIdsDeclaring = (): readonly string[] => [
+  ...MERGE_DEFAULT_GATE_ENTRIES.map((entry) => entry.id),
+  "ci-required-job",
+];
+
 const notMergeableHarness = (options: {
   readonly page?: ReturnType<typeof pageWith>;
   readonly record?: Parameters<typeof verificationRecord>[0];
   readonly reReadHead?: string;
+  readonly requiredJob?: string;
 }): MergeHarness => {
   const harness = createMergeHarness({
     landing: REFUSED_LANDING,
     request: baseRequest({ mergeableState: "not-mergeable" }),
     ...(options.page === undefined ? {} : { checkRuns: options.page }),
+    ...(options.requiredJob === undefined
+      ? {}
+      : { gateSet: gateSetDeclaring(options.requiredJob) }),
   });
   harness.seedVerification(
     verificationRecord({
       verifiedAt: isoAt(-2 * MINUTE),
+      ...(options.requiredJob === undefined
+        ? {}
+        : {
+            gateSet: {
+              schemaVersion: MERGE_GATE_SET_SCHEMA_VERSION,
+              ids: gateSetIdsDeclaring(),
+            },
+          }),
       ...(options.record ?? {}),
     }),
   );
@@ -175,7 +204,10 @@ describe("TC-F2-002 a not-mergeable refusal resolves to behind-unconfirmed after
 
 describe("TC-F2-003 a checks posture resolves to the effective gate set's row", () => {
   test("a pending job yields the ci-green family row with ci-pending", async () => {
-    const harness = notMergeableHarness({ page: pageWith("queued") });
+    const harness = notMergeableHarness({
+      page: pageWith("queued"),
+      requiredJob: "CI / test (18)",
+    });
     try {
       const result = await harness.run();
       expect(result.exitCode).toBe(1);
@@ -192,6 +224,7 @@ describe("TC-F2-003 a checks posture resolves to the effective gate set's row", 
   test("a job the recorded verification already read failed yields ci-failed", async () => {
     const harness = notMergeableHarness({
       page: pageWith("failed"),
+      requiredJob: "CI / test (18)",
       record: {
         gates: verificationRecord().gates.map((gate) =>
           gate.id === "ci-green"
@@ -225,13 +258,50 @@ describe("TC-F2-003 a checks posture resolves to the effective gate set's row", 
   });
 });
 
+describe("AC-F3-3 the not-mergeable checks posture covers only declared required jobs", () => {
+  test("an undeclared failing job is not evidence and the refusal stays behind-unconfirmed", async () => {
+    // The page's failing job is `CI / test (18)`; the effective gate set
+    // declares only `CI / lint`, which is green.
+    const harness = notMergeableHarness({ page: pageWith("failed"), requiredJob: "CI / lint" });
+    try {
+      const result = await harness.run();
+      expect(result.exitCode).toBe(1);
+      expect(errorOf(result)?.code).toBe("merge.sync-required");
+      const summary = summaryOf(result);
+      expect(summary).toContain("evidence=behind-unconfirmed");
+      expect(summary).not.toContain("gate=ci-green");
+      expect(harness.counts.landing).toBe(1);
+      expect(harness.counts.requestDetail).toBe(2);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("the same non-green job, declared, is gate evidence and refuses", async () => {
+    const harness = notMergeableHarness({
+      page: pageWith("failed"),
+      requiredJob: "CI / test (18)",
+    });
+    try {
+      const result = await harness.run();
+      expect(result.exitCode).toBe(1);
+      expect(errorOf(result)?.code).toBe("merge.gate.ci-green.failed");
+      expect(summaryOf(result)).toContain("evidence=ci-failed");
+      expect(harness.counts.landing).toBe(1);
+      expect(harness.counts.requestDetail).toBe(2);
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
+
 describe("TC-F2-004 no not-mergeable branch yields a clean pre-mutation abort", () => {
   test("the three stimuli's code set is exactly the two declared identities", async () => {
     const codes: string[] = [];
     // (a) the re-read repeats not-mergeable
     const repeated = notMergeableHarness({});
-    // (b) the re-read observes a checks posture
-    const checks = notMergeableHarness({ page: pageWith("queued") });
+    // (b) the re-read observes a declared checks posture
+    const checks = notMergeableHarness({ page: pageWith("queued"), requiredJob: "CI / test (18)" });
     // (c) the re-read observes a non-checks protection posture
     const blocked = notMergeableHarness({ page: baseCheckRuns() });
     for (const harness of [repeated, checks, blocked]) {

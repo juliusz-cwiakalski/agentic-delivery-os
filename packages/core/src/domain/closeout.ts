@@ -1086,6 +1086,26 @@ type MilestoneStepPlan = {
 };
 
 const MILESTONE_DECLARATION = /^M(\d+):\s*(\S.*)$/u;
+const MILESTONE_TITLE = /^M(\d+):\s*(.*)$/u;
+
+/**
+ * The ONE milestone-title normalizer (GH-349 AC-F4-2, DM-9).
+ *
+ * The declaration grammar carries the `M<n>:` prefix and the provider's
+ * work-item milestone title is copied verbatim, so it carries the same prefix.
+ * Comparing either side in its raw form matches only a fixture: both sides go
+ * through this normalizer, which collapses whitespace and canonicalizes the
+ * `M<n>:` prefix so the milestone identity survives — `M4: X` matches the
+ * provider's `M4:  X` and never `M5: X`. Nothing else is normalized (never case
+ * folding, never similarity).
+ */
+const normalizeMilestoneTitle = (title: string): string => {
+  const canonical = title.trim().replace(/\s+/gu, " ");
+  const parsed = MILESTONE_TITLE.exec(canonical);
+  if (parsed === null) return canonical;
+  const phrase = (parsed[2] ?? "").trim();
+  return phrase.length === 0 ? canonical : `M${parsed[1]}: ${phrase}`;
+};
 
 const milestoneEvidence = (fields: readonly CloseoutEvidenceField[]): CloseoutEvidence =>
   evidence(...fields);
@@ -1152,14 +1172,18 @@ const milestoneStep = (facts: CloseoutPlanFacts): MilestoneStepPlan => {
       state: "declared-milestone-missing",
     });
   }
-  const declaredTitle = (parsed[2] ?? "").trim();
+  const declaredTitle = normalizeMilestoneTitle(declaration ?? "");
   if (declaredTitle.length === 0) {
     return withheld("declared-milestone-missing", [], { state: "declared-milestone-missing" });
   }
 
   // 3. The observed attachment must be the declared milestone, matched by the
-  //    provider-asserted title and never by similarity.
-  if (observedTitle === undefined || observedTitle !== declaredTitle) {
+  //    provider-asserted title and never by similarity. The provider copies its
+  //    milestone title verbatim (prefix included), so the declaration and the
+  //    observation are compared after the same normalizer.
+  const observedTitlePhrase =
+    observedTitle === undefined ? undefined : normalizeMilestoneTitle(observedTitle);
+  if (observedTitlePhrase === undefined || observedTitlePhrase !== declaredTitle) {
     return withheld(
       "attachment-mismatch",
       [field("observed", observedTitle ?? "absent"), field("declaredTitle", declaredTitle)],

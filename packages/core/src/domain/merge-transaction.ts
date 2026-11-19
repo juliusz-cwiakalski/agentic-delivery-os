@@ -459,26 +459,39 @@ const containmentAnswer = async (
 };
 
 /**
- * The checks posture of the verified head over the bounded page (AC-F2-2).
+ * The effective gate set's declared required jobs (GH-349 AC-F3-3).
+ *
+ * Every `required-ci-job` entry is declared, whether the merge projection
+ * re-probes it or the change-level battery already evaluated it; the raw page
+ * is never the candidate set.
+ */
+const declaredCiJobsOf = (gateSet: MergeEffectiveGateSet): readonly string[] =>
+  gateSet.entries
+    .filter((entry) => entry.recipe === "required-ci-job")
+    .map((entry) => entry.job ?? entry.id);
+
+/**
+ * The checks posture of the verified head over the declared required set
+ * (AC-F2-2, AC-F3-3).
  *
  * A provider refuses a landing because a required check is not green, and the
  * only structural reading of that posture is the page the invocation already
- * read. Every job name the page carries is evaluated through the delivered
- * per-job evaluator — the single required-check mapping — and the first
- * non-green result names the posture. A page for another head carries no
- * posture, and no refusal message is ever matched.
+ * read. The candidate set is the effective gate set's declared required jobs —
+ * every `required-ci-job` entry, `job ?? id` — and never the raw page: a job the
+ * gate set does not declare is not gate evidence and produces no refusal. Each
+ * declared job is evaluated through the delivered per-job evaluator (the single
+ * required-check mapping) and the first non-green result names the posture. A
+ * page for another head carries no posture, and no refusal message is ever
+ * matched.
  */
 const checksPostureOf = (input: {
   readonly runs: readonly PipelineRun[];
   readonly pageSha: string | undefined;
   readonly headSha: string;
+  readonly requiredJobs: readonly string[];
 }): { readonly reason: VerifyGateReason; readonly jobs: readonly string[] } | undefined => {
   if (input.pageSha !== undefined && input.pageSha !== input.headSha) return undefined;
-  const names: string[] = [];
-  for (const run of input.runs) {
-    if (!names.includes(run.pipelineName)) names.push(run.pipelineName);
-  }
-  for (const name of names) {
+  for (const name of input.requiredJobs) {
     const evaluation = evaluateRequiredJobGate({
       jobName: name,
       runs: input.runs,
@@ -978,6 +991,7 @@ export const runMergeTransaction = async (input: {
       runs: checkRuns.value.items,
       pageSha: checkRuns.value.sha ?? head,
       headSha: head,
+      requiredJobs: declaredCiJobsOf(config.gateSet),
     });
     if (posture !== undefined) {
       return refused({

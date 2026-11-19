@@ -16,6 +16,7 @@ import {
   type MilestoneReadObservation,
 } from "../../packages/core/src/contracts/index";
 import { buildCloseoutPlan, runCloseout } from "../../packages/core/src/domain/closeout";
+import { foldCloseoutHistory } from "../../packages/core/src/state/closeout";
 import {
   CLOSEOUT_TIMESTAMP,
   type FakeProviderOptions,
@@ -65,6 +66,8 @@ type MilestoneFixtureOptions = {
   readonly workItemMilestone?: string | undefined;
   readonly capabilities?: CloseoutPlanFacts["provider"]["capabilities"];
   readonly systemName?: string;
+  /** The folded ledger the plan is built against (defaults to an empty one). */
+  readonly persisted?: CloseoutPlanFacts["persisted"];
 };
 
 const milestoneFacts = (options: MilestoneFixtureOptions = {}): CloseoutPlanFacts => {
@@ -84,6 +87,7 @@ const milestoneFacts = (options: MilestoneFixtureOptions = {}): CloseoutPlanFact
       makeWorkItem({ ...(observedTitle === undefined ? {} : { milestone: observedTitle }) }),
     ),
     milestone,
+    ...(options.persisted === undefined ? {} : { persisted: options.persisted }),
   });
 };
 
@@ -168,6 +172,32 @@ describe("TC-F4-002 a satisfying exit review closes once over one read-back-veri
     if (result.ok) return;
     expect(result.error.code).toBe("closeout.write.failed");
     expect(closeCalls(provider.calls)).toHaveLength(1);
+  });
+});
+
+describe("AC-F4-2 the provider-native prefixed title matches the declaration (B1)", () => {
+  test("the real GH-shaped title matches instead of reporting attachment-mismatch", () => {
+    // The provider copies its milestone title verbatim, prefix included.
+    expect(MILESTONE_TITLE).toBe("M4: Jaiship-native delivery");
+    const plan = buildCloseoutPlan(milestoneFacts({ observation: satisfyingMilestone() }));
+    const step = milestoneStep(plan);
+    expect(step.outcome).toBe("would-apply");
+    expect(step.reason).toBeUndefined();
+    expect(step.evidence).toEqual(
+      expect.arrayContaining([{ name: "attachment", value: "matched" }]),
+    );
+    expect(withheldResidue(plan)).toHaveLength(0);
+  });
+
+  test("the same phrase under another milestone number is still a mismatch", () => {
+    const plan = buildCloseoutPlan(
+      milestoneFacts({
+        observation: satisfyingMilestone(),
+        workItemMilestone: "M5: Jaiship-native delivery",
+      }),
+    );
+    expect(milestoneStep(plan).outcome).toBe("skipped-noop");
+    expect(milestoneStep(plan).reason).toBe("attachment-mismatch");
   });
 });
 
@@ -380,7 +410,7 @@ describe("TC-F4-010 plan mode renders the closed outcome table with zero writes"
 });
 
 describe("TC-F4-011 two applies perform at most one close", () => {
-  test("the first reports applied, the second satisfied, and the total close count is one", async () => {
+  test("the second apply observes an open record and is satisfied from the ledger", async () => {
     const provider = makeProvider();
     const git = makeGit();
     const state = makeState();
@@ -399,10 +429,27 @@ describe("TC-F4-011 two applies perform at most one close", () => {
     expect(first.data.steps.find((step) => step.stepId === "milestone-sync")?.outcome).toBe(
       "applied",
     );
+    expect(state.records.filter((record) => record.operation === "close-milestone")).toHaveLength(
+      1,
+    );
 
-    const secondPlan = buildCloseoutPlan(milestoneFacts({ observation: alreadyClosedMilestone() }));
+    // The second apply observes the SAME open record: the provider has not been
+    // asked again, so the only possible source of `satisfied` is the ledger's
+    // terminal outcome for the first close (AC-F4-6). With an empty ledger the
+    // same facts would ask for a second write, which is the control below.
+    const secondFacts = milestoneFacts({
+      observation: satisfyingMilestone(),
+      persisted: foldCloseoutHistory(state.records),
+    });
+    expect(milestoneStep(buildCloseoutPlan(secondFacts)).outcome).toBe("satisfied");
+    expect(
+      milestoneStep(buildCloseoutPlan(milestoneFacts({ observation: satisfyingMilestone() })))
+        .outcome,
+    ).toBe("would-apply");
+
+    const appendsBefore = state.fence.appends;
     const second = await runCloseout({
-      plan: secondPlan,
+      plan: buildCloseoutPlan(secondFacts),
       provider: provider.runtime,
       git: git.runtime,
       state: state.runtime,
@@ -416,6 +463,10 @@ describe("TC-F4-011 two applies perform at most one close", () => {
       "satisfied",
     );
     expect(closeCalls(provider.calls)).toHaveLength(1);
+    expect(state.fence.appends).toBe(appendsBefore);
+    expect(state.records.filter((record) => record.operation === "close-milestone")).toHaveLength(
+      1,
+    );
   });
 });
 

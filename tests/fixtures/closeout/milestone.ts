@@ -13,7 +13,11 @@ import type {
 } from "../../../packages/core/src/contracts/index";
 
 export const MILESTONE_DECLARATION = "M4: Jaiship-native delivery";
-export const MILESTONE_TITLE = "Jaiship-native delivery";
+/**
+ * The provider's work-item milestone title, copied verbatim (GH-349 AC-F4-2):
+ * GitHub carries the `M<n>:` prefix, exactly as the declaration does.
+ */
+export const MILESTONE_TITLE = "M4: Jaiship-native delivery";
 export const MILESTONE_NUMBER = 4;
 export const OTHER_MILESTONE_TITLE = "M5: A different commitment";
 

@@ -62,6 +62,14 @@ const declaredSet = (entries: readonly MergeGateEntry[]) => {
 
 const declaredWorkspace = () => declaredSet([...MERGE_DEFAULT_GATE_ENTRIES, workspaceEntry]);
 
+/**
+ * The same job declared by the change-level battery only (surface `battery`):
+ * the freshness probe does not re-evaluate it, so a non-green page surfaces in
+ * the post-refusal checks posture rather than pre-empting the landing.
+ */
+const postureWorkspace = () =>
+  declaredSet([...MERGE_DEFAULT_GATE_ENTRIES, { ...workspaceEntry, surface: "battery" }]);
+
 type Page = {
   readonly items: readonly {
     readonly identity: { readonly systemName: string; readonly entityId: string };
@@ -437,13 +445,15 @@ describe("TC-F3-005 a check-run page for another head is not head evidence", () 
 
 describe("TC-F3-006 a provider-required refusal is classified, never retried or bypassed", () => {
   test("the guarded landing is refused once and the checks posture classifies it", async () => {
+    const { raw, set } = postureWorkspace();
     const harness = createMergeHarness({
+      gateSet: raw,
       request: baseRequest({ mergeableState: "not-mergeable" }),
       landing: { ok: false, code: "provider.outage" },
       checkRuns: pageWith("queued"),
     });
     try {
-      harness.seedVerification(verificationRecord({ verifiedAt: VERIFIED_AT }));
+      harness.seedVerification(verificationFor(set, { verifiedAt: VERIFIED_AT }));
       const { failure } = await refusedOf(harness);
       expect(failure.code).toBe("merge.gate.ci-green.failed");
       expect(failure.domainKind).toBe("merge");
