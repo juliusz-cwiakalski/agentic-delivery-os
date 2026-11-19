@@ -4,7 +4,7 @@ decision_type: tdr
 status: Proposed
 created: 2026-11-18
 decision_date: null
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 summary: "One phase truth source: the delivery-registry ledger fold stays the only authority, the pm-notes document stays a derived mirror written from the post-transition fold (latest completion, never the earliest recorded one), divergence is detected — never repaired — as one additive `lint.phases.divergent` row on the existing `lint --pm-notes --registry` both-target, scoped to phases that have ledger history and comparing completion only, `verify change` is unchanged, and the regression is named after the F4 stale-timestamp defect."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -523,3 +523,9 @@ exclusion; both are handled by measuring first and recording the boundary rather
   [TDR-0005](TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md),
   [PDR-0005](PDR-0005-milestone-first-planning-and-delivery.md) (signal-precision reasoning reused for
   the corpus bound)
+
+## Revision
+
+### 2026-11-19 — renumbered to TDR-0055; content unchanged
+
+- Renumbered TDR-0040 → TDR-0044 → TDR-0049 → **TDR-0055** to resolve collisions with upstream records (the install-lifecycle set TDR-0044–0048 and the dispatch set TDR-0049–0054); only the `id`, the title line, and the `00-index.md` row moved — no decision, alternative, driver, constraint, consequence, evidence row, or `status: Proposed` changed.
