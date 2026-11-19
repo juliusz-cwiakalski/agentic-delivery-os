@@ -2080,6 +2080,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/output/merge-text.ts": ["renderDryRunHuman", "renderMergeHuman"],
   "core/src/app/queue.ts": [
     "addQueueDependency",
+    "claimDispatchLease",
     "singleFlightRefusalFromLeases",
     "claimQueueLease",
     "claimSingleFlightRefusal",

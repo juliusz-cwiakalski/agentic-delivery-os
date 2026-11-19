@@ -700,8 +700,10 @@ describe("the production composition supplies and orders the preflight", () => {
     const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
     expect(production).toContain("preflight: dispatchPreflight");
     expect(engine.indexOf("ports.preflight()")).toBeGreaterThan(0);
+    // GH-347 AC-F2-3: the claim is awaited because the injected delay makes the
+    // bounded fence wait asynchronous; the ordering property is unchanged.
     expect(engine.indexOf("ports.preflight()")).toBeLessThan(
-      engine.indexOf("const claimed = ports.claimLease()"),
+      engine.indexOf("await ports.claimLease()"),
     );
   });
 });

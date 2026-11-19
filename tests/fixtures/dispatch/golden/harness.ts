@@ -23,6 +23,7 @@ import { resolveBrandIdentity } from "../../../../packages/core/src/branding/ind
 import {
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
+  type DispatchDelay,
   type DispatchEnvelopeData,
   type DispatchEvidenceClass,
   ECONOMICS_EXHAUSTION_OPTIONS,
@@ -121,6 +122,8 @@ export type CommandScenarioOptions = {
   readonly newDivergenceId?: (ref: string) => string;
   /** The optional admission preflight; omitting it keeps the delivered order. */
   readonly preflight?: DispatchPreflightPort;
+  /** The injected delay fact (GH-347 AC-F9-2); absent keeps the delivered order. */
+  readonly delay?: DispatchDelay;
   /** An optional store wrapper (for targeted append failures). */
   readonly store?: (store: StateStorePort) => StateStorePort;
 };
@@ -227,6 +230,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     repository: () => options.repository ?? "github.com/owner/repo",
     readTruth: async () => options.reads ?? readsFrom(),
     ...(options.preflight === undefined ? {} : { preflight: options.preflight }),
+    ...(options.delay === undefined ? {} : { delay: options.delay }),
     claimLease: () => {
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };

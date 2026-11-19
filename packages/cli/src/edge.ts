@@ -6986,7 +6986,10 @@ export type DispatchComposition = {
   readonly harnessAgent?: (ref: string) => string | undefined;
   /** The composition-resolved single-seat binding for this run (TDR-0040). */
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
-  readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
+  readonly claimLease: (
+    ref: string,
+    repository: string,
+  ) => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
   /**

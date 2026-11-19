@@ -86,6 +86,11 @@ export type DispatchLeaseClaim =
       readonly summary?: string;
       /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
       readonly holder?: string;
+      /**
+       * The declared error-table kind the refusal must preserve (GH-347 AC-F2-3,
+       * DM-7): a `state.*` refusal keeps kind `state` and never becomes `queue`.
+       */
+      readonly kind?: "queue" | "state" | "input";
     };
 
 /** One cancellable cadence wait; the composition owns the timer. */
@@ -262,7 +267,7 @@ export type DispatchPorts = {
   readonly newAttemptId: () => string;
   readonly newDivergenceId: () => string;
   readonly readTruth: () => Promise<DispatchTruthReads>;
-  readonly claimLease: () => DispatchLeaseClaim;
+  readonly claimLease: () => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: DispatchPhaseLedger;
   /**
@@ -690,12 +695,14 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     }
   }
 
-  const claimed = ports.claimLease();
+  const claimed = await ports.claimLease();
   if (!claimed.ok) {
     return {
       ok: false,
       error: {
-        kind: "queue",
+        // The claim's declared kind is preserved (GH-347 AC-F2-3): a state
+        // failure stays `state` at exit 2 and is never relabelled `queue`.
+        kind: claimed.kind ?? "queue",
         code: claimed.code,
         ...(claimed.summary === undefined ? {} : { summary: claimed.summary }),
         ...(claimed.holder === undefined ? {} : { holder: claimed.holder }),

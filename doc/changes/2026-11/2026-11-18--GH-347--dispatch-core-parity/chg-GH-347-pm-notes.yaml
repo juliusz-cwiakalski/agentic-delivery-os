@@ -384,3 +384,24 @@ notes:
       commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 2 (atomic admission) implemented before its commit: the
+      claim's live-lease verdict decided inside the fence (same-ref under any
+      holder refuses queue.single-flight naming the holder, other-ref refuses
+      queue.lease-conflict, never a renewal), the bounded claim-fence wait
+      through the injected delay (capped at queue.lease-ttl, a persistent state
+      failure keeping its state.* kind at exit 2), the refused-kind
+      preservation in the engine wrapper, and the production mount of
+      claimDispatchLease in place of the pre-claim predicate. Additive
+      composition facts clock and dispatchDelay were added for the deterministic
+      battery (no CLI surface, no config key). Gate results: the admission
+      parity suite 9 pass; the five sibling/control suites 29 pass; the
+      composition suite green; typecheck green; git diff --check clean.
+      DELIVERED EXPECTATION UPDATES, each minimal and authorised by AC-F2-3: the
+      single-flight fixture claim seam is awaited (the awaiting claim is the
+      async bounded wait), so its six delivered call sites await it and one
+      conformance suite awaits the same helper; and
+      tests/structure/dispatch-composition.test.ts pins the preflight-before-claim
+      ordering against the awaited literal. No assertion property was relaxed or
+      removed. The phase commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

@@ -194,9 +194,11 @@ export {
  */
 export {
   addQueueDependency,
+  claimDispatchLease,
   claimQueueLease,
   claimSingleFlightRefusal,
   type DispatchAdmissionRefusal,
+  type DispatchLeaseClaimOutcome,
   declareQueueEntry,
   dispatchAdmissionRefusal,
   leaseRecordHeartbeatAgeMs,

@@ -85,7 +85,7 @@ import {
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
-  claimQueueLease,
+  claimDispatchLease,
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
@@ -100,7 +100,6 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
-  dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   emptyHandoverGate,
   evaluateRestartBudget,
@@ -238,6 +237,7 @@ import {
   type ProjectScopedMemberWork,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_REF_PATTERN,
+  type DispatchDelay,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
@@ -559,6 +559,18 @@ export type ProductionCompositionFacts = {
   readonly gitChildRunner?: GitChildRunner;
   /** The supervisor's own process id (the bin supplies `process.pid`). */
   readonly processId?: number;
+  /**
+   * The injected dispatch delay fact (GH-347 AC-F9-2). Production binds the
+   * real timer; the offline battery injects a recorder that advances a virtual
+   * clock, so no parity case waits on a wall clock.
+   */
+  readonly dispatchDelay?: DispatchDelay;
+  /**
+   * The injected composition clock (GH-347 driver D1): a fixed clock makes the
+   * battery deterministic without a wall-clock read. Production omits it and
+   * reads the system clock.
+   */
+  readonly clock?: { readonly nowMs: () => number; readonly nowIso: () => string };
   /**
    * The process signal subscription seam (the bin supplies the host process).
    */
@@ -1557,8 +1569,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (acquired.ok) emitConfigNotice(acquired.prior);
       return acquired;
     };
-    const nowIso = (): string => new Date().toISOString();
-    const nowMs = (): number => Date.now();
+    const nowIso = (): string => facts.clock?.nowIso() ?? new Date().toISOString();
+    const nowMs = (): number => facts.clock?.nowMs() ?? Date.now();
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
 
@@ -3010,6 +3022,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { ok: true as const, facts: admitted.facts };
     };
 
+    // The one injected delay fact (GH-347 AC-F9-2): production binds the real
+    // timer; an offline composition injects its recorder.
+    const dispatchDelay: DispatchDelay =
+      facts.dispatchDelay ??
+      ((ms) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        }));
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -3051,45 +3072,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // by default, so a fresh installation refuses `provider.profile.absent`
       // until it declares its profiles (the branch's fail-closed contract).
       nominate: nominationPredicate,
-      claimLease: (ref) => {
-        const hold = readOwnerHold();
-        if (hold.active) {
-          return {
-            ok: false,
-            code: "queue.precondition.unmet",
-            summary:
-              hold.reason === undefined
-                ? `reason=owner-hold; owner hold active (${hold.source})`
-                : `reason=owner-hold; owner hold active (${hold.source}): ${hold.reason}`,
-          };
-        }
-        // GH-292 F-4: the dispatch family's ONE admission predicate, before the
-        // claim, spawn, resume, attempt, or record. The dispatch path claims
-        // with the fixed holder `dispatch` and never renews, so any live
-        // same-ref lease is a running dispatch.
-        const refused = dispatchAdmissionRefusal(store, { ref, nowMs: nowMs() });
-        if (refused !== undefined) {
-          return {
-            ok: false,
-            code: refused.code,
-            ...(refused.summary === undefined ? {} : { summary: refused.summary }),
-            ...(refused.holder === undefined ? {} : { holder: refused.holder }),
-          };
-        }
-        const claimed = claimQueueLease(store, {
+      claimLease: (ref) =>
+        claimDispatchLease(store, {
           ref,
-          holder: "dispatch",
-          runner: "dispatch",
-          weightClass: "standard",
-          nowIso: nowIso(),
-          nowMs: nowMs(),
+          nowIso,
+          nowMs,
           fenceToken: newFenceToken(),
-          ownerHold: hold,
-        });
-        return claimed.ok
-          ? { ok: true, leaseId: claimed.value.lease.leaseId }
-          : { ok: false, code: claimed.code };
-      },
+          ownerHold: readOwnerHold(),
+          delay: dispatchDelay,
+        }),
       releaseLease: (ref) => {
         const released = releaseQueueLease(store, {
           ref,
@@ -3103,11 +3094,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       phaseLedger: phaseSummary,
       // The one injected delay fact (GH-347 AC-F9-2): production binds the real
       // timer; no configuration key and no ambient timer lives in the engine.
-      delay: (ms, reason) =>
-        new Promise<void>((resolve) => {
-          void reason;
-          setTimeout(resolve, ms);
-        }),
+      delay: dispatchDelay,
       // The lane policy is data: both the restart bound and the liveness cadence
       // come from the typed `lane` configuration branch.
       restartBudget: lane.restartBudget,
