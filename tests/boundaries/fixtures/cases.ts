@@ -991,6 +991,15 @@ export const AMBIENT_CASES: AmbientCase[] = [
     "packages/core/src/provider/probe.ts",
     'export const zone = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });\n',
   ),
+  // GH-350 rule 4: a provider-shaped environment name is refused, not
+  // projected. Provider policy is configuration data; the provider tier declares
+  // no environment source, so a provider-shaped read is a boundary violation.
+  ambient(
+    "ambient-provider-environment",
+    "ambient-globals-neutral-tiers",
+    "packages/core/src/provider/probe.ts",
+    "export const enabled = process.env.JAISHIP_PROVIDER__ENTRIES__DEFAULT__ENABLED;\n",
+  ),
   ...Object.entries(GLOBALS).flatMap(([globalName, source]) =>
     NEUTRAL_TIERS.map((tier) =>
       ambient(

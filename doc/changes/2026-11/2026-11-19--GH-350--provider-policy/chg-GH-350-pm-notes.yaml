@@ -189,6 +189,9 @@ notes:
       were not edited."
     type: evidence
     date: "2026-11-19"
+  - text: "Resume sync finding: origin/main-tools advanced by f802f71a (GH-347 dispatch core parity), which added TDR-0049..TDR-0054 — the same ids this branch created for ADR-0012's companions (TDR-0049 budgets, 0050 simulate, 0051 migrate, 0052 watch, 0053 mount, 0054 ref). The merge therefore needs a renumber of this branch's six TDRs to the next free ids (0055..0060) across filenames, front matter, the decision index and every reference in the spec, test plan, plan, pm-notes and readiness reviews, plus code unions in production.ts, edge.ts, contracts/index.ts, the contracts/content inventories and the count-bearing pages. Resolvable mechanically; tracked here so the renumber is not mistaken for scope drift."
+    type: blocker
+    date: "2026-11-19"
   - text: "Commit-message observation (not blocking): the commit primitive composes
       a template subject from the staged set, so most commits read
       `docs(GH-350): update doc/changes/...` even where source changed, and many

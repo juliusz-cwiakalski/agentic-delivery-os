@@ -7,32 +7,40 @@
  * configuration phase that declares the catalog branch; TC-BUD-012 owns the
  * chain suite; TC-BUD-015/TC-CONFORM-004 own the evidence-bounds suite.
  */
+
+import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, test } from "bun:test";
-import {
-  type CombinedProviderCondition,
-  type ProviderBudgetDeclaration,
-  type ProviderChain,
-  type ProviderConditionKind,
-  type ProviderConditionResult,
-  type ProviderConfiguration,
-  type ProviderDescriptor,
-  type ProviderResolveResult,
-  type ProviderSpendTotalsInput,
-  type ProviderSpendTotalsRead,
-} from "../../packages/core/src/contracts/index";
 import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import { createProviderSpendTotalsPort } from "../../packages/cli/src/edge";
 import { projectExitCode } from "../../packages/cli/src/projection";
-import { evaluateBudgets, type BudgetEvaluation } from "../../packages/core/src/provider/budgets";
+import { resolveConfig } from "../../packages/core/src/config/index";
+import type {
+  CombinedProviderCondition,
+  ProviderBudgetDeclaration,
+  ProviderChain,
+  ProviderConditionKind,
+  ProviderConditionResult,
+  ProviderConfiguration,
+  ProviderDescriptor,
+  ProviderResolveResult,
+  ProviderSpendTotalsInput,
+  ProviderSpendTotalsRead,
+} from "../../packages/core/src/contracts/index";
+import { computeSpendReport } from "../../packages/core/src/domain/spend";
+import { type BudgetEvaluation, evaluateBudgets } from "../../packages/core/src/provider/budgets";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
 import { combineProviderConditions } from "../../packages/core/src/provider/conditions";
 import { createProviderEngine } from "../../packages/core/src/provider/engine";
-import { parseProviderConfiguration } from "../../packages/core/src/provider/validate";
-import { computeSpendReport } from "../../packages/core/src/domain/spend";
+import {
+  parseAndValidateProviderConfiguration,
+  parseProviderBudgets,
+  parseProviderConfiguration,
+} from "../../packages/core/src/provider/validate";
 import { appendHarnessTelemetry, readSpendLedger } from "../../packages/core/src/state/index";
+import { fileFacts } from "../fixtures/config/facts";
+import { makeSessionRecord } from "../fixtures/spend/harness";
 import {
   listStoreFiles,
   makeIdentity,
@@ -40,7 +48,6 @@ import {
   openStore,
   removeRoot,
 } from "../fixtures/state/harness";
-import { makeSessionRecord } from "../fixtures/spend/harness";
 
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
 const REF = "GH-350";
@@ -946,5 +953,180 @@ describe("TC-BUD-016 no second measurement path is reachable from the gate", () 
     expect(projection.indexOf("readSpendLedger")).toBeLessThan(
       projection.indexOf("computeSpendReport"),
     );
+  });
+});
+
+describe("TC-BUD-001 the budget declaration matrix fails closed naming the field", () => {
+  /** Resolve a declaration through the production catalog, exactly as configuration does. */
+  const resolveDeclaration = (
+    budget: Record<string, unknown>,
+  ):
+    | { readonly ok: true; readonly budgets: Record<string, ProviderBudgetDeclaration> }
+    | {
+        readonly ok: false;
+        readonly code: string;
+        readonly detail?: string;
+        readonly layer?: string;
+      } => {
+    const resolved = resolveConfig({
+      sources: [
+        fileFacts(
+          "project-committed",
+          {
+            provider: {
+              entries: { sub: { class: "subscription" } },
+              budgets: { b: budget },
+            },
+          },
+          6,
+        ),
+      ],
+    });
+    if (!resolved.ok) {
+      return { ok: false, code: resolved.error.code, layer: resolved.error.layer };
+    }
+    const parsed = parseAndValidateProviderConfiguration(resolved.value.values);
+    if (!parsed.ok) return { ok: false, code: parsed.error.code, detail: parsed.error.detail };
+    return { ok: true, budgets: parsed.config.budgets ?? {} };
+  };
+
+  test("the valid corpus validates for every declared combination of the six children", () => {
+    let checked = 0;
+    for (const scope of ["ticket", "window"] as const) {
+      for (const basis of ["cost", "tokens"] as const) {
+        for (const enabled of [true, false]) {
+          for (const entries of [undefined, ["sub"]] as const) {
+            const budget = {
+              enabled,
+              scope,
+              basis,
+              ceiling: 40,
+              ...(scope === "window" ? { windowSeconds: 3600 } : {}),
+              ...(entries === undefined ? {} : { entries }),
+            };
+            const result = resolveDeclaration(budget);
+            const label = JSON.stringify(budget);
+            expect(result.ok, label).toBe(true);
+            if (!result.ok) continue;
+            expect(result.budgets.b, label).toEqual({
+              enabled,
+              scope,
+              basis,
+              ceiling: 40,
+              ...(scope === "window" ? { windowSeconds: 3600 } : {}),
+              ...(entries === undefined ? {} : { entries }),
+            });
+            checked += 1;
+          }
+        }
+      }
+    }
+    expect(checked).toBe(16);
+  });
+
+  test("every invalid child refuses with the declared identity naming exactly the field", () => {
+    const invalid: readonly {
+      readonly label: string;
+      readonly budget: Record<string, unknown>;
+      readonly code: string;
+      readonly field?: string;
+    }[] = [
+      {
+        label: "unknown scope",
+        budget: { scope: "weekly", basis: "cost", ceiling: 40 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.scope",
+      },
+      {
+        label: "unknown basis",
+        budget: { scope: "ticket", basis: "usd", ceiling: 40 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.basis",
+      },
+      {
+        label: "ceiling 0",
+        budget: { scope: "ticket", basis: "cost", ceiling: 0 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.ceiling",
+      },
+      {
+        label: "ceiling -1",
+        budget: { scope: "ticket", basis: "cost", ceiling: -1 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.ceiling",
+      },
+      {
+        label: "windowSeconds 0",
+        budget: { scope: "window", basis: "cost", ceiling: 40, windowSeconds: 0 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.windowSeconds",
+      },
+      {
+        label: "windowSeconds on ticket",
+        budget: { scope: "ticket", basis: "cost", ceiling: 40, windowSeconds: 60 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.windowSeconds",
+      },
+      {
+        label: "windowSeconds absent on window",
+        budget: { scope: "window", basis: "cost", ceiling: 40 },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.windowSeconds",
+      },
+      {
+        label: "an undeclared descriptor",
+        budget: { scope: "ticket", basis: "cost", ceiling: 40, entries: ["ghost"] },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.entries",
+      },
+      {
+        label: "empty entries",
+        budget: { scope: "ticket", basis: "cost", ceiling: 40, entries: [] },
+        code: "provider.chain.invalid",
+        field: "provider.budgets.b.entries",
+      },
+      {
+        label: "a non-boolean enabled",
+        budget: { enabled: "yes", scope: "ticket", basis: "cost", ceiling: 40 },
+        code: "config.value.invalid",
+        field: "provider.budgets.b.enabled",
+      },
+    ];
+
+    for (const entry of invalid) {
+      const result = resolveDeclaration(entry.budget);
+      expect(result.ok, entry.label).toBe(false);
+      if (result.ok) continue;
+      expect(result.code, entry.label).toBe(entry.code);
+      if (entry.code === "provider.chain.invalid") {
+        expect(result.detail, entry.label).toBe(entry.field);
+      } else {
+        // A wrong type is the configuration layer's identity; the field-level
+        // refusal is the same pure rule, asserted directly below.
+        expect(result.layer, entry.label).toBe("project-committed");
+      }
+      expect(result, entry.label).not.toHaveProperty("budgets");
+    }
+
+    // The field-level rule is the same one configuration reaches: handed the
+    // untyped child, it names the exact path, so a type defect is not silent.
+    const direct = parseProviderBudgets(
+      { b: { enabled: "yes", scope: "ticket", basis: "cost", ceiling: 40 } },
+      { sub: { name: "sub", class: "subscription", enabled: true } },
+    );
+    expect(direct).toBe("provider.budgets.b.enabled");
+  });
+
+  test("no evaluation result exists for an invalid declaration", () => {
+    const parsed = parseAndValidateProviderConfiguration({
+      provider: {
+        entries: { sub: { class: "subscription" } },
+        budgets: { b: { scope: "window", basis: "cost", ceiling: 40 } },
+      },
+    });
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect("config" in parsed).toBe(false);
+    expect(parsed.error.detail).toBe("provider.budgets.b.windowSeconds");
   });
 });

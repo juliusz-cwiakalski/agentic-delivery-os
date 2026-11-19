@@ -1198,3 +1198,100 @@ describe("GH-350 phase 2 the zone pages state the delivered basis", () => {
     );
   });
 });
+
+/**
+ * GH-350 phase 4 — the configuration page completes: the budgets branch table,
+ * the widened zone value domain, and the per-repository clause with the
+ * precedence matrix, the origin evidence, the `CI=true` posture and the
+ * multi-checkout boundary (TC-CFG-011's documentation half).
+ *
+ * The page's `maxAgeSeconds` row is the seventh phase's, with the key it
+ * describes; this row asserts only what phase 4 delivers.
+ */
+const GH350_PHASE4_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-config-layer.md",
+    stale: [
+      "an optional UTC `peak` window",
+      "(`provider.credentials`, `provider.entries`, `provider.chains`) use the additive",
+    ],
+    required: [
+      "provider.budgets",
+      "`windowSeconds`",
+      "required iff `scope` is `window`; refused on `ticket`",
+      "an optional `peak` window in a declared IANA zone",
+      "Per-repository provider policy",
+      "Five layers can declare a provider value",
+      "project-local beats project-committed",
+      "record maps merge by child name",
+      "lists replace whole",
+      "`reset` removes inherited descendants",
+      "layer=<layer> file=<path> line=<n>",
+      "validated before it is merged",
+      "`ci-disabled` with no read of it",
+      "`--enable-project-local-config`",
+      "`selected-config` with no local read",
+      "not expressible through these layers",
+      "no `provider.projects.*` branch, key, state kind, command, or error identity exists",
+      "`config.environment.unmapped`",
+      "`config.key.unknown`",
+    ],
+  },
+];
+
+export const gh350Phase4Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 phase 4 the configuration page states the budgets branch and the per-repository policy", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the declared page carries every delivered statement", () => {
+    expect(gh350Phase4Violations(GH350_PHASE4_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced UTC-only peak window and a dropped boundary sentence each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-config-layer.md"
+        ? `${pageText(page) ?? ""}\n- an optional UTC \`peak\` window\n`
+        : pageText(page);
+    expect(gh350Phase4Violations(GH350_PHASE4_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: an optional UTC `peak` window",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-config-layer.md"
+        ? (pageText(page) ?? "").replace(
+            "not expressible through these layers",
+            "expressed through these layers",
+          )
+        : pageText(page);
+    expect(gh350Phase4Violations(GH350_PHASE4_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: not expressible through these layers",
+    );
+  });
+});

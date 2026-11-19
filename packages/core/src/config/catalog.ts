@@ -255,6 +255,30 @@ const PROVIDER_PROFILES = {
 } as const satisfies CatalogField;
 
 /**
+ * One declared spend ceiling (GH-350 F-2, DM-2; TDR-0049).
+ *
+ * The catalog pins the child *shape* only: `enabled` defaults to `true`, and
+ * `scope`, `basis` and `ceiling` are required for every declared budget. The
+ * conditional `windowSeconds` rule (required for `scope: window`, refused on
+ * `scope: ticket`) and the closed scope/basis vocabularies are semantic and
+ * validated fail-closed by the provider rule parser, which names the offending
+ * field path. `entries` is a list of declared descriptor names and replaces
+ * whole on merge. The record ships empty: no ceiling is invented.
+ */
+const PROVIDER_BUDGET_VALUE = {
+  type: "object",
+  required: true,
+  fields: {
+    enabled: { type: "boolean", default: true },
+    scope: { type: "string", required: true },
+    basis: { type: "string", required: true },
+    ceiling: { type: "number", required: true },
+    windowSeconds: { type: "number" },
+    entries: { type: "array", items: { type: "string" } },
+  },
+} as const satisfies CatalogField;
+
+/**
  * One declared gate entry (GH-225 DM-4). The closed recipe vocabulary and the
  * mandatory-built-in / reserved-id rules are semantic and validated by the
  * merge domain; this schema pins the entry shape.
@@ -509,6 +533,7 @@ export const PRODUCTION_CATALOG = {
       entries: { type: "record", value: PROVIDER_ENTRY_VALUE },
       chains: { type: "record", value: PROVIDER_CHAIN_VALUE },
       profiles: PROVIDER_PROFILES,
+      budgets: { type: "record", value: PROVIDER_BUDGET_VALUE },
     },
   },
   commit: {

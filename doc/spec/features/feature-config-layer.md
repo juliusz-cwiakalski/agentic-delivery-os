@@ -2,14 +2,14 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps (including the spend-ceiling budgets branch) and shipped overridable defaults, per-repository provider policy over the five layers that can declare a provider value, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-350"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "PDR-0006", "TDR-0049"]
 ---
 
 # Feature: Configuration Layer and Inspection
@@ -86,7 +86,7 @@ One trusted draft-07 schema is generated from the typed catalog. A recursively r
 - Top-level `x-` keys are allowed in files as vendor data but do not create environment or CLI mappings.
 - Unknown ordinary keys fail `config.key.unknown`; invalid types, directive shapes and disallowed null fail `config.value.invalid`.
 - Explicit null requires catalog permission.
-- The ordinary production catalog declares the typed `provider`, `commit`, `merge`, `verify`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
+- The ordinary production catalog declares the typed `provider`, `commit`, `merge`, `verify`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches. The provider branch's dynamic-name maps (`provider.credentials`, `provider.entries`, `provider.chains`, `provider.profiles.profiles`, `provider.profiles.watch`, `provider.budgets`) use the additive `record` field kind: every child name is arbitrary and every child value is validated against the declared shape, while fixed branches keep exact unknown-key discipline.
 - `workingName` is the separate required bootstrap descriptor, supplied before discovery and never a mutable config key.
 - Typed extension catalogs exercise the same production resolver for required, nullable, defaulted, deprecated, nested, list, secret and machine-path fields. They are not production settings.
 
@@ -96,13 +96,45 @@ The provider branch is the first ordinary production setting. It declares:
 
 - `provider.defaultChain`: the chain used when `--chain` is omitted; absent by default.
 - `provider.credentials.<name>.sourceKey`: a `literal` key name or an `environment-prefixed` suffix; a credential reference, never secret material.
-- `provider.entries.<name>`: a required `class` (`subscription` or `pay-per-token`), an `enabled` flag defaulting to `true`, an optional UTC `peak` window, and an optional `quota` policy.
+- `provider.entries.<name>`: a required `class` (`subscription` or `pay-per-token`), an `enabled` flag defaulting to `true`, an optional `peak` window in a declared IANA zone (its `timezone` value defaults to `UTC`), and an optional `quota` policy.
 - `provider.chains.<name>`: a required non-empty `entries` list and an `allowPaidFallback` boolean defaulting to `false`.
 - `provider.profiles`: the model-profile branch (GH-234). It declares dynamic-name `tiers` and `profiles` maps, a `preferenceChain`, a `pacing` block (ordered `goalPriorities`, `rungs`, tail threshold), a `watch` map keyed by provider name, and optional `envRecord` grammar overrides. Profiles reference declared providers and credentials; the branch ships empty (`provider.profiles: {}`), so no profile, chain, rung, or threshold is invented. The model is specified in [Provider Profiles and Watching](feature-provider-profiles.md).
+- `provider.budgets`: the spend-ceiling branch (GH-350). It is a dynamic-name record map whose children are declared budgets, and it ships empty, so no ceiling is invented. The shape is:
+
+| Key | Type | Default | Semantics |
+|---|---|---|---|
+| `provider.budgets.<name>.enabled` | boolean | `true` | A disabled budget is inert: no spend read, no condition, no announcement. |
+| `provider.budgets.<name>.scope` | `ticket` or `window` | required | `ticket` measures the whole work-item ref; `window` measures the trailing span ending at the evaluation instant. |
+| `provider.budgets.<name>.basis` | `cost` or `tokens` | required | The measured figure, from the delivered spend fold; `cost` is harness-reported units and is never re-priced. |
+| `provider.budgets.<name>.ceiling` | positive number | required | A measurement at or above the ceiling is a crossing. |
+| `provider.budgets.<name>.windowSeconds` | positive integer | required iff `scope` is `window`; refused on `ticket` | The trailing span in seconds. |
+| `provider.budgets.<name>.entries` | non-empty list of declared descriptor names | absent means every declared entry | Restricts which entries the budget governs. |
+
+Budget validation is fail-closed and names the offending field: an unknown `scope` or `basis`, a non-positive or non-integer `ceiling` or `windowSeconds`, a `windowSeconds` on a `ticket` scope (or its absence on a `window` scope), an entry naming no declared descriptor, an empty `entries` list, or an unknown child key fails with `provider.chain.invalid`, and no partial evaluation, park, announcement or spend read escapes. A wrong-typed child is the configuration layer's own `config.value.invalid` before the provider rules run. The evaluation semantics, the park/refusal split and the one-read injected totals port are specified in [Provider Engine](feature-provider-engine.md).
 
 The shipped defaults declare one concrete subscription descriptor, `provider.entries.zai-coding-plan`, with an enabled UTC peak window of `06:00–10:00` and a `7200`-second buffer, and an enabled quota policy against the public Z.AI quota endpoint with credential reference `zai`. The matching `provider.credentials.zai` entry declares a `literal` source key named `ZAI_API_KEY`. `provider.chains` ships empty and `provider.defaultChain` is absent, so a fresh installation fails closed until an operator declares a chain. Every shipped value is overridable per layer and reports its origin through `config debug`.
 
 The full field contract, evaluation semantics, and defaults are documented in [Provider Engine](feature-provider-engine.md); provider semantic-validation failures surface as `provider.chain.invalid` or `provider.chain.empty` from the provider engine, while schema-level configuration failures remain the configuration layer's classified errors.
+
+### Per-repository provider policy
+
+"Per-project provider overrides" is answered by the repository-owned layers, not by a project-keyed branch. A provider policy element — a descriptor, a chain, a profile, a watch target, or a budget — resolves through the same layered resolver as every other setting. Five layers can declare a provider value; the environment and CLI layers remain resolver layers but carry no declared provider node:
+
+| Priority | Layer | Source |
+|---:|---|---|
+| 1 | Defaults | Typed catalog declarations and the shipped defaults manifest |
+| 2 | System | Platform configuration directories |
+| 3 | User-global | Operator configuration directory |
+| 4 | Project-committed | `<repo>/<configDirectoryName>/config.yaml`, or the selected file |
+| 5 | Project-local | `<repo>/<configDirectoryName>/config.local.yaml` |
+
+The highest declaring layer wins for each value; project-local beats project-committed; record maps merge by child name, so a lower layer's sibling values survive; lists replace whole, including a chain's `entries` and a budget's `entries`; `reset` removes inherited descendants; and every effective value reports its exact winning origin. Origin grammar is unchanged: a file value reports `layer=<layer> file=<path> line=<n>`, and `config debug` / `config get <key> --show-origin` expose the same truth for the provider subtree as for any other key.
+
+A repository-layer provider document is validated before it is merged, like every other layer, so a wrong-typed or unknown provider element refuses with the delivered `config.*` identity, and a semantically invalid element refuses the provider's `provider.chain.invalid` naming the offending field. Either way the run fails and never falls back to a machine-global value. Because the environment and CLI layers declare no provider node, a provider-shaped environment name refuses `config.environment.unmapped`, a provider-shaped flag refuses `config.key.unknown`, and this feature introduces no environment variable and no flag.
+
+Under `CI=true` the project-committed document is the CI-visible provider policy: it is read, and project-local is reported `ci-disabled` with no read of it, unless `--enable-project-local-config` enables that layer independently. A selected configuration file (`--config <path>`, then the brand's selector variable, then a recognised legacy selector) occupies the project-committed slot and makes project-local `selected-config` with no local read; it is not an eighth layer.
+
+One policy spanning several checkouts of one project is not expressible through these layers: each checkout resolves its own documents, and no key reads another checkout's policy. That is a declared boundary owned by the future project registry, and no `provider.projects.*` branch, key, state kind, command, or error identity exists in this feature. The product decision is recorded in [PDR-0006](../../decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md) and the budget branch in [TDR-0049](../../decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md).
 
 The status digest consumes the resolved provider branch through the ordinary configuration resolver: `provider.defaultChain`, `provider.chains`, and `provider.entries`. It adds no configuration key, no tracker, VCS, CI, or repository-addressing branch, and no status-specific cap or threshold setting. Status reads the branch and never writes configuration; repository addressing comes from the checkout's `origin` remote. The consumer contract is in [Status Digest](feature-status-digest.md).
 
