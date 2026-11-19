@@ -123,4 +123,48 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
   test("the attempt-record schema version is unchanged", () => {
     expect(DISPATCH_ATTEMPT_PAYLOAD_SCHEMA).toBe("delivery.dispatch.attempt.v1");
   });
+
+  test("the configuration branches are exactly the nine declared ones", () => {
+    const resolved = resolveConfig({ sources: [] });
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    expect(Object.keys(resolved.value.values).sort()).toEqual([
+      "commit",
+      "coordinator",
+      "daemon",
+      "harness",
+      "lane",
+      "merge",
+      "poll",
+      "provider",
+      "queue",
+    ]);
+    // No terminate-grace, tracker, ladder, or attempt key exists anywhere.
+    const serialized = JSON.stringify(resolved.value.values);
+    for (const forbidden of ["terminate-grace", "tracker-ladder", "ladder-attempts"]) {
+      expect(serialized, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  test("the projection of each dispatch/queue row is unchanged", () => {
+    const projections = (prefix: string): Record<string, string> =>
+      Object.fromEntries(
+        ERROR_TABLE.filter((row) => row.code.startsWith(prefix)).map((row) => [
+          row.code,
+          row.projectionClass,
+        ]),
+      );
+    expect(projections("dispatch.")).toEqual({
+      "dispatch.restart-budget-exceeded": "user-validation",
+      "dispatch.resume-uneconomical": "user-validation",
+      "dispatch.session.spawn-failed": "user-validation",
+      "dispatch.state-unverified": "platform-provider",
+    });
+    expect(projections("queue.single-flight")).toEqual({
+      "queue.single-flight": "user-validation",
+    });
+    expect(projections("queue.lease-conflict")).toEqual({
+      "queue.lease-conflict": "user-validation",
+    });
+  });
 });

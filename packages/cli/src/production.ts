@@ -3191,14 +3191,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }),
       };
       const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
-      const coordinator = resolveCoordinatorSettings(resolved.value.values, resolved.value.origins);
+      const coordinatorSettings = resolveCoordinatorSettings(
+        resolved.value.values,
+        resolved.value.origins,
+      );
       if (!lane.ok) return { ok: false, code: lane.error.code };
-      if (!coordinator.ok) return { ok: false, code: coordinator.error.code };
+      if (!coordinatorSettings.ok) return { ok: false, code: coordinatorSettings.error.code };
       return {
         ok: true,
         settings: reconciled,
         lane: lane.value,
-        killGraceMs: coordinator.value.killGraceMs,
+        killGraceMs: coordinatorSettings.value.killGraceMs,
       };
     };
 

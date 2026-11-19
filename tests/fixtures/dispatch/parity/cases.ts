@@ -10,6 +10,7 @@
  * scenario and no scenario is written twice.
  */
 import { spawnFreshObservation, spawnResumeObservation, type ParityObservation } from "./harness";
+import { CLASS_ROWS } from "./evidence";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
 import {
   resumeOverPrOpen,
@@ -76,7 +77,17 @@ export type ParityCase = {
 /** The long token values live here so the secret scanner sees no assignment. */
 const SU = "state-unverified";
 
+/** The 11 class rows complete the registry (29 total). */
+const CLASS_CASES: readonly ParityCase[] = CLASS_ROWS.map((row) => ({
+  id: row.id,
+  group: "class" as const,
+  declaredSeam: row.declaredSeam,
+  scenario: () => row.scenario(),
+  expected: { token: row.token, exit: row.exit },
+}));
+
 export const PARITY_CASES: readonly ParityCase[] = [
+  ...CLASS_CASES,
   {
     id: "admission-same-ref-race",
     group: "admission",

@@ -29,7 +29,7 @@ type DispatchToken = DeliveryResultToken;
  * pr-open-unverified, `f` failed, `mr` max-restarts, `su` state-unverified,
  * `np` noop-lane-permission, `nn` noop-lane-nothing-to-do.
  */
-const [m, b, po, pou, f, fin, mr, su, , np, nn] = DELIVERY_RESULT_TOKENS;
+const [m, b, po, pou, f, fin, mr, su, par, np, nn] = DELIVERY_RESULT_TOKENS;
 const [, , O_FAILED, O_REFUSED] = HARNESS_OUTCOMES;
 
 /** One injected truth read: the value, or a classified unreadable reason. */
@@ -303,12 +303,12 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     if (artifacts.branchCommits > 0) {
       return artifacts.pmNotes === "complete"
         ? base(input, {
-            token: "finished",
+            token: fin,
             outcome: harness.outcome,
             lastMessage: "the branch carries commits and the pm-notes are complete",
           })
         : base(input, {
-            token: "partial",
+            token: par,
             outcome: harness.outcome,
             lastMessage: "the branch carries commits but the pm-notes are not complete",
           });

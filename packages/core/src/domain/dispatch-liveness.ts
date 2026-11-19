@@ -7,7 +7,7 @@
  * two consecutive sourced evaluations with no advance. Absent readings keep
  * their declared absence reason and are never coerced to zero.
  */
-import type { EconomicsSourcedSignalAbsenceReason } from "#contracts";
+import { DELIVERY_RESULT_TOKENS, type EconomicsSourcedSignalAbsenceReason } from "#contracts";
 import type { DispatchArtifactFacts, DispatchRead, DispatchTrackerFacts } from "./dispatch-result.js";
 
 /** The four declared progress signals. */
@@ -142,7 +142,10 @@ export const evaluateDispatchLiveness = (input: {
  * short-circuit a stall. A decisive artifact outside it (`finished`, `partial`,
  * `noop-lane-nothing-to-do`) does not stop a stall.
  */
-export const DISPATCH_TERMINAL_PRE_RESTART_VERDICTS = ["merged", "blocked", "pr-open"] as const;
+/** The three verdicts, taken from the ONE taxonomy (no second token list). */
+const [MERGED, BLOCKED, PR_OPEN] = DELIVERY_RESULT_TOKENS;
+
+export const DISPATCH_TERMINAL_PRE_RESTART_VERDICTS = [MERGED, BLOCKED, PR_OPEN] as const;
 
 export type DispatchTerminalPreRestartVerdict =
   (typeof DISPATCH_TERMINAL_PRE_RESTART_VERDICTS)[number];
@@ -160,12 +163,12 @@ export const dispatchStallShortCircuit = (input: {
   readonly artifacts: DispatchRead<DispatchArtifactFacts>;
 }): DispatchTerminalPreRestartVerdict | undefined => {
   if (input.tracker.ok) {
-    if (input.tracker.value.state === "done") return "merged";
+    if (input.tracker.value.state === "done") return MERGED;
     if (input.tracker.value.blocking || input.tracker.value.state === "delivery-blocked") {
-      return "blocked";
+      return BLOCKED;
     }
   }
-  if (input.artifacts.ok && input.artifacts.value.pr.state === "open") return "pr-open";
+  if (input.artifacts.ok && input.artifacts.value.pr.state === "open") return PR_OPEN;
   return undefined;
 };
 

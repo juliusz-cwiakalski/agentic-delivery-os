@@ -522,3 +522,33 @@ notes:
       the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 7 (parity battery, no-shell invariant, daemon regression,
+      closed-contract pin) implemented before its commit: the single registry now
+      carries all 29 rows (11 class + 18 non-class across the seven declared
+      groups); the permanent PARITY_PROOF_BOUNDARY constant (eight proven ids,
+      six not-proven ids, in order) and the 11-class table live in
+      parity/evidence.ts; parity/seams.ts holds the import-identity manifest, the
+      forbidden-signature scan and the planted control; the battery suite asserts
+      the class replay, the seam identity, the two-run determinism (60 composed
+      runs), the boundary self-consistency and its planted drifts, and the record
+      bounds/redaction; scripts/checks/no-shell-dispatch.ts scans the 22-file
+      declared surface with the four anchored rules (R1 literal values, R2 shell
+      true, R3 the child_process receiver, R4 the literal shell:false) and its
+      suite proves each rule by name plus the RegExp.exec, port-spawn, .sha and
+      comment controls; the daemon-lane suite gains TC-PARITY-006 over six rows
+      with the attempt-level corroboration; the contract pin adds the nine config
+      branches, the dispatch/queue projections, the four record kinds (including
+      the lane kind and the unchanged daemon kind) and the 16-reference bound.
+      Gate results: conformance dispatch 94 pass; the no-shell/invariance checks
+      17 pass and the check binary exits clean over 22 surface files; the
+      delivered privacy/bounds/additive-stability/exit-projection/token-home and
+      error-table-sync suites 142 pass; typecheck green; git diff --check clean.
+      DISCOVERY, reported: the new short-circuit verdict set and the two artifact
+      arms initially carried token literals in production modules, which the
+      delivered one-token-home invariant rejects; they now reference the taxonomy
+      aliases, so no dispatch production module declares a token literal. The
+      proof boundary's PAGE publication and the constant-to-page equality are
+      lifecycle phase 7's check; this phase asserts only the constant. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

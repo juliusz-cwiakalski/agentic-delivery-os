@@ -75,7 +75,7 @@ import {
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
-const [, , po, pou, f, , mr, su] = DELIVERY_RESULT_TOKENS;
+const [m, , po, pou, f, , mr, su] = DELIVERY_RESULT_TOKENS;
 const O_FAILED = HARNESS_OUTCOMES[2];
 
 /** A local short alias: keeps the payload field type recognizable. */
@@ -1156,13 +1156,13 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         });
         if (shortCircuit !== undefined) {
           const arm =
-            shortCircuit === "merged" && reads.tracker.ok && reads.tracker.value.state === "done"
+            shortCircuit === m && reads.tracker.ok && reads.tracker.value.state === "done"
               ? ("tracker-done-merged" as const)
               : undefined;
           const facts = corroborationFactsOf(reads);
           const comparison = comparisonFor({ token: shortCircuit, reads, urlResolved: false });
           const prUrl =
-            shortCircuit === "pr-open" && reads.artifacts.ok
+            shortCircuit === po && reads.artifacts.ok
               ? (reads.artifacts.value.pr.url ?? "")
               : "";
           return record({
