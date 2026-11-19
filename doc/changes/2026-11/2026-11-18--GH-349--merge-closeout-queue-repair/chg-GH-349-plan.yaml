@@ -158,7 +158,7 @@
 #               The two earlier added ids remain: **TC-SYNC-009** (the tenth
 #               operation's EIGHTEEN enforcing pins of Appendix H, each asserted
 #               at ten, plus the transport typecheck and the posture content) and
-#               **TC-F1-014** (the eight-changed / eight-green merge-suite split
+#               **TC-F1-014** (the NINE-changed / seven-green merge-suite split
 #               with three token-absence scans and the green inventories).
 #               **v1.10 was the first MERGED-BASE reconciliation, and it added
 #               the release case:** the upstream merge (`origin/main-tools` PR #357,
@@ -479,6 +479,47 @@
 #   `tests/behaviour/closeout-queue-removal.test.ts` (declared by phase 6) needed
 #   no new declaration: earlier and later phases already declare them. The additions above are the paths where the UNION did not cover the edit
 #   plus the three the review asked to name per phase.
+#
+# REVIEW-1 REMEDIATION (code-review/review-iter-1.yaml; status FAIL — one blocker
+#   and five majors; 46/46 ACs adjudicated 39 pass / 3 pass-with-notes / 4 fail;
+#   plan_compliance PASS_WITH_NOTES). Recorded here because two findings are
+#   DECLARATION defects this plan must carry, and the rest are repair obligations
+#   inside already-declared phase scope — no requirement, criterion or ordering
+#   changes:
+#   - BLOCKER B1 — milestone ATTACHMENT NORMALIZATION. The attachment check strips
+#     the `M<n>:` prefix from the declaration but compares it to the
+#     provider-native title (which keeps the prefix), so a real GitHub work item
+#     ("M4: Jaiship-native delivery") never matches and `closeout --apply` reports
+#     `attachment-mismatch` instead of `applied`/withheld-closure; the suites pass
+#     only because their fixture uses the phrase-only title. Repair + fixture
+#     re-point + one end-to-end composition case: phase 5, obligation 5.4b.
+#   - MAJOR M1 — the not-mergeable CHECKS-POSTURE classifier ranges over every page
+#     job instead of the DECLARED required set (AC-F3-3's "a job the gate set does
+#     not declare is not evidence"). Repair in phase 2's declared transaction
+#     scope, proved by the phase-3 probe suite.
+#   - MAJOR M2 — AC-F4-5's recorded `close-milestone` round trip through the REAL
+#     state validator is unproven: the case asserts the map, not the delivered
+#     reader. Extend TC-SYNC-002's round trip against `state/closeout.ts` (phase 5).
+#   - MAJOR M3 — TC-F4-011's second apply starts from an ALREADY-CLOSED observation,
+#     so it exercises the already-closed arm rather than ledger-terminal
+#     idempotency. Make the second run reuse the first run's unchanged OPEN
+#     observation and fold the ledger instead (phase 5).
+#   - MAJOR M4 — `merge-probe` is EDITED although AC-F1-1/§16 declared it one of the
+#     eight green-unedited suites. RESOLVED IN THIS PLAN as a declaration
+#     correction: the split is **nine changed / seven green**, `merge-probe` is the
+#     ninth (its undeclared-job case inversion is AC-F3-3), and the obligation check
+#     must pin that inverted case id so a presence check can see the semantic edit.
+#   - MAJOR M5 — the withheld `milestone-sync-withheld` residue forced the
+#     `attention` exit for EVERY change without a conforming declaration,
+#     contradicting AC-F4-7's "success-shaped" outcome and the rollout's "no
+#     behaviour change beyond one extra plan line". RESOLVED IN THIS PLAN as a
+#     declaration correction: the kind is INFORMATIONAL and excluded from the
+#     attention projection (an otherwise-complete apply exits 0 with the residue
+#     present), every other residue kind keeps exit 1, and a gated write failure
+#     still exits 2; phase 5 obligation 5.4a proves it through the production exit
+#     projection.
+#   The reviewers' six minors and two infos live in the review artifact and are not
+#   restated here; none of them changes a scope declaration.
 #
 # PIN CLASSIFICATION (three kinds) — the lesson from phases 1, 2 and 5:
 #   A "pin" in this repository is not one thing, and a plan that declares only
@@ -1726,17 +1767,24 @@ phases:
   #     Three are RE-POINTED: `merge-landing` and `merge-convergence` (a
   #     `git-squash-land` count becomes the provider landing call count),
   #     `merge-refusal-surface` (the `merge.rebase-conflict` matrix row becomes
-  #     `merge.sync-required` with reason `dirty`). Two are MECHANICALLY EDITED
-  #     because the retired golden forces them: `merge-bounds` (its
-  #     capped-conflicting-paths case loses its producer and is re-pointed or
-  #     retired, with its line/byte bound assertions kept) and `merge-determinism`
-  #     (drops the retired `refusal-rebase` scenario name). The OTHER EIGHT
+  #     `merge.sync-required` with reason `dirty`). **ONE is SEMANTICALLY EDITED:
+  #     `merge-probe`**, whose TC-MERGE-016 inverts from "a red job on the verified
+  #     head refuses `ci-green`" to "a red job the effective gate set does not
+  #     declare is not evidence and the merge proceeds" — that inversion IS
+  #     AC-F3-3 (review-1 M4). Two are MECHANICALLY EDITED because the retired
+  #     golden forces them: `merge-bounds` (its capped-conflicting-paths case loses
+  #     its producer and is re-pointed or retired, with its line/byte bound
+  #     assertions kept) and `merge-determinism` (drops the retired
+  #     `refusal-rebase` scenario name). **NINE CHANGE.** The OTHER SEVEN
   #     (`merge-classification`, `merge-dry-run`, `merge-freshness`,
-  #     `merge-gate-set`, `merge-privacy`, `merge-probe`,
-  #     `merge-production-composition`, `merge-verification-record`) are GREEN
-  #     UNEDITED and must not be touched. `tests/structure/merge-suite-obligations.test.ts`
-  #     asserts the split in both directions; "the nine merge suites" and
-  #     "three invert / thirteen unedited" are retired claims (M107).
+  #     `merge-gate-set`, `merge-privacy`, `merge-production-composition`,
+  #     `merge-verification-record`) are GREEN UNEDITED and must not be touched.
+  #     `tests/structure/merge-suite-obligations.test.ts` asserts the split in both
+  #     directions — and, because a presence check cannot see a semantic edit, it
+  #     must ALSO pin `merge-probe`'s inverted case id so the ninth edit is
+  #     observable. "The nine merge suites", "three invert / thirteen unedited"
+  #     and the earlier "eight changed / eight green" count are retired claims
+  #     (M107, review-1 M4).
   #   - The title is the provider-asserted request title VERBATIM; only when that
   #     signal is absent does the deterministic fallback
   #     `merge(<ref>): squash <sourceRef>` (change ref, then the request's source
@@ -1829,14 +1877,17 @@ phases:
   #        TC-F1-012 — a type change alone is not acceptance (M105).
   #   2.4 Make the emittable declaration exhaustive over the family it emits, with
   #       the family expression and the extended refusal-site scan.
-  #   2.5 Bring the EIGHT changed suites to their post-change obligations (three
-  #       inverted, three re-pointed, two mechanically edited) and keep the OTHER
-  #       EIGHT delivered merge suites GREEN UNEDITED. Author
+  #   2.5 Bring the NINE changed suites to their post-change obligations (three
+  #       inverted, three re-pointed, ONE semantically edited — `merge-probe`, the
+  #       AC-F3-3 undeclared-job inversion — and two mechanically edited) and keep
+  #       the OTHER SEVEN delivered merge suites GREEN UNEDITED. Author
   #       `tests/structure/merge-suite-obligations.test.ts` (TC-F1-014) asserting,
-  #       in both directions, each changed suite's obligation, the three
-  #       token-absence scans (no `git-squash-land` COUNT, no
-  #       `merge.rebase-conflict` PRODUCER claim, no `refusal-rebase` scenario
-  #       name) and the eight green suites' unchanged assertion inventories (M107).
+  #       in both directions, each changed suite's obligation (including
+  #       `merge-probe`'s inverted case id, so the semantic edit is visible to a
+  #       presence check), the three token-absence scans (no `git-squash-land`
+  #       COUNT, no `merge.rebase-conflict` PRODUCER claim, no `refusal-rebase`
+  #       scenario name) and the seven green suites' unchanged assertion
+  #       inventories (M107, review-1 M4).
   #   2.6 Author the seam-capability suite (TC-F1-013: `squashLand` on a clean and
   #       a conflicting branch; `refresh` clean, conflicting and broken) plus the
   #       `shaOnBase` behaviour and type cases (TC-F1-011/TC-F1-012).
@@ -1893,9 +1944,10 @@ phases:
   # the emittable set covering every family code with a live mismatch control still
   # containing; `shaOnBase` reading `true`/`"unknown"` with its rendered token, the
   # record ROUND-TRIPPING through the widened state-layer validator and a legacy
-  # boolean record replaying; five seam outcomes green; the EIGHT changed suites
-  # asserting their post-change facts with the EIGHT green suites unedited (both
-  # directions, plus the three token-absence scans); TWO goldens absent and ELEVEN
+  # boolean record replaying; five seam outcomes green; the NINE changed suites
+  # asserting their post-change facts (including `merge-probe`'s inverted
+  # undeclared-job case) with the SEVEN green suites unedited (both directions,
+  # plus the three token-absence scans); TWO goldens absent and ELEVEN
   # byte-identical):
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-landing.test.ts tests/behaviour/merge-landing-metadata.test.ts tests/behaviour/merge-head-guard.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-git-seam-capabilities.test.ts tests/behaviour/merge-rebase.test.ts tests/behaviour/merge-coordinator-boundary.test.ts tests/behaviour/merge-waivers.test.ts
@@ -1909,7 +1961,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, binding)
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Provider-side landing as the only lifecycle mechanism with crafted squash metadata, the exact-head guard, the shaOnBase unknown state carried by its widened state-layer validator, the total refusal taxonomy over the two-member reason pair, the exhaustive emittable declaration, the eight changed merge suites claimed, and F1's remaining constructor repair"
+    title: "Provider-side landing as the only lifecycle mechanism with crafted squash metadata, the exact-head guard, the shaOnBase unknown state carried by its widened state-layer validator, the total refusal taxonomy over the two-member reason pair, the exhaustive emittable declaration, the nine changed merge suites claimed, and F1's remaining constructor repair"
     kind: delivery
     summary: "feat(GH-349): provider-side landing path and the typed merge refusal taxonomy"
     weightClass: heavy
@@ -1956,7 +2008,8 @@ phases:
         # (phase 3 extends it for TC-FLOOR-005 — a declared split touch).
         - tests/behaviour/merge-bounds.test.ts
         - tests/behaviour/merge-determinism.test.ts
-        # TC-F1-014: the eight-changed / eight-green split, asserted both ways.
+        # TC-F1-014: the NINE-changed / seven-green split, asserted both ways
+        # (merge-probe included: its undeclared-job case inversion is AC-F3-3).
         - tests/structure/merge-suite-obligations.test.ts
         - tests/structure/merge-refusal-rows.test.ts
         # MOVED EARLY IN PHASE 1 (commit 0a3dc3ff): its hard-coded merge-row
@@ -2368,10 +2421,22 @@ phases:
   #     gap; and on a close write that did not land or whose read-back did not
   #     observe closed, `failed` in apply returning the delivered gating identity
   #     `closeout.write.failed` at exit 2 with NO capsule close. The closed
-  #     residue vocabulary is NOT widened with an `unknown-state` member.
+  #     residue vocabulary is NOT widened with an `unknown-state` member. The four
+  #     `skipped-noop`/`skipped-gap` milestone outcomes are EXIT-0 outcomes: their
+  #     single `milestone-sync-withheld` residue is informational (see the next
+  #     bullet), while `failed` is the only milestone outcome that gates.
   #   - ONE additive residue kind, `milestone-sync-withheld`, carrying the closed
   #     reason as bounded item text and the work-item ref as its location; the
   #     dedup key, ordering and the 50-item cap with its sentinel are unchanged.
+  #   - **THE WITHHELD RESIDUE IS INFORMATIONAL — IT DOES NOT RAISE THE `attention`
+  #     EXIT** (review-1 M5, and the resolution is a decision, not a discovery):
+  #     `milestone-sync-withheld` is excluded from the applied-mode `attention`
+  #     projection, so an otherwise-complete `closeout --apply` exits **0** with
+  #     the residue item present — which is what keeps AC-F4-7's "success-shaped"
+  #     claim and the rollout's "no behaviour change beyond one extra plan line"
+  #     true for every change whose declaration is absent or non-conforming. Every
+  #     OTHER residue kind keeps the attention behaviour (exit **1**), and a gated
+  #     close-write failure still exits **2** through `closeout.write.failed`.
   #   - Plan mode reads and renders with zero writes, zero appends, zero fence
   #     acquisitions; apply mode folds the ledger and reuses terminal outcomes, so
   #     two consecutive applies perform at most one close and the second reports
@@ -2543,6 +2608,25 @@ phases:
   #       idempotency, write-failure gating, gap posture, GH-349's own withheld
   #       case), the contract/vocabulary structure suite and the type probes
   #       (M40..M53, M83, M93..M95, M97, M101).
+  #   5.4a **PROVE THE WITHHELD RESIDUE IS EXIT-0** (review-1 M5): an
+  #        otherwise-complete `closeout --apply` whose only residue is
+  #        `milestone-sync-withheld` exits **0** with the item present, asserted
+  #        through the PRODUCTION exit projection (not a unit map); the same run
+  #        with one OTHER residue kind still exits **1** through attention; and a
+  #        failed close write still exits **2** via `closeout.write.failed`. The
+  #        withheld case must stay success-shaped, because AC-F4-7 and the rollout
+  #        both say so — if the projection cannot express it, that is a finding
+  #        against the code, never a licence to reword the AC.
+  #   5.4b **FIX THE MILESTONE ATTACHMENT NORMALIZATION AND RE-POINT THE FIXTURE**
+  #        (review-1 B1, the blocker): the attachment check must compare the
+  #        declaration against the provider-asserted title on ONE normalization —
+  #        either compare the full `M<n>: <phrase>` form on both sides or strip the
+  #        prefix on both — because the delivered code strips it on the declaration
+  #        only and therefore reports `attachment-mismatch` for a real GitHub work
+  #        item. `tests/fixtures/closeout/milestone.ts` and `m4-attached-set.ts`
+  #        must carry the PREFIXED provider title so the oracle cannot pass on the
+  #        phrase-only form, and one end-to-end composition case must drive
+  #        `production.ts` `planFacts` → `milestoneStep` so the glue is exercised.
   #   5.5 Author TC-SYNC-003 (the atomic ripple, including the all-gaps
   #       representation that carries AC-F1-7's cited half) and TC-SYNC-002 (step,
   #       operation-name and residue pins in every place they exist, the two
@@ -2564,7 +2648,10 @@ phases:
   # queue outcome unchanged; zero closes across the open-item, unavailable, unknown
   # and truncated-page fixtures; one read per run and no second page; zero writes
   # in plan mode; one close across two applies; `closeout.write.failed` at exit 2
-  # with no capsule close on a failed write and convergence on retry; ten
+  # with no capsule close on a failed write and convergence on retry; the withheld
+  # residue exiting 0 through the production projection while another residue kind
+  # exits 1 and a failed write exits 2 (the attachment check matching the PREFIXED
+  # provider title, asserted end to end); ten
   # operations with ALL EIGHTEEN pins at ten (and their posture content: GitHub
   # supported += close-milestone with an empty gap list, GitLab
   # adapter-not-implemented, Jira provider-unsupported, seed postures 9→10 /
