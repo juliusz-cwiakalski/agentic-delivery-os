@@ -1013,3 +1013,32 @@ notes:
       and contract-type wording in code now state the matched meaning."
     type: decision
     date: "2026-11-19"
+  - text: "PLAN PHASE 10 EVIDENCE (review-iteration-2 remediation). Plan phase id 10
+      (`fix(GH-347): review-iteration-2 remediation`) is implemented and landed
+      in commit 6ae1ae2d89ab7a8c372f902eafdd186362096983 (16 files; the commit
+      primitive's template subject is the delivered
+      `feat(GH-347): update doc/changes/...` line because this commit was made
+      without `--phase`). Gate at that HEAD, exit 0 on every plan line: harness
+      adapter suites 23 pass; stall/loop 32 pass; derivation + token-closure 42
+      pass; parity battery/no-shell/spawn 26 pass; composition + harness
+      contract 71 pass; contract-invariance + no-shell 21 pass;
+      content/port/dispatch structure 37 pass; `scripts/checks/no-shell-dispatch.ts`
+      clean (22 surface files); `pnpm typecheck` clean; `git diff --check` clean.
+      The BINDING aggregate `pnpm check` is green: lint/format/typecheck PASS,
+      11,147 pass / 4 skip / 0 fail across 1,376 files, boundaries, memory
+      (records=3 areas=8 errors=0), prompt-conformance (5 clean),
+      help-guide-coverage and exports-parity (5 publishables) all PASS. R13:
+      production session ports declare (createClaudeSession ->
+      CLAUDE_CAPABILITIES with the terminate gap; createOpencodeSession -> its
+      resolved declaration) and `harnessFor` fills only an ABSENT declaration;
+      the TC-TERM-007 production-composed case drives createClaudeSession's own
+      port through a below-bound stall to one spawn, zero economics.restart and
+      terminal state-unverified at exit 2; the adapter suites and the
+      composition source assertion hold the wiring. R14: the TC-TERM-005
+      unconfirmed case proves the terminate:failed half. R15: the 16-id mirror
+      with its size assertion and test plan v0.6. R16: signalProcess removed,
+      `reaped` documented as the exact-identity match, process-runner header
+      live-counter semantics. No pinned surface moved; the mutation register
+      stays 90 rows and M42 is re-armed."
+    type: info
+    date: "2026-11-19"
