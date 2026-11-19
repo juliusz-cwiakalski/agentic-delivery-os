@@ -527,3 +527,27 @@ notes:
       tree and rode this commit as reported scope drift."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 decision-record renumber (pre-merge, no phase transition): the
+      six ADR-0012 companion records moved to TDR-0057..TDR-0062 because
+      upstream main-tools already carries records 0049..0054 (GH-347,
+      f802f71a) and GH-348 holds 0055 and 0056 in flight. Mapping: 0049 ->
+      0057 (budget ceilings), 0050 -> 0058 (provider simulate), 0051 -> 0059
+      (legacy migration), 0052 -> 0060 (watch freshness), 0053 -> 0061 (family
+      mounting), 0054 -> 0062 (budget work-item ref). Applied by git mv on the
+      six filenames plus id, heading and cross-reference updates in the
+      records themselves, the 00-index rows and narrative block, ADR-0012,
+      feature-config-layer, the spec, test plan, plan, pm-notes, all three
+      readiness reviews, and the source comments in edge.ts, production.ts,
+      config/catalog.ts, contracts/provider.ts, provider/engine.ts and
+      provider/budgets.ts; TDR-0044..TDR-0048 (GH-346) and every ADR, PDR and
+      ODR are untouched. Verification: grep -rn --exclude-dir=tmp
+      --exclude-dir=node_modules --exclude-dir=.git -E
+      'TDR-00(49|50|51|52|53|54)' . -> 0 hits; the same grep for
+      'TDR-005[7-9]|TDR-006[0-2]' -> 218 hits. Gates: bun test
+      tests/checks/decision-record.test.ts
+      tests/checks/doc-conformance.test.ts -> 44 pass / 0 fail; pnpm typecheck
+      green after a clean dist rebuild (stale dist artifacts had still carried
+      the old ids); jaiship lint GH-350 -> conforms; jaiship plan validate
+      GH-350 -> valid, readyForDevelopment=true. Commit 20e5dff5."
+    type: evidence
+    date: "2026-11-19"
