@@ -32,7 +32,8 @@
     "doc/planning/oss-tooling/milestones/m2/commands/steer.md",
     "doc/planning/oss-tooling/milestones/m2/commands/metrics.md",
     "doc/planning/oss-tooling/milestones/m2/commands/supervise.md",
-    "doc/planning/oss-tooling/milestones/m4/commands/install.md"
+    "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+    "doc/planning/oss-tooling/milestones/m1/commands/provider.md"
   ],
   "commands": [
     "status",
@@ -60,6 +61,7 @@
     "steer",
     "metrics",
     "supervise",
-    "install"
+    "install",
+    "provider"
   ]
 }

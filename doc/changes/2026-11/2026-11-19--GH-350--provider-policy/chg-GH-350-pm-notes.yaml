@@ -712,3 +712,58 @@ notes:
       mapped value refuses proposal-invalid."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 plan phase 7 (delivery) complete: each watch target's
+      provider.profiles.watch.<name>.maxAgeSeconds is a positive integer with
+      the effective default 900 applied policy-side (the catalog declares the
+      key with no default field, so an omitted bound gives a record child no
+      defaults-layer origin), and the freshness predicate is one pure function
+      of the injected clock and the supplied observation instant — ageSeconds
+      = max(0, floor((nowMs - observedAtMs) / 1000)), stale exactly at
+      ageSeconds >= maxAgeSeconds. The watch view's condition is the closed
+      six-value PROVIDER_WATCH_CONDITIONS domain and gains the three additive
+      fields observedAt, ageSeconds and maxAgeSeconds beside the delivered
+      name, source and checkedAt; watch-stale is watch-only (membership of no
+      park cause, condition kind, skip reason, announcement code or record
+      kind) and a stale reading is never probed, never coerced to clear and
+      never reported as provider-outage. A park derived from a reading expires
+      no later than min(naturalExpiry, observedAt + maxAgeSeconds * 1000) and
+      no park exists when that instant is not strictly future
+      (clampWatchParkExpiry returns undefined). The live composition supplies
+      the read instant as the observation instant (observedAt === checkedAt,
+      age 0, never stale); staleness is exercised by a composition-supplied
+      observation through the new watchObservedAtMs seam and by the clamp. The
+      watch path adds no cache, timer, refresher, scheduler, command, state
+      record kind or state write; the config-layer page gains its
+      maxAgeSeconds row and doc-conformance pins it. Commit eebb04d4.
+      OWNER-AUTHORISED ADDITIONS (approved during delivery): (1)
+      packages/core/src/provider/validate.ts joins the phase because
+      parseWatchTarget is the PRODUCER of the typed watch target and a closed
+      exactKeys list that omits a declared key made the configuration refuse;
+      it now admits maxAgeSeconds and copies it onto the target with NO
+      default and NO value semantics, so provider.profile.invalid still covers
+      only structural/unknown-key violations while the value rules stay in the
+      reader (config.value.invalid naming
+      provider.profiles.watch.<name>.maxAgeSeconds for 0, -1 and non-integers;
+      a string is refused by the configuration schema). (2)
+      tests/fixtures/provider/profile/golden/data.ts and
+      tests/fixtures/provider/profile/golden/watch-status.json carry the three
+      additive fields on the delivered watch-status goldens (observedAt =
+      checkedAt, ageSeconds 0, maxAgeSeconds 900) because the view gained them
+      and a shared incomplete fixture is not evidence. Gate: narrow phase-7
+      suites 114 pass (the golden and profile-CLI arms included after the
+      fixture additions); tests/boundaries unchanged; pnpm typecheck green;
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11521 pass
+      / 4 skip / 2 fail (11527 tests). Both failures are HOST-ENVIRONMENT, not
+      phase-7 regressions: TC-BIN-071 and TC-MEMNFR-004 spawn the
+      doc-distribution guard, whose sandbox install sees a real installed
+      `jaiship` artifact under the operator's home written by a concurrent
+      session and refuses content it does not own; the guard passes with a clean
+      HOME ('OK
+      — 96 in-scope docs; install set matches ados_distribution markers') and
+      the two suites pass alone with a clean HOME (19/19). Recorded, never
+      edited. Note: the key-naming refusal is asserted on the command failure
+      value because the delivered output boundary suppresses config-shaped
+      summaries by policy."
+    type: evidence
+    date: "2026-11-19"

@@ -34,8 +34,10 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "steer",
   "metrics",
   "supervise",
-  // GH-346 appends the install lifecycle family as the twenty-sixth and last.
+  // GH-346 appends the install lifecycle family as the twenty-sixth.
   "install",
+  // GH-350 appends the provider family as the twenty-seventh and last.
+  "provider",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

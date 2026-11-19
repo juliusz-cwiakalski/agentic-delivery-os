@@ -75,6 +75,7 @@ import {
   OPENCODE_CAPABILITIES,
 } from "@delivery-os/adapters/harness";
 import { createHostSpawnRunner, createHostSpawnStarter } from "@delivery-os/adapters/host";
+import { createProviderQuotaTransport } from "@delivery-os/adapters/provider-quota";
 import {
   findGitRoot,
   nodeRepositoryIo,
@@ -4565,6 +4566,27 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       plan: { changesDirectory, fs: notesFs, readDiff: plan.readDiff },
       phase: committedPhaseRuntime,
       commit: commitOptions,
+      // The provider family is registered unconditionally through the delivered
+      // config program (GH-350 F-8, TDR-0061): the six declared
+      // `ProviderComposition` seams are supplied here, so the composed program
+      // carries `provider` on every invocation and a configuration failure is a
+      // typed handler outcome rather than a missing family. The `installProgram`
+      // spread below preserves it, exactly as the config program's own commands
+      // are preserved.
+      provider: createProductionProviderComposition({
+        clock: { nowMs },
+        credentialPort: credentials,
+        transport: createProviderQuotaTransport(),
+        sleep: {
+          sleep: (milliseconds) =>
+            new Promise<void>((resolve) => {
+              setTimeout(resolve, milliseconds);
+            }),
+        },
+        stateStore: store,
+        newFenceToken,
+        localContext: { path: pmContextPath, fs: localFs },
+      }),
       status: statusComposition(),
       brief: statusComposition(),
       queueReady: statusComposition(),

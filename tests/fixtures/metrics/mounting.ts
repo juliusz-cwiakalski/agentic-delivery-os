@@ -3,8 +3,9 @@
  *
  * One statement of the delivered 23-family base (steer at index 22), one of the
  * metrics-mounted 24-family set (GH-299), the merged 25-family set (GH-295
- * appends `supervise`), and the 26-family set GH-346 appends `install` to,
- * plus the pinning files every count must move in.
+ * appends `supervise`), the 26-family set GH-346 appends `install` to, and the
+ * 27-family set GH-350 appends `provider` to, plus the pinning files every
+ * count must move in.
  */
 
 /** The families through GH-298: 23 entries with steer last. */
@@ -41,9 +42,12 @@ export const METRICS_MOUNTED_FAMILIES = [...DELIVERED_FAMILIES, "metrics"] as co
 export const SUPERVISE_MOUNTED_FAMILIES = [...METRICS_MOUNTED_FAMILIES, "supervise"] as const;
 
 /** The mounted set after GH-346: install appended as the twenty-sixth family. */
-export const MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install"] as const;
+export const INSTALL_MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install"] as const;
 
-/** The suites that pin the family count and must all read 26. */
+/** The mounted set after GH-350: provider appended as the twenty-seventh and last family. */
+export const MOUNTED_FAMILIES = [...INSTALL_MOUNTED_FAMILIES, "provider"] as const;
+
+/** The suites that pin the family count and must all read 27. */
 export const PINNING_FILES = [
   "tests/structure/entrypoint-bin.test.ts",
   "tests/structure/steer-mounting.test.ts",
@@ -56,6 +60,10 @@ export const PINNING_FILES = [
   "tests/behaviour/events-mount-help.test.ts",
   "tests/behaviour/ceremony-cli.test.ts",
   "tests/structure/metrics-mounting.test.ts",
+  "tests/structure/supervision-mounting.test.ts",
+  "tests/structure/install-conformance.test.ts",
+  "tests/behaviour/install-family-surface.test.ts",
+  "tests/behaviour/entrypoint-two-bins.test.ts",
 ] as const;
 
 /** The declared non-count residual: the queue-ready control-matrix count. */

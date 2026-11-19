@@ -1086,6 +1086,121 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     ["<binary> install purge", "<binary> install purge --yes", "<binary> install purge --dry-run"],
   ),
+  entry(
+    ["provider"],
+    "Inspect and resolve AI provider policy: chains, quota, parks, profiles, watches, simulation, and legacy migration",
+    [
+      "<binary> provider resolve [--chain <name>] [--profile <name>]",
+      "<binary> provider quota [--provider <name>]",
+      "<binary> provider parks list [--all] [--provider <name>]",
+      "<binary> provider profile resolve [--agent <name>] [--for-spawn]",
+      "<binary> provider watch status [--provider <name>]",
+      "<binary> provider simulate --fixture <path>",
+      "<binary> provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]",
+    ],
+    [
+      ["--chain <name>", "Resolve one declared chain instead of the default chain (`resolve`)"],
+      ["--profile <name>", "Scope the resolution to one named profile's providers (`resolve`)"],
+      ["--provider <name>", "Narrow `quota`, `parks list`, or `watch status` to one provider"],
+      ["--all", "Include cleared and expired parks (`parks list`)"],
+      ["--agent <name>", "Select the seat for one agent (`profile resolve`)"],
+      ["--for-spawn", "Emit the spawn env record (`profile resolve`)"],
+      ["--fixture <path>", "The bounded simulation fixture to replay (`simulate`)"],
+      [
+        "--profiles-dir <dir>",
+        "Read legacy profiles from one declared directory (`migrate legacy`)",
+      ],
+      ["--hook <path>", "Read the pre-iteration hook from one declared path (`migrate legacy`)"],
+      [
+        "--write",
+        "Write the migration proposal to the project-committed document (`migrate legacy`)",
+      ],
+    ],
+    [
+      "<binary> provider resolve",
+      "<binary> provider quota --provider coding-plan",
+      "<binary> provider watch status --json",
+    ],
+    "provider",
+  ),
+  entry(
+    ["provider", "resolve"],
+    "Resolve one chain decision and persist its parks and announcements",
+    ["<binary> provider resolve [--chain <name>] [--profile <name>]"],
+    [
+      ["--chain <name>", "Resolve one declared chain instead of the default chain"],
+      ["--profile <name>", "Scope the resolution to one named profile's providers"],
+    ],
+    ["<binary> provider resolve", "<binary> provider resolve --profile mixed --json"],
+    "provider",
+  ),
+  entry(
+    ["provider", "quota"],
+    "Evaluate quota conditions for one provider or the default chain without writing state",
+    ["<binary> provider quota [--provider <name>]"],
+    [["--provider <name>", "Evaluate one declared provider instead of the default chain"]],
+    ["<binary> provider quota", "<binary> provider quota --provider coding-plan --json"],
+    "provider",
+  ),
+  entry(
+    ["provider", "parks", "list"],
+    "Read the active park projection, optionally including cleared and expired parks",
+    ["<binary> provider parks list [--all] [--provider <name>]"],
+    [
+      ["--all", "Include cleared and expired parks"],
+      ["--provider <name>", "Narrow the projection to one provider"],
+    ],
+    ["<binary> provider parks list", "<binary> provider parks list --all --json"],
+    "provider",
+  ),
+  entry(
+    ["provider", "profile", "resolve"],
+    "Resolve the profile selection decision for an agent, optionally as the spawn env record",
+    ["<binary> provider profile resolve [--agent <name>] [--for-spawn]"],
+    [
+      ["--agent <name>", "Select the seat for one agent instead of the preference chain"],
+      ["--for-spawn", "Emit the validated model environment record for the spawn wrapper"],
+    ],
+    [
+      "<binary> provider profile resolve",
+      "<binary> provider profile resolve --agent reviewer --for-spawn --json",
+    ],
+    "provider",
+  ),
+  entry(
+    ["provider", "watch", "status"],
+    "Read the declared watch conditions and their observation freshness",
+    ["<binary> provider watch status [--provider <name>]"],
+    [["--provider <name>", "Read one declared watch target instead of every target"]],
+    ["<binary> provider watch status", "<binary> provider watch status --json"],
+    "provider",
+  ),
+  entry(
+    ["provider", "simulate"],
+    "Replay a resolution from one bounded fixture with zero state, credential, network, or spend effect",
+    ["<binary> provider simulate --fixture <path>"],
+    [["--fixture <path>", "The bounded simulation fixture to replay"]],
+    [
+      "<binary> provider simulate --fixture tmp/simulate.json",
+      "<binary> provider simulate --fixture tmp/simulate.json --json",
+    ],
+    "provider",
+  ),
+  entry(
+    ["provider", "migrate", "legacy"],
+    "Read legacy provider profiles and the pre-iteration hook as compatibility input and emit a proposal",
+    ["<binary> provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]"],
+    [
+      ["--profiles-dir <dir>", "Read legacy profiles from one declared directory"],
+      ["--hook <path>", "Read the pre-iteration hook from one declared path"],
+      ["--write", "Write the proposal to the project-committed configuration document"],
+    ],
+    [
+      "<binary> provider migrate legacy",
+      "<binary> provider migrate legacy --profiles-dir ./legacy/profiles --json",
+    ],
+    "provider",
+  ),
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

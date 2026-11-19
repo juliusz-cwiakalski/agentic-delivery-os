@@ -144,8 +144,9 @@ describe("TC-INST-002 root help and each entry's own help come from the static i
       .split("\n")
       .filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line))
       .map((line) => line.trimStart().split("  ")[0]);
-    expect(families).toHaveLength(26);
-    expect(families.at(-1)).toBe("install");
+    expect(families).toHaveLength(27);
+    expect(families.at(-2)).toBe("install");
+    expect(families.at(-1)).toBe("provider");
     for (const path of [
       ["install"],
       ["install", "status"],

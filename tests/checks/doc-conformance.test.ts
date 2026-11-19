@@ -426,7 +426,7 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
     required: [
       "two executables",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
-      "twenty-six families",
+      "twenty-seven families",
       "one shared launcher composition",
       "The invoking bin's declared default working name",
       "`--print-install-path`",
@@ -687,9 +687,13 @@ const GH346_ROWS: readonly PageClaimRow[] = [
   },
   {
     page: "doc/spec/features/feature-cli-entrypoint.md",
-    stale: ["twenty-five families", "exactly the declared five-site inventory"],
-    required: [
+    stale: [
+      "twenty-five families",
       "twenty-six families",
+      "exactly the declared five-site inventory",
+    ],
+    required: [
+      "twenty-seven families",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
       "install.identity.not-owning",
       "compile-time constant",
@@ -747,13 +751,14 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "BASELINE_ROWS.length + 119",
       "BASELINE_ROWS.length + 130",
       "family count (25)",
+      "family count (26)",
     ],
     required: [
       "167 entries",
       "166 delivered rows",
       "66 allowlisted two-segment codes",
       "BASELINE_ROWS.length + 133",
-      "family count (26)",
+      "family count (27)",
     ],
   },
   {
@@ -1457,6 +1462,247 @@ describe("GH-350 phase 7 the config page carries the watch freshness row", () =>
         : pageText(page);
     expect(gh350Phase7Violations(GH350_PHASE7_ROWS, missing).join("\n")).toContain(
       "missing required phrase: observedAt + maxAgeSeconds × 1000",
+    );
+  });
+});
+
+/**
+ * GH-350 phase 8 — the family mount: the count-bearing pages state
+ * twenty-seven families with `provider` last and `install` the twenty-sixth,
+ * the reference page carries its required self-description flags and all seven
+ * members, and the delivered ordinals are unchanged (TC-MOUNT-009's ordinal
+ * half of AC-F8-3).
+ *
+ * `feature-supervise.md` is never a phase-8 row: its GH-346 row above keeps
+ * `stale: "26th family"` / `required: "25th family"` exactly as delivered, and
+ * the ordinal guard below reads it as a control.
+ */
+const GH350_PHASE8_PAGES = [
+  "doc/spec/features/feature-cli-entrypoint.md",
+  "doc/spec/features/feature-install-lifecycle.md",
+  "doc/spec/features/feature-metrics.md",
+  "doc/00-index.md",
+  "doc/overview/glossary.md",
+  "doc/planning/oss-tooling/cli-command-registry.md",
+  "doc/planning/oss-tooling/milestones/m1/commands/provider.md",
+] as const;
+
+const GH350_PHASE8_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-cli-entrypoint.md",
+    stale: [
+      "twenty-six families",
+      "the twenty-sixth and last prompt-required family",
+      "(`config`, `provider`, `db`, `watchdog`)",
+    ],
+    required: [
+      "twenty-seven families",
+      "The `provider` family is the twenty-seventh and last prompt-required family",
+      "ProviderComposition",
+      "`provider resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, and `migrate legacy`",
+      "the twenty-sixth prompt-required family",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-install-lifecycle.md",
+    stale: ["exactly 26", "at exactly 26 families"],
+    required: ["exactly 27", "at exactly 27 families", "the twenty-sixth prompt-required family"],
+  },
+  {
+    page: "doc/spec/features/feature-metrics.md",
+    stale: ["family count (26)", "24-family mount", "family-count pins read 24"],
+    required: [
+      "family count (27)",
+      "27-family mount",
+      "family-count pins read 27",
+      "twenty-fourth prompt-required command family",
+    ],
+  },
+  {
+    page: "doc/00-index.md",
+    stale: ["twenty-six-family prompt-required set"],
+    required: [
+      "twenty-seven-family prompt-required set",
+      "the twenty-sixth prompt-required `install` family",
+    ],
+  },
+  {
+    page: "doc/overview/glossary.md",
+    stale: ["twenty-six families"],
+    required: ["twenty-seven families", "`supervise`, `install`, and `provider`"],
+  },
+  {
+    page: "doc/planning/oss-tooling/cli-command-registry.md",
+    stale: ["Delivered subcommands: `resolve` (one chain decision", "with eight skip reasons"],
+    required: [
+      "Mounted as the 27th and last prompt-required family",
+      "the prompt-required inventory is exactly 27 with `provider` last",
+      "`simulate --fixture <path>`",
+      "`migrate legacy",
+      "nine skip reasons",
+      "`watch-stale`",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m1/commands/provider.md",
+    stale: ["eight skip reasons", "UTC-only", "no simulation surface"],
+    required: [
+      "--help",
+      "--version",
+      "--chain <name>",
+      "provider simulate --fixture <path>",
+      "provider migrate legacy",
+      "watch-stale",
+      "provider.peak.zone-unknown",
+      "provider.budget.exceeded",
+      "provider.migrate.refused",
+      "input.value.rejected",
+      "the twenty-seventh and last prompt-required command family",
+    ],
+  },
+];
+
+export const gh350Phase8Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH350_PHASE8_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push("GH-350 phase-8 page set is not the declared seven");
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+/** The ordinal sites TC-MOUNT-009 reads as controls: no delivered ordinal moves. */
+const GH350_ORDINAL_SITES = [
+  {
+    page: "doc/spec/features/feature-cli-entrypoint.md",
+    required: ["the twenty-sixth prompt-required family"],
+  },
+  {
+    page: "doc/spec/features/feature-install-lifecycle.md",
+    required: ["`install` is the twenty-sixth prompt-required family"],
+  },
+  {
+    page: "doc/00-index.md",
+    required: ["the twenty-sixth prompt-required `install` family"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+    required: ["`install` is the twenty-sixth prompt-required family"],
+  },
+  {
+    page: "doc/spec/features/feature-supervise.md",
+    required: ["25th family"],
+  },
+  {
+    page: "doc/spec/features/feature-metrics.md",
+    required: ["twenty-fourth prompt-required command family"],
+  },
+] as const;
+
+/** No page may assign `install` a twenty-seventh ordinal or renumber a family. */
+const GH350_RENUMBERED_INSTALL = [
+  "`install` is the twenty-seventh",
+  "the twenty-seventh prompt-required `install` family",
+  "twenty-seventh prompt-required family `install`",
+] as const;
+
+export const gh350Phase8OrdinalViolations = (
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  for (const site of GH350_ORDINAL_SITES) {
+    const text = pageText(site.page);
+    if (text === undefined) {
+      failures.push(`${site.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of site.required) {
+      if (!text.includes(phrase))
+        failures.push(`${site.page}: missing delivered ordinal: ${phrase}`);
+    }
+    for (const phrase of GH350_RENUMBERED_INSTALL) {
+      if (text.includes(phrase)) failures.push(`${site.page}: renumbered install: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 phase 8 the mount pages state the delivered truth", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the seven declared pages carry the mount statements", () => {
+    expect(gh350Phase8Violations(GH350_PHASE8_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced twenty-six-family count and a dropped provider paragraph each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-cli-entrypoint.md"
+        ? `${pageText(page) ?? ""}\nthe entrypoint composes twenty-six families\n`
+        : pageText(page);
+    expect(gh350Phase8Violations(GH350_PHASE8_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: twenty-six families",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-cli-entrypoint.md"
+        ? (pageText(page) ?? "").replace(
+            "The `provider` family is the twenty-seventh and last prompt-required family",
+            "The provider family is registered",
+          )
+        : pageText(page);
+    expect(gh350Phase8Violations(GH350_PHASE8_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: The `provider` family is the twenty-seventh and last",
+    );
+  });
+
+  test("the delivered ordinals stay and no page renumbers install", () => {
+    expect(gh350Phase8OrdinalViolations(pageText)).toEqual([]);
+  });
+
+  test("an over-corrected install ordinal and a moved supervise ordinal each fail by name", () => {
+    const renumbered = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-install-lifecycle.md"
+        ? (pageText(page) ?? "").replace(
+            "`install` is the twenty-sixth prompt-required family",
+            "`install` is the twenty-seventh prompt-required family",
+          )
+        : pageText(page);
+    expect(gh350Phase8OrdinalViolations(renumbered).join("\n")).toContain(
+      "missing delivered ordinal: `install` is the twenty-sixth prompt-required family",
+    );
+    expect(gh350Phase8OrdinalViolations(renumbered).join("\n")).toContain(
+      "renumbered install: `install` is the twenty-seventh",
+    );
+    const superviseMoved = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-supervise.md"
+        ? (pageText(page) ?? "").replaceAll("25th family", "26th family")
+        : pageText(page);
+    expect(gh350Phase8OrdinalViolations(superviseMoved).join("\n")).toContain(
+      "missing delivered ordinal: 25th family",
     );
   });
 });

@@ -256,13 +256,17 @@
 #   NON-BLOCKING 5 — the test plan's closing corpus note (plan-owned): resolved by
 #        spec v1.2 (84 = 59 + 25 stated as declared values); phase 1 asserts them
 #        as declared values.
-#   NON-BLOCKING 6 — the `entrypoint-help-coverage` claim: the suite derives its
-#        tuples from `allHelpEntries()` and holds no provider tuple, so NO phase
-#        declares it. The real edit target is `packages/cli/src/help.ts`'s entry
-#        table, which phase 8 declares. The same holds for
-#        `tests/fixtures/entrypoint/programs.ts`, which derives both
-#        `syntheticPromptProgram()` and `HELP_TUPLES` from the declarative set and
-#        `allHelpEntries()`: it is a control here and is declared by no phase.
+#   NON-BLOCKING 6 — the `entrypoint-help-coverage` claim (CORRECTED at phase-8
+#        delivery, where the claim was found FALSE): the suite does NOT derive its
+#        coverage list. It holds a LITERAL 26-name inventory assertion (the
+#        `coverage.commands` list, ~lines 151-180) plus the derived tuple walk, so
+#        the literal list MUST gain `provider` and the suite IS edited in PHASE 8 —
+#        the eight help tuples then follow from `allHelpEntries()`. What genuinely
+#        derives, and stays an undeclared control, is
+#        `tests/fixtures/entrypoint/programs.ts`: `syntheticPromptProgram()` is
+#        built from `PROMPT_REQUIRED_COMMANDS` and `HELP_TUPLES` from
+#        `allHelpEntries()`, so neither needs an edit. The real help-table edit
+#        target is `packages/cli/src/help.ts`, also phase 8's.
 #
 # DOR ITERATION-2 REMEDIATION MAP (readiness-iter-2.md; spec v1.3, test plan v1.3):
 #   D2-1 — test plan §7.2's stale "no edit; the family count stays 26" control row
@@ -454,9 +458,9 @@
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
 #   gives the commit primitive staging authority. A file that is only RE-RUN as a
 #   delivered regression control is NOT declared. Controls this change re-runs
-#   and never edits: `tests/behaviour/entrypoint-help-coverage.test.ts` (derives
-#   its tuples from `allHelpEntries()`), `tests/fixtures/entrypoint/programs.ts`
-#   (derives both `syntheticPromptProgram` and `HELP_TUPLES`),
+#   and never edits: `tests/fixtures/entrypoint/programs.ts`
+#   (derives both `syntheticPromptProgram` from `PROMPT_REQUIRED_COMMANDS` and
+#   `HELP_TUPLES` from `allHelpEntries()`),
 #   `tests/checks/ci-checks.test.ts`, `tests/checks/help-guide-coverage.test.ts`
 #   and `tests/checks/reference-page-parity.test.ts` (both read the fixture and
 #   iterate the inventory), `tests/checks/prompt-conformance.test.ts`,
@@ -847,9 +851,14 @@
 #   array (not a derivation) and therefore moves in phase 8 as well: the set
 #   becomes the 27 names, the drop-one mutant uses it, and `provider` is REMOVED
 #   from the suite's `withExtras()` arm, because a mounted family must stop being
-#   listed as a non-prompt-required extra (DoR D2-12). The suites that DO derive
-#   (`entrypoint-help-coverage.test.ts`, `tests/fixtures/entrypoint/programs.ts`)
-#   are controls and are declared by no phase.
+#   listed as a non-prompt-required extra (DoR D2-12). ONE of the two suites that
+#   hold literal sets is `tests/behaviour/entrypoint-help-coverage.test.ts`: its
+#   `coverage.commands` assertion is a LITERAL 26-name list (~lines 151-180), so it
+#   is EDITED here too — the list gains `provider` (27) and the eight help tuples
+#   then follow from `allHelpEntries()`. Only
+#   `tests/fixtures/entrypoint/programs.ts` genuinely derives
+#   (`syntheticPromptProgram` from `PROMPT_REQUIRED_COMMANDS`, `HELP_TUPLES` from
+#   `allHelpEntries()`) and is a control declared by no phase.
 #   THE MOUNT IS NOT MEMBERSHIP ALONE (DoR D2-3): the production composition
 #   supplies the six `ProviderComposition` seams (`clock`, `credentialPort`,
 #   `transport`, `sleep`, `stateStore`, `newFenceToken`) and registers the family
@@ -903,21 +912,27 @@
 #   retrofitted — a row added later would assert prose a later page edit
 #   contradicts. THE CLOSED PAGE SET is the union of every documentation path
 #   this plan declares, and it includes `feature-cli-entrypoint.md`,
-#   `doc/planning/oss-tooling/cli-command-registry.md`, `doc/overview/glossary.md`
-#   and `.changeset/install-lifecycle-minor.md` because the mount moves their
+#   `doc/planning/oss-tooling/cli-command-registry.md` and
+#   `doc/overview/glossary.md` because the mount moves their
 #   counts and tail statements. `feature-supervise.md` is a MEMBER-BY-EXCEPTION:
 #   no phase edits it, its three `25th`-family ordinal statements stay
 #   byte-unchanged, and the phrase table's `stale: "26th family"` guard is kept
 #   exactly so an over-correction fails. THE PAGES THAT STATE THE FAMILY COUNT are
 #   `feature-cli-entrypoint.md`, `feature-install-lifecycle.md`,
-#   `feature-metrics.md`, `doc/00-index.md`, `doc/overview/glossary.md`,
-#   `doc/planning/oss-tooling/cli-command-registry.md` and
-#   `.changeset/install-lifecycle-minor.md`; every one of them moves 26 -> 27 in
-#   phase 8 (the changeset conditionally), and phase 8's scope is the list.
-#   `.changeset/install-lifecycle-minor.md` is declared with its condition: its
-#   "twenty-six prompt-required families" moves to twenty-seven IFF the changeset
-#   is still pending at delivery (it is pending today); a consumed changeset is
-#   historical and must not be rewritten.
+#   `feature-metrics.md`, `doc/00-index.md`, `doc/overview/glossary.md` and
+#   `doc/planning/oss-tooling/cli-command-registry.md`; every one of them moves
+#   26 -> 27 in phase 8, and phase 8's scope is the list.
+#   `.changeset/install-lifecycle-minor.md` IS DELIBERATELY NOT EDITED, IN ANY
+#   PHASE (corrected at phase-8 delivery): it is PRE-EXISTING release metadata, and
+#   the delivered `TC-RELEASE-001` / `tests/checks/privacy-release.test.ts` guard
+#   requires `.changeset/` to show exactly ONE ADDED file and NO modified or
+#   deleted one — editing it fails the gate by name. The mount's release-facing
+#   count is stated in THIS change's own
+#   `.changeset/gh350-provider-policy-minor.md`, whose body already names the
+#   provider family "as the twenty-seventh and last prompt-required family", so
+#   nothing is lost. Spec §16's conditional changeset row is therefore superseded
+#   by the delivered guard and should be corrected by `@spec-writer` (flagged, not
+#   fixed here).
 #
 # EVERY PHASE BOUNDARY IS GREEN; NO NEW SURFACES:
 #   The gate command convention is `TMPDIR=$PWD/tmp/tmpdir pnpm check` (the ticket
@@ -2656,10 +2671,14 @@ phases:
   # `tests/behaviour/entrypoint-composition.test.ts` (which holds a literal
   # `EXPECTED` array and does not derive). `tests/fixtures/entrypoint/
   # alias-baseline.json` gains exactly ONE `provider` line in its `Commands` cell
-  # and its provenance clause; every other cell is byte-unchanged. The suites that
-  # derive (`entrypoint-help-coverage.test.ts`, `tests/fixtures/entrypoint/
-  # programs.ts`) are controls and are declared by no phase (non-blocking DoR
-  # finding 6).
+  # and its provenance clause; every other cell is byte-unchanged.
+  # `tests/behaviour/entrypoint-help-coverage.test.ts` holds a LITERAL 26-name
+  # `coverage.commands` assertion (~lines 151-180), so it IS EDITED here — the list
+  # gains `provider` (27) and the eight help tuples then follow from
+  # `allHelpEntries()`. It is NOT a control: only
+  # `tests/fixtures/entrypoint/programs.ts` derives (both
+  # `syntheticPromptProgram` and `HELP_TUPLES`) and stays undeclared (non-blocking
+  # DoR finding 6, corrected at delivery).
   # TWO OBLIGATIONS INSIDE THOSE SUITES, NAMED (DoR D2-12, D2-9):
   #   - `tests/behaviour/entrypoint-composition.test.ts` moves its literal
   #     `EXPECTED` set to the 27 names (with `provider` last) and uses that set for
@@ -2738,10 +2757,14 @@ phases:
   # (the family list ends `supervise`, `install`, `provider`),
   # `doc/planning/oss-tooling/cli-command-registry.md` (the provider row becomes a
   # mounted twenty-seventh family with seven members; the registry's inventory
-  # states 27 with `provider` last), the M1 reference page above, and
-  # `.changeset/install-lifecycle-minor.md` ("twenty-six prompt-required families"
-  # -> twenty-seven IFF the changeset is still pending at delivery; it is pending
-  # today, and a consumed changeset is historical and stays).
+  # states 27 with `provider` last), and the M1 reference page above.
+  # `.changeset/install-lifecycle-minor.md` IS NOT EDITED (corrected at delivery):
+  # it is PRE-EXISTING release metadata, and `TC-RELEASE-001`
+  # (`tests/checks/privacy-release.test.ts`) requires exactly one ADDED changeset
+  # and NO modified or deleted one, so editing it fails the gate by name. This
+  # change's own `.changeset/gh350-provider-policy-minor.md` already states the
+  # provider family "as the twenty-seventh and last prompt-required family"; the
+  # spec's conditional row is flagged for `@spec-writer` rather than acted on here.
   # `feature-supervise.md` is NOT edited: its three `25th`-family statements are
   # true before and after, and the phrase table's `stale: "26th family"` guard is
   # kept exactly as delivered.
@@ -2822,12 +2845,20 @@ phases:
         - doc/overview/glossary.md
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m1/commands/provider.md
-        # The changeset's family count, IFF it is still pending (declared with
-        # that condition; a consumed changeset is historical and does not move).
-        - .changeset/install-lifecycle-minor.md
+        # `.changeset/install-lifecycle-minor.md` is NOT declared and NOT edited:
+        # it is pre-existing release metadata pinned byte-identical by
+        # `TC-RELEASE-001`, and this change's own changeset already carries the
+        # twenty-seventh-family statement.
         # The mount's phrase rows and ordinal guard (this phase extends the
         # table; phases 1, 2, 4 and 6 already moved their pages' rows).
         - tests/checks/doc-conformance.test.ts
+        # OWNER-AUTHORISED (during delivery): its expected mounted set hard-codes
+        # the family list, so the single `provider` token must be added there.
+        - tests/checks/event-mount-guards.test.ts
+        # OWNER-AUTHORISED (during delivery): it holds a LITERAL 26-name
+        # `coverage.commands` assertion, so the list gains `provider` (27) and the
+        # eight help tuples then follow from `allHelpEntries()`.
+        - tests/behaviour/entrypoint-help-coverage.test.ts
 
   # ---------------------------------------------------------------------------
   # Phase 9 — Documentation truth and release: the remaining specification pages,
