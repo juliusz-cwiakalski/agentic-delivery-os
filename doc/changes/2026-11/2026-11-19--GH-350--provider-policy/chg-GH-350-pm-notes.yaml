@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-19T05:54:41.790Z }
   specification: { started: null, completed: 2026-11-19T07:52:06.641Z }
   test_planning: { started: null, completed: 2026-11-19T08:38:39.374Z }
-  delivery_planning: { started: null, completed: 2026-11-19T08:38:47.930Z }
+  delivery_planning: { started: null, completed: 2026-11-19T09:28:30.293Z }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -162,6 +162,34 @@ notes:
       seconds-of-day, not instants. Reopened: specification, test_planning,
       delivery_planning."
     type: blocker
+    date: "2026-11-19"
+  - text: "Sweep result (plan phase delivery_planning re-recorded, DoR verdict
+      unaffected): every asserting suite and page sentence the moved counts
+      falsify is now declared in phase 1, the count-bearing suite list is
+      corrected from nine to ten (merge-classification-conformance was missing),
+      five files were added to phase 1 (provider-parks, provider-announcements,
+      merge-classification-conformance, the conditions-and-parks guide, and the
+      readiness-iter-3 record), and `scripts/checks/error-table-sync.ts` was
+      dropped as declared-but-unedited. No requirement, AC, case or count
+      changed, so the READY verdict stands without a new gate iteration."
+    type: info
+    date: "2026-11-19"
+  - text: "Delivery escalation 2 (phase 1, still 0 commits): two more undeclared
+      count consumers — `tests/behaviour/provider-parks.test.ts` asserts the
+      park allowlist is 8 fields (declared only in phase 2), and
+      `tests/structure/merge-classification-conformance.test.ts` asserts the
+      provider kind is 13 (declared by no phase; the plan's 'nine count suites'
+      list omitted it). Instead of fixing one at a time, a full sweep of every
+      assertion the moved counts falsify is being run and each owner declared."
+    type: info
+    date: "2026-11-19"
+  - text: "Retro (second occurrence): the plan derived its count-bearing suite list
+      from memory rather than from a sweep, so two delivery cycles were spent
+      discovering assertion sites. The escalation trigger now requires a
+      sweep-derived inventory. This is the same lesson as the
+      exhaustive-consumer gap, one level up: enumerate from the tree, never from
+      recall."
+    type: retro
     date: "2026-11-19"
   - text: "Post-READY guard hole found by the confirmation review: the error-table
       no-leftover scan's wording-bound forms omitted `163 delivered` and several

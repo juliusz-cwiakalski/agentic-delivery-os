@@ -485,6 +485,13 @@
 #   no-child-process/shell rule — the only two of TC-CONFORM-008's four rules that
 #   are import-graph rules; DoR D2-5),
 #   `tests/behaviour/provider-budgets.test.ts` (P3 behaviour, P4 declaration),
+#   `tests/behaviour/provider-parks.test.ts` (P1 the evidence-allowlist SIZE,
+#   8 -> 14, and the stale "eight-field" title; P2 the `timezone`-on-emitted-
+#   evidence arm),
+#   `doc/guides/provider-conditions-and-parks.md` (P1 the numeric sentences — park
+#   allowlist eight -> fourteen, announcement allowlist eleven -> seventeen, the
+#   two added codes and `provider.budget.parked` in the informational set; P9 the
+#   additive explanation of the new members),
 #   `tests/checks/doc-conformance.test.ts` (P1 counts and the engine page's
 #   vocabulary sentences, P2 zone pages, P4 config-layer, P6 hook guide, P7 watch
 #   bound, P8 mount pages, mount ordinals and the metrics/entrypoint sentences,
@@ -543,12 +550,18 @@
 #   `feature-metrics.md`, `feature-install-lifecycle.md` — and
 #   `feature-supervise.md` is deliberately NOT in this set: its only restatement
 #   is the 66-member allowlist, which does not move, so editing it would make a
-#   false claim and TC-DOC-001 asserts its `66` stays `66`), the nine delivered
-#   count/membership suites, the `BASELINE_ROWS.length + 130` arithmetic — which
+#   false claim and TC-DOC-001 asserts its `66` stays `66`), the TEN delivered
+#   count/membership suites (`error-table-sync`, `error-table`,
+#   `cross-repository-contract`, `supervision-error-family`,
+#   `supervision-error-socialization`, `ceremony-contract`,
+#   `dispatch-attempts-taxonomy`, `verify-gates-suite-map-contract`,
+#   `ceremony-nonregression`, `merge-classification-conformance`), the
+#   `BASELINE_ROWS.length + 130` arithmetic — which
 #   lives in `tests/checks/error-table-sync.test.ts`, NOT in
-#   `scripts/checks/error-table-sync.ts` (that script supplies the counts the
-#   assertion compares; the arithmetic base and every `+ 130` site are the
-#   test's) — the repo-wide no-leftover scan in
+#   `scripts/checks/error-table-sync.ts` (that script DERIVES the counts from the
+#   live table and is declared by no phase: the arithmetic base and every `+ 130`
+#   site are the test's, and its two-segment allowlist stays 66 because none of the
+#   three new codes is kind-first) — the repo-wide no-leftover scan in
 #   `tests/structure/error-table.test.ts` (its `APPENDIX_D_FILES` list gains
 #   `feature-install-lifecycle.md`, and its token pattern gains this change's
 #   outgoing forms as WORDING-BOUND forms in the existing style — the outgoing
@@ -565,6 +578,99 @@
 #   or suite that still states the number as CURRENT fails by name while a declared
 #   delta survives), and the count phrases of the delivered
 #   doc-conformance block.
+#   COUNT-AND-VOCABULARY ASSERTION SWEEP — THE COMPLETE SET (phase 1; derived by
+#   grep over `tests/**`, `scripts/**` and `doc/spec/**`, not by memory). Every
+#   site below states or asserts a value this change moves. (a) = phase-1 edit.
+#     EVIDENCE ALLOWLISTS (8 -> 14 park, 11 -> 17 announcement):
+#       (a) `tests/behaviour/provider-parks.test.ts:61,65` title "eight-field
+#           allowlist" + `allowlist.fields).toHaveLength(8)` -> fourteen
+#       (a) `tests/behaviour/provider-announcements.test.ts:75` title
+#           "eleven-field allowlist" -> seventeen; cause table gains
+#           `budget-exhausted -> provider.budget.parked -> info`
+#       (a) `tests/checks/provider-evidence-bounds.test.ts:68,71,72` title +
+#           8/11 -> 14/17 (also declares the two allowlist fixtures)
+#       (a) `tests/structure/provider-contract.test.ts:112,113,114` title +
+#           8/11 -> 14/17
+#       (a) `tests/fixtures/provider/evidence/park-allowlist.json`,
+#           `announcement-allowlist.json` (the fixtures the suites compare)
+#       (a) `doc/spec/features/feature-provider-engine.md:145` (eight-field ->
+#           fourteen), `:159` (eleven-field -> seventeen + six names), `:283`
+#           (8 / 8+3 / 11-field -> 14 / 14+3 / 17-field)
+#       (a) `doc/guides/provider-conditions-and-parks.md:78-80` (eight park
+#           fields -> fourteen; eleven-field -> seventeen; the code list gains the
+#           two budget codes; "the first two and the last are informational" gains
+#           `provider.budget.parked`) — phase 9 keeps the additive prose
+#       (c) `tests/fixtures/provider/evidence/{max-evidence,over-bound-evidence,
+#           unknown-key-evidence}.json`: `max-evidence` is phase 3's (it gains the
+#           budget fields for TC-CONFORM-004); the two negative fixtures are
+#           1024-byte/unknown-key defects and stay unchanged
+#       (c) `tests/checks/provider-profile-evidence-bounds.test.ts` — the PROFILE
+#           allowlist, a different set
+#       (c) every `eight-field`/`eleven` hit in the event envelope, steer record,
+#           daemon rows and delivery-result token sets — other closed sets
+#     PROVIDER-KIND AND TABLE TOTALS (13 -> 16; 164/163 -> 167/166; +130 -> +133;
+#     corpus 81 -> 84):
+#       (a) `tests/structure/merge-classification-conformance.test.ts:83`
+#           `counts.get("provider")).toBe(13)` -> 16 — FOUND BY THIS SWEEP, declared
+#           by no phase before it
+#       (a) `tests/checks/error-table-sync.test.ts:1081,1082,1162,1185` (`+ 130` ->
+#           `+ 133`), `:1793,1796,1797,1808` (164 -> 167, phrase)
+#       (a) `tests/checks/supervision-error-socialization.test.ts:60,61` 164 -> 167,
+#           `:62` corpusRows 81 -> 84
+#       (a) `tests/structure/error-table.test.ts:849,925,1159,1799,1892,1911,2336,
+#           2372,2530,2532,2534,2544,2545,2622,2623,2669,2670,2688-2690,2735,2736,
+#           2750,2751,2805,2806,2843-2845` (164 -> 167, 163 -> 166, phrases,
+#           APPENDIX_D_FILES + wording-bound forms)
+#       (a) `tests/structure/verify-gates-suite-map-contract.test.ts:149,150`,
+#           `tests/structure/ceremony-contract.test.ts:113,119`,
+#           `tests/structure/dispatch-attempts-taxonomy.test.ts:2,58,60`,
+#           `tests/behaviour/ceremony-nonregression.test.ts:56` (164 -> 167)
+#       (a) `tests/structure/cross-repository-contract.test.ts:495-527` — the
+#           `additive` set gains the three provider codes so the exact
+#           pre-change snapshot equality holds; `DOMAIN_KINDS` unchanged
+#       (a) `tests/checks/doc-conformance.test.ts:727,736,748,749,751,874,877`
+#           (count phrases and the stale/required pairs)
+#       (a) `doc/spec/features/feature-result-contract.md:9` (summary "thirteen
+#           provider-kind rows"), `:63` ("carries thirteen rows"), `:312`
+#           ("thirteen `provider` rows" + 164 -> 167), `:439` ("thirteen provider
+#           identities") -> sixteen
+#       (a) `doc/spec/features/feature-metrics.md:260,348,390` (164/163/+130 ->
+#           167/166/+133; line 390's family count is phase 8's)
+#       (a) `doc/spec/features/feature-install-lifecycle.md:264` (table total 164
+#           -> 167; no delivered-rows metric on that page)
+#       (a) `doc/spec/features/feature-ceremony-runner.md` (164/66 restatements)
+#       (c) `scripts/checks/error-table-sync.ts` — DERIVES every count; its
+#           `RESERVED_TWO_SEGMENT_CODES` stays 66. Executed by the phase-1 gate,
+#           declared by no phase
+#       (c) `tests/fixtures/result/code-corpora/false-positives.json` — unchanged
+#           (the change adds true-positive rows only)
+#       (c) `tests/fixtures/events/error-table-baseline.json` — READ, never edited;
+#           the suite adds the three codes to its `additive` set
+#     VOCABULARY SIZES (kinds 5 -> 6, causes 7 -> 8, skips 8 -> 9, codes 11 -> 13,
+#     tie order 5 -> 6):
+#       (a) `tests/structure/provider-contract.test.ts` (closed sets, tie order,
+#           export inventory) and `tests/fixtures/provider/contract-inventory.json`
+#       (a) `tests/structure/content-inventory.test.ts` + `tests/structure/
+#           inventory.json` (per-file export lists)
+#       (a) `tests/behaviour/provider-announcements.test.ts` cause/severity table
+#       (c) `tests/structure/provider-profile-contract.test.ts:153` — a subset
+#           check (`not.toContain`), unaffected
+#       (c) `QUEUE_PARK_CAUSES` / `QUEUE_LANE_IDLE_REASONS` and the queue,
+#           supervision, closeout and steer vocabularies — different closed sets
+#     FAMILY COUNTS (26 -> 27, tail one place, alias baseline) — all phase 8,
+#     listed in that phase's scope; included in this sweep's check: `board-help`,
+#     `ceremony-cli`, `entrypoint-two-bins`, `entrypoint-composition`,
+#     `events-mount-help`, `install-family-surface`, `repos-help`,
+#     `install-conformance-mutants`, `board-mounting`, `daemon-production-
+#     composition`, `dispatch-attempts-composition`, `events-production-
+#     composition`, `install-conformance`, `metrics-mounting`, `steer-mounting`,
+#     `supervision-mounting`, `entrypoint-bin`, `tests/fixtures/metrics/mounting.ts`,
+#     `tests/fixtures/supervise/mounting.ts`, `tests/fixtures/entrypoint/
+#     alias-baseline.json`, `tests/checks/doc-conformance.test.ts` and the pages.
+#   (b) LATER-PHASE EDITS are the phase-2 `timezone` arm on `provider-parks`, the
+#   phase-3 budget-evidence arms, and the pages/guides whose ADDITIVE prose lands
+#   at their own phase. (c) UNAFFECTED is stated per group above, never assumed.
+#
 #   DECLARED IDENTITY WINDOW, stated rather than implied: ALL THREE rows are
 #   documented from phase 1 with NO emitter — the zone refusal's emitter lands in
 #   phase 2, the budget refusal's in phase 3, and the migration refusal's in
@@ -823,6 +929,7 @@ tier:
     - "A source or fixture still states or implies `PROVIDER_PEAK_TIMEZONES = [\"UTC\"]`-only validation, a non-UTC window refused for being non-UTC, or a UTC basis for a declared local window, at a phase boundary after phase 2 (AC-F1-1, AC-F8-3, TC-ZONE-011)"
     - "A guard ships without its failing negative control (including the mount's two-arm proof and the coverage twin mutant), a case is skipped, environment-gated or made green by weakening an oracle, or a new boundary rule has no failing fixture (test plan §4.3, MOUNT-TP-1, TC-CONFORM-008)"
     - "A phase widens or retires a closed set (`PARK_CAUSES`, `PROVIDER_CONDITION_KINDS`, `PROVIDER_SKIP_REASONS`, `ANNOUNCEMENT_CODES`, `PARK_EVIDENCE_FIELDS`, `ANNOUNCEMENT_EVIDENCE_FIELDS`, `PROVIDER_CONDITION_TIE_ORDER`) WITHOUT declaring, in the same commit, every module that maps over it exhaustively — a `switch`/`satisfies`/mapped-type consumer is a BUILD break (TS2366), not a test failure, and discovering it at a phase boundary means the phase cannot be green inside its declared scope (Fix 1, Fix 2)"
+    - "A widened count or vocabulary size leaves an ASSERTING SUITE or a page sentence undeclared at that phase — every `toHaveLength`, `toBe`, exact-snapshot comparison, title and prose restatement of a moved value is found by a SWEEP over `tests/**`, `scripts/**` and `doc/spec/**` (the phase-1 inventory above is the result of one), never by memory and never one delivery finding at a time; a suite asserting the old value that no phase declares is the guard hole this trigger closes"
     - "`TMPDIR=$PWD/tmp/tmpdir pnpm check` is not green at a phase boundary, a gate is recorded as PASS with an unresolved ERROR, or a phase commits a case it cannot make green (test plan §6.3)"
     - "A phase declares a path it does not edit, or edits a path it does not declare, so the commit primitive loses staging authority for authored content (the SCOPE DECLARATION RULE)"
 defaultLeases:
@@ -893,8 +1000,14 @@ phases:
   #
   # Register edit-set (see the header): source rows, documented rows and the
   # prose facts spec §16 binds to feature-result-contract.md, one true-positive
-  # corpus row per new code, the three other count-bearing pages, the nine
-  # delivered count/membership suites (the `BASELINE_ROWS` arithmetic in
+  # corpus row per new code, the three other count-bearing pages, the TEN
+  # delivered count/membership suites — named: `error-table-sync`,
+  # `error-table`, `cross-repository-contract`, `supervision-error-family`,
+  # `supervision-error-socialization`, `ceremony-contract`,
+  # `dispatch-attempts-taxonomy`, `verify-gates-suite-map-contract`,
+  # `ceremony-nonregression` and `merge-classification-conformance` (the last one
+  # found by the sweep below, not by memory) — with the `BASELINE_ROWS` arithmetic
+  # in
   # `tests/checks/error-table-sync.test.ts` and the structural mirror's
   # `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
@@ -1125,12 +1238,13 @@ phases:
         - tests/fixtures/result/code-corpora/true-positives.json
         # The count surface: the `BASELINE_ROWS.length + 130` arithmetic lives in
         # `tests/checks/error-table-sync.test.ts` (every `+ 130` site and the
-        # baseline-length comparison), while `scripts/checks/error-table-sync.ts`
-        # supplies the counts it compares; the structural mirror's no-leftover
-        # scan gains the outgoing forms (164 identities, 163 delivered,
-        # `BASELINE_ROWS.length + 130`) so a page or suite left behind fails by
-        # name.
-        - scripts/checks/error-table-sync.ts
+        # baseline-length comparison) and the structural mirror's no-leftover scan
+        # gains the outgoing forms, so a page or suite left behind fails by name.
+        # `scripts/checks/error-table-sync.ts` is EXECUTED by this phase's gate and
+        # NOT edited: it derives every count from the live table and its documented
+        # counterpart, and its `RESERVED_TWO_SEGMENT_CODES` set stays at 66 because
+        # none of the three new codes is kind-first two-segment. Declaring it would
+        # be the declared-but-unedited noise the DoR flagged (N-8).
         - tests/checks/error-table-sync.test.ts
         - tests/structure/error-table.test.ts
         - tests/structure/cross-repository-contract.test.ts
@@ -1138,6 +1252,22 @@ phases:
         - tests/checks/supervision-error-socialization.test.ts
         - tests/structure/ceremony-contract.test.ts
         - tests/structure/dispatch-attempts-taxonomy.test.ts
+        # The provider-kind count in a THIRD mirror the earlier passes missed:
+        # `expect(counts.get("provider")).toBe(13)` → 16 (this suite is the
+        # delivered per-kind baseline for config/state/provider/merge; declared by
+        # no phase before this sweep).
+        - tests/structure/merge-classification-conformance.test.ts
+        # The two delivered suites that assert an EVIDENCE-ALLOWLIST SIZE and a
+        # stale title, found by this sweep and previously declared in phase 2 /
+        # nowhere: `provider-parks.test.ts:61,65` (title "eight-field allowlist",
+        # `allowlist.fields).toHaveLength(8)` → fourteen — this phase owns the
+        # SIZE and the title; phase 2 owns the `timezone`-on-emitted-evidence arm),
+        # and `provider-announcements.test.ts:75` (title "eleven-field allowlist" →
+        # seventeen, plus the cause→code→severity table gains
+        # `budget-exhausted → provider.budget.parked → info`, the pure mapping
+        # this phase declares in `announcements.ts`).
+        - tests/behaviour/provider-parks.test.ts
+        - tests/behaviour/provider-announcements.test.ts
         - tests/structure/verify-gates-suite-map-contract.test.ts
         - tests/behaviour/ceremony-nonregression.test.ts
         # The delivered GH-346 block's count phrases move with the counts; phases
@@ -1165,8 +1295,19 @@ phases:
         # enumerations — see the obligation below); its zone half is phase 2's and
         # its budget prose is phase 9's (DoR D2-4, N-3).
         - doc/spec/features/feature-provider-engine.md
-        # The eight TRACKED decision records land on this phase's delivery
-        # commit, with the index that already carries their rows.
+        # The conditions guide's NUMERIC sentences are this phase's, because its
+        # evidence arithmetic and its announcement-code list are falsified the
+        # moment the register widens: "Evidence is closed to the eight park fields
+        # plus `parkName`, `parkExpiresAt`, and `announcementCode`" and "the closed
+        # eleven-field allowlist" (lines 78-80) become fourteen base fields plus
+        # three → seventeen, the closed code list gains
+        # `provider.budget.parked` and `provider.budget.crossed`, and "The first
+        # two and the last are informational" must add `provider.budget.parked`.
+        # Phase 9 keeps the guide for the ADDITIVE explanations (budget members,
+        # `timezone`, `watch-stale`, the terminal refusal, no-paid-escalation).
+        - doc/guides/provider-conditions-and-parks.md
+        # The eight TRACKED decision records land on this phase's delivery commit,
+        # with the index that already carries their rows.
         - doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
         - doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
         - doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
@@ -1182,6 +1323,9 @@ phases:
         # this revision answers (DoR D2-10).
         - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-1.md
         - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-2.md
+        # The iteration-3 verdict (READY + two follow-up observations) is tracked
+        # too; declared with its siblings so the DoR record set stages as a set.
+        - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-3.md
       folders:
         - doc/decisions
         - doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review
@@ -1365,6 +1509,12 @@ phases:
         - tests/behaviour/peak-window-utc-clock.test.ts
         - tests/behaviour/provider-peak-window.test.ts
         - tests/behaviour/daemon-peak-window-isolation.test.ts
+        # `provider-parks.test.ts` is a MULTI-PHASE suite: PHASE 1 already moved
+        # its allowlist size (8 -> 14) and its stale "eight-field" title, because
+        # the size is falsified the moment the register widens; THIS phase adds the
+        # `timezone`-on-emitted-evidence arm (the park and announcement evidence
+        # for a window-derived park), which requires the zone writer. Neither phase
+        # re-moves the other's assertion.
         - tests/behaviour/provider-parks.test.ts
         # TC-ZONE-010's ambient-neutrality arm joins the suite phase 1 moved.
         - tests/structure/provider-contract.test.ts
@@ -2346,6 +2496,14 @@ phases:
         - doc/spec/features/feature-spend.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/nonfunctional.md
+        # `provider-conditions-and-parks.md` is MULTI-PHASE: PHASE 1 moved its
+        # numeric sentences (the eight-field -> fourteen-field park allowlist, the
+        # eleven-field -> seventeen-field announcement allowlist, the two added
+        # budget codes in the closed list and `provider.budget.parked` in the
+        # informational set); THIS phase adds the additive explanations — budget
+        # members, `timezone`, `watch-stale` with age and bound, the terminal
+        # ticket refusal with its remedy, no-paid-escalation, and the
+        # one-spawn-increment pre-spawn bound. THIS phase does NOT re-move a count.
         - doc/guides/provider-conditions-and-parks.md
         - doc/guides/opencode-model-configuration.md
         - doc/00-index.md
