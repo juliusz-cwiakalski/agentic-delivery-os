@@ -514,13 +514,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   entry(
     ["dispatch"],
-    "Run one typed dispatch, read dual-run evidence, or move authority",
+    "Run one typed dispatch, read dual-run evidence, inspect a per-ref lane, or move authority",
     [
       "<binary> dispatch <ref> [--harness <name>] [--resume-prompt <text>]",
       "<binary> dispatch attempts [--ref <ref>] [--limit <n>]",
       "<binary> dispatch dual-run summary --repo <repo>",
       "<binary> dispatch dual-run resolve <divergence-id> --note <text>",
       "<binary> dispatch handover <repo> [--revert]",
+      "<binary> dispatch status <ref> [--json]",
+      "<binary> dispatch log <ref> [--tail <n>] [--json]",
+      "<binary> dispatch is-delivering [<ref>] [--json]",
+      "<binary> dispatch last-message <ref> [--json]",
     ],
     [
       ["--harness <name>", "Harness adapter (opencode, claude-code); default from config"],
@@ -530,6 +534,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       ["--repo <repo>", "Repository identity for summary and handover"],
       ["--note <text>", "Bounded divergence-resolution note"],
       ["--revert", "Revert a recorded handover to dual-run"],
+      ["--tail <n>", "Log tail size, 1..500 (default 50); refused, never clamped"],
     ],
     [
       "<binary> dispatch GH-242",
@@ -538,6 +543,10 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> dispatch dual-run summary --repo github.com/owner/repo",
       '<binary> dispatch dual-run resolve DIV-1 --note "tracker was stale"',
       "<binary> dispatch handover github.com/owner/repo --revert",
+      "<binary> dispatch status GH-354 --json",
+      "<binary> dispatch log GH-354 --tail 200",
+      "<binary> dispatch is-delivering GH-354",
+      "<binary> dispatch last-message GH-354 --json",
     ],
     "dispatch",
   ),
@@ -556,6 +565,48 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> dispatch attempts --json",
     ],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "attempts")],
+  },
+  {
+    path: ["dispatch", "status"],
+    summary:
+      "Answer the newest durable lane for a ref: delivering/stale/marker/probe, the owner facts, and the last outcome (exit 0 in every state)",
+    usage: ["<binary> dispatch status <ref> [--json]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> dispatch status GH-354", "<binary> dispatch status GH-354 --json"],
+    seeAlso: [page("dispatch")],
+  },
+  {
+    path: ["dispatch", "log"],
+    summary:
+      "Answer the bounded per-ref tail of the streaming harness's own stdout; no artifact is no-log (exit 0), an unreadable file is unreadable (exit 1)",
+    usage: ["<binary> dispatch log <ref> [--tail <n>] [--json]"],
+    options: [
+      ["--tail <n>", "Newest lines to return, 1..500 (default 50); refused, never clamped"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: ["<binary> dispatch log GH-354", "<binary> dispatch log GH-354 --tail 200 --json"],
+    seeAlso: [page("dispatch")],
+  },
+  {
+    path: ["dispatch", "is-delivering"],
+    summary:
+      "Answer whether a ref (or the repository) has an active, non-stale lane: exit 0 in progress, exit 1 not; the JSON answer carries the boolean",
+    usage: ["<binary> dispatch is-delivering [<ref>] [--json]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: ["<binary> dispatch is-delivering GH-354", "<binary> dispatch is-delivering --json"],
+    seeAlso: [page("dispatch")],
+  },
+  {
+    path: ["dispatch", "last-message"],
+    summary:
+      "Answer the session's final assistant message for a ref, composed redact -> flatten -> bound -> mark; a closed reason at exit 1 when it cannot",
+    usage: ["<binary> dispatch last-message <ref> [--json]"],
+    options: [...GLOBAL_OPTIONS],
+    examples: [
+      "<binary> dispatch last-message GH-354",
+      "<binary> dispatch last-message GH-354 --json",
+    ],
+    seeAlso: [page("dispatch")],
   },
   entry(
     ["dispatch", "dual-run", "summary"],

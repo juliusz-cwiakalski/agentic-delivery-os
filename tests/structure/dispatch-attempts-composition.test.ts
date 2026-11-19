@@ -43,8 +43,9 @@ describe("TC-ATTEMPT-029 the pointer is the only route to the gate", () => {
     expect(attempts?.seeAlso).toEqual([
       "doc/planning/oss-tooling/milestones/m2/commands/attempts.md",
     ]);
-    // Exactly five dispatch help entries: no sixth surface was introduced.
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(5);
+    // §25.1 / TC-CONTRACT-002: the four operator forms are declared entries, so
+    // the family's count moves 5 -> 9 and no page is added.
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(9);
   });
 
   test("no second surface computes coverage or floor", async () => {
