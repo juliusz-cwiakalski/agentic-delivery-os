@@ -8,9 +8,9 @@
  * no exit literal, and no token literal lives here.
  */
 import {
+  type CommandFailureHarnessDetail,
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
-  type CommandFailureHarnessDetail,
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -309,7 +309,7 @@ export type DispatchPorts = {
    * TDR-0049). A role-less composition supplies none, so it stays role-less; a
    * resume never carries one.
    */
-  readonly spawnTitle?: string;
+  readonly freshTitle?: string;
   /**
    * The advisory lane owner facts (GH-347 DM-1, TDR-0044): the composition's
    * process id and the declared start instant. Absent keeps the lane write off
@@ -958,7 +958,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           workItemRef: ports.ref,
           prompt: spawnPrompt ?? ports.prompt,
           descriptor: ports.descriptor,
-          ...(ports.spawnTitle === undefined ? {} : { title: ports.spawnTitle }),
+          ...(ports.freshTitle === undefined ? {} : { title: ports.freshTitle }),
           ...propagation,
         });
       })();
@@ -1162,9 +1162,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           const facts = corroborationFactsOf(reads);
           const comparison = comparisonFor({ token: shortCircuit, reads, urlResolved: false });
           const prUrl =
-            shortCircuit === po && reads.artifacts.ok
-              ? (reads.artifacts.value.pr.url ?? "")
-              : "";
+            shortCircuit === po && reads.artifacts.ok ? (reads.artifacts.value.pr.url ?? "") : "";
           return record({
             token: shortCircuit,
             outcome: evidenceResult.value.completionMarker
@@ -1220,12 +1218,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 escalation: "restart-budget-exhausted" as const,
               };
         if (!decision.admitted) {
-          const exhaustionRef = ensureExhaustion(
-            ports,
-            session.value.sessionId,
-            restarts,
-            now,
-          );
+          const exhaustionRef = ensureExhaustion(ports, session.value.sessionId, restarts, now);
           return record({
             token: mr,
             outcome: O_FAILED,
@@ -1282,151 +1275,151 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         continue;
       }
 
-    const evidence: HarnessEvidence = evidenceResult.value;
-    const classification = ports.harness.classify(evidence);
-    const harnessToken = classification.token;
+      const evidence: HarnessEvidence = evidenceResult.value;
+      const classification = ports.harness.classify(evidence);
+      const harnessToken = classification.token;
 
-    const reads = await ports.readTruth();
-    const derivation = deriveDispatchResult({
-      harness: {
-        ok: true,
-        value: {
-          outcome: classification.outcome,
-          token: harnessToken,
-          exitStatus: evidence.exitStatus,
-          spawnRefused: evidence.spawnRefused,
+      const reads = await ports.readTruth();
+      const derivation = deriveDispatchResult({
+        harness: {
+          ok: true,
+          value: {
+            outcome: classification.outcome,
+            token: harnessToken,
+            exitStatus: evidence.exitStatus,
+            spawnRefused: evidence.spawnRefused,
+          },
         },
-      },
-      artifacts: reads.artifacts,
-      ledger: reads.ledger,
-      tracker: reads.tracker,
-      restarts: { count: restarts, bound: budget },
-      handoverState: ports.handoverState,
-    });
-
-    const derivedToken = derivation.token;
-    const comparison = comparisonFor({
-      token: derivedToken,
-      ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
-      reads,
-      urlResolved: derivation.urlResolved,
-    });
-
-    let divergenceRef: string | undefined;
-    let truthRef: string | undefined;
-    let appendFailureCode: string | undefined;
-    const delivered =
-      derivation.token === su &&
-      isDeliveredEvidence({
-        outcome: classification.outcome,
+        artifacts: reads.artifacts,
         ledger: reads.ledger,
+        tracker: reads.tracker,
+        restarts: { count: restarts, bound: budget },
+        handoverState: ports.handoverState,
       });
-    const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
-    if (delivered && truthReason !== undefined) {
-      truthRef = `truth:unreadable:${truthReason}`;
-      const ledger = readDispatchDivergences(ports.store);
-      const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
-      // A replayed attempt is already represented by its own divergence,
-      // resolved or not; never open a second record for it.
-      const recordedAttempt = folded.some(
-        (entry) =>
-          entry.attemptId === attemptId &&
-          entry.repository === ports.repository &&
-          entry.ref === ports.ref &&
-          entry.comparisonClass === "not-applicable" &&
-          entry.engineToken === su &&
-          entry.comparisonToken === null,
-      );
-      if (!recordedAttempt) {
-        const existing = folded.find((entry) =>
-          isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
+
+      const derivedToken = derivation.token;
+      const comparison = comparisonFor({
+        token: derivedToken,
+        ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+        reads,
+        urlResolved: derivation.urlResolved,
+      });
+
+      let divergenceRef: string | undefined;
+      let truthRef: string | undefined;
+      let appendFailureCode: string | undefined;
+      const delivered =
+        derivation.token === su &&
+        isDeliveredEvidence({
+          outcome: classification.outcome,
+          ledger: reads.ledger,
+        });
+      const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
+      if (delivered && truthReason !== undefined) {
+        truthRef = `truth:unreadable:${truthReason}`;
+        const ledger = readDispatchDivergences(ports.store);
+        const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
+        // A replayed attempt is already represented by its own divergence,
+        // resolved or not; never open a second record for it.
+        const recordedAttempt = folded.some(
+          (entry) =>
+            entry.attemptId === attemptId &&
+            entry.repository === ports.repository &&
+            entry.ref === ports.ref &&
+            entry.comparisonClass === "not-applicable" &&
+            entry.engineToken === su &&
+            entry.comparisonToken === null,
         );
-        if (existing !== undefined) {
-          divergenceRef = existing.divergenceId;
-        } else {
-          const candidate = ports.newDivergenceId();
-          const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
-            schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-            divergenceId: candidate,
-            repository: ports.repository,
-            ref: ports.ref,
-            attemptId,
-            state: "open",
-            comparisonClass: "not-applicable",
-            engineToken: su,
-            comparisonToken: null,
-            evidenceRefs: [`attempt:${attemptId}`, truthRef],
-            recordedAt: now,
-          });
-          if (appended.ok) divergenceRef = candidate;
-          else appendFailureCode = appended.code;
+        if (!recordedAttempt) {
+          const existing = folded.find((entry) =>
+            isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
+          );
+          if (existing !== undefined) {
+            divergenceRef = existing.divergenceId;
+          } else {
+            const candidate = ports.newDivergenceId();
+            const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
+              schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+              divergenceId: candidate,
+              repository: ports.repository,
+              ref: ports.ref,
+              attemptId,
+              state: "open",
+              comparisonClass: "not-applicable",
+              engineToken: su,
+              comparisonToken: null,
+              evidenceRefs: [`attempt:${attemptId}`, truthRef],
+              recordedAt: now,
+            });
+            if (appended.ok) divergenceRef = candidate;
+            else appendFailureCode = appended.code;
+          }
         }
+      } else if (comparison.outcome === "mismatch") {
+        divergenceRef = ports.newDivergenceId();
+        appendDispatchDivergence(ports.store, ports.fenceToken, {
+          schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+          divergenceId: divergenceRef,
+          repository: ports.repository,
+          ref: ports.ref,
+          attemptId,
+          state: "open",
+          comparisonClass: comparison.class,
+          engineToken: derivedToken,
+          comparisonToken: comparison.token,
+          evidenceRefs: [`attempt:${attemptId}`],
+          recordedAt: now,
+        });
       }
-    } else if (comparison.outcome === "mismatch") {
-      divergenceRef = ports.newDivergenceId();
-      appendDispatchDivergence(ports.store, ports.fenceToken, {
-        schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-        divergenceId: divergenceRef,
-        repository: ports.repository,
-        ref: ports.ref,
-        attemptId,
-        state: "open",
-        comparisonClass: comparison.class,
-        engineToken: derivedToken,
-        comparisonToken: comparison.token,
-        evidenceRefs: [`attempt:${attemptId}`],
-        recordedAt: now,
+
+      const facts = corroborationFactsOf(reads);
+      // The arm is the derivation's own decision (GH-347 DEC-6): the one
+      // derivation decides it; both evaluation sites pass it unchanged.
+      const corroborationArm = derivation.corroborationArm;
+      const corroboration = buildCorroborationRecord({
+        token: derivedToken,
+        facts,
+        ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
       });
-    }
+      const unreadable = unreadableCorroborationSources(facts);
+      const falseSuccess = classifyFalseSuccess({
+        token: derivedToken,
+        comparison,
+        corroboration,
+        ...(unreadable.length === 0 ? {} : { unreadable }),
+        ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
+      });
 
-    const facts = corroborationFactsOf(reads);
-    // The arm is the derivation's own decision (GH-347 DEC-6): the one
-    // derivation decides it; both evaluation sites pass it unchanged.
-    const corroborationArm = derivation.corroborationArm;
-    const corroboration = buildCorroborationRecord({
-      token: derivedToken,
-      facts,
-      ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
-    });
-    const unreadable = unreadableCorroborationSources(facts);
-    const falseSuccess = classifyFalseSuccess({
-      token: derivedToken,
-      comparison,
-      corroboration,
-      ...(unreadable.length === 0 ? {} : { unreadable }),
-      ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
-    });
+      const trackerExhausted =
+        !reads.tracker.ok && reads.tracker.identity === "tracker:exhausted"
+          ? ["tracker:exhausted"]
+          : [];
+      const evidenceRefs = [
+        `attempt:${attemptId}`,
+        ...trackerExhausted,
+        ...(truthRef === undefined ? [] : [truthRef]),
+        ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
+        ...livenessRefs,
+      ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
+      const lastMessage =
+        appendFailureCode === undefined
+          ? derivation.lastMessage
+          : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
 
-    const trackerExhausted =
-      !reads.tracker.ok && reads.tracker.identity === "tracker:exhausted"
-        ? ["tracker:exhausted"]
-        : [];
-    const evidenceRefs = [
-      `attempt:${attemptId}`,
-      ...trackerExhausted,
-      ...(truthRef === undefined ? [] : [truthRef]),
-      ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
-      ...livenessRefs,
-    ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
-    const lastMessage =
-      appendFailureCode === undefined
-        ? derivation.lastMessage
-        : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
-
-    return record({
-      token: derivedToken,
-      outcome: derivation.outcome,
-      ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
-      ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
-      comparison,
-      corroboration,
-      falseSuccess,
-      prUrl: derivation.prUrl,
-      urlResolved: derivation.urlResolved,
-      lastMessage,
-      evidenceRefs,
-      ...(divergenceRef === undefined ? {} : { divergenceRef }),
-    });
+      return record({
+        token: derivedToken,
+        outcome: derivation.outcome,
+        ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+        ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
+        comparison,
+        corroboration,
+        falseSuccess,
+        prUrl: derivation.prUrl,
+        urlResolved: derivation.urlResolved,
+        lastMessage,
+        evidenceRefs,
+        ...(divergenceRef === undefined ? {} : { divergenceRef }),
+      });
     }
   } finally {
     ports.releaseLease(releaseCause);

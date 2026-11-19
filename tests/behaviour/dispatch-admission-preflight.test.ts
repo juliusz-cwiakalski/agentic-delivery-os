@@ -128,7 +128,11 @@ describe("TC-ADMIT-007 a resume is refused identically", () => {
 describe("TC-ADMIT-008 a direct caller without the preflight keeps the delivered order", () => {
   test("one spawn and the delivered state-unverified outcome", async () => {
     const scenario = createCommandScenario({
-      reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }),
+      // GH-347 AC-F4-3: undecidable truth requires both reads to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "config.credential.missing"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);

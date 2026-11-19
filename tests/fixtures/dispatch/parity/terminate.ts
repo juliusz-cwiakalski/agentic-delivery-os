@@ -56,7 +56,9 @@ export type ProcessTreeModel = {
 };
 
 /** One node: this lane's session tree plus unrelated near-miss processes. */
-export const createProcessTreeModel = (options: { readonly nowMs: () => number }): ProcessTreeModel => {
+export const createProcessTreeModel = (options: {
+  readonly nowMs: () => number;
+}): ProcessTreeModel => {
   const processes: ProcessRecord[] = [];
   const signals: SignalRecord[] = [];
   const model: ProcessTreeModel = {
@@ -80,8 +82,7 @@ export const createProcessTreeModel = (options: { readonly nowMs: () => number }
       let reaped = 0;
       for (const process of processes) {
         if (process.escaped !== true || process.reaped) continue;
-        const bySession =
-          input.sessionId !== undefined && process.sessionId === input.sessionId;
+        const bySession = input.sessionId !== undefined && process.sessionId === input.sessionId;
         const byTitle = input.title !== undefined && process.title === input.title;
         if (!bySession && !byTitle) continue;
         process.reaped = true;
@@ -230,7 +231,10 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
         value: report ?? { readings: [] },
       };
     },
-    listSessions: async () => ({ ok: true, value: { handles: handle === undefined ? [] : [handle] } }),
+    listSessions: async () => ({
+      ok: true,
+      value: { handles: handle === undefined ? [] : [handle] },
+    }),
   };
 
   if (options.terminateCapable !== false) {
@@ -288,7 +292,10 @@ export const sourcedReadings = (
 /* The registry scenario builders for the loop/terminate rows (GH-347 §6.1).  */
 /* ------------------------------------------------------------------------- */
 
-import { readDispatchAttempts, readDispatchLanes } from "../../../../packages/core/src/app/dispatch-ledger";
+import {
+  readDispatchAttempts,
+  readDispatchLanes,
+} from "../../../../packages/core/src/app/dispatch-ledger";
 import { readEconomicsRecords } from "../../../../packages/core/src/state/index";
 import { createCommandScenario, readsFrom } from "../golden/harness";
 import { COMPLETED_EVIDENCE } from "../harness";
@@ -299,15 +306,21 @@ import type { ParityEnvelope, ParityObservation } from "./harness";
 const outsideSetReads = () =>
   readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) });
 
-const stall = (): IterationScript => ({ liveness: [
-  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
-  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
-], evidence: COMPLETED_EVIDENCE });
+const stall = (): IterationScript => ({
+  liveness: [
+    sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+    sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+  ],
+  evidence: COMPLETED_EVIDENCE,
+});
 
-const clean = (): IterationScript => ({ liveness: [
-  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
-  sourcedReadings({ traffic: 9, worktree: 9, process: 9 }),
-], evidence: COMPLETED_EVIDENCE });
+const clean = (): IterationScript => ({
+  liveness: [
+    sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+    sourcedReadings({ traffic: 9, worktree: 9, process: 9 }),
+  ],
+  evidence: COMPLETED_EVIDENCE,
+});
 
 const runLoop = async (input: {
   readonly label: string;
@@ -326,9 +339,7 @@ const runLoop = async (input: {
     delay: async (ms, reason) => {
       waits.push({ reason, ms });
     },
-    ...(input.terminateCapable === undefined
-      ? {}
-      : { terminateCapable: input.terminateCapable }),
+    ...(input.terminateCapable === undefined ? {} : { terminateCapable: input.terminateCapable }),
   });
   const scenario = createCommandScenario({
     label: input.label,
@@ -488,7 +499,9 @@ export const terminateExactIdentity = (): Promise<ParityObservation> => {
         spawns: 1,
         resumes: 0,
         waits: [],
-        violations: model.signalsFor(9103).map((signal) => `unrelated pid 9103 got ${signal.signal}`),
+        violations: model
+          .signalsFor(9103)
+          .map((signal) => `unrelated pid 9103 got ${signal.signal}`),
         invocations: [],
         envelopes: run.envelope === undefined ? [] : [run.envelope as ParityEnvelope],
       };

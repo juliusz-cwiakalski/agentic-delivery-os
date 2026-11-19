@@ -608,8 +608,7 @@ export type DispatchLaneRecord = {
 };
 
 /** The per-ref lane record key; one key per ref, appended per state change. */
-export const dispatchLaneRecordKey = (ref: string): string =>
-  `${DISPATCH_LANE_KEY_PREFIX}${ref}`;
+export const dispatchLaneRecordKey = (ref: string): string => `${DISPATCH_LANE_KEY_PREFIX}${ref}`;
 
 /** The fresh-spawn title fact (DM-6, TDR-0049): `ticket-<REF>`, one short token. */
 export const DISPATCH_SPAWN_TITLE_PREFIX = "ticket-" as const;

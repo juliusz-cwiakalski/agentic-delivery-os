@@ -11,7 +11,7 @@ import {
   PREMATURE_END_EVIDENCE,
   TOOL_FAILURE_EVIDENCE,
 } from "../fixtures/dispatch/harness";
-import { artifacts, ledger, prNone, readOk, readFail } from "../fixtures/dispatch/truth";
+import { artifacts, ledger, prNone, readFail, readOk } from "../fixtures/dispatch/truth";
 
 const attemptsOf = (scenario: ReturnType<typeof createCommandScenario>) => {
   const read = readDispatchAttempts(scenario.state.store);
@@ -103,7 +103,11 @@ describe("TC-DISP-010 a failing run still emits a complete classified envelope",
   test("an unreadable truth read emits state-unverified at exit 2 with one record", async () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
-      reads: readsFrom({ tracker: readFail("tracker", "tracker.read-unreadable") }),
+      // GH-347 AC-F4-3: undecidable truth needs both reads to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "tracker.read-unreadable"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);

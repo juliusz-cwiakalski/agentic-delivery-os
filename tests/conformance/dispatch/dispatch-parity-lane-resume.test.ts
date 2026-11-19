@@ -8,24 +8,25 @@
  * single registry.
  */
 import { describe, expect, test } from "bun:test";
-import { DISPATCH_LANE_PAYLOAD_SCHEMA } from "../../../packages/core/src/contracts/index";
-import { readDispatchAttempts, readDispatchLanes } from "../../../packages/core/src/app/dispatch-ledger";
 import { readDaemonLanes } from "../../../packages/core/src/app/daemon";
+import {
+  readDispatchAttempts,
+  readDispatchLanes,
+} from "../../../packages/core/src/app/dispatch-ledger";
+import { DISPATCH_LANE_PAYLOAD_SCHEMA } from "../../../packages/core/src/contracts/index";
+import { createCommandScenario, readsFrom } from "../../fixtures/dispatch/golden/harness";
 import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
 import { createParityHarness, PARITY_REPOSITORY } from "../../fixtures/dispatch/parity/harness";
-import {
-  resumePromptReentryObservation,
-} from "../../fixtures/dispatch/parity/lane";
 import {
   attemptCountFor,
   daemonLanesOf,
   dispatchLanesOf,
   failLaneAppends,
   LANE_NOW,
+  resumePromptReentryObservation,
   seedDaemonLane,
   seedDispatchLane,
 } from "../../fixtures/dispatch/parity/lane";
-import { createCommandScenario, readsFrom } from "../../fixtures/dispatch/golden/harness";
 import { artifacts, prOpen, readOk } from "../../fixtures/dispatch/truth";
 
 const ACTIVE_KEYS = [

@@ -11,14 +11,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  CLAUDE_CAPABILITIES,
+  OPENCODE_CAPABILITIES,
+} from "../../packages/adapters/src/harness/index";
+import {
   HARNESS_FAILURE_CODES,
   HARNESS_OPERATIONS,
   type HarnessSessionPort,
 } from "../../packages/core/src/contracts/index";
-import {
-  CLAUDE_CAPABILITIES,
-  OPENCODE_CAPABILITIES,
-} from "../../packages/adapters/src/harness/index";
 import { assembleLiveness, classifier } from "../fixtures/harness/harness-io";
 import {
   HAPPY_PATH_LINES,
@@ -138,9 +138,18 @@ describe("TC-OCS-002 the session port and one-shot runner are unchanged", () => 
     // port implements it with the declared input and result shape.
     const capable: HarnessSessionPort = {
       spawn: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
-      deliver: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
-      resume: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
-      collect: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
+      deliver: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
+      resume: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
+      collect: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
       classify: classifier,
       liveness: async () => ({ ok: true, value: assembleLiveness({ sourced: [] }) }),
       listSessions: async () => ({ ok: true, value: { handles: [] } }),

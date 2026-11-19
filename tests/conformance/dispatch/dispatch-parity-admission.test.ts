@@ -8,8 +8,8 @@
  * refusal-table cases use the same latch and harness.
  */
 import { describe, expect, test } from "bun:test";
-import { ERROR_TABLE } from "../../../packages/core/src/contracts/index";
 import { projectExitCode } from "../../../packages/cli/src/projection";
+import { ERROR_TABLE } from "../../../packages/core/src/contracts/index";
 import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
 import { createParityHarness } from "../../fixtures/dispatch/parity/harness";
 import { admissionSameRefRace, createFenceLatch } from "../../fixtures/dispatch/parity/interleave";
@@ -146,7 +146,6 @@ describe("TC-ADMIT-004 a persistent state failure keeps its state.* kind at exit
       h.dispose();
     }
   });
-
 });
 
 describe("TC-ADMIT-005 every refusal exits its mapped code with zero records", () => {

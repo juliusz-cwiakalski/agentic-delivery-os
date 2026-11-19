@@ -8,28 +8,51 @@
  * attempt appends, and the economics records are the production ones.
  */
 import { describe, expect, test } from "bun:test";
-import { readDispatchAttempts, readDispatchLanes } from "../../../packages/core/src/app/dispatch-ledger";
+import {
+  readDispatchAttempts,
+  readDispatchLanes,
+} from "../../../packages/core/src/app/dispatch-ledger";
 import { readEconomicsRecords } from "../../../packages/core/src/state/index";
 import { createCommandScenario, exitOf, readsFrom } from "../../fixtures/dispatch/golden/harness";
-import { COMPLETED_EVIDENCE, PREMATURE_END_EVIDENCE, TOOL_FAILURE_EVIDENCE } from "../../fixtures/dispatch/harness";
+import {
+  COMPLETED_EVIDENCE,
+  PREMATURE_END_EVIDENCE,
+  TOOL_FAILURE_EVIDENCE,
+} from "../../fixtures/dispatch/harness";
 import {
   createProcessTreeModel,
   createStallPort,
-  KILL,
   type IterationScript,
+  KILL,
   sourcedReadings,
   TERM,
 } from "../../fixtures/dispatch/parity/terminate";
-import { artifacts, prNone, prOpen, readFail, readOk, tracker } from "../../fixtures/dispatch/truth";
+import {
+  artifacts,
+  prNone,
+  prOpen,
+  readFail,
+  readOk,
+  tracker,
+} from "../../fixtures/dispatch/truth";
 
-const STALL_LIVENESS = [sourcedReadings({ traffic: 1, worktree: 1, process: 1 }), sourcedReadings({ traffic: 1, worktree: 1, process: 1 })];
-const CLEAN_LIVENESS = [sourcedReadings({ traffic: 1, worktree: 1, process: 1 }), sourcedReadings({ traffic: 5, worktree: 5, process: 5 })];
+const STALL_LIVENESS = [
+  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+];
+const CLEAN_LIVENESS = [
+  sourcedReadings({ traffic: 1, worktree: 1, process: 1 }),
+  sourcedReadings({ traffic: 5, worktree: 5, process: 5 }),
+];
 
 /** A decisive artifact OUTSIDE the terminal pre-restart set (never short-circuits). */
 const outsideSetReads = () =>
   readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) });
 
-const stallScript = (): IterationScript => ({ liveness: STALL_LIVENESS, evidence: COMPLETED_EVIDENCE });
+const stallScript = (): IterationScript => ({
+  liveness: STALL_LIVENESS,
+  evidence: COMPLETED_EVIDENCE,
+});
 const cleanScript = (evidence = COMPLETED_EVIDENCE): IterationScript => ({
   liveness: CLEAN_LIVENESS,
   evidence,
@@ -67,9 +90,7 @@ const build = (input: {
       waits.push({ reason, ms });
       input.advanceOnDelay?.(ms);
     },
-    ...(input.terminateCapable === undefined
-      ? {}
-      : { terminateCapable: input.terminateCapable }),
+    ...(input.terminateCapable === undefined ? {} : { terminateCapable: input.terminateCapable }),
     ...(input.title === undefined ? {} : { title: input.title }),
   });
   const scenario = createCommandScenario({
@@ -209,7 +230,11 @@ describe("TC-TERM-003 a stall short-circuits on each terminal pre-restart verdic
       reads: readsFrom({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })) }),
       token: "blocked",
     },
-    { label: "open-pr", reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }), token: "pr-open" },
+    {
+      label: "open-pr",
+      reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }),
+      token: "pr-open",
+    },
   ] as const;
   for (const row of rows) {
     test(`${row.label} short-circuits with no restart`, async () => {
@@ -236,9 +261,20 @@ describe("TC-TERM-003 a stall short-circuits on each terminal pre-restart verdic
 
 describe("TC-TERM-004 a decisive artifact outside the set does not stop a stall", () => {
   const rows = [
-    { label: "finished", reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }) },
-    { label: "partial", reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })) }) },
-    { label: "nothing-to-do", reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }) },
+    {
+      label: "finished",
+      reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }),
+    },
+    {
+      label: "partial",
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+      }),
+    },
+    {
+      label: "nothing-to-do",
+      reads: readsFrom({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }),
+    },
   ] as const;
   for (const row of rows) {
     test(`${row.label}: one ordinal is consumed and a second iteration runs`, async () => {
@@ -352,7 +388,9 @@ describe("TC-TERM-006 terminate is idempotent and reaps only the exact identity"
     for (const pid of [9103, 9104, 9105]) {
       expect(model.signalsFor(pid), `pid ${pid}`).toHaveLength(0);
     }
-    const reaped = model.processes.filter((process) => process.reaped).map((process) => process.pid);
+    const reaped = model.processes
+      .filter((process) => process.reaped)
+      .map((process) => process.pid);
     expect(reaped).toContain(9101);
     expect(reaped).toContain(9102);
     expect(reaped).not.toContain(9103);

@@ -14,14 +14,22 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  type DispatchTruthInput,
-  deriveDispatchResult,
-} from "../../packages/core/src/domain/dispatch-result";
-import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
 } from "../../packages/core/src/contracts/index";
+import {
+  type DispatchTruthInput,
+  deriveDispatchResult,
+} from "../../packages/core/src/domain/dispatch-result";
+import {
+  DISPATCH_TRACKER_LADDER_ATTEMPTS,
+  DISPATCH_TRACKER_LADDER_BASE_MS,
+  DISPATCH_TRACKER_LADDER_CAP_MS,
+  dispatchTrackerLadderWait,
+  runDispatchTrackerLadder,
+} from "../../packages/core/src/domain/dispatch-tracker";
+import { COMPLETED_EVIDENCE, PREMATURE_END_EVIDENCE } from "../fixtures/dispatch/harness";
 import {
   artifacts,
   blockedInput,
@@ -39,8 +47,6 @@ import {
   truthInput,
   unverifiedUrlInput,
 } from "../fixtures/dispatch/truth";
-import { COMPLETED_EVIDENCE, PREMATURE_END_EVIDENCE } from "../fixtures/dispatch/harness";
-import { DISPATCH_TRACKER_LADDER_ATTEMPTS, DISPATCH_TRACKER_LADDER_BASE_MS, DISPATCH_TRACKER_LADDER_CAP_MS, dispatchTrackerLadderWait, runDispatchTrackerLadder } from "../../packages/core/src/domain/dispatch-tracker";
 
 describe("TC-TRUTH-001 a clean exit with no artifact and a reachable tracker is nothing-to-do", () => {
   test("the subsumed failed arm no longer exists; the shell arm derives", () => {
@@ -159,8 +165,9 @@ describe("TC-DERIVE-001 tracker-done with no visible PR is merged, tracker-corro
 describe("TC-DERIVE-002 tracker-done wins over a blocking label", () => {
   test("done + blocking is merged; blocking without done stays blocked", () => {
     expect(
-      deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }))
-        .token,
+      deriveDispatchResult(
+        truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }),
+      ).token,
     ).toBe("merged");
     expect(
       deriveDispatchResult(
@@ -255,9 +262,7 @@ describe("TC-DERIVE-005 nothing-to-do requires no commits and a readable tracker
     const complete = deriveDispatchResult(
       truthInput({
         ...base,
-        ledger: readOk(
-          ledger({ completed: 9, total: 9, progressed: false, workRemaining: false }),
-        ),
+        ledger: readOk(ledger({ completed: 9, total: 9, progressed: false, workRemaining: false })),
       }),
     );
     const incomplete = deriveDispatchResult(
@@ -332,25 +337,118 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
       token: SU,
     },
     // C — the completed-session ladder.
-    { id: "C1", arm: "spawn-refused", input: truthInput({ harness: readOk(harnessFacts({ completionMarker: false, exitStatus: null, timedOut: false, spawnRefused: true, failureReported: false, toolFailure: false })) }), token: NP },
+    {
+      id: "C1",
+      arm: "spawn-refused",
+      input: truthInput({
+        harness: readOk(
+          harnessFacts({
+            completionMarker: false,
+            exitStatus: null,
+            timedOut: false,
+            spawnRefused: true,
+            failureReported: false,
+            toolFailure: false,
+          }),
+        ),
+      }),
+      token: NP,
+    },
     { id: "C2", arm: "tracker-done", input: doneInput(), token: "merged" },
     { id: "C3", arm: "blocking", input: blockedInput(), token: "blocked" },
     { id: "C4", arm: "open-pr", input: truthInput(), token: "pr-open" },
     { id: "C5", arm: "open-pr-unverified", input: unverifiedUrlInput(), token: POU },
     { id: "C6", arm: "already-merged", input: mergedInput(), token: "merged" },
-    { id: "C7", arm: "commits-complete", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }), token: "finished" },
-    { id: "C8", arm: "commits-incomplete", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })) }), token: "partial" },
-    { id: "C9", arm: "nothing-to-do", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }), token: NN },
-    { id: "C10", arm: "classifier", input: truthInput({ harness: readOk(harnessFacts(COMPLETED_EVIDENCE)), artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })) }), token: "partial" },
+    {
+      id: "C7",
+      arm: "commits-complete",
+      input: truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
+      }),
+      token: "finished",
+    },
+    {
+      id: "C8",
+      arm: "commits-incomplete",
+      input: truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+      }),
+      token: "partial",
+    },
+    {
+      id: "C9",
+      arm: "nothing-to-do",
+      input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }),
+      token: NN,
+    },
+    {
+      id: "C10",
+      arm: "classifier",
+      input: truthInput({
+        harness: readOk(harnessFacts(COMPLETED_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })),
+      }),
+      token: "partial",
+    },
     // Collisions — the order decides.
-    { id: "X1", arm: "done-and-blocking", input: truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }), token: "merged" },
-    { id: "X2", arm: "done-and-open-pr", input: truthInput({ tracker: readOk(tracker({ state: "done" })), artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }), token: "merged" },
-    { id: "X3", arm: "open-pr-and-commits", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }), token: "pr-open" },
-    { id: "X4", arm: "no-commits-complete-ledger", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })), ledger: readOk(ledger({ completed: 9, total: 9, progressed: false, workRemaining: false })) }), token: NN },
+    {
+      id: "X1",
+      arm: "done-and-blocking",
+      input: truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }),
+      token: "merged",
+    },
+    {
+      id: "X2",
+      arm: "done-and-open-pr",
+      input: truthInput({
+        tracker: readOk(tracker({ state: "done" })),
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })),
+      }),
+      token: "merged",
+    },
+    {
+      id: "X3",
+      arm: "open-pr-and-commits",
+      input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }),
+      token: "pr-open",
+    },
+    {
+      id: "X4",
+      arm: "no-commits-complete-ledger",
+      input: truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
+        ledger: readOk(ledger({ completed: 9, total: 9, progressed: false, workRemaining: false })),
+      }),
+      token: NN,
+    },
     // Read precedence.
-    { id: "R1", arm: "done-artifact-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "done" })), artifacts: readFail("artifact", "artifact.read-unreadable") }), token: "merged" },
-    { id: "R2", arm: "blocking-artifact-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })), artifacts: readFail("artifact", "artifact.read-unreadable") }), token: "blocked" },
-    { id: "R3", arm: "done-ledger-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "done" })), ledger: readFail("ledger", "ledger.read-unreadable") }), token: "merged" },
+    {
+      id: "R1",
+      arm: "done-artifact-unreadable",
+      input: truthInput({
+        tracker: readOk(tracker({ state: "done" })),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
+      token: "merged",
+    },
+    {
+      id: "R2",
+      arm: "blocking-artifact-unreadable",
+      input: truthInput({
+        tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
+      token: "blocked",
+    },
+    {
+      id: "R3",
+      arm: "done-ledger-unreadable",
+      input: truthInput({
+        tracker: readOk(tracker({ state: "done" })),
+        ledger: readFail("ledger", "ledger.read-unreadable"),
+      }),
+      token: "merged",
+    },
   ];
 
   test("every declared arm projects its token; 21 inputs, 10 distinct tokens", () => {
@@ -365,9 +463,24 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
   });
 
   test("the collisions prove the order: done beats blocking, blocking beats PR, PR beats commits", () => {
-    expect(deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) })).token).toBe("merged");
-    expect(deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })), artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) })).token).toBe("blocked");
-    expect(deriveDispatchResult(truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) })).token).toBe("pr-open");
+    expect(
+      deriveDispatchResult(
+        truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }),
+      ).token,
+    ).toBe("merged");
+    expect(
+      deriveDispatchResult(
+        truthInput({
+          tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })),
+          artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })),
+        }),
+      ).token,
+    ).toBe("blocked");
+    expect(
+      deriveDispatchResult(
+        truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }),
+      ).token,
+    ).toBe("pr-open");
   });
 
   test("the taxonomy, the projections, and the attempt schema are unchanged", () => {

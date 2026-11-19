@@ -134,7 +134,12 @@ const classObservation = async (input: {
   }
 };
 
-const row = (id: string, token: string, declaredSeam: ParitySeam, input: Parameters<typeof classObservation>[0]): ClassRow => ({
+const row = (
+  id: string,
+  token: string,
+  declaredSeam: ParitySeam,
+  input: Parameters<typeof classObservation>[0],
+): ClassRow => ({
   id,
   token,
   exit: exitOf(token),

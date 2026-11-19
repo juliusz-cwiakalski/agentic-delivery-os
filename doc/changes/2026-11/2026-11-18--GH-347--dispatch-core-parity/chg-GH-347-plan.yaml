@@ -1098,6 +1098,7 @@ phases:
         - tests/structure/dispatch-contract.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/events/state-additivity-baseline.json
         - tests/types/harness.type-test.ts
         # Untracked at plan time (COMMIT-BOUNDARY REALITY). Six exact paths.
         - doc/decisions/TDR-0044-dispatch-owned-durable-lane-record.md
@@ -1267,6 +1268,10 @@ phases:
         - tests/conformance/dispatch/dispatch-parity-admission.test.ts
         - tests/behaviour/dispatch-single-flight.test.ts
         - tests/fixtures/queue/single-flight/harness.ts
+        - tests/behaviour/queue-lease-takeover.test.ts
+        - tests/behaviour/dispatch-admission-preflight.test.ts
+        - tests/structure/dispatch-preflight-contract.test.ts
+        - tests/structure/owner-hold-composition.test.ts
         - tests/fixtures/dispatch/golden/harness.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/fixtures/dispatch/parity/cases.ts
@@ -1731,6 +1736,11 @@ phases:
         - tests/behaviour/dispatch-false-success.test.ts
         - tests/behaviour/dispatch-comparison.test.ts
         - tests/behaviour/dispatch-gate-evidence.test.ts
+        - tests/behaviour/dispatch-envelope.test.ts
+        - tests/behaviour/dispatch-error-envelope.test.ts
+        - tests/golden/dispatch-errors.test.ts
+        - tests/golden/dispatch-text.test.ts
+        - tests/fixtures/dispatch/golden/text/failed.txt
         - tests/conformance/dispatch/dispatch-fixture.test.ts
         - tests/fixtures/dispatch/truth.ts
         - tests/fixtures/dispatch/parity/pm-notes.ts
@@ -2169,6 +2179,7 @@ phases:
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/queue/production/harness.ts
         - tests/types/harness.type-test.ts
       folders:
         - tests/fixtures/dispatch/parity
@@ -2382,6 +2393,7 @@ phases:
     summary: "feat(GH-347): parity battery and no-shell invariant"
     scope:
       files:
+        - package.json
         - scripts/checks/no-shell-dispatch.ts
         - tests/checks/no-shell-dispatch.test.ts
         - tests/checks/dispatch-contract-invariance.test.ts

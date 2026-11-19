@@ -7,9 +7,9 @@
  * atomically from the folded handover ledger. Identical replays append nothing.
  */
 import {
+  DISPATCH_ATTEMPT_KEY_PREFIX,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_ATTEMPT_RECORD_KIND,
-  DISPATCH_ATTEMPT_KEY_PREFIX,
   DISPATCH_AUTHORITY_DOCUMENT_NAME,
   DISPATCH_DIVERGENCE_KEY_PREFIX,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -29,15 +29,16 @@ import {
   type DispatchDivergenceRecord,
   type DispatchHandoverRecord,
   type DispatchLaneRecord,
+  dispatchAttemptRecordKey,
+  dispatchDivergenceRecordKey,
+  dispatchHandoverRecordKey,
+  dispatchLaneRecordKey,
+  HARNESS_KINDS,
   type StateAppendOutcome,
   type StateFailureCode,
   type StateJsonValue,
   type StateReadEvidence,
   type StateStorePort,
-  dispatchAttemptRecordKey,
-  dispatchDivergenceRecordKey,
-  dispatchHandoverRecordKey,
-  dispatchLaneRecordKey,
 } from "#contracts";
 
 /** One verified ledger read, with any declared truncation. */
@@ -440,7 +441,7 @@ export const isDispatchLaneRecord = (value: unknown): value is DispatchLaneRecor
   if (typeof value.repository !== "string" || value.repository.length === 0) return false;
   if (typeof value.attemptId !== "string" || value.attemptId.length === 0) return false;
   if (typeof value.sessionId !== "string" || value.sessionId.length === 0) return false;
-  if (value.harnessKind !== "opencode" && value.harnessKind !== "claude-code") return false;
+  if (!(HARNESS_KINDS as readonly string[]).includes(value.harnessKind as string)) return false;
   if (!isLaneOwner(value.owner)) return false;
   if (
     typeof value.iterationOrdinal !== "number" ||
@@ -457,7 +458,8 @@ export const isDispatchLaneRecord = (value: unknown): value is DispatchLaneRecor
     return false;
   }
   if (!isInstant(value.recordedAt)) return false;
-  if (value.state === "active") return value.lastToken === undefined && value.lastOutcome === undefined;
+  if (value.state === "active")
+    return value.lastToken === undefined && value.lastOutcome === undefined;
   if (value.state !== "terminal") return false;
   return typeof value.lastToken === "string" && typeof value.lastOutcome === "string";
 };

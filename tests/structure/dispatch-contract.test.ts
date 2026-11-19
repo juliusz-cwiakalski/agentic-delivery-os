@@ -13,6 +13,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
+import { isDispatchLaneRecord } from "../../packages/core/src/app/dispatch-ledger";
 import {
   DISPATCH_DELAY_REASONS,
   DISPATCH_LANE_KEY_PREFIX,
@@ -25,7 +26,6 @@ import {
   type DispatchLaneRecord,
   dispatchLaneRecordKey,
 } from "../../packages/core/src/contracts/index";
-import { isDispatchLaneRecord } from "../../packages/core/src/app/dispatch-ledger";
 import { isSpawnTitle, spawnTitleFor } from "../../packages/core/src/domain/dispatch-identity";
 
 const ROOT = process.cwd();
@@ -156,9 +156,9 @@ describe("GH-347 the dispatch lane record is declared once", () => {
 
   test("an active record carrying a terminal token is refused", () => {
     expect(isDispatchLaneRecord(laneRecord({ lastToken: "pr-open" }))).toBe(false);
-    expect(
-      isDispatchLaneRecord(laneRecord({ state: "terminal", lastToken: "pr-open" })),
-    ).toBe(false);
+    expect(isDispatchLaneRecord(laneRecord({ state: "terminal", lastToken: "pr-open" }))).toBe(
+      false,
+    );
   });
 });
 

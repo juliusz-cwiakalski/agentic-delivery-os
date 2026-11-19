@@ -63,7 +63,11 @@ describe("TC-ERR-004 error envelopes carry stable identity and bounded exit", ()
   test("state-unverified is byte-identical to its golden", async () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
-      reads: readsFrom({ tracker: readFail("tracker", "tracker.read-unreadable") }),
+      // GH-347 AC-F4-3: undecidable truth needs both reads to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "tracker.read-unreadable"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);

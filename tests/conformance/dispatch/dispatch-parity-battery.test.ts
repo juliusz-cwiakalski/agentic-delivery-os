@@ -16,11 +16,11 @@ import {
   runAllParityCases,
 } from "../../fixtures/dispatch/parity/cases";
 import {
-  canonicalize,
   CLASS_ROWS,
+  canonicalize,
   PARITY_NOT_PROVEN_SURFACES,
-  PARITY_PROVEN_SURFACES,
   PARITY_PROOF_BOUNDARY,
+  PARITY_PROVEN_SURFACES,
 } from "../../fixtures/dispatch/parity/evidence";
 import {
   importIdentityViolations,
@@ -142,7 +142,9 @@ describe("TC-PARITY-002 every case exercises the real production seam", () => {
 describe("TC-PARITY-003 two consecutive runs are identical with zero live I/O", () => {
   // Sixty composed runs; the suite's own budget is the only time source.
 
-  test("the full registry runs twice with identical envelopes and counts", { timeout: 60_000 }, async () => {
+  test("the full registry runs twice with identical envelopes and counts", {
+    timeout: 60_000,
+  }, async () => {
     const first = await runAllParityCases();
     const second = await runAllParityCases();
     expect(first).toHaveLength(PARITY_CASES.length);
@@ -195,11 +197,17 @@ describe("TC-PARITY-004 the proved / not-proved boundary is permanent and self-c
       "proof boundary drift: proven expected 8 ids, received 7",
     );
     const swapped = {
-      proven: [PARITY_PROOF_BOUNDARY.proven[1], PARITY_PROOF_BOUNDARY.proven[0], ...PARITY_PROOF_BOUNDARY.proven.slice(2)],
+      proven: [
+        PARITY_PROOF_BOUNDARY.proven[1],
+        PARITY_PROOF_BOUNDARY.proven[0],
+        ...PARITY_PROOF_BOUNDARY.proven.slice(2),
+      ],
       notProven: [...PARITY_PROOF_BOUNDARY.notProven],
     };
     expect(
-      boundaryViolations(swapped, rows).some((failure) => failure.startsWith("proof boundary drift: proven order")),
+      boundaryViolations(swapped, rows).some((failure) =>
+        failure.startsWith("proof boundary drift: proven order"),
+      ),
     ).toBe(true);
     const extraNotProven = {
       proven: [...PARITY_PROOF_BOUNDARY.proven],
@@ -250,7 +258,10 @@ describe("TC-PARITY-005 record bounds and redaction hold across the battery", ()
 
   test("no injected canary appears in any envelope or record", { timeout: 60_000 }, async () => {
     const results = await runAllParityCases();
-    const text = canonicalize(results.map((run) => run.observation), ROOT);
+    const text = canonicalize(
+      results.map((run) => run.observation),
+      ROOT,
+    );
     for (const canary of ["planted-gh347-parity-canary", "planted-secret-canary"]) {
       expect(text).not.toContain(canary);
     }

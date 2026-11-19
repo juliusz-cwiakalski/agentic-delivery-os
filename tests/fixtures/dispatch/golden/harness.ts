@@ -256,10 +256,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     appendRestart:
       options.appendRestart ??
       ((input) => {
-        calls.restarts = [
-          ...calls.restarts,
-          { ordinal: input.ordinal, reason: input.reason },
-        ];
+        calls.restarts = [...calls.restarts, { ordinal: input.ordinal, reason: input.reason }];
         const appended = appendEconomicsRestartEvent(state.store, state.fenceToken, {
           schemaId: "delivery.economics.restart.v1",
           workItemRef: input.ref,

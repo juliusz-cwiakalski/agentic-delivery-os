@@ -36,7 +36,10 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
   });
 
   test("R2 reports shell: true", () => {
-    const violations = scanSource("planted.ts", "const options = { shell: true };\nexport { options };\n");
+    const violations = scanSource(
+      "planted.ts",
+      "const options = { shell: true };\nexport { options };\n",
+    );
     expect(violations.map((violation) => violation.rule)).toContain("shell-enabled spawn");
   });
 
@@ -69,7 +72,7 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
       // shell: false is accepted.
       'import { spawn } from "node:child_process";\nexport const run = () => spawn("x", [], { shell: false });\n',
       // A scripts/ reference in a comment is not a literal.
-      '// see scripts/checks/no-shell-dispatch.ts\nexport const ok = 1;\n',
+      "// see scripts/checks/no-shell-dispatch.ts\nexport const ok = 1;\n",
     ];
     for (const source of controls) {
       expect(scanSource("control.ts", source), source.slice(0, 40)).toEqual([]);

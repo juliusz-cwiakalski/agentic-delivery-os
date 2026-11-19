@@ -113,7 +113,8 @@ describe("TC-HOLDEDGE-001 the queue composition supplies the fact to every CLI s
     expect(production).toContain("resolveOwnerHoldFact({");
     expect(production).toContain("readOwnerHoldMarker(");
     expect(production).toContain("readOwnerHold,");
-    expect(production).toContain("ownerHold: hold,");
+    // GH-347 DEC-1: the dispatch mount passes the fact to the atomic claim
+    expect(production).toContain("ownerHold: readOwnerHold(),");
     const mcpServe = readFileSync(join(ROOT, "packages/mcp/src/serve.ts"), "utf8");
     expect(mcpServe).toContain("const readOwnerHold = (): OwnerHoldFact =>");
     expect(mcpServe).toContain("resolveOwnerHoldFact({");

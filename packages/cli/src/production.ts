@@ -27,13 +27,13 @@ import {
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   preserveCorruptHostIndex,
+  projectPmNotesCompleteness,
   readCommittedConfigDocument,
   readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
   readHostIndexFile,
   readLocalPmContext,
   readOwnerHoldMarker,
-  projectPmNotesCompleteness,
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
@@ -53,11 +53,11 @@ import {
   createGitHubClient,
   createGithubCliTransport,
   createGithubNativeTransport,
-  githubCliHostname,
   type GithubChildRunner,
   type GithubClientOptions,
   type GithubTransportPolicy,
   type GithubTransportSelection,
+  githubCliHostname,
   probeGithubCli,
   resolveTransportSelection,
 } from "@delivery-os/adapters/github";
@@ -80,11 +80,20 @@ import {
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
+import type {
+  HarnessAdapterRegistration,
+  HarnessBindingResolution,
+  HarnessProfileView,
+  HarnessSelectionView,
+} from "@delivery-os/core";
 import {
   type AuthorityEvidence,
   aggregateProjectMemberOutcomes,
   assembleHarnessLiveness,
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
   buildHarnessSpawnEnvironment,
+  buildLifecyclePrompt,
   type CoordinatorSettings,
   claimDispatchLease,
   classifyHarnessEvidence,
@@ -103,11 +112,14 @@ import {
   type DispatchTruthReads,
   EvaluateVerifyChange,
   emptyHandoverGate,
+  evaluateHarnessModeAvailability,
+  evaluateModelExpressibility,
   evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
+  harnessAgentIdentityViolation,
   type LaneSettings,
   legacyStoreWarning,
   maintainHostIndex,
@@ -139,25 +151,26 @@ import {
   releaseQueueLease,
   reposHandoverGateOf,
   reposListDataOf,
+  resolveBinding,
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
-  buildLifecyclePrompt,
   resolveDispatchLane,
-  runDispatchTrackerLadder,
-  spawnTitleFor,
+  resolveHarnessInstance,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
   reversibilityOf,
+  runDispatchTrackerLadder,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
   selectProjectGroups,
   serializeHostIndexDocument,
   serializeIdentityMarker,
+  spawnTitleFor,
   stateScopeEnvironmentName,
   stateScopeRoots,
   suiteMapReadOfDocument,
@@ -168,26 +181,12 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
-import {
-  bindingEnvironmentRecords,
-  bindingInvocationArgs,
-  evaluateHarnessModeAvailability,
-  evaluateModelExpressibility,
-  harnessAgentIdentityViolation,
-  resolveBinding,
-  resolveHarnessInstance,
-} from "@delivery-os/core";
-import type {
-  HarnessAdapterRegistration,
-  HarnessBindingResolution,
-  HarnessProfileView,
-  HarnessSelectionView,
-} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type CommandFailureHarnessDetail,
   type ConfigErrorCode,
   type ConfigNodeOrigins,
   type ConfigPriorOutcome,
@@ -201,24 +200,24 @@ import {
   type DeliveryRequest,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  type DispatchDelay,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
-  type CommandFailureHarnessDetail,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
-  type HarnessFailure,
   type HarnessExecutionEnvironmentDescriptor,
+  type HarnessFailure,
   type HarnessKind,
   type HarnessMode,
   type HarnessModeOrigin,
-  type HarnessSeatBinding,
   type HarnessResult,
+  type HarnessSeatBinding,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
@@ -242,7 +241,6 @@ import {
   type ProjectScopedMemberWork,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_REF_PATTERN,
-  type DispatchDelay,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
@@ -2742,8 +2740,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         delay: dispatchDelay,
       });
       const trackerRead = ladder.ok
-        ? ({ ok: true as const, value: ladder.value })
-        : ({ ok: false as const, identity: ladder.identity });
+        ? { ok: true as const, value: ladder.value }
+        : { ok: false as const, identity: ladder.identity };
 
       let artifacts: DispatchRead<DispatchArtifactFacts>;
       if ("identity" in branch) {
@@ -3064,7 +3062,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // member; the binding is the delivered pure resolution's single seat.
       harnessAgent: () => "pm",
       // The deterministic fresh-spawn title is a composition fact.
-      spawnTitle: (ref) => spawnTitleFor(ref),
+      freshTitle: (ref) => spawnTitleFor(ref),
       harnessBinding: () => {
         const context = resolveProfileContext();
         if (context === undefined) return undefined;
@@ -3137,6 +3135,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           defaultHarnessKind: settings.kind,
           treeRoot: cwd,
           completedPhases: completedPhaseIds,
+          // The adapter capability is a composition fact: the opencode adapter
+          // declares resume injection; the CLI keeps the literal.
+          supportsResumeInjection: (kind) => kind === "opencode",
           restartCount: (target) => {
             const restarts = readEconomicsRecords(store, target);
             return restarts.ok ? restarts.restarts.length : 0;

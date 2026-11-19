@@ -8,7 +8,11 @@
  * their declared absence reason and are never coerced to zero.
  */
 import { DELIVERY_RESULT_TOKENS, type EconomicsSourcedSignalAbsenceReason } from "#contracts";
-import type { DispatchArtifactFacts, DispatchRead, DispatchTrackerFacts } from "./dispatch-result.js";
+import type {
+  DispatchArtifactFacts,
+  DispatchRead,
+  DispatchTrackerFacts,
+} from "./dispatch-result.js";
 
 /** The four declared progress signals. */
 export const DISPATCH_LIVENESS_SIGNALS = [

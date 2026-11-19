@@ -2375,9 +2375,7 @@ export const claimDispatchLease = async (
     const step = Math.min(DISPATCH_FENCE_WAIT_STEP_MS, remaining);
     // The injected delay is the only time source; absent a composed fact the
     // wait is a deterministic tick that still consumes the declared budget.
-    await (request.delay === undefined
-      ? Promise.resolve()
-      : request.delay(step, "claim-fence"));
+    await (request.delay === undefined ? Promise.resolve() : request.delay(step, "claim-fence"));
     waitedMs += step;
   }
 };

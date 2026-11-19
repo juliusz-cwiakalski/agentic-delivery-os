@@ -7,12 +7,13 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
-import {
-  DISPATCH_LIFECYCLE_SECTION_TITLES,
-} from "../../../packages/core/src/domain/dispatch-prompt";
-import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
-import { spawnFreshObservation, spawnResumeObservation } from "../../fixtures/dispatch/parity/harness";
+import { DISPATCH_LIFECYCLE_SECTION_TITLES } from "../../../packages/core/src/domain/dispatch-prompt";
 import { createCommandScenario } from "../../fixtures/dispatch/golden/harness";
+import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
+import {
+  spawnFreshObservation,
+  spawnResumeObservation,
+} from "../../fixtures/dispatch/parity/harness";
 
 const argsOf = (observation: Awaited<ReturnType<typeof spawnFreshObservation>>) =>
   observation.invocations.filter((invocation) => invocation.seam === "harness").map((i) => i.args);
@@ -121,13 +122,7 @@ describe("TC-SPAWN-003 the prompt is the lifecycle prompt parameterized by ref a
         lane: { adapterSupportsResumeInjection: true, restartCount: 0 },
       });
       try {
-        await scenario.invoke([
-          "dispatch",
-          "GH-301",
-          "--resume-prompt",
-          "operator text",
-          "--json",
-        ]);
+        await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "operator text", "--json"]);
         expect(resumePrompts).toEqual(["operator text"]);
       } finally {
         scenario.dispose();

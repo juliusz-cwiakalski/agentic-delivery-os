@@ -13,6 +13,7 @@
 import {
   type DispatchLaneFacts,
   type DispatchLaneRecord,
+  HARNESS_KINDS,
   type HarnessKind,
   type StateStorePort,
 } from "#contracts";
@@ -20,11 +21,7 @@ import { readDaemonLanes } from "./daemon.js";
 import { latestDispatchLaneFor, readDispatchLanes } from "./dispatch-ledger.js";
 
 /** The delivered daemon states a resume may attach to (DEC-3). */
-export const DISPATCH_RESUMABLE_DAEMON_STATES = [
-  "delivering",
-  "detached",
-  "preempted",
-] as const;
+export const DISPATCH_RESUMABLE_DAEMON_STATES = ["delivering", "detached", "preempted"] as const;
 
 export type DispatchLaneResolutionInput = {
   readonly ref: string;
@@ -36,6 +33,8 @@ export type DispatchLaneResolutionInput = {
   readonly completedPhases: (ref: string) => readonly string[];
   /** The persisted restart total for the ref, read at resolution time. */
   readonly restartCount: (ref: string) => number;
+  /** The adapter's declared resume-injection capability, injected as data. */
+  readonly supportsResumeInjection: (kind: HarnessKind) => boolean;
 };
 
 type Candidate = {
@@ -92,8 +91,9 @@ export const resolveDispatchLane = (
       );
     if (resumable?.sessionId !== undefined) {
       const kind: HarnessKind =
-        resumable.harnessKind === "opencode" || resumable.harnessKind === "claude-code"
-          ? resumable.harnessKind
+        resumable.harnessKind !== undefined &&
+        (HARNESS_KINDS as readonly string[]).includes(resumable.harnessKind)
+          ? (resumable.harnessKind as HarnessKind)
           : input.defaultHarnessKind;
       candidates.push({
         sessionId: resumable.sessionId,
@@ -118,7 +118,7 @@ export const resolveDispatchLane = (
       workItemRef: input.ref,
     },
     completedPhases: [...input.completedPhases(input.ref)],
-    adapterSupportsResumeInjection: selected.harnessKind === "opencode",
+    adapterSupportsResumeInjection: input.supportsResumeInjection(selected.harnessKind),
     restartCount: input.restartCount(input.ref),
   };
 };

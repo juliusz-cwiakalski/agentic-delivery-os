@@ -24,11 +24,7 @@ const ROOT = process.cwd();
 const exitOf = (token: string): number | undefined => {
   const row = DELIVERY_RESULT_TAXONOMY.find((entry) => entry.token === token);
   if (row === undefined) return undefined;
-  return row.projectionClass === "success"
-    ? 0
-    : row.projectionClass === "user-validation"
-      ? 1
-      : 2;
+  return row.projectionClass === "success" ? 0 : row.projectionClass === "user-validation" ? 1 : 2;
 };
 
 describe("TC-TRACKER-004 the ladder adds no configuration key", () => {

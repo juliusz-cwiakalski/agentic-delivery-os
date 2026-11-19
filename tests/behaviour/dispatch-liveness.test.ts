@@ -6,12 +6,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  DISPATCH_LIVENESS_ABSENCE_REASONS,
+  type DispatchLivenessReading,
   dispatchStallShortCircuit,
   dispatchStallUndecidable,
   evaluateDispatchLiveness,
-  type DispatchLivenessReading,
 } from "../../packages/core/src/domain/dispatch-liveness";
-import { DISPATCH_LIVENESS_ABSENCE_REASONS } from "../../packages/core/src/domain/dispatch-liveness";
 
 const CADENCE_MS = 30_000;
 
@@ -147,7 +147,14 @@ describe("GH-347 the terminal pre-restart verdict set is the only short-circuit"
     expect(
       dispatchStallShortCircuit({
         tracker: { ok: true, value: { state: "done", blocking: false } },
-        artifacts: { ok: true, value: { branchCommits: 0, pr: { state: "none", url: null, mergeReady: false }, pmNotes: "absent" } },
+        artifacts: {
+          ok: true,
+          value: {
+            branchCommits: 0,
+            pr: { state: "none", url: null, mergeReady: false },
+            pmNotes: "absent",
+          },
+        },
       }),
     ).toBe("merged");
   });
@@ -167,7 +174,11 @@ describe("GH-347 the terminal pre-restart verdict set is the only short-circuit"
         tracker: { ok: false, reason: "tracker" },
         artifacts: {
           ok: true,
-          value: { branchCommits: 2, pr: { state: "open", url: "https://example.test/1", mergeReady: true }, pmNotes: "complete" },
+          value: {
+            branchCommits: 2,
+            pr: { state: "open", url: "https://example.test/1", mergeReady: true },
+            pmNotes: "complete",
+          },
         },
       }),
     ).toBe("pr-open");

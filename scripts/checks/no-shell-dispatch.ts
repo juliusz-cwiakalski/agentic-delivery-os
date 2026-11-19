@@ -66,7 +66,14 @@ export type NoShellViolation = {
 };
 
 const CHILD_PROCESS_MODULES = new Set(["child_process", "node:child_process"]);
-const FORBIDDEN_MEMBERS = new Set(["exec", "execSync", "execFile", "execFileSync", "spawnSync", "fork"]);
+const FORBIDDEN_MEMBERS = new Set([
+  "exec",
+  "execSync",
+  "execFile",
+  "execFileSync",
+  "spawnSync",
+  "fork",
+]);
 
 const isScriptPathLiteral = (value: string): boolean =>
   value.endsWith(".sh") ||
@@ -161,7 +168,10 @@ export const missingSurfaceFiles = (
 ): string[] => surface.filter((relative) => !existsSync(join(root, relative)));
 
 /** Scan the declared surface under `root` (existence is asserted separately). */
-export const scan = (root: string, surface: readonly string[] = DISPATCH_FLOW_SURFACE): NoShellViolation[] => {
+export const scan = (
+  root: string,
+  surface: readonly string[] = DISPATCH_FLOW_SURFACE,
+): NoShellViolation[] => {
   const violations: NoShellViolation[] = [];
   for (const relative of surface) {
     if (!existsSync(join(root, relative))) continue;
@@ -180,9 +190,7 @@ const main = (): number => {
     return 0;
   }
   for (const violation of violations) {
-    console.error(
-      `no-shell invariant: ${violation.rule} at ${violation.file}:${violation.line}`,
-    );
+    console.error(`no-shell invariant: ${violation.rule} at ${violation.file}:${violation.line}`);
   }
   return 1;
 };

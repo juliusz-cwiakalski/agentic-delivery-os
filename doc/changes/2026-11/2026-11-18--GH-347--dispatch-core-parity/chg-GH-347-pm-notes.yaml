@@ -552,3 +552,31 @@ notes:
       commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 8 (release obligations) delivered: one five-package minor
+      changeset (.changeset/gh-347-dispatch-core-parity-minor.md: core, adapters,
+      cli, mcp, opencode; no testkit entry; no pre-existing changeset touched);
+      plan validate verdict=valid tier=full readyForDevelopment=true and lint
+      plan valid at the delivered HEAD; the doc-distribution guard green (96
+      in-scope docs, no drift); the doc-conformance, dispatch-doc-conformance and
+      reference-page-parity guards 28 pass; the no-shell invariant clean over 22
+      surface files; git diff --check clean; and the AGGREGATE
+      TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check exits 0
+      (11127 tests, 0 fail, plus boundaries, memory, prompt/help/exports and the
+      new no-shell check). DOC STAGING ONLY: the current-truth pages listed in the
+      plan are declared for the commit primitive and remain UNRECONCILED; the
+      stale 'no kill operation' scan still reports the four delivered sentences
+      on feature-dispatch-engine.md and feature-session-lifecycle-economics.md,
+      so DOD-6's zero-hit scan and the proof-boundary page publication are
+      lifecycle phase 7's (@doc-syncer) obligations, not this phase's. PLAN
+      REVISION, declared: the phase scopes gained the twelve files the delivery
+      actually touched (the state-additivity baseline pin in phase 1; the
+      awaited-claim and undecidable-read expectation updates in phase 2; the
+      envelope/golden expectation updates in phase 4; the provider-profile
+      fixture in phase 6; package.json and the no-shell check wiring in phase 7).
+      package.json is declared because the delivered CI-topology invariant
+      requires every scripts/checks/*.ts to be wired: a named
+      'check:no-shell' script was added WITHOUT touching the pinned aggregate
+      chain. No phase, AC, TC, mutation row, or ownership moved. The phase commit
+      hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

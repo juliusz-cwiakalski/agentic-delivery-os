@@ -12,7 +12,7 @@
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type GitChildRunner } from "../../../../packages/adapters/src/git/index";
+import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../../packages/cli/src/production";
 import {
@@ -39,9 +39,9 @@ import {
   readEconomicsRecords,
   STATE_SCHEMA_VERSION,
 } from "../../../../packages/core/src/state/index";
-import { createDispatchClock, DISPATCH_NOW } from "../harness";
-import { makeCheckout } from "../../queue/production/harness";
 import { projectScopeFor } from "../../projects/state-scope";
+import { makeCheckout } from "../../queue/production/harness";
+import { createDispatchClock, DISPATCH_NOW } from "../harness";
 import { createGuardedRunner, type GuardedInvocation, type GuardedRunner } from "./process-runner";
 
 const ROOT = process.cwd();
@@ -103,7 +103,6 @@ export type ParityObservation = {
   readonly invocations: readonly GuardedInvocation[];
   readonly envelopes: readonly ParityEnvelope[];
 };
-
 
 /* ------------------------------------------------------------------------- */
 /* The on-disk pm-notes fixture (GH-347 DM-3): a real document the production  */
@@ -457,9 +456,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
       waits: [...waits],
       violations: [...guarded.violations],
       invocations: [...guarded.records],
-      envelopes: runs.flatMap((entry) =>
-        entry.envelope === undefined ? [] : [entry.envelope],
-      ),
+      envelopes: runs.flatMap((entry) => (entry.envelope === undefined ? [] : [entry.envelope])),
     };
   };
 
@@ -521,7 +518,8 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     holdFence: () => {
       const handleStore = secondHandle();
       const acquired = handleStore.acquireFence(`external-fence-${externalStores.length + 1}`);
-      if (!acquired.ok) throw new Error(`external fence acquisition failed: ${acquired.error.code}`);
+      if (!acquired.ok)
+        throw new Error(`external fence acquisition failed: ${acquired.error.code}`);
       externalStores.push(handleStore);
       return acquired.value.handle;
     },
@@ -553,7 +551,9 @@ export const spawnResumeObservation = async (): Promise<ParityObservation> => {
   const h = createParityHarness({ label: "spawn-resume" });
   try {
     // The lane is seeded through the real append, exactly as a prior run leaves it.
-    const { appendDispatchLane } = await import("../../../../packages/core/src/app/dispatch-ledger");
+    const { appendDispatchLane } = await import(
+      "../../../../packages/core/src/app/dispatch-ledger"
+    );
     const appended = appendDispatchLane(h.store, "seed-spawn", {
       schema: "delivery.dispatch.lane.v1",
       ref: "GH-347",

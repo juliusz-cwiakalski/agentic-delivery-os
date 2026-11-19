@@ -712,7 +712,9 @@ describe("GH-347 the lane resolver and the delay fact are mounted", () => {
     expect(production).toContain("delay: dispatchDelay");
     expect(production).toContain("setTimeout(resolve, ms)");
     // The advisory owner facts ride the composition.
-    expect(production).toContain("laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt }");
+    expect(production).toContain(
+      "laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt }",
+    );
     // The engine consumes the injected facts and never reads an ambient timer.
     expect(engine).toContain("readonly delay?: DispatchDelay");
     expect(engine).not.toContain("setTimeout");
@@ -727,12 +729,14 @@ describe("GH-347 the terminate grace, the restart append and the caller scope", 
     const peak = readFileSync(join(ROOT, "packages/core/src/domain/daemon-peak-pause.ts"), "utf8");
     // The grace is borrowed from coordinator.kill-grace and waits through the one
     // delay fact with reason terminate-grace.
-    expect(production).toContain("coordinator.value.killGraceMs");
+    expect(production).toContain("coordinatorSettings.value.killGraceMs");
     expect(production).toContain('terminateWait: (ms) => dispatchDelay(ms, "terminate-grace")');
     expect(production).toContain("killGraceMs,");
     // One economics.restart append with the delivered reason.
     expect(production).toContain("appendEconomicsRestartEvent");
-    expect(production).toContain("appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt })");
+    expect(production).toContain(
+      "appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt })",
+    );
     expect(engine).toContain('reason: "watchdog.liveness-stalled"');
     // The operator-resume admission passes the admitting caller scope; the loop
     // keeps the default (budget-consulting) scope, and peak-pause states it.
