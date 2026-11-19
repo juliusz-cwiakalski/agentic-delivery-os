@@ -17,12 +17,21 @@ import {
   readQueueDependencies,
   readQueueEntries,
   readQueueFold,
+  readQueueRemovals,
 } from "../../packages/core/src/app/index";
 import {
   canonicalQueueRef,
   foldQueueGraph,
   normalizeRepositoryKey,
 } from "../../packages/core/src/domain/index";
+import {
+  type PresenceObservation,
+  presenceIntegrityDivergence,
+  presenceSpecialCaseBreach,
+  presenceTimestampBreach,
+} from "../fixtures/queue/integrity-breaches";
+import { REMOVAL_REF } from "../fixtures/queue/removal/cases";
+import { createRemovalHarness } from "../fixtures/queue/removal/harness";
 import { makeAuditStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
@@ -479,5 +488,79 @@ describe("GH-310 member-ref canonicalization and fold identity", () => {
     if (!read.ok) return;
     expect(read.records.map((record) => record.ref)).toEqual([MEMBER_REF]);
     expect(read.records[0]?.repository).toBe("api-service-1a2b3c4d");
+  });
+});
+
+describe("TC-F6-007 presence follows append position across a re-declaration", () => {
+  test("timestamps deliberately inverted: absent after removal, present after re-declaration", async () => {
+    const harness = createRemovalHarness("graph-presence-control");
+    const store = harness.composition.store;
+    try {
+      harness.seedEntry({ ref: REMOVAL_REF });
+      const removed = await harness.run([
+        "queue",
+        "remove",
+        REMOVAL_REF,
+        "--reason",
+        "abandoned",
+        "--json",
+      ]);
+      expect(removed.exitCode).toBe(0);
+      const foldAfterRemoval = readQueueFold(store);
+      if (!foldAfterRemoval.ok) throw new Error("fold read failed");
+      const afterRemovalPresent = foldAfterRemoval.value.entries.some(
+        (entry) => entry.ref === REMOVAL_REF,
+      );
+      expect(afterRemovalPresent).toBe(false);
+      const recordsAfterRemoval = store.readRecords();
+      if (!recordsAfterRemoval.ok) throw new Error("read failed");
+
+      const removals = readQueueRemovals(store);
+      if (!removals.ok) throw new Error("removal read failed");
+      const removalAt = removals.records.at(-1)?.recordedAt ?? "2026-11-07T10:00:00Z";
+      const earlier = new Date(Date.parse(removalAt) - 86_400_000).toISOString();
+      const redeclared = declareQueueEntry(store, {
+        ref: REMOVAL_REF,
+        priority: 2,
+        recordedAt: earlier,
+        fenceToken: "graph-presence-redeclare-earlier",
+      });
+      expect(redeclared.ok).toBe(true);
+      const foldAfterRedeclaration = readQueueFold(store);
+      if (!foldAfterRedeclaration.ok) throw new Error("fold read failed");
+      const afterRedeclarationPresent = foldAfterRedeclaration.value.entries.some(
+        (entry) => entry.ref === REMOVAL_REF,
+      );
+      expect(afterRedeclarationPresent).toBe(true);
+      const recordsAfterRedeclaration = store.readRecords();
+      if (!recordsAfterRedeclaration.ok) throw new Error("read failed");
+
+      const observation: PresenceObservation = {
+        ref: REMOVAL_REF,
+        afterRemoval: {
+          records: recordsAfterRemoval.value.records,
+          foldPresent: afterRemovalPresent,
+        },
+        afterRedeclaration: {
+          records: recordsAfterRedeclaration.value.records,
+          foldPresent: afterRedeclarationPresent,
+        },
+        decisionSource: "append-position",
+        rederivationSpecialCase: false,
+      };
+      expect(presenceIntegrityDivergence(observation)).toBeUndefined();
+      const timestampDivergence = presenceIntegrityDivergence(presenceTimestampBreach(observation));
+      expect(timestampDivergence).toBeDefined();
+      expect(timestampDivergence ?? "").toContain(earlier);
+      expect(() => {
+        throw new Error(timestampDivergence ?? "the timestamp control produced no divergence");
+      }).toThrow("timestamp text decides presence");
+      const specialCaseDivergence = presenceIntegrityDivergence(
+        presenceSpecialCaseBreach(observation),
+      );
+      expect(specialCaseDivergence ?? "").toContain("special case");
+    } finally {
+      harness.dispose();
+    }
   });
 });

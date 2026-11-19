@@ -4,9 +4,10 @@
  * cycle check, even on a cyclic graph.
  */
 import { describe, expect, test } from "bun:test";
-import { ledgerDigest } from "../fixtures/state/harness";
+import { detectCycleForEdge } from "../../packages/core/src/domain/index";
 import { CONSUMER_REF, PRODUCER_REF } from "../fixtures/queue/depend/grammar-cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
+import { ledgerDigest } from "../fixtures/state/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const errorOf = (text: string): Record<string, unknown> =>
@@ -63,5 +64,30 @@ describe("TC-QLC-033 the cycle check is add-only", () => {
       (record) => record.key === `queue.deps:${CONSUMER_REF}`,
     );
     expect(reverse.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("TC-F6-004 a depth-two cycle re-derivation names the path length", () => {
+  test("the delivered check finds the three-edge path; a shallow double admits it", () => {
+    const edges = [
+      { consumer: "GH-301", producer: "GH-302" },
+      { consumer: "GH-302", producer: "GH-303" },
+    ];
+    // Adding GH-303 -> GH-301 closes GH-301 -> GH-302 -> GH-303 -> GH-301.
+    const path = detectCycleForEdge(edges, "GH-303", "GH-301");
+    expect(path).toEqual(["GH-303", "GH-301", "GH-302", "GH-303"]);
+    expect(path).toHaveLength(4);
+    // A deliberately broken shallow double (direct two-node only) misses it.
+    const shallow = (consumer: string, producer: string) =>
+      edges.some((edge) => edge.consumer === producer && edge.producer === consumer);
+    expect(shallow("GH-303", "GH-301")).toBe(false);
+    const controlDivergence =
+      path !== undefined && shallow("GH-303", "GH-301") === false
+        ? `the shallow double misses the depth-two path of length ${path.length}`
+        : undefined;
+    expect(controlDivergence).toContain("length 4");
+    expect(() => {
+      throw new Error(controlDivergence ?? "the shallow cycle control produced no divergence");
+    }).toThrow("path of length 4");
   });
 });

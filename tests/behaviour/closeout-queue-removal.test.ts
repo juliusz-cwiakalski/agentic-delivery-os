@@ -21,6 +21,11 @@ import {
 } from "../fixtures/closeout/queue-removal";
 import { memberCloseoutObservation } from "../fixtures/cross-repository/closeout";
 import { API_MEMBER, memberRef, WEB_MEMBER } from "../fixtures/cross-repository/constants";
+import {
+  createCloseoutRemovalVariantHarness,
+  type MilestoneVariant,
+  seedVariantQueueEntry,
+} from "../fixtures/queue/closeout-removal-variants";
 
 const WORK_ITEM_REF = CLOSEOUT_WORK_ITEM_REF;
 
@@ -228,5 +233,85 @@ describe("GH-310 per-member landing removal inside the closeout fence", () => {
     } finally {
       harness.dispose();
     }
+  });
+});
+
+/* --------------- TC-F6-008 the automatic removal across variants ---------- */
+
+const MILESTONE_OUTCOME: Record<MilestoneVariant, string> = {
+  applied: "applied",
+  withheld: "skipped-noop",
+  gap: "skipped-gap",
+};
+
+type StepOutcomes = Readonly<Record<string, string>>;
+
+const stepOutcomes = (data: {
+  readonly steps: readonly { readonly stepId: string; readonly outcome: string }[];
+}): StepOutcomes => Object.fromEntries(data.steps.map((step) => [step.stepId, step.outcome]));
+
+const withoutMilestone = (outcomes: StepOutcomes): StepOutcomes => {
+  const rest: Record<string, string> = {};
+  for (const [stepId, outcome] of Object.entries(outcomes)) {
+    if (stepId !== "milestone-sync") rest[stepId] = outcome;
+  }
+  return rest;
+};
+
+describe("TC-F6-008 the automatic landed removal is unchanged across the milestone variants", () => {
+  test("applied, withheld and gap each remove once inside one fence, as a non-step, with equal other steps", async () => {
+    const outcomesByVariant = new Map<MilestoneVariant, StepOutcomes>();
+    const fenceCounts: number[] = [];
+    for (const variant of ["applied", "withheld", "gap"] as const) {
+      const harness = createCloseoutRemovalVariantHarness({
+        label: `variant-${variant}`,
+        variant,
+      });
+      try {
+        seedVariantQueueEntry(harness, CLOSEOUT_WORK_ITEM_REF);
+        const fencesBefore = harness.writeLog.fences;
+        const result = await harness.run();
+        const fencesAfter = harness.writeLog.fences;
+        expect(result.ok, variant).toBe(true);
+        if (!result.ok) continue;
+        expect(fencesAfter - fencesBefore, `${variant} fence count`).toBe(1);
+        fenceCounts.push(fencesAfter - fencesBefore);
+        expect(result.data.queueRemoval).toEqual({
+          outcome: "removed",
+          ref: CLOSEOUT_WORK_ITEM_REF,
+          reason: "landed",
+        });
+        // The removal block is a non-step disclosure: it never enters steps[].
+        expect(result.data.steps.some((step) => step.stepId === "queue-removal")).toBe(false);
+        expect(result.data.steps).toHaveLength(13);
+        expect(result.data.steps.filter((step) => step.outcome === "failed")).toEqual([]);
+        const milestone = result.data.steps.find((step) => step.stepId === "milestone-sync");
+        expect(milestone?.outcome, `${variant} milestone outcome`).toBe(MILESTONE_OUTCOME[variant]);
+        const removals = readQueueRemovals(harness.store);
+        expect(removals.ok).toBe(true);
+        if (!removals.ok) continue;
+        expect(removals.records).toHaveLength(1);
+        expect(removals.records[0]?.reason).toBe("landed");
+        const fold = readQueueFold(harness.store);
+        expect(fold.ok).toBe(true);
+        if (!fold.ok) continue;
+        expect(fold.value.entries.map((entry) => entry.ref)).not.toContain(CLOSEOUT_WORK_ITEM_REF);
+        outcomesByVariant.set(variant, stepOutcomes(result.data));
+      } finally {
+        harness.dispose();
+      }
+    }
+    const baseline = outcomesByVariant.get("gap");
+    expect(baseline).toBeDefined();
+    for (const variant of ["applied", "withheld"] as const) {
+      const current = outcomesByVariant.get(variant);
+      expect(current, `${variant} produced step outcomes`).toBeDefined();
+      if (current === undefined || baseline === undefined) continue;
+      expect(
+        withoutMilestone(current),
+        `${variant} steps equal the milestone-free fixture`,
+      ).toEqual(withoutMilestone(baseline));
+    }
+    expect(fenceCounts).toEqual([1, 1, 1]);
   });
 });
