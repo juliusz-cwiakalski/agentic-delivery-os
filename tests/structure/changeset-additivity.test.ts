@@ -1,21 +1,23 @@
 /**
- * TC-SYNC-011 — the release additivity pin. The delivered `.changeset/*.md` set
- * equals the phase-1 baseline plus exactly the three declared added files — the
- * GH-349 delivery's own changeset plus the two upstream deliveries that landed on
- * the integration base after the pin was captured (PR #363, PR #364); each of them
- * declares exactly the five fixed-group packages at `minor` with
- * `@delivery-os/testkit` absent, no sixth package and a non-empty body; all 64
- * baseline files keep
- * their SHA-256 digest; and each of the five package `version` values equals its
- * baseline value, so the bump belongs to changesets and never to a hand edit.
+ * TC-SYNC-011 — the release additivity pin. The rule is a PINNED BASELINE PLUS
+ * ONE OR MORE VALID ADDITIONS, never a fixed list of expected files:
+ *
+ *   - every pinned `.changeset/*.md` file keeps its SHA-256 digest
+ *     (`changeset.baseline.digest`), so a delivered file cannot be rewritten;
+ *   - at least one addition over the pin is required (`changeset.added.zero`):
+ *     a release must add its own changeset, and any number of later deliveries
+ *     may add theirs;
+ *   - every addition declares exactly the five fixed-group packages at `minor`
+ *     with `@delivery-os/testkit` absent, no sixth package and a non-empty body;
+ *   - each of the five package `version` values equals its baseline value, so the
+ *     bump belongs to changesets and never to a hand edit.
  *
  * The baseline is captured in phase 1 from the pre-change tree
  * (`tests/fixtures/pins/changeset-baseline.json`) and is read-only afterwards:
  * a permanent suite must not assert a diff against a moving base branch, so the
  * pin is a tree fixture rather than a `git diff` (`.ai/rules/testing-strategy.md`).
- * The baseline keeps the pre-GH-349 file set; upstream's two later deliveries are
- * recognised as declared additions, never as violations, so the pin still proves
- * the GH-349 delivery adds exactly its own one changeset.
+ * Additions are validated by their own content, never by membership in a
+ * point-in-time list, so the invariant survives every later delivery.
  * Every failure mode of the register M117..M123 is a mutation control over the
  * same validator the live assertion runs, so a control cannot pass vacuously.
  */
@@ -27,16 +29,6 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const PIN_PATH = "tests/fixtures/pins/changeset-baseline.json";
 const CHANGESET_DIR = ".changeset";
-/**
- * The declared additions over the pre-GH-349 baseline, sorted: the two upstream
- * deliveries that landed on the integration base after capture (PR #363's install
- * lifecycle, PR #364's dispatch core parity) and GH-349's own changeset.
- */
-const ADDED_CHANGESETS = [
-  "gh-347-dispatch-core-parity-minor.md",
-  "gh-349-merge-closeout-queue-repair-minor.md",
-  "install-lifecycle-minor.md",
-] as const;
 const PINNED_CHANGESET_COUNT = 64;
 
 /** The fixed group of `.changeset/config.json`: five packages, testkit excluded. */
@@ -53,8 +45,6 @@ type ChangesetBaseline = {
   readonly provenance: string;
   readonly fixedPackages: Readonly<Record<string, string>>;
   readonly changesets: Readonly<Record<string, string>>;
-  /** The declared additions; the tree fixture omits it and takes the live set. */
-  readonly expectedAdded?: readonly string[];
 };
 
 type TreeSnapshot = {
@@ -151,21 +141,11 @@ export const releaseViolations = (
   const present = Object.keys(snapshot.files).sort();
   const added = present.filter((name) => !Object.hasOwn(baseline.changesets, name));
 
-  const expected = [...(baseline.expectedAdded ?? ADDED_CHANGESETS)];
   if (added.length === 0) {
     violations.push({
       code: "changeset.added.zero",
-      detail: `expected exactly ${expected.join(", ")}, found none across ${present.length} files`,
+      detail: `no addition was found across ${present.length} files; a delivery must add at least one changeset over the pinned baseline`,
     });
-  } else {
-    const unexpected = added.filter((name) => !expected.includes(name));
-    const missing = expected.filter((name) => !added.includes(name));
-    if (unexpected.length > 0 || missing.length > 0) {
-      violations.push({
-        code: "changeset.added.multiple",
-        detail: `expected exactly ${expected.join(", ")}, found ${added.join(", ")}`,
-      });
-    }
   }
 
   for (const name of Object.keys(baseline.changesets).sort()) {
@@ -246,7 +226,6 @@ const controlBaseline = (): ChangesetBaseline => {
   const files = controlFiles();
   return {
     provenance: "mutation-control fixture, not a tree pin",
-    expectedAdded: ["control-added-minor.md"],
     fixedPackages: controlVersions(),
     changesets: Object.fromEntries(
       Object.entries(files).map(([name, content]) => [name, digestOf(content)]),
@@ -263,16 +242,6 @@ const controlTree = (): TreeSnapshot => ({
   versions: controlVersions(),
 });
 
-/**
- * The control baseline with its expected set replaced by the live declared
- * additions, so the zero- and two-added controls exercise the same declared set
- * the live assertion reads.
- */
-const declaredControlBaseline = (): ChangesetBaseline => ({
-  ...controlBaseline(),
-  expectedAdded: [...ADDED_CHANGESETS],
-});
-
 describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
   test("the pin holds the 64 delivered changesets and the five fixed packages", () => {
     expect(baseline.provenance.length).toBeGreaterThan(0);
@@ -284,9 +253,22 @@ describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
     }
   });
 
-  test("the delivered changeset directory is the baseline plus exactly the three declared additions", () => {
-    const added = addedFrom(readTree());
-    expect(added).toEqual([...ADDED_CHANGESETS].sort());
+  test("the delivered changeset directory is the pinned baseline plus valid additions", () => {
+    const snapshot = readTree();
+    const pinned = Object.keys(baseline.changesets).sort();
+    // The pinned baseline itself is unchanged: every pinned file is still present.
+    expect(
+      Object.keys(snapshot.files)
+        .filter((name) => Object.hasOwn(baseline.changesets, name))
+        .sort(),
+    ).toEqual(pinned);
+    expect(pinned).toHaveLength(PINNED_CHANGESET_COUNT);
+    // The rule is "at least one addition", never a fixed list of them.
+    const added = addedFrom(snapshot);
+    expect(added.length).toBeGreaterThanOrEqual(1);
+    // And every addition is valid on its own terms.
+    const violations = releaseViolations(snapshot, baseline);
+    expect(violations).toEqual([]);
   });
 
   test("each added changeset declares the five fixed packages at minor and no other", () => {
@@ -311,34 +293,52 @@ describe("TC-SYNC-011 mutation controls fail by name", () => {
   test("M117 — zero added changesets", () => {
     const violations = releaseViolations(
       { files: controlFiles(), versions: controlVersions() },
-      declaredControlBaseline(),
+      controlBaseline(),
     );
     expect(codesOf(violations)).toContain("changeset.added.zero");
     expect(violations).toHaveLength(1);
     const detail = detailOf(violations, "changeset.added.zero");
-    for (const name of ADDED_CHANGESETS) {
-      expect(detail).toContain(name);
-    }
-    expect(detail).toContain("found none");
+    // The detail names the file count and that nothing was added; it never
+    // interpolates a fixed expected list.
+    expect(detail).toContain(`across ${Object.keys(controlFiles()).length} files`);
+    expect(detail).toContain("no addition was found");
   });
 
-  test("M118 — two added changesets", () => {
+  test("M118a — two VALID additions are legitimate (positive control)", () => {
     const tree = controlTree();
     const files = {
       ...tree.files,
       "control-second-minor.md": validAddedText(fiveMinorLines()),
     };
-    const violations = releaseViolations(
-      { files, versions: tree.versions },
-      declaredControlBaseline(),
+    const violations = releaseViolations({ files, versions: tree.versions }, controlBaseline());
+    // Multiple additions are the normal case, so the invariant reports nothing.
+    expect(violations).toEqual([]);
+  });
+
+  test("M118b — two INVALID additions each fail by file name", () => {
+    const tree = controlTree();
+    const files = {
+      ...tree.files,
+      "control-sixth-package-minor.md": validAddedText(
+        `${fiveMinorLines()}\n"@delivery-os/sixth": minor`,
+      ),
+      "control-testkit-minor.md": validAddedText(
+        `${fiveMinorLines()}\n"@delivery-os/testkit": minor`,
+      ),
+    };
+    const violations = releaseViolations({ files, versions: tree.versions }, controlBaseline());
+    const unexpected = violations.filter(
+      (violation) => violation.code === "changeset.package.unexpected",
     );
-    expect(codesOf(violations)).toContain("changeset.added.multiple");
-    const detail = detailOf(violations, "changeset.added.multiple");
-    expect(detail).toContain("control-added-minor.md");
-    expect(detail).toContain("control-second-minor.md");
-    for (const name of ADDED_CHANGESETS) {
-      expect(detail).toContain(name);
-    }
+    // One independent violation per offending file: the additions are validated
+    // individually, never collapsed into one closed-set verdict.
+    expect(unexpected).toHaveLength(2);
+    expect(
+      unexpected.some((violation) => violation.detail.includes("control-sixth-package-minor.md")),
+    ).toBe(true);
+    expect(
+      unexpected.some((violation) => violation.detail.includes("control-testkit-minor.md")),
+    ).toBe(true);
   });
 
   test("M119 — a patch bump on one of the five packages", () => {
