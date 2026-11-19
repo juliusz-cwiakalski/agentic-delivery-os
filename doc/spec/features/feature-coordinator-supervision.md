@@ -3,14 +3,14 @@ ados_distribution: internal
 id: SPEC-COORDINATOR-SUPERVISION
 status: Current
 created: 2026-11-09
-last_updated: 2026-11-09
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "Coordinator supervision: the coordinator start/stop/status/tick family composed by the shipped entrypoint over the delivered harness session port, the append-only instance lease with a liveness-first atomic claim and one-record stale takeover, the two named state-fence rules, the recorded join-or-resume-or-spawn lifecycle decision, artifact-evidence stuck detection with the progress-bound corroborator, identity-verified kill-with-grace over the delivered DaemonProcessPort, the distinct per-epoch restart budget carried durably on the lease, loud owner-brief exhaustion escalation with a reserved render-first slot, wake-on-typed-question with the selected live/resume/spawn effect, the declared foreground supervision loop with its lifetime lease pair, the six additive coordinator.* records, the six coordinator config keys, the six coordinator error identities, and the deterministic delivery.coordinator.v1 observation payload."
+summary: "Coordinator supervision: the coordinator start/stop/status/tick family composed by the shipped entrypoint over the delivered harness session port, the append-only instance lease with a liveness-first atomic claim and one-record stale takeover, the two named state-fence rules, the recorded join-or-resume-or-spawn lifecycle decision, artifact-evidence stuck detection with the progress-bound corroborator, identity-verified kill-with-grace over the delivered DaemonProcessPort, the distinct per-epoch restart budget carried durably on the lease, loud owner-brief exhaustion escalation with a reserved render-first slot, wake-on-typed-question with the selected live/resume/spawn effect, the declared foreground supervision loop with its lifetime lease pair, the six additive coordinator.* records, the six coordinator config keys, the six coordinator error identities, and the deterministic delivery.coordinator.v1 observation payload. The delivered supervision engine is shared: the `loop` family is a second composition profile over the lease, the per-epoch budget, the stuck record pair, and the identity-verified kill under the distinct identity `loop-main`, while each profile keeps its own supervised target, predicate, and records."
 links:
-  related_changes: ["GH-241"]
+  related_changes: ["GH-241", "GH-348"]
   related_decisions:
-    ["TDR-0017", "TDR-0018", "ADR-0003", "ODR-0003"]
+    ["TDR-0017", "TDR-0018", "TDR-0055", "TDR-0056", "ADR-0003", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/coordinator.ts"
     - "packages/core/src/contracts/daemon.ts"
@@ -27,8 +27,20 @@ recorded lifecycle decision, artifact-evidence stuck detection, kill with grace,
 a bounded restart budget, and wake on a typed question — without creating a
 second daemon, a control socket, lane supervision, or an OS installer.
 
-`ceo-loop.sh` is unchanged. The `coordinator` family is its typed replacement;
-the bash entry point retires at M4-S5.
+The coordinator profiles one supervised target: a delivery expectation. Two
+composition profiles share the same delivered supervision engine — the
+append-only instance lease, the per-epoch restart budget, the stuck
+verdict/outcome record pair, and the identity-verified kill-with-grace — and each
+keeps its own supervised target, predicate, and records: this `coordinator` family
+and the [`loop`](feature-loop-supervision.md) family, which supervises the Mode A
+CEO session under the distinct identity `loop-main` (TDR-0055). The two do not
+exclude each other and do not read each other's records, because every record key
+is scoped by supervisor identity.
+
+`scripts/ceo-loop.sh` stays byte-unchanged. It remains the documented, executable
+shell fallback for the Mode A outer loop until the F6 handover; the typed Mode A
+operator surface is `jaiship loop`, and this page's family is not a replacement for
+either.
 
 ## 1. Command family
 
@@ -179,14 +191,23 @@ disclosed rather than fabricated:
   session facts fall back to the newest recorded daemon lane row — the only
   durable session, replacement, and process identity it can read. A later
   invocation with no such row starts a fresh session and consumes one ordinal.
-- **No pid on a spawned handle.** `HarnessSessionHandle` carries no pid, so
-  kill-with-grace stays unavailable for a coordinator-spawned session until a lane
-  record supplies its pid and start time; the kill path reports the process
-  capability gap instead of signalling an unverified pid.
-- **No sourced progress reading.** The production harness instances are
-  constructed without injected `livenessFacts` or `sourcedSignals`, so the
+- **No pid on a spawned handle** — *reconciled against the additive handle fact.*
+  `HarnessSessionHandle` carries an optional `pid`, supplied by the adapters that
+  can report the started child (the opencode streaming starter does) and absent
+  where they cannot; absence stays absent and is never fabricated or zeroed. This
+  coordinator composition still supplies no process id of its own and still
+  derives the process identity it kills from a recorded lane row, so the
+  coordinator's kill-with-grace behaviour, its declared limitations, and its
+  observation payload are unchanged: kill stays unavailable for a
+  coordinator-spawned session until a lane record supplies its pid and start time,
+  and the kill path then reports the process capability gap instead of signalling
+  an unverified pid.
+- **No sourced progress reading.** The coordinator's production harness instances
+  are constructed without injected `livenessFacts` or `sourcedSignals`, so the
   projected new-turn fact is `unknown` and the `progress-bound` prefill veto
-  cannot fire.
+  cannot fire. The additive handle pid does not supply a progress source, and the
+  `loop` profile obtains sourced progress from the delivered per-session totals
+  reader instead of from this composition, so this limitation still holds here.
 
 A harness kind that declares resume absent (claude-code) returns the delivered
 `harness.capability.gap` from the adapter rather than a fabricated resume.
@@ -327,6 +348,10 @@ migration). The command composition supplies the coordinator identity, defaultin
 to `coordinator-main` when none is supplied, and every record key is scoped by
 it. Every fold — lease, stuck, last decision, last wake — orders by ledger
 sequence; `recordedAt` is descriptive only, except as the lease-age anchor in §2.
+The same six kinds and the same folds carry the `loop` profile's records under the
+distinct identity `loop-main`; the scoping is at the key, so a read for one
+identity skips the other's records rather than rejecting them, and the two
+profiles share the kinds safely.
 
 | Record kind | Payload schema | Store key | Purpose |
 |---|---|---|---|
@@ -418,7 +443,8 @@ additive explicit `command` vector named above.
   progress source is an `unknown` evidence class; only a missing process-port
   alive, kill-with-grace, or start-time identity capability raises
   `coordinator.process.capability-gap` at exit 2.
-- `ceo-loop.sh` stays byte-unchanged.
+- `ceo-loop.sh` stays byte-unchanged, and neither this family nor the sibling
+  `loop` profile edits, deletes, or re-points it.
 
 ## 11. Testing
 
@@ -438,6 +464,8 @@ scenario (SC-M1-25) over the in-process CLI and the fake process harness.
 
 ## Related
 
+- [Loop Supervision](feature-loop-supervision.md) — the sibling composition
+  profile over the same engine, under the identity `loop-main`.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
   sourced progress signals and the `evaluateRestartBudget` shape this feature
   consumes; the coordinator owns a distinct budget.
@@ -453,5 +481,8 @@ scenario (SC-M1-25) over the in-process CLI and the fake process harness.
   `coordinator` domain kind and six rows.
 - [Coordinator Supervision Test Specification](../quality/test-specs/test-spec-coordinator-supervision.md)
   — the enduring coverage map.
-- Decision records: [TDR-0017](../../decisions/TDR-0017-coordinator-supervision-architecture.md)
-  and [TDR-0018](../../decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md).
+- Decision records: [TDR-0017](../../decisions/TDR-0017-coordinator-supervision-architecture.md),
+  [TDR-0018](../../decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md),
+  [TDR-0055](../../decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md)
+  (the shared-engine profile boundary), and
+  [TDR-0056](../../decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md).

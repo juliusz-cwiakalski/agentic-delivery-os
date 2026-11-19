@@ -7,7 +7,7 @@ id: GUIDE-DELIVERY-MODES
 status: Active
 created: 2026-07-07
 owners: ["engineering"]
-summary: "How to run ADOS autonomous ticket delivery in the two unattended modes — the autonomous CEO loop (Mode A) and the manual batch (Mode B) — the component responsibilities, the AI-vs-script split, and the behavioral invariants that keep unattended delivery converging instead of burning tokens."
+summary: "How to run ADOS autonomous ticket delivery in the two unattended modes — the autonomous CEO loop (Mode A: the typed `jaiship loop` family, with `ceo-loop.sh` as the retained fallback) and the manual batch (Mode B) — the component responsibilities, the AI-vs-script split, and the behavioral invariants that keep unattended delivery converging instead of burning tokens."
 references:
   - "ADOS epic #95 — Autonomous-loop reliability"
   - "ADOS epic #117 — Loop tooling productization & safe CEO upstream"
@@ -16,8 +16,8 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286", "GH-288"]
-  decisions: ["TDR-0002"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286", "GH-288", "GH-348"]
+  decisions: ["TDR-0002", "TDR-0055", "TDR-0056"]
 ---
 
 # Delivery Modes
@@ -29,13 +29,13 @@ next ticket** and **who authorizes the merge**.
 
 | | Mode A — Autonomous CEO loop | Mode B — Manual batch |
 |---|---|---|
-| **Trigger** | `scripts/ceo-loop.sh` (long-running outer process) | Human: `scripts/batch-deliver.sh GH-A GH-B …` |
+| **Trigger** | `jaiship loop start --foreground` (typed supervisor; `scripts/ceo-loop.sh` stays the retained fallback) | Human: `scripts/batch-deliver.sh GH-A GH-B …` |
 | **Who picks tickets** | The `@ceo` agent (respects deps, priority, blockers) | The human (an explicit list) |
 | **Tickets per run** | One at a time, many per CEO session | The provided list, sequentially |
 | **Merge authority** | **The `@ceo` agent** — it is the approver and the merger (authority granted once for autonomous mode, not per-PR) | **The human** — the human approves (via the `approved` label); the batch script then rebases, waits for green quality gates, and squash-merges |
 | **Concurrency** | Exactly one ticket in flight **per repo working tree** | Exactly one ticket in flight at a time (sequential) |
 | **Best for** | Unattended delivery (overnight, weekend) | Curated batch with human review; addressing review feedback |
-| **Backstop if a delivery outlives a session** | `ceo-loop.sh` detects the stuck CEO and kill+restarts it; the in-flight delivery (if healthy) is joined, not raced | Human re-runs the same command (idempotent skip) |
+| **Backstop if a delivery outlives a session** | The Mode A supervisor (`jaiship loop`, or `scripts/ceo-loop.sh` on the fallback path) detects the stuck CEO and kill+restarts it; the in-flight delivery (if healthy) is joined, not raced | Human re-runs the same command (idempotent skip) |
 
 > **Batch autonomy is intentionally bounded.** In Mode B, `batch-deliver.sh`
 > never merges on its own — it only acts on a PR the human has explicitly
@@ -363,9 +363,9 @@ selects that model.
                 ┌─────────────────────────────────────────────────────────┐
                 │  MODE A                                  MODE B          │
                 │                                                           │
-   human ─────► ceo-loop.sh                human ─────► batch-deliver.sh   │
-                │   │ (bash, outer;                         │ (bash,        │
-                │   │  stuck-session watchdog)              │  sequential)  │
+   human ─────► jaiship loop                human ─────► batch-deliver.sh   │
+                │   │ (typed, outer)                        │ (bash,        │
+                │   │  stuck-session watchdog              │  sequential)  │
                 │   ▼ per CEO session                       ▼ per ticket   │
                 │ @ceo (opencode, AI)                      deliver-ticket.sh
                 │   │  pick ticket / merge approved PR        │ (foreground) │
@@ -383,7 +383,8 @@ selects that model.
 
 | Component | Kind | Owns | Must NOT do |
 |---|---|---|---|
-| `ceo-loop.sh` | Script (outer) | Spawn one `@ceo` session at a time; **detect a stuck CEO** (no session traffic, no healthy delivery in progress) and kill+restart it; resume the previous CEO session when its context is under the resume threshold; honor a durable stop signal | Spawn a second `@ceo` while one is alive; kill a CEO that is blocked on a healthy in-flight delivery; wipe the stop signal at startup |
+| `ceo-loop.sh` | Script (outer fallback) | Spawn one `@ceo` session at a time; **detect a stuck CEO** (no session traffic, no healthy delivery in progress) and kill+restart it; resume the previous CEO session when its context is under the resume threshold; honor a durable stop signal | Spawn a second `@ceo` while one is alive; kill a CEO that is blocked on a healthy in-flight delivery; wipe the stop signal at startup |
+| `jaiship loop` | Typed supervisor (outer) | The typed Mode A surface: five verbs; **detect a stuck CEO** by the two-signal verdict (sourced progress plus the delivered dispatch/daemon lane corroborator); restart with the declared backoff and the durable budget; **terminate through the delivered harness `terminate`**; hold the **durable `loop.stop`** record and a bounded operational log; refuse a second instance and re-find its recorded session | Spawn a second CEO beside a live recorded one; kill on an unreadable corroborator; run a shell probe; read or write the shell's stop marker |
 | `@ceo` | AI agent (decision points) | Pick next ticket; **wait for `deliver-ticket.sh` to return** and consume its last-message + result; verify the PM finalized all phases before merging; merge ready (approved) PRs; handle blockers (optionally resume the PM with a `--resume-prompt`); retrospectives | Babysit a healthy delivery; detach `deliver-ticket.sh`; merge a PR the PM has not finalized; yield forever on a ready PR; halt merely because a peer exists |
 | `batch-deliver.sh` | Script | Sequential per-ticket delivery; pre-flight skip; **rebase-before-merge with green-gate wait** for human-approved PRs; **platform-aware** Mode B merge (GitHub/GitLab, configurable strategy) using the PR title/description as the commit message; summary | Pick tickets; approve a PR (Mode B); merge a PR the human has not approved |
 | `deliver-ticket.sh` | Script (per-ticket) | Single-ticket lifecycle: **single-flight + join** per repo, spawn/resume PM, in-progress tracking (repo-local PID file), **writes the delivering marker on its OWN path** (race-free "CEO blocked on delivery" signal for ceo-loop.sh), **log-progress liveness watchdog**, kill-and-restart on stall, **signal propagation to the PM child**, **platform-aware** state classification & PR URL (dispatch seam + JSON normalization); expose subcommands (`--is-delivering`, `--last-message`, `--resume-prompt`); return a delivery summary (result + PR URL + PM last-message) on stdout | Run detached; spawn a duplicate PM for the same ticket/repo; **merge** (merge authority is the CEO in Mode A or `batch-deliver.sh` in Mode B); leave an orphaned opencode child when killed |
@@ -448,7 +449,7 @@ converges to "exactly one PM session per ticket in this repo."
   so killing the wrapper never leaves an orphaned opencode instance. The same
   propagation rule applies to `ceo-loop.sh` and every other delivery script.
 
-### INV-DM-3: `ceo-loop.sh` detects a *stuck* CEO, not a healthy wait
+### INV-DM-3: The Mode A supervisor detects a *stuck* CEO, not a healthy wait
 
 The loop runner's **primary job is to detect a CEO session that is genuinely
 stuck** — and recover it via kill+restart. It is *not* primarily about "parking
@@ -460,22 +461,30 @@ threshold, **all** of these hold:
 
 - no new **opencode session message traffic** (the stream of assistant/tool
   messages has gone idle), **and**
-- **no healthy delivery in progress** in this repo. This is checked via two
+- **no healthy delivery in progress** in this repo. The shell path checks two
   complementary signals: the race-free **delivering marker file**
   (`.ai/local/delivery/delivering`, written by `deliver-ticket.sh` on its OWN
   path *before* the delivery starts, carrying a live pid), and — as
   defense-in-depth — `deliver-ticket.sh --is-delivering` (the PID probe), plus
-  the in-flight delivery's own watchdog.
+  the in-flight delivery's own watchdog. The typed `jaiship loop` path decides the
+  same two-signal definition from sourced session progress and the read-only
+  delivery corroborator over the delivered `dispatch.lane` and `daemon.lane`
+  records, testing owner liveness on the recorded process id only.
 
 A CEO that is **blocked on a healthy, progressing delivery** is *not* stuck and
 must not be killed — the delivery will return and the CEO will continue. The
-delivering marker makes this race-free: it exists before the child PID is
-observable by the probe, closing the brief window where a just-started
-delivery could look "not in progress."
+delivering marker makes this race-free on the shell path: it exists before the
+child PID is observable by the probe, closing the brief window where a
+just-started delivery could look "not in progress." The typed path has the same
+property structurally: an absent pid or an unreadable store reads `unknown`, and
+`unknown` never licenses a kill.
 
 The stop/park signal is **durable across loop restarts** (#97): `ceo-loop.sh`
 does not wipe its stop file at startup, and a non-expired park condition is
-honored until it clears.
+honored until it clears. The typed loop's stop is the identity-scoped `loop.stop`
+ledger record, folded before a start claims the lease and re-read at every cycle
+boundary; only an explicit `jaiship loop reset` clears it
+([Loop Supervision](../spec/features/feature-loop-supervision.md)).
 
 ### INV-DM-4: CEO merges approved, finalized PRs — does not yield (Mode A)
 
@@ -695,20 +704,32 @@ flowchart TD
 ### Running Mode A
 
 ```bash
-# Start the autonomous CEO loop (foreground; run in tmux/nohup for unattended use)
+# Typed supervisor (the Mode A operator surface; run in tmux/nohup for unattended use)
+jaiship loop start --foreground
+
+# Stop it durably (the ledger stop survives a restart until cleared)
+jaiship loop stop                  # default --mode drain
+jaiship loop stop --mode immediate # opt-in: terminate the held session
+
+# Inspect and clear
+jaiship loop status
+jaiship loop log --lines 50
+jaiship loop reset                 # clear a folded stop
+
+# Retained shell fallback (unchanged; still executable)
 scripts/ceo-loop.sh
-
-# Stop it durably (the stop signal survives a restart until cleared)
 scripts/ceo-loop.sh --stop
-
-# Clear a stale stop signal and resume
 scripts/ceo-loop.sh --reset
 ```
 
-`ceo-loop.sh` is the outer process. It is **not** the merge authority itself —
-it spawns the `@ceo` agent, which decides and merges. The loop's own job is
-session lifecycle (spawn / resume / detect-stuck / kill+restart) and honoring
-the stop signal.
+The typed loop is the outer supervisor, not the merge authority: it spawns the
+`@ceo` agent, which decides and merges. Its job is session lifecycle (spawn /
+re-find / detect-stuck / kill+restart) and honouring the durable stop, exactly as
+the shell loop's is. The two paths are independent: each has its own stop carrier
+(a `loop.stop` ledger record versus the workspace marker), so a `jaiship loop stop`
+does not stop a running `scripts/ceo-loop.sh` and vice versa. Use one path per
+workspace and use that path's own stop and reset
+([Loop Supervision](../spec/features/feature-loop-supervision.md)).
 
 ## Mode B — Manual batch (human review gate)
 
@@ -789,7 +810,7 @@ The design is robust to the messy realities of long-running AI sessions:
 
 | Failure | What happens | Why it converges |
 |---|---|---|
-| CEO session crashes mid-delivery | PM child keeps running (reparented to init). `ceo-loop.sh` sees the delivery is still in progress (`--is-delivering`) and does **not** spawn a racing CEO; it waits, then spawns a fresh/resumed CEO once the delivery finishes. | No duplicate agent; delivery finishes; loop resumes. |
+| CEO session crashes mid-delivery | PM child keeps running (reparented to init). The Mode A supervisor (`jaiship loop`, or `ceo-loop.sh` on the fallback path) sees the delivery is still in progress and does **not** spawn a racing CEO; it waits, then spawns a fresh/resumed CEO once the delivery finishes. | No duplicate agent; delivery finishes; loop resumes. |
 | CEO bash-tool timeout cuts a blocking `deliver-ticket.sh` call | PM child keeps running. Next CEO decision point calls `deliver-ticket.sh REF`, which **joins** (INV-DM-2). | No duplicate PM; same result returned. |
 | PM LLM stream hangs (opencode bug) | Liveness watchdog (INV-DM-5) sees no session traffic for ≥threshold → kill-and-resume the PM via the session manager. | No infinite wait; session resumes from committed artifacts + pm-notes. |
 | Agent hits a forbidden-folder permission prompt | Same as above — no session traffic → detected as stuck → kill+restart. | Autonomous mode is not blocked on an unseen prompt. |
@@ -801,7 +822,17 @@ The design is robust to the messy realities of long-running AI sessions:
 
 ## Configuration
 
-All settings are environment variables (CLI flag overrides where noted).
+All shell settings are environment variables (CLI flag overrides where noted).
+The typed `jaiship loop` reads no environment knob: it consumes the delivered
+`coordinator.*` configuration keys, onto which five of the shell loop's knobs map
+value-for-value (`CEO_LOOP_STUCK_MINUTES` → `coordinator.stuck-window`,
+`CEO_LOOP_POLL_SECONDS` → `coordinator.collection-interval`,
+`CEO_LOOP_KILL_GRACE_SECONDS` → `coordinator.kill-grace`,
+`CEO_LOOP_MAX_RESTARTS` → `coordinator.restart-budget`, `CEO_RESUME_TOKEN_LIMIT` →
+`coordinator.resume-context-limit`); `CEO_LOOP_SLEEP_SECONDS` is replaced by the
+declared backoff schedule plus the collection interval, and `MAX_ITERATIONS=0` is
+replaced by an unbounded loop. No configuration key is added
+([Loop Supervision](../spec/features/feature-loop-supervision.md)).
 
 **Stuck thresholds.** `deliver-ticket.sh` reads `DELIVER_STUCK_MINUTES` (default `10`; override with the `--stuck-minutes <n>` flag) and `ceo-loop.sh` reads `CEO_LOOP_STUCK_MINUTES` (default `10`). Liveness is multi-signal — recursive session-message traffic is the primary signal and git/worktree activity the secondary; a session is stalled only when both are quiet for the threshold (see [INV-DM-5](#inv-dm-5-liveness-means-multi-signal-progress-not-process-alive)). Raise the threshold when a step is legitimately long: too-low values kill healthy sessions and cause restarts. The seconds-level overrides (`DELIVER_STUCK_SECONDS` and ceo-loop's internal seconds seam) are test-only accelerators, not operator knobs.
 
@@ -861,6 +892,15 @@ The state-poll backoff is exponential and capped: at the default base of 2 s the
 | Merge used a poor commit message | PR description not merge-ready | `@pr-manager` must always emit descriptions fit to be the squash commit message |
 | `clean-merged-branches` deleted a branch I needed | Misconfigured `--base` / `--protected`, or a branch that looked merged | It must never delete unmerged or protected branches; if it did, that is a bug |
 | On macOS, an owner/CEO is rejected as stale right after it starts | macOS `ps` lacks the Linux `-o etimes=` (elapsed **seconds**) column. The scripts fall back to parsing `-o etime=` (elapsed `[[dd-]hh:]mm:ss`) when `etimes=` is absent; this needs `ps` from a modern macOS build. If the fallback also fails the start-epoch guard degrades gracefully (treats the owner as live rather than wrongly killing it). | Ensure `ceo-loop.sh`/`deliver-ticket.sh` are current (they carry the `etime=` fallback); no action needed otherwise. |
+| `jaiship loop start` exits 0 immediately with `state=stopped` | A durable `loop.stop` request is folded; a stopped loop starts nothing by design | `jaiship loop status` shows `stop_signal=yes` and `stop_mode`; run `jaiship loop reset`, then `jaiship loop start --foreground` |
+| `jaiship loop start` exits 2 with `coordinator.already-running` | A live loop already holds the `loop-main` instance lease | Use the running loop, or `jaiship loop stop` it; the shell loop holds a different identity and does not collide |
+| `jaiship loop` never kills a CEO that looks idle | The delivery corroborator reports a healthy delivery in progress (`in-progress`) or an unreadable input (`unknown`); neither is a stuck signal | Check `jaiship loop status` (`last_verdict`, `degraded`) and the `event=restart` / `event=stuck-verdict` log lines; read the paired `coordinator.stuck` evidence corpus before concluding the loop is wrong |
+| A `jaiship loop stop` did not stop a running `scripts/ceo-loop.sh` (or the reverse) | The two paths use different durable stop carriers and neither reads the other | Stop the path that is actually running with that path's own command; use one path per workspace |
+| `jaiship loop start` exits 1 with `coordinator.restart-budget-exhausted` | The per-epoch restart budget is spent; a crash-looping start must not launder its own history | Read the summary's history reference, then `jaiship loop start --foreground --fresh-budget` once the cause is fixed |
+
+Both paths are supported and the troubleshooting above applies to each on its own
+surface: the shell rows name `ceo-loop.sh` state, and the typed rows name
+`jaiship loop` state.
 
 > **Known rough edge:** `ceo-loop.sh --help` still prints the stale name `CEO_LOOP_STALL_MINUTES` for the loop threshold — a bash-era usage-text inaccuracy to be fixed in a future shell-allowed change; the knob the loop actually reads is `CEO_LOOP_STUCK_MINUTES`.
 
@@ -886,6 +926,16 @@ they encapsulate PID validation, staleness detection, and signal propagation.
 | `--last-message REF` | Print the PM's last message for REF |
 | `--log [REF]` | Print the last 50 lines of the delivery log for REF |
 | `--help` | Full usage + options |
+
+### `jaiship loop`
+
+| Verb | What it does |
+|---|---|
+| `start --foreground [--fresh-budget]` | Run the typed Mode A supervisor in the foreground; `--fresh-budget` opens the next restart-budget epoch |
+| `stop [--mode drain\|immediate]` | Append one durable stop request (`drain` waits for the session to end; `immediate` terminates it) |
+| `status` | Print the bounded `key=value` block (the six shell keys plus the additive keys) |
+| `log [--lines <n>]` | Print the bounded tail of the operational log (default 50, maximum 100) |
+| `reset` | Append one durable stop clearance |
 
 ### `ceo-loop.sh`
 

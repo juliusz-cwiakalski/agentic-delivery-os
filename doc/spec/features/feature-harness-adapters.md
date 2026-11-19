@@ -6,10 +6,10 @@ created: 2026-11-06
 last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps, including the additive optional capability-gated `terminate` operation; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, the fresh-spawn `--title ticket-<REF>` rendering, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations, and the supported terminate); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, terminate, liveness kinds, and both sourced-signal kinds declared as gaps; the built delivery-lifecycle prompt with its five stable sections; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and held-identity-scoped reads; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, union session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the pinned supported-version window and probe grammar with the version refusals, the declared integration mode with its origin, the per-spawn caller-supplied agent identity and single-seat binding mapped onto the honoured surface, the observed-store telemetry contract with seat, resolved-model, duration, and observed-axis-absence facts, and the conformance extension scenarios on the delivered registry; the typed dispatch engine is the first production consumer of the session port."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps, including the additive optional capability-gated `terminate` operation and the additive optional session process id on the handle; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, the caller-supplied fresh-spawn `--title` rendering, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations, and the supported terminate); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, terminate, liveness kinds, and both sourced-signal kinds declared as gaps; the built delivery-lifecycle prompt with its five stable sections; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and held-identity-scoped reads; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, union session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the pinned supported-version window and probe grammar with the version refusals, the declared integration mode with its origin, the per-spawn caller-supplied agent identity and single-seat binding mapped onto the honoured surface (the dispatch `pm` identity and the loop `ceo` identity), the observed-store telemetry contract with seat, resolved-model, duration, and observed-axis-absence facts, and the conformance extension scenarios on the delivered registry; the typed dispatch engine and the `loop` supervision profile are the production consumers of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291", "GH-335", "GH-347"]
-  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0043", "TDR-0051", "TDR-0054"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291", "GH-335", "GH-347", "GH-348"]
+  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0043", "TDR-0051", "TDR-0054", "TDR-0055", "TDR-0056"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
     - "packages/core/src/contracts/economics.ts"
@@ -107,11 +107,12 @@ the dispatch composition; the adapters add no dispatch branch of their own.
 | `HarnessInstance` | Kind, observed version (explicit unknown plus warning), capability declaration, and the additive `versionVerdict`, `mode`, and `modeOrigin` members. |
 | `HarnessSessionPort` | Spawn, deliver, resume, collect, classify, liveness, and read-only session listing as the seven required members, plus the optional declared `capabilities` and the additive optional capability-gated `terminate`. |
 | `HarnessSpawnInput`, `HarnessResumeInput` | The spawn, resume, and deliver inputs; each carries the additive optional caller-supplied `agent` identity and the additive optional single-seat `binding`, and its `agent` absence is the role-less `no-agent` state. The spawn input additionally carries the additive optional fresh-spawn `title`. |
+| `HarnessSessionHandle` | The session identity and attribution (`harnessKind`, `sessionId`, `treeRoot`, `workItemRef`) plus the additive **optional** `pid` of the process the session leads. An adapter that can report the started child fills it; one that cannot leaves it absent — never fabricated and never `0`. No capability name is added, and a handle double constructed without the member stays valid. |
 | `HarnessTerminateInput`, `HarnessTerminateResult` | The terminate input (the session handle plus the declared grace in milliseconds) and its result (`terminated`, `escalated`, and `reaped` booleans); `reaped` reports that an exact-identity target was matched, not that an OS reap occurred. |
 | `HarnessSeatBinding` | One resolved seat: the agent identity it was resolved for, the seat name, the resolved model, and the declared variable name for a variable-consuming harness. |
 | `HarnessVersionProbe` | The pinned version-probe seam: one bounded invocation with the declared deadline and injected clock, answering a stdout line or `timed-out`; the resolver treats a rejection as indeterminate and never retries. |
 | `HarnessSpawnRunner` | The one-shot child-process seam: resolves at process close and carries the bounded stdout, stderr, exit status, and timeout flag; used for read-only session listing and by the Claude Code adapter. |
-| `HarnessSpawnStarter` | The streaming child-process seam: starts a child and returns its line stream, completion promise, handle-acquisition acknowledgement, and idempotent kill; used by the opencode adapter for spawn, resume, and deliver. |
+| `HarnessSpawnStarter` | The streaming child-process seam: starts a child and returns its line stream, completion promise, handle-acquisition acknowledgement, its `pid` when the started child exposes one, and idempotent kill; used by the opencode adapter for spawn, resume, and deliver. |
 | `HarnessSpawnStreamOptions`, `HarnessSpawnStream` | The starter's per-invocation options (working directory, environment, optional stdin, handle-acquisition bound, optional whole-session bound) and its stream handle. |
 | `HarnessExecutionEnvironmentDescriptor` | Execution kind (`host` only), work directory, and the declared variable names (each variable entry may carry the additive optional marker) and credential references. |
 
@@ -119,6 +120,14 @@ the dispatch composition; the adapters add no dispatch branch of their own.
 `collect` later returns evidence — and exposes no stream. `HarnessSpawnRunner`
 and `HarnessSpawnRunnerResult` keep their one-shot completion-gated shape. The
 streaming seam is adapter-internal and the session port does not carry it.
+
+A spawned or resumed opencode session exposes the process it leads through the
+handle's optional `pid`, sourced from the host streaming starter's child. The
+host starter starts that child in its own process group (`detached: true`,
+`shell: false`), so the session outlives a killed supervisor, and the optional
+fact lets a supervisor re-find and terminate exactly that process. An absent
+`pid` stays absent: a consumer records `null`, never a fabricated number, and
+degrades conservatively.
 
 ### Terminate operation
 
@@ -261,6 +270,12 @@ before a session existed; it does not assert a lane-permission policy verdict.
 > deliver, collect, classify, liveness, and read-only session listing; the coordinator
 > profile uses spawn, resume, liveness, and listing, and reads progress from the
 > liveness report. Resume is a decision input, never a process capability.
+> The loop profile uses spawn, resume, listing, and the capability-gated
+> `terminate`; it reads progress from the delivered per-session totals reader and
+> records the optional handle `pid` as its re-find and termination identity, with
+> an absent `pid` degraded to unknown-liveness rather than fabricated. Its
+> terminate call is this operation, not a second kill path, and an unconfirmed
+> termination closes the loop instead of starting another session.
 > Capability ownership is four-way and distinct: an undeclared or unavailable
 > harness **resume** selects `spawn-fresh` reason `session-interrupted` with no
 > error identity; a harness that cannot or will not **spawn** returns the
@@ -289,11 +304,15 @@ on the first line whose identifier equals the handle's `sessionId`, preserve the
 delivered tree root and identity, and refuse a different or absent identifier as
 `harness.session.unknown` after an idempotent kill; a later non-zero exit is
 post-handle evidence. A fresh spawn renders the caller's binding as one `--agent <agent identity>` and
-one `--model`, and renders the supplied `title` as exactly one `--title
-ticket-<REF>`; a resume never carries a title, and the session identifier stays
-adjacent to its own flag so the binding arguments are appended after it. In the
-shipped production composition the agent identity is `pm`, so a fresh spawn
-carries `--agent pm`. It lists
+one `--model`, and renders the supplied `title` verbatim as exactly one `--title
+<title>` — the dispatch profile supplies `ticket-<REF>`, the loop profile
+supplies `ceo-loop-<UTC stamp>`; a resume never carries a title, and the session
+identifier stays adjacent to its own flag so the binding arguments are appended
+after it. In the shipped production composition the dispatch agent identity is
+`pm`, so a fresh dispatch spawn carries `--agent pm`; the loop composition's agent
+identity is `ceo`, so a fresh loop spawn carries `--agent ceo` with the resolved
+seat `--model`. The fresh-spawn title is the exact-identity reap target the
+terminate path matches beside the session id. It lists
 sessions read-only with an explicit cap through the one-shot runner, supports the
 capability-gated `terminate`, sources session-traffic and process liveness,
 carries injected heartbeat-age and token-delta sourced-signal facts, and
