@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-19T19:26:16.328Z }
   system_spec_update: { started: null, completed: 2026-11-19T16:56:32.286Z }
   review_fix: { started: null, completed: 2026-11-19T19:25:45.916Z }
-  quality_gates: { started: null, completed: 2026-11-19T22:38:08.543Z }
+  quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: 2026-11-19T20:09:03.208Z }
   pr_creation: { started: null, completed: 2026-11-19T20:41:15.539Z }
 decisions:
@@ -1360,3 +1360,51 @@ notes:
       can see it."
     type: info
     date: "2026-11-19"
+  - text: "CEO-AUTHORIZED FIX-FORWARD #2 at the `TS tests` CI gate — commit
+      recorded below. HERMETICITY CLASS: the scratch root is created by a test
+      PRELOAD, so no suite depends on another suite's side effect. WHAT CHANGED
+      (two files, plus this plan-scope declaration): `tests/preload.ts` (new)
+      resolves the repository root the way the suites do (`process.cwd()`) and
+      runs `mkdirSync(join(root, "tmp", "tmpdir"), { recursive: true })` once per
+      test process before any suite loads; `bunfig.toml` registers it under
+      `[test]` as `preload = ["./tests/preload.ts"]` while `root = "."` and
+      `pathIgnorePatterns` stay exactly as they were. No per-file guard was added
+      to the ~24 modules that `mkdtemp` beneath the root, and no test assertion,
+      fixture, or scratch prefix was touched. WHY: `tmp/` is git-ignored, so a
+      fresh CI checkout has none, while `tests/fixtures/install/artifact.ts` and
+      `tests/checks/install-lifecycle-e2e.test.ts` (among others) call
+      `mkdtempSync(join(ROOT, "tmp/tmpdir/<prefix>"))` with no guard of their own;
+      they passed locally only when another suite created the root first. That is
+      a scheduling race, and it produced the deterministic CI failure
+      `ENOENT: mkdtemp '.../tmp/tmpdir/gh346-e2e-XXXX'` plus the downstream
+      `artifact.path` TypeError. PROOF: (a) with `tmp/` REMOVED and the aggregate
+      run started from that state (`pnpm check`, isolated HOME and commit-signing
+      override, TMPDIR outside the repo), the scratch root did not exist at start
+      and was created during the run by the preload; every previously failing
+      `gh346-e2e` / `gh346-artifact` case passed; totals 11774 pass / 8 fail, where
+      ALL eight failures are 5-second test timeouts in subprocess-spawning suites
+      under the concurrent sibling workspace's full-suite run (GH-238
+      daemon-watch, TC-BIN-084, TC-DAEMON-121, TC-LOG-003, TC-PROJ-014/015,
+      TC-PROJ-037, TC-SECRET-001, TC-STEER-006) and every one passes in isolation
+      with the same TMPDIR (50 pass and 6 pass, 0 fail). (b) with `tmp/` REMOVED,
+      `bun test tests/checks/install-lifecycle-e2e.test.ts` ALONE passes (1 pass /
+      0 fail) and the test process itself created `tmp/tmpdir`; (c) the CONTROL
+      proves the preload is load-bearing: with the preload line removed and `tmp/`
+      absent, the same single suite fails with exactly the CI error
+      `ENOENT: ... mkdtemp '.../tmp/tmpdir/gh346-e2e-...'`. PRECISE
+      ENVIRONMENT FACT, not hidden: the documented gate form
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` cannot start from a `tmp/`-absent tree,
+      because pnpm's own bootstrap resolves TMPDIR and aborts with
+      `ENOENT ... lstat '<repo>/tmp'` before any test or preload runs; the proof
+      runs therefore used an existing TMPDIR outside the repository
+      (`/home/juliusz/git/.tmp-gh348`), which is the only deviation from the
+      literal command and does not affect the scratch-root result. (d) no ordering
+      dependency surfaced: the preload removed the one class that existed, and no
+      second guard was needed. Plan scope: `tests/preload.ts` and `bunfig.toml`
+      are declared in phase 11 (obligation 11.7) so the commit primitive keeps
+      staging authority; `jaiship plan validate GH-348` -> verdict=valid,
+      tier=full, readyForDevelopment=true and `jaiship lint plan GH-348` -> valid
+      after the declaration. Gate phase: the reopened `quality_gates` gate; no
+      plan-phase behaviour, AC, case, or mutation row changed (41 / 74 / 120)."
+    type: info
+    date: "2026-11-20"

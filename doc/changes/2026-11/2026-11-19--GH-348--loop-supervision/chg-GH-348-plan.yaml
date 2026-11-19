@@ -3027,6 +3027,17 @@ phases:
   #        actual mechanism (the lifecycle-phase-7 one-off reconciliation recorded
   #        in pm-notes), keeping AC-F8-5's "documentation-phase check" scope. This
   #        is the only test-plan edit this phase makes.
+  #   11.7 DELIVERED HERMETICITY FIX (CEO-authorized fix-forward #2; declared at
+  #        plan revision, reported). `tmp/` is git-ignored, so a fresh checkout
+  #        has no scratch root while several suites `mkdtemp` beneath
+  #        `tmp/tmpdir`; the suites that do so without their own guard passed only
+  #        when another suite happened to create it first (a scheduling race, and
+  #        the deterministic CI `TS tests` failure). ONE preload
+  #        (`tests/preload.ts`, registered in `bunfig.toml` under `[test]`)
+  #        creates `tmp/tmpdir` idempotently before any suite loads; no per-file
+  #        guard was added to the ~24 modules that `mkdtemp` beneath the root, and
+  #        no test assertion, fixture, or scratch prefix changed.
+  #
   #   11.6 DELIVERED PIN UPDATE (declared at plan revision, reported): the three
   #        new verdict-tier exports (`artifactAdvancedSince`, `artifactInstantOf`,
   #        `MERGE_TRANSACTION_RECORD_KIND`) need their allowance rows in
@@ -3101,6 +3112,11 @@ phases:
         # DELIVERED PIN UPDATE (obligation 11.6): the three new verdict-tier
         # exports need their executable-allowance rows.
         - tests/structure/content-inventory.test.ts
+        # DELIVERED HERMETICITY FIX (obligation 11.7): the test preload that
+        # creates the git-ignored scratch root once per test process, and the
+        # bunfig registration of it.
+        - tests/preload.ts
+        - bunfig.toml
         - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-test-plan.md
       folders:
         - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision
