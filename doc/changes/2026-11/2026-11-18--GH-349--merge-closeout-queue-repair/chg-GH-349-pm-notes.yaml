@@ -891,3 +891,95 @@ notes:
       assertion loosened). Phase 6 was not started.
     type: info
     date: "2026-11-19"
+  - text: >-
+      Plan phase 6 COMPLETE (implementation commit
+      d1213762dfd5a73c557189775fbe7325e44818ac): the seven queue-integrity
+      properties proved through the production composition, each with one
+      declared-shape control that fails naming the property, and the automatic
+      landed removal proved unchanged across the milestone variants. NO REPAIR
+      WAS REQUIRED: every property proved clean ("property proved clean; no
+      repair"), so the conditional packages/core/src/app/queue.ts was NOT edited
+      and the commit's scopeDrift is empty. SEVEN PROPERTIES AND THEIR CONTROL
+      SHAPES: (1) claim integrity — deliberately broken double (a renewal double
+      appending a second lease record; the production outcomes are same-holder
+      renewal with one record and the same lease id, a stale takeover with one
+      incident naming the previous holder, queue.single-flight naming the live
+      holder, and queue.lease-conflict on a same-repository other-ref hold);
+      (2) park integrity — deliberately broken double (an operator park writer
+      that accepts the battery-only liveness-stall cause; the production path
+      refuses it by name, refuses an out-of-vocabulary cause, requires an expiry
+      for provider-window/peak-window, refuses one for owner-hold, and a removal
+      leaves no active park); (3) reconcile integrity — deliberately broken
+      double (a tracker-read double that reports in-review as done; the
+      production run removes only done/canceled, retains in-progress/in-review,
+      reports the not-found and the 100-entry cap with remainder 5 on 105
+      entries, and --ref narrows to one entry); (4) CRUD integrity — derived
+      comparison (an independent edge-multiset re-derivation; one edge per
+      accepted add, a one-edge dep remove, the add-only cycle check naming the
+      existing path, and no cascade — the dependent survives with byte-identical
+      records and remains held dependency-unobserved); (5) reason-bearing
+      removal — derived comparison (an independent append-sequence comparison on
+      each of the five refusals, each appending zero records, plus the deliberate
+      non-idempotency of the explicit verb against the converging automatic
+      path); (6) single-flight — deliberately broken double (an envelope double
+      that returns the holder only in nested detail and one that returns a stale
+      holder; the production refusal carries the live holder at the envelope-root
+      detail within COMMAND_FAILURE_DETAIL_MAX_CHARS=128); (7)
+      append-position-presence — derived comparison (a sequence-only
+      re-derivation compared with a timestamp-text one under deliberately
+      inverted timestamps, plus a re-declaration special-case breach; the
+      production fold is absent after the removal and present after the earlier-
+      timestamp re-declaration with no special case). Each control is exercised
+      against a real observation captured from the production composition, and a
+      control that returns no divergence is itself a named failure (the M98/
+      TC-F6-012 guard). FOUR properties use derived comparisons and THREE use
+      deliberately broken doubles, so the metric is 7/7 property suites with a
+      declared control shape. The 3/3 named defects (F1, F4, F8) are reported
+      SEPARATELY as phase 7's declared obligation — each carries a defect-named
+      regression there; this phase claims no defect regression and the two counts
+      are never conflated (spec v1.3 F19). PARK RELEASE ORDERING (AC-F6-5,
+      TC-F6-009): a parked entry's removal over a caller-held fence appends the
+      released park record before the removal (lower ledger sequence), makes
+      exactly two appends inside that one fence with no second acquisition, both
+      records stay readable, and a rejection appends nothing. INSERTION-INVARIANT
+      LANDED REMOVAL (AC-F6-4, TC-F6-008): for applied, withheld and gap milestone
+      variants each closeout --apply appends exactly one queue.removal with reason
+      landed, acquires exactly one closeout fence (the removal rides that handle,
+      never a second), keeps the removal a non-step disclosure absent from
+      steps[], keeps 13 steps with no failed step, and keeps every other step
+      outcome equal to the milestone-free baseline; a re-run reports
+      queueRemoval.outcome satisfied with zero duplicate removals and one fence
+      per run. BOUNDS AND SURFACE (AC-F6-3/6): tests/structure/queue-bounds.test.ts
+      pins QUEUE_MAX_ENTRIES=500, QUEUE_RECONCILE_MAX_ENTRIES=100, the four
+      removal reasons, and the 128/160 detail bounds, and exercises the
+      single-flight and lease-conflict detail through the claim composition;
+      tests/structure/queue-surface.test.ts asserts exact-set equality (both
+      directions) over the ten verbs derived from the handler's dispatch arms,
+      the six record kinds, the six store-key prefixes and the ten-flag grammar,
+      with add/remove mutations proving the comparison can fail. No new verb,
+      record kind, state key or flag exists. FILES: 15 staged — seven extended
+      behaviour suites (queue-claim-single-flight, queue-lease-takeover,
+      queue-park-causes-s17, queue-dep-cycle, queue-remove-refusals,
+      queue-reconcile-bounds, queue-graph), the two extended closeout×queue
+      removal suites, the new queue-integrity property suite, the new queue-bounds
+      and queue-surface structure suites, the typed integrity-breaches fixture,
+      the closeout milestone-variant harness, and an additive dispose() helper on
+      tests/fixtures/queue/cli/harness.ts (inside the declared tests/fixtures/queue
+      folder) so the new suites remove their temp roots. GATES (all
+      TMPDIR=$PWD/tmp/tmpdir, all exit 0; logs under
+      tmp/tmpdir/phase6-gates/): queue-integrity 12 pass / 0 fail;
+      queue-bounds+queue-surface 10 pass / 0 fail; the closeout removal pair 11
+      pass / 0 fail; the seven extended suites 43 pass / 0 fail (214s); G1
+      `bun test tests/behaviour tests/golden` 7732 pass / 4 skip / 0 fail across
+      1035 files (917s); G2 `bun test tests/structure` 1854 pass / 0 fail across
+      199 files (36s); G3 `bun test tests/checks` 1342 pass / 0 fail across 146
+      files (267s); G6 `pnpm typecheck` clean (6 packages plus tests/types, 19s);
+      G9 `git diff --check` exit 0 with empty output; G12 `pnpm check` exit 0 —
+      lint and format clean, 11401 pass / 4 skip / 0 fail across 1407 files
+      (1552s), boundaries 482 modules no violations, memory 0 errors, prompt
+      conformance clean, help-guide coverage complete, exports parity clean. The
+      four skips are pre-existing. Phase 7 was NOT started: no defect-named
+      suite, residual pin, corpus record or release obligation was authored, and
+      no phase subcommand was run.
+    type: info
+    date: "2026-11-19"
