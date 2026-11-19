@@ -804,3 +804,90 @@ notes:
       routes/projections, and the three documentation carriers.
     type: risk
     date: "2026-11-19"
+  - text: >-
+      Plan phase 5 COMPLETE (commit dd0567597bf6fb73882101114fb0b349d20eb47d):
+      milestone synchronization as step 12 of 13 and the atomic tenth-operation
+      ripple in one commit. INVENTORY: CLOSEOUT_STEP_IDS 12 to 13 with
+      milestone-sync at position 12 and capsule terminal at 13;
+      closeoutStepDefinitions carries the same 13 ids and labels;
+      CLOSEOUT_OPERATION_NAMES 6 to 7 with close-milestone appended last (the
+      stale "five" comment corrected to seven); the canonical-argument union has
+      seven arms with the one-operand milestone shape; the state-layer
+      validArguments switch gains the seventh arm and a recorded close-milestone
+      operation round-trips through the verified history read;
+      ADAPTER_OPERATIONS 9 to 10 with close-milestone tenth; GitHub supports it
+      with an empty declared-gap list, GitLab declares adapter-not-implemented,
+      Jira provider-unsupported; EXPECTED_SEED_POSTURES reads github 10 / gitlab
+      8 gaps / jira 7 gaps; the transport matrix carries the tenth key;
+      CAPSULE_RESIDUE_KINDS 8 to 9 with milestone-sync-withheld last; the
+      conformance flow is 15 steps with change-lifecycle.close-milestone and the
+      seventh assertion family milestone-state (TRACKER_TRAP_FAMILIES stays six;
+      the 18-cell trap accounting is unchanged); parity is 30 cells with 15 gaps,
+      15 supported pairs, 10 reference cells and 5 intersections, and the
+      register keeps exactly three adjudicated cells; the control column and
+      control coverage are 10 of 10. MILESTONE SEMANTICS: one bounded provider
+      page at CLOSEOUT_MILESTONE_PAGE_SIZE=100 with no follow-up pagination, no
+      poll and no retry; CLOSEOUT_MILESTONE_LOGICAL_CAP=200 is a ceiling the page
+      realizes only up to its size; closure holds only for an open record whose
+      every attached item in that page is done or canceled on a page with no
+      truncation marker; the withheld reasons are the closed five
+      (declared-milestone-missing, attachment-mismatch, closure-withheld,
+      attached-set-truncated, milestone-signal-unavailable) with an unknown
+      state carried in bounded evidence; a declaration of none is a declared
+      gap; the close is read-back verified, issued at most once and never
+      retried; a write that did not land or whose read-back did not observe
+      closed gates at closeout.write.failed exit 2 with no capsule close and
+      converges on retry. THREE PIN KINDS, all in this commit: (A) the eighteen
+      operation-membership pins all move 9 to 10, including both arrays in
+      tests/structure/provider-surface.test.ts (supported operations 9 to 10 and
+      the client Object.keys surface 14 to 16 for readMilestone + closeMilestone)
+      and the exhaustive operationLabel probe; (B) the flow-step count pins move
+      14 to 15 at the registry length, tests/conformance/stateful-double.test.ts,
+      closeout-contract, the two conformance-coverage sites and the two
+      mock-conformance sites; (C) the regenerate-on-change inventories:
+      tests/fixtures/ports/v1-contract-inventory.json (eleven distinct names,
+      twenty-two module-qualified entries as closeout.ts 6 + index.ts 11 +
+      ports.ts 5, set equality both ways, no total pinned) and the parity
+      observation record. GOLDEN DELTA: human.txt and envelope-data.json move
+      12 to 13 step lines (bytes captured from the fixed planner); the
+      member-form closeout golden also moves to 13 steps; every other merge and
+      closeout golden is byte-identical. MOCK: the GitHub tenant appends the
+      close-milestone PATCH write route and its GET read-back route plus the
+      {closed:true} projection; the GitLab and Jira tenants are byte-unchanged.
+      DOC CARRIERS: feature-adapter-reference-behavior.md (transport, capability
+      and failure tables at ten), feature-closeout.md (documented inventory at
+      thirteen), and doc/guides/milestone-management.md (the transaction's
+      closure step and the owner-only acts). CASES: TC-F4-001..015 plus
+      TC-SYNC-002, TC-SYNC-003, TC-SYNC-007, TC-SYNC-008 and TC-SYNC-009, each
+      with its paired control (the close-write count, the open-item flip, the
+      unknown-state evidence comparison, the GH-349 M4 withheld outcome, the
+      ten-of-ten control coverage). OQ-1: the scoped PDR-0005 reading is
+      implemented and the write half survives, as recorded. GATES (all
+      TMPDIR=$PWD/tmp/tmpdir): the phase-5 targeted set 638 pass / 0 fail across
+      40 files; bun test tests/conformance 321 pass / 0 fail; bun test
+      tests/structure 1818 pass / 0 fail across 193 files; bun test tests/checks
+      1264 pass / 0 fail across 135 files; bun test tests/behaviour tests/golden
+      7660 pass / 0 fail across 1028 files (874s); pnpm typecheck clean;
+      scripts/.tests/test-doc-distribution.sh OK (96 in-scope docs, no drift);
+      git diff --check 0; pnpm check exit 0 — lint and format clean, 11215 pass /
+      4 skip / 0 fail across 1383 files (1377s), boundaries 466 modules / 1469
+      dependencies no violations, memory records=3 areas=8 errors=0 advisories=0,
+      prompt-conformance 5 prompts clean, help-guide-coverage all covered,
+      exports-parity 5 publishables. One earlier pnpm check run hit a transient
+      5 s timeout in tests/behaviour/identity-override.test.ts under full-suite
+      load; that suite passes in isolation (9 pass) and the re-run was green.
+      SCOPE NOTES, reported not silent: three related files sit outside phase
+      5's declared list and the commit's scopeDrift names exactly them —
+      packages/testkit/src/conformance/adapters.ts (the GitHub conformance client
+      must expose readMilestone and closeMilestone, or the appended flow step
+      fails closed), tests/fixtures/providers/conformance/parity/observation-record.json
+      (a regenerate-on-change gate input; without the github/close-milestone
+      observation every parity gate call reports a missing observation), and
+      tests/fixtures/cross-repository/goldens/closeout-members-applied.json
+      (the member-form closeout renders the same thirteenth step; the plan named
+      only two closeout goldens). One plan-union mechanical edit:
+      tests/structure/merge-classification-conformance.test.ts's slice marker
+      follows the production rename closeout to closeoutBase (same region, no
+      assertion loosened). Phase 6 was not started.
+    type: info
+    date: "2026-11-19"
