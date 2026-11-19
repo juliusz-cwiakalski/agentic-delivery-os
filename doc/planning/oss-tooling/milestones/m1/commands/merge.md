@@ -2,7 +2,9 @@
 
 Status: Delivered M1-S4 (GH-225); the production composition, the dry-run
 report, and the declared emittable failure set are delivered by M2-S16
-(GH-293). Implemented contract; scenarios SC-M1-01..04.
+(GH-293); the provider-side landing path, the mergeability refusal taxonomy,
+and the not-green required-job attribution are delivered by M4-S11 (GH-349).
+Implemented contract; scenarios SC-M1-01..04.
 
 ## NAME
 
@@ -26,15 +28,38 @@ Then one bounded post-verification probe re-reads the work item, one check-run
 page on the head, and the request detail.
 
 With fresh evidence the transaction authorizes any declared waiver, applies
-the declared-gate verdicts plus the probe, performs at most one rebase-refresh
-when the request is behind its base, lands one squash commit, verifies the
-landing (squash SHA on the base, request merged), and records the transaction.
+the declared-gate verdicts plus the probe, resolves the request's mergeability
+into one declared outcome, and lands through exactly one guarded call to the
+closed `merge-delivery-request` adapter operation at the head the envelope
+verified. The squash subject is the request's provider-asserted title verbatim,
+or `merge(<ref>): squash <sourceRef>` when the provider asserts none; the
+message is the fixed trailer `Landed by the delivery lifecycle merge primitive.`
+The outcome is recorded with the provider-asserted merge commit as its landing
+identity.
 
-A recorded contained landing replays `result=merged` at exit 0 with the same
-squash SHA, no git mutation, and no duplicate record. A clean pre-mutation
-abort never mutates and reports retryable `merge.transaction-aborted`; a fired
-but unverifiable landing refuses `merge.landing-unverified` with consequence
+A recorded landing replays `result=merged` at exit 0 with the same identity, no
+landing call, and no duplicate record. A clean pre-mutation abort never mutates
+and reports retryable `merge.transaction-aborted`; a fired landing whose provider
+truth was not observed refuses `merge.landing-unverified` with consequence
 `unknown` and is never re-landed by a re-run.
+
+The refusal decision is total over the observed mergeability plus absence. A
+conflicting request refuses `merge.sync-required` with reason `dirty` and issues
+no landing call. A `not-mergeable` request is offered to the provider once, and
+its refusal is classified by one bounded re-read: a checks posture over the
+effective gate set's declared `required-ci-job` entries yields
+the effective required-job row, and any other reading — including one whose only
+non-green job the gate set does not declare — yields `merge.sync-required`
+with reason `behind-unconfirmed`. An unknown or absent mergeability gets exactly
+one exact-head re-read; a still-unknown answer refuses
+`merge.mergeability-unknown`. No path performs an internal rebase or mutates the
+verified head; `merge.rebase-conflict` stays declared and is reachable from no
+command path.
+
+`landing=sha-on-base` reports `yes` or `no` only when a local containment read
+answers for the provider's merge commit, and `unknown` otherwise — which is the
+normal production answer after a provider landing, because the merge does not
+fetch.
 
 The effective gate set is configuration data (`merge.gates`, versioned, with
 every built-in retained); the freshness bound is `merge.gate-freshness`. Owner
@@ -66,7 +91,7 @@ declaration's authorization verdict and never appends a waiver record.
 
 Text: the bounded merged summary opens with the identity line
 `<binary> merge <ref>  merged`, then `result=merged`, `change=`,
-`squash=`, `landing=sha-on-base:<yes|no> request-state=<state>`,
+`squash=`, `landing=sha-on-base:<yes|no|unknown> request-state=<state>`,
 `refresh=attempts=<n> outcome=<outcome>`, `waivers=`, `post-landing=`, and
 `gates=<passed>/<total> passed` (`gates-omitted=+N` when the record list was
 clamped), followed by one `gate <id> <verdict> reason=<reason>` line per
@@ -81,7 +106,7 @@ condition with inline evidence go to stderr (`<binary>:
 evidence lines).
 
 Envelope `data` of a merged transaction: `result` (`merged`), `changeRef`,
-`squashSha`, `replayed`, `landing` (`shaOnBase`, `requestState`), `refresh`
+`squashSha`, `replayed`, `landing` (`shaOnBase` as `boolean | "unknown"`, `requestState`), `refresh`
 (`attempts`, `outcome`), `waiverRefs[]`, `postLanding[]` (`id`, `status`),
 `gates[]` (`id`, `verdict` in `pass`/`fail`/`unknown`, `reason`, `citation`),
 and `gatesOmitted`.
@@ -96,9 +121,9 @@ envelope itself is `schemaVersion` `delivery.result.v1`, `runId`, `exitCode`,
 
 | Code | Meaning |
 |---|---|
-| `0` | The squash landing was verified and recorded, a recorded contained landing replayed, or the dry-run verdict was produced |
-| `1` | Refused: a named gate, freshness, waiver, owner-gate, rebase, a clean pre-mutation abort, a grammar or configuration refusal, an absent request or work item, or a rejected credential |
-| `2` | A platform or state failure: non-consumable gate-verification state, an unverified landing, or an unreachable provider |
+| `0` | The provider-asserted landing was recorded, a recorded landing replayed, or the dry-run verdict was produced |
+| `1` | Refused: a named gate, freshness, waiver, owner-gate, sync-required (dirty or behind-unconfirmed), a clean pre-mutation abort, a grammar or configuration refusal, an absent request or work item, or a rejected credential |
+| `2` | A platform or state failure: non-consumable gate-verification state, an unverified landing, an undecided mergeability, or an unreachable provider |
 
 ## EXAMPLES
 
@@ -116,7 +141,7 @@ $ <binary> merge GH-301 --json
     "changeRef": "GH-301",
     "squashSha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
     "replayed": false,
-    "landing": { "shaOnBase": true, "requestState": "merged" },
+    "landing": { "shaOnBase": "unknown", "requestState": "merged" },
     "refresh": { "attempts": 0, "outcome": "not-attempted" },
     "waiverRefs": [],
     "postLanding": [
@@ -131,6 +156,10 @@ $ <binary> merge GH-301 --json
   }
 }
 ```
+
+`squashSha` is the provider's merge commit. `shaOnBase` is `"unknown"` here
+because the checkout holds no object for that identity; a `yes`/`no` answer
+requires a local containment read that can resolve it.
 
 Dry run that lands nothing:
 
@@ -152,11 +181,26 @@ $ <binary> merge GH-302
 summary: result=refused; condition=merge.gate.ci-green.failed
 gate=ci-green
 new-red-jobs=ts-tests
+attribution=probe
 remediation=Resolve the named merge-applicable gate evidence and re-run `verify gates`, then retry the merge.
 ```
 
-(A refusal is exit 1; the condition, the named gate, and the evidence ride in
-`error.summary` on the envelope and on stderr in human mode.)
+A request that must be synced before it can land:
+
+```
+$ <binary> merge GH-303
+<binary>: merge.sync-required
+summary: result=refused; condition=merge.sync-required
+recorded-sha=9f21c0e current-sha=9f21c0e
+request-state=conflicting
+evidence=dirty
+remediation=Update the delivery branch onto the base by the normal path, re-run `verify gates`, then retry the merge; a refusal that persists after the sync means the protection rule is the cause.
+```
+
+(A refusal is exit 1; the condition, the named gate or reason, and the evidence
+ride in `error.summary` on the envelope and on stderr in human mode. A
+required-job finding also names its attribution: `recorded` when the persisted
+verdict already reported the job not green, `probe` when the probe observed it.)
 
 ## ERRORS
 
@@ -173,18 +217,25 @@ carries the resolved row's `code`, `category`, `retryable`, `consequence`, and
 | `merge.waiver-unauthorized` | user | no | not_landed | user-validation | 1 |
 | `merge.owner-gate-override-without-waiver` | user | no | not_landed | user-validation | 1 |
 | `merge.rebase-conflict` | user | no | not_landed | user-validation | 1 |
+| `merge.sync-required` | user | no | not_landed | user-validation | 1 |
 | `merge.transaction-aborted` | user | yes | not_landed | user-validation | 1 |
 | `merge.state-unverified` | platform | no | not_landed | platform-provider | 2 |
 | `merge.landing-unverified` | platform | no | unknown | platform-provider | 2 |
+| `merge.mergeability-unknown` | platform | yes | not_landed | platform-provider | 2 |
 
 `merge.gate.<gate-id>.failed` is the one declared open-slot family
 (`merge.gate.` plus the gate id plus `.failed`) and names the gate whose
-evidence did not pass. `merge.gates-stale` covers an aged, head-mismatched, or
-gate-set-mismatched record and a refresh that changed the head; its evidence
-carries the age, the bound, the SHAs, the set delta, and any probe observation.
-`merge.owner-gate-override-without-waiver` names the gate and the declared
-override path. `merge.rebase-conflict` names the conflicting paths and has no
-force variant.
+evidence did not pass; a not-green required-job finding on that family carries
+the `recorded` or `probe` attribution. `merge.gates-stale` covers an aged,
+head-mismatched, or gate-set-mismatched record and a head that moved before the
+landing; its evidence carries the age, the bound, the SHAs, the set delta, and
+any probe observation. `merge.sync-required` carries the closed reason pair
+`dirty` \| `behind-unconfirmed` and instructs a sync-and-re-verify rather than an
+internal rebase. `merge.mergeability-unknown` reports that the provider has not
+decided after one exact-head re-read and is retryable. `merge.owner-gate-override-without-waiver`
+names the gate and the declared override path. `merge.rebase-conflict` stays
+declared and reserved: no delivered command path emits it, and no force variant
+exists.
 
 The composition's emittable set is published as
 `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive over its refusal branches and

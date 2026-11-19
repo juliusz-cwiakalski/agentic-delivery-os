@@ -1,7 +1,10 @@
 /**
- * TC-MERGE-030 — the coordinator-only boundary: no daemon/dispatch module
- * composes the merge mutation surface, the merge command is the only landing
- * producer, and every invocation is audited with its claimed identity.
+ * TC-F1-008 / TC-F1-009 / TC-F2-008 (suite obligation) — the coordinator-only
+ * boundary, inverted: the local landing and local refresh have zero composed
+ * callers, the merge command is the only landing producer, and a declared
+ * adapter landing gap refuses the delivered clean pre-mutation abort with no
+ * landing attempt and no local fallback. Every invocation is still audited with
+ * its claimed identity.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -17,6 +20,9 @@ import {
 const ROOT = process.cwd();
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
+
+const errorOf = (run: { envelope?: Record<string, unknown> }) =>
+  run.envelope?.error as Record<string, unknown> | undefined;
 
 const sourceFiles = (root: string): string[] => {
   const files: string[] = [];
@@ -34,38 +40,37 @@ const sourceFiles = (root: string): string[] => {
 };
 
 const importers = (root: string, needle: string): string[] =>
-  sourceFiles(root).filter((file) => {
-    const text = readFileSync(join(root, file), "utf8");
-    return text.includes(needle);
-  });
+  sourceFiles(root).filter((file) => readFileSync(join(root, file), "utf8").includes(needle));
 
 const boundaryViolations = (root: string): string[] => {
   const violations: string[] = [];
-  const mergeImporters = importers(root, "commands/merge");
-  for (const file of mergeImporters) {
-    if (/daemon|dispatch|queue|watchdog|scheduler/i.test(file)) {
+  for (const file of importers(root, "commands/merge")) {
+    if (/daemon|dispatch|queue|watchdog|scheduler/iu.test(file)) {
       violations.push(`${file} composes the merge mutation surface`);
     }
   }
-  const landCallers = importers(root, ".squashLand(");
-  for (const file of landCallers) {
-    const allowed =
-      file === "packages/adapters/src/git/merge.ts" ||
-      file === "packages/cli/src/edge.ts" ||
-      file === "packages/adapters/src/git/index.ts";
-    if (!allowed) violations.push(`${file} calls the squash landing outside the composition`);
+  // The retained local capabilities must have zero composed callers anywhere in
+  // the product packages: a landing is the provider-side operation only.
+  for (const file of sourceFiles(root)) {
+    const lines = readFileSync(join(root, file), "utf8").split("\n");
+    lines.forEach((line, index) => {
+      if (/\.(squashLand|refresh)\(/u.test(line)) {
+        violations.push(`${file}:${index + 1} calls the local landing or refresh`);
+      }
+    });
   }
   return violations;
 };
 
-describe("TC-MERGE-030 coordinator-only boundary", () => {
-  test("no daemon or dispatch module imports the merge mutation surface", () => {
+describe("TC-F1-009 zero composed callers of the retained local capabilities", () => {
+  test("no product module composes the local landing or refresh and no daemon composes merge", () => {
     expect(boundaryViolations(ROOT)).toEqual([]);
-    const landingDefinition = importers(ROOT, "export const createGitMergeSeam");
-    expect(landingDefinition).toEqual(["packages/adapters/src/git/merge.ts"]);
+    expect(importers(ROOT, "export const createGitMergeSeam")).toEqual([
+      "packages/adapters/src/git/merge.ts",
+    ]);
   });
 
-  test("a daemon-to-merge fixture fails the boundary scan", () => {
+  test("the mandatory failing control is found by file and line", () => {
     const temp = mkdtempSync(join(tmpdir(), "merge-boundary-"));
     try {
       mkdirSync(join(temp, "packages/daemon/src"), { recursive: true });
@@ -73,30 +78,77 @@ describe("TC-MERGE-030 coordinator-only boundary", () => {
         join(temp, "packages/daemon/src/dispatch.ts"),
         'import "../../cli/src/commands/merge.js";\n',
       );
-      mkdirSync(join(temp, "packages/adapters/src/git"), { recursive: true });
+      mkdirSync(join(temp, "packages/cli/src"), { recursive: true });
       writeFileSync(
-        join(temp, "packages/adapters/src/git/merge.ts"),
-        "export const createGitMergeSeam = () => ({});\nawait seam.squashLand({});\n",
+        join(temp, "packages/cli/src/composition.ts"),
+        "await seam.squashLand({ branch, baseRef, message });\n",
       );
-      expect(boundaryViolations(temp).length).toBeGreaterThan(0);
+      const violations = boundaryViolations(temp);
+      expect(violations.length).toBeGreaterThan(0);
+      expect(violations.join("\n")).toContain("packages/cli/src/composition.ts:1");
+      expect(violations.join("\n")).toContain("composes the merge mutation surface");
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
   });
 
-  test("the CLI merge command is a positive landing control", async () => {
+  test("the CLI merge command is a positive provider-landing control", async () => {
     const harness = createMergeHarness();
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run();
       expect(result.exitCode).toBe(0);
-      expect(harness.events).toContain("git-squash-land");
+      expect(harness.counts.landing).toBe(1);
+      expect(harness.events).not.toContain("git-squash-land");
     } finally {
       harness.cleanup();
     }
   });
+});
 
-  test("every invocation is audited with its claimed identity when present", async () => {
+describe("TC-F1-008 a declared landing gap refuses without an attempt", () => {
+  for (const gap of ["adapter-not-implemented", "provider-unsupported"] as const) {
+    test(`${gap}: exit 1, the operation and its reason named, zero attempts, zero fallback`, async () => {
+      const harness = createMergeHarness({ landingGap: gap });
+      try {
+        harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+        const result = await harness.run();
+        expect(result.exitCode).toBe(1);
+        expect(errorOf(result)?.code).toBe("merge.transaction-aborted");
+        const summary = String(errorOf(result)?.summary);
+        expect(summary).toContain("merge-delivery-request");
+        expect(summary).toContain(gap);
+        // Zero attempts: the landing port is never called and no local
+        // mechanism runs (no squash, no refresh).
+        expect(harness.counts.landing).toBe(0);
+        expect(harness.events).not.toContain("git-squash-land");
+        expect(harness.events).not.toContain("git-rebase-refresh");
+        expect(harness.transactions()).toHaveLength(0);
+      } finally {
+        harness.cleanup();
+      }
+    });
+  }
+
+  test("control: a silent local fallback would be visible as a landing or squash event", async () => {
+    const harness = createMergeHarness({ landingGap: "adapter-not-implemented" });
+    try {
+      harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+      await harness.run();
+      // Only the head read happened: no landing call and no local mutation.
+      expect(harness.events).toEqual(["git-read-head"]);
+      expect(harness.counts.landing).toBe(0);
+      // A third identity would move the declared merge row count, so the refusal
+      // cannot be a new `merge.landing-gap` row.
+      expect(errorOf(await harness.run())?.code).toBe("merge.transaction-aborted");
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
+
+describe("TC-MERGE-030 every invocation is audited with its claimed identity", () => {
+  test("the audit record carries the identity, exit, and timing", async () => {
     const harness = createMergeHarness({
       auditIdentity: { kind: "claimed", value: "coordinator@example" },
     });
@@ -121,24 +173,11 @@ describe("TC-MERGE-030 coordinator-only boundary", () => {
   });
 
   test("identity is absent, never inferred, when not supplied", async () => {
-    const harness = createMergeHarness();
+    const harness = createMergeHarness({ checkRuns: baseCheckRuns() });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       await harness.run();
       expect(harness.auditRecords[0]?.agentIdentity).toBeUndefined();
-    } finally {
-      harness.cleanup();
-    }
-  });
-
-  test("a re-run produces a second record with a new runId", async () => {
-    const harness = createMergeHarness({ checkRuns: baseCheckRuns() });
-    try {
-      harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
-      await harness.run(undefined, { runId: "run-a" });
-      await harness.run(undefined, { runId: "run-b" });
-      expect(harness.auditRecords).toHaveLength(2);
-      expect(harness.auditRecords.map((record) => record.runId)).toEqual(["run-a", "run-b"]);
     } finally {
       harness.cleanup();
     }

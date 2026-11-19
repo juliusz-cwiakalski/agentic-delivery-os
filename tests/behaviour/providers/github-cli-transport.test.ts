@@ -20,8 +20,8 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
+import { isAbsolute, join } from "node:path";
 import { ADAPTER_OPERATIONS } from "@delivery-os/core/contracts";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
@@ -110,7 +110,8 @@ const statusBlock = (status: number, body: unknown): string =>
   `HTTP/2.0 ${status} OK\ncontent-type: application/json\n\n${JSON.stringify(body)}\n`;
 
 describe("TC-CLI-001 the transport matrix covers every closed operation", () => {
-  test("nine of nine operations declare gh preferred and api fallback, with no extras", () => {
+  test("ten of ten operations declare gh preferred and api fallback, with no extras", () => {
+    expect(Object.keys(GITHUB_TRANSPORT_MATRIX)).toHaveLength(10);
     expect(Object.keys(GITHUB_TRANSPORT_MATRIX).sort()).toEqual([...ADAPTER_OPERATIONS].sort());
     for (const operation of ADAPTER_OPERATIONS) {
       expect(GITHUB_TRANSPORT_MATRIX[operation]).toEqual({ preferred: "gh", fallback: "api" });

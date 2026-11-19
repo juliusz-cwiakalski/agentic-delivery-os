@@ -21,8 +21,10 @@ All decision records for this repository, ordered by type and number.
 | [ADR-0009](ADR-0009-release-model-v1.md) | ADR | Release Model v1 | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0010](ADR-0010-session-admin-port-mutating-contract.md) | ADR | Separate Mutating `SessionAdminPort` from the Read-Only `SessionStore` (ADR-0003 Reconciliation) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0011](ADR-0011-canonical-memory-record-schema.md) | ADR | One Canonical Agent-Memory Record Schema — Required Spine, Closed Optional Set, Dispositions, and a One-Way Reconciliation Direction | Proposed | 2026-11-15 | Juliusz Ćwiąkalski |
+| [ADR-0012](ADR-0012-provider-side-merge-landing-path.md) | ADR | Provider-Side Landing Is the Lifecycle Merge Path — One Mechanism, Exact-Head Guards, and Typed Sync-Required Outcomes | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
+| [ODR-0005](ODR-0005-closeout-milestone-synchronization.md) | ODR | Milestone Synchronization in `closeout --apply` — Attachment Verification and Exit-Review-Gated Closure | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
@@ -82,8 +84,9 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) | TDR | In-Process Bounded Restart Loop — Clean Exit Terminal, Stall-Only Restart, One Attempt Record per Terminal Dispatch, and the Delivered `lane.restart-budget` Bound | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0054](TDR-0054-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0055](TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0056](TDR-0056-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0055](TDR-0055-phase-truth-registry-fold-mirror.md) | TDR | One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -93,6 +96,6 @@ Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their o
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 
-Decisions TDR-0055 and TDR-0056 are the binding design of change GH-348; their owner
+Decisions TDR-0056 and TDR-0057 are the binding design of change GH-348; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.

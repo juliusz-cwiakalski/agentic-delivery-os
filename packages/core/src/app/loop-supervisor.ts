@@ -2,7 +2,7 @@
  * The loop supervision cycle (GH-348 F-1, F-2, F-6; DM-1, DM-3, DM-4).
  *
  * A COMPOSITION PROFILE over the delivered supervision engine under the
- * distinct identity `loop-main` (TDR-0055): it reuses the delivered append-only
+ * distinct identity `loop-main` (TDR-0056): it reuses the delivered append-only
  * instance lease and its claim decision, the delivered restart budget, stuck
  * record pair, and identity-verified kill primitives, plus the delivered
  * per-identity state read. It reimplements none of them, and it never imports the

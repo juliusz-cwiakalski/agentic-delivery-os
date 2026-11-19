@@ -12,6 +12,10 @@ import {
   seedQueueEntry,
   seedQueueLease,
 } from "../fixtures/closeout/queue-removal";
+import {
+  createCloseoutRemovalVariantHarness,
+  seedVariantQueueEntry,
+} from "../fixtures/queue/closeout-removal-variants";
 
 const WORK_ITEM_REF = CLOSEOUT_WORK_ITEM_REF;
 
@@ -73,6 +77,52 @@ describe("TC-QLC-023 fail-open under a live lease", () => {
       expect(stepsFailed).toEqual([]);
     } finally {
       harness.dispose();
+    }
+  });
+});
+
+/* ---------- TC-F6-008 a re-run converges with zero duplicate removal -------- */
+
+describe("TC-F6-008 the automatic removal stays idempotent across the milestone variants", () => {
+  test("each variant removes once, a re-run adds no removal and no second fence", async () => {
+    for (const variant of ["applied", "withheld", "gap"] as const) {
+      const harness = createCloseoutRemovalVariantHarness({
+        label: `idempotent-${variant}`,
+        variant,
+      });
+      try {
+        seedVariantQueueEntry(harness, CLOSEOUT_WORK_ITEM_REF);
+        const first = await harness.run();
+        expect(first.ok, `${variant} first run`).toBe(true);
+        if (!first.ok) continue;
+        expect(first.data.queueRemoval).toEqual({
+          outcome: "removed",
+          ref: CLOSEOUT_WORK_ITEM_REF,
+          reason: "landed",
+        });
+        const afterFirst = readQueueRemovals(harness.store);
+        expect(afterFirst.ok).toBe(true);
+        if (!afterFirst.ok) continue;
+        expect(afterFirst.records).toHaveLength(1);
+        const fencesAfterFirst = harness.writeLog.fences;
+
+        const second = await harness.run();
+        expect(second.ok, `${variant} second run`).toBe(true);
+        if (!second.ok) continue;
+        expect(second.data.queueRemoval).toEqual({
+          outcome: "satisfied",
+          ref: CLOSEOUT_WORK_ITEM_REF,
+        });
+        expect(second.data.steps.filter((step) => step.outcome === "failed")).toEqual([]);
+        const afterSecond = readQueueRemovals(harness.store);
+        expect(afterSecond.ok).toBe(true);
+        if (!afterSecond.ok) continue;
+        expect(afterSecond.records).toHaveLength(1);
+        // Exactly one fence per run: no second acquisition for the removal.
+        expect(harness.writeLog.fences - fencesAfterFirst).toBe(1);
+      } finally {
+        harness.dispose();
+      }
     }
   });
 });

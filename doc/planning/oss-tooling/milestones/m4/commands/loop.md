@@ -88,6 +88,6 @@ Neither reads the other, so each path's own stop and reset governs that path.
 
 ## See also
 
-- `TDR-0055` — the loop as a profile of the coordinator engine
-- `TDR-0056` — the durable stop as a state-ledger record
+- `TDR-0056` — the loop as a profile of the coordinator engine
+- `TDR-0057` — the durable stop as a state-ledger record
 - `doc/spec/features/feature-loop-supervision.md` — the current-truth page

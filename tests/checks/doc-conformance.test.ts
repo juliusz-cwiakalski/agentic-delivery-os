@@ -720,42 +720,55 @@ const GH346_ROWS: readonly PageClaimRow[] = [
     stale: [
       "The table declares 149 machine identities",
       "The table declares 153 machine identities",
+      "The table declares 164 machine identities",
       "allowlist of 65 declared identities",
+      "allowlist of 66 declared identities",
     ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 164 machine identities",
-      "allowlist of 66 declared identities",
+      "The table declares 167 machine identities",
+      "allowlist of 68 declared identities",
       "the eleven `install` rows",
       "the thirteen `harness` rows",
+      "the nine concrete `merge` rows",
     ],
   },
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
-    stale: ["149 identities", "153 identities", "65-entry allowlist"],
-    required: ["164 identities", "66-entry allowlist"],
+    stale: [
+      "149 identities",
+      "153 identities",
+      "164 identities",
+      "65-entry allowlist",
+      "66-entry allowlist",
+    ],
+    required: ["167 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
     stale: [
       "149 entries",
       "153 entries",
+      "164 entries",
+      "163 delivered rows",
       "BASELINE_ROWS.length + 115",
       "BASELINE_ROWS.length + 119",
+      "BASELINE_ROWS.length + 130",
+      "66 allowlisted two-segment codes",
       "family count (25)",
     ],
     required: [
-      "164 entries",
-      "163 delivered rows",
-      "66 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 130",
+      "167 entries",
+      "166 delivered rows",
+      "68 allowlisted two-segment codes",
+      "BASELINE_ROWS.length + 133",
       "family count (26)",
     ],
   },
   {
     page: "doc/spec/features/feature-supervise.md",
-    stale: ["65-member allowlist", "26th family"],
-    required: ["66-member allowlist", "25th family"],
+    stale: ["65-member allowlist", "66-member allowlist", "26th family"],
+    required: ["68-member allowlist", "25th family"],
   },
   {
     page: "doc/spec/features/feature-branding-seam.md",
@@ -871,10 +884,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("164 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("167 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 164 identities",
+      "missing required phrase: 167 identities",
     );
   });
 

@@ -209,6 +209,7 @@ export const CAPSULE_RESIDUE_KINDS = [
   "worktree-retained",
   "session-attribution-gap",
   "capsule-cap-reached",
+  "milestone-sync-withheld",
 ] as const;
 
 /** The four merged-diff marker kinds (Appendix C). */

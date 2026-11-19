@@ -8,7 +8,7 @@ owners: ["engineering"]
 summary: "Operating guide for engine-first delivery: the daily routine, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
   related_changes: ["GH-293", "GH-348"]
-  related_decisions: ["TDR-0031", "TDR-0055", "TDR-0056"]
+  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057"]
 ---
 
 # Engine-first delivery operations

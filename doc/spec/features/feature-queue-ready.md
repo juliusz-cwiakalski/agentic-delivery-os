@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The read-only queue-ready ready-set command: the `queue ready` grammar and canonical-ref bounds, the six closed tri-state readiness conditions and their declared sources, the all-six-satisfied ready rule with named blocking conditions, provider-agnostic identity resolution and the numeric suffix bridge, close association and classification by the repository branch convention, deterministic class ranking, the six-group bounded reason vocabulary, the nine provider-derived output caps with the single `value-clamped` marker and deterministic byte-budget reduction, the bounded `delivery.queue-ready.v1` machine payload and human digest, the read-only and credential boundary posture, error-identity reuse, the dispatch claim's in-claim per-ref verdict beside the unchanged sibling `queue claim` renewal and repository exclusivity, and the fixture corpus plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-176", "GH-183", "GH-238", "GH-338", "GH-347"]
+  related_changes: ["GH-176", "GH-183", "GH-238", "GH-338", "GH-347", "GH-349"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003", "TDR-0032", "TDR-0050"]
   contracts:
     - "packages/core/src/contracts/queue-ready.ts"
@@ -301,6 +301,8 @@ The contracts and domain import only the shared contracts and their own modules.
 The default suite is fixture-driven with zero live network calls. Every condition state, close class, ranking rule, provider-derived cap, truncation flag, and worked example is committed under `tests/fixtures/queue-ready/**`, and the corpus meta-check requires complete coverage of the derivation matrix, the close classes, the named source failures, the identity rows, and the cap rows. Golden payload and human bytes pin deterministic output.
 
 An opt-in live smoke runs against this repository with a resolvable credential and asserts structural invariants only: one valid payload, six conditions per candidate, at least one known candidate observed through the identity rule, no ready candidate with a non-satisfied condition, no `merge-ready` without observed approval, no provider evidence record or availability claim using `available`, the declared bounds, and no secrets. It never pins volatile item counts. The live smoke is enabled only by the test-harness-only live switch, read only under `tests/**` and enabled only when its value is exactly `1`; it is never a production or contract constant, configuration key, payload or evidence field, or human-digest token, and it is excluded from the aggregate check. A bounded, secret-free live evidence artifact may be attached to the pull request but is not committed by default.
+
+The readiness conditions this page declares are also exercised by the scheduling engine's queue-integrity property suites, which prove the claim, park, reconcile, CRUD, reason-bearing removal, single-flight, and append-position properties with declared controls. Those proofs add no readiness condition, cap, reason, or output field, and this surface's behaviour is unchanged by them; the property set and its controls are described in [Scheduling Engine](feature-scheduling-engine.md).
 
 ## Operational & Support
 

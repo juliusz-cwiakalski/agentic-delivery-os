@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The watchdog check family: `watchdog preflight <lane>` refuses dirty or non-base checkouts with named evidence and mutates nothing, `watchdog teardown <lane>` restores the lane's base checkout on every caller-invoked exit path and reports each action while verifying that agent-memory publications are committed or preserved (never discarded), and `watchdog liveness <lane>` evaluates adapter-sourced heartbeat age, session traffic, and token delta through the neutral harness-liveness bridge: a fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`, `progressing` is a success verdict at exit `0`, and genuinely absent sources keep `watchdog.signals-absent` at exit `2` (unknown, never guessed; CPU is never a signal). A `watchdog` domain kind joins the closed error-table union with exactly four identities, every probe projects through the v1 envelope and the `{0, 1, 2}` exit taxonomy, and the surface checks rather than runs."
 links:
   related_changes: ["GH-221", "GH-235", "GH-238", "GH-295", "GH-348"]
-  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0055", "TDR-0056"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0056", "TDR-0057"]
   contracts:
     - "packages/core/src/contracts/watchdog.ts"
     - "packages/core/src/contracts/harness.ts"

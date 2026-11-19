@@ -4,7 +4,15 @@
  * guard's coverage of the new contracts files.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
@@ -19,9 +27,11 @@ import {
   BOARD_COLLECTOR_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
+  ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
+  PM_NOTES_LINT_CODES,
 } from "../../packages/core/src/contracts/index";
 import { scan, scopedFiles } from "../../scripts/checks/ambient-globals";
 
@@ -81,6 +91,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.state-unverified",
   "merge.landing-unverified",
   "merge.transaction-aborted",
+  // GH-349 adds the two merge sync/mergeability rows; they are kind-first
+  // two-segment codes, so they join the exact allowlist with no wildcard.
+  "merge.sync-required",
+  "merge.mergeability-unknown",
   // GH-240 pins the capsule-invalid identity exactly; it is a two-segment code.
   "closeout.capsule-invalid",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
@@ -540,13 +554,14 @@ const LINT_ROWS = [
 ] as const;
 
 describe("TC-SYNC-007 lint rows are exact and additive", () => {
-  test("lint is a declared multi-row kind with the five conformance rows plus the unreadable row", () => {
+  test("lint is a declared multi-row kind with the five conformance rows, the unreadable row, and the divergence row", () => {
     expect(DOMAIN_KINDS).toContain("lint");
     const lint = entries.filter((entry) => entry.domainKind === "lint");
-    expect(lint).toHaveLength(6);
+    expect(lint).toHaveLength(7);
     expect(lint.map((entry) => entry.code)).toEqual([
       ...LINT_ROWS.map(([code]) => code),
       "lint.document.unreadable",
+      "lint.phases.divergent",
     ]);
     for (const [code, hint, summary] of LINT_ROWS) {
       expect(classifyDomainKind("lint", code)).toMatchObject({
@@ -836,17 +851,17 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
-    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "doctor")).toHaveLength(1);
-    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "blockers")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "spend")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(164);
+    expect(entries).toHaveLength(167);
   });
 });
 
@@ -922,7 +937,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(164);
+    expect(entries).toHaveLength(167);
     expect(db).toHaveLength(4);
   });
 
@@ -1156,7 +1171,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(164);
+    expect(entries).toHaveLength(167);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1214,9 +1229,9 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
-    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(7);
-    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(5);
   });
@@ -1430,7 +1445,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
   });
 });
 
@@ -1796,7 +1811,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(164);
+    expect(entries).toHaveLength(167);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1889,7 +1904,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(163);
+    expect(delivered).toHaveLength(166);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1908,7 +1923,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("164 identities");
+    expect(doc).toContain("167 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2333,7 +2348,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
       "ceremony.declaration.invalid",
       "ceremony.note-invalid",
     ]);
-    expect(entries).toHaveLength(164);
+    expect(entries).toHaveLength(167);
   });
 
   test("both rows carry the declared class and project to exit 1", () => {
@@ -2353,7 +2368,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
   test("the two-segment note identity is on the exact allowlist", () => {
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.note-invalid")).toBe(true);
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.declaration.invalid")).toBe(false);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
   });
 
   test("a kind-only ceremony lookup is contained by fallback.internal", () => {
@@ -2369,7 +2384,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
     expect(doc).toContain(
       "The `ceremony` kind carries exactly the two additive ceremony-runner identities",
     );
-    expect(doc).toContain("164 machine identities");
+    expect(doc).toContain("167 machine identities");
   });
 });
 
@@ -2403,6 +2418,17 @@ const LEGACY_TOKENS = [
   // The pre-change entry count stays contextual where it is the post-change
   // delivered-row pin, so it is detected only in its entries wording below.
   "6" + "2",
+  // GH-349 moves the identity total and the delivered-row count: both
+  // pre-change numbers join the full legacy scan, the delivered-row pin is the
+  // post-change delivered count, and the post-change total is the live count.
+  "14" + "9",
+  "14" + "8",
+  // GH-346's install rows and GH-349's three additive rows both moved the
+  // totals, so the two outgoing pairs join the same full scan.
+  "16" + "4",
+  "16" + "3",
+  "15" + "6",
+  "15" + "5",
 ] as const;
 const LEGACY_ARITHMETIC = `+ ${"10" + "2"}`;
 const LEGACY_ARITHMETIC_PREVIOUS = `+ ${"10" + "6"}`;
@@ -2410,8 +2436,13 @@ const LEGACY_ARITHMETIC_SUPERVISE = `+ ${"11" + "2"}`;
 const LEGACY_ARITHMETIC_MOVED = `+ ${"11" + "2"}`;
 const LEGACY_ARITHMETIC_MERGED_PREVIOUS = `+ ${"11" + "4"}`;
 const LEGACY_ARITHMETIC_MERGED_OTHER = `+ ${"11" + "3"}`;
+/** The pre-change delivered-row arithmetic of the sync suite's baseline sum. */
+const LEGACY_ARITHMETIC_DELIVERED = `+ ${"11" + "5"}`;
 /** The outgoing sync-suite arithmetic base GH-346 moved to the new total. */
 const LEGACY_ARITHMETIC_OUTGOING = `+ ${"11" + "5"}`;
+/** The outgoing bases the two merged lines carried before this merge. */
+const LEGACY_ARITHMETIC_PRE_MERGE = `+ ${"12" + "2"}`;
+const LEGACY_ARITHMETIC_PRE_MERGE_INSTALL = `+ ${"13" + "0"}`;
 /** The pre-change entry-count forms: detected only in their entries wording. */
 const LEGACY_ENTRY_146_FORMS = [
   "14" + "6 entries",
@@ -2420,7 +2451,7 @@ const LEGACY_ENTRY_146_FORMS = [
   "14" + "6 documented",
   "entries).toHaveLength(14" + "6",
 ] as const;
-/** The outgoing 149-total forms (GH-346 moved the total to 164). */
+/** The outgoing identity-total forms the install family retired. */
 const LEGACY_ENTRY_149_FORMS = [
   "14" + "9 entries",
   "14" + "9 identities",
@@ -2429,7 +2460,7 @@ const LEGACY_ENTRY_149_FORMS = [
   "entries).toHaveLength(14" + "9",
   "toHaveLength(14" + "9)",
 ] as const;
-/** The pre-change entry forms: 148 was the delivered-row pin before GH-346. */
+/** The outgoing delivered-row forms the install family retired. */
 const LEGACY_ENTRY_148_FORMS = [
   "14" + "8 entries",
   "14" + "8 identities",
@@ -2437,7 +2468,7 @@ const LEGACY_ENTRY_148_FORMS = [
   "14" + "8 documented",
   "entries).toHaveLength(14" + "8",
 ] as const;
-/** The pre-change delivered-row forms (GH-335: four delivered rows became five). */
+/** The pre-change delivered-row forms, detected only in their entries wording. */
 const LEGACY_ENTRY_152_FORMS = [
   "15" + "2 entries",
   "15" + "2 identities",
@@ -2451,14 +2482,16 @@ const LEGACY_ENTRY_152_FORMS = [
  * wording or mirror pin.
  */
 const LEGACY_ALLOWLIST_FORMS = [
-  ...[`${"6"}${"3"}`, `${"6"}${"4"}`, `${"6"}${"5"}`].flatMap((count) => [
-    `${count} members`,
-    `${count}-member`,
-    `allowlist of ${count}`,
-    `${count} declared identities`,
-    `toHaveLength(${count})`,
-    `size).toBe(${count})`,
-  ]),
+  ...[`${"6"}${"3"}`, `${"6"}${"4"}`, `${"6"}${"5"}`, `${"6"}${"6"}`, `${"6"}${"7"}`].flatMap(
+    (count) => [
+      `${count} members`,
+      `${count}-member`,
+      `allowlist of ${count}`,
+      `${count} declared identities`,
+      `toHaveLength(${count})`,
+      `size).toBe(${count})`,
+    ],
+  ),
 ] as const;
 const LEGACY_FORM_ALTERNATION = [
   ...LEGACY_ENTRY_146_FORMS,
@@ -2470,7 +2503,7 @@ const LEGACY_FORM_ALTERNATION = [
   .map((form) => form.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
   .join("|");
 const LEGACY_PATTERN = new RegExp(
-  `\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}|\\${LEGACY_ARITHMETIC_PREVIOUS}|\\${LEGACY_ARITHMETIC_SUPERVISE}|\\${LEGACY_ARITHMETIC_MOVED}|\\${LEGACY_ARITHMETIC_MERGED_PREVIOUS}|\\${LEGACY_ARITHMETIC_MERGED_OTHER}|\\${LEGACY_ARITHMETIC_OUTGOING}|${LEGACY_FORM_ALTERNATION}`,
+  `\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}|\\${LEGACY_ARITHMETIC_PREVIOUS}|\\${LEGACY_ARITHMETIC_SUPERVISE}|\\${LEGACY_ARITHMETIC_MOVED}|\\${LEGACY_ARITHMETIC_MERGED_PREVIOUS}|\\${LEGACY_ARITHMETIC_MERGED_OTHER}|\\${LEGACY_ARITHMETIC_OUTGOING}|\\${LEGACY_ARITHMETIC_PRE_MERGE}|\\${LEGACY_ARITHMETIC_PRE_MERGE_INSTALL}|${LEGACY_FORM_ALTERNATION}`,
   "u",
 );
 
@@ -2508,8 +2541,8 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect([...DOMAIN_KINDS].filter((kind) => kind === "board")).toHaveLength(1);
   });
 
-  test("the closed two-segment allowlist holds exactly 66 members with two board codes, three steer codes, two supervise codes, one metrics code, and three retro codes", () => {
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+  test("the closed two-segment allowlist holds exactly 68 members with two board codes, three steer codes, two supervise codes, one metrics code, and three retro codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
     const board = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("board."));
     expect(board.sort()).toEqual(["board.repository-unknown", "board.state-unavailable"]);
   });
@@ -2527,23 +2560,23 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(resolveAppErrorCode("board.state-unavailable").ok).toBe(true);
   });
 
-  test("the four surfaces agree on 164 entries / 163 delivered / 66 allowlist / 2 board / 3 steer / 2 supervise / 1 metrics / 3 retro / 164 documented", () => {
+  test("the four surfaces agree on 167 entries / 166 delivered / 68 allowlist / 2 board / 3 steer / 2 supervise / 1 metrics / 3 retro / and 167 documented", () => {
     const tableEntries = ERROR_TABLE as readonly { domainKind: string }[];
-    expect(tableEntries).toHaveLength(164);
+    expect(tableEntries).toHaveLength(167);
     const delivered = tableEntries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(163);
+    expect(delivered).toHaveLength(166);
     expect(tableEntries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(tableEntries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
     expect(tableEntries.filter((entry) => entry.domainKind === "supervise")).toHaveLength(2);
     expect(tableEntries.filter((entry) => entry.domainKind === "metrics")).toHaveLength(1);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
     const carrier = readFileSync(
       join(ROOT, "doc/spec/features/feature-result-contract.md"),
       "utf8",
     );
-    expect(carrier).toContain("164 machine identities");
-    expect(carrier).toContain("the same 164 identities");
-    expect(carrier).toContain("exact two-segment allowlist of 66 declared identities");
+    expect(carrier).toContain("167 machine identities");
+    expect(carrier).toContain("the same 167 identities");
+    expect(carrier).toContain("exact two-segment allowlist of 68 declared identities");
   });
 
   test("the repo-wide no-leftover scan reports no legacy count pin across the declared files", () => {
@@ -2619,8 +2652,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
   });
 
   test("the entry and delivered counts moved exactly once and no delivered row changed", () => {
-    expect(entries).toHaveLength(164);
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(163);
+    expect(entries).toHaveLength(167);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(166);
     expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
@@ -2632,8 +2665,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
     );
   });
 
-  test("the closed allowlist is exactly 66 members including the three steer, two supervise, one metrics, and three retro codes", () => {
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+  test("the closed allowlist is exactly 68 members including the three steer, two supervise, one metrics, and three retro codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
     const steer = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("steer."));
     expect(steer.sort()).toEqual([
       "steer.credential-value-rejected",
@@ -2666,9 +2699,9 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       expect(doc.split(row).length - 1, entry.code).toBe(1);
     }
     expect(doc).toContain("The `steer` kind carries exactly the three steering identities");
-    expect(doc).toContain("164 machine identities");
-    expect(doc).toContain("the same 164 identities");
-    expect(doc).toContain("exact two-segment allowlist of 66 declared identities");
+    expect(doc).toContain("167 machine identities");
+    expect(doc).toContain("the same 167 identities");
+    expect(doc).toContain("exact two-segment allowlist of 68 declared identities");
   });
 
   test("four surfaces agree on the same tuple read from one tree", async () => {
@@ -2685,10 +2718,10 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       metrics: entries.filter((entry) => entry.domainKind === "metrics").length,
     };
     expect(tuple).toEqual({
-      entries: 164,
-      documented: 164,
-      deliverd: 163,
-      allowlist: 66,
+      entries: 167,
+      documented: 167,
+      deliverd: 166,
+      allowlist: 68,
       board: 2,
       steer: 3,
       metrics: 1,
@@ -2732,8 +2765,8 @@ describe("TC-METRICS-090 the metrics kind and its one row", () => {
   });
 
   test("the entry and delivered-row counts moved and every other kind is unchanged", () => {
-    expect(entries).toHaveLength(164);
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(163);
+    expect(entries).toHaveLength(167);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(166);
     expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "retro")).toHaveLength(7);
@@ -2747,17 +2780,17 @@ describe("TC-METRICS-090 the metrics kind and its one row", () => {
     if (row === undefined) throw new Error("metrics row missing");
     const documented = `| ${row.code} | metrics | ${row.category} | ${String(row.retryable)} | ${row.consequence} | ${row.remediationHint} | ${row.projectionClass} | ${row.summary ?? ""} |`;
     expect(doc.split(documented).length - 1).toBe(1);
-    expect(doc).toContain("164 machine identities");
-    expect(doc).toContain("the same 164 identities");
-    expect(doc).toContain("exact two-segment allowlist of 66 declared identities");
+    expect(doc).toContain("167 machine identities");
+    expect(doc).toContain("the same 167 identities");
+    expect(doc).toContain("exact two-segment allowlist of 68 declared identities");
   });
 });
 
 describe("TC-METRICS-091 the allowlist widens by exactly one declared code", () => {
   const METRICS_CODE = "metrics.baseline-unreadable";
 
-  test("the mirror allowlist has 66 members and exactly one metrics code", () => {
-    expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(66);
+  test("the mirror allowlist has 68 members and exactly one metrics code", () => {
+    expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(68);
     const metricsCodes = [...RESERVED_TWO_SEGMENT_CODES].filter((code) =>
       code.startsWith("metrics."),
     );
@@ -2802,9 +2835,9 @@ describe("TC-METRICS-092 every Appendix D site moved and four surfaces agree", (
     const { runSyncCheck } = await import("../../scripts/checks/error-table-sync");
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(164);
-    expect(result.counts.documentedRows).toBe(164);
-    expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(66);
+    expect(result.counts.sourceEntries).toBe(167);
+    expect(result.counts.documentedRows).toBe(167);
+    expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(68);
     const syncSource = readFileSync(join(ROOT, "scripts/checks/error-table-sync.ts"), "utf8");
     expect(syncSource).toContain('"metrics.baseline-unreadable"');
     expect(syncSource).not.toContain(`metrics${"."}*`);
@@ -2840,12 +2873,291 @@ describe("TC-METRICS-092 every Appendix D site moved and four surfaces agree", (
       metrics: entries.filter((entry) => entry.domainKind === "metrics").length,
     };
     expect(tuple).toEqual({
-      entries: 164,
-      documented: 164,
-      delivered: 163,
-      allowlist: 66,
+      entries: 167,
+      documented: 167,
+      delivered: 166,
+      allowlist: 68,
       metrics: 1,
     });
+  });
+});
+
+/**
+ * TC-SYNC-001 — the identity total moves on both tables and all seven pin sites
+ * together, the legacy-token scan admits the pre-change numbers with two
+ * planted-stale controls, `PM_NOTES_LINT_CODES` stays five, and the two
+ * identity-count pages carry the moved numbers (AC-F2-5, DM-2, DM-8, NFR-6).
+ *
+ * The operation-count pages belong to TC-SYNC-010 (the documentation phase) and
+ * the delivered-check-bound reference-behavior table to TC-SYNC-009 (the
+ * milestone phase), so this case names neither.
+ */
+const IDENTITY_TOTAL = 167;
+const DELIVERED_TOTAL = 166;
+const ALLOWLIST_TOTAL = 68;
+/** The live sync-suite arithmetic; the pre-change form is a legacy token. */
+const LIVE_ARITHMETIC = `+ ${"13" + "3"}`;
+/** The same arithmetic as the pages spell it inside a slash-separated tuple. */
+const LIVE_ARITHMETIC_COMPACT = `+${"13" + "3"}`;
+/** The pre-change values, assembled so this file is clean under its own scan. */
+const STALE_TOTAL = `${"16"}${"4"}`;
+const STALE_DELIVERED = `${"16"}${"3"}`;
+const STALE_TOTAL_GH349 = `${"15"}${"6"}`;
+const STALE_DELIVERED_GH349 = `${"15"}${"5"}`;
+
+const IDENTITY_PIN_SITES = [
+  "tests/checks/error-table-sync.test.ts",
+  "tests/checks/supervision-error-socialization.test.ts",
+  "tests/structure/error-table.test.ts",
+  "tests/structure/dispatch-attempts-taxonomy.test.ts",
+  "tests/structure/verify-gates-suite-map-contract.test.ts",
+  "tests/structure/ceremony-contract.test.ts",
+  "tests/behaviour/ceremony-nonregression.test.ts",
+] as const;
+
+const IDENTITY_COUNT_PAGES = [
+  "doc/spec/features/feature-metrics.md",
+  "doc/spec/features/feature-ceremony-runner.md",
+] as const;
+
+/** The three additive rows: two `merge` identities and one cross-surface `lint`. */
+const ADDITIVE_ROWS = [
+  ["merge.sync-required", "merge"],
+  ["merge.mergeability-unknown", "merge"],
+  ["lint.phases.divergent", "lint"],
+] as const;
+
+/** The delivered merge rows that stay declared verbatim. */
+const DELIVERED_MERGE_ROWS = [
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.state-unverified",
+  "merge.landing-unverified",
+  "merge.transaction-aborted",
+] as const;
+
+/** One temp-tree copy for the both-direction sync controls. */
+const makeSyncRoot = (edit?: (root: string) => void): string => {
+  const root = mkdtempSync(join(tmpdir(), "gh349-sync-"));
+  cpSync(join(ROOT, CONTRACTS_DIR), join(root, CONTRACTS_DIR), { recursive: true });
+  cpSync(join(ROOT, "packages/cli/src"), join(root, "packages/cli/src"), { recursive: true });
+  cpSync(join(ROOT, "tests/fixtures/result"), join(root, "tests/fixtures/result"), {
+    recursive: true,
+  });
+  mkdirSync(join(root, "doc/spec/features"), { recursive: true });
+  cpSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), join(root, DOC_PATH));
+  edit?.(root);
+  return root;
+};
+
+const SYNCS = (root: string): Promise<{ failures: readonly string[]; counts: unknown }> =>
+  import("../../scripts/checks/error-table-sync").then((module) => module.runSyncCheck({ root }));
+
+const DOC_PATH = "doc/spec/features/feature-result-contract.md";
+
+describe("TC-SYNC-001 the identity total moves to 167 with a three-row exact delta", () => {
+  test("both tables agree at 167 and the delta is exactly the three additive rows", async () => {
+    const result = await SYNCS(ROOT);
+    expect(result.failures).toEqual([]);
+    const counts = result.counts as { sourceEntries: number; documentedRows: number };
+    expect(counts.sourceEntries).toBe(IDENTITY_TOTAL);
+    expect(counts.documentedRows).toBe(IDENTITY_TOTAL);
+
+    const doc = readFileSync(join(ROOT, DOC_PATH), "utf8");
+    for (const [code, kind] of ADDITIVE_ROWS) {
+      const machine = entries.filter((entry) => entry.code === code);
+      expect(machine, code).toHaveLength(1);
+      expect(machine[0]?.domainKind, code).toBe(kind);
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+    // The delivered merge rows are not removed, retyped, or reworded.
+    for (const code of DELIVERED_MERGE_ROWS) {
+      expect(
+        entries.filter((entry) => entry.code === code),
+        code,
+      ).toHaveLength(1);
+    }
+    expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(9);
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(7);
+  });
+
+  test("the family declarations are unchanged: no pattern widening", () => {
+    const families = ERROR_TABLE_FAMILIES as readonly {
+      template: string;
+      slotPrefix: string;
+      slotSuffix: string;
+    }[];
+    expect(families.map((family) => family.template)).toEqual([
+      "merge.gate.<gate-id>.failed",
+      "closeout.step.<id>.failed",
+    ]);
+    expect(families[0]).toMatchObject({
+      slotPrefix: "merge.gate.",
+      slotSuffix: ".failed",
+    });
+    // The two additive rows are exact declared codes, never family instances.
+    for (const [code] of ADDITIVE_ROWS) {
+      expect(families.some((family) => code.startsWith(family.slotPrefix))).toBe(false);
+    }
+  });
+
+  test("the two added merge rows are exact two-segment allowlist members", () => {
+    expect(RESERVED_TWO_SEGMENT_CODES.has("merge.sync-required")).toBe(true);
+    expect(RESERVED_TWO_SEGMENT_CODES.has("merge.mergeability-unknown")).toBe(true);
+    const mergeAllowlist = [...RESERVED_TWO_SEGMENT_CODES]
+      .filter((code) => code.startsWith("merge."))
+      .sort();
+    expect(mergeAllowlist).toEqual(
+      [...DELIVERED_MERGE_ROWS, "merge.sync-required", "merge.mergeability-unknown"].sort(),
+    );
+    expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(ALLOWLIST_TOTAL);
+  });
+});
+
+describe("TC-SYNC-001 all seven pin sites carry 167 and none carries the stale total", () => {
+  test("every pin site reads 167 and no pre-change count survives", () => {
+    for (const site of IDENTITY_PIN_SITES) {
+      const text = readFileSync(join(ROOT, site), "utf8");
+      expect(text, site).toContain(String(IDENTITY_TOTAL));
+      expect(leftoverPins(text), site).toEqual([]);
+    }
+  });
+
+  test("the delivered-row pin is 166 on the surface that states it", () => {
+    const text = readFileSync(join(ROOT, "tests/structure/error-table.test.ts"), "utf8");
+    expect(text).toContain(String(DELIVERED_TOTAL));
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(DELIVERED_TOTAL);
+  });
+
+  test("the two identity-count pages carry the moved numbers and no stale one", () => {
+    const [metricsPage, ceremonyPage] = IDENTITY_COUNT_PAGES;
+    const metrics = readFileSync(join(ROOT, metricsPage), "utf8");
+    expect(metrics).toContain(
+      `${IDENTITY_TOTAL} entries, ${DELIVERED_TOTAL} delivered rows, and ${ALLOWLIST_TOTAL} allowlisted two-segment codes`,
+    );
+    expect(metrics).toContain(`BASELINE_ROWS.length ${LIVE_ARITHMETIC}`);
+    expect(metrics).toContain(
+      `${IDENTITY_TOTAL} entries / ${DELIVERED_TOTAL} delivered / ${ALLOWLIST_TOTAL} allowlist / ${LIVE_ARITHMETIC_COMPACT}`,
+    );
+    expect(metrics).toContain(
+      `${IDENTITY_TOTAL} / ${DELIVERED_TOTAL} / ${ALLOWLIST_TOTAL} / ${LIVE_ARITHMETIC_COMPACT}`,
+    );
+    expect(metrics, metricsPage).not.toContain(`${STALE_TOTAL} entries`);
+    expect(metrics, metricsPage).not.toContain(`${STALE_DELIVERED} delivered`);
+
+    const ceremony = readFileSync(join(ROOT, ceremonyPage), "utf8");
+    expect(ceremony.split(`${IDENTITY_TOTAL} identities`).length - 1).toBe(3);
+    expect(ceremony.split(`${ALLOWLIST_TOTAL}-entry`).length - 1).toBe(3);
+    expect(ceremony, ceremonyPage).not.toContain(`${STALE_TOTAL} identities`);
+  });
+});
+
+describe("TC-SYNC-001 the legacy-token set admits the pre-change numbers, non-vacuously", () => {
+  test("a stale total, a stale delivered count and stale arithmetic are each detected", () => {
+    // Planted controls: each pre-change number must be caught by name.
+    expect(leftoverPins(`expect(entries).toHaveLength(${STALE_TOTAL});`)).toEqual(["line 1"]);
+    expect(leftoverPins(`expect(delivered).toHaveLength(${STALE_DELIVERED});`)).toEqual(["line 1"]);
+    expect(leftoverPins(`toEqual(BASELINE_ROWS.length ${LEGACY_ARITHMETIC_DELIVERED});`)).toEqual([
+      "line 1",
+    ]);
+    expect(leftoverPins(`the registry holds ${STALE_TOTAL} identities`)).toEqual(["line 1"]);
+    // Both merged lines' outgoing pairs are caught by name too.
+    expect(leftoverPins(`the registry holds ${STALE_TOTAL_GH349} identities`)).toEqual(["line 1"]);
+    expect(leftoverPins(`expect(delivered).toHaveLength(${STALE_DELIVERED_GH349});`)).toEqual([
+      "line 1",
+    ]);
+    expect(leftoverPins(`toEqual(BASELINE_ROWS.length ${LEGACY_ARITHMETIC_PRE_MERGE})`)).toEqual([
+      "line 1",
+    ]);
+    expect(
+      leftoverPins(`toEqual(BASELINE_ROWS.length ${LEGACY_ARITHMETIC_PRE_MERGE_INSTALL})`),
+    ).toEqual(["line 1"]);
+    expect(leftoverPins(`an allowlist of ${"6"}${"6"} declared identities`)).toEqual(["line 1"]);
+    expect(
+      leftoverPins(`an allowlist of ${String(ALLOWLIST_TOTAL - 1)} declared identities`),
+    ).toEqual(["line 1"]);
+  });
+
+  test("the live total, the delivered-row pin and the live arithmetic are not legacy tokens", () => {
+    expect(leftoverPins(`expect(entries).toHaveLength(${String(IDENTITY_TOTAL)});`)).toEqual([]);
+    expect(leftoverPins(`expect(delivered).toHaveLength(${String(DELIVERED_TOTAL)});`)).toEqual([]);
+    expect(leftoverPins(`toEqual(BASELINE_ROWS.length ${LIVE_ARITHMETIC});`)).toEqual([]);
+  });
+
+  test("the scan is clean across every declared file and the extension is present", () => {
+    for (const file of APPENDIX_D_FILES) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(leftoverPins(text), file).toEqual([]);
+    }
+    const scanSource = readFileSync(join(ROOT, "tests/structure/error-table.test.ts"), "utf8");
+    expect(scanSource).toContain('"14" + "9"');
+    expect(scanSource).toContain('"14" + "8"');
+    expect(scanSource).toContain("LEGACY_ARITHMETIC_DELIVERED");
+  });
+});
+
+describe("TC-SYNC-001 the lint row set moves while PM_NOTES_LINT_CODES stays five", () => {
+  test("the pm-notes-only constant keeps exactly five members", () => {
+    expect([...PM_NOTES_LINT_CODES]).toHaveLength(5);
+    expect([...PM_NOTES_LINT_CODES]).not.toContain("lint.phases.divergent");
+    for (const code of PM_NOTES_LINT_CODES) {
+      expect(
+        entries.filter((entry) => entry.code === code),
+        code,
+      ).toHaveLength(1);
+    }
+  });
+
+  test("the documented pm-notes set reads six and the machine lint rows seven", () => {
+    const doc = readFileSync(join(ROOT, DOC_PATH), "utf8");
+    for (const code of [...PM_NOTES_LINT_CODES, "lint.phases.divergent"]) {
+      expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain("carries the six pm-notes lint identities");
+    expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(7);
+  });
+});
+
+describe("TC-SYNC-001 both sync directions fail naming the code and the side", () => {
+  test("dropping the machine divergence row fails documented-to-machine", async () => {
+    const root = makeSyncRoot((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "error-table.ts");
+      const text = readFileSync(path, "utf8");
+      const start = text.indexOf('    code: "lint.phases.divergent",');
+      if (start === -1) throw new Error("divergence row is missing");
+      const end = text.indexOf("\n  },\n", start);
+      writeFileSync(path, `${text.slice(0, start)}${text.slice(end + 3)}`);
+    });
+    try {
+      const result = await SYNCS(root);
+      expect(result.failures.join("\n")).toContain(
+        "documented code lint.phases.divergent has no source entry",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("dropping a merge row from the documented table fails machine-to-documented", async () => {
+    const root = makeSyncRoot((directory) => {
+      const path = join(directory, DOC_PATH);
+      const text = readFileSync(path, "utf8");
+      const line = text
+        .split("\n")
+        .find((candidate) => candidate.startsWith("| merge.sync-required |"));
+      if (line === undefined) throw new Error("documented merge row is missing");
+      writeFileSync(path, text.replace(`${line}\n`, ""));
+    });
+    try {
+      const result = await SYNCS(root);
+      expect(result.failures.join("\n")).toContain(
+        "source entry merge.sync-required is undocumented",
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

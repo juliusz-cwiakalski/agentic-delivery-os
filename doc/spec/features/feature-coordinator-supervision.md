@@ -10,7 +10,7 @@ summary: "Coordinator supervision: the coordinator start/stop/status/tick family
 links:
   related_changes: ["GH-241", "GH-348"]
   related_decisions:
-    ["TDR-0017", "TDR-0018", "TDR-0055", "TDR-0056", "ADR-0003", "ODR-0003"]
+    ["TDR-0017", "TDR-0018", "TDR-0056", "TDR-0057", "ADR-0003", "ODR-0003"]
   contracts:
     - "packages/core/src/contracts/coordinator.ts"
     - "packages/core/src/contracts/daemon.ts"
@@ -33,7 +33,7 @@ append-only instance lease, the per-epoch restart budget, the stuck
 verdict/outcome record pair, and the identity-verified kill-with-grace — and each
 keeps its own supervised target, predicate, and records: this `coordinator` family
 and the [`loop`](feature-loop-supervision.md) family, which supervises the Mode A
-CEO session under the distinct identity `loop-main` (TDR-0055). The two do not
+CEO session under the distinct identity `loop-main` (TDR-0056). The two do not
 exclude each other and do not read each other's records, because every record key
 is scoped by supervisor identity.
 
@@ -483,6 +483,6 @@ scenario (SC-M1-25) over the in-process CLI and the fake process harness.
   — the enduring coverage map.
 - Decision records: [TDR-0017](../../decisions/TDR-0017-coordinator-supervision-architecture.md),
   [TDR-0018](../../decisions/TDR-0018-coordinator-artifact-evidence-and-brief-escalation.md),
-  [TDR-0055](../../decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md)
+  [TDR-0056](../../decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md)
   (the shared-engine profile boundary), and
-  [TDR-0056](../../decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md).
+  [TDR-0057](../../decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md).

@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 links:
   related_changes: ["GH-348"]
-  related_decisions: ["TDR-0055", "TDR-0056"]
+  related_decisions: ["TDR-0056", "TDR-0057"]
   feature_spec: doc/spec/features/feature-loop-supervision.md
 ---
 
@@ -427,6 +427,6 @@ publishes the same list in the same order, and the doc guard compares the two.
 - Corroborator record sources: [Dispatch Engine](../../spec/features/feature-dispatch-engine.md),
   [Resident Dispatch Daemon](../../spec/features/feature-resident-daemon.md).
 - Error table: [Result Contract and Error Table](../../spec/features/feature-result-contract.md).
-- Decisions: [TDR-0055](../../decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md),
-  [TDR-0056](../../decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md).
+- Decisions: [TDR-0056](../../decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md),
+  [TDR-0057](../../decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md).
 - Reference page: [`loop`](../../planning/oss-tooling/milestones/m4/commands/loop.md).

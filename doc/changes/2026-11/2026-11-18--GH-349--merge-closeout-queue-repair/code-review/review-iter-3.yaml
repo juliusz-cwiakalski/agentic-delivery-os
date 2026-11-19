@@ -1,0 +1,207 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-349
+branch: feat/GH-349/merge-closeout-queue-repair
+status: PASS_WITH_NOTES
+summary: >-
+  Narrow re-review of the two review-2 majors, verified against the delivered tree
+  and by mutation, not against the report. N1 is RESOLVED: `22fb284e` moves
+  `merge-probe` into `CHANGED`, drops it from `GREEN`, sets the two length
+  assertions to 9 and 7, updates the header and both describe titles, and adds an
+  obligation entry whose markers include the inverted assertion
+  `expect(errorOf(result)).toBeUndefined()`; spec §16 (`:458`), AC-F1-1 (`:469`),
+  test-plan v1.14 §7.6 (`:1466`) and plan obligation 2.5 (`:1922-1931`) all now
+  read nine changed / seven green with `merge-probe` claimed. A scratch-copy
+  revert of the probe case fails the meta-check by name, and so does reverting
+  only the decisive inverted assertion. N2 is RESOLVED: `78d8a3ff` declares the
+  six remediation paths in phase 5 (`chg-GH-349-plan.yaml:2857-2869`, 70→76
+  files) and the union over `a832c861`'s twelve paths is 12/12 covered (phase 5
+  nine, phase 2 two, phase 3 one); the plan still validates. No blocker, no
+  failing AC, and no code changed after `a832c861`, so the review-2 verdict stands
+  in substance: 44 pass, 2 pass-with-notes, 0 fail. One new minor remains in the
+  declaration/enforcement layer (the meta-check pins the AC-F3-3 inversion but not
+  the five not-green states that TC-F1-014's Pass and AC-F1-1 still name), plus
+  the seven carried iteration-1 minors/infos.
+severity_breakdown:
+  blocker: 0
+  major: 0
+  minor: 1
+  info: 1
+carried_persistent_findings:
+  minor: 6
+  info: 1
+carried_minors_note: >-
+  m1 (post-landing non-2xx classified abort not unknown, `production.ts:2395-2411`),
+  m2 (GitHub 2xx treated as merged without read-back, `github/client.ts:816-831`),
+  m3 (`alreadyApplied` unreachable, `closeout.ts:1245-1253`), m4 (tautological inline
+  controls, `merge-refusal-taxonomy.test.ts:196-258`, `merge-required-job-probe.test.ts:479-493`),
+  m5 (post-refusal re-read does not compare its head, `merge-transaction.ts:981-1017`),
+  m6 (gap check after attachment comparison, `closeout.ts:1186-1211`) and m7 (info —
+  `readMilestone` failures all map to `unavailable`) are unchanged: no product file
+  differs between `a832c861` and HEAD, so each persists at its iteration-2 location,
+  with the same severity, confidence and suggested fix. None is required by an AC.
+spec_compliance: PASS
+plan_compliance: PASS
+iteration_2_disposition:
+  totals:
+    findings: 10
+    resolved: 2
+    partially_resolved: 0
+    persistent: 8
+  rows:
+    - finding: N1
+      severity: major
+      status: Resolved
+      evidence: >-
+        `tests/structure/merge-suite-obligations.test.ts` now declares the nine/seven
+        split: header "NINE change ... the other SEVEN" (`:5-6`), `CHANGED` has nine
+        entries including `merge-probe` (`:37-47`), `GREEN` has seven without it
+        (`:49-57`), `toHaveLength(9)` / `toHaveLength(7)` (`:126-127`), both describe
+        titles read nine/seven (`:131`, `:165`), and `merge-probe` is gone from
+        `GREEN_INVENTORY` (`:87-95`). The new obligation entry (`:77-84`) pins
+        `TC-MERGE-016`, the inverted case statement, `AC-F3-3` and — decisively —
+        `expect(errorOf(result)).toBeUndefined()` (the file's only occurrence). Commit
+        `22fb284e` is exactly this file (15 insertions, 9 deletions). Four-source
+        agreement on the partition: spec §16 `:458` ("Nine of the sixteen ... the other
+        seven"), AC-F1-1 `:469` ("Nine ... the other seven"), test-plan v1.14 §7.6
+        landing row `:1466` ("the nine changed merge suites out of the sixteen ... the
+        other seven", with `merge-probe`'s "inverted undeclared-job case pinned"), plan
+        obligation 2.5 `:1922-1931` ("NINE changed suites ... including `merge-probe`'s
+        inverted case id, so the semantic edit is visible to a presence check") and the
+        declared scope `:2055` (committed to phase 2). Mutation proof, run on a scratch
+        copy under /tmp (no tree edits): control 22/22 pass; reverting
+        `merge-probe.test.ts` to its pre-GH-349 text (`e0aa765f^`) fails 1/22 naming
+        "merge-probe must carry a red job the gate set does not declare is not gate
+        evidence and the merge proceeds"; reverting only
+        `expect(errorOf(result)).toBeUndefined()` to a `merge.gate.ci-green.failed`
+        refusal fails naming that marker. Real tree: the structure suite plus the probe
+        and taxonomy suites are 76/76 green.
+    - finding: N2
+      severity: major
+      status: Resolved
+      evidence: >-
+        Commit `78d8a3ff` touches only the plan (99 lines), the test-plan (6 lines) and
+        the review-2 artifact — no code. The plan carries a `# REVIEW-1 REMEDIATION
+        SCOPE` block (`chg-GH-349-plan.yaml:535-563`) that names the six paths with the
+        review-1 obligation each carries (M5/5.4a, M3, B1/5.4b) and records that the
+        union check was re-run over the whole `a832c861` commit. Verified by parsing the
+        YAML, not the comment: the six paths are real entries in phase 5's `scope.files`
+        (`:2857-2869`), phase 5 grows 70→76 files, and the union over `a832c861`'s
+        twelve paths is 12/12 — phase 5: `packages/cli/src/commands/closeout.ts`,
+        `packages/core/src/domain/closeout.ts`,
+        `tests/behaviour/closeout-attention-exit.test.ts`,
+        `tests/behaviour/closeout-idempotency.test.ts`,
+        `tests/behaviour/closeout-milestone-production.test.ts`,
+        `tests/fixtures/closeout/production-composition.ts`,
+        `tests/fixtures/capsule/mutants.ts`,
+        `tests/behaviour/closeout-milestone-sync.test.ts`,
+        `tests/fixtures/closeout/milestone.ts`; phase 2:
+        `packages/core/src/domain/merge-transaction.ts`,
+        `tests/behaviour/merge-refusal-taxonomy.test.ts`; phase 3:
+        `tests/behaviour/merge-required-job-probe.test.ts`. No commit path is
+        undeclared by every phase, and no requirement or other phase's file count
+        moved. `jaiship plan validate GH-349` -> valid, tier full,
+        readyForDevelopment true. `jaiship plan diff GH-349` still answers
+        `input.value.rejected` / "repository diff for GH-349 could not be read" — the
+        same tooling limitation iteration 2 recorded, unrelated to the declaration, so
+        the union was verified by direct parse.
+    - finding: I-1
+      severity: info
+      status: Persistent
+      evidence: >-
+        Carried: branch commit subjects remain the `commit` primitive's truncated
+        template. Tooling follow-up already recorded in pm-notes; no action here.
+    - finding: m1..m7
+      severity: minor
+      status: Persistent
+      evidence: >-
+        Carried unchanged (see `carried_minors_note`). No product file in the change
+        scope differs between `a832c861` and HEAD, so none was incidentally fixed and
+        none regressed; each retains its iteration-2 severity and confidence.
+findings:
+  - id: n1
+    severity: minor
+    confidence: high
+    category: test-quality
+    location: tests/structure/merge-suite-obligations.test.ts:77
+    ac_refs: [AC-F1-1, AC-F3-3]
+    message: >-
+      [m | owner: test-plan owner + phase-2 scope] Resolving N1 pinned the AC-F3-3
+      inversion but not the other half of `merge-probe`'s declared obligation.
+      TC-F1-014's Pass (`chg-GH-349-test-plan.md:450`) states "nine obligation
+      assertions (including `merge-probe`'s five not-green states)" and its Then
+      (`:449`) names the five states, while AC-F1-1 (`chg-GH-349-spec.md:469`) names
+      `TC-F3-001`, `TC-F3-002` and `TC-F3-006` as "the suite's obligation cases". The
+      delivered `OBLIGATIONS["merge-probe"]` markers are `TC-MERGE-016`, the inversion
+      sentence, `AC-F3-3` and the inverted assertion only, so the five-state block
+      (`tests/behaviour/merge-probe.test.ts:239-296`, added by `e0aa765f` as the
+      "extended" half) has no enforcing marker: deleting it would leave the meta-check
+      green. A second, inherent limit: a source-marker oracle cannot see every
+      semantic edit — keeping the title, the `AC-F3-3` comment and the
+      `toBeUndefined` line while flipping `expect(result.exitCode).toBe(0)` to `1`
+      still passes 22/22 (the runtime suite fails, so the inversion cannot silently
+      ship). Neither gap is reachable by a real revert of the probe case, which the
+      mutation run above fails by name; both are declaration/coverage nits, not
+      behaviour defects.
+    suggestion: >-
+      Minimal fix, either direction: add `TC-F3-001` (and the `queued`/`running`/
+      `canceled`/`skipped`/`failed` identifiers of that block) to
+      `OBLIGATIONS["merge-probe"]` — the markers are present today, so the check stays
+      green and gains the ability to see the extension reverted; or reword
+      TC-F1-014's Then/Pass and AC-F1-1's clause to declare the inversion as the
+      pinned obligation and the five states as runtime-only coverage. (The label
+      difference — spec §16/AC-F1-1 call `merge-probe` "re-pointed", test-plan §7.6
+      and TC-F1-014 call it "extended" — is cosmetic and needs no change.)
+    suppressed: false
+  - id: I-1
+    severity: info
+    confidence: high
+    category: tooling
+    location: tests/structure/memory-lint-docs.test.ts:117
+    ac_refs: []
+    message: >-
+      [I | no action in this change] In this host, `tests/structure` is 1886 pass /
+      1 fail: `memory-lint-docs.test.ts:123` fails only because
+      `scripts/.tests/test-doc-distribution.sh` runs a sandbox `install.sh --local`
+      that refuses when `~/.jaiship/bin/jaiship` already holds the compiled binary.
+      With `HOME=/tmp/guardhome` the same guard passes ("no drift — 96 in-scope docs;
+      install set matches ados_distribution markers"), so GH-349's markers are clean
+      and the failure is host state, not a tree defect. The change's other gates are
+      unaffected (pm-notes records a clean `bun test tests/structure tests/checks`).
+    suggestion: >-
+      No action in GH-349; run the guard with an isolated HOME in the pipeline, or
+      clear the host launcher slot before the quality-gates phase.
+    suppressed: false
+ac_verdict_totals:
+  total: 46
+  pass: 44
+  pass_with_notes: 2
+  fail: 0
+  unverified: 0
+ac_verdicts_delta:
+  - id: AC-F1-1
+    verdict: PASS_WITH_NOTES
+    change: "note narrowed (was: enforcement stale at eight/eight; now: enforcement delivered for the inversion, five-state markers not pinned — n1)"
+  - id: AC-F4-5
+    verdict: PASS_WITH_NOTES
+    change: "unchanged (m3: alreadyApplied still unreachable)"
+  - id: all-other-44
+    verdict: carried
+    change: "no verdict change; no product file differs between a832c861 and HEAD, so the iteration-2 rows carry verbatim"
+reviewed_at: 2026-11-19T19:40:00Z
+next_step: PROCEED
+plan_gaps: >-
+  Both iteration-2 gaps are closed. (a) Phase 2's obligation 2.5 is now delivered
+  (`22fb284e`); the residual is the narrower-than-declared marker set (n1), not an
+  open obligation. (b) The six remediation paths are declared in phase 5 and the
+  union over `a832c861`'s twelve paths is 12/12, so no SCOPE_DEVIATION remains
+  (`plan validate` green; `plan diff` is unreadable in this host for the tooling
+  reason recorded in iteration 2, and the union was verified by direct parse). No
+  OPEN_PHASES: all seven phases carry pm-notes completion notes with commit hashes
+  and gate evidence.
+test_coverage_gaps: >-
+  (1) No structure-level marker for `merge-probe`'s five not-green states / the
+  TC-F3-001 block (n1). (2) Carried: no case for a gap adapter with a conforming
+  declaration and an absent attachment (m6), and no case that a head moved during a
+  not-mergeable refusal is refused gates-stale (m5).

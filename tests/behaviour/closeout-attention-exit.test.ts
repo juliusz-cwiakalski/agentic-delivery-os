@@ -1,15 +1,42 @@
 /** TC-CAP-034 (P6 subset) — apply data + exit 1, plan exit 0, failures carry no residue. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts, makeProvider } from "../fixtures/closeout/harness";
+import { ADAPTER_OPERATIONS } from "../../packages/core/src/contracts/index";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import {
+  makeFacts,
+  makeProvider,
+  makeWorkItem,
+  observed,
+  WORK_ITEM_REF,
+} from "../fixtures/closeout/harness";
+import {
+  MILESTONE_DECLARATION,
+  MILESTONE_TITLE,
+  openItemMilestone,
+} from "../fixtures/closeout/milestone";
+
+const githubCapabilities = {
+  supportedOperations: [...ADAPTER_OPERATIONS],
+  declaredGaps: [],
+  writableCarriers: [],
+  readableCarriers: [],
+} as const;
 
 const humanFacts = () =>
   makeFacts({
     threadAuthorFacts: [
       { threadId: "PRRT_2", authorPrincipal: "@reviewer-bob", authorKind: "human" },
     ],
+  });
+
+/** A withheld milestone closure and nothing else (the routine success shape). */
+const withheldMilestoneFacts = () =>
+  makeFacts({
+    provider: { systemName: "github", capabilities: githubCapabilities },
+    observedWorkItem: observed(makeWorkItem({ milestone: MILESTONE_TITLE })),
+    milestone: { declaration: MILESTONE_DECLARATION, observation: openItemMilestone() },
   });
 
 const tree = () =>
@@ -74,6 +101,53 @@ describe("TC-CAP-034 attention exit", () => {
       expect(run.envelope.error).toBeDefined();
     } finally {
       failing.cleanup();
+    }
+  });
+});
+
+describe("AC-F4-3/AC-F4-7 a withheld milestone closure stays success-shaped", () => {
+  test("the withheld residue alone applies at exit 0 and still reports the item", async () => {
+    const change = tree();
+    try {
+      const run = await runCloseoutCli(["--json", "closeout", WORK_ITEM_REF, "--apply"], {
+        capsule: makeCapsuleRuntime(change.changes),
+        facts: withheldMilestoneFacts(),
+      });
+      expect(run.exitCode).toBe(0);
+      expect(run.envelope.error).toBeUndefined();
+      const residue = closeoutData(run.envelope).residue ?? [];
+      expect(residue).toHaveLength(1);
+      expect(residue[0]).toEqual({
+        item: "closure-withheld",
+        kind: "milestone-sync-withheld",
+        location: WORK_ITEM_REF,
+      });
+      expect(run.provider.calls.filter((call) => call.kind === "closeMilestone")).toHaveLength(0);
+    } finally {
+      change.cleanup();
+    }
+  });
+
+  test("another residue kind alongside it still projects the attention exit", async () => {
+    const change = tree();
+    try {
+      const run = await runCloseoutCli(["--json", "closeout", WORK_ITEM_REF, "--apply"], {
+        capsule: makeCapsuleRuntime(change.changes),
+        facts: {
+          ...withheldMilestoneFacts(),
+          threadAuthorFacts: [
+            { threadId: "PRRT_2", authorPrincipal: "@reviewer-bob", authorKind: "human" },
+          ],
+        },
+      });
+      expect(run.exitCode).toBe(1);
+      const residue = closeoutData(run.envelope).residue ?? [];
+      expect(residue.map((item) => item.kind)).toEqual([
+        "unresolved-human-thread",
+        "milestone-sync-withheld",
+      ]);
+    } finally {
+      change.cleanup();
     }
   });
 });

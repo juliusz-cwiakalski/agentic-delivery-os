@@ -62,7 +62,7 @@ Two observations this plan deliberately does **not** encode as permanent cases, 
 | Reference | Use |
 |-----------|-----|
 | `./chg-GH-348-spec.md` (v1.4) | Source of the 41 ACs, `F-1`…`F-8`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, `DOD-1`…`DOD-9`, §8.5 (ten divergences and the three pinned surfaces), Appendix C (proof boundary), Appendix F (parity mapping, normative), Appendix G (proof-boundary constant), Appendix D (implementation-decided details), and the v1.1 rulings R1–R4 that close this plan's four prior questions |
-| `./chg-GH-348-pm-notes.yaml` | The `BINDING for delivery_planning` note (pinned surfaces are pin updates with mutation controls intact), the `PM rulings on the four open questions` decision entry (R1–R4), the two cross-file pins, the `TMPDIR`/`PATH` operational prerequisite, the declared-divergence note, the TDR-0055/TDR-0056 staging note |
+| `./chg-GH-348-pm-notes.yaml` | The `BINDING for delivery_planning` note (pinned surfaces are pin updates with mutation controls intact), the `PM rulings on the four open questions` decision entry (R1–R4), the two cross-file pins, the `TMPDIR`/`PATH` operational prerequisite, the declared-divergence note, the TDR-0056/TDR-0057 staging note |
 | `.ai/rules/testing-strategy.md` | Layers, module→test mapping, invariant-authoring rules, `pnpm check` as the aggregate |
 | `.ai/rules/typescript.md` §9–§10 | `bun:test` authoring rules, determinism, fixtures never named `*.test.ts`, gate commands |
 | `doc/quality/test-specs/test-spec-coordinator-supervision.md` | The enduring coverage map this change extends with a loop counterpart (`test-spec-loop-supervision.md`, phase 7) |
@@ -73,7 +73,7 @@ Two observations this plan deliberately does **not** encode as permanent cases, 
 | `tests/checks/install-conformance-mutants.test.ts`, `tests/structure/metrics-mounting.test.ts`, `tests/fixtures/metrics/mounting.ts`, `tests/checks/reference-page-parity.test.ts`, `scripts/checks/help-guide-coverage.ts`, `tests/fixtures/help-guide/coverage.json` | The delivered pinned help-inventory machinery this change repins |
 | `packages/core/src/contracts/error-table.ts`, `packages/core/src/config/defaults.ts`, `packages/cli/src/help/prompt-required-commands.ts` | The closed identity/key/inventory surfaces asserted as data, never as literals guessed in a test |
 
-`./chg-GH-348-plan.yaml` is authored in `delivery_planning` (phase 4) after this plan; this plan is its input and fixes the plan-phase scope items it must carry: the staged TDR-0055/TDR-0056 files and their `doc/decisions/00-index.md` rows (pm-notes staging note), the production seam exports of §8.2 assumption 1, the M4 reference page `doc/planning/oss-tooling/milestones/m4/commands/loop.md`, and the `loop` surface extension of §7.2.
+`./chg-GH-348-plan.yaml` is authored in `delivery_planning` (phase 4) after this plan; this plan is its input and fixes the plan-phase scope items it must carry: the staged TDR-0056/TDR-0057 files and their `doc/decisions/00-index.md` rows (pm-notes staging note), the production seam exports of §8.2 assumption 1, the M4 reference page `doc/planning/oss-tooling/milestones/m4/commands/loop.md`, and the `loop` surface extension of §7.2.
 
 ## 3. Coverage Overview
 

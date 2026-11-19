@@ -23,7 +23,12 @@ import type {
   HarnessTelemetryWarning,
   HarnessTruncation,
 } from "./harness-telemetry.js";
-import type { DeliveryRequest, ProviderQualifiedIdentity, WorkItem } from "./ports.js";
+import type {
+  DeliveryRequest,
+  MilestoneReadObservation,
+  ProviderQualifiedIdentity,
+  WorkItem,
+} from "./ports.js";
 import type {
   StateAppendOutcome,
   StateFenceAcquisition,
@@ -41,7 +46,10 @@ export const CLOSEOUT_OPERATION_PAYLOAD_SCHEMA = "delivery.closeout.operation.v1
 /** The additive state-ledger record kind (EVT-1, DM-4). */
 export const CLOSEOUT_OPERATION_RECORD_KIND = "closeout.operation" as const;
 
-/** The step ids in their binding order (F-2, PIN-2; GH-240 F-12 additive). */
+/**
+ * The step ids in their binding order (F-2, PIN-2; GH-240 F-12 additive;
+ * GH-349 adds `milestone-sync` as step 12 of 13, `capsule` stays terminal).
+ */
 export const CLOSEOUT_STEP_IDS = [
   "ticket-to-done",
   "lifecycle-label-sweep",
@@ -54,6 +62,7 @@ export const CLOSEOUT_STEP_IDS = [
   "merged-diff-sweep",
   "retro-coverage-move",
   "session-compaction",
+  "milestone-sync",
   "capsule",
 ] as const;
 
@@ -83,7 +92,10 @@ export const CLOSEOUT_GAP_REASONS = [
   "plan-restriction",
 ] as const;
 
-/** The five closeout operation names (PIN-3). */
+/**
+ * The seven closeout operation names (PIN-3; GH-349 appends the tenth
+ * adapter operation's `close-milestone` name LAST, moving no delivered index).
+ */
 export const CLOSEOUT_OPERATION_NAMES = [
   "transition-work-item",
   "write-work-item",
@@ -91,6 +103,7 @@ export const CLOSEOUT_OPERATION_NAMES = [
   "restore-checkout",
   "delete-branch",
   "remove-worktree",
+  "close-milestone",
 ] as const;
 
 /** The discriminated read-observation vocabulary (DM-11). */
@@ -167,6 +180,49 @@ export const CLOSEOUT_MAX_HUMAN_BYTES = 16_384 as const;
 
 /** The bound on declared members reported in one closeout run (GH-310 DEC-10). */
 export const CLOSEOUT_MAX_MEMBERS = 8 as const;
+
+/**
+ * The declared milestone attached-set page size (GH-349 API-4, Appendix G-8).
+ *
+ * The bounded milestone read performs ONE provider page at this size: no
+ * follow-up pagination, no poll, no retry. This is the effective single-read
+ * bound, not the logical cap below.
+ */
+export const CLOSEOUT_MILESTONE_PAGE_SIZE = 100 as const;
+
+/**
+ * The declared milestone attached-set logical cap (GH-349 DM-9, Appendix G-8).
+ *
+ * The cap is a ceiling, never an effective bound: it is realized only up to the
+ * page size above, so a milestone larger than one page reports
+ * `attached-set-truncated` and never closes through the tool.
+ */
+export const CLOSEOUT_MILESTONE_LOGICAL_CAP = 200 as const;
+
+/** The closed milestone withheld-reason set carried as residue item text (GH-349 DM-5). */
+export const CLOSEOUT_MILESTONE_WITHHELD_REASONS = [
+  "declared-milestone-missing",
+  "attachment-mismatch",
+  "closure-withheld",
+  "attached-set-truncated",
+  "milestone-signal-unavailable",
+] as const;
+
+/** One closed milestone withheld reason. */
+export type CloseoutMilestoneWithheldReason = (typeof CLOSEOUT_MILESTONE_WITHHELD_REASONS)[number];
+
+/**
+ * The declared milestone facts the pure planner consumes (GH-349 F-4, DM-9).
+ *
+ * `declaration` is the change's pm-notes `milestone`, verbatim; absent means the
+ * change declares none. `observation` is the ONE bounded adapter-local read,
+ * performed by the composition at most once per run; absent means the provider
+ * composes no milestone surface (a declared gap, never an empty set).
+ */
+export type CloseoutMilestoneFacts = {
+  readonly declaration?: string;
+  readonly observation?: MilestoneReadObservation;
+};
 
 /** The per-member cleanup column in plan mode (GH-310 DM-5, DEC-12). */
 export const CLOSEOUT_MEMBER_CLEANUP_PLAN_OUTCOMES = [
@@ -402,6 +458,16 @@ export type CloseoutWorktreeArguments = {
   readonly expectedHead?: string;
 };
 
+/**
+ * The canonical arguments for a `close-milestone` operation (GH-349 DM-4).
+ *
+ * ONE operand: the milestone identity. Create, attach, detach, rename, and
+ * reopen are unrepresentable in this shape rather than rejected at runtime.
+ */
+export type CloseoutMilestoneArguments = {
+  readonly milestone: string;
+};
+
 /** The retro-coverage facts the plan consumes (GH-240 F-8, DM-9). */
 export type CloseoutRetroFacts = {
   readonly available: boolean;
@@ -472,7 +538,8 @@ export type CloseoutCanonicalArguments =
   | CloseoutThreadArguments
   | CloseoutRestoreArguments
   | CloseoutDeleteArguments
-  | CloseoutWorktreeArguments;
+  | CloseoutWorktreeArguments
+  | CloseoutMilestoneArguments;
 
 /** Alias for the canonical argument union used by the plan and ledger. */
 export type CloseoutArguments = CloseoutCanonicalArguments;
@@ -716,6 +783,17 @@ export type CloseoutProviderRuntime = {
   readonly resolveDeliveryThread: (input: {
     readonly deliveryRequest: ProviderQualifiedIdentity;
     readonly threadId: string;
+  }) => Promise<CloseoutWriteOutcome>;
+  /**
+   * The one milestone close write (GH-349 API-3).
+   *
+   * Optional: an adapter that declares `close-milestone` as a gap omits it, and
+   * the planner renders `skipped-gap` instead of composing an operation. The
+   * write is read-back verified by the adapter, at most once per run, never
+   * retried, and reports `alreadyApplied` when the record already reads closed.
+   */
+  readonly closeMilestone?: (input: {
+    readonly milestone: string;
   }) => Promise<CloseoutWriteOutcome>;
 };
 

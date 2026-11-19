@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-ADAPTER-REFERENCE-BEHAVIOR
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os provider adapters
-summary: "The normative reference behavior of the closed adapter contract: per-operation preferred and fallback transports, primary failure identities, absence semantics, the two bounded evidence reads with their fixed caps and truncation signals, the CLI probe and composition-edge transport selection value, the mechanism-scoped GitHub Issues transition mapping with its injected seeded map and four read outcomes, and the deliberate limitations of both."
+summary: "The normative reference behavior of the closed adapter contract: per-operation preferred and fallback transports, primary failure identities, absence semantics, the bounded milestone read and the read-back-verified close write, the two bounded evidence reads with their fixed caps and truncation signals, the CLI probe and composition-edge transport selection value, the mechanism-scoped GitHub Issues transition mapping with its injected seeded map and four read outcomes, and the deliberate limitations of both."
 links:
-  related_changes: ["GH-338", "GH-339"]
-  related_decisions: ["ADR-0005", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035", "TDR-0036"]
+  related_changes: ["GH-338", "GH-339", "GH-349"]
+  related_decisions: ["ADR-0005", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035", "TDR-0036", "ODR-0005"]
   contracts:
     - "packages/core/src/contracts/adapter-capabilities.ts"
     - "packages/core/src/contracts/ports.ts"
@@ -44,6 +44,7 @@ Every closed operation declares a preferred transport and an API fallback. The C
 | `write-comment` | `gh` | `api` |
 | `resolve-delivery-thread` | `gh` | `api` |
 | `merge-delivery-request` | `gh` | `api` |
+| `close-milestone` | `gh` | `api` |
 
 ## Capability posture
 
@@ -51,9 +52,9 @@ A declaration is honest: an operation is either supported or carries exactly one
 
 | Adapter | Supported | Gaps | Gap reasons |
 |---|---|---|---|
-| github | 9 | 0 | none |
-| gitlab | 2 | 7 | adapter-not-implemented |
-| jira | 3 | 6 | adapter-not-implemented; provider-unsupported |
+| github | 10 | 0 | none |
+| gitlab | 2 | 8 | adapter-not-implemented |
+| jira | 3 | 7 | adapter-not-implemented; provider-unsupported |
 
 ## Failure identities
 
@@ -69,7 +70,8 @@ A failure is classifiable from structured data, never from prose. A read disting
 | `read-pipeline-run` | 404 -> `provider.not-found`; other non-2xx -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; credential -> `config.credential.missing` |
 | `write-comment` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; carrier-free text only |
 | `resolve-delivery-thread` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; a mutation that leaves the thread unresolved is a failure |
-| `merge-delivery-request` | a guard rejection and any non-2xx are classified -> `provider.payload.invalid` with `httpStatus`; a transport failure -> `provider.payload.invalid` without status; already-merged is success only after a read-back that observes provider-asserted merged truth; no retry |
+| `merge-delivery-request` | a guard rejection and any non-2xx are classified -> `provider.payload.invalid` with `httpStatus`; a transport failure -> `provider.payload.invalid` without status; already-merged is success only after a read-back that observes provider-asserted merged truth; the crafted title and message are transmitted verbatim and the expected head is a binding guard; at most once, no retry |
+| `close-milestone` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; success requires a read-back that observes the closed state; at most one write per run, never retried |
 
 ## Absence semantics
 
@@ -84,6 +86,31 @@ An absent optional field means the provider did not assert the signal: the value
 | `WorkItem` relation availability (`signals.relations`) | an `unavailable` signal means the dependency read did not observe relations | replaced by an empty observed set when the read failed |
 | `pageItemCount` | not applicable; supplied whenever a page is read | replaced by a header-derived or synthesized value |
 | merge commit identity (`mergeCommitSha`) | the provider did not supply it | derived from a local commit or a branch head |
+| milestone record state and attached set | the adapter composes no milestone read, or the read did not answer | collapsed into an empty observed set or an implied `closed` |
+
+## Milestone surface
+
+Two provider surfaces sit beside the closed contract and add no closed operation
+beyond `close-milestone`.
+
+The **bounded milestone read** is one adapter-local read over the change's own
+work item. It returns the provider-neutral record — identity, title, state, and
+the attached items with their delivery states — and reads the attached set as
+exactly one provider page at the declared page size, with a truncation marker and
+no follow-up pagination, poll, or retry. Four facts stay distinct and never
+collapse: an adapter without the surface composes no read (absence), a read that
+does not answer is `unavailable` (never an empty observed set), an unparsable
+answer is `invalid`, and a page whose marker reports omitted items is truncated.
+A record whose provider state the adapter cannot normalize reads `unknown`, never
+`open` or `closed`.
+
+The **close write** sets the record closed and nothing else. Its canonical
+argument is the milestone identity alone, so create, attach, detach, rename, and
+reopen are unrepresentable. Success requires a read-back in which the provider
+asserts the closed state; the write is issued at most once per run and is never
+retried. An already-closed record is reported by the consumer's plan as
+`satisfied` with zero writes, because idempotency is derived from the observed
+record state and the closeout ledger rather than from a write-side flag.
 
 ## Evidence read: review-thread discussion
 

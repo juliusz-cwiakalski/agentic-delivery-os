@@ -468,3 +468,98 @@ describe("TC-CLOSE-019 closeout ledger stores one record per append", () => {
     }
   });
 });
+
+const milestoneCloseRecord = (
+  overrides: Partial<CloseoutOperationRecord> = {},
+): CloseoutOperationRecord => ({
+  schemaId: "delivery.closeout.operation.v1",
+  operationId: "a".repeat(64),
+  workItemRef: WORK_ITEM_REF,
+  engine: "github",
+  capabilityContext: "supported",
+  operation: "close-milestone",
+  arguments: { milestone: "4" },
+  target: { systemName: "github", entityId: "4" },
+  outcome: "applied",
+  evidence: [{ name: "operation", value: "close-milestone" }],
+  timestamp: "2026-11-01T00:00:00Z",
+  ...overrides,
+});
+
+describe("TC-SYNC-002 a recorded close-milestone operation round-trips through the real state layer", () => {
+  test("the one-operand argument arm appends and reads back without a torn history", () => {
+    const root = makeRealStateRoot();
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      const acquired = store.acquireFence("fence-close-milestone-round-trip");
+      expect(acquired.ok).toBe(true);
+      if (!acquired.ok) return;
+      const record = milestoneCloseRecord();
+
+      const appended = appendCloseoutOutcome(store, acquired.value.handle, record);
+      expect(appended.ok).toBe(true);
+      store.releaseFence(acquired.value.handle);
+
+      const history = readCloseoutHistory(store, WORK_ITEM_REF);
+      expect(history.ok).toBe(true);
+      if (!history.ok) {
+        expect(history.error.code).not.toBe("state.store.torn");
+        expect(history.error.code).not.toBe("state.keys.missing");
+        return;
+      }
+      expect(history.value).toHaveLength(1);
+      expect(history.value[0]?.operation).toBe("close-milestone");
+      expect(history.value[0]?.arguments).toEqual({ milestone: "4" });
+      expect(history.value[0]?.operationId).toBe(record.operationId);
+      expect(ledgerLines(ledgerText(identity))).toHaveLength(1);
+    } finally {
+      removeRoot(root);
+    }
+  });
+
+  test("control: a second operand, a non-string operand, or no arm poisons the history", () => {
+    const cases: ReadonlyArray<{ readonly label: string; readonly payload: StateJsonValue }> = [
+      {
+        label: "a second operand",
+        payload: {
+          ...milestoneCloseRecord(),
+          arguments: { milestone: "4", title: "Jaiship-native delivery" },
+        },
+      },
+      {
+        label: "a non-string operand",
+        payload: { ...milestoneCloseRecord(), arguments: { milestone: 4 } },
+      },
+      {
+        label: "a name with no argument arm",
+        payload: { ...milestoneCloseRecord(), operation: "reopen-milestone" },
+      },
+    ];
+    for (const entry of cases) {
+      const root = makeRealStateRoot();
+      try {
+        const identity = makeIdentity(root);
+        const { store } = openStore(identity);
+        const acquired = store.acquireFence(`fence-close-milestone-control-${entry.label}`);
+        expect(acquired.ok, entry.label).toBe(true);
+        if (!acquired.ok) continue;
+        // The writer bypasses the validator here: this is the payload the one
+        // argument arm must reject so a recorded operation can never widen the
+        // milestone vocabulary.
+        const appended = store.append(acquired.value.handle, {
+          kind: CLOSEOUT_OPERATION_RECORD_KIND,
+          recordKey: closeoutOperationRecordKey(WORK_ITEM_REF),
+          payload: entry.payload,
+        });
+        expect(appended.ok, entry.label).toBe(true);
+        const history = readCloseoutHistory(store, WORK_ITEM_REF);
+        expect(history.ok, entry.label).toBe(false);
+        if (!history.ok) expect(history.error.code, entry.label).toBe("state.store.torn");
+        store.releaseFence(acquired.value.handle);
+      } finally {
+        removeRoot(root);
+      }
+    }
+  });
+});

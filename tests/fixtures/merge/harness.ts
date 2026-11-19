@@ -29,7 +29,11 @@ import {
 } from "../../../packages/core/src/contracts/index";
 import type { MergeEffectiveGateSet } from "../../../packages/core/src/domain/merge-gate-set";
 import { resolveMergeGateSet } from "../../../packages/core/src/domain/merge-gate-set";
-import type { MergeTransactionPorts } from "../../../packages/core/src/domain/merge-transaction";
+import type {
+  MergeLandResult,
+  MergeTransactionPorts,
+} from "../../../packages/core/src/domain/merge-transaction";
+import type { MergeDeliveryRequestInput } from "../../../packages/core/src/contracts/index";
 import {
   appendMergeGateVerification,
   appendMergeTransaction,
@@ -48,6 +52,8 @@ export const MERGE_CLOCK_ISO = "2026-11-06T12:00:00Z";
 export const MERGE_CLOCK_MS = Date.parse(MERGE_CLOCK_ISO);
 export const MERGE_HEAD = "9f21c0e1a2b3c4d5e6f708192a3b4c5d6e7f8091";
 export const MERGE_BASE = "main-tools";
+/** The provider's merge commit in the default fixture landing. */
+export const MERGE_LANDING_SHA = "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
 
 export type ProviderRead<T> =
   | { readonly ok: true; readonly value: T }
@@ -80,6 +86,8 @@ export type MergeGitFacts = {
     | { readonly ok: false; readonly code: string }
   >;
   deleteBranch: (input: { branch: string }) => Promise<"ok" | "failed">;
+  /** Return the local checkout to the base ref (recorded so tests can assert it). */
+  restoreCheckout: (baseRef: string) => Promise<"ok" | "failed">;
 };
 
 export type FakeGitOptions = {
@@ -134,6 +142,10 @@ export const createFakeGit = (
       operations.push(`delete-branch:${input.branch}`);
       return options.delete ?? "ok";
     },
+    restoreCheckout: async (baseRef) => {
+      operations.push(`checkout-base:${baseRef}`);
+      return "ok";
+    },
   };
 };
 
@@ -151,6 +163,16 @@ export type MergeHarnessOptions = {
   readonly checkRuns?: CheckRunPage | { readonly fault: string };
   readonly request?: DeliveryRequest | { readonly fault: string };
   readonly git?: MergeGitFacts;
+  /** The adapter's declared landing gap (`undefined` = supported). */
+  readonly landingGap?: "adapter-not-implemented" | "provider-unsupported" | "plan-restriction";
+  /**
+   * The provider-side landing outcome: one fixed outcome, or a factory called
+   * once per landing attempt with the canonical landing input. Default: the
+   * provider performed the squash landing and asserted the request merged.
+   */
+  readonly landing?:
+    | MergeLandResult
+    | ((input: MergeDeliveryRequestInput) => MergeLandResult | Promise<MergeLandResult>);
   readonly nowIso?: () => string;
   readonly nowMs?: () => number;
   readonly configFailure?: { readonly code: string; readonly detail?: string };
@@ -172,13 +194,23 @@ export type MergeHarness = {
     checkRuns: number;
     requestDetail: number;
     verification: number;
+    landing: number;
+    nowIso: number;
+    nowMs: number;
     order: string[];
   };
   readonly events: string[];
+  /** Every composed landing call, in canonical-argument order. */
+  readonly landings: MergeDeliveryRequestInput[];
   readonly auditRecords: Array<Record<string, unknown>>;
   setWorkItem(value: WorkItem | { readonly fault: string }): void;
   setCheckRuns(value: CheckRunPage | { readonly fault: string }): void;
-  setRequest(value: DeliveryRequest | { readonly fault: string }): void;
+  setRequest(
+    value:
+      | DeliveryRequest
+      | { readonly fault: string }
+      | (() => DeliveryRequest | { readonly fault: string }),
+  ): void;
   setAppendWaiverFault(code: string | undefined): void;
   setAppendTransactionFault(code: string | undefined): void;
   seedVerification(record: MergeGateVerificationRecord): void;
@@ -220,9 +252,13 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     checkRuns: 0,
     requestDetail: 0,
     verification: 0,
+    landing: 0,
+    nowIso: 0,
+    nowMs: 0,
     order: [] as string[],
   };
   const events: string[] = [];
+  const landings: MergeDeliveryRequestInput[] = [];
   const auditRecords: Array<Record<string, unknown>> = [];
   const recordingGit: MergeGitFacts = {
     head: () => {
@@ -245,11 +281,18 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
       events.push("git-delete-branch");
       return git.deleteBranch(input);
     },
+    restoreCheckout: (baseRef) => {
+      events.push("git-checkout-base");
+      return git.restoreCheckout(baseRef);
+    },
   };
   let workItemFact: WorkItem | { readonly fault: string } = options.workItem ?? baseWorkItem();
   let checkRunsFact: CheckRunPage | { readonly fault: string } =
     options.checkRuns ?? baseCheckRuns();
-  let requestFact: DeliveryRequest | { readonly fault: string } = options.request ?? baseRequest();
+  let requestFact:
+    | DeliveryRequest
+    | { readonly fault: string }
+    | (() => DeliveryRequest | { readonly fault: string }) = options.request ?? baseRequest();
   let appendWaiverFault = options.appendWaiverFault;
   let appendTransactionFault = options.appendTransactionFault;
 
@@ -280,8 +323,14 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
   };
 
   const createPorts = (changeRef: string): MergeTransactionPorts => ({
-    nowIso,
-    nowMs,
+    nowIso: () => {
+      counts.nowIso += 1;
+      return nowIso();
+    },
+    nowMs: () => {
+      counts.nowMs += 1;
+      return nowMs();
+    },
     readVerification: () => {
       counts.verification += 1;
       counts.order.push("verification");
@@ -348,24 +397,34 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     readRequestDetail: async () => {
       counts.requestDetail += 1;
       counts.order.push("request-detail");
-      if ("fault" in requestFact) {
-        return { ok: false as const, code: requestFact.fault };
+      const fact = typeof requestFact === "function" ? requestFact() : requestFact;
+      if ("fault" in fact) {
+        return { ok: false as const, code: fact.fault };
       }
-      return { ok: true as const, request: requestFact };
+      return { ok: true as const, request: fact };
     },
     readHead: () => recordingGit.head(),
     readBaseContainment: (sha) => recordingGit.isContained(sha, options.baseRef ?? MERGE_BASE),
-    refresh: () => recordingGit.refresh({ branch, baseRef: options.baseRef ?? MERGE_BASE }),
-    land: (input) =>
-      recordingGit.land({
-        branch,
-        baseRef: input.baseRef,
-        message: `merge(${changeRef})`,
-      }),
+    readLandingGap: () => options.landingGap,
+    land: async (input) => {
+      counts.landing += 1;
+      landings.push(input);
+      events.push("provider-land");
+      const outcome = options.landing;
+      if (typeof outcome === "function") return outcome(input);
+      return (
+        outcome ?? {
+          ok: true,
+          requestState: "merged",
+          mergeCommitSha: MERGE_LANDING_SHA,
+        }
+      );
+    },
     deleteBranch: (input) =>
       input.branch === undefined
         ? Promise.resolve("failed")
         : recordingGit.deleteBranch({ branch: input.branch }),
+    restoreCheckout: (baseRef) => recordingGit.restoreCheckout(baseRef),
   });
 
   const runtime: MergeCommandRuntime = { readConfig, createPorts };
@@ -446,6 +505,7 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     counts,
     runtime,
     events,
+    landings,
     auditRecords,
     setWorkItem: (value) => {
       workItemFact = value;

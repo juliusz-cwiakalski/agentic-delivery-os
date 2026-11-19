@@ -71,6 +71,8 @@ export const operationLabel = (operation: AdapterOperation): string => {
       return "resolve-delivery-thread";
     case "merge-delivery-request":
       return "merge-delivery-request";
+    case "close-milestone":
+      return "close-milestone";
     default: {
       const unhandled: never = operation;
       return unhandled;
@@ -78,13 +80,13 @@ export const operationLabel = (operation: AdapterOperation): string => {
   }
 };
 
-/** A consumer that forgot the ninth operation must fail loudly at compile time. */
+/** A consumer that forgot the tenth operation must fail loudly at compile time. */
 const nonExhaustive = (operation: AdapterOperation): string => {
   switch (operation) {
     case "read-work-item":
       return "read";
     default: {
-      // @ts-expect-error the closed set grew: omitting merge-delivery-request is a type error
+      // @ts-expect-error the closed set grew: omitting close-milestone is a type error
       const unhandled: never = operation;
       return String(unhandled);
     }

@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035, TDR-0036, TDR-0037, TDR-0038, TDR-0039, TDR-0040, TDR-0041, TDR-0042, TDR-0043, TDR-0044, TDR-0045, TDR-0046, TDR-0047, TDR-0048]
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-335", "GH-346"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-335", "GH-346", "GH-349"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -104,8 +104,8 @@ production composes no lane executor, so a resident daemon runs the declared
 | `core/src/app/`, core `createRuntime` | Application tier: the runtime-neutral state-scope policy (host root, project identity, host index) and the `projects` projections; the dispatch engine, handover ledger, and dispatch gate; the queue, polling, and watch folds; the daemon runtime, control server, dispatch-result, status, supervision, reconcile, and preemption behaviour. `createRuntime` remains an `export declare` composition signature, not a callable implementation. |
 | `cli/bin/`, `cli/src/bin-launcher.ts`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts`, `build-identity.ts` | Executable surface: two declared Bun bins (`delivery-os` as the compatibility alias and `jaiship`) over one shared launcher composition, per-bin declared default identities with the working-name override seam, the build-time identity the version line reports, the compiled re-entry path, self-description covering root and command help, version, and the install path, the prompt-required composition including the `install` lifecycle family, and fail-closed containment for an uncomposed invocation. Self-description reads no state, network, git, or configuration. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, the mounted daemon lifecycle family, and bounded status collectors. |
-| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported writes. GitHub is the complete reference: all nine closed operations — reads, labels/assignee, mechanism-scoped issue transitions, thread resolution, carrier-free comments, delivery-request content create/update, and the provider-side squash landing — over a CLI-first transport with a declared API fallback. GitLab retains declared write gaps and no work-item read; Jira keeps its closeout write slice. GitHub reads feed status and gate composition, the bounded deploy-job trace read feeds `verify deploy`, and the bounded log-excerpt and thread-discussion reads supply evidence without entering the normalized contract. |
-| `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded squash landing. |
+| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported writes. GitHub is the complete reference: all ten closed operations — reads, labels/assignee, mechanism-scoped issue transitions, thread resolution, carrier-free comments, delivery-request content create/update, the provider-side squash landing, and the milestone close — over a CLI-first transport with a declared API fallback. GitLab retains declared write gaps and no work-item read; Jira keeps its closeout write slice. GitHub reads feed status and gate composition, the bounded deploy-job trace read feeds `verify deploy`, and the bounded log-excerpt and thread-discussion reads supply evidence without entering the normalized contract. |
+| `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded landing identity. |
 | `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping, the append-only capsule runtime, confined memory-home writes, and the read-only memory-tree scan with YAML frontmatter parsing. |
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
@@ -204,11 +204,13 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   package declares no `bin` and no installer registration. See the
   [MCP surface](../spec/features/feature-mcp-surface.md).
 - `merge <ref>` is the landing transaction: the freshness envelope over the newest
-  recorded verification, one bounded post-verification probe, waiver
-  authorization against the declared class policy, one rebase-refresh with no
-  force path, one squash landing, and landing verification recorded as a
-  `merge.transaction` record. It is the only landing producer; a re-run replays a
-  recorded landing instead of landing twice. See
+  recorded verification, one bounded post-verification probe extended to every
+  not-green declared required job, waiver authorization against the declared
+  class policy, a total mergeability refusal decision, and exactly one guarded
+  provider-side squash landing recorded as a `merge.transaction` record with the
+  provider's merge commit as its landing identity. It is the only landing
+  producer, no path mutates the verified head, and a re-run replays a recorded
+  landing instead of landing twice. See
   [merge and verify deploy](../spec/features/feature-merge-verify-deploy.md).
 - `retro collect|report|action file|close|list [--level <name>]` is the learning-plane evidence pipeline and its follow-through registry.
   Collection folds delivered GET-only sources into an independent append-only,
@@ -237,16 +239,18 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   `spend.telemetry-absent` (exit 1). No harness re-query, no state writes. See the
   [spend read side](../spec/features/feature-spend.md) and
   [harness telemetry v2](../spec/features/feature-telemetry-v2.md).
-- [Closeout](../spec/features/feature-closeout.md) is integrated: twelve-step
+- [Closeout](../spec/features/feature-closeout.md) is integrated: thirteen-step
   transaction, plan by default, writes only with `--apply`, ref validation before
   reads. The steps cover the tracker, review-thread authorship policy from
   provider root-author facts, checkout,
   local worktree and branch cleanup, the detection-only merged-diff sweep with
   its four marker kinds and action tokens, retro coverage read from the delivered
-  registry, session compaction,
-  and the change-capsule close. The transaction reports a
+  registry, session compaction, the exit-review-gated milestone
+  synchronization, and the change-capsule close. The transaction reports a
   bounded `residue[]` and exits 1 through the additive `attention` class when
-  judgment residue remains; human mode renders a `JUDGMENT RESIDUE` section and
+  judgment residue of an attention-raising kind remains, while the informational
+  withheld milestone closure is reported without selecting it; human mode renders
+  a `JUDGMENT RESIDUE` section and
   a capsule close summary. `createCloseoutComposition` in CLI edge bridges raw
   provider clients, the real git seam, `StateStorePort`, the capsule runtime, and
   resolved harness settings; `planFacts` reads issue, merged request, dependents,
@@ -369,8 +373,8 @@ These are existing decision criteria, not a new package-splitting decision.
 | Client to credentials | `CredentialPort.resolve(reference): CredentialResolution` | `config.credential.missing`; no diagnostic channel; material only on success. |
 | Edge to provider | `createProviderEngine(deps).resolve({config, chainName?, persist?})` | Typed decision/park/announcement; state failures remain visible. |
 | Status collector to GitHub | `listWorkItems(limit)`, `listDeliveryRequests(limit)`, `readPipelineRun(sha, limit?)` | `ProviderReadResult<T>`: normalized value or credential/payload failure, mapped into status availability. |
-| Closeout to provider/git/state | Nine declared provider operations including `resolve-delivery-thread` and `merge-delivery-request`; capability-qualified GitHub/Jira writes and local git cleanup | Classified provider/state/safety failure with consequence; unsupported operations remain gaps. Closeout issues no comment and no content write, and never composes the adapter's provider-side landing: its terminal transition is one state-only write, label cleanup is its separate `write-work-item` step, and remote branch cleanup stays out of scope. |
-| Merge transaction to provider/git/state | One verification read, one work-item read, one check-run page and one request-detail read per invocation; the declared mutation union carries one rebase-refresh, one squash landing, and post-landing cleanup | Classified `merge.*` or state identity with exit projection; no force variant exists and the merge command is the only composed producer of the lifecycle merge. The adapter's `merge-delivery-request` capability is not composed into it. |
+| Closeout to provider/git/state | Ten declared provider operations including `resolve-delivery-thread`, `merge-delivery-request`, and `close-milestone`; capability-qualified GitHub/Jira writes and local git cleanup | Classified provider/state/safety failure with consequence; unsupported operations remain gaps. Closeout issues no comment and no content write, and never composes the adapter's provider-side landing: its terminal transition is one state-only write, label cleanup is its separate `write-work-item` step, and remote branch cleanup stays out of scope. |
+| Merge transaction to provider/git/state | One verification read, one work-item read, one check-run page, and one request-detail read per invocation, at most one post-refusal re-read and one unknown-recovery re-read, and exactly one guarded provider-side landing call | Classified `merge.*` or state identity with exit projection; no force, bypass, auto-merge, queue, or retry variant exists and the merge command is the only composed producer of the lifecycle merge. No path mutates the verified head, and the local squash landing and refresh stay declared git-seam capabilities with no composed caller. |
 | Consumer to state | `read({requiredKeys})`, `append(handle, request)`, `replaceDocument(handle, request)` | `StateResult<T>`; verified-empty differs from torn/missing required keys. Writes require acquired fence handle. |
 | Session caller to adapter | `SessionStorePort` reads; `SessionAdminPort` prune/reboot with explicit `apply` | Classified `db.*` errors; metadata-only output, no transcript or raw command output. |
 | Handler to CLI | `{data}` or `{error}`; `runCli(argv, streams, deps): Promise<number>` | Declared kind/code to error table; malformed/unclassifiable values become `fallback.internal`. |

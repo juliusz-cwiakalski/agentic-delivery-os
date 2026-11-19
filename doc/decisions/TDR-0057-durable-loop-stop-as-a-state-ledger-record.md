@@ -1,5 +1,5 @@
 ---
-id: TDR-0056
+id: TDR-0057
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -72,13 +72,13 @@ links:
     - "packages/cli/src/commands/coordinator-loop.ts"
     - "scripts/ceo-loop.sh"
   diagrams: []
-  decisions: ["TDR-0004", "TDR-0005", "TDR-0017", "TDR-0052", "TDR-0055"]
+  decisions: ["TDR-0004", "TDR-0005", "TDR-0017", "TDR-0052", "TDR-0056"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S10"]
 ---
 
-# TDR-0056: The Durable Loop Stop Is a State-Ledger Record, Not a File
+# TDR-0057: The Durable Loop Stop Is a State-Ledger Record, Not a File
 
 > **Traceability.** Change spec §5.1 **F-4** (durable stop), §8.3 **DM-2** (the `loop.stop` record), §17.4 AC-F4-1…AC-F4-5, and §15 **DEC-2** (`doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-spec.md`); M4-S10 AC "durable stop across restarts" (`doc/planning/oss-tooling/milestones/m4/backlog.md:55-63`) and the M4 flip-plan F3 verification bar "durable stop across restarts" (`doc/planning/oss-tooling/milestones/m4/flip-plan.md:117`); spec NFR-5 (`doc/spec/features/feature-autonomous-delivery.md:242`); spec INV-DM-4, which keeps `ceo-loop.sh` executable as the documented fallback and therefore keeps its file stop as the parity reference (`feature-autonomous-delivery.md:164`); the change's clarify note that the file-versus-lease question must be stated rather than assumed (`chg-GH-348-pm-notes.yaml`, "verified seams" note, item (5)). Builds on [TDR-0017](TDR-0017-coordinator-supervision-architecture.md) (the supervision architecture and its instance lease), TDR-0004 (state storage engine), TDR-0005 (exit taxonomy), and [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (the pattern of a supervision decision encoded against shell parity).
 

@@ -24,5 +24,6 @@ delivery: 504 feat/GH-183/closeout-v1-branch-cleanup -> main-tools
 9. merged-diff-sweep: skipped-gap merged-diff-unavailable
 10. retro-coverage-move: would-apply
 11. session-compaction: skipped-noop no-sessions
-12. capsule: would-apply
-summary: satisfied=2 skipped-gap=1 skipped-noop=1 would-apply=8
+12. milestone-sync: skipped-gap milestone-construct-absent
+13. capsule: would-apply
+summary: satisfied=2 skipped-gap=2 skipped-noop=1 would-apply=8

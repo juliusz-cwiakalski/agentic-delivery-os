@@ -114,15 +114,15 @@
 #               the nine PM rulings for the DoR-iteration-2 remediation
 #               (incremental verb surface, segment split and re-ownership,
 #               R-24..R-28, R-15's page half, N-04);
-#               the "Commit-boundary update" note that TDR-0055/TDR-0056 are now
+#               the "Commit-boundary update" note that TDR-0056/TDR-0057 are now
 #               TRACKED in 400a96ad; the declared-divergence note; the operational
 #               prerequisite that every primitive call carries BOTH
 #               PATH=$PWD/node_modules/.bin:$PATH and TMPDIR=$PWD/tmp/tmpdir).
-#   - Decisions: doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-
+#   - Decisions: doc/decisions/TDR-0056-loop-supervision-as-a-profile-of-the-
 #               coordinator-engine.md (the loop is a COMPOSITION PROFILE over the
 #               delivered lease/budget/stuck/kill primitives under the distinct
 #               identity `loop-main`; the coordinator family is not extended and
-#               is not edited), doc/decisions/TDR-0056-durable-loop-stop-as-a-
+#               is not edited), doc/decisions/TDR-0057-durable-loop-stop-as-a-
 #               state-ledger-record.md (the stop is the identity-scoped
 #               `loop.stop` ledger record `delivery.loop.stop.v1`, key
 #               `loop.stops:<loopId>`, append-only latest-wins, actions
@@ -180,8 +180,8 @@
 #   The two decision records are ALREADY COMMITTED on this branch: the bare
 #   `jaiship commit GH-348` that landed the DoR verdict (400a96ad) also swept them
 #   in, so both are TRACKED at plan revision time:
-#     doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
-#     doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+#     doc/decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+#     doc/decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md
 #   They are therefore VERIFICATION TARGETS, NOT AUTHORED SCOPE. Phase 1 does NOT
 #   declare either path as a file it authors or edits; declaring a
 #   declared-but-unchanged path would surface only as an advisory `plan diff`
@@ -194,8 +194,8 @@
 #   paragraph (line 96) are committed.
 #   PHASE-1 DONE CRITERION (mechanical, re-run at DoD), kept even though the
 #   phase authors neither record:
-#     git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
-#     git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+#     git ls-files --error-unmatch doc/decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+#     git ls-files --error-unmatch doc/decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md
 #   each exit 0 AND `git status --porcelain -- doc/decisions` is empty, so no
 #   index row points at an untracked record and no stray `doc/decisions` change
 #   rides the phase commit. `doc/decisions/00-index.md` STAYS in phase 1 as a
@@ -781,7 +781,7 @@
 #   both paths); `doc/quality/test-specs/test-spec-loop-supervision.md` (spec v1.2
 #   Appendix A / R-14: new enduring coverage map, the loop counterpart of the
 #   coordinator test spec).
-#   The reconciled pages must cite TDR-0055 and TDR-0056, every new or changed
+#   The reconciled pages must cite TDR-0056 and TDR-0057, every new or changed
 #   distributable page declares its `ados_distribution` class, and the
 #   doc-distribution guard (`bash scripts/.tests/test-doc-distribution.sh`) must
 #   stay green (phase 9 owns running it).
@@ -981,14 +981,14 @@ tier:
   phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
     - "A new error identity, error-table row, domain kind, configuration key, or delivered schema-version bump appears, or a coordinator module is edited (NFR-7, NG-4, NG-9, DEC-1)"
-    - "A second supervision engine, lease, kill path, budget fold, or process-exclusivity mechanism is built, or the loop's supervisor identity is made `coordinator-main` (DEC-1, TDR-0055, NG-3, TC-INSTANCE-004)"
+    - "A second supervision engine, lease, kill path, budget fold, or process-exclusivity mechanism is built, or the loop's supervisor identity is made `coordinator-main` (DEC-1, TDR-0056, NG-3, TC-INSTANCE-004)"
     - "A stuck verdict is produced from an unreadable progress reading or an unreadable corroborator, or a kill occurs while a healthy delivery is in progress (F-5, AC-F5-3, AC-F5-4, NFR-5, TC-STUCK-003/004/005)"
     - "The corroborator compares a start time or an age instead of testing recorded-pid presence plus liveness, folds an unreadable input or an absent daemon pid to `none`, or omits a row of the sixteen-row decision table (PM ruling R-01/R-02, spec v1.2 F-5/DM-6, TC-STUCK-009/010, M106/M107/M108)"
     - "The NFR-5 detection bound is hardcoded to 652 000 ms instead of the formula `stuck-window + collection-interval + kill-grace + first backoff`, or the at-bound history reference loses its `seq` component (PM ruling R-09/R-20, spec v1.2 NFR-5, TC-STUCK-006, TC-BACKOFF-004, M109/M112)"
     - "A status key is projected from the wrong source — `loop_id` not the constant `loop-main` and always present, or `ceo_pid`/`ceo_session` from a recorded rather than a live session (PM ruling R-06, spec v1.2 API-4/API-7, TC-VERB-003, M114/M115)"
     - "A restart follows an unconfirmed termination, a second session starts beside a live recorded session, or an identity mismatch sends a signal (PM ruling R3, AC-F5-6, AC-F6-4, RSK-4, RSK-5)"
     - "The declared delay schedule, the 300 000 ms cap, the one-ordinal-per-stuck-restart accounting, the at-bound refusal, or the `--fresh-budget` epoch opening changes (F-3, DM-5, AC-F3-2/003/004, TC-BACKOFF-002/004/005)"
-    - "The stop becomes per-holder or per-instance, is read after the claim, or an unreadable/torn fold reads as `not stopped` (DEC-2, TDR-0056, AC-F4-2, AC-F4-5, TC-STOP-002/003/006/007)"
+    - "The stop becomes per-holder or per-instance, is read after the claim, or an unreadable/torn fold reads as `not stopped` (DEC-2, TDR-0057, AC-F4-2, AC-F4-5, TC-STOP-002/003/006/007)"
     - "A log line, summary, record, or diagnostic carries a prompt, transcript, diff, credential, environment value, provider payload, model name, or seat name; evidence exceeds 512 bytes; or a log fault changes a verdict, exit, or record (NFR-3, NFR-10, AC-F7-2, TC-LOG-002/004)"
     - "The prompt-required inventory is relaxed instead of repinned — not 27, `loop` not last, `install` not immediately before it, the metrics stale-pin set not gaining 26, or the reference-page mapping not learning the M4 root (DOD-8, DEC-7, TC-BATTLE-008, M1–M4, M101)"
     - "A second no-shell invariant is authored instead of extending the existing declared surface, or the surface/allowlist is widened to silence a hit (AC-F8-3, test plan §7.2(b), TC-BATTLE-005, M82/M83)"
@@ -1015,11 +1015,11 @@ phases:
   # state folds, and the whole pure domain tier, with no behaviour wired yet, so
   # each later phase fills one seam and proves it. This phase is first because
   # (i) every later phase consumes one of these declarations, (ii) an additive
-  # contract change is the only thing reviewable in isolation, and (iii) TDR-0055
-  # and TDR-0056 are the governing records and must be on the branch before the
+  # contract change is the only thing reviewable in isolation, and (iii) TDR-0056
+  # and TDR-0057 are the governing records and must be on the branch before the
   # code they govern.
   #
-  # Contract (TDR-0055, TDR-0056; spec DM-1, DM-2, DM-5, DM-6, DM-7, DM-8):
+  # Contract (TDR-0056, TDR-0057; spec DM-1, DM-2, DM-5, DM-6, DM-7, DM-8):
   #   - Verb/mode/event/degradation/output vocabularies: exactly five verbs
   #     (`start`, `stop`, `status`, `log`, `reset`), the flag sets per verb, the
   #     `drain` | `immediate` stop modes, the closed eleven-name log event
@@ -1101,7 +1101,7 @@ phases:
   #   tests/checks/loop-mutants.test.ts          (new: the purity mutant, M93)
   #   doc/decisions/00-index.md                  (conditional staging only)
   #   VERIFIED, NOT DECLARED (already tracked in 400a96ad):
-  #   doc/decisions/TDR-0055-...md and doc/decisions/TDR-0056-...md.
+  #   doc/decisions/TDR-0056-...md and doc/decisions/TDR-0057-...md.
   #
   # Acceptance: no AC; TC-CONTRACT-005 (domain purity). Phase 1 is scaffolding:
   #   claiming an AC from a declaration alone would be a false claim. CONTRACT-006
@@ -1116,8 +1116,8 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/decision-record.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
   # ---------------------------------------------------------------------------
   - id: 1
@@ -1143,7 +1143,7 @@ phases:
         # status row or typo touch made while the phase runs stages with it.
         # Never a licence to edit an unrelated row.
         - doc/decisions/00-index.md
-        # NOT declared: TDR-0055 and TDR-0056 are already TRACKED (400a96ad) and
+        # NOT declared: TDR-0056 and TDR-0057 are already TRACKED (400a96ad) and
         # are VERIFICATION TARGETS, not authored scope (COMMIT-BOUNDARY REALITY).
         # The `doc/decisions` FOLDER is deliberately NOT declared either: an
         # unrelated write there would then surface as advisory
@@ -1440,7 +1440,7 @@ phases:
   # Goal: two loops cannot both run, and a start after an unclean death re-finds
   # the session it already owns before it considers spawning another.
   #
-  # Contract (API-1, API-4; DEC-1, TDR-0055; AC-F6-1..3, AC-F6-5):
+  # Contract (API-1, API-4; DEC-1, TDR-0056; AC-F6-1..3, AC-F6-5):
   #   - The loop claims the DELIVERED append-only instance lease under the
   #     distinct supervisor identity `loop-main`. A live holder is refused
   #     `coordinator.already-running` at exit 2 with no session record and no
@@ -1998,7 +1998,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 6 — The durable identity-scoped stop, the clearance, and both stop
-  # modes (F-4; DM-2; DEC-2, TDR-0056).
+  # modes (F-4; DM-2; DEC-2, TDR-0057).
   #
   # Verb surface at this boundary: ADDS `stop [--mode drain|immediate]` and
   #   `reset`, plus `start`'s folded-stop success path (`state=stopped`, exit 0).
@@ -2764,8 +2764,8 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH jaiship lint plan GH-348
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
   # ---------------------------------------------------------------------------
   - id: 9

@@ -174,8 +174,8 @@ notes:
       coverage-inventory row, or `pnpm check:help` fails."
     type: risk
     date: "2026-11-19"
-  - text: "Staging note (GH-347 precedent): TDR-0055
-      (loop-supervision-as-a-profile-of-the-coordinator-engine) and TDR-0056
+  - text: "Staging note (GH-347 precedent): TDR-0056
+      (loop-supervision-as-a-profile-of-the-coordinator-engine) and TDR-0057
       (durable-loop-stop-as-a-state-ledger-record) plus their two
       doc/decisions/00-index.md rows and the GH-348 acceptance paragraph live
       OUTSIDE the change folder, so the phase-completion commit cannot land
@@ -399,7 +399,7 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "Commit-boundary update: the bare `jaiship commit GH-348` that landed the
-      DoR verdict (400a96ad) also swept in TDR-0055 and TDR-0056, so both
+      DoR verdict (400a96ad) also swept in TDR-0056 and TDR-0057, so both
       records are now TRACKED. Plan phase 1 no longer authors them; its done
       criterion stays the mechanical `git ls-files --error-unmatch` on both
       paths plus an empty `git status --porcelain -- doc/decisions`, and the
@@ -1227,5 +1227,26 @@ notes:
       doc-distribution guard's sandbox install refuses to overwrite (documented
       environment fact, not a change defect). No lifecycle transition, no push,
       no PR."
+    type: info
+    date: "2026-11-19"
+  - text: "DECISION-RECORD RENUMBERING (sync with main-tools; PM ruling
+      2026-11-19). GH-349's phase-truth record had already landed on
+      `main-tools` as `TDR-0055`
+      (`doc/decisions/TDR-0055-phase-truth-registry-fold-mirror.md`, #370), so the
+      sync collided with this change's own `TDR-0055`. The repository's recorded
+      rule is that the EARLIER ARRIVAL keeps its number (GH-349's spec applied it
+      three times while landing), so GH-349 keeps `TDR-0055` and this change's two
+      records took the next free ids in their authored order: DEC-1 (loop
+      supervision as a profile over the coordinator engine) `TDR-0055` ->
+      `TDR-0056`, and DEC-2 (durable loop stop as a state-ledger record)
+      `TDR-0056` -> `TDR-0057`. Only identities changed: both files were renamed,
+      their frontmatter `id` and self-references updated, the index rows re-laid in
+      numeric order with GH-349's row kept, and every citation in this change
+      folder, the reconciled pages, the guides, the glossaries and the M4 planning
+      pages re-pointed (`0055`(loop)->`0056`, `0056`(stop)->`0057`). The records'
+      content, `status: Proposed` and dates are unchanged and NO decision outcome
+      was reopened or re-decided — this is registry hygiene forced by two changes
+      numbering independently. GH-348 stays the owner of the decision content;
+      GH-349's references were not touched."
     type: info
     date: "2026-11-19"

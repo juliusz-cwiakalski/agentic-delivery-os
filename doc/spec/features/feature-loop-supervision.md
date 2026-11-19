@@ -9,7 +9,7 @@ service: delivery-os
 summary: "CEO loop supervision: the `loop` start/stop/status/log/reset family as a composition profile over the delivered supervision engine under the distinct supervisor identity `loop-main`, the preserved shell parity of six status keys plus the additive key block and its per-key source table, the engine-reuse boundary (lease, per-epoch restart budget, stuck record pair, identity-verified kill, six coordinator keys, per-identity verified state read shared; the coordinator cycle, artifact-evidence predicate, wake path, and escalation not shared), the CEO spawn identity with the per-spawn single-seat binding and the deterministic `ceo-loop-<stamp>` title, the two-signal stuck verdict over sourced progress, artifact advance, and the read-only delivery corroborator with its D1-D6 and M1-M6 evidence classes, F0-F3 fold, pid-only owner-liveness rule and deliberate pid-reuse residual risk, the restart-reason compromise over the delivered closed token `stuck-artifact-evidence`, the declared backoff schedule and the at-bound history reference, the durable identity-scoped `loop.stop` and its `reset`, the bounded identifier-only operational log, the single-instance rule with session re-find, the two additive record kinds `loop.session` and `loop.stop`, and the published proof boundary of nine proven and six not-proven surfaces."
 links:
   related_changes: ["GH-348"]
-  related_decisions: ["TDR-0055", "TDR-0056", "TDR-0017", "TDR-0051"]
+  related_decisions: ["TDR-0056", "TDR-0057", "TDR-0017", "TDR-0051"]
   contracts:
     - "packages/core/src/contracts/loop.ts"
     - "packages/core/src/contracts/coordinator.ts"
@@ -33,7 +33,7 @@ supervision engine the coordinator family already delivered — the append-only
 instance lease, the per-epoch restart budget, the stuck verdict/outcome record
 pair, the identity-verified kill-with-grace, and the six `coordinator.*`
 configuration keys — under the distinct supervisor identity `loop-main`
-(TDR-0055). It is not a second supervisor: no new lease, kill path, or budget
+(TDR-0056). It is not a second supervisor: no new lease, kill path, or budget
 fold exists.
 
 The family supervises one long-lived CEO session through the delivered harness
@@ -136,7 +136,7 @@ block has no progress key.
 ## 4. Engine reuse boundary
 
 The loop shares the delivered engine primitives and deliberately does not share
-the coordinator's supervision cycle (TDR-0055).
+the coordinator's supervision cycle (TDR-0056).
 
 | Surface | Shared with the coordinator | Notes |
 |---|---|---|
@@ -398,7 +398,7 @@ nothing and still exits 0. `loop reset` appends exactly one record with action
 
 The stop names the **loop identity**, never a process instance: no pid, start
 time, or holder participates, which is what makes it survive any number of
-restarts, a crash, and a fresh process (TDR-0056).
+restarts, a crash, and a fresh process (TDR-0057).
 
 - `start` folds the stop **before** claiming the lease. A folded request yields
   exit 0 with `state=stopped`, no lease record, no session, and no session
@@ -552,8 +552,8 @@ unchanged. `scripts/checks/no-shell-dispatch.ts` scans the declared loop surface
 - [Configuration Layer](feature-config-layer.md) — the six consumed keys.
 - [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md) — the
   twenty-seventh prompt-required family and the M4 reference-page root.
-- Decision records: [TDR-0055](../../decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md)
+- Decision records: [TDR-0056](../../decisions/TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md)
   (the profile boundary) and
-  [TDR-0056](../../decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md)
+  [TDR-0057](../../decisions/TDR-0057-durable-loop-stop-as-a-state-ledger-record.md)
   (the durable stop home).
 - Reference page: [`loop`](../../planning/oss-tooling/milestones/m4/commands/loop.md).

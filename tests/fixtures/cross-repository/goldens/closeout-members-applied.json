@@ -393,6 +393,22 @@
       }
     },
     {
+      "stepId": "milestone-sync",
+      "label": "milestone synchronization",
+      "outcome": "skipped-gap",
+      "reason": "milestone-construct-absent",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "attachment",
+          "value": "absent"
+        }
+      ],
+      "detail": {
+        "state": "none"
+      }
+    },
+    {
       "stepId": "capsule",
       "label": "close the change capsule",
       "outcome": "skipped-noop",
@@ -424,14 +440,14 @@
     "counts": {
       "would-apply": 0,
       "satisfied": 4,
-      "skipped-gap": 1,
+      "skipped-gap": 2,
       "skipped-noop": 2,
       "would-refuse": 0,
       "applied": 5,
       "failed": 0,
       "refused": 0
     },
-    "gaps": 1,
+    "gaps": 2,
     "noops": 2,
     "failures": 0,
     "refusals": 0

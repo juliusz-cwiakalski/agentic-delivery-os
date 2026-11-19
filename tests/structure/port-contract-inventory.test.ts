@@ -372,3 +372,129 @@ describe("TC-CONTRACT-001 WorkItem field-shape probe", () => {
     }
   });
 });
+
+/**
+ * TC-SYNC-004 — the normalized delivery request gains exactly one additive
+ * optional field (DM-1, NFR-6).
+ *
+ * The delivered field set, its optionality, its readonly modifiers, and the
+ * declared type text are pinned; the one delta is `title` as an optional
+ * `string`. Absence is the unknown signal and is never derived, so the field is
+ * optional and the contract declares no schema version to re-version.
+ */
+const DELIVERY_REQUEST_SHAPE: FieldShapeFixture = {
+  typeName: "DeliveryRequest",
+  fields: [
+    { name: "identity", optional: false, readonly: true, typeText: "ProviderQualifiedIdentity" },
+    { name: "sourceRef", optional: false, readonly: true, typeText: "string" },
+    { name: "targetRef", optional: false, readonly: true, typeText: "string" },
+    {
+      name: "reviewState",
+      optional: false,
+      readonly: true,
+      typeText: "DeliveryRequestReviewState",
+    },
+    { name: "threads", optional: false, readonly: true, typeText: "readonly DeliveryThread[]" },
+    { name: "headSha", optional: true, readonly: true, typeText: "string" },
+    { name: "sourceHeadSha", optional: true, readonly: true, typeText: "string" },
+    {
+      name: "mergeableState",
+      optional: true,
+      readonly: true,
+      typeText: "DeliveryRequestMergeableState",
+    },
+    { name: "commitCount", optional: true, readonly: true, typeText: "number" },
+    { name: "changedFileCount", optional: true, readonly: true, typeText: "number" },
+    // The one additive field this change declares.
+    { name: "title", optional: true, readonly: true, typeText: "string" },
+  ],
+};
+
+describe("TC-SYNC-004 the normalized request gains one additive optional title", () => {
+  test("the live DeliveryRequest shape equals the declared shape exactly", () => {
+    expect(fieldShapeFailures(ROOT, DELIVERY_REQUEST_SHAPE)).toEqual([]);
+    const shape = collectFieldShape(ROOT, "DeliveryRequest");
+    if (shape === undefined) throw new Error("DeliveryRequest is missing");
+    expect(shape.map((field) => field.name)).toEqual([
+      "identity",
+      "sourceRef",
+      "targetRef",
+      "reviewState",
+      "threads",
+      "headSha",
+      "sourceHeadSha",
+      "mergeableState",
+      "commitCount",
+      "changedFileCount",
+      "title",
+    ]);
+    // Exactly one field moved: the additive optional title, and nothing else.
+    expect(shape.filter((field) => field.optional).map((field) => field.name)).toEqual([
+      "headSha",
+      "sourceHeadSha",
+      "mergeableState",
+      "commitCount",
+      "changedFileCount",
+      "title",
+    ]);
+    expect(shape.find((field) => field.name === "title")).toMatchObject({
+      optional: true,
+      readonly: true,
+      typeText: "string",
+    });
+  });
+
+  test("the port module declares no schema version, so the additive field re-versions nothing", () => {
+    const source = readFileSync(join(ROOT, CONTRACTS_DIR, "ports.ts"), "utf8");
+    expect(source).not.toMatch(/schemaVersion\s*:/u);
+    expect(source).not.toMatch(/schemaVersion\?/u);
+  });
+
+  test("making title required fails naming the field and its optionality", () => {
+    const root = makeContractsCopy((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "ports.ts");
+      writeFileSync(
+        path,
+        readFileSync(path, "utf8").replace("readonly title?: string;", "readonly title: string;"),
+      );
+    });
+    try {
+      expect(fieldShapeFailures(root, DELIVERY_REQUEST_SHAPE)).toEqual([
+        "DeliveryRequest.title: optional false != true",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("retyping title to a number fails naming the declared type", () => {
+    const root = makeContractsCopy((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "ports.ts");
+      writeFileSync(
+        path,
+        readFileSync(path, "utf8").replace("readonly title?: string;", "readonly title?: number;"),
+      );
+    });
+    try {
+      expect(fieldShapeFailures(root, DELIVERY_REQUEST_SHAPE)).toEqual([
+        "DeliveryRequest.title: type number != string",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("removing title fails naming the missing field", () => {
+    const root = makeContractsCopy((directory) => {
+      const path = join(directory, CONTRACTS_DIR, "ports.ts");
+      writeFileSync(path, readFileSync(path, "utf8").replace("readonly title?: string;", ""));
+    });
+    try {
+      expect(fieldShapeFailures(root, DELIVERY_REQUEST_SHAPE)).toEqual([
+        "DeliveryRequest.title: missing field",
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

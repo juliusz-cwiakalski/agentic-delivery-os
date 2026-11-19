@@ -9,7 +9,7 @@ created: 2026-11-14
 owners: ["engineering"]
 summary: "The milestone-first operating rule: naming, creation, attachment, entry and exit review, planned scope, closure, extension and reopening, and enforcement."
 links:
-  decisions: ["PDR-0005"]
+  decisions: ["PDR-0005", "ODR-0005"]
 ---
 
 # Milestone Management
@@ -91,6 +91,24 @@ review, not an implied completion.
 A milestone closes only after exit review. Once closed, the milestone record is
 an immutable record of what was planned and delivered; closure is not a licence
 to keep attaching work silently.
+
+The `closeout` transaction performs this closure as its `milestone-sync` step:
+it checks the declared `M<n>:` milestone against the provider-asserted
+attachment on the change's own ticket — both sides compared as one canonical
+`M<n>: <title>` identity after whitespace and prefix normalization, so a different
+number or title still mismatches — evaluates the exit review over one bounded page
+of attached tickets, and closes an open record through one read-back-verified
+`close-milestone` operation. It withholds rather than
+guesses: an absent or mismatched declaration, an open attached ticket, an
+unavailable or unknown record state, or a page whose truncation marker says the
+full set was not observed all leave the record open with one recorded reason,
+and a project that declares `none` reports a declared gap. A withheld closure is
+the routine outcome for a milestone that is not on its last ticket, and it is a
+success-shaped step result with one residue item, not a failure. That residue item
+is informational: it is reported but does not raise the `attention` exit on its
+own, so a closeout whose only residue is withheld closures exits 0. The vocabulary
+cannot express create, attach, detach, rename, or reopen, so those remain owner
+acts performed in the tracker, never agent decisions.
 
 ## Extension and reopening
 

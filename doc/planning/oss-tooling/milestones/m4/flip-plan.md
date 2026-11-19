@@ -56,8 +56,8 @@ resolution: F1 for supervision, F2 for provider/model injection. F3 and F4 are
 disjoint surfaces and may run in parallel once F0 and F1 are settled.
 
 **Delivered stages.** F1a (GH-347) and F3 (GH-348) are delivered. F3's operator
-surface is the `loop` family, designed by TDR-0055 (the profile boundary) and
-TDR-0056 (the durable stop home); its current-truth page is
+surface is the `loop` family, designed by TDR-0056 (the profile boundary) and
+TDR-0057 (the durable stop home); its current-truth page is
 [`feature-loop-supervision.md`](../../../../spec/features/feature-loop-supervision.md)
 and its reference page is [`commands/loop.md`](commands/loop.md). `scripts/ceo-loop.sh`
 stays present and executable as the documented fallback. F5 (prompt re-pointing,

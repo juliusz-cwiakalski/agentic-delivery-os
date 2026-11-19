@@ -64,6 +64,7 @@ import {
   createGitHubClient,
   createGithubCliTransport,
   createGithubNativeTransport,
+  GITHUB_ADAPTER_CONTRACT,
   type GithubChildRunner,
   type GithubClientOptions,
   type GithubTransportPolicy,
@@ -210,6 +211,8 @@ import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  CLOSEOUT_MILESTONE_PAGE_SIZE,
+  type CloseoutMilestoneFacts,
   type CommandFailureHarnessDetail,
   type ConfigErrorCode,
   type ConfigNodeOrigins,
@@ -259,6 +262,10 @@ import {
   type InstallDaemonPort,
   type InstallRuntime,
   LOCAL_CALLER_PRINCIPAL,
+  type MERGE_GATE_ERROR_PREFIX,
+  type MERGE_GATE_ERROR_SUFFIX,
+  type MergeDeliveryRequestInput,
+  type MilestoneReadObservation,
   type OwnerHoldFact,
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
@@ -378,7 +385,7 @@ const MERGE_COMPOSITION_CONFIGURATION_CODES = [
 
 /**
  * The production merge composition's declared emittable failure codes (GH-293
- * F-7, DM-6; TDR-0031 D9).
+ * F-7, DM-6; GH-349 F-1, DEC-7; TDR-0031 D9).
  *
  * Exhaustive by construction over this composition's refusal branches: every
  * member is a code the delivered error table already declares, and the
@@ -388,6 +395,15 @@ const MERGE_COMPOSITION_CONFIGURATION_CODES = [
  * invalid `merge` value is classified by its declared identity rather than
  * silently resolving defaults. The set is a declaration, never a row source: it
  * adds no row, kind, or exit.
+ *
+ * The declaration also covers the `merge.gate.<gate-id>.failed` family the
+ * transaction emits from its refusal path — as the family expression below,
+ * never as a list of gate ids: the slot is resolved against the effective
+ * declared gate set at emission, so adding a declared gate id can never reopen
+ * the classification hole this declaration closes. `merge.rebase-conflict`
+ * stays declared although no delivered path emits it: the row is retained and
+ * reserved, and dropping it from the declaration would remove a capability the
+ * change does not remove.
  */
 export const MERGE_COMPOSITION_EMITTABLE_CODES = [
   ...MERGE_COMPOSITION_CONFIGURATION_CODES,
@@ -401,7 +417,31 @@ export const MERGE_COMPOSITION_EMITTABLE_CODES = [
   "merge.owner-gate-override-without-waiver",
   "merge.rebase-conflict",
   "merge.landing-unverified",
+  "merge.sync-required",
+  "merge.mergeability-unknown",
 ] as const;
+
+/**
+ * The `merge.gate.<gate-id>.failed` family expression the composition declares.
+ *
+ * The template and its slot pair are the contract's own declaration
+ * (`MERGE_GATE_ERROR_TEMPLATE` and its prefix/suffix), so a family emission is
+ * visible to the refusal-site scan and to the totality proof without a second
+ * vocabulary. The slot itself is validated where the effective gate set is
+ * resolved; this expression only states which family the composition may emit,
+ * and it is never a list of gate ids — enumerating them would re-open the
+ * classification hole for the next declared gate.
+ */
+export type MergeCompositionEmittableFamily =
+  `${typeof MERGE_GATE_ERROR_PREFIX}${string}${typeof MERGE_GATE_ERROR_SUFFIX}`;
+
+/**
+ * One code the merge composition may emit: a declared member above, or an
+ * instance of the declared `merge.gate.<gate-id>.failed` family.
+ */
+export type MergeCompositionEmittableCode =
+  | (typeof MERGE_COMPOSITION_EMITTABLE_CODES)[number]
+  | MergeCompositionEmittableFamily;
 
 /**
  * The tracker-family tokens the truth read derives, resolved from the one
@@ -2092,6 +2132,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           recordCount: read.value.evidence.recordCount,
           verification: read.value.evidence.verification,
           projection: { present: true },
+          fold: foldPhaseState(changeRef, read.value.transitions),
         };
       },
       readPlan: plan.readPlan,
@@ -2340,12 +2381,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       | { readonly ok: false; readonly code: string }
     > => {
       if (target === undefined) return { ok: false, code: "merge.transaction-aborted" };
-      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT);
+      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT, {
+        includeGateFacts: true,
+      });
       if (!open.ok) return { ok: false, code: mergeReadCodeOf(open) };
       const match =
         mergeBranch === undefined
           ? undefined
           : open.value.items.find((item) => item.sourceRef === mergeBranch);
+      // The bounded list page is the request-detail read: it carries the
+      // provider-asserted title and, on this read, the mergeability state and
+      // gate facts the taxonomy classifies (GH-349 AC-F1-6, AC-F2-1..4). Both
+      // are provider assertions; nothing is derived.
       if (match !== undefined) return { ok: true, request: match };
       // The convergence case: an already-merged request for the branch's ref.
       const changeRef = mergeBranch === undefined ? undefined : changeRefInBranch(mergeBranch);
@@ -2359,9 +2406,54 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { ok: false, code: "merge.transaction-aborted" };
     };
 
+    /**
+     * The one composed landing mechanism (GH-349 AC-F1-1, API-1).
+     *
+     * The transaction composes the canonical argument shape — the request
+     * identity, the squash strategy, the verified head as the expected head, and
+     * the two crafted metadata strings — and this seam transmits it over the
+     * closed `merge-delivery-request` operation. The adapter returns success only
+     * after a read-back asserted merged truth, so `ok` here is provider truth;
+     * an adapter read-back that could not observe merged truth is reported as an
+     * unverified landing (the write may have fired) rather than as a clean
+     * pre-mutation abort, and never as merged.
+     */
+    const mergeLanding = async (input: MergeDeliveryRequestInput) => {
+      const landed = await client.mergeDeliveryRequest(input);
+      if (landed.ok) {
+        return {
+          ok: true as const,
+          // The adapter's own read-back observed the request merged.
+          requestState: "merged",
+          ...(landed.value.mergeCommitSha === undefined
+            ? {}
+            : { mergeCommitSha: landed.value.mergeCommitSha }),
+        };
+      }
+      if (landed.code === "provider.payload.invalid" && landed.httpStatus === undefined) {
+        return { ok: true as const, requestState: "unknown" };
+      }
+      return { ok: false as const, code: mergeReadCodeOf(landed) };
+    };
+
     const mergeRuntimeBase = createMergeCommandRuntime({
       store,
       git: createGitMergeSeam({ cwd }),
+      land: mergeLanding,
+      landingGap: () => {
+        const declared = GITHUB_ADAPTER_CONTRACT.capabilities;
+        if (declared.supportedOperations.includes("merge-delivery-request")) {
+          return undefined;
+        }
+        return (
+          declared.declaredGaps.find((gap) => gap.operation === "merge-delivery-request")?.reason ??
+          "adapter-not-implemented"
+        );
+      },
+      restoreCheckout: async (baseRef) => {
+        const restored = await gitBranches.restoreCheckout({ baseRef });
+        return restored.ok ? "ok" : "failed";
+      },
       values: () => {
         const configuration = mergeConfiguration();
         return configuration.ok ? configuration.values : {};
@@ -2398,7 +2490,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       createPorts: mergeRuntimeBase.createPorts,
     };
 
-    const closeout = createCloseoutComposition({
+    const closeoutBase = createCloseoutComposition({
       workspaceId,
       provider: { kind: "github", client },
       git: gitBranches,
@@ -2407,6 +2499,82 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowMs,
       newFenceToken,
     });
+
+    /**
+     * The declared milestone (GH-349 F-4): the change's pm-notes `milestone`,
+     * read once per invocation from the same committed document the lint and
+     * phase surfaces read. An absent or unreadable document declares nothing.
+     */
+    const milestoneDeclarationFor = (changeRef: string): string | undefined => {
+      const read = readPmNotesText({ changeRef, changesDirectory, fs: notesFs });
+      if (!read.ok || !isRecord(read.value)) return undefined;
+      const declaration = read.value.milestone;
+      return typeof declaration === "string" ? declaration : undefined;
+    };
+
+    /** The work item's numeric identity for a GitHub closeout read. */
+    const milestoneEntityIdFor = (workItemRef: string): string | undefined => {
+      const match = /^[A-Z][A-Z0-9]*-(\d+)$/.exec(workItemRef);
+      return match?.[1];
+    };
+
+    /**
+     * The milestone-aware closeout composition: the declared milestone plus ONE
+     * bounded adapter-local read per run, and the single read-back-verified
+     * close over the same injected transport and credential port. Everything
+     * else is the delivered composition.
+     */
+    const closeout = {
+      ...closeoutBase,
+      planFacts: async (workItemRef: string) => {
+        const facts = await closeoutBase.planFacts(workItemRef);
+        const declaration = milestoneDeclarationFor(workItemRef);
+        const milestone: CloseoutMilestoneFacts = {
+          ...(declaration === undefined ? {} : { declaration }),
+        };
+        const needsRead =
+          declaration !== undefined &&
+          declaration.trim() !== "" &&
+          declaration.trim() !== "none" &&
+          /^M\d+:/u.test(declaration.trim());
+        if (!needsRead) return { ...facts, milestone };
+        const entityId =
+          facts.observedWorkItem.observation === "observed"
+            ? facts.observedWorkItem.value.identity.entityId
+            : milestoneEntityIdFor(workItemRef);
+        if (entityId === undefined) {
+          const unavailable: MilestoneReadObservation = { observation: "unavailable" };
+          return { ...facts, milestone: { ...milestone, observation: unavailable } };
+        }
+        const read = await client.readMilestone({
+          entityId,
+          pageSize: CLOSEOUT_MILESTONE_PAGE_SIZE,
+        });
+        const observation: MilestoneReadObservation = read.ok
+          ? { observation: "observed", value: read.value }
+          : { observation: "unavailable" };
+        return {
+          ...facts,
+          milestone: {
+            ...milestone,
+            observation,
+          },
+        };
+      },
+      provider: {
+        ...closeoutBase.provider,
+        closeMilestone: async (input: { readonly milestone: string }) => {
+          const written = await client.closeMilestone(input);
+          return written.ok
+            ? { ok: true as const }
+            : {
+                ok: false as const,
+                code: written.code,
+                detail: "detail" in written ? written.detail : written.code,
+              };
+        },
+      },
+    };
 
     /** Map the resolved allowlist onto descriptor entries (names and references only). */
     const harnessEnvironmentEntries = (

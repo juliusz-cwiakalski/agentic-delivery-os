@@ -565,6 +565,17 @@ export const ERROR_TABLE = [
     summary: "A lint target document could not be read or decoded.",
   },
   {
+    code: "lint.phases.divergent",
+    domainKind: "lint",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the pm-notes mirror to the registry fold's completion value, or re-run the phase command that writes it; the ledger is the truth and no surface repairs the document.",
+    projectionClass: "user-validation",
+    summary: "A pm-notes phase completion diverges from the registry fold.",
+  },
+  {
     code: "verify.ledger.incomplete",
     domainKind: "verify",
     category: "user",
@@ -955,6 +966,28 @@ export const ERROR_TABLE = [
       "Clear the named pre-mutation condition and retry; nothing landed and a re-run converges.",
     projectionClass: "user-validation",
     summary: "The transaction aborted cleanly before any landing mutation.",
+  },
+  {
+    code: "merge.sync-required",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Update the delivery branch onto the base by the normal path, re-run `verify gates`, then retry the merge; a refusal that persists after the sync means the protection rule is the cause.",
+    projectionClass: "user-validation",
+    summary: "The delivery request needs a sync before it can land.",
+  },
+  {
+    code: "merge.mergeability-unknown",
+    domainKind: "merge",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Retry after the provider finishes computing the request's mergeability; the command never waits or forces the merge.",
+    projectionClass: "platform-provider",
+    summary: "The provider did not resolve the request's mergeability.",
   },
   {
     code: "verify.deploy.trace-missing",

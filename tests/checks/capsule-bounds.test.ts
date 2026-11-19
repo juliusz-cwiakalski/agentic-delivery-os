@@ -39,8 +39,8 @@ describe("capsule bounds data", () => {
   });
 
   test("the residue and marker vocabularies stay closed", () => {
-    expect(CAPSULE_RESIDUE_KINDS.length).toBe(8);
-    expect(new Set(CAPSULE_RESIDUE_KINDS).size).toBe(8);
+    expect(CAPSULE_RESIDUE_KINDS.length).toBe(9);
+    expect(new Set(CAPSULE_RESIDUE_KINDS).size).toBe(9);
     expect(CAPSULE_DIFF_MARKER_KINDS.length).toBe(4);
     expect(CAPSULE_DIFF_ACTIONS.length).toBe(4);
   });

@@ -1,11 +1,13 @@
 /**
- * Pure post-verification probe classification (GH-225 F-3, AC-F3-1, GAP-6).
+ * Pure post-verification probe classification (GH-225 F-3, AC-F3-1, GAP-6;
+ * GH-349 F-3).
  *
  * The probe compares the recorded verification's observed posture and CI
  * evidence with the bounded merge-time reads. A tracker transition into an
- * owner-attention posture after verification and a newly failing job on the
- * verified head are the two transition classes. No I/O and no waiting: the
- * caller supplies parsed facts.
+ * owner-attention posture after verification and a declared required job that
+ * is not green on the verified head — queued, running, canceled, skipped or
+ * failed — are the two transition classes. No I/O and no waiting: the caller
+ * supplies parsed facts.
  */
 import {
   type MergeTrackerPosture,
@@ -147,7 +149,17 @@ const jobStateOf = (runs: readonly PipelineRun[], jobName: string): string | und
   return worst;
 };
 
-/** Evaluate one `required-ci-job` gate entry against the bounded page. */
+/**
+ * Evaluate one `required-ci-job` gate entry against the bounded page.
+ *
+ * This is the single required-check mapping on both sides of the check
+ * boundary: `verify gates`' declared-battery evaluation and the
+ * post-verification probe call it with the same stimulus. `queued` and
+ * `running` are not green (`ci-pending`) by declared contract, and
+ * `canceled`, `skipped` and `failed` keep `ci-canceled`, `ci-all-skipped` and
+ * `ci-failed`. A page for another head is `unknown`/`head-unresolved`, so the
+ * caller never treats it as head evidence.
+ */
 export const evaluateRequiredJobGate = (input: {
   readonly jobName: string;
   readonly runs: readonly PipelineRun[];

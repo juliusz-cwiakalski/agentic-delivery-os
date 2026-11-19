@@ -16,7 +16,7 @@ describe("TC-QLC-025 the additive queueRemoval data block", () => {
     expect(run.exitCode).toBe(0);
     const data = closeoutData(run.envelope as Record<string, unknown>);
     expect(Object.hasOwn(data, "queueRemoval")).toBe(false);
-    expect(data.steps).toHaveLength(12);
+    expect(data.steps).toHaveLength(13);
   });
 
   test("the closed outcome vocabulary is exactly the declared four values", () => {

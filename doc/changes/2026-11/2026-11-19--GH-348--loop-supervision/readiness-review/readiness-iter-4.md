@@ -27,7 +27,7 @@ Pause Required: yes
   drops every command not in `PROMPT_REQUIRED_COMMANDS`, throws only for a
   declared name the program lacks) and `:447` (applied to every composed
   program); `packages/cli/src/help/prompt-required-commands.ts:11-39` (26
-  entries, `install` last); `doc/decisions/TDR-0055-*`/`TDR-0056-*` (`status:
+  entries, `install` last); `doc/decisions/TDR-0056-*`/`TDR-0057-*` (`status:
   Proposed`, both tracked, `git status --porcelain -- doc/decisions` empty).
 - Mechanical gates at `28e0f95b` (clean tree): `plan validate GH-348` →
   `verdict=valid`, `tier=full`, `readyForDevelopment=true`; `lint plan GH-348` →
@@ -79,7 +79,7 @@ Recomputed counts (from the artifacts, not the hand-off):
 - cross_artifact_consistency: **FAIL** — R-34/R-35/R-36 (test-plan case text vs
   the plan's phase map and the delivered entrypoint), plus minors R-37, R-38,
   R-39 and nit N-07. R-26, R-29, R-31, R-32, R-33, N-05, N-06 are closed.
-- decision_capture: **PASS** — DEC-1…DEC-7 in spec §15; TDR-0055/TDR-0056
+- decision_capture: **PASS** — DEC-1…DEC-7 in spec §15; TDR-0056/TDR-0057
   tracked, `Proposed`, cited in both artifacts, treated by phase 1 as
   verification targets, re-checked by the phase-9 done criterion. No new
   decision is required by revision 0.5.

@@ -98,6 +98,12 @@ const validArguments = (operation: string, value: unknown): boolean => {
         isNonEmptyString(value.worktreePath) &&
         (value.expectedHead === undefined || isNonEmptyString(value.expectedHead))
       );
+    case "close-milestone":
+      // The seventh recorded operation name (GH-349 DM-4): ONE operand, the
+      // milestone identity. Without this explicit arm the recorded operation
+      // would fall through to `default: false` and poison the whole history on
+      // the next verified read.
+      return hasOnlyKeys(value, ["milestone"]) && isNonEmptyString(value.milestone);
     default:
       return false;
   }

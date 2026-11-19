@@ -5,7 +5,7 @@
  * payload types, the declared output/retention bounds, the declared backoff
  * policy data, and the two read-only projection types. The loop is a
  * COMPOSITION PROFILE over the delivered supervision engine under the distinct
- * supervisor identity `loop-main` (TDR-0055); the coordinator family is not
+ * supervisor identity `loop-main` (TDR-0056); the coordinator family is not
  * extended and no coordinator declaration moves.
  *
  * Two additive record kinds only: `loop.session` (DM-1) and `loop.stop`
@@ -31,7 +31,7 @@ export type LoopVerb = (typeof LOOP_VERBS)[number];
 export const LOOP_STOP_MODES = ["drain", "immediate"] as const;
 export type LoopStopMode = (typeof LOOP_STOP_MODES)[number];
 
-/** The two declared durable-stop transitions (DM-2, TDR-0056). */
+/** The two declared durable-stop transitions (DM-2, TDR-0057). */
 export const LOOP_STOP_ACTIONS = ["requested", "cleared"] as const;
 export type LoopStopAction = (typeof LOOP_STOP_ACTIONS)[number];
 
@@ -149,7 +149,7 @@ export const LOOP_STOP_KEY_PREFIX = "loop.stops:" as const;
 export const LOOP_STOP_PAYLOAD_SCHEMA = "delivery.loop.stop.v1" as const;
 
 /**
- * The durable, identity-scoped stop (DM-2, TDR-0056). No pid, holder, or
+ * The durable, identity-scoped stop (DM-2, TDR-0057). No pid, holder, or
  * instance field participates: the stop names the loop identity, which is what
  * makes it survive a restart, a crash, and a fresh process.
  */

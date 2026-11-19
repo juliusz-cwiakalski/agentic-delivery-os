@@ -1,0 +1,54 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-19",
+  "note": "Synthetic milestone shapes for the GH-349 milestone suites. Example-only hosts and identities; never provider truth.",
+  "host": "https://github.example.com",
+  "records": {
+    "open": {
+      "identity": { "systemName": "github", "entityId": "4" },
+      "title": "Jaiship-native delivery",
+      "state": "open",
+      "attachedItems": [
+        { "identity": { "systemName": "github", "entityId": "349" }, "deliveryState": "done" },
+        {
+          "identity": { "systemName": "github", "entityId": "352" },
+          "deliveryState": "in-progress"
+        }
+      ]
+    },
+    "closed": {
+      "identity": { "systemName": "github", "entityId": "4" },
+      "title": "Jaiship-native delivery",
+      "state": "closed",
+      "attachedItems": []
+    },
+    "unknown": {
+      "identity": { "systemName": "github", "entityId": "4" },
+      "title": "Jaiship-native delivery",
+      "state": "unknown",
+      "attachedItems": []
+    }
+  },
+  "attachedSets": {
+    "all-done": [
+      { "identity": { "systemName": "github", "entityId": "349" }, "deliveryState": "done" },
+      { "identity": { "systemName": "github", "entityId": "350" }, "deliveryState": "canceled" }
+    ],
+    "one-open": [
+      { "identity": { "systemName": "github", "entityId": "349" }, "deliveryState": "done" },
+      { "identity": { "systemName": "github", "entityId": "352" }, "deliveryState": "in-review" }
+    ],
+    "exactly-page-size": {
+      "count": 100,
+      "deliveryState": "done",
+      "truncation": null
+    },
+    "page-size-plus-one": {
+      "count": 100,
+      "omitted": 1,
+      "deliveryState": "done",
+      "truncation": { "truncated": true, "omitted": 1, "cap": 100 }
+    }
+  },
+  "absent": { "observation": "absent", "note": "the adapter declares the read as a gap" },
+  "unavailable": { "observation": "unavailable" }
+}
