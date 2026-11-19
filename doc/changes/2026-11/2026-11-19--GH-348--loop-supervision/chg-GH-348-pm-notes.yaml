@@ -1083,3 +1083,25 @@ notes:
       plan's ownership are untouched."
     type: info
     date: "2026-11-19"
+  - text: "DOCUMENTATION RE-SYNC after review-iteration-1 remediation (docs commit
+      599babc2). Pages: doc/spec/features/feature-loop-supervision.md
+      (baseline-relative artifact advance, stale-positive `unevaluable` and
+      `progress-bound` freshness, newest-per-ref corroborator, re-find fact
+      seeding and the null-start-time unknown-liveness arm, status
+      `session.progress`, the real-runtime pick-deliver-merge scenario and the
+      unchanged nine/six boundary), doc/quality/test-specs/test-spec-loop-supervision.md
+      (the same surfaces in the test map and scenarios), and
+      doc/overview/glossary.md (the two-signal and corroborator entries).
+      GUARDS: `bun test tests/checks/doc-conformance.test.ts
+      tests/checks/reference-page-parity.test.ts
+      tests/structure/content-inventory.test.ts` -> 42 pass, 0 fail; `bash
+      scripts/.tests/test-doc-distribution.sh` -> OK, no drift across 96
+      in-scope docs; `git diff --check` clean. PROOF-BOUNDARY EQUALITY: both
+      pages carry the nine proven and six not-proven ids in the same order as
+      LOOP_PARITY_PROOF_BOUNDARY; the boundary is unchanged. STALE-STATE SCAN:
+      zero hits for the superseded artifact-advance, every-lane, unobserved-join,
+      hardcoded-progress, and stale-positive claims. `ados_distribution:
+      internal` present on all three changed pages. No lifecycle transition, no
+      push, no PR."
+    type: info
+    date: "2026-11-19"
