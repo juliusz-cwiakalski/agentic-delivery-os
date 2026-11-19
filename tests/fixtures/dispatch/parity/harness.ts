@@ -22,6 +22,7 @@ import {
 } from "../../../../packages/core/src/app/dispatch-ledger";
 import { claimQueueLease, declareQueueEntry } from "../../../../packages/core/src/app/queue";
 import { resolveBrandIdentity } from "../../../../packages/core/src/branding/index";
+import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import type {
   BrandIdentity,
   CredentialPort,
@@ -31,6 +32,7 @@ import type {
   DispatchLaneRecord,
   DispatchLogFileSystem,
   DispatchOwnerProbe,
+  HarnessKind,
   StateFenceHandle,
   StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
@@ -192,6 +194,10 @@ export type ParityHarnessOptions = {
   readonly artifactRoot?: string;
   /** The artifact-family filesystem edge (GH-354 DM-2). */
   readonly artifactFs?: DispatchLogFileSystem;
+  /** The injected transcript read (GH-354 API-9). */
+  readonly transcriptRead?: DispatchTranscriptRead;
+  /** The adapter capability the transcript read is gated by (GH-354 DM-3). */
+  readonly supportsIntrospection?: (kind: HarnessKind) => boolean;
   /**
    * An observability seam over the main state store (GH-354 §7.2). The composed
    * program keeps using the returned port, so a case can count reads without
@@ -407,6 +413,11 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     ...(options.ownerProbe === undefined ? {} : { ownerProbe: options.ownerProbe }),
     ...(options.artifactRoot === undefined ? {} : { dispatchLogFamilyRoot: options.artifactRoot }),
     ...(options.artifactFs === undefined ? {} : { dispatchLogFileSystem: options.artifactFs }),
+    ...(options.secrets === undefined ? {} : { registeredSecrets: options.secrets }),
+    ...(options.transcriptRead === undefined ? {} : { operatorTranscript: options.transcriptRead }),
+    ...(options.supportsIntrospection === undefined
+      ? {}
+      : { operatorSupportsIntrospection: options.supportsIntrospection }),
     ...(options.onAppend === undefined && options.storeWrap === undefined
       ? {}
       : {

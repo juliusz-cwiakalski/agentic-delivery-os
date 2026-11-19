@@ -43,6 +43,7 @@ const FIXED_SURFACE = [
   "packages/adapters/src/harness/opencode.ts",
   "packages/adapters/src/host/index.ts",
   "packages/adapters/src/file/dispatch-logs.ts",
+  "packages/adapters/src/harness/opencode-transcript.ts",
   "packages/adapters/src/daemon/lane-executor.ts",
 ] as const;
 

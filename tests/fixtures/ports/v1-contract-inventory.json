@@ -1331,6 +1331,8 @@
     ],
     "harness.ts": [
       "DEFAULT_HARNESS_MODE",
+      "DispatchTranscriptRead",
+      "DispatchTranscriptResult",
       "HARNESS_BINDING_RESOLUTION_OUTCOMES",
       "HARNESS_CLASSIFICATION_TOKENS",
       "HARNESS_EXECUTION_KINDS",
@@ -2596,6 +2598,8 @@
       "DispatchResumeMode",
       "DispatchStatusData",
       "DispatchSummaryData",
+      "DispatchTranscriptRead",
+      "DispatchTranscriptResult",
       "DispatchUnmetCondition",
       "DispatchWindowStartReason",
       "DoctorArea",

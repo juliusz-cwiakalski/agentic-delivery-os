@@ -258,6 +258,17 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "dispatchLogsRefDirectory",
   ],
   "core/src/app/dispatch-log-tail.ts": ["readDispatchLog"],
+  "core/src/app/dispatch-last-message.ts": ["readDispatchLastMessage"],
+  "core/src/domain/dispatch-message.ts": [
+    "composeDispatchMessage",
+    "DISPATCH_MESSAGE_LADDER",
+    "firstMessageReason",
+    "flattenMessageText",
+  ],
+  "adapters/src/harness/opencode-transcript.ts": [
+    "createOpencodeTranscriptReader",
+    "TRANSCRIPT_STATEMENT_LIMIT",
+  ],
   "core/src/domain/dispatch-log.ts": [
     "boundDispatchLogLines",
     "cutAtByteCap",
@@ -390,6 +401,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderDispatchAttemptsText",
     "renderDispatchDeliveringText",
     "renderDispatchHandoverText",
+    "renderDispatchLastMessageText",
     "renderDispatchLogText",
     "renderDispatchResolveText",
     "renderDispatchStatusText",

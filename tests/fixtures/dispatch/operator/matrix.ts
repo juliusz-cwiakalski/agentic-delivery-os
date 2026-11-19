@@ -89,6 +89,28 @@ const log = (
   expected,
 });
 
+const message = (
+  id: string,
+  reason: string | undefined,
+  projection: ProjectionClass,
+): OperatorMatrixEntry => ({
+  id,
+  group: "MSG",
+  query: "last-message GH-354",
+  state: "terminal",
+  mode: "json",
+  precondition:
+    reason === undefined
+      ? "a terminal opencode lane with a readable transcript"
+      : `a lane whose answer is ${reason}`,
+  projection,
+  expected: (data) => [
+    ...mismatch("query", at(data, "query"), "last-message"),
+    ...mismatch("reason", at(data, "reason"), reason),
+    ...mismatch("available", at(data, "available"), reason === undefined),
+  ],
+});
+
 /**
  * The declared rows. Phase 2 declares the six `status` combinations, both
  * `is-delivering` forms, and both output modes of the per-ref negative answer;
@@ -172,6 +194,11 @@ export const OPERATOR_MATRIX: readonly OperatorMatrixEntry[] = [
     ...mismatch("reason", at(data, "reason"), "no-log"),
     ...mismatch("lines", at(data, "lines"), []),
   ]),
+  message("MATRIX-MSG-PRODUCED-JSON", undefined, "success"),
+  message("MATRIX-MSG-NO-LANE-JSON", "no-lane", "user-validation"),
+  message("MATRIX-MSG-CAPABILITY-GAP-JSON", "capability-gap", "user-validation"),
+  message("MATRIX-MSG-SESSION-UNKNOWN-JSON", "session-unknown", "user-validation"),
+  message("MATRIX-MSG-NO-MESSAGE-JSON", "no-message", "user-validation"),
   delivering(
     "MATRIX-ISDEL-REPOLESS-ABSENT-JSON",
     "absent",

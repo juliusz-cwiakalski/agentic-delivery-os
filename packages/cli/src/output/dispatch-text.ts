@@ -16,6 +16,7 @@ import {
   type DispatchCorroborationRecord,
   type DispatchDeliveringData,
   type DispatchEnvelopeData,
+  type DispatchLastMessageData,
   type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
@@ -216,6 +217,18 @@ export const renderDispatchDeliveringText = (data: DispatchDeliveringData): stri
   ];
   return `${lines.join("\n")}\n`;
 };
+
+/**
+ * `last-message` as the declared key set: `available`, `final`, `reason` when
+ * present, and `last_message` (§8.5, DEC-8).
+ */
+export const renderDispatchLastMessageText = (data: DispatchLastMessageData): string =>
+  `${[
+    `available=${data.available ? "true" : "false"}`,
+    `final=${data.final ? "true" : "false"}`,
+    ...(data.reason === undefined ? [] : [`reason=${data.reason}`]),
+    `last_message=${data.message ?? ""}`,
+  ].join("\n")}\n`;
 
 /**
  * `log` as the RAW tail plus at most one `truncation=` line (DEC-8, §8.5).

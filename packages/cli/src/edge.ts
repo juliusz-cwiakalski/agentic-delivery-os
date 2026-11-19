@@ -201,7 +201,9 @@ import {
   readDaemonLanes,
   readDispatchAttemptHistory,
   readDispatchAttempts,
+  readDispatchLastMessage,
   readDispatchLog,
+  type DispatchTranscriptRead,
   readOperatorDelivering,
   readOperatorStatus,
   readOutboxEffects,
@@ -503,6 +505,7 @@ import {
   type DispatchCommandRuntime,
   type DispatchDeliveringRuntime,
   type DispatchLogRuntime,
+  type DispatchMessageRuntime,
   type DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
@@ -569,6 +572,7 @@ export type {
   DispatchCommandRuntime,
   DispatchDeliveringRuntime,
   DispatchLogRuntime,
+  DispatchMessageRuntime,
   DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 
@@ -586,6 +590,7 @@ import type {
   CommandFlags,
   CommandProgram,
 } from "./index.js";
+import { redact } from "./output/serialize.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
 
@@ -5089,7 +5094,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.verify = createVerifyCommandDefinition(options.verify);
   }
   if (options.dispatch !== undefined) {
-    commands.dispatch = createDispatchCommandDefinition(options.dispatch);
+    // The registered credential set the composition root already holds is the
+    // set the message composition redacts with BEFORE bounding (AC-F4-7). A
+    // runtime that already carries an injected set is never shadowed.
+    commands.dispatch = createDispatchCommandDefinition(
+      options.dispatch.secrets === undefined ? { ...options.dispatch, secrets } : options.dispatch,
+    );
   }
   if (options.doctor !== undefined) {
     commands.doctor = createDoctorCommandDefinition(
@@ -7215,6 +7225,10 @@ export type DispatchOperatorComposition = {
   /** The artifact family's root and edge (GH-354 API-7); absent = uncomposed. */
   readonly artifactRoot?: string;
   readonly artifactFs?: DispatchLogFileSystem;
+  /** The injected transcript read (GH-354 API-9); absent = uncomposed. */
+  readonly transcript?: DispatchTranscriptRead;
+  /** The adapter's declared `session-introspection` support (GH-354 DM-3). */
+  readonly supportsIntrospection?: (kind: HarnessKind) => boolean;
 };
 
 /**
@@ -7230,6 +7244,7 @@ export const createDispatchOperatorRuntime = (
   readonly status: DispatchStatusRuntime;
   readonly delivering: DispatchDeliveringRuntime;
   readonly log?: DispatchLogRuntime;
+  readonly message?: DispatchMessageRuntime;
 } => {
   const failureOf = (read: { readonly code: string }, summary: string) => ({
     ok: false as const,
@@ -7312,6 +7327,46 @@ export const createDispatchOperatorRuntime = (
                   ),
               }),
             }),
+          },
+        }),
+    ...(composition.transcript === undefined || composition.supportsIntrospection === undefined
+      ? {}
+      : {
+          message: {
+            read: async (input: { readonly ref: string; readonly secrets: readonly string[] }) => {
+              const repository = composition.resolveRepository();
+              if (repository === undefined) {
+                return {
+                  ok: false as const,
+                  error: {
+                    kind: "input",
+                    code: "input.value.rejected",
+                    summary: "repository identity is unresolvable",
+                  },
+                };
+              }
+              const read = await readDispatchLastMessage({
+                store: composition.store,
+                repository,
+                ref: input.ref,
+                transcript: composition.transcript as DispatchTranscriptRead,
+                supportsIntrospection: composition.supportsIntrospection as (
+                  kind: HarnessKind,
+                ) => boolean,
+                redact: (text: string) => redact(text, input.secrets),
+              });
+              if (!read.ok) {
+                return {
+                  ok: false as const,
+                  error: {
+                    kind: "state",
+                    code: read.code,
+                    summary: `dispatch lane read failed (${read.code})`,
+                  },
+                };
+              }
+              return { ok: true as const, data: read.data };
+            },
           },
         }),
   };

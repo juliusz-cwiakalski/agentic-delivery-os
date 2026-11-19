@@ -73,6 +73,7 @@ import {
   createOpencodeInstance,
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
+  createOpencodeTranscriptReader,
   mapCoordinatorNewTurn,
   OPENCODE_CAPABILITIES,
 } from "@delivery-os/adapters/harness";
@@ -86,6 +87,7 @@ import {
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import type {
+  DispatchTranscriptRead,
   HarnessAdapterRegistration,
   HarnessBindingResolution,
   HarnessProfileView,
@@ -794,6 +796,20 @@ export type ProductionCompositionFacts = {
    */
   readonly dispatchLogFamilyRoot?: string;
   readonly dispatchLogFileSystem?: DispatchLogFileSystem;
+  /**
+   * The injected transcript read and the adapter capability declaration it is
+   * gated by (GH-354 API-9). Production mounts the real opencode reader; the
+   * offline battery injects a recording double so the ladder is observable
+   * without a live store.
+   */
+  /**
+   * The registered credential set the operator runtime redacts the final
+   * message with (GH-354 AC-F4-7). Production derives it from the resolved
+   * credential references; an embedder may inject the same runtime fact.
+   */
+  readonly registeredSecrets?: readonly string[];
+  readonly operatorTranscript?: DispatchTranscriptRead;
+  readonly operatorSupportsIntrospection?: (kind: HarnessKind) => boolean;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
@@ -3670,12 +3686,30 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // The operator read surfaces (GH-354 DEC-7): the same single store, a
       // persistence-disabled repository resolution, and the advisory probe.
       // No configuration key is added.
+      ...(facts.registeredSecrets === undefined ? {} : { secrets: facts.registeredSecrets }),
       ...createDispatchOperatorRuntime({
         store,
         resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),
         probe: facts.ownerProbe ?? productionOwnerProbe,
         artifactRoot: dispatchLogRoot,
         artifactFs: dispatchLogFs,
+        // The transcript read is the content use of the EXISTING
+        // `session-introspection` capability; it is mounted only for a harness
+        // that declares it supported.
+        transcript:
+          facts.operatorTranscript ??
+          ((input) => {
+            const resolution = resolveProductionHarnessSettings();
+            if (!resolution.ok) return { ok: false, reason: "unreadable" };
+            return createOpencodeTranscriptReader({
+              opener: createBunSqliteStoreOpener(),
+              storePath: resolution.settings.opencodeDatabasePath,
+            }).read(input);
+          }),
+        supportsIntrospection:
+          facts.operatorSupportsIntrospection ??
+          ((kind) =>
+            harnessDeclaration(kind).lifecycleCapabilities.includes("session-introspection")),
       }),
     };
 

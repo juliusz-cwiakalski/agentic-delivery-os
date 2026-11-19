@@ -27,6 +27,7 @@ import {
   type DispatchAttemptsData,
   type DispatchDeliveringData,
   type DispatchEnvelopeData,
+  type DispatchLastMessageData,
   type DispatchLogData,
   type DispatchResolveData,
   type DispatchStatusData,
@@ -38,6 +39,7 @@ import {
   renderDispatchAttemptsText,
   renderDispatchDeliveringText,
   renderDispatchHandoverText,
+  renderDispatchLastMessageText,
   renderDispatchLogText,
   renderDispatchResolveText,
   renderDispatchStatusText,
@@ -180,6 +182,17 @@ export type DispatchDeliveringRuntime = {
   >;
 };
 
+/** The `last-message` read surface (GH-354 API-4); the secrets are runtime facts. */
+export type DispatchMessageRuntime = {
+  readonly read: (input: {
+    readonly ref: string;
+    readonly secrets: readonly string[];
+  }) => Promise<
+    | { readonly ok: true; readonly data: DispatchLastMessageData }
+    | { readonly ok: false; readonly error: DispatchRuntimeFailure }
+  >;
+};
+
 /** The bounded `log` read surface (GH-354 API-2); the tail is pre-validated. */
 export type DispatchLogRuntime = {
   readonly read: (input: {
@@ -201,6 +214,7 @@ export type DispatchCommandRuntime = {
   readonly status?: DispatchStatusRuntime;
   readonly delivering?: DispatchDeliveringRuntime;
   readonly log?: DispatchLogRuntime;
+  readonly message?: DispatchMessageRuntime;
   /**
    * The registered credential set the composition root already holds (the same
    * value `blockers` and `steer` receive); the message composition redacts with
@@ -266,6 +280,9 @@ const isDeliveringData = (data: unknown): data is DispatchDeliveringData =>
   queryOf(data) === "is-delivering";
 
 const isLogData = (data: unknown): data is DispatchLogData => queryOf(data) === "log";
+
+const isLastMessageData = (data: unknown): data is DispatchLastMessageData =>
+  queryOf(data) === "last-message";
 
 /**
  * The `--tail` value: a canonical decimal in 1..500, REFUSED rather than clamped
@@ -412,6 +429,7 @@ export const createDispatchCommandDefinition = (
       if (queryOf(data) === "status") return "success";
       if (isDeliveringData(data)) return data.delivering ? "success" : "user-validation";
       if (isLogData(data)) return data.reason === "unreadable" ? "user-validation" : "success";
+      if (isLastMessageData(data)) return data.available ? "success" : "user-validation";
       const handover = data as {
         readonly verdict?: unknown;
         readonly recorded?: unknown;
@@ -431,6 +449,7 @@ export const createDispatchCommandDefinition = (
       if (isStatusData(data)) return renderDispatchStatusText(data);
       if (isDeliveringData(data)) return renderDispatchDeliveringText(data);
       if (isLogData(data)) return renderDispatchLogText(data);
+      if (isLastMessageData(data)) return renderDispatchLastMessageText(data);
       if (isSummaryData(data)) return renderDispatchSummaryText(data);
       if (isResolveData(data)) return renderDispatchResolveText(data);
       const envelope = data as Partial<DispatchEnvelopeData>;
@@ -508,6 +527,19 @@ export const createDispatchCommandDefinition = (
             );
           }
           const result = await runtime.log.read({ ref: request.ref, tail });
+          return result.ok ? { data: result.data } : { error: result.error };
+        }
+
+        // `last-message` reads the persisted transcript under the declared
+        // capability; the registered credential set is a runtime fact.
+        if (first === "last-message") {
+          if (runtime.message === undefined || request.ref === undefined) {
+            return failure("input.value.rejected");
+          }
+          const result = await runtime.message.read({
+            ref: request.ref,
+            secrets: runtime.secrets ?? [],
+          });
           return result.ok ? { data: result.data } : { error: result.error };
         }
 

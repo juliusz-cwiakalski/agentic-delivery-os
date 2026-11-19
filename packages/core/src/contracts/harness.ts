@@ -459,6 +459,28 @@ export type HarnessStreamSinkContext = {
   readonly iterationOrdinal?: number;
 };
 
+/**
+ * The injected adapter-owned transcript read (GH-354 API-9).
+ *
+ * A READ, not a member of the closed session operation set: it takes no handle,
+ * performs no session operation, and returns the stored final assistant text
+ * under the adapter's own read cap or one closed absence. It does not flatten,
+ * bound, redact, or mark — that composition belongs to the query.
+ */
+export type DispatchTranscriptResult =
+  | {
+      readonly ok: true;
+      readonly message: string;
+      readonly recordedAt: string | null;
+    }
+  | { readonly ok: false; readonly reason: "session-unknown" | "no-message" | "unreadable" };
+
+export type DispatchTranscriptRead = (input: {
+  readonly harnessKind: HarnessKind;
+  readonly sessionId: string;
+  readonly ref: string;
+}) => DispatchTranscriptResult | Promise<DispatchTranscriptResult>;
+
 /** The additive per-stream sink factory (GH-354 API-8). */
 export type HarnessStreamSinkFactory = (
   context: HarnessStreamSinkContext,

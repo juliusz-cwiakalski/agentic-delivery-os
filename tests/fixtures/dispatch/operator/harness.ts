@@ -19,6 +19,7 @@ import type {
   DispatchLaneRecord,
   DispatchLogFileSystem,
   DispatchOwnerProbe,
+  HarnessKind,
   HarnessSessionPort,
   StateRecord,
   StateStorePort,
@@ -30,6 +31,7 @@ import {
 import { countStore, type StoreCounters } from "../attempts-harness";
 import { createParityHarness, PARITY_REPOSITORY } from "../parity/harness";
 import type { GuardedRunner } from "../parity/process-runner";
+import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import {
   type LaneSeed,
   seedDaemonLane,
@@ -85,6 +87,10 @@ export type OperatorHarnessOptions = {
   readonly artifactRoot?: string;
   /** The artifact-family filesystem edge; absent means the family is unreadable. */
   readonly artifactFs?: DispatchLogFileSystem;
+  /** The injected transcript read (GH-354 API-9). */
+  readonly transcriptRead?: DispatchTranscriptRead;
+  /** The adapter capability the transcript read is gated by (GH-354 DM-3). */
+  readonly supportsIntrospection?: (kind: HarnessKind) => boolean;
   /** A store wrapper around the counted store (the read-failure rows). */
   readonly wrap?: (store: StateStorePort) => StateStorePort;
   /** A shared guarded runner (the scripted session's stdout is injected there). */
@@ -308,6 +314,10 @@ export const createOperatorHarness = (options: OperatorHarnessOptions = {}): Ope
     ...(options.artifactRoot === undefined ? {} : { artifactRoot: options.artifactRoot }),
     ...(options.artifactFs === undefined ? {} : { artifactFs: options.artifactFs }),
     ...(options.guarded === undefined ? {} : { guarded: options.guarded }),
+    ...(options.transcriptRead === undefined ? {} : { transcriptRead: options.transcriptRead }),
+    ...(options.supportsIntrospection === undefined
+      ? {}
+      : { supportsIntrospection: options.supportsIntrospection }),
     storeWrap: (opened) => {
       const counted = countStore(opened);
       counters = counted.counters as OperatorCounters;

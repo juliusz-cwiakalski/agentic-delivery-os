@@ -89,6 +89,13 @@ export const SEAM_MANIFEST: readonly SeamManifestEntry[] = [
     mountedIn: "packages/cli/src/edge.ts",
   },
   {
+    // GH-354 S-transcript: the adapter-owned read-only transcript reader.
+    seam: "transcript-read",
+    symbol: "createOpencodeTranscriptReader",
+    module: "packages/adapters/src/harness/opencode-transcript",
+    mountedIn: "packages/cli/src/production.ts",
+  },
+  {
     // GH-354 S-sink: the per-stream stdout artifact sink.
     seam: "log-sink",
     symbol: "createDispatchLogSink",

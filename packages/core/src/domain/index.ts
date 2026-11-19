@@ -361,6 +361,12 @@ export {
   type OperatorLaneVerdict,
 } from "./dispatch-operator-view.js";
 export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./dispatch-message.js";
+export {
   boundDispatchLogLines,
   cutAtByteCap,
   type DispatchLogNameInput,

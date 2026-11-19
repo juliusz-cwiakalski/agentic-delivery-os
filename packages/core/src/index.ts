@@ -111,6 +111,12 @@ export {
   readDispatchLog,
 } from "./app/dispatch-log-tail.js";
 export {
+  type DispatchLastMessageRead,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
+  readDispatchLastMessage,
+} from "./app/dispatch-last-message.js";
+export {
   createDispatchLogSink,
   type DispatchLogSinkInput,
   dispatchLogsDirectoryName,
@@ -742,6 +748,12 @@ export {
   operatorMarkerOf,
   type OperatorLaneVerdict,
 } from "./domain/dispatch-operator-view.js";
+export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./domain/dispatch-message.js";
 export {
   boundDispatchLogLines,
   cutAtByteCap,

@@ -1465,6 +1465,8 @@ export {
   type HarnessStreamSink,
   type HarnessStreamSinkContext,
   type HarnessStreamSinkFactory,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
   type HarnessTerminateInput,
   type HarnessTerminateResult,
   type HarnessVersionProbe,

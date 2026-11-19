@@ -34,6 +34,8 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/core/src/app/dispatch-lane-view.ts",
   "packages/core/src/app/dispatch-log-sink.ts",
   "packages/core/src/app/dispatch-log-tail.ts",
+  "packages/core/src/app/dispatch-last-message.ts",
+  "packages/core/src/domain/dispatch-message.ts",
   "packages/core/src/domain/dispatch-operator-view.ts",
   "packages/core/src/domain/dispatch-log.ts",
   "packages/core/src/domain/dispatch-attempts.ts",
@@ -54,6 +56,7 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/adapters/src/harness/opencode.ts",
   "packages/adapters/src/host/index.ts",
   "packages/adapters/src/file/dispatch-logs.ts",
+  "packages/adapters/src/harness/opencode-transcript.ts",
   "packages/adapters/src/daemon/lane-executor.ts",
 ] as const;
 

@@ -115,6 +115,12 @@ export {
   readDispatchLog,
 } from "./dispatch-log-tail.js";
 export {
+  type DispatchLastMessageRead,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
+  readDispatchLastMessage,
+} from "./dispatch-last-message.js";
+export {
   createDispatchLogSink,
   type DispatchLogSinkInput,
   dispatchLogsDirectoryName,
