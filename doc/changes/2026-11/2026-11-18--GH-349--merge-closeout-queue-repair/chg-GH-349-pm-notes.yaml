@@ -983,3 +983,147 @@ notes:
       no phase subcommand was run.
     type: info
     date: "2026-11-19"
+
+  - text: >-
+      Plan phase 7 COMPLETE (implementation commit
+      ef8a22087f6fb2c67733b9841a505a3587d4fdfc, 11 files, scopeDrift empty; the
+      note commit follows and the two together close the phase). THREE
+      DEFECT-NAMED REGRESSIONS, each named for its Appendix F defect and each
+      failing by name against the pre-fix behaviour through a SUBSTITUTED
+      artefact — never by re-running old code: (1) F1
+      `tests/structure/defect-f1-merge-refusal-containment.test.ts` (7 cases) —
+      the suite derives the composition's emitted codes from
+      `merge-transaction.ts` literals plus every `merge.gate.<gate-id>.failed`
+      instance over the effective gate ids, and asserts the production
+      declaration leaves none uncovered; a gate-family refusal resolves to the
+      family code, domain kind `merge` and exit 1; a live production refusal
+      (failing required job `CI / test`) carries
+      `merge.gate.ci-required.failed` at exit 1 with `fallback.internal` absent
+      from the envelope, the summary and the human stderr; the two additive
+      rows resolve to their own code/kind/exit; every member resolves to its own
+      row's kind; and a live kind/code mismatch still contains
+      (`provider`+`config.credential.missing` and the family code on the wrong
+      kind both reach `fallback.internal`). CONTROL: the PRE-FIX 17-member
+      declaration (7 forwarded config + 3 read identities + 7 pre-fix merge
+      ids, no family expression) is substituted and the same predicate reports
+      the gate family plus the two additive rows uncovered
+      (`preFix.length > 0`, `production.length === 0`; family uncovered count
+      equals the effective gate-id count), so a control copying the production
+      declaration fails by name. (2) F4
+      `tests/behaviour/defect-f4-phase-mirror.test.ts` (6 cases) —
+      complete → reopen → re-complete leaves the SECOND completion on the fold,
+      on `phase list` and in the document, with the pre-reopen value absent
+      from the document and from the projection, and the no-op re-run reports
+      that same value with no appended record; companions assert a hand-edited
+      completion yields exactly one `lint.phases.divergent` naming the phase
+      with both bounded values, a document-only completion is not flagged
+      (compared 0, findings 0), and detection performs zero document writes,
+      zero appends, zero fences and zero clock reads across two identical runs.
+      CONTROL: the retired history lookup (`preFixCompletionLookup`, first
+      matching completion) is substituted and is asserted exactly `T1` and
+      `not.toBe(T2)` BEFORE the equalities, so a control returning the fixed
+      value fails by name. (3) F8
+      `tests/behaviour/defect-f8-serial-merge-churn.test.ts` (6 cases) over
+      `tests/fixtures/merge/serial-three.ts` — three merges from the same base
+      (first `mergeable`, second `conflicting`, third `unknown` → one bounded
+      re-read → `conflicting`) land 1/0/0 (never more than one per invocation),
+      mutate the head zero times, record zero rebase-refresh attempts, and the
+      non-first invocations return `merge.sync-required` at exit 1 with a
+      remediation that instructs a sync and contains no rebase instruction.
+      CONTROL: the PRE-FIX ATTEMPT (one local rebase-refresh on a `conflicting`
+      read) is injected into the same repaired composition; it fails the
+      head-mutation invariant at `merge-2` and `rebase-attempt@merge-2`, its
+      moved head then voids the SHA-bound verification and `merge-3` refuses
+      `merge.gates-stale`, and the control pair is 0 vs 1 head mutation. The
+      meta-check `tests/structure/defect-suite-presence.test.ts` (6 cases)
+      declares every assertion id and control shape independently, asserts each
+      tag exactly once in its file (a removed tag fails naming file and id), the
+      control-differs snippet, the absence of any child-process seam, and
+      reports 3/3 named defects with `substituted-derivation` controls
+      separately from 7/7 queue property suites (3 `derived-comparison` + 4
+      `deliberately-broken-double`). TC-F7-006 lives in
+      `tests/checks/merge-suite-discovery.test.ts` (5 cases): the five new
+      suites are admitted `*.test.ts` files under the repository's own bunfig
+      discovery (a `tmp/` path and the fixture are refused), the aggregate
+      `test` stage is `bun test`, no new suite imports a network or
+      child-process seam (with a non-vacuous planted-file control), and the
+      workflow file set, per-file job set and per-file trigger set equal
+      `tests/fixtures/pins/workflow-topology.json`. RESIDUAL PIN FLOOR, exact
+      and not loosened: the tree's merged identity truth is **167 documented /
+      166 delivered / 68-entry two-segment allowlist / `BASELINE_ROWS.length +
+      133`** on all SEVEN pin sites and both identity pages
+      (`feature-metrics.md`, `feature-ceremony-runner.md`); the legacy-token
+      scan keeps its planted stale-total and stale-delivered controls; the lint
+      decomposition stays `PM_NOTES_LINT_CODES` five, documented pm-notes six,
+      machine `lint` rows seven; the tenth operation set is ten with all
+      EIGHTEEN enforcing pins green (`adapter-operation-consumers`), the parity
+      matrix 30 cells, flow steps 15, assertion families 7 with trap families
+      six and the 18-cell accounting unchanged; closeout steps 13 with
+      `CLOSEOUT_OPERATION_NAMES` seven, and BOTH closeout goldens at thirteen
+      step lines in the declared order (`human.txt` numbered 12
+      `milestone-sync`, 13 `capsule`; `envelope-data.json` step ids equal
+      `CLOSEOUT_STEP_IDS`); residue kinds nine; the merge golden set 2 moved /
+      2 retired / 11 byte-identical; merge rows 9 and lint rows 7. TC-SYNC-001's
+      REACHABILITY half (the first phase where all three additive rows have an
+      emitting branch) is authored in `tests/checks/error-table-sync.test.ts`:
+      `merge.sync-required`, `merge.mergeability-unknown` and
+      `lint.phases.divergent` each have a named emitting branch and a declared
+      row, while the retained reserved `merge.rebase-conflict` is declared and
+      emitted by no branch (the non-vacuous discriminator). THE THREE PROSE-ONLY
+      OPERATION-COUNT PAGES are reconciled and asserted by TC-SYNC-010 in
+      `tests/checks/operation-count-pages.test.ts` (6 cases, nine named
+      locations): five on `feature-provider-client-seeds.md` — `:9` "(ten
+      supported operations, no gaps)", `:21` "GitHub supports all ten closed
+      operations" with `close-milestone` and the GitLab
+      `adapter-not-implemented` / Jira `provider-unsupported` gap enumerations,
+      `:58` the "All ten closed operations:" enumeration naming each of the ten
+      exactly once, `:72` "All ten closed operations | None.", `:297` "Three
+      primitive flows over the ten closed operations"; `doc/spec/nonfunctional.md`
+      the parity statement "a declared matrix over the ten closed operations"
+      (now `:354` — the plan's `:349` is line drift from the merged base, and the
+      statement is located by its bytes); and
+      `doc/overview/architecture-overview.md:107` "all ten closed operations"
+      naming the milestone close. The TWO NEGATIVES stay nine and are asserted
+      unchanged: `doc/spec/nonfunctional.md:357` "one of nine closed clause ids"
+      and `doc/overview/architecture-overview.md:127` "nine-section". The suite
+      also asserts the complete `nine`-line set per page equals those two
+      neighbours, so a leftover statement fails naming file and line and a
+      page-wide `nine`→`ten` sweep fails naming the overreach; the
+      check-bound `feature-adapter-reference-behavior.md` table is deliberately
+      excluded (TC-SYNC-009 owns it). GATES, all with `TMPDIR=$PWD/tmp/tmpdir`,
+      all exit 0 (logs under `tmp/tmpdir/phase7-gates/`): defect-F1 + presence
+      13 pass / 0 fail; defect-F4 + F8 (G10) 12 pass / 0 fail;
+      merge-suite-discovery 5 pass / 0 fail; error-table-sync +
+      operation-count-pages 111 pass / 0 fail; the pin-floor battery (18
+      operation pins, closeout contract/additive, error-table, reference
+      behavior, merge-classification, capsule bounds, supervision socialization,
+      both closeout goldens) 226 pass / 0 fail; G1 `bun test tests/behaviour
+      tests/golden` 7744 pass / 4 skip / 0 fail across 1037 files (1061.87s);
+      G2 `bun test tests/structure` 1867 pass / 0 fail across 201 files
+      (52.49s); G3 `bun test tests/checks` 1362 pass / 0 fail across 148 files
+      (352.88s); G4 `bun test tests/conformance` 321 pass / 0 fail across 25
+      files (4.71s); G5 `bun test tests/boundaries` 152 pass / 0 fail across 2
+      files (131.97s); G6 `pnpm typecheck` clean; G7
+      `scripts/checks/ci-topology.ts` OK (7 bash jobs intact, 16 TS jobs present,
+      triggers cover delivery); G8 `test-doc-distribution.sh` OK (96 in-scope
+      docs, no drift); G9 `git diff --check` clean with empty output;
+      `pnpm build` clean; `jaiship plan validate GH-349` exit 0 with verdict
+      `valid`, tier `full`, readyForDevelopment true; `jaiship lint plan GH-349`
+      exit 0, verdict `valid`, errors []; and G12 (BINDING) `pnpm check` exit 0 —
+      biome lint and format clean, 11446 pass / 4 skip / 0 fail across 1413
+      files (1736.23s), boundaries 482 modules with no violations, memory 0
+      errors / 0 advisories, prompt conformance 5 prompts clean, help-guide
+      coverage complete, exports parity OK. DEVIATIONS RECORDED, NOT FIXED HERE:
+      the plan and change artifacts still cite the pre-merge absolute counts
+      (156/155/67/`+122`) and `TDR-0044`, while the merged tree carries
+      167/166/68/`+133` and the phase-truth record is TDR-0049 (upstream took
+      0044–0048); this phase asserts the tree's truth and edits no
+      change artifact or decision record apart from this note. The
+      implementation commit's subject is the primitive's deterministic template
+      (`docs(GH-349): update doc/overview/architecture-overview.md`) because no
+      inference transport is configured; the plan's phase summary was not
+      composed by hand. No lifecycle `phase` subcommand was run: the delivery
+      transition remains for the orchestrator, and the PR stays open for human
+      review.
+    type: info
+    date: "2026-11-19"
