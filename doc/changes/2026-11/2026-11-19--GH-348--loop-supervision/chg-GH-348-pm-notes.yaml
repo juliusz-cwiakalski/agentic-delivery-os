@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-19T19:25:45.916Z }
   quality_gates: { started: null, completed: 2026-11-19T20:07:55.357Z }
   dod_check: { started: null, completed: 2026-11-19T20:09:03.208Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-19T20:41:15.539Z }
 decisions:
   - text: "Scope is the ticket body plus the M4 blueprint (flip-plan F3 row, backlog
       M4-S10, ranking row 4, and the F3 verification bar 'loop
@@ -755,6 +755,27 @@ notes:
       origin/main-tools, merge-base f802f71a."
     type: info
     date: "2026-11-19"
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/371
+      (feat/GH-348/loop-supervision -> main-tools, 48 commits after the sync).
+      The PR body carries the mandated deviation line verbatim, the readiness
+      history (three NOT_READY iterations, the Option-A fourth pass, the
+      Option-B authorization and the recorded override), the contract footprint,
+      the gate evidence and the two accepted info findings. Post-review sync:
+      the branch was merged with origin/main-tools (7d024040) because the first
+      PR creation reported CONFLICTING; four conflicts were resolved by
+      combining both sides (install-lifecycle 26th family plus loop 27th,
+      allowlist 68 / table 167; result-contract and glossary unions). GH-349
+      landed TDR-0055 on main-tools first, so by the earlier-arrival rule
+      GH-348's records were renumbered TDR-0056 (loop profile) and TDR-0057
+      (durable stop), with all citations updated across 39 files; no decision
+      content changed and no id duplicate remains. Gates re-run on the merged
+      tree: plan validate valid, loop and doc suites green (three timeout
+      failures in subprocess suites under a concurrent sibling run were green in
+      isolation), doc-distribution no drift, diff-check clean, duplicate-id and
+      stale-claim scans empty."
+    type: info
+    date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
       folds, and the pure verdict/backoff/log/status/prompt tier). Implemented
       before its commit. Gates all exit 0: bun test
@@ -1229,23 +1250,23 @@ notes:
       no PR."
     type: info
     date: "2026-11-19"
-  - text: "DECISION-RECORD RENUMBERING (sync with main-tools; PM ruling
-      2026-11-19). GH-349's phase-truth record had already landed on
-      `main-tools` as `TDR-0055`
-      (`doc/decisions/TDR-0055-phase-truth-registry-fold-mirror.md`, #370), so the
-      sync collided with this change's own `TDR-0055`. The repository's recorded
-      rule is that the EARLIER ARRIVAL keeps its number (GH-349's spec applied it
-      three times while landing), so GH-349 keeps `TDR-0055` and this change's two
-      records took the next free ids in their authored order: DEC-1 (loop
-      supervision as a profile over the coordinator engine) `TDR-0055` ->
-      `TDR-0056`, and DEC-2 (durable loop stop as a state-ledger record)
-      `TDR-0056` -> `TDR-0057`. Only identities changed: both files were renamed,
-      their frontmatter `id` and self-references updated, the index rows re-laid in
-      numeric order with GH-349's row kept, and every citation in this change
-      folder, the reconciled pages, the guides, the glossaries and the M4 planning
-      pages re-pointed (`0055`(loop)->`0056`, `0056`(stop)->`0057`). The records'
-      content, `status: Proposed` and dates are unchanged and NO decision outcome
-      was reopened or re-decided — this is registry hygiene forced by two changes
+  - text: "DECISION-RECORD RENUMBERING (sync with main-tools; PM ruling 2026-11-19).
+      GH-349's phase-truth record had already landed on `main-tools` as
+      `TDR-0055` (`doc/decisions/TDR-0055-phase-truth-registry-fold-mirror.md`,
+      #370), so the sync collided with this change's own `TDR-0055`. The
+      repository's recorded rule is that the EARLIER ARRIVAL keeps its number
+      (GH-349's spec applied it three times while landing), so GH-349 keeps
+      `TDR-0055` and this change's two records took the next free ids in their
+      authored order: DEC-1 (loop supervision as a profile over the coordinator
+      engine) `TDR-0055` -> `TDR-0056`, and DEC-2 (durable loop stop as a
+      state-ledger record) `TDR-0056` -> `TDR-0057`. Only identities changed:
+      both files were renamed, their frontmatter `id` and self-references
+      updated, the index rows re-laid in numeric order with GH-349's row kept,
+      and every citation in this change folder, the reconciled pages, the
+      guides, the glossaries and the M4 planning pages re-pointed
+      (`0055`(loop)->`0056`, `0056`(stop)->`0057`). The records' content,
+      `status: Proposed` and dates are unchanged and NO decision outcome was
+      reopened or re-decided — this is registry hygiene forced by two changes
       numbering independently. GH-348 stays the owner of the decision content;
       GH-349's references were not touched."
     type: info
