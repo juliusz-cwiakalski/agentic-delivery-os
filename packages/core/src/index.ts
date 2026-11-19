@@ -1014,7 +1014,7 @@ export {
   LOOP_MAX_EVIDENCE_BYTES,
   LOOP_PROMPT_PRIMITIVES,
   LOOP_RESTART_DELAYS_MS,
-  LOOP_STOP_INSTRUCTION,
+  loopStopInstruction,
   type LoopLogAppendPlan,
   type LoopStatusFacts,
   type LoopVerdictInput,

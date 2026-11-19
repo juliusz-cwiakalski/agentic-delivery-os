@@ -13,8 +13,12 @@ import { LOOP_V1_SUPERVISOR_IDENTITY } from "#contracts";
 export const LOOP_PROMPT_PRIMITIVES = ["dispatch", "merge", "queue", "closeout"] as const;
 export type LoopPromptPrimitive = (typeof LOOP_PROMPT_PRIMITIVES)[number];
 
-/** The durable-stop instruction the prompt carries. */
-export const LOOP_STOP_INSTRUCTION =
+/**
+ * The durable-stop instruction the prompt carries. A function, not an exported
+ * string constant: the branding seam forbids exported module-level strings, and
+ * a product-name literal has no business in a const anyway.
+ */
+export const loopStopInstruction = (): string =>
   "To stop this loop durably, run `loop stop`; the request survives a restart until an explicit `loop reset`.";
 
 /**
@@ -31,7 +35,7 @@ export const loopPromptFor = (loopId: string = LOOP_V1_SUPERVISOR_IDENTITY): str
     `2. \`dispatch\` delivers it (never a shell entry point).`,
     `3. \`merge\` lands the reviewed change.`,
     `4. \`closeout\` closes the change capsule.`,
-    LOOP_STOP_INSTRUCTION,
+    loopStopInstruction(),
     "Report progress through those primitives; do not idle silently while work is available.",
   ].join("\n");
 

@@ -103,7 +103,7 @@ describe("TC-BACKOFF-004 at the bound the loop exits 1 with its own remediation"
     // The loop's own summary carries `loop start --foreground --fresh-budget`,
     // never the delivered coordinator row's remediation.
     const envelope = result.json ?? {};
-    const error = envelope["error"] as { summary?: string } | undefined;
+    const error = envelope.error as { summary?: string } | undefined;
     expect(error?.summary).toContain("epoch=");
     expect(error?.summary).toContain("restarts=0/0");
     expect(error?.summary).toContain("seq=");

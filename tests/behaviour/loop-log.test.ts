@@ -86,7 +86,7 @@ describe("TC-LOG-004 a failing append leaves the exit, the records, and the disc
     const status = await harness.run(["loop", "status", "--json"]);
     expect(status.code).toBe(0);
     const data = harness.dataOf(status);
-    expect(data["degraded"]).toEqual(["log-unavailable"]);
+    expect(data.degraded).toEqual(["log-unavailable"]);
   });
 
   test("a healthy sink records the cycle-surface lines and discloses nothing", async () => {
@@ -115,5 +115,58 @@ describe("TC-LOG-004 (phase-4 segment) the stuck-episode lines are narrated", ()
     for (const line of harness.lines) {
       expect(logByteLength(line)).toBeLessThanOrEqual(LOOP_MAX_LOG_LINE_BYTES);
     }
+  });
+});
+
+describe("TC-LOG-005 the bounded log read honours lines and bytes with a truncation flag", () => {
+  test("--lines 1, 100 and the default 50 return the requested tail", async () => {
+    const harness = createLoopHarness({ label: "log-005" });
+    // Seed a log corpus through the same renderer the sink uses.
+    for (let index = 0; index < 120; index += 1) {
+      harness.logFs.append(`${STAMP} event=cycle seq=${String(index)}`);
+    }
+    const one = harness.dataOf(await harness.run(["loop", "log", "--lines", "1", "--json"]));
+    expect(one.returnedLines).toBe(1);
+    const hundred = harness.dataOf(await harness.run(["loop", "log", "--lines", "100", "--json"]));
+    expect(hundred.returnedLines).toBe(100);
+    expect(hundred.truncated).toBe(true);
+    const byDefault = harness.dataOf(await harness.run(["loop", "log", "--json"]));
+    expect(byDefault.returnedLines).toBe(50);
+    expect(Number(byDefault.totalBytes)).toBeLessThanOrEqual(65_536);
+  });
+
+  test("a missing log is a success with zero lines and a false truncation flag", async () => {
+    const harness = createLoopHarness({ label: "log-005-missing" });
+    const result = await harness.run(["loop", "log", "--json"]);
+    expect(result.code).toBe(0);
+    const data = harness.dataOf(result);
+    expect(data.returnedLines).toBe(0);
+    expect(data.truncated).toBe(false);
+    expect(data.unreadable).toBe(false);
+  });
+});
+
+describe("TC-LOG-006 the log lives beside the ledger, per identity, and a read creates nothing", () => {
+  test("the declared path is loop/<loopId>.log under the state directory", async () => {
+    const { loopLogRelativePath } = await import("../../packages/core/src/contracts/index");
+    expect(loopLogRelativePath("loop-main")).toBe("loop/loop-main.log");
+    const harness = createLoopHarness({ label: "log-006" });
+    const before = harness.counters.appends;
+    await harness.run(["loop", "log", "--json"]);
+    expect(harness.counters.appends).toBe(before);
+    expect(harness.logFs.active()).toBe("");
+  });
+});
+
+describe("TC-LOG-007 an unreadable log yields zero lines with the marker at exit 0", () => {
+  test("the marker never borrows a failure identity", async () => {
+    const harness = createLoopHarness({ label: "log-007" });
+    harness.logFs.setUnreadable(true);
+    const result = await harness.run(["loop", "log", "--json"]);
+    expect(result.code).toBe(0);
+    const data = harness.dataOf(result);
+    expect(data.unreadable).toBe(true);
+    expect(data.returnedLines).toBe(0);
+    expect(result.json?.error).toBeUndefined();
   });
 });

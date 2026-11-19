@@ -3797,6 +3797,30 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           }
         },
         available: () => true,
+        read: (lines) => {
+          let text: string;
+          try {
+            const stat = statSync(logPath);
+            if (stat.size === 0) {
+              return { lines: [], totalBytes: 0, truncated: false, unreadable: false };
+            }
+            text = readFileSync(logPath, "utf8");
+          } catch {
+            // A missing log is a success with zero lines; only a present but
+            // unreadable file reports the marker.
+            return existsSync(logPath)
+              ? { lines: [], totalBytes: 0, truncated: false, unreadable: true }
+              : { lines: [], totalBytes: 0, truncated: false, unreadable: false };
+          }
+          const all = text.split("\n").filter((line) => line.length > 0);
+          const tail = all.slice(Math.max(0, all.length - lines));
+          return {
+            lines: tail,
+            totalBytes: logByteLength(text),
+            truncated: all.length > tail.length,
+            unreadable: false,
+          };
+        },
       };
 
       return {

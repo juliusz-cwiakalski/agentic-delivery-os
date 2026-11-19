@@ -127,6 +127,8 @@ export type LoopHarness = {
     readonly resumes: number;
     readonly joins: number;
     readonly readsInHandler: number;
+    /** The supervisor's own verified snapshots (the evaluation reads). */
+    readonly snapshots: number;
     readonly cycles: number;
   };
   readonly process: {
@@ -209,7 +211,15 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
     progressBoundMs: settings["coordinator.progress-bound"],
   };
 
-  const counters = { appends: 0, reads: 0, spawns: 0, resumes: 0, joins: 0, readsInHandler: 0 };
+  const counters = {
+    appends: 0,
+    reads: 0,
+    snapshots: 0,
+    spawns: 0,
+    resumes: 0,
+    joins: 0,
+    readsInHandler: 0,
+  };
   const signals: { pid: number; signal: string }[] = [];
   let probes = 0;
   const aliveAnswers: Record<number, boolean | null> = { ...(options.alive ?? {}) };
@@ -267,6 +277,7 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       logFs.append(line);
     },
     available: () => !logFails,
+    read: (lines) => logFs.readTail(lines),
   };
 
   let fenceCounter = 0;
@@ -295,6 +306,7 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
 
   const ledger: LoopLedgerPort = {
     read: () => {
+      counters.snapshots += 1;
       const raw = guardedStore.readRecords();
       const cached: typeof guardedStore = { ...guardedStore, readRecords: () => raw };
       return {
@@ -538,6 +550,7 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
               status: supervisor.status,
               stop: supervisor.stop,
               reset: supervisor.reset,
+              log: supervisor.log,
             }),
           },
         },
@@ -583,6 +596,9 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       },
       get readsInHandler() {
         return counters.readsInHandler;
+      },
+      get snapshots() {
+        return counters.snapshots;
       },
       get cycles() {
         return cyclesRun;

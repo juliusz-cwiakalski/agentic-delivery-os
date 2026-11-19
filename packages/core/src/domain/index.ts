@@ -1135,7 +1135,7 @@ export {
 } from "./loop-log.js";
 export {
   LOOP_PROMPT_PRIMITIVES,
-  LOOP_STOP_INSTRUCTION,
+  loopStopInstruction,
   type LoopPromptPrimitive,
   loopPromptFor,
   loopSessionTitle,

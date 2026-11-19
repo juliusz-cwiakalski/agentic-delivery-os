@@ -3,14 +3,14 @@
  * parsing and the per-subscription buffer never exceeds its bound.
  */
 import { describe, expect, test } from "bun:test";
-import { decodeControlLine } from "../../packages/core/src/domain/control-codec";
-import { createControlSession } from "../../packages/core/src/domain/control-session";
 import {
   CONTROL_PROTOCOL_CURRENT,
   DAEMON_MAX_FRAME_BYTES,
-  LOCAL_CALLER_PRINCIPAL,
   type DaemonClockPort,
+  LOCAL_CALLER_PRINCIPAL,
 } from "../../packages/core/src/contracts/index";
+import { decodeControlLine } from "../../packages/core/src/domain/control-codec";
+import { createControlSession } from "../../packages/core/src/domain/control-session";
 
 const clock = (): DaemonClockPort => ({
   nowMs: () => 1_000,

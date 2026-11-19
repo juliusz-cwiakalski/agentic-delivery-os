@@ -8,7 +8,7 @@
  * the `{0,1,2}` projection are the command surface's.
  */
 import type { LoopResult, LoopStartReceipt, LoopStopData } from "@delivery-os/core";
-import type { LoopStatusProjection } from "@delivery-os/core/contracts";
+import type { LoopLogProjection, LoopStatusProjection } from "@delivery-os/core/contracts";
 import { FALLBACK_INVOCATION_CODE } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
@@ -36,6 +36,7 @@ export type LoopCommandRuntime = {
     readonly mode: "drain" | "immediate";
   }) => Promise<LoopResult<LoopStopData>>;
   readonly reset: () => Promise<LoopResult<LoopStopData>>;
+  readonly log: (input: { readonly lines: number }) => Promise<LoopResult<LoopLogProjection>>;
 };
 
 const refused = (summary: string): Failure => ({
@@ -48,8 +49,8 @@ const foregroundRequired = (): Failure =>
   refused("loop start requires --foreground in v1; detached hosting is not declared");
 
 export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): CommandDefinition => ({
-  flags: ["--foreground", "--fresh-budget", "--mode"],
-  requiresValue: ["--mode"],
+  flags: ["--foreground", "--fresh-budget", "--mode", "--lines"],
+  requiresValue: ["--mode", "--lines"],
   positionals: { max: 1 },
   humanSuccess: true,
   humanFailureText: (error: unknown): string | undefined => {
@@ -65,7 +66,16 @@ export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): Comman
       const stop = data as LoopStopData;
       return `loop ${stop.state}  loop_id=${stop.loopId}  mode=${stop.mode ?? ""}\n`;
     }
-    if (value["schemaVersion"] !== "delivery.loop.v1") return "";
+    if (value.schemaVersion === "delivery.loop.log.v1") {
+      const log = data as LoopLogProjection;
+      const header = `loop log  lines=${String(log.returnedLines)}/${String(
+        log.requestedLines,
+      )}  bytes=${String(log.totalBytes)}  truncated=${
+        log.truncated ? "yes" : "no"
+      }  unreadable=${log.unreadable ? "yes" : "no"}`;
+      return `${[header, ...log.lines].join("\n")}\n`;
+    }
+    if (value.schemaVersion !== "delivery.loop.v1") return "";
     return "released" in value
       ? renderLoopStartHuman(data as LoopStartReceipt)
       : renderLoopStatusHuman(data as LoopStatusProjection);
@@ -76,24 +86,38 @@ export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): Comman
     const foreground = invocation.flags["--foreground"] === true;
     const freshBudget = invocation.flags["--fresh-budget"] === true;
     const modeFlag = invocation.flags["--mode"];
+    const linesFlag = invocation.flags["--lines"];
+    if (linesFlag !== undefined && subcommand !== "log") return grammar();
     if (subcommand === "start") {
-      if (modeFlag !== undefined) return grammar();
+      if (modeFlag !== undefined || linesFlag !== undefined) return grammar();
       if (!foreground) return foregroundRequired();
       return runtime.start({ foreground: true, freshBudget });
     }
     if (subcommand === "status") {
-      if (foreground || freshBudget || modeFlag !== undefined) return grammar();
+      if (foreground || freshBudget || modeFlag !== undefined || linesFlag !== undefined) {
+        return grammar();
+      }
       return runtime.status();
     }
     if (subcommand === "stop") {
-      if (foreground || freshBudget) return grammar();
+      if (foreground || freshBudget || linesFlag !== undefined) return grammar();
       if (modeFlag !== undefined && modeFlag !== "drain" && modeFlag !== "immediate") {
         return grammar();
       }
       return runtime.stop({ mode: modeFlag === "immediate" ? "immediate" : "drain" });
     }
-    if (subcommand === "reset") {
+    if (subcommand === "log") {
       if (foreground || freshBudget || modeFlag !== undefined) return grammar();
+      if (linesFlag === undefined) return runtime.log({ lines: 50 });
+      if (typeof linesFlag !== "string" || !/^\d+$/u.test(linesFlag)) return grammar();
+      const parsed = Number(linesFlag);
+      if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) return grammar();
+      return runtime.log({ lines: parsed });
+    }
+    if (subcommand === "reset") {
+      if (foreground || freshBudget || modeFlag !== undefined || linesFlag !== undefined) {
+        return grammar();
+      }
       return runtime.reset();
     }
     return grammar();

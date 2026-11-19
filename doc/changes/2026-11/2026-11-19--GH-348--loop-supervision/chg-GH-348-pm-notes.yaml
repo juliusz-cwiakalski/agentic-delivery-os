@@ -788,3 +788,32 @@ notes:
   - text: "PLAN PHASE 6 commit hash: recorded after the commit."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 6 commit hash: b2d5472b."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 7 complete (the complete five-verb grammar and refusals, the
+      six-shell-key status block, the bounded log read, the production family
+      mount, and the 26-to-27 help-inventory repin with the M4 reference page).
+      Implemented: the `log [--lines n]` verb (1..100, truncation, unreadable),
+      the final refusal coverage (required --foreground, undeclared/flags,
+      malformed --lines, and the global flags accepted everywhere), the status
+      block unchanged in its declared order, the static loop family and
+      subcommand help entries rooted at the M4 reference root, the new M4 page
+      doc/planning/oss-tooling/milestones/m4/commands/loop.md, the inventory
+      26 -> 27 with `loop` last and `install` immediately before it, the
+      install-family comparator at 27 with the loop-removal control, the
+      metrics-mounting fixture/test at 27 with the stale-pin set gaining 26, and
+      the reference-page-parity mapping plus help-guide-coverage learning the M4
+      root. Gates all exit 0: grammar/status/log/read-cost 38 pass; the D1
+      re-observation suite 5 pass; help-guide-coverage clean; the three repinned
+      suites 18 pass; coordinator-sequence + provider-surface 12 pass unmodified;
+      pnpm typecheck; git diff --check. DISCOVERY: the D1 argv rows are observed
+      at the entrypoint reachability and pre-session refusal surface; the exact
+      `--agent ceo`/`--model` argv is proven at the D2/adapter surface because a
+      bare fixture checkout configures no CEO seat. The phase commit hash is
+      recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 7 commit hash: recorded after the commit."
+    type: info
+    date: "2026-11-19"

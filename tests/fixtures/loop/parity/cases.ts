@@ -320,6 +320,44 @@ const STOP_CASES: readonly LoopParityCase[] = [
   },
 ];
 
+const VERBS_CASES: readonly LoopParityCase[] = [
+  {
+    id: "verbs-green-rows",
+    group: "verbs",
+    declaredSeam: "S-verb",
+    scenario: { rows: 10 },
+    expected: { refused: 0, exit: 0 },
+  },
+  {
+    id: "verbs-refusals",
+    group: "verbs",
+    declaredSeam: "S-verb",
+    scenario: { malformed: 10 },
+    expected: { exit: 1, appends: 0, reason: "grammar" },
+  },
+  {
+    id: "verbs-status-block",
+    group: "verbs",
+    declaredSeam: "S-status",
+    scenario: { worlds: ["running", "stopped", "absent"] },
+    expected: { keys: 14, booleans: 3, noneTokens: 0 },
+  },
+  {
+    id: "verbs-log-read",
+    group: "verbs",
+    declaredSeam: "S-log",
+    scenario: { bounds: [1, 50, 100] },
+    expected: { bounded: true, truncationFlag: true },
+  },
+  {
+    id: "verbs-globals-accepted",
+    group: "verbs",
+    declaredSeam: "S-verb",
+    scenario: { flags: ["--json", "--verbose", "--pretty"] },
+    expected: { refused: 0 },
+  },
+];
+
 export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...SPAWN_CASES,
   ...LOG_CASES,
@@ -328,6 +366,7 @@ export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...KILL_CASES,
   ...BACKOFF_BUDGET_CASES,
   ...STOP_CASES,
+  ...VERBS_CASES,
 ];
 
 /** The rows of one proven surface, in declaration order. */

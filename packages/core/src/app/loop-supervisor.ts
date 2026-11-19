@@ -26,6 +26,7 @@ import {
   type LoopDegradation,
   type LoopDeliveryReading,
   type LoopLogEvent,
+  type LoopLogProjection,
   type LoopSessionRecord,
   type LoopStatusProjection,
   type LoopStopMode,
@@ -175,6 +176,17 @@ export type LoopLogSink = {
   ) => void;
   /** Whether the sink can write; `false` discloses `log-unavailable` on `status`. */
   readonly available?: () => boolean;
+  /**
+   * The bounded tail read (API-5). A missing or empty log is a success with
+   * zero lines; an unreadable log reports the marker instead of borrowing a
+   * failure identity.
+   */
+  readonly read?: (lines: number) => {
+    readonly lines: readonly string[];
+    readonly totalBytes: number;
+    readonly truncated: boolean;
+    readonly unreadable: boolean;
+  };
 };
 
 /** The injected supervisor ports. */
@@ -219,6 +231,7 @@ export type LoopSupervisor = {
     readonly freshBudget: boolean;
   }): Promise<LoopResult<LoopStartReceipt>>;
   status(): Promise<LoopResult<LoopStatusProjection>>;
+  log(input: { readonly lines: number }): Promise<LoopResult<LoopLogProjection>>;
   stop(input: { readonly mode: LoopStopMode }): Promise<LoopResult<LoopStopData>>;
   reset(): Promise<LoopResult<LoopStopData>>;
 };
@@ -628,8 +641,10 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   const cycle = async (): Promise<CycleStep> => {
     const nowMs = clock.nowMs();
     const session = ports.session.read();
-    // A running loop re-reads the fold at every iteration boundary (F-4).
-    const stopRead = ledger.read().loop;
+    // ONE verified state read per supervision cycle: the stop fold, the
+    // already-recorded expectation, and the epoch all fold from this snapshot.
+    const snapshot = ledger.read();
+    const stopRead = snapshot.loop;
     if (!stopRead.ok) return "stop";
     const folded = foldLoopStop(stopRead.stops);
     if (folded.applied && folded.kind === "requested") {
@@ -677,9 +692,8 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     if (verdict.verdict === "progressing") return "continue";
 
     const stuckId = `${loopId}:${String(cycleOrdinal)}`;
-    const snapshot = ledger.read().coordinator;
-    const already = snapshot.ok
-      ? snapshot.stuck.filter((record) => record.stuckId === stuckId)
+    const already = snapshot.coordinator.ok
+      ? snapshot.coordinator.stuck.filter((record) => record.stuckId === stuckId)
       : [];
     if (already.length === 0) {
       const verdictRecord: CoordinatorStuckRecord = {
@@ -728,11 +742,13 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     acquiredSession = null;
 
     // The delivered restart-admission fold decides exactly once.
-    const epoch = loopBudgetEpoch(ledger.read().coordinator);
+    const epoch = loopBudgetEpoch(snapshot.coordinator);
     const admission = ports.admission({ ordinal: cycleOrdinal, budgetEpochId: epoch });
     if (admission.state === "unevaluable") return "stop";
     const bound = settings.restartBudget;
-    const consumed = epochRestartCount(epoch);
+    const consumed = snapshot.coordinator.ok
+      ? snapshot.coordinator.restarts.filter((record) => record.budgetEpochId === epoch).length
+      : 0;
     if (admission.state === "refuse" || consumed >= bound) {
       // At/above the bound: no restart record, no session, the loop's own
       // remediation and the derivable history reference (R-20).
@@ -776,11 +792,6 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     return "continue";
   };
 
-  /** The epoch's consumed ordinals, from the loop identity's own records. */
-  function epochRestartCount(epoch: string): number {
-    const read = ledger.read().coordinator;
-    return read.ok ? read.restarts.filter((record) => record.budgetEpochId === epoch).length : 0;
-  }
 
   /* --------------------------------- start --------------------------------- */
 
@@ -891,6 +902,31 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     return { data: projection(loopRead, coordinatorRead, facts, degraded) };
   };
 
+  /* ---------------------------------- log ---------------------------------- */
+
+  const logRead = async (input: {
+    readonly lines: number;
+  }): Promise<LoopResult<LoopLogProjection>> => {
+    const requested =
+      Number.isInteger(input.lines) && input.lines >= 1 && input.lines <= 100 ? input.lines : 50;
+    const tail =
+      ports.log.read === undefined
+        ? { lines: [], totalBytes: 0, truncated: false, unreadable: false }
+        : ports.log.read(requested);
+    return {
+      data: {
+        schemaVersion: "delivery.loop.log.v1",
+        loopId,
+        requestedLines: requested,
+        returnedLines: tail.lines.length,
+        totalBytes: tail.totalBytes,
+        truncated: tail.truncated,
+        unreadable: tail.unreadable,
+        lines: tail.lines,
+      },
+    };
+  };
+
   /* ------------------------------ stop/reset ------------------------------- */
 
   const stop = async (input: {
@@ -948,7 +984,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     };
   };
 
-  return { start, status, stop, reset };
+  return { start, status, log: logRead, stop, reset };
 };
 
 /** The delivered progress vocabulary the projection reuses (DM-6). */
