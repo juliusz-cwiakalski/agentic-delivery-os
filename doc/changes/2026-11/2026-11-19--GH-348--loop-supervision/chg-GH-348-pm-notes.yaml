@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
-  specification: { started: null, completed: 2026-11-19T11:25:46.895Z }
+  specification: { started: null, completed: 2026-11-19T11:46:29.187Z }
   test_planning: { started: null, completed: 2026-11-19T11:26:03.753Z }
   delivery_planning: { started: null, completed: 2026-11-19T11:32:31.858Z }
   dor_check: { started: null, completed: null }
@@ -420,4 +420,65 @@ notes:
       Ownership unchanged at 41/41 ACs and 74/74 TCs; plan validate
       valid/full/readyForDevelopment=true and lint plan valid."
     type: info
+    date: "2026-11-19"
+  - text: "DoR gate iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md),
+      Pause Required: no. All 24 iteration-1 findings dispositioned: 23
+      Resolved, 1 Partially resolved (R-15: the restart-reason compromise is in
+      F-3/DM-5/ AC-F3-6 but not yet in the new page's required content), 0
+      unresolved, 0 regressed. Counts re-verified from the artifacts (41 ACs, 74
+      cases, 78 links, 115 mutation rows, 41/41 and 74/74 owned, 127 entries
+      over 83 unique paths). Seven new findings, none a repeat: R-22 (major) and
+      R-23 (major) are PHASE-ORDER defects - cases in phases 3/4/6 read `loop
+      status`, a `coordinator.restart` and the immediate-stop segment that only
+      land in phases 7/5/6, so those phase gates cannot be green in isolation;
+      R-24 to R-28 and N-04 are counted/narrowed assertions and one missing doc
+      row."
+    type: info
+    date: "2026-11-19"
+  - text: "PM rulings for the DoR-iteration-2 remediation (iteration 3 of 3; a
+      further NOT_READY escalates to the human). Remediation order is
+      specification -> test_planning -> delivery_planning because the plan's
+      ownership recomputation depends on the case-level segment split, which is
+      the reverse of the gate's suggested order and is why the plan pass is
+      last: (1) R-22 INCREMENTAL VERB SURFACE. The command family is mounted
+      incrementally by the phase that first needs it: phase 2 delivers the
+      read-only `status` (and the log sink's read projection), phases 3-6 add
+      the verbs they exercise, and phase 7 owns the FINAL grammar/refusal
+      coverage, the status block, the bounded `log` read, the inventory repin 26
+      -> 27 and the M4 reference page - the repin lands last because it forces
+      the complete family. Before the repin the family is not prompt-required
+      and may be partially mounted. No case moves because of R-22. (2) R-23
+      SEGMENT SPLIT AND RE-OWNERSHIP. The stuck verdict and termination stay
+      phase 4; the `coordinator.restart` observation moves to phase 5 (the phase
+      that implements it), and the immediate-stop segment of TC-INSTANCE-005
+      moves to phase 6 (the phase that implements stop), while the
+      at-most-one-session assertion after an unconfirmed termination stays phase
+      4. An acceptance criterion is owned by the phase landing the LAST of its
+      cases, so AC-F5-1 follows to phase 5 and AC-F6-4 follows to phase 6; the
+      plan must recompute ownership and re-verify 41/41 and 74/74 with zero
+      orphans and zero double-owned. Every phase gate must be green in
+      isolation. (3) R-24 is a case narrowing: TC-INSTANCE-007 row B asserts the
+      capability gap the delivered claim gate actually produces (the
+      alive-capability declaration), not a start-time gap. (4) R-25: the seam
+      count is corrected to the enumerated number in the test plan and the plan.
+      (5) R-26: TC-SPAWN-002's resume step is stated as the pointer it now is,
+      with no duplicate driving instruction. (6) R-27: plan assumption (a) is
+      corrected - both TDRs are tracked. (7) R-28:
+      `feature-coordinator-supervision.md` joins Appendix A with its §3 'No pid
+      on a spawned handle' reconciliation (DM-3 adds the pid), and the plan
+      stages it. (8) R-15 page half: the new current-truth page's required
+      content includes the restart-reason compromise. (9) N-04: DOD-9's
+      stale-statement scan and AC-F8-5's page/constant agreement name their
+      mechanism in the spec, not only in the test plan."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 2): the remediation fixed the substance and exposed
+      a class the first gate could not see - PHASE-GATE SELF-SUFFICIENCY. Five
+      cases assert behaviour a later phase implements, which is invisible when
+      each artifact is read alone and obvious when each phase's gate is executed
+      in isolation. Process fix for iteration 3: for every case, ask which plan
+      phase implements the behaviour it asserts, and require that phase's
+      ordinal to be less than or equal to the owning phase's; the plan's phase
+      gates must be runnable in isolation by construction."
+    type: retro
     date: "2026-11-19"
