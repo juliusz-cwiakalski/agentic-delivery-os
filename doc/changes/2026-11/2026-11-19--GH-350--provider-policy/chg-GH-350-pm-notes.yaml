@@ -657,3 +657,58 @@ notes:
       the repository JSON formatter."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 plan phase 6 (delivery) complete: `provider migrate legacy
+      [--profiles-dir <dir>] [--hook <path>] [--write] [--json]` reads the
+      legacy profile directory and hook as DATA under one assignment-only
+      grammar (blank lines, # comments, NAME=value / export NAME=value with a
+      single literal token), refuses the whole run as provider.migrate.refused
+      at exit 1 with one closed reason (no-source, unreadable-source,
+      oversized-source, shell-construct, dynamic-value, target-exists,
+      proposal-invalid) naming the source and line and never the content,
+      enforces PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536,
+      PROVIDER_MIGRATE_SOURCE_MAX_LINES = 2000 and
+      PROVIDER_MIGRATE_MAX_SOURCES = 64 with one read per source, classifies a
+      credential-shaped name before its value is examined and discards that
+      value at the parse boundary (only a literal source-key reference is
+      representable), maps recognisable literals under Appendix E's closed
+      table with the two declared derivations (the per-agent model address and
+      the credential reference name), discloses every other name as unmapped
+      and omits it, validates the proposal before output, prints the proposal
+      on stdout (data.proposal with --json) and the report on the diagnostic
+      stream (data.report with --json), and with --write creates the
+      project-committed document only when absent (target-exists otherwise,
+      never a merge, legacy digests and mtimes unchanged). Commit af6a67eb.
+      AUTHORISED SCOPE ADDITIONS (owner-approved during delivery; the plan's
+      phase-6 scope now records them): (1)
+      packages/adapters/src/legacy/provider-migrate-table.ts plus its
+      re-export in packages/adapters/src/legacy/index.ts own the pre-freeze
+      vendor names, because the delivered closed forbidden-literals registry
+      admits pre-freeze tokens only under packages/adapters/src/legacy/ while
+      the provider tier must stay vendor-neutral (TC-PROV-006); the provider
+      module keeps the grammar, firewall and mapper and receives the table as
+      an injected value. No token was assembled by string concatenation and
+      the closed allowlist was not extended. (2)
+      tests/structure/provider-legacy-absence.test.ts is corrected to
+      TC-INDEP-003's own oracle: zero legacy-path constructions outside the
+      migration reader and non-migration readers equal the empty set. (3)
+      tests/fixtures/legacy/literal-inventory.json gains the adapter barrel's
+      new relative re-export in its reviewed structural literals. Gate: narrow
+      migrate suites and widened structural/identity suites 154 pass;
+      tests/boundaries 156 pass; depcruise packages clean; bun run
+      scripts/checks/forbidden-literals.ts exit 0 with zero violations; bun
+      run scripts/checks/privacy-literals.ts exit 0; GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11496 pass / 4 skip / 1 fail (11501
+      tests). The one failure is a host-load latency flake in an unrelated
+      suite, TC-DAEMON-121 foreground stop latency (cancellation 256.95 ms
+      against a 250 ms bound); the same file passes alone with a maximum of
+      236.84 ms. Interpretation recorded, not a weakening: DM-7's 'validated
+      by the delivered provider validator and configuration schema' is
+      implemented as the configuration schema's per-layer partial view — the
+      exact validation every supplied configuration source receives before
+      merge (F-3) — plus the provider validator run over the shipped defaults
+      the proposal overrides, so the documented per-agent-model mapping can
+      emit the partial profile an operator completes while a wrong-typed
+      mapped value refuses proposal-invalid."
+    type: evidence
+    date: "2026-11-19"

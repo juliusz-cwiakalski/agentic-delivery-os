@@ -1702,6 +1702,12 @@ export type ProviderComposition = {
    * composition's configuration filesystem extended with directory listing.
    */
   readonly migrateFs?: ProviderMigrateFileSystem;
+  /**
+   * The observation instant a watch read stands for (GH-350 F-7). Absent means
+   * the read instant, which is what this composition supplies by default; a test
+   * injects a retained instant to exercise staleness.
+   */
+  readonly watchObservedAtMs?: () => number;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
@@ -5276,6 +5282,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           targets: profileParsed.config.watch ?? {},
           credentials: providerParsed.config.credentials,
           ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+          ...(provider.watchObservedAtMs === undefined
+            ? {}
+            : { observedAtMs: provider.watchObservedAtMs() }),
         });
       },
     };

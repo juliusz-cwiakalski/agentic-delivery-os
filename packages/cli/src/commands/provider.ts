@@ -299,7 +299,10 @@ const isWatchConditionView = (value: unknown): value is ProviderWatchConditionVi
     typeof candidate.name === "string" &&
     typeof candidate.condition === "string" &&
     typeof candidate.source === "string" &&
-    typeof candidate.checkedAt === "string"
+    typeof candidate.checkedAt === "string" &&
+    typeof candidate.observedAt === "string" &&
+    typeof candidate.ageSeconds === "number" &&
+    typeof candidate.maxAgeSeconds === "number"
   );
 };
 

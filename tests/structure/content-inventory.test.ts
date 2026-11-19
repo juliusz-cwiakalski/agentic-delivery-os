@@ -2629,11 +2629,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "simulateProviderResolution",
   ],
   "core/src/provider/quota.ts": [
+    "PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS",
     "classifyQuotaTransport",
+    "clampWatchParkExpiry",
     "createProviderWatchStatus",
     "evaluateQuotaResponse",
     "evaluateQuotaSnapshot",
+    "isWatchObservationStale",
     "normalizeQuotaEnvelopeResult",
+    "watchObservationAgeSeconds",
   ],
   "core/src/provider/validate.ts": [
     "emptyProfileConfiguration",

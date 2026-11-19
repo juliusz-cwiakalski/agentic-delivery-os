@@ -838,7 +838,7 @@ const parseWatchTarget = (
   if (!isRecord(value)) return profileInvalid(`watch.${name} must be an object`, name);
   const extra = exactKeys(
     value,
-    ["mapping", "endpoint", "credentialRef", "floor", "thresholdPercent"],
+    ["mapping", "endpoint", "credentialRef", "floor", "thresholdPercent", "maxAgeSeconds"],
     `watch.${name}`,
   );
   if (extra !== undefined) return extra;
@@ -867,12 +867,19 @@ const parseWatchTarget = (
   if (value.thresholdPercent !== undefined && thresholdPercent === undefined) {
     return profileInvalid(`watch.${name}.thresholdPercent must be 0..100`, name);
   }
+  // The freshness bound is carried, never interpreted here (GH-350 F-7): the
+  // configuration schema owns its type and the watch producer owns its value
+  // rules, so this parser neither defaults nor refuses it. The structural
+  // narrowing keeps a non-number off the typed target; a string is already
+  // refused by the configuration schema before this parser runs.
+  const maxAgeSeconds = typeof value.maxAgeSeconds === "number" ? value.maxAgeSeconds : undefined;
   return {
     mapping: mapping as ProviderWatchMappingKind,
     endpoint,
     credentialRef,
     ...(floor === undefined ? {} : { floor }),
     ...(thresholdPercent === undefined ? {} : { thresholdPercent }),
+    ...(maxAgeSeconds === undefined ? {} : { maxAgeSeconds }),
   };
 };
 

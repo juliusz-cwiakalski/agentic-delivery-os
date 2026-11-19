@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
 import type {
   CredentialPort,
   CredentialReference,
@@ -16,7 +17,6 @@ import type {
   QuotaTransportResult,
 } from "../../packages/core/src/contracts/index";
 import { createProviderWatchStatus } from "../../packages/core/src/provider/index";
-import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
 
 const ROOT = process.cwd();
 const NOW = 1_700_000_000_000;
@@ -117,7 +117,14 @@ describe("TC-PROFILE-020/045 read-only watch status", () => {
     expect(result.providers[0]?.source).toBe("weekly 61%, rolling 12%");
     expect(result.providers[1]?.source).toBe("balance 12.50 vs floor 5.00");
     expect(result.providers[2]?.source).toBe("5h 12%, weekly 61%");
-    for (const entry of result.providers) expect(entry.checkedAt).toBe("2023-11-14T22:13:20.000Z");
+    for (const entry of result.providers) {
+      expect(entry.checkedAt).toBe("2023-11-14T22:13:20.000Z");
+      // GH-350 F-7: the live read observes at read time, so age is zero and the
+      // effective bound is the declared default.
+      expect(entry.observedAt).toBe(entry.checkedAt);
+      expect(entry.ageSeconds).toBe(0);
+      expect(entry.maxAgeSeconds).toBe(900);
+    }
   });
 
   test("--provider filters to exactly the named provider", async () => {

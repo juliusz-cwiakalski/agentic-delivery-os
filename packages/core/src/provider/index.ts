@@ -167,16 +167,20 @@ export {
   rungState,
 } from "./profile-pacing.js";
 export {
+  clampWatchParkExpiry,
   classifyQuotaTransport,
   createProviderWatchStatus,
   evaluateQuotaResponse,
   evaluateQuotaSnapshot,
+  isWatchObservationStale,
   normalizeQuotaEnvelopeResult,
+  PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS,
   type ProviderWatchStatusInput,
   type ProviderWatchStatusReader,
   type ProviderWatchStatusResult,
   type ProviderWatchStatusRuntime,
   type QuotaNormalizationFailure,
+  watchObservationAgeSeconds,
 } from "./quota.js";
 export {
   createProviderSimulateZonePort,

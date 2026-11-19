@@ -211,6 +211,11 @@ const PROVIDER_WATCH_TARGET = {
     credentialRef: { type: "string", required: true },
     floor: { type: "number" },
     thresholdPercent: { type: "number" },
+    // The observation-freshness bound (GH-350 F-7). The effective default (900)
+    // is applied policy-side; this declaration is shape metadata, so an omitted
+    // bound carries no defaults-layer origin. Positivity is refused by the
+    // consumer that honours the bound.
+    maxAgeSeconds: { type: "number" },
   },
 } as const satisfies CatalogField;
 

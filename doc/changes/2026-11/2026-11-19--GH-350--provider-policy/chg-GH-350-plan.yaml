@@ -524,7 +524,10 @@
 #   constants, and the retirement of `PROVIDER_PEAK_TIMEZONES`; the same one-
 #   edit-set rule as the contracts-export inventory, because the suite compares
 #   `provider.ts`'s export names two-way against it),
-#   `packages/core/src/provider/{validate,engine,index}.ts`,
+#   `packages/core/src/provider/{validate,engine,index}.ts` (`validate.ts`: P2 the
+#   descriptor zone grammar, P3 the budget rules, P7 the watch-target producer arm
+#   — the owner-authorised `maxAgeSeconds` admission; `engine.ts`: P2 zone facts,
+#   P3 budget inputs; `index.ts`: the barrel row of each phase's new exports),
 #   `packages/core/src/provider/announcements.ts` (P1 the pure park-cause ->
 #   announcement-code mapping and the `info` classification of the widened code
 #   set — the exhaustive switch over `PARK_CAUSES`; P3 the evaluator-driven
@@ -539,11 +542,15 @@
 #   TC-BUD-016's measurement-path scan — the arm's structural home),
 #   `tests/checks/provider-evidence-bounds.test.ts`,
 #   `tests/checks/provider-hermetic.test.ts`,
+#   `tests/structure/provider-legacy-absence.test.ts` (P4 the pre-migration
+#   oracle; P6 the corrected oracle after the migration reader exists — zero
+#   constructions OUTSIDE it and `nonMigrationReaders === []`),
 #   `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json`
 #   (P1 contracts exports, P2 adapters subpath, P3 budgets module, P5 simulate and
 #   fixture reader, P6 migrate and source reader),
 #   `tests/golden/provider-parks-list.test.ts` and the
-#   `tests/fixtures/provider/golden/` folder (P2 `timezone`, P3 budget park),
+#   `tests/fixtures/provider/golden/` folder (P2 `timezone`, P3 budget park, P6 the
+#   migration proposal and report goldens),
 #   `tests/boundaries/fixture-registry.json` (rule 1 P2, rule 4 P4, rule 2 P5,
 #   rule 3 P6) and `.dependency-cruiser.cjs` (P5 the fixture-read rule, P6 the
 #   no-child-process/shell rule — the only two of TC-CONFORM-008's four rules that
@@ -1054,6 +1061,8 @@ tier:
     - "A phase widens or retires a closed set (`PARK_CAUSES`, `PROVIDER_CONDITION_KINDS`, `PROVIDER_SKIP_REASONS`, `ANNOUNCEMENT_CODES`, `PARK_EVIDENCE_FIELDS`, `ANNOUNCEMENT_EVIDENCE_FIELDS`, `PROVIDER_CONDITION_TIE_ORDER`) WITHOUT declaring, in the same commit, every module that maps over it exhaustively — a `switch`/`satisfies`/mapped-type consumer is a BUILD break (TS2366), not a test failure, and discovering it at a phase boundary means the phase cannot be green inside its declared scope (Fix 1, Fix 2)"
     - "A widened count or vocabulary size leaves an ASSERTING SUITE or a page sentence undeclared at that phase — every `toHaveLength`, `toBe`, exact-snapshot comparison, title and prose restatement of a moved value is found by a SWEEP over `tests/**`, `scripts/**` and `doc/spec/**` (the phase-1 inventory above is the result of one), never by memory and never one delivery finding at a time; a suite asserting the old value that no phase declares is the guard hole this trigger closes"
     - "A new adapters subpath, export key or publishable edit leaves a SET assertion or a release-metadata obligation undeclared — an exact export-map list, a `readdirSync(packages/adapters/src)` listing, a `workspaceImports` map in ANY importer, a dependency-cruiser rule-name list, or the one added changeset — because those assertions fail on a set the change widens and on a release gate the change trips; each is found by the adapters-set sweep above and declared in the phase that edits it, never discovered at a boundary"
+    - "A new module must hold pre-freeze or vendor tokens (`ADOS_*`, an agent-model name, a prior-working-name literal) and is placed anywhere other than the allowlisted legacy home (`packages/adapters/src/legacy/`), or the closed `forbidden-literals` / `privacy-literals` registry is widened, or a token is assembled by string concatenation to dodge the scan — the closed registry is NEVER widened to accommodate a module, and the vendor table is INJECTED into a vendor-neutral provider tier (TC-PROV-006, phase-6 owner-authorised addition 1)"
+    - "A typed target's PRODUCER does not carry every field the reader consumes — a closed `exactKeys` list that omits a declared key so the configuration refuses, or a workaround that STRIPS and RE-ATTACHES the field in the composition edge instead of producing it — is a defect, not a composition concern: the producer must carry the field (admitting the key, no default, no value semantics), while the consumer owns the value rules and the refusing identity (phase-7 owner-authorised `parseWatchTarget`/`maxAgeSeconds` addition)"
     - "`TMPDIR=$PWD/tmp/tmpdir pnpm check` is not green at a phase boundary, a gate is recorded as PASS with an unresolved ERROR, or a phase commits a case it cannot make green (test plan §6.3)"
     - "A phase declares a path it does not edit, or edits a path it does not declare, so the commit primitive loses staging authority for authored content (the SCOPE DECLARATION RULE)"
 defaultLeases:
@@ -2086,6 +2095,14 @@ phases:
   # only surface that reads the legacy paths at all, and only by explicit
   # invocation (phase 6). The ref seam adds no environment read and no flag, so
   # AC-F4-2's enumeration stays closed.
+  # MULTI-PHASE SUITE, ARMS NAMED: `tests/structure/provider-legacy-absence.test.ts`
+  # is declared HERE for TC-INDEP-003's pre-migration world (zero legacy-path
+  # constructions, no reader except the delivered ones) and in PHASE 6, which
+  # introduces the migration reader by design and therefore corrects the oracle to
+  # TC-INDEP-003's own wording — zero constructions OUTSIDE the migration reader
+  # and `nonMigrationReaders === []`. The AC and the case are unchanged; neither
+  # phase re-moves the other's arm, and no guard is weakened (the phase-6 arm is
+  # the stricter expression, not a relaxation).
   # DELIVERED ASSERTION THAT MOVES: `feature-config-layer.md` is its own subject
   # and COMPLETES here — the budgets branch table, the widened zone value domain,
   # and the per-repository clause with the precedence matrix, the origin evidence,
@@ -2309,6 +2326,16 @@ phases:
   # NO HELP ENTRY HERE (declared, same reason as phase 5): the `provider migrate`
   # and `provider migrate legacy` entries land with the mount in phase 8.
   # The hook guide moves HERE, with the surface that replaces it.
+  # OWNER-AUTHORISED ADDITIONS (approved during delivery; commit `af6a67eb`, and
+  # the pm-notes evidence entry names all three): the legacy table lives in
+  # `packages/adapters/src/legacy/` because that is the ONE package-tree home the
+  # closed `forbidden-literals` registry admits (placing it in `adapters/file`
+  # produced nine `ADOS_` violations across five guards), re-exported by that
+  # subpath's barrel and injected into the vendor-neutral provider module; the
+  # phase-4 legacy-absence suite's oracle is corrected to TC-INDEP-003's own
+  # wording once the migration reader exists; and the reviewed legacy
+  # literal-inventory fixture gains the new re-export. No allowlist is widened and
+  # no behaviour is added beyond F-6; the full reasons are on the scope entries.
   #
   # Acceptance: AC-F6-1 (TC-MIG-001, -002, -008, -012, -014), AC-F6-2 (TC-MIG-003,
   # -004), AC-F6-3 (TC-MIG-005, -011), AC-F6-4 (TC-MIG-006, -007, -009, -010),
@@ -2360,22 +2387,48 @@ phases:
         - tests/boundaries/fixture-registry.json
         - doc/guides/zai-peak-hours-hook.md
         - tests/checks/doc-conformance.test.ts
-        # OWNER-AUTHORISED scope addition (phase-6 delivery). The delivered
-        # closed forbidden-literals registry admits pre-freeze tokens only under
-        # `packages/adapters/src/legacy/`, so the legacy mapping table lives
-        # there rather than in the `file` subpath; the phase-4 legacy-absence
-        # suite's two assertions are corrected to the phase-6 world (zero
-        # legacy-path constructions outside the migration reader, and every
-        # reader is the migration module); and the adapter's reviewed literal
-        # inventory gains the new relative re-export. No behaviour is added
-        # beyond F-6, and no guard is relaxed.
+        # OWNER-AUTHORISED scope additions (approved by the owner DURING phase-6
+        # delivery, recorded here so the plan matches the landed commit
+        # `af6a67eb`; the pm-notes evidence entry names all three):
+        #   (1) THE VENDOR TABLE'S HOME. The delivered closed
+        #       `forbidden-literals` registry admits pre-freeze/vendor tokens
+        #       (`ADOS_*`, the agent-model names) only under
+        #       `packages/adapters/src/legacy/`, so the legacy mapping table lives
+        #       there and NOT in `adapters/file`, where the first attempt produced
+        #       NINE `ADOS_` violations across `forbidden-literals`,
+        #       `identity-docs`, `legacy-confinement`, `memory-lint-docs` and
+        #       `TC-BIN-084`. The registry's allowlist is UNCHANGED and the
+        #       provider tier stays vendor-neutral (`provider/migrate.ts` keeps the
+        #       grammar, the credential firewall and the mapper and receives the
+        #       table as an INJECTED value; TC-PROV-006 still admits only
+        #       `#contracts`/`#provider/*`). No token was assembled by string
+        #       concatenation to dodge the scan.
+        #   (2) THE PHASE-4 SUITE'S ORACLE. `provider-legacy-absence.test.ts`
+        #       asserted zero legacy-path constructions overall and
+        #       `nonMigrationReaders === readers`; phase 6 introduces the migration
+        #       reader by design, so the phase-4 suite is corrected to
+        #       TC-INDEP-003's OWN oracle — zero constructions OUTSIDE the migration
+        #       reader, and `nonMigrationReaders === []`. The AC and the case are
+        #       unchanged; only the suite's expression of them is.
+        #   (3) THE REVIEWED LITERAL INVENTORY. `tests/fixtures/legacy/
+        #       literal-inventory.json` gains the adapter barrel's new relative
+        #       re-export in its reviewed structural-literal set.
+        # No behaviour is added beyond F-6, no guard is relaxed, and no closed set
+        # or allowlist is widened.
         - packages/adapters/src/legacy/provider-migrate-table.ts
         - packages/adapters/src/legacy/index.ts
         - tests/structure/provider-legacy-absence.test.ts
         - tests/fixtures/legacy/literal-inventory.json
+        # (The migration goldens' DATA lives under the
+        # `tests/fixtures/provider/golden` folder declared below: the proposal and
+        # the report in both modes, read by the declared
+        # `tests/golden/provider-migrate-golden.test.ts`. Same class as that
+        # folder's phase-2/phase-3 declarations, not an owner scope change: the
+        # test was declared, the data it reads was not.)
       folders:
         - packages/adapters/src/file
         - tests/boundaries/fixtures
+        - tests/fixtures/provider/golden
 
   # ---------------------------------------------------------------------------
   # Phase 7 — Watch freshness: per-target `maxAgeSeconds`, the watch-only
@@ -2430,6 +2483,21 @@ phases:
   # supplies, so the injection lands in `packages/cli/src/edge.ts` alone.
   # The config-layer page gains its `maxAgeSeconds` row in this commit, with the
   # key.
+  # OWNER-AUTHORISED ADDITION (approved during delivery):
+  # `packages/core/src/provider/validate.ts` — `parseWatchTarget` is the PRODUCER
+  # of the typed `ProviderWatchTarget`, and its closed `exactKeys` list omitted
+  # `maxAgeSeconds`, so any configuration declaring the bound refused
+  # `provider.profile.invalid` and the declared bound could NEVER reach the reader
+  # whose predicate is this phase's whole point. The authorised change admits the
+  # key in the producer's closed key list and copies it onto the returned target
+  # with NO semantic validation and NO DEFAULT there; the structural refusal
+  # identity stays `provider.profile.invalid`, and the VALUE rules (`0`, `-1`, a
+  # non-integer, a coerced string → `config.value.invalid` naming
+  # `provider.profiles.watch.<name>.maxAgeSeconds`) stay with the reader. The
+  # split is deliberate: the producer must CARRY the field, the consumer owns its
+  # meaning. Phase 2 declared this file for the descriptor zone grammar and phase
+  # 3 for the budget rules; this phase adds the watch-target arm, and no phase
+  # re-moves another's.
   #
   # Acceptance: AC-F7-1 (TC-WFRESH-001, -002), AC-F7-2 (TC-WFRESH-003, -004,
   # -010), AC-F7-3 (TC-WFRESH-005, -006, -008), AC-F7-4 (TC-WFRESH-007, -009).
@@ -2477,6 +2545,19 @@ phases:
         # The watch target's `maxAgeSeconds` declaration and its positivity
         # refusal; phase 4 owns the `provider.budgets` branch in the same file.
         - packages/core/src/config/catalog.ts
+        # OWNER-AUTHORISED (during delivery): `parseWatchTarget` is the PRODUCER of
+        # the typed `ProviderWatchTarget`, and its closed `exactKeys` list omitted
+        # `maxAgeSeconds` — so ANY configuration declaring the bound refused
+        # `provider.profile.invalid` and the declared bound could never reach the
+        # reader. The authorised change admits the key in the producer's closed key
+        # list and COPIES it onto the returned target with NO semantic validation
+        # and NO DEFAULT there: the structural refusal identity stays
+        # `provider.profile.invalid`, and the VALUE rules (`0`, `-1`, a non-integer,
+        # or a coerced string → `config.value.invalid` naming
+        # `provider.profiles.watch.<name>.maxAgeSeconds`) stay with the reader. No
+        # default is invented in the producer, so "absent" still reaches the reader
+        # as absent and the reader owns the declared 900.
+        - packages/core/src/provider/validate.ts
         - packages/cli/src/commands/provider.ts
         - packages/cli/src/edge.ts
         - tests/behaviour/provider-watch-freshness.test.ts
@@ -2485,6 +2566,21 @@ phases:
         # TC-PROFILE-020/045's view assertion gains the three fields on the
         # delivered suite; the five delivered condition arms stay unchanged.
         - tests/behaviour/provider-watch-status.test.ts
+        # OWNER-AUTHORISED (during delivery): the watch view now carries the three
+        # additive fields (`observedAt`, `ageSeconds`, `maxAgeSeconds`) and the
+        # command's shape guard ENFORCES them, so the delivered `watchProviders`
+        # fixtures that still constructed the old four-field view failed two
+        # arms (the behaviour suite and the machine golden). BOTH fixtures gain
+        # `observedAt` equal to the existing `checkedAt`, `ageSeconds: 0` and
+        # `maxAgeSeconds: 900` — the LIVE-READ semantics (the observation instant is
+        # the read instant, the age is zero, the effective bound is the default),
+        # not a hand-tuned expectation. THE POINT, recorded: a machine golden and
+        # its fixture sharing the same incomplete shape is NOT evidence — they agree
+        # because they are the same wrong object; the golden must assert the REAL
+        # field set, which is why the fixture and the golden move together here and
+        # the new suites assert the three fields against the live view.
+        - tests/fixtures/provider/profile/golden/data.ts
+        - tests/fixtures/provider/profile/golden/watch-status.json
         - tests/checks/provider-profile-evidence-bounds.test.ts
         # The config-layer page's `maxAgeSeconds` row lands with the key.
         - doc/spec/features/feature-config-layer.md

@@ -1379,3 +1379,84 @@ describe("GH-350 phase 6 the hook guide states the delivered posture", () => {
     );
   });
 });
+
+/**
+ * GH-350 phase 7 — the config-layer page gains its `maxAgeSeconds` row with the
+ * key it describes: the bound, the first-stale predicate, the additive view
+ * fields, the evidence-bounded park clamp, the watch-only posture, and the
+ * policy-side default with no defaults-layer origin.
+ */
+const GH350_PHASE7_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-config-layer.md",
+    stale: ["a `watch` map keyed by provider name, and optional `envRecord` grammar overrides"],
+    required: [
+      "provider.profiles.watch.<name>.maxAgeSeconds",
+      "positive integer",
+      "`900`, applied by the policy that honours the bound",
+      "first stale age",
+      "`ageSeconds >= maxAgeSeconds`",
+      "observedAt + maxAgeSeconds × 1000",
+      "when that instant is not strictly in the future, no park is created",
+      "`observedAt`, `ageSeconds` and `maxAgeSeconds`",
+      "watch-only",
+      "no defaults-layer origin",
+      "a live reading's age is `0` and it is never stale",
+      "no cache, timer, refresher, scheduler, command, or state write",
+    ],
+  },
+];
+
+export const gh350Phase7Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 phase 7 the config page carries the watch freshness row", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the page states the bound, the predicate, the clamp and the watch-only posture", () => {
+    expect(gh350Phase7Violations(GH350_PHASE7_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced bound-less watch bullet and a dropped clamp sentence each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-config-layer.md"
+        ? `${pageText(page) ?? ""}\na \`watch\` map keyed by provider name, and optional \`envRecord\` grammar overrides\n`
+        : pageText(page);
+    expect(gh350Phase7Violations(GH350_PHASE7_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: a `watch` map keyed by provider name",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-config-layer.md"
+        ? (pageText(page) ?? "").replace("observedAt + maxAgeSeconds × 1000", "a bound")
+        : pageText(page);
+    expect(gh350Phase7Violations(GH350_PHASE7_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: observedAt + maxAgeSeconds × 1000",
+    );
+  });
+});
