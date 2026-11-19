@@ -583,3 +583,35 @@ notes:
       branch can route through it) for the phase that owns the export inventory.
     type: info
     date: "2026-11-19"
+  - text: >-
+      Plan obligation 2.9 complete (F1's remaining repair, AC-F7-1's containment
+      half, DEC-7): the exported internalMergeFailure constructor is REMOVED,
+      not re-derived. Before deletion a repo-wide scan found NO production
+      caller: every hit was its declaration at
+      packages/core/src/domain/merge-transaction.ts:1255, its two barrel
+      re-exports (packages/core/src/domain/index.ts and
+      packages/core/src/index.ts), the content-inventory executable allowance at
+      tests/structure/content-inventory.test.ts:1900, and four plan/pm-notes
+      mentions; no package source, test, fixture, script or generated prompt
+      invoked it, so no test asserted its existence beyond that bidirectional
+      allowance map and no assertion needed inverting. The helper, its
+      FALLBACK_INTERNAL_CODE import (that constant had no other use in the
+      file), both barrel entries and the allowance line are gone in ONE commit,
+      so no merge failure can declare a kind its row denies;
+      FALLBACK_INTERNAL_CODE and its declared row are untouched, and no error
+      identity, kind or projection changed. The diff is 12 deleted lines across
+      exactly four paths and no other export was added, removed or renamed.
+      Commit 6864eeb9464391b4071ed404524c8fe58ecfacee, subject docs(GH-349):
+      update packages/core/src/domain/index.ts, messageSource template, no
+      lifecycle transition, no push, no scopeDrift, staged set exactly those
+      four paths. Gates, all exit 0 with TMPDIR=$PWD/tmp/tmpdir: bun test
+      tests/structure/content-inventory.test.ts (12 pass, 0 fail); bun test
+      tests/structure tests/checks (3024 pass, 0 fail across 323 files); pnpm
+      typecheck (pretypecheck build of six packages plus recursive tsc and
+      tests/types clean); pnpm check:boundaries (depcruise 466 modules / 1469
+      dependencies, no violations; ambient-globals, workspace-entrypoints and
+      secret-read-boundary OK); bun run scripts/checks/exports-parity.ts (5
+      publishables pass attw --pack --profile esm-only). The full pnpm check was
+      NOT run: phase 9 owns the aggregate.
+    type: info
+    date: "2026-11-19"
