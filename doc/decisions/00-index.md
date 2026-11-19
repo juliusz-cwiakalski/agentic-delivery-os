@@ -85,6 +85,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0054](TDR-0054-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0055](TDR-0055-phase-truth-registry-fold-mirror.md) | TDR | One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0056](TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md) | TDR | Dispatch Session-Output Artifacts and the Transcript Read Seam — A Bounded Per-Ref Sidecar Family and an Adapter-Owned Read Kept Outside the Closed Operation Set | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -93,3 +94,7 @@ acceptance is that change's pull-request review, and their status moves from
 Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
+
+Decision TDR-0056 is the binding design of change GH-354; its owner acceptance is
+that change's pull-request review, and its status moves from `Proposed` there
+rather than in the delivery commits.
