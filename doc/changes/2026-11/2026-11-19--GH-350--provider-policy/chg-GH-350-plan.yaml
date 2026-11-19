@@ -144,9 +144,13 @@
 #   B4 — `documentedRows` is 167 after the change, not 166. Phase 1 states both
 #        numbers with their different homes: `sourceEntries` and `documentedRows`
 #        are EQUAL at 167 (the delivered `documentedRows === sourceEntries`
-#        assertion holds), while 163 -> 166 is the result-contract page's
-#        separate delivered-rows metric (entries minus the `spend` row), asserted
-#        in the doc-conformance phrase table and never in that equality.
+#        assertion holds in `tests/checks/error-table-sync.test.ts`), while
+#        163 -> 166 is the DELIVERED-ROWS metric — `ERROR_TABLE` entries minus the
+#        single `spend` row — stated as "163 delivered rows" on
+#        `feature-metrics.md` (lines 260, 348 and 390) and derived by the sync and
+#        structural suites, never in that equality and never on the install page.
+#        The two numbers have two homes and one owner each (phase 1 for both, but
+#        two different assertions).
 #   B5 — evidence-count oracles and the paid-entry contradiction (test-plan
 #        remediations B5a/B5b; spec B5c). Phase 2's TC-ZONE-009 asserts that a
 #        peak park carries `timezone` and that the ALLOWLIST is fourteen fields —
@@ -488,12 +492,15 @@
 #   `doc/spec/features/feature-provider-engine.md` (P1 the whole vocabulary
 #   edit-set — counts, enumerated lists, tie order and the two allowlist
 #   enumerations — P2 the zone basis, P9 the budget/ref/announcement/CLI prose),
-#   `doc/spec/features/feature-metrics.md` (P1 counts, P8 family
-#   count, P9 gate-versus-alarm),
-#   `doc/spec/features/feature-install-lifecycle.md` (P1 the ERROR-TABLE numbers
-#   — table total and delivered-rows metric, 164/163 -> 167/166 — and P8 the
-#   FAMILY COUNT 26 -> 27 while its `install` "twenty-sixth" ordinals stay; the
-#   page carries both numbers, so each phase moves one and neither leaves it
+#   `doc/spec/features/feature-metrics.md` (P1 the ERROR-TABLE numbers — lines
+#   260, 348 and the counts half of 390, 164/163/+130 -> 167/166/+133 — P8 the
+#   FAMILY COUNT on line 390, 26 -> 27 — P9 the gate-versus-alarm paragraph; the
+#   page is a three-phase file and each phase moves ONE number family),
+#   `doc/spec/features/feature-install-lifecycle.md` (P1 the TABLE TOTAL,
+#   164 -> 167, which the page states at "the declared table total at 164 machine
+#   identities" — it carries NO delivered-rows metric — and P8 the FAMILY COUNT
+#   26 -> 27 while its `install` "twenty-sixth" ordinals stay; the page carries
+#   both kinds of number, so each phase moves one and neither leaves it
 #   half-moved),
 #   `doc/spec/features/feature-config-layer.md` (P4 branch and per-repository
 #   clause, P7 the `maxAgeSeconds` row),
@@ -545,11 +552,18 @@
 #   `tests/structure/error-table.test.ts` (its `APPENDIX_D_FILES` list gains
 #   `feature-install-lifecycle.md`, and its token pattern gains this change's
 #   outgoing forms as WORDING-BOUND forms in the existing style — the outgoing
-#   count only in its `entries` / `identities` / `machine identities` /
-#   `documented` / `entries).toHaveLength(` wordings, plus the
-#   `BASELINE_ROWS.length + 130` arithmetic form — so a page or suite that still
-#   states the number as CURRENT fails by name while the declared delta shapes
-#   `164 -> 167` cannot trip the scan), and the count phrases of the delivered
+#   count only as a CURRENT-VALUE RESTATEMENT, never as a bare token: `entries` ·
+#   `identities` · `machine identities` · `documented` · `entries).toHaveLength(` ·
+#   `delivered` · `delivered rows` · `163 delivered` ·
+#   `164 entries / 163 delivered` · `(164 / 163` · `toBe(164)` · `toBe(163)` ·
+#   `toHaveLength(163)` · `toHaveLength(164)` ·
+#   `entries: 164, documented: 164` · `documented: 164` · plus the
+#   `BASELINE_ROWS.length + 130` arithmetic form. THE DELTA CARVE-OUT IS
+#   EXPLICIT: `164 -> 167`, `163 -> 166`, `8 -> 14`, `11 -> 17`, `26 -> 27` and
+#   every bare-arrow form (including the unicode `164 → 167`) do NOT trip the scan,
+#   because an arrow line is history and a wording line is a live claim — so a page
+#   or suite that still states the number as CURRENT fails by name while a declared
+#   delta survives), and the count phrases of the delivered
 #   doc-conformance block.
 #   DECLARED IDENTITY WINDOW, stated rather than implied: ALL THREE rows are
 #   documented from phase 1 with NO emitter — the zone refusal's emitter lands in
@@ -634,8 +648,9 @@
 #   catalogue branch is its whole subject and completes it); the hook guide moves
 #   in phase 6 with the migration that replaces it; the family-count and
 #   tail-bearing pages move in phase 8 with the mount, INCLUDING
-#   `feature-metrics.md`'s "24-family mount" and "family-count pins read 24"
-#   sentences and `feature-cli-entrypoint.md`'s count and "and last" sentence; and
+#   `feature-metrics.md`'s "24-family mount", its "family-count pins read 24"
+#   sentence and the mounted family count on its line 390 ("(26)"), and
+#   `feature-cli-entrypoint.md`'s count and "and last" sentence; and
 #   everything ADDITIVE —
 #   where no sentence is contradicted, only absent — moves in phase 9's sweep
 #   (the budget prose on the engine page, the watch members on the profiles page,
@@ -884,21 +899,41 @@ phases:
   # `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
   # `feature-install-lifecycle.md` IS A TWO-NUMBER PAGE AND MOVES HERE FOR ONE OF
-  # THEM (Fix 3): THIS phase moves its ERROR-TABLE numbers (the table total and
-  # its delivered-rows metric, 164/163 -> 167/166 — the page restates the same
-  # figure set as the register), while its FAMILY COUNT (26 -> 27) is phase 8's
+  # THEM (Fix 3): THIS phase moves its TABLE TOTAL only, 164 -> 167 — the page
+  # states it as "the declared table total at 164 machine identities" and carries
+  # **NO delivered-rows metric**, so 163/166 belongs to `feature-metrics.md` and to
+  # the sync suite, never to this page. Its FAMILY COUNT (26 -> 27) is phase 8's
   # and its three "`install` is the twenty-sixth" ORDINALS stay untouched in both.
-  # The page is therefore declared in phases 1 and 8 with one number each, so no
-  # boundary leaves it half-moved.
-  # THE NO-LEFTOVER SCAN'S NEW FORMS ARE WORDING-BOUND (Fix 4b):
+  # `feature-metrics.md` IS A THREE-NUMBER PAGE AND MOVES HERE FOR ONE FAMILY
+  # (Fix 2): THIS phase moves its ERROR-TABLE numbers at **lines 260, 348 and the
+  # counts half of 390** — "the table holds 164 entries, 163 delivered rows … at
+  # `BASELINE_ROWS.length + 130`" (260), "at 164 entries / 163 delivered / 66
+  # allowlist / +130" (348) and "(164 / 163 / 66 / +130)" (390) — to
+  # 167/166/+133. Line 390 also carries the MOUNTED FAMILY COUNT, and that half is
+  # PHASE 8's (26 -> 27); the same line is therefore edited twice, once per number
+  # family, and neither phase may touch the other's half. Its gate-versus-alarm
+  # paragraph is phase 9's.
+  # THE NO-LEFTOVER SCAN'S NEW FORMS ARE WORDING-BOUND (Fix 1/Fix 4b):
   # `tests/structure/error-table.test.ts` gains the outgoing `164`/`163` forms ONLY
-  # in the wordings it already uses — `… entries`, `… identities`, `… machine
-  # identities`, `… documented`, `entries).toHaveLength(…` — plus the
-  # `BASELINE_ROWS.length + 130` arithmetic form, and it gains
-  # `feature-install-lifecycle.md` in `APPENDIX_D_FILES`. A wording-bound form is
-  # what makes the scan discriminate: a page that still states the number as
-  # CURRENT fails by name, while the declared delta line `164 -> 167` (and a
-  # `26 -> 27`) cannot trip it.
+  # as CURRENT-VALUE RESTATEMENTS — never as a bare token — in this declared form
+  # set, plus `feature-install-lifecycle.md` and (per Fix 2) nothing else in
+  # `APPENDIX_D_FILES`:
+  #   `entries` · `identities` · `machine identities` · `documented` ·
+  #   `entries).toHaveLength(` · `delivered` · `delivered rows` ·
+  #   `163 delivered` · `164 entries / 163 delivered` · `(164 / 163` ·
+  #   `toBe(164)` · `toBe(163)` · `toHaveLength(163)` · `toHaveLength(164)` ·
+  #   `entries: 164, documented: 164` · `documented: 164` ·
+  #   the `BASELINE_ROWS.length + 130` arithmetic form.
+  # Every entry is a WORDING, not a number: `… entries`, `… identities`, `…
+  # machine identities`, `… documented`, `… delivered`, `… delivered rows`,
+  # `entries).toHaveLength(…`, `toBe(…)`, `toHaveLength(…)`, the `entries: 164,
+  # documented: 164` pair, and the arithmetic form. THE DELTA CARVE-OUT IS
+  # EXPLICIT: `164 -> 167`, `163 -> 166`, `8 -> 14`, `11 -> 17`, `26 -> 27` and
+  # every bare-arrow form (`164 → 167` with the unicode arrow, `x -> y`) do NOT
+  # trip the scan, because the arrow form is history and the wording form is a
+  # live claim. That is what makes the scan discriminate: a page or suite that
+  # still states the number as CURRENT fails by name, while a declared delta line
+  # survives.
   # THE SUPERVISION FAMILY SUITE STOPS BEING A POSITIONAL PREFIX (Fix 4a):
   # `tests/structure/supervision-error-family.test.ts` compares the live table to
   # a **150-row baseline** with a raw `entries.slice(0, 150)`, and this change
@@ -1109,15 +1144,26 @@ phases:
         # 2, 4, 6, 8 and 9 extend the same file for the pages they move.
         - tests/checks/doc-conformance.test.ts
         # Count-bearing pages: they move in the phase that moves the numbers,
-        # never in the phase-9 sweep.
+        # never in the phase-9 sweep. `feature-metrics.md` and
+        # `feature-install-lifecycle.md` are declared in TWO phases each and the
+        # split is named here so no boundary leaves either page half-moved:
+        #   - `feature-metrics.md` — THIS phase moves its error-table numbers
+        #     (lines 260, 348 and the counts half of 390: 164/163/+130 ->
+        #     167/166/+133); PHASE 8 moves the family count on line 390 (26 -> 27);
+        #     PHASE 9 moves the gate-versus-alarm paragraph.
+        #   - `feature-install-lifecycle.md` — THIS phase moves its TABLE TOTAL
+        #     only (164 -> 167, "the declared table total at 164 machine
+        #     identities"); PHASE 8 moves its family count (26 -> 27) while its
+        #     `install` "twenty-sixth" ordinals stay. The page carries NO
+        #     delivered-rows metric.
         - doc/spec/features/feature-result-contract.md
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-install-lifecycle.md
-#        # The engine page's whole vocabulary edit-set (the counts, the enumerated
-#        # reason/cause/code lists, the tie order, and the two allowlist
-#        # enumerations — see the obligation below); its zone half is
-#        # phase 2's and its budget prose is phase 9's (DoR D2-4, N-3).
+        # The engine page's whole vocabulary edit-set (the counts, the enumerated
+        # reason/cause/code lists, the tie order, and the two allowlist
+        # enumerations — see the obligation below); its zone half is phase 2's and
+        # its budget prose is phase 9's (DoR D2-4, N-3).
         - doc/spec/features/feature-provider-engine.md
         # The eight TRACKED decision records land on this phase's delivery
         # commit, with the index that already carries their rows.
@@ -2089,13 +2135,20 @@ phases:
   # non-prompt-required list drops `provider`; the composition table gains a
   # `provider` row and the quality-evidence table a provider mount row),
   # `feature-install-lifecycle.md` — A TWO-NUMBER PAGE, and THIS phase moves ONE of
-  # them: its ERROR-TABLE numbers (the table total and its delivered-rows metric)
-  # moved in PHASE 1 with the register, and they are NOT re-moved here. THIS phase
+  # them: its TABLE TOTAL (164 -> 167, stated as "the declared table total at 164
+  # machine identities") moved in PHASE 1 with the register, and it is NOT re-moved
+  # here; the page carries no delivered-rows metric, so 163/166 belongs to
+  # `feature-metrics.md` and the sync suite and NEVER to this page. THIS phase
   # moves its family count: its two mounted-count sites 26 -> 27, while its
   # three "`install` is the twenty-sixth" ordinal statements STAY. A boundary that
   # moved one number without the other would leave the page half-moved, which is
   # why it is declared in both phases with the number each owns.
-  # `feature-metrics.md` — ITS NAMED SENTENCES (DoR D2-4): the quality-evidence
+  # `feature-metrics.md` — A THREE-NUMBER PAGE, and THIS phase moves ONE family:
+  # the FAMILY COUNT on **line 390** ("the mounted family count (26)") becomes 27,
+  # and the same bullet's error-table counts "(164 / 163 / 66 / +130)" were PHASE
+  # 1's and are NOT re-moved here (line 390 is edited once per number family, by
+  # the phase that owns that family). ITS NAMED SENTENCES (DoR D2-4): the
+  # quality-evidence
   # line "the 24-family mount with the family-count pins and the stale-count scan"
   # becomes the **27-family** mount with the same pins and the widened stale-count
   # scan, and every "family-count pins read 24" statement becomes 27, WHILE
