@@ -2515,6 +2515,11 @@ phases:
         # declared it; phase 6 owns it because the release evidence belongs with the
         # documentation-truth and full-battery phase.
         - .changeset/install-lifecycle-minor.md
+        # The spec-coverage page phase 7 authored (doc-sync: the install lifecycle had
+        # no feature spec). It is created after planning, so phase 6 declares it to
+        # give the commit primitive staging authority; the page states the delivered
+        # truth and is unrelated to phase 6's own edits.
+        - doc/spec/features/feature-install-lifecycle.md
         - tests/checks/install-lifecycle-docs.test.ts
         # Owns the branding-seam page's scoped required phrase, its two stale
         # phrases and the two-scan-scope fact, AND the entrypoint page's scoped

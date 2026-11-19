@@ -5,7 +5,7 @@ milestone: "M4: Jaiship-native delivery"
 story_code: M4-S1
 phases:
   clarify_scope: { started: "2026-11-18T16:53:00Z", completed: 2026-11-18T16:09:23.758Z }
-  specification: { started: null, completed: 2026-11-18T18:42:01.705Z }
+  specification: { started: null, completed: 2026-11-19T00:12:10.809Z }
   test_planning: { started: null, completed: 2026-11-18T18:42:08.248Z }
   delivery_planning: { started: null, completed: 2026-11-18T23:51:33.056Z }
   dor_check: { started: null, completed: 2026-11-18T18:48:25.093Z }

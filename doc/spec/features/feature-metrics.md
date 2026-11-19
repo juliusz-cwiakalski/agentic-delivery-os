@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-METRICS
 status: Current
 created: 2026-11-17
-last_updated: 2026-11-17
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivery metrics and alarm family: the read-only `metrics [--ref <ref>] [--from <iso>] [--through <iso>] [--json]` report under `delivery.metrics.v1`, carrying the four vocabulary entries (native ceremony share from the runner fold, native cycle time from the transition history with right-censoring, the CI-failure-rate proxy recomputed under the committed definition, and the escaped-defects curated floor with its closed three-class set), the per-dispatch tokens/cost/restarts block composed from the delivered spend fold with the attributable-scoped roll-up disclosure, the burn-rate alarm evaluated against the project-committed `metrics.burn-rate` declaration node (schema `delivery.metrics.burn-rate.v1`, one alarm per crossing, `crossedAt` the read instant), the live comparison view under the committed protocol (`sampleMinimum: 5`, `insufficient-sample` below it, the proxy-vs-native caveat exactly on cross-kind rows), the per-section classified-absence posture with the single `metrics.baseline-unreadable` platform row, the deterministic bounded machine and human output with tail-ordered counted drops and a never-dropped alarm set, and the mount as the twenty-fourth prompt-required family."
 links:
-  related_changes: ["GH-299"]
+  related_changes: ["GH-299", "GH-346"]
   related_decisions: ["ODR-0002", "ADR-0003"]
   contracts:
     - "packages/core/src/contracts/metrics.ts"

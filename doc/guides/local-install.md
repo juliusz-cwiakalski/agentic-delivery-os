@@ -46,7 +46,7 @@ A dirty tree is never an admission question. The rule is about *where* the targe
 
 ## The dev-build requirement
 
-An install requires a running artifact that carries an **injected build identity**. A workspace run, a test-shaped invocation, or any run that was not produced by `bun run build:binary` carries no injected identity, reports `0.0.0 (build dev)`, and is refused with `install.dev-build`, naming the build entry and the `dist/<binary-name>` convention. The install never invokes a build tool, a package manager, or a network client; that absence is asserted structurally. A machine without a `Bun runtime at install time` never needs one: the artifact is self-contained, and the runtime is required only by the legacy launcher step.
+An install requires a running artifact that carries an **injected build identity**. A workspace run, a test-shaped invocation, or any run that was not produced by `bun run build:binary` carries no injected identity, reports `0.0.0 (build dev)`, and is refused with `install.dev-build`, naming the build entry and the `dist/<binary-name>` convention. The install never invokes a build tool, a package manager, or a network client; that absence is asserted structurally. A Bun runtime at install time is not required: the artifact is self-contained, and the runtime is required only by the legacy launcher step.
 
 ## Upgrade
 
@@ -134,4 +134,5 @@ The GitHub repository, the package scope, the docs URLs, and the compatibility a
 
 - [Install lifecycle reference page](../planning/oss-tooling/milestones/m4/commands/install.md)
 - [Install model](../planning/oss-tooling/milestones/m4/install-model.md)
+- [Installable Artifact and Install Lifecycle](../spec/features/feature-install-lifecycle.md)
 - [CLI Entrypoint](../spec/features/feature-cli-entrypoint.md)

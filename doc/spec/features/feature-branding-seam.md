@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRANDING-SEAM
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-15
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, the bounded and declared product-surface inventory plus one declared build-side site, with its per-bin declared defaults and prior identity, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, the consumed install path, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288", "GH-320"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288", "GH-320", "GH-346"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -75,7 +75,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 | `docsBaseUrl` | `https://` plus the scope org plus `.github.io/` plus the binary transformation plus `/`. | The scope org is the package scope without `@`. |
 | `repositoryUrl` | `https://github.com/` plus the scope org plus `/` plus the binary transformation. | Derived, not committed. |
 | `releaseAssetPrefix` | The binary transformation plus `-`. | Consumed by release work after the freeze. |
-| `installPath` | `~/` plus the config directory name plus `/bin/` plus the binary transformation. | Consumed by the executable's state-free `--print-install-path` self-description, which the local installer reads to register the launcher at the brand install path ([Local Install and Prior-Identity Transition](../../../guides/local-install.md)). |
+| `installPath` | `~/` plus the config directory name plus `/bin/` plus the binary transformation. | Consumed by the executable's state-free `--print-install-path` self-description: the install lifecycle derives the artifact destination from it and never accepts a destination input, and the local installer reads it to register the legacy launcher at the brand install path ([Installable Artifact and Install Lifecycle](feature-install-lifecycle.md), [Local Install and Prior-Identity Transition](../../../guides/local-install.md)). |
 
 The derivation rules are documented authoritatively in the resolver source. Rule changes are reviewed changes with drill implications.
 
@@ -257,6 +257,7 @@ Tests use synthetic names only (for example `.renamed-product`, `.alt-brand`, `.
 ## Related Documentation
 
 - [Local Install and Prior-Identity Transition](../../../guides/local-install.md) — the install posture, the launcher, the transitional read, and the declared divergences.
+- [Installable Artifact and Install Lifecycle](feature-install-lifecycle.md) — the build-side identity-literal site's consumer, the artifact destination derived from `installPath`, and the owning role.
 
 - **Decision record:** [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md).
 - **Scaffold substrate:** [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md).

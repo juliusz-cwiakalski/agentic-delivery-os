@@ -212,6 +212,7 @@
     "doc/spec/features/feature-doctor.md",
     "doc/spec/features/feature-event-taxonomy.md",
     "doc/spec/features/feature-harness-adapters.md",
+    "doc/spec/features/feature-install-lifecycle.md",
     "doc/spec/features/feature-mcp-surface.md",
     "doc/spec/features/feature-measurement-baseline.md",
     "doc/spec/features/feature-memory-lint.md",

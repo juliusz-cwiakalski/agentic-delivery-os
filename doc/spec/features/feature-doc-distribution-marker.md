@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DOC-DISTRIBUTION-MARKER
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-15
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The ados_distribution marker system: three values, a two-path parser, a marker-derived install set, a five-mode CI drift guard, and the closed DM-2 scan scope (which excludes doc/spec/**)."
 links:
-  related_changes: ["GH-79", "GH-67", "GH-320"]
+  related_changes: ["GH-79", "GH-67", "GH-320", "GH-346"]
 ---
 
 # Feature: Doc Distribution Marker
@@ -48,7 +48,7 @@ The local install set is the marker-derived document set plus the delivery scrip
 - **Owner per artifact class (GH-346, F-14).** The binary, its rollback slot, its install record, and its managed PATH block belong to the lifecycle family (`install`, `install status`, `install rollback`, `install uninstall`, `install purge`); repository artifacts — the delivered docs, agent and command definitions, the plugin projection, and the legacy launcher when nothing else sits at the install path — belong to the shell installers. `scripts/uninstall.sh` keeps its repository-artifact scope, its own `0/2/3/4/5` exit taxonomy, its two modes, and its dry-run; it removes no binary, slot, record, or Jaiship root, reports a managed install, and names `install uninstall` as the owning removal command. Its detection source is the product's read-free `--print-install-path` self-description, invoked with the working-name override scrubbed from the child environment; when no binary is reachable it reports no managed install without an error and guesses no path.
 - **Unchanged:** the delivery script array, the delivery tool array, the template set, the hook examples, the plugin projection, and the `delivery-os` bin mapping. No `delivery-os` launcher is registered.
 
-The operator-facing description is the [Local Install and Prior-Identity Transition](../../guides/local-install.md) guide.
+The operator-facing description is the [Local Install and Prior-Identity Transition](../../guides/local-install.md) guide, and the owned surface is specified in [Installable Artifact and Install Lifecycle](feature-install-lifecycle.md).
 
 ## User Experience & Functionality
 
@@ -137,6 +137,7 @@ The `get_marker()` parser is **shared** between `install.sh` and the guard (the 
 - **Drift guard (authoritative):** `scripts/.tests/test-doc-distribution.sh`.
 - **Modes harness:** `scripts/.tests/test-doc-distribution-modes.sh`.
 - **Installer:** `scripts/install.sh` (`ADOS_LOCAL_DIRS`, `ADOS_UPDATABLE_FILES`).
+- **Lifecycle owner:** [Installable Artifact and Install Lifecycle](feature-install-lifecycle.md) — the artifact, its slot, its record, and the managed `PATH` block.
 - **Decision record:** [ODR-0001](../../decisions/ODR-0001-classify-yaml-register-templates-redistributable.md) — classify YAML register templates `redistributable`.
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — "Doc distribution marker" (the marker rule + DM-2 enumeration).
 - **Delivering change:** GH-67 (marker system).
