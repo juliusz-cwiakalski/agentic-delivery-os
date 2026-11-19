@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
   specification: { started: null, completed: 2026-11-19T10:46:54.583Z }
   test_planning: { started: null, completed: 2026-11-19T10:47:07.675Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-19T10:55:43.887Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -260,4 +260,37 @@ notes:
       dangerous class - one clause reading as 'restart' while another forbids a
       second session - and no single-artifact review would have found it."
     type: retro
+    date: "2026-11-19"
+  - text: "Delivery planning complete: chg-GH-348-plan.yaml, 9 delivery phases (all
+      kind: delivery, tier full, repo main-tools, standard weight), 124 declared
+      file entries over 80 unique paths. Ownership: 41/41 ACs and 74/74 TCs,
+      zero orphans, zero double-owned, zero unmapped; four declared group splits
+      (STUCK-006, INSTANCE-005, LOG, CONTRACT) each with a stated reason, and
+      the rule that a shared path declared by several phases is case ownership,
+      not path ownership. plan validate verdict=valid tier=full
+      readyForDevelopment=true and lint plan valid at the delivered HEAD. Phase
+      1 declares the two decision records by exact path (plus
+      doc/decisions/00-index.md conditional-staging only, verified clean at plan
+      time because it landed in be803e11) with a mechanical git ls-files
+      --error-unmatch done criterion. The parity registry
+      tests/fixtures/loop/parity/cases.ts is authored in phase 2 - the earliest
+      consuming phase - not in the battery phase. The proof-boundary constant
+      and its mutation controls are phase 8; the three pinned help-inventory
+      surfaces and the M4 reference page are phase 7 in one commit."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan-time assumptions accepted (declared, not invented): module paths are
+      plan-time conventions the spec left implementation-decided
+      (contracts/loop.ts, state/loop.ts, domain/loop-*.ts,
+      app/loop-{supervisor,session,corroborator}.ts, cli/commands/loop.ts,
+      cli/output/loop-text.ts) - a rename is a plan revision; AC-F7-1 is owned
+      by phase 8 because its log-hygiene case is a whole-battery scan; AC-F1-1
+      by phase 7 because the inventory repin lands there; AC-F5-5 by phase 5
+      because the bound observes the next session; AC-F6-4 by phase 4 because
+      its case protects the terminate path; TC-PARITY-008 keeps one owner with
+      its static scan re-observed in phase 8; the 101-row mutation register
+      stays a reviewer-executed exercise with the planted controls as the
+      permanent non-vacuity proof (GH-347 precedent); one minor changeset in
+      phase 9."
+    type: decision
     date: "2026-11-19"

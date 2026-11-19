@@ -1,0 +1,1831 @@
+# GH-348 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change (there is no chg-GH-348-plan.md). `plan validate`, `plan diff`,
+# `plan overlap`, and `lint plan` read it directly. Extra phase data (goal,
+# obligations, AC/TC ownership, code areas, gate commands, done-artifact
+# expectations) rides in YAML comments so the parsed document stays
+# schema-strict; the plan declares phases and scope only — no `tasks` key and no
+# progress log. Progress is a pm-notes `notes:` entry naming the plan phase id,
+# the commit hash, and the gate result.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-348-spec.md (v1.1; F-1..F-8; API-1..API-7; DM-1..DM-9;
+#               NFR-1..NFR-11; NG-1..NG-11; RSK-1..RSK-12; DEC-1..DEC-7;
+#               §6 flows 1–5; §7.1/§7.2 scope; §8.5 the ten declared divergences
+#               and the three pinned help-inventory surfaces; §16 the affected
+#               components; §17 the 41 ACs in eight groups; §18 the nine DoD
+#               items; §19 the outcome landing order; §25.1 Appendix A doc
+#               impacts; §25.3 Appendix C proof boundary; §25.4 Appendix D
+#               implementation-decided details; §25.6 Appendix F the NORMATIVE
+#               parity mapping; §25.7 Appendix G the proof-boundary constant).
+#   - Tests:    ./chg-GH-348-test-plan.md (revision 0.2; 74 cases in ten
+#               groups — VERB 5, SPAWN 6, BACKOFF 7, STOP 7, STUCK 11,
+#               INSTANCE 7, LOG 7, BATTLE 8, CONTRACT 6, PARITY 10; 41/41 ACs
+#               mapped with 77 AC→case links, 0 unmapped, 0 orphans; §5.2
+#               scenario details and their Target Layer/Location lines; §6.1 the
+#               fixture inventory (15 existing / 9 authored / 9 extended);
+#               §6.2 the fixture mechanisms; §7.1 the eleven seams and the one
+#               case registry; §7.2 the three no-shell observations; §7.3 the
+#               file map; §7.4 the 101-row mutation register M1–M101; §7.5 the
+#               per-group gate battery; §7.6 non-functional verification; §8.3
+#               the open-questions disposition (zero open)).
+#   - PM record: ./chg-GH-348-pm-notes.yaml (delivery_mode autonomous; the
+#               "BINDING for delivery_planning" note — the three pinned
+#               help-inventory surfaces are PIN UPDATES, never relaxations, and
+#               the no-shell invariant is EXTENDED in the existing list; the
+#               TDR-0055/TDR-0056 staging note with the GH-347 precedent; the
+#               PM rulings R1–R4 and the two cross-file pins now spec v1.1 §8.5;
+#               the declared-divergence note; the operational prerequisite that
+#               every primitive call carries BOTH
+#               PATH=$PWD/node_modules/.bin:$PATH and TMPDIR=$PWD/tmp/tmpdir).
+#   - Decisions: doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-
+#               coordinator-engine.md (the loop is a COMPOSITION PROFILE over the
+#               delivered lease/budget/stuck/kill primitives under the distinct
+#               identity `loop-main`; the coordinator family is not extended and
+#               is not edited), doc/decisions/TDR-0056-durable-loop-stop-as-a-
+#               state-ledger-record.md (the stop is the identity-scoped
+#               `loop.stop` ledger record `delivery.loop.stop.v1`, key
+#               `loop.stops:<loopId>`, append-only latest-wins, actions
+#               `requested`/`cleared` — never a file, never the coordinator's
+#               per-holder `stop-requested` lease action).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages; per-phase one-line summary; typed
+#               done-artifacts; leases; weightClass; interactions; tier; no
+#               tasks key, no progress log).
+#   - Precedent: ../2026-11/2026-11-18--GH-347--dispatch-core-parity/
+#               chg-GH-347-plan.yaml (comment-carried phase data, the
+#               COMMIT-BOUNDARY REALITY section, the SCOPE DECLARATION RULE,
+#               one-commit-per-phase discipline, the incremental case registry,
+#               the body-only staging declaration for doc/decisions/00-index.md,
+#               and spec reconciliation declared for STAGING ONLY in the release
+#               phase).
+#
+# PLAN SHAPE: nine phases, all `kind: delivery` (each edits the repository and
+#   takes the default `repo:main-tools` lease), zero `planning` phases. The spec
+#   is complete at v1.1 and the test plan at revision 0.2, so no design work
+#   remains; a planning phase would declare no scope to compute. The nine phases
+#   are the change's own ids; `tier.phases` below lists the LIFECYCLE phase ids
+#   [1..11] (the ceremony tier engine's vocabulary) and the two namespaces are
+#   never conflated.
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1):
+#   The two decision records are UNTRACKED in the worktree at plan time because
+#   the specification-phase completion commits stage only the change folder:
+#     doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+#     doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+#   Phase 1 declares those two EXACT paths so @coder lands them on the branch.
+#   VERIFIED AT PLAN TIME (2026-11-19, `git status --porcelain -- doc/decisions`):
+#   the ONLY entries under doc/decisions are those two `??` rows — the two
+#   `doc/decisions/00-index.md` ROWS ARE ALREADY COMMITTED on this branch (the
+#   index was last touched by 11608b55 and carries the TDR-0055 row at line 85,
+#   the TDR-0056 row at line 86, and the GH-348 binding paragraph at line 96).
+#   The index is therefore declared in phase 1 for CONDITIONAL STAGING ONLY — the
+#   same declared exception GH-347 used — so that a status row or a typo touch
+#   made while landing the two records stages with them and Appendix A's
+#   decision-record citation stays provable at DoD. Until phase 1 commits, the
+#   branch carries index rows pointing at uncommitted records; that is exactly
+#   the gap this phase closes.
+#   PHASE-1 DONE CRITERION (mechanical, re-run at DoD):
+#     git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+#     git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+#   each exit 0 AND `git status --porcelain -- doc/decisions` is empty, so no
+#   index row points at an untracked record. Both records are Proposed; owner
+#   acceptance is the GH-348 PR review gate. NO PHASE EDITS EITHER RECORD to
+#   match the code — a design divergence from a record is an escalation.
+#   If the phase does not touch the index, `plan diff` reports at most an
+#   advisory `undeclared-missing` for it, never a validation failure.
+#
+# SCOPE DECLARATION RULE (binding on every phase, inherited from GH-339/GH-347):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   regression control is NOT declared: declaring it would only produce an
+#   advisory `plan diff` `undeclared-missing` for a file that needs no edit.
+#   THREE DECLARED KINDS, stated so the rule and the declaration cannot
+#   contradict:
+#     (i)   A CONDITIONAL-STAGING declaration: `doc/decisions/00-index.md` in
+#           phase 1 (clean at plan time, may be touched while the two records
+#           land; never a licence to edit an unrelated row).
+#     (ii)  A PINNED-SURFACE declaration, used by phase 7 only:
+#           `tests/fixtures/help-guide/coverage.json`,
+#           `tests/fixtures/metrics/mounting.ts`,
+#           `scripts/checks/help-guide-coverage.ts`,
+#           `tests/checks/install-conformance-mutants.test.ts`,
+#           `tests/structure/metrics-mounting.test.ts`, and
+#           `tests/checks/reference-page-parity.test.ts` are PIN UPDATES
+#           (26 → 27, `loop` last, `install` immediately before `loop`, the
+#           stale-pin scan set gaining 26, the duplicated page mapping learning
+#           the M4 root). Every mutation control is kept; no assertion is
+#           deleted, inverted, or relaxed, and the removal control must fail by
+#           name (DOD-8).
+#     (iii) A DELIVERED-SURFACE EXTENSION declaration, used by phase 8 only:
+#           `scripts/checks/no-shell-dispatch.ts` and
+#           `tests/checks/no-shell-dispatch.test.ts` are EXTENDED by adding files
+#           to the existing `DISPATCH_FLOW_SURFACE` and the existing
+#           declared-equality/reachability assertions. Authoring a second
+#           no-shell invariant module is forbidden (test plan §7.2(b), M83).
+#   A file edited by more than one phase (notably
+#   `packages/core/src/app/loop-supervisor.ts`,
+#   `packages/cli/src/commands/loop.ts`, `packages/cli/src/production.ts`, and
+#   `tests/fixtures/loop/parity/cases.ts`) is declared by EVERY phase that
+#   touches it. No phase claims exclusive ownership of a shared file; ownership
+#   is of CASES and ACs, not of paths.
+#
+# SEQUENCING (spec §19's outcome order, made concrete). Every phase is
+#   independently committable and gate-green at its own boundary; the aggregate
+#   `pnpm check` is phase 9's alone among the authoring phases.
+#
+#   Phase 1  Contract, record and pure-domain foundation: the closed
+#            vocabularies, the two record payload types and their state folds,
+#            the pure verdict/backoff/log/status/prompt modules, the domain-tier
+#            purity proof, and the two decision records.
+#   Phase 2  CEO spawn identity and session identity: the additive optional
+#            harness `pid`, the deterministic `ceo-loop-<stamp>` title, the
+#            delivered per-spawn binding, the `loop.session` record, the bounded
+#            operational log sink, and the command/receipt skeleton.
+#   Phase 3  Single instance over the delivered lease: the `loop-main` claim, the
+#            liveness-first takeover, the session re-find that never duplicates,
+#            the distinct-identity non-interference, and the pid-less
+#            degradation.
+#   Phase 4  The two-signal stuck verdict, the delivered-lane corroborator, and
+#            the identity-verified terminate path — the highest-risk surface,
+#            placed after the contracts, the lease, the session identity, and
+#            the process id it depends on.
+#   Phase 5  The bounded restart policy: the declared delay schedule, one ordinal
+#            per stuck restart, zero for a clean end, the at-bound exhaustion
+#            exit, `--fresh-budget`, and the detection-to-next-session bound.
+#   Phase 6  The durable identity-scoped stop: request/clearance, the
+#            read-before-claim refusal, the fail-closed unreadable fold, drain vs
+#            immediate, and cross-process honouring.
+#   Phase 7  The operator surface: the complete five-verb grammar and refusals,
+#            the six-shell-key status block, the bounded `log` read, the static
+#            help entry, the M4 reference page, and the 26 → 27 inventory repin
+#            across the three pinned suites.
+#   Phase 8  The conformance battery, the proof-boundary constant and its
+#            mutation controls, the extended no-shell surface, the
+#            pick-deliver-merge cycle, and the closed-surface invariance and
+#            hygiene pins.
+#   Phase 9  Release obligations: the single minor changeset, plan
+#            validate/lint, the doc-distribution guard, the aggregate gate, and
+#            the current-truth pages declared for STAGING ONLY (lifecycle phase 7
+#            reconciles them; this plan reconciles none).
+#
+#   WHY THIS ORDER AND NOT ANOTHER:
+#   - Phase 2 must precede phase 3 because a claim only has a session to re-find
+#     once the session record exists, and the `pid` fact is the re-find identity.
+#   - Phase 3 must precede phase 4 because a stuck verdict requires a LIVE
+#     SESSION and a single instance; a verdict path built before the lease and
+#     the session resolution would be untestable and would risk the duplicate
+#     spawn the verdict path guards against.
+#   - Phase 4 must precede phase 5 because "only a stuck restart consumes an
+#     ordinal" — the restart policy is downstream of the verdict that triggers it,
+#     and STUCK-006's detection-to-next-session bound needs the first backoff
+#     step to observe a next session at all.
+#   - Phase 5 must precede phase 6 because the stop's `immediate` mode terminates
+#     the session through the phase-4 terminate path, and the stop's
+#     iteration-boundary read only has a cycle to interrupt once the restart
+#     policy exists.
+#   - Phase 6 must precede phase 7 because `loop start`'s folded-stop refusal and
+#     the five-verb grammar are asserted by TC-VERB-001 and TC-STOP-002 together;
+#     the family cannot be declared complete while `stop`/`reset` do not fold.
+#   - Phase 7 must precede phase 8 because the battery drives the real command
+#     path with the complete grammar and the real composition mounted from the
+#     prompt-required inventory; a battery over a partial family would prove a
+#     surface that does not ship.
+#   - Phase 8 must precede phase 9 because the aggregate gate and the doc guards
+#     range over the assembled change.
+#
+# AC OWNERSHIP (41/41; exactly one owning phase each; 0 orphans, 0 double-owned).
+#   "Owning phase" = the phase whose commit lands the LAST of the AC's named
+#   cases, i.e. the boundary at which the AC first becomes fully observable and
+#   gate-green. A case listed for an AC in test plan §3.1 that lands in an
+#   earlier phase is the AC's partial evidence, never a second owner.
+#   Phase 1 (0):  contract/record/domain foundation; no AC is claimed by a
+#                 declaration alone.
+#   Phase 2 (5):  AC-F2-1 (SPAWN-001 + PARITY-008), AC-F2-2 (SPAWN-002/005/006
+#                 + PARITY-005), AC-F2-3 (SPAWN-003), AC-F2-4 (SPAWN-004),
+#                 AC-F7-2 (LOG-003/004).
+#   Phase 3 (4):  AC-F6-1 (INSTANCE-001/007 + PARITY-001), AC-F6-2
+#                 (INSTANCE-002/003), AC-F6-3 (INSTANCE-004), AC-F6-5
+#                 (INSTANCE-006).
+#   Phase 4 (7):  AC-F5-1 (STUCK-001/011), AC-F5-2 (STUCK-002), AC-F5-3
+#                 (STUCK-003/010), AC-F5-4 (STUCK-004/005), AC-F5-6
+#                 (STUCK-007/008), AC-F5-7 (STUCK-009/010), AC-F6-4
+#                 (INSTANCE-005).
+#   Phase 5 (7):  AC-F3-1 (BACKOFF-001), AC-F3-2 (BACKOFF-002/003 +
+#                 PARITY-004), AC-F3-3 (BACKOFF-004), AC-F3-4 (BACKOFF-005 +
+#                 PARITY-003), AC-F3-5 (BACKOFF-006), AC-F3-6 (BACKOFF-007),
+#                 AC-F5-5 (STUCK-006).
+#   Phase 6 (6):  AC-F1-4 (STOP-001/004), AC-F4-1 (STOP-001), AC-F4-2
+#                 (STOP-002/003 + PARITY-010), AC-F4-3 (STOP-004), AC-F4-4
+#                 (STOP-005 + PARITY-007), AC-F4-5 (STOP-006/007 + PARITY-010).
+#   Phase 7 (6):  AC-F1-1 (VERB-001/002/005 + PARITY-002/008/009 + BATTLE-008),
+#                 AC-F1-2 (VERB-003), AC-F1-3 (LOG-005 + VERB-002), AC-F1-5
+#                 (VERB-004 + CONTRACT-003), AC-F7-3 (LOG-005 + PARITY-006),
+#                 AC-F7-4 (LOG-006/007).
+#   Phase 8 (6):  AC-F7-1 (LOG-001/002 + PARITY-006; LOG-002 is the whole-battery
+#                 scan), AC-F8-1 (BATTLE-001/002), AC-F8-2 (BATTLE-003), AC-F8-3
+#                 (BATTLE-004/005), AC-F8-4 (BATTLE-006), AC-F8-5 (BATTLE-007).
+#   Phase 9 (0):  the release floor re-establishes evidence for the whole set; it
+#                 owns no AC and moves none. A reviewer who wants ownership moved
+#                 is asking for a plan revision, not a silent transfer.
+#   COUNT: 0 + 5 + 4 + 7 + 7 + 6 + 6 + 6 + 0 = 41.
+#   Per-feature reconciliation against spec §17 (5/4/6/5/7/5/4/5):
+#     F-1 5 = AC-F1-1, F1-2, F1-3, F1-4, F1-5 → 1 (phase 6) + 4 (phase 7).
+#     F-2 4 = all phase 2.
+#     F-3 6 = all phase 5.
+#     F-4 5 = all phase 6 (AC-F4-1..F4-5).
+#     F-5 7 = 6 (phase 4) + AC-F5-5 (phase 5).
+#     F-6 5 = 4 (phase 3) + AC-F6-4 (phase 4).
+#     F-7 4 = AC-F7-2 (phase 2), AC-F7-3/F7-4 (phase 7), AC-F7-1 (phase 8).
+#     F-8 5 = all phase 8.
+#   4+6+5+7+5 = 27 in F-3..F-7; 5+4+5 = 14 in F-1/F-2/F-8; 27 + 14 = 41.
+#
+# TC -> PHASE MAP (74 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the declaration that makes it green):
+#   Phase 1 (1):   TC-CONTRACT-005
+#   Phase 2 (11):  TC-SPAWN-001, TC-SPAWN-002, TC-SPAWN-003, TC-SPAWN-004,
+#                  TC-SPAWN-005, TC-SPAWN-006 (6),
+#                  TC-PARITY-005, TC-PARITY-008 (2),
+#                  TC-LOG-001, TC-LOG-003, TC-LOG-004 (3)
+#   Phase 3 (7):   TC-INSTANCE-001, TC-INSTANCE-002, TC-INSTANCE-003,
+#                  TC-INSTANCE-004, TC-INSTANCE-006, TC-INSTANCE-007 (6),
+#                  TC-PARITY-001 (1)
+#   Phase 4 (12):  TC-STUCK-001, TC-STUCK-002, TC-STUCK-003, TC-STUCK-004,
+#                  TC-STUCK-005, TC-STUCK-007, TC-STUCK-008, TC-STUCK-009,
+#                  TC-STUCK-010, TC-STUCK-011 (10), TC-INSTANCE-005 (1),
+#                  TC-CONTRACT-006 (1)
+#   Phase 5 (10):  TC-BACKOFF-001, TC-BACKOFF-002, TC-BACKOFF-003,
+#                  TC-BACKOFF-004, TC-BACKOFF-005, TC-BACKOFF-006,
+#                  TC-BACKOFF-007 (7), TC-STUCK-006 (1),
+#                  TC-PARITY-003, TC-PARITY-004 (2)
+#   Phase 6 (9):   TC-STOP-001, TC-STOP-002, TC-STOP-003, TC-STOP-004,
+#                  TC-STOP-005, TC-STOP-006, TC-STOP-007 (7),
+#                  TC-PARITY-007, TC-PARITY-010 (2)
+#   Phase 7 (13):  TC-VERB-001, TC-VERB-002, TC-VERB-003, TC-VERB-004,
+#                  TC-VERB-005 (5), TC-LOG-005, TC-LOG-006, TC-LOG-007 (3),
+#                  TC-PARITY-002, TC-PARITY-006, TC-PARITY-009 (3),
+#                  TC-CONTRACT-003 (1), TC-BATTLE-008 (1)
+#   Phase 8 (11):  TC-BATTLE-001, TC-BATTLE-002, TC-BATTLE-003, TC-BATTLE-004,
+#                  TC-BATTLE-005, TC-BATTLE-006, TC-BATTLE-007 (7),
+#                  TC-LOG-002 (1), TC-CONTRACT-001, TC-CONTRACT-002,
+#                  TC-CONTRACT-004 (3)
+#   Phase 9 (0)
+#   COUNT: 1 + 11 + 7 + 12 + 10 + 9 + 13 + 11 + 0 = 74.
+#   0 orphans (every id appears above once), 0 double-owned (each id appears
+#   once), 0 unmapped: the ten group totals reconcile as
+#     VERB 5 = 5 (p7);
+#     SPAWN 6 = 6 (p2);
+#     BACKOFF 7 = 7 (p5);
+#     STOP 7 = 7 (p6);
+#     STUCK 11 = 10 (p4) + 1 (p5: STUCK-006);
+#     INSTANCE 7 = 6 (p3) + 1 (p4: INSTANCE-005);
+#     LOG 7 = 3 (p2: 001/003/004) + 3 (p7: 005/006/007) + 1 (p8: 002);
+#     BATTLE 8 = 1 (p7: 008) + 7 (p8: 001..007);
+#     CONTRACT 6 = 1 (p1: 005) + 1 (p4: 006) + 1 (p7: 003) + 3 (p8: 001/002/004);
+#     PARITY 10 = 2 (p2: 005/008) + 1 (p3: 001) + 2 (p5: 003/004)
+#                 + 2 (p6: 007/010) + 3 (p7: 002/006/009).
+#     5+6+7+7+11+7+7+8+6+10 = 74.
+#   FOUR GROUP SPLITS, stated so no id is silently re-homed:
+#     - STUCK splits at the restart dependency: TC-STUCK-006 observes the next
+#       session (600 000 + 30 000 + 20 000 + 2 000 ms) and therefore belongs to
+#       the restart phase; the other ten STUCK ids stay whole in phase 4.
+#     - INSTANCE splits at the flows it must span: TC-INSTANCE-005 asserts
+#       at-most-one session across takeover, RESTART, stop, and unconfirmed
+#       termination, so it lands once restart (phase 5) and stop (phase 6) exist —
+#       it is owned by phase 4 because the terminate path it protects is phase
+#       4's, and its restart/stop steps are driven by phase-4 scripted boundaries
+#       (no delivered behaviour is borrowed from phases 5/6: the scripted driver
+#       supplies the events). A reviewer who reads "restart" as phase 5 should
+#       read that clause as "the loop's own restart branch", which phase 4 owns.
+#     - LOG splits at its observation point: the renderer/rotation/failure cases
+#       (001/003/004) land with the log sink in phase 2; the `log` READ cases
+#       (005/006/007) need the verb and land in phase 7; the whole-battery hygiene
+#       scan (002) needs the battery and lands in phase 8.
+#     - CONTRACT splits at what each half needs to be non-vacuous: domain purity
+#       (005) with the domain modules; engine-reuse import identity (006) with the
+#       lease/budget/kill wiring; read economy (003) with the read-only verbs; the
+#       closed-surface invariance (001), hygiene scan (002), and configuration
+#       mapping (004) with the whole surface and the battery.
+#   TCs DELIBERATELY OWNED BY THE PHASE THAT ALSO AUTHORS THEIR FIXTURE:
+#     - TC-SPAWN-* and TC-LOG-001/003/004 ↔ `tests/fixtures/loop/{harness,
+#       session,log-fs}.ts` (phase 2 authors them).
+#     - TC-STUCK-* and TC-INSTANCE-005 ↔ `tests/fixtures/loop/facts.ts` (phase 4
+#       authors it).
+#     - TC-BATTLE-001..007 ↔ `tests/fixtures/loop/parity/{evidence,seams,e2e}.ts`
+#       (phase 8 authors them; `evidence.ts` is the ONLY source of
+#       `LOOP_PARITY_PROOF_BOUNDARY`).
+#     - TC-BATTLE-008 ↔ the six pinned-surface files (phase 7 moves them exactly).
+#
+# FIXTURE-FIRST RULE (binding on every phase): the `tests/fixtures/loop/**`
+#   family is authored INCREMENTALLY at first need, never as one battery-phase
+#   drop. Phase 2 creates `harness.ts` (driver D2), `session.ts`, `log-fs.ts`, and
+#   `parity/cases.ts`; phase 4 adds `facts.ts`; phase 7 adds `golden/status.ts`;
+#   phase 8 adds `parity/{evidence,seams,e2e}.ts`. A case never depends on a
+#   fixture committed after it, and the battery phase authors only the fixtures
+#   only it consumes plus the boundary/seam manifests.
+#
+# THE ONE CASE REGISTRY (`tests/fixtures/loop/parity/cases.ts`, GH-347 DoR
+#   finding — NEVER in the last phase): `LOOP_PARITY_CASES` enumerates every
+#   battery row as `{id, group, declaredSeam, scenario, expected}`, where `group`
+#   is one of the nine proven ids. It exports `loopParityCasesOf(group)` and
+#   `runAllLoopParityCases()`. It is AUTHORED IN PHASE 2 — the earliest phase
+#   whose suites consume it (`loop-spawn.test.ts` and `loop-log.test.ts` import
+#   their group's builders instead of re-authoring the scenario) — and APPENDED
+#   by phases 3 (`single-instance`), 4 (`stuck`, `kill`), 5 (`backoff-budget`),
+#   6 (`stop`), 7 (`verbs`, the log READ rows), and 8 (the `no-shell` rows). Each
+#   phase appends ONLY its own group. Registry run counts at each boundary:
+#   p2 → spawn + log(renderer) rows; p3 → + single-instance; p4 → + stuck + kill;
+#   p5 → + backoff-budget; p6 → + stop; p7 → + verbs + log read; p8 → + no-shell.
+#   The `no-shell` rows MUST NOT call `runAllLoopParityCases()` (recursion): they
+#   run the other groups under the guarded runner, call the static
+#   `scan(ROOT)`, and scan the production prompt.
+#
+# PROOF BOUNDARY (spec §25.3/§25.7, NORMATIVE): the machine-checked source is the
+#   PERMANENT fixture constant `LOOP_PARITY_PROOF_BOUNDARY` in
+#   `tests/fixtures/loop/parity/evidence.ts` — proven (9, in order): `verbs`,
+#   `log`, `spawn`, `stuck`, `kill`, `backoff-budget`, `stop`, `single-instance`,
+#   `no-shell`; not proven (6, in order): `live-opencode`, `live-provider`,
+#   `os-termination`, `real-pick-deliver-merge`, `long-run-loop`,
+#   `cross-process-race`. The constant, its two mutation controls (M5/M6, M7 for
+#   order, M8 for an off-boundary row) and TC-BATTLE-007 belong to PHASE 8 —
+#   the phase that COMPLETES the battery — and never to the release phase. The
+#   current-truth page publishes the same list in LIFECYCLE PHASE 7 and no
+#   delivery phase asserts page text; a page/constant mismatch is a
+#   documentation-phase defect, never a TC-BATTLE-007 failure. No suite reads
+#   `doc/changes/**`.
+#
+# THREE PINNED HELP-INVENTORY SURFACES + THE M4 PAGE — one commit, phase 7
+#   (spec v1.1 §8.5, DOD-8, DEC-7; pm-notes "BINDING for delivery_planning").
+#   These are PIN UPDATES, not relaxations:
+#     1. `packages/cli/src/help/prompt-required-commands.ts`: append `loop` last,
+#        26 → 27.
+#     2. `tests/checks/install-conformance-mutants.test.ts`: the family comparator
+#        keeps its count, missing/undeclared, and tail rules with the NEW expected
+#        tail — `install` immediately before `loop`; a removal control that fails
+#        by name (`count 26 != 27`, `missing loop`, `tail is not loop`).
+#     3. `tests/structure/metrics-mounting.test.ts` + `tests/fixtures/metrics/
+#        mounting.ts`: the positional and count assertions move to 27
+#        (`metrics` 23, `supervise` 24, `install` 25, `loop` 26) AND the stale-pin
+#        scan set `toHaveLength(2[345])` gains 26, so a leftover 26-family pin
+#        fails by name (M4).
+#     4. `tests/checks/reference-page-parity.test.ts` + `scripts/checks/
+#        help-guide-coverage.ts`: the duplicated per-command page mapping learns
+#        the M4 root for `loop`, so `loop` resolves to
+#        `doc/planning/oss-tooling/milestones/m4/commands/loop.md` and never to a
+#        non-existent M1 page (M101).
+#     5. `doc/planning/oss-tooling/milestones/m4/commands/loop.md`: the new M4
+#        reference page (`--help`/`--version`, the five verbs, the flags, the
+#        exits, the status keys, the log bounds, the durable-stop workflow, the
+#        §8.5 divergences, and its `ados_distribution` marker).
+#   WHY ONE COMMIT: `metrics-mounting` renders root help and counts families,
+#   `reference-page-parity` iterates every help entry's see-also target, and
+#   `help-guide-coverage` requires a page for every prompt-required command; any
+#   split turns one of them red. A relaxation anywhere here is an ESCALATION.
+#
+# THE ADDITIVE HARNESS `pid` (DM-3) — introduced by phase 2 together with EVERY
+#   consumer and EVERY handle-construction site the change makes compile:
+#     - `packages/core/src/contracts/harness.ts`: OPTIONAL `pid` on
+#       `HarnessSessionHandle` and OPTIONAL `pid` on `HarnessSpawnStream`. Absent
+#       stays absent — never fabricated, never `0` — and NO capability name is
+#       added.
+#     - `packages/adapters/src/host/index.ts`: expose the started child's pid on
+#       the stream it returns.
+#     - `packages/adapters/src/harness/opencode.ts`: carry that pid onto the
+#       handle it constructs (spawn and resume).
+#     - `packages/core/src/app/loop-session.ts`: record `pid` and
+#       `processStartTimeMs` on `loop.session`, `null` when absent.
+#     - EVERY existing handle-construction site stays valid because the member is
+#       optional: `tests/fixtures/coordinator/harness.ts` and the delivered
+#       coordinator/daemon/dispatch doubles are DELIBERATELY UNCHANGED and are
+#       re-run as read-only controls in phase 2 (a compile break there is a
+#       finding, not a licence to edit them).
+#     - Consumers declared by phase 2: the session record writer, the status
+#       projection's `ceo_pid`, and the re-find identity. Phase 3 adds the
+#       re-find comparison and the pid-less degradation; phase 4 adds the
+#       terminate target selection; phase 6 adds the immediate-mode verification.
+#
+# THE NO-SHELL INVARIANT IS EXTENDED, NEVER DUPLICATED — phase 8 (test plan
+#   §7.2(b), M82/M83/M84). `scripts/checks/no-shell-dispatch.ts` keeps its four
+#   rules, its empty allowlist, and its declared-surface design; this change only
+#   ADDS FILES to the existing `DISPATCH_FLOW_SURFACE` (the loop app modules, the
+#   loop domain modules including `loop-prompt.ts`, the `loop` command module, and
+#   the loop state module). `tests/checks/no-shell-dispatch.test.ts` extends its
+#   declared-equality assertion to `dispatch-* + loop-* + fixed entries` and its
+#   reachability entries to the loop composition, so a new loop module cannot be
+#   silently unscanned. NO SECOND INVARIANT MODULE IS AUTHORED; a scan that finds
+#   one fails by name.
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Every command runs from the repository root with BOTH prerequisites:
+#     TMPDIR=$PWD/tmp/tmpdir (repo-local, git-ignored; never /tmp or $HOME) and
+#     PATH=$PWD/node_modules/.bin:$PATH (the commit primitive probes the bare
+#     `commitlint` name; without it every lifecycle commit fails as
+#     commit.commitlint-failed).
+#   - The typed CLI does not run from an unbuilt workspace. Any `jaiship`
+#     invocation (plan validate, lint plan) is preceded by
+#     `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build`.
+#   - TARGETED GATES: the `bun test` / `bun run scripts/checks/*` lines named in
+#     each phase, `pnpm typecheck` where a type surface moved, and
+#     `git diff --check` before every commit.
+#   - THE AGGREGATE `pnpm check` IS PHASE 9'S ALONE among the authoring phases and
+#     is never substituted by a narrow pass.
+#   - The branch-range commit-message gate
+#     (`./scripts/lint-commit-range.sh --base origin/main-tools`) is LIFECYCLE
+#     PHASE 9's gate (test plan §7.5), not a delivery-phase gate; its verdict is
+#     recorded as a pm-notes `notes:` entry (DOD-3).
+#   - Every phase boundary records its gate result and its commit hash as a
+#     pm-notes `notes:` entry naming the plan phase id.
+#
+# COMMIT CONVENTION (one commit per plan phase through the commit primitive;
+#   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
+#   phase 1  feat(GH-348): loop contracts, records and pure domain spine
+#   phase 2  feat(GH-348): CEO spawn identity, session record and harness pid
+#   phase 3  feat(GH-348): loop instance lease, takeover and session re-find
+#   phase 4  feat(GH-348): two-signal stuck verdict, corroborator and terminate
+#   phase 5  feat(GH-348): bounded restart backoff and per-epoch budget
+#   phase 6  feat(GH-348): durable loop stop, reset and stop modes
+#   phase 7  feat(GH-348): loop command family, status block and help inventory
+#   phase 8  feat(GH-348): loop conformance battery and no-shell surface
+#   phase 9  chore(GH-348): release obligations and spec reconciliation staging
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
+#   1.  ZERO new error identities, domain kinds, configuration keys, and ZERO
+#       delivered schema-version bumps; exactly TWO new record kinds
+#       (`loop.session`, `loop.stop`) and ONE additive optional harness fact
+#       (`pid`) (NFR-7, DM-8, NG-9).
+#   2.  The coordinator family is NOT edited: no new lease, no new predicate, no
+#       change to `evaluateStuck`, `decideLifecycle`,
+#       `evaluateCoordinatorRestartAdmission`, or the six `coordinator.*`
+#       defaults (NG-4, DEC-1, §8.5).
+#   3.  `scripts/ceo-loop.sh` and every `.opencode/agent/**` file are UNTOUCHED
+#       (NG-1, NG-2, DOD-7). `tests/structure/provider-surface.test.ts` (the
+#       script's sha256 pin) stays green and is a read-only control.
+#   4.  No shell invocation, no script path, no shell probe anywhere in the loop
+#       flow; every spawn is a fixed argv with `shell: false` (API-6, NFR-9).
+#   5.  Termination is identity-verified only: this session's process tree, or
+#       the recorded pid + platform start time, or the exact session id / exact
+#       `ceo-loop-<stamp>` title. No name match, no prefix, no pattern (AC-F5-6).
+#   6.  An unreadable progress reading or an unreadable corroborator is
+#       `unevaluable` and NEVER a kill; an unconfirmed termination is TERMINAL
+#       (one outcome record, lease released, exit 2, zero restarts, zero spawns)
+#       (PM ruling R3, AC-F5-4, AC-F5-6).
+#   7.  No configuration key is added; the six `coordinator.*` keys are consumed
+#       with their shipped defaults, and the backoff schedule is declared policy
+#       data with an INJECTED delay (DM-5, DM-8, NFR-1).
+#   8.  Records, log lines, summaries, and diagnostics are identifier-only: no
+#       prompt, transcript, diff, credential, environment value, provider
+#       payload, model name, or seat name; evidence corpus <= 512 UTF-8 bytes
+#       (NFR-10).
+#   9.  The log is bounded observability, not durable truth: line <= 512 B,
+#       active <= 1 048 576 B, exactly one retained generation, total
+#       <= 2 097 152 B; a log fault never changes a verdict, exit, or record
+#       (F-7, NFR-3).
+#   10. A delivered assertion is UPDATED only by citing its authorising clause
+#       (§8.5, a DEC, or a PM ruling) and NEVER deleted, renamed, relaxed,
+#       reordered, or skipped. The delivered coordinator, dispatch, and pinned
+#       suites stay green unmodified except the three pinned help-inventory
+#       surfaces phase 7 repins.
+#   11. Tier/boundary: `packages/core/src/app/**` may not import branding or
+#       state (it talks to the store through `#contracts` port types);
+#       `domain/**` imports `#contracts` only; `state/**` imports `#contracts`
+#       only; `adapters/**` imports the `./contracts` subpath and never the core
+#       root; `cli/**` imports no mcp/opencode. A new subpath is not added.
+#   12. Every new record kind rides the existing append-only ledger: no state
+#       engine, storage-format, or boundary change; `loop.session` and
+#       `loop.stop` are ordinary duck-typed records under identity-scoped keys.
+#
+# DOCUMENTATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are declared by
+#   phase 9 for STAGING ONLY — this plan authors none of them, and reconciliation
+#   is NOT a delivery phase): spec §25.1 Appendix A names every page and its
+#   required reconciliation —
+#   `doc/spec/features/feature-loop-supervision.md` (new current-truth page: the
+#   five-verb grammar and flags, the exit vocabulary and shell mapping, the six
+#   shell status keys plus the additive keys, the engine-reuse boundary, the
+#   two-signal verdict and the corroborator source, the terminate reuse, the
+#   backoff schedule, the durable stop and `reset`, the log retention bounds, the
+#   single-instance rule and re-find, the configuration mapping, and the
+#   published proof boundary with the not-proven list);
+#   `feature-coordinator-supervision.md` (§1's "its typed replacement" → the
+#   delivered family split; the per-identity key-scoping guarantee; keep §10's
+#   "`ceo-loop.sh` stays byte-unchanged" true);
+#   `feature-autonomous-delivery.md` (Mode A's target is `jaiship loop`; INV-DM-3's
+#   corroborator has a typed source; NFR-5's durable stop is a ledger record; the
+#   shell knob → coordinator key mapping);
+#   `feature-resident-daemon.md` (the loop reads `daemon.lane` read-only and
+#   writes none; the daemon neither reads nor reconciles the loop's records);
+#   `feature-watchdog-lane-contracts.md` (`watchdog` stays check-only and is not
+#   the loop's liveness source);
+#   `feature-harness-adapters.md` (the additive optional session pid on the handle
+#   and the streaming seam, `--agent ceo` plus the seat model, the
+#   `ceo-loop-<stamp>` title as a reap identity, the terminate reuse);
+#   `feature-config-layer.md` (zero keys added; the six `coordinator.*` keys
+#   consumed unchanged);
+#   `feature-result-contract.md` (zero new identities/domain kinds; the two new
+#   record kinds are not error identities; the reused exhaustion identity's
+#   remediation is carried by the loop's own summary);
+#   `doc/overview/glossary.md` (supervisor profile, supervisor identity, loop
+#   family, durable stop, drain/immediate, sourced progress, delivery
+#   corroborator, two-signal verdict, unevaluable, backoff schedule, loop session
+#   record, proof boundary);
+#   `doc/00-index.md` (index the new current-truth page and the M4 reference
+#   page); `doc/planning/oss-tooling/milestones/m4/{README,flip-plan,backlog}.md`
+#   (mark M4-S10 / F3 delivered, keep F5/F6 ownership);
+#   `doc/guides/delivery-modes.md` (reconcile any "Mode A is only
+#   `scripts/ceo-loop.sh`" statement, keep the troubleshooting guidance valid for
+#   both paths); `doc/quality/test-specs/test-spec-loop-supervision.md` (new
+#   enduring coverage map, the loop counterpart of the coordinator test spec).
+#   The reconciled pages must cite TDR-0055 and TDR-0056, every new or changed
+#   distributable page declares its `ados_distribution` class, and the
+#   doc-distribution guard (`bash scripts/.tests/test-doc-distribution.sh`) must
+#   stay green (phase 9 owns running it).
+#   NOT declared, deliberately: `tests/checks/doc-conformance.test.ts` is
+#   LIFECYCLE phase-7 work (it is edited when the page exists, after this change's
+#   delivery phases); `doc/planning/oss-tooling/milestones/m4/commands/loop.md` is
+#   authored in PHASE 7 as part of the help surface, not reconciled in phase 7 of
+#   the lifecycle.
+#
+# ASSUMPTIONS AND DISCOVERIES (reported, not silently resolved):
+#   (a) `doc/decisions/00-index.md` is CLEAN at plan time: `git status
+#       --porcelain -- doc/decisions` shows only the two untracked records, and
+#       the TDR-0055/TDR-0056 rows plus the GH-348 binding paragraph are already
+#       committed at 11608b55. Phase 1 therefore declares the index for
+#       CONDITIONAL STAGING ONLY, exactly as GH-347 did.
+#   (b) MODULE PATHS ARE PLAN-TIME CONVENTIONS. The spec gives module
+#       RESPONSIBILITIES (§16) but no paths, and Appendix D leaves internal shape
+#       implementation-decided. The paths below (`contracts/loop.ts`,
+#       `state/loop.ts`, `domain/loop-*.ts`, `app/loop-{supervisor,session,
+#       corroborator}.ts`, `cli/commands/loop.ts`, `cli/output/loop-text.ts`) are
+#       declared so scope is COMPUTABLE; a rename at delivery is a plan revision,
+#       never a silent deviation.
+#   (c) The test plan names `tests/fixtures/loop/parity/evidence.ts` as the ONLY
+#       source of the proof boundary and `parity/cases.ts` as the ONE registry;
+#       this plan honours both and adds no second table.
+#   (d) `tests/fixtures/loop/harness.ts` must expose a HANDLER-SCOPED
+#       configuration double (PM ruling R4 / AC-F1-5): handler reads counted
+#       separately from the composition's resolution, and an acquisition failure
+#       falls back to the shipped defaults so `status` always composes.
+#   (e) The five `loop.session` fields `pid`, `processStartTimeMs`, and `title`
+#       are nullable and never fabricated; a pid-less `active` session is
+#       unknown-liveness (resumed, never killed, never duplicated) — AC-F6-5.
+#   (f) There is no `doc/documentation-profile.md` (engineering-repo default), so
+#       no `doc/business/**` area is created or touched.
+#   (g) `version_impact: minor` plus publishable-package edits means exactly ONE
+#       minor changeset covering the affected packages (phase 9 authors
+#       `.changeset/gh-348-loop-supervision-minor.md`).
+#   (h) The 101-row mutation register (§7.4) is a REVIEWER/FIXER exercise, not a
+#       committed suite; the permanent non-vacuity proofs are the planted
+#       controls inside the owning cases. Phase 8 owns the rows whose named cases
+#       are battery cases (M1–M8, M76–M84, M94–M101 land with their owning phases
+#       as noted in each phase's acceptance block).
+#
+schemaVersion: delivery.plan.v1
+workItemRef: GH-348
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "A new error identity, error-table row, domain kind, configuration key, or delivered schema-version bump appears, or a coordinator module is edited (NFR-7, NG-4, NG-9, DEC-1)"
+    - "A second supervision engine, lease, kill path, budget fold, or process-exclusivity mechanism is built, or the loop's supervisor identity is made `coordinator-main` (DEC-1, TDR-0055, NG-3, TC-INSTANCE-004)"
+    - "A stuck verdict is produced from an unreadable progress reading or an unreadable corroborator, or a kill occurs while a healthy delivery is in progress (F-5, AC-F5-3, AC-F5-4, NFR-5, TC-STUCK-003/004/005)"
+    - "A restart follows an unconfirmed termination, a second session starts beside a live recorded session, or an identity mismatch sends a signal (PM ruling R3, AC-F5-6, AC-F6-4, RSK-4, RSK-5)"
+    - "The declared delay schedule, the 300 000 ms cap, the one-ordinal-per-stuck-restart accounting, the at-bound refusal, or the `--fresh-budget` epoch opening changes (F-3, DM-5, AC-F3-2/003/004, TC-BACKOFF-002/004/005)"
+    - "The stop becomes per-holder or per-instance, is read after the claim, or an unreadable/torn fold reads as `not stopped` (DEC-2, TDR-0056, AC-F4-2, AC-F4-5, TC-STOP-002/003/006/007)"
+    - "A log line, summary, record, or diagnostic carries a prompt, transcript, diff, credential, environment value, provider payload, model name, or seat name; evidence exceeds 512 bytes; or a log fault changes a verdict, exit, or record (NFR-3, NFR-10, AC-F7-2, TC-LOG-002/004)"
+    - "The prompt-required inventory is relaxed instead of repinned — not 27, `loop` not last, `install` not immediately before it, the metrics stale-pin set not gaining 26, or the reference-page mapping not learning the M4 root (DOD-8, DEC-7, TC-BATTLE-008, M1–M4, M101)"
+    - "A second no-shell invariant is authored instead of extending the existing declared surface, or the surface/allowlist is widened to silence a hit (AC-F8-3, test plan §7.2(b), TC-BATTLE-005, M82/M83)"
+    - "The proof-boundary constant drops, adds, or reorders an id, a battery row declares a not-proven seam, or a delivery suite asserts the current-truth page text (Appendix G, AC-F8-5, TC-BATTLE-007, M5–M8)"
+    - "`scripts/ceo-loop.sh` or any `.opencode/agent/**` file is edited, the shell's stop marker or `--is-delivering` probe is read by the loop, or the typed and shell stops become interchangeable (NG-1, NG-2, NG-11, DOD-7, AC-F5-7, AC-PARITY-010)"
+    - "A parity case re-expresses a scenario instead of consuming its `tests/fixtures/loop/parity/cases.ts` entry, the registry is authored in the battery phase, or a battery file reimplements a lease/budget/kill/backoff seam (AC-F8-1, TC-BATTLE-001/002, M76/M77)"
+    - "The two decision records are not tracked after phase 1, an index row points at an untracked record, or either record is edited to match the code (COMMIT-BOUNDARY REALITY; phase 1's mechanical done criterion and the phase-9 DoD obligation)"
+    - "A delivered assertion is deleted, renamed, relaxed, reordered, or skipped, or a delivered expectation changes without citing its authorising clause (§8.5, a DEC, or a PM ruling)"
+    - "A phase boundary is not gate-green, or `pnpm check` is reported green while a check was skipped, disabled, or made vacuous (DOD-2, DOD-4, DOD-5)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Contract, record and pure-domain foundation, plus the two
+  # decision records (F-1..F-8 declarations; DM-1, DM-2, DM-5, DM-6, DM-7).
+  #
+  # Goal: declare every closed vocabulary, both record payload types with their
+  # state folds, and the whole pure domain tier, with no behaviour wired yet, so
+  # each later phase fills one seam and proves it. This phase is first because
+  # (i) every later phase consumes one of these declarations, (ii) an additive
+  # contract change is the only thing reviewable in isolation, and (iii) TDR-0055
+  # and TDR-0056 are the governing records and must be on the branch before the
+  # code they govern.
+  #
+  # Contract (TDR-0055, TDR-0056; spec DM-1, DM-2, DM-5, DM-6, DM-7, DM-8):
+  #   - Verb/mode/event/degradation/output vocabularies: exactly five verbs
+  #     (`start`, `stop`, `status`, `log`, `reset`), the flag sets per verb, the
+  #     `drain` | `immediate` stop modes, the closed eleven-name log event
+  #     vocabulary, the closed five-value degradation list
+  #     (`session-pid-unknown`, `progress-unreadable`,
+  #     `delivery-corroborator-unreadable`, `live-facts-unknown`,
+  #     `log-unavailable`), the human/machine output bounds (32 lines; 65 536
+  #     bytes), and the log retention bounds (512 B line, 1 048 576 B active, one
+  #     retained generation, 2 097 152 B total, `--lines` 1..100 default 50).
+  #   - `loop.session` (DM-1): schema `delivery.loop.session.v1`, key
+  #     `loop.sessions:<loopId>`, append-only latest-wins; fields exactly
+  #     `schemaId`, `sessionRecordId`, `loopId`, `sessionId`, `harnessKind`,
+  #     `pid` (positive integer|null), `processStartTimeMs` (positive
+  #     integer|null), `title` (string|null), `state` (`active`|`ended`),
+  #     `acquiredAt`, `recordedAt`. One append per acquisition and one per state
+  #     change, never one per cycle. No prompt, transcript, credential, provider
+  #     payload, model, or seat.
+  #   - `loop.stop` (DM-2): schema `delivery.loop.stop.v1`, key
+  #     `loop.stops:<loopId>`, append-only latest-wins; fields exactly `schemaId`,
+  #     `stopId`, `loopId`, `action` (`requested`|`cleared`), `mode`
+  #     (`drain`|`immediate`|null), `recordedAt`. Identity-scoped: no pid, holder,
+  #     or instance field.
+  #   - The state module's append/read/fold operations for both kinds, over the
+  #     EXISTING append-only ledger and its injected store port. No new state
+  #     engine, no schema bump, no new key prefix outside these two.
+  #   - The pure domain tier, each module a pure function set with injected
+  #     facts and no ambient clock/timer/environment/I/O/network:
+  #     `loop-verdict.ts` (the two-signal verdict over progress state + artifact
+  #     advance + corroborator reading + window/progress bound, vocabulary
+  #     `progressing`|`stuck`|`unevaluable`), `loop-backoff.ts`
+  #     (`restartDelayMs(n) = min(2 000 * 2^(n-1), 300 000)`, the full 1..10
+  #     table, the epoch total bound), `loop-log.ts` (the single-line
+  #     ANSI-free identifier-only renderer with whole-pair dropping and the
+  #     retention arithmetic), `loop-status.ts` (the `delivery.loop.v1`
+  #     projection and the declared key order with three booleans and a bare
+  #     `key=` for every absent value), and `loop-prompt.ts` (the declared prompt
+  #     as data: the primitives it names, the stop instruction, and zero
+  #     script-path literals).
+  #   - NO projection is persisted; `delivery.loop.v1` and
+  #     `delivery.loop.log.v1` are read-only (DM-4).
+  #
+  # Obligations:
+  #   1.1 Declare the vocabularies, the two record payload types with their key
+  #       builders, the output/retention bounds, the backoff policy data, and the
+  #       projection types in `contracts/loop.ts`; re-export through
+  #       `contracts/index.ts` and the core root.
+  #   1.2 Author `state/loop.ts`: append and read for `loop.session` and
+  #       `loop.stop`, the latest-wins fold, the folded-stop reader, and the
+  #       "unreadable fold is a typed state failure" distinction. Re-export
+  #       through `state/index.ts`.
+  #   1.3 Author the five pure domain modules and re-export them through
+  #       `domain/index.ts`. No store import, no clock, no timer, no environment,
+  #       no child process, no network.
+  #   1.4 Author `tests/structure/loop-imports.test.ts` and
+  #       `tests/checks/loop-mutants.test.ts` with ONLY the phase-1 assertions:
+  #       the domain tier's purity (no ambient clock/timer/environment/I/O/network
+  #       import or call; a temp-copy planted `setTimeout` in `loop-backoff.ts`
+  #       fails by name — M93). Later phases extend these two files with their own
+  #       rows; this phase does not.
+  #   1.5 Land the two decision records and, conditionally, the decision index
+  #       (see COMMIT-BOUNDARY REALITY). Nothing else outside the declared scope.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/loop.ts        (vocabularies, record payload
+  #                                               types, bounds, policy data)
+  #   packages/core/src/contracts/index.ts       (re-exports)
+  #   packages/core/src/state/loop.ts            (both folds, verified read)
+  #   packages/core/src/state/index.ts           (re-export)
+  #   packages/core/src/domain/loop-verdict.ts   (two-signal predicate)
+  #   packages/core/src/domain/loop-backoff.ts   (declared schedule)
+  #   packages/core/src/domain/loop-log.ts       (line renderer + retention)
+  #   packages/core/src/domain/loop-status.ts    (projection + key order)
+  #   packages/core/src/domain/loop-prompt.ts    (prompt as data)
+  #   packages/core/src/domain/index.ts          (re-exports)
+  #   packages/core/src/index.ts                 (re-exports)
+  #   tests/structure/loop-imports.test.ts       (new: domain purity)
+  #   tests/checks/loop-mutants.test.ts          (new: the purity mutant, M93)
+  #   doc/decisions/TDR-0055-...md, doc/decisions/TDR-0056-...md (exact paths)
+  #   doc/decisions/00-index.md                  (conditional staging only)
+  #
+  # Acceptance: no AC; TC-CONTRACT-005 (domain purity). Phase 1 is scaffolding:
+  #   claiming an AC from a declaration alone would be a false claim. CONTRACT-006
+  #   (engine reuse by import identity) is NOT claimed here — the lease/budget/kill
+  #   mounts do not exist yet; phase 4 owns it.
+  #
+  # Gate (expected signal: exit 0; every vocabulary and both record shapes
+  #   declared once and exported; the domain tier purity check green with its
+  #   planted mutant failing by name; both record paths tracked and
+  #   `doc/decisions` clean):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/decision-record.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Loop contracts, the two record kinds with their folds, the pure verdict/backoff/log/status/prompt tier, and the two decision records"
+    kind: delivery
+    summary: "feat(GH-348): loop contracts, records and pure domain spine"
+    scope:
+      files:
+        - packages/core/src/contracts/loop.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/state/loop.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/domain/loop-verdict.ts
+        - packages/core/src/domain/loop-backoff.ts
+        - packages/core/src/domain/loop-log.ts
+        - packages/core/src/domain/loop-status.ts
+        - packages/core/src/domain/loop-prompt.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/loop-imports.test.ts
+        - tests/checks/loop-mutants.test.ts
+        # Untracked at plan time (COMMIT-BOUNDARY REALITY). Two exact paths.
+        - doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+        - doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+        # CONDITIONAL STAGING ONLY: rows are committed (11608b55), file clean;
+        # declared so a status row or typo touch made while the two records land
+        # stages with them. Never a licence to edit an unrelated row.
+        - doc/decisions/00-index.md
+      folders:
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/loop.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/loop-verdict.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-1 commit (purity and record/decision suites green; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — CEO spawn identity, session identity, the additive harness `pid`,
+  # and the bounded log sink (F-2, F-7; DM-1, DM-3, DM-7).
+  #
+  # Goal: a `loop start` resolves the CEO seat through the DELIVERED per-spawn
+  # binding, spawns one session with a deterministic title, records the session
+  # (including the process id when the adapter supplies one), writes bounded
+  # identifier-only log lines, and returns a receipt.
+  #
+  # Contract (API-1, API-6, DM-1, DM-3, DM-7; §8.5 divergences 5 and 8):
+  #   - The invocation carries caller agent identity `ceo`, exactly one
+  #     `--agent ceo` together with the binding's resolved `--model`, and exactly
+  #     one `--title ceo-loop-<UTC yyyymmdd-hhmmss>` (<= 64 characters) on a FRESH
+  #     spawn. A resume carries no title. The argv is fixed and never
+  #     shell-interpreted.
+  #   - The binding is the delivered per-spawn single-seat resolution over the
+  #     selected profile and chain (the composition's profile-port wrapper plus
+  #     the pure admission-binding resolution) — the same composed function the
+  #     dispatch surface uses. No second resolver, no policy evaluation, no
+  #     operator flag.
+  #   - Pre-session refusals keep their delivered identities: an unassigned `ceo`
+  #     seat -> `provider.profile.invalid`, an unresolvable profile context ->
+  #     `config.value.invalid`, an unrepresentable seat model ->
+  #     `harness.profile.model-unrepresentable`; all exit 1, all with no session
+  #     and no session record, and the lease released.
+  #   - `loop.session` is appended exactly once per acquisition (state `active`)
+  #     and once per state change (`ended`); a quiet or progressing session
+  #     appends nothing further. `pid`/`processStartTimeMs`/`title` are `null`
+  #     when the adapter supplies none — never fabricated, never `0`.
+  #   - The operational log appends one single-line ANSI-free identifier-only
+  #     record per supervision event at `loop/<loopId>.log` inside the project
+  #     state directory beside the ledger; whole pairs are dropped rather than cut
+  #     at 512 UTF-8 bytes; the directory is created by the first append and never
+  #     by a read; a failed append/rotation is swallowed after one bounded attempt
+  #     and disclosed only as `log-unavailable`.
+  #   - No pre-iteration hook is run and no hook path is read (§8.5 row 8); no
+  #     context resume is attempted or claimed (§8.5 row 5).
+  #
+  # Seam (BINDING): the additive `pid` (DM-3) lands here TOGETHER with every
+  #   consumer and every handle-construction site the change makes compile — see
+  #   the header's "THE ADDITIVE HARNESS `pid`" block. `packages/core/src/
+  #   app/loop-supervisor.ts` is the supervision cycle's home from here on and is
+  #   declared by phases 3, 4, 5, and 6 as each adds one decision step.
+  #
+  # Obligations:
+  #   2.1 Add the OPTIONAL `pid` to `HarnessSessionHandle` and to
+  #       `HarnessSpawnStream` in `contracts/harness.ts`; add NO capability name.
+  #   2.2 Expose the started child's pid on the stream in
+  #       `packages/adapters/src/host/index.ts` and carry it onto the handle in
+  #       `packages/adapters/src/harness/opencode.ts` for spawn AND resume. The
+  #       existing doubles construct handles WITHOUT the member and must keep
+  #       compiling (re-run as read-only controls).
+  #   2.3 Author `app/loop-session.ts`: the fresh-spawn title helper, the prompt
+  #       wiring, the per-spawn binding mount, the `loop.session` record write,
+  #       and the session-facts read the cycle needs.
+  #   2.4 Author `app/loop-supervisor.ts`: the cycle skeleton — resolve settings,
+  #       claim the lease, resolve/spawn the session, append the log lines, run
+  #       the injected cycle driver, release on exit. The verdict/terminate,
+  #       restart, and stop steps land in phases 4, 5, and 6; this phase wires
+  #       none of them.
+  #   2.5 Author `packages/cli/src/commands/loop.ts` (the `start` verb with
+  #       `--foreground` and the provider/config/harness refusals),
+  #       `packages/cli/src/output/loop-text.ts` (the bounded receipt/summary
+  #       renderer), and the composition/registration in `edge.ts` +
+  #       `production.ts` (the CEO session profile, the progress reader bound to
+  #       the delivered per-session totals reader, the process port, the log
+  #       sink, and the injected `delay(ms, reason)` fact with reasons
+  #       `restart-backoff`, `collection-interval`, `terminate-grace`,
+  #       `fence-wait`).
+  #   2.6 Author the fixtures this phase first needs:
+  #       `tests/fixtures/loop/harness.ts` (driver D2: one composed edge
+  #       registering `loop` over a temp state root; injected
+  #       clock/id/config/session/process/progress/corroborator/log-sink/delay; a
+  #       HANDLER-SCOPED configuration double counting handler reads separately
+  #       and armable to fail acquisition/resolution with the shipped-default
+  #       fallback; `run`, `records()`, `counters`, `dispose()`),
+  #       `tests/fixtures/loop/session.ts` (scripted session port: recorded
+  #       invocations, monotonic token totals, pid-present and pid-absent modes,
+  #       the `scriptedSession` hook), `tests/fixtures/loop/log-fs.ts` (the
+  #       append-only log FS double with retention arithmetic and a failure
+  #       injector), and `tests/fixtures/loop/parity/cases.ts` — THE ONE CASE
+  #       REGISTRY, authored HERE because this phase's suites are the first that
+  #       consume it: the entry shape `{id, group, declaredSeam, scenario,
+  #       expected}`, `loopParityCasesOf(group)`, `runAllLoopParityCases()`, and
+  #       the `spawn` group plus the `log` group's renderer rows. From this phase
+  #       onward a suite row may not be added without a registry entry, and no
+  #       scenario is expressed twice.
+  #   2.7 Author `tests/behaviour/loop-spawn.test.ts` (SPAWN-001..003 and -006,
+  #       PARITY-005, PARITY-008), `tests/structure/loop-production-session.test.ts`
+  #       (SPAWN-001 and -005 on driver D1), `tests/structure/
+  #       loop-production-composition.test.ts` (SPAWN-004), and
+  #       `tests/behaviour/loop-log.test.ts` (LOG-001, LOG-003, LOG-004 — the
+  #       renderer, the rotation/retention arithmetic, and the failing-write
+  #       path). `loop-log.test.ts` is EXTENDED in phase 7 with the three read
+  #       cases; this phase lands only its own three.
+  #   2.8 Mutation rows owned here (test plan §7.4): M15–M24 (spawn identity,
+  #       session record cardinality), M27 (`pid` not a capability), M68–M73
+  #       (log line, ANSI, rotation, failed append, forbidden content), M22's
+  #       first half at SPAWN-005. A mutation that stops failing is blocking.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/harness.ts      (optional pid, both surfaces)
+  #   packages/adapters/src/host/index.ts         (child pid on the stream)
+  #   packages/adapters/src/harness/opencode.ts   (pid onto the handle)
+  #   packages/core/src/state/loop.ts             (session record write/read)
+  #   packages/core/src/app/loop-session.ts       (new)
+  #   packages/core/src/app/loop-supervisor.ts    (new: cycle skeleton)
+  #   packages/core/src/app/index.ts               (exports)
+  #   packages/core/src/index.ts                   (exports)
+  #   packages/cli/src/commands/loop.ts            (new: `start` + refusals)
+  #   packages/cli/src/commands/index.ts           (export the loop definition)
+  #   packages/cli/src/output/loop-text.ts         (new: receipts/summary)
+  #   packages/cli/src/output/index.ts             (export)
+  #   packages/cli/src/edge.ts                     (composition type, registration)
+  #   packages/cli/src/production.ts               (session profile, progress
+  #                                                 reader, process port, log sink,
+  #                                                 injected delay)
+  #   tests/behaviour/loop-spawn.test.ts            (new)
+  #   tests/behaviour/loop-log.test.ts              (new)
+  #   tests/structure/loop-production-composition.test.ts (new)
+  #   tests/structure/loop-production-session.test.ts     (new)
+  #   tests/fixtures/loop/harness.ts                (new)
+  #   tests/fixtures/loop/session.ts                (new)
+  #   tests/fixtures/loop/log-fs.ts                 (new)
+  #   tests/fixtures/loop/parity/cases.ts           (new: schema, runners, spawn
+  #                                                 and log-renderer groups)
+  #   Re-run as read-only controls (NOT declared): tests/structure/
+  #   harness-stream-contract.test.ts, tests/behaviour/harness-opencode-*.test.ts,
+  #   tests/fixtures/coordinator/harness.ts's suites, every
+  #   tests/behaviour/coordinator-*.test.ts.
+  #
+  # Acceptance: AC-F2-1 (SPAWN-001 + PARITY-008), AC-F2-2 (SPAWN-002/005/006 +
+  #   PARITY-005), AC-F2-3 (SPAWN-003), AC-F2-4 (SPAWN-004), AC-F7-2
+  #   (LOG-003/004). 5 ACs, 11 TCs.
+  #
+  # Gate (expected signal: exit 0; one `--agent ceo`, one resolved `--model`, one
+  #   `ceo-loop-<fixed stamp>` title on a fresh spawn and none on a resume; each
+  #   pre-session refusal at its delivered identity with a released lease and 0
+  #   session records; the pid present when supplied and ABSENT (never 0) when
+  #   not; one session record per acquisition and per state change; every log line
+  #   <= 512 B and ANSI-free with whole-pair dropping; rotation keeps the newest
+  #   data and drops the oldest generation; a failed append changes no verdict,
+  #   exit, or record; the delivered handle doubles still compile):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-spawn.test.ts tests/behaviour/loop-log.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-production-composition.test.ts tests/structure/loop-production-session.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-stream-contract.test.ts tests/behaviour/coordinator-foreground-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "CEO spawn identity, the per-spawn binding, the additive harness pid, the loop.session record, the bounded log sink, and the command/cycle skeleton"
+    kind: delivery
+    summary: "feat(GH-348): CEO spawn identity, session record and harness pid"
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/adapters/src/host/index.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/core/src/state/loop.ts
+        - packages/core/src/app/loop-session.ts
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/loop-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/loop-spawn.test.ts
+        - tests/behaviour/loop-log.test.ts
+        - tests/structure/loop-production-composition.test.ts
+        - tests/structure/loop-production-session.test.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/session.ts
+        - tests/fixtures/loop/log-fs.ts
+        - tests/fixtures/loop/parity/cases.ts
+      folders:
+        - tests/fixtures/loop
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-2 commit (spawn and log suites green; the delivered handle doubles unchanged; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Single instance over the delivered lease, the takeover, and the
+  # session re-find (F-6; DM-1, DM-3).
+  #
+  # Goal: two loops cannot both run, and a start after an unclean death re-finds
+  # the session it already owns before it considers spawning another.
+  #
+  # Contract (API-1, API-4; DEC-1, TDR-0055; AC-F6-1..3, AC-F6-5):
+  #   - The loop claims the DELIVERED append-only instance lease under the
+  #     distinct supervisor identity `loop-main`. A live holder is refused
+  #     `coordinator.already-running` at exit 2 with no session record and no
+  #     spawn; a dead holder is taken over with EXACTLY ONE record (liveness
+  #     first, then the 2 x collection-interval age fallback); an undeclared alive
+  #     capability is `coordinator.process.capability-gap` at exit 2 before any
+  #     record.
+  #   - The identity is deliberately distinct from `coordinator-main`: `loop start`
+  #     and `coordinator start --foreground` do not exclude each other, and neither
+  #     reads the other's records (the delivered per-identity read skips foreign
+  #     keys by construction).
+  #   - After a takeover the loop resolves its recorded session BEFORE it
+  #     considers spawning: a recorded pid alive with a matching start time is
+  #     JOINED and observed (0 spawns); a session recorded `ended` is replaced by
+  #     exactly ONE fresh session; a session recorded `active` with no process
+  #     identity is unknown-liveness and is RESUMED rather than duplicated, and
+  #     `session-pid-unknown` appears on the degradation list.
+  #   - No path spawns a second session beside a recorded live one.
+  #
+  # Obligations:
+  #   3.1 Wire the claim/fold takeover into `app/loop-supervisor.ts` through the
+  #       delivered `decideCoordinatorClaim` semantics mounted at the loop
+  #       composition's claim; no new fence, no new lock, no pid-file probe.
+  #   3.2 Implement the session resolution in `app/loop-session.ts`: the
+  #       pid+start-time comparison, join-vs-replace-vs-resume, and the pid-less
+  #       unknown-liveness branch.
+  #   3.3 Map the two refusals and the capability gap in
+  #       `packages/cli/src/commands/loop.ts` and supply the declared alive
+  #       capability from `production.ts`; keep the exit projection derived from
+  #       the delivered table, never a bare digit chosen by the handler.
+  #   3.4 Author `tests/behaviour/loop-instance.test.ts` for INSTANCE-001..004,
+  #       -006, -007 and PARITY-001 over the real store fence with the
+  #       deterministic two-start interleaving (both orderings; the GH-347 fence
+  #       latch, no sleep), and APPEND the `single-instance` group's rows to
+  #       `tests/fixtures/loop/parity/cases.ts`.
+  #   3.5 Extend `tests/fixtures/loop/harness.ts` with the lease seeds, the
+  #       takeover/rebuild helper, and the spawn/resume/join/terminate counters
+  #       the later phases reuse. Do not re-author it.
+  #   3.6 Mutation rows owned here: M61–M67 (in-fence decision, no spawn beside a
+  #       live session, pid-less not ended, the distinct identity, one lease
+  #       record, no foreign reads, capability gap) and M85 (second start exits 2).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/app/loop-supervisor.ts   (claim, takeover, release)
+  #   packages/core/src/app/loop-session.ts      (resolution, join/replace/resume)
+  #   packages/cli/src/commands/loop.ts          (refusal mapping, degradation)
+  #   packages/cli/src/edge.ts                   (composition typing)
+  #   packages/cli/src/production.ts             (process port + alive capability)
+  #   tests/behaviour/loop-instance.test.ts      (new)
+  #   tests/fixtures/loop/harness.ts             (extend: seeds/counters)
+  #   tests/fixtures/loop/parity/cases.ts        (append single-instance)
+  #
+  # Acceptance: AC-F6-1 (INSTANCE-001/007 + PARITY-001), AC-F6-2
+  #   (INSTANCE-002/003), AC-F6-3 (INSTANCE-004), AC-F6-5 (INSTANCE-006).
+  #   4 ACs, 7 TCs. AC-F6-4 (at most one session across every flow) is NOT
+  #   claimed here — it needs the restart and stop flows and is phase 4's.
+  #
+  # Gate (expected signal: exit 0; in BOTH interleavings exactly 1 admitted and 1
+  #   `coordinator.already-running` at exit 2 with 0 session records and 0 spawns;
+  #   one takeover record and 0 spawns on a live recorded session; exactly 1 fresh
+  #   spawn on an ended one; both identities admitted and neither reading the
+  #   other; a pid-less active session resumed with 0 spawns, 0 kills, 1
+  #   degradation entry):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-instance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/coordinator-foreground-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Single instance over the delivered lease: the loop-main claim, the liveness-first takeover, the session re-find and the pid-less degradation"
+    kind: delivery
+    summary: "feat(GH-348): loop instance lease, takeover and session re-find"
+    scope:
+      files:
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/app/loop-session.ts
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/loop-instance.test.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/parity/cases.ts
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-3 commit (instance and coordinator non-interference suites green; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The two-signal stuck verdict, the delivery corroborator, and the
+  # identity-verified terminate path (F-5; DM-6; DEC-3, DEC-5).
+  #
+  # Goal: a stuck CEO is detected by the binding two-signal rule and terminated by
+  # the delivered identity-verified path, and an unreadable signal or a healthy
+  # delivery can never produce a kill.
+  #
+  # Contract (API-1, DM-6; AC-F5-1..4, AC-F5-6..7, AC-F6-4; INV-DM-3/5):
+  #   - The verdict is the loop's OWN pure rule over three injected fact sets:
+  #     sourced progress (the delivered new-turn mapper over a sourced
+  #     `token-delta` reading of the recorded session: positive | zero | unknown),
+  #     artifact advance (no merge or blocker answer since the baseline), and the
+  #     delivery corroborator (in-progress | none | unknown).
+  #   - `stuck` requires ALL of: a live session; sourced progress `zero` for at
+  #     least `coordinator.stuck-window` (600 000 ms) measured from the last
+  #     sourced-progress observation the running supervisor holds; no artifact
+  #     advance since that observation; and a READABLE corroborator reporting
+  #     NONE. A just-started supervisor seeds that observation at its own session
+  #     acquisition or its first reading — never earlier — so a restart can only
+  #     delay a verdict.
+  #   - `progressing` when sourced progress is positive within
+  #     `coordinator.progress-bound` (300 000 ms) or within the window, or when
+  #     the corroborator reports a delivery in progress. `unevaluable` when the
+  #     progress reading is unknown OR the corroborator is unreadable: nothing is
+  #     killed, exactly ONE verdict record lands per expectation, and the loop
+  #     continues.
+  #   - The corroborator reads ONLY the delivered `dispatch.lane` and
+  #     `daemon.lane` records from the single verified state read; it writes no
+  #     lane record, runs no shell probe, and reads no `.ai/local` delivery
+  #     marker. In progress when the newest `dispatch.lane` for any ref is
+  #     `active` with a live recorded owner, or the newest `daemon.lane` is
+  #     `delivering` with a live recorded process; none over a verified-empty
+  #     store; unknown when the state read fails.
+  #   - On `stuck`: one `coordinator.stuck` verdict record with the bounded
+  #     evidence corpus (`session`, `traffic`, `delivery`, `windowMs`,
+  #     `progressAgeMs`, `killOutcome`, <= 512 bytes); terminate with the
+  #     delivered `terminate` for a session this process holds, or the delivered
+  #     `killCoordinatorProcess` for a recorded pid identity (TERM first, KILL only
+  #     after `coordinator.kill-grace` and only while the tree is still listed);
+  #     then exactly one outcome record.
+  #   - AN UNCONFIRMED TERMINATION IS TERMINAL (PM ruling R3): one outcome
+  #     record, lease released, `coordinator.session.kill-failed` at exit 2, NO
+  #     restart, NO second session. The restart path is phase 5's and applies only
+  #     after a CONFIRMED termination.
+  #   - No new verdict, reason, or evidence class: the persisted reasons are the
+  #     delivered `stuck-artifact-evidence` and `evidence-unevaluable`.
+  #
+  # Obligations:
+  #   4.1 Wire the verdict step into `app/loop-supervisor.ts` over the phase-1
+  #       pure predicate, seeding the last-sourced-progress observation at
+  #       acquisition, and recording verdict/outcome through the delivered record
+  #       writers.
+  #   4.2 Author `app/loop-corroborator.ts`: the read-only lane corroborator over
+  #       the single verified read, exported and re-exported from the app index
+  #       and the core root. It imports no lane appender and no process runner.
+  #   4.3 Mount the delivered progress reader (the per-session totals reader), the
+  #       corroborator read, the process port, and the kill grace in
+  #       `production.ts`; map `coordinator.session.kill-failed` at exit 2 in the
+  #       command with the lease released and no restart.
+  #   4.4 Author `tests/behaviour/loop-stuck.test.ts` for STUCK-001, STUCK-002,
+  #       STUCK-003, STUCK-004, STUCK-005, STUCK-007, STUCK-008, STUCK-009,
+  #       STUCK-010 and STUCK-011, over the recording clock and scripted
+  #       progress/artifact/corroborator doubles, with the GH-347 process-tree
+  #       model for the terminate assertions. EXTEND
+  #       `tests/behaviour/loop-instance.test.ts` (authored in phase 3) with
+  #       INSTANCE-005 only — it appends one case and rewrites nothing. APPEND the
+  #       `stuck` and `kill` groups to `tests/fixtures/loop/parity/cases.ts`.
+  #   4.5 Author `tests/fixtures/loop/facts.ts` (progress/artifact/corroborator
+  #       tables, the evidence-corpus candidates including a maximal one, the
+  #       verdict table, and the restart/lifecycle seeds phase 5 reuses) and
+  #       extend `tests/fixtures/loop/harness.ts` with the verdict counters.
+  #   4.6 Extend `tests/structure/loop-imports.test.ts` with the engine-reuse
+  #       import identity (TC-CONTRACT-006) and the corroborator purity assertion
+  #       (TC-STUCK-009's import half): the loop imports `decideCoordinatorClaim`,
+  #       `evaluateCoordinatorRestartAdmission`, and the kill primitives from their
+  #       production modules, mounts them, and reimplements no lease, budget, kill,
+  #       or lock fold (M49, M77).
+  #   4.7 Mutation rows owned here: M45–M53 (corroborator veto, both unreadable
+  #       inputs, the seeding rule, no coordinator predicate reuse, verdict/
+  #       terminate pairing, per-expectation cardinality, the bound), M54–M60
+  #       (signal order, grace, closed tree, unrelated pid, mismatch, the typed
+  #       failure, the exact reap target set), M96–M98 (unconfirmed termination is
+  #       terminal, one outcome record, lease released, no restart/spawn).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/app/loop-supervisor.ts   (verdict + terminate step)
+  #   packages/core/src/app/loop-corroborator.ts (new: lane corroborator)
+  #   packages/core/src/app/index.ts             (export)
+  #   packages/core/src/index.ts                 (export)
+  #   packages/cli/src/commands/loop.ts          (kill-failed projection)
+  #   packages/cli/src/production.ts             (progress reader, corroborator,
+  #                                               process port, kill grace)
+  #   tests/behaviour/loop-stuck.test.ts         (new)
+  #   tests/behaviour/loop-instance.test.ts      (extend: INSTANCE-005)
+  #   tests/structure/loop-imports.test.ts       (extend: CONTRACT-006, STUCK-009)
+  #   tests/fixtures/loop/facts.ts               (new)
+  #   tests/fixtures/loop/harness.ts             (extend: verdict counters)
+  #   tests/fixtures/loop/parity/cases.ts        (append stuck + kill)
+  #
+  # Acceptance: AC-F5-1 (STUCK-001/011), AC-F5-2 (STUCK-002), AC-F5-3
+  #   (STUCK-003/010), AC-F5-4 (STUCK-004/005), AC-F5-6 (STUCK-007/008), AC-F5-7
+  #   (STUCK-009/010), AC-F6-4 (INSTANCE-005). 7 ACs, 12 TCs. AC-F5-5
+  #   (STUCK-006) is phase 5's — it observes the NEXT session.
+  #
+  # Gate (expected signal: exit 0; one verdict + one terminate + one outcome per
+  #   stuck expectation; 0 kills under a live delivery; 0 kills on either
+  #   unreadable input with 1 record per expectation; TERM before KILL and KILL
+  #   only after 20 000 ms on a still-listed tree; 0 signals to an unrelated pid or
+  #   on an identity mismatch; an unconfirmed termination at exit 2 with exactly
+  #   one outcome record, a released lease, 0 restarts and 0 spawns; <= 1 session
+  #   at every observation point; the loop importing the delivered primitives):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stuck.test.ts tests/behaviour/loop-instance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-imports.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/coordinator-foreground-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "The two-signal stuck verdict, the read-only delivered-lane corroborator, the identity-verified terminate path and the terminal unconfirmed-termination branch"
+    kind: delivery
+    summary: "feat(GH-348): two-signal stuck verdict, corroborator and terminate"
+    scope:
+      files:
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/app/loop-corroborator.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/loop-stuck.test.ts
+        - tests/behaviour/loop-instance.test.ts
+        - tests/structure/loop-imports.test.ts
+        - tests/fixtures/loop/facts.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/parity/cases.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/loop-corroborator.ts
+        role: consumer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-4 commit (stuck, terminate and import-identity suites green; the delivered coordinator suites green unmodified; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — The bounded restart policy, the per-epoch budget, and the
+  # exhaustion exit (F-3; DM-5; DEC-4).
+  #
+  # Goal: a stuck restart consumes exactly one ordinal, waits the declared delay,
+  # starts exactly one new session, and ends at the bound with the delivered
+  # identity and the loop's own remediation — with zero real waits in the battery.
+  #
+  # Contract (API-1, DM-5; AC-F3-1..6, AC-F5-5):
+  #   - ONLY a stuck restart consumes an ordinal; a session that ends on its own
+  #     consumes none and waits the ordinary `coordinator.collection-interval`
+  #     (30 000 ms).
+  #   - A below-bound stuck restart appends exactly one `coordinator.restart`
+  #     carrying the next contiguous ordinal, the delivered reason
+  #     `stuck-artifact-evidence`, and the replaced session identity; then the loop
+  #     waits `restartDelayMs(n) = min(2 000 * 2^(n-1), 300 000)` ms where n is the
+  #     ordinal just consumed — 2 000, 4 000, 8 000, 16 000, 32 000, 64 000,
+  #     128 000, 256 000, 300 000, 300 000 for ordinals 1..10, total
+  #     <= 1 110 000 ms — and starts exactly one new session.
+  #   - The wait is CANCELLABLE: a durable stop or a signal ends it immediately
+  #     without applying the session effect.
+  #   - At/above the bound (`coordinator.restart-budget`, default 10) no restart
+  #     record is appended and no session starts; the loop releases the lease,
+  #     logs `event=budget-exhausted`, and exits 1 on the delivered
+  #     `coordinator.restart-budget-exhausted` with a bounded summary naming the
+  #     history reference, `restarts=<n>/<bound>`, and the LOOP's remediation
+  #     (`loop start --foreground --fresh-budget`).
+  #   - `--fresh-budget` opens the next epoch: count 0, the previous epoch's
+  #     records remain readable, and the epoch is durable across a subsequent
+  #     status and start.
+  #   - Detection-to-next-session is <= 652 000 ms of virtual time on the
+  #     confirmed path (600 000 + 30 000 + 20 000 + 2 000); an unconfirmed
+  #     termination has no next session (phase 4's terminal branch).
+  #   - The constants are DECLARED POLICY DATA, not configuration keys, and the
+  #     delay is INJECTED (phase 2's fact), so the battery records rather than
+  #     sleeps.
+  #
+  # Obligations:
+  #   5.1 Wire the restart step into `app/loop-supervisor.ts`: ordinal
+  #       consumption through the delivered `evaluateCoordinatorRestartAdmission`
+  #       fold, the single `coordinator.restart` append, the injected wait with
+  #       reason `restart-backoff`, the cancellation checks, and the one new
+  #       session.
+  #   5.2 Expose the schedule from `domain/loop-backoff.ts` as the ONE declared
+  #       table (it is authored in phase 1; this phase consumes it and keeps it
+  #       pure) and bind the real timer in `production.ts`.
+  #   5.3 Add `--fresh-budget` and the exhaustion summary to
+  #       `packages/cli/src/commands/loop.ts` and
+  #       `packages/cli/src/output/loop-text.ts`; the summary text is the loop's
+  #       own and never the delivered coordinator row's remediation (M33).
+  #   5.4 Author `tests/behaviour/loop-backoff.test.ts` for BACKOFF-001..007,
+  #       STUCK-006, PARITY-003 and PARITY-004 with the recording delay double and
+  #       the virtual clock. APPEND the `backoff-budget` group to
+  #       `tests/fixtures/loop/parity/cases.ts` and extend
+  #       `tests/fixtures/loop/{harness,facts}.ts` with the delay recorder, the
+  #       epoch seeds, and the restart seeds.
+  #   5.5 Extend `tests/structure/loop-imports.test.ts` with the schedule-purity
+  #       half of TC-BACKOFF-002 and `tests/checks/loop-mutants.test.ts` with its
+  #       planted ambient-timer control (M28/M29/M93's schedule rows).
+  #   5.6 Mutation rows owned here: M28–M36 (fixed pause, ignored cap, two
+  #       ordinals per restart, admitted at the bound, ordinal on a clean end, the
+  #       wrong remediation, non-cancellable wait, epoch reset, missing replaced
+  #       session), M53 (the detection bound).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/app/loop-supervisor.ts   (restart step, cancellation)
+  #   packages/core/src/domain/loop-backoff.ts   (schedule consumption/projection)
+  #   packages/cli/src/commands/loop.ts          (--fresh-budget, exhaustion)
+  #   packages/cli/src/output/loop-text.ts       (exhaustion summary)
+  #   packages/cli/src/production.ts             (real timer binding)
+  #   tests/behaviour/loop-backoff.test.ts       (new)
+  #   tests/structure/loop-imports.test.ts       (extend: schedule purity)
+  #   tests/checks/loop-mutants.test.ts          (extend: ambient-timer mutant)
+  #   tests/fixtures/loop/harness.ts             (extend: delay recorder)
+  #   tests/fixtures/loop/facts.ts               (extend: epoch/restart seeds)
+  #   tests/fixtures/loop/parity/cases.ts        (append backoff-budget)
+  #
+  # Acceptance: AC-F3-1..AC-F3-6 (BACKOFF-001..007 + PARITY-003/004), AC-F5-5
+  #   (STUCK-006). 7 ACs, 10 TCs.
+  #
+  # Gate (expected signal: exit 0; the ordered delay list 2/4/8/16/32/64/128/256/
+  #   300/300 s with a total <= 1 110 000; exactly 1 restart record and 1 new
+  #   spawn per below-bound stuck restart; 0 restart records and the ordinary
+  #   interval on a self-ended session; at the bound 0 restarts, 1 exit-1 failure
+  #   on the delivered identity and the loop's own `--fresh-budget` summary;
+  #   `--fresh-budget` opening a durable epoch; a stop/signal cancelling the wait
+  #   with no session effect; detection-to-next-session <= 652 000 virtual ms):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-backoff.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "The declared restart backoff schedule, one ordinal per stuck restart, the at-bound exhaustion exit with the loop's own remediation, and the durable fresh-budget epoch"
+    kind: delivery
+    summary: "feat(GH-348): bounded restart backoff and per-epoch budget"
+    scope:
+      files:
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/domain/loop-backoff.ts
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/output/loop-text.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/loop-backoff.test.ts
+        - tests/structure/loop-imports.test.ts
+        - tests/checks/loop-mutants.test.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/facts.ts
+        - tests/fixtures/loop/parity/cases.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/loop-backoff.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-5 commit (backoff, budget and purity suites green; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — The durable identity-scoped stop, the clearance, and both stop
+  # modes (F-4; DM-2; DEC-2, TDR-0056).
+  #
+  # Goal: a stop survives a restart, a crash, and a fresh process; only an
+  # explicit `reset` clears it; and the two stop modes behave as declared.
+  #
+  # Contract (API-1, API-2, API-3; AC-F1-4, AC-F4-1..5, NFR-4):
+  #   - `loop stop [--mode drain|immediate]` appends EXACTLY ONE `loop.stop`
+  #     record for the loop identity with action `requested` and the requested
+  #     mode; a repeat appends nothing (idempotent) and still exits 0; it never
+  #     signals a session, never touches the lease, and works whether or not a
+  #     loop is running. `drain` is the default and the parity mode.
+  #   - `loop reset` appends EXACTLY ONE record with action `cleared` when a
+  #     request is folded, otherwise nothing; it exits 0 either way.
+  #   - The stop names the LOOP IDENTITY, never a process instance: no pid, start
+  #     time, or holder participates. A stop recorded by one process is honoured
+  #     by any later process.
+  #   - `start` FOLDS THE STOP BEFORE CLAIMING the lease: a folded request yields
+  #     exit 0 with `state=stopped`, no lease record, no session, no session
+  #     record. A torn or unreadable fold FAILS CLOSED — a `state.*` failure at
+  #     exit 2 with no lease record and no session — because "unreadable" must
+  #     never read as "not stopped".
+  #   - A running loop re-reads the fold at every iteration boundary.
+  #     `mode=drain` never terminates a session (the loop finishes it, then ends);
+  #     `mode=immediate` terminates the held session within
+  #     `collection-interval + kill-grace` (<= 50 000 ms) through the phase-4
+  #     terminate path, and a session whose process identity cannot be verified is
+  #     NEVER signalled — the loop reports `session-pid-unknown` and ends at the
+  #     boundary. Both release the lease and exit 0.
+  #   - The typed stop and the shell's `.ai/local/ceo/stop` marker are NOT
+  #     interchangeable and neither reads the other (§8.5; AC-PARITY-010).
+  #
+  # Obligations:
+  #   6.1 Extend `state/loop.ts` with the folded-stop reader used before the claim
+  #       and the idempotent request/clearance transitions (the fold semantics are
+  #       phase 1's; this phase supplies the read-before-claim ordering and the
+  #       typed unreadable distinction if the phase-1 shape needs it).
+  #   6.2 Wire the fold into `app/loop-supervisor.ts`: read before the claim, the
+  #       fail-closed branch, the iteration-boundary re-read, and the two modes'
+  #       effects (drain = no terminate; immediate = terminate within the bound,
+  #       or report and end without a signal).
+  #   6.3 Add the `stop` and `reset` verbs and `start`'s folded-stop success
+  #       (`state=stopped`, exit 0, not a refusal) to
+  #       `packages/cli/src/commands/loop.ts`, with their bounded receipts in
+  #       `packages/cli/src/output/loop-text.ts`.
+  #   6.4 Author `tests/behaviour/loop-stop.test.ts` for STOP-001..007,
+  #       PARITY-007 and PARITY-010, including the simulated process restart, the
+  #       simulated crash, the rebuilt composition, the torn fold, and the
+  #       unverifiable-identity case with 0 signals. APPEND the `stop` group to
+  #       `tests/fixtures/loop/parity/cases.ts` and extend
+  #       `tests/fixtures/loop/harness.ts` with the stop seeds and the rebuild
+  #       helper.
+  #   6.5 Mutation rows owned here: M37–M44 (duplicate requested, read after the
+  #       claim, unreadable as not-stopped, `cleared` with nothing folded,
+  #       terminate on drain, signal on unverifiable identity, forbidden payload
+  #       keys, instance-scoped stop), M87 (re-pointing at the shell marker).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/state/loop.ts            (fold reader / transitions)
+  #   packages/core/src/app/loop-supervisor.ts   (fold-before-claim, modes)
+  #   packages/cli/src/commands/loop.ts          (stop, reset, folded start)
+  #   packages/cli/src/output/loop-text.ts       (stop/reset receipts)
+  #   tests/behaviour/loop-stop.test.ts          (new)
+  #   tests/fixtures/loop/harness.ts             (extend: seeds, rebuild)
+  #   tests/fixtures/loop/parity/cases.ts        (append stop)
+  #
+  # Acceptance: AC-F1-4 (STOP-001/004), AC-F4-1 (STOP-001), AC-F4-2
+  #   (STOP-002/003 + PARITY-010), AC-F4-3 (STOP-004), AC-F4-4 (STOP-005 +
+  #   PARITY-007), AC-F4-5 (STOP-006/007 + PARITY-010). 6 ACs, 9 TCs.
+  #
+  # Gate (expected signal: exit 0; one `requested` and 0 on a repeat; a folded
+  #   stop preventing a start after a restart AND after a crash with 0 lease/0
+  #   session/0 session records and `state=stopped` at exit 0; a torn fold at exit
+  #   2 with 0 session effects; one `cleared` then a running loop, and 0 on a
+  #   repeat; drain with 0 terminations, immediate within 50 000 virtual ms,
+  #   unverifiable identity with 0 signals and the degradation entry; the payload
+  #   naming only the loop identity, action, mode, timestamps; a rebuilt
+  #   composition folding the stop):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "The durable identity-scoped loop stop: request and clearance, the read-before-claim refusal, the fail-closed unreadable fold, and the drain/immediate modes"
+    kind: delivery
+    summary: "feat(GH-348): durable loop stop, reset and stop modes"
+    scope:
+      files:
+        - packages/core/src/state/loop.ts
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/output/loop-text.ts
+        - tests/behaviour/loop-stop.test.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/parity/cases.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/loop.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-6 commit (durable-stop and mode suites green; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — The operator surface: the complete five-verb grammar and refusals,
+  # the six-shell-key status block, the bounded `log` read, and the help
+  # inventory repin (F-1; API-4, API-5, API-7; DEC-6, DEC-7; DOD-8).
+  #
+  # Goal: `jaiship loop` is a complete, prompt-required operator family whose five
+  # verbs behave as declared, whose status block keeps the shell's six keys
+  # verbatim, whose log read is bounded, and whose inventory pins move EXACTLY.
+  #
+  # Contract (API-1..5, API-7; §8.5 rows 2, 6, 10; PM rulings R1/R2/R4):
+  #   - The five verbs accept exactly their declared flag sets: `start
+  #     --foreground [--fresh-budget]`, `stop [--mode drain|immediate]`, `status`,
+  #     `log [--lines <n>]`, `reset`. Any other subcommand, a missing subcommand,
+  #     an undeclared flag, or a malformed `--lines` is refused as
+  #     `fallback.invocation` at exit 1 with `result=refused; reason=grammar` and
+  #     appends no record (§8.5 row 2: the shell's usage exit 2 becomes 1).
+  #   - `status` human output is a `key=value` block in the DECLARED order: the
+  #     six shell names first (`loop_running`, `loop_pid`, `ceo_alive`, `ceo_pid`,
+  #     `ceo_session`, `stop_signal`), then `stop_mode`, then `loop_id`,
+  #     `ceo_title`, `restarts`, `budget_epoch`, `last_restart_reason`,
+  #     `last_verdict`, `degraded`. EXACTLY three keys are boolean
+  #     (`loop_running`, `ceo_alive`, `stop_signal`) rendering `yes`/`no` with
+  #     `stop_signal=yes` when a stop is folded; `stop_mode` renders `drain` or
+  #     `immediate` when folded and is empty otherwise; `restarts` renders
+  #     `<n>/<bound>`; and EVERY absent value renders as the EMPTY STRING after
+  #     `=` — never a `none` token (R1/R2).
+  #   - The `restarts` bound is COMPOSITION-SUPPLIED; the handler reads no
+  #     configuration branch (R4), and a configuration acquisition/resolution
+  #     failure falls back to the shipped defaults so `status` always composes.
+  #   - `status` and `log` append zero records, create no file or directory, make
+  #     no network call, apply no session effect, and evaluate no verdict.
+  #   - `log [--lines n]` returns the tail (`n` an integer 1..100, default 50) with
+  #     the returned line count, total byte count, a truncation flag, and an
+  #     `unreadable` marker; a missing or empty log is a success with zero lines
+  #     and truncation false; an unreadable file yields zero lines with
+  #     `unreadable` true at exit 0 and borrows no failure identity; a read
+  #     creates nothing.
+  #   - Every verb is ANSI-free and bounded: <= 32 human lines for
+  #     start/stop/status/reset, <= 1 + n for `log`, machine `data`
+  #     <= 65 536 bytes.
+  #   - The prompt-required inventory grows 26 -> 27 with `loop` appended LAST and
+  #     the production composition mounts the family in the same commit (§16: the
+  #     entrypoint composes exactly the prompt-required set and throws for a
+  #     declared name the program lacks).
+  #
+  # Obligations:
+  #   7.1 Complete the grammar, the refusals, the `log` verb, and the `status`
+  #       projection dispatch in `packages/cli/src/commands/loop.ts`; render the
+  #       status block, the log header, and the receipts in
+  #       `packages/cli/src/output/loop-text.ts`.
+  #   7.2 Append `loop` to `packages/cli/src/help/prompt-required-commands.ts`
+  #       and add the static family/subcommand help entry rooted at the M4
+  #       reference root in `packages/cli/src/help.ts`; mount the family in the
+  #       entrypoint composition from `packages/cli/src/production.ts` (and
+  #       `edge.ts` only if the composition typing needs it).
+  #   7.3 Author the M4 reference page
+  #       `doc/planning/oss-tooling/milestones/m4/commands/loop.md` with
+  #       `--help`/`--version`, the five verbs and flags, the exits, the status
+  #       keys, the log bounds, the durable-stop workflow, the §8.5 divergences,
+  #       and its `ados_distribution` marker.
+  #   7.4 Repin the THREE pinned surfaces EXACTLY, in this one commit (see the
+  #       header's pinned-surface block): `tests/checks/install-conformance-mutants
+  #       .test.ts` (27, `install` immediately before `loop`, removal control),
+  #       `tests/structure/metrics-mounting.test.ts` +
+  #       `tests/fixtures/metrics/mounting.ts` (27, positions, stale-pin set gains
+  #       26, planted-stale-pin control), `tests/checks/reference-page-parity
+  #       .test.ts` + `scripts/checks/help-guide-coverage.ts` (the M4 root for
+  #       `loop`), and `tests/fixtures/help-guide/coverage.json` (command + page
+  #       rows). No relaxation anywhere.
+  #   7.5 Author `tests/behaviour/loop-grammar.test.ts` (VERB-001, -002, -005,
+  #       PARITY-002, PARITY-009), `tests/behaviour/loop-status.test.ts`
+  #       (VERB-003, VERB-004) with `tests/fixtures/loop/golden/status.ts` (the
+  #       running, stopped-with-folded-stop, and absent-identifier worlds with
+  #       their human and `delivery.loop.v1` pairs, plus the golden
+  #       `delivery.loop.log.v1` and the golden log-line corpus), and
+  #       `tests/behaviour/loop-read-cost.test.ts` (CONTRACT-003). EXTEND
+  #       `tests/behaviour/loop-log.test.ts` with LOG-005, -006, -007.
+  #   7.6 APPEND the `verbs` group and the log READ rows to
+  #       `tests/fixtures/loop/parity/cases.ts`, and extend
+  #       `tests/fixtures/loop/harness.ts` with the handler-configuration counter
+  #       and the read-only file-system double.
+  #   7.7 Mutation rows owned here: M1–M4 (the pin), M9–M14 (grammar/status),
+  #       M74/M75 (log path/read), M88 (no transcript), M90 (no write on a
+  #       read-only verb), M94/M95 (no `none` token, `stop_mode` position), M99/
+  #       M100 (no handler config read, shipped-default fallback), M101 (the M4
+  #       page mapping), M86 (grammar exit 1).
+  #
+  # Code areas (concrete):
+  #   packages/cli/src/commands/loop.ts            (complete grammar, log, status)
+  #   packages/cli/src/output/loop-text.ts         (status block, log header)
+  #   packages/cli/src/help.ts                     (static family entry)
+  #   packages/cli/src/help/prompt-required-commands.ts (27, loop last)
+  #   packages/cli/src/edge.ts                     (registration, if needed)
+  #   packages/cli/src/production.ts               (family mount, resolved bound)
+  #   doc/planning/oss-tooling/milestones/m4/commands/loop.md (new page)
+  #   tests/behaviour/loop-grammar.test.ts          (new)
+  #   tests/behaviour/loop-status.test.ts           (new)
+  #   tests/behaviour/loop-log.test.ts              (extend: read cases)
+  #   tests/behaviour/loop-read-cost.test.ts        (new)
+  #   tests/fixtures/loop/golden/status.ts          (new)
+  #   tests/fixtures/loop/harness.ts                (extend: handler config)
+  #   tests/fixtures/loop/parity/cases.ts           (append verbs + log read)
+  #   tests/fixtures/help-guide/coverage.json       (PIN UPDATED)
+  #   tests/fixtures/metrics/mounting.ts            (PIN UPDATED)
+  #   scripts/checks/help-guide-coverage.ts         (PIN UPDATED: M4 root)
+  #   tests/checks/install-conformance-mutants.test.ts (PIN UPDATED)
+  #   tests/structure/metrics-mounting.test.ts      (PIN UPDATED)
+  #   tests/checks/reference-page-parity.test.ts    (PIN UPDATED)
+  #
+  # Acceptance: AC-F1-1 (VERB-001/002/005 + PARITY-002/008/009 + BATTLE-008),
+  #   AC-F1-2 (VERB-003), AC-F1-3 (LOG-005 + VERB-002), AC-F1-5 (VERB-004 +
+  #   CONTRACT-003), AC-F7-3 (LOG-005 + PARITY-006), AC-F7-4 (LOG-006/007).
+  #   6 ACs, 13 TCs.
+  #
+  # Gate (expected signal: exit 0; one green case per verb x declared flag set and
+  #   one refusal per malformed form at exit 1 with 0 records; the status block in
+  #   the declared order with exactly three booleans, `stop_mode` immediately after
+  #   `stop_signal`, `<n>/<bound>` restarts, a bare `key=` for every absent value
+  #   and ZERO `none` tokens, <= 32 lines and <= 65 536 machine bytes, 0 ANSI; the
+  #   log read at 1/50/100 with correct truncation and 0 created paths on a read;
+  #   `status`/`log` with 0 appends, 0 handler-scoped configuration reads and the
+  #   shipped-default fallback; the inventory at 27 with `loop` last and `install`
+  #   immediately before it; the stale-pin scan set at 26; the M4 page resolving;
+  #   a removal of `loop` failing by name):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-grammar.test.ts tests/behaviour/loop-status.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-log.test.ts tests/behaviour/loop-read-cost.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/help-guide-coverage.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/install-conformance-mutants.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/coordinator-sequence.test.ts tests/structure/provider-surface.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "The complete five-verb grammar and refusals, the six-shell-key status block, the bounded log read, the production family mount, and the 26-to-27 help-inventory repin with the M4 reference page"
+    kind: delivery
+    summary: "feat(GH-348): loop command family, status block and help inventory"
+    scope:
+      files:
+        - packages/cli/src/commands/loop.ts
+        - packages/cli/src/output/loop-text.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - doc/planning/oss-tooling/milestones/m4/commands/loop.md
+        - tests/behaviour/loop-grammar.test.ts
+        - tests/behaviour/loop-status.test.ts
+        - tests/behaviour/loop-log.test.ts
+        - tests/behaviour/loop-read-cost.test.ts
+        - tests/fixtures/loop/golden/status.ts
+        - tests/fixtures/loop/parity/cases.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/fixtures/metrics/mounting.ts
+        - scripts/checks/help-guide-coverage.ts
+        - tests/checks/install-conformance-mutants.test.ts
+        - tests/structure/metrics-mounting.test.ts
+        - tests/checks/reference-page-parity.test.ts
+      folders:
+        - doc/planning/oss-tooling/milestones/m4/commands
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: generated-code
+        target: tests/fixtures/loop/golden/status.ts
+        role: producer
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m4/commands/loop.md
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-7 commit (grammar, status, log, read-cost and the three repinned suites green; the delivered coordinator and provider-surface controls green unmodified; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — The conformance battery, the proof boundary, the extended no-shell
+  # surface, and the closed-surface invariance (F-8; DM-9; DEC-7).
+  #
+  # Goal: one offline deterministic battery proves the nine declared surfaces
+  # through the real composition and the real command path, publishes a
+  # machine-checked boundary, and proves the no-shell property three ways.
+  #
+  # Contract (API-6; AC-F8-1..5, AC-F7-1; NFR-1, NFR-9, NFR-7):
+  #   - The battery drives the real command path and the real composition with the
+  #     harness session, tracker, and process doubled, replays the NINE proven
+  #     surfaces (Appendix C), extends the delivered conformance fixtures (never a
+  #     second harness), exercises each production seam through the same composed
+  #     function production uses, runs with the injected delay that RECORDS rather
+  #     than sleeps, and asserts two identical runs.
+  #   - No battery file reimplements a seam: three independent mechanisms (import
+  #     identity via `seams.ts`, a forbidden-signature scan, and a planted
+  #     reimplementation rejected by name).
+  #   - No-shell is proven THREE times: the guarded injected runner recording zero
+  #     shell invocations and refusing a script path by name; the delivered static
+  #     invariant EXTENDED over the declared loop surface with a planted reference
+  #     failing by name; and the loop's declared spawn prompt carrying zero
+  #     script-path literals with a non-vacuity assertion that the primitive names
+  #     are present.
+  #   - `LOOP_PARITY_PROOF_BOUNDARY` is the permanent constant: 9 proven ids and 6
+  #     not-proven ids in the declared order, every battery row naming a proven
+  #     seam, and both a missing/reordered id and an off-boundary row failing by
+  #     name.
+  #   - The closed surface holds: 0 new error identities, 0 new domain kinds, 0
+  #     new configuration keys, 0 changes to coordinator records/payloads/defaults/
+  #     behaviour, exactly 2 new record kinds, exactly 1 additive optional harness
+  #     fact; every record, log line, and diagnostic is identifier-only and the
+  #     evidence corpus is <= 512 bytes.
+  #   - Read economy: one verified state read per supervision cycle and zero
+  #     appends or extra reads for `status`/`log`/`reset`.
+  #
+  # Obligations:
+  #   8.1 Author `tests/conformance/loop/loop-parity-battery.test.ts`
+  #       (BATTLE-001..004, -007, LOG-002, CONTRACT-002's battery half) and
+  #       `tests/conformance/loop/loop-pick-deliver-merge.test.ts` (BATTLE-006).
+  #   8.2 Author `tests/fixtures/loop/parity/evidence.ts` — the ONLY source of
+  #       `LOOP_PARITY_PROOF_BOUNDARY` plus the per-seam boundary-violation helper
+  #       and the canonicalizer re-export — `parity/seams.ts` (import-identity
+  #       manifest + reimplementation signatures + the planted control), and
+  #       `parity/e2e.ts` (the pick-deliver-merge scenario builder wiring the
+  #       scripted session to `queue claim` / `phase complete` / `merge` through
+  #       the real runtime). APPEND the `no-shell` group to `parity/cases.ts` (it
+  #       MUST NOT call `runAllLoopParityCases()`).
+  #   8.3 EXTEND the delivered no-shell invariant by ADDING FILES to
+  #       `DISPATCH_FLOW_SURFACE` in `scripts/checks/no-shell-dispatch.ts` (the
+  #       loop app modules, the loop domain modules including `loop-prompt.ts`, the
+  #       `loop` command module, and the loop state module) and extend
+  #       `tests/checks/no-shell-dispatch.test.ts` with the loop globs in its
+  #       declared-equality assertion and the loop composition in its reachability
+  #       entries. NO second invariant module, no new rule, no allowlist entry.
+  #   8.4 Author `tests/checks/loop-contract-invariance.test.ts` (CONTRACT-001,
+  #       CONTRACT-004) and `tests/checks/loop-privacy.test.ts` (CONTRACT-002's
+  #       source half). EXTEND `tests/fixtures/loop/harness.ts` with the one arm
+  #       CONTRACT-004 needs (the shipped-default configuration fallback probed
+  #       beside the resolved bound); phase 2 authored the file and this phase
+  #       appends only that arm.
+  #       PARITY-008's `loop-contract-invariance.test.ts` half (a static scan for
+  #       a hook path in the loop surface) is authored HERE as a RE-OBSERVATION of
+  #       a property phase 2 already owns: the case's load-bearing observation (0
+  #       hook runs, 0 hook paths read on a start) is phase 2's, and this phase's
+  #       addition is a static control, never a second owner.
+  #   8.5 Re-declare `packages/core/src/domain/loop-prompt.ts` because this phase's
+  #       prompt-content scan is the only assertion of its text; an edit here is
+  #       permitted ONLY to remove a script-path literal, and a prompt that must
+  #       name a primitive differently is an escalation.
+  #   8.6 Mutation rows owned here: M5–M8 (boundary drift), M76–M84 (registry
+  #       completeness, no reimplementation, determinism, the three no-shell
+  #       observations, the declared-surface equality, the second-invariant scan,
+  #       the planted literal), M25/M26/M27 (closed-surface and capability),
+  #       M89/M91/M92 (read economy, hygiene, evidence bound).
+  #
+  # Code areas (concrete):
+  #   scripts/checks/no-shell-dispatch.ts              (EXTEND the surface)
+  #   tests/checks/no-shell-dispatch.test.ts           (EXTEND assertions)
+  #   tests/conformance/loop/loop-parity-battery.test.ts (new)
+  #   tests/conformance/loop/loop-pick-deliver-merge.test.ts (new)
+  #   tests/fixtures/loop/parity/evidence.ts           (new: the boundary)
+  #   tests/fixtures/loop/parity/seams.ts              (new)
+  #   tests/fixtures/loop/parity/e2e.ts                (new)
+  #   tests/fixtures/loop/parity/cases.ts              (append no-shell)
+  #   tests/checks/loop-contract-invariance.test.ts    (new)
+  #   tests/checks/loop-privacy.test.ts                (new)
+  #   tests/fixtures/loop/harness.ts                   (extend: the
+  #                                                     shipped-default arm)
+  #   packages/core/src/domain/loop-prompt.ts          (conditional: script-path
+  #                                                     literal removal only)
+  #
+  # Acceptance: AC-F7-1 (LOG-001/002 + PARITY-006), AC-F8-1 (BATTLE-001/002),
+  #   AC-F8-2 (BATTLE-003), AC-F8-3 (BATTLE-004/005), AC-F8-4 (BATTLE-006),
+  #   AC-F8-5 (BATTLE-007). 6 ACs, 11 TCs.
+  #
+  # Gate (expected signal: exit 0; every registry row executed and declaring one
+  #   proven seam; 0 seam reimplementations with the planted control rejected by
+  #   name; two canonicalized runs identical with 0 live network, 0 real children,
+  #   0 real waits; 0 shell invocations and 0 script paths in the prompt; the
+  #   static invariant green over the extended surface with its planted reference
+  #   failing by name and NO second invariant found; the pick-deliver-merge cycle
+  #   with 3 primitive envelopes, 0 kills and 0 restarts; the boundary at 9/6 in
+  #   order with all three mutation controls failing by name; the closed surface
+  #   unchanged with exactly 2 record kinds and 1 additive harness fact; every
+  #   record/log line identifier-only with evidence <= 512 B; one evaluation read
+  #   per cycle and 0 appends on a read-only verb):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/loop-contract-invariance.test.ts tests/checks/loop-privacy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "The offline deterministic conformance battery, the permanent nine-proven/six-not-proven boundary with its mutation controls, the extended no-shell declared surface, and the closed-surface invariance pins"
+    kind: delivery
+    summary: "feat(GH-348): loop conformance battery and no-shell surface"
+    scope:
+      files:
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/conformance/loop/loop-parity-battery.test.ts
+        - tests/conformance/loop/loop-pick-deliver-merge.test.ts
+        - tests/fixtures/loop/parity/evidence.ts
+        - tests/fixtures/loop/parity/seams.ts
+        - tests/fixtures/loop/parity/e2e.ts
+        - tests/fixtures/loop/parity/cases.ts
+        - tests/checks/loop-contract-invariance.test.ts
+        - tests/checks/loop-privacy.test.ts
+        - tests/fixtures/loop/harness.ts
+        - packages/core/src/domain/loop-prompt.ts
+      folders:
+        - tests/conformance/loop
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/evidence.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/loop/parity/cases.ts
+        role: producer
+      - kind: contract-file
+        target: scripts/checks/no-shell-dispatch.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-8 commit (the battery, the extended invariant, the invariance/hygiene pins and the delivered conformance controls green; the aggregate runs in phase 9)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Release obligations (spec §19, §23; DOD-2, DOD-8, DOD-9).
+  #
+  # Goal: the change ships with exactly one minor changeset, a validated and linted
+  # plan, a green doc-distribution guard, and a green aggregate gate at the final
+  # HEAD — and the current-truth pages are STAGED for lifecycle phase 7, never
+  # reconciled here.
+  #
+  # Obligations:
+  #   9.1 Author `.changeset/gh-348-loop-supervision-minor.md`: ONE minor changeset
+  #       covering the packages the change touches (version_impact: minor; the
+  #       privacy-release check enforces the single-changeset rule). Lockstep
+  #       versioning; no package version is hand-edited.
+  #   9.2 Run and record the plan gates:
+  #       `pnpm build` then `jaiship plan validate GH-348` (verdict valid, tier
+  #       full, readyForDevelopment=true) and `jaiship lint plan GH-348`
+  #       (verdict valid).
+  #   9.3 Run `bash scripts/.tests/test-doc-distribution.sh` and record the
+  #       verdict; the two new redistributable pages (the current-truth page and
+  #       the M4 reference page) must both declare `ados_distribution`.
+  #   9.4 Run the aggregate
+  #       `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check`
+  #       at the final HEAD and attach the captured log; no check is skipped,
+  #       disabled, or made vacuous (DOD-2).
+  #   9.5 Declare the Appendix A current-truth pages for STAGING ONLY —
+  #       reconciliation belongs to lifecycle phase 7 (@doc-syncer) and this plan
+  #       reconciles none of them. The commit primitive needs them declared so the
+  #       staging authority is explicit; a phase-9 edit of their CONTENT instead of
+  #       their staging is a defect.
+  #   9.6 Re-run the phase-1 mechanical done criterion at DoD: both TDR paths
+  #       tracked (`git ls-files --error-unmatch` exits 0 each) and
+  #       `git status --porcelain -- doc/decisions` empty, so no index row points
+  #       at an untracked record.
+  #
+  # Code areas (concrete):
+  #   .changeset/gh-348-loop-supervision-minor.md  (new)
+  #   doc/spec/features/feature-loop-supervision.md (new; STAGING ONLY)
+  #   doc/spec/features/feature-coordinator-supervision.md (STAGING ONLY)
+  #   doc/spec/features/feature-autonomous-delivery.md     (STAGING ONLY)
+  #   doc/spec/features/feature-resident-daemon.md         (STAGING ONLY)
+  #   doc/spec/features/feature-watchdog-lane-contracts.md (STAGING ONLY)
+  #   doc/spec/features/feature-harness-adapters.md        (STAGING ONLY)
+  #   doc/spec/features/feature-config-layer.md            (STAGING ONLY)
+  #   doc/spec/features/feature-result-contract.md         (STAGING ONLY)
+  #   doc/overview/glossary.md                             (STAGING ONLY)
+  #   doc/00-index.md                                      (STAGING ONLY)
+  #   doc/quality/test-specs/test-spec-loop-supervision.md (new; STAGING ONLY)
+  #   doc/guides/delivery-modes.md                         (STAGING ONLY)
+  #   doc/planning/oss-tooling/milestones/m4/README.md     (STAGING ONLY)
+  #   doc/planning/oss-tooling/milestones/m4/flip-plan.md  (STAGING ONLY)
+  #   doc/planning/oss-tooling/milestones/m4/backlog.md    (STAGING ONLY)
+  #
+  # Acceptance: no AC and no TC. Phase 9 re-establishes the evidence for the whole
+  #   set; it owns none and moves none.
+  #
+  # Gate (expected signal: exit 0; `verdict=valid`, `tier=full`,
+  #   `readyForDevelopment=true`; `lint plan` verdict valid; the doc-distribution
+  #   guard green; `pnpm check` exit 0 with the full battery green; the two TDR
+  #   paths tracked and `doc/decisions` clean):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH jaiship plan validate GH-348
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH jaiship lint plan GH-348
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0055-loop-supervision-as-a-profile-of-the-coordinator-engine.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-durable-loop-stop-as-a-state-ledger-record.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "The single minor changeset, plan validate and lint, the doc-distribution guard, the aggregate gate at the final HEAD, and the current-truth pages staged for lifecycle phase 7"
+    kind: delivery
+    summary: "chore(GH-348): release obligations and spec reconciliation staging"
+    scope:
+      files:
+        - .changeset/gh-348-loop-supervision-minor.md
+        # Reconciled in lifecycle phase 7 (system_spec_update, @doc-syncer), not
+        # by this phase. Declared so the commit primitive can stage them; the
+        # required reconciliation per file is the header's documentation handoff.
+        - doc/spec/features/feature-loop-supervision.md
+        - doc/spec/features/feature-coordinator-supervision.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-watchdog-lane-contracts.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+        - doc/quality/test-specs/test-spec-loop-supervision.md
+        - doc/guides/delivery-modes.md
+        - doc/planning/oss-tooling/milestones/m4/README.md
+        - doc/planning/oss-tooling/milestones/m4/flip-plan.md
+        - doc/planning/oss-tooling/milestones/m4/backlog.md
+      folders:
+        - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision
+        - .changeset
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-348/loop-supervision targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
+      pipelineId: "CI pipeline for the GH-348 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
+      trackerTransition: "in-review"
