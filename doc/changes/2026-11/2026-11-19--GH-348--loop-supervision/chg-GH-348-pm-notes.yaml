@@ -693,3 +693,24 @@ notes:
       in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 2 commit hash: a8b93029."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 3 complete (single instance over the delivered lease: the
+      loop-main claim, liveness-first takeover, session re-find, the narrowed
+      admission rows and the pid-less degradation). Implemented in
+      app/loop-supervisor.ts: the recorded-session resolution before any spawn
+      (join when the recorded pid probes alive with a matching start time;
+      replace when the record is `ended`; resume exactly once when the record is
+      `active` with no process identity; otherwise one fresh spawn), so no path
+      spawns beside a recorded live session. The registry appended the
+      `single-instance` group. Gates all exit 0: loop-instance 9 pass (both
+      two-start orderings, takeover+join with zero spawns, ended replacement with
+      zero resumes for the previous id, distinct identities with no foreign read,
+      one pid-less resume with zero spawns/kills and the degradation entry, the
+      alive capability gap before any record, and the admitted start-time-gap
+      row); coordinator-foreground-loop green unmodified; pnpm typecheck; git
+      diff --check. The phase commit hash is recorded in the note that follows
+      it."
+    type: info
+    date: "2026-11-19"

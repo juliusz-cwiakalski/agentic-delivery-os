@@ -507,7 +507,18 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   };
 
   /** Establish the CEO session before any observation (F-2). */
-  /** Establish the CEO session before any observation (F-2). */
+  /**
+   * Resolve the recorded session BEFORE considering another spawn (F-6):
+   *
+   *   - a recorded pid alive with a matching start time  -> JOIN and observe;
+   *   - a session recorded `ended`                       -> REPLACE with one
+   *     fresh session (the re-homed TC-PARITY-005 path);
+   *   - `active` with no process identity                -> unknown-liveness,
+   *     RESUMED exactly once with the recorded session id and no title;
+   *   - no usable record                                 -> one fresh spawn.
+   *
+   * No path spawns a second session beside a recorded live one.
+   */
   const establishSession = async (): Promise<
     | {
         readonly ok: true;
@@ -517,13 +528,41 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     | { readonly ok: false; readonly failure: LoopFailure }
   > => {
     const facts = ports.session.read();
+    const prompt = loopSpawnPrompt(loopId);
+    const snapshot = ledger.read().loop;
+    const recorded = snapshot.ok ? snapshot.sessions[snapshot.sessions.length - 1] : undefined;
+
     if (facts.liveness === "alive") {
       const joined = await ports.session.join();
       if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
       return { ok: true, facts, record: null };
     }
+
+    if (recorded !== undefined && recorded.state === "active") {
+      if (recorded.sessionId === null) {
+        // A record without a session identity cannot be joined or resumed.
+      } else if (recorded.pid === null) {
+        // Unknown-liveness: resume, never duplicate and never kill (AC-F6-5).
+        const resumed = await ports.session.resume({ sessionId: recorded.sessionId, prompt });
+        if (!resumed.ok) return { ok: false, failure: refusalFor(resumed.code) };
+        return { ok: true, facts: { ...facts, ...resumed, liveness: "alive" }, record: null };
+      } else {
+        const answer = ports.processPort.capabilities.alive
+          ? ports.processPort.probe({
+              pid: recorded.pid,
+              processStartTimeMs: recorded.processStartTimeMs ?? 0,
+            })
+          : null;
+        if (answer === true) {
+          const joined = await ports.session.join();
+          if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
+          return { ok: true, facts, record: null };
+        }
+      }
+    }
+
     const title = freshSessionTitle(clock.nowMs());
-    const spawned = await ports.session.spawn({ title, prompt: loopSpawnPrompt(loopId) });
+    const spawned = await ports.session.spawn({ title, prompt });
     if (!spawned.ok) return { ok: false, failure: refusalFor(spawned.code) };
     const acquisition = recordAcquisition(spawned);
     return { ok: true, facts: acquisition.facts, record: acquisition.record };

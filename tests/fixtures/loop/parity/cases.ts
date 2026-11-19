@@ -107,8 +107,51 @@ const LOG_CASES: readonly LoopParityCase[] = [
   },
 ];
 
+/** The `single-instance` group's rows (phase 3). */
+const SINGLE_INSTANCE_CASES: readonly LoopParityCase[] = [
+  {
+    id: "instance-two-starts",
+    group: "single-instance",
+    declaredSeam: "S-lease",
+    scenario: { starts: 2, liveHolder: true },
+    expected: { admitted: 1, refused: 1, exit: 2 },
+  },
+  {
+    id: "instance-dead-holder-join",
+    group: "single-instance",
+    declaredSeam: "S-lease",
+    scenario: { holderAlive: false, recordedSession: "live" },
+    expected: { takeoverRecords: 1, spawns: 0 },
+  },
+  {
+    id: "instance-ended-replaced",
+    group: "single-instance",
+    declaredSeam: "S-refind",
+    scenario: { recordedSession: "ended" },
+    expected: { spawns: 1, resumesForPrevious: 0 },
+  },
+  {
+    id: "instance-distinct-identity",
+    group: "single-instance",
+    declaredSeam: "S-lease",
+    scenario: { identities: ["loop-main", "coordinator-main"] },
+    expected: { admittedBoth: true, foreignRecordsRead: 0 },
+  },
+  {
+    id: "instance-pidless-resume",
+    group: "single-instance",
+    declaredSeam: "S-refind",
+    scenario: { recordedSession: "active", pid: null },
+    expected: { resumes: 1, spawns: 0, degradations: ["session-pid-unknown"] },
+  },
+];
+
 /** The whole registry; every phase appends its own group. */
-export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [...SPAWN_CASES, ...LOG_CASES];
+export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
+  ...SPAWN_CASES,
+  ...LOG_CASES,
+  ...SINGLE_INSTANCE_CASES,
+];
 
 /** The rows of one proven surface, in declaration order. */
 export const loopParityCasesOf = (group: LoopProvenSeam): readonly LoopParityCase[] =>
