@@ -47,7 +47,8 @@
       "./provider-quota",
       "./registry",
       "./repo",
-      "./session"
+      "./session",
+      "./time-zone"
     ]
   },
   "scripts": {

@@ -13,6 +13,7 @@ import {
   type PacingGoalPriority,
   PROFILE_CAPABILITIES,
   PROVIDER_COST_CLASSES,
+  PROVIDER_DEFAULT_ZONE,
   PROVIDER_QUOTA_DEFAULTS,
   PROVIDER_WATCH_MAPPING_KINDS,
   type ProfileCapability,
@@ -34,6 +35,7 @@ import {
   type ProviderWatchMappingKind,
   type ProviderWatchTarget,
 } from "#contracts";
+import { isZoneNameGrammar, normaliseZoneName } from "./peak.js";
 import { parseProfilePeakWindows } from "./peak-rules.js";
 
 export type ProviderValidationError = {
@@ -87,8 +89,9 @@ const string = (value: unknown): string | undefined =>
 
 const parsePeak = (value: unknown): ProviderPeakWindow | string => {
   if (!isRecord(value)) return "peak";
-  const timezone = value.timezone === undefined ? "UTC" : value.timezone;
-  if (timezone !== "UTC") return "peak.timezone";
+  const rawTimezone = value.timezone === undefined ? PROVIDER_DEFAULT_ZONE : value.timezone;
+  if (!isZoneNameGrammar(rawTimezone)) return "peak.timezone";
+  const timezone = normaliseZoneName(rawTimezone);
   const start = integer(value.startSecondsOfDay);
   const end = integer(value.endSecondsOfDay);
   const buffer = integer(value.bufferSeconds, 0);

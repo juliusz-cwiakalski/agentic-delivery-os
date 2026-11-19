@@ -176,6 +176,9 @@ notes:
       delivery_planning."
     type: blocker
     date: "2026-11-19"
+  - text: "Commit-message observation (not blocking): the commit primitive composes a template subject from the staged set, so most commits read `docs(GH-350): update doc/changes/...` even where source changed, and many are truncated with a literal ellipsis. `scripts/lint-commit-range.sh --base main-tools` reports PASS (28 commits, 0 offending, commitlint from node_modules/.bin), so the range gate is green; the semantic weakness is recorded for the PR description and for the commit-primitive repair story, not corrected by hand."
+    type: risk
+    date: "2026-11-19"
   - text: "Phase 2 escalation (0 commits; work preserved in
       tmp/tmpdir/phase2-escalation.patch, 2316 lines): five undeclared consumers
       — privacy-release needs a new changeset because publishable packages

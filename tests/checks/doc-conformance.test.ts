@@ -1100,3 +1100,101 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
     }
   });
 });
+
+/**
+ * GH-350 phase 2 — the zone pages state the delivered basis: the declared zone
+ * grammar and the `ProviderZonePort`, the one named `peakWindowEndInstantMs`
+ * derivation, and the edge refusal. The engine's zone half is this phase's; its
+ * budget half is phase 9.
+ */
+const GH350_PHASE2_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-provider-engine.md",
+    stale: [
+      "UTC peak and subscription-quota evaluation",
+      "Timezone basis. | `UTC`; only `UTC` is admitted",
+      "Non-UTC, empty, out-of-range, and cross-midnight windows fail validation",
+      "non-UTC timezones",
+    ],
+    required: [
+      "zone-aware peak and subscription-quota evaluation",
+      "Declared zone",
+      "IANA zone name",
+      "ProviderZonePort",
+      "nextTransitionAtOrAfter",
+      "peakWindowEndInstantMs(nowMs, zoneFacts, rule)",
+      "provider.peak.zone-unknown",
+      "transition instant exactly",
+      "first occurrence",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-provider-profiles.md",
+    stale: ["its UTC peak window", "UTC basis; non-UTC and local-timezone windows are not modeled"],
+    required: ["declared-zone peak window", "declared-zone basis", "non-UTC windows are modeled"],
+  },
+  {
+    page: "doc/spec/features/feature-peak-pausing.md",
+    stale: ["UTC-only", "only the `UTC` designation validates", "evaluated on the UTC basis only"],
+    required: [
+      "declared-zone grammar",
+      "IANA zone name matching the declared grammar",
+      "peakWindowEndInstantMs",
+      "provider.peak.zone-unknown",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/cli-command-registry.md",
+    stale: ["UTC peak windows"],
+    required: ["zone-aware peak windows"],
+  },
+];
+
+describe("GH-350 phase 2 the zone pages state the delivered basis", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+  const violations = (rows: readonly GH350Row[], text: (page: string) => string | undefined) => {
+    const failures: string[] = [];
+    for (const row of rows) {
+      const content = text(row.page);
+      if (content === undefined) {
+        failures.push(`${row.page}: page does not exist`);
+        continue;
+      }
+      for (const phrase of row.stale) {
+        if (content.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+      }
+      for (const phrase of row.required) {
+        if (!content.includes(phrase))
+          failures.push(`${row.page}: missing required phrase: ${phrase}`);
+      }
+    }
+    return failures;
+  };
+
+  test("the four zone pages carry the delivered basis", () => {
+    expect(violations(GH350_PHASE2_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced UTC-only basis and a missing port phrase each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-peak-pausing.md"
+        ? `${pageText(page) ?? ""}\nevaluated on the UTC basis only\n`
+        : pageText(page);
+    expect(violations(GH350_PHASE2_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: evaluated on the UTC basis only",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-engine.md"
+        ? (pageText(page) ?? "").replace("nextTransitionAtOrAfter", "offset lookup")
+        : pageText(page);
+    expect(violations(GH350_PHASE2_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: nextTransitionAtOrAfter",
+    );
+  });
+});

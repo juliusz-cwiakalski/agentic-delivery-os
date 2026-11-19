@@ -344,6 +344,7 @@ describe("TC-DB-002 contract and domain tier discipline", () => {
         "./registry",
         "./repo",
         "./session",
+        "./time-zone",
       ].sort(),
     );
     const core = JSON.parse(readFileSync(join(ROOT, "packages/core/package.json"), "utf8")) as {

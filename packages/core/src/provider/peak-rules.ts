@@ -21,10 +21,11 @@
  *     error, never silently clamped (NFR-1, DEC-6).
  */
 import {
-  PROVIDER_PEAK_TIMEZONES,
+  PROVIDER_DEFAULT_ZONE,
   type ProviderProfilePeakRules,
   type ProviderProfilePeakWindow,
 } from "#contracts";
+import { isZoneNameGrammar, normaliseZoneName } from "./peak.js";
 
 /** The classified configuration identity the rule validation reuses. */
 export const PEAK_RULES_ERROR_CODE = "provider.profile.invalid" as const;
@@ -83,16 +84,14 @@ export const parseProfilePeakWindow = (
   field: string,
 ): PeakRulesResult | { readonly ok: true; readonly window: ProviderProfilePeakWindow } => {
   if (!isRecord(value)) return failure(field, `${field} must be an object`);
-  const rawTimezone = value.timezone === undefined ? PROVIDER_PEAK_TIMEZONES[0] : value.timezone;
-  if (
-    typeof rawTimezone !== "string" ||
-    !(PROVIDER_PEAK_TIMEZONES as readonly string[]).includes(rawTimezone)
-  ) {
+  const rawTimezone = value.timezone === undefined ? PROVIDER_DEFAULT_ZONE : value.timezone;
+  if (!isZoneNameGrammar(rawTimezone)) {
     return failure(
       `${field}.timezone`,
-      `${field}.timezone must be UTC (GH-294 DEC-1: windows are declared and evaluated on the UTC basis only); refusing non-UTC literal ${String(value.timezone)}`,
+      `${field}.timezone must be UTC or an IANA zone name matching the declared grammar (GH-350, DM-1)`,
     );
   }
+  const timezone = normaliseZoneName(rawTimezone);
   const startSecondsOfDay = integer(value.startSecondsOfDay);
   const endSecondsOfDay = integer(value.endSecondsOfDay);
   if (startSecondsOfDay === undefined || startSecondsOfDay < 0 || startSecondsOfDay > 86399) {
@@ -125,7 +124,7 @@ export const parseProfilePeakWindow = (
   return {
     ok: true,
     window: {
-      timezone: rawTimezone as (typeof PROVIDER_PEAK_TIMEZONES)[number],
+      timezone,
       startSecondsOfDay,
       endSecondsOfDay,
       multiplier,

@@ -204,6 +204,7 @@ export {
   type PeakStopDecision,
   type PeakStopPort,
   type PeakWatchLane,
+  type PeakZoneFactsFor,
   peakWindowOpenAt,
   recoverInterruptedLane,
   runPeakResume,

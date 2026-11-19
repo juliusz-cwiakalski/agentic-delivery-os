@@ -13,9 +13,13 @@ import type { CredentialSourceKey, SecretMaterial } from "./credentials.js";
 export const PROVIDER_COST_CLASSES = ["subscription", "pay-per-token"] as const;
 export type ProviderCostClass = (typeof PROVIDER_COST_CLASSES)[number];
 
-/** The only timezone basis admitted at v1 (DEC-10). */
-export const PROVIDER_PEAK_TIMEZONES = ["UTC"] as const;
-export type ProviderPeakTimezone = (typeof PROVIDER_PEAK_TIMEZONES)[number];
+/** The declared default zone; `UTC` is the alias of `Etc/UTC` (GH-350, DM-1). */
+export const PROVIDER_DEFAULT_ZONE = "UTC" as const;
+/**
+ * The IANA zone-name grammar (GH-350, DM-1/Appendix B). Grammar only: existence
+ * is decided at the composition edge through the injected zone port.
+ */
+export const PROVIDER_ZONE_NAME_PATTERN = "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+)*$" as const;
 
 /** The closed condition kinds that can drive a park (DM-8; GH-350 adds the sixth). */
 export const PROVIDER_CONDITION_KINDS = [
@@ -191,9 +195,9 @@ export type ProviderCredentialDeclaration = {
   readonly sourceKey: CredentialSourceKey;
 };
 
-/** A UTC peak window (DM-3, DEC-10). */
+/** A declared peak window; `timezone` is `UTC` or an IANA zone name (DM-1). */
 export type ProviderPeakWindow = {
-  readonly timezone: ProviderPeakTimezone;
+  readonly timezone: string;
   readonly startSecondsOfDay: number;
   readonly endSecondsOfDay: number;
   readonly bufferSeconds: number;
@@ -477,6 +481,7 @@ export type ProviderParkView = {
 
 /** Provider classification identities produced by the engine (F-9). */
 export type ProviderErrorCode =
+  | "provider.peak.zone-unknown"
   | "provider.quota.exceeded"
   | "provider.outage"
   | "provider.auth.rejected"
@@ -506,6 +511,24 @@ export type QuotaTransport = {
 /** An injected clock seam (PD-G). */
 export type ProviderClock = {
   readonly nowMs: () => number;
+};
+
+/**
+ * The single zone edge (GH-350, DM-1, ADR-0012 as revised). Three required
+ * members: existence, the offset in effect at an instant, and the smallest
+ * transition instant at or after an instant. `undefined` from the transition
+ * lookup means "no transition in the horizon" — never a refusal, never UTC.
+ */
+export type ProviderZonePort = {
+  readonly isKnownZone: (zone: string) => boolean;
+  readonly offsetSecondsAt: (zone: string, atMs: number) => number;
+  readonly nextTransitionAtOrAfter: (zone: string, atMs: number) => number | undefined;
+};
+
+/** The zone facts one pure evaluation can query; bound to a single zone. */
+export type ProviderZoneFacts = {
+  readonly offsetSecondsAt: (atMs: number) => number;
+  readonly nextTransitionAtOrAfter: (atMs: number) => number | undefined;
 };
 
 /** An injected sleep seam; the core never calls a real timer (DEC-9). */

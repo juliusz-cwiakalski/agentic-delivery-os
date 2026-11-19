@@ -154,3 +154,21 @@ describe("TC-PROV-062 documentation contract", () => {
     expect(guideFailures(removed).length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * GH-350 TC-CONFORM-005 — the new zone edge is hermetic: no network, credential,
+ * timer, or filesystem import, and the zone suites join the provider-tier scan.
+ */
+describe("GH-350 the zone edge is hermetic", () => {
+  test("the time-zone adapter imports no network, credential, timer or filesystem module", () => {
+    const text = readFileSync(join(ROOT, "packages/adapters/src/time-zone/index.ts"), "utf8");
+    for (const forbidden of ["fetch(", "node:fs", "child_process", "setTimeout", "http"]) {
+      expect(text, forbidden).not.toContain(forbidden);
+    }
+    expect(text).toContain("Intl");
+  });
+
+  test("the zone suites are covered by the provider-tier hermetic scan", () => {
+    expect(providerTestFiles()).toContain("tests/behaviour/provider-peak-zone.test.ts");
+  });
+});

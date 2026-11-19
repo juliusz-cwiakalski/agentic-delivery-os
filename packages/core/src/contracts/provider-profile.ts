@@ -8,7 +8,7 @@
  * clock, randomness, environment, filesystem, or network access is declared
  * here.
  */
-import type { ProviderPeakTimezone, QuotaLimit } from "./provider.js";
+import type { QuotaLimit } from "./provider.js";
 
 /** The closed pacing classes (F-7, DEC-1). */
 export const PACING_CLASSES = ["judgment", "execution"] as const;
@@ -160,12 +160,12 @@ export type ProviderPacingConfiguration = {
 /**
  * One declared peak-window rule window (GH-294 DM-3, DEC-1).
  *
- * Evaluated on the UTC basis only: the time-zone declaration admits the
- * delivered `UTC` designation and nothing else (OQ-TP-1). The multiplier is
+ * The `timezone` declaration admits `UTC` or an IANA zone name (GH-350,
+ * DM-1); existence is decided at the composition edge. The multiplier is
  * declared rule data for cost accounting; it never prices or converts (NG-5).
  */
 export type ProviderProfilePeakWindow = {
-  readonly timezone: ProviderPeakTimezone;
+  readonly timezone: string;
   readonly startSecondsOfDay: number;
   readonly endSecondsOfDay: number;
   readonly multiplier: number;

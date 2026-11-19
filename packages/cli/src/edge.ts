@@ -385,12 +385,16 @@ import {
   type WatchdogSignalSource,
   type WorkItem,
 } from "@delivery-os/core/contracts";
+import type { ProviderZoneFacts } from "@delivery-os/core/contracts";
+import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import {
+  bindZoneFacts,
   createProfileProbePort,
   createProviderEngine,
   createProviderWatchStatus,
   evaluatePeakWindow,
   evaluateProfileLifecycle,
+  normaliseZoneName,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
   persistProfileTarget,
@@ -398,6 +402,7 @@ import {
   readProviderLedger,
   readProviderParkViews,
   resolveProfileForSpawn,
+  UTC_ZONE_FACTS,
   selectProfile,
 } from "@delivery-os/core/provider";
 import {
@@ -2670,9 +2675,21 @@ const providerFailure = (failure: { readonly code: string }): StatusReadFailure 
  * available. Module-level so the provider command path and the production
  * nomination composition read one probe truth.
  */
+const providerZonePort = createIntlZonePort();
+
+/** Resolve a declared zone to its bound facts through the single Intl edge. */
+const providerZoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
+  const normalised = normaliseZoneName(zone);
+  if (normalised === "UTC") return UTC_ZONE_FACTS;
+  return providerZonePort.isKnownZone(normalised)
+    ? bindZoneFacts(normalised, providerZonePort)
+    : undefined;
+};
+
 export const createResolvedProviderProbe = (
   entries: ProviderConfiguration["entries"],
   nowMs: number,
+  zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined = providerZoneFactsFor,
 ): ReturnType<typeof createProfileProbePort> =>
   createProfileProbePort((providerName) => {
     const descriptor = entries[providerName];
@@ -2705,7 +2722,11 @@ export const createResolvedProviderProbe = (
       };
     }
     if (descriptor.peak !== undefined) {
-      const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+      const peak = evaluatePeakWindow(
+        descriptor.peak,
+        nowMs,
+        zoneFactsFor(descriptor.peak.timezone) ?? UTC_ZONE_FACTS,
+      );
       if (peak.status === "parked") {
         return {
           available: false,

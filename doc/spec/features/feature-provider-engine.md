@@ -6,7 +6,7 @@ created: 2026-10-31
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
+summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
 links:
   related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
@@ -58,9 +58,9 @@ Provider configuration is the typed `provider` branch of the layered catalog. Al
 | `provider.credentials.<name>.sourceKey.suffix` | Suffix appended to the branding environment prefix. | required for `environment-prefixed` |
 | `provider.entries.<name>.class` | `subscription` or `pay-per-token`. | required |
 | `provider.entries.<name>.enabled` | Boolean descriptor gate. | `true` |
-| `provider.entries.<name>.peak` | Optional UTC peak window. | absent; no peak condition |
+| `provider.entries.<name>.peak` | Optional zone-aware peak window. | absent; no peak condition |
 | `provider.entries.<name>.quota` | Optional subscription quota policy. | absent; no quota condition |
-| `peak.timezone` | Timezone basis. | `UTC`; only `UTC` is admitted |
+| `peak.timezone` | Declared zone. | `UTC` (default; alias of `Etc/UTC`) or an IANA zone name matching the declared grammar |
 | `peak.startSecondsOfDay` / `peak.endSecondsOfDay` | UTC seconds-of-day, end strictly greater than start. | required when peak is present |
 | `peak.bufferSeconds` | Non-negative buffer that advances the effective start. | `0` |
 | `quota.enabled` | Whether the quota endpoint is evaluated. | `true` |
@@ -79,7 +79,7 @@ Provider dynamic-name maps (`credentials`, `entries`, `chains`) use the catalog'
 
 The shipped defaults provide one concrete subscription descriptor and its credential reference, both overridable:
 
-- `provider.entries.zai-coding-plan`: class `subscription`, enabled, UTC peak window `06:00–10:00` with a `7200`-second buffer (pausing from `04:00` UTC), and an enabled quota policy against `https://api.z.ai/api/monitor/usage/quota/limit` with credential reference `zai`.
+- `provider.entries.zai-coding-plan`: class `subscription`, enabled, peak window `06:00–10:00` declared in `UTC` with a `7200`-second buffer (pausing from `04:00` UTC), and an enabled quota policy against `https://api.z.ai/api/monitor/usage/quota/limit` with credential reference `zai`.
 - `provider.credentials.zai`: `sourceKey` `{ style: literal, name: ZAI_API_KEY }`, a reference only and never a secret value.
 - `provider.chains`: empty, and `provider.defaultChain` is absent. A fresh installation therefore fails closed with `provider.chain.empty` until an operator declares a chain.
 
@@ -122,7 +122,7 @@ When no entry is eligible but at least one enabled entry is parked, the decision
 
 ### Peak windows
 
-A peak window is a UTC start second-of-day, end second-of-day, buffer, and timezone `UTC`. The effective pause window is the half-open interval `[max(0, start − buffer), end)`. Inside it the condition parks for the seconds until the window end, with an absolute expiry at that instant. Outside it the condition is clear. Evaluation is pure arithmetic over the injected clock; no vendor value is hardcoded. Non-UTC, empty, out-of-range, and cross-midnight windows fail validation.
+A peak window is a start second-of-day, end second-of-day, buffer, and declared zone (`UTC` by default, or an IANA zone name matching the declared grammar and bounded by `PROVIDER_ZONE_NAME_MAX_LENGTH`). Its seconds-of-day are read on that zone's clock: the effective pause window is the half-open interval `[max(0, start − buffer), end)` in local seconds, and inside it the condition parks with an absolute expiry resolved by the one named `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` derivation. The rule is the earliest instant at or after the declared local end; a skipped local second resolves to the transition instant exactly and a repeated local second to its first occurrence. Pure policy receives zone facts through the injected `ProviderZonePort` (`isKnownZone`, `offsetSecondsAt`, the required `nextTransitionAtOrAfter`); no vendor or ambient zone read enters core. A grammar-valid zone the composition cannot resolve refuses `provider.peak.zone-unknown` at exit 1 before any evaluation, with no park and no announcement. Empty, out-of-range, and cross-midnight windows fail validation. No vendor value is hardcoded.
 
 ### Quota evaluation
 
@@ -232,7 +232,7 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/core/src/contracts/provider.ts` | Provider descriptors, cost classes, peak, quota, conditions, parks, announcements, decisions, skip reasons, error codes, schema identifiers, and the `QuotaTransport` contract. |
 | `packages/core/src/provider/validate.ts` | Parsing and semantic validation: references, duplicates, cost ordering, ranges, endpoints, and chain selection. |
 | `packages/core/src/provider/chain.ts` | Deterministic chain resolution, skip reasons, cost-policy eligibility, and chain parks. |
-| `packages/core/src/provider/peak.ts` | UTC peak-window arithmetic, buffer clamp, and expiry. |
+| `packages/core/src/provider/peak.ts` | Zone-aware peak-window arithmetic, the local-seconds basis, and the one named transition-segment expiry derivation shared by the gate and the watcher. |
 | `packages/core/src/provider/quota.ts` | Quota snapshot normalization, `TOKENS_LIMIT` filtering, threshold/reset evaluation, and failure classification. |
 | `packages/core/src/provider/conditions.ts` | MAX combination and the fixed condition tie order. |
 | `packages/core/src/provider/parks.ts` | Park construction, deterministic naming, generation identity, evidence projection, ledger persistence, fold and read-time views, and the `provider-parks.json` projection. |
@@ -261,7 +261,7 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 - The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read boundary admits no entry from this subpath.
 - The host/binary composition injects the production credential port and quota transport; the CLI composition edge accepts the injected provider composition and wires its ports into the engine. Tests inject fakes. No production module imports the credential-port or quota-transport factories yet, and the CLI edge does not construct them.
 - The state layer owns ledger framing, fences, verified reads, and atomic document replacement; the provider engine only supplies record payloads and the fold.
-- Model-profile selection (specified in [Provider Profiles and Watching](feature-provider-profiles.md)), harness spawn, non-UTC timezones, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
+- Model-profile selection (specified in [Provider Profiles and Watching](feature-provider-profiles.md)), harness spawn, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
 
 ### API and interface contracts
 

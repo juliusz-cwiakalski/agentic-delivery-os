@@ -356,7 +356,8 @@
     "src/repo/index.ts",
     "src/session/commit-one-shot.ts",
     "src/session/delivery-session-facts.ts",
-    "src/session/index.ts"
+    "src/session/index.ts",
+    "src/time-zone/index.ts"
   ],
   "cli": [
     "bin/delivery-os.ts",

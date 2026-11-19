@@ -451,3 +451,77 @@ describe("TC-PROV-028..033/050 state integration", () => {
     }
   });
 });
+
+/**
+ * GH-350 TC-ZONE-009 — a window-derived park and its announcement are
+ * self-describing about their basis: every one carries `timezone` = the
+ * effective declared zone (including `UTC`), while cause/kind/code stay
+ * delivered, and the allowlist constant is not an emitted object's field count.
+ */
+describe("GH-350 TC-ZONE-009 window parks carry the effective declared zone", () => {
+  const window = {
+    startSecondsOfDay: 0,
+    endSecondsOfDay: 36_000,
+    bufferSeconds: 0,
+  };
+
+  test("UTC and Europe/Berlin parks and announcements carry their zone", async () => {
+    const { createParkAnnouncement } = await import(
+      "../../packages/core/src/provider/announcements"
+    );
+    const { evaluatePeakWindow, bindZoneFacts } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const now = Date.parse("2026-07-13T08:00:00.000Z");
+    const berlin = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const base = {
+      ...window,
+      bufferSeconds: 0,
+    };
+    const utcCondition = evaluatePeakWindow(
+      { ...base, timezone: "UTC", endSecondsOfDay: 43_200 },
+      now,
+    );
+    const berlinCondition = evaluatePeakWindow(
+      { ...base, timezone: "Europe/Berlin", endSecondsOfDay: 43_200 },
+      now,
+      berlin,
+    );
+    for (const [condition, zone] of [
+      [utcCondition, "UTC"],
+      [berlinCondition, "Europe/Berlin"],
+    ] as const) {
+      if (condition.status !== "parked") throw new Error(condition.status);
+      expect(condition.kind).toBe("peak-window");
+      expect(condition.announcementCode).toBe("provider.peak.parked");
+      expect(condition.evidence.timezone).toBe(zone);
+      const record = createParkRecord({
+        subjectKind: "provider",
+        subjectName: "zai-coding-plan",
+        cause: condition.cause ?? "peak-window",
+        conditions: condition.evidence.conditionKinds ?? ["peak-window"],
+        createdAtMs: now,
+        expiresAtMs: condition.expiresAtMs,
+        evidence: condition.evidence,
+      });
+      expect(record.evidence.timezone).toBe(zone);
+      const announcement = createParkAnnouncement(record, now);
+      expect(announcement.code).toBe("provider.peak.parked");
+      expect(announcement.severity).toBe("info");
+      expect(announcement.evidence.timezone).toBe(zone);
+      expect(Object.keys(announcement.evidence)).toContain("timezone");
+    }
+    // The allowlist constant is 14; a peak park carries the eight delivered
+    // base fields plus `timezone` (nine), never the five budget fields.
+    const { PARK_EVIDENCE_FIELDS, ANNOUNCEMENT_EVIDENCE_FIELDS } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
+    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(17);
+    expect(allowlist.fields).toHaveLength(14);
+  });
+});

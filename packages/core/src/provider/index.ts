@@ -53,9 +53,16 @@ export {
   readProviderParkViews,
 } from "./parks.js";
 export {
+  bindZoneFacts,
   evaluatePeakWindow,
+  isZoneNameGrammar,
+  localSecondsOfDay,
+  normaliseZoneName,
+  type PeakWindowEndRule,
+  peakWindowEndInstantMs,
   peakWindowEndSeconds,
   peakWindowOpenSeconds,
+  UTC_ZONE_FACTS,
   utcSecondsOfDay,
 } from "./peak.js";
 export {

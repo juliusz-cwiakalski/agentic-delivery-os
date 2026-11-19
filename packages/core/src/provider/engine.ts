@@ -34,6 +34,7 @@ import type {
   StateResult,
   StateStorePort,
 } from "#contracts";
+import { PROVIDER_DEFAULT_ZONE, type ProviderZoneFacts } from "#contracts";
 import { createParkAnnouncement, severityForAnnouncementCode } from "./announcements.js";
 import { type ChainEntryState, resolveProviderChain } from "./chain.js";
 import { combineProviderConditions } from "./conditions.js";
@@ -43,7 +44,7 @@ import {
   persistProviderResolution,
   readProviderParkViews,
 } from "./parks.js";
-import { evaluatePeakWindow } from "./peak.js";
+import { evaluatePeakWindow, normaliseZoneName, UTC_ZONE_FACTS } from "./peak.js";
 import { selectProfile } from "./profile.js";
 import { evaluateQuotaResponse } from "./quota.js";
 import { selectProviderChain, validateProviderConfiguration } from "./validate.js";
@@ -55,6 +56,12 @@ export type ProviderEngineDependencies = {
   readonly sleep: ProviderSleep;
   readonly stateStore?: StateStorePort;
   readonly newFenceToken?: () => string;
+  /**
+   * Bind the zone port to one declared zone (GH-350, ADR-0012 as revised). A
+   * `UTC` window needs no seam; a non-UTC window with no facts refuses
+   * `provider.peak.zone-unknown` before any evaluation.
+   */
+  readonly zoneFactsFor?: (zone: string) => ProviderZoneFacts | undefined;
 };
 
 /**
@@ -336,6 +343,40 @@ const evaluateQuotaCondition = async (
   );
 };
 
+const zoneFactsForPeak = (
+  deps: ProviderEngineDependencies,
+  zone: string,
+): ProviderZoneFacts | undefined => {
+  const normalised = normaliseZoneName(zone);
+  return normalised === PROVIDER_DEFAULT_ZONE ? UTC_ZONE_FACTS : deps.zoneFactsFor?.(normalised);
+};
+
+/** Refuse a non-UTC window whose zone the composition cannot resolve, before evaluation. */
+const zoneRefusal = (
+  deps: ProviderEngineDependencies,
+  config: ProviderConfiguration,
+  names: readonly string[],
+):
+  | {
+      readonly ok: false;
+      readonly errorCode: ProviderErrorCode;
+      readonly summary: string;
+      readonly announcementCode?: AnnouncementCode;
+    }
+  | undefined => {
+  for (const name of names) {
+    const peak = config.entries[name]?.peak;
+    if (peak === undefined) continue;
+    if (zoneFactsForPeak(deps, peak.timezone) === undefined) {
+      return failure(
+        "provider.peak.zone-unknown",
+        `provider ${name} declares peak zone ${peak.timezone}, which this composition cannot resolve; correct the zone name, or run where zone data is available (a UTC declaration needs none)`,
+      );
+    }
+  }
+  return undefined;
+};
+
 const evaluateEntry = async (
   deps: ProviderEngineDependencies,
   config: ProviderConfiguration,
@@ -347,7 +388,8 @@ const evaluateEntry = async (
   }
   const results: ProviderConditionResult[] = [];
   if (descriptor.peak !== undefined) {
-    results.push(evaluatePeakWindow(descriptor.peak, nowMs));
+    const facts = zoneFactsForPeak(deps, descriptor.peak.timezone) ?? UTC_ZONE_FACTS;
+    results.push(evaluatePeakWindow(descriptor.peak, nowMs, facts));
   }
   const quota = await evaluateQuotaCondition(deps, config, descriptor, nowMs);
   if (quota !== undefined) results.push(quota);
@@ -447,6 +489,8 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         }
         chain = { ...chain, entries };
       }
+      const zoneFailure = zoneRefusal(deps, input.config, chain.entries);
+      if (zoneFailure !== undefined) return zoneFailure;
       const nowMs = deps.clock.nowMs();
       const evaluations = await evaluateAll(input.config, chain.entries, nowMs);
       const states: Record<string, ChainEntryState> = {};
@@ -527,6 +571,8 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
           return failure("provider.chain.empty", `provider ${name} is not declared`);
         }
       }
+      const zoneFailure = zoneRefusal(deps, input.config, names);
+      if (zoneFailure !== undefined) return zoneFailure;
       const nowMs = deps.clock.nowMs();
       const evaluations = await evaluateAll(input.config, names, nowMs);
       const views: ProviderQuotaView[] = [];

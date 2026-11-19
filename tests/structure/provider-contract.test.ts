@@ -237,3 +237,42 @@ describe("TC-PROV-006 provider-policy purity and neutrality", () => {
     }
   });
 });
+
+/**
+ * GH-350 TC-ZONE-010 — zone data is read at exactly one edge and core policy
+ * stays ambient-neutral: the provider tier carries no `Intl`, and the guard now
+ * fails by name on a planted reference.
+ */
+describe("GH-350 TC-ZONE-010 the provider tier holds no ambient zone read", () => {
+  test("no provider-tier file references Intl or TZ; the adapter is the only reader", () => {
+    for (const file of providerFiles()) {
+      const text = readFileSync(join(ROOT, file), "utf8")
+        .replace(/\/\*[\s\S]*?\*\//g, "")
+        .replace(/\/\/.*$/gm, "");
+      expect(text, file).not.toContain("Intl");
+      expect(text, file).not.toContain("process.env.TZ");
+    }
+    expect(readFileSync(join(ROOT, "packages/adapters/src/time-zone/index.ts"), "utf8")).toContain(
+      "Intl",
+    );
+    expect(
+      scan(ROOT).filter((violation) => violation.file.startsWith("packages/core/src/provider/")),
+    ).toEqual([]);
+  });
+
+  test("a planted Intl reference in the provider tier fails by name", () => {
+    const root = mkdtempSync(join(tmpdir(), "zone-guard-"));
+    const directory = join(root, "packages/core/src/provider");
+    mkdirSync(directory, { recursive: true });
+    try {
+      writeFileSync(
+        join(directory, "planted.ts"),
+        'export const zone = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });\n',
+      );
+      const violations = scan(root);
+      expect(violations.map((violation) => violation.detail)).toContain("ambient global Intl");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

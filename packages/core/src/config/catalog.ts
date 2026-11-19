@@ -169,9 +169,9 @@ const PROVIDER_PROFILE_PEAK_WINDOW = {
 
 /**
  * GH-294 F-2/DM-3 — per-profile peak-window rules as versioned profile data.
- * Validation semantics (UTC-only designation, duplicate refusal, grace bound)
- * live in the provider rule parser; the catalog declares only the shapes so
- * the resolver passes declared values through.
+ * Validation semantics (the declared zone grammar, duplicate refusal, grace
+ * bound) live in the provider rule parser; the catalog declares only the shapes
+ * so the resolver passes declared values through.
  */
 const PROVIDER_PROFILE_PEAK_WINDOWS = {
   type: "object",

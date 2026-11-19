@@ -185,11 +185,10 @@ describe("TC-PROV-002/004/005 provider validation", () => {
   });
 
   test("peak ranges, timezone, credential references, and endpoints are validated", () => {
-    for (const name of [
-      "peak-invalid-timezone.yaml",
-      "peak-end-before-start.yaml",
-      "peak-out-of-range.yaml",
-    ]) {
+    // GH-350: a grammar-valid but runtime-unknown zone (`Mars/Olympus` in the
+    // re-purposed fixture) is an EDGE refusal (`provider.peak.zone-unknown`),
+    // not a validation refusal; its arm lives in the phase-2 zone suite.
+    for (const name of ["peak-end-before-start.yaml", "peak-out-of-range.yaml"]) {
       const parsed = parseAndValidateProviderConfiguration(
         parse(readFileSync(join(ROOT, "tests/fixtures/provider/config", name), "utf8")) as never,
       );

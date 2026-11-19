@@ -983,6 +983,14 @@ export const AMBIENT_CASES: AmbientCase[] = [
     "packages/core/src/index.ts",
     "export const value = fetch;\n",
   ),
+  // GH-350: provider policy receives zone facts through the injected port and
+  // never reads Intl in the neutral tier (ADR-0012 as revised).
+  ambient(
+    "ambient-provider-intl",
+    "ambient-globals-neutral-tiers",
+    "packages/core/src/provider/probe.ts",
+    'export const zone = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });\n',
+  ),
   ...Object.entries(GLOBALS).flatMap(([globalName, source]) =>
     NEUTRAL_TIERS.map((tier) =>
       ambient(

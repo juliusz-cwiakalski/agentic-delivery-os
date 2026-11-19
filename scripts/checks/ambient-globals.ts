@@ -25,7 +25,17 @@ export const AMBIENT_SCOPE = {
   directories: [...NEUTRAL_TIER_DIRECTORIES],
 } as const;
 
-export const BANNED_GLOBALS = ["process", "Bun", "Deno", "setTimeout", "setInterval", "fetch"];
+export const BANNED_GLOBALS = [
+  "process",
+  "Bun",
+  "Deno",
+  "setTimeout",
+  "setInterval",
+  "fetch",
+  // GH-350: zone data is read only at the declared adapters edge, never in the
+  // neutral core tier (ADR-0012 as revised).
+  "Intl",
+];
 export const BANNED_PROPERTY_ACCESS: Array<[string, string]> = [
   ["Date", "now"],
   ["Math", "random"],

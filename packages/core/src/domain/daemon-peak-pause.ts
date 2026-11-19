@@ -22,6 +22,7 @@
 
 import {
   type ProviderProfilePeakRules,
+  type ProviderZoneFacts,
   QUEUE_PARK_RECHECK_DEFAULTS,
   type QueueParkPreservation,
   type QueueParkRecord,
@@ -30,7 +31,13 @@ import {
 // peak-window boundary helpers, enforced by name in the dependency matrix
 // (`tier-domain-not-provider`'s pathNot exception) with a firing negative
 // fixture (tests/boundaries).
-import { peakWindowEndSeconds, peakWindowOpenSeconds, utcSecondsOfDay } from "../provider/peak.js";
+import {
+  localSecondsOfDay,
+  peakWindowEndInstantMs,
+  peakWindowEndSeconds,
+  peakWindowOpenSeconds,
+  UTC_ZONE_FACTS,
+} from "../provider/peak.js";
 import {
   admitDispatchRestart,
   evaluateDispatchResumeEconomics,
@@ -62,6 +69,19 @@ export type PeakStopDecision = {
 /** The rule lookup the watch reads: one parsed rule set per declared profile. */
 export type PeakRulesLookup = (profile: string) => ProviderProfilePeakRules | undefined;
 
+/** Bind the injected zone port to one declared zone (GH-350); UTC needs no port. */
+export type PeakZoneFactsFor = (zone: string) => ProviderZoneFacts | undefined;
+
+/**
+ * The safe default for a caller that supplies no seam: UTC resolves to the
+ * definitional facts and a non-UTC window is not evaluated (never coerced to
+ * UTC). Production compositions inject the real binder.
+ */
+const defaultZoneFactsFor: PeakZoneFactsFor = (zone) => {
+  const declared = zone === undefined || zone === "" ? "UTC" : zone;
+  return declared === "UTC" || declared === "Etc/UTC" ? UTC_ZONE_FACTS : undefined;
+};
+
 /** The episode-id factory (injected; deterministic in tests). */
 export type PeakEpisodeIdFactory = () => string;
 
@@ -77,9 +97,17 @@ const isoOf = (nowMs: number, secondsLater: number): string =>
 export const peakWindowOpenAt = (
   rules: ProviderProfilePeakRules,
   nowMs: number,
+  zoneFactsFor: PeakZoneFactsFor = defaultZoneFactsFor,
 ): { readonly open: boolean; readonly windowEnd: string } => {
-  const second = utcSecondsOfDay(nowMs);
   for (const window of rules.windows) {
+    const facts = zoneFactsFor(window.timezone);
+    // A composition that cannot supply the zone facts must not evaluate the
+    // window as UTC; the admission gate refuses the declaration by name.
+    if (facts === undefined) continue;
+    const second = localSecondsOfDay(
+      nowMs,
+      facts.offsetSecondsAt(Math.floor(nowMs / 1_000) * 1_000),
+    );
     const open = peakWindowOpenSeconds({
       startSecondsOfDay: window.startSecondsOfDay,
       bufferBeforeSeconds: window.bufferBeforeSeconds,
@@ -89,11 +117,13 @@ export const peakWindowOpenAt = (
       bufferAfterSeconds: window.bufferAfterSeconds,
     });
     if (second >= open && second < end) {
-      // The window end in absolute time: today's end when still ahead of the
-      // clock's second-of-day (declared windows never wrap midnight — the
-      // parser refuses end <= start).
-      const endMsToday = Math.floor(nowMs / 1_000) * 1_000 + (end - second) * 1_000;
-      return { open: true, windowEnd: new Date(endMsToday).toISOString() };
+      // The window end in absolute time: the one named derivation, on the
+      // declared zone's clock.
+      const windowEndMs = peakWindowEndInstantMs(nowMs, facts, {
+        endSecondsOfDay: window.endSecondsOfDay,
+        bufferAfterSeconds: window.bufferAfterSeconds,
+      });
+      return { open: true, windowEnd: new Date(windowEndMs).toISOString() };
     }
   }
   return { open: false, windowEnd: "" };
@@ -111,6 +141,7 @@ export const peakWindowOpenAt = (
 export const decidePeakStops = (input: {
   readonly lanes: readonly PeakWatchLane[];
   readonly rulesFor: PeakRulesLookup;
+  readonly zoneFactsFor?: PeakZoneFactsFor;
   readonly nowMs: number;
   /** Refs holding an active `peak-window` park; already parked lanes are skipped (exactly once per episode). */
   readonly parkedRefs: readonly string[];
@@ -136,7 +167,10 @@ export const decidePeakStops = (input: {
     let state = seen.get(profile);
     if (state === undefined) {
       const rules = input.rulesFor(profile);
-      const window = rules === undefined ? undefined : peakWindowOpenAt(rules, input.nowMs);
+      const window =
+        rules === undefined
+          ? undefined
+          : peakWindowOpenAt(rules, input.nowMs, input.zoneFactsFor ?? defaultZoneFactsFor);
       state = {
         rules,
         open: window?.open ?? false,
@@ -179,6 +213,7 @@ export type PeakParkAppendPort = (record: QueueParkRecord) => boolean;
 export const runPeakWatch = async (input: {
   readonly lanes: readonly PeakWatchLane[];
   readonly rulesFor: PeakRulesLookup;
+  readonly zoneFactsFor?: PeakZoneFactsFor;
   readonly nowMs: number;
   readonly parkedRefs: readonly string[];
   readonly newEpisodeId: PeakEpisodeIdFactory;
@@ -190,6 +225,7 @@ export const runPeakWatch = async (input: {
   const decisions = decidePeakStops({
     lanes: input.lanes,
     rulesFor: input.rulesFor,
+    zoneFactsFor: input.zoneFactsFor ?? defaultZoneFactsFor,
     nowMs: input.nowMs,
     parkedRefs: input.parkedRefs,
     newEpisodeId: input.newEpisodeId,

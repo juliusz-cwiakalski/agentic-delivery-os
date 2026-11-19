@@ -339,6 +339,11 @@
       "path": "packages/core/src/index.ts"
     },
     {
+      "id": "ambient-provider-intl",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/provider/probe.ts"
+    },
+    {
       "id": "ambient-sweep-domain-process",
       "tc": "TC-SCAFFOLD-015",
       "path": "packages/core/src/domain/probe.ts"
