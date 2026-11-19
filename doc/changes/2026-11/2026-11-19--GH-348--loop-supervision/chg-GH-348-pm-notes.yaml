@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
   specification: { started: null, completed: 2026-11-19T11:25:46.895Z }
   test_planning: { started: null, completed: 2026-11-19T11:26:03.753Z }
-  delivery_planning: { started: null, completed: 2026-11-19T10:55:43.887Z }
+  delivery_planning: { started: null, completed: 2026-11-19T11:32:31.858Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -407,5 +407,17 @@ notes:
       declared authorship (a declared-but-unchanged path would surface only as
       an advisory `plan diff` `undeclared-missing`, never a validation
       failure)."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan remediation for DoR iteration 1 complete: phase 2's harness
+      registers BOTH command families; phase 8 declares the nested-dispatch e2e
+      fixture and states `phase complete` is never the deliver leg; the mutation
+      allocation is regenerated from the test plan's 115-row register and sums
+      exactly (1+17+9+23+12+9+25+19+0 = 115, zero missing, zero duplicates, zero
+      out of range); phase 4 ends at M52 and M53 belongs to phase 5; phase 9
+      stages feature-state-layer.md and test-spec-loop-supervision.md; the two
+      TDRs are verification targets only; the N-02 five/three sentence is fixed.
+      Ownership unchanged at 41/41 ACs and 74/74 TCs; plan validate
+      valid/full/readyForDevelopment=true and lint plan valid."
     type: info
     date: "2026-11-19"
