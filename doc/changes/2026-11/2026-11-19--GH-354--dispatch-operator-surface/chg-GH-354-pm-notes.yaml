@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-19T20:04:37.444Z }
   specification: { started: null, completed: 2026-11-19T20:50:46.241Z }
   test_planning: { started: null, completed: 2026-11-19T21:08:07.260Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-19T21:09:30.773Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -44,6 +44,18 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Operational trap (hit 2026-11-19): the commit primitive's template
+      subject carries the plan phase summary, and `validateCommitMessage`
+      rejects any tracker-like token other than the resolved ref. A phase-1
+      summary naming `TDR-0056` therefore aborted both `phase complete
+      delivery_planning` and a standalone `commit GH-354` with
+      `commit.commitlint-failed: invented tracker references are not allowed:
+      TDR-0056` (the same trap recorded in GH-275 and GH-322). Remediation:
+      phase summaries must not contain decision-record ids; the summary now says
+      'land the governing decision record'. No contract change — this is a
+      message-authoring constraint."
+    type: retro
+    date: "2026-11-19"
   - text: "Intake state (verified 2026-11-19): issue GH-354 open, label `change`,
       milestone `M4: Jaiship-native delivery`, zero comments; no open or closed
       PR for the branch; branch existed at the `origin/main-tools` tip

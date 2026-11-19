@@ -697,7 +697,7 @@ phases:
   - id: 1
     title: "Land TDR-0056 and its decision index row (the plan's pre-delivery phase)"
     kind: planning
-    summary: "chore(GH-354): land TDR-0056 and its decision index row"
+    summary: "chore(GH-354): land the governing decision record and its index row"
     scope:
       files:
         # Untracked at plan time (COMMIT-BOUNDARY REALITY). Exact path.
