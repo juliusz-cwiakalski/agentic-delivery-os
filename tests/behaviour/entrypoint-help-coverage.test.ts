@@ -174,6 +174,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "steer",
         "metrics",
         "supervise",
+        "install",
       ].sort(),
     );
   });

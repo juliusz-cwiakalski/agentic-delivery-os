@@ -82,6 +82,27 @@ export const launcherStepViolations = (source: string): string[] => {
   if (global !== undefined && global.includes(STEP)) {
     failures.push("the global-install path invokes the launcher step");
   }
+  // GH-346: the one content predicate. The step refuses anything at the install
+  // path that is not the delivered launcher, decided by content, and names the
+  // lifecycle command as the update path without reading the install record.
+  if (!body.includes("LAUNCHER_CONTENT_MARKER")) {
+    failures.push("the launcher step carries no content predicate for the delivered launcher");
+  }
+  if (!body.includes("LAUNCHER_PROBE_BYTES")) {
+    failures.push("the launcher content predicate is not bounded to a probe window");
+  }
+  if (!body.includes("refusing:")) {
+    failures.push("the launcher step has no classified refusal arm");
+  }
+  if (!body.includes("lifecycle command")) {
+    failures.push("the launcher step's refusal does not name the lifecycle command");
+  }
+  if (/-L "\$\{install_path\}"/u.test(body) === false) {
+    failures.push("the launcher step does not refuse a symlink at the install path");
+  }
+  if (/install\.json|install\.record|recordState|record_path/u.test(body)) {
+    failures.push("the launcher step reads the install record as its guard");
+  }
   // The launcher content executes exactly one absolute target.
   if ((body.match(/exec bun/gu) ?? []).length !== 1) {
     failures.push("the launcher content does not exec exactly one runtime target");
@@ -193,5 +214,41 @@ describe("TC-BIN-054 the installer arrays still name no binary", () => {
     const failures = installerArrayViolations(injected).join("\n");
     expect(failures).toContain("installer array ADOS_DELIVERY_SCRIPTS names the CLI surface");
     expect(failures).toContain("packages/cli");
+  });
+});
+
+describe("GH-346 TC-INST-090/091 the managed-artifact guard is live", () => {
+  test("the delivered guard is green and the delivered launcher is still owned", () => {
+    expect(launcherStepViolations(installScript)).toEqual([]);
+    expect(installScript).toContain(
+      'readonly LAUNCHER_CONTENT_MARKER="# Installed by the local install"',
+    );
+    expect(installScript).toContain('readonly LAUNCHER_TARGET_MARKER="readonly TARGET="');
+    expect(installScript).toContain('return "${EXIT_CONFIG}"');
+  });
+
+  test("a seeded copy without the guard, and one keyed on the record, fail by name", () => {
+    const withoutGuard = installScript
+      .replaceAll('"${existing}" != *"${LAUNCHER_CONTENT_MARKER}"*', "false")
+      .replace(
+        'if [[ -L "${install_path}" ]] || [[ -d "${install_path}" ]]; then',
+        "if false; then",
+      );
+    const guardFailures = launcherStepViolations(withoutGuard).join("\n");
+    expect(guardFailures).toContain("content predicate");
+    expect(guardFailures).toContain("symlink");
+    const recordKeyed = installScript.replace(
+      'local existing=""',
+      'local existing="" # install.json',
+    );
+    expect(launcherStepViolations(recordKeyed).join("\n")).toContain("reads the install record");
+    const wholeFileRead = installScript.replace(
+      `head -c "\${LAUNCHER_PROBE_BYTES}" "\${install_path}"`,
+      'cat "${install_path}"',
+    );
+    expect(wholeFileRead).not.toBe(installScript);
+    expect(launcherStepViolations(wholeFileRead).join("\n")).toContain(
+      "not bounded to a probe window",
+    );
   });
 });

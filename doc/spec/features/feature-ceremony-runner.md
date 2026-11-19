@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CEREMONY-RUNNER
 status: Current
 created: 2026-11-16
-last_updated: 2026-11-17
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299"]
+  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299", "GH-346"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"
@@ -338,7 +338,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | `ceremony.note-invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A note required by the declaration is absent, omits a required member or its idempotent `scopeKey`, names another ceremony, or disagrees with the declaration's scope key; the field is named and no partial ceremony output is written. |
 | `ceremony.declaration.invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A built-in or project declaration violates the contract — unknown step kind, input source, output slot, verification mode, trigger event, cadence, or tier; missing verification or output schema; duplicate id; built-in collision; unparseable schedule; over-bound collection; missing or illegal scope-key derivation; executable content — naming the ceremony id and the field, with nothing registered. |
 
-`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 156 identities and a 67-entry reserved two-segment allowlist.
+`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 167 identities and a 68-entry reserved two-segment allowlist.
 
 ### 4.7 Invariants
 
@@ -361,7 +361,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | Idempotency | Zero duplicate run records per identity; addenda only for notes; zero appends for a caught-up window | Delivered |
 | Catch-up boundedness | ≤1 replayed window per ceremony per invocation; zero fabricated windows; zero replays for an occupied identity | Delivered |
 | Bounded carried state | Summary ≤4 096 bytes / 40 lines with an explicit omission count; run record ≤16 KiB; step record ≤2 KiB; declaration document ≤1 MiB | Delivered |
-| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 156 identities and a 67-entry allowlist |
+| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 167 identities and a 68-entry allowlist |
 | Tier neutrality | Exactly two phase-set sources, no third vocabulary, no hardcoded default set | Delivered; a structure suite fails on a second literal |
 | Measurement completeness | Every executed step carries a duration and a verification verdict | Delivered |
 | Mirror safety | Declared targets only (≤8), equality in both directions, no force path, no landing without `--apply` | Delivered over injected mirror ports |
@@ -389,7 +389,7 @@ All ceremony fixtures are synthetic and committed: injected clocks, id factories
 | `tests/behaviour/ceremony-bounds.test.ts`, `ceremony-determinism.test.ts`, `ceremony-performance.test.ts` (TC-050, TC-053..055) | Output and record bounds, replay determinism, measured read cost and bounded-work posture |
 | `tests/behaviour/ceremony-nonregression.test.ts` (TC-057) | The retro pipeline's payloads, identities, and registry status stay byte-identical |
 | `tests/checks/ceremony-hermetic.test.ts`, `ceremony-mutants.test.ts` (TC-050, TC-056) | No skips, sockets, spawns, `HOME` reads, or live-tree writes; sixteen disabled rules each fail their suite |
-| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 156 identities, 67-entry allowlist, documentation truth |
+| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 167 identities, 68-entry allowlist, documentation truth |
 
 Mounting is covered by the help/coverage matrix, the prompt-set count assertion, root and family help, and the M2 reference page; a mapping whose reference page is absent fails `pnpm check:help`.
 

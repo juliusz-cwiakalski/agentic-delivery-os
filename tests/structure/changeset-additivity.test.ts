@@ -1,8 +1,9 @@
 /**
  * TC-SYNC-011 — the release additivity pin. The delivered `.changeset/*.md` set
- * equals the phase-1 baseline plus exactly one added file; that file declares
- * exactly the five fixed-group packages at `minor` with `@delivery-os/testkit`
- * absent, no sixth package and a non-empty body; all 64 baseline files keep
+ * equals the phase-1 baseline plus exactly the two declared added files; each of
+ * them declares exactly the five fixed-group packages at `minor` with
+ * `@delivery-os/testkit` absent, no sixth package and a non-empty body; all 64
+ * baseline files keep
  * their SHA-256 digest; and each of the five package `version` values equals its
  * baseline value, so the bump belongs to changesets and never to a hand edit.
  *
@@ -21,7 +22,10 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const PIN_PATH = "tests/fixtures/pins/changeset-baseline.json";
 const CHANGESET_DIR = ".changeset";
-const ADDED_CHANGESET = "gh-349-merge-closeout-queue-repair-minor.md";
+const ADDED_CHANGESETS = [
+  "gh-349-merge-closeout-queue-repair-minor.md",
+  "install-lifecycle-minor.md",
+] as const;
 const PINNED_CHANGESET_COUNT = 64;
 
 /** The fixed group of `.changeset/config.json`: five packages, testkit excluded. */
@@ -38,6 +42,8 @@ type ChangesetBaseline = {
   readonly provenance: string;
   readonly fixedPackages: Readonly<Record<string, string>>;
   readonly changesets: Readonly<Record<string, string>>;
+  /** The declared additions; the tree fixture omits it and takes the live set. */
+  readonly expectedAdded?: readonly string[];
 };
 
 type TreeSnapshot = {
@@ -134,16 +140,21 @@ export const releaseViolations = (
   const present = Object.keys(snapshot.files).sort();
   const added = present.filter((name) => !Object.hasOwn(baseline.changesets, name));
 
+  const expected = [...(baseline.expectedAdded ?? ADDED_CHANGESETS)];
   if (added.length === 0) {
     violations.push({
       code: "changeset.added.zero",
-      detail: `expected exactly one added .changeset/*.md, found none across ${present.length} files`,
+      detail: `expected exactly ${expected.join(", ")}, found none across ${present.length} files`,
     });
-  } else if (added.length > 1) {
-    violations.push({
-      code: "changeset.added.multiple",
-      detail: `expected exactly one added .changeset/*.md, found ${added.length}: ${added.join(", ")}`,
-    });
+  } else {
+    const unexpected = added.filter((name) => !expected.includes(name));
+    const missing = expected.filter((name) => !added.includes(name));
+    if (unexpected.length > 0 || missing.length > 0) {
+      violations.push({
+        code: "changeset.added.multiple",
+        detail: `expected exactly ${expected.join(", ")}, found ${added.join(", ")}`,
+      });
+    }
   }
 
   for (const name of Object.keys(baseline.changesets).sort()) {
@@ -224,6 +235,7 @@ const controlBaseline = (): ChangesetBaseline => {
   const files = controlFiles();
   return {
     provenance: "mutation-control fixture, not a tree pin",
+    expectedAdded: ["control-added-minor.md"],
     fixedPackages: controlVersions(),
     changesets: Object.fromEntries(
       Object.entries(files).map(([name, content]) => [name, digestOf(content)]),
@@ -251,19 +263,20 @@ describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
     }
   });
 
-  test("the delivered changeset directory is the baseline plus exactly one added file", () => {
+  test("the delivered changeset directory is the baseline plus exactly the two declared additions", () => {
     const added = addedFrom(readTree());
-    expect(added).toEqual([ADDED_CHANGESET]);
+    expect(added).toEqual([...ADDED_CHANGESETS].sort());
   });
 
-  test("the added changeset declares the five fixed packages at minor and no other", () => {
+  test("each added changeset declares the five fixed packages at minor and no other", () => {
     const snapshot = readTree();
-    const [name] = addedFrom(snapshot);
-    const parsed = parseChangeset(snapshot.files[name ?? ""] ?? "");
-    expect(parsed).not.toBeNull();
-    expect(parsed?.packages).toEqual(expectedFrontMatter());
-    expect(Object.hasOwn(parsed?.packages ?? {}, "@delivery-os/testkit")).toBe(false);
-    expect(parsed?.body.trim().length ?? 0).toBeGreaterThan(0);
+    for (const name of addedFrom(snapshot)) {
+      const parsed = parseChangeset(snapshot.files[name] ?? "");
+      expect(parsed, name).not.toBeNull();
+      expect(parsed?.packages, name).toEqual(expectedFrontMatter());
+      expect(Object.hasOwn(parsed?.packages ?? {}, "@delivery-os/testkit"), name).toBe(false);
+      expect(parsed?.body.trim().length ?? 0, name).toBeGreaterThan(0);
+    }
   });
 
   test("the release surface is additive and no package version is hand-edited", () => {

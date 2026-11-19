@@ -1,5 +1,5 @@
 ---
-id: TDR-0044
+id: TDR-0049
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -77,7 +77,7 @@ links:
   roadmap_items: ["M4-S11", "GH-349"]
 ---
 
-# TDR-0044: One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence
+# TDR-0049: One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence
 
 ## Context
 

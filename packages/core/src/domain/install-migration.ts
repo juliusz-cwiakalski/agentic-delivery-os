@@ -1,0 +1,49 @@
+/**
+ * The migration hook (F-13; NG-1).
+ *
+ * Without `--migrate`, prior-namespace artifacts are DETECTED and one advisory
+ * line names them and the operator's documented manual move; nothing is ever
+ * moved, copied, or deleted. With `--migrate`, the hook is accepted and answers
+ * one typed refusal naming the M4-S2 story as owner; no migration port is
+ * composed, so the flag cannot silently no-op.
+ */
+import { expandHome } from "./install-path-block.js";
+
+/**
+ * The declared prior identity's directory names (F-13, NG-1). The binary name is
+ * DERIVED from the config directory name (a leading dot removed) rather than
+ * declared: no working-name literal enters a library module, and the inventory
+ * stays at its delivered product-surface size.
+ */
+export const PRIOR_NAMESPACE_NAMES = {
+  config: ".delivery-os",
+  state: ".delivery-os-state",
+} as const;
+
+/** The prior identity's executable name, derived from its directory name. */
+export const priorBinaryName = (): string => PRIOR_NAMESPACE_NAMES.config.replace(/^\./u, "");
+
+/** The prior-namespace paths this product may have left on a machine. */
+export const priorNamespacePaths = (homeDirectory: string): readonly string[] => [
+  expandHome(`~/${PRIOR_NAMESPACE_NAMES.config}`, homeDirectory),
+  expandHome(`~/${PRIOR_NAMESPACE_NAMES.state}`, homeDirectory),
+  expandHome(`~/${PRIOR_NAMESPACE_NAMES.config}/bin/${priorBinaryName()}`, homeDirectory),
+];
+
+/** Detect the prior-namespace artifacts that exist at this moment. */
+export const detectPriorNamespace = (input: {
+  readonly homeDirectory: string;
+  readonly exists: (path: string) => boolean;
+}): readonly string[] =>
+  priorNamespacePaths(input.homeDirectory).filter((path) => input.exists(path));
+
+/** The one advisory line: what was found and the documented manual move. */
+export const migrationAdvisory = (found: readonly string[]): string =>
+  `advisory: prior-namespace artifacts exist at ${found.join(", ")}; this build never moves ` +
+  "them — perform the documented manual move when you are ready (nothing was moved, copied, or deleted)";
+
+/** The typed delegation refusal's sentence (the row supplies the projection). */
+export const migrationUnavailableSummary = (owner: string): string =>
+  `refused: migration is not available in this build; ${owner} owns the namespace move — ` +
+  "perform the documented manual move of the prior-namespace artifacts; nothing was moved, " +
+  "copied, or deleted";

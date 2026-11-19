@@ -144,7 +144,7 @@ const FALLBACK_CODES = new Set(["fallback.invocation", "fallback.internal"]);
 // declared codes (not a pattern widening), and every other failure identity
 // keeps the three-segment minimum. GH-230 pins the four closed `blockers.*`
 // user-validation identities the same way: exact codes, no family wildcard.
-const RESERVED_TWO_SEGMENT_CODES = new Set([
+export const RESERVED_TWO_SEGMENT_CODES = new Set([
   "provider.outage",
   "watchdog.checkout-dirty",
   "watchdog.checkout-non-base",
@@ -238,6 +238,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "retro.action-incomplete",
   "retro.closure-incomplete",
   "retro.wip-limit-exceeded",
+  // GH-346 pins the one kind-first two-segment install identity exactly; the
+  // other ten install rows are three-segment and the allowlist widens by this
+  // single declared member to 66.
+  "install.dev-build",
   // GH-298 pins the three steer identities exactly (DEC-8, C-16); the steer
   // family stays closed to these three members with no pattern widening.
   "steer.unknown-id",
@@ -271,6 +275,10 @@ const RESERVED_RECORD_KIND_LITERALS = new Set([
   "harness.telemetry.step",
   "harness.telemetry.baseline",
   "harness.telemetry.capture",
+  // GH-346: the install record and the install status payload are schema
+  // identifiers, not failure identities.
+  "install.record.v1",
+  "install.status.v1",
 ]);
 const CODE_FORMAT = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";

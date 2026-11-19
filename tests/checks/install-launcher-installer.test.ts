@@ -646,3 +646,122 @@ describe("TC-BIN-057 both composition branches are exercised offline on an injec
     }
   }, 120_000);
 });
+
+describe("GH-346 TC-INST-091 the installer refuses when anything but the delivered launcher is at the install path", () => {
+  const plantArtifact = (s: Scratch): string => {
+    installOnce(s);
+    const path = launcherPath(s);
+    writeFileSync(path, "\u007fELF managed artifact fixture\n");
+    chmodSync(path, 0o755);
+    return digest(path);
+  };
+
+  const cases: readonly {
+    readonly name: string;
+    readonly record: "current" | "record-stale" | "absent" | "damaged";
+  }[] = [
+    { name: "a current record", record: "current" },
+    { name: "a record-stale record", record: "record-stale" },
+    { name: "a deleted record", record: "absent" },
+    { name: "a damaged record", record: "damaged" },
+  ];
+
+  for (const arm of cases) {
+    test(`refuses under ${arm.name} and leaves the artifact byte-untouched`, () => {
+      const s = scratch(`guard-${arm.record}`);
+      try {
+        const before = plantArtifact(s);
+        // The shell installer writes no install record (the record belongs to the
+        // lifecycle family), so the record conditions are planted here; the guard
+        // must answer the same way in every one of them.
+        const recordPath = join(s.home, ".jaiship/install.json");
+        mkdirSync(dirname(recordPath), { recursive: true });
+        const record = {
+          schemaVersion: "install.record.v1",
+          version: "0.0.0",
+          commit: "a".repeat(40),
+          builtAt: "2026-11-18T12:00:00.000Z",
+          dirty: false,
+          channel: "dev",
+          stateSchemaVersion: "delivery.state.v1",
+          provenance: "verified",
+          installedAt: "2026-11-18T12:05:00.000Z",
+          launcherDisposition: "none",
+        };
+        if (arm.record === "absent") rmSync(recordPath, { force: true });
+        if (arm.record === "damaged") writeFileSync(recordPath, "{ damaged\n");
+        if (arm.record === "record-stale") {
+          writeFileSync(recordPath, JSON.stringify({ ...record, commit: "b".repeat(40) }));
+        }
+        if (arm.record === "current") writeFileSync(recordPath, JSON.stringify(record));
+        const result = runInstaller(s);
+        expect({ arm: arm.record, status: result.status }).toEqual({ arm: arm.record, status: 3 });
+        const combined = `${result.stdout}${result.stderr}`;
+        expect(combined).toContain("refusing:");
+        expect(combined).toContain("install");
+        expect(digest(launcherPath(s))).toBe(before);
+        expect(
+          readdirSync(dirname(launcherPath(s))).filter((name) => name.includes(".tmp")),
+        ).toEqual([]);
+      } finally {
+        s.dispose();
+      }
+    });
+  }
+
+  test("a directory or a foreign non-launcher content is refused too", () => {
+    const s = scratch("guard-foreign");
+    try {
+      installOnce(s);
+      const path = launcherPath(s);
+      rmSync(path, { force: true });
+      mkdirSync(path);
+      const result = runInstaller(s);
+      expect(result.status).toBe(3);
+      expect(`${result.stdout}${result.stderr}`).toContain("refusing:");
+      expect(existsSync(path)).toBe(true);
+    } finally {
+      s.dispose();
+    }
+  });
+
+  test("a NUL-containing binary is refused without a shell warning and stays byte-untouched", () => {
+    const s = scratch("guard-nul");
+    try {
+      installOnce(s);
+      const path = launcherPath(s);
+      // Compiled-artifact shaped: ELF magic, NUL bytes, and a size past the
+      // bounded probe window, so a whole-file text read would warn and reread
+      // 8 KiB of binary content.
+      const bytes = Buffer.concat([
+        Buffer.from([0x7f, 0x45, 0x4c, 0x46]),
+        Buffer.alloc(8192, 0),
+        Buffer.from("not the delivered launcher\n"),
+      ]);
+      writeFileSync(path, bytes);
+      chmodSync(path, 0o755);
+      const before = digest(path);
+      const result = runInstaller(s);
+      expect(result.status).toBe(3);
+      expect(`${result.stdout}${result.stderr}`).toContain("refusing:");
+      expect(result.stderr).not.toContain("null byte");
+      expect(result.stderr).not.toContain("ignored null byte");
+      expect(digest(path)).toBe(before);
+    } finally {
+      s.dispose();
+    }
+  });
+
+  test("the delivered launcher and an absent path are still owned by this step", () => {
+    const s = scratch("guard-allow");
+    try {
+      installOnce(s);
+      const content = readFileSync(launcherPath(s), "utf8");
+      const again = runInstaller(s);
+      expect(again.status).toBe(0);
+      expect(readFileSync(launcherPath(s), "utf8")).toBe(content);
+    } finally {
+      s.dispose();
+    }
+  });
+});

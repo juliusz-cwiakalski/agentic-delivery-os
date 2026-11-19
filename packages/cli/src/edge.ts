@@ -634,7 +634,7 @@ export function registerEdgeSecrets(
  * Read the registry target through the injected state port. The derived
  * projection is observed by its documented record key; no mutation or fence is
  * acquired by a read. The verified fold is carried additively (DM-8,
- * TDR-0044 §4) so the both-target comparison reads the ledger, never the
+ * TDR-0049 §4) so the both-target comparison reads the ledger, never the
  * projection document and never the pm-notes bytes.
  */
 export const createRegistryLintReader = (

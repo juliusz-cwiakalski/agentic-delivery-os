@@ -692,6 +692,58 @@ test_local_requires_git_dir() {
   assert_contains "${stdout}" "Not a project root" "Should mention missing .git"
 }
 
+
+# ============================================================================
+# THE MANAGED-INSTALL REPORTING ARM (GH-346 F-14, AC-F14-2)
+# ============================================================================
+
+# One reachable primary-identity binary plus a fake bun answering the read-free
+# probe, and a scratch home holding a managed install.
+create_managed_install_fixture() {
+  local -r base="$1"
+  mkdir -p "${base}/project/.git" "${base}/project/packages/cli/bin" "${base}/bin" "${base}/home/.fake-product/bin"
+  printf '#!/usr/bin/env bun\n' > "${base}/project/packages/cli/bin/jaiship.ts"
+  cat > "${base}/bin/bun" <<'FAKE_BUN'
+#!/usr/bin/env bash
+if [[ "$*" == *"--print-install-path"* ]]; then
+  if [[ -n "${DELIVERY_OS_WORKING_NAME:-}" ]]; then
+    printf 'override-not-scrubbed\n' >&2
+    exit 3
+  fi
+  printf '%s\n' "~/.fake-product/bin/fake-product"
+  exit 0
+fi
+exit 0
+FAKE_BUN
+  chmod +x "${base}/bin/bun"
+  printf '\177ELF fixture artifact\n' > "${base}/home/.fake-product/bin/fake-product"
+  printf '{"schemaVersion":"install.record.v1"}\n' > "${base}/home/.fake-product/install.json"
+}
+
+test_uninstaller_reports_a_managed_install_and_removes_none_of_it() {
+  local -r base="${_test_tmpdir}/managed"
+  create_managed_install_fixture "${base}"
+  local output
+  output="$(cd "${base}/project" && PATH="${base}/bin:${PATH}" HOME="${base}/home" DELIVERY_OS_WORKING_NAME=renamed-tool report_managed_install "${base}/project" 2>&1)"
+  assert_contains "${output}" "Managed install detected at ${base}/home/.fake-product/bin/fake-product"
+  assert_contains "${output}" "install.json"
+  assert_contains "${output}" "install uninstall"
+  assert_contains "${output}" "removes no binary, slot, record, or Jaiship root"
+  assert_file_exists "${base}/home/.fake-product/bin/fake-product"
+  assert_file_exists "${base}/home/.fake-product/install.json"
+}
+
+test_uninstaller_reports_no_managed_install_without_a_reachable_binary() {
+  local -r base="${_test_tmpdir}/nobinary"
+  mkdir -p "${base}/project/.git" "${base}/home"
+  local output exit_code=0
+  output="$(PATH="${base}/bin:${PATH}" HOME="${base}/home" report_managed_install "${base}/project" 2>&1)" || exit_code=$?
+  assert_exit_code 0 "${exit_code}" "the no-binary arm is not an error"
+  assert_contains "${output}" "No managed install detected"
+  assert_not_contains "${output}" "fake-product" "no path is guessed"
+  assert_not_contains "${output}" "[ERROR]" "no error line is emitted"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -741,6 +793,10 @@ main() {
   run_test "unknown option exits with code 2" test_unknown_option
   run_test "no mode specified exits with code 2" test_no_mode_specified
   run_test "local uninstall requires .git directory" test_local_requires_git_dir
+
+  # Managed-install reporting arm (GH-346 F-14)
+  run_test "uninstaller reports a managed install and removes none of it" test_uninstaller_reports_a_managed_install_and_removes_none_of_it
+  run_test "uninstaller reports no managed install without a reachable binary" test_uninstaller_reports_no_managed_install_without_a_reachable_binary
 
   print_summary
 }

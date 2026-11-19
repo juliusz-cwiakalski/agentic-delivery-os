@@ -99,6 +99,27 @@ const m2PageEntry =
     seeAlso: [pageIn(M2_REFERENCE_ROOT, pageName)],
   });
 
+/** The M4-rooted family pages (GH-346): the install lifecycle's own milestone. */
+const M4_REFERENCE_ROOT = "doc/planning/oss-tooling/milestones/m4";
+
+/** An M4-rooted family page for one named reference page. */
+const m4PageEntry =
+  (pageName: string) =>
+  (
+    path: readonly string[],
+    summary: string,
+    usage: readonly string[],
+    options: readonly (readonly [string, string])[],
+    examples: readonly string[],
+  ): HelpEntry => ({
+    path,
+    summary,
+    usage,
+    options: [...options, ...GLOBAL_OPTIONS],
+    examples,
+    seeAlso: [pageIn(M4_REFERENCE_ROOT, pageName)],
+  });
+
 /** The M2-rooted family pages (GH-298): steer documents itself in its milestone. */
 const m2Entry = (
   path: readonly string[],
@@ -990,6 +1011,80 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ["<binary> supervise [--json]"],
     [],
     ["<binary> supervise", "<binary> supervise --json"],
+  ),
+
+  m4PageEntry("install")(
+    ["install"],
+    "Install, upgrade, inspect, roll back, and remove the installed product; installation is owned by the primary identity, so the compatibility alias advertises the family and refuses it — run the lifecycle through the installed product binary as the reference page and the local install guide document",
+    [
+      "<binary> install [--add-to-path] [--shell-profile <path>] [--migrate] [--dry-run] [--stop-daemon]",
+      "<binary> install status [--json]",
+      "<binary> install rollback [--dry-run] [--stop-daemon]",
+      "<binary> install uninstall [--dry-run] [--stop-daemon]",
+      "<binary> install purge [--dry-run] [--stop-daemon] [--yes]",
+    ],
+    [
+      ["--add-to-path", "Append one delimited PATH block to the operator's profile"],
+      [
+        "--shell-profile <path>",
+        "The profile file to manage; overrides the declared shell mapping",
+      ],
+      ["--migrate", "Accept the migration hook; this build declares it unavailable"],
+      ["--dry-run", "Print the complete plan and write nothing"],
+      [
+        "--stop-daemon",
+        "Stop a live daemon through the delivered stop path before the swap or removal",
+      ],
+      ["--yes", "Confirm `install purge`"],
+    ],
+    [
+      "<binary> install --dry-run",
+      "<binary> install status --json",
+      "<binary> install rollback",
+      "<binary> install uninstall --dry-run",
+      "<binary> install purge --yes",
+    ],
+  ),
+  m4PageEntry("install")(
+    ["install", "status"],
+    "Report the running identity, the installed record, the record condition, the slot, the target stability, the state-format verdict, and the managed block",
+    ["<binary> install status [--json]"],
+    [],
+    ["<binary> install status", "<binary> install status --json"],
+  ),
+  m4PageEntry("install")(
+    ["install", "rollback"],
+    "Swap the rollback slot and the destination with two renames in reverse order",
+    ["<binary> install rollback [--dry-run] [--stop-daemon]"],
+    [
+      [
+        "--dry-run",
+        "Print the two identities, the two renames, and the record update, or the refusal",
+      ],
+      ["--stop-daemon", "Stop a live daemon through the delivered stop path before the swap"],
+    ],
+    ["<binary> install rollback", "<binary> install rollback --dry-run"],
+  ),
+  m4PageEntry("install")(
+    ["install", "uninstall"],
+    "Remove the artifact, the slot, the record, and the managed PATH block, always printing the purge residual set",
+    ["<binary> install uninstall [--dry-run] [--stop-daemon]"],
+    [
+      ["--dry-run", "Print the removal list and the residual set in two separated blocks"],
+      ["--stop-daemon", "Stop a live daemon through the delivered stop path before removal"],
+    ],
+    ["<binary> install uninstall", "<binary> install uninstall --dry-run"],
+  ),
+  m4PageEntry("install")(
+    ["install", "purge"],
+    "Remove the artifact surface and both roots behind an explicit confirmation",
+    ["<binary> install purge [--dry-run] [--stop-daemon] [--yes]"],
+    [
+      ["--dry-run", "Print the removal list including every enumerated project root"],
+      ["--stop-daemon", "Stop a live daemon through the delivered stop path before removal"],
+      ["--yes", "Confirm the purge; without it the run refuses and removes nothing"],
+    ],
+    ["<binary> install purge", "<binary> install purge --yes", "<binary> install purge --dry-run"],
   ),
 ];
 

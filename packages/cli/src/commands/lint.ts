@@ -44,7 +44,7 @@ export type LintPmNotesRead =
 /**
  * A registry target read: verified evidence, or a classified state failure.
  *
- * `fold` is the additive field (DM-8, TDR-0044 §4): the verified ledger fold the
+ * `fold` is the additive field (DM-8, TDR-0049 §4): the verified ledger fold the
  * both-target divergence comparison reads. The delivered fields keep their
  * values and types; a read that exposes no ledger omits the fold and the
  * comparison has nothing to compare.

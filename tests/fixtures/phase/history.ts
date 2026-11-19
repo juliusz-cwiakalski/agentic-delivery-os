@@ -1,5 +1,5 @@
 /**
- * Transition-history fixtures for the phase mirror (F-5, API-6, TDR-0044).
+ * Transition-history fixtures for the phase mirror (F-5, API-6, TDR-0049).
  *
  * A history is a plain list of verified `phase.transition` records, so a fixture
  * states exactly what the ledger would hold. `reopenedThenRecompleted` is the

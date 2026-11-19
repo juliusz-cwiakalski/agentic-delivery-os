@@ -7,7 +7,8 @@
  * prior identity, and delegates to the one shared launcher composition. It never
  * composes the program itself and never calls the command runtime.
  */
-import { runBinLauncher } from "../src/bin-launcher.ts";
+import { resolveReentryEntryPath, runBinLauncher } from "../src/bin-launcher.ts";
+import { injectedBuildIdentity } from "../src/build-identity.ts";
 
 /** The compatibility alias's declared identity; the one identity literal here. */
 const DEFAULT_WORKING_NAME = "delivery-os";
@@ -20,7 +21,11 @@ export const completion: Promise<void> = runBinLauncher({
   streams: { stdout: process.stdout, stderr: process.stderr },
   processId: process.pid,
   signalHost: process,
-  daemonEntry: process.argv[1],
+  daemonEntry: resolveReentryEntryPath({
+    argvEntry: process.argv[1],
+    execPath: process.execPath,
+  }),
+  buildIdentity: injectedBuildIdentity(),
 }).then((exitCode) => {
   if (exitCode !== 0) process.exitCode = exitCode;
 });
