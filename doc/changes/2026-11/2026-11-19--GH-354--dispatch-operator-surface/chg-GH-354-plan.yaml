@@ -823,9 +823,9 @@ phases:
   #   checked by `pnpm check` at the phase-8 aggregate.)
   # ---------------------------------------------------------------------------
   - id: 1
-    title: "Land TDR-0056 and its decision index row (satisfied at plan time; no committable work)"
+    title: "Land the governing decision record and its decision index row (satisfied at plan time; no committable work)"
     kind: planning
-    summary: "chore(GH-354): land TDR-0056 (satisfied at plan time)"
+    summary: "chore(GH-354): land the governing decision record (satisfied at plan time)"
     scope:
       files:
         # TRACKED at plan time (86aa74e8) and clean. Declared as the phase's
