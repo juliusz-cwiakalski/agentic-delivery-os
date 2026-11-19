@@ -18,16 +18,25 @@ import {
   PARK_EVIDENCE_FIELDS,
   PROVIDER_ANNOUNCEMENT_RECORD_KEY,
   PROVIDER_ANNOUNCEMENT_SCHEMA_ID,
+  PROVIDER_BUDGET_BASES,
+  PROVIDER_BUDGET_SCOPES,
   PROVIDER_CONDITION_KINDS,
+  PROVIDER_CONDITION_TIE_ORDER,
   PROVIDER_COST_CLASSES,
+  PROVIDER_MIGRATE_MAX_SOURCES,
+  PROVIDER_MIGRATE_SOURCE_MAX_BYTES,
+  PROVIDER_MIGRATE_SOURCE_MAX_LINES,
   PROVIDER_PARK_RECORD_KEY,
   PROVIDER_PARK_SCHEMA_ID,
   PROVIDER_PARK_STATES,
   PROVIDER_PARKS_DOCUMENT_NAME,
   PROVIDER_PARKS_PROJECTION_SCHEMA_ID,
   PROVIDER_RECORD_KINDS,
+  PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
   PROVIDER_SKIP_REASONS,
+  PROVIDER_WATCH_CONDITIONS,
   PROVIDER_WATCH_MAPPING_KINDS,
+  PROVIDER_ZONE_NAME_MAX_LENGTH,
 } from "../../packages/core/src/contracts/provider";
 
 const ROOT = process.cwd();
@@ -103,15 +112,38 @@ describe("TC-PROV-001 contract surface", () => {
       parkStates: PROVIDER_PARK_STATES,
       severities: ANNOUNCEMENT_SEVERITIES,
       watchMappingKinds: PROVIDER_WATCH_MAPPING_KINDS,
+      watchConditions: PROVIDER_WATCH_CONDITIONS,
+      budgetScopes: PROVIDER_BUDGET_SCOPES,
+      budgetBases: PROVIDER_BUDGET_BASES,
     };
     for (const [name, values] of Object.entries(sets)) {
       expect(diffNames(`closed set ${name}`, values, INVENTORY.closedSets[name] ?? [])).toEqual([]);
     }
   });
 
-  test("evidence allowlists are exactly eight and eleven fields", () => {
-    expect(PARK_EVIDENCE_FIELDS).toHaveLength(8);
-    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(11);
+  test("the condition tie order inserts budget-exhausted third", () => {
+    expect([...PROVIDER_CONDITION_TIE_ORDER]).toEqual([
+      "peak-window",
+      "quota-exhausted",
+      "budget-exhausted",
+      "provider-outage",
+      "credential-missing",
+      "credential-rejected",
+    ]);
+    expect([...PROVIDER_CONDITION_TIE_ORDER]).toEqual([...PROVIDER_CONDITION_KINDS]);
+  });
+
+  test("the five declared bound constants are pinned by name and value", () => {
+    expect(PROVIDER_ZONE_NAME_MAX_LENGTH).toBe(64);
+    expect(PROVIDER_SIMULATE_FIXTURE_MAX_BYTES).toBe(65536);
+    expect(PROVIDER_MIGRATE_SOURCE_MAX_BYTES).toBe(65536);
+    expect(PROVIDER_MIGRATE_SOURCE_MAX_LINES).toBe(2000);
+    expect(PROVIDER_MIGRATE_MAX_SOURCES).toBe(64);
+  });
+
+  test("evidence allowlists are exactly fourteen and seventeen fields", () => {
+    expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
+    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(17);
     expect([...PARK_EVIDENCE_FIELDS]).toEqual(INVENTORY.evidence.park);
     expect([...ANNOUNCEMENT_EVIDENCE_FIELDS]).toEqual(INVENTORY.evidence.announcement);
   });

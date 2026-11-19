@@ -80,7 +80,7 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     }
     expect(counts.get("config")).toBe(10);
     expect(counts.get("state")).toBe(9);
-    expect(counts.get("provider")).toBe(13);
+    expect(counts.get("provider")).toBe(16);
     expect(counts.get("merge")).toBe(7);
     expect([...DOMAIN_KINDS]).toContain("config");
     expect([...DOMAIN_KINDS]).not.toContain("handover");

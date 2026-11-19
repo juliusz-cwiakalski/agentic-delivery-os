@@ -58,11 +58,11 @@ describe("TC-PROV-028 park shape and closed allowlist", () => {
     expect(record.schemaVersion).toBe("delivery.provider.park.v1");
   });
 
-  test("every evidence key belongs to the eight-field allowlist", () => {
+  test("every evidence key belongs to the fourteen-field allowlist", () => {
     for (const key of Object.keys(park().evidence)) {
       expect(allowlist.fields).toContain(key);
     }
-    expect(allowlist.fields).toHaveLength(8);
+    expect(allowlist.fields).toHaveLength(14);
   });
 });
 

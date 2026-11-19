@@ -6,7 +6,7 @@ created: 2026-10-31
 last_updated: 2026-11-07
 owners: ["engineering"]
 service: delivery-os
-summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with eight skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
+summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, UTC peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
 links:
   related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
@@ -102,13 +102,14 @@ Structural or relational violations fail `provider.chain.invalid`. An absent def
 
 Resolution walks the selected chain in declared order and selects the first eligible entry. An entry is eligible when it is enabled, its combined condition is clear, and either it is a subscription entry or the chain allows paid fallback and no subscription entry is parked for a peak window. A peak-window park therefore never substitutes paid capacity.
 
-Every non-selected entry is reported with exactly one reason from the closed eight-value set:
+Every non-selected entry is reported with exactly one reason from the closed nine-value set:
 
 | Reason | Meaning |
 |--------|---------|
 | `disabled` | The descriptor's `enabled` flag is false. |
 | `peak-window` | The entry is parked in its peak window. |
 | `quota-exhausted` | The entry is parked on an exhausted quota limit with a future reset, or is skipped as a failed entry whose exhausted limit has no honest reset. |
+| `budget-exhausted` | The entry is parked (`window` scope) or failed (`ticket` scope) on a declared spend ceiling measured at or above its limit. |
 | `provider-outage` | The entry is parked on a transport, HTTP, envelope, or parse failure. |
 | `credential-missing` | The entry is parked because its credential reference could not resolve. |
 | `credential-rejected` | The entry is parked because the provider rejected the credential (HTTP 401/403). |
@@ -133,16 +134,16 @@ Malformed JSON, an invalid envelope (`code` not `200` or `success` not `true`), 
 
 ### Conditions and MAX
 
-Peak and quota are independent conditions on one entry. They are combined by the MAX rule: the later expiry wins, the park lists every active condition kind, and the single cause is the condition that determines the expiry. Ties resolve in the fixed order `peak-window`, `quota-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`.
+Peak and quota are independent conditions on one entry. They are combined by the MAX rule: the later expiry wins, the park lists every active condition kind, and the single cause is the condition that determines the expiry. Ties resolve in the fixed order `peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`.
 
 ### Parks
 
 Every non-clear provider condition with an honest future expiry becomes a named park; a failed entry (quota exhausted with no honest reset) is not a park and is reported as a skipped entry instead. Provider parks are named `provider:<name>`; chain parks are named `chain:<name>`. A park carries:
 
-- a cause from the closed set `peak-window`, `quota-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`, `chain-exhausted`, or `reevaluation-cap`;
+- a cause from the closed set `peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`, `chain-exhausted`, or `reevaluation-cap`;
 - the active condition kinds;
 - a creation time and an absolute expiry strictly in the future at creation;
-- bounded, secret-free evidence drawn only from the eight-field park allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, and `credentialRefName` (the reference name only, never the resolved value).
+- bounded, secret-free evidence drawn only from the fourteen-field park allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName` (the reference name only, never the resolved value), `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`, and `budgetCeiling`.
 
 A peak or quota park expires at the determining condition's end. An outage or credential-failure park uses its configured TTL. A `reevaluation-cap` park uses the configured cap TTL. A `chain-exhausted` park uses the earliest contributing provider expiry. A park is always a provider-availability pause with a guaranteed resume time; it is never a blocked lane, never a delivery failure, and never hides a lane's readiness condition.
 
@@ -154,9 +155,9 @@ Every non-clear condition that persists a park emits exactly one structured anno
 
 Announcements use a closed code set:
 
-`provider.peak.parked`, `provider.quota.parked`, `provider.quota.reset_missing`, `provider.quota.unreachable`, `provider.quota.http_error`, `provider.quota.auth_rejected`, `provider.quota.malformed`, `provider.credential.missing`, `provider.chain.exhausted`, `provider.reevaluation.cap`, and `provider.resumed`.
+`provider.peak.parked`, `provider.quota.parked`, `provider.quota.reset_missing`, `provider.quota.unreachable`, `provider.quota.http_error`, `provider.quota.auth_rejected`, `provider.quota.malformed`, `provider.credential.missing`, `provider.chain.exhausted`, `provider.reevaluation.cap`, `provider.resumed`, `provider.budget.parked`, and `provider.budget.crossed`.
 
-`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning. An announcement carries a safe templated message and bounded evidence projected at runtime through the closed eleven-field allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName`, `parkName`, `parkExpiresAt`, and `announcementCode`; non-allowlisted keys are dropped. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
+`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning. An announcement carries a safe templated message and bounded evidence projected at runtime through the closed seventeen-field allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName`, `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`, `budgetCeiling`, `parkName`, `parkExpiresAt`, and `announcementCode`; non-allowlisted keys are dropped. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
 
 Announcements surface in three places: inside `data.announcements` for `resolve` and a successful `quota`; in the classified error envelope plus the diagnostic stream for a failure that produces no park; and in the state ledger as `provider.announcement` records when a resolution persists park state. A failed entry's announcement appears in `data.announcements` but is not written to the state ledger because no park exists. A failing `quota` carries the announcement code in the safe summary.
 
@@ -206,7 +207,7 @@ Consequently a configuration-resolution failure (`config-invalid` with its class
 
 ### Error taxonomy
 
-The provider kind carries five provider-engine error identities, classified by exact code:
+The provider kind carries sixteen rows while the engine family's own count stays five. The five provider-engine error identities, classified by exact code:
 
 | Code | Category | Retryable | Projection |
 |------|----------|-----------|------------|
@@ -280,7 +281,7 @@ The quota transport contract is one `send` call receiving the endpoint, method `
 | Hermetic testing | Zero live network calls, zero live credential reads, and zero real sleeps; clock, sleep, credential port, and transport are injected. |
 | Runtime neutrality | Provider core imports only core contracts and its own modules; the ambient-globals guard covers the provider tier. |
 | Secret safety | No secret, authorization header, or raw response body appears in envelopes, diagnostics, park records, announcement records, or evidence; canary tests cover every captured surface. |
-| Bounded evidence | Park and announcement evidence is at most 1024 serialized bytes and 20 fields, drawn only from the closed allowlists (8 park fields; 8 base plus 3 announcement fields); announcement evidence is projected through the 11-field allowlist at runtime, so non-allowlisted keys are dropped. |
+| Bounded evidence | Park and announcement evidence is at most 1024 serialized bytes and 20 fields, drawn only from the closed allowlists (14 park fields; 14 base plus 3 announcement fields); announcement evidence is projected through the 17-field allowlist at runtime, so non-allowlisted keys are dropped. |
 | Idempotence | Re-evaluating an unchanged park generation appends zero duplicate records; repeated `parks list` has zero side effects; repeated `quota` performs zero state writes. |
 | Expiry correctness | A park is inactive exactly at `expiresAt`; TTL and chain parks have an expiry strictly after creation; no park is created with a past or absent expiry. |
 | Error-table synchronization | The five provider-engine rows agree between the machine table and the documented table in both directions; provider classification is exact-code and total with `fallback.internal` containment. |

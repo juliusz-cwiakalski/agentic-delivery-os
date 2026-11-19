@@ -20,6 +20,7 @@ import {
 import {
   collectorIdOfFamilyCode,
   isDeclaredCollectorFamilyCode,
+  RESERVED_TWO_SEGMENT_CODES,
   runSyncCheck,
   scanReferences,
 } from "../../scripts/checks/error-table-sync";
@@ -1078,8 +1079,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 130) {
-    failures.push(`table length ${live.length} != baseline + 130 (${BASELINE_ROWS.length + 130})`);
+  if (live.length !== BASELINE_ROWS.length + 133) {
+    failures.push(`table length ${live.length} != baseline + 133 (${BASELINE_ROWS.length + 133})`);
   }
   return failures;
 };
@@ -1095,7 +1096,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const kinds = new Map<string, number>();
     for (const entry of live) kinds.set(entry.domainKind, (kinds.get(entry.domainKind) ?? 0) + 1);
     expect(Object.fromEntries(kinds)).toMatchObject({
-      provider: 13,
+      provider: 16,
       input: 1,
       config: 10,
       state: 9,
@@ -1159,7 +1160,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 130,
+      BASELINE_ROWS.length + 133,
     );
   });
 
@@ -1182,7 +1183,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 130);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 133);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1790,11 +1791,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 164 entries and 164 documented rows", async () => {
+  test("the live tree is green at 167 entries and 167 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(164);
-    expect(result.counts.documentedRows).toBe(164);
+    expect(result.counts.sourceEntries).toBe(167);
+    expect(result.counts.documentedRows).toBe(167);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1805,7 +1806,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("164 identities");
+    expect(doc).toContain("167 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
@@ -1829,5 +1830,75 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     const declared = scanReferences("coordinator.already-running", [...DOMAIN_KINDS]);
     expect(declared.map((reference) => reference.code)).toEqual(["coordinator.already-running"]);
     expect(declared.every((reference) => reference.recognized)).toBe(true);
+  });
+});
+
+/**
+ * GH-350 — the provider register moves as one edit-set: three declared rows,
+ * both table counts at 167, the delivered-rows metric at 166, the arithmetic at
+ * `+ 133`, the allowlist unchanged at 66, and the corpus at 84 (59 / 25).
+ */
+describe("GH-350 the provider register moves as one edit-set", () => {
+  const NEW_CODES = [
+    "provider.peak.zone-unknown",
+    "provider.budget.exceeded",
+    "provider.migrate.refused",
+  ] as const;
+
+  test("the provider kind holds sixteen rows including the three declared policy identities", () => {
+    const providerRows = (ERROR_TABLE as readonly ErrorTableEntry[]).filter(
+      (entry) => entry.domainKind === "provider",
+    );
+    expect(providerRows).toHaveLength(16);
+    for (const code of NEW_CODES) {
+      const row = providerRows.find((entry) => entry.code === code);
+      expect(row, code).toBeDefined();
+      expect(row).toMatchObject({
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      });
+      expect((row?.remediationHint ?? "").length, code).toBeGreaterThan(0);
+    }
+  });
+
+  test("both counts hold 167, the delivered-rows metric 166, the arithmetic +133 and the allowlist 66", async () => {
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    expect(result.counts.sourceEntries).toBe(167);
+    expect(result.counts.documentedRows).toBe(167);
+    expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
+    const entries = ERROR_TABLE as readonly ErrorTableEntry[];
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(166);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+    const doc = readFile(ROOT, DOC);
+    expect(doc).toContain("167 machine identities");
+    expect(doc).toContain("the same 167 identities");
+    expect(doc).toContain("delivered-rows metric");
+    expect(doc).toContain("166");
+    expect(doc).toContain("BASELINE_ROWS.length + 133");
+    expect(doc).toContain("exact two-segment allowlist of 66 declared identities");
+  });
+
+  test("the corpus holds 84 rows: 59 true-positive and 25 false-positive, one resolving row per new code", () => {
+    const truePositives = JSON.parse(
+      readFileSync(join(ROOT, CORPUS, "true-positives.json"), "utf8"),
+    ) as { rows: { text: string; recognized: boolean; resolves: boolean }[] };
+    const falsePositives = JSON.parse(
+      readFileSync(join(ROOT, CORPUS, "false-positives.json"), "utf8"),
+    ) as { rows: { text: string; recognized: boolean; resolves: boolean }[] };
+    expect(truePositives.rows).toHaveLength(59);
+    expect(falsePositives.rows).toHaveLength(25);
+    expect(truePositives.rows.length + falsePositives.rows.length).toBe(84);
+    for (const code of NEW_CODES) {
+      const rows = truePositives.rows.filter((row) => row.text === code);
+      expect(rows, code).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ recognized: true, resolves: true });
+      expect(
+        falsePositives.rows.filter((row) => row.text === code),
+        code,
+      ).toHaveLength(0);
+    }
   });
 });

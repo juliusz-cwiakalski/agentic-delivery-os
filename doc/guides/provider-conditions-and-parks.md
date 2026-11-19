@@ -74,12 +74,14 @@ Announcements use a closed code set: `provider.peak.parked`,
 `provider.quota.unreachable`, `provider.quota.http_error`,
 `provider.quota.auth_rejected`, `provider.quota.malformed`,
 `provider.credential.missing`, `provider.chain.exhausted`,
-`provider.reevaluation.cap`, and `provider.resumed`. The first two and the last
-are informational; the rest are warnings. Evidence is closed to the eight park
-fields plus `parkName`, `parkExpiresAt`, and `announcementCode`; announcement
-evidence is projected at runtime through that closed eleven-field allowlist, so
-non-allowlisted keys are dropped. No raw body, authorization header, credential
-value, or endpoint userinfo is retained.
+`provider.reevaluation.cap`, `provider.resumed`, `provider.budget.parked`, and
+`provider.budget.crossed`. The first two, `provider.resumed`, and
+`provider.budget.parked` are informational; the rest are warnings. Evidence is
+closed to the fourteen park fields (the delivered eight plus `timezone` and the
+five budget fields) plus `parkName`, `parkExpiresAt`, and `announcementCode`;
+announcement evidence is projected at runtime through that closed
+seventeen-field allowlist, so non-allowlisted keys are dropped. No raw body,
+authorization header, credential value, or endpoint userinfo is retained.
 
 ## Configuration
 

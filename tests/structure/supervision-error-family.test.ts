@@ -79,20 +79,30 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
     expect(baseline.rows).toHaveLength(150);
     // The captured baseline includes GH-335's four harness rows; it predates
     // GH-299's `metrics` row, the two supervise rows, and GH-346's eleven
-    // install rows, so the delivered comparison excludes those three kinds.
+    // install rows. GH-350 inserts three provider rows INSIDE the provider
+    // block, so the comparison is "the baseline plus the three declared new
+    // provider codes": filter those codes out first, then compare row for row.
+    const NEW_PROVIDER_CODES = new Set([
+      "provider.peak.zone-unknown",
+      "provider.budget.exceeded",
+      "provider.migrate.refused",
+    ]);
     const live = entries.filter(
       (entry) =>
         entry.domainKind !== "supervise" &&
         entry.domainKind !== "metrics" &&
-        entry.domainKind !== "install",
+        entry.domainKind !== "install" &&
+        !NEW_PROVIDER_CODES.has(entry.code),
     );
     expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // The new rows are appended after every delivered row: no reordering.
-    expect(entries.slice(0, 150).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // Indices 150..152 hold supervise/metrics and 153..163 hold the eleven
-    // install rows, so the baseline prefix index stays while its meaning narrows.
-    expect(entries.slice(150).map((entry) => entry.domainKind)).toEqual([
+    // The three new rows are declared inside the provider block, not appended.
+    expect(
+      entries.filter((entry) => NEW_PROVIDER_CODES.has(entry.code)).map((entry) => entry.code),
+    ).toEqual([...NEW_PROVIDER_CODES]);
+    // The tail kinds are positionally unchanged: the last fourteen rows are the
+    // two supervise rows, the one metrics row, and the eleven install rows.
+    expect(entries.slice(-14).map((entry) => entry.domainKind)).toEqual([
       "supervise",
       "supervise",
       "metrics",

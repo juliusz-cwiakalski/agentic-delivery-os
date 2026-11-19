@@ -513,6 +513,10 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       "install.slot.absent",
       "install.slot.invalid",
       "install.purge.unconfirmed",
+      // GH-350 adds the three declared provider-policy rows.
+      "provider.peak.zone-unknown",
+      "provider.budget.exceeded",
+      "provider.migrate.refused",
     ]);
     const delivered = entries.filter((entry) => !additive.has(entry.code));
     expect(delivered).toHaveLength(preChange.length);

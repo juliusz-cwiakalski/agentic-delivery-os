@@ -17,6 +17,7 @@ const INFO_CODES = new Set<AnnouncementCode>([
   "provider.peak.parked",
   "provider.quota.parked",
   "provider.resumed",
+  "provider.budget.parked",
 ]);
 
 /** Map a park cause (and its failure class) to the closed announcement code. */
@@ -29,6 +30,8 @@ export const announcementCodeForCondition = (
       return "provider.peak.parked";
     case "quota-exhausted":
       return "provider.quota.parked";
+    case "budget-exhausted":
+      return "provider.budget.parked";
     case "provider-outage":
       if (failureClass?.startsWith("http_")) return "provider.quota.http_error";
       if (

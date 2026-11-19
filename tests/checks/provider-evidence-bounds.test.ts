@@ -65,11 +65,11 @@ describe("TC-PROV-049 evidence bounds and closed allowlists", () => {
     expect(unknown.join("\n")).toContain("unknown evidence key rawBody");
   });
 
-  test("the two allowlists are the closed eight and eleven fields", () => {
+  test("the two allowlists are the closed fourteen and seventeen fields", () => {
     expect(PARK_EVIDENCE_FIELDS).toEqual(parkAllowlist);
     expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toEqual(announcementAllowlist);
-    expect(PARK_EVIDENCE_FIELDS).toHaveLength(8);
-    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(11);
+    expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
+    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(17);
   });
 
   test("announcement evidence filters unknown keys and the bounds still reject", () => {

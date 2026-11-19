@@ -720,11 +720,12 @@ const GH346_ROWS: readonly PageClaimRow[] = [
     stale: [
       "The table declares 149 machine identities",
       "The table declares 153 machine identities",
+      "The table declares 164 machine identities",
       "allowlist of 65 declared identities",
     ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 164 machine identities",
+      "The table declares 167 machine identities",
       "allowlist of 66 declared identities",
       "the eleven `install` rows",
       "the thirteen `harness` rows",
@@ -732,23 +733,26 @@ const GH346_ROWS: readonly PageClaimRow[] = [
   },
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
-    stale: ["149 identities", "153 identities", "65-entry allowlist"],
-    required: ["164 identities", "66-entry allowlist"],
+    stale: ["149 identities", "153 identities", "164 identities", "65-entry allowlist"],
+    required: ["167 identities", "66-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
     stale: [
       "149 entries",
       "153 entries",
+      "164 entries",
+      "163 delivered rows",
       "BASELINE_ROWS.length + 115",
       "BASELINE_ROWS.length + 119",
+      "BASELINE_ROWS.length + 130",
       "family count (25)",
     ],
     required: [
-      "164 entries",
-      "163 delivered rows",
+      "167 entries",
+      "166 delivered rows",
       "66 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 130",
+      "BASELINE_ROWS.length + 133",
       "family count (26)",
     ],
   },
@@ -871,10 +875,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("164 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("167 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 164 identities",
+      "missing required phrase: 167 identities",
     );
   });
 
@@ -915,5 +919,184 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     expect(pageClaimViolations(GH346_ROWS, noBuildSide).join("\n")).toContain(
       "missing required phrase: a scan of the build-side site's own root",
     );
+  });
+});
+
+/**
+ * GH-350 — the phase-1 documentation half: the count-bearing pages move with the
+ * register, the engine page's whole vocabulary edit-set lands with the closed
+ * sets, and the eight decision records are present, `Proposed` and indexed.
+ *
+ * The page set is the phase-1 subset of the plan's closed page set; later phases
+ * extend it in their own commits.
+ */
+type GH350Row = {
+  readonly page: string;
+  readonly stale: readonly string[];
+  readonly required: readonly string[];
+};
+
+const GH350_PHASE1_PAGES = [
+  "doc/spec/features/feature-result-contract.md",
+  "doc/spec/features/feature-ceremony-runner.md",
+  "doc/spec/features/feature-metrics.md",
+  "doc/spec/features/feature-install-lifecycle.md",
+  "doc/spec/features/feature-provider-engine.md",
+] as const;
+
+const GH350_PHASE1_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-result-contract.md",
+    stale: [
+      "The table declares 164 machine identities",
+      "the same 164 identities",
+      "BASELINE_ROWS.length + 130",
+    ],
+    required: [
+      "167 machine identities",
+      "the same 167 identities",
+      "delivered-rows metric",
+      "BASELINE_ROWS.length + 133",
+      "the sixteen `provider` rows",
+      "provider.peak.zone-unknown",
+      "provider.budget.exceeded",
+      "provider.migrate.refused",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-ceremony-runner.md",
+    stale: ["164 identities"],
+    required: ["167 identities", "66-entry allowlist"],
+  },
+  {
+    page: "doc/spec/features/feature-metrics.md",
+    stale: ["164 entries", "163 delivered rows", "BASELINE_ROWS.length + 130"],
+    required: ["167 entries", "166 delivered rows", "BASELINE_ROWS.length + 133"],
+  },
+  {
+    page: "doc/spec/features/feature-install-lifecycle.md",
+    stale: ["declared table total at 164 machine identities"],
+    required: ["declared table total at 167 machine identities", "66 declared identities"],
+  },
+  {
+    page: "doc/spec/features/feature-provider-engine.md",
+    stale: [
+      "eight skip reasons",
+      "closed eight-value set",
+      "eight-field park allowlist",
+      "closed eleven-field allowlist",
+      "The provider kind carries five provider-engine error identities",
+      "8 park fields; 8 base plus 3 announcement fields",
+      "the 11-field allowlist",
+    ],
+    required: [
+      "nine skip reasons",
+      "the closed nine-value set",
+      "fourteen-field park allowlist",
+      "closed seventeen-field allowlist",
+      "carries sixteen rows while the engine family's own count stays five",
+      "14 park fields; 14 base plus 3 announcement fields",
+      "the 17-field allowlist",
+      "provider.budget.parked",
+      "provider.budget.crossed",
+      "`peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`",
+    ],
+  },
+];
+
+export const gh350Phase1Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH350_PHASE1_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push("GH-350 phase-1 page set is not the declared five");
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 the phase-1 count and vocabulary pages state the delivered truth", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the five declared pages are reconciled in both directions", () => {
+    expect(gh350Phase1Violations(GH350_PHASE1_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced outgoing count and a missing new count each fail by name", () => {
+    const withStale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-metrics.md"
+        ? `${pageText(page) ?? ""}\nthe table holds 164 entries\n`
+        : pageText(page);
+    expect(gh350Phase1Violations(GH350_PHASE1_ROWS, withStale).join("\n")).toContain(
+      "stale phrase present: 164 entries",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-engine.md"
+        ? (pageText(page) ?? "").replace("nine skip reasons", "eight skip reasons")
+        : pageText(page);
+    expect(gh350Phase1Violations(GH350_PHASE1_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: nine skip reasons",
+    );
+  });
+});
+
+describe("GH-350 the eight decision records are Proposed and indexed", () => {
+  const RECORDS = [
+    "ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md",
+    "PDR-0006-per-project-provider-policy-repository-config-layers.md",
+    "TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md",
+    "TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md",
+    "TDR-0051-legacy-provider-profile-and-hook-migration.md",
+    "TDR-0052-watch-observation-freshness-and-stale-condition.md",
+    "TDR-0053-provider-family-mounting-27th-prompt-required.md",
+    "TDR-0054-provider-budget-work-item-ref-source.md",
+  ] as const;
+
+  test("each record exists, is Proposed, and has exactly one index row", () => {
+    const index = read("doc/decisions/00-index.md");
+    for (const file of RECORDS) {
+      const text = read(`doc/decisions/${file}`);
+      expect(text, file).toContain("status: Proposed");
+      expect(index.split(`(${file})`).length - 1, file).toBe(1);
+    }
+  });
+
+  test("the spec references every record and the index", () => {
+    const spec = read("doc/changes/2026-11/2026-11-19--GH-350--provider-policy/chg-GH-350-spec.md");
+    for (const id of [
+      "ADR-0012",
+      "PDR-0006",
+      "TDR-0049",
+      "TDR-0050",
+      "TDR-0051",
+      "TDR-0052",
+      "TDR-0053",
+      "TDR-0054",
+    ]) {
+      expect(spec, id).toContain(id);
+    }
   });
 });
