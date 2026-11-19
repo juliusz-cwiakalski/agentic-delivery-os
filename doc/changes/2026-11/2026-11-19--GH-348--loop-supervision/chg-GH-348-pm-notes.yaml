@@ -900,3 +900,37 @@ notes:
       commit.gpgsign=true and not the change."
     type: info
     date: "2026-11-19"
+  - text: "PLAN REVISION (post-delivery, declarations only) — commit 1d38e25d.
+      Aligned the plan's scope declarations with what the delivery commits touched,
+      with NO partition change: still 41 ACs, 74 TCs and 120 mutation rows, no
+      phase added or removed, no AC/TC/mutation ownership moved, and no source
+      behaviour change. Method: `git show --name-only` on every phase commit,
+      reconciled against that phase's declared `scope.files`. Phases whose scope
+      grew, and by how many paths: phase 4 +2 (the edge ledger wiring and the
+      command-index type re-exports), phase 5 +2 (the restart append and the
+      BACKOFF-001 per-session fold correction), phase 6 +6 (the stop-append edge
+      mount and the five index barriers for the fold move), phase 7 +40 (the family
+      counters and their fixtures, the bounded-log-read supervisor, the export
+      barriers, the loop-prompt export-shape fix, and nineteen formatter-only test
+      touches), phase 8 +5 (formatter-only conformance touches), phase 9 +24 (the
+      forbidden-literals registry, the module inventory and its executable
+      allowances, the additivity/port-contract/taxonomy/seam pins, the alias help
+      baseline, the remaining family counters, and the two gate fixes). Phases 1, 2
+      and 3 needed no addition. No declaration was deleted. Declared entries now
+      total 196 (130 unique paths) across the nine phases, and the phased
+      reconciliation reports ZERO untouched-by-its-phase paths. Also recorded: the
+      header's DELIVERED DEVIATIONS block (D-1 commit subjects are the primitive's
+      path template because the plan-phase summary is unreachable without
+      `--phase delivery`; D-2 the pinned-surface set; D-3 formatter-only touches;
+      D-4 the D1 re-observation surface; D-5 the stop-fold home; D-6 the fixture
+      commit-signing environment fact; D-7 the two phase-9 gate fixes), phase 2's
+      obligation 2.9 and phase 7's 7.10 declaring the `loop-production-composition`
+      expectation update with its authorising clause (spec §8.5 / DOD-8, the repin
+      landing in phase 7), and phase 7's 7.9 plus phase 9's 9.7 stating each pin
+      update and that every assertion and mutation control is preserved. Gate
+      verdicts immediately before the commit: `jaiship plan validate GH-348` ->
+      verdict=valid, artifact=yaml:chg-GH-348-plan.yaml, tier=full,
+      readyForDevelopment=true; `jaiship lint plan GH-348` -> verdict valid,
+      errors=[]. This note lands in the follow-up commit that records the hash."
+    type: info
+    date: "2026-11-19"
