@@ -1,6 +1,6 @@
 /**
  * TC-SPAWN-001..004 — the production spawn identity, the deterministic title,
- * and the lifecycle prompt (GH-347 F-7; API-6; DEC-8; TDR-0049).
+ * and the lifecycle prompt (GH-347 F-7; API-6; DEC-8; TDR-0054).
  *
  * The fresh/resume rows come from the single registry; the role-less and
  * grammar cases drive the command-level harness and the shipped CLI.

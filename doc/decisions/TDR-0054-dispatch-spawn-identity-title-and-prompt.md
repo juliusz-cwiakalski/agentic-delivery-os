@@ -1,5 +1,5 @@
 ---
-id: TDR-0049
+id: TDR-0054
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -71,15 +71,15 @@ links:
     - "packages/cli/src/commands/dispatch.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["ADR-0008", "TDR-0016", "TDR-0040", "TDR-0042", "TDR-0043", "TDR-0046"]
+  decisions: ["ADR-0008", "TDR-0016", "TDR-0040", "TDR-0042", "TDR-0043", "TDR-0051"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0049: Dispatch Spawn Identity — Agent, Title, and Lifecycle Prompt
+# TDR-0054: Dispatch Spawn Identity — Agent, Title, and Lifecycle Prompt
 
-> **Traceability.** Spec §15 **DEC-8**; §5.1 F-7; §6 Flow 1; §8.1 API-6/API-7; §8.3 DM-6; §8.5 "Spawn identity is a deliberate behaviour change"; §17.7 AC-F7-1…AC-F7-4; §22 "No shell injection surface"; §25.1 Appendix A; §25.4 Appendix D; §15.1 maps DEC-8 to this record. Fires **TDR-0040** revisit trigger 1 and supplies the identity **TDR-0046**'s reap matches.
+> **Traceability.** Spec §15 **DEC-8**; §5.1 F-7; §6 Flow 1; §8.1 API-6/API-7; §8.3 DM-6; §8.5 "Spawn identity is a deliberate behaviour change"; §17.7 AC-F7-1…AC-F7-4; §22 "No shell injection surface"; §25.1 Appendix A; §25.4 Appendix D; §15.1 maps DEC-8 to this record. Fires **TDR-0040** revisit trigger 1 and supplies the identity **TDR-0051**'s reap matches.
 
 ## Context
 
@@ -108,7 +108,7 @@ The typed dispatch builds a fixed command line and a fixed sentence. The shell b
 
 Root cause versus symptom: the symptom is a spawn with no `--agent`, no title, and a one-line prompt. The cause is that when the propagation contract was delivered (TDR-0040), the *delivery* had no need for the dispatch to declare an agent, so the composition stayed role-less by design and the gap was recorded as an open question. Gap 8 closes that question — and it also closes the terminate operation's identity requirement, because a reap keyed on `ticket-<REF>` presumes a title exists.
 
-The title deserves separate reasoning because it is not cosmetic: it is the deterministic handle an operator uses to find the session and the engine uses to reap an escaped runtime (TDR-0046 DC-3). A title that could be set by the operator would move the reap's identity into user input.
+The title deserves separate reasoning because it is not cosmetic: it is the deterministic handle an operator uses to find the session and the engine uses to reap an escaped runtime (TDR-0051 DC-3). A title that could be set by the operator would move the reap's identity into user input.
 
 Deliberately out of scope: no new CLI flag, no configuration key, no operator override (NG-11, AC-F7-4); no second agent identity per dispatch (one spawn binds one seat, TDR-0040); no change to the adapter's model rendering beyond the delivered binding mapping; no prompt-engineering of the lifecycle content beyond parameterization (Appendix D); no change to the hook (retired, NG-2).
 
@@ -161,7 +161,7 @@ Deliberately out of scope: no new CLI flag, no configuration key, no operator ov
 ## Decision Drivers
 
 1. **Parity with the shell's session identity.** The shell's session is a named `pm` session under `ticket-<REF>`; that is what makes the delivery attributable and findable.
-2. **Termination needs a deterministic name.** The exact-identity reap (TDR-0046) matches `ticket-<REF>`; without a title the reap has only the session identity, and the reap's near-miss safety argument weakens.
+2. **Termination needs a deterministic name.** The exact-identity reap (TDR-0051) matches `ticket-<REF>`; without a title the reap has only the session identity, and the reap's near-miss safety argument weakens.
 3. **The lifecycle is the work.** A constant sentence cannot carry state detection, the eleven phases, and merge authority; the prompt is the difference between "a session ran" and "a delivery ran".
 4. **Nothing enters the grammar.** A flag would make the identity and title operator variables, which would move the reap's identity into user input and grow the help inventory.
 5. **Honesty about role-less runs.** The delivered disclosure is right; this decision must narrow it without deleting it.
@@ -285,7 +285,7 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
 - **Decision:** Adopt **ALT-5**.
 
   1. **DC-1 — The production composition declares the lifecycle agent.** A production dispatch supplies `pm` through the spawn contract's existing optional agent member; the delivered pure resolver produces the single-seat binding; the adapter renders exactly one `--agent pm` together with the binding's resolved `--model`. An empty or whitespace-only identity keeps the delivered `config.value.invalid` refusal; absence stays the `no-agent` state. (Spec F-7, API-6, DM-6.)
-  2. **DC-2 — A fresh spawn carries one deterministic title; a resume carries none.** The title is `ticket-<REF>` derived from the canonical work-item reference, validated against the declared reference grammar, bounded to a short single token, and carried on an additive optional spawn-title member. It is byte-identical for the same ref across invocations and is never present on a resume. (Spec DM-6, AC-F7-2; the reap in TDR-0046 DC-3 matches it.)
+  2. **DC-2 — A fresh spawn carries one deterministic title; a resume carries none.** The title is `ticket-<REF>` derived from the canonical work-item reference, validated against the declared reference grammar, bounded to a short single token, and carried on an additive optional spawn-title member. It is byte-identical for the same ref across invocations and is never present on a resume. (Spec DM-6, AC-F7-2; the reap in TDR-0051 DC-3 matches it.)
   3. **DC-3 — The fresh prompt is the delivery lifecycle, parameterized and passed as data.** It carries state detection, resume synchronization, actions by state, the eleven-phase lifecycle, and merge authority, parameterized by the ref and the resolved base branch. A resume uses the operator's resume text when supplied and the same lifecycle prompt otherwise. The prompt is never a shell fragment and never carries a credential or environment value. (Spec F-7, AC-F7-3.)
   4. **DC-4 — These are composition facts, not operator surface.** No CLI flag, no configuration key, no override. The grammar and its help inventory are unchanged. (Spec NG-11, AC-F7-4.)
   5. **DC-5 — A role-less composition stays role-less and unbound.** It sends no identity members and no title, records no binding, and is disclosed as an unresolved seat; no seat, identity, or title is inferred, whatever the profile's seat count (TDR-0040 A-1). The production dispatch is not role-less.
@@ -301,7 +301,7 @@ ALT-5 satisfies C-1 through C-6. C-1: no flag, no key, no override; the delivere
 ### Positive Outcomes
 
 - The dispatched session is the `pm` delivery session the lifecycle expects, so attribution, telemetry, and handover read a named delivery rather than a generic run.
-- The title gives the terminate reap its second identity, which is what makes the exact-identity rule able to catch a runtime that escaped the direct child (TDR-0046 DC-3).
+- The title gives the terminate reap its second identity, which is what makes the exact-identity rule able to catch a runtime that escaped the direct child (TDR-0051 DC-3).
 - The prompt becomes declared, parameterized data a reviewer can read, instead of a sentence whose adequacy nobody can inspect.
 - TDR-0040's open question closes without changing any of its rules, and seat telemetry for dispatch attempts gains the binding it was designed to receive.
 - No grammar growth: operators gain behaviour, not options.
@@ -346,7 +346,7 @@ ALT-5 satisfies C-1 through C-6. C-1: no flag, no key, no override; the delivere
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §2.1 (spawn identity and prompt snapshot), §5.1 F-7, §6 Flow 1, §7.2 `[OUT]`, §8.1 API-6/API-7, §8.3 DM-6, §8.5, §17.7, §22, §25.1 Appendix A, §25.4 Appendix D.
-- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0040 (seat–spawn cardinality, seat resolution, A-1/A-4, revisit trigger 1); TDR-0042 (opencode integration mode); TDR-0043 (opencode adapter contract); [TDR-0046](TDR-0046-harness-terminate-operation.md) (the reap that matches the title).
+- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0040 (seat–spawn cardinality, seat resolution, A-1/A-4, revisit trigger 1); TDR-0042 (opencode integration mode); TDR-0043 (opencode adapter contract); [TDR-0051](TDR-0051-harness-terminate-operation.md) (the reap that matches the title).
 - Specs: `doc/spec/features/feature-harness-adapters.md`; `feature-dispatch-engine.md`; `feature-delivery-lifecycle.md`; the dispatch and command reference pages.
 - Contracts and code (read 2026-11-18): `packages/core/src/contracts/harness.ts`; `packages/core/src/contracts/queue-ready.ts`; `packages/core/src/domain/harness-profile-propagation.ts`; `packages/adapters/src/harness/opencode.ts`; `packages/cli/src/production.ts`; `packages/cli/src/commands/dispatch.ts`.
 - Parity reference (read 2026-11-18): `scripts/deliver-ticket.sh` — the reaper's exact argv match (lines 1258-1288) and base-branch detection (lines 1714-1720).

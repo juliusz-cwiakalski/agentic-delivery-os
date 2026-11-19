@@ -1,5 +1,5 @@
 ---
-id: TDR-0047
+id: TDR-0052
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -73,15 +73,15 @@ links:
     - "packages/cli/src/production.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["TDR-0005", "TDR-0017", "TDR-0026", "TDR-0044", "TDR-0046", "TDR-0048"]
+  decisions: ["TDR-0005", "TDR-0017", "TDR-0026", "TDR-0049", "TDR-0051", "TDR-0053"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0047: In-Process Bounded Restart Loop
+# TDR-0052: In-Process Bounded Restart Loop
 
-> **Traceability.** Spec §15 **DEC-5** (and the budget half of DEC-3); §4.1 restart-loop metric; §5.1 F-6; §6 Flow 1; §8.1 API-1; §8.3 DM-1/DM-4; §8.5; §17.6 AC-F6-1…AC-F6-6; NFR-4; §25.6 Appendix F(D/E); §15.1 maps DEC-5 to this record. Depends on [TDR-0046](TDR-0046-harness-terminate-operation.md), records into [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md)'s lane, and consumes [TDR-0048](TDR-0048-total-derivation-ladder-and-corroboration.md)'s ladder.
+> **Traceability.** Spec §15 **DEC-5** (and the budget half of DEC-3); §4.1 restart-loop metric; §5.1 F-6; §6 Flow 1; §8.1 API-1; §8.3 DM-1/DM-4; §8.5; §17.6 AC-F6-1…AC-F6-6; NFR-4; §25.6 Appendix F(D/E); §15.1 maps DEC-5 to this record. Depends on [TDR-0051](TDR-0051-harness-terminate-operation.md), records into [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md)'s lane, and consumes [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md)'s ladder.
 
 ## Context
 
@@ -151,7 +151,7 @@ Deliberately out of scope: no change to the eleven tokens, projections, or exits
 ### C-6: An operator resume consumes no ordinal and is never budget-refused
 
 - **Statement:** A `--resume-prompt` continuation of a recorded lane consumes no restart ordinal and is not refused by the restart budget; only an automatic restart after a stall consumes one. No second session starts until a stalled session is confirmed terminated.
-- **Source:** AC (AC-F3-2; AC-F6-1; §5.1 F-3/F-6) + [TDR-0046](TDR-0046-harness-terminate-operation.md) DC-3/DC-4
+- **Source:** AC (AC-F3-2; AC-F6-1; §5.1 F-3/F-6) + [TDR-0051](TDR-0051-harness-terminate-operation.md) DC-3/DC-4
 - **Verification:** test (operator resume at the bound: admitted, zero ordinals consumed; automatic restart: one ordinal, and zero new sessions when terminate is unsupported) + code review
 - **Negotiable:** no
 
@@ -278,7 +278,7 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
 
 - **Eligibility:** Not eligible (fails C-7).
 - **Summary:** Each iteration re-invokes the dispatch command as a child process, so the "loop" is external to the engine and each attempt keeps its own record.
-- **Constraint compliance:** Passes C-1…C-6. Fails C-7 and the lease contract: a nested invocation would claim the repository-exclusive lease its parent already holds and be refused `queue.single-flight` by its own parent (TDR-0045), or would need a lease hand-off that does not exist.
+- **Constraint compliance:** Passes C-1…C-6. Fails C-7 and the lease contract: a nested invocation would claim the repository-exclusive lease its parent already holds and be refused `queue.single-flight` by its own parent (TDR-0050), or would need a lease hand-off that does not exist.
 - **Driver fit:** Fails driver 3 (it cannot confirm death before starting a second process tree) and driver 7 (it adds a process seam to avoid a loop).
 - **Pros:** Reuses the one-shot path unchanged; each attempt is a clean process boundary.
 - **Cons:** Self-refusal on the lease; no shared session identity or termination confirmation; two processes to supervise; a shell-flavoured design in a change whose whole point is the no-shell invariant.
@@ -304,7 +304,7 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
   4. **DC-4 — The stall ladder is ordered and total, and it is not the completed-session ladder.** A stall short-circuits **only** on a member of the **terminal pre-restart verdict set** — `merged` from a tracker-done work item, `blocked` from a blocking tracker state, `pr-open` from an open pull-request artifact (an artifact verdict, not a tracker fact) — which is returned without a restart. A decisive artifact **outside** the set (`finished`, `partial`, `noop-lane-nothing-to-do`) does not stop a stall: a stalled session with commits and complete pm-notes restarts below the bound. Absent a member, an undecidable truth is terminal `state-unverified` at exit 2 and consumes no ordinal; otherwise, below the bound, the loop consumes exactly one ordinal, appends exactly one `economics.restart` with reason `watchdog.liveness-stalled`, resumes the recorded session (a fresh spawn only when no session was ever recorded), and runs the next iteration; at or above the bound it terminates the session, appends the delivered terminal exhaustion record, and produces `max-restarts`. After a **completed** session, derivation is artifact-first and this ladder is not consulted. (Spec §5.1 F-4/F-5/F-6; §8.5 "Stall truth is not completed-session truth"; §25.6 Appendix F(C) and F(D); AC-F5-3, AC-F6-1…AC-F6-3.)
   5. **DC-5 — The attempt record is terminal-only.** Exactly one attempt record is appended at the dispatch's terminal classification; a restarted stalled iteration appends none, because the record carries a delivered result token an interrupted iteration does not have. A pre-session refusal appends none. (Spec §5.1 F-6, NFR-4, DM-2.)
   6. **DC-6 — The bound is the dispatch lane's own `lane.restart-budget`.** Default 3, unchanged. `coordinator.restart-budget` (10) governs coordinator supervision and is deliberately not consumed here; the shell lane's env default of 10 is a shell-lane default and is not adopted as the lane bound. No key is added; parity is proven with a pinned bound per case. (Spec DEC-5, DEC-10, NFR-11, §7.3, §8.5 "Configuration unchanged".)
-  7. **DC-7 — Operator resume is not a restart.** A `--resume-prompt` continuation consumes no ordinal and is not refused by the budget; only an automatic post-stall restart does. No second session starts until the stalled session is confirmed terminated (TDR-0046). (Spec F-3, AC-F3-2, AC-F6-1.)
+  7. **DC-7 — Operator resume is not a restart.** A `--resume-prompt` continuation consumes no ordinal and is not refused by the budget; only an automatic post-stall restart does. No second session starts until the stalled session is confirmed terminated (TDR-0051). (Spec F-3, AC-F3-2, AC-F6-1.)
   8. **DC-8 — The persisted restart count gates restarts, never admission.** A dispatch admitted with a persisted count at or above `lane.restart-budget` still runs exactly one iteration; a clean exit keeps its own classification and appends no exhaustion record, and only a stall in that iteration produces `max-restarts` with exactly one attempt record and the delivered exhaustion record. (Spec F-6, AC-F6-6, §25.6 Appendix F(D).)
 
   **One deliberate divergence from the shell, recorded.** The shell restarts a **stalled** session whose classification is `state-unverified` (it is not a member of the terminal pre-restart verdict set, so it falls through to the bound test at `scripts/deliver-ticket.sh:1698`). This decision makes an unverified stall **terminal with no ordinal consumed**, because the typed lane has already spent the declared five-attempt tracker ladder before concluding "unverified" (spec DEC-5, F-4), and replaying a series of exhausted ladders would multiply a known outage by the remaining budget. The divergence is justified and bounded: the operator can still re-dispatch, and the reader sees the exhaustion evidence that explains why no restart happened.
@@ -341,7 +341,7 @@ ALT-5 satisfies C-1 through C-8. C-1: the terminal rule is unconditional. C-2: e
 2. **Terminal rules.** Apply DC-2 first, then the stall ladder: terminate if capable, short-circuit only on the terminal pre-restart verdict set, decide unverified-terminal or restart, and enforce the bound; for a completed session, hand off to artifact-first derivation without consulting the stall ladder. Admit at or above the persisted bound and run exactly one iteration (DC-8).
 3. **Accounting.** On each restart, append exactly one `economics.restart` with `watchdog.liveness-stalled` and increment the count; at the bound, use the delivered exhaustion append and produce `max-restarts`.
 4. **Cardinality.** Keep the attempt append at the terminal classification only; assert that a restarted iteration appends none; keep the refusal path at zero.
-5. **Lane.** Append an active lane record per acquired session (TDR-0044) and exactly one terminal record at the dispatch's final classification.
+5. **Lane.** Append an active lane record per acquired session (TDR-0049) and exactly one terminal record at the dispatch's final classification.
 6. **Conformance.** Add the loop cases: clean exit at a high bound (one iteration), below-bound restart (one ordinal, one economics record, no attempt for the stalled iteration), at-bound `max-restarts` with the exhaustion record, unverified stall (no ordinal), non-capable terminate (no second session), and operator resume at the bound (admitted, no ordinal).
 7. **Documentation.** Replace the two "left to lane supervision" statements with the loop contract and record that the dispatch family is now a producer of `economics.restart`.
 
@@ -365,7 +365,7 @@ ALT-5 satisfies C-1 through C-8. C-1: the terminal rule is unconditional. C-2: e
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §2.1 (restart budget and shell loop snapshot), §4.1, §5.1 F-5/F-6, §6 Flow 1, §7.3, §8.1 API-1, §8.2, §8.3 DM-1/DM-4, §8.5 (including "Stall truth is not completed-session truth" and "Phase-ledger no-work arm retired"), §10, §11 RSK-3, §17.6 AC-F6-1…AC-F6-6, §23 (cost), §25.6 Appendix F(C–E).
-- Prior decisions: TDR-0005 (result taxonomy and exits); TDR-0017 (coordinator supervision architecture); TDR-0024 (attempt read side); TDR-0026 (restart-budget-exhausted reason vocabulary); [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md) (lane write points); [TDR-0046](TDR-0046-harness-terminate-operation.md) (termination); [TDR-0048](TDR-0048-total-derivation-ladder-and-corroboration.md) (the ladder a terminal iteration consumes).
+- Prior decisions: TDR-0005 (result taxonomy and exits); TDR-0017 (coordinator supervision architecture); TDR-0024 (attempt read side); TDR-0026 (restart-budget-exhausted reason vocabulary); [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) (lane write points); [TDR-0051](TDR-0051-harness-terminate-operation.md) (termination); [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) (the ladder a terminal iteration consumes).
 - Specs: `doc/spec/features/feature-dispatch-engine.md`; `feature-session-lifecycle-economics.md`; `feature-coordinator-supervision.md`.
 - Contracts and code (read 2026-11-18): `packages/core/src/app/dispatch.ts`; `packages/core/src/domain/dispatch-result.ts`; `packages/core/src/contracts/dispatch.ts`; `packages/core/src/contracts/economics.ts`; `packages/core/src/config/defaults.ts`; `packages/core/src/app/supervise.ts`; `packages/core/src/app/daemon-reconcile.ts`; `packages/cli/src/production.ts`.
 - Parity reference (read 2026-11-18): `scripts/deliver-ticket.sh` — `MAX_RESTARTS` default 10 (line 59), `decide_after_iteration` (lines 1648-1712), restart count increment (line 1963).

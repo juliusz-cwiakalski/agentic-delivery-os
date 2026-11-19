@@ -13,7 +13,7 @@ Reviewer stance: adversarial Definition-of-Ready gate (`@readiness-reviewer`), i
 - `chg-GH-347-test-plan.md` 0.3 (50 TCs in 11 groups, 42/42 ACs, 88 mutation rows, §3.1 exit-literal rule, §7.2 no-shell design, §7.4 register).
 - `chg-GH-347-plan.yaml` (parsed with a YAML loader: 8 phases, ids `[1..8]` once each, 8 × `files`/`title`/`kind`/`scope`/`folders`/`doneArtifacts` — no duplicated blocks; 2356 lines, not the 2353 claimed in the hand-off).
 - `chg-GH-347-pm-notes.yaml` (rulings (i)–(vi), reopened phases, DoR-1 RETRO).
-- `doc/decisions/TDR-0044…TDR-0049` (all still `status: Proposed`, all still untracked; index rows still committed — not accepted by this review).
+- `doc/decisions/TDR-0049…TDR-0054` (all still `status: Proposed`, all still untracked; index rows still committed — not accepted by this review).
 - Delivered code re-read for every code claim: `packages/core/src/contracts/{delivery-result,harness,dispatch,pm-notes}.ts`, `packages/core/src/domain/{dispatch-result,dispatch-comparison,dispatch-gate,dispatch-resume,daemon-peak-pause,dispatch-identity}.ts`, `packages/core/src/app/{dispatch,dispatch-ledger}.ts`, `packages/cli/src/{edge,production,projection}.ts`, `packages/adapters/src/{host/index,harness/opencode,harness/claude,file/pm-notes-parser}.ts`, `tests/behaviour/{dispatch-restart-budget,dispatch-liveness,dispatch-exit-projection}.test.ts`, `tests/structure/{harness-contract,harness-stream-contract}.test.ts`, `tests/checks/milestone-gate.test.ts`, `.changeset/config.json`, `package.json`, `tests/structure/inventory.json`, and the file existence of every path declared in phases 1–8.
 
 ## Facet Summary

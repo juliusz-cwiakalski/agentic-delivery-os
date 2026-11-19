@@ -179,7 +179,7 @@ findings:
       escalates to SIGKILL after a fixed `KILL_GRACE_MS = 100` (not the declared
       20 000 ms grace) and signals only the direct child (the child is not spawned
       `detached`, so no process group is signalled); there is no escaped-runtime
-      reap anywhere in production. TDR-0046 explicitly forbids reusing the 100 ms
+      reap anywhere in production. TDR-0051 explicitly forbids reusing the 100 ms
       probe escalation for terminate and requires the reported booleans to match
       the observed acts. API-5/AC-F5-5/NFR-6 require TERM to the process tree,
       KILL only after the declared grace, and an exact-identity reap. Appendix
@@ -470,7 +470,7 @@ dimensions:
       F(C), the incapable-adapter restart (B2) contradicts AC-F5-4, AC-F9-3's
       determinism oracle is weaker than stated, and the plan's absolute
       "never deleted/renamed/relaxed" rule is breached (M6). Plan scopes were
-      revised to declare the 12 touched files, TDR-0044..0049 are committed, and
+      revised to declare the 12 touched files, TDR-0049..0049 are committed, and
       the disclosed deviations (cold-resume registration, resume argv adjacency,
       provider-profile `pm` model, state-additivity lane pin, package.json
       no-shell script) are legitimate and consistent with the code.
@@ -594,7 +594,7 @@ remediation:
         `terminated` when a resume registers a new live stream (or key idempotence
         per acquisition). Add a test invoking the real adapter terminate (and a
         faithful tree double) and a non-vacuous broad-pattern negative control.
-      clause: "TDR-0046 C-2/C-4 (do not reuse the 100 ms probe escalation; booleans match observed acts); API-5; AC-F5-1; AC-F5-5; NFR-6."
+      clause: "TDR-0051 C-2/C-4 (do not reuse the 100 ms probe escalation; booleans match observed acts); API-5; AC-F5-1; AC-F5-5; NFR-6."
     - id: R6
       addresses: M3
       file: "packages/core/src/domain/dispatch-liveness.ts (dispatchStallUndecidable ~179-183)"

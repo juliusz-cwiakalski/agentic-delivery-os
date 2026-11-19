@@ -1,5 +1,5 @@
 ---
-id: TDR-0045
+id: TDR-0050
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -53,7 +53,7 @@ revisit_triggers:
   - "A caller needs the dispatch group to claim for a ref under a holder that also dispatches other refs: the own-holder rule and the repository-exclusive lease scope are reopened together, because the refusal's enforceability depends on the fixed dispatch holder."
   - "Fence contention is observed to last longer than the queue lease TTL in practice: the declared wait bound and its relationship to lease liveness are re-decided, and the wait never silently becomes unbounded."
   - "A refusal is proposed to carry a new detail member beyond `detail.holder`: that is a failure-envelope contract change (TDR-0027), not an edit inside this decision."
-  - "A live same-ref lease is proposed to be adopted as a resume instead of refused: resumability is an operator-requested act (TDR-0044), and automatic adoption from a refusal would make a second invocation hijack a running session."
+  - "A live same-ref lease is proposed to be adopted as a resume instead of refused: resumability is an operator-requested act (TDR-0049), and automatic adoption from a refusal would make a second invocation hijack a running session."
 links:
   related_changes: ["GH-347", "GH-292"]
   supersedes: []
@@ -72,13 +72,13 @@ links:
     - "packages/cli/src/production.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["TDR-0005", "TDR-0026", "TDR-0027", "TDR-0044"]
+  decisions: ["TDR-0005", "TDR-0026", "TDR-0027", "TDR-0049"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0045: Atomic Dispatch Admission
+# TDR-0050: Atomic Dispatch Admission
 
 > **Traceability.** Spec §15 **DEC-1** (admission, ticket AC-2) and the binding PM DECISION A; §5.1 F-2; §8.1 API-2; §8.3 DM-7; §8.5 "Queue sibling unchanged"; §10; §17.2 AC-F2-1…AC-F2-5; §25.6 Appendix F(A); §15.1 maps DEC-1 to this record. Amends **TDR-0026 DC-2/DC-3 for the dispatch caller only**.
 
@@ -326,7 +326,7 @@ ALT-4 satisfies C-1 through C-6. C-1: every returned verdict is a declared row, 
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §2.1 (admission snapshot), §5.1 F-2, §6 Flow 2, §8.1 API-2, §8.3 DM-7, §8.5, §12, §17.2, §22, §25.2, §25.6 Appendix F(A).
 - Amended decision: `doc/decisions/TDR-0026-queue-lifecycle-removal-single-flight.md` — C-4, C-5, DC-2, DC-3.
-- Prior decisions: TDR-0005 (delivery result enum and exit taxonomy); TDR-0027 (failure-envelope `detail.holder`); [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md) (the lane a live lease protects).
+- Prior decisions: TDR-0005 (delivery result enum and exit taxonomy); TDR-0027 (failure-envelope `detail.holder`); [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) (the lane a live lease protects).
 - Specs: `doc/spec/features/feature-dispatch-engine.md` (per-ref single-flight table); `feature-scheduling-engine.md`.
 - Contracts and code (read 2026-11-18): `packages/core/src/app/queue.ts`; `packages/core/src/app/dispatch.ts`; `packages/core/src/contracts/error-table.ts`; `packages/core/src/contracts/result.ts`; `packages/core/src/state/index.ts`; `packages/cli/src/production.ts`; `packages/core/src/config/defaults.ts`.
 - Parity reference: `scripts/deliver-ticket.sh` (single-lane-per-ticket expectation) and the TDR-0026 delivery evidence for the two-path guard.

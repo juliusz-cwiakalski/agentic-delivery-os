@@ -353,6 +353,54 @@ export {
   resolveQueueSettings,
   serializeProductionSchema,
 } from "./config/index.js";
+// GH-346: the install lifecycle contracts and its pure domain (DM-2..DM-6).
+export {
+  INSTALL_DESTINATION_DISPOSITIONS,
+  INSTALL_DEV_BUILD_CODE,
+  INSTALL_DOMAIN_CODES,
+  INSTALL_FAULT_STEPS,
+  INSTALL_LAUNCHER_DISPOSITIONS,
+  INSTALL_MAX_JUDGED_ROOTS,
+  INSTALL_OUTCOMES,
+  INSTALL_PROVENANCE_STATES,
+  INSTALL_RECORD_FILE_NAME,
+  INSTALL_RECORD_SCHEMA,
+  INSTALL_RECORD_STATES,
+  INSTALL_SHELL_PROFILE_MAPPING,
+  INSTALL_SLOT_STATES,
+  INSTALL_STATE_FORMAT_OUTCOMES,
+  INSTALL_STATE_ROOT_PROJECTS_DIRECTORY,
+  INSTALL_STATUS_SCHEMA,
+  INSTALL_TARGET_STABILITY_STATES,
+  type InstallArtifactIdentity,
+  type InstallDaemonPort,
+  type InstallDaemonState,
+  type InstallDestinationDisposition,
+  type InstallDomainCode,
+  type InstallFaultPort,
+  type InstallFaultStep,
+  type InstallFilePort,
+  type InstallFileStat,
+  type InstallGitRead,
+  type InstallLauncherDisposition,
+  type InstallOutcome,
+  type InstallOutcomeKind,
+  type InstallPathBlockRecord,
+  type InstallProvenance,
+  type InstallReconciliationReport,
+  type InstallRecord,
+  type InstallRecordState,
+  type InstallRunningIdentity,
+  type InstallRuntime,
+  type InstallSlotReport,
+  type InstallSlotState,
+  type InstallStagedWrite,
+  type InstallStateFormatOutcome,
+  type InstallStateFormatVerdict,
+  type InstallStateRootVerdict,
+  type InstallStatusPayload,
+  type InstallTargetStability,
+} from "./contracts/install.js";
 // GH-298: the shared typed message record and the `steer` family's declared
 // contract data. The full vocabulary lives in `@delivery-os/core/contracts`;
 // this entry re-exports the record schema, the shared closed sets, the filing
@@ -1159,6 +1207,78 @@ export {
   watchdogPreservedRefName,
   weightLoads,
 } from "./domain/index.js";
+export {
+  evaluateInstallAdmission,
+  type InstallAdmission,
+  installTargetStability,
+} from "./domain/install-admission.js";
+export {
+  compatibilityAdvisories,
+  incompatibleRoots,
+  judgeStateFormat,
+  judgeStateRoot,
+  type StateRootObservation,
+} from "./domain/install-compatibility.js";
+export {
+  detectPriorNamespace,
+  migrationAdvisory,
+  migrationUnavailableSummary,
+  PRIOR_NAMESPACE_NAMES,
+  priorNamespacePaths,
+} from "./domain/install-migration.js";
+export {
+  hasIdenticalBlock,
+  mergePathBlock,
+  type PathBlock,
+  removePathBlock,
+  renderPathBlock,
+  resolveProfilePath,
+  shellProfileFor,
+} from "./domain/install-path-block.js";
+// GH-346 phase 3: the install record, the compatibility verdict, and the
+// seven-step replace plan (DM-2, DM-4, Appendix B).
+export {
+  buildInstallRecord,
+  type InstallRecordRead,
+  parseInstallRecord,
+  readInstallRecord,
+  serializeInstallRecord,
+} from "./domain/install-record.js";
+// GH-346 phase 4: the removal matrix, the managed PATH block, and the migration
+// hook (DM-5, Appendix C.3).
+export {
+  INSTALL_REMOVAL_ORDER,
+  type InstallRemovalMember,
+  NOTHING_TO_REMOVE,
+  purgeMembers,
+  RESIDUAL_LABEL,
+  type RemovalFacts,
+  type RemovalMember,
+  residualSet,
+  uninstallMembers,
+} from "./domain/install-removal.js";
+export {
+  planReplace,
+  provenanceOfAdmission,
+  type ReplacePlan,
+  ROLLBACK_RECORD_CAUSES,
+  type RollbackPrecondition,
+  type RollbackRecordCause,
+  reconciliationRecordOf,
+  replacingRecordOf,
+  rollbackCauseSentence,
+  rollbackPrecondition,
+  rollbackRecordOf,
+  slotCondition,
+  targetStabilityOf,
+} from "./domain/install-replace.js";
+export {
+  assembleInstallStatus,
+  identityOfRecord,
+  recordStateOf,
+  runningIdentityOf,
+  slotReportOf,
+} from "./domain/install-status.js";
 export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,

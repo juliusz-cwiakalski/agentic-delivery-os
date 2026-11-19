@@ -281,7 +281,7 @@ dimensions:
       4-7 to every ended, non-stall session, arm 8 clean-only, arm 9 the non-clean
       classifier token, arm 10 unreadable-with-no-decisive-artifact; F(D) carries
       the termination-capability gate; DM-5 records the delivered two-case terminate
-      booleans and notes TDR-0046 DC-4 owner reconciliation. The four re-verified
+      booleans and notes TDR-0051 DC-4 owner reconciliation. The four re-verified
       current-truth pages match the terminate implementation and the ended-session
       order. The one over-claim is the capability sentence ("an adapter that declares
       no terminate capability ... never causes a second session"): true of the
@@ -321,9 +321,9 @@ delivered_assertion_disposition:
     while the classifier half is added. No unclaused deletion, rename, relaxation or
     reordering found.
 residuals_judgement:
-  - residual: "TDR-0046 DC-4 still says an already-exited or unknown session returns terminated:true; the adapter returns false for a known-but-gone runtime (still success)."
+  - residual: "TDR-0051 DC-4 still says an already-exited or unknown session returns terminated:true; the adapter returns false for a known-but-gone runtime (still success)."
     verdict: "Acceptable to defer"
-    owner: "TDR-0046 owner (decision-advisor / repository owner) at PR acceptance; the record is Proposed and spec v1.7 DM-5 records the delivered two-case semantics with the reconciliation noted."
+    owner: "TDR-0051 owner (decision-advisor / repository owner) at PR acceptance; the record is Proposed and spec v1.7 DM-5 records the delivered two-case semantics with the reconciliation noted."
     note: "The engine treats terminated:false as unconfirmed and resolves terminal state-unverified, which is the conservative, spec-consistent outcome. No code change required for this change."
   - residual: "No mutation row hoists the classifier arm above the artifact arms."
     verdict: "Acceptable to defer"

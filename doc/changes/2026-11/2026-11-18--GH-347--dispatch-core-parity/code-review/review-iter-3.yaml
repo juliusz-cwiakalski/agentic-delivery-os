@@ -163,7 +163,7 @@ findings:
     message: >-
       Two current-truth pages and the glossary still use "exact-identity reap" wording
       (the economics page bullet and frontmatter summary, and the dispatch page's
-      TDR-0046 link annotation), and the glossary Terminate/Exact-identity reap entries do
+      TDR-0051 link annotation), and the glossary Terminate/Exact-identity reap entries do
       not state the match-not-OS-reap meaning or the port-carried declaration. The
       harness-adapter page and the code already state that `reaped` reports the match.
     suggestion: >-

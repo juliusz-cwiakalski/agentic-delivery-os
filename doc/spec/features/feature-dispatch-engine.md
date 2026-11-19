@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution with the pinned supported-version window and declared integration mode evaluated once before the lease, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the dispatch-owned durable per-ref `dispatch.lane` record appended at each session acquisition and at the terminal classification with latest-wins reads and recorded-attempt resume (a recorded `pr-open` attempt included), the dispatch family's atomic per-ref admission decided inside the claim with the declared same-ref/other-ref verdicts and a bounded fence wait, spawn or resume through the harness session port with the caller agent identity `pm`, the single-seat binding, the deterministic `ticket-<REF>` title, and the ref-parameterized delivery-lifecycle prompt, handle acquisition before completion, the five-attempt tracker retry ladder, progress-based liveness with a bounded in-process restart loop that terminates a corroborated stall through the capability-gated `terminate` operation before any restart, the one total derivation ladder shared with the daemon path including the retired ledger no-work arm, the subsumed exit-0-no-artifact failure arm, the tracker-done `merged` arm, the artifact `partial` arm, and arm-aware corroboration, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, the published parity proof boundary, the CLI-independent bash fallback authority read, and the offline parity battery that proves all eleven classes with no shell dependency."
 links:
   related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293", "GH-335", "GH-347"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0044", "TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048", "TDR-0049"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/harness.ts"
@@ -86,7 +86,7 @@ Refusals before any session attempt exists are: an unknown harness, rejected inp
 
 ### Stall ladder
 
-The stall decision is a total, ordered ladder and it is not the artifact-first derivation ladder an ended session uses (TDR-0047):
+The stall decision is a total, ordered ladder and it is not the artifact-first derivation ladder an ended session uses (TDR-0052):
 
 1. **Terminal pre-restart verdict set.** Exactly three truths short-circuit a stall without a restart: `merged` from a tracker-done work item, `blocked` from a blocking tracker state, and `pr-open` from an open pull-request artifact. A decisive artifact outside the set — `finished`, `partial`, `noop-lane-nothing-to-do` — does not stop a stall.
 2. **Undecidable truth.** Any required read unreadable with no decisive artifact — an unreadable artifact, or an unreadable tracker with no open or already-merged pull request and no branch commits — resolves `state-unverified` at exit `2`, consumes no ordinal, and starts no second session.
@@ -99,7 +99,7 @@ An admitted iteration at or above a persisted count still runs once; only a stal
 ### Spawn identity, title, and lifecycle prompt
 
 The spawn facts are supplied by the production composition as data, and no new
-CLI flag, argument, or output key exposes them (TDR-0049):
+CLI flag, argument, or output key exposes them (TDR-0054):
 
 - **Agent identity.** The caller agent identity is `pm`, supplied through the
   delivered optional agent member; the single-seat binding is the delivered pure
@@ -139,7 +139,7 @@ The 404 summary states that the provider reported the work item absent for this 
 
 The dispatch family's per-ref verdict is decided **inside** the claim, from live
 lease truth observed atomically with the claim's own append, so a live same-ref
-lease can never slip past a separate pre-claim read (TDR-0045). It is one
+lease can never slip past a separate pre-claim read (TDR-0050). It is one
 predicate shared by `dispatch <ref>` and a composed daemon supervision claim,
 because both claim with a fixed holder and never renew mid-flight:
 
@@ -190,7 +190,7 @@ readiness condition are unchanged and are different controls.
 ## Durable per-ref lane record
 
 `dispatch.lane` (`delivery.dispatch.lane.v1`, key `dispatch.lanes:<ref>`) is the
-dispatch-owned durable lane record and the resumable artifact (TDR-0044). It
+dispatch-owned durable lane record and the resumable artifact (TDR-0049). It
 mirrors the daemon lane's shape without sharing its kind, its states, or its
 ownership:
 
@@ -235,7 +235,7 @@ no `dispatch.lane` records simply resolves "no lane".
 ## Result derivation and exit projection
 
 Derivation is one total order — the same derivation, with no second mode, is
-called by the one-shot path and by the daemon path (TDR-0048). First match wins;
+called by the one-shot path and by the daemon path (TDR-0053). First match wins;
 the pull-request and artifact arms apply to every ended, non-stall session, not
 only to a clean completion:
 
@@ -316,7 +316,7 @@ configuration key.
 ### Arm-aware corroboration
 
 Success corroboration is arm-aware for exactly two arms, and every other token
-keeps its token-keyed requirement (TDR-0048): a `merged` reached from a
+keeps its token-keyed requirement (TDR-0053): a `merged` reached from a
 tracker-done work item, and `noop-lane-nothing-to-do`, each require the tracker
 fact and nothing else. The closed requirement map is data — `merged` requires
 `pm-notes`, `tracker`, and `ci`; `pr-open`, `pr-open-unverified`, and `blocked`
@@ -677,11 +677,11 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [TDR-0016 — Additive harness streaming spawn seam](../../decisions/TDR-0016-harness-streaming-spawn-seam.md)
 - [TDR-0026 — Queue lifecycle removal and single-flight](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md)
 - [TDR-0027 — Command failure envelope detail slot](../../decisions/TDR-0027-command-failure-envelope-detail-slot.md)
-- [TDR-0044 — Dispatch-owned durable lane record](../../decisions/TDR-0044-dispatch-owned-durable-lane-record.md) — the lane kind, its fields, its ownership boundary, and recorded-attempt resume.
-- [TDR-0045 — Dispatch atomic admission verdicts](../../decisions/TDR-0045-dispatch-atomic-admission-verdicts.md) — the in-claim same-ref/other-ref verdict, the no-renewal rule, and the bounded fence wait.
-- [TDR-0046 — Harness terminate operation](../../decisions/TDR-0046-harness-terminate-operation.md) — the capability-gated terminate contract, its grace, and the exact-identity reap.
-- [TDR-0047 — In-process bounded restart loop](../../decisions/TDR-0047-in-process-bounded-restart-loop.md) — the one-invocation loop, the stall ladder, and one terminal attempt record.
-- [TDR-0048 — Total derivation ladder and corroboration](../../decisions/TDR-0048-total-derivation-ladder-and-corroboration.md) — the total order, the pm-notes artifact fact, and arm-aware corroboration.
-- [TDR-0049 — Dispatch spawn identity, title, and prompt](../../decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md) — the `pm` identity, the `ticket-<REF>` title, and the built lifecycle prompt.
+- [TDR-0049 — Dispatch-owned durable lane record](../../decisions/TDR-0049-dispatch-owned-durable-lane-record.md) — the lane kind, its fields, its ownership boundary, and recorded-attempt resume.
+- [TDR-0050 — Dispatch atomic admission verdicts](../../decisions/TDR-0050-dispatch-atomic-admission-verdicts.md) — the in-claim same-ref/other-ref verdict, the no-renewal rule, and the bounded fence wait.
+- [TDR-0051 — Harness terminate operation](../../decisions/TDR-0051-harness-terminate-operation.md) — the capability-gated terminate contract, its grace, and the exact-identity reap.
+- [TDR-0052 — In-process bounded restart loop](../../decisions/TDR-0052-in-process-bounded-restart-loop.md) — the one-invocation loop, the stall ladder, and one terminal attempt record.
+- [TDR-0053 — Total derivation ladder and corroboration](../../decisions/TDR-0053-total-derivation-ladder-and-corroboration.md) — the total order, the pm-notes artifact fact, and arm-aware corroboration.
+- [TDR-0054 — Dispatch spawn identity, title, and prompt](../../decisions/TDR-0054-dispatch-spawn-identity-title-and-prompt.md) — the `pm` identity, the `ticket-<REF>` title, and the built lifecycle prompt.
 
 **Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation), and `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/` (the durable lane, atomic admission, recorded-attempt resume, tracker ladder, terminate, the in-process loop, spawn identity, the total derivation, and the parity battery).

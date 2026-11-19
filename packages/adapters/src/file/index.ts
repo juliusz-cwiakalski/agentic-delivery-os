@@ -96,6 +96,34 @@ export {
   replaceHostIndexFile,
 } from "./host-index-store.js";
 export {
+  classifyInstallDestination,
+  createNodeInstallFilePort,
+  INSTALL_ARTIFACT_MODE,
+  INSTALL_DESTINATION_CLASSES,
+  INSTALL_PROBE_BYTES,
+  type InstallDestinationClass,
+  isCompiledArtifactAtPath,
+  isLauncherAtPath,
+  LAUNCHER_TARGET_MARKER,
+  launcherTargetOf,
+  symlinkTargetOf,
+} from "./install-destination.js";
+export {
+  INSTALL_PROFILE_MODE,
+  readProfileText,
+  writeProfileText,
+} from "./install-profile.js";
+export {
+  INSTALL_RECORD_MODE,
+  removeInstallRecord,
+  writeInstallRecordText,
+} from "./install-record.js";
+export {
+  enumerateStateRoots,
+  type StateRootEnumeration,
+  type StateRootFacts,
+} from "./install-state-roots.js";
+export {
   applyPromotionWrite,
   checkPromotionConfinement,
   type MemoryReadFileSystem,

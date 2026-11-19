@@ -1,5 +1,13 @@
 /**
- * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry holds 153 identities
+ * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry holds 164 identities
+ * (GH-290's three `events.*` rows, GH-292's two queue
+ * lifecycle rows, GH-309's three group-surface rows, GH-309's three
+ * moved `repos.*` rows, GH-287's three action-registry rows, GH-298's
+ * three steer rows, GH-299's one metrics row, GH-295's two supervise
+ * rows, GH-335's four harness rows, and GH-346's eleven install rows) with
+ * exactly four `dispatch` rows, and no `attempts.*`
+ * identity exists in the code, the help surface, the result-contract page, or
+ * the rendered output.
  * (GH-290's three `events.*` rows, GH-292's two queue
  * lifecycle rows, GH-309's three group-surface rows, GH-309's three
  * moved `repos.*` rows, GH-287's three action-registry rows, GH-298's
@@ -47,9 +55,9 @@ const SCAN_TARGETS = [
 ] as const;
 
 describe("TC-ATTEMPT-017 taxonomy closure", () => {
-  test("the registry holds exactly 153 identities and four dispatch rows", () => {
+  test("the registry holds exactly 164 identities and four dispatch rows", () => {
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries).toHaveLength(153);
+    expect(entries).toHaveLength(164);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.some((entry) => entry.code.startsWith("attempts."))).toBe(false);
     expect(entries.map((entry) => entry.code)).toContain("queue.reason-missing");

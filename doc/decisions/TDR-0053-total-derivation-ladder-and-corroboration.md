@@ -1,5 +1,5 @@
 ---
-id: TDR-0048
+id: TDR-0053
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -73,15 +73,15 @@ links:
     - "packages/core/src/app/daemon-dispatch-result.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["TDR-0005", "TDR-0010", "TDR-0018", "TDR-0024", "TDR-0047"]
+  decisions: ["TDR-0005", "TDR-0010", "TDR-0018", "TDR-0024", "TDR-0052"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0048: Total Derivation Ladder and Arm-Aware Corroboration
+# TDR-0053: Total Derivation Ladder and Arm-Aware Corroboration
 
-> **Traceability.** Spec §15 **DEC-6** and **DEC-11**; §15.1 maps DEC-6 to this record; §5.1 F-4/F-8; §6 Flow 4; §7.2 `[OUT]`; §7.3 (deferred corroboration re-point, not deferred arms); §8.3 DM-3/DM-4; §8.5 "Deliberate behaviour changes", "Phase-ledger no-work arm retired", "Stall truth is not completed-session truth", "One shared derivation, daemon path included", and "`pm-notes` corroboration remains ledger-sourced"; §17.8 AC-F8-1…AC-F8-5; §25.6 Appendix F(A–E); NFR-3. Sibling records: [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) (the stall ladder that consumes this one), [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md) (record cardinality).
+> **Traceability.** Spec §15 **DEC-6** and **DEC-11**; §15.1 maps DEC-6 to this record; §5.1 F-4/F-8; §6 Flow 4; §7.2 `[OUT]`; §7.3 (deferred corroboration re-point, not deferred arms); §8.3 DM-3/DM-4; §8.5 "Deliberate behaviour changes", "Phase-ledger no-work arm retired", "Stall truth is not completed-session truth", "One shared derivation, daemon path included", and "`pm-notes` corroboration remains ledger-sourced"; §17.8 AC-F8-1…AC-F8-5; §25.6 Appendix F(A–E); NFR-3. Sibling records: [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (the stall ladder that consumes this one), [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) (record cardinality).
 
 ## Context
 
@@ -294,7 +294,7 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
 
 - **Decision:** Adopt **ALT-5**.
 
-  1. **DC-1 — One total, ordered ladder over completed-session truth.** In order: pre-session refusals (no token, no attempt, no lane) → attempt-stage failures (spawn failure → `failed`; resume refused as uneconomical → `failed`; resume admission facts unreadable → `state-unverified`; unreadable collected harness evidence → `state-unverified`) → harness spawn refusal → `noop-lane-permission` → tracker readable and done → `merged` → tracker readable and blocking → `blocked` → PR open → `pr-open` / `pr-open-unverified` → PR already merged → `merged` → commits > 0 with complete pm-notes → `finished` → commits > 0 with incomplete or absent pm-notes → `partial` → commits = 0 with a readable non-done non-blocked tracker → `noop-lane-nothing-to-do` → the shared classifier's token (`failed` for a reported failure or non-zero exit; `partial` for a tool failure or premature end) → truth undecidable → `state-unverified` at exit 2. This is the **completed-session** ladder: a stall does not consult it, and at a stall only a member of the terminal pre-restart verdict set short-circuits (TDR-0047 DC-4; Appendix F C versus D). (Spec §25.6 Appendix F is normative; DM-4 states the order.)
+  1. **DC-1 — One total, ordered ladder over completed-session truth.** In order: pre-session refusals (no token, no attempt, no lane) → attempt-stage failures (spawn failure → `failed`; resume refused as uneconomical → `failed`; resume admission facts unreadable → `state-unverified`; unreadable collected harness evidence → `state-unverified`) → harness spawn refusal → `noop-lane-permission` → tracker readable and done → `merged` → tracker readable and blocking → `blocked` → PR open → `pr-open` / `pr-open-unverified` → PR already merged → `merged` → commits > 0 with complete pm-notes → `finished` → commits > 0 with incomplete or absent pm-notes → `partial` → commits = 0 with a readable non-done non-blocked tracker → `noop-lane-nothing-to-do` → the shared classifier's token (`failed` for a reported failure or non-zero exit; `partial` for a tool failure or premature end) → truth undecidable → `state-unverified` at exit 2. This is the **completed-session** ladder: a stall does not consult it, and at a stall only a member of the terminal pre-restart verdict set short-circuits (TDR-0052 DC-4; Appendix F C versus D). (Spec §25.6 Appendix F is normative; DM-4 states the order.)
   2. **DC-2 — The tracker-done arm precedes the blocking arm.** A readable tracker whose native state is done resolves `merged`, corroborated by the tracker fact, with no visible pull request required; a done work item that also carries a blocking label therefore resolves `merged`, not `blocked`. (Spec AC-F8-1, AC-F8-2; shell `closed → merged`.)
   3. **DC-3 — Artifact completeness is a ladder arm.** `finished` and `partial` are distinguished by the new `pmNotes: complete | incomplete | absent` artifact fact, with `complete` requiring a present document with a non-null delivery completion and every other shape reading as not complete; malformed reads as incomplete, so the fallible direction is never "finished". (Spec DM-3, AC-F8-3.)
   4. **DC-4 — One token, one derivation: the no-work arm is the shell arm, and the phase-ledger no-work arm is retired.** With zero commits, no pull request, and a readable tracker that is neither done nor blocking, the result is `noop-lane-nothing-to-do`, corroborated by the tracker fact; an unreadable tracker never takes this arm. The delivered phase-ledger no-work arm is **retired, not merely unused**: a complete phase ledger alone does not produce the token, a complete ledger with commits resolves `finished` or `partial` by pm-notes completeness, and a complete ledger with no commits reaches `noop-lane-nothing-to-do` only under the shell condition above. The ledger's role narrows to the resume position, the attempt comparison's `progressed` fact, and the delivered-evidence predicate's `progressed` read; `ledger.workRemaining` remains carried for compatibility and reporting but **no rule reads it as a token gate**, and no code path may retain the retired arm behind a flag, a mode, or a preference. (Spec §8.3 DM-4; §8.5 "Phase-ledger no-work arm retired"; AC-F8-4; §25.6 Appendix F(C).)
@@ -362,7 +362,7 @@ ALT-5 satisfies C-1 through C-7. C-1: no token, projection, exit, row, or domain
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §2.1 (delivered derivation order and shell order), §4.1, §5.1 F-4/F-8, §6 Flow 4, §7.3, §8.3 DM-3/DM-4, §8.5, §11 RSK-4/RSK-10, §12, §17.4, §17.8, §25.5 Appendix E, §25.6 Appendix F(A–E), §25.7 Appendix G.
-- Prior decisions: TDR-0005 and TDR-0010 (result taxonomy, projection, and dispatch-session projection); TDR-0018 (artifact evidence and escalation); TDR-0024 (attempt read side); [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) (the stall ladder's terminal-verdict branch); [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md) (record cardinality).
+- Prior decisions: TDR-0005 and TDR-0010 (result taxonomy, projection, and dispatch-session projection); TDR-0018 (artifact evidence and escalation); TDR-0024 (attempt read side); [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (the stall ladder's terminal-verdict branch); [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) (record cardinality).
 - Specs: `doc/spec/features/feature-dispatch-engine.md` (result-derivation bullets and failure-token mapping); `feature-result-contract.md`; `feature-session-lifecycle-economics.md`; `doc/overview/glossary.md`.
 - Contracts and code (read 2026-11-18): `packages/core/src/domain/dispatch-result.ts`; `packages/core/src/domain/dispatch-comparison.ts`; `packages/core/src/contracts/dispatch.ts`; `packages/core/src/contracts/delivery-result.ts`; `packages/core/src/contracts/harness.ts`; `packages/core/src/app/dispatch.ts`; `packages/core/src/app/dispatch-ledger.ts`.
 - Parity reference (read 2026-11-18): `scripts/deliver-ticket.sh` — `classify_result` (lines 1308-1419) and `decide_after_iteration` (lines 1648-1712).

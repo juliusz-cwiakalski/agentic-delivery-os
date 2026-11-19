@@ -134,11 +134,11 @@ notes:
     type: retro
     date: "2026-11-18"
   - text: "Decision records authored by @decision-advisor for the precedent-setting
-      forks: TDR-0044 (dispatch-owned durable lane record), TDR-0045 (atomic
+      forks: TDR-0049 (dispatch-owned durable lane record), TDR-0050 (atomic
       dispatch admission verdicts, amending TDR-0026 DC-2/DC-3 for the dispatch
-      caller), TDR-0046 (harness terminate operation), TDR-0047 (in-process
-      bounded restart loop and attempt cardinality), TDR-0048 (total derivation
-      ladder and arm-aware corroboration), TDR-0049 (spawn identity, title, and
+      caller), TDR-0051 (harness terminate operation), TDR-0052 (in-process
+      bounded restart loop and attempt cardinality), TDR-0053 (total derivation
+      ladder and arm-aware corroboration), TDR-0054 (spawn identity, title, and
       lifecycle prompt). All status Proposed; owner acceptance happens at the PR
       review gate. doc/decisions/00-index.md carries one row per record."
     type: decision
@@ -160,7 +160,7 @@ notes:
       stalled first iteration produces max-restarts."
     type: decision
     date: "2026-11-19"
-  - text: "Staging note (GH-339 precedent): TDR-0044..TDR-0049 and the
+  - text: "Staging note (GH-339 precedent): TDR-0049..TDR-0054 and the
       doc/decisions/00-index.md rows live outside the change folder, so the
       specification-phase completion commit stages only the change folder and
       leaves them untracked by design. The implementation plan MUST declare the
@@ -197,7 +197,7 @@ notes:
       validate verdict=valid tier=full readyForDevelopment=true, lint plan
       valid. Ownership: 42/42 ACs and 50/50 TCs, zero orphans, zero
       double-owned. Phase 1 is contract scaffolding (0 AC/0 TC) and also lands
-      TDR-0044..0049 plus the conditional index staging; phases 2-7 own the 42
+      TDR-0049..0049 plus the conditional index staging; phases 2-7 own the 42
       ACs; phase 8 owns the changeset, plan validation, aggregate gate and doc
       staging. The seam prerequisite is satisfied: claimDispatchLease exported
       and mounted in phase 2, resolveDispatchLane (new app/dispatch-lane.ts)
@@ -888,7 +888,7 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "Residuals recorded for the re-review and the owner gate, none a code
-      defect: (1) TDR-0046 DC-4 still says an already-exited session returns
+      defect: (1) TDR-0051 DC-4 still says an already-exited session returns
       terminated:true; the adapter returns false for a known-but-gone runtime
       (still success), and the spec now records the delivered semantics with the
       owner reconciliation noted - the record is Proposed and not accepted. (2)
@@ -936,7 +936,7 @@ notes:
       the stale header. Executed as plan phase 10 under a reopened delivery,
       then the docs are re-checked (the capability wiring is a documented
       claim), then review iteration 3. The three recorded residuals stay
-      deferred to their owners (TDR-0046, @test-plan-writer, the m1 page
+      deferred to their owners (TDR-0051, @test-plan-writer, the m1 page
       owner)."
     type: decision
     date: "2026-11-19"
@@ -1122,5 +1122,18 @@ notes:
       satisfied. Documentation is reconciled with no residual gap. Quality gates
       are green and the range gate is PASS over 35 commits. The branch is 36
       commits over origin/main-tools with a clean tree."
+    type: info
+    date: "2026-11-19"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/364
+      - base main-tools, head feat/GH-347/dispatch-core-parity at dc615e35, not
+      draft, no auto-merge, 37 commits, 120 files, +22000/-918. First state is
+      CONFLICTING/DIRTY because main-tools advanced one commit after the fork
+      with GH-346 (#363, d1fff222), which overlaps four files:
+      doc/decisions/00-index.md, doc/overview/glossary.md,
+      doc/spec/features/feature-result-contract.md and
+      packages/cli/src/production.ts. Per the resume-sync instruction the branch
+      is synced with origin/main-tools, the four conflicts are resolved, the
+      affected gates and the range gate are re-run, and the PR is updated. Merge
+      authority stays with the CEO/human; nothing was merged."
     type: info
     date: "2026-11-19"

@@ -420,7 +420,7 @@ export const writeDispatchAuthority = (
 };
 
 /* ------------------------------------------------------------------------- */
-/* GH-347 — the dispatch-owned durable lane record (DM-1, TDR-0044).         */
+/* GH-347 — the dispatch-owned durable lane record (DM-1, TDR-0049).         */
 /* ------------------------------------------------------------------------- */
 
 const isLaneOwner = (value: unknown): boolean =>

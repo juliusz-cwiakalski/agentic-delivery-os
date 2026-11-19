@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339, GH-346]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -38,8 +38,11 @@ declaration-only; the baseline CLI has no `bin`; the MCP package serves three re
 over local stdio; the typed OpenCode entry remains a placeholder. The current
 tree declares two CLI executables — `delivery-os` (the compatibility alias) and
 `jaiship` — over one shared launcher composition beside the `main` composition
-entry, and the local install registers a `jaiship` launcher at the brand install
-path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.md).
+entry; the product install copies the compiled `dist/<binary-name>` artifact to the
+brand install path and the shell installer registers a `jaiship` launcher there only
+while nothing but the delivered launcher is at that path. See
+[CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.md) and
+[Installable Artifact and Install Lifecycle](features/feature-install-lifecycle.md).
 
 ## Existing contract index
 

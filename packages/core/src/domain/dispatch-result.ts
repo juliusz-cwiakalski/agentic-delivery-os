@@ -51,7 +51,7 @@ export type DispatchPrFact = {
 
 /**
  * The artifact read: branch commits, the independently observed PR fact, and
- * the required pm-notes completeness projection (GH-347 DM-3, TDR-0048).
+ * the required pm-notes completeness projection (GH-347 DM-3, TDR-0053).
  *
  * `complete` is a present document whose delivery phase carries a non-null
  * completion; `absent` is no document; `incomplete` is present but incomplete,
@@ -163,7 +163,7 @@ export type DispatchDerivation = {
   readonly readFailure?: DispatchReadFailure;
   /**
    * The closed corroboration arm, decided ONCE here at the two arm-aware
-   * branches (GH-347 DEC-6, TDR-0048) and passed unchanged to both evaluation
+   * branches (GH-347 DEC-6, TDR-0053) and passed unchanged to both evaluation
    * sites. Absent for every other token, whose requirement is token-keyed.
    */
   readonly corroborationArm?: DispatchCorroborationArm;

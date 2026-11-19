@@ -144,7 +144,7 @@ const SPAWN_TITLE_WORK_ITEM_REF = /^[A-Z][A-Z0-9]*-[0-9]+$/;
 const SPAWN_TITLE_PATTERN = new RegExp(DISPATCH_SPAWN_TITLE_PATTERN);
 
 /**
- * The pure fresh-spawn title (GH-347 DM-6, API-6, TDR-0049).
+ * The pure fresh-spawn title (GH-347 DM-6, API-6, TDR-0054).
  *
  * Returns `ticket-<REF>` for a canonical work-item reference, or `undefined`
  * for a ref outside the grammar or a title beyond the declared bound. The

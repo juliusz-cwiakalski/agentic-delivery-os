@@ -138,7 +138,7 @@ export const evaluateDispatchLiveness = (input: {
 };
 
 /* ------------------------------------------------------------------------- */
-/* GH-347 — the stall decision (Appendix F(D), DM-4, TDR-0047).               */
+/* GH-347 — the stall decision (Appendix F(D), DM-4, TDR-0052).               */
 /* ------------------------------------------------------------------------- */
 
 /**

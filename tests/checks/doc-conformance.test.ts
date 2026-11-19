@@ -421,9 +421,12 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
       "The bin is not part of the install or release surface.",
       "names neither the bin nor the composition in either of its delivery arrays",
       "then the neutral `delivery-os` default used only for self-description when neither source yields a name",
+      "exactly the declared five-site inventory",
     ],
     required: [
       "two executables",
+      "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
+      "twenty-six families",
       "one shared launcher composition",
       "The invoking bin's declared default working name",
       "`--print-install-path`",
@@ -438,9 +441,15 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
     stale: [
       "no working-name literal is committed",
       "The CLI entrypoint and the MCP serve composition apply the neutral working name",
+      "no identity literal lives anywhere else",
+      "outside the declared five-site inventory",
     ],
     required: [
       "exactly five sites",
+      "exactly five sites in the product-surface inventory",
+      "zero committed working-name literals outside the product-surface inventory, plus the one declared build-side site under `scripts/`",
+      "product-surface inventory plus one declared build-side site",
+      "a scan of the build-side site's own root, `scripts/`",
       "`SCOPE_ORG`",
       "the three CLI selector sites",
       "the unchanged MCP default",
@@ -478,7 +487,7 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
   },
   {
     page: "doc/spec/features/feature-doc-distribution-marker.md",
-    stale: ["**TBD / out of scope** here (not yet delivered)"],
+    stale: ["**TBD / out of scope** here (not yet delivered)", "no uninstall path exists"],
     required: [
       "launcher",
       "brand install path",
@@ -488,6 +497,8 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
       "`DRY_RUN`",
       "`--tool`",
       "`delivery-os` bin mapping",
+      "install uninstall",
+      "reports a managed install",
     ],
   },
 ];
@@ -621,5 +632,288 @@ describe("TC-CEREMONY-060 ceremony documentation current truth", () => {
     expect(text).toContain("Twenty-two families");
     expect(text).toContain("`ceremony`");
     expect(text).toContain("`board`");
+  });
+});
+
+/**
+ * GH-346 TC-INST-111/112 — this change's own page-claim table.
+ *
+ * A self-contained requirement table over an exact declared page set (the GH-320
+ * precedent): every row carries at least one required and one stale phrase, so no
+ * row passes with an empty list, and both directions are driven non-vacuously.
+ * The count-bearing pages carry the moved numbers; the supervision row keeps the
+ * `supervise` ordinal as a REQUIRED phrase, so an over-correction to "26th" fails.
+ */
+type PageClaimRow = {
+  readonly page: string;
+  readonly stale: readonly string[];
+  readonly required: readonly string[];
+};
+
+const GH346_PAGES = [
+  "doc/guides/local-install.md",
+  "doc/spec/features/feature-cli-entrypoint.md",
+  "doc/spec/features/feature-doc-distribution-marker.md",
+  "doc/spec/features/feature-state-layer.md",
+  "doc/spec/features/feature-result-contract.md",
+  "doc/spec/features/feature-ceremony-runner.md",
+  "doc/spec/features/feature-metrics.md",
+  "doc/spec/features/feature-supervise.md",
+  "doc/spec/features/feature-branding-seam.md",
+  "doc/planning/oss-tooling/milestones/m4/install-model.md",
+  "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+] as const;
+
+const GH346_ROWS: readonly PageClaimRow[] = [
+  {
+    page: "doc/guides/local-install.md",
+    stale: [
+      "launcher-only installation",
+      "Removing a registered launcher is an operator action: reinstall to update it",
+    ],
+    required: [
+      "install a release",
+      "linked git worktree",
+      "deleted after merge",
+      "install.dev-build",
+      "different compiled artifact",
+      "single step back",
+      "purge would additionally delete",
+      "--add-to-path",
+      "shell mapping",
+      "install.state.incompatible",
+      "One owner per artifact class",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-cli-entrypoint.md",
+    stale: ["twenty-five families", "exactly the declared five-site inventory"],
+    required: [
+      "twenty-six families",
+      "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
+      "install.identity.not-owning",
+      "compile-time constant",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-doc-distribution-marker.md",
+    stale: ["no uninstall path exists"],
+    required: [
+      "refuses, classified",
+      "install uninstall",
+      "reports a managed install",
+      "never by the install record",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-state-layer.md",
+    stale: ["The check aggregates a state version"],
+    required: [
+      "compatibility surface for the installed binary",
+      "read-only",
+      "install.state.incompatible",
+      "state.schema.mismatch",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-result-contract.md",
+    stale: [
+      "The table declares 149 machine identities",
+      "The table declares 153 machine identities",
+      "allowlist of 65 declared identities",
+    ],
+    required: [
+      "install | user | false | not_landed | Build and install from the primary checkout",
+      "The table declares 164 machine identities",
+      "allowlist of 66 declared identities",
+      "the eleven `install` rows",
+      "the thirteen `harness` rows",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-ceremony-runner.md",
+    stale: ["149 identities", "153 identities", "65-entry allowlist"],
+    required: ["164 identities", "66-entry allowlist"],
+  },
+  {
+    page: "doc/spec/features/feature-metrics.md",
+    stale: [
+      "149 entries",
+      "153 entries",
+      "BASELINE_ROWS.length + 115",
+      "BASELINE_ROWS.length + 119",
+      "family count (25)",
+    ],
+    required: [
+      "164 entries",
+      "163 delivered rows",
+      "66 allowlisted two-segment codes",
+      "BASELINE_ROWS.length + 130",
+      "family count (26)",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-supervise.md",
+    stale: ["65-member allowlist", "26th family"],
+    required: ["66-member allowlist", "25th family"],
+  },
+  {
+    page: "doc/spec/features/feature-branding-seam.md",
+    stale: ["outside the declared five-site inventory", "No identity literal lives anywhere else:"],
+    required: [
+      "exactly five sites in the product-surface inventory",
+      "zero committed working-name literals outside the product-surface inventory, plus the one declared build-side site under `scripts/`",
+      "product-surface inventory plus one declared build-side site",
+      "a scan of the build-side site's own root, `scripts/`",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/install-model.md",
+    stale: ["scripts/install-jaiship.sh", "--purge --yes"],
+    required: [
+      "**mechanics** below",
+      "superseded",
+      "jaiship install rollback",
+      "install.record.v1",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+    stale: ["no lifecycle", "The four causes are missing-name conditions"],
+    required: [
+      "install uninstall",
+      "install.slot.absent",
+      "install.purge.unconfirmed",
+      "install.status.v1",
+      "a destination that is not a compiled artifact",
+    ],
+  },
+];
+
+/** The page-claim rule, driven over injected page texts. */
+export const pageClaimViolations = (
+  rows: readonly PageClaimRow[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH346_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push(`GH-346 page set ${JSON.stringify(declared)} is not the declared eleven`);
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the eleven declared pages are reconciled in both directions", () => {
+    expect(pageClaimViolations(GH346_ROWS, pageText)).toEqual([]);
+  });
+
+  test("every row carries a non-empty stale and required list", () => {
+    for (const row of GH346_ROWS) {
+      expect({ page: row.page, stale: row.stale.length > 0 }).toEqual({
+        page: row.page,
+        stale: true,
+      });
+      expect({ page: row.page, required: row.required.length > 0 }).toEqual({
+        page: row.page,
+        required: true,
+      });
+    }
+  });
+
+  test("the page set is exact: a missing or extra page fails by name", () => {
+    expect(pageClaimViolations(GH346_ROWS.slice(0, 10), pageText).join("\n")).toContain(
+      "is not the declared eleven",
+    );
+    const extra = [
+      ...GH346_ROWS,
+      { page: "doc/spec/features/feature-invented.md", stale: ["x"], required: ["y"] },
+    ];
+    expect(pageClaimViolations(extra, pageText).join("\n")).toContain("is not the declared eleven");
+  });
+
+  test("both directions fail by name on an injected text", () => {
+    const reintroduced: readonly PageClaimRow[] = GH346_ROWS.map((row) =>
+      row.page === "doc/spec/features/feature-metrics.md"
+        ? { ...row, stale: [...row.stale], required: [...row.required] }
+        : row,
+    );
+    const withStale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-metrics.md"
+        ? `${pageText(page) ?? ""}\nBASELINE_ROWS.length + 115\n`
+        : pageText(page);
+    expect(pageClaimViolations(reintroduced, withStale).join("\n")).toContain(
+      "stale phrase present: BASELINE_ROWS.length + 115",
+    );
+    const withoutRequired = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-ceremony-runner.md"
+        ? (pageText(page) ?? "").replaceAll("164 identities", "the moved count")
+        : pageText(page);
+    expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
+      "missing required phrase: 164 identities",
+    );
+  });
+
+  test("the supervision row keeps the ordinal and never demands its absence", () => {
+    const supervision = GH346_ROWS.find(
+      (row) => row.page === "doc/spec/features/feature-supervise.md",
+    );
+    expect(supervision?.required).toContain("25th family");
+    expect(supervision?.stale).not.toContain("25th family");
+    expect(supervision?.stale).not.toContain("25th");
+    const overCorrected = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-supervise.md"
+        ? (pageText(page) ?? "").replaceAll("25th family", "26th family")
+        : pageText(page);
+    expect(pageClaimViolations(GH346_ROWS, overCorrected).join("\n")).toContain(
+      "missing required phrase: 25th family",
+    );
+  });
+
+  test("a branding page claiming a sixth product-surface site or dropping the build-side site fails", () => {
+    const sixth = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-branding-seam.md"
+        ? (pageText(page) ?? "").replaceAll(
+            "exactly five sites in the product-surface inventory",
+            "exactly six sites in the product-surface inventory",
+          )
+        : pageText(page);
+    expect(pageClaimViolations(GH346_ROWS, sixth).join("\n")).toContain(
+      "missing required phrase: exactly five sites in the product-surface inventory",
+    );
+    const noBuildSide = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-branding-seam.md"
+        ? (pageText(page) ?? "").replaceAll(
+            "a scan of the build-side site's own root, `scripts/`",
+            "a single scan",
+          )
+        : pageText(page);
+    expect(pageClaimViolations(GH346_ROWS, noBuildSide).join("\n")).toContain(
+      "missing required phrase: a scan of the build-side site's own root",
+    );
   });
 });

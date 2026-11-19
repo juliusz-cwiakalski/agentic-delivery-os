@@ -138,7 +138,7 @@ export type PmNotesParseOutcome =
   | { readonly ok: false; readonly parseFailure: PmNotesParseFailure };
 
 /**
- * The closed artifact-completeness vocabulary (GH-347 DM-3, TDR-0048).
+ * The closed artifact-completeness vocabulary (GH-347 DM-3, TDR-0053).
  *
  * `complete` is a present document whose delivery phase carries a non-null
  * completion; `absent` is no document; `incomplete` is present but

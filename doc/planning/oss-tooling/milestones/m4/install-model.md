@@ -1,7 +1,13 @@
-# M4 install model: local user install from a cloned repository (design)
+# M4 install model: local user install from a built artifact
 
-Status: **design draft** (planning PR GH-333). Owner directive 2026-11-17:
-local-only install for now; only Jaiship namespaces.
+Status: **delivered surface** (GH-346 / M4-S1). Owner directive 2026-11-17:
+local-only install; only Jaiship namespaces. The **mechanics** below — layout,
+atomic replace, one slot, record fields, `PATH` block, daemon refusal, and the
+out-of-scope list — are preserved as behaviour. The **surface** is the composed
+`install` lifecycle family of the installed product; the shell lifecycle script
+and its flag forms (`--rollback`, `--uninstall`, `--purge`) described in the
+earlier draft are superseded by that family, and the decision records
+(TDR-0044 … TDR-0048) win on surface.
 
 ## Constraints
 
@@ -18,54 +24,94 @@ local-only install for now; only Jaiship namespaces.
 ```
 ~/.jaiship/
   bin/jaiship                 # the installed binary (single executable)
-  bin/jaiship.previous        # one rollback slot, replaced on each install
+  bin/jaiship.previous        # one rollback slot, replaced on each replacing install
   config.yaml                 # user configuration layer (provider policy, defaults)
-  install.json                # install metadata: version, source commit, installedAt
+  install.json                # install record: install.record.v1 (see below)
 ~/.jaiship-state/             # state layer: ledger, registry, projects, telemetry
 <repo>/.jaiship/config.yaml   # optional project-local configuration layer
 ```
 
+`install.json` carries `schemaVersion` (`install.record.v1`), the installed
+artifact's identity (`version`, `commit`, `builtAt`, `dirty`, `channel`), the
+accepted state format (`stateSchemaVersion`), the source checkout when the build
+had git metadata, the recorded provenance (`verified`/`unverified`),
+`installedAt`, the previous slot's identity (absent when no readable record
+names it — reported unknown, never guessed), the launcher disposition, and the
+managed `PATH` block's file and marker. It holds no credential and is written
+staged-and-renamed, never in place.
+
 ## Build and install flow
 
-1. Clone the repository and build: `pnpm install && pnpm build`.
-2. Produce a single binary: the CLI entry compiles with Bun into
-   `dist/jaiship` (self-contained; no repository imports at runtime).
-3. Run `scripts/install-jaiship.sh`:
-   - Preconditions: `dist/jaiship` exists and `dist/jaiship --version` exits 0.
-   - Atomic replace: copy to `~/.jaiship/bin/.jaiship.tmp`, then `mv` over the
-     target; keep the prior binary as `jaiship.previous`.
-   - Write `install.json` (version/build identity, source commit, timestamp).
-   - Print PATH guidance; `--add-to-path` appends one managed block to the
-     user's shell profile only when explicitly requested.
-   - Legacy migration hook: if `~/.delivery-os*` or `<repo>/.delivery-os`
-     exist, instruct (and, with `--migrate`, run) the idempotent migration
-     defined in M4-S2 with a backup before any move.
-4. Verify: `jaiship --version` reports the build identity; `jaiship status`
-   reads config and state from the Jaiship paths only.
+1. Work in the primary checkout (a lane worktree is refused on purpose).
+2. Produce the artifact with the additive entry: `bun run build:binary`
+   (repo-internal; it does not join the package build chain). It writes
+   `dist/jaiship`, captures version/commit/build instant/dirty over tracked
+   files only, and reports the identity, size, and host target it produced.
+3. Run the artifact: `./dist/jaiship install`.
+   - Admission: the artifact's own directory resolves to a stable checkout
+     (`verified`) or to an absence (`unverified`); a linked worktree is
+     `install.target.worktree`.
+   - Identity: a run with no injected identity is `install.dev-build`.
+   - Daemon guard: a live holder is `install.daemon.running` unless
+     `--stop-daemon` is passed; the stop runs through the delivered stop path
+     **before** any rename.
+   - Compatibility pre-flight: read-only and advisory; one line per
+     not-accepted root; the exit code is unchanged.
+   - Seven-step atomic replace: stage the running artifact's bytes in the
+     install directory, verify a complete executable copy, stop at step 4 when
+     the destination's **content** is already these bytes (reconciling the
+     record in place when it is not `current`), move a differing compiled
+     artifact into the slot, rename the staged copy into place, and write the
+     record last.
+   - `--add-to-path` appends exactly one delimited block to one profile, only
+     when explicitly requested, and records its file and marker.
+   - The migration hook detects prior-namespace artifacts and advises; with
+     `--migrate` it refuses with `install.migration.unavailable` (M4-S2 owns
+     the move) and moves nothing.
+4. Verify: `jaiship --version` reports the build identity on one line, and
+   `jaiship install status` (or `--json`) reports the running identity, the
+   installed record, the record and slot conditions, target stability, the
+   state-format verdict, and the managed block.
 
 ## Upgrade and rollback
 
-- Upgrade = rebuild from the desired commit and re-run the installer. The
-  previous binary stays as `jaiship.previous` for one step.
-- Rollback = `scripts/install-jaiship.sh --rollback` (swap previous back).
+- Upgrade = **install a different compiled artifact**: build (or receive) it
+  and run *it*. Nothing downloads and nothing builds. The previous artifact
+  stays in `jaiship.previous` for exactly one step, and both identities are
+  reported.
+- Rollback = `jaiship install rollback`: two renames in reverse order against
+  the single slot, then the record update. It is involutive — a second rollback
+  returns the previous state — and it refuses with `install.slot.absent`,
+  `install.slot.invalid`, or `install.record.unreadable`, writing nothing.
 - Version identity in every machine envelope lets CI and operators prove which
   build is running.
 
 ## Uninstall
 
-- `scripts/install-jaiship.sh --uninstall` removes the binary and
-  `install.json`; config and state are preserved.
-- `--purge --yes` additionally removes `~/.jaiship/` and `~/.jaiship-state/`.
+- `jaiship install uninstall` removes the binary, the rollback slot, the
+  install record, and only the managed `PATH` block; configuration and state
+  are preserved, and the purge residual set is always printed.
+- `jaiship install purge --yes` additionally removes `~/.jaiship/` and
+  `~/.jaiship-state/`; without `--yes` it refuses with
+  `install.purge.unconfirmed` and removes nothing.
 
 ## Safety
 
-- Refuse to replace a running daemon unless `--stop-daemon` is passed.
-- Never write outside the user's home directory; never store secrets in
+- Refuse to replace or remove a running daemon unless `--stop-daemon` is
+  passed; the stop precedes the swap or removal.
+- Never write outside the user's home directory (and the one operator-owned
+  profile file the operator explicitly asks to manage); never store secrets in
   `install.json` (credentials stay environment-only).
-- Failed builds never replace a working install (atomic replace only after a
-  verified `--version` run).
+- Failed installs never replace a working install: the staged copy is verified
+  before any rename, and the slot is filled before the destination is replaced.
+- The rollback slot accepts only a compiled artifact carrying an injected
+  identity; a legacy launcher is discarded with a report and is never promoted.
+- The shell installer's launcher step refuses whenever anything but the
+  delivered launcher sits at the install path, and `scripts/uninstall.sh`
+  removes no lifecycle member.
 
 ## Out of scope (this milestone)
 
-Package-manager channels, system-wide installs, auto-update, and multi-user
-hosts. Those can follow once the local model is proven.
+Package-manager channels, system-wide installs, auto-update, multi-user hosts,
+release publishing, and the namespace migration itself (M4-S2). Those can
+follow once the local model is proven.

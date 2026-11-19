@@ -537,7 +537,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
 };
 
 /* ------------------------------------------------------------------------- */
-/* The spawn rows (GH-347 F-7, TDR-0049).                                     */
+/* The spawn rows (GH-347 F-7, TDR-0054).                                     */
 /* ------------------------------------------------------------------------- */
 
 /** A fresh production spawn: one --agent pm, one --model, one fresh --title. */

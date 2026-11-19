@@ -306,12 +306,12 @@ export type DispatchPorts = {
   readonly harnessBinding?: HarnessSeatBinding;
   /**
    * The fresh-spawn title, supplied as a COMPOSITION fact (GH-347 DM-6,
-   * TDR-0049). A role-less composition supplies none, so it stays role-less; a
+   * TDR-0054). A role-less composition supplies none, so it stays role-less; a
    * resume never carries one.
    */
   readonly freshTitle?: string;
   /**
-   * The advisory lane owner facts (GH-347 DM-1, TDR-0044): the composition's
+   * The advisory lane owner facts (GH-347 DM-1, TDR-0049): the composition's
    * process id and the declared start instant. Absent keeps the lane write off
    * (a direct composition that never gained a lane), never a fabricated owner.
    */
@@ -953,7 +953,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       if (admission.restarts !== undefined) restarts = admission.restarts;
     }
 
-    // GH-347 F-6, DEC-5, TDR-0047 — the in-process bounded loop. One dispatch
+    // GH-347 F-6, DEC-5, TDR-0052 — the in-process bounded loop. One dispatch
     // owns one or more iterations; a clean session exit is ALWAYS terminal, and
     // only a corroborated liveness stall or a harness-reported timeout is
     // restart-eligible. Each restarted iteration appends its active lane record

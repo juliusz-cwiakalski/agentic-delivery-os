@@ -1,7 +1,7 @@
 /**
  * TC-TERM-001/002 (engine half)/003/004/005/006, TC-LOOP-001..005 and
  * TC-LANE-003 — stall termination, the in-process bounded loop, and the lane's
- * terminal shape (GH-347 F-5, F-6; DEC-4, DEC-5; TDR-0046, TDR-0047).
+ * terminal shape (GH-347 F-5, F-6; DEC-4, DEC-5; TDR-0051, TDR-0052).
  *
  * The cases drive the real command path (D2) with the session port double from
  * `parity/terminate.ts`: the engine's stall decision, the loop, the lane and
@@ -537,7 +537,7 @@ describe("TC-TERM-007 an incapable adapter never starts a second session", () =>
   });
 
   test("a second stall on a capable adapter is signalled again", async () => {
-    // GH-347 AC-F5-1/AC-F5-5, TDR-0046 DC-4 (review M2): the termination fact is
+    // GH-347 AC-F5-1/AC-F5-5, TDR-0051 DC-4 (review M2): the termination fact is
     // per acquisition, so iteration 2's stall of the resuming session IS
     // signalled. Inheriting the first termination would leave it alive.
     const { scenario, stallPort, model } = build({

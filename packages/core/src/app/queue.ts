@@ -2076,7 +2076,7 @@ export const claimQueueLease = (
     readonly ownerHold?: OwnerHoldFact;
     readonly precheck?: () => QueueClaimPrecondition;
     /**
-     * The dispatch caller's no-renewal flag (GH-347 TDR-0045): a live same-ref
+     * The dispatch caller's no-renewal flag (GH-347 TDR-0050): a live same-ref
      * lease under ANY holder — including this caller's own holder — refuses
      * `queue.single-flight` inside the fence. The sibling `queue claim` omits
      * it and keeps its delivered own-holder renewal.
@@ -2170,7 +2170,7 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "claimed", lease: record } };
     }
-    // GH-347 TDR-0045 DC-2/DC-3: the dispatch caller refuses a live same-ref
+    // GH-347 TDR-0050 DC-2/DC-3: the dispatch caller refuses a live same-ref
     // lease under ANY holder inside the fence, so the verdict is decided from
     // the live lease atomically with the claim. No renewal, no takeover.
     if (
@@ -2271,7 +2271,7 @@ export const claimQueueLease = (
   });
 };
 
-/** The dispatch caller's bounded fence-wait step (GH-347 AC-F2-3, TDR-0045). */
+/** The dispatch caller's bounded fence-wait step (GH-347 AC-F2-3, TDR-0050). */
 const DISPATCH_FENCE_WAIT_STEP_MS = 1_000;
 
 /**
@@ -2329,7 +2329,7 @@ const claimRefusalOf = (failure: QueueLeaseFailure): DispatchLeaseClaimOutcome =
 };
 
 /**
- * The dispatch caller's atomic claim (GH-347 API-2, DM-7; TDR-0045 DC-1..DC-5).
+ * The dispatch caller's atomic claim (GH-347 API-2, DM-7; TDR-0050 DC-1..DC-5).
  *
  * The verdict is decided INSIDE the claim from the live lease: a live same-ref
  * lease under any holder refuses `queue.single-flight` naming the holder, a

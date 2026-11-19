@@ -1,6 +1,6 @@
 /**
  * TC-TRACKER-001/002/003 — the bounded tracker retry ladder over the real
- * composed production program (GH-347 F-4; API-4; DEC-7; TDR-0048).
+ * composed production program (GH-347 F-4; API-4; DEC-7; TDR-0053).
  *
  * The tracker read is the production read through the injected delay recorder;
  * the scripted transport fails a declared number of issue reads, so the attempt

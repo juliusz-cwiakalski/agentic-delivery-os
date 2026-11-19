@@ -1,5 +1,5 @@
 /**
- * The bounded tracker retry ladder (GH-347 F-4, API-4; DM-8; DEC-7; TDR-0048).
+ * The bounded tracker retry ladder (GH-347 F-4, API-4; DM-8; DEC-7; TDR-0053).
  *
  * Declared policy constants and one pure wait function, plus a runner over an
  * injected read and the injected `delay(ms, reason)` fact. No configuration key,

@@ -1,5 +1,5 @@
 /**
- * The dispatch lane resolver (GH-347 F-3, API-3; DEC-3; TDR-0044).
+ * The dispatch lane resolver (GH-347 F-3, API-3; DEC-3; TDR-0049).
  *
  * One function resolves "the lane for this ref": the newest recorded lane that
  * carries a session identity, among the dispatch-owned `dispatch.lane` records

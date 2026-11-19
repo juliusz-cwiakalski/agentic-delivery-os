@@ -55,12 +55,12 @@ Also out of scope (spec §7.2, `NG-1`…`NG-12`): the F1b operator surface (`sta
 |-----------|-----|
 | `./chg-GH-347-spec.md` (v1.6) | Source of the 42 ACs, `F-1`…`F-9`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, Appendix C (proof boundary), Appendix F (normative ladder C vs D), Appendix G (coverage matrix) |
 | `./chg-GH-347-pm-notes.yaml` | Scope, the F1a/GH-354 split, rulings R1–R7, the staging note, the `TMPDIR`/`PATH` operational prerequisite |
-| `doc/decisions/TDR-0044` | Dispatch-owned durable lane record (distinct kind, acquisition/terminal appends, latest-wins) |
-| `doc/decisions/TDR-0045` | Atomic dispatch admission (verdict inside the claim, no dispatch renewal, bounded fence wait) |
-| `doc/decisions/TDR-0046` | Harness `terminate` (capability gating, TERM→KILL, exact-identity reap, idempotence) |
-| `doc/decisions/TDR-0047` | In-process bounded restart loop (clean exit terminal, stall-only restart, one attempt record) |
-| `doc/decisions/TDR-0048` | Total derivation ladder and arm-aware corroboration |
-| `doc/decisions/TDR-0049` | Spawn identity: `pm` agent, `ticket-<REF>` title, lifecycle prompt |
+| `doc/decisions/TDR-0049` | Dispatch-owned durable lane record (distinct kind, acquisition/terminal appends, latest-wins) |
+| `doc/decisions/TDR-0050` | Atomic dispatch admission (verdict inside the claim, no dispatch renewal, bounded fence wait) |
+| `doc/decisions/TDR-0051` | Harness `terminate` (capability gating, TERM→KILL, exact-identity reap, idempotence) |
+| `doc/decisions/TDR-0052` | In-process bounded restart loop (clean exit terminal, stall-only restart, one attempt record) |
+| `doc/decisions/TDR-0053` | Total derivation ladder and arm-aware corroboration |
+| `doc/decisions/TDR-0054` | Spawn identity: `pm` agent, `ticket-<REF>` title, lifecycle prompt |
 | `.ai/rules/testing-strategy.md` | Layers, module→test mapping, invariant-authoring rules, `pnpm check` as the aggregate |
 | `doc/spec/features/feature-dispatch-engine.md`, `feature-session-lifecycle-economics.md`, `feature-harness-adapters.md`, `feature-resident-daemon.md`, `feature-result-contract.md` | Current truth this plan pins; the two stale "no kill operation" statements are reconciled in the documentation phase, not asserted here |
 | `tests/conformance/dispatch/{controlled-repo.ts,dispatch-e2e.test.ts,dispatch-fixture.test.ts,dispatch-daemon-lane.test.ts}` | Fixtures and suites this change extends |
@@ -391,7 +391,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Negative / Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, AC-F2-1, API-2, DM-7, NFR-8, DEC-1, TDR-0045
+**Related IDs**: F-2, AC-F2-1, API-2, DM-7, NFR-8, DEC-1, TDR-0050
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-admission.test.ts`
@@ -447,7 +447,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, AC-F2-3, DM-7, NFR-8, TDR-0045
+**Related IDs**: F-2, AC-F2-3, DM-7, NFR-8, TDR-0050
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-admission.test.ts`
@@ -552,7 +552,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-1, API-3, NFR-9, TDR-0044
+**Related IDs**: F-3, AC-F3-1, API-3, NFR-9, TDR-0049
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`
@@ -755,7 +755,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-5, AC-F5-1, API-5, DM-5, NFR-6, DEC-4, TDR-0046
+**Related IDs**: F-5, AC-F5-1, API-5, DM-5, NFR-6, DEC-4, TDR-0051
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -807,7 +807,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-5, AC-F5-3, DM-4, TDR-0047
+**Related IDs**: F-5, AC-F5-3, DM-4, TDR-0052
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -832,7 +832,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-5, AC-F5-3, DM-4, TDR-0047, R3
+**Related IDs**: F-5, AC-F5-3, DM-4, TDR-0052, R3
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -912,7 +912,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, NFR-4, DM-1, TDR-0047
+**Related IDs**: F-6, AC-F6-1, NFR-4, DM-1, TDR-0052
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -939,7 +939,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-2, DM-5, TDR-0047
+**Related IDs**: F-6, AC-F6-2, DM-5, TDR-0052
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -1043,7 +1043,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-6, NFR-4, DM-4, R5, TDR-0047
+**Related IDs**: F-6, AC-F6-6, NFR-4, DM-4, R5, TDR-0052
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-restart-budget.test.ts` (rewrite of `TC-RESUME-002`) + `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
@@ -1069,7 +1069,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-1, API-6, API-7, TDR-0049
+**Related IDs**: F-7, AC-F7-1, API-6, API-7, TDR-0054
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-spawn.test.ts`
@@ -1173,7 +1173,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-8, AC-F8-1, DM-3, DM-4, TDR-0048, DEC-6
+**Related IDs**: F-8, AC-F8-1, DM-3, DM-4, TDR-0053, DEC-6
 **Test Type(s)**: Unit + Command
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-truth-derivation.test.ts` (extend) + `tests/conformance/dispatch/dispatch-parity-battery.test.ts`

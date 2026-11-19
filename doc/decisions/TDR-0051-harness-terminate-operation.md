@@ -1,5 +1,5 @@
 ---
-id: TDR-0046
+id: TDR-0051
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -52,7 +52,7 @@ revisit_triggers:
   - "A harness adapter declares terminate but its runtime cannot express a process tree (for example a remote or containerised session): the capability declaration must then split 'can terminate' from 'can signal a tree', and the no-second-session rule is restated for the weaker capability."
   - "The exact-identity reap matches nothing while a session is alive (a renamed or wrapper-launched runtime): the identity rule is re-decided against the observed argv, and the fallback is never a broad process pattern."
   - "The grace value diverges from `coordinator.kill-grace` (an operator sets one and not the other): the reuse is re-decided as two keys with one meaning or one key with two consumers, never as two silently different graces."
-  - "Termination is proposed to release the lane's lease: releasing is an admission/accounting act (TDR-0045, TDR-0026), and coupling it to a signal would make a kill mutate exclusion."
+  - "Termination is proposed to release the lane's lease: releasing is an admission/accounting act (TDR-0050, TDR-0026), and coupling it to a signal would make a kill mutate exclusion."
 links:
   related_changes: ["GH-347"]
   supersedes: []
@@ -72,15 +72,15 @@ links:
     - "packages/cli/src/commands/coordinator-loop.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["ADR-0008", "TDR-0016", "TDR-0017", "TDR-0043", "TDR-0047"]
+  decisions: ["ADR-0008", "TDR-0016", "TDR-0017", "TDR-0043", "TDR-0052"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0046: Harness `terminate` Operation
+# TDR-0051: Harness `terminate` Operation
 
-> **Traceability.** Spec §15 **DEC-4**; §5.1 F-5; §8.1 API-5; §8.3 DM-5; §8.5 "a stalled session on a terminate-capable adapter is terminated instead of left running"; §17.5 AC-F5-1…AC-F5-5; §22 "Termination is a privilege boundary"; NFR-6; §25.3 Appendix C(3); §25.6 Appendix F(D); §15.1 maps DEC-4 to this record. Consumed by [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md).
+> **Traceability.** Spec §15 **DEC-4**; §5.1 F-5; §8.1 API-5; §8.3 DM-5; §8.5 "a stalled session on a terminate-capable adapter is terminated instead of left running"; §17.5 AC-F5-1…AC-F5-5; §22 "Termination is a privilege boundary"; NFR-6; §25.3 Appendix C(3); §25.6 Appendix F(D); §15.1 maps DEC-4 to this record. Consumed by [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md).
 
 ## Context
 
@@ -94,7 +94,7 @@ The typed engine can start a session, watch it, and collect from it — but it c
 - **FACT:** `coordinator.kill-grace` defaults to 20 000 ms and is consumed by the coordinator loop's process lifecycle and by the daemon process seam (`packages/core/src/config/defaults.ts:84`; `packages/cli/src/commands/coordinator-loop.ts:1147`; `packages/adapters/src/daemon/process.ts:97`). There is no dispatch-lane kill-grace key. *(read 2026-11-18)*
 - **FACT:** Two current-truth pages state that the delivered session port exposes no kill operation, and describe leaving a below-budget stall to supervision because of it (`doc/spec/features/feature-dispatch-engine.md:65`; `doc/spec/features/feature-session-lifecycle-economics.md:93,185`). *(read 2026-11-18)*
 - **FACT:** Ordering is available: the engine invokes `collect` and holds a session handle, and the streaming starter is injected into the adapter the engine already composes, so a terminate implementation has a call site that is not a new process seam. *(read 2026-11-18)*
-- **Why now:** The restart loop (TDR-0047) must not start a second session beside a session that might still be alive. Without a termination capability the loop's only safe behaviour is to stop, so this operation is what makes an in-process restart defensible at all — and the shell has had it, with an exact-identity reap, since the orphan-runtime defect.
+- **Why now:** The restart loop (TDR-0052) must not start a second session beside a session that might still be alive. Without a termination capability the loop's only safe behaviour is to stop, so this operation is what makes an in-process restart defensible at all — and the shell has had it, with an exact-identity reap, since the orphan-runtime defect.
 
 ## Problem Framing (Clarified)
 
@@ -294,7 +294,7 @@ ALT-4 satisfies C-1 through C-6. C-1: one operation added, optional, declared, n
 - The reap depends on the runtime's argv carrying the session id or the deterministic title; a wrapper that changes the argv shape would make the reap match nothing, leaving the direct child termination as the only effective act.
 - Process-group signalling is POSIX-shaped; the proof boundary excludes kernel delivery, so a platform difference is a deployment observation, not a battery failure.
 - A 20 s grace means a stalled restart can take 20 s longer than an abrupt kill would; this is accepted because abrupt kills are what corrupt harness state.
-- Termination and the loop's ordering introduce a new obligation on the engine: it must never restart without the confirmation, which is a control-flow invariant a reviewer must check (TDR-0047).
+- Termination and the loop's ordering introduce a new obligation on the engine: it must never restart without the confirmation, which is a control-flow invariant a reviewer must check (TDR-0052).
 
 ### Unresolved Questions
 
@@ -326,7 +326,7 @@ ALT-4 satisfies C-1 through C-6. C-1: one operation added, optional, declared, n
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §2.1 (stall and restart budget snapshot), §5.1 F-5, §6 Flow 1, §7.3 (deferred shared seam), §8.1 API-5, §8.3 DM-5, §8.5, §11 RSK-2/RSK-3, §17.5, §22, §25.1 Appendix A, §25.3 Appendix C, §25.6 Appendix F(D).
-- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0017 (coordinator supervision, the delivered process lifecycle seam); TDR-0043 (opencode adapter window and mode); [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) (the loop that consumes this operation).
+- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0017 (coordinator supervision, the delivered process lifecycle seam); TDR-0043 (opencode adapter window and mode); [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (the loop that consumes this operation).
 - Specs: `doc/spec/features/feature-harness-adapters.md`; `feature-dispatch-engine.md`; `feature-session-lifecycle-economics.md`; `feature-coordinator-supervision.md`.
 - Contracts and code (read 2026-11-18): `packages/core/src/contracts/harness.ts`; `packages/core/src/config/defaults.ts`; `packages/core/src/contracts/error-table.ts`; `packages/adapters/src/host/index.ts`; `packages/adapters/src/daemon/process.ts`; `packages/cli/src/commands/coordinator-loop.ts`.
 - Parity reference (read 2026-11-18): `scripts/deliver-ticket.sh` — `kill_process_tree` (lines 1226-1249) and `_reap_opencode_orphan` (lines 1251-1288), with `KILL_GRACE_SECONDS` default 20 at line 65.

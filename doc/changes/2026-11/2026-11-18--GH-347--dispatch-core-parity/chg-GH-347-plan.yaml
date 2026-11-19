@@ -8,6 +8,13 @@
 # progress log. Progress is a pm-notes `notes:` entry naming the plan phase id,
 # the commit hash, and the gate result.
 #
+# SYNC (2026-11-19): the branch is merged with `main-tools` at d1fff222 (GH-346).
+# The six binding decision records are renumbered TDR-0044..TDR-0049 ->
+# TDR-0049..TDR-0054 because `main-tools` already holds TDR-0044..TDR-0048
+# (GH-346's install-lifecycle records). The precedent is GH-346's own renumber of
+# TDR-0036..TDR-0040 -> TDR-0044..TDR-0048 on the same ground. Phases, scope,
+# AC/TC acceptance and gates are unchanged; only the record ids move.
+#
 # SOURCES (single source of truth; this plan invents no requirement):
 #   - Spec:     ./chg-GH-347-spec.md (v1.7; F-1..F-9; API-1..API-7;
 #               DM-1..DM-9; NFR-1..NFR-11; NG-1..NG-12; RSK-1..RSK-11;
@@ -33,27 +40,27 @@
 #               BINDING seam prerequisite).
 #   - PM record: ./chg-GH-347-pm-notes.yaml (delivery_mode autonomous; scope =
 #               ticket F1a gaps 1–10, gaps 11–12 → GH-354; rulings R1–R7; the
-#               staging note for TDR-0044..TDR-0049; the operational
+#               staging note for TDR-0049..TDR-0054; the operational
 #               prerequisite that every primitive call carries BOTH
 #               PATH=$PWD/node_modules/.bin:$PATH and TMPDIR=$PWD/tmp/tmpdir
 #               because the commit primitive probes the bare `commitlint` name;
 #               the "BINDING for delivery_planning" note naming the seam exports
 #               and the injected delay(ms, reason) fact).
-#   - Decisions: doc/decisions/TDR-0044 (dispatch-owned durable lane record:
+#   - Decisions: doc/decisions/TDR-0049 (dispatch-owned durable lane record:
 #               kind `dispatch.lane`, schema `delivery.dispatch.lane.v1`, key
 #               `dispatch.lanes:<ref>`, append-only latest-wins, acquisition and
-#               terminal appends, no daemon adoption), TDR-0045 (atomic
+#               terminal appends, no daemon adoption), TDR-0050 (atomic
 #               admission: the verdict decided inside the claim, the declared
 #               refusal set, no dispatch renewal, bounded fence wait; amends
-#               TDR-0026 DC-2/DC-3 for the dispatch caller only), TDR-0046
+#               TDR-0026 DC-2/DC-3 for the dispatch caller only), TDR-0051
 #               (harness `terminate`: optional port member, capability gating,
 #               TERM→KILL inside `coordinator.kill-grace`, exact-identity reap,
-#               idempotence), TDR-0047 (in-process bounded loop: clean exit
+#               idempotence), TDR-0052 (in-process bounded loop: clean exit
 #               terminal, stall-only restart, one attempt record per terminal
-#               dispatch, the `lane.restart-budget` bound), TDR-0048 (total
+#               dispatch, the `lane.restart-budget` bound), TDR-0053 (total
 #               derivation ladder, the terminal pre-restart verdict set,
 #               arm-aware corroboration, the retired ledger no-work arm, the
-#               subsumed exit-0-no-artifact `failed` arm), TDR-0049 (`pm` agent
+#               subsumed exit-0-no-artifact `failed` arm), TDR-0054 (`pm` agent
 #               through the binding seam, deterministic `ticket-<REF>` title,
 #               lifecycle prompt as data).
 #   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
@@ -84,12 +91,12 @@
 #   The six decision records are UNTRACKED in the worktree at plan time because
 #   the specification-phase completion commit (0aaf9c39) stages only the change
 #   folder:
-#     doc/decisions/TDR-0044-dispatch-owned-durable-lane-record.md
-#     doc/decisions/TDR-0045-dispatch-atomic-admission-verdicts.md
-#     doc/decisions/TDR-0046-harness-terminate-operation.md
-#     doc/decisions/TDR-0047-in-process-bounded-restart-loop.md
-#     doc/decisions/TDR-0048-total-derivation-ladder-and-corroboration.md
-#     doc/decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md
+#     doc/decisions/TDR-0049-dispatch-owned-durable-lane-record.md
+#     doc/decisions/TDR-0050-dispatch-atomic-admission-verdicts.md
+#     doc/decisions/TDR-0051-harness-terminate-operation.md
+#     doc/decisions/TDR-0052-in-process-bounded-restart-loop.md
+#     doc/decisions/TDR-0053-total-derivation-ladder-and-corroboration.md
+#     doc/decisions/TDR-0054-dispatch-spawn-identity-title-and-prompt.md
 #   Phase 1 declares those six EXACT paths so @coder lands them on the branch.
 #   VERIFIED AT PLAN TIME: the six `doc/decisions/00-index.md` ROWS ARE ALREADY
 #   COMMITTED on this branch (they landed in 0aaf9c39 together with the change
@@ -656,7 +663,7 @@
 #     prompt builder are pure and stay there.
 #   - `packages/core/src/state/**` may import `#contracts` only
 #     (tier-state-allowed-set). Phase 2's fence-wait helper, if it lands in
-#     `state/index.ts` as TDR-0045's touched-file list anticipates, receives the
+#     `state/index.ts` as TDR-0050's touched-file list anticipates, receives the
 #     delay as injected data and imports nothing new.
 #   - `packages/adapters/**` may NOT import the core ROOT (subpath-undeclared);
 #     it imports `@delivery-os/core/contracts`. The `terminate` member and the
@@ -719,7 +726,7 @@
 #     exclusivity unchanged.
 #   - doc/spec/features/feature-scheduling-engine.md — the lease section notes the
 #     dispatch caller's no-renewal rule and the unchanged TTL/exclusivity
-#     (DISCOVERED AT PLAN TIME: TDR-0045's reference list names this page and the
+#     (DISCOVERED AT PLAN TIME: TDR-0050's reference list names this page and the
 #     current-truth lease text lives here; no AC or TC changes).
 #   - doc/spec/features/feature-config-layer.md AND
 #     doc/planning/oss-tooling/milestones/m1/commands/config.md — record that no
@@ -750,8 +757,8 @@
 #     process management and its kill grace; the harness terminate member does not
 #     move coordinator supervision, and neither page carries the stale session-port
 #     sentence.
-#   Each reconciled page must cite the governing record: TDR-0044, TDR-0045,
-#   TDR-0046, TDR-0047, TDR-0048, TDR-0049.
+#   Each reconciled page must cite the governing record: TDR-0049, TDR-0050,
+#   TDR-0051, TDR-0052, TDR-0053, TDR-0054.
 #
 # DOC-CONFORMANCE OBLIGATIONS (declared here so no phase improvises):
 #   - THIS CHANGE EDITS NO `.opencode/**` FILE. The prompts describe the shell
@@ -907,10 +914,10 @@
 #       the lane/terminate/tracker facts are bounded evidence references (spec §22).
 #   5.  `daemon.lane`, its state vocabulary, and daemon reconciliation ownership
 #       are untouched; the daemon family never reads or writes `dispatch.lane`
-#       (NG-6, TDR-0044).
+#       (NG-6, TDR-0049).
 #   6.  The sibling `queue claim` renewal, repository exclusivity, its TTL, and
 #       stale takeover are unchanged; only the dispatch caller refuses and never
-#       renews (NG-5, TDR-0045).
+#       renews (NG-5, TDR-0050).
 #   7.  The attempt record's shape is unchanged and gains no lane field; exactly
 #       one attempt record per classified dispatch, zero for a pre-session
 #       refusal, zero for a restarted iteration (DM-2, NFR-4).
@@ -1040,7 +1047,7 @@ tier:
     - "A configuration key or default is added or changed, including a lane-specific terminate-grace key in place of the borrowed coordinator.kill-grace (NFR-11, DEC-4)"
     - "A CLI command, flag, argument, output key, help-inventory entry, or rendered operator surface is added, or a `.opencode/**` prompt is edited (NG-11, NG-1, the doc-conformance obligations)"
     - "A new failure identity, error-table row, domain kind, or second error system appears, or a lane/terminate/tracker fact is emitted as an identity instead of a bounded evidence reference (spec §22)"
-    - "daemon.lane, its state vocabulary, or daemon reconciliation ownership changes, or the daemon family reads or writes dispatch.lane (NG-6, TDR-0044, AC-F1-4, TC-LANE-005)"
+    - "daemon.lane, its state vocabulary, or daemon reconciliation ownership changes, or the daemon family reads or writes dispatch.lane (NG-6, TDR-0049, AC-F1-4, TC-LANE-005)"
     - "The sibling queue claim renews differently, repository exclusivity or its TTL changes, the dispatch path renews a live same-ref lease, or an admission outcome is contained as fallback.internal (NG-5, DEC-1, API-2, TC-ADMIT-001..006)"
     - "A pre-session refusal appends an attempt, a lane, or a lease; a classified dispatch appends 2+ attempts; a restarted iteration appends a terminal lane or an attempt; or a resume replay writes an attempt (NFR-4, DM-2, TC-LANE-002/003, TC-LOOP-001/005)"
     - "A seam is reimplemented in tests instead of imported from its production module, or `claimDispatchLease`, `resolveDispatchLane`, or the injected delay(ms, reason) fact is dropped, made non-injectable, or resolved from an ambient timer/configuration key (AC-F9-2, test plan §8.2/§8.3, TC-PARITY-002)"
@@ -1073,12 +1080,12 @@ phases:
   # reviewed in isolation, and (iii) the six TDRs are the governing records and
   # must be on the branch before the code they govern.
   #
-  # Contract (TDR-0044, TDR-0046, TDR-0048, TDR-0049; spec DM-1, DM-3, DM-5,
+  # Contract (TDR-0049, TDR-0051, TDR-0053, TDR-0054; spec DM-1, DM-3, DM-5,
   #   DM-6, DM-8):
   #   - `dispatch.lane`: kind `dispatch.lane`, payload schema
   #     `delivery.dispatch.lane.v1`, key `dispatch.lanes:<ref>`, identity `ref`,
   #     append-only, latest record per ref is the lane. Record fields exactly as
-  #     DM-1/TDR-0044: `schema`, `ref`, `repository`, `attemptId`, `sessionId`,
+  #     DM-1/TDR-0049: `schema`, `ref`, `repository`, `attemptId`, `sessionId`,
   #     `harnessKind`, `owner: {processId, startedAt}`, `iterationOrdinal >= 1`,
   #     `restartsConsumed >= 0`, `state: "active" | "terminal"`, optional
   #     `lastToken`/`lastOutcome` present ONLY on a terminal record, `recordedAt`.
@@ -1165,7 +1172,7 @@ phases:
   #   tests/structure/content-inventory.test.ts
   #   tests/fixtures/ports/v1-contract-inventory.json
   #   tests/types/harness.type-test.ts
-  #   doc/decisions/TDR-0044..TDR-0049 (six exact paths)
+  #   doc/decisions/TDR-0049..TDR-0054 (six exact paths)
   #   doc/decisions/00-index.md (conditional staging only)
   #   packages/core/src/state/** is NOT touched: record kinds ride the existing
   #   append-only ledger; no state-engine or boundary change is needed.
@@ -1213,12 +1220,12 @@ phases:
         - tests/fixtures/events/state-additivity-baseline.json
         - tests/types/harness.type-test.ts
         # Untracked at plan time (COMMIT-BOUNDARY REALITY). Six exact paths.
-        - doc/decisions/TDR-0044-dispatch-owned-durable-lane-record.md
-        - doc/decisions/TDR-0045-dispatch-atomic-admission-verdicts.md
-        - doc/decisions/TDR-0046-harness-terminate-operation.md
-        - doc/decisions/TDR-0047-in-process-bounded-restart-loop.md
-        - doc/decisions/TDR-0048-total-derivation-ladder-and-corroboration.md
-        - doc/decisions/TDR-0049-dispatch-spawn-identity-title-and-prompt.md
+        - doc/decisions/TDR-0049-dispatch-owned-durable-lane-record.md
+        - doc/decisions/TDR-0050-dispatch-atomic-admission-verdicts.md
+        - doc/decisions/TDR-0051-harness-terminate-operation.md
+        - doc/decisions/TDR-0052-in-process-bounded-restart-loop.md
+        - doc/decisions/TDR-0053-total-derivation-ladder-and-corroboration.md
+        - doc/decisions/TDR-0054-dispatch-spawn-identity-title-and-prompt.md
         # CONDITIONAL STAGING ONLY: rows are committed (0aaf9c39), file clean;
         # declared so a status row or typo touch made while the six records land
         # stages with them. Never a licence to edit an unrelated row.
@@ -1236,13 +1243,13 @@ phases:
       pipelineId: "CI pipeline for the GH-347 phase-1 commit (targeted contract, type, pin and decision-record suites green; the aggregate runs in phase 8)"
 
   # ---------------------------------------------------------------------------
-  # Phase 2 — Atomic admission (F-2; DEC-1; TDR-0045).
+  # Phase 2 — Atomic admission (F-2; DEC-1; TDR-0050).
   #
   # Goal: a dispatch's admission verdict is decided atomically with the claim, so
   # a race can never admit two invocations, mislabel store contention as
   # `fallback.internal`, or renew another invocation's live same-ref lease.
   #
-  # Contract (API-2, DM-7; TDR-0045 DC-1..DC-5):
+  # Contract (API-2, DM-7; TDR-0050 DC-1..DC-5):
   #   - The claim observes the live lease under the fence and returns exactly one
   #     of: claimed (with a lease identity), `queue.single-flight` (a live lease
   #     recording the requested ref under ANY holder, exit 1, holder named in
@@ -1278,7 +1285,7 @@ phases:
   #   2.1 Add the path flag ("this caller may not renew") and the bounded fence
   #       wait to the delivered claim in `app/queue.ts`, keeping the fence body's
   #       lease fold, stale takeover, and `queue.lease-conflict` construction
-  #       (TDR-0045's implementation plan steps 1–2). Export `claimDispatchLease`
+  #       (TDR-0050's implementation plan steps 1–2). Export `claimDispatchLease`
   #       as the dispatch caller's entry point.
   #   2.2 If the wait helper lands in `state/index.ts` (the decision record names
   #       it), it receives the delay as injected data and imports no new module.
@@ -1323,7 +1330,7 @@ phases:
   #   packages/core/src/app/queue.ts      (atomic claim, no-renew flag, fence wait,
   #                                        claimDispatchLease)
   #   packages/core/src/state/index.ts    (bounded fence-wait helper, if homed here
-  #                                        per TDR-0045's touched-file list)
+  #                                        per TDR-0050's touched-file list)
   #   packages/core/src/app/dispatch.ts   (kind preservation, refusal mapping)
   #   packages/core/src/app/index.ts      (export)
   #   packages/core/src/index.ts          (export)
@@ -1406,13 +1413,13 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 3 — Durable lane writes and recorded-attempt resume (F-1, F-3; DEC-2,
-  # DEC-3; TDR-0044).
+  # DEC-3; TDR-0049).
   #
   # Goal: a dispatch that acquires a session becomes resumable BEFORE its outcome
   # is known, and a later `--resume-prompt` resolves the recorded lane instead of
   # spawning fresh — including a finished `pr-open` attempt.
   #
-  # Contract (DM-1, DM-2, API-3; TDR-0044):
+  # Contract (DM-1, DM-2, API-3; TDR-0049):
   #   - On every session acquisition (spawn or resume) exactly one `active` lane
   #     record is appended for the ref with session identity, normalized
   #     repository, attempt id, harness kind, owner `{processId, startedAt}`, a
@@ -1579,7 +1586,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 4 — Tracker retry ladder, the pmNotes artifact fact, and the total
-  # derivation order (F-4, F-8; DEC-6, DEC-7, DEC-11; TDR-0048).
+  # derivation order (F-4, F-8; DEC-6, DEC-7, DEC-11; TDR-0053).
   #
   # Goal: a tracker outage is bounded, retried, and honest, and the derivation
   # becomes ONE total order that yields all eleven classes — including
@@ -1609,7 +1616,7 @@ phases:
   #     carried but gates nothing). The typed-only exit-0-no-artifact `failed` arm
   #     is SUBSUMED. A decisive artifact resolves on a COMPLETED session; at a
   #     stall only the terminal pre-restart verdict set does (phase 5 applies it).
-  #   - Arm-aware corroboration (TDR-0048; AC-F8-1, AC-F8-4): the corroboration
+  #   - Arm-aware corroboration (TDR-0053; AC-F8-1, AC-F8-4): the corroboration
   #     REQUIREMENT is arm-aware for exactly TWO arms — the tracker-done `merged`
   #     arm (Appendix F(C)(2)) and the nothing-to-do arm (Appendix F(C)(8)) — and
   #     every other token keeps today's requirement. Tracker-done `merged` and
@@ -1878,13 +1885,13 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 5 — Stall termination and the in-process restart loop (F-1 terminal
-  # half, F-5, F-6; DEC-4, DEC-5; TDR-0046, TDR-0047).
+  # half, F-5, F-6; DEC-4, DEC-5; TDR-0051, TDR-0052).
   #
   # Goal: a corroborated terminal stall is terminated within a bounded grace and
   # never leaks a silent second session, and one dispatch invocation reproduces
   # the shell's bounded iterate-until-terminal table without burning a slot twice.
   #
-  # Contract (API-5, DM-1 terminal half, DM-4(D), DM-5; TDR-0046, TDR-0047):
+  # Contract (API-5, DM-1 terminal half, DM-4(D), DM-5; TDR-0051, TDR-0052):
   #   - `terminate` JOINS the closed harness operation set. The port member is
   #     optional; a terminate-capable adapter declares and implements it; an
   #     adapter without it declares a gap (`harness.capability.gap`) and is never
@@ -1931,7 +1938,7 @@ phases:
   #     its scope EXPLICITLY. The authorising clause for (iii) is that peak-pause
   #     recovery is a coordinator-family re-entry that consumes an ordinal, not an
   #     operator resume: AC-F3-2 admits only the operator resume, AC-F6-6 governs
-  #     an admitted dispatch iteration, and TDR-0047's bound is the dispatch lane's
+  #     an admitted dispatch iteration, and TDR-0052's bound is the dispatch lane's
   #     loop bound. A global change to the shared function would silently remove
   #     peak-pause recovery's refusal and the loop's `max-restarts`; neither is
   #     acceptable.
@@ -1995,7 +2002,7 @@ phases:
   #       EXPLICITLY at `recoverInterruptedLane` in `domain/daemon-peak-pause.ts`,
   #       which KEEPS today's refusing behaviour (authorising clauses: AC-F3-2
   #       admits only the operator resume, AC-F6-6 governs an admitted dispatch
-  #       iteration, TDR-0047's bound is the lane loop bound; peak-pause recovery
+  #       iteration, TDR-0052's bound is the lane loop bound; peak-pause recovery
   #       is a coordinator-family re-entry that consumes an ordinal). Rewrite
   #       `tests/behaviour/dispatch-restart-budget.test.ts` TC-RESUME-002 into
   #       TC-LOOP-006 in the same commit (delivered expectation 1).
@@ -2187,13 +2194,13 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 6 — Spawn identity, title, and lifecycle prompt (F-7; DEC-8;
-  # TDR-0049).
+  # TDR-0054).
   #
   # Goal: a production dispatch spawns the delivery lifecycle the way the shell
   # lane does — the `pm` agent, a deterministic title, and the real lifecycle
   # prompt — with no new flag and no operator override.
   #
-  # Contract (API-6, DM-6; TDR-0049):
+  # Contract (API-6, DM-6; TDR-0054):
   #   - A production dispatch supplies the caller agent identity `pm` through the
   #     existing optional agent member; the delivered pure resolver produces the
   #     single-seat binding; the adapter renders exactly one `--agent pm` and
@@ -2654,7 +2661,7 @@ phases:
   #
   # GOAL: close B1 and B2 and the six majors coupled to the same proofs, using
   #   only the clauses that already authorise each change, so the change returns
-  #   to review against the SAME spec v1.6, test plan v0.4, and TDR-0044..TDR-0049.
+  #   to review against the SAME spec v1.6, test plan v0.4, and TDR-0049..TDR-0054.
   #   No decision is reopened, no AC is redefined, nothing moves in the closed
   #   surface (tokens, projections, exits, attempt schema, error table, domain
   #   kinds, configuration defaults), and no scope is added to the ticket: every
@@ -2756,7 +2763,7 @@ phases:
   #       key idempotence per acquisition); add a test invoking the real adapter
   #       terminate (with a faithful tree double) and a non-vacuous broad-pattern
   #       negative control.
-  #     clause: "TDR-0046 C-2/C-4 (do not reuse the 100 ms probe escalation;
+  #     clause: "TDR-0051 C-2/C-4 (do not reuse the 100 ms probe escalation;
   #       booleans match observed acts); API-5; AC-F5-1; AC-F5-5; NFR-6."
   #
   #   R6 [M3] packages/core/src/domain/dispatch-liveness.ts
@@ -3041,7 +3048,7 @@ phases:
   # reach the engine through the mounted session port, not only through a test
   # double; close N2 by EXERCISING the unconfirmed-termination branch and
   # correcting the pm-note that overstates it; correct N3/N4 as doc/comment and
-  # closed-set accuracy. NO decision is reopened: DM-5, TDR-0046, Appendix F(D)
+  # closed-set accuracy. NO decision is reopened: DM-5, TDR-0051, Appendix F(D)
   # and AC-F5-4 are implemented exactly as written; the defect is that the
   # production composition never feeds the gate its input.
   #

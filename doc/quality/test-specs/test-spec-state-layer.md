@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-STATE-LAYER
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-16
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320", "GH-296", "GH-287"]
+  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320", "GH-296", "GH-287", "GH-346"]
   feature_spec: doc/spec/features/feature-state-layer.md
 ---
 
@@ -54,6 +54,7 @@ Every integration store lives under a per-test temporary root and is driven thro
 - `retro-registry.test.ts`, `retro-sidecar-append.test.ts`, `retro-chain.test.ts`, `retro-chain-mutations.test.ts`, `retro-chain-salvage.test.ts`, `retro-chain-cross-process.test.ts`, `retro-key-artifact.test.ts`, `retro-malformed.test.ts` — the retro registry's three-kind boundary validation and additive seed, collector-fenced sidecar appends and permissions, clean and mutated chain verification, key creation/reuse/open failures, cross-process continuity, salvage continuity, and entry-level malformation preservation.
 - `action-store-boundary.test.ts` — the action registry's two-kind boundary validation, the valid/verified-empty verdicts with entry-level malformation in band, the `retro-action-registry` fence namespace, and write refusal for a nonconforming payload. The consumer contract is in [Retro Action Registry](../../spec/features/feature-retro-action-registry.md).
 - `telemetry-storage-migration.test.ts`, `telemetry-storage-damage.test.ts`, `telemetry-storage-growth.test.ts`, `telemetry-storage-coexistence.test.ts` — version-declared re-read equality with no in-place mutation or dropped record, the torn/unsupported-version damage identities, linear per-step and per-session-close growth, and the v2 and closeout planes coexisting. The record contract is in [Harness Telemetry v2](../../spec/features/feature-telemetry-v2.md).
+- `install-compatibility.test.ts` — the installed artifact's read-only state-format check over the ledger header: the advisory on the install write paths, the typed verdict on the report path, the bounded header-only enumeration with its cap and truncation flag, and deterministic reporting. The contract is in [Installable Artifact and Install Lifecycle](../../spec/features/feature-install-lifecycle.md).
 - `prior-identity-state-fallback.test.ts` — the host-root selection of an identity that declares a prior identity: an absolute `<PREFIX>_STATE_DIR` override disables the fallback, the current default root wins when both exist, the prior default root is selected when only it exists, no second root is created, a prior-prefix state-directory override is never read, and one effective root serves the reads and store operations that follow. The policy contract is in [Repositories and the Host Overview](../../spec/features/feature-projects.md).
 
 ### Contract, Structure, and Boundary Tests
@@ -187,3 +188,4 @@ No numeric coverage threshold is asserted. Coverage is risk-based: every corrupt
 - Registry consumer: [PM-Notes Lint and Phase Transitions](../../spec/features/feature-pm-notes-lint-and-phase-transitions.md).
 - Testing rules: [.ai/rules/testing-strategy.md](../../../.ai/rules/testing-strategy.md) and [.ai/rules/typescript.md](../../../.ai/rules/typescript.md).
 - Storage-engine decision: [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md).
+- Compatibility consumer: [Installable Artifact and Install Lifecycle](../../spec/features/feature-install-lifecycle.md).

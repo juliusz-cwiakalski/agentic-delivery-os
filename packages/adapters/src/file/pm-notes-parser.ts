@@ -279,7 +279,7 @@ export const nodePmNotesFileSystemFacts = (): PmNotesFileSystemFacts => ({
 });
 
 /**
- * The artifact-completeness projection (GH-347 DM-3, TDR-0048).
+ * The artifact-completeness projection (GH-347 DM-3, TDR-0053).
  *
  * `complete` requires a present document whose `delivery` phase carries a
  * non-null completion. A missing file is `absent`; a malformed, unparseable, or

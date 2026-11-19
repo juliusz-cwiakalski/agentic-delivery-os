@@ -355,7 +355,7 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
       const pid = Number(input.handle.treeRoot);
       // Idempotent PER ACQUISITION: a repeated call before a resume reports the
       // same terminal facts and signals nothing further (GH-347 AC-F5-5,
-      // TDR-0046 DC-4). A resume clears the entry, so iteration 2+ IS signalled.
+      // TDR-0051 DC-4). A resume clears the entry, so iteration 2+ IS signalled.
       if (terminated.has(input.handle.sessionId)) {
         return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
       }

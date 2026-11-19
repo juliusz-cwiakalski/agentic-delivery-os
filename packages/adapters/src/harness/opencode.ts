@@ -110,7 +110,7 @@ export type OpencodeHarnessOptions = {
   readonly terminateWait?: (ms: number) => Promise<void>;
   /**
    * The injected process-tree seam for the terminate contract (GH-347 AC-F5-5,
-   * TDR-0046 DC-2/DC-3). The composition binds the real seam; a test injects a
+   * TDR-0051 DC-2/DC-3). The composition binds the real seam; a test injects a
    * faithful model so TERM-before-KILL, the declared grace, and "0 unrelated
    * runtimes signalled" are observable without a kernel. Absent means no
    * signalling capability is available, and the adapter reports that honestly.
@@ -681,7 +681,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: record?.descriptor ?? descriptor,
       completion: outcome.completion,
-      // GH-347 AC-F5-5, TDR-0046 DC-4: a resumed stream is a NEW live process
+      // GH-347 AC-F5-5, TDR-0051 DC-4: a resumed stream is a NEW live process
       // tree, so the previous termination fact is CLEARED. Inheriting it would
       // make iteration 2+ of the restart loop unsignalable while its process is
       // still alive.
@@ -715,7 +715,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       if (!capabilities.supportedOperations.includes("terminate")) return gap("terminate");
       const record = sessions.get(input.handle.sessionId);
       // An already-exited or unknown session is SUCCESS, never an error
-      // (GH-347 AC-F5-5, TDR-0046 DC-4).
+      // (GH-347 AC-F5-5, TDR-0051 DC-4).
       if (record === undefined) {
         return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
       }

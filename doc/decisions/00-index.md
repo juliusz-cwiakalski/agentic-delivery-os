@@ -71,9 +71,22 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0041](TDR-0041-harness-dispatch-outcome-envelope-detail.md) | TDR | Harness Dispatch-Outcome Disclosure on the Failure-Envelope `detail` Slot — One Declared `harness` Member (`kind`, `observedVersion`, `versionVerdict`, `mode`) on the Four Pre-Session Harness Refusals, Additive Within `delivery.result.v1` | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
 | [TDR-0042](TDR-0042-opencode-integration-mode.md) | TDR | opencode Integration Mode — One Declared Default Selected Never Inferred | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0043](TDR-0043-opencode-harness-adapter-contract.md) | TDR | opencode Harness Adapter Contract — Version Window, Mode, Propagation Reference, and Observed-Store Telemetry | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0044](TDR-0044-dispatch-owned-durable-lane-record.md) | TDR | Dispatch-Owned Durable Lane Record — A Distinct `dispatch.lane` Kind, Acquisition-Time and Terminal Appends, and a Latest-Wins Per-Ref Resume Read | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0045](TDR-0045-dispatch-atomic-admission-verdicts.md) | TDR | Atomic Dispatch Admission — The Verdict Decided Inside the Claim, Declared Queue Verdicts, No Dispatch Renewal, and Repository Exclusivity Untouched | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0046](TDR-0046-harness-terminate-operation.md) | TDR | Harness `terminate` Operation — Capability-Gated Process-Tree Termination with TERM→KILL Inside the Declared Grace and an Exact-Identity Reap | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) | TDR | In-Process Bounded Restart Loop — Clean Exit Terminal, Stall-Only Restart, One Attempt Record per Terminal Dispatch, and the Delivered `lane.restart-budget` Bound | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0048](TDR-0048-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0049](TDR-0049-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) | TDR | Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) | TDR | Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0049](TDR-0049-dispatch-owned-durable-lane-record.md) | TDR | Dispatch-Owned Durable Lane Record — A Distinct `dispatch.lane` Kind, Acquisition-Time and Terminal Appends, and a Latest-Wins Per-Ref Resume Read | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0050](TDR-0050-dispatch-atomic-admission-verdicts.md) | TDR | Atomic Dispatch Admission — The Verdict Decided Inside the Claim, Declared Queue Verdicts, No Dispatch Renewal, and Repository Exclusivity Untouched | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0051](TDR-0051-harness-terminate-operation.md) | TDR | Harness `terminate` Operation — Capability-Gated Process-Tree Termination with TERM→KILL Inside the Declared Grace and an Exact-Identity Reap | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) | TDR | In-Process Bounded Restart Loop — Clean Exit Terminal, Stall-Only Restart, One Attempt Record per Terminal Dispatch, and the Delivered `lane.restart-budget` Bound | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0054](TDR-0054-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+
+Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.
+
+Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.

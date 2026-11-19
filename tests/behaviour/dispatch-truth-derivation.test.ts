@@ -1,5 +1,5 @@
 /**
- * The total derivation order (GH-347 F-8; DEC-6; TDR-0048; Appendix F) and the
+ * The total derivation order (GH-347 F-8; DEC-6; TDR-0053; Appendix F) and the
  * delivered TC-TRUTH-001..005 cases, updated where §8.5 names a deliberate
  * change.
  *

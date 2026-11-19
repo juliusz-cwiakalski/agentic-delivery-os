@@ -292,7 +292,7 @@ export type HarnessSpawnInput = {
   readonly agent?: string;
   readonly binding?: HarnessSeatBinding;
   /**
-   * The additive optional fresh-spawn title (GH-347 DM-6, TDR-0049): one
+   * The additive optional fresh-spawn title (GH-347 DM-6, TDR-0054): one
    * deterministic `ticket-<REF>` token the adapter renders as a single
    * `--title` argument. A resume carries none.
    */
@@ -471,7 +471,7 @@ export type HarnessLivenessAssembler = (input: {
  *
  * One shape for every adapter. `classify` is bound to the shared classifier by
  * composition; adapters normalize facts and never classify with their own
- * logic. `terminate` is the additive OPTIONAL member (GH-347 API-5, TDR-0046):
+ * logic. `terminate` is the additive OPTIONAL member (GH-347 API-5, TDR-0051):
  * a port double without it stays valid, and an adapter that declares no
  * capability is never asked.
  */
@@ -500,7 +500,7 @@ export type HarnessSessionPort = {
    * dispatch-composition and adapter-port suites hold that obligation.
    */
   readonly capabilities?: HarnessCapabilityDeclaration;
-  /** The additive optional capability-gated termination (GH-347 API-5, TDR-0046). */
+  /** The additive optional capability-gated termination (GH-347 API-5, TDR-0051). */
   readonly terminate?: (
     input: HarnessTerminateInput,
   ) => Promise<HarnessResult<HarnessTerminateResult>>;

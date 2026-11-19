@@ -2,9 +2,9 @@
  * The captured prompt-required family lists (GH-299 TC-METRICS-080).
  *
  * One statement of the delivered 23-family base (steer at index 22), one of the
- * metrics-mounted 24-family set (GH-299), and one of the merged 25-family set
- * (GH-295 appends `supervise` last), plus the pinning files every count must
- * move in.
+ * metrics-mounted 24-family set (GH-299), the merged 25-family set (GH-295
+ * appends `supervise`), and the 26-family set GH-346 appends `install` to,
+ * plus the pinning files every count must move in.
  */
 
 /** The families through GH-298: 23 entries with steer last. */
@@ -38,9 +38,12 @@ export const DELIVERED_FAMILIES = [
 export const METRICS_MOUNTED_FAMILIES = [...DELIVERED_FAMILIES, "metrics"] as const;
 
 /** The merged mounted set: supervise appended as the twenty-fifth family. */
-export const MOUNTED_FAMILIES = [...METRICS_MOUNTED_FAMILIES, "supervise"] as const;
+export const SUPERVISE_MOUNTED_FAMILIES = [...METRICS_MOUNTED_FAMILIES, "supervise"] as const;
 
-/** The suites that pin the family count and must all read 25. */
+/** The mounted set after GH-346: install appended as the twenty-sixth family. */
+export const MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install"] as const;
+
+/** The suites that pin the family count and must all read 26. */
 export const PINNING_FILES = [
   "tests/structure/entrypoint-bin.test.ts",
   "tests/structure/steer-mounting.test.ts",

@@ -257,7 +257,7 @@ describe("TC-OCS-034 deliver shares the resume identity rules", () => {
 });
 
 /* ------------------------------------------------------------------------- */
-/* GH-347 AC-F5-5 / TDR-0046 — the production terminate over a faithful tree.  */
+/* GH-347 AC-F5-5 / TDR-0051 — the production terminate over a faithful tree.  */
 /* ------------------------------------------------------------------------- */
 
 /**

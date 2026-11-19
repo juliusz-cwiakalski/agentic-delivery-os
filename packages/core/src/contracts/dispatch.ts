@@ -158,7 +158,7 @@ export const DISPATCH_CORROBORATION_SUFFICIENCY = {
 } as const satisfies Readonly<Record<DeliveryResultToken, readonly DispatchCorroborationSource[]>>;
 
 /**
- * The closed corroboration-arm vocabulary (GH-347 DM-4, TDR-0048; AC-F8-1,
+ * The closed corroboration-arm vocabulary (GH-347 DM-4, TDR-0053; AC-F8-1,
  * AC-F8-4). Exactly the two arms whose required evidence source changed: a
  * tracker-done `merged` and a nothing-to-do result are corroborated by the
  * tracker fact alone. Every other token keeps its token-keyed requirement.
@@ -585,7 +585,7 @@ export type DispatchLaneOwner = {
 };
 
 /**
- * One durable dispatch lane record (DM-1, TDR-0044).
+ * One durable dispatch lane record (DM-1, TDR-0049).
  *
  * Append-only; the latest record for a ref is the lane. `lastToken` and
  * `lastOutcome` are present only on a terminal record. No prompt, transcript,
@@ -610,7 +610,7 @@ export type DispatchLaneRecord = {
 /** The per-ref lane record key; one key per ref, appended per state change. */
 export const dispatchLaneRecordKey = (ref: string): string => `${DISPATCH_LANE_KEY_PREFIX}${ref}`;
 
-/** The fresh-spawn title fact (DM-6, TDR-0049): `ticket-<REF>`, one short token. */
+/** The fresh-spawn title fact (DM-6, TDR-0054): `ticket-<REF>`, one short token. */
 export const DISPATCH_SPAWN_TITLE_PREFIX = "ticket-" as const;
 export const DISPATCH_MAX_SPAWN_TITLE_CHARS = 64 as const;
 /** Anchored grammar: the prefix plus the work-item reference grammar. */

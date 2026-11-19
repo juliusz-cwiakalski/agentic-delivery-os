@@ -1,5 +1,5 @@
 ---
-id: TDR-0044
+id: TDR-0049
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -72,15 +72,15 @@ links:
     - "packages/cli/src/production.ts"
     - "scripts/deliver-ticket.sh"
   diagrams: []
-  decisions: ["TDR-0004", "TDR-0023", "TDR-0024", "TDR-0045", "TDR-0047"]
+  decisions: ["TDR-0004", "TDR-0023", "TDR-0024", "TDR-0050", "TDR-0052"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S9"]
 ---
 
-# TDR-0044: Dispatch-Owned Durable Lane Record
+# TDR-0049: Dispatch-Owned Durable Lane Record
 
-> **Traceability.** Spec §15 **DEC-2** (lane-record home) and the resolution half of **DEC-3** (resume over a recorded lane); §15.1 maps DEC-2 to this record; §5.1 F-1; §8.3 DM-1 and DM-2; §8.5 backward compatibility; §17.1 AC-F1-1…AC-F1-4. Sibling records: [TDR-0045](TDR-0045-dispatch-atomic-admission-verdicts.md) (admission), [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) (the loop whose iterations append these records).
+> **Traceability.** Spec §15 **DEC-2** (lane-record home) and the resolution half of **DEC-3** (resume over a recorded lane); §15.1 maps DEC-2 to this record; §5.1 F-1; §8.3 DM-1 and DM-2; §8.5 backward compatibility; §17.1 AC-F1-1…AC-F1-4. Sibling records: [TDR-0050](TDR-0050-dispatch-atomic-admission-verdicts.md) (admission), [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (the loop whose iterations append these records).
 
 ## Context
 
@@ -197,7 +197,7 @@ Deliberately out of scope, so the boundary is reviewable: no change to `daemon.l
 - **First principles:** What must be true for "this ref can be resumed" to be a fact? (i) a durable record exists before the outcome is known, (ii) it names the session that is still alive, (iii) it is unique per ref under a defined read rule, (iv) its owner is unambiguous. Nothing else is required, and no requirement implies reuse of the daemon record.
 - **Inversion:** What makes resumability dangerous? A record written at classification (nothing to resume after a crash); a record a supervisor can adopt (two authorities on one session); a record that drifts into carrying prompts (a privacy leak in durable state); a silent append failure (a resumability claim that cannot be honoured); a fabricated lane for pre-change state. C-1…C-6 close exactly these.
 - **Second-order thinking:** Adding a kind is cheap today and fixes what every later consumer may assume — that the latest record for a ref is *the* lane, so GH-354's `status`/`log`, the resume resolver, and any future shared resolver read one artifact. Choosing the attempt record instead would push a mutating write into a record whose contract is "one immutable report per classified attempt".
-- **Systems thinking:** The chain is acquisition → session identity → lane append → read → resume mode → budget accounting. Each link can substitute a different fact: the lane append can happen too late, the read can pick the daemon's record, the resolver can pick a token-filtered subset, the loop can treat an operator resume as an automatic restart. This decision pins the first three joins; the fourth is TDR-0047's.
+- **Systems thinking:** The chain is acquisition → session identity → lane append → read → resume mode → budget accounting. Each link can substitute a different fact: the lane append can happen too late, the read can pick the daemon's record, the resolver can pick a token-filtered subset, the loop can treat an operator resume as an automatic restart. This decision pins the first three joins; the fourth is TDR-0052's.
 - **5 Whys (on "resume degrades to a fresh spawn"):** no fresh spawn is wrong → no lane was resolved → the resolver only looks at daemon lanes in supervision states → only the daemon records a lane → the one-shot path never records one. The fix therefore belongs at the one-shot acquisition point and its read rule, not at the resume call site.
 - **Paved road / KISS:** Reuse the delivered per-ref prefix-scoped read pattern, the append-only ledger, the delivered evidence-reference budget, and the delivered resume-mode vocabulary (`attach-continue`, `resume-prompt-reentry`). Add one kind with two write points and one read rule.
 
@@ -270,11 +270,11 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
 - **Decision:** Adopt **ALT-4**. A dispatch-owned, append-only, per-ref lane record is the resumable artifact; `daemon.lane` is untouched and never adopts it.
 
   1. **Record home and shape.** Kind `dispatch.lane`, payload schema `delivery.dispatch.lane.v1`, key `dispatch.lanes:<REF>`, identity field `ref`, append-only, latest record per ref is the lane. Fields: `schema`, `ref`, `repository` (normalized), `attemptId`, `sessionId`, `harnessKind`, `owner: { processId: positive integer, startedAt: ISO timestamp }`, `iterationOrdinal` (integer ≥ 1), `restartsConsumed` (integer ≥ 0), `state: "active" | "terminal"`, optional `lastToken` and `lastOutcome` (present **only** on a terminal record), `recordedAt`. (Spec §8.3 DM-1.)
-  2. **Write points.** Exactly one `active` append when a fresh spawn or a resume yields a session handle, before any evidence is collected; exactly one `terminal` append carrying the final token and outcome when the dispatch reaches its final classification. A stalled iteration that is restarted appends no terminal record — only its `economics.restart` and the next iteration's `active` record (TDR-0047). A pre-session refusal appends no lane record.
-  3. **Read shape and resume eligibility.** "The lane for a ref" is the newest record for that ref that carries a session identity, drawn from the dispatch lane and from a daemon lane in `delivering`/`detached`/`preempted`; newest wins when both exist. A recorded dispatch lane is resumable **regardless of the token it recorded**: a `pr-open` or `pr-open-unverified` attempt attaches and continues rather than re-dispatching, because the harness session survives the process. With no recorded lane, a fresh spawn is explicit and recorded as fresh. The completed-phase position a resume continues from is read from the phase ledger — the ledger's remaining role after the derivation ruling ([TDR-0048](TDR-0048-total-derivation-ladder-and-corroboration.md) DC-4) — never from the lane. A recorded lane is never silently replaced by a fresh spawn: an unknown-session refusal is a classified failure with exactly one attempt record. (Spec DEC-3, resolved here because it is this record's read rule; the budget half of DEC-3 is TDR-0047's.)
+  2. **Write points.** Exactly one `active` append when a fresh spawn or a resume yields a session handle, before any evidence is collected; exactly one `terminal` append carrying the final token and outcome when the dispatch reaches its final classification. A stalled iteration that is restarted appends no terminal record — only its `economics.restart` and the next iteration's `active` record (TDR-0052). A pre-session refusal appends no lane record.
+  3. **Read shape and resume eligibility.** "The lane for a ref" is the newest record for that ref that carries a session identity, drawn from the dispatch lane and from a daemon lane in `delivering`/`detached`/`preempted`; newest wins when both exist. A recorded dispatch lane is resumable **regardless of the token it recorded**: a `pr-open` or `pr-open-unverified` attempt attaches and continues rather than re-dispatching, because the harness session survives the process. With no recorded lane, a fresh spawn is explicit and recorded as fresh. The completed-phase position a resume continues from is read from the phase ledger — the ledger's remaining role after the derivation ruling ([TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) DC-4) — never from the lane. A recorded lane is never silently replaced by a fresh spawn: an unknown-session refusal is a classified failure with exactly one attempt record. (Spec DEC-3, resolved here because it is this record's read rule; the budget half of DEC-3 is TDR-0052's.)
   4. **Ownership.** The kind is dispatch-owned: the daemon family never reads it as a supervised lane, never adopts it in reconciliation, and never rewrites it; the dispatch family never writes a `daemon.lane`. `daemon.lane`'s kind, schema, five states, and reconciliation ownership are unchanged.
   5. **Honest failure.** A lane append that cannot be persisted does not change the delivery token — the attempt record remains the authoritative outcome — and is disclosed as a bounded `lane:append-failed` evidence reference so resumability is never silently claimed.
-  6. **Owner facts are advisory.** The owner process id and start time exist for staleness inspection and operator evidence; the queue lease remains the exclusion mechanism (TDR-0045). No path derives admission or exclusion from the lane.
+  6. **Owner facts are advisory.** The owner process id and start time exist for staleness inspection and operator evidence; the queue lease remains the exclusion mechanism (TDR-0050). No path derives admission or exclusion from the lane.
 
 ### Constraint Compliance Attestation
 
@@ -328,7 +328,7 @@ ALT-4 satisfies C-1 through C-6. C-1: the active append is bound to session acqu
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-spec.md` — §5.1 F-1, §6 Flow 1/Flow 3, §8.3 DM-1/DM-2, §8.5, §12, §17.1, §20, §25.1 Appendix A, §25.3 Appendix C, §25.6 Appendix F(D/E), and §15 DEC-2/DEC-3.
-- Prior decisions: TDR-0004 (append-only state storage); TDR-0023 (daemon lifecycle mount and record kinds); TDR-0024 (attempt read side and record-bounded projections); TDR-0026 (queue lifecycle and admission); [TDR-0045](TDR-0045-dispatch-atomic-admission-verdicts.md) (admission); [TDR-0047](TDR-0047-in-process-bounded-restart-loop.md) (restart accounting).
+- Prior decisions: TDR-0004 (append-only state storage); TDR-0023 (daemon lifecycle mount and record kinds); TDR-0024 (attempt read side and record-bounded projections); TDR-0026 (queue lifecycle and admission); [TDR-0050](TDR-0050-dispatch-atomic-admission-verdicts.md) (admission); [TDR-0052](TDR-0052-in-process-bounded-restart-loop.md) (restart accounting).
 - Specs: `doc/spec/features/feature-dispatch-engine.md`; `feature-resident-daemon.md` §Lane supervision; `feature-session-lifecycle-economics.md`; `feature-dispatch-attempts` read side as described by TDR-0024.
 - Contracts and code (read 2026-11-18): `packages/core/src/contracts/daemon.ts`; `packages/core/src/contracts/dispatch.ts`; `packages/core/src/contracts/state.ts`; `packages/core/src/app/daemon.ts`; `packages/core/src/app/dispatch.ts`; `packages/cli/src/production.ts`.
 - Parity reference (read 2026-11-18): `scripts/deliver-ticket.sh` (session mapping write/read, restart count).

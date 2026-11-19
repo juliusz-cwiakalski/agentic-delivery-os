@@ -9,6 +9,7 @@
  */
 
 import type { GithubChildRunner, GithubTransportPolicy } from "@delivery-os/adapters/github";
+import type { BuildIdentity } from "./build-identity.js";
 import { runEntrypoint, workingNameEnvironmentVariable } from "./entrypoint.js";
 import {
   createProductionComposer,
@@ -38,10 +39,45 @@ export type BinLauncherOptions = {
     readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
   };
   readonly daemonEntry?: string;
+  /**
+   * The injected build identity, when the invoking entry is a compiled
+   * artifact. The bin observes the compiled fact and forwards the constant; a
+   * workspace run passes nothing, so the delivered fallback stays verbatim.
+   */
+  readonly buildIdentity?: BuildIdentity;
+  /**
+   * The running artifact's real path, when a compiled run supplies it. Steps 2
+   * and 3 of a replace read this composition fact instead of an ambient
+   * process read.
+   */
+  readonly runningArtifactPath?: string;
+  /**
+   * Whether the invoking bin owns installation (GH-346 D6). The primary bin
+   * declares `true`; the alias declares nothing, and absent means NOT owning.
+   */
+  readonly ownsInstallation?: boolean;
   /** The closed composition transport policy; absent means the declared default. */
   readonly githubTransportPolicy?: GithubTransportPolicy;
   /** An injected CLI child runner so composition tests spawn nothing. */
   readonly githubCliRunner?: GithubChildRunner;
+};
+
+/**
+ * The re-entry entry path for the compiled shape (F-3).
+ *
+ * A compiled artifact presents the runtime name and a virtual bundle path as
+ * its first two arguments, so a spawn or a service unit given `argv[1]` would
+ * receive a path inside the bundle. The bin observes the two process facts and
+ * this rule answers the artifact's real executable path for a compiled run and
+ * the delivered script path otherwise. The rule reads no ambient value.
+ */
+export const resolveReentryEntryPath = (input: {
+  readonly argvEntry?: string;
+  readonly execPath: string;
+}): string => {
+  const entry = input.argvEntry;
+  if (entry === undefined || entry.length === 0) return input.execPath;
+  return entry.startsWith("/$bunfs/") || entry.includes("/$bunfs/") ? input.execPath : entry;
 };
 
 /**
@@ -64,6 +100,7 @@ export const runBinLauncher = async (options: BinLauncherOptions): Promise<numbe
     ...(options.priorWorkingName === undefined
       ? {}
       : { priorWorkingName: options.priorWorkingName }),
+    ...(options.buildIdentity === undefined ? {} : { buildIdentity: options.buildIdentity }),
     credentialReferences: DECLARED_CREDENTIAL_REFERENCES,
     // The one composition path: the wrapper runs only when the entrypoint
     // composes, so every self-description path returns before the probe. The
@@ -86,6 +123,13 @@ export const runBinLauncher = async (options: BinLauncherOptions): Promise<numbe
         githubTransportSelection,
         ...(options.signalHost === undefined ? {} : { signalHost: options.signalHost }),
         ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
+        ...(options.buildIdentity === undefined ? {} : { buildIdentity: options.buildIdentity }),
+        ...(options.runningArtifactPath === undefined
+          ? {}
+          : { runningArtifactPath: options.runningArtifactPath }),
+        ...(options.ownsInstallation === undefined
+          ? {}
+          : { ownsInstallation: options.ownsInstallation }),
       })(brand, invocation);
     },
   });

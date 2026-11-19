@@ -324,6 +324,51 @@ remove_global_commands() {
   done
 }
 
+# The one declared layout reference to the primary-identity CLI entry. It is an
+# independent copy of install.sh's reference (a drift is observable), and no
+# brand install path or record path is written here.
+readonly CLI_ENTRY_RELATIVE="packages/cli/bin/jaiship.ts"
+
+# Report a managed install and name the owning removal command.
+#
+# The detection source is DECIDED: ask a REACHABLE primary-identity binary for its
+# read-free `--print-install-path`, with the working-name override SCRUBBED from
+# the child environment (the delivered install.sh probe pattern), and derive the
+# record path from that answer. When no binary is reachable this reports NO
+# managed install WITHOUT an error, guesses no path, and leaves the exit taxonomy
+# unchanged. This surface never removes a binary, a slot, a record, or a Jaiship
+# root.
+report_managed_install() {
+  local project_root="${1:-$(pwd)}"
+  local entry="${project_root}/${CLI_ENTRY_RELATIVE}"
+  local answer install_path record_path dir install_dir state_dir
+  if [[ ! -f "${entry}" ]] || ! command -v bun >/dev/null 2>&1; then
+    log_info "No managed install detected: no reachable product binary answers a brand install path; this surface removed no binary, slot, record, or Jaiship root"
+    return 0
+  fi
+  if ! answer="$(env -u DELIVERY_OS_WORKING_NAME bun "${entry}" --print-install-path 2>/dev/null)"; then
+    log_info "No managed install detected: the product binary did not answer --print-install-path; this surface removed no binary, slot, record, or Jaiship root"
+    return 0
+  fi
+  case "${answer}" in
+    "~/"*) install_path="${HOME}/${answer#\~/}" ;;
+    /*)    install_path="${answer}" ;;
+    *)
+      log_info "No managed install detected: the product binary answered an unusable install path; this surface removed no binary, slot, record, or Jaiship root"
+      return 0
+      ;;
+  esac
+  install_dir="$(dirname "${install_path}")"
+  dir="$(dirname "${install_dir}")"
+  record_path="${dir}/install.json"
+  if [[ -e "${install_path}" || -e "${install_path}.previous" || -e "${record_path}" ]]; then
+    log_info "Managed install detected at ${install_path} (record ${record_path}); removal belongs to the lifecycle command 'install uninstall' — run it through the installed product binary. This surface removes no binary, slot, record, or Jaiship root."
+  else
+    log_info "No managed install detected at ${install_path} (record ${record_path}); this surface removes no binary, slot, record, or Jaiship root"
+  fi
+  return 0
+}
+
 do_global_uninstall() {
   log_info "=== ADOS Global Uninstall ==="
   log_info "ADOS_HOME:          ${ADOS_HOME}"
@@ -532,6 +577,10 @@ main() {
   log_debug "DRY_RUN=${DRY_RUN}"
   log_debug "VERBOSE=${VERBOSE}"
   log_debug "FORCE=${FORCE}"
+
+  # The ownership report runs in both modes: a managed install is reported and
+  # never touched, and its absence is not an error.
+  report_managed_install "$(pwd)"
 
   case "${UNINSTALL_MODE}" in
     global) do_global_uninstall ;;

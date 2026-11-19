@@ -1,6 +1,6 @@
 /**
  * TC-LANE-001/002/004/005 and TC-RESUME-101/103/104 — the durable dispatch
- * lane and recorded-attempt resume (GH-347 F-1, F-3; DEC-2, DEC-3; TDR-0044).
+ * lane and recorded-attempt resume (GH-347 F-1, F-3; DEC-2, DEC-3; TDR-0049).
  *
  * The lane cases drive the composed production program (D1); the append-failure
  * case drives the real engine (D2) through the delivered command harness with a

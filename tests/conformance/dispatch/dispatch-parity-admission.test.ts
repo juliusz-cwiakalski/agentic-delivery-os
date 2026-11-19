@@ -1,6 +1,6 @@
 /**
  * TC-ADMIT-001..005 — atomic dispatch admission over the real composed
- * production program and the real state store (GH-347 F-2; DEC-1; TDR-0045).
+ * production program and the real state store (GH-347 F-2; DEC-1; TDR-0050).
  *
  * Every case drives the shipped composition (driver D1) with only the declared
  * seams injected. The two concurrent-dispatch scenarios come from the single

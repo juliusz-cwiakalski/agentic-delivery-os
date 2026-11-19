@@ -151,7 +151,7 @@ export const comparisonClassOf = (record: DispatchComparisonRecord): DispatchCom
  * The independently required corroboration sources for a success claim.
  *
  * `arm` is data, not a second classification: the one derivation decides the
- * arm at its two arm-aware branches (GH-347 DEC-6, TDR-0048) and every
+ * arm at its two arm-aware branches (GH-347 DEC-6, TDR-0053) and every
  * consumer passes that same value. Absent an arm the token-level requirement
  * applies, so a persisted consumer with no arm (the evidence-window gate) is
  * unchanged.

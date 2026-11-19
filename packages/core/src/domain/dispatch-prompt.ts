@@ -1,5 +1,5 @@
 /**
- * The delivery-lifecycle prompt (GH-347 F-7, API-6, DM-6; DEC-8; TDR-0049).
+ * The delivery-lifecycle prompt (GH-347 F-7, API-6, DM-6; DEC-8; TDR-0054).
  *
  * The fresh-spawn prompt is the lifecycle the shell lane carried, parameterized
  * by the work-item reference and the resolved base branch. It is data built by
