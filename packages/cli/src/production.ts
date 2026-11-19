@@ -3101,6 +3101,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return released.ok;
       },
       phaseLedger: phaseSummary,
+      // The one injected delay fact (GH-347 AC-F9-2): production binds the real
+      // timer; no configuration key and no ambient timer lives in the engine.
+      delay: (ms, reason) =>
+        new Promise<void>((resolve) => {
+          void reason;
+          setTimeout(resolve, ms);
+        }),
       // The lane policy is data: both the restart bound and the liveness cadence
       // come from the typed `lane` configuration branch.
       restartBudget: lane.restartBudget,

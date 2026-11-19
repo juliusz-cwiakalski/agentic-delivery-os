@@ -18,6 +18,9 @@ import {
   DISPATCH_HANDOVER_KEY_PREFIX,
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
   DISPATCH_HANDOVER_RECORD_KIND,
+  DISPATCH_LANE_KEY_PREFIX,
+  DISPATCH_LANE_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_RECORD_KIND,
   DISPATCH_MAX_ATTEMPT_RECORDS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_NOTE_CHARS,
@@ -25,6 +28,7 @@ import {
   type DispatchAuthorityView,
   type DispatchDivergenceRecord,
   type DispatchHandoverRecord,
+  type DispatchLaneRecord,
   type StateAppendOutcome,
   type StateFailureCode,
   type StateJsonValue,
@@ -33,6 +37,7 @@ import {
   dispatchAttemptRecordKey,
   dispatchDivergenceRecordKey,
   dispatchHandoverRecordKey,
+  dispatchLaneRecordKey,
 } from "#contracts";
 
 /** One verified ledger read, with any declared truncation. */
@@ -411,4 +416,90 @@ export const writeDispatchAuthority = (
   if (!released.ok)
     return { ok: false, code: released.error.code, path: released.error.location.path };
   return { ok: true };
+};
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 — the dispatch-owned durable lane record (DM-1, TDR-0044).         */
+/* ------------------------------------------------------------------------- */
+
+const isLaneOwner = (value: unknown): boolean =>
+  isRecord(value) &&
+  typeof value.processId === "number" &&
+  Number.isInteger(value.processId) &&
+  value.processId > 0 &&
+  isInstant(value.startedAt);
+
+/**
+ * The closed lane-record guard (DM-1): the exact field set's values, the
+ * `active`/`terminal` state, and the terminal-only token/outcome pair.
+ */
+export const isDispatchLaneRecord = (value: unknown): value is DispatchLaneRecord => {
+  if (!isRecord(value)) return false;
+  if (value.schema !== DISPATCH_LANE_PAYLOAD_SCHEMA) return false;
+  if (typeof value.ref !== "string" || value.ref.length === 0) return false;
+  if (typeof value.repository !== "string" || value.repository.length === 0) return false;
+  if (typeof value.attemptId !== "string" || value.attemptId.length === 0) return false;
+  if (typeof value.sessionId !== "string" || value.sessionId.length === 0) return false;
+  if (value.harnessKind !== "opencode" && value.harnessKind !== "claude-code") return false;
+  if (!isLaneOwner(value.owner)) return false;
+  if (
+    typeof value.iterationOrdinal !== "number" ||
+    !Number.isInteger(value.iterationOrdinal) ||
+    value.iterationOrdinal < 1
+  ) {
+    return false;
+  }
+  if (
+    typeof value.restartsConsumed !== "number" ||
+    !Number.isInteger(value.restartsConsumed) ||
+    value.restartsConsumed < 0
+  ) {
+    return false;
+  }
+  if (!isInstant(value.recordedAt)) return false;
+  if (value.state === "active") return value.lastToken === undefined && value.lastOutcome === undefined;
+  if (value.state !== "terminal") return false;
+  return typeof value.lastToken === "string" && typeof value.lastOutcome === "string";
+};
+
+/** Read every dispatch lane record in append order, bounded and verified. */
+export const readDispatchLanes = (
+  store: StateStorePort,
+  options: { readonly max?: number } = {},
+): DispatchLedgerRead<DispatchLaneRecord> =>
+  readLedger(store, {
+    kind: DISPATCH_LANE_RECORD_KIND,
+    schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+    keyPrefix: DISPATCH_LANE_KEY_PREFIX,
+    isRecord: isDispatchLaneRecord,
+    max: options.max ?? DISPATCH_MAX_ATTEMPT_RECORDS,
+  });
+
+/**
+ * Append exactly one lane record: append-only, latest-wins per ref. A differing
+ * record for the same ref is a new append, never a rewrite; only an identical
+ * replay is a noop.
+ */
+export const appendDispatchLane = (
+  store: StateStorePort,
+  fenceToken: string,
+  record: DispatchLaneRecord,
+): DispatchAppendResult<DispatchLaneRecord> => {
+  const recordKey = dispatchLaneRecordKey(record.ref);
+  if (!isDispatchLaneRecord(record)) {
+    return { ok: false, code: "state.write.failed", path: recordKey };
+  }
+  return appendLedger(store, fenceToken, DISPATCH_LANE_RECORD_KIND, recordKey, record, false);
+};
+
+/** The lane: the latest record for the ref, or `undefined` when none exists. */
+export const latestDispatchLaneFor = (
+  records: readonly DispatchLaneRecord[],
+  ref: string,
+): DispatchLaneRecord | undefined => {
+  for (let index = records.length - 1; index >= 0; index -= 1) {
+    const record = records[index];
+    if (record !== undefined && record.ref === ref) return record;
+  }
+  return undefined;
 };

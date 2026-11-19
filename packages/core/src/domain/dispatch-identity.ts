@@ -8,6 +8,11 @@
  * `<git-common-dir>/dispatch-identity.json`. A checkout-path digest is never
  * presented as an identity; when none resolves the caller refuses cleanly.
  */
+import {
+  DISPATCH_MAX_SPAWN_TITLE_CHARS,
+  DISPATCH_SPAWN_TITLE_PATTERN,
+  DISPATCH_SPAWN_TITLE_PREFIX,
+} from "#contracts";
 
 /** The half-open repository identity pattern: `host/owner/name`. */
 const IDENTITY_PATTERN = /^[a-z0-9][a-z0-9.-]*\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -131,3 +136,27 @@ export const resolveDispatchIdentity = (input: {
   }
   return { ok: false, reason: "unresolvable" };
 };
+
+/** The work-item reference grammar a spawn title is derived from (DM-6). */
+const SPAWN_TITLE_WORK_ITEM_REF = /^[A-Z][A-Z0-9]*-[0-9]+$/;
+
+/** The anchored title grammar the helper validates against (DM-6). */
+const SPAWN_TITLE_PATTERN = new RegExp(DISPATCH_SPAWN_TITLE_PATTERN);
+
+/**
+ * The pure fresh-spawn title (GH-347 DM-6, API-6, TDR-0049).
+ *
+ * Returns `ticket-<REF>` for a canonical work-item reference, or `undefined`
+ * for a ref outside the grammar or a title beyond the declared bound. The
+ * value is one token: no whitespace and no shell-interpretable character.
+ */
+export const spawnTitleFor = (ref: string): string | undefined => {
+  if (!SPAWN_TITLE_WORK_ITEM_REF.test(ref)) return undefined;
+  const title = `${DISPATCH_SPAWN_TITLE_PREFIX}${ref}`;
+  if (title.length > DISPATCH_MAX_SPAWN_TITLE_CHARS) return undefined;
+  return SPAWN_TITLE_PATTERN.test(title) ? title : undefined;
+};
+
+/** Whether a value is a well-formed fresh-spawn title (grammar plus bound). */
+export const isSpawnTitle = (value: string): boolean =>
+  value.length <= DISPATCH_MAX_SPAWN_TITLE_CHARS && SPAWN_TITLE_PATTERN.test(value);

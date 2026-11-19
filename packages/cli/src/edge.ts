@@ -6989,6 +6989,11 @@ export type DispatchComposition = {
   readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
+  /**
+   * The one injected delay fact (GH-347 AC-F9-2): the composition owns the
+   * timer. Production binds a real one; the offline battery injects a recorder.
+   */
+  readonly delay?: DispatchPorts["delay"];
   readonly restartBudget?: number;
   /** The delivery's persisted restart count, read at run time (AC-F3-2). */
   readonly restartCount?: (ref: string) => number;
@@ -7254,6 +7259,7 @@ export const createDispatchCommandRuntime = (
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),
+        ...(composition.delay === undefined ? {} : { delay: composition.delay }),
         ...(composition.restartBudget === undefined
           ? {}
           : { restartBudget: composition.restartBudget }),

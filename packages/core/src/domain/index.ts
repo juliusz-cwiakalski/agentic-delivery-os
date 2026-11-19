@@ -278,11 +278,13 @@ export {
   type DispatchIdentityResolution,
   type DispatchIdentitySource,
   isRepositoryIdentity,
+  isSpawnTitle,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryRemote,
   parseIdentityMarker,
   resolveDispatchIdentity,
   serializeIdentityMarker,
+  spawnTitleFor,
 } from "./dispatch-identity.js";
 export {
   DISPATCH_LIVENESS_ABSENCE_REASONS,

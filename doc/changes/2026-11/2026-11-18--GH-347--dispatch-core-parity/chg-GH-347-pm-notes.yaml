@@ -370,3 +370,17 @@ notes:
       '17' and 'v1.5'; the artifacts correctly say 18 and v1.6."
     type: decision
     date: "2026-11-19"
+  - text: "Plan phase 1 (contract scaffolding) implemented before its commit: the
+      dispatch.lane kind/schema/key/record type and key builder, the optional
+      harness terminate member and result type, the spawn-title fact with the
+      ticket-<REF> grammar and pure helper, the pm-notes completeness
+      vocabulary, the injected delay(ms, reason) fact with the closed reasons
+      and the production real-timer binding, the exact pinned-surface moves
+      (executable allowances and the contract inventory), and the six TDR paths
+      staged with the conditional decision index. Gate results at this boundary:
+      dispatch-contract 14 pass; harness-contract, harness-stream-contract,
+      port-contract-inventory, content-inventory, subpaths and decision-record
+      suites green; pnpm typecheck green; git diff --check clean. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

@@ -290,6 +290,12 @@ export type HarnessSpawnInput = {
   readonly descriptor: HarnessExecutionEnvironmentDescriptor;
   readonly agent?: string;
   readonly binding?: HarnessSeatBinding;
+  /**
+   * The additive optional fresh-spawn title (GH-347 DM-6, TDR-0049): one
+   * deterministic `ticket-<REF>` token the adapter renders as a single
+   * `--title` argument. A resume carries none.
+   */
+  readonly title?: string;
 };
 
 /** A resume/steer input: the existing handle plus the steering payload as data. */
@@ -464,7 +470,9 @@ export type HarnessLivenessAssembler = (input: {
  *
  * One shape for every adapter. `classify` is bound to the shared classifier by
  * composition; adapters normalize facts and never classify with their own
- * logic.
+ * logic. `terminate` is the additive OPTIONAL member (GH-347 API-5, TDR-0046):
+ * a port double without it stays valid, and an adapter that declares no
+ * capability is never asked.
  */
 export type HarnessSessionPort = {
   readonly spawn: (input: HarnessSpawnInput) => Promise<HarnessResult<HarnessSessionHandle>>;
@@ -478,6 +486,29 @@ export type HarnessSessionPort = {
     readonly handle: HarnessSessionHandle;
   }) => Promise<HarnessResult<HarnessLivenessReport>>;
   readonly listSessions: (input: HarnessListInput) => Promise<HarnessResult<HarnessSessionList>>;
+  /** The additive optional capability-gated termination (GH-347 API-5, TDR-0046). */
+  readonly terminate?: (
+    input: HarnessTerminateInput,
+  ) => Promise<HarnessResult<HarnessTerminateResult>>;
+};
+
+/**
+ * The terminate input (GH-347 API-5, DM-5): the session handle plus the
+ * declared grace in milliseconds (`coordinator.kill-grace`, reused not added).
+ */
+export type HarnessTerminateInput = {
+  readonly handle: HarnessSessionHandle;
+  readonly graceMs: number;
+};
+
+/**
+ * The terminate report (GH-347 API-5, DM-5): whether the tree was signalled,
+ * whether the escalation ran, and whether an escaped runtime was reaped.
+ */
+export type HarnessTerminateResult = {
+  readonly terminated: boolean;
+  readonly escalated: boolean;
+  readonly reaped: boolean;
 };
 
 /* ------------------------------------------------------------------------- */

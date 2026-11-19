@@ -18,6 +18,7 @@ import {
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
   type DispatchAttemptRecord,
+  type DispatchDelay,
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
   type DispatchEvidenceClass,
@@ -300,6 +301,12 @@ export type DispatchPorts = {
    * them on the attempt (GH-335 F-1/F-2, TDR-0041).
    */
   readonly harnessFacts?: () => DispatchHarnessFacts | undefined;
+  /**
+   * The one injected delay fact (GH-347 AC-F9-2, NFR-11). The admission fence
+   * wait, the tracker ladder, and the terminate grace all go through it, so the
+   * offline battery supplies a recorder and never waits on a wall clock.
+   */
+  readonly delay?: DispatchDelay;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
   readonly harnessAdmission?: DispatchHarnessAdmissionPort;
 };
