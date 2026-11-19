@@ -23,7 +23,13 @@ export const renderInstallStatus = (payload: Record<string, unknown>): string =>
     `builtAt: ${running.builtAt}`,
     `dirty: ${String(running.dirty)}`,
     `channel: ${running.channel}`,
-    `installed: ${report.installed === null ? "absent" : `${report.installed.version} (build ${report.installed.commit})`}`,
+    `installed: ${
+      report.installed !== null
+        ? `${report.installed.version} (build ${report.installed.commit})`
+        : report.recordState === "unreadable"
+          ? "unreadable"
+          : "absent"
+    }`,
     `record: ${report.recordState} (${report.recordPath})`,
     `rollback: ${report.rollback.state} (${report.rollback.path})`,
     `target-stability: ${report.targetStability}`,

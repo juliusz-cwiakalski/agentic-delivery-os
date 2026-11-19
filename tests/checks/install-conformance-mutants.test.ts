@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { allHelpEntries } from "../../packages/cli/src/help";
+import { type HelpEntry, allHelpEntries } from "../../packages/cli/src/help";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import { runHelpGuideCoverage } from "../../scripts/checks/help-guide-coverage";
 
@@ -53,6 +53,33 @@ export const familyViolations = (actual: readonly string[]): readonly string[] =
   return failures;
 };
 
+/** The install family's help entries, in the order the gate names them. */
+const INSTALL_HELP_PATHS = [
+  "install",
+  "install status",
+  "install rollback",
+  "install uninstall",
+  "install purge",
+] as const;
+
+/**
+ * The help-entry conformance rule, over an injected entry list: the family and
+ * each of its four subcommands must resolve their own static entry.
+ */
+export const installHelpViolations = (entries: readonly HelpEntry[]): readonly string[] => {
+  const failures: string[] = [];
+  for (const expected of INSTALL_HELP_PATHS) {
+    if (!entries.some((entry) => entry.path.join(" ") === expected)) {
+      failures.push(`missing help entry ${expected}`);
+    }
+  }
+  const count = entries.filter((entry) => entry.path[0] === "install").length;
+  if (count !== INSTALL_HELP_PATHS.length) {
+    failures.push(`install help entries ${String(count)} != ${String(INSTALL_HELP_PATHS.length)}`);
+  }
+  return failures;
+};
+
 describe("TC-INST-104 each conformance gate fails by name on an injected fixture", () => {
   test("the family count and tail mutants fail by name", () => {
     expect(familyViolations(PROMPT_REQUIRED_COMMANDS)).toEqual([]);
@@ -60,27 +87,24 @@ describe("TC-INST-104 each conformance gate fails by name on an injected fixture
     expect(familyViolations([...PROMPT_REQUIRED_COMMANDS, "doctor"])).toContain(
       "undeclared doctor",
     );
-    expect(
-      familyViolations([
-        ...PROMPT_REQUIRED_COMMANDS.slice(0, 25),
-        ...PROMPT_REQUIRED_COMMANDS.slice(25),
-      ]),
-    ).toEqual([]);
     expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain(
       "tail is not install",
     );
   });
 
   test("the help-entry mutant names the missing entry", () => {
-    const without = allHelpEntries().filter((entry) => entry.path.join(" ") !== "install purge");
-    const missing = [
-      "install",
-      "install status",
-      "install rollback",
-      "install uninstall",
-      "install purge",
-    ].filter((path) => !without.some((entry) => entry.path.join(" ") === path));
-    expect(missing).toEqual(["install purge"]);
+    // The delivered inventory is green.
+    expect(installHelpViolations(allHelpEntries())).toEqual([]);
+    // A fixture with one subcommand's entry removed fails by name, and the
+    // family count is asserted independently of the filter that built it.
+    const withoutPurge = allHelpEntries().filter(
+      (entry) => entry.path.join(" ") !== "install purge",
+    );
+    expect(installHelpViolations(withoutPurge)).toContain("missing help entry install purge");
+    const withoutRollback = allHelpEntries().filter(
+      (entry) => entry.path.join(" ") !== "install rollback",
+    );
+    expect(installHelpViolations(withoutRollback)).toContain("install help entries 4 != 5");
   });
 
   test("a missing page, a page without --version, and an M1-placed page all fail by name", () => {

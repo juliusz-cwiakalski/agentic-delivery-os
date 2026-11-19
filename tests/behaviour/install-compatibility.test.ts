@@ -4,9 +4,10 @@
  * and deterministic reporting (F-7; READ-TP-1).
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
+import { createProductionComposer } from "../../packages/cli/src/production";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import {
   createFixtureArtifact,
@@ -159,6 +160,33 @@ describe("TC-INST-044 install status reports the per-root verdict with the decla
   });
 });
 
+describe("TC-INST-044b the human status distinguishes an absent record from an unreadable one", () => {
+  test("the installed line repeats the record's condition", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.configRoot, { recursive: true });
+      writeFileSync(target.recordPath, "{ damaged\n");
+      const unreadableRuntime = runtimeFor(target, [target.stateRoot]);
+      const unreadable = await invoke(unreadableRuntime, ["status"]);
+      expect(unreadable.error).toBeUndefined();
+      const unreadableText =
+        createInstallCommandDefinition(unreadableRuntime).humanText?.(unreadable.data, brand) ?? "";
+      expect(unreadableText).toContain("installed: unreadable");
+      expect(unreadableText).toContain("record: unreadable");
+      rmSync(target.recordPath, { force: true });
+      const absentRuntime = runtimeFor(target, [target.stateRoot]);
+      const absent = await invoke(absentRuntime, ["status"]);
+      expect(absent.error).toBeUndefined();
+      const absentText =
+        createInstallCommandDefinition(absentRuntime).humanText?.(absent.data, brand) ?? "";
+      expect(absentText).toContain("installed: absent");
+      expect(absentText).toContain("record: absent");
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
 describe("TC-INST-045 the enumeration is header-only, capped, and non-persistent", () => {
   test("a planted payload below a project never flips the verdict and nothing is written", async () => {
     const target = fresh();
@@ -196,6 +224,55 @@ describe("TC-INST-045 the enumeration is header-only, capped, and non-persistent
       expect(format.truncated).toBe(true);
     } finally {
       target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-045b the production composition reports the enumeration's truncation", () => {
+  test("more than 128 project roots are judged capped and reported truncated", async () => {
+    const root = mkdtempSync(join(process.cwd(), "tmp/tmpdir/gh346-compat-production-"));
+    try {
+      const home = join(root, "home");
+      const hostRoot = join(home, brand.stateDirectoryName);
+      const projects = join(hostRoot, "projects");
+      mkdirSync(projects, { recursive: true });
+      for (let index = 0; index < 140; index += 1) {
+        mkdirSync(join(projects, `project-${String(index)}`));
+      }
+      const artifactPath = join(root, "artifact");
+      writeFileSync(artifactPath, Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00]), { mode: 0o755 });
+      chmodSync(artifactPath, 0o755);
+      const program = createProductionComposer({
+        environment: { HOME: home, PATH: process.env.PATH ?? "" },
+        cwd: root,
+        homeDirectory: home,
+        workingName: "jaiship",
+        buildIdentity: fixtureIdentity(),
+        runningArtifactPath: artifactPath,
+        ownsInstallation: true,
+      })(brand);
+      const definition = program.commands.install;
+      if (definition === undefined) throw new Error("install is not composed");
+      const outcome = (await definition.handler({
+        command: "install",
+        flags: {},
+        argv: ["install", "status"],
+        positionals: ["status"],
+        brand,
+      } as never)) as Output;
+      expect(outcome.error).toBeUndefined();
+      const format = outcome.data?.stateFormat as {
+        readonly judged: number;
+        readonly truncated: boolean;
+        readonly roots: readonly unknown[];
+      };
+      // 140 project roots plus the host root: the cap is visible as a fact, not
+      // silently re-derived from the already capped list.
+      expect(format.truncated).toBe(true);
+      expect(format.judged).toBe(128);
+      expect(format.roots).toHaveLength(128);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

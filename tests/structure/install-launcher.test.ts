@@ -88,6 +88,9 @@ export const launcherStepViolations = (source: string): string[] => {
   if (!body.includes("LAUNCHER_CONTENT_MARKER")) {
     failures.push("the launcher step carries no content predicate for the delivered launcher");
   }
+  if (!body.includes("LAUNCHER_PROBE_BYTES")) {
+    failures.push("the launcher content predicate is not bounded to a probe window");
+  }
   if (!body.includes("refusing:")) {
     failures.push("the launcher step has no classified refusal arm");
   }
@@ -239,5 +242,13 @@ describe("GH-346 TC-INST-090/091 the managed-artifact guard is live", () => {
       'local existing="" # install.json',
     );
     expect(launcherStepViolations(recordKeyed).join("\n")).toContain("reads the install record");
+    const wholeFileRead = installScript.replace(
+      `head -c "\${LAUNCHER_PROBE_BYTES}" "\${install_path}"`,
+      'cat "${install_path}"',
+    );
+    expect(wholeFileRead).not.toBe(installScript);
+    expect(launcherStepViolations(wholeFileRead).join("\n")).toContain(
+      "not bounded to a probe window",
+    );
   });
 });

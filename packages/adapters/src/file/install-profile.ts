@@ -19,12 +19,18 @@ export const readProfileText = (input: {
   return input.fs.readText(input.path) ?? "";
 };
 
-/** Write the profile atomically: stage beside it, then rename. */
+/**
+ * Write the profile atomically: create the parent directory when an explicit
+ * `--shell-profile` names one that does not exist yet, stage beside the file,
+ * then rename.
+ */
 export const writeProfileText = (input: {
   readonly fs: InstallFilePort;
   readonly path: string;
   readonly text: string;
 }): boolean => {
+  const parent = input.path.slice(0, input.path.lastIndexOf("/"));
+  if (parent.length > 0 && !input.fs.mkdirp(parent)) return false;
   const staged = input.fs.writeStaged(
     input.path,
     new TextEncoder().encode(input.text),

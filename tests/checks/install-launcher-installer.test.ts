@@ -725,6 +725,33 @@ describe("GH-346 TC-INST-091 the installer refuses when anything but the deliver
     }
   });
 
+  test("a NUL-containing binary is refused without a shell warning and stays byte-untouched", () => {
+    const s = scratch("guard-nul");
+    try {
+      installOnce(s);
+      const path = launcherPath(s);
+      // Compiled-artifact shaped: ELF magic, NUL bytes, and a size past the
+      // bounded probe window, so a whole-file text read would warn and reread
+      // 8 KiB of binary content.
+      const bytes = Buffer.concat([
+        Buffer.from([0x7f, 0x45, 0x4c, 0x46]),
+        Buffer.alloc(8192, 0),
+        Buffer.from("not the delivered launcher\n"),
+      ]);
+      writeFileSync(path, bytes);
+      chmodSync(path, 0o755);
+      const before = digest(path);
+      const result = runInstaller(s);
+      expect(result.status).toBe(3);
+      expect(`${result.stdout}${result.stderr}`).toContain("refusing:");
+      expect(result.stderr).not.toContain("null byte");
+      expect(result.stderr).not.toContain("ignored null byte");
+      expect(digest(path)).toBe(before);
+    } finally {
+      s.dispose();
+    }
+  });
+
   test("the delivered launcher and an absent path are still owned by this step", () => {
     const s = scratch("guard-allow");
     try {

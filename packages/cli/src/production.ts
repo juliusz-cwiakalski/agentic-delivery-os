@@ -4011,6 +4011,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         cap: INSTALL_MAX_JUDGED_ROOTS,
       });
       const stateRoots = enumeration.roots.map((entry) => entry.root);
+      const stateRootsTruncated = enumeration.truncated;
       const daemonPort: InstallDaemonPort = {
         status: async () => {
           const read = await daemonRuntime.status({ live: false });
@@ -4051,6 +4052,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         configRoot,
         stateRoot: hostRoot,
         stateRoots,
+        stateRootsTruncated,
         acceptedStateSchemaVersion: STATE_SCHEMA_VERSION,
         ...(facts.buildIdentity === undefined ? {} : { runningIdentity: facts.buildIdentity }),
         runningArtifactPath: facts.runningArtifactPath ?? "",

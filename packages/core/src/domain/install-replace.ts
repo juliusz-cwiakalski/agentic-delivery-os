@@ -155,18 +155,28 @@ export type RollbackPrecondition =
  * running artifact IS the destination's artifact, so that the destination leg is
  * knowable — its `current` names the running identity. When the invoked artifact
  * is not the one at the destination the destination leg is unknowable and the
- * record's claim is taken at its word.
+ * record's claim is taken at its word. A destination that is not a compiled
+ * artifact at all cannot form the pair, so it refuses with the pair-inversion
+ * cause rather than displacing that object into the slot.
  */
 export const rollbackPrecondition = (input: {
   readonly record: InstallRecordRead;
   readonly running: InstallArtifactIdentity;
   readonly destinationIsRunning: boolean;
+  /**
+   * Whether the destination holds a compiled artifact at all. When it does not
+   * (a launcher, a symlink, a foreign file, or nothing), the pair the swap
+   * inverts does not exist on disk, so the precondition refuses like a pair
+   * inversion instead of promoting that object into the slot.
+   */
+  readonly destinationIsArtifact?: boolean;
 }): RollbackPrecondition => {
   if (input.record.kind === "absent") return { ok: false, cause: "absent" };
   if (input.record.kind === "unreadable") return { ok: false, cause: "unreadable" };
   const record = input.record.record;
   const current = identityOfRecord(record);
   if (record.previous === undefined) return { ok: false, cause: "no-previous" };
+  if (input.destinationIsArtifact === false) return { ok: false, cause: "pair-inverted" };
   if (input.destinationIsRunning && !sameIdentity(current, input.running)) {
     return { ok: false, cause: "pair-inverted" };
   }
@@ -311,13 +321,30 @@ export const provenanceOfAdmission = (
     ? { provenance: admission.provenance }
     : { provenance: admission.provenance, sourceCheckout: admission.checkoutPath };
 
-/** The slot's condition, reported even when its identity is not knowable. */
+/**
+ * The slot's condition, reported even when its identity is not knowable.
+ *
+ * The condition uses the same compiled-artifact predicate the replace and the
+ * rollback use: a regular, non-empty, executable file that is not a script. A
+ * launcher or an identity-less file in the slot is `invalid`, so `status` and
+ * `rollback` never disagree about whether the slot is rollback-ready.
+ */
 export const slotCondition = (input: {
-  readonly stats: { readonly kind: string; readonly size: number } | undefined;
+  readonly stats:
+    | { readonly kind: string; readonly size: number; readonly executable: boolean }
+    | undefined;
+  /** Whether the occupant begins with a shebang, which makes it a script. */
+  readonly script?: boolean;
   readonly identity?: InstallArtifactIdentity;
 }): { readonly state: InstallSlotState; readonly identity?: InstallArtifactIdentity } => {
   if (input.stats === undefined) return { state: "absent" };
-  if (input.stats.kind !== "file" || input.stats.size === 0) return { state: "invalid" };
+  if (
+    input.stats.kind !== "file" ||
+    input.stats.size === 0 ||
+    !input.stats.executable ||
+    input.script === true
+  )
+    return { state: "invalid" };
   return input.identity === undefined
     ? { state: "present" }
     : { state: "present", identity: input.identity };

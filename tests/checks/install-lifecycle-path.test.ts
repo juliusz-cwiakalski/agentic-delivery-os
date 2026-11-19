@@ -5,8 +5,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createNodeInstallFilePort } from "../../packages/adapters/src/file/index";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
+import type { InstallFilePort } from "../../packages/core/src/contracts/install";
 import {
   createFixtureArtifact,
   type FixtureArtifact,
@@ -17,6 +19,7 @@ import {
   createInstallScratch,
   fixtureIdentity,
   type InstallScratch,
+  readRecordText,
 } from "../fixtures/install/home";
 
 const brand = (() => {
@@ -97,6 +100,123 @@ describe("TC-INST-070 the PATH block is appended once, recorded, and replaced in
       expect(replaced).toContain(target.installDirectory);
       expect(replaced).not.toContain("/old/place");
       expect(replaced.startsWith("# operator profile\n")).toBe(true);
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-070a the managed block is written once per path and its failure is typed", () => {
+  test("a replacing install and an agreement run each write the profile once", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const profile = join(target.home, ".zshrc");
+      const node = createNodeInstallFilePort();
+      const writes: string[] = [];
+      const counting: InstallFilePort = {
+        ...node,
+        writeStaged: (path, bytes, mode) => {
+          writes.push(path);
+          return node.writeStaged(path, bytes, mode);
+        },
+      };
+      const countingRuntime = createInstallRuntime({
+        scratch: target,
+        runningArtifactPath: running.path,
+        identity: fixtureIdentity(),
+        environment: { HOME: target.home, SHELL: "/bin/zsh" },
+        fs: counting,
+      });
+      // A first, replacing install writes the block exactly once.
+      const first = await invoke(countingRuntime, [], { "--add-to-path": true });
+      expect(first.error).toBeUndefined();
+      expect(writes.filter((path) => path === profile)).toHaveLength(1);
+      // A second, agreeing install writes it exactly once too, never twice.
+      writes.length = 0;
+      const second = await invoke(countingRuntime, [], { "--add-to-path": true });
+      expect(second.error).toBeUndefined();
+      expect(second.data?.outcome).toBe("unchanged");
+      expect(writes.filter((path) => path === profile)).toHaveLength(1);
+      expect(readFileSync(profile, "utf8").match(/jaiship-install-path >>>/gu)).toHaveLength(1);
+    } finally {
+      target.dispose();
+    }
+  });
+
+  test("an explicit --shell-profile directory is created", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const profile = join(target.base, "custom", "nested", "profile");
+      const outcome = await invoke(runtimeFor(target), [], {
+        "--add-to-path": true,
+        "--shell-profile": profile,
+      });
+      expect(outcome.error).toBeUndefined();
+      expect(existsSync(profile)).toBe(true);
+      expect(readFileSync(profile, "utf8")).toContain(target.installDirectory);
+      expect((dataOf(outcome).pathBlock as { readonly file?: string } | undefined)?.file).toBe(
+        profile,
+      );
+    } finally {
+      target.dispose();
+    }
+  });
+
+  test("a profile write that fails is a typed refusal and no block is recorded", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const profile = join(target.home, ".zshrc");
+      const node = createNodeInstallFilePort();
+      const failing: InstallFilePort = {
+        ...node,
+        writeStaged: (path, bytes, mode) =>
+          path === profile
+            ? { ok: false, reason: "the staged file could not be written" }
+            : node.writeStaged(path, bytes, mode),
+      };
+      // Arm 1: a first (replacing) install refuses before the record exists.
+      const refused = await invoke(
+        createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: running.path,
+          identity: fixtureIdentity(),
+          environment: { HOME: target.home, SHELL: "/bin/zsh" },
+          fs: failing,
+        }),
+        [],
+        { "--add-to-path": true },
+      );
+      expect(refused.error?.code).toBe("fallback.internal");
+      expect(refused.error?.summary).toContain(profile);
+      expect(refused.error?.summary).toContain("PATH block could not be written");
+      expect(existsSync(profile)).toBe(false);
+      const record = JSON.parse(readRecordText(target) ?? "{}") as {
+        readonly pathBlock?: unknown;
+      };
+      expect(record.pathBlock).toBeUndefined();
+      // Arm 2: a clean install records the block; the same failure on an
+      // agreement run refuses and leaves both the record and the profile alone.
+      const clean = await invoke(runtimeFor(target, "/bin/zsh"), [], { "--add-to-path": true });
+      expect(clean.error).toBeUndefined();
+      const recordBefore = readRecordText(target);
+      const profileBefore = readFileSync(profile, "utf8");
+      const refusedAgreement = await invoke(
+        createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: running.path,
+          identity: fixtureIdentity(),
+          environment: { HOME: target.home, SHELL: "/bin/zsh" },
+          fs: failing,
+        }),
+        [],
+        { "--add-to-path": true },
+      );
+      expect(refusedAgreement.error?.code).toBe("fallback.internal");
+      expect(readRecordText(target)).toBe(recordBefore);
+      expect(readFileSync(profile, "utf8")).toBe(profileBefore);
     } finally {
       target.dispose();
     }

@@ -157,18 +157,69 @@ describe("TC-INST-021 the slot never holds anything but a compiled artifact", ()
       const outcome = await invoke(runtimeFor(target), []);
       expect(outcome.data?.disposition).toBe("launcher-discarded");
       expect(existsSync(target.slotPath)).toBe(false);
-      // Plant a launcher in the slot: rollback must refuse it as invalid.
+      // Plant a launcher in the slot: rollback must refuse it as invalid, and
+      // status must agree rather than claim a rollback-ready slot.
       writeFileSync(target.slotPath, "#!/usr/bin/env bash\nreadonly TARGET=/x\nexit 0\n", {
         mode: 0o755,
       });
       const refused = await invoke(runtimeFor(target), ["rollback"]);
       expect(refused.error?.code).toBe("install.slot.invalid");
+      const launcherStatus = await invoke(runtimeFor(target), ["status"]);
+      expect((dataOf(launcherStatus).rollback as { readonly state?: string }).state).toBe(
+        "invalid",
+      );
       // And an identity-less (non-executable) binary is invalid too.
       writeFileSync(target.slotPath, Buffer.from([0x7f, 0x45, 0x4c, 0x46]));
       chmodSync(target.slotPath, 0o644);
       expect((await invoke(runtimeFor(target), ["rollback"])).error?.code).toBe(
         "install.slot.invalid",
       );
+      const plainStatus = await invoke(runtimeFor(target), ["status"]);
+      expect((dataOf(plainStatus).rollback as { readonly state?: string }).state).toBe("invalid");
+      // The same bytes with the execute bit set are a compiled artifact, and the
+      // slot then reads as present.
+      chmodSync(target.slotPath, 0o755);
+      const executableStatus = await invoke(runtimeFor(target), ["status"]);
+      expect((dataOf(executableStatus).rollback as { readonly state?: string }).state).toBe(
+        "present",
+      );
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-021b rollback refuses a destination that is not a compiled artifact", () => {
+  test("a launcher at the destination is never displaced into the slot", async () => {
+    const target = freshScratch();
+    try {
+      // Two installs leave a real artifact in the slot and a valid record.
+      await invoke(runtimeFor(target), []);
+      await invoke(
+        runtimeFor(target, {
+          artifact: other.path,
+          identity: fixtureIdentity({ commit: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }),
+        }),
+        [],
+      );
+      const slotBefore = digestOf(target.slotPath);
+      // Replace the destination with a delivered launcher: the pair the swap
+      // inverts no longer exists, so the run refuses and writes nothing.
+      writeFileSync(
+        target.destinationPath,
+        "#!/usr/bin/env bash\nreadonly TARGET=/checkout/packages/cli/bin/jaiship.ts\nexit 0\n",
+        { mode: 0o755 },
+      );
+      const destinationBefore = readFileSync(target.destinationPath);
+      const dry = await invoke(runtimeFor(target), ["rollback"], { "--dry-run": true });
+      expect(dry.error).toBeUndefined();
+      expect((dataOf(dry).plan as readonly string[]).join("\n")).toContain(
+        "refusal: install.record.unreadable",
+      );
+      const refused = await invoke(runtimeFor(target), ["rollback"]);
+      expect(refused.error?.code).toBe("install.record.unreadable");
+      expect(readFileSync(target.destinationPath)).toEqual(destinationBefore);
+      expect(digestOf(target.slotPath)).toBe(slotBefore);
     } finally {
       target.dispose();
     }

@@ -138,9 +138,14 @@ describe("TC-INST-061 rollback --dry-run prints the plan or the refusal in place
       );
       expect(outcome.error).toBeUndefined();
       expect(snapshotTree(target.base)).toEqual(before);
-      const joined = (dataOf(outcome).plan as readonly string[]).join("\n");
+      const plan = dataOf(outcome).plan as readonly string[];
+      const joined = plan.join("\n");
+      // The printed plan is the executed three-rename temp swap, not a
+      // two-rename sequence that would overwrite the slot.
       expect(joined).toContain("rename 1");
       expect(joined).toContain("rename 2");
+      expect(joined).toContain("rename 3");
+      expect(joined).toContain(`${target.slotPath}.rollback-tmp`);
       expect(joined).toContain("record:");
       expect(dataOf(outcome).outcome).toBe("plan");
     } finally {

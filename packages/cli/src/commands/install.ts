@@ -47,6 +47,7 @@ import {
   rollbackRecordOf,
   type StateRootObservation,
   serializeInstallRecord,
+  slotCondition,
   uninstallMembers,
 } from "@delivery-os/core";
 import type {
@@ -179,7 +180,10 @@ const artifactDirectoryOf = (runtime: InstallRuntime): string =>
 
 /** The state-format verdict over the declared roots (read-only, bounded). */
 export const stateFormatVerdict = (runtime: InstallRuntime): InstallStateFormatVerdict => {
-  const truncated = runtime.stateRoots.length > INSTALL_MAX_JUDGED_ROOTS;
+  // The composition that capped the list knows whether it truncated it; the
+  // slice fallback keeps an injected uncapped list honest on the same rule.
+  const truncated =
+    runtime.stateRootsTruncated ?? runtime.stateRoots.length > INSTALL_MAX_JUDGED_ROOTS;
   const judgedRoots = runtime.stateRoots.slice(0, INSTALL_MAX_JUDGED_ROOTS);
   const observations: StateRootObservation[] = judgedRoots.map((root) => {
     const stats = runtime.fs.stat(root);
@@ -251,13 +255,16 @@ const writeRecord = (runtime: InstallRuntime, record: InstallRecord): boolean =>
 /** The slot report, read from disk and named only by a readable record. */
 const slotReportOf = (runtime: InstallRuntime, read: InstallRecordRead): InstallSlotReport => {
   const stats = runtime.fs.stat(runtime.slotPath);
-  if (stats === undefined) return { path: runtime.slotPath, state: "absent" };
-  if (stats.kind !== "file" || stats.size === 0)
-    return { path: runtime.slotPath, state: "invalid" };
-  const identity = read.kind === "record" ? read.record.previous : undefined;
-  return identity === undefined
-    ? { path: runtime.slotPath, state: "present" }
-    : { path: runtime.slotPath, state: "present", identity };
+  const probe = stats?.kind === "file" && stats.size > 0 && stats.executable;
+  const bytes = probe ? runtime.fs.readBytes(runtime.slotPath) : undefined;
+  const condition = slotCondition({
+    stats,
+    script: bytes !== undefined && bytes[0] === 0x23 && bytes[1] === 0x21,
+    ...(read.kind === "record" && read.record.previous !== undefined
+      ? { identity: read.record.previous }
+      : {}),
+  });
+  return { path: runtime.slotPath, ...condition };
 };
 
 /**
@@ -338,6 +345,31 @@ const destinationFacts = (runtime: InstallRuntime) => {
       destinationClass === "launcher"
         ? launcherTargetOf(runtime.fs, runtime.destinationPath)
         : undefined,
+  };
+};
+
+/**
+ * Write the managed PATH block exactly once for the resolved profile, and
+ * answer a typed refusal when the write fails. The caller never records a block
+ * that is not on disk.
+ */
+const applyPathBlock = (
+  runtime: InstallRuntime,
+  profile: {
+    readonly file?: string;
+    readonly merged?: string;
+    readonly block?: ReturnType<typeof renderPathBlock>;
+  },
+): { readonly ok: true } | { readonly ok: false; readonly refusal: Refusal } => {
+  if (profile.file === undefined || profile.block === undefined) return { ok: true };
+  if (writeProfileText({ fs: runtime.fs, path: profile.file, text: profile.merged ?? "" })) {
+    return { ok: true };
+  }
+  return {
+    ok: false,
+    refusal: internalFailure(
+      `the managed PATH block could not be written to ${profile.file}; the record was not updated and no block is claimed`,
+    ),
   };
 };
 
@@ -486,14 +518,12 @@ const runInstall = async (
     return internalFailure("the artifact-agreement step was injected to fail; nothing is staged");
   }
 
-  // The managed PATH block is written once per run, before the artifact decision
-  // narrows to the agreement path, so both paths carry the operator's request.
-  if (profilePlan.file !== undefined && profilePlan.block !== undefined) {
-    writeProfileText({ fs: runtime.fs, path: profilePlan.file, text: profilePlan.merged ?? "" });
-  }
-
   // Step 4: the artifact-agreement gate and the in-place record reconciliation.
   if (plannedPlan.agreement) {
+    // The managed PATH block is written once on the agreement path, before the
+    // reconciliation records it.
+    const block = applyPathBlock(runtime, profilePlan);
+    if (!block.ok) return block.refusal;
     let reconciliation: InstallOutcome["reconciliation"];
     if (plannedPlan.reconcilesRecord) {
       const reconciled = reconciliationRecordOf({
@@ -598,15 +628,15 @@ const runInstall = async (
     return internalFailure("the staged artifact could not be renamed into place");
   }
 
-  // Step 7: the record, staged and renamed.
+  // Step 7: the managed PATH block (once on this path), then the record, staged
+  // and renamed.
   if (runtime.fault?.failAt("record-write") === true) {
     return internalFailure(
       "the record write was injected to fail; both artifacts are valid and install status reports record-stale",
     );
   }
-  if (profilePlan.file !== undefined && profilePlan.block !== undefined) {
-    writeProfileText({ fs: runtime.fs, path: profilePlan.file, text: profilePlan.merged ?? "" });
-  }
+  const block = applyPathBlock(runtime, profilePlan);
+  if (!block.ok) return block.refusal;
   const recordToWrite = replacingRecordOf({
     running,
     stateSchemaVersion: runtime.acceptedStateSchemaVersion,
@@ -709,9 +739,10 @@ const runRollback = async (
     );
   }
   const record = readRecord(runtime);
+  const destinationIsArtifact = isCompiledArtifactAtPath(runtime.fs, runtime.destinationPath);
   const destinationIsRunning =
     runtime.runningArtifactPath.length > 0 &&
-    isCompiledArtifactAtPath(runtime.fs, runtime.destinationPath) &&
+    destinationIsArtifact &&
     runtime.fs.digest(runtime.destinationPath) === runtime.fs.digest(runtime.runningArtifactPath);
   const running = runtime.runningIdentity;
   const precondition = rollbackPrecondition({
@@ -724,6 +755,7 @@ const runRollback = async (
       channel: "dev",
     },
     destinationIsRunning,
+    destinationIsArtifact,
   });
 
   if (options.dryRun) {
@@ -731,8 +763,9 @@ const runRollback = async (
       ? [
           `restore: ${precondition.claimedCurrent.version} (build ${precondition.claimedCurrent.commit}) from the slot`,
           `displace: ${precondition.claimedPrevious.version} (build ${precondition.claimedPrevious.commit}) into the slot`,
-          "rename 1: destination -> slot (the displaced artifact)",
+          `rename 1: destination -> ${runtime.slotPath}.rollback-tmp (the displaced artifact moves aside)`,
           "rename 2: slot -> destination (the restored artifact)",
+          `rename 3: ${runtime.slotPath}.rollback-tmp -> slot (the displaced artifact becomes the new slot)`,
           "record: current = the slot's claimed artifact, previous = the displaced destination",
         ]
       : [
@@ -995,25 +1028,6 @@ export const createInstallCommandDefinition = (runtime: InstallRuntime): Command
     return renderInstallOutcome(data as InstallOutcome);
   },
   humanFailureText: (error, brand) => renderInstallFailure(error, brand),
-  exitProjection: (data) => {
-    if (typeof data === "object" && data !== null) {
-      const record = data as Record<string, unknown>;
-      if (record.schemaVersion === "install.status.v1") {
-        const format = record.stateFormat;
-        if (typeof format === "object" && format !== null) {
-          const roots = (format as { readonly roots?: readonly unknown[] }).roots ?? [];
-          const incompatible = roots.some(
-            (entry) =>
-              typeof entry === "object" &&
-              entry !== null &&
-              (entry as { readonly outcome?: unknown }).outcome === "not-accepted",
-          );
-          if (incompatible) return "user-validation";
-        }
-      }
-    }
-    return "success";
-  },
   handler: async (invocation) => {
     if (!runtime.ownsInstallation) return notOwningRefusal(runtime);
     const command: InstallCommandInput = { runtime, invocation };

@@ -971,6 +971,9 @@ readonly CLI_ENTRY_RELATIVE="packages/cli/bin/jaiship.ts"
 # install record.
 readonly LAUNCHER_CONTENT_MARKER="# Installed by the local install"
 readonly LAUNCHER_TARGET_MARKER="readonly TARGET="
+# The probe window that decides launcher ownership: both markers are in the
+# header, so a bounded read never touches the whole installed binary.
+readonly LAUNCHER_PROBE_BYTES=4096
 
 # Ask the executable's own state-free self-description for the brand install
 # path, with the working-name override scrubbed from that child's environment,
@@ -1056,7 +1059,13 @@ LAUNCHER
   fi
   local existing=""
   if [[ -f "${install_path}" ]]; then
-    existing="$(cat "${install_path}")" || existing=""
+    # Bounded and byte-safe: the installed artifact is the compiled binary, so
+    # read only the launcher header's worth of bytes and drop NUL bytes before
+    # the bytes become a shell variable. Both markers live in that header, so a
+    # 4 KiB probe decides ownership exactly as the whole file would.
+    existing="$(
+      head -c "${LAUNCHER_PROBE_BYTES}" "${install_path}" 2>/dev/null | LC_ALL=C tr -d '\000' || true
+    )"
     if [[ "${existing}" != *"${LAUNCHER_CONTENT_MARKER}"* || "${existing}" != *"${LAUNCHER_TARGET_MARKER}"* ]]; then
       log_err "refusing: ${install_path} holds content this installer does not own; update the product with the lifecycle command `install` (it owns the artifact, the slot, and the record); no launcher was written"
       return "${EXIT_CONFIG}"

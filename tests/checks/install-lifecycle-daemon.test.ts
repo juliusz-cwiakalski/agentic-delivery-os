@@ -189,6 +189,7 @@ describe("TC-INST-081 --stop-daemon stops before the swap or removal", () => {
   test("a dry-run with --stop-daemon takes no daemon action on any guarded path", async () => {
     for (const positionals of [
       [] as readonly string[],
+      ["rollback"] as readonly string[],
       ["uninstall"] as readonly string[],
       ["purge"] as readonly string[],
     ]) {

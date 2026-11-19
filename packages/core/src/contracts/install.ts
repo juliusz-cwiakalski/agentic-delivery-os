@@ -22,7 +22,10 @@ export const INSTALL_RECORD_FILE_NAME = "install.json" as const;
 /** The delivered store-format identifier the installed artifact accepts. */
 export const INSTALL_STATE_ROOT_PROJECTS_DIRECTORY = "projects" as const;
 
-/** The five compatibility outcomes for one judged root (DM-4). */
+/**
+ * The four compatibility outcomes for one judged root (DM-4). Truncation is a
+ * separate group-level flag, never a per-root outcome.
+ */
 export const INSTALL_STATE_FORMAT_OUTCOMES = [
   "accepted",
   "not-accepted",
@@ -289,6 +292,12 @@ export type InstallRuntime = {
   readonly stateRoot: string;
   /** The judged state roots: the host root and each first-level project root. */
   readonly stateRoots: readonly string[];
+  /**
+   * Whether the enumeration found more state roots than the declared cap and
+   * reported a bounded list. The composition carries the enumeration's own fact
+   * so the verdict never re-derives it from an already capped list.
+   */
+  readonly stateRootsTruncated?: boolean;
   readonly acceptedStateSchemaVersion: string;
   /** The injected identity; absent means this is a development run. */
   readonly runningIdentity?: InstallArtifactIdentity;
