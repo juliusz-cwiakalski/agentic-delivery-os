@@ -41,6 +41,7 @@ import type {
 } from "../../../packages/core/src/contracts/index";
 import { renderLogLine } from "../../../packages/core/src/domain/index";
 import {
+  appendCoordinatorRestart,
   appendCoordinatorStuck,
   appendLoopSession,
   appendLoopStop,
@@ -316,6 +317,23 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       return appended.ok
         ? { ok: true, appended: appended.appended }
         : { ok: false, code: appended.code };
+    },
+    appendRestart: (record) => {
+      const appended = appendCoordinatorRestart(guardedStore, newFenceToken(), record);
+      return appended.ok
+        ? { ok: true, appended: appended.appended }
+        : { ok: false, code: appended.code };
+    },
+    lastRestartSequence: () => {
+      const read = guardedStore.readRecords();
+      if (!read.ok) return null;
+      for (let index = read.value.records.length - 1; index >= 0; index -= 1) {
+        const entry = read.value.records[index];
+        if (entry?.kind === "coordinator.restart" && entry.key.endsWith(`:${LOOP_ID}`)) {
+          return entry.sequence;
+        }
+      }
+      return null;
     },
     appendFence: (record, held) => {
       const appendWith = (handle: Parameters<typeof guardedStore.append>[0]) => {

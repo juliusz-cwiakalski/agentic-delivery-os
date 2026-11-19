@@ -738,3 +738,29 @@ notes:
       The phase commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 4 commit hash: 674f2aa6."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 5 complete (the declared backoff schedule, one ordinal per
+      stuck restart, zero for a clean end, the at-bound exhaustion exit, the
+      durable fresh-budget epoch, the detection bound, and the delivered restart
+      record with its second session). Implemented in app/loop-supervisor.ts: one
+      `coordinator.restart` at the next contiguous ordinal with the delivered
+      reason and the replaced session id, the injected cancellable wait with
+      reason `restart-backoff`, exactly one replacement session, the terminated
+      session's `ended` record written BEFORE the replacement (so at most one
+      live session), the at-bound refusal appending no record and exiting 1 with
+      the loop's own summary (epoch, restarts=<n>/<bound>, the three-part history
+      reference, and `loop start --foreground --fresh-budget`), and the
+      `--fresh-budget` epoch open. loop-text.ts renders the loop's own exhaustion
+      summary. Gates all exit 0: loop-backoff + loop-stuck 23 pass; loop-imports +
+      loop-mutants 9 pass; pnpm typecheck; git diff --check. TC-STUCK-001's phase-4
+      segment was corrected to assert exactly its declared four observations (the
+      verdict, the termination, the outcome, and the admission decision), with the
+      restart record and second session left to BACKOFF-001 row A as the test plan
+      splits them. The phase commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 5 commit hash: recorded after the commit."
+    type: info
+    date: "2026-11-19"

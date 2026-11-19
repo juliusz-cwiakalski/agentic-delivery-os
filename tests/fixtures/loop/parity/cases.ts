@@ -223,12 +223,58 @@ const KILL_CASES: readonly LoopParityCase[] = [
   },
 ];
 
+const BACKOFF_BUDGET_CASES: readonly LoopParityCase[] = [
+  {
+    id: "backoff-schedule",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { ordinals: 10 },
+    expected: { total: 1_110_000, capped: [300_000, 300_000] },
+  },
+  {
+    id: "backoff-one-ordinal",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { stuckRestarts: 1 },
+    expected: { restartRecords: 1, spawns: 2 },
+  },
+  {
+    id: "backoff-clean-end",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { selfEnded: true },
+    expected: { restartRecords: 0, backoffWaits: 0 },
+  },
+  {
+    id: "backoff-exhaustion",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { atBound: true },
+    expected: { exit: 1, remediation: "loop start --foreground --fresh-budget" },
+  },
+  {
+    id: "backoff-fresh-budget",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { exhaustedThenFresh: true },
+    expected: { epoch: "epoch-2", count: 0 },
+  },
+  {
+    id: "backoff-cancelled-wait",
+    group: "backoff-budget",
+    declaredSeam: "S-backoff",
+    scenario: { cancelled: true },
+    expected: { sessionEffect: false },
+  },
+];
+
 export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...SPAWN_CASES,
   ...LOG_CASES,
   ...SINGLE_INSTANCE_CASES,
   ...STUCK_CASES,
   ...KILL_CASES,
+  ...BACKOFF_BUDGET_CASES,
 ];
 
 /** The rows of one proven surface, in declaration order. */

@@ -38,6 +38,7 @@ import {
   decideCoordinatorClaim,
   foldCoordinatorLease,
 } from "../domain/coordinator-fence.js";
+import { restartDelayMs } from "../domain/loop-backoff.js";
 import { orderDegradations, projectLoopStatus } from "../domain/loop-status.js";
 import { evaluateLoopVerdict, observeProgress } from "../domain/loop-verdict.js";
 import {
@@ -117,6 +118,9 @@ export type LoopLedgerPort = {
   readonly recoverFence: (token: string) => boolean;
   readonly appendSession: (record: LoopSessionRecord) => LoopRecordAppend;
   readonly appendStuck: (record: CoordinatorStuckRecord) => LoopRecordAppend;
+  readonly appendRestart: (record: CoordinatorRestartRecord) => LoopRecordAppend;
+  /** The newest restart record's ledger sequence, or `null` when none exists. */
+  readonly lastRestartSequence: () => number | null;
   /**
    * Append one lease record. `handle` carries the claim's already-held write
    * fence so the claim append is atomic with the decision; without it the port
@@ -194,6 +198,8 @@ export type LoopSupervisorPorts = {
     readonly nextOrdinal: number;
   };
   readonly delay: LoopDelay;
+  /** Whether a durable stop or a signal has cancelled the pending wait (F-3). */
+  readonly cancelled?: () => boolean;
   readonly loop: {
     readonly run: (onCycle: () => Promise<"continue" | "stop">) => Promise<LoopExit>;
   };
@@ -589,8 +595,10 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   let lastProgressAtMs: number | null = null;
   let cycleOrdinal = 0;
   let degradations: LoopDegradation[] = [];
+  let exhaustion: string | null = null;
+  let acquiredSession: LoopSessionRecord | null = null;
 
-  type CycleStep = "continue" | "stop" | "kill-failed";
+  type CycleStep = "continue" | "stop" | "kill-failed" | "exhausted";
 
   /**
    * The two-signal stuck step (F-5, DEC-3): the loop's own pure verdict over
@@ -681,13 +689,65 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       // A possibly-live orphan must never be joined by another session (R3).
       return "kill-failed";
     }
-    // Confirmed: record the restart ADMISSION decision exactly once.
-    ports.admission({
-      ordinal: cycleOrdinal,
-      budgetEpochId: loopBudgetEpoch(ledger.read().coordinator),
+    // Confirmed. The terminated session's record closes BEFORE any replacement
+    // is recorded, so at most one `active` record ever exists (AC-F6-4).
+    recordEnd(acquiredSession);
+    acquiredSession = null;
+
+    // The delivered restart-admission fold decides exactly once.
+    const epoch = loopBudgetEpoch(ledger.read().coordinator);
+    const admission = ports.admission({ ordinal: cycleOrdinal, budgetEpochId: epoch });
+    if (admission.state === "unevaluable") return "stop";
+    const bound = settings.restartBudget;
+    const consumed = epochRestartCount(epoch);
+    if (admission.state === "refuse" || consumed >= bound) {
+      // At/above the bound: no restart record, no session, the loop's own
+      // remediation and the derivable history reference (R-20).
+      const sequence = ledger.lastRestartSequence();
+      const summary = `epoch=${epoch};restarts=${String(consumed)}/${String(
+        bound,
+      )};historyRef=${epoch};restarts=${String(consumed)};seq=${String(sequence ?? 0)};remediation=loop start --foreground --fresh-budget`;
+      log("budget-exhausted", { epoch, restarts: `${String(consumed)}/${String(bound)}` });
+      exhaustion = summary;
+      return "exhausted";
+    }
+    const delayMs = restartDelayMs(admission.nextOrdinal);
+    const restartRecord: CoordinatorRestartRecord = {
+      schemaId: "delivery.coordinator.restart.v1",
+      restartId: `${loopId}#${epoch}#${String(admission.nextOrdinal)}`,
+      coordinatorId: loopId,
+      budgetEpochId: epoch,
+      sessionId: null,
+      ordinal: admission.nextOrdinal,
+      reason: "stuck-artifact-evidence",
+      previousSessionId: session.sessionId,
+      recordedAt: clock.nowIso(),
+    };
+    const appendedRestart = ledger.appendRestart(restartRecord);
+    if (!appendedRestart.ok) return "stop";
+    log("restart", {
+      ordinal: admission.nextOrdinal,
+      reason: "stuck-artifact-evidence",
+      delayMs,
+      replaced: session.sessionId ?? "",
     });
+    // The wait is CANCELLABLE: a durable stop or a signal ends it without the
+    // session effect (AC-F3-2).
+    await ports.delay(delayMs, "restart-backoff");
+    log("backoff", { delayMs, ordinal: admission.nextOrdinal });
+    if (ports.cancelled !== undefined && ports.cancelled()) return "stop";
+    const title = freshSessionTitle(clock.nowMs());
+    const spawned = await ports.session.spawn({ title, prompt: loopSpawnPrompt(loopId) });
+    if (!spawned.ok) return "stop";
+    acquiredSession = recordAcquisition(spawned).record;
     return "continue";
   };
+
+  /** The epoch's consumed ordinals, from the loop identity's own records. */
+  function epochRestartCount(epoch: string): number {
+    const read = ledger.read().coordinator;
+    return read.ok ? read.restarts.filter((record) => record.budgetEpochId === epoch).length : 0;
+  }
 
   /* --------------------------------- start --------------------------------- */
 
@@ -716,6 +776,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       }
       facts = established.facts;
       acquisition = established.record;
+      acquiredSession = established.record;
       lastProgressAtMs = clock.nowMs();
       const exit = await ports.loop.run(async () => {
         const step = await cycle();
@@ -724,16 +785,21 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       });
       void exit;
       if (killFailed) {
-        recordEnd(acquisition);
+        recordEnd(acquiredSession ?? acquisition);
         release(identity);
         return failure("coordinator", COORDINATOR_ERROR_CODES[3], `session=${facts.sessionId}`);
+      }
+      if (exhaustion !== null) {
+        recordEnd(acquiredSession ?? acquisition);
+        release(identity);
+        return failure("coordinator", COORDINATOR_ERROR_CODES[1], exhaustion);
       }
     } catch (thrown) {
       recordEnd(acquisition);
       release(identity);
       return failureFor(thrown);
     }
-    recordEnd(acquisition);
+    recordEnd(acquiredSession ?? acquisition);
     facts = { ...facts, liveness: "absent" };
     release(identity);
     const snapshot = ledger.read();

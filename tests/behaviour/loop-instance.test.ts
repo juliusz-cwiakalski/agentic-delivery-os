@@ -183,7 +183,10 @@ describe("TC-INSTANCE-005 (phase-4 segment) takeover and unconfirmed termination
       expect(records.restarts).toHaveLength(0);
       expect(records.fences.at(-1)?.action).toBe("released");
     }
-    const active = harness.loopRecords().sessions.filter((record) => record.state === "active");
-    expect(active.length).toBeLessThanOrEqual(1);
+    const folded = new Map<string, string>();
+    for (const record of harness.loopRecords().sessions) {
+      folded.set(record.sessionId, record.state);
+    }
+    expect([...folded.values()].filter((state) => state === "active").length).toBeLessThanOrEqual(1);
   });
 });

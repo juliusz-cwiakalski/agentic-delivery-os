@@ -407,6 +407,7 @@ import {
   appendCloseoutOutcome,
   appendCommitTelemetry,
   appendCoordinatorFence,
+  appendCoordinatorRestart,
   appendCoordinatorStuck,
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
@@ -3948,6 +3949,23 @@ export const createLoopLedgerPort = (
     return appended.ok
       ? { ok: true, appended: appended.appended }
       : { ok: false, code: appended.code };
+  },
+  appendRestart: (record) => {
+    const appended = appendCoordinatorRestart(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
+  lastRestartSequence: () => {
+    const read = store.readRecords();
+    if (!read.ok) return null;
+    for (let index = read.value.records.length - 1; index >= 0; index -= 1) {
+      const entry = read.value.records[index];
+      if (entry?.kind === "coordinator.restart" && entry.key.endsWith(`:${loopId}`)) {
+        return entry.sequence;
+      }
+    }
+    return null;
   },
   appendFence: (record, held) => {
     if (held !== undefined) {

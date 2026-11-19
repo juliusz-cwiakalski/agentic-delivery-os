@@ -29,3 +29,9 @@ export const renderLoopStatusHuman = (projection: LoopStatusProjection): string 
  */
 export const renderLoopStartHuman = (receipt: LoopStartReceipt): string =>
   `${bounded([...renderStatusBlock(receipt), `released=${receipt.released ? "yes" : "no"}`]).join("\n")}\n`;
+
+/**
+ * The at-bound exhaustion summary (AC-F3-3): the loop's OWN remediation and its
+ * derivable history reference, never the delivered coordinator row's text.
+ */
+export const renderLoopExhaustion = (summary: string): string => `loop exhausted  ${summary}\n`;

@@ -67,11 +67,11 @@ describe("TC-STUCK-001 all four conditions produce one verdict, one terminate, o
     expect(first?.killFailureReason).toBeNull();
     expect(first?.evidence).toContain("traffic=zero");
     expect(first?.evidence).toContain("delivery=none");
-    // Phase 4 records the ADMISSION decision only: no restart record, no second
-    // session (those are phase 5's).
-    expect(records.restarts).toHaveLength(0);
-    expect(harness.counters.spawns).toBe(1);
+    // The phase-4 SEGMENT: the verdict, the termination, the outcome, and the
+    // restart ADMISSION DECISION. The delivered `coordinator.restart` record and
+    // the second session are re-observed by phase 5's TC-BACKOFF-001 row A.
     expect(harness.verdicts.admissions).toHaveLength(1);
+    expect(harness.verdicts.admissions[0]?.ordinal).toBe(1);
   });
 });
 

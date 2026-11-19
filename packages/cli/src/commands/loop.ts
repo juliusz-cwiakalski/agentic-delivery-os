@@ -11,7 +11,11 @@ import type { LoopResult, LoopStartReceipt } from "@delivery-os/core";
 import type { LoopStatusProjection } from "@delivery-os/core/contracts";
 import { FALLBACK_INVOCATION_CODE } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
-import { renderLoopStartHuman, renderLoopStatusHuman } from "../output/loop-text.js";
+import {
+  renderLoopExhaustion,
+  renderLoopStartHuman,
+  renderLoopStatusHuman,
+} from "../output/loop-text.js";
 
 type Failure = {
   readonly error: {
@@ -43,6 +47,12 @@ export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): Comman
   flags: ["--foreground", "--fresh-budget"],
   positionals: { max: 1 },
   humanSuccess: true,
+  humanFailureText: (error: unknown): string | undefined => {
+    if (typeof error !== "object" || error === null) return undefined;
+    const value = error as { readonly code?: unknown; readonly summary?: unknown };
+    if (value.code !== "coordinator.restart-budget-exhausted") return undefined;
+    return typeof value.summary === "string" ? renderLoopExhaustion(value.summary) : undefined;
+  },
   humanText: (data: unknown): string => {
     if (typeof data !== "object" || data === null) return "";
     const value = data as Record<string, unknown>;
