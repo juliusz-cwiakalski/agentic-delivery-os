@@ -1137,3 +1137,31 @@ notes:
       authority stays with the CEO/human; nothing was merged."
     type: info
     date: "2026-11-19"
+  - text: "Branch synced with origin/main-tools at d1fff222 (GH-346, PR #363) by
+      merge commit 3888c3f0 (parents dc615e35 and d1fff222); nothing was
+      rebased or force-pushed. Four conflicts, all resolved by integrating both
+      sides: (1) doc/decisions/00-index.md keeps the GH-346 rows TDR-0044..0048
+      and carries the GH-347 rows as TDR-0049..0054, in ascending id order, with
+      no row dropped; (2) doc/overview/glossary.md keeps both term sets and the
+      union of both frontmatter link sets; (3) feature-result-contract.md carries
+      GH-346 and GH-347 in related_changes and leaves the eleven-token taxonomy,
+      the projections, the exits and the error table exactly as delivered; (4)
+      packages/cli/src/production.ts composes GH-346's install family runtime and
+      GH-347's dispatch composition together. ID COLLISION RESOLVED BY
+      RENUMBERING: both branches independently allocated TDR-0044..0048, so the
+      six GH-347 records moved 0044..0049 -> 0049..0054 (file names, frontmatter
+      ids, headings, index rows, spec/plan/test-plan/pm-notes/readiness
+      references, spec/features pages, glossary rows and code comments all
+      updated; GH-346's records and references are untouched). The documented
+      rule is that decision numbers are never reused and the next number is
+      highest + 1, and GH-346 itself renumbered TDR-0036..TDR-0040 ->
+      TDR-0044..0048 on the same ground. Verification after the merge: pnpm
+      typecheck pass; 180 tests pass across the dispatch composition, install
+      structure and the two harness behaviour suites; 322 tests pass across the
+      decision/doc/error-table/content-inventory checks; 238 tests pass across
+      the dispatch-structure and entrypoint structure/behaviour suites; 123 tests
+      pass across the port-inventory, supervision-imports and install error
+      domain suites; git diff --check clean. Merge authority stays with the
+      CEO/human; the PR is updated, not merged."
+    type: info
+    date: "2026-11-19"
