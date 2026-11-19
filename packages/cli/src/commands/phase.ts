@@ -298,6 +298,19 @@ const stagedCompleted = (value: unknown, phaseId: string): boolean => {
 };
 
 /**
+ * The one mirror derivation (F-5, API-6, TDR-0044 §2): the completion the
+ * document entry mirrors is the post-transition fold's value for that phase,
+ * never a lookup over the history. Every document-writing branch calls this
+ * named unit, and the defect regression substitutes the retired derivation
+ * alongside it instead of executing pre-fix code (test plan M99).
+ */
+const deriveMirrorCompletion = (
+  changeRef: string,
+  transitions: readonly PhaseTransitionRecord[],
+  phaseId: string,
+): string | null => foldPhaseState(changeRef, transitions).phases[phaseId]?.completed ?? null;
+
+/**
  * Matrix row 6: name the still-open phases that precede the target in the
  * effective variant's required order (C-4, PIN-4). Completion is read from the
  * post-transition document, so a reopened phase is open again; the advisory is
@@ -436,6 +449,23 @@ const completeWithCommit = async (
     ...(evidence.evidenceSource === undefined ? {} : { evidenceSource: evidence.evidenceSource }),
   } as const;
 
+  // Write the post-transition document: the entry's `completed` is the fold's
+  // value for the history that includes the just-appended record (API-6).
+  const writeMirroredDocument = (
+    operation: PhaseTransitionOperation,
+    transitions: readonly PhaseTransitionRecord[],
+  ): TargetFailure | undefined => {
+    const completedAt = deriveMirrorCompletion(changeRef, transitions, phaseId);
+    const mirrored = runtime.stageEntry(read.text, {
+      phaseId,
+      operation,
+      timestamp: completedAt ?? timestamp,
+    });
+    if (!mirrored.ok) return internalFailure("post-transition document is not parseable");
+    const written = runtime.writePmNotes(read.file, mirrored.text);
+    return written.ok ? undefined : internalFailure(written.message);
+  };
+
   const recordOnly = (basis: CommitIntentBasis): TargetSuccess | TargetFailure => {
     const appended = runtime.appendTransition({
       changeRef,
@@ -447,7 +477,7 @@ const completeWithCommit = async (
       commitIntentBasis: basis,
     });
     if (!appended.ok) return stateFailure(appended.error);
-    const written = writeDocument();
+    const written = writeMirroredDocument("complete", appended.value.transitions);
     if (written !== undefined) return written;
     const projected = replaceProjection(appended.value.transitions);
     if (projected !== undefined) return projected;
@@ -473,16 +503,21 @@ const completeWithCommit = async (
         atomic: false,
         commitSkipped: basis,
         reconciliation: { completed: "intentional-no-op", basis },
-        evidence: { outcome: "no-op", basis, reconciliation: "intentional-no-op" },
+        evidence: {
+          outcome: "no-op",
+          basis,
+          completedAt: deriveMirrorCompletion(changeRef, registry.transitions, phaseId),
+          reconciliation: "intentional-no-op",
+        },
       },
     };
   }
 
   if (delta.state === "both") {
-    const completedAt = registry.transitions.find(
-      (record) => record.phaseId === phaseId && record.operation === "complete",
-    )?.timestamp;
-    if (completedAt !== undefined && read.text !== staged.text) {
+    // The mirror is the post-transition fold's completion (API-6, TDR-0044 §2):
+    // the latest completion in the verified history, never the first one.
+    const completedAt = deriveMirrorCompletion(changeRef, registry.transitions, phaseId);
+    if (completedAt !== null && read.text !== staged.text) {
       const convergence = runtime.stageEntry(read.text, {
         phaseId,
         operation: "complete",
@@ -506,7 +541,7 @@ const completeWithCommit = async (
         evidence: {
           outcome: "no-op",
           basis: "already-completed",
-          ...(completedAt === undefined ? {} : { completedAt }),
+          completedAt,
           commitSkipped: "no-op",
         },
       },
@@ -524,7 +559,7 @@ const completeWithCommit = async (
       commitSha: delta.commitSha,
     });
     if (!appended.ok) return stateFailure(appended.error);
-    const written = writeDocument();
+    const written = writeMirroredDocument("complete", appended.value.transitions);
     if (written !== undefined) return written;
     const projected = replaceProjection(appended.value.transitions);
     if (projected !== undefined) return projected;
@@ -542,10 +577,14 @@ const completeWithCommit = async (
   }
 
   if (delta.state === "record-atomic-without-commit") {
+    // The record already landed, so the fold over the verified history authors
+    // the convergence document's completion (API-6); the record identity is a
+    // delivered fallback only when the history carries no entry for the phase.
+    const completedAt = deriveMirrorCompletion(changeRef, registry.transitions, phaseId);
     const convergence = runtime.stageEntry(read.text, {
       phaseId,
       operation: "complete",
-      timestamp: evidence.transitionId ?? timestamp,
+      timestamp: completedAt ?? evidence.transitionId ?? timestamp,
     });
     if (!convergence.ok) return internalFailure("convergence document is not parseable");
     const preWritten = runtime.writePmNotes(read.file, convergence.text);
@@ -576,7 +615,11 @@ const completeWithCommit = async (
           atomic: false,
           commitSkipped: "interrupted-atomic-no-pending-work",
           reconciliation: { completed: "intentional-no-op" },
-          evidence: { outcome: "no-op", basis: "interrupted-atomic-no-pending-work" },
+          evidence: {
+            outcome: "no-op",
+            basis: "interrupted-atomic-no-pending-work",
+            completedAt,
+          },
         },
       };
     }
@@ -612,7 +655,9 @@ const completeWithCommit = async (
   }
 
   // DEC-16: the pm-notes transition is written before the commit act; the
-  // pre-write bytes are restored if the act fails.
+  // pre-write bytes are restored if the act fails. The entry carries `timestamp`,
+  // which is the value this branch's own append records, so it equals the
+  // post-transition fold by construction — no history is consulted here.
   const preWritten = writeDocument();
   if (preWritten !== undefined) return preWritten;
   const baselineHead = (await extension.currentHead()) ?? "";
@@ -815,7 +860,22 @@ const transitionTarget = async (
   });
   if (!appended.ok) return stateFailure(appended.error);
 
-  const written = runtime.writePmNotes(read.file, staged.text);
+  // The written entry mirrors the post-transition fold: a completion takes the
+  // fold's latest completion (the timestamp this append records); a reopen
+  // writes null, which is the fold's cleared value. `started` is never rewritten
+  // for an existing entry (API-6, TDR-0044 §2).
+  const mirrorCompleted = deriveMirrorCompletion(changeRef, appended.value.transitions, phaseId);
+  const mirrored =
+    kind === "complete" && mirrorCompleted !== null
+      ? runtime.stageEntry(read.text, {
+          phaseId,
+          operation: "complete",
+          timestamp: mirrorCompleted,
+        })
+      : staged;
+  if (!mirrored.ok) return internalFailure("post-transition document is not parseable");
+
+  const written = runtime.writePmNotes(read.file, mirrored.text);
   if (!written.ok) return internalFailure(written.message);
 
   const replaced = runtime.replaceProjection({

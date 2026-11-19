@@ -1967,6 +1967,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           recordCount: read.value.evidence.recordCount,
           verification: read.value.evidence.verification,
           projection: { present: true },
+          fold: foldPhaseState(changeRef, read.value.transitions),
         };
       },
       readPlan: plan.readPlan,

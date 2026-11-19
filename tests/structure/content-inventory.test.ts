@@ -1157,6 +1157,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/pm-notes.ts": [
     "CANONICAL_PHASE_IDS",
+    "DIVERGENT_VALUE_BOUND",
     "LITE_REQUIRED_PHASES",
     "PM_NOTES_COLLECTION_KEYS",
     "PM_NOTES_DEFAULT_VARIANT",
@@ -1532,7 +1533,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validatePlan",
     "validatePlanValue",
   ],
-  "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
+  "core/src/domain/pm-notes-lint.ts": ["comparedPhaseCount", "firstPhaseDivergence", "lintPmNotes"],
   "core/src/domain/project-groups.ts": [
     "aggregateProjectMemberOutcomes",
     "projectGroupDeclared",

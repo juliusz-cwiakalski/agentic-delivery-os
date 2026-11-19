@@ -633,7 +633,9 @@ export function registerEdgeSecrets(
 /**
  * Read the registry target through the injected state port. The derived
  * projection is observed by its documented record key; no mutation or fence is
- * acquired by a read.
+ * acquired by a read. The verified fold is carried additively (DM-8,
+ * TDR-0044 §4) so the both-target comparison reads the ledger, never the
+ * projection document and never the pm-notes bytes.
  */
 export const createRegistryLintReader = (
   store: StateStorePort,
@@ -642,6 +644,8 @@ export const createRegistryLintReader = (
     const read = store.read({ requiredKeys: [] });
     if (!read.ok) return { ok: false, error: read.error };
     const { evidence, values } = read.value;
+    const transitions = readChangeTransitionsTolerant(store, changeRef);
+    if (!transitions.ok) return { ok: false, error: transitions.error };
     const projectionName = `${PHASE_STATE_DOCUMENT_PREFIX}${changeRef}${PHASE_STATE_DOCUMENT_SUFFIX}`;
     return {
       ok: true,
@@ -649,6 +653,7 @@ export const createRegistryLintReader = (
       recordCount: evidence.recordCount,
       verification: evidence.verification,
       projection: { present: Object.hasOwn(values, `document:${projectionName}`) },
+      fold: foldPhaseState(changeRef, transitions.value.transitions),
     };
   };
 };

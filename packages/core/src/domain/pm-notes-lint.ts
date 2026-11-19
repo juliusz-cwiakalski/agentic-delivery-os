@@ -1,5 +1,6 @@
 /**
- * Pure pm-notes conformance rules (GH-179 C-1..C-3, PIN-5).
+ * Pure pm-notes conformance rules (GH-179 C-1..C-3, PIN-5) and the both-target
+ * divergence rule (GH-349 F-5, API-5, TDR-0044 §4).
  *
  * The rules operate on parsed values or a parse-failure input; they perform no
  * I/O, invoke no parser, and read no ambient state. Families run in the fixed
@@ -7,13 +8,20 @@
  * carries the first finding's single classified identity. Within a family all
  * offenders of that class are named. Only schema-declared keys are inspected:
  * extra keys stay opaque (NG-4, GH-179 D11).
+ *
+ * The divergence rule compares a parsed document's `completed` values with the
+ * verified ledger fold, scoped to phases the ledger holds history for. It
+ * detects and never repairs: it is pure, consults no exclusion list, and reads
+ * no clock.
  */
 import {
+  CANONICAL_PHASE_IDS,
   PM_NOTES_COLLECTION_KEYS,
   PM_NOTES_OPTIONAL_STRING_KEYS,
   PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
   PM_NOTES_REQUIRED_TOP_LEVEL_KEYS,
   PM_NOTES_VARIANT_VALUES,
+  type PhaseStateProjection,
   type PmNotesLintCode,
   type PmNotesParseOutcome,
   type PmNotesVariant,
@@ -245,6 +253,52 @@ export const lintPmNotes = (input: PmNotesParseOutcome): PmNotesLintVerdict => {
 
   return { ok: true, variant: effectiveVariant };
 };
+
+/** One ledger-backed phase whose document completion differs from the fold. */
+export type PhaseDivergence = {
+  readonly phaseId: string;
+  readonly documentCompleted: string | null;
+  readonly foldCompleted: string | null;
+};
+
+/**
+ * The document's completion for one phase: a timestamp when present, otherwise
+ * `null`. An absent entry records no completion, which is null for the compare.
+ */
+const documentCompletion = (document: unknown, phaseId: string): string | null => {
+  if (!isRecord(document) || !isRecord(document.phases)) return null;
+  const entry = document.phases[phaseId];
+  if (!isRecord(entry)) return null;
+  return typeof entry.completed === "string" ? entry.completed : null;
+};
+
+/**
+ * The first canonical phase whose document completion differs from the verified
+ * fold's completion (GH-349 API-5, TDR-0044 §4).
+ *
+ * Scope: phases the ledger has at least one transition for, compared on
+ * `completed` only — a null and a timestamp are different facts. A phase with no
+ * ledger history produces no finding, and a document-only completion produces
+ * none either (the declaration question belongs to `verify change`). Pure: no
+ * I/O, no clock, no ordering dependency beyond the canonical phase order.
+ */
+export const firstPhaseDivergence = (
+  document: unknown,
+  fold: PhaseStateProjection,
+): PhaseDivergence | undefined => {
+  for (const phaseId of CANONICAL_PHASE_IDS) {
+    const folded = fold.phases[phaseId];
+    if (folded === undefined) continue;
+    const documentCompleted = documentCompletion(document, phaseId);
+    if (documentCompleted === folded.completed) continue;
+    return { phaseId, documentCompleted, foldCompleted: folded.completed };
+  }
+  return undefined;
+};
+
+/** How many canonical phases the ledger holds history for (the corpus count). */
+export const comparedPhaseCount = (fold: PhaseStateProjection): number =>
+  CANONICAL_PHASE_IDS.filter((phaseId) => fold.phases[phaseId] !== undefined).length;
 
 /** Re-exported for the value-type fixture controls that inspect collections. */
 export type { PmNotesLintCode };

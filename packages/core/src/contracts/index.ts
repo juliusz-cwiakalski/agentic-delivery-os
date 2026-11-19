@@ -1856,6 +1856,7 @@ export {
 // pm-notes schema vocabulary (GH-179 C-1, C-2): types and `as const` data only.
 export {
   CANONICAL_PHASE_IDS,
+  DIVERGENT_VALUE_BOUND,
   LITE_REQUIRED_PHASES,
   PM_NOTES_COLLECTION_KEYS,
   PM_NOTES_DEFAULT_VARIANT,

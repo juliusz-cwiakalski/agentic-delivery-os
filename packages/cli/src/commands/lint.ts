@@ -5,10 +5,24 @@
  * runs the pure rules over edge-parsed values, and returns data or a classified
  * failure. It never writes streams, never chooses an exit code, and never
  * mutates a target. The brand arrives through the injected invocation.
+ *
+ * The both-target invocation adds one read-only comparison after both
+ * conformance checks pass: each ledger-backed canonical phase's document
+ * `completed` must equal the verified fold's, and the first divergence is
+ * `lint.phases.divergent`. Detection never repairs a document.
  */
-import { lintPmNotes, type PmNotesLintFinding, validatePlan } from "@delivery-os/core";
 import {
+  comparedPhaseCount,
+  firstPhaseDivergence,
+  lintPmNotes,
+  type PhaseDivergence,
+  type PmNotesLintFinding,
+  validatePlan,
+} from "@delivery-os/core";
+import {
+  DIVERGENT_VALUE_BOUND,
   LINT_DOCUMENT_UNREADABLE_CODE,
+  type PhaseStateProjection,
   type PlanArtifactRead,
   type PlanYamlParser,
   type PmNotesParseFailure,
@@ -27,7 +41,14 @@ export type LintPmNotesRead =
       readonly parseFailure: PmNotesParseFailure;
     };
 
-/** A registry target read: verified evidence, or a classified state failure. */
+/**
+ * A registry target read: verified evidence, or a classified state failure.
+ *
+ * `fold` is the additive field (DM-8, TDR-0044 §4): the verified ledger fold the
+ * both-target divergence comparison reads. The delivered fields keep their
+ * values and types; a read that exposes no ledger omits the fold and the
+ * comparison has nothing to compare.
+ */
 export type LintRegistryRead =
   | {
       readonly ok: true;
@@ -35,6 +56,7 @@ export type LintRegistryRead =
       readonly recordCount: number;
       readonly verification: readonly string[];
       readonly projection: { readonly present: boolean };
+      readonly fold?: PhaseStateProjection;
     }
   | { readonly ok: false; readonly error: StateFailure };
 
@@ -49,6 +71,37 @@ export type LintCommandRuntime = {
 
 type TargetSuccess = { readonly ok: true; readonly data: Record<string, unknown> };
 type TargetFailure = { readonly ok: false; readonly error: Record<string, unknown> };
+
+/** A pm-notes conformance success that keeps the parsed document for the compare. */
+type PmNotesTargetOutcome = TargetSuccess & { readonly document: unknown };
+/** A registry conformance success that carries the additive verified fold. */
+type RegistryTargetOutcome = TargetSuccess & {
+  readonly fold: PhaseStateProjection | undefined;
+};
+
+const boundedValue = (value: string | null): string =>
+  value === null
+    ? "null"
+    : value.length <= DIVERGENT_VALUE_BOUND
+      ? value
+      : `${value.slice(0, DIVERGENT_VALUE_BOUND)}…`;
+
+/**
+ * The classified `lint.phases.divergent` failure: the phase id, both bounded
+ * values and the operator remediation. Detection never repairs (C-4).
+ */
+const divergenceFailure = (divergence: PhaseDivergence): TargetFailure => ({
+  ok: false,
+  error: {
+    kind: "lint",
+    code: "lint.phases.divergent",
+    summary: `phases.${divergence.phaseId}.completed diverges from the registry fold: document=${boundedValue(
+      divergence.documentCompleted,
+    )} fold=${boundedValue(
+      divergence.foldCompleted,
+    )} (re-derive the document from phase list, or record the missing transition through phase complete)`,
+  },
+});
 
 const locationText = (finding: PmNotesLintFinding): string => {
   const { location } = finding;
@@ -78,7 +131,7 @@ const findingError = (finding: PmNotesLintFinding): TargetFailure => ({
 const pmNotesTarget = (
   runtime: LintCommandRuntime,
   changeRef: string,
-): TargetSuccess | TargetFailure => {
+): PmNotesTargetOutcome | TargetFailure => {
   const read = runtime.readPmNotes(changeRef);
   if (!read.ok && read.reason === "missing") {
     return {
@@ -92,7 +145,7 @@ const pmNotesTarget = (
   }
   if (!read.ok) {
     const verdict = lintPmNotes({ ok: false, parseFailure: read.parseFailure });
-    return verdict.ok ? { ok: true, data: {} } : findingError(verdict.finding);
+    return verdict.ok ? { ok: true, data: {}, document: undefined } : findingError(verdict.finding);
   }
   const verdict = lintPmNotes({ ok: true, value: read.value });
   if (!verdict.ok) return findingError(verdict.finding);
@@ -104,13 +157,14 @@ const pmNotesTarget = (
       variant: verdict.variant,
       evidence: { class: "conforms", file: read.file },
     },
+    document: read.value,
   };
 };
 
 const registryTarget = (
   runtime: LintCommandRuntime,
   changeRef: string,
-): TargetSuccess | TargetFailure => {
+): RegistryTargetOutcome | TargetFailure => {
   const read = runtime.readRegistry(changeRef);
   if (!read.ok) return { ok: false, error: { ...read.error } };
   return {
@@ -126,6 +180,7 @@ const registryTarget = (
         projection: read.projection,
       },
     },
+    fold: read.fold,
   };
 };
 
@@ -228,15 +283,36 @@ export const createLintCommandDefinition = (runtime: LintCommandRuntime): Comman
     const registrySelected = flags["--registry"] === true;
     const pmNotesSelected = flags["--pm-notes"] === true || !registrySelected;
     const targets: Record<string, unknown>[] = [];
+    let document: unknown;
+    let fold: PhaseStateProjection | undefined;
     if (pmNotesSelected) {
       const result = pmNotesTarget(runtime, changeRef);
       if (!result.ok) return { error: result.error };
+      document = result.document;
       targets.push(result.data);
     }
     if (registrySelected) {
       const result = registryTarget(runtime, changeRef);
       if (!result.ok) return { error: result.error };
+      fold = result.fold;
       targets.push(result.data);
+    }
+    // The both-target comparison runs only after both conformance checks passed,
+    // so a malformed document is still reported as malformed (API-5). It reads
+    // the two already-read surfaces and writes nothing.
+    if (pmNotesSelected && registrySelected) {
+      if (document === undefined || fold === undefined) {
+        return { data: { changeRef, targets, divergence: { compared: 0, findings: 0 } } };
+      }
+      const divergence = firstPhaseDivergence(document, fold);
+      if (divergence !== undefined) return { error: divergenceFailure(divergence).error };
+      return {
+        data: {
+          changeRef,
+          targets,
+          divergence: { compared: comparedPhaseCount(fold), findings: 0 },
+        },
+      };
     }
     return {
       data: targets.length === 1 ? targets[0] : { changeRef, targets },
