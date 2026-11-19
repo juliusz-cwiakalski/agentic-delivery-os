@@ -100,3 +100,20 @@ describe("TC-LOG-004 a failing append leaves the exit, the records, and the disc
     expect(harness.dataOf(status).degraded).toEqual([]);
   });
 });
+
+describe("TC-LOG-004 (phase-4 segment) the stuck-episode lines are narrated", () => {
+  test("a stuck episode emits exactly one stuck-verdict line and one kill line", async () => {
+    const harness = createLoopHarness({
+      label: "log-stuck-episode",
+      progressReading: { state: "zero", observedAtMs: 0 },
+      cycleStepMs: 700_000,
+    });
+    await harness.run(["loop", "start", "--foreground", "--json"]);
+    const events = harness.lines.map((line) => /event=([a-z-]+)/u.exec(line)?.[1]);
+    expect(events.filter((event) => event === "stuck-verdict")).toHaveLength(1);
+    expect(events.filter((event) => event === "kill")).toHaveLength(1);
+    for (const line of harness.lines) {
+      expect(logByteLength(line)).toBeLessThanOrEqual(LOOP_MAX_LOG_LINE_BYTES);
+    }
+  });
+});

@@ -407,6 +407,7 @@ import {
   appendCloseoutOutcome,
   appendCommitTelemetry,
   appendCoordinatorFence,
+  appendCoordinatorStuck,
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
   appendLoopSession,
@@ -3942,6 +3943,12 @@ export const createLoopLedgerPort = (
   },
   recoverFence: (token) => store.recoverFence(token).ok,
   appendSession: (record) => appendLoopSession(store, newFenceToken(), record),
+  appendStuck: (record) => {
+    const appended = appendCoordinatorStuck(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
   appendFence: (record, held) => {
     if (held !== undefined) {
       const appended = store.append(held, {

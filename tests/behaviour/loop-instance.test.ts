@@ -157,3 +157,33 @@ describe("TC-PARITY-005 an ended session is replaced rather than resumed", () =>
     expect(recorded?.sessionId).not.toBe("session-previous");
   });
 });
+
+describe("TC-INSTANCE-005 (phase-4 segment) takeover and unconfirmed termination keep one session", () => {
+  test("0 restarts, 0 spawns, a released lease, and at most one live active session", async () => {
+    const harness = createLoopHarness({
+      label: "instance-005",
+      own: OWN,
+      progressReading: { state: "zero", observedAtMs: 0 },
+      killOutcome: "failed",
+      killFailureReason: "identity-mismatch",
+      cycleStepMs: 700_000,
+    });
+    // A dead lease holder left a LIVE recorded session behind: takeover + join.
+    harness.seedFence({ action: "acquired", pid: 4000, processStartTimeMs: 4_000 });
+    harness.seedSession({ sessionId: "session-1", pid: 4242, processStartTimeMs: 2_000 });
+    harness.setAlive(4000, false);
+    harness.setAlive(4242, true);
+    harness.setSessionFacts({ sessionId: "session-1", liveness: "alive", pid: 4242 });
+
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(2);
+    expect(harness.counters.spawns).toBe(0);
+    const records = harness.coordinatorRecords();
+    if (records.ok) {
+      expect(records.restarts).toHaveLength(0);
+      expect(records.fences.at(-1)?.action).toBe("released");
+    }
+    const active = harness.loopRecords().sessions.filter((record) => record.state === "active");
+    expect(active.length).toBeLessThanOrEqual(1);
+  });
+});

@@ -162,6 +162,19 @@ export {
 } from "./host-index.js";
 /* --------------------- loop supervision profile (GH-348) ----------------- */
 export {
+  corroborateDelivery,
+  type CorroboratorInput,
+  type DaemonLaneFact,
+  daemonEvidenceClass,
+  type DispatchLaneFact,
+  dispatchEvidenceClass,
+  evidenceClassContribution,
+  foldDeliveryEvidence,
+  type LaneLiveness,
+  LOOP_EVIDENCE_CLASSES,
+  type LoopEvidenceClass,
+} from "./loop-corroborator.js";
+export {
   endedSessionRecord,
   freshSessionTitle,
   type LoopSessionEffect,
@@ -188,6 +201,7 @@ export {
   type LoopRecordAppend,
   type LoopResult,
   type LoopStartReceipt,
+  type LoopTerminateOutcome,
   type LoopSupervisor,
   type LoopSupervisorPorts,
   loopBudgetEpoch,

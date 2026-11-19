@@ -154,3 +154,25 @@ describe("TC-CONTRACT-005 the loop domain tier is pure", () => {
     expect(contracts.loopLogRelativePath("loop-main")).toBe("loop/loop-main.log");
   });
 });
+
+describe("TC-CONTRACT-006 the loop composes the delivered engine primitives", () => {
+  const supervisorSource = (): string =>
+    readFileSync(join(ROOT, "packages/core/src/app/loop-supervisor.ts"), "utf8");
+
+  test("the loop imports the delivered claim decision and the delivered lease fold", () => {
+    const text = supervisorSource();
+    expect(text).toContain('from "../domain/coordinator-fence.js"');
+    expect(text).toContain("decideCoordinatorClaim");
+    expect(text).toContain("foldCoordinatorLease");
+    // No second lease/kill/lock mechanism is authored here.
+    expect(text).not.toContain("killCoordinatorProcess");
+    expect(text).not.toContain("store.acquireFence");
+  });
+
+  test("the delivered module owns the fold, so the loop declares no second one", () => {
+    const text = supervisorSource();
+    expect(text).not.toContain("const foldLease");
+    expect(text).not.toContain("function foldLease");
+    expect(text).not.toContain("O_EXCL");
+  });
+});

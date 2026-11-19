@@ -147,10 +147,88 @@ const SINGLE_INSTANCE_CASES: readonly LoopParityCase[] = [
 ];
 
 /** The whole registry; every phase appends its own group. */
+const STUCK_CASES: readonly LoopParityCase[] = [
+  {
+    id: "stuck-two-signal-verdict",
+    group: "stuck",
+    declaredSeam: "S-verdict",
+    scenario: { traffic: "zero", delivery: "none", windowElapsed: true },
+    expected: { verdict: "stuck", records: 2, kills: 1 },
+  },
+  {
+    id: "stuck-positive-progress",
+    group: "stuck",
+    declaredSeam: "S-verdict",
+    scenario: { traffic: "positive" },
+    expected: { verdict: "progressing", records: 0, kills: 0 },
+  },
+  {
+    id: "stuck-delivery-veto",
+    group: "stuck",
+    declaredSeam: "S-corroborator",
+    scenario: { traffic: "zero", delivery: "in-progress" },
+    expected: { verdict: "progressing", kills: 0 },
+  },
+  {
+    id: "stuck-unreadable-progress",
+    group: "stuck",
+    declaredSeam: "S-verdict",
+    scenario: { traffic: "unknown" },
+    expected: { verdict: "unevaluable", records: 1, kills: 0 },
+  },
+  {
+    id: "stuck-unreadable-corroborator",
+    group: "stuck",
+    declaredSeam: "S-corroborator",
+    scenario: { delivery: "unknown" },
+    expected: { verdict: "unevaluable", kills: 0 },
+  },
+  {
+    id: "stuck-seeded-observation",
+    group: "stuck",
+    declaredSeam: "S-verdict",
+    scenario: { restartJustHappened: true },
+    expected: { verdictDelayed: true },
+  },
+  {
+    id: "stuck-decision-table",
+    group: "stuck",
+    declaredSeam: "S-corroborator",
+    scenario: { rows: 16 },
+    expected: { total: true, noneRequiresReadableStore: true },
+  },
+];
+
+const KILL_CASES: readonly LoopParityCase[] = [
+  {
+    id: "kill-term-before-kill",
+    group: "kill",
+    declaredSeam: "S-terminate",
+    scenario: { graceMs: 20_000, treeListed: true },
+    expected: { termFirst: true, killAfterGrace: true },
+  },
+  {
+    id: "kill-exact-target",
+    group: "kill",
+    declaredSeam: "S-terminate",
+    scenario: { mismatch: true },
+    expected: { signals: 0, reason: "identity-mismatch" },
+  },
+  {
+    id: "kill-unconfirmed-terminal",
+    group: "kill",
+    declaredSeam: "S-terminate",
+    scenario: { confirmed: false },
+    expected: { exit: 2, restarts: 0, spawns: 1 },
+  },
+];
+
 export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...SPAWN_CASES,
   ...LOG_CASES,
   ...SINGLE_INSTANCE_CASES,
+  ...STUCK_CASES,
+  ...KILL_CASES,
 ];
 
 /** The rows of one proven surface, in declaration order. */

@@ -15,6 +15,7 @@ export type {
   LoopRecordAppend,
   LoopSupervisor,
   LoopSupervisorPorts,
+  LoopTerminateOutcome,
 } from "@delivery-os/core";
 export { createLoopSupervisor } from "@delivery-os/core";
 export type { BlockerSessionPort, BlockersCommandRuntime } from "./blockers.js";

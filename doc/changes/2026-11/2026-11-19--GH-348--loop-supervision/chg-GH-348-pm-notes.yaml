@@ -714,3 +714,27 @@ notes:
       it."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 3 commit hash: 38526bf3."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 4 complete (the two-signal stuck verdict, the read-only
+      delivered-lane corroborator, the identity-verified terminate path, the
+      terminal unconfirmed-termination branch, and the restart admission
+      decision). Implemented: app/loop-corroborator.ts (the total decision over
+      store readability, the newest dispatch-lane facts and the daemon-lane
+      facts; evidence classes D1-D6/M1-M6 and the F0-F3 fold, no startedAt, no
+      age, no start-time comparison), the supervisor's cycle step over the
+      phase-1 predicate (one verdict record per expectation, the loop-scoped
+      `<loopId>:<ordinal>` stuckId/iterationId, the terminate call through the
+      injected delivered kill path, one outcome record, the terminal
+      kill-failed exit with no restart and no second session, and the recorded
+      admission decision only), the delivered lease fold reused instead of a
+      second one (TC-CONTRACT-006), the production mounts (per-session totals
+      reader, lane corroborator, artifact advance, terminate, admission), and
+      the fixtures (facts tables, verdict counters, the stuck/kill registry
+      groups). Gates all exit 0: loop-stuck + loop-instance + loop-log 32 pass;
+      loop-imports 6 pass (including the engine-reuse identity); the delivered
+      coordinator control 7 pass unmodified; pnpm typecheck; git diff --check.
+      The phase commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

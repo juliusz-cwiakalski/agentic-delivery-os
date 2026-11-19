@@ -30,13 +30,18 @@ import {
 } from "../../../packages/core/src/app/index";
 import type {
   CoordinatorConfigKey,
+  CoordinatorKillFailureReason,
+  CoordinatorKillOutcome,
+  CoordinatorProgressState,
   DaemonProcessPort,
+  LoopDeliveryReading,
   LoopLogEvent,
   LoopSessionRecord,
   LoopStopRecord,
 } from "../../../packages/core/src/contracts/index";
 import { renderLogLine } from "../../../packages/core/src/domain/index";
 import {
+  appendCoordinatorStuck,
   appendLoopSession,
   appendLoopStop,
   readCoordinatorRecords,
@@ -80,6 +85,8 @@ export type LoopHarnessOptions = {
   readonly cycles?: number;
   /** The driver's declared exit once the cycles are spent. */
   readonly exit?: "stopped" | "signal";
+  /** The virtual time the injected driver advances before each cycle. */
+  readonly cycleStepMs?: number;
   /** The supervisor's own recorded identity. */
   readonly own?: { readonly pid: number; readonly processStartTimeMs: number } | null;
   readonly declared?: Partial<{
@@ -92,6 +99,16 @@ export type LoopHarnessOptions = {
   readonly startTimes?: Readonly<Record<number, number>>;
   /** Makes every log append fail (the bounded-attempt path). */
   readonly logFails?: boolean;
+  /** The sourced progress reading; `null` is unreadable (F-5). */
+  readonly progressReading?: {
+    readonly state: CoordinatorProgressState;
+    readonly observedAtMs: number | null;
+  } | null;
+  readonly delivery?: LoopDeliveryReading;
+  readonly artifactAdvanced?: boolean;
+  readonly killOutcome?: CoordinatorKillOutcome | "capability-gap";
+  readonly killFailureReason?: CoordinatorKillFailureReason;
+  readonly admissionState?: "admit" | "refuse" | "unevaluable";
 };
 
 export type LoopHarness = {
@@ -114,6 +131,12 @@ export type LoopHarness = {
   readonly process: {
     readonly signals: readonly { readonly pid: number; readonly signal: string }[];
     readonly probes: number;
+  };
+  /** The recorded terminate calls, the admission decisions, and progress reads. */
+  readonly verdicts: {
+    readonly kills: readonly string[];
+    readonly admissions: readonly { readonly ordinal: number; readonly budgetEpochId: string }[];
+    readonly progressReads: number;
   };
   /** Every rendered log line, in append order. */
   readonly lines: readonly string[];
@@ -147,6 +170,13 @@ export type LoopHarness = {
   setSessionFacts: (overrides: Partial<LoopSessionFacts>) => void;
   setLogFails: (value: boolean) => void;
   setAlive: (pid: number, answer: boolean | null) => void;
+  setProgressReading: (
+    value: {
+      readonly state: CoordinatorProgressState;
+      readonly observedAtMs: number | null;
+    } | null,
+  ) => void;
+  setDelivery: (value: LoopDeliveryReading) => void;
   dataOf: (result: {
     readonly json: Record<string, unknown> | undefined;
   }) => Record<string, unknown>;
@@ -207,6 +237,16 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       ? { facts: { ...absentSessionFacts(), ...(options.session?.facts ?? {}) } }
       : {}),
   });
+
+  let progressReading =
+    options.progressReading === undefined
+      ? { state: "positive" as CoordinatorProgressState, observedAtMs: 1_000_000 }
+      : options.progressReading;
+  let delivery: LoopDeliveryReading = options.delivery ?? "none";
+  const artifactAdvanced = options.artifactAdvanced ?? false;
+  const kills: string[] = [];
+  const admissions: { ordinal: number; budgetEpochId: string }[] = [];
+  let progressReads = 0;
 
   const logFs = createLogFs();
   const lines: string[] = [];
@@ -271,6 +311,12 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
     },
     recoverFence: (token) => guardedStore.recoverFence(token).ok,
     appendSession: (record) => appendLoopSession(guardedStore, newFenceToken(), record),
+    appendStuck: (record) => {
+      const appended = appendCoordinatorStuck(guardedStore, newFenceToken(), record);
+      return appended.ok
+        ? { ok: true, appended: appended.appended }
+        : { ok: false, code: appended.code };
+    },
     appendFence: (record, held) => {
       const appendWith = (handle: Parameters<typeof guardedStore.append>[0]) => {
         const result = guardedStore.append(handle, {
@@ -316,13 +362,41 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
       ownIdentity: () => own,
     },
     session: sessionPort.port,
+    progress: {
+      read: () => {
+        progressReads += 1;
+        return progressReading;
+      },
+    },
+    corroborator: { read: () => delivery },
+    artifactAdvanced: () => artifactAdvanced,
+    terminate: async () => {
+      const outcome = options.killOutcome ?? "terminated";
+      kills.push(outcome);
+      return {
+        outcome,
+        failureReason:
+          outcome === "failed"
+            ? (options.killFailureReason ?? "identity-mismatch")
+            : outcome === "capability-gap"
+              ? null
+              : null,
+      };
+    },
+    admission: ({ ordinal, budgetEpochId }) => {
+      admissions.push({ ordinal, budgetEpochId });
+      const state = options.admissionState ?? "admit";
+      return { state, nextOrdinal: ordinal };
+    },
     log: logSink,
     delay: async (ms, reason) => {
       delays.push({ ms, reason });
     },
     loop: {
       run: async (onCycle) => {
+        const step = options.cycleStepMs ?? settings["coordinator.collection-interval"];
         for (let index = 0; index < maxCycles; index += 1) {
+          clock.value += step;
           cyclesRun += 1;
           const outcome = await onCycle();
           if (outcome === "stop") return options.exit ?? "stopped";
@@ -494,6 +568,13 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
         return probes;
       },
     },
+    verdicts: {
+      kills,
+      admissions,
+      get progressReads() {
+        return progressReads;
+      },
+    },
     get lines() {
       return lines;
     },
@@ -575,6 +656,12 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
     },
     setAlive: (pid, answer) => {
       aliveAnswers[pid] = answer;
+    },
+    setProgressReading: (value) => {
+      progressReading = value;
+    },
+    setDelivery: (value) => {
+      delivery = value;
     },
     dataOf: (result) => {
       const envelope = result.json;

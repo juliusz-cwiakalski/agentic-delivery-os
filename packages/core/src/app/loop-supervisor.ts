@@ -17,11 +17,14 @@ import {
   COORDINATOR_ERROR_CODES,
   type CoordinatorExhaustionRecord,
   type CoordinatorFenceRecord,
+  type CoordinatorKillFailureReason,
+  type CoordinatorKillOutcome,
   type CoordinatorProgressState,
   type CoordinatorRestartRecord,
   type CoordinatorStuckRecord,
   type DaemonProcessPort,
   type LoopDegradation,
+  type LoopDeliveryReading,
   type LoopLogEvent,
   type LoopSessionRecord,
   type LoopStatusProjection,
@@ -30,8 +33,13 @@ import {
   type StateFenceHandle,
 } from "#contracts";
 import type { CoordinatorSettings } from "../config/index.js";
-import { type CoordinatorLease, decideCoordinatorClaim } from "../domain/coordinator-fence.js";
+import {
+  type CoordinatorLease,
+  decideCoordinatorClaim,
+  foldCoordinatorLease,
+} from "../domain/coordinator-fence.js";
 import { orderDegradations, projectLoopStatus } from "../domain/loop-status.js";
+import { evaluateLoopVerdict, observeProgress } from "../domain/loop-verdict.js";
 import {
   endedSessionRecord,
   freshSessionTitle,
@@ -54,6 +62,12 @@ export type LoopStartReceipt = LoopStatusProjection & { readonly released: boole
 
 /** The declared foreground-loop exit vocabulary (API-1). */
 export type LoopExit = "stopped" | "signal";
+
+/** One termination result from the injected delivered kill path (AC-F5-6). */
+export type LoopTerminateOutcome = {
+  readonly outcome: CoordinatorKillOutcome | "capability-gap";
+  readonly failureReason: CoordinatorKillFailureReason | null;
+};
 
 /* -------------------------------- ledger --------------------------------- */
 
@@ -102,6 +116,7 @@ export type LoopLedgerPort = {
   readonly fenceStatus: () => { readonly held: boolean; readonly stale: boolean };
   readonly recoverFence: (token: string) => boolean;
   readonly appendSession: (record: LoopSessionRecord) => LoopRecordAppend;
+  readonly appendStuck: (record: CoordinatorStuckRecord) => LoopRecordAppend;
   /**
    * Append one lease record. `handle` carries the claim's already-held write
    * fence so the claim append is atomic with the decision; without it the port
@@ -161,6 +176,23 @@ export type LoopSupervisorPorts = {
   readonly processPort: LoopProcessPort;
   readonly session: LoopSessionPort;
   readonly log: LoopLogSink;
+  /** The sourced progress reading; `null` is UNREADABLE, never zero (F-5). */
+  readonly progress: {
+    readonly read: (
+      sessionId: string | null,
+    ) => { readonly state: CoordinatorProgressState; readonly observedAtMs: number | null } | null;
+  };
+  /** The read-only delivery corroborator reading (F-5). */
+  readonly corroborator: { readonly read: () => LoopDeliveryReading };
+  /** Whether a merge or blocker answer landed since the observation (F-5). */
+  readonly artifactAdvanced: () => boolean;
+  /** The delivered identity-verified termination over the injected port (F-5). */
+  readonly terminate: (graceMs: number) => Promise<LoopTerminateOutcome>;
+  /** The delivered restart-admission fold, recorded but not performed (phase 4). */
+  readonly admission: (input: { readonly ordinal: number; readonly budgetEpochId: string }) => {
+    readonly state: "admit" | "refuse" | "unevaluable";
+    readonly nextOrdinal: number;
+  };
   readonly delay: LoopDelay;
   readonly loop: {
     readonly run: (onCycle: () => Promise<"continue" | "stop">) => Promise<LoopExit>;
@@ -243,28 +275,14 @@ export const loopBudgetEpoch = (read: LoopCoordinatorRead): string => {
   return latestRestart === undefined ? "epoch-1" : latestRestart.budgetEpochId;
 };
 
-/** The lease fold over the loop identity's own fence records (F-6). */
+/**
+ * The lease over the loop identity's own fence records: the DELIVERED fold, not
+ * a second one (TC-CONTRACT-006). A foreign identity's records never reach this
+ * fold because the per-identity read skips them by construction.
+ */
 export const loopLeaseOf = (read: LoopCoordinatorRead): CoordinatorLease | null => {
   if (!read.ok) return null;
-  let latest: CoordinatorFenceRecord | null = null;
-  let acquisition: CoordinatorFenceRecord | null = null;
-  for (const record of read.fences) {
-    latest = record;
-    if (record.action === "acquired" || record.action === "stale-takeover") acquisition = record;
-  }
-  if (latest === null) return null;
-  return {
-    action: latest.action,
-    instanceId: latest.instanceId,
-    holder: latest.holder,
-    pid: latest.pid,
-    processStartTimeMs: latest.processStartTimeMs,
-    supervisorMode: latest.supervisorMode,
-    externalUnit: latest.externalUnit,
-    acquisitionAtMs: toMs(acquisition?.recordedAt ?? null),
-    previousHolder: latest.previousHolder,
-    fenceAgeMs: latest.fenceAgeMs,
-  };
+  return foldCoordinatorLease({ records: read.fences, recordedAtMs: toMs });
 };
 
 /** The recorded facts default when the composition has nothing to report. */
@@ -506,7 +524,6 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     log("session", { session: ended.sessionId, state: "ended" });
   };
 
-  /** Establish the CEO session before any observation (F-2). */
   /**
    * Resolve the recorded session BEFORE considering another spawn (F-6):
    *
@@ -568,8 +585,109 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     return { ok: true, facts: acquisition.facts, record: acquisition.record };
   };
 
-  /** One supervision cycle at the collection boundary (F-5; phases 4-6 extend it). */
-  const cycle = async (): Promise<"continue" | "stop"> => "continue";
+  /** The supervisor's own last sourced-progress observation (seeded at acquisition). */
+  let lastProgressAtMs: number | null = null;
+  let cycleOrdinal = 0;
+  let degradations: LoopDegradation[] = [];
+
+  type CycleStep = "continue" | "stop" | "kill-failed";
+
+  /**
+   * The two-signal stuck step (F-5, DEC-3): the loop's own pure verdict over
+   * sourced progress, artifact advance, and the readable corroborator. An
+   * unreadable input is `unevaluable` and never a kill; a confirmed termination
+   * records the restart ADMISSION decision only (phases 5 performs the restart);
+   * an unconfirmed termination is TERMINAL.
+   */
+  const cycle = async (): Promise<CycleStep> => {
+    const nowMs = clock.nowMs();
+    const session = ports.session.read();
+    if (lastProgressAtMs === null) lastProgressAtMs = nowMs;
+    cycleOrdinal += 1;
+
+    const reading = ports.progress.read(session.sessionId);
+    const progressState: CoordinatorProgressState = reading === null ? "unknown" : reading.state;
+    const delivery = ports.corroborator.read();
+    const verdict = evaluateLoopVerdict({
+      liveSession: session.liveness === "alive",
+      progress: progressState,
+      progressObservedAtMs: reading?.observedAtMs ?? null,
+      lastProgressAtMs,
+      nowMs,
+      stuckWindowMs: settings.stuckWindowMs,
+      progressBoundMs: settings.progressBoundMs,
+      artifactAdvanced: ports.artifactAdvanced(),
+      delivery,
+    });
+    lastProgressAtMs = observeProgress({
+      progress: progressState,
+      observedAtMs: reading?.observedAtMs ?? null,
+      nowMs,
+      progressBoundMs: settings.progressBoundMs,
+      lastProgressAtMs,
+    });
+    const observed: LoopDegradation[] = [];
+    if (progressState === "unknown") observed.push("progress-unreadable");
+    if (delivery === "unknown") observed.push("delivery-corroborator-unreadable");
+    if (session.liveness !== "alive") observed.push("live-facts-unknown");
+    degradations = [...orderDegradations(observed)];
+    log("cycle", { verdict: verdict.verdict, delivery });
+
+    if (verdict.verdict === "progressing") return "continue";
+
+    const stuckId = `${loopId}:${String(cycleOrdinal)}`;
+    const snapshot = ledger.read().coordinator;
+    const already = snapshot.ok
+      ? snapshot.stuck.filter((record) => record.stuckId === stuckId)
+      : [];
+    if (already.length === 0) {
+      const verdictRecord: CoordinatorStuckRecord = {
+        schemaId: "delivery.coordinator.stuck.v1",
+        stuckId,
+        coordinatorId: loopId,
+        iterationId: stuckId,
+        verdict: verdict.verdict,
+        phase: "verdict",
+        reason: verdict.reason ?? "evidence-unevaluable",
+        evidence: verdict.evidence ?? "",
+        killOutcome: "not-attempted",
+        killFailureReason: null,
+        recordedAt: clock.nowIso(),
+      };
+      const appended = ledger.appendStuck(verdictRecord);
+      if (!appended.ok) return "stop";
+      log("stuck-verdict", { verdict: verdict.verdict, stuck: stuckId });
+    }
+    if (verdict.verdict === "unevaluable") return "continue";
+
+    const killed = await ports.terminate(settings.killGraceMs);
+    log("kill", { outcome: killed.outcome, session: session.sessionId });
+    const outcomeRecord: CoordinatorStuckRecord = {
+      schemaId: "delivery.coordinator.stuck.v1",
+      stuckId,
+      coordinatorId: loopId,
+      iterationId: stuckId,
+      verdict: verdict.verdict,
+      phase: "outcome",
+      reason: verdict.reason ?? "stuck-artifact-evidence",
+      evidence: verdict.evidence ?? "",
+      killOutcome: killed.outcome === "capability-gap" ? "failed" : killed.outcome,
+      killFailureReason: killed.failureReason,
+      recordedAt: clock.nowIso(),
+    };
+    const appendedOutcome = ledger.appendStuck(outcomeRecord);
+    if (!appendedOutcome.ok) return "stop";
+    if (killed.outcome === "failed" || killed.outcome === "capability-gap") {
+      // A possibly-live orphan must never be joined by another session (R3).
+      return "kill-failed";
+    }
+    // Confirmed: record the restart ADMISSION decision exactly once.
+    ports.admission({
+      ordinal: cycleOrdinal,
+      budgetEpochId: loopBudgetEpoch(ledger.read().coordinator),
+    });
+    return "continue";
+  };
 
   /* --------------------------------- start --------------------------------- */
 
@@ -589,6 +707,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     const identity = claimed.claimed;
     let facts: LoopSessionFacts = absentSessionFacts();
     let acquisition: LoopSessionRecord | null = null;
+    let killFailed = false;
     try {
       const established = await establishSession();
       if (!established.ok) {
@@ -597,7 +716,18 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       }
       facts = established.facts;
       acquisition = established.record;
-      await ports.loop.run(cycle);
+      lastProgressAtMs = clock.nowMs();
+      const exit = await ports.loop.run(async () => {
+        const step = await cycle();
+        if (step === "kill-failed") killFailed = true;
+        return step === "continue" ? "continue" : "stop";
+      });
+      void exit;
+      if (killFailed) {
+        recordEnd(acquisition);
+        release(identity);
+        return failure("coordinator", COORDINATOR_ERROR_CODES[3], `session=${facts.sessionId}`);
+      }
     } catch (thrown) {
       recordEnd(acquisition);
       release(identity);
@@ -607,7 +737,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     facts = { ...facts, liveness: "absent" };
     release(identity);
     const snapshot = ledger.read();
-    const data = projection(snapshot.loop, snapshot.coordinator, facts, []);
+    const data = projection(snapshot.loop, snapshot.coordinator, facts, degradations);
     return { data: { ...data, state: "stopped", released: true } };
   };
 
@@ -651,6 +781,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     if (ports.log.available !== undefined && !ports.log.available()) {
       degraded.push("log-unavailable");
     }
+    degraded.push(...degradations);
     return { data: projection(loopRead, coordinatorRead, facts, degraded) };
   };
 

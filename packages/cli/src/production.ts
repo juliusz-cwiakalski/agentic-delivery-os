@@ -111,6 +111,7 @@ import {
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
+  corroborateDelivery,
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
   type DaemonComposition,
@@ -125,6 +126,7 @@ import {
   detectPriorNamespace,
   EvaluateVerifyChange,
   emptyHandoverGate,
+  evaluateCoordinatorRestartAdmission,
   evaluateHarnessModeAvailability,
   evaluateModelExpressibility,
   evaluateRestartBudget,
@@ -165,6 +167,7 @@ import {
   readDaemonLanes,
   readDispatchGate,
   readDispatchHandover,
+  readDispatchLanes,
   readQueueEntries,
   releaseQueueLease,
   renderLogLine,
@@ -299,6 +302,7 @@ import {
   readAuditLedger,
   readBlockerLedger,
   readChangeTransitionsTolerant,
+  readCoordinatorRecords,
   readEconomicsRecords,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
@@ -3714,6 +3718,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           }));
 
       let handle: HarnessSessionHandle | null = null;
+      let lastTokens: number | null = null;
       let recorded: LoopSessionFacts = {
         sessionId: null,
         liveness: "absent",
@@ -3818,6 +3823,105 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             const start = ownStartTimeMs();
             return start === undefined ? null : { pid: ownProcessId, processStartTimeMs: start };
           },
+        },
+        progress: {
+          read: (sessionId) => {
+            if (sessionId === null) return { state: "unknown" as const, observedAtMs: null };
+            const resolution = resolveProductionHarnessSettings();
+            if (!resolution.ok) return { state: "unknown" as const, observedAtMs: null };
+            const totals = createOpencodeSessionTotalsReader({
+              opener: createBunSqliteStoreOpener(),
+              storePath: resolution.settings.opencodeDatabasePath,
+            });
+            const reading = totals(sessionId);
+            if (reading === undefined) {
+              return { state: "unknown" as const, observedAtMs: null };
+            }
+            const total =
+              (reading.tokens.input ?? 0) +
+              (reading.tokens.output ?? 0) +
+              (reading.tokens.reasoning ?? 0) +
+              (reading.tokens.cacheRead ?? 0) +
+              (reading.tokens.cacheWrite ?? 0);
+            const delta = total - (lastTokens ?? 0);
+            lastTokens = total;
+            return {
+              state: delta > 0 ? ("positive" as const) : ("zero" as const),
+              observedAtMs: nowMs(),
+            };
+          },
+        },
+        corroborator: {
+          read: () => {
+            const lanes = readDispatchLanes(store);
+            const daemon = readDaemonLanes(store);
+            return corroborateDelivery({
+              storeReadable: lanes.ok && daemon.ok,
+              dispatchLanes: lanes.ok
+                ? lanes.records.map((lane: { state: string; owner?: { processId?: number } }) => ({
+                    state: lane.state === "active" ? ("active" as const) : ("terminal" as const),
+                    pid: lane.owner?.processId ?? null,
+                    liveness:
+                      lane.owner?.processId === undefined
+                        ? ("unreadable" as const)
+                        : processPort.isAlive(lane.owner.processId)
+                          ? ("alive" as const)
+                          : ("dead" as const),
+                  }))
+                : [],
+              daemonLane:
+                daemon.ok && daemon.latest !== undefined
+                  ? {
+                      state: daemon.latest.state,
+                      pid: daemon.latest.processId ?? null,
+                      liveness:
+                        daemon.latest.processId === undefined
+                          ? ("unreadable" as const)
+                          : processPort.isAlive(daemon.latest.processId)
+                            ? ("alive" as const)
+                            : ("dead" as const),
+                    }
+                  : null,
+            });
+          },
+        },
+        artifactAdvanced: () => {
+          const read = store.readRecords();
+          if (!read.ok) return false;
+          return read.value.records.some(
+            (entry) => entry.kind === "merge.transaction" || entry.kind === "blocker.answer",
+          );
+        },
+        terminate: async (graceMs) => {
+          if (handle === null || handle.pid === undefined) {
+            return { outcome: "capability-gap", failureReason: null };
+          }
+          const resolved = harnessForLoop();
+          if (!resolved.ok || resolved.port.terminate === undefined) {
+            return { outcome: "capability-gap", failureReason: null };
+          }
+          const killed = await resolved.port.terminate({ handle, graceMs });
+          if (!killed.ok) {
+            return { outcome: "failed", failureReason: "identity-mismatch" };
+          }
+          return {
+            outcome: killed.value.terminated ? "terminated" : "failed",
+            failureReason: killed.value.terminated ? null : "identity-mismatch",
+          };
+        },
+        admission: ({ ordinal, budgetEpochId }) => {
+          const read = readCoordinatorRecords(store, loopId);
+          if (!read.ok) return { state: "unevaluable", nextOrdinal: ordinal };
+          const decision = evaluateCoordinatorRestartAdmission({
+            records: read.restarts,
+            budgetEpochId,
+            bound: settings.restartBudget,
+          });
+          return decision.state === "admit"
+            ? { state: "admit", nextOrdinal: decision.nextOrdinal }
+            : decision.state === "refuse"
+              ? { state: "refuse", nextOrdinal: ordinal }
+              : { state: "unevaluable", nextOrdinal: ordinal };
         },
         session: {
           read: () => {

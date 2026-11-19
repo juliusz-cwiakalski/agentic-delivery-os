@@ -161,6 +161,19 @@ export {
 // injected state port, composed from the pure domain policy in the app tier.
 // GH-348: the loop supervision profile over the delivered engine primitives.
 export {
+  corroborateDelivery,
+  type CorroboratorInput,
+  type DaemonLaneFact,
+  daemonEvidenceClass,
+  type DispatchLaneFact,
+  dispatchEvidenceClass,
+  evidenceClassContribution,
+  foldDeliveryEvidence,
+  type LaneLiveness,
+  LOOP_EVIDENCE_CLASSES,
+  type LoopEvidenceClass,
+} from "./app/index.js";
+export {
   absentSessionFacts,
   addQueueDependency,
   type ControlHandlerResult,
@@ -204,6 +217,7 @@ export {
   type LoopSessionFacts,
   type LoopSessionPort,
   type LoopStartReceipt,
+  type LoopTerminateOutcome,
   type LoopSupervisor,
   type LoopSupervisorPorts,
   leaseRecordHeartbeatAgeMs,
