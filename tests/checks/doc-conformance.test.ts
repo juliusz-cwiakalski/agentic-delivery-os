@@ -4,7 +4,7 @@
  * that the lifecycle-completion change owns.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
@@ -1704,5 +1704,409 @@ describe("GH-350 phase 8 the mount pages state the delivered truth", () => {
     expect(gh350Phase8OrdinalViolations(superviseMoved).join("\n")).toContain(
       "missing delivered ordinal: 25th family",
     );
+  });
+});
+
+/**
+ * GH-350 phase 9 — documentation truth and release. The remaining pages state the
+ * delivered truth: the engine's budget branch, ref rule, announcement meaning and
+ * two added CLI members; the profiles page's freshness bound and watch condition;
+ * the spend page's one-basis statement; the metrics page's gate-versus-alarm
+ * distinction; the nonfunctional provider row; the operator guides; and the index
+ * and M4 planning-pack rows. A page whose change is additive declares a
+ * forward-guard stale arm so both directions stay driven.
+ */
+const GH350_PHASE9_PAGES = [
+  "doc/spec/features/feature-provider-engine.md",
+  "doc/spec/features/feature-provider-profiles.md",
+  "doc/spec/features/feature-spend.md",
+  "doc/spec/features/feature-metrics.md",
+  "doc/spec/nonfunctional.md",
+  "doc/guides/provider-conditions-and-parks.md",
+  "doc/guides/opencode-model-configuration.md",
+  "doc/00-index.md",
+  "doc/planning/oss-tooling/milestones/m4/backlog.md",
+  "doc/planning/oss-tooling/milestones/m4/flip-plan.md",
+] as const;
+
+const GH350_PHASE9_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-provider-engine.md",
+    stale: [
+      "The minimal engine CLI surface is",
+      "All three accept the global `--json`",
+      "`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning",
+      "| Peak window | A UTC interval",
+    ],
+    required: [
+      "### Budget ceilings",
+      "provider.budgets.<name>.windowSeconds",
+      "required iff `scope` is `window`; refused on `ticket`",
+      "exactly one verified, ref-scoped spend-totals read",
+      "the read count is one at any budget count",
+      "newestAtMs + windowSeconds × 1000",
+      "the delivered seam and the same pattern an omitted `spend --ref` uses",
+      "the five budget evidence fields",
+      "no-paid-escalation rule",
+      "blocks paid substitution exactly as a peak park does",
+      "one-spawn-increment pre-spawn bound",
+      "`provider simulate`",
+      "`provider migrate legacy`",
+      "prompt-required",
+      "and `provider.budget.parked` are informational",
+      "`provider.budget.exceeded` asks the operator to raise or clear the ceiling",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-provider-profiles.md",
+    stale: [
+      "UTC designation, start/end seconds-of-day",
+      "only the `UTC` zone designation validates",
+      "reports `name`, `condition`, `source` (mapping summary), and `checkedAt` from the injected clock. The read path",
+    ],
+    required: [
+      "a declared `timezone`, `UTC` by default",
+      "positive integer with the policy default `900`",
+      "closed six-value set",
+      "the additive `watch-stale` condition and nothing else",
+      "ageSeconds >= maxAgeSeconds",
+      "observedAtMs + maxAgeSeconds × 1000",
+      "never reports `watch-stale`",
+      "additive view fields `observedAt`, `ageSeconds`, and `maxAgeSeconds`",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-spend.md",
+    // Additive page: no delivered sentence is retired, so the stale arm guards the
+    // claim this change forbids — a second measurement path.
+    stale: ["runs its own separate spend read"],
+    required: [
+      "### The provider budget gate",
+      "not a second measurement path",
+      "resolves its work-item ref through the same local-context seam",
+      "the same pattern an omitted `--ref` uses",
+      "One basis, one read, and one set of figures",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-metrics.md",
+    // Additive page: the counts moved in phases 1 and 8; phase 9 adds the
+    // gate-versus-alarm distinction, whose stale arm forbids conflating them.
+    stale: ["a burn-rate alarm parks the lane"],
+    required: [
+      "The gate-versus-alarm distinction is deliberate",
+      "A declared `provider.budgets` ceiling is a gate",
+      "A burn-rate alarm is evidence",
+      "it never blocks a spawn, parks a lane, or refuses a command",
+    ],
+  },
+  {
+    page: "doc/spec/nonfunctional.md",
+    stale: [
+      "Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines.",
+    ],
+    required: [
+      "at the declared zone's local seconds",
+      "a DST gap resolves to the transition instant",
+      "exactly one verified ref-scoped spend-totals read at any budget count",
+      "Simulation is pure: one bounded fixture read, zero state writes",
+      "Legacy migration executes nothing",
+      "bounded at 64 sources of 65536 bytes and 2000 lines each",
+    ],
+  },
+  {
+    page: "doc/guides/provider-conditions-and-parks.md",
+    stale: ["the declared UTC peak interval, extended by its buffer"],
+    required: [
+      "on its declared zone's clock",
+      "`timezone` evidence field",
+      "`budget-exhausted` — a declared spend ceiling",
+      "The fixed tie order is",
+      "## Budget conditions",
+      "`provider.budget.parked` is raised at `info`",
+      "`provider.budget.crossed` is raised at `warning`",
+      "raise or clear the ceiling, or to start a new ticket",
+      "blocks paid substitution exactly as a peak park does",
+      "ticket-scope crossing fails that one entry",
+      "input.value.rejected",
+      "at most one spawn increment may land above a ceiling before the next evaluation observes the new records",
+      "never a real-time spend stop",
+      "## Watch conditions",
+      "`watch-stale` is the watch-only freshness condition",
+      "ageSeconds >= maxAgeSeconds",
+      "observedAtMs + maxAgeSeconds × 1000",
+      "no park is created",
+      "its age is `0`",
+      "provider.profiles.watch.<name>.maxAgeSeconds",
+    ],
+  },
+  {
+    page: "doc/guides/opencode-model-configuration.md",
+    // Additive pointer: the stale arm guards against a second policy surface.
+    stale: ["provider policy lives in the shell profile"],
+    required: [
+      "### Provider and model policy",
+      "typed `provider` and `provider.profiles` branches",
+      "The typed profile branch is the canonical path",
+    ],
+  },
+  {
+    page: "doc/00-index.md",
+    stale: [
+      "Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer",
+    ],
+    required: [
+      "the declared-zone basis, condition kinds and park causes, expiry semantics, budget ceilings with their parked-versus-failed split and pre-spawn bound, watch freshness",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/backlog.md",
+    stale: ["### M4-S4 Declarative provider policy\n- Goal"],
+    required: [
+      "### M4-S4 Declarative provider policy — **delivered (GH-350)**",
+      "the twenty-seventh prompt-required family",
+      "provider simulate",
+      "provider migrate legacy",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/flip-plan.md",
+    stale: ["(weekday 06:00-10:00Z today) instead of burning"],
+    required: [
+      "**F2 evidence pointer (GH-350).**",
+      "provider simulate --fixture <path>",
+      "twenty-seventh and last prompt-required one",
+      "each evaluated on",
+      "the mount/reachability/coverage suites, GH-350",
+    ],
+  },
+];
+
+export const gh350Phase9Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH350_PHASE9_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push("GH-350 phase-9 page set is not the declared ten");
+  }
+  for (const row of rows) {
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+/**
+ * The closed §16 page set. Twenty-two members resolve to these paths: twelve
+ * specification pages, three operator guides, the command registry, the glossary,
+ * the M1 provider reference page, the decisions index, `doc/00-index.md`, and the
+ * M4 planning pack's two files. `.changeset/install-lifecycle-minor.md` is the
+ * conditional member: it is historical record pinned byte-identical by
+ * TC-RELEASE-001, so it is asserted separately and never scanned as current truth.
+ */
+const GH350_CLOSED_PAGE_SET = [
+  "doc/spec/features/feature-provider-engine.md",
+  "doc/spec/features/feature-provider-profiles.md",
+  "doc/spec/features/feature-peak-pausing.md",
+  "doc/spec/features/feature-config-layer.md",
+  "doc/spec/features/feature-spend.md",
+  "doc/spec/features/feature-metrics.md",
+  "doc/spec/features/feature-result-contract.md",
+  "doc/spec/features/feature-ceremony-runner.md",
+  "doc/spec/features/feature-cli-entrypoint.md",
+  "doc/spec/features/feature-install-lifecycle.md",
+  "doc/spec/features/feature-supervise.md",
+  "doc/spec/nonfunctional.md",
+  "doc/guides/provider-conditions-and-parks.md",
+  "doc/guides/zai-peak-hours-hook.md",
+  "doc/guides/opencode-model-configuration.md",
+  "doc/planning/oss-tooling/cli-command-registry.md",
+  "doc/overview/glossary.md",
+  "doc/planning/oss-tooling/milestones/m1/commands/provider.md",
+  "doc/decisions/00-index.md",
+  "doc/00-index.md",
+  "doc/planning/oss-tooling/milestones/m4/backlog.md",
+  "doc/planning/oss-tooling/milestones/m4/flip-plan.md",
+] as const;
+
+const GH350_CONDITIONAL_CHANGESET = ".changeset/install-lifecycle-minor.md";
+
+/** Declared moves are history, not a current value: they never trip the scan. */
+const GH350_DELTA_MOVES = [
+  "164 / 163 / 66 / +130 → 167 / 166 / 66 / +133",
+  "164/163 → 167/166",
+  "164 → 167",
+  "163 → 166",
+  "26 → 27",
+] as const;
+
+const GH350_RETIRED_CLAIMS = [
+  "UTC only",
+  "UTC-only",
+  "non-UTC windows are not modeled",
+  "non-UTC windows are out of scope",
+  "provider policy depends on shell profiles",
+  "provider policy depends on the hook",
+  "no simulation surface",
+  "watch cannot be stale",
+  "hard real-time cap",
+  "hard cap on",
+  "twenty-six families",
+  "the twenty-sixth and last",
+  "164 entries",
+  "163 delivered rows",
+  "BASELINE_ROWS.length + 130",
+  "family count (26)",
+  "24-family mount",
+] as const;
+
+const carveDeclaredMoves = (text: string): string =>
+  GH350_DELTA_MOVES.reduce((carved, move) => carved.split(move).join(""), text);
+
+export const gh350RetiredClaimViolations = (
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  for (const page of GH350_CLOSED_PAGE_SET) {
+    const text = pageText(page);
+    if (text === undefined) {
+      failures.push(`${page}: page does not exist`);
+      continue;
+    }
+    const residue = carveDeclaredMoves(text);
+    for (const claim of GH350_RETIRED_CLAIMS) {
+      if (residue.includes(claim)) failures.push(`${page}: retired claim present: ${claim}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 phase 9 the remaining pages and the closed page set state the delivered truth", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the ten declared pages are reconciled in both directions", () => {
+    expect(gh350Phase9Violations(GH350_PHASE9_ROWS, pageText)).toEqual([]);
+  });
+
+  test("every declared page's stale arm and required arm each fail by name", () => {
+    const failures: string[] = [];
+    for (const row of GH350_PHASE9_ROWS) {
+      const original = pageText(row.page) ?? "";
+      for (const phrase of row.stale) {
+        const injected = (page: string): string | undefined =>
+          page === row.page ? `${original}\n${phrase}\n` : pageText(page);
+        const found = gh350Phase9Violations(GH350_PHASE9_ROWS, injected).join("\n");
+        if (!found.includes(`stale phrase present: ${phrase}`)) {
+          failures.push(`${row.page}: injected stale phrase was not detected: ${phrase}`);
+        }
+      }
+      for (const phrase of row.required) {
+        const injected = (page: string): string | undefined =>
+          page === row.page ? original.split(phrase).join("") : pageText(page);
+        const found = gh350Phase9Violations(GH350_PHASE9_ROWS, injected).join("\n");
+        if (!found.includes(`missing required phrase: ${phrase}`)) {
+          failures.push(`${row.page}: removed required phrase was not detected: ${phrase}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the closed page set carries zero retired claims as current truth", () => {
+    expect(gh350RetiredClaimViolations(pageText)).toEqual([]);
+  });
+
+  test("each retired claim injected into a closed-set page fails by name", () => {
+    const failures: string[] = [];
+    const target = "doc/spec/features/feature-provider-engine.md";
+    for (const claim of GH350_RETIRED_CLAIMS) {
+      const injected = (page: string): string | undefined =>
+        page === target ? `${pageText(page) ?? ""}\n${claim}\n` : pageText(page);
+      const found = gh350RetiredClaimViolations(injected).join("\n");
+      if (!found.includes(`retired claim present: ${claim}`)) {
+        failures.push(`injected retired claim was not detected: ${claim}`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("a declared move is history and does not trip the retired-claim scan", () => {
+    const target = "doc/spec/features/feature-metrics.md";
+    const withMoves = (page: string): string | undefined =>
+      page === target
+        ? `${pageText(page) ?? ""}\n164 → 167\n163 → 166\n26 → 27\n164/163 → 167/166\n164 / 163 / 66 / +130 → 167 / 166 / 66 / +133\n`
+        : pageText(page);
+    expect(gh350RetiredClaimViolations(withMoves)).toEqual([]);
+    const withOutgoingValue = (page: string): string | undefined =>
+      page === target ? `${pageText(page) ?? ""}\nfamily count (26)\n` : pageText(page);
+    expect(gh350RetiredClaimViolations(withOutgoingValue).join("\n")).toContain(
+      "retired claim present: family count (26)",
+    );
+  });
+
+  test("the closed page set is exactly the declared list", () => {
+    expect([...GH350_CLOSED_PAGE_SET].sort()).toEqual(
+      [
+        "doc/spec/features/feature-provider-engine.md",
+        "doc/spec/features/feature-provider-profiles.md",
+        "doc/spec/features/feature-peak-pausing.md",
+        "doc/spec/features/feature-config-layer.md",
+        "doc/spec/features/feature-spend.md",
+        "doc/spec/features/feature-metrics.md",
+        "doc/spec/features/feature-result-contract.md",
+        "doc/spec/features/feature-ceremony-runner.md",
+        "doc/spec/features/feature-cli-entrypoint.md",
+        "doc/spec/features/feature-install-lifecycle.md",
+        "doc/spec/features/feature-supervise.md",
+        "doc/spec/nonfunctional.md",
+        "doc/guides/provider-conditions-and-parks.md",
+        "doc/guides/zai-peak-hours-hook.md",
+        "doc/guides/opencode-model-configuration.md",
+        "doc/planning/oss-tooling/cli-command-registry.md",
+        "doc/overview/glossary.md",
+        "doc/planning/oss-tooling/milestones/m1/commands/provider.md",
+        "doc/decisions/00-index.md",
+        "doc/00-index.md",
+        "doc/planning/oss-tooling/milestones/m4/backlog.md",
+        "doc/planning/oss-tooling/milestones/m4/flip-plan.md",
+      ].sort(),
+    );
+  });
+
+  test("the conditional changeset is historical record, never rewritten to the new count", () => {
+    const path = join(ROOT, GH350_CONDITIONAL_CHANGESET);
+    if (!existsSync(path)) {
+      // A release consumed it: absence is the assertion, and nothing may be
+      // rewritten in its place (the delivered TC-RELEASE-001 guard pins that).
+      expect(existsSync(path)).toBe(false);
+      return;
+    }
+    const text = read(GH350_CONDITIONAL_CHANGESET);
+    expect(text).toContain("twenty-six prompt-required families");
+    expect(text).not.toContain("twenty-seven prompt-required families");
+  });
+
+  test("the delivered ordinals stay and the mount pages are not re-corrected", () => {
+    expect(gh350Phase8OrdinalViolations(pageText)).toEqual([]);
+    expect(GH350_PHASE9_PAGES).not.toContain("doc/spec/features/feature-supervise.md");
   });
 });

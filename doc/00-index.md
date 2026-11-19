@@ -82,7 +82,7 @@ ados_distribution: redistributable
 | [Engine-first Delivery Operations](guides/engine-first-operations.md) | Daily engine-first routine: reading the handover gate and `repos list` row, per-repository flip and reversal, shell fallback, declared residuals |
 | [Milestone Management](guides/milestone-management.md) | The milestone-first operating rule: naming, creation, attachment, entry and exit review, closure, extension, and enforcement |
 | [Autonomous Batch Delivery](guides/autonomous-batch-delivery.md) | Unattended multi-ticket delivery: `batch-deliver.sh`, `deliver-ticket.sh`, liveness, approvals |
-| [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer |
+| [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: the declared-zone basis, condition kinds and park causes, expiry semantics, budget ceilings with their parked-versus-failed split and pre-spawn bound, watch freshness, fail-loud announcements, configuration pointer |
 | [Ceremony Runner](guides/ceremony-runner.md) | Operator guide: the four verbs, the declaration document and vocabularies, a worked project declaration, notes and windows, dry-run/`--apply`, catch-up, artifacts, and the measurement record |
 | [Migrating to Per-Repository Delivery State](guides/migrating-to-per-repository-state.md) | One-step, reversible move of an existing single delivery store into a per-repository project state root |
 | [Tracker Credential Provisioning](guides/tracker-credential-provisioning.md) | Provision the truth-read key (`GITHUB_TOKEN`), the explicit `gh` bridge, least privilege, rotation, and the 404 scope check |

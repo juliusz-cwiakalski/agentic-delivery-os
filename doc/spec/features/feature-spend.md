@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-SPEND
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the window-scoped zero-spend evidence for peak-pause episodes with its closed four-value exclusion-reason set and classified telemetry absence, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
@@ -136,6 +136,10 @@ figure. `spend.telemetry-absent` keeps its work-item-scoped meaning.
 ### Telemetry state and fold basis
 
 `telemetryState` is the DM-4 disclosure: `present` when any telemetry record of either capture plane exists for the selection. `reconciliation.basis` is the declared reading basis — `stream-ingest` when only per-step v2 records feed the selection's figures, `closeout-capture` when only the delivered v1 session-group records do, and `combined` when records of both planes exist and the OQ-T4 session-dedup rule selects each session's step figures while its closeout sums corroborate the baseline. Absence keys off telemetry records of either plane: a baseline-only store is still `spend.telemetry-absent`, never a zero report.
+
+### The provider budget gate
+
+The provider budget gate is a second consumer of this same fold, not a second measurement path. A declared `provider.budgets` ceiling is measured from one verified, ref-scoped spend-totals read that folds the same telemetry families under the same inclusion rules, so the figure the gate compares against a ceiling is the figure this report states for the same selection and window: cost on the harness-reported basis and tokens over the declared token classes, never re-priced and never re-derived. The gate resolves its work-item ref through the same local-context seam and the same pattern an omitted `--ref` uses, so an operator sees one ref-resolution rule on both surfaces, and no provider flag, environment variable, or state-store read supplies a second source. One basis, one read, and one set of figures is the contract ([Provider Engine](feature-provider-engine.md), [TDR-0062](../../decisions/TDR-0062-provider-budget-work-item-ref-source.md)).
 
 ### Window-scoped zero-spend evidence
 
@@ -371,6 +375,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 - [Harness Adapters](feature-harness-adapters.md) — the neutral telemetry vocabulary and closeout capture point.
 - [Status Digest](feature-status-digest.md) — the section 8 projection fed by the same fold.
 - [Provider Peak Pausing](feature-peak-pausing.md) — the peak-pause episodes the window-scoped evidence proves and the park record that supplies the profile and scope.
+- [Provider Engine](feature-provider-engine.md) — the budget gate that consumes this same fold and reports the same figures.
 - [Harness Telemetry v2](feature-telemetry-v2.md) — the storage identity and step records the window evidence counts over.
 - [Closeout Transaction](feature-closeout.md) — the capture-side producer of the records read here.
 - [PM-Notes Lint and Phase Transitions](feature-pm-notes-lint-and-phase-transitions.md) — the `phase.transition` history.

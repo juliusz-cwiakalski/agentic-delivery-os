@@ -84,11 +84,19 @@ created (after plan approval).
   named defect; two concurrent dispatches without admission failure.
 - Depends on: M4-S1, M4-S2.
 
-### M4-S4 Declarative provider policy
+### M4-S4 Declarative provider policy — **delivered (GH-350)**
 - Goal: Quota-aware routing as product configuration, not shell logic.
 - Tasks: quota watch targets, peak windows, chains/fallbacks, pacing goals and
   rungs, per-project overrides, budgets and alarms; policy simulation;
   removal of shell-hook dependency from the delivery path.
+- Delivered: the zone-aware engine and profile policy on one bounded expiry
+  derivation; the typed `provider.budgets` ceilings with one ref-scoped spend
+  read and the parked-versus-failed split; watch freshness with
+  `maxAgeSeconds` and `watch-stale`; the `provider simulate` offline replay and
+  the `provider migrate legacy` compatibility import; and the mount of the
+  family as the twenty-seventh prompt-required family — provider policy now
+  lives only in the tool's configuration, with the pre-iteration hook off the
+  delivery path.
 - AC: policy expressed only in Jaiship config; simulated quota states produce
   the documented routing; soak delivery passes without the shell hook.
 - Depends on: M4-S2.

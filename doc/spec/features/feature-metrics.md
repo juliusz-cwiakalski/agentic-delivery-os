@@ -202,6 +202,8 @@ The evaluation window is the declared trailing span ending at the injected clock
 
 The alarm set is a derived view with at most one entry per evaluation. No persisted alarm state exists, duplicate alarms are impossible by construction, and a repeat evaluation over unchanged facts is byte-identical. Alarms are evidence, not gates: no gate blocks on an alarm, and the family declares no notification channel, event topic, subscription, scheduler, daemon, timer, or push path.
 
+The gate-versus-alarm distinction is deliberate and is the reason a spend ceiling appears in two different vocabularies. A declared `provider.budgets` ceiling is a gate: it is evaluated before a spawn, and a crossing parks a `window`-scope entry or fails a `ticket`-scope entry ([Provider Engine](feature-provider-engine.md)). A burn-rate alarm is evidence: it is raised by this read-only report after the fact over the declared trailing window, it never blocks a spawn, parks a lane, or refuses a command, and clearing it changes no provider state. The two never substitute for each other, and the report never claims the gate's pre-spawn verdict.
+
 ### The comparison view
 
 `comparisons[]` is a live, read-only evaluation under the committed comparison protocol. Each row carries the committed `metricId` and `definitionRef`, the log's `before` value with its window, basis, measurement kind, and status, the freshly measured `after` value with its window, measurement kind, status, and sample size, `sampleMinimum: 5`, and a verdict.

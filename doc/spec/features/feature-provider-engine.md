@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-PROVIDER-ENGINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
@@ -22,7 +22,7 @@ links:
 
 The provider engine decides which declared AI model provider entry is available for a spawn. It validates typed provider configuration, resolves a named chain in declared order, evaluates every entry's peak-window and subscription-quota conditions, and selects the first eligible entry under a subscription-first cost policy — or returns a chain park carrying an honest resume time. Every pause is a named, self-expiring park persisted through the state layer, and every failure to determine availability is a structured announcement rather than a silent "clear" verdict. Quota authorization resolves only through the credential port.
 
-The engine selects provider entries, not models: model-profile selection and provider watching are specified in [Provider Profiles and Watching](feature-provider-profiles.md) and compose this engine's conditions, parks, announcements, and quota transport seam. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The minimal engine CLI surface is `provider resolve`, `provider quota`, and `provider parks list`.
+The engine selects provider entries, not models: model-profile selection and provider watching are specified in [Provider Profiles and Watching](feature-provider-profiles.md) and compose this engine's conditions, parks, announcements, and quota transport seam. It returns a decision plus durable availability state that the later spawn gate and the status, queue-readiness, doctor, spend, and ceremony surfaces consume. The provider family is prompt-required: it is mounted as the twenty-seventh and last prompt-required family, and its engine CLI surface is `provider resolve`, `provider quota`, and `provider parks list`, beside the two additive members `provider simulate` and `provider migrate legacy` specified below.
 
 The configuration branch is specified in [Configuration Layer and Inspection](feature-config-layer.md); the ledger records and projection in [State Layer](feature-state-layer.md); failure identity and the envelope in [Result Contract and Error Table](feature-result-contract.md); credential resolution and runtime confinement in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); package tiers and boundary mechanics in [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the quota transport follows the reviewed confinement path of [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md); the engine's placement, fail-loud semantics, park vocabulary, and cost policy are recorded in [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) (Proposed, owner acceptance pending).
 
@@ -74,8 +74,14 @@ Provider configuration is the typed `provider` branch of the layered catalog. Al
 | `quota.capParkTtlSeconds` | `reevaluation-cap` park TTL. | `300` |
 | `provider.chains.<name>.entries` | Non-empty ordered list of declared descriptor names. | required |
 | `provider.chains.<name>.allowPaidFallback` | Whether a pay-per-token entry may be selected. | `false` |
+| `provider.budgets.<name>.enabled` | Whether the declared ceiling is evaluated at all. | `true` |
+| `provider.budgets.<name>.scope` | `ticket` measures from the work item's beginning; `window` measures from `now − windowSeconds`. | required |
+| `provider.budgets.<name>.basis` | `cost` uses harness-reported units and is never re-priced; `tokens` sums the declared token classes. | required |
+| `provider.budgets.<name>.ceiling` | A measurement at or above it is a crossing (`>=`). | required |
+| `provider.budgets.<name>.windowSeconds` | Positive integer trailing window. | required iff `scope` is `window`; refused on `ticket` |
+| `provider.budgets.<name>.entries` | Restricts which declared descriptors the budget governs. | absent means every declared entry |
 
-Provider dynamic-name maps (`credentials`, `entries`, `chains`) use the catalog's `record` field kind: child names are arbitrary and each child value is validated against the declared shape. Fixed branches keep exact unknown-key discipline.
+Provider dynamic-name maps (`credentials`, `entries`, `chains`, `budgets`) use the catalog's `record` field kind: child names are arbitrary and each child value is validated against the declared shape. Fixed branches keep exact unknown-key discipline.
 
 The shipped defaults provide one concrete subscription descriptor and its credential reference, both overridable:
 
@@ -95,12 +101,15 @@ Configuration is parsed from the already-resolved tree and then semantically val
 - Every subscription entry must precede every pay-per-token entry.
 - A declared `provider.defaultChain` must name a declared chain.
 - A peak window must be non-empty and must not cross midnight.
+- Every declared budget has a closed scope (`ticket` or `window`), a closed basis (`cost` or `tokens`), and a positive ceiling; `windowSeconds` is required exactly for a `window` scope and refused on `ticket`, and a declared `entries` list is non-empty and names declared descriptors. A budget defect fails `provider.chain.invalid` naming the field path, and no partial evaluation escapes.
 
 Structural or relational violations fail `provider.chain.invalid`. An absent default chain, an undeclared requested chain, or a chain with no entries fails `provider.chain.empty`. No silent reordering, substitution, or default chain is invented.
 
 ### Chain resolution
 
 Resolution walks the selected chain in declared order and selects the first eligible entry. An entry is eligible when it is enabled, its combined condition is clear, and either it is a subscription entry or the chain allows paid fallback and no subscription entry is parked for a peak window. A peak-window park therefore never substitutes paid capacity.
+
+The no-paid-escalation rule extends that eligibility to spend ceilings and keeps the two budget outcomes distinct. A subscription entry parked by a `window`-scope budget (class P) blocks paid substitution exactly as a peak park does, so no chain configuration makes a paid entry selectable while a subscription entry is budget-parked. A `ticket`-scope crossing (class T) fails that one entry without parking it, so a later paid entry stays selectable when the chain declares `allowPaidFallback`: the failure names the entry instead of inventing a ceiling-wide pause.
 
 Every non-selected entry is reported with exactly one reason from the closed nine-value set:
 
@@ -132,6 +141,21 @@ A limit is exhausted when its percentage is at or above the configured threshold
 
 Malformed JSON, an invalid envelope (`code` not `200` or `success` not `true`), absent or non-array limits, a non-object limit, a non-string limit type, and a non-numeric percentage are malformed-response failures. They are classified as outages and announced; they are never treated as clear.
 
+### Budget ceilings
+
+A declared `provider.budgets` record map turns spend into a pre-spawn gate. Evaluation consumes exactly one verified, ref-scoped spend-totals read that projects every declared scope, so the read count is one at any budget count and both bases are served by the same read. Nothing declared means no gate, no read, and no condition.
+
+- A measurement below the ceiling is clear and resolution proceeds.
+- At or above the ceiling on a `window` scope, the entry parks with cause and condition kind `budget-exhausted` and the expiry `newestAtMs + windowSeconds × 1000`, which is strictly future by construction; the `provider.budget.parked` announcement is raised once per park generation at `info` and carries the five budget evidence fields.
+- At or above the ceiling on a `ticket` scope, the entry is failed rather than parked: no park and no expiry are created, the entry is skipped with reason `budget-exhausted`, and the `provider.budget.crossed` announcement is raised at `warning` with the same five fields. When no later entry is eligible and no honest contributing park supplies an expiry, resolution fails with `provider.budget.exceeded` at exit `1`, whose remediation is to raise or clear the ceiling, or to start a new ticket, because the ceiling cannot reopen by itself.
+- A read that fails refuses with the delivered `state.*` identity instead of reading as clear, while a verified-empty reading with telemetry present measures zero and is clear.
+
+The measured subject is a fact, so the read needs one work-item ref and resolves it through one declared three-tier precedence: an explicitly supplied ref-bearing fact wins (today only the `simulate` fixture's `workItemRef`); otherwise the local delivery context at `<cwd>/.ai/local/pm-context.yaml` through the delivered seam and the same pattern an omitted `spend --ref` uses; otherwise the evaluation refuses. The ref is required exactly when at least one enabled budget is declared, for either scope, because the one read is ref-scoped. When a required ref cannot resolve, the run refuses once with `input.value.rejected` at exit `1` before resolution, naming the enabled budgets, the context path, and the remedy — never a zero measurement, a clear or inert skip, or a window-only downgrade. The read-only members (`quota`, `parks list`, `profile resolve`, and `watch status`) resolve no ref and never fail on a missing context, and `simulate` takes its ref only from the fixture. There is no provider flag, no environment variable, no state-store read, and no new `resolve` key.
+
+The evidence is closed to five budget fields: `budgetName` names the ceiling that crossed, `budgetScope` records `ticket` or `window`, `budgetBasis` records `cost` or `tokens`, `budgetMeasured` carries the figure the one read produced, and `budgetCeiling` carries the declared limit. The work-item ref is not a sixth field; it appears in the announcement or refusal message only.
+
+The gate is bounded and honest about that bound: at most one spawn increment may land above a ceiling before the next evaluation observes the new records, so the documented limit is a one-spawn-increment pre-spawn bound rather than a real-time spend stop. The gate is also distinct from an alarm: a ceiling parks or refuses before a spawn, while the [metrics](feature-metrics.md) burn-rate alarm reports a crossing as evidence and blocks nothing.
+
 ### Conditions and MAX
 
 Peak and quota are independent conditions on one entry. They are combined by the MAX rule: the later expiry wins, the park lists every active condition kind, and the single cause is the condition that determines the expiry. Ties resolve in the fixed order `peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`, `credential-missing`, `credential-rejected`.
@@ -145,7 +169,7 @@ Every non-clear provider condition with an honest future expiry becomes a named 
 - a creation time and an absolute expiry strictly in the future at creation;
 - bounded, secret-free evidence drawn only from the fourteen-field park allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName` (the reference name only, never the resolved value), `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`, and `budgetCeiling`.
 
-A peak or quota park expires at the determining condition's end. An outage or credential-failure park uses its configured TTL. A `reevaluation-cap` park uses the configured cap TTL. A `chain-exhausted` park uses the earliest contributing provider expiry. A park is always a provider-availability pause with a guaranteed resume time; it is never a blocked lane, never a delivery failure, and never hides a lane's readiness condition.
+A peak or quota park expires at the determining condition's end. A `budget-exhausted` park expires at `newestAtMs + windowSeconds × 1000`, the end of its declared trailing window. An outage or credential-failure park uses its configured TTL. A `reevaluation-cap` park uses the configured cap TTL. A `chain-exhausted` park uses the earliest contributing provider expiry. A park is always a provider-availability pause with a guaranteed resume time; it is never a blocked lane, never a delivery failure, and never hides a lane's readiness condition.
 
 Expiry is derived at read time: a park is active while `expiresAt > now` and inactive at exactly `expiresAt <= now`. No timer, daemon, delete, or expiry write exists. An unchanged active generation (`cause:expiresAtMs`) appends nothing; a changed cause or expiry appends a new record and the latest record per park name wins. When a previously active park is observed gone on the next mutating resolve, that resolve appends one `provider.resumed` announcement. It appends a `cleared` record only when the clear is observed before expiry (`expiresAt > now`); a park observed after expiry stays `expired` in `--all` views with no `cleared` record and no expiry write.
 
@@ -157,7 +181,7 @@ Announcements use a closed code set:
 
 `provider.peak.parked`, `provider.quota.parked`, `provider.quota.reset_missing`, `provider.quota.unreachable`, `provider.quota.http_error`, `provider.quota.auth_rejected`, `provider.quota.malformed`, `provider.credential.missing`, `provider.chain.exhausted`, `provider.reevaluation.cap`, `provider.resumed`, `provider.budget.parked`, and `provider.budget.crossed`.
 
-`provider.peak.parked`, `provider.quota.parked`, and `provider.resumed` are informational; every other code is a warning. An announcement carries a safe templated message and bounded evidence projected at runtime through the closed seventeen-field allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName`, `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`, `budgetCeiling`, `parkName`, `parkExpiresAt`, and `announcementCode`; non-allowlisted keys are dropped. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
+`provider.peak.parked`, `provider.quota.parked`, `provider.resumed`, and `provider.budget.parked` are informational; every other code, including `provider.budget.crossed`, is a warning. The two budget codes are raised once per budget episode: `provider.budget.parked` at `info` when a `window`-scope ceiling parks the entry with the five budget evidence fields, and `provider.budget.crossed` at `warning` when a `ticket`-scope ceiling fails the entry and no park is created. An announcement carries a safe templated message and bounded evidence projected at runtime through the closed seventeen-field allowlist: `providerName`, `chainName`, `conditionKinds`, `waitSeconds`, `resetEpochMs`, `httpStatus`, `failureClass`, `credentialRefName`, `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`, `budgetCeiling`, `parkName`, `parkExpiresAt`, and `announcementCode`; non-allowlisted keys are dropped. No announcement carries a secret, authorization header, raw response body, or endpoint userinfo.
 
 Announcements surface in three places: inside `data.announcements` for `resolve` and a successful `quota`; in the classified error envelope plus the diagnostic stream for a failure that produces no park; and in the state ledger as `provider.announcement` records when a resolution persists park state. A failed entry's announcement appears in `data.announcements` but is not written to the state ledger because no park exists. A failing `quota` carries the announcement code in the safe summary.
 
@@ -184,8 +208,12 @@ The secret-read boundary remains unchanged: the provider engine, the CLI provide
 | `provider resolve` | yes; persists parks and announcements for a resolved decision | `--chain <name>`, `--profile <name>` (restricts candidates to the named profile's providers; see [Provider Profiles and Watching](feature-provider-profiles.md)) | Decision (selected or parked), skipped entries, parks, announcements |
 | `provider quota` | no | `--provider <name>` | Per-provider condition views and announcements, or a classified error |
 | `provider parks list` | no | `--all`, `--provider <name>` | Park views folded from verified ledger truth; active by default, expired and cleared with `--all` |
+| `provider simulate` | no; zero state, credential, network, and spend effect | `--fixture <path>` | The delivered resolve payload from the `delivery.provider.simulate.v1` fixture, plus the `simulation` block |
+| `provider migrate legacy` | only with `--write`, and only when the target document is absent | `--profiles-dir <path>`, `--hook <path>`, `--write` | A mapped proposal, a created document, or one `provider.migrate.refused` refusal |
 
-All three accept the global `--json` and emit one CommandResult envelope. Human `resolve` prints the selected provider or the park's cause and resume time; warnings go to the error stream. `quota` without `--provider` evaluates the default chain's entries when `defaultChain` is declared, otherwise every declared entry. `parks list` reads verified park state, makes no network call, and mutates nothing. Invalid subcommands, flags, flag values, and positionals fail as classified invocation or input errors and never crash or emit an invalid envelope.
+`provider simulate` replays one fixture through the delivered engine and discloses `fixturePath`, `fixtureSchemaVersion`, `now`, the supplied `workItemRef` when the fixture declared one, `stateWrites: 0`, and the credential, quota, spend, and zone inputs it consumed; the fixture declares chain and profile selection, so the member accepts no `--chain`, `--profile`, or `--ref` flag and never reads the local context. `provider migrate legacy` reads the legacy profile directory and the pre-iteration hook once as compatibility input under an assignment-only grammar, maps the recognised names literal-to-literal, and discloses every unmapped name; it refuses the whole run rather than producing a partial artifact, names a provider-policy import rather than the M4-S2 namespace migration or the install lifecycle's `--migrate` flag, and no path executes, sources, imports, or emulates the hook.
+
+All five accept the global `--json` and emit one CommandResult envelope. Human `resolve` prints the selected provider or the park's cause and resume time; warnings go to the error stream. `quota` without `--provider` evaluates the default chain's entries when `defaultChain` is declared, otherwise every declared entry. `parks list` reads verified park state, makes no network call, and mutates nothing. Invalid subcommands, flags, flag values, and positionals fail as classified invocation or input errors and never crash or emit an invalid envelope.
 
 ### Status consumer
 
@@ -219,6 +247,8 @@ The provider kind carries sixteen rows while the engine family's own count stays
 
 `provider.outage` covers quota transport, non-auth HTTP, and malformed-response failures, a chain that cannot supply a future resume time for a reason other than an indeterminate quota verdict, and a failed state write. A `quota` failure to resolve a credential uses the `config`-kind identity `config.credential.missing` (user, non-retryable, user-validation). Because the provider kind has more than one row, a provider failure must carry an exact declared code; an unclassified, undeclared, or wrong-kind provider failure is contained as `fallback.internal`, never mapped to the first provider row. Announcement codes are a separate closed vocabulary, not error-table rows. The machine and documented tables are synchronized in both directions. The profile-selection and `data-v1` env-record families add eight further provider-kind identities documented in [Provider Profiles and Watching](feature-provider-profiles.md).
 
+The three identities this change adds are `user`, non-retryable, and projected as `user-validation` at exit `1`, and each carries its own remediation: `provider.peak.zone-unknown` asks the operator to correct the zone name or run where zone data is available, because a `UTC` declaration needs no zone data; `provider.budget.exceeded` asks the operator to raise or clear the ceiling or start a new ticket, because the ceiling cannot reopen by itself; and `provider.migrate.refused` asks the operator to read the named reason, file, and line and then hand-author the policy or correct the source and re-run. None is a kind-first two-segment identity, so the reserved two-segment allowlist is unchanged.
+
 ## Technical Architecture & Codebase Map
 
 ### High-level design
@@ -234,6 +264,9 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/core/src/provider/chain.ts` | Deterministic chain resolution, skip reasons, cost-policy eligibility, and chain parks. |
 | `packages/core/src/provider/peak.ts` | Zone-aware peak-window arithmetic, the local-seconds basis, and the one named transition-segment expiry derivation shared by the gate and the watcher. |
 | `packages/core/src/provider/quota.ts` | Quota snapshot normalization, `TOKENS_LIMIT` filtering, threshold/reset evaluation, and failure classification. |
+| `packages/core/src/provider/budgets.ts` | Pure budget evaluation over injected totals and clock facts: the comparison, the `window` park with its derived expiry, the `ticket` failure with no park, and the five-field evidence. |
+| `packages/core/src/provider/simulate.ts` | `delivery.provider.simulate.v1` fixture validation and payload assembly over the delivered engine; no condition arithmetic and no state write. |
+| `packages/core/src/provider/migrate.ts` | The bounded legacy reader, the name-first credential classification, the literal-to-literal mapper, and the proposal builder; no child process, shell, or ambient read. |
 | `packages/core/src/provider/conditions.ts` | MAX combination and the fixed condition tie order. |
 | `packages/core/src/provider/parks.ts` | Park construction, deterministic naming, generation identity, evidence projection, ledger persistence, fold and read-time views, and the `provider-parks.json` projection. |
 | `packages/core/src/provider/announcements.ts` | Announcement code mapping, severity, safe messages, and deterministic identity. |
@@ -241,7 +274,8 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/core/src/provider/engine.ts` | Engine composition over injected seams: `resolve`, `quota`, and `parks`. |
 | `packages/core/src/provider/index.ts` | Public pure provider-engine surface. |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper: bounded GET, `redirect: manual`, in-memory bearer header, no storage. |
-| `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, and `parks list`; the same command file hosts the provider-family profile and watch subcommands specified in [Provider Profiles and Watching](feature-provider-profiles.md). |
+| `packages/adapters/src/time-zone/index.ts` | The single `Intl`-backed `ProviderZonePort` implementation: the only workspace module that reads zone data for provider policy, with no I/O, network, or extra environment read. |
+| `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, `parks list`, `simulate`, and `migrate legacy`; the same command file hosts the provider-family profile and watch subcommands specified in [Provider Profiles and Watching](feature-provider-profiles.md). |
 | `packages/cli/src/edge.ts` | Wires an injected provider composition (clock, credential port, quota transport, sleep seam, and state store) into the engine for the provider command. |
 | `packages/core/src/config/catalog.ts` / `defaults.ts` | Provider catalog branch and shipped overridable defaults. |
 | `packages/core/src/contracts/error-table.ts` | The five provider-engine rows and exact-code provider classification. |
@@ -265,7 +299,7 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 
 ### API and interface contracts
 
-The public engine is created by `createProviderEngine(deps)` with injected `clock`, `credentialPort`, `transport`, `sleep`, optional `stateStore`, and optional `newFenceToken`. It exposes:
+The public engine is created by `createProviderEngine(deps)` with injected `clock`, `credentialPort`, `transport`, `sleep`, optional `stateStore`, and optional `newFenceToken`, beside the optional zone seam `zoneFactsFor`, the optional budget seams `spendTotals` and `resolveWorkItemRef`, and the optional `workItemContextPath` the refusal names. It exposes:
 
 - `resolve({ config, chainName?, persist? })` returning a selected decision or a parked chain decision with skipped entries, parks, and announcements, or a classified failure.
 - `quota({ config, providerName? })` returning per-provider condition views and announcements, or a classified failure; it never writes state.
@@ -285,7 +319,7 @@ The quota transport contract is one `send` call receiving the endpoint, method `
 | Idempotence | Re-evaluating an unchanged park generation appends zero duplicate records; repeated `parks list` has zero side effects; repeated `quota` performs zero state writes. |
 | Expiry correctness | A park is inactive exactly at `expiresAt`; TTL and chain parks have an expiry strictly after creation; no park is created with a past or absent expiry. |
 | Error-table synchronization | The five provider-engine rows agree between the machine table and the documented table in both directions; provider classification is exact-code and total with `fallback.internal` containment. |
-| Evaluation cost | Pure evaluation of 100 provider entries completes within 50 ms on the reference environment, excluding quota transport time. |
+| Evaluation cost | Pure evaluation of 100 provider entries completes within 50 ms on the reference environment, excluding quota transport time; a budget evaluation issues exactly one spend-totals read regardless of how many ceilings are declared, and the five evidence fields add no second measurement path. |
 
 ## Quality Assurance Strategy
 
@@ -340,9 +374,11 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 | Provider descriptor | A named provider entry: cost class, enabled flag, optional peak window, and optional quota policy. |
 | Cost class | `subscription` (quota-limited, preferred) or `pay-per-token` (paid fallback). |
 | Provider chain | A named ordered list of descriptors plus a paid-fallback policy. |
-| Peak window | A UTC interval, extended by a buffer, during which work pauses rather than using peak-priced capacity. |
+| Peak window | A half-open interval on the declared zone's clock, extended by a buffer, during which work pauses rather than using peak-priced capacity. |
+| Budget ceiling | A declared spend limit on one basis and either a ticket or a trailing window scope; a measurement at or above it parks (`window`) or fails (`ticket`) an entry. |
+| Budget crossing | The point at which a measured spend figure reaches its declared ceiling; the ticket-scope outcome, reported once per entry with `provider.budget.crossed`. |
 | Quota snapshot | The normalized, secret-free limits and reset times derived from a provider response. |
-| Condition | A provider entry's current availability driver: clear, peak-window, quota-exhausted, provider-outage, credential-missing, or credential-rejected. |
+| Condition | A provider entry's current availability driver: clear, peak-window, quota-exhausted, budget-exhausted, provider-outage, credential-missing, or credential-rejected. |
 | Park | A named, self-expiring provider or chain pause with a closed cause, active conditions, and an absolute expiry. |
 | Park generation | The identity of one park episode, `cause:expiresAtMs`, used to deduplicate records. |
 | Announcement | A structured, deduplicated event with a closed code and severity describing a park, failure, cap, or resume. |

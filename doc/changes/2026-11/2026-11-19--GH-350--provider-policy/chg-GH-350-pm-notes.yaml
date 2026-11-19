@@ -767,3 +767,54 @@ notes:
       summaries by policy."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 plan phase 8 (delivery) complete: the provider family is mounted as the
+      twenty-seventh and last prompt-required family (install twenty-sixth, supervise
+      twenty-fifth, no delivered ordinal moved). PROMPT_REQUIRED_COMMANDS is exactly 27 with
+      provider last; the production composition supplies the six ProviderComposition seams (clock,
+      credentialPort, transport, sleep, stateStore, newFenceToken) through
+      createProductionProviderComposition and registers the family unconditionally, preserved by
+      the install spread; selectPromptRequiredProgram is untouched. The help inventory gains one
+      family entry plus seven member entries (resolve, quota, parks list, profile resolve, watch
+      status, simulate, migrate legacy) with the five sections and the M1 see-also page; the
+      coverage fixture gains the provider command row and the M1 reference-page row with a twin
+      mutant; the M1 page carries --help/--version, all seven members, --chain, the budget ref
+      rule, watch-stale and the three new error rows. Counts/tails move once:
+      fixtures/metrics/mounting.ts appends provider and grows PINNING_FILES 11 -> 15,
+      fixtures/supervise/mounting.ts appends provider, every PINNING_FILES suite reads 27 with the
+      tail one place (provider last, install penultimate, supervise two before), and the
+      stale-detector class widens 2[345] -> 2[3456]. The alias baseline gains exactly one provider
+      line and its GH-350 provenance clause. Reachability: 7/7 member paths and 8/8 help surfaces
+      resolve through runEntrypoint with the production composer (one composer construction per
+      member invocation, 0 for help); the case-local copy with every relative import rewritten and
+      a provider-less declarative set (26 entries, provider zero times) answers fallback.internal
+      at exit 2 for the family token with the containment summary and handler count 0, a member
+      token answers its delivered grammar refusal at exit 1 with handler count 0, provider --help
+      still resolves at exit 0 because help precedes composition, and a synthetic extra family is
+      dropped with the selected keys equal to the declared set. Gate: narrow declared-scope suites
+      270 pass / 0 fail across 27 files (four new suites 34/34; nine pinning suites 86/86); pnpm
+      typecheck and biome green. GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11559 pass / 4 skip / 4 fail
+      (11567 tests, 1422 files). All four failures are HOST-ENVIRONMENT/HOST-LOAD, not phase-8
+      regressions: TC-BIN-071 and TC-MEMNFR-004 spawn the doc-distribution guard, which sees a
+      real installed artifact under the operator's home written by a concurrent session and
+      refuses content it does not own (both suites pass 19/19 with a clean HOME; the guard reports
+      96 in-scope docs); TC-SHELL-001 x2 in
+      tests/conformance/dispatch/dispatch-parity-no-shell.test.ts timed out at the 5 s per-test
+      limit under a host load average near 31 and pass 4/4 with --timeout 60000 (189 expects).
+      Recorded, never edited. These boundary items were owner-authorised during delivery: (1) two
+      guard files now in phase 8 scope — tests/checks/event-mount-guards.test.ts gains provider in
+      its expected mounted set, and tests/behaviour/entrypoint-help-coverage.test.ts gains
+      provider in its literal 27-name coverage list (the eight help tuples then derive); (2) two
+      corrected oracles — TC-MOUNT-008 compares the alias baseline against the recorded pre-change
+      commit d1fff222 because the fixture postdates capturedFrom (40dc45a4 > 8a1f77ad), still
+      proving every other cell byte-identical with exactly one appended provider row, and
+      TC-MOUNT-003 uses the family token for the containment arm plus a member's delivered grammar
+      refusal, because provider --help resolves from the static inventory before composition; (3)
+      .changeset/install-lifecycle-minor.md is NOT modified: the delivered TC-RELEASE-001 guard
+      requires exactly one added changeset and no modified pre-existing one, and this change's own
+      .changeset/gh350-provider-policy-minor.md already states the twenty-seventh family; the
+      plan, spec v1.6 and test plan v2.0 record that correction. The uncommitted phase-7 note was
+      sanitized to remove an absolute operator path so privacy-literals stays green. Commit
+      3d07b1f50fb0756929bc3d8400f2ffec3b8df156."
+    type: evidence
+    date: "2026-11-19"
