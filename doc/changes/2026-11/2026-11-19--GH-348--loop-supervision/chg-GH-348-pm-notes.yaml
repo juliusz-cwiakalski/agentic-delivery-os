@@ -842,3 +842,27 @@ notes:
   - text: "PLAN PHASE 8 commit hash: recorded after the commit."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 8 commit hash: 1af3b1d2."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 9 complete (release obligations only). Authored: ONE minor
+      changeset covering the five publishable packages
+      (.changeset/gh-348-loop-supervision-minor.md); no package version
+      hand-edited (lockstep). Recorded gates: `pnpm build` green; `jaiship plan
+      validate GH-348` -> verdict=valid, artifact=yaml:chg-GH-348-plan.yaml,
+      tier=full, readyForDevelopment=true; `jaiship lint plan GH-348` -> verdict
+      valid, 0 errors; `bash scripts/.tests/test-doc-distribution.sh` -> no drift,
+      96 in-scope docs; both TDR paths tracked and `git status --porcelain --
+      doc/decisions` empty. Supporting pins updated by this phase, each a pin
+      UPDATE: the forbidden-literals registry (the new M4 page registered), the
+      module inventory and the per-file executable allowances, the alias help
+      baseline (one new family line), and the 26 -> 27 family counts in the
+      remaining pinned suites. The aggregate `pnpm check` runs at the phase-9
+      HEAD: the HEAD-cloning `ci-baseline-parity` case can only pass once the
+      registry change is committed, so its authoritative run is the post-commit
+      one reported to the caller. No current-truth page is reconciled here
+      (lifecycle phase 7 owns that); the Appendix A set stays declared for
+      staging only. The phase commit hash and the final aggregate result are
+      reported with this phase."
+    type: info
+    date: "2026-11-19"

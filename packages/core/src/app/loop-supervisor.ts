@@ -792,7 +792,6 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     return "continue";
   };
 
-
   /* --------------------------------- start --------------------------------- */
 
   const start = async (input: {

@@ -3878,9 +3878,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         corroborator: {
           read: () => {
             const lanes = readDispatchLanes(store);
-            const daemon = readDaemonLanes(store);
+            const daemonRead = readDaemonLanes(store);
+            const newestDaemon = daemonRead.ok ? daemonRead.latest : undefined;
             return corroborateDelivery({
-              storeReadable: lanes.ok && daemon.ok,
+              storeReadable: lanes.ok && daemonRead.ok,
               dispatchLanes: lanes.ok
                 ? lanes.records.map((lane: { state: string; owner?: { processId?: number } }) => ({
                     state: lane.state === "active" ? ("active" as const) : ("terminal" as const),
@@ -3894,18 +3895,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                   }))
                 : [],
               daemonLane:
-                daemon.ok && daemon.latest !== undefined
-                  ? {
-                      state: daemon.latest.state,
-                      pid: daemon.latest.processId ?? null,
+                newestDaemon === undefined
+                  ? null
+                  : {
+                      state: newestDaemon.state,
+                      pid: newestDaemon.processId ?? null,
                       liveness:
-                        daemon.latest.processId === undefined
+                        newestDaemon.processId === undefined
                           ? ("unreadable" as const)
-                          : processPort.isAlive(daemon.latest.processId)
+                          : processPort.isAlive(newestDaemon.processId)
                             ? ("alive" as const)
                             : ("dead" as const),
-                    }
-                  : null,
+                    },
             });
           },
         },
