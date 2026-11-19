@@ -125,6 +125,32 @@ describe("TC-STATUS-021 bounded GitHub collection reads", () => {
     expect(JSON.stringify(result)).not.toContain("review_threads");
   });
 
+  test("the bounded request-detail list read carries the provider-asserted title verbatim", async () => {
+    // The merge taxonomy's request-detail read is this bounded list page, so it
+    // is where the provider-asserted title signal is surfaced (GH-349 DM-1).
+    const transport = createFixtureTransport([{ url: pullsUrl(100), body: pullsBody }]);
+    const client = createGitHubClient({ instance, credentials, repository, transport });
+    const result = requireValue(await client.listDeliveryRequests(100), "pull list");
+    expect(result.items.map((item) => item.title)).toEqual([
+      "Open pull request",
+      "Draft pull request",
+    ]);
+    // Absence stays absent: a payload without a title never yields a derived or
+    // empty-string substitute.
+    const withoutTitles = asArray(pullsBody).map((entry) =>
+      isRecord(entry)
+        ? Object.fromEntries(Object.entries(entry).filter(([key]) => key !== "title"))
+        : entry,
+    );
+    const bare = createFixtureTransport([{ url: pullsUrl(100), body: withoutTitles }]);
+    const bareClient = createGitHubClient({ instance, credentials, repository, transport: bare });
+    const bareResult = requireValue(await bareClient.listDeliveryRequests(100), "bare list");
+    for (const item of bareResult.items) {
+      expect(item.title).toBeUndefined();
+      expect(Object.hasOwn(item, "title")).toBe(false);
+    }
+  });
+
   test("no provider-native key crosses the subpath surface", async () => {
     const transport = createFixtureTransport([
       { url: issuesUrl(100), body: mixedBody },

@@ -235,9 +235,19 @@ export type MergePostLandingStep = {
   readonly status: MergePostLandingStatus;
 };
 
-/** The landing-verification evidence (EVT-3, DM-3). */
+/**
+ * The landing-verification evidence (EVT-3, DM-3).
+ *
+ * `shaOnBase` answers the containment of the provider-asserted merge commit on
+ * the base, and only when a local containment read answers for that identity:
+ * after a provider landing with no fetch the object is not in the checkout, so
+ * the field is `"unknown"` rather than a locally derived `true`. The value
+ * domain is exactly `boolean | "unknown"`, the delivered state-layer validator
+ * accepts the same domain so a written `unknown` round-trips, and a legacy
+ * boolean record reads exactly as before. The field is never landing evidence.
+ */
 export type MergeLandingEvidence = {
-  readonly shaOnBase: boolean;
+  readonly shaOnBase: boolean | "unknown";
   readonly requestState: string;
 };
 

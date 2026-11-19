@@ -6,8 +6,15 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { runEntrypoint } from "../../../packages/cli/src/entrypoint";
+import { readChangeTransitionsTolerant } from "../../../packages/core/src/state/index";
 import { createPilot, type Pilot, type PilotSequence } from "../../fixtures/pilot/harness";
 import { PILOT_MATRIX, type PilotMatrixEntry } from "../../fixtures/pilot/matrix";
+import {
+  PILOT_BASE,
+  PILOT_BRANCH,
+  PILOT_CHANGE_FOLDER,
+  PILOT_REF,
+} from "../../fixtures/pilot/repo";
 import {
   type FetchGuard,
   installFetchGuard,
@@ -80,8 +87,24 @@ describe("TC-PILOT-003 stub/real matrix", () => {
   test("real surfaces carry real evidence", () => {
     const current = fixture();
     expect(current.snapshot().ledger).toContain("phase.transition");
-    expect(current.repo.commitCount()).toBeGreaterThanOrEqual(2);
-    expect(current.repo.changeFolderFiles().length).toBeGreaterThan(0);
+    // GH-349: the provider landing replaces the local squash, so the base never
+    // advances past its seeded commit, the delivery branch is deleted after the
+    // landing, and the checkout returns to the base. The change-folder evidence
+    // is the delivery commit the completion recorded, which still carries it.
+    expect(current.repo.commitCount()).toBeGreaterThanOrEqual(1);
+    expect(current.repo.branchHead(PILOT_BASE)).toBeDefined();
+    expect(current.repo.branchHead(PILOT_BRANCH)).toBeUndefined();
+    const transitions = readChangeTransitionsTolerant(current.store, PILOT_REF);
+    const delivery = transitions.ok
+      ? transitions.value.transitions.find((transition) => transition.phaseId === "delivery")
+      : undefined;
+    expect(typeof delivery?.commitSha).toBe("string");
+    const committed = current.repo.run([
+      "cat-file",
+      "-e",
+      `${delivery?.commitSha ?? "HEAD"}:${PILOT_CHANGE_FOLDER}/chg-${PILOT_REF}-spec.md`,
+    ]);
+    expect(committed.status).toBe(0);
     expect(sequence?.status.exitCode).toBe(0);
     expect(sequence?.merge.exitCode).toBe(0);
   });

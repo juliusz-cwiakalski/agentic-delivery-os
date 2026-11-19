@@ -185,10 +185,18 @@ const isWaiver = (value: unknown): value is MergeWaiverRecord => {
   return value.reason === undefined || typeof value.reason === "string";
 };
 
+/**
+ * The landing-evidence validator (DM-3).
+ *
+ * The value domain is exactly `boolean | "unknown"`: a legacy boolean record
+ * written before the widening stays valid and reads as before, while the
+ * third state a provider landing produces is accepted instead of being
+ * classified as torn state on every later read.
+ */
 const isLanding = (value: unknown): value is MergeLandingEvidence =>
   isRecord(value) &&
   hasOnlyKeys(value, LANDING_KEYS) &&
-  typeof value.shaOnBase === "boolean" &&
+  (typeof value.shaOnBase === "boolean" || value.shaOnBase === "unknown") &&
   isNonEmptyString(value.requestState);
 
 const isRefresh = (value: unknown): value is MergeRefreshEvidence =>

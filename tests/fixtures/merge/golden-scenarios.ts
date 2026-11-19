@@ -7,9 +7,7 @@ import { MERGE_DEFAULT_GATE_ENTRIES } from "../../../packages/core/src/contracts
 import { resolveMergeGateSet } from "../../../packages/core/src/domain/merge-gate-set";
 import {
   baseCheckRuns,
-  baseRequest,
   baseWorkItem,
-  createFakeGit,
   createMergeHarness,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
@@ -125,20 +123,6 @@ export const goldenScenarios = (): Record<string, () => GoldenHarness> => ({
   "refusal-override": () => {
     const harness = createMergeHarness(gated());
     harness.seedVerification(gatedRecord());
-    return { harness, args: [] };
-  },
-  "refusal-rebase": () => {
-    const git = createFakeGit({
-      refresh: {
-        outcome: "conflicted",
-        paths: ["packages/core/src/a.ts", "packages/core/src/b.ts"],
-      },
-    });
-    const harness = createMergeHarness({
-      git,
-      request: baseRequest({ mergeableState: "conflicting" }),
-    });
-    harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
     return { harness, args: [] };
   },
 });

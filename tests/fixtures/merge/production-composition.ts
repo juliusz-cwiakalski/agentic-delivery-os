@@ -48,6 +48,13 @@ export type MergeProductionRun = {
   readonly envelope?: Record<string, unknown>;
 };
 
+/** One recorded outbound provider request (method, url, serialized body). */
+export type MergeTransportRequest = {
+  readonly method: string;
+  readonly url: string;
+  readonly body?: string;
+};
+
 export type MergeProviderReply =
   | { readonly status: number; readonly body: unknown }
   | { readonly throw: true };
@@ -76,6 +83,8 @@ export type MergeProductionHarness = {
   readonly stateLocation: string;
   readonly store: StateStorePort;
   readonly transportCalls: readonly string[];
+  /** Every outbound request, with its method and serialized body. */
+  readonly transportRequests: readonly MergeTransportRequest[];
   readonly credentialReads: () => number;
   /** Replace the provider reply between invocations (one fixture, two phases). */
   setReply: (reply: (url: string) => MergeProviderReply) => void;
@@ -186,6 +195,7 @@ export const createMergeProductionHarness = (
   const checkout = buildCheckout(base);
   const counter = { value: 0 };
   const transportCalls: string[] = [];
+  const transportRequests: MergeTransportRequest[] = [];
   const spawnRunner: HarnessSpawnRunner = async (): Promise<HarnessSpawnRunnerResult> => ({
     stdout: JSON.stringify({ session: { id: "ses-gh293" }, result: { completion: "complete" } }),
     stderr: "",
@@ -246,6 +256,11 @@ export const createMergeProductionHarness = (
       githubTransport: {
         send: async (request) => {
           transportCalls.push(request.url);
+          transportRequests.push({
+            method: request.method,
+            url: request.url,
+            ...(request.body === undefined ? {} : { body: request.body }),
+          });
           const result = reply(request.url);
           if ("throw" in result) throw new Error("synthetic transport failure");
           return { status: result.status, body: result.body };
@@ -294,6 +309,7 @@ export const createMergeProductionHarness = (
     stateLocation,
     store,
     transportCalls,
+    transportRequests,
     credentialReads: () => counter.value,
     setReply: (next) => {
       reply = next;

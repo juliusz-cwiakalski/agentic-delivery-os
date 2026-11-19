@@ -42,13 +42,7 @@ const runFreshOnce = async (name: string, mode: "json" | "text") => {
 };
 
 describe("TC-MERGE-035 determinism under fixed facts", () => {
-  for (const name of [
-    "success",
-    "refusal-stale",
-    "refusal-tracker",
-    "refusal-waiver",
-    "refusal-rebase",
-  ] as const) {
+  for (const name of ["success", "refusal-stale", "refusal-tracker", "refusal-waiver"] as const) {
     test(`${name}: twenty runs are byte-identical`, async () => {
       const first = await runFreshOnce(name, "text");
       for (let index = 0; index < 19; index += 1) {

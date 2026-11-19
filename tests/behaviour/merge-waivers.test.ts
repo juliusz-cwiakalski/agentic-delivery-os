@@ -13,6 +13,7 @@ import {
   MERGE_CLOCK_ISO,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
+  MERGE_LANDING_SHA,
   verificationRecord,
 } from "../fixtures/merge/harness";
 
@@ -59,7 +60,7 @@ const errorOf = (run: { envelope?: Record<string, unknown> }) =>
   run.envelope?.error as Record<string, unknown> | undefined;
 
 describe("TC-MERGE-018 an authorized waiver is recorded before landing and persists", () => {
-  test("the waiver record precedes the first git mutation and the gate passes under it", async () => {
+  test("the waiver record precedes the provider landing and the gate passes under it", async () => {
     const harness = createMergeHarness({
       workItem: gatedWorkItem(),
       ownerPrincipal: "owner-principal",
@@ -76,11 +77,20 @@ describe("TC-MERGE-018 an authorized waiver is recorded before landing and persi
       expect(waiver?.changeRef).toBe("GH-301");
       expect(waiver?.authorizer).toBe("owner-principal");
       expect(waiver?.authorizedAt).toBe(MERGE_CLOCK_ISO);
+      // Recording precedes the one composed landing call, which is the
+      // provider-side operation (GH-349) and not a local squash.
       const waiverIndex = harness.events.indexOf("append-waiver");
-      const landIndex = harness.events.indexOf("git-squash-land");
+      const landingIndex = harness.events.indexOf("provider-land");
       expect(waiverIndex).toBeGreaterThanOrEqual(0);
-      expect(landIndex).toBeGreaterThan(waiverIndex);
-      expect(harness.transactions()[0]?.waiverRefs).toEqual(["owner-gate"]);
+      expect(landingIndex).toBeGreaterThan(waiverIndex);
+      expect(harness.events).not.toContain("git-squash-land");
+      const record = harness.transactions()[0];
+      expect(record?.waiverRefs).toEqual(["owner-gate"]);
+      // The recorded landing identity is the provider's merge commit, and the
+      // containment answer is the local read's own answer.
+      expect(record?.squashSha).toBe(MERGE_LANDING_SHA);
+      expect(record?.landing.requestState).toBe("merged");
+      expect(record?.landing.shaOnBase).toBe(true);
       expect(harness.waivers()).toHaveLength(1);
     } finally {
       harness.cleanup();
@@ -99,6 +109,7 @@ describe("TC-MERGE-018 an authorized waiver is recorded before landing and persi
       expect(result.exitCode).toBe(1);
       expect(harness.waivers()).toHaveLength(1);
       expect(harness.transactions()).toHaveLength(0);
+      expect(harness.counts.landing).toBe(0);
       expect(harness.events).not.toContain("git-squash-land");
     } finally {
       harness.cleanup();

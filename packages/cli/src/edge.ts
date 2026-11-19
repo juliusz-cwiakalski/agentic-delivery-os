@@ -337,6 +337,8 @@ import {
   type HarnessSessionPort,
   type MetricsReadSeams,
   type MetricsStateRead,
+  type CapabilityGapReason,
+  type MergeDeliveryRequestInput,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   type OwnerGateSlaDecisionRecord,
@@ -1375,7 +1377,31 @@ export const createVerifyGatesCommandRuntime = (
 /** The injected seams for the merge command composition (GH-225 F-1..F-8). */
 export type MergeCommandComposition = {
   readonly store: StateStorePort;
+  /**
+   * The git seam the transaction composes: head, base containment, and branch
+   * deletion. Its retained `squashLand` and `refresh` capabilities are never
+   * composed here — a landing is the provider-side operation.
+   */
   readonly git: GitMergeSeam;
+  /** The one composed landing mechanism: the closed provider-side operation. */
+  readonly land: (
+    input: MergeDeliveryRequestInput,
+  ) => Promise<
+    | { readonly ok: true; readonly requestState: string; readonly mergeCommitSha?: string }
+    | { readonly ok: false; readonly code: string }
+  >;
+  /**
+   * The adapter's declared capability for the landing operation: `undefined`
+   * when supported, or the declared gap reason.
+   */
+  readonly landingGap: () => CapabilityGapReason | undefined;
+  /**
+   * Return the local checkout to the base ref. The provider landing leaves the
+   * checkout on the delivery branch, so the delivered post-landing branch
+   * deletion needs one local HEAD move to the base first (no fetch, no push, no
+   * remote read, and no base mutation).
+   */
+  readonly restoreCheckout: (baseRef: string) => Promise<"ok" | "failed">;
   readonly values: () => Readonly<Record<string, unknown>>;
   readonly readWorkItem: (
     changeRef: string,
@@ -1503,25 +1529,16 @@ export const createMergeCommandRuntime = (
       readHead: () => composition.git.head(),
       readBaseContainment: (sha) =>
         composition.git.isContained(sha, composition.baseRef ?? "main-tools"),
-      refresh: async () =>
-        composition.branch === undefined
-          ? { outcome: "failed" as const, code: "branch-unresolved" }
-          : composition.git.refresh({
-              branch: composition.branch,
-              baseRef: composition.baseRef ?? "main-tools",
-            }),
-      land: async (input) =>
-        composition.branch === undefined
-          ? { ok: false as const, code: "branch-unresolved" }
-          : composition.git.squashLand({
-              branch: composition.branch,
-              baseRef: input.baseRef,
-              message: `merge(${changeRef}): squash ${composition.branch}`,
-            }),
-      deleteBranch: async (input) =>
-        input.branch === undefined
-          ? "failed"
-          : composition.git.deleteBranch({ branch: input.branch }),
+      readLandingGap: () => composition.landingGap(),
+      land: (input) => composition.land(input),
+      deleteBranch: async (input) => {
+        if (input.branch === undefined) return "failed";
+        // The provider landing leaves the checkout on the delivery branch, so the
+        // delivered post-landing deletion first returns the checkout to the base
+        // (one local HEAD move; never a fetch, push, or base mutation).
+        await composition.restoreCheckout(composition.baseRef ?? "main-tools");
+        return composition.git.deleteBranch({ branch: input.branch });
+      },
     }),
   };
 };

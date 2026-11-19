@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   MERGE_DEFAULT_GATE_ENTRIES,
-  MERGE_MAX_CONFLICT_PATHS,
+  MERGE_MAX_EVIDENCE_NAMES,
   MERGE_MAX_HUMAN_BYTES,
   MERGE_MAX_HUMAN_LINES,
   MERGE_MAX_MACHINE_BYTES,
@@ -16,8 +16,6 @@ import {
 import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
 import {
   baseCheckRuns,
-  baseRequest,
-  createFakeGit,
   createMergeHarness,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
@@ -124,27 +122,32 @@ describe("TC-MERGE-033 output bounds", () => {
     }
   });
 
-  test("many conflicting paths are capped with an explicit +N mark", async () => {
-    const paths = Array.from(
-      { length: 12 },
-      (_, index) => `packages/core/src/conflict-${index}.ts`,
-    );
-    const git = createFakeGit({
-      refresh: { outcome: "conflicted", paths },
-    });
+  test("many newly failing jobs are capped with an explicit +N mark", async () => {
+    const runs: PipelineRun[] = Array.from({ length: 12 }, (_, index) => ({
+      identity: { systemName: "github", entityId: `run-${index}` },
+      pipelineName: `CI / job-${String(index).padStart(2, "0")}`,
+      jobs: [
+        {
+          jobName: `CI / job-${String(index).padStart(2, "0")}`,
+          jobState: "failed" as const,
+        },
+      ],
+      traceEvidence: [],
+    }));
     const harness = createMergeHarness({
-      git,
-      request: baseRequest({ mergeableState: "conflicting" }),
+      checkRuns: { items: runs, pageItemCount: runs.length, sha: MERGE_HEAD },
     });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run(undefined, { json: false });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain(`+${paths.length - MERGE_MAX_CONFLICT_PATHS}`);
+      expect(result.stderr).toContain(`+${runs.length - MERGE_MAX_EVIDENCE_NAMES}`);
       const summary = result.stderr.split("summary: ")[1] ?? "";
       expect(summary.split("\n").length).toBeLessThanOrEqual(MERGE_MAX_HUMAN_LINES);
       expect(Buffer.byteLength(summary, "utf8")).toBeLessThanOrEqual(MERGE_MAX_HUMAN_BYTES);
-      expect(summary).toContain("conflicting-paths=");
+      expect(summary).toContain("new-red-jobs=");
+      // Nothing landed: the bounded refusal is the whole outcome.
+      expect(harness.counts.landing).toBe(0);
     } finally {
       harness.cleanup();
     }

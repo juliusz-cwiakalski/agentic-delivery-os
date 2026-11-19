@@ -12,8 +12,18 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync as read, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyThrown, resolveAppErrorCode } from "../../packages/cli/src/classify";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
-import { DOMAIN_KINDS, ERROR_TABLE } from "../../packages/core/src/contracts/index";
+import {
+  DOMAIN_KINDS,
+  ERROR_TABLE,
+  FALLBACK_INTERNAL_CODE,
+  MERGE_DEFAULT_GATE_ENTRIES,
+  MERGE_GATE_ERROR_PREFIX,
+  MERGE_GATE_ERROR_SUFFIX,
+} from "../../packages/core/src/contracts/index";
+import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
+import { declaredGateSetWith } from "../fixtures/merge/harness";
 
 const ROOT = process.cwd();
 const members: readonly string[] = MERGE_COMPOSITION_EMITTABLE_CODES;
@@ -145,5 +155,109 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     // The forwarded value is the delivered taxonomy's code, so a code the
     // taxonomy does not declare cannot reach the declaration unchecked.
     expect(source).toContain("code: ConfigErrorCode");
+  });
+});
+
+/** The `merge.gate.<gate-id>.failed` family the composition declares. */
+const GATE_FAMILY_PREFIX = MERGE_GATE_ERROR_PREFIX;
+const GATE_FAMILY_SUFFIX = MERGE_GATE_ERROR_SUFFIX;
+
+const declares = (code: string): boolean =>
+  members.includes(code) ||
+  (code.startsWith(GATE_FAMILY_PREFIX) &&
+    code.endsWith(GATE_FAMILY_SUFFIX) &&
+    code.length > GATE_FAMILY_PREFIX.length + GATE_FAMILY_SUFFIX.length);
+
+/** Every refusal code the transaction's branches can emit, read from its source. */
+const transactionEmittedCodes = (): {
+  readonly literals: readonly string[];
+  readonly family: number;
+} => {
+  const source = read(join(ROOT, "packages/core/src/domain/merge-transaction.ts"), "utf8");
+  const literals = [...source.matchAll(/"((?:merge|provider|config|state|input)\.[a-z0-9.-]+)"/gu)]
+    .map((match) => match[1] as string)
+    // The declared family prefix is a matcher, not an emitted code.
+    .filter((code) => code !== GATE_FAMILY_PREFIX);
+  const family = [...source.matchAll(/failureCode\(\s*(?:"[a-z0-9-]+"|entry\.id)/gu)].length;
+  return { literals, family };
+};
+
+describe("TC-F2-007/F1 the emittable declaration is exhaustive over its refusal branches", () => {
+  test("the declaration carries the two additive rows and keeps the reserved one", () => {
+    expect(members).toContain("merge.sync-required");
+    expect(members).toContain("merge.mergeability-unknown");
+    expect(members).toContain("merge.rebase-conflict");
+  });
+
+  test("the family is a declared expression, never an enumerated gate list", () => {
+    // No member is a family instance: enumerating gate ids is exactly the defect.
+    for (const code of members) {
+      expect(code.startsWith(GATE_FAMILY_PREFIX), code).toBe(false);
+    }
+    // The declaration expresses the family with the contract's own slot pair.
+    const source = read(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    expect(source).toContain("MergeCompositionEmittableFamily");
+    expect(source).toContain("MERGE_GATE_ERROR_PREFIX");
+    expect(source).toContain("MERGE_GATE_ERROR_SUFFIX");
+    // The proof expands it over every gate id the effective set can resolve.
+    const defaultSet = resolveMergeGateSet(undefined);
+    if (!defaultSet.ok) throw new Error(defaultSet.failure.detail);
+    const declared = resolveMergeGateSet(
+      declaredGateSetWith([
+        ...MERGE_DEFAULT_GATE_ENTRIES,
+        {
+          id: "workspace-tests",
+          recipe: "required-ci-job",
+          surface: "both",
+          job: "workspace-tests",
+        },
+      ]),
+    );
+    if (!declared.ok) throw new Error(declared.failure.detail);
+    const ids = new Set([...defaultSet.value.ids, ...declared.value.ids, "ci-green"]);
+    for (const id of ids) {
+      const code = `${GATE_FAMILY_PREFIX}${id}${GATE_FAMILY_SUFFIX}`;
+      expect(declares(code), code).toBe(true);
+      const resolved = resolveAppErrorCode(code);
+      expect(resolved.ok, code).toBe(true);
+      if (!resolved.ok) continue;
+      expect(resolved.entry.domainKind).toBe("merge");
+    }
+  });
+
+  test("every code the transaction emits is declared", () => {
+    const { literals, family } = transactionEmittedCodes();
+    expect(literals.length).toBeGreaterThan(0);
+    expect(family).toBeGreaterThan(0);
+    for (const code of literals) {
+      expect(declares(code), `emitted ${code} is outside the declaration`).toBe(true);
+    }
+    // The family emission is the only computed code, and it is declared.
+    const sample = `${GATE_FAMILY_PREFIX}ci-green${GATE_FAMILY_SUFFIX}`;
+    expect(declares(sample)).toBe(true);
+  });
+
+  test("a gate-family refusal is merge-kind at exit 1 and never reaches containment", () => {
+    const code = `${GATE_FAMILY_PREFIX}ci-green${GATE_FAMILY_SUFFIX}`;
+    const resolved = resolveAppErrorCode(code);
+    expect(resolved.ok).toBe(true);
+    if (!resolved.ok) return;
+    expect(resolved.entry.domainKind).toBe("merge");
+    expect(projectExitCode(resolved.entry.projectionClass)).toBe(1);
+    const classified = classifyThrown({ kind: "merge", code });
+    expect(classified.code).toBe(code);
+    expect(classified.code).not.toBe(FALLBACK_INTERNAL_CODE);
+    // The live mismatch control still reaches the containment identity, so the
+    // assertion above cannot pass vacuously.
+    const contained = classifyThrown({ kind: "provider", code });
+    expect(contained.code).toBe(FALLBACK_INTERNAL_CODE);
+  });
+
+  test("an undeclared merge code is visible as undeclared", () => {
+    const undeclared = "merge.declared-nowhere";
+    expect(declares(undeclared)).toBe(false);
+    expect(resolveAppErrorCode(undeclared).ok).toBe(false);
+    const plantedFamily = `${GATE_FAMILY_PREFIX}`;
+    expect(declares(plantedFamily)).toBe(false);
   });
 });

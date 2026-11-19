@@ -135,7 +135,10 @@ export type GithubClient = {
   ) => Promise<
     ProviderReadResult<{ readonly items: readonly WorkItem[]; readonly pageItemCount: number }>
   >;
-  readonly listDeliveryRequests: (limit: number) => Promise<
+  readonly listDeliveryRequests: (
+    limit: number,
+    options?: { readonly includeGateFacts?: boolean },
+  ) => Promise<
     ProviderReadResult<{
       readonly items: readonly DeliveryRequest[];
       readonly pageItemCount: number;
@@ -432,13 +435,19 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       if (!response.ok) return response;
       return normalizeGithubIssueList(response.value.body, context);
     },
-    listDeliveryRequests: async (limit) => {
+    listDeliveryRequests: async (limit, options) => {
       if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
       if (!response.ok) return response;
-      return normalizeGithubPullList(response.value.body, context);
+      // The default list read keeps its delivered shape (refs, head, draft,
+      // state, and the provider-asserted title); a caller that needs the
+      // per-request gate facts opts in, because the merge taxonomy classifies
+      // the mergeability state the list read deliberately omits (GH-349 DM-1).
+      return normalizeGithubPullList(response.value.body, context, {
+        includeGateFacts: options?.includeGateFacts ?? false,
+      });
     },
     readWorkItemObservation: (entityId) =>
       mapFailure === undefined ? readObservation(entityId) : Promise.resolve(invalidObservation()),

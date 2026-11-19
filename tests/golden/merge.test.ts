@@ -1,6 +1,6 @@
 /** TC-MERGE-036 / TC-MERGE-037 — byte-pinned merge success and refusal goldens. */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { goldenScenarios } from "../fixtures/merge/golden-scenarios";
@@ -59,7 +59,6 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
     "refusal-tracker",
     "refusal-waiver",
     "refusal-override",
-    "refusal-rebase",
   ] as const;
 
   for (const name of cases) {
@@ -102,3 +101,42 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
     expect(golden.replace("verification-age=31m", "verification-age=30m")).not.toBe(golden);
   });
 });
+
+describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly thirteen files", () => {
+  /** The eleven goldens this change must leave byte-identical, plus phase 3's pair. */
+  const EXPECTED = [
+    "refusal-gate-human.txt",
+    "refusal-gate-scripted.json",
+    "refusal-override-human.txt",
+    "refusal-override-scripted.json",
+    "refusal-stale-human.txt",
+    "refusal-stale-scripted.json",
+    "refusal-tracker-human.txt",
+    "refusal-tracker-scripted.json",
+    "refusal-waiver-human.txt",
+    "refusal-waiver-scripted.json",
+    "success-data.json",
+    "success-human.txt",
+    "success-scripted.json",
+  ] as const;
+
+  test("the directory holds the thirteen declared files and the retired pair is absent", () => {
+    const present = readdirSync(GOLDEN).sort();
+    expect(present).toEqual([...EXPECTED].sort());
+    for (const retired of ["refusal-rebase-human.txt", "refusal-rebase-scripted.json"]) {
+      expect(present).not.toContain(retired);
+    }
+    // The directory is never declared as a folder, so a third moved or retired
+    // file is visible here rather than silently regenerated.
+    expect(present).toHaveLength(13);
+  });
+
+  test("no golden carries the retired scenario's identity", () => {
+    for (const file of presentGoldenFiles()) {
+      expect(goldenText(file)).not.toContain("refusal-rebase");
+    }
+    expect(goldenScenarios()["refusal-rebase" as string]).toBeUndefined();
+  });
+});
+
+const presentGoldenFiles = (): readonly string[] => readdirSync(GOLDEN);

@@ -459,3 +459,35 @@ notes:
       wildcarded, or dropped."
     type: info
     date: "2026-11-18"
+  - text: "Plan phase 1 release metadata complete (plan obligation 1.0). The
+      additive phase now ships its release obligation as its own commit: exactly
+      ONE added changeset .changeset/gh-349-merge-closeout-queue-repair-minor.md
+      declaring the five fixed-group packages at minor (core, adapters, cli,
+      mcp, opencode; @delivery-os/testkit absent and no sixth package) with a
+      non-empty body naming the additive surface - the two merge refusal rows
+      (merge.sync-required with the closed dirty | behind-unconfirmed reason
+      vocabulary, merge.mergeability-unknown), the sixth lint row
+      lint.phases.divergent with the additive registry fold read, the optional
+      request title, the closeout milestone step / close-milestone operation /
+      milestone-sync-withheld residue kind, and the tenth adapter operation with
+      the milestone-state assertion family. The phase-1 baseline pin
+      tests/fixtures/pins/changeset-baseline.json captures the 64 pre-change
+      .changeset/*.md names with per-file SHA-256 digests plus the five package
+      versions, and tests/structure/changeset-additivity.test.ts (TC-SYNC-011)
+      asserts the set equality (baseline plus exactly one added file), the exact
+      five-package minor front matter, the non-empty body, all 64 digest
+      equalities and the five version equalities, with each of the seven
+      register controls M117..M123 a mutation control over the same validator
+      that fails by name. NO package version was edited by hand: core, adapters,
+      cli, mcp, opencode and testkit all stay 0.0.0 because changesets owns the
+      bump. Commit 5c933ea52915457bf658aa4ca56a3947a27fc4cd, subject
+      docs(GH-349): update .changeset/gh-349-merge-closeout-queue-repair-mino...,
+      messageSource template, no lifecycle transition, no scopeDrift. Gates, all
+      exit 0 with TMPDIR=$PWD/tmp/tmpdir: bun test
+      tests/structure/changeset-additivity.test.ts tests/checks/privacy-release.test.ts
+      (18 pass); the nine named phase-1 suites (319 pass); G6 pnpm typecheck; G2
+      bun test tests/structure (1726 pass across 187 files); G3 bun test
+      tests/checks (1251 pass across 133 files); G9 git diff --check. G12 pnpm
+      check was deliberately NOT run here: phase 9 owns the aggregate."
+    type: info
+    date: "2026-11-19"
