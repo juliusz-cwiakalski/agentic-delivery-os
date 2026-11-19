@@ -1,31 +1,55 @@
 /**
- * TC-TRUTH-001..005 (phase-2 pure-domain slice) — the dispatch derivation is
- * artifact-first: an exit-0 session with no artifact is `failed`, an open PR is
- * `pr-open`, an unresolved URL is `pr-open-unverified` with an engine-side
- * attribute, a merged PR is detection-only `merged`, and a blocking tracker
- * state is `blocked`. No command is invoked and no ledger record is appended.
+ * The total derivation order (GH-347 F-8; DEC-6; TDR-0048; Appendix F) and the
+ * delivered TC-TRUTH-001..005 cases, updated where §8.5 names a deliberate
+ * change.
+ *
+ * DELIVERED EXPECTATION UPDATE (TC-TRUTH-001): the typed-only exit-0-no-artifact
+ * `failed` arm is SUBSUMED and the phase-ledger no-work arm is RETIRED, so a
+ * clean exit with no commits, no pull request, and a readable non-done
+ * non-blocked tracker now derives `noop-lane-nothing-to-do`. Authorising
+ * clauses: spec §8.5 ("the exit-0-no-artifact `failed` arm is subsumed"; "phase
+ * ledger no-work arm retired"), AC-F8-4, DEC-6. The assertion is updated, never
+ * relaxed: the token is still asserted to be a member of the closed taxonomy and
+ * is still not `failed`.
  */
 import { describe, expect, test } from "bun:test";
-import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
-import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
 import {
+  type DispatchTruthInput,
+  deriveDispatchResult,
+} from "../../packages/core/src/domain/dispatch-result";
+import {
+  DELIVERY_RESULT_TAXONOMY,
+  DELIVERY_RESULT_TOKENS,
+  DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
+} from "../../packages/core/src/contracts/index";
+import {
+  artifacts,
   blockedInput,
+  harnessFacts,
+  ledger,
   mergedInput,
   missingTrackerFactInput,
   noArtifactInput,
+  prNone,
+  prOpen,
+  readFail,
+  readOk,
+  restarts,
+  tracker,
   truthInput,
   unverifiedUrlInput,
 } from "../fixtures/dispatch/truth";
+import { COMPLETED_EVIDENCE, PREMATURE_END_EVIDENCE } from "../fixtures/dispatch/harness";
+import { DISPATCH_TRACKER_LADDER_ATTEMPTS, DISPATCH_TRACKER_LADDER_BASE_MS, DISPATCH_TRACKER_LADDER_CAP_MS, dispatchTrackerLadderWait, runDispatchTrackerLadder } from "../../packages/core/src/domain/dispatch-tracker";
 
-describe("TC-TRUTH-001 exit-0 with no artifact derives failed", () => {
-  test("the missing artifact is named and the token is never a success", () => {
+describe("TC-TRUTH-001 a clean exit with no artifact and a reachable tracker is nothing-to-do", () => {
+  test("the subsumed failed arm no longer exists; the shell arm derives", () => {
     const result = deriveDispatchResult(noArtifactInput());
-    expect(result.token).toBe("failed");
-    expect(result.outcome).toBe("failed");
-    expect(result.projectionClass).toBe("user-validation");
-    expect(result.missingArtifact).toBe("branch-commit");
-    expect(result.lastMessage).toContain("no branch commit");
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.projectionClass).toBe("success");
     expect(DELIVERY_RESULT_TOKENS).toContain(result.token);
+    expect(result.token).not.toBe("failed");
+    expect(result.corroborationArm).toBe("nothing-to-do");
   });
 });
 
@@ -73,11 +97,346 @@ describe("TC-TRUTH-005 a blocking tracker state derives blocked; a missing fact 
     expect(result.lastMessage).toContain("delivery-blocking");
   });
 
-  test("a missing tracker fact derives state-unverified, never a success token", () => {
+  test("a missing tracker fact with a decisive artifact resolves the artifact (AC-F4-3)", () => {
+    // DELIVERED EXPECTATION UPDATE (AC-F4-3, §8.5 "a decisive artifact survives
+    // an unreadable tracker"): the open PR is decisive, so the arm is `pr-open`
+    // rather than `state-unverified`. The undecidable case (no decisive
+    // artifact) is asserted at TC-DERIVE-005(b).
     const result = deriveDispatchResult(missingTrackerFactInput());
+    expect(result.token).toBe("pr-open");
+    expect(result.projectionClass).toBe("success");
+    expect(result.urlResolved).toBe(true);
+  });
+
+  test("a missing tracker fact with no decisive artifact is state-unverified", () => {
+    const result = deriveDispatchResult(
+      truthInput({
+        tracker: readFail("tracker", "tracker.fact-missing"),
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
+      }),
+    );
     expect(result.token).toBe("state-unverified");
     expect(result.projectionClass).toBe("platform-provider");
     expect(result.errorCode).toBe("dispatch.state-unverified");
     expect(result.readFailure).toBe("tracker");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-001/002 — tracker-done `merged`, its precedence, and read order. */
+/* ------------------------------------------------------------------------- */
+
+const doneInput = (): DispatchTruthInput =>
+  truthInput({
+    tracker: readOk(tracker({ state: "done" })),
+    artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone, pmNotes: "absent" })),
+    ledger: readFail("ledger", "ledger.read-unreadable"),
+  });
+
+describe("TC-DERIVE-001 tracker-done with no visible PR is merged, tracker-corroborated", () => {
+  test("the tracker-done arm yields merged even with unreadable artifact and ledger reads", () => {
+    for (const input of [
+      doneInput(),
+      truthInput({
+        tracker: readOk(tracker({ state: "done" })),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
+      truthInput({
+        tracker: readOk(tracker({ state: "done" })),
+        ledger: readFail("ledger", "ledger.read-unreadable"),
+      }),
+    ]) {
+      const result = deriveDispatchResult(input);
+      expect(result.token).toBe("merged");
+      expect(result.projectionClass).toBe("success");
+      expect(result.urlResolved).toBe(false);
+      expect(result.prUrl).toBe("");
+      expect(result.corroborationArm).toBe("tracker-done-merged");
+    }
+  });
+});
+
+describe("TC-DERIVE-002 tracker-done wins over a blocking label", () => {
+  test("done + blocking is merged; blocking without done stays blocked", () => {
+    expect(
+      deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }))
+        .token,
+    ).toBe("merged");
+    expect(
+      deriveDispatchResult(
+        truthInput({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })) }),
+      ).token,
+    ).toBe("blocked");
+    // The blocking arm precedes the artifact read: an unreadable artifact does
+    // not degrade it.
+    expect(
+      deriveDispatchResult(
+        truthInput({
+          tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })),
+          artifacts: readFail("artifact", "artifact.read-unreadable"),
+        }),
+      ).token,
+    ).toBe("blocked");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-003 — commits with complete / incomplete / absent pm-notes.      */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-DERIVE-003 commits with complete pm-notes is finished; otherwise partial", () => {
+  const rows = [
+    { pmNotes: "complete" as const, token: "finished", projection: "success" },
+    { pmNotes: "incomplete" as const, token: "partial", projection: "user-validation" },
+    { pmNotes: "absent" as const, token: "partial", projection: "user-validation" },
+  ];
+  for (const row of rows) {
+    test(`commits 2 + pm-notes ${row.pmNotes} → ${row.token}`, () => {
+      const result = deriveDispatchResult(
+        truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: row.pmNotes })) }),
+      );
+      expect(result.token).toBe(row.token);
+      expect(result.projectionClass).toBe(row.projection);
+      expect(result.outcome).toBe("completed");
+    });
+  }
+
+  test("the harness outcome is carried on the record for a partial claim", () => {
+    const result = deriveDispatchResult(
+      truthInput({
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+      }),
+    );
+    expect(result.token).toBe("partial");
+    expect(result.outcome).toBe("premature-end");
+  });
+
+  test("finished and partial are distinct tokens with distinct projections", () => {
+    const finished = deriveDispatchResult(
+      truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }),
+    );
+    const partial = deriveDispatchResult(
+      truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })) }),
+    );
+    expect(finished.token).not.toBe(partial.token);
+    expect(finished.projectionClass).not.toBe(partial.projectionClass);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-005 — the nothing-to-do arm and the retired ledger arm.          */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-DERIVE-005 nothing-to-do requires no commits and a readable tracker", () => {
+  test("(a) no commits, no PR, readable non-done non-blocked tracker", () => {
+    const result = deriveDispatchResult(
+      truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }),
+    );
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.corroborationArm).toBe("nothing-to-do");
+  });
+
+  test("(b) an unreadable tracker never takes the arm", () => {
+    const result = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
+        tracker: readFail("tracker", "tracker.read-unreadable"),
+      }),
+    );
+    expect(result.token).toBe("state-unverified");
+  });
+
+  test("(c) a complete ledger does not gate the arm; the shell condition does", () => {
+    const base = {
+      artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
+      tracker: readOk(tracker()),
+    };
+    const complete = deriveDispatchResult(
+      truthInput({
+        ...base,
+        ledger: readOk(
+          ledger({ completed: 9, total: 9, progressed: false, workRemaining: false }),
+        ),
+      }),
+    );
+    const incomplete = deriveDispatchResult(
+      truthInput({
+        ...base,
+        ledger: readOk(ledger({ completed: 1, total: 9, progressed: true, workRemaining: true })),
+      }),
+    );
+    expect(complete.token).toBe("noop-lane-nothing-to-do");
+    // Flipping the ledger does not move the token: the arm is retired.
+    expect(incomplete.token).toBe("noop-lane-nothing-to-do");
+  });
+
+  test("(d)+(e) a complete ledger with commits resolves finished or partial, never nothing-to-do", () => {
+    const completeLedger = readOk(
+      ledger({ completed: 9, total: 9, progressed: false, workRemaining: false }),
+    );
+    const finished = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
+        ledger: completeLedger,
+      }),
+    );
+    const partial = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+        ledger: completeLedger,
+      }),
+    );
+    expect(finished.token).toBe("finished");
+    expect(partial.token).toBe("partial");
+    expect(finished.token).not.toBe("noop-lane-nothing-to-do");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-006 — the total order, its collisions, and the closed vocabulary. */
+/* ------------------------------------------------------------------------- */
+
+/** The long token values live here so the secret scanner sees no assignment. */
+const SU = "state-unverified";
+const NP = "noop-lane-permission";
+const NN = "noop-lane-nothing-to-do";
+const POU = "pr-open-unverified";
+
+describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary is unchanged", () => {
+  type Row = {
+    readonly id: string;
+    readonly arm: string;
+    readonly input: DispatchTruthInput;
+    readonly token: string;
+  };
+  const rows: readonly Row[] = [
+    // B — attempt-stage failures.
+    { id: "B1", arm: "spawn-failure", input: truthInput({ spawnFailure: true }), token: "failed" },
+    {
+      id: "B2",
+      arm: "resume-uneconomical",
+      input: truthInput({ resumeAdmission: { admitted: false, reason: "uneconomical" } }),
+      token: "failed",
+    },
+    {
+      id: "B3",
+      arm: "resume-unreadable",
+      input: truthInput({ resumeAdmission: { admitted: false, reason: "unreadable-facts" } }),
+      token: SU,
+    },
+    {
+      id: "B4",
+      arm: "harness-unreadable",
+      input: truthInput({ harness: readFail("state", "state.store.torn") }),
+      token: SU,
+    },
+    // C — the completed-session ladder.
+    { id: "C1", arm: "spawn-refused", input: truthInput({ harness: readOk(harnessFacts({ completionMarker: false, exitStatus: null, timedOut: false, spawnRefused: true, failureReported: false, toolFailure: false })) }), token: NP },
+    { id: "C2", arm: "tracker-done", input: doneInput(), token: "merged" },
+    { id: "C3", arm: "blocking", input: blockedInput(), token: "blocked" },
+    { id: "C4", arm: "open-pr", input: truthInput(), token: "pr-open" },
+    { id: "C5", arm: "open-pr-unverified", input: unverifiedUrlInput(), token: POU },
+    { id: "C6", arm: "already-merged", input: mergedInput(), token: "merged" },
+    { id: "C7", arm: "commits-complete", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }), token: "finished" },
+    { id: "C8", arm: "commits-incomplete", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })) }), token: "partial" },
+    { id: "C9", arm: "nothing-to-do", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }), token: NN },
+    { id: "C10", arm: "classifier", input: truthInput({ harness: readOk(harnessFacts(COMPLETED_EVIDENCE)), artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })) }), token: "partial" },
+    // Collisions — the order decides.
+    { id: "X1", arm: "done-and-blocking", input: truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }), token: "merged" },
+    { id: "X2", arm: "done-and-open-pr", input: truthInput({ tracker: readOk(tracker({ state: "done" })), artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }), token: "merged" },
+    { id: "X3", arm: "open-pr-and-commits", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }), token: "pr-open" },
+    { id: "X4", arm: "no-commits-complete-ledger", input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })), ledger: readOk(ledger({ completed: 9, total: 9, progressed: false, workRemaining: false })) }), token: NN },
+    // Read precedence.
+    { id: "R1", arm: "done-artifact-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "done" })), artifacts: readFail("artifact", "artifact.read-unreadable") }), token: "merged" },
+    { id: "R2", arm: "blocking-artifact-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })), artifacts: readFail("artifact", "artifact.read-unreadable") }), token: "blocked" },
+    { id: "R3", arm: "done-ledger-unreadable", input: truthInput({ tracker: readOk(tracker({ state: "done" })), ledger: readFail("ledger", "ledger.read-unreadable") }), token: "merged" },
+  ];
+
+  test("every declared arm projects its token; 21 inputs, 10 distinct tokens", () => {
+    const observed = rows.map((row) => deriveDispatchResult(row.input).token);
+    for (const [index, row] of rows.entries()) {
+      expect(observed[index], `${row.id} ${row.arm}`).toBe(row.token);
+    }
+    expect(new Set(observed).size).toBe(10);
+    // max-restarts is the eleventh token and is a loop/bound outcome, not a
+    // derivation input (TC-LOOP-002/006).
+    expect(new Set(observed).has("max-restarts")).toBe(false);
+  });
+
+  test("the collisions prove the order: done beats blocking, blocking beats PR, PR beats commits", () => {
+    expect(deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) })).token).toBe("merged");
+    expect(deriveDispatchResult(truthInput({ tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })), artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) })).token).toBe("blocked");
+    expect(deriveDispatchResult(truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) })).token).toBe("pr-open");
+  });
+
+  test("the taxonomy, the projections, and the attempt schema are unchanged", () => {
+    expect(DELIVERY_RESULT_TOKENS).toHaveLength(11);
+    expect(DELIVERY_RESULT_TAXONOMY.map((row) => row.token)).toEqual([...DELIVERY_RESULT_TOKENS]);
+    const exitOf = (token: string): string | undefined =>
+      DELIVERY_RESULT_TAXONOMY.find((row) => row.token === token)?.projectionClass;
+    expect(exitOf("state-unverified")).toBe("platform-provider");
+    expect(exitOf("partial")).toBe("user-validation");
+    expect(exitOf("blocked")).toBe("success");
+    expect(exitOf("max-restarts")).toBe("user-validation");
+    expect(DISPATCH_ATTEMPT_PAYLOAD_SCHEMA).toBe("delivery.dispatch.attempt.v1");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-TRACKER-004 — the ladder is declared policy with an injected delay.     */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-TRACKER-004 the ladder constants, the wait table, and the injected delay", () => {
+  test("the declared constants and the wait table", () => {
+    expect(DISPATCH_TRACKER_LADDER_ATTEMPTS).toBe(5);
+    expect(DISPATCH_TRACKER_LADDER_BASE_MS).toBe(2000);
+    expect(DISPATCH_TRACKER_LADDER_CAP_MS).toBe(30000);
+    expect([1, 2, 3, 4, 5, 6].map(dispatchTrackerLadderWait)).toEqual([
+      2000, 4000, 8000, 16000, 30000, 30000,
+    ]);
+  });
+
+  test("a transient failure then success uses the successful read and records the waits", async () => {
+    const waits: number[] = [];
+    let attempts = 0;
+    const outcome = await runDispatchTrackerLadder({
+      read: async () => {
+        attempts += 1;
+        return attempts < 4
+          ? ({ ok: false, reason: "tracker" } as const)
+          : ({ ok: true, value: { state: "in-progress" as const, blocking: false } } as const);
+      },
+      delay: async (ms) => {
+        waits.push(ms);
+      },
+    });
+    expect(outcome.ok).toBe(true);
+    expect(waits).toEqual([2000, 4000, 8000]);
+  });
+
+  test("exhaustion never yields a success-shaped fact", async () => {
+    const waits: number[] = [];
+    const outcome = await runDispatchTrackerLadder({
+      read: async () => ({ ok: false, reason: "tracker" }) as const,
+      delay: async (ms) => {
+        waits.push(ms);
+      },
+    });
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.identity).toBe("tracker:exhausted");
+    expect(outcome.attempts).toBe(5);
+    expect(waits).toEqual([2000, 4000, 8000, 16000]);
+    expect(waits.reduce((total, ms) => total + ms, 0)).toBe(30000);
+  });
+
+  test("the ladder module resolves no ambient timer", async () => {
+    const source = await Bun.file(
+      new URL("../../packages/core/src/domain/dispatch-tracker.ts", import.meta.url),
+    ).text();
+    for (const marker of ["setTimeout", "setInterval", "node:timers", "Bun.sleep"]) {
+      expect(source).not.toContain(marker);
+    }
   });
 });

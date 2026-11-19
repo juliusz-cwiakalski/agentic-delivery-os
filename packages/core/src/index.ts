@@ -616,6 +616,15 @@ export {
   evaluateDispatchLiveness,
 } from "./domain/dispatch-liveness.js";
 export {
+  DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
+  DISPATCH_TRACKER_LADDER_ATTEMPTS,
+  DISPATCH_TRACKER_LADDER_BASE_MS,
+  DISPATCH_TRACKER_LADDER_CAP_MS,
+  type DispatchTrackerLadderOutcome,
+  dispatchTrackerLadderWait,
+  runDispatchTrackerLadder,
+} from "./domain/dispatch-tracker.js";
+export {
   classifyDispatchFailure,
   classifySpawnRefusal,
   DISPATCH_FAILURE_KINDS,

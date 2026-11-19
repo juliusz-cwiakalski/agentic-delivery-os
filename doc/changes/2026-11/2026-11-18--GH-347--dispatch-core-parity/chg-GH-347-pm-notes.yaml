@@ -429,3 +429,36 @@ notes:
       commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 4 (tracker ladder, pmNotes fact, total derivation, arm-aware
+      corroboration) implemented before its commit: the bounded ladder in
+      domain/dispatch-tracker.ts (5 attempts, min(2s*2^(n-1),30s), injected delay,
+      exhaustion identity tracker:exhausted) wired around the production tracker
+      read; the required pmNotes completeness fact on DispatchArtifactFacts with
+      the projection from the real document (projectPmNotesCompleteness in the
+      pm-notes parser); the ONE total order in domain/dispatch-result.ts (tracker
+      arms first, then the COMPLETED-session artifact ladder gated on the
+      classifier's finished token, the ledger no-work arm retired, the
+      exit-0-no-artifact failed arm subsumed, the persisted-count arm left for
+      phase 5); and arm-aware corroboration decided ONCE on the derivation result
+      (corroborationArm) and passed unchanged by both evaluation sites (one-shot
+      and daemon), with the evidence-window gate pinned token-level through
+      windowCorroborationRequirement. Gate results: tracker parity suite 7 pass;
+      truth-derivation 26; the delivered truth/token/watch/divergence/false-success
+      controls 109 total; the new contract-invariance check 8; inventory suites
+      23; all conformance dispatch 35; typecheck green; git diff --check clean.
+      DELIVERED EXPECTATION UPDATES, each minimal and clause-cited: TC-TRUTH-001
+      now expects noop-lane-nothing-to-do (section 8.5 subsumed failed arm plus
+      retired ledger arm, AC-F8-4); TC-TRUTH-005/006 expect a decisive artifact to
+      survive an unreadable tracker and an unreadable ledger not to gate the token
+      (AC-F4-3, section 8.5); TC-DISP-012's rows re-stated for the retired ledger
+      arm and the shell arm (AC-F8-4); TC-EVID-003's fixture input moved to a
+      reported failure so it still reaches failed (section 8.5, Appendix F(C)(9));
+      the delivered-evidence divergence fixture's reads made genuinely undecidable
+      (tracker AND artifact unreadable) under AC-F4-3; the two artifact-facts
+      literals (dispatch-token-closure, dispatch-watch) gained the explicit
+      pmNotes member; and the controlled-proof drive table rows for failed,
+      state-unverified and nothing-to-do were re-expressed under the same
+      clauses. No assertion was deleted, renamed, or relaxed. The phase commit
+      hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

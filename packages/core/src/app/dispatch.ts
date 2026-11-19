@@ -1209,17 +1209,30 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     }
 
     const facts = corroborationFactsOf(reads);
-    const corroboration = buildCorroborationRecord({ token: derivedToken, facts });
+    // The arm is the derivation's own decision (GH-347 DEC-6): the one
+    // derivation decides it; both evaluation sites pass it unchanged.
+    const corroborationArm = derivation.corroborationArm;
+    const corroboration = buildCorroborationRecord({
+      token: derivedToken,
+      facts,
+      ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
+    });
     const unreadable = unreadableCorroborationSources(facts);
     const falseSuccess = classifyFalseSuccess({
       token: derivedToken,
       comparison,
       corroboration,
       ...(unreadable.length === 0 ? {} : { unreadable }),
+      ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
     });
 
+    const trackerExhausted =
+      !reads.tracker.ok && reads.tracker.identity === "tracker:exhausted"
+        ? ["tracker:exhausted"]
+        : [];
     const evidenceRefs = [
       `attempt:${attemptId}`,
+      ...trackerExhausted,
       ...(truthRef === undefined ? [] : [truthRef]),
       ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
       ...livenessRefs,

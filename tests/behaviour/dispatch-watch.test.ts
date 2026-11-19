@@ -64,7 +64,11 @@ describe("the one-shot watch clears a transient stall on later progress", () => 
       reads: readsFrom({
         artifacts: {
           ok: true,
-          value: { branchCommits: 2, pr: { state: "none", url: null, mergeReady: false } },
+          value: {
+            branchCommits: 2,
+            pr: { state: "none", url: null, mergeReady: false },
+            pmNotes: "complete",
+          },
         },
         ledger: {
           ok: true,

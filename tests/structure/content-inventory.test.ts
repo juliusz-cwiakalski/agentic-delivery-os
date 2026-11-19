@@ -209,6 +209,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "isComparisonShapeValid",
     "requiredCorroboration",
     "unreadableCorroborationSources",
+    "windowCorroborationRequirement",
   ],
   "core/src/domain/dispatch-identity.ts": [
     "DISPATCH_IDENTITY_SCHEMA",
@@ -291,6 +292,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/lane-launch-plan.ts": ["createLaneLaunchPlanner", "planLaneLaunch"],
   "core/src/app/daemon-dispatch-result.ts": ["daemonAttemptId", "recordDaemonDispatchResult"],
+  "core/src/domain/dispatch-tracker.ts": [
+    "DISPATCH_TRACKER_EXHAUSTED_IDENTITY",
+    "DISPATCH_TRACKER_LADDER_ATTEMPTS",
+    "DISPATCH_TRACKER_LADDER_BASE_MS",
+    "DISPATCH_TRACKER_LADDER_CAP_MS",
+    "dispatchTrackerLadderWait",
+    "runDispatchTrackerLadder",
+  ],
   "core/src/domain/dispatch-result.ts": [
     "DISPATCH_FAILURE_KINDS",
     "DISPATCH_READ_FAILURE_SOURCES",
@@ -814,6 +823,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DISPATCH_COMPARISON_OUTCOMES",
     "DISPATCH_COMPARISON_REASONS",
     "DISPATCH_CONDITION_STATES",
+    "DISPATCH_CORROBORATION_ARM_SUFFICIENCY",
+    "DISPATCH_CORROBORATION_ARMS",
     "DISPATCH_CORROBORATION_SOURCES",
     "DISPATCH_CORROBORATION_STATES",
     "DISPATCH_CORROBORATION_SUFFICIENCY",
@@ -2893,6 +2904,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/file/pm-notes-parser.ts": [
     "nodePmNotesFileSystemFacts",
     "parsePmNotesText",
+    "projectPmNotesCompleteness",
     "readPmNotesTarget",
     "readPmNotesText",
     "stagePmNotesPhaseEntry",

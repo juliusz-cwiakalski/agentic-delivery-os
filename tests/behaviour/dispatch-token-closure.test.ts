@@ -85,7 +85,7 @@ describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () =>
       const result = deriveDispatchResult(
         truthInput({
           harness: readOk(harnessFacts(evidence)),
-          artifacts: readOk({ branchCommits: 2, pr: prNone }),
+          artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
         }),
       );
       expect(result.token).toBe("partial");
@@ -111,7 +111,7 @@ describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () =>
     const result = deriveDispatchResult(
       truthInput({
         harness: readOk(harnessFacts(TIMED_OUT_EVIDENCE)),
-        artifacts: readOk({ branchCommits: 2, pr: prNone }),
+        artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
       }),
     );
     expect(result.token).toBe("max-restarts");
@@ -119,26 +119,33 @@ describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () =>
   });
 });
 
-describe("TC-DISP-012 noop-lane-nothing-to-do only with no remaining work", () => {
-  test("the exhausted lane derives noop-lane-nothing-to-do", () => {
+describe("TC-DISP-012 noop-lane-nothing-to-do only under the shell arm", () => {
+  test("a complete ledger with commits resolves the artifact arm (ledger arm retired)", () => {
+    // DELIVERED EXPECTATION UPDATE: the phase-ledger no-work arm is RETIRED
+    // (spec §8.5 "Phase-ledger no-work arm retired"; AC-F8-4; DEC-6). A complete
+    // ledger with commits resolves `finished`/`partial`, never nothing-to-do.
     const result = deriveDispatchResult(exhaustedLaneInput());
-    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.token).toBe("finished");
     expect(result.projectionClass).toBe("success");
-    expect(result.lastMessage).toContain("no remaining work");
+    expect(result.token).not.toBe("noop-lane-nothing-to-do");
   });
 
-  test("an open-phase lane never derives the no-work token", () => {
-    const inputs = [
+  test("the shell arm is no commits, no PR, and a readable non-done non-blocked tracker", () => {
+    const result = deriveDispatchResult(noArtifactInput());
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.projectionClass).toBe("success");
+  });
+
+  test("a non-completed session never derives the no-work token", () => {
+    const result = deriveDispatchResult(
       truthInput({
-        artifacts: readOk({ branchCommits: 2, pr: prNone }),
+        artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
         ledger: readOk(ledger({ completed: 5, total: 7, workRemaining: true, progressed: false })),
         harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
       }),
-      noArtifactInput(),
-    ];
-    for (const input of inputs) {
-      expect(deriveDispatchResult(input).token).not.toBe("noop-lane-nothing-to-do");
-    }
+    );
+    expect(result.token).not.toBe("noop-lane-nothing-to-do");
+    expect(result.token).toBe("partial");
   });
 
   test("the happy-path open-PR lane is not a no-work claim", () => {

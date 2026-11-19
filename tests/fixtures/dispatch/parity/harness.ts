@@ -10,7 +10,7 @@
  * wall-clock wait. The fixtures expose no attempt/lane/divergence writer: every
  * record is produced by the command path itself.
  */
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type GitChildRunner } from "../../../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
@@ -103,6 +103,58 @@ export type ParityObservation = {
   readonly envelopes: readonly ParityEnvelope[];
 };
 
+
+/* ------------------------------------------------------------------------- */
+/* The on-disk pm-notes fixture (GH-347 DM-3): a real document the production  */
+/* reader locates in the checkout's change folder.                            */
+/* ------------------------------------------------------------------------- */
+
+const PM_NOTES_MONTH = "2026-11";
+const PM_NOTES_FOLDER = "2026-11-19--GH-347--parity-fixture";
+
+const pmNotesDocument = (deliveryCompleted: string | null): string =>
+  `change_id: GH-347
+title: "Parity fixture document"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: "2026-11-19T00:00:00.000Z" }
+  specification: { started: null, completed: "2026-11-19T00:00:00.000Z" }
+  test_planning: { started: null, completed: "2026-11-19T00:00:00.000Z" }
+  delivery_planning: { started: null, completed: "2026-11-19T00:00:00.000Z" }
+  dor_check: { started: null, completed: "2026-11-19T00:00:00.000Z" }
+  delivery: { started: null, completed: ${deliveryCompleted === null ? "null" : `"${deliveryCompleted}"`} }
+open_questions: []
+blockers: []
+notes: []
+`;
+
+export const COMPLETE_PM_NOTES = pmNotesDocument("2026-11-19T12:00:00.000Z");
+export const INCOMPLETE_PM_NOTES = pmNotesDocument(null);
+export const MALFORMED_PM_NOTES = "change_id: [unterminated\nphases: {";
+
+export type PmNotesFixtureKind = "complete" | "incomplete" | "absent" | "malformed";
+
+/** Write one fixture document into the checkout and return its path (or none). */
+export const writePmNotesFixture = (
+  checkout: string,
+  kind: PmNotesFixtureKind,
+  ref = "GH-347",
+): string | undefined => {
+  if (kind === "absent") return undefined;
+  const folder = join(checkout, "doc", "changes", PM_NOTES_MONTH, PM_NOTES_FOLDER);
+  mkdirSync(folder, { recursive: true });
+  const file = join(folder, `chg-${ref}-pm-notes.yaml`);
+  writeFileSync(
+    file,
+    kind === "complete"
+      ? COMPLETE_PM_NOTES
+      : kind === "incomplete"
+        ? INCOMPLETE_PM_NOTES
+        : MALFORMED_PM_NOTES,
+  );
+  return file;
+};
+
 export type ParityHarnessOptions = {
   readonly label?: string;
   readonly ref?: string;
@@ -119,6 +171,8 @@ export type ParityHarnessOptions = {
   readonly originUrl?: string;
   /** Observes every landed store append (the interleaving latch wires its release). */
   readonly onAppend?: (record: { readonly kind: string }) => void;
+  /** The on-disk pm-notes fixture; defaults to a complete document. */
+  readonly pmNotes?: PmNotesFixtureKind;
 };
 
 export type ParityHarness = {
@@ -147,26 +201,54 @@ const resolveBrand = (): BrandIdentity => {
   return resolved.value;
 };
 
-/** The default transport: one readable issue per id, no pull requests. */
-export const readableParityTransport = (requests?: string[]): ParityTransport => ({
-  send: async (request) => {
-    requests?.push(request.url);
-    const issue = /\/issues\/(\d+)(?:[?/]|$)/u.exec(request.url);
-    if (issue !== null) {
-      const number = Number(issue[1]);
-      return {
-        status: 200,
-        body: { number, title: `Change ${number}`, state: "open", labels: [], body: "" },
-      };
-    }
-    if (request.url.includes("/pulls?")) return { status: 200, body: [] };
-    if (request.url.includes("/issues?")) return { status: 200, body: [] };
-    if (request.url.includes("/check-runs")) {
-      return { status: 200, body: { total_count: 0, check_runs: [] } };
-    }
-    return { status: 200, body: { items: [] } };
-  },
-});
+/**
+ * The scripted transport: one readable issue per id, no pull requests by
+ * default. `trackerFailures` fails that many issue reads with a provider fault
+ * before answering, so the tracker ladder's attempt count and waits are
+ * observable independently of the token.
+ */
+export const readableParityTransport = (
+  options: {
+    readonly requests?: string[];
+    readonly trackerFailures?: number;
+    readonly openPulls?: readonly unknown[];
+    readonly mergedPulls?: readonly unknown[];
+  } = {},
+): ParityTransport => {
+  let issueReads = 0;
+  const failures = options.trackerFailures ?? 0;
+  return {
+    send: async (request) => {
+      options.requests?.push(request.url);
+      const issue = /\/issues\/(\d+)(?:[?/]|$)/u.exec(request.url);
+      if (issue !== null) {
+        issueReads += 1;
+        // The FIRST issue read is the admission preflight (one bounded read);
+        // the ladder's reads follow it, so the outage starts at read 2.
+        if (issueReads > 1 && issueReads <= failures + 1) {
+          return { status: 500, body: { message: "synthetic tracker outage" } };
+        }
+        const number = Number(issue[1]);
+        return {
+          status: 200,
+          body: { number, title: `Change ${number}`, state: "open", labels: [], body: "" },
+        };
+      }
+      if (request.url.includes("/pulls?state=open")) {
+        return { status: 200, body: options.openPulls ?? [] };
+      }
+      if (request.url.includes("/pulls?state=closed")) {
+        return { status: 200, body: options.mergedPulls ?? [] };
+      }
+      if (request.url.includes("/pulls?")) return { status: 200, body: [] };
+      if (request.url.includes("/issues?")) return { status: 200, body: [] };
+      if (request.url.includes("/check-runs")) {
+        return { status: 200, body: { total_count: 0, check_runs: [] } };
+      }
+      return { status: 200, body: { items: [] } };
+    },
+  };
+};
 
 export const createParityHarness = (options: ParityHarnessOptions = {}): ParityHarness => {
   const brand = resolveBrand();
@@ -211,6 +293,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
   };
 
   const ref = options.ref ?? "GH-347";
+  writePmNotesFixture(checkout, options.pmNotes ?? "complete", ref);
   const seededAt = clock.nowIso();
   for (const seededRef of [ref, ...(options.extraRefs ?? [])]) {
     const seeded = declareQueueEntry(rawStore, {

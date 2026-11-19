@@ -149,6 +149,7 @@ export {
   type PmNotesTargetRequest,
   type PmNotesTextRead,
   parsePmNotesText,
+  projectPmNotesCompleteness,
   readPmNotesTarget,
   readPmNotesText,
   stagePmNotesPhaseEntry,

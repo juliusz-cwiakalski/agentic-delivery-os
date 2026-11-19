@@ -10,8 +10,10 @@ import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
+  DISPATCH_CORROBORATION_ARM_SUFFICIENCY,
   DISPATCH_CORROBORATION_SUFFICIENCY,
   type DispatchComparisonClass,
+  type DispatchCorroborationArm,
   type DispatchComparisonOutcome,
   type DispatchComparisonReason,
   type DispatchComparisonRecord,
@@ -145,10 +147,22 @@ export const buildComparisonRecord = (input: ComparisonInput): DispatchCompariso
 export const comparisonClassOf = (record: DispatchComparisonRecord): DispatchComparisonClass =>
   record.class;
 
-/** The independently required corroboration sources for a success claim. */
+/**
+ * The independently required corroboration sources for a success claim.
+ *
+ * `arm` is data, not a second classification: the one derivation decides the
+ * arm at its two arm-aware branches (GH-347 DEC-6, TDR-0048) and every
+ * consumer passes that same value. Absent an arm the token-level requirement
+ * applies, so a persisted consumer with no arm (the evidence-window gate) is
+ * unchanged.
+ */
 export const requiredCorroboration = (
   token: DispatchToken,
-): readonly DispatchCorroborationSource[] => DISPATCH_CORROBORATION_SUFFICIENCY[token];
+  arm?: DispatchCorroborationArm,
+): readonly DispatchCorroborationSource[] =>
+  arm === undefined
+    ? DISPATCH_CORROBORATION_SUFFICIENCY[token]
+    : DISPATCH_CORROBORATION_ARM_SUFFICIENCY[arm];
 
 /**
  * One injected per-source corroboration fact (AC-F4-4).
@@ -181,8 +195,9 @@ export const unreadableCorroborationSources = (
 export const buildCorroborationRecord = (input: {
   readonly token: DispatchToken;
   readonly facts?: CorroborationFacts;
+  readonly arm?: DispatchCorroborationArm;
 }): DispatchCorroborationRecord => {
-  const required = requiredCorroboration(input.token);
+  const required = requiredCorroboration(input.token, input.arm);
   const stateFor = (source: DispatchCorroborationSource): DispatchCorroborationState => {
     if (!required.includes(source)) return "not-applicable";
     const fact = input.facts?.[source];
@@ -215,8 +230,9 @@ export const classifyFalseSuccess = (input: {
   readonly comparison: DispatchComparisonRecord;
   readonly corroboration: DispatchCorroborationRecord;
   readonly unreadable?: readonly DispatchCorroborationSource[];
+  readonly arm?: DispatchCorroborationArm;
 }): boolean => {
-  const required = requiredCorroboration(input.token);
+  const required = requiredCorroboration(input.token, input.arm);
   if (required.length === 0) return false;
   if (input.comparison.outcome === "mismatch") return true;
   const unreadable = input.unreadable ?? [];
@@ -227,3 +243,14 @@ export const classifyFalseSuccess = (input: {
       !unreadable.includes(source) && input.corroboration[fieldOf(source)] === "unsatisfied",
   );
 };
+
+/**
+ * The TOKEN-LEVEL corroboration requirement, for a persisted consumer that has
+ * no arm to consult (GH-347 phase 4 obligation 4.5): the evidence-window gate
+ * reads an attempt record, which carries no arm, and adding one would be an
+ * attempt-schema change (NFR-3). The window therefore stays token-level by
+ * decision; this named accessor is the one place it reads the requirement.
+ */
+export const windowCorroborationRequirement = (
+  token: DispatchToken,
+): readonly DispatchCorroborationSource[] => requiredCorroboration(token);

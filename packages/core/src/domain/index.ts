@@ -259,6 +259,7 @@ export {
   isComparisonShapeValid,
   requiredCorroboration,
   unreadableCorroborationSources,
+  windowCorroborationRequirement,
 } from "./dispatch-comparison.js";
 export {
   COUNTED_EVIDENCE_CLASS,
@@ -321,6 +322,15 @@ export {
   type DispatchTruthInput,
   deriveDispatchResult,
 } from "./dispatch-result.js";
+export {
+  DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
+  DISPATCH_TRACKER_LADDER_ATTEMPTS,
+  DISPATCH_TRACKER_LADDER_BASE_MS,
+  DISPATCH_TRACKER_LADDER_CAP_MS,
+  type DispatchTrackerLadderOutcome,
+  dispatchTrackerLadderWait,
+  runDispatchTrackerLadder,
+} from "./dispatch-tracker.js";
 export {
   admissionRefusalPair,
   admitDispatchRestart,

@@ -157,6 +157,24 @@ export const DISPATCH_CORROBORATION_SUFFICIENCY = {
   "noop-lane-permission": [],
 } as const satisfies Readonly<Record<DeliveryResultToken, readonly DispatchCorroborationSource[]>>;
 
+/**
+ * The closed corroboration-arm vocabulary (GH-347 DM-4, TDR-0048; AC-F8-1,
+ * AC-F8-4). Exactly the two arms whose required evidence source changed: a
+ * tracker-done `merged` and a nothing-to-do result are corroborated by the
+ * tracker fact alone. Every other token keeps its token-keyed requirement.
+ */
+export const DISPATCH_CORROBORATION_ARMS = ["tracker-done-merged", "nothing-to-do"] as const;
+
+export type DispatchCorroborationArm = (typeof DISPATCH_CORROBORATION_ARMS)[number];
+
+/** The arm-keyed sufficiency entries; the only additions to the token map. */
+export const DISPATCH_CORROBORATION_ARM_SUFFICIENCY = {
+  "tracker-done-merged": ["tracker"],
+  "nothing-to-do": ["tracker"],
+} as const satisfies Readonly<
+  Record<DispatchCorroborationArm, readonly DispatchCorroborationSource[]>
+>;
+
 /** The four handover conditions, in evaluation order (DM-7). */
 export const DISPATCH_HANDOVER_CONDITIONS = [
   "truth",

@@ -33,6 +33,7 @@ import {
   readHostIndexFile,
   readLocalPmContext,
   readOwnerHoldMarker,
+  projectPmNotesCompleteness,
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
@@ -142,6 +143,7 @@ import {
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
   resolveDispatchLane,
+  runDispatchTrackerLadder,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
@@ -1573,6 +1575,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const nowMs = (): number => facts.clock?.nowMs() ?? Date.now();
     // The composition's declared start instant rides every lane owner fact.
     const compositionStartedAt = nowIso();
+    // The one injected delay fact (GH-347 AC-F9-2): production binds the real
+    // timer; an offline composition injects its recorder.
+    const dispatchDelay: DispatchDelay =
+      facts.dispatchDelay ??
+      ((ms) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        }));
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
 
@@ -2714,7 +2724,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
       const branch = await readChangeBranch(changeRef);
       const pull = await readPullTruth(changeRef, "identity" in branch ? undefined : branch.branch);
-      const trackerRead = await readTrackerTruth(changeRef);
+      // The bounded tracker ladder (GH-347 API-4, DEC-7): five attempts with the
+      // declared waits through the injected delay; exhaustion is named, never a
+      // success-shaped fact.
+      const ladder = await runDispatchTrackerLadder({
+        read: async () => {
+          const attempt = await readTrackerTruth(changeRef);
+          return attempt.ok
+            ? { ok: true as const, value: attempt.value }
+            : { ok: false as const, reason: "tracker" as const, identity: attempt.identity };
+        },
+        delay: dispatchDelay,
+      });
+      const trackerRead = ladder.ok
+        ? ({ ok: true as const, value: ladder.value })
+        : ({ ok: false as const, identity: ladder.identity });
 
       let artifacts: DispatchRead<DispatchArtifactFacts>;
       if ("identity" in branch) {
@@ -2724,7 +2748,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       } else {
         const commits = await readBranchCommits(branch.branch, pull.value);
         artifacts = commits.ok
-          ? { ok: true, value: { branchCommits: commits.value, pr: pull.value.fact } }
+          ? {
+              ok: true,
+              value: {
+                branchCommits: commits.value,
+                pr: pull.value.fact,
+                pmNotes: projectPmNotesCompleteness(verifyRuntime.readPmNotes(changeRef)),
+              },
+            }
           : { ok: false, reason: "artifact", identity: commits.identity };
       }
 
@@ -2989,15 +3020,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       dispatchHarnessFacts = admitted.facts;
       return { ok: true as const, facts: admitted.facts };
     };
-
-    // The one injected delay fact (GH-347 AC-F9-2): production binds the real
-    // timer; an offline composition injects its recorder.
-    const dispatchDelay: DispatchDelay =
-      facts.dispatchDelay ??
-      ((ms) =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, ms);
-        }));
 
     const dispatchComposition = (
       settings: HarnessSettings,

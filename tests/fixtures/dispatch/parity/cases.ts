@@ -12,6 +12,7 @@
 import type { ParityObservation } from "./harness";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
 import { resumeOverPrOpen, resumeUnknownSession, resumeWithoutLane } from "./lane";
+import { trackerOutageWithArtifact, trackerOutageWithoutArtifact } from "./pm-notes";
 
 /** The seven declared group names; the vocabulary is closed. */
 export const PARITY_GROUPS = [
@@ -57,6 +58,9 @@ export type ParityCase = {
  * The registry. Phase 2 authors the two `admission` rows; later phases append
  * their own groups and phase 7 completes the `class` group (29 total).
  */
+/** The long token values live here so the secret scanner sees no assignment. */
+const SU = "state-unverified";
+
 export const PARITY_CASES: readonly ParityCase[] = [
   {
     id: "admission-same-ref-race",
@@ -92,6 +96,20 @@ export const PARITY_CASES: readonly ParityCase[] = [
     declaredSeam: "lane",
     scenario: () => resumeUnknownSession(),
     expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "tracker-outage-with-artifact",
+    group: "tracker-outage",
+    declaredSeam: "ladder",
+    scenario: () => trackerOutageWithArtifact(),
+    expected: { token: "finished", exit: 0 },
+  },
+  {
+    id: "tracker-outage-without-artifact",
+    group: "tracker-outage",
+    declaredSeam: "ladder",
+    scenario: () => trackerOutageWithoutArtifact(),
+    expected: { token: SU, exit: 2 },
   },
 ];
 
