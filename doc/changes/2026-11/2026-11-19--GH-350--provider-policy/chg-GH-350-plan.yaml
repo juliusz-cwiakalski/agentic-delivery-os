@@ -8,11 +8,16 @@
 # plan phase id, the commit hash, and the test result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-350-spec.md (v1.3: F-1..F-8; **31** ACs
+#   - Spec:      ./chg-GH-350-spec.md (v1.4: F-1..F-8; **31** ACs
 #                AC-F1-1..AC-F8-5 — AC-F8-5 (entrypoint reachability, one
 #                criterion with two arms) sits inside F-8, so the capability list
-#                stays at eight; DM-1..DM-10; NFR-1..NFR-16; RSK-1..RSK-19;
-#                DEC-1..DEC-17 — DEC-16 adopts TDR-0053's mount (as corrected at
+#                stays at eight; DM-1..DM-10 — **DM-1 and DM-8 carry the AMENDED
+#                ZONE CONTRACT** (v1.4, per ADR-0012's `## Revision`, which is
+#                authoritative: three-member port, `ProviderZoneFacts`,
+#                `UTC_ZONE_FACTS`, `PeakWindowEndRule`, the transition-segment
+#                expiry and its probe budget); NFR-1..NFR-16; RSK-1..RSK-19;
+#                DEC-1..DEC-17 — DEC-1 cites ADR-0012 **as amended**, DEC-16
+#                adopts TDR-0053's mount (as corrected at
 #                DoR iteration 2: membership PLUS the six-seam `ProviderComposition`
 #                wiring) and DEC-17 adopts TDR-0054's work-item ref; no open
 #                question reaches delivery; §5.1 capability details; §6 flows
@@ -35,8 +40,7 @@
 #                including `workItemRef`), E (migration subset, mapping table,
 #                refusals), F (watch freshness), G (the three declared provider
 #                rows)).
-#   - Test plan: ./chg-GH-350-test-plan.md (v1.4: **108** cases in eleven blocks
-#                — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
+#   - Test plan: ./chg-GH-350-test-plan.md (v1.7: **108** cases in eleven blocks — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
 #                class-T paid-entry case), TC-CFG-001..011 (11),
 #                TC-INDEP-001..004 (4), TC-SIM-001..011 (11),
 #                TC-MIG-001..015 (15), TC-WFRESH-001..010 (10),
@@ -119,6 +123,52 @@
 #                `bash scripts/.tests/test-doc-distribution.sh` runs in phase 9's
 #                battery as a control).
 #
+# AMENDED ZONE CONTRACT — PHASE 2 SUMMARY (spec v1.4; ADR-0012's `## Revision` is
+# authoritative; this block is the plan-level digest of what phase 2 must now
+# build):
+#   ONE THREE-MEMBER PORT. `ProviderZonePort` = `isKnownZone(zone)`,
+#   `offsetSecondsAt(zone, atMs)` and a REQUIRED `nextTransitionAtOrAfter(zone,
+#   atMs): number | undefined` (smallest `T ≥ atMs` with
+#   `offsetSecondsAt(zone, T) ≠ offsetSecondsAt(zone, T − 1000)`, or `undefined`
+#   when the runtime knows of no transition at or after `atMs`). The third member
+#   is required: a composition that can resolve offsets but cannot produce
+#   transition instants does not implement the port and must not supply one.
+#   `undefined` means **"no transition in the horizon"** — never a capability
+#   signal, never a refusal, never an implicit UTC.
+#   ONE ZONE-BOUND FACTS VALUE. `ProviderZoneFacts = { offsetSecondsAt(atMs),
+#   nextTransitionAtOrAfter(atMs) }`, owned by `packages/core/src/contracts/
+#   provider.ts`, bound by `bindZoneFacts(zone, port)` in `packages/core/src/
+#   provider/peak.ts`; `UTC_ZONE_FACTS` (offset 0, no transition) is a core
+#   constant, which is why a `UTC` declaration still needs no port.
+#   ONE EXPIRY DERIVATION, SAME NAME, SECOND PARAMETER'S TYPE ONLY.
+#   `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` with `PeakWindowEndRule =
+#   { endSecondsOfDay, bufferAfterSeconds }` (the shape `peakWindowEndSeconds`
+#   already accepts). Only the second parameter changes type — scalar offset →
+#   zone facts — so TC-ZONE-008's structural binding (the engine's `expiresAtMs`,
+#   the profile gate's lane decision and the watcher's window end all derive from
+#   this one function) still holds unchanged.
+#   THE EXACT DERIVATION is a bounded TRANSITION-SEGMENT WALK, not a fixed-point
+#   loop over offsets: `LE(t) = t/1000 + offsetSecondsAt(t)` is linear inside a
+#   segment and jumps at a transition, and a fixed-point loop cannot locate the
+#   instant itself (it oscillates across a gap and lands an hour early or late).
+#   Per segment: `T ← nextTransitionAtOrAfter(segStart + 1000)`;
+#   `t* ← (target − off) × 1000`; return `t*` when `T` is `undefined` or
+#   `t* < T` (STRICT); at segment 3 return `t*` as the deterministic last
+#   candidate (the guard, so no fourth offset probe); otherwise
+#   `offNext ← offsetSecondsAt(T)` and return `T` when the POST-transition
+#   boundary satisfies `T/1000 + offNext ≥ target`; else advance. `target` is
+#   invariant across a repeated hour, which is why the first-occurrence rule falls
+#   out of the walk rather than needing a special case.
+#   PER-CELL RESULTS (the oracle): gap → the transition instant **exactly** (never
+#   a rounded neighbour); repeat → the FIRST occurrence at or after the evaluation
+#   instant; no transition → plain arithmetic in the current offset.
+#   PROBE BUDGET, COUNTED PER METHOD: ≤3 `offsetSecondsAt` probes AND ≤3
+#   `nextTransitionAtOrAfter` lookups per derivation, with the segment-3 guard
+#   returning before a fourth offset probe — total port-call ceiling 6, and the
+#   counting oracle counts each method separately. `waitSeconds` is
+#   `floor((expiresAtMs − nowMs) / 1000)` derived from the resolved expiry, never
+#   `end − localNow` (across a gap the two differ by the size of the skip).
+#
 # DOR ITERATION-1 REMEDIATION MAP (where each blocking finding is answered here):
 #   B1 — the family is unreachable in the production composition.
 #        Phase 8 is the TDR-0053 mount: membership in
@@ -170,11 +220,15 @@
 #        page set, and `feature-supervise.md` is a member-by-exception whose
 #        ordinal stays.
 #   B7 — TC-ZONE-008's structural oracle is unsatisfiable as written. Phase 2
-#        declares `peakWindowEndInstantMs(nowMs, offsetSeconds, rule)` in
-#        `packages/core/src/provider/peak.ts` and makes both the engine's
+#        declares `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` in
+#        `packages/core/src/provider/peak.ts` (spec v1.4: only the second
+#        parameter's TYPE changed, from a scalar offset to `ProviderZoneFacts`, so
+#        the structural binding is unchanged) and makes both the engine's
 #        `expiresAtMs` and the daemon watcher's window end derive from it; the
 #        seconds-of-day helpers stop being expiry producers and the assertion
-#        names exactly that.
+#        names exactly that. The instant itself is produced by the bounded
+#        transition-segment walk of the AMENDED ZONE CONTRACT block above, not by
+#        a fixed-point loop over offsets — offsets alone cannot locate a gap.
 #   NON-BLOCKING 1 — a record-child default cannot report a `layer=defaults`
 #        origin. VERIFIED at plan time against `packages/core/src/config/
 #        resolver.ts`: the defaults layer is built from catalog paths that carry a
@@ -460,6 +514,12 @@
 #   or retires a contract export falsifies it; each of those phases declares both
 #   files and moves them as one edit-set with its export change, which is the only
 #   way the aggregate gate stays green at the boundary — N-1),
+#   `tests/fixtures/provider/contract-inventory.json` (P1 the vocabulary names and
+#   closed sets; P2 the zone exports — `ProviderZonePort` with its three members,
+#   `ProviderZoneFacts`, `PeakWindowEndRule`, `PROVIDER_DEFAULT_ZONE`, the grammar
+#   constants, and the retirement of `PROVIDER_PEAK_TIMEZONES`; the same one-
+#   edit-set rule as the contracts-export inventory, because the suite compares
+#   `provider.ts`'s export names two-way against it),
 #   `packages/core/src/provider/{validate,engine,index}.ts`,
 #   `packages/core/src/provider/announcements.ts` (P1 the pure park-cause ->
 #   announcement-code mapping and the `info` classification of the widened code
@@ -914,7 +974,8 @@ tier:
     - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
     - "A page and the doc-conformance phrase that pins it move in different commits, a phrase row is added for prose a later phase contradicts, a page outside the closed page set states a claim this change falsifies, or `feature-supervise.md` is edited at all (the one-edit-set rule; spec §16's closed page set and family-count class)"
     - "`Intl`, `TZ`, an ambient clock, an environment read, a filesystem read or a network read appears anywhere in packages/core/src/provider or in the provider tier the ambient-globals check scans, `scripts/checks/ambient-globals.ts` still bans neither `Intl` nor a `TZ` access after phase 2, or a second workspace module reads zone data for provider policy (AC-F1-3, NFR-1, TC-ZONE-010)"
-    - "The engine's `expiresAtMs` and the daemon watcher's window end stop deriving from the one named `peakWindowEndInstantMs(nowMs, offsetSeconds, rule)`, or a second expiry computation reappears (AC-F1-2, NFR-4, TC-ZONE-008, DoR B7)"
+    - "The engine's `expiresAtMs` and the daemon watcher's window end stop deriving from the one named `peakWindowEndInstantMs(nowMs, zoneFacts, rule)`, or a second expiry computation reappears (AC-F1-2, NFR-4, TC-ZONE-008, DoR B7)"
+    - "A zone derivation spends a FOURTH probe of either port method (`offsetSecondsAt` or `nextTransitionAtOrAfter`), or returns a gap-adjacent instant instead of the transition instant itself — the segment-3 guard returns before a fourth offset probe, the per-method budget is ≤3 + ≤3 with a ceiling of 6, and a spring-forward cell must equal the transition instant to the millisecond (spec v1.4, ADR-0012 `## Revision`, AC-F1-2, TC-ZONE-005/-007/-008)"
     - "A budget evaluation writes state, performs more than one spend-totals read per evaluation at any budget count, opens a second measurement path, or lets a paid entry become selectable while a subscription entry is budget-PARKED (AC-F2-2, AC-F2-4, AC-F2-5, NFR-6, NFR-7, NFR-9, TC-BUD-007/010/016)"
     - "A budget-evaluating invocation measures zero, skips as clear, or downgrades to a window-only evaluation when no work-item ref resolves; the ref seam gains a flag, an environment variable or a state-store read; a read-only member (`quota`, `parks list`, `profile resolve`, `watch status`) resolves a ref; or `simulate` reads the local context (AC-F2-5, TDR-0054, TC-REF-001..005)"
     - "A budget park carries a non-future, absent or guessed expiry, a ticket-scope crossing is presented as a park, or the class-T paid-entry behaviour is implemented as class P (AC-F2-3, NFR-6, DEC-7, TC-BUD-010/017)"
@@ -1348,41 +1409,106 @@ phases:
   # boundary instant through ONE named function — or refuses by name instead of
   # reinterpreting the zone.
   #
-  # Contract: `provider.entries.<name>.peak.timezone` and
+  # Contract (SPEC v1.4 — the AMENDED ZONE CONTRACT; ADR-0012's `## Revision` is
+  # authoritative, see the header digest):
+  # `provider.entries.<name>.peak.timezone` and
   # `provider.profiles.profiles.<name>.peakWindows.windows[].timezone` admit the
   # literal `UTC` (default, and the alias of `Etc/UTC`) or an IANA name matching
   # the declared grammar bounded by `PROVIDER_ZONE_NAME_MAX_LENGTH` (63 and 64
   # validate, 65 refuses). `PROVIDER_PEAK_TIMEZONES` retires — in the contract AND
-  # in the `#contracts` barrel AND in the content inventory, in this commit; the
-  # validator decides grammar only and never asserts existence.
-  # `ProviderZonePort` (`isKnownZone`, `offsetSecondsAt`) lives in core contracts
-  # and is implemented once, at `packages/adapters/src/time-zone/`, which is the
-  # only workspace module that reads zone data for provider policy (no I/O, no
+  # in the `#contracts` barrel AND in the provider contract inventory, in this
+  # commit; the validator decides grammar only and never asserts existence.
+  # THE PORT HAS THREE MEMBERS, THE THIRD REQUIRED. `ProviderZonePort` =
+  # `isKnownZone(zone)`, `offsetSecondsAt(zone, atMs)` and
+  # `nextTransitionAtOrAfter(zone, atMs): number | undefined` — the smallest
+  # instant `T ≥ atMs` at which the zone's offset changes
+  # (`offsetSecondsAt(zone, T) ≠ offsetSecondsAt(zone, T − 1000)`). It is a
+  # REQUIRED member, not an optional one: a composition that can resolve offsets
+  # but cannot produce transition instants does not implement the port and per
+  # C-2 must not supply one. `packages/adapters/src/time-zone/index.ts` implements
+  # all three over the runtime's own `Intl` data AND verifies transitions
+  # (`offsetSecondsAt(T) ≠ offsetSecondsAt(T − 1000)`) before reporting them; it is
+  # the only workspace module that reads zone data for provider policy (no I/O, no
   # network, no extra environment read beyond what `Intl` itself uses).
-  # `packages/adapters/package.json` publishes the subpath. Every composition
-  # injects the port; a composition that cannot supply it REFUSES a non-UTC
-  # declaration with `provider.peak.zone-unknown` at exit 1 (no UTC fallback, no
-  # bundled table), while a `UTC` declaration needs no port.
-  # THE ONE NAMED EXPIRY DERIVATION (DoR B7): `peakWindowEndInstantMs(nowMs,
-  # offsetSeconds, rule)` is declared in `packages/core/src/provider/peak.ts`
-  # beside the delivered seconds-of-day helpers, which KEEP their names and stay
-  # SECONDS-OF-DAY PRODUCERS ONLY. It resolves the earliest instant at or after
-  # the declared local end by bounded fixed-point iteration (at most three
-  # passes, last candidate used), a skipped local second resolving to the
-  # transition instant and a repeated local second to its first occurrence. BOTH
-  # the engine's `expiresAtMs` and the daemon watcher's window end call it, so
-  # the assertion is exact: `evaluatePeakWindow`'s `expiresAtMs` and
-  # `daemon-peak-pause.ts`'s window end derive from that function, and
-  # `peakWindowOpenSeconds`/`peakWindowEndSeconds` produce no absolute instant.
+  # `packages/adapters/package.json` publishes the subpath.
+  # THE PURE INPUT IS A ZONE-BOUND FACTS VALUE. `ProviderZoneFacts =
+  # { offsetSecondsAt(atMs), nextTransitionAtOrAfter(atMs) }` is owned by
+  # `packages/core/src/contracts/provider.ts` (type only, ambient-neutral tier) and
+  # bound by `bindZoneFacts(zone, port)` in `packages/core/src/provider/peak.ts`;
+  # `UTC_ZONE_FACTS = { offsetSecondsAt: () => 0, nextTransitionAtOrAfter: () =>
+  # undefined }` is a core constant, which is why a `UTC` (or `Etc/UTC`)
+  # declaration still needs NO port. Every composition injects the port; a
+  # composition that cannot supply it REFUSES a non-UTC declaration with
+  # `provider.peak.zone-unknown` at exit 1 (no UTC fallback, no bundled table).
+  # `undefined` FROM THE TRANSITION LOOKUP MEANS "NO TRANSITION IN THE HORIZON" —
+  # never a capability signal, never a refusal, never an implicit UTC. The core
+  # treats it as "no transition intervenes", which is exact for a zone with no
+  # further transition: a declared window never crosses local midnight and
+  # `endSecondsOfDay ≤ 86400`, so any expiry lies at most 24 h ahead, and a zone
+  # that transitions in that day has a transition to report. Refusing on
+  # `undefined` would fail a zone that lawfully abolished DST.
+  # THE ONE NAMED EXPIRY DERIVATION (DoR B7; spec v1.4):
+  # `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` with `PeakWindowEndRule =
+  # { endSecondsOfDay, bufferAfterSeconds }` (the same end-rule shape
+  # `peakWindowEndSeconds` already accepts) is declared in
+  # `packages/core/src/provider/peak.ts` beside the delivered seconds-of-day
+  # helpers, which KEEP their names and stay SECONDS-OF-DAY PRODUCERS ONLY. ONLY
+  # THE SECOND PARAMETER'S TYPE CHANGES — scalar offset → `ProviderZoneFacts` — so
+  # TC-ZONE-008's structural binding still holds unchanged: the engine's
+  # `expiresAtMs`, the profile gate's lane decision and the watcher's window end
+  # all derive from this one function and none recomputes an instant from
+  # `utcSecondsOfDay`. Callers obtain facts through an injected
+  # `zoneFactsFor(zone)` seam (engine dependencies; watch input) built by
+  # `bindZoneFacts`, so the three surfaces consume one derivation and one binder.
+  # A descriptor window passes `bufferAfterSeconds: 0`; a profile window passes its
+  # own two values.
+  # THE DERIVATION IS A BOUNDED TRANSITION-SEGMENT WALK (not a fixed-point loop
+  # over offsets — offsets alone cannot locate a gap: the loop oscillates across
+  # the discontinuity and lands an hour early or late). Work at whole seconds
+  # (`nowS = floor(nowMs/1000) × 1000`); `LE(t) = t/1000 + offsetSecondsAt(t)` is
+  # linear inside an offset segment and jumps at each transition; `localNow =
+  # mod(nowS/1000 + off₀, 86400)` anchors the local day once and
+  # `target = (nowS/1000 + off₀) − localNow + E` is invariant across a repeated
+  # hour (which is why the FIRST-occurrence rule falls out instead of needing a
+  # case). Then, per segment: `off ← zoneFacts.offsetSecondsAt(segStart)` (probe 1
+  # at `nowS`); `T ← zoneFacts.nextTransitionAtOrAfter(segStart + 1000)` — probed
+  # at `segStart + 1000` so a transition exactly at `nowS` is not re-reported,
+  # because `offsetSecondsAt(nowS)` already carries the post-transition offset;
+  # `t* ← (target − off) × 1000`; return `t*` when `T = undefined` or `t* < T`
+  # (STRICT); at segment 3 return `t*` as the deterministic last candidate (the
+  # BUDGET GUARD — never a fourth offset probe); else `offNext ←
+  # zoneFacts.offsetSecondsAt(T)` and return `T` when the POST-transition boundary
+  # satisfies `T/1000 + offNext ≥ target`; else `off ← offNext`, `segStart ← T` and
+  # repeat.
+  # PER-CELL RESULTS (the oracle TC-ZONE-005/006 assert): a skipped local second
+  # (spring-forward gap) resolves to the TRANSITION INSTANT EXACTLY — the boundary
+  # test uses the POST-transition offset at `T`, never a rounded neighbour an hour
+  # away; a repeated local second (fall-back) resolves to its FIRST occurrence at
+  # or after the evaluation instant, because `t* < T` is strict and `target` is
+  # invariant; a window with no transition in between resolves by plain arithmetic
+  # in the current offset (`T` undefined).
+  # PROBE BUDGET, COUNTED PER METHOD: at most **3 `offsetSecondsAt` probes** and at
+  # most **3 `nextTransitionAtOrAfter` lookups** per derivation, the segment-3
+  # guard returning before it spends a fourth offset probe — TOTAL port-call
+  # ceiling 6, and the counting fake port counts each method separately. Typical
+  # cost is 1 + 1 (UTC, a non-DST zone, or a DST zone whose window is not open
+  # across its transition) and 2 + 2 when one transition intervenes.
+  # `waitSeconds` on a peak condition and on its park is
+  # `floor((expiresAtMs − nowMs) / 1000)` — derived from the resolved expiry, NEVER
+  # from `end − localNow`, because across a gap the two differ by the size of the
+  # skip and the seconds-of-day form would publish a wait that contradicts the
+  # park's own `expiresAtMs`.
   # WATCHER HALF, DECLARED: `packages/core/src/domain/daemon-peak-pause.ts`
   # currently derives the verdict from `utcSecondsOfDay` and builds the window end
   # from UTC seconds — a second boundary computation that becomes wrong the moment
-  # the basis widens. It therefore moves HERE, its own instant computation is
-  # REMOVED in favour of `peakWindowEndInstantMs`, its domain barrel row
-  # (`packages/core/src/domain/index.ts`) follows the new input fact, and
-  # `packages/core/src/app/daemon-supervision.ts` threads the zone facts through
-  # its declared peak ports. AC-F1-2's "0 differences" (TC-ZONE-008) is not
-  # assertable otherwise.
+  # the basis widens. It therefore moves HERE: `peakWindowOpenAt(rules, nowMs,
+  # zoneFactsFor)` binds each declared window's zone through the injected seam and
+  # calls `peakWindowEndInstantMs`, so its own instant computation is REMOVED; its
+  # domain barrel row (`packages/core/src/domain/index.ts`) follows the new input
+  # fact, and `packages/core/src/app/daemon-supervision.ts` threads the zone facts
+  # through its declared peak ports. AC-F1-2's "0 differences" (TC-ZONE-008) is
+  # not assertable otherwise.
+
   # THE AMBIENT GUARD GAINS THE ZONE RULE (DoR B3): `scripts/checks/
   # ambient-globals.ts` bans neither `Intl` nor a `TZ` access today, so
   # TC-ZONE-010's negative fixture had no rule to fail. `Intl` joins
@@ -1466,7 +1592,7 @@ phases:
   # Commit: feat(GH-350): zone-aware peak windows and the shared expiry derivation
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Zone port, local-seconds peak arithmetic and one named expiry derivation shared by the engine gate, the profile gate and the daemon watcher"
+    title: "Zone port, local-seconds peak arithmetic and one exact transition-segment expiry derivation shared by the engine gate, the profile gate and the daemon watcher"
     kind: delivery
     summary: "feat(GH-350): zone-aware peak windows and the shared expiry derivation"
     scope:
@@ -1485,6 +1611,24 @@ phases:
         # list for exactly this reason.
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/port-contract-inventory.test.ts
+        # THE PROVIDER CONTRACT INVENTORY MOVES WITH THE ZONE EXPORTS (spec v1.4):
+        # `tests/structure/provider-contract.test.ts` compares `provider.ts`'s
+        # export names two-way against this fixture, so adding `ProviderZonePort`
+        # (three members), `ProviderZoneFacts`, `PeakWindowEndRule`,
+        # `PROVIDER_DEFAULT_ZONE` and the grammar constants while retiring
+        # `PROVIDER_PEAK_TIMEZONES`/`ProviderPeakTimezone` falsifies it. Declared in
+        # phase 1 for the vocabulary names and HERE for the zone names, one
+        # edit-set with the contract file.
+        - tests/fixtures/provider/contract-inventory.json
+        # THE COUNTING ZONE-PORT FIXTURE (spec v1.4, ADR-0012 `## Revision`): the
+        # shared fake the zone suites inject — a step table whose `fromMs`
+        # boundaries ARE the transitions (so a transition lookup spends no hidden
+        # probe), PER-METHOD call counters for `offsetSecondsAt` and
+        # `nextTransitionAtOrAfter`, `UTC` facts, and an unknown-zone variant. The
+        # per-method probe budget (≤3 + ≤3, ceiling 6) and the gap-exactness arms
+        # are asserted against it, so it is a declared file, not an inline object in
+        # one suite.
+        - tests/fixtures/provider/zone-port.ts
         - packages/core/src/provider/peak.ts
         - packages/core/src/provider/peak-rules.ts
         - packages/core/src/provider/validate.ts

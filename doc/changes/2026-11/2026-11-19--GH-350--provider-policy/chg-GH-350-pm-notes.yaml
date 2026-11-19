@@ -5,9 +5,9 @@ story_code: M4-S4
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T05:54:41.790Z }
-  specification: { started: null, completed: 2026-11-19T07:52:06.641Z }
-  test_planning: { started: null, completed: 2026-11-19T08:38:39.374Z }
-  delivery_planning: { started: null, completed: 2026-11-19T09:28:30.293Z }
+  specification: { started: null, completed: 2026-11-19T10:11:13.277Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -80,6 +80,19 @@ decisions:
       creates no park. Additive view fields `observedAt`, `ageSeconds`,
       `maxAgeSeconds`; no new park cause, skip reason, announcement, error,
       command, cache or quota freshness key."
+    date: "2026-11-19"
+  - text: "ADR-0012 amended during phase 2 (delivery-discovered contradiction): the
+      port gains a required third member `nextTransitionAtOrAfter(zone, atMs)`;
+      the pure core consumes `ProviderZoneFacts` with `UTC_ZONE_FACTS` as a
+      definitional constant; the expiry uses a bounded transition-segment walk
+      (strict `t* < T`, post-transition boundary test, at most 3 segments) so a
+      skipped local second resolves to the transition instant exactly and a
+      repeated second to its first occurrence; the probe budget is per method (3
+      offsets + 3 transition lookups, ceiling 6); `peakWindowEndInstantMs(nowMs,
+      zoneFacts, rule)` keeps its name and arity with only the second
+      parameter's type changed; `waitSeconds` derives from the resolved expiry.
+      Bisection was rejected because the predicate is not monotone across a
+      fall-back, and 'last candidate' as pass-parity, not calendar."
     date: "2026-11-19"
   - text: "TDR-0053 — `provider` is mounted as the twenty-seventh and last
       prompt-required family (appended after `install`): membership, one family
@@ -161,6 +174,36 @@ notes:
       oracle is unsatisfiable because the boundary functions return
       seconds-of-day, not instants. Reopened: specification, test_planning,
       delivery_planning."
+    type: blocker
+    date: "2026-11-19"
+  - text: "DoR status after the zone-contract amendment: the READY verdict stands
+      without a new gate iteration. The amendment resolves an unsatisfiable
+      contract (it removes a requirement that could not be implemented), adds no
+      product surface, changes no AC count (31) or case count (108), and was
+      propagated into spec v1.4, test plan v1.7 and the plan's phase-2 contract
+      with two new fixtures; the plan validates. The ADR records an executed
+      algorithm check across the DST cells and the probe budget."
+    type: info
+    date: "2026-11-19"
+  - text: "Phase 1 delivered: commit e282db52, full aggregate gate green (11128
+      pass, 4 skip, 0 fail; boundaries, memory, prompt, help and exports all
+      OK). Moves landed: vocabulary 6/8/9/13, watch 6, allowlists 14/17,
+      provider kind 16, entries/documented 167/167, delivered-rows metric 166,
+      arithmetic +133, corpus 84 (59/25), allowlist 66, plus the ten asserting
+      suites and the count-bearing pages. Note: the commit primitive composed a
+      docs(...) subject from the staged set rather than the plan's feat(...)
+      summary; conventional and lint-valid, flagged for the range-lint review."
+    type: evidence
+    date: "2026-11-19"
+  - text: "Phase 2 blocked before code: the zone contract is internally
+      unsatisfiable — ProviderZonePort exposes only isKnownZone/offsetSecondsAt
+      and TC-ZONE-007 caps offset probes at three, yet AC-F1-2/TC-ZONE-006
+      require a spring-forward end inside the skipped interval to resolve to the
+      exact transition instant, which offset probes alone cannot locate; and
+      peakWindowEndInstantMs(nowMs, offsetSeconds, rule) takes a scalar offset
+      while the rule requires re-resolution at the candidate. Decision delegated
+      to @decision-advisor to extend the port with a transition fact and fix the
+      signature; spec, test plan and plan follow."
     type: blocker
     date: "2026-11-19"
   - text: "Sweep result (plan phase delivery_planning re-recorded, DoR verdict
@@ -331,4 +374,16 @@ notes:
       most plausibly map onto the existing project-committed/project-local
       config layers rather than a new project registry (M4-S5 undelivered)."
     type: info
+    date: "2026-11-19"
+  - text: "GH-350 plan phase 1 (delivery) complete: declared provider vocabulary,
+      the moved error register, the engine-profile-announcement/parks assertion
+      sweep, and the eight decision records. Commit e282db52. Gate:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (11128 pass / 4 skip / 0 fail;
+      lint, format, typecheck, boundaries, memory, prompt-conformance,
+      help-guide-coverage and exports-parity all green); error-table-sync
+      entries=167 documented=167 with the delivered-rows metric at 166,
+      allowlist 66, arithmetic +133, corpus 84 (59 true-positive / 25
+      false-positive); provider kind 16 rows; narrow register, inventory and
+      documentation suites 325 pass."
+    type: evidence
     date: "2026-11-19"
