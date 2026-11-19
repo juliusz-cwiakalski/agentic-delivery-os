@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-19T13:33:12.941Z }
   delivery_planning: { started: null, completed: 2026-11-19T13:33:23.784Z }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-19T21:02:45.335Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -190,20 +190,19 @@ notes:
     type: evidence
     date: "2026-11-19"
   - text: "Resume sync finding (resolved before the merge): origin/main-tools
-      advanced by f802f71a (GH-347 dispatch core parity) and already carries
-      the decision records 0049..0054; GH-348 holds 0055 and 0056 in flight. The
-      six ADR-0012 companion records this branch created therefore moved to
-      the next free ids TDR-0057..TDR-0062: 0049 -> 0057 (budget ceilings),
-      0050 -> 0058 (provider simulate), 0051 -> 0059 (legacy migration), 0052
-      -> 0060 (watch freshness), 0053 -> 0061 (family mounting), 0054 -> 0062
-      (budget work-item ref). The renumber is applied across the six
-      filenames, their front matter and headings, the decision index rows and
-      narrative block, ADR-0012, the spec, test plan, plan, pm-notes and the
-      three readiness reviews, and the source comments in edge.ts,
-      production.ts, config/catalog.ts, contracts/provider.ts,
-      provider/engine.ts and provider/budgets.ts. TDR-0044..TDR-0048 (GH-346)
-      and every ADR, PDR and ODR are untouched; tracked here so the renumber
-      is not mistaken for scope drift."
+      advanced by f802f71a (GH-347 dispatch core parity) and already carries the
+      decision records 0049..0054; GH-348 holds 0055 and 0056 in flight. The six
+      ADR-0012 companion records this branch created therefore moved to the next
+      free ids TDR-0057..TDR-0062: 0049 -> 0057 (budget ceilings), 0050 -> 0058
+      (provider simulate), 0051 -> 0059 (legacy migration), 0052 -> 0060 (watch
+      freshness), 0053 -> 0061 (family mounting), 0054 -> 0062 (budget work-item
+      ref). The renumber is applied across the six filenames, their front matter
+      and headings, the decision index rows and narrative block, ADR-0012, the
+      spec, test plan, plan, pm-notes and the three readiness reviews, and the
+      source comments in edge.ts, production.ts, config/catalog.ts,
+      contracts/provider.ts, provider/engine.ts and provider/budgets.ts.
+      TDR-0044..TDR-0048 (GH-346) and every ADR, PDR and ODR are untouched;
+      tracked here so the renumber is not mistaken for scope drift."
     type: blocker
     date: "2026-11-19"
   - text: "Commit-message observation (not blocking): the commit primitive composes
@@ -487,55 +486,54 @@ notes:
   - text: "GH-350 plan phase 4 (delivery) complete: the typed provider.budgets
       record-map catalog branch (enabled default true, scope/basis/ceiling
       required, windowSeconds required iff the scope is window, entries list,
-      shipped empty, exact unknown-key discipline) reached from configuration
-      so the phase-3 fail-closed rules refuse as provider.chain.invalid naming
-      the offending field with no partial evaluation; the per-repository
-      precedence evidence (the defaults, system, user-global,
-      project-committed and project-local winners with real file and line
-      origins, project-local over project-committed 5/5, child-name record
-      merges, whole-list replacement, reset, a complete leaf-origin table with
-      zero non-winning leaves, an invalid repository-layer refusal with no
-      machine-global fallback, CI=true read of the committed policy with
-      project-local ci-disabled and zero reads, --enable-project-local-config,
-      the selected-file selected-config posture, and no provider.projects
-      surface); the runtime-independence evidence (resolve, quota and watch
-      status resolve with both legacy paths absent and present-but-inert, zero
-      reads, unchanged legacy digests and mtimes, and no production module
-      reading either path or an observed environment name); the rule-4
-      boundary fixture (a provider-shaped environment read refused in the
-      provider tier) and the completed feature-config-layer page with its
-      doc-conformance phrase row. Commit 85dfe914. Gate: GIT_CONFIG_COUNT=1
-      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
-      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11235 pass / 4 skip / 2 fail (11241
-      tests); both failures are 5 s timeouts under parallel load with zero
-      assertion failures and pass alone (tests/checks/privacy-literals.test.ts
-      39/39, tests/behaviour/metrics-read-cost.test.ts 4/4). The earlier run
-      without the override logged 9 timeout/SIGTERM failures in git-fixture
-      suites (TC-ATTEMPT-003, TC-CLOSE-045/046/048/049, TC-SUP-011,
-      TC-SUP-072, TC-WATCHDOG-025/026/060): host-level global commit.gpgsign
-      plus concurrent batteries in this checkout, not phase-4 regressions;
-      each passes alone, and watchdog-checks-not-runner is 5/5 in 1.0 s with
-      the signing override. Narrow gate: provider-config-precedence plus
-      provider-legacy-reads plus provider-legacy-absence 28 pass,
-      provider-budgets 25 pass, tests/boundaries 154 pass, doc-conformance 33
-      pass, typecheck green. Scope note (declared, not a weakening):
-      TC-INDEP-001's fourth member provider simulate does not exist until
-      phase 5, so this phase proves resolve, quota and watch status plus the
-      structural absence, and the simulate arm lands with the member.
-      Concurrent-session note: a PM resume-sync blocker entry (TDR id
-      collision with main-tools f802f71a) was already present in the working
-      tree and rode this commit as reported scope drift."
+      shipped empty, exact unknown-key discipline) reached from configuration so
+      the phase-3 fail-closed rules refuse as provider.chain.invalid naming the
+      offending field with no partial evaluation; the per-repository precedence
+      evidence (the defaults, system, user-global, project-committed and
+      project-local winners with real file and line origins, project-local over
+      project-committed 5/5, child-name record merges, whole-list replacement,
+      reset, a complete leaf-origin table with zero non-winning leaves, an
+      invalid repository-layer refusal with no machine-global fallback, CI=true
+      read of the committed policy with project-local ci-disabled and zero
+      reads, --enable-project-local-config, the selected-file selected-config
+      posture, and no provider.projects surface); the runtime-independence
+      evidence (resolve, quota and watch status resolve with both legacy paths
+      absent and present-but-inert, zero reads, unchanged legacy digests and
+      mtimes, and no production module reading either path or an observed
+      environment name); the rule-4 boundary fixture (a provider-shaped
+      environment read refused in the provider tier) and the completed
+      feature-config-layer page with its doc-conformance phrase row. Commit
+      85dfe914. Gate: GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11235 pass /
+      4 skip / 2 fail (11241 tests); both failures are 5 s timeouts under
+      parallel load with zero assertion failures and pass alone
+      (tests/checks/privacy-literals.test.ts 39/39,
+      tests/behaviour/metrics-read-cost.test.ts 4/4). The earlier run without
+      the override logged 9 timeout/SIGTERM failures in git-fixture suites
+      (TC-ATTEMPT-003, TC-CLOSE-045/046/048/049, TC-SUP-011, TC-SUP-072,
+      TC-WATCHDOG-025/026/060): host-level global commit.gpgsign plus concurrent
+      batteries in this checkout, not phase-4 regressions; each passes alone,
+      and watchdog-checks-not-runner is 5/5 in 1.0 s with the signing override.
+      Narrow gate: provider-config-precedence plus provider-legacy-reads plus
+      provider-legacy-absence 28 pass, provider-budgets 25 pass,
+      tests/boundaries 154 pass, doc-conformance 33 pass, typecheck green. Scope
+      note (declared, not a weakening): TC-INDEP-001's fourth member provider
+      simulate does not exist until phase 5, so this phase proves resolve, quota
+      and watch status plus the structural absence, and the simulate arm lands
+      with the member. Concurrent-session note: a PM resume-sync blocker entry
+      (TDR id collision with main-tools f802f71a) was already present in the
+      working tree and rode this commit as reported scope drift."
     type: evidence
     date: "2026-11-19"
-  - text: "GH-350 decision-record renumber (pre-merge, no phase transition): the
-      six ADR-0012 companion records moved to TDR-0057..TDR-0062 because
-      upstream main-tools already carries records 0049..0054 (GH-347,
-      f802f71a) and GH-348 holds 0055 and 0056 in flight. Mapping: 0049 ->
-      0057 (budget ceilings), 0050 -> 0058 (provider simulate), 0051 -> 0059
-      (legacy migration), 0052 -> 0060 (watch freshness), 0053 -> 0061 (family
+  - text: "GH-350 decision-record renumber (pre-merge, no phase transition): the six
+      ADR-0012 companion records moved to TDR-0057..TDR-0062 because upstream
+      main-tools already carries records 0049..0054 (GH-347, f802f71a) and
+      GH-348 holds 0055 and 0056 in flight. Mapping: 0049 -> 0057 (budget
+      ceilings), 0050 -> 0058 (provider simulate), 0051 -> 0059 (legacy
+      migration), 0052 -> 0060 (watch freshness), 0053 -> 0061 (family
       mounting), 0054 -> 0062 (budget work-item ref). Applied by git mv on the
-      six filenames plus id, heading and cross-reference updates in the
-      records themselves, the 00-index rows and narrative block, ADR-0012,
+      six filenames plus id, heading and cross-reference updates in the records
+      themselves, the 00-index rows and narrative block, ADR-0012,
       feature-config-layer, the spec, test plan, plan, pm-notes, all three
       readiness reviews, and the source comments in edge.ts, production.ts,
       config/catalog.ts, contracts/provider.ts, provider/engine.ts and
@@ -544,23 +542,22 @@ notes:
       --exclude-dir=node_modules --exclude-dir=.git -E
       'TDR-00(49|50|51|52|53|54)' . -> 0 hits; the same grep for
       'TDR-005[7-9]|TDR-006[0-2]' -> 218 hits. Gates: bun test
-      tests/checks/decision-record.test.ts
-      tests/checks/doc-conformance.test.ts -> 44 pass / 0 fail; pnpm typecheck
-      green after a clean dist rebuild (stale dist artifacts had still carried
-      the old ids); jaiship lint GH-350 -> conforms; jaiship plan validate
-      GH-350 -> valid, readyForDevelopment=true. Commit 20e5dff5."
+      tests/checks/decision-record.test.ts tests/checks/doc-conformance.test.ts
+      -> 44 pass / 0 fail; pnpm typecheck green after a clean dist rebuild
+      (stale dist artifacts had still carried the old ids); jaiship lint GH-350
+      -> conforms; jaiship plan validate GH-350 -> valid,
+      readyForDevelopment=true. Commit 20e5dff5."
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 merge sync with origin/main-tools (f802f71a): merge commit
       50a1482b (parents 5c189f46 and f802f71a), no conflict aborted and no
       --abort used. Three conflicts resolved as union. (1)
       doc/decisions/00-index.md: upstream's six GH-347 dispatch rows
-      TDR-0049..TDR-0054 and this branch's six provider rows
-      TDR-0057..TDR-0062 both kept, and the three narrative blocks (GH-346
-      0044..0048, GH-347 0049..0054, GH-350 0057..0062) kept in id order;
-      nothing renumbered further and no row dropped. (2)
-      doc/spec/features/feature-config-layer.md: upstream's GH-347
-      dispatch-lane policy paragraph kept beside this branch's
+      TDR-0049..TDR-0054 and this branch's six provider rows TDR-0057..TDR-0062
+      both kept, and the three narrative blocks (GH-346 0044..0048, GH-347
+      0049..0054, GH-350 0057..0062) kept in id order; nothing renumbered
+      further and no row dropped. (2) doc/spec/features/feature-config-layer.md:
+      upstream's GH-347 dispatch-lane policy paragraph kept beside this branch's
       provider.budgets table, declared-zone peak value domain, record-map list
       and per-repository section (precedence matrix, origins, CI=true,
       selected-file, multi-checkout boundary); the front-matter links union
@@ -569,22 +566,22 @@ notes:
       createProductionProviderComposition (readLocalPmContext ref seam plus
       createProviderSpendTotalsPort) landed as a pure 47-line addition over
       upstream's dispatch composition; the DispatchLaneFacts type import was
-      dropped because upstream deleted its only consumer (laneFactsFor,
-      replaced by resolveDispatchLane), which the build named as TS6133.
-      Renumber interplay: the six provider records stay TDR-0057..TDR-0062
-      (0057 budgets, 0058 simulate, 0059 migration, 0060 watch, 0061 mount,
-      0062 ref); upstream's 0049..0054 are its own dispatch records and are
-      untouched. Counts: UNCHANGED, established after the merge rather than
-      assumed. bun run scripts/checks/error-table-sync.ts reports entries=167
-      documented=167 corpus=84 and OK; the merged table holds 167 source
-      entries = 34 baseline + 133, 167 documented rows, 166 delivered rows on
-      the separate metric, the 66-entry two-segment allowlist, and the 84-row
-      corpus (59 true-positive / 25 false-positive); the provider kind holds
-      16 rows and the vocabulary stays 6 condition kinds, 8 park causes, 9
-      skip reasons, 13 announcement codes, 14 park evidence fields, 17
-      announcement evidence fields. So no page or spec total moved: 167 / 167
-      / 166 / +133 / 66 / 84 (59/25) were correct before and after. The
-      count-bearing suites (tests/checks/error-table-sync.test.ts,
+      dropped because upstream deleted its only consumer (laneFactsFor, replaced
+      by resolveDispatchLane), which the build named as TS6133. Renumber
+      interplay: the six provider records stay TDR-0057..TDR-0062 (0057 budgets,
+      0058 simulate, 0059 migration, 0060 watch, 0061 mount, 0062 ref);
+      upstream's 0049..0054 are its own dispatch records and are untouched.
+      Counts: UNCHANGED, established after the merge rather than assumed. bun
+      run scripts/checks/error-table-sync.ts reports entries=167 documented=167
+      corpus=84 and OK; the merged table holds 167 source entries = 34 baseline
+      + 133, 167 documented rows, 166 delivered rows on the separate metric, the
+      66-entry two-segment allowlist, and the 84-row corpus (59 true-positive /
+      25 false-positive); the provider kind holds 16 rows and the vocabulary
+      stays 6 condition kinds, 8 park causes, 9 skip reasons, 13 announcement
+      codes, 14 park evidence fields, 17 announcement evidence fields. So no
+      page or spec total moved: 167 / 167 / 166 / +133 / 66 / 84 (59/25) were
+      correct before and after. The count-bearing suites
+      (tests/checks/error-table-sync.test.ts,
       tests/structure/error-table.test.ts,
       tests/structure/content-inventory.test.ts,
       tests/structure/port-contract-inventory.test.ts,
@@ -592,23 +589,22 @@ notes:
       pass 98/98, and the auto-merged inventories (v1-contract-inventory.json,
       inventory.json, content-inventory.test.ts) are pure additions over HEAD.
       Gate: GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
-      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11422 pass
-      / 4 skip / 2 fail (11428 tests); both failures are 5 s timeouts under
-      host load with zero assertion failures, TC-METRICS-106 (passes 4/4
-      alone) and TC-SHELL-001's two registry rows (pass 4/4 alone at a 60 s
-      budget, ~11 s total on this host). pnpm build green after a clean dist
-      rebuild."
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11422 pass /
+      4 skip / 2 fail (11428 tests); both failures are 5 s timeouts under host
+      load with zero assertion failures, TC-METRICS-106 (passes 4/4 alone) and
+      TC-SHELL-001's two registry rows (pass 4/4 alone at a 60 s budget, ~11 s
+      total on this host). pnpm build green after a clean dist rebuild."
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 plan phase 5 (delivery) complete: `provider simulate --fixture
-      <path> [--json]` composes the delivered createProviderEngine with
-      fixture seams and calls resolve with persist:false, and none of its own
-      routing, condition, park or announcement logic exists.
+      <path> [--json]` composes the delivered createProviderEngine with fixture
+      seams and calls resolve with persist:false, and none of its own routing,
+      condition, park or announcement logic exists.
       packages/core/src/provider/simulate.ts declares the strict
       delivery.provider.simulate.v1 parser (unknown key, missing key, wrong
       type, unsupported version, and the PROVIDER_SIMULATE_FIXTURE_MAX_BYTES =
-      65536 byte bound each refuse input.value.rejected naming the field with
-      no content echoed; the credential outcome is a closed
+      65536 byte bound each refuse input.value.rejected naming the field with no
+      content echoed; the credential outcome is a closed
       resolved/missing/rejected enum, so a credential value is not
       representable), a step-table zone port, the spend-points projection, the
       credential and quota seams, the delivered six resolve keys followed by
@@ -619,42 +615,42 @@ notes:
       never read). packages/adapters/src/file/provider-simulate-fixture.ts is
       the one bounded read, exported through the subpath barrel. The CLI gains
       the simulate grammar (no --chain/--profile/--all/positional, one
-      --fixture), the runtime member, and the human rendering; edge.ts
-      composes it over the fixture filesystem seam
-      (ProviderComposition.fixtureFs) and production.ts supplies the node
-      reader. The production .dependency-cruiser.cjs gains
-      provider-fixture-read-only-simulate (reachable only from the simulate
-      composition) with its named failing fixture, its fixture-registry entry
-      and the verify-imports rule-name entry; the content inventory and
-      executable allowances move for both new modules; the hermetic and
-      one-evaluator scans cover them. Tests: provider-simulate (16),
-      provider-budget-ref TC-REF-004 (+3), provider-simulate-cli (5), the
-      simulate goldens (2), provider-composition-absence (4), boundaries +1,
-      hermetic +2. No help entry and no provider.simulate.* error row (both
-      declared for phase 8 / never). Commit 54d602f4. Gate: narrow
-      provider-simulate + provider-budget-ref + provider-simulate-cli +
-      goldens 35 pass; provider-composition-absence + content-inventory +
-      verify-imports 29 pass; tests/boundaries 155 pass; typecheck green;
-      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
-      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11455 pass
-      / 4 skip / 2 fail (11461 tests). Both failures are host-load timeouts
-      with zero assertion failures and pass alone: TC-BIN-010 in
-      tests/behaviour/identity-override.test.ts (9/9 alone) and its
-      consequence in tests/checks/prior-identity-hermetic.test.ts TC-BIN-084
-      half (b), whose spawned guarded-suite run exits 1 when a child suite
-      times out (the file passes 5/5 alone, 109.5 s). Escalation (spec versus
-      delivered): AC-F5-3 and TC-SIM-007 say a parked decision exits 2
-      mirroring resolve, but the delivered resolve projects parked to 0 and
+      --fixture), the runtime member, and the human rendering; edge.ts composes
+      it over the fixture filesystem seam (ProviderComposition.fixtureFs) and
+      production.ts supplies the node reader. The production
+      .dependency-cruiser.cjs gains provider-fixture-read-only-simulate
+      (reachable only from the simulate composition) with its named failing
+      fixture, its fixture-registry entry and the verify-imports rule-name
+      entry; the content inventory and executable allowances move for both new
+      modules; the hermetic and one-evaluator scans cover them. Tests:
+      provider-simulate (16), provider-budget-ref TC-REF-004 (+3),
+      provider-simulate-cli (5), the simulate goldens (2),
+      provider-composition-absence (4), boundaries +1, hermetic +2. No help
+      entry and no provider.simulate.* error row (both declared for phase 8 /
+      never). Commit 54d602f4. Gate: narrow provider-simulate +
+      provider-budget-ref + provider-simulate-cli + goldens 35 pass;
+      provider-composition-absence + content-inventory + verify-imports 29 pass;
+      tests/boundaries 155 pass; typecheck green; GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11455 pass / 4 skip / 2 fail (11461
+      tests). Both failures are host-load timeouts with zero assertion failures
+      and pass alone: TC-BIN-010 in tests/behaviour/identity-override.test.ts
+      (9/9 alone) and its consequence in
+      tests/checks/prior-identity-hermetic.test.ts TC-BIN-084 half (b), whose
+      spawned guarded-suite run exits 1 when a child suite times out (the file
+      passes 5/5 alone, 109.5 s). Escalation (spec versus delivered): AC-F5-3
+      and TC-SIM-007 say a parked decision exits 2 mirroring resolve, but the
+      delivered resolve projects parked to 0 and
       tests/behaviour/provider-cli.test.ts:169 pins that; simulate mirrors the
-      delivered resolve exactly (the case asserts the pairing) and no
-      delivered assertion was changed or weakened. Two delivery notes: a
-      rejected credential outcome is realised as an auth-rejected transport
-      answer (HTTP 401) because the delivered credential port has exactly two
-      outcomes (material or config.credential.missing), and an entry whose
-      credential resolves with no fixture quota block is simulated as an entry
-      without that observation rather than inheriting an invented fact. The
-      machine golden is a .txt capture so the byte-for-byte assertion survives
-      the repository JSON formatter."
+      delivered resolve exactly (the case asserts the pairing) and no delivered
+      assertion was changed or weakened. Two delivery notes: a rejected
+      credential outcome is realised as an auth-rejected transport answer (HTTP
+      401) because the delivered credential port has exactly two outcomes
+      (material or config.credential.missing), and an entry whose credential
+      resolves with no fixture quota block is simulated as an entry without that
+      observation rather than inheriting an invented fact. The machine golden is
+      a .txt capture so the byte-for-byte assertion survives the repository JSON
+      formatter."
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 plan phase 6 (delivery) complete: `provider migrate legacy
@@ -666,50 +662,48 @@ notes:
       oversized-source, shell-construct, dynamic-value, target-exists,
       proposal-invalid) naming the source and line and never the content,
       enforces PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536,
-      PROVIDER_MIGRATE_SOURCE_MAX_LINES = 2000 and
-      PROVIDER_MIGRATE_MAX_SOURCES = 64 with one read per source, classifies a
-      credential-shaped name before its value is examined and discards that
-      value at the parse boundary (only a literal source-key reference is
-      representable), maps recognisable literals under Appendix E's closed
-      table with the two declared derivations (the per-agent model address and
-      the credential reference name), discloses every other name as unmapped
-      and omits it, validates the proposal before output, prints the proposal
-      on stdout (data.proposal with --json) and the report on the diagnostic
-      stream (data.report with --json), and with --write creates the
-      project-committed document only when absent (target-exists otherwise,
-      never a merge, legacy digests and mtimes unchanged). Commit af6a67eb.
-      AUTHORISED SCOPE ADDITIONS (owner-approved during delivery; the plan's
-      phase-6 scope now records them): (1)
-      packages/adapters/src/legacy/provider-migrate-table.ts plus its
-      re-export in packages/adapters/src/legacy/index.ts own the pre-freeze
-      vendor names, because the delivered closed forbidden-literals registry
-      admits pre-freeze tokens only under packages/adapters/src/legacy/ while
-      the provider tier must stay vendor-neutral (TC-PROV-006); the provider
-      module keeps the grammar, firewall and mapper and receives the table as
-      an injected value. No token was assembled by string concatenation and
-      the closed allowlist was not extended. (2)
-      tests/structure/provider-legacy-absence.test.ts is corrected to
-      TC-INDEP-003's own oracle: zero legacy-path constructions outside the
-      migration reader and non-migration readers equal the empty set. (3)
-      tests/fixtures/legacy/literal-inventory.json gains the adapter barrel's
-      new relative re-export in its reviewed structural literals. Gate: narrow
-      migrate suites and widened structural/identity suites 154 pass;
+      PROVIDER_MIGRATE_SOURCE_MAX_LINES = 2000 and PROVIDER_MIGRATE_MAX_SOURCES
+      = 64 with one read per source, classifies a credential-shaped name before
+      its value is examined and discards that value at the parse boundary (only
+      a literal source-key reference is representable), maps recognisable
+      literals under Appendix E's closed table with the two declared derivations
+      (the per-agent model address and the credential reference name), discloses
+      every other name as unmapped and omits it, validates the proposal before
+      output, prints the proposal on stdout (data.proposal with --json) and the
+      report on the diagnostic stream (data.report with --json), and with
+      --write creates the project-committed document only when absent
+      (target-exists otherwise, never a merge, legacy digests and mtimes
+      unchanged). Commit af6a67eb. AUTHORISED SCOPE ADDITIONS (owner-approved
+      during delivery; the plan's phase-6 scope now records them): (1)
+      packages/adapters/src/legacy/provider-migrate-table.ts plus its re-export
+      in packages/adapters/src/legacy/index.ts own the pre-freeze vendor names,
+      because the delivered closed forbidden-literals registry admits pre-freeze
+      tokens only under packages/adapters/src/legacy/ while the provider tier
+      must stay vendor-neutral (TC-PROV-006); the provider module keeps the
+      grammar, firewall and mapper and receives the table as an injected value.
+      No token was assembled by string concatenation and the closed allowlist
+      was not extended. (2) tests/structure/provider-legacy-absence.test.ts is
+      corrected to TC-INDEP-003's own oracle: zero legacy-path constructions
+      outside the migration reader and non-migration readers equal the empty
+      set. (3) tests/fixtures/legacy/literal-inventory.json gains the adapter
+      barrel's new relative re-export in its reviewed structural literals. Gate:
+      narrow migrate suites and widened structural/identity suites 154 pass;
       tests/boundaries 156 pass; depcruise packages clean; bun run
-      scripts/checks/forbidden-literals.ts exit 0 with zero violations; bun
-      run scripts/checks/privacy-literals.ts exit 0; GIT_CONFIG_COUNT=1
+      scripts/checks/forbidden-literals.ts exit 0 with zero violations; bun run
+      scripts/checks/privacy-literals.ts exit 0; GIT_CONFIG_COUNT=1
       GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
       TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11496 pass / 4 skip / 1 fail (11501
       tests). The one failure is a host-load latency flake in an unrelated
       suite, TC-DAEMON-121 foreground stop latency (cancellation 256.95 ms
       against a 250 ms bound); the same file passes alone with a maximum of
-      236.84 ms. Interpretation recorded, not a weakening: DM-7's 'validated
-      by the delivered provider validator and configuration schema' is
-      implemented as the configuration schema's per-layer partial view — the
-      exact validation every supplied configuration source receives before
-      merge (F-3) — plus the provider validator run over the shipped defaults
-      the proposal overrides, so the documented per-agent-model mapping can
-      emit the partial profile an operator completes while a wrong-typed
-      mapped value refuses proposal-invalid."
+      236.84 ms. Interpretation recorded, not a weakening: DM-7's 'validated by
+      the delivered provider validator and configuration schema' is implemented
+      as the configuration schema's per-layer partial view — the exact
+      validation every supplied configuration source receives before merge (F-3)
+      — plus the provider validator run over the shipped defaults the proposal
+      overrides, so the documented per-agent-model mapping can emit the partial
+      profile an operator completes while a wrong-typed mapped value refuses
+      proposal-invalid."
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 plan phase 7 (delivery) complete: each watch target's
@@ -717,34 +711,33 @@ notes:
       the effective default 900 applied policy-side (the catalog declares the
       key with no default field, so an omitted bound gives a record child no
       defaults-layer origin), and the freshness predicate is one pure function
-      of the injected clock and the supplied observation instant — ageSeconds
-      = max(0, floor((nowMs - observedAtMs) / 1000)), stale exactly at
-      ageSeconds >= maxAgeSeconds. The watch view's condition is the closed
-      six-value PROVIDER_WATCH_CONDITIONS domain and gains the three additive
-      fields observedAt, ageSeconds and maxAgeSeconds beside the delivered
-      name, source and checkedAt; watch-stale is watch-only (membership of no
-      park cause, condition kind, skip reason, announcement code or record
-      kind) and a stale reading is never probed, never coerced to clear and
-      never reported as provider-outage. A park derived from a reading expires
-      no later than min(naturalExpiry, observedAt + maxAgeSeconds * 1000) and
-      no park exists when that instant is not strictly future
-      (clampWatchParkExpiry returns undefined). The live composition supplies
-      the read instant as the observation instant (observedAt === checkedAt,
-      age 0, never stale); staleness is exercised by a composition-supplied
-      observation through the new watchObservedAtMs seam and by the clamp. The
-      watch path adds no cache, timer, refresher, scheduler, command, state
-      record kind or state write; the config-layer page gains its
-      maxAgeSeconds row and doc-conformance pins it. Commit eebb04d4.
-      OWNER-AUTHORISED ADDITIONS (approved during delivery): (1)
-      packages/core/src/provider/validate.ts joins the phase because
-      parseWatchTarget is the PRODUCER of the typed watch target and a closed
-      exactKeys list that omits a declared key made the configuration refuse;
-      it now admits maxAgeSeconds and copies it onto the target with NO
+      of the injected clock and the supplied observation instant — ageSeconds =
+      max(0, floor((nowMs - observedAtMs) / 1000)), stale exactly at ageSeconds
+      >= maxAgeSeconds. The watch view's condition is the closed six-value
+      PROVIDER_WATCH_CONDITIONS domain and gains the three additive fields
+      observedAt, ageSeconds and maxAgeSeconds beside the delivered name, source
+      and checkedAt; watch-stale is watch-only (membership of no park cause,
+      condition kind, skip reason, announcement code or record kind) and a stale
+      reading is never probed, never coerced to clear and never reported as
+      provider-outage. A park derived from a reading expires no later than
+      min(naturalExpiry, observedAt + maxAgeSeconds * 1000) and no park exists
+      when that instant is not strictly future (clampWatchParkExpiry returns
+      undefined). The live composition supplies the read instant as the
+      observation instant (observedAt === checkedAt, age 0, never stale);
+      staleness is exercised by a composition-supplied observation through the
+      new watchObservedAtMs seam and by the clamp. The watch path adds no cache,
+      timer, refresher, scheduler, command, state record kind or state write;
+      the config-layer page gains its maxAgeSeconds row and doc-conformance pins
+      it. Commit eebb04d4. OWNER-AUTHORISED ADDITIONS (approved during
+      delivery): (1) packages/core/src/provider/validate.ts joins the phase
+      because parseWatchTarget is the PRODUCER of the typed watch target and a
+      closed exactKeys list that omits a declared key made the configuration
+      refuse; it now admits maxAgeSeconds and copies it onto the target with NO
       default and NO value semantics, so provider.profile.invalid still covers
       only structural/unknown-key violations while the value rules stay in the
       reader (config.value.invalid naming
-      provider.profiles.watch.<name>.maxAgeSeconds for 0, -1 and non-integers;
-      a string is refused by the configuration schema). (2)
+      provider.profiles.watch.<name>.maxAgeSeconds for 0, -1 and non-integers; a
+      string is refused by the configuration schema). (2)
       tests/fixtures/provider/profile/golden/data.ts and
       tests/fixtures/provider/profile/golden/watch-status.json carry the three
       additive fields on the delivered watch-status goldens (observedAt =
@@ -753,68 +746,148 @@ notes:
       suites 114 pass (the golden and profile-CLI arms included after the
       fixture additions); tests/boundaries unchanged; pnpm typecheck green;
       GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
-      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11521 pass
-      / 4 skip / 2 fail (11527 tests). Both failures are HOST-ENVIRONMENT, not
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11521 pass /
+      4 skip / 2 fail (11527 tests). Both failures are HOST-ENVIRONMENT, not
       phase-7 regressions: TC-BIN-071 and TC-MEMNFR-004 spawn the
       doc-distribution guard, whose sandbox install sees a real installed
       `jaiship` artifact under the operator's home written by a concurrent
       session and refuses content it does not own; the guard passes with a clean
-      HOME ('OK
-      — 96 in-scope docs; install set matches ados_distribution markers') and
-      the two suites pass alone with a clean HOME (19/19). Recorded, never
-      edited. Note: the key-naming refusal is asserted on the command failure
-      value because the delivered output boundary suppresses config-shaped
-      summaries by policy."
+      HOME ('OK — 96 in-scope docs; install set matches ados_distribution
+      markers') and the two suites pass alone with a clean HOME (19/19).
+      Recorded, never edited. Note: the key-naming refusal is asserted on the
+      command failure value because the delivered output boundary suppresses
+      config-shaped summaries by policy."
     type: evidence
     date: "2026-11-19"
-  - text: "GH-350 plan phase 8 (delivery) complete: the provider family is mounted as the
-      twenty-seventh and last prompt-required family (install twenty-sixth, supervise
-      twenty-fifth, no delivered ordinal moved). PROMPT_REQUIRED_COMMANDS is exactly 27 with
-      provider last; the production composition supplies the six ProviderComposition seams (clock,
+  - text: "GH-350 plan phase 8 (delivery) complete: the provider family is mounted
+      as the twenty-seventh and last prompt-required family (install
+      twenty-sixth, supervise twenty-fifth, no delivered ordinal moved).
+      PROMPT_REQUIRED_COMMANDS is exactly 27 with provider last; the production
+      composition supplies the six ProviderComposition seams (clock,
       credentialPort, transport, sleep, stateStore, newFenceToken) through
-      createProductionProviderComposition and registers the family unconditionally, preserved by
-      the install spread; selectPromptRequiredProgram is untouched. The help inventory gains one
-      family entry plus seven member entries (resolve, quota, parks list, profile resolve, watch
-      status, simulate, migrate legacy) with the five sections and the M1 see-also page; the
-      coverage fixture gains the provider command row and the M1 reference-page row with a twin
-      mutant; the M1 page carries --help/--version, all seven members, --chain, the budget ref
-      rule, watch-stale and the three new error rows. Counts/tails move once:
-      fixtures/metrics/mounting.ts appends provider and grows PINNING_FILES 11 -> 15,
-      fixtures/supervise/mounting.ts appends provider, every PINNING_FILES suite reads 27 with the
-      tail one place (provider last, install penultimate, supervise two before), and the
-      stale-detector class widens 2[345] -> 2[3456]. The alias baseline gains exactly one provider
-      line and its GH-350 provenance clause. Reachability: 7/7 member paths and 8/8 help surfaces
-      resolve through runEntrypoint with the production composer (one composer construction per
-      member invocation, 0 for help); the case-local copy with every relative import rewritten and
-      a provider-less declarative set (26 entries, provider zero times) answers fallback.internal
-      at exit 2 for the family token with the containment summary and handler count 0, a member
-      token answers its delivered grammar refusal at exit 1 with handler count 0, provider --help
-      still resolves at exit 0 because help precedes composition, and a synthetic extra family is
-      dropped with the selected keys equal to the declared set. Gate: narrow declared-scope suites
-      270 pass / 0 fail across 27 files (four new suites 34/34; nine pinning suites 86/86); pnpm
-      typecheck and biome green. GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
-      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11559 pass / 4 skip / 4 fail
-      (11567 tests, 1422 files). All four failures are HOST-ENVIRONMENT/HOST-LOAD, not phase-8
-      regressions: TC-BIN-071 and TC-MEMNFR-004 spawn the doc-distribution guard, which sees a
-      real installed artifact under the operator's home written by a concurrent session and
-      refuses content it does not own (both suites pass 19/19 with a clean HOME; the guard reports
-      96 in-scope docs); TC-SHELL-001 x2 in
-      tests/conformance/dispatch/dispatch-parity-no-shell.test.ts timed out at the 5 s per-test
-      limit under a host load average near 31 and pass 4/4 with --timeout 60000 (189 expects).
-      Recorded, never edited. These boundary items were owner-authorised during delivery: (1) two
-      guard files now in phase 8 scope — tests/checks/event-mount-guards.test.ts gains provider in
-      its expected mounted set, and tests/behaviour/entrypoint-help-coverage.test.ts gains
-      provider in its literal 27-name coverage list (the eight help tuples then derive); (2) two
-      corrected oracles — TC-MOUNT-008 compares the alias baseline against the recorded pre-change
-      commit d1fff222 because the fixture postdates capturedFrom (40dc45a4 > 8a1f77ad), still
-      proving every other cell byte-identical with exactly one appended provider row, and
-      TC-MOUNT-003 uses the family token for the containment arm plus a member's delivered grammar
-      refusal, because provider --help resolves from the static inventory before composition; (3)
-      .changeset/install-lifecycle-minor.md is NOT modified: the delivered TC-RELEASE-001 guard
-      requires exactly one added changeset and no modified pre-existing one, and this change's own
-      .changeset/gh350-provider-policy-minor.md already states the twenty-seventh family; the
-      plan, spec v1.6 and test plan v2.0 record that correction. The uncommitted phase-7 note was
-      sanitized to remove an absolute operator path so privacy-literals stays green. Commit
+      createProductionProviderComposition and registers the family
+      unconditionally, preserved by the install spread;
+      selectPromptRequiredProgram is untouched. The help inventory gains one
+      family entry plus seven member entries (resolve, quota, parks list,
+      profile resolve, watch status, simulate, migrate legacy) with the five
+      sections and the M1 see-also page; the coverage fixture gains the provider
+      command row and the M1 reference-page row with a twin mutant; the M1 page
+      carries --help/--version, all seven members, --chain, the budget ref rule,
+      watch-stale and the three new error rows. Counts/tails move once:
+      fixtures/metrics/mounting.ts appends provider and grows PINNING_FILES 11
+      -> 15, fixtures/supervise/mounting.ts appends provider, every
+      PINNING_FILES suite reads 27 with the tail one place (provider last,
+      install penultimate, supervise two before), and the stale-detector class
+      widens 2[345] -> 2[3456]. The alias baseline gains exactly one provider
+      line and its GH-350 provenance clause. Reachability: 7/7 member paths and
+      8/8 help surfaces resolve through runEntrypoint with the production
+      composer (one composer construction per member invocation, 0 for help);
+      the case-local copy with every relative import rewritten and a
+      provider-less declarative set (26 entries, provider zero times) answers
+      fallback.internal at exit 2 for the family token with the containment
+      summary and handler count 0, a member token answers its delivered grammar
+      refusal at exit 1 with handler count 0, provider --help still resolves at
+      exit 0 because help precedes composition, and a synthetic extra family is
+      dropped with the selected keys equal to the declared set. Gate: narrow
+      declared-scope suites 270 pass / 0 fail across 27 files (four new suites
+      34/34; nine pinning suites 86/86); pnpm typecheck and biome green.
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11559 pass /
+      4 skip / 4 fail (11567 tests, 1422 files). All four failures are
+      HOST-ENVIRONMENT/HOST-LOAD, not phase-8 regressions: TC-BIN-071 and
+      TC-MEMNFR-004 spawn the doc-distribution guard, which sees a real
+      installed artifact under the operator's home written by a concurrent
+      session and refuses content it does not own (both suites pass 19/19 with a
+      clean HOME; the guard reports 96 in-scope docs); TC-SHELL-001 x2 in
+      tests/conformance/dispatch/dispatch-parity-no-shell.test.ts timed out at
+      the 5 s per-test limit under a host load average near 31 and pass 4/4 with
+      --timeout 60000 (189 expects). Recorded, never edited. These boundary
+      items were owner-authorised during delivery: (1) two guard files now in
+      phase 8 scope — tests/checks/event-mount-guards.test.ts gains provider in
+      its expected mounted set, and
+      tests/behaviour/entrypoint-help-coverage.test.ts gains provider in its
+      literal 27-name coverage list (the eight help tuples then derive); (2) two
+      corrected oracles — TC-MOUNT-008 compares the alias baseline against the
+      recorded pre-change commit d1fff222 because the fixture postdates
+      capturedFrom (40dc45a4 > 8a1f77ad), still proving every other cell
+      byte-identical with exactly one appended provider row, and TC-MOUNT-003
+      uses the family token for the containment arm plus a member's delivered
+      grammar refusal, because provider --help resolves from the static
+      inventory before composition; (3) .changeset/install-lifecycle-minor.md is
+      NOT modified: the delivered TC-RELEASE-001 guard requires exactly one
+      added changeset and no modified pre-existing one, and this change's own
+      .changeset/gh350-provider-policy-minor.md already states the
+      twenty-seventh family; the plan, spec v1.6 and test plan v2.0 record that
+      correction. The uncommitted phase-7 note was sanitized to remove an
+      absolute operator path so privacy-literals stays green. Commit
       3d07b1f50fb0756929bc3d8400f2ffec3b8df156."
+    type: evidence
+    date: "2026-11-19"
+  - text: "GH-350 plan phase 9 (delivery) complete — documentation truth and
+      release, and the final plan phase. The ten declared pages state the
+      delivered truth and the closed §16 page set carries no retired claim as
+      current truth. Engine page: the budget branch and its evaluation, the five
+      budget evidence fields' meaning, the work-item ref rule and its three-tier
+      precedence with the one pre-resolution refusal, the parked-versus-failed
+      no-paid-escalation split, the one-spawn-increment pre-spawn bound with the
+      gate-versus-alarm distinction, the two new CLI members with their
+      zero-write and no-execution posture, the informational set corrected to
+      include provider.budget.parked, the three added error rows' remediation
+      prose, and the technical-map entries for budgets, simulate, migrate and
+      the time-zone subpath. Profiles: the declared-zone grammar replaces the
+      UTC-only validation sentence, maxAgeSeconds with its policy default 900,
+      the closed six-value watch set, watch-stale with the age predicate and the
+      clamped bound, and the three additive view fields. Spend: the gate
+      consumes the same fold, reports the same figures, and resolves its ref
+      through the same local-context seam and the same pattern as an omitted
+      --ref — one basis, no second measurement path. Metrics: the
+      gate-versus-alarm distinction. Nonfunctional: the provider row gains
+      zone/DST correctness, the one-read budget bound, simulation purity and the
+      migration no-execution guarantees. Conditions guide: the zone basis and
+      timezone, budget-exhausted as condition, cause and skip reason, both
+      budget announcements with their evidence, the terminal ticket refusal with
+      its remedy, no-paid-escalation, the one-spawn-increment bound with an
+      explicit not-a-real-time-cap disclaimer, the closed six-value watch set
+      with watch-stale, and the two new configuration keys. Model guide: one
+      pointer to the typed provider and profile branches as the canonical policy
+      path. doc/00-index.md: the guide inventory row. M4 pack: the M4-S4
+      delivered marker and the flip-plan F2 evidence pointer. doc-conformance
+      adds GH350_PHASE9_ROWS (ten pages, exact-set, both directions driven over
+      injected copies), the 22-member closed page set with the retired-claim
+      list, a declared-delta carve-out proven not to trip (164 → 167, 163 → 166,
+      26 → 27 and the slash and compaction move forms), the conditional
+      changeset arm (historical record, never rewritten) and the
+      delivered-ordinal control (feature-supervise.md's 25th family stays
+      byte-unchanged and is not a phase-9 page). Gate G1..G6: doc-conformance +
+      help-guide-coverage + reference-page-parity 59 pass / 0 fail; narrow
+      provider suites 662 pass / 1 fail (TC-INDEP-003 timed out at the 5 s
+      limit; 4/4 pass alone with --timeout 60000); tests/boundaries 156 pass / 0
+      fail; error-table-sync entries=167 documented=167 corpus=84 (S1 573, S3
+      32, ignored 1108); doc-distribution FAIL as-is on the concurrent session's
+      installed artifact under the operator's home and OK with a clean HOME (96
+      in-scope docs); check:help all prompt-required commands covered;
+      check:prompt 5 prompts clean; check:memory records=3 areas=8 errors=0
+      advisories=0; check:forbidden-literals 196 user-facing docs green;
+      check:privacy-literals 4965 files, 7 rules, 0 violations;
+      lint-commit-range --base main-tools PASS (41 commits in range, 0
+      offending). Full GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11566 pass /
+      4 skip / 5 fail (11575 tests, 1422 files). All five failures are
+      HOST-ENVIRONMENT or HOST-LOAD, not phase-9 regressions: TC-BIN-071 and
+      TC-MEMNFR-004 spawn the doc-distribution guard (12/12 pass with a clean
+      HOME), and TC-PRIVACY-020, TC-ATTEMPT-003 and TC-ATTEMPT-009/010/037
+      exceeded the 5 s per-test limit under a load average near 22 (39/39 and
+      38/38 pass alone with --timeout 60000). Recorded, never edited. Flagged,
+      not edited: (1) TC-MOUNT-008's wording had already been corrected by the
+      preceding session (test plan v2.1 — capturedFrom stays 8a1f77ad, the
+      baseline is materialised at d1fff222) and that correction rode this
+      commit; (2) TC-DOC-005's expectation still reads 'the changeset reads
+      twenty-seven if it is still pending', which spec v1.6 supersedes — the
+      pre-existing changeset is historical record pinned byte-identical by
+      TC-RELEASE-001 and is not rewritten; (3)
+      doc/planning/oss-tooling/status.md, a page outside the §16 closed set,
+      carries a dated 2026-11-13 snapshot sentence naming UTC-only designations
+      and was left as historical record. Commit
+      5eaa83f5bb0d7273f458c480b986c109cc50f283."
     type: evidence
     date: "2026-11-19"
