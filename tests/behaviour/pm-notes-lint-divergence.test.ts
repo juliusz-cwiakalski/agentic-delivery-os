@@ -1,6 +1,6 @@
 /**
  * TC-F5-004..006 — the both-target lint detects a mirror divergence and never
- * repairs it (F-5, API-5, TDR-0049 §4/§5).
+ * repairs it (F-5, API-5, TDR-0055 §4/§5).
  *
  * Each case pairs a parsed pm-notes document with the verified fold the ledger
  * would produce. The rule is scoped to phases the ledger has history for and to

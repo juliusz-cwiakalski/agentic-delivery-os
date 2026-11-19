@@ -298,7 +298,7 @@ const stagedCompleted = (value: unknown, phaseId: string): boolean => {
 };
 
 /**
- * The one mirror derivation (F-5, API-6, TDR-0049 §2): the completion the
+ * The one mirror derivation (F-5, API-6, TDR-0055 §2): the completion the
  * document entry mirrors is the post-transition fold's value for that phase,
  * never a lookup over the history. Every document-writing branch calls this
  * named unit, and the defect regression substitutes the retired derivation
@@ -514,7 +514,7 @@ const completeWithCommit = async (
   }
 
   if (delta.state === "both") {
-    // The mirror is the post-transition fold's completion (API-6, TDR-0049 §2):
+    // The mirror is the post-transition fold's completion (API-6, TDR-0055 §2):
     // the latest completion in the verified history, never the first one.
     const completedAt = deriveMirrorCompletion(changeRef, registry.transitions, phaseId);
     if (completedAt !== null && read.text !== staged.text) {
@@ -863,7 +863,7 @@ const transitionTarget = async (
   // The written entry mirrors the post-transition fold: a completion takes the
   // fold's latest completion (the timestamp this append records); a reopen
   // writes null, which is the fold's cleared value. `started` is never rewritten
-  // for an existing entry (API-6, TDR-0049 §2).
+  // for an existing entry (API-6, TDR-0055 §2).
   const mirrorCompleted = deriveMirrorCompletion(changeRef, appended.value.transitions, phaseId);
   const mirrored =
     kind === "complete" && mirrorCompleted !== null

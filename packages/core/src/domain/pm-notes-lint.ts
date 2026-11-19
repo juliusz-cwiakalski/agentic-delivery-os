@@ -1,6 +1,6 @@
 /**
  * Pure pm-notes conformance rules (GH-179 C-1..C-3, PIN-5) and the both-target
- * divergence rule (GH-349 F-5, API-5, TDR-0049 §4).
+ * divergence rule (GH-349 F-5, API-5, TDR-0055 §4).
  *
  * The rules operate on parsed values or a parse-failure input; they perform no
  * I/O, invoke no parser, and read no ambient state. Families run in the fixed
@@ -274,7 +274,7 @@ const documentCompletion = (document: unknown, phaseId: string): string | null =
 
 /**
  * The first canonical phase whose document completion differs from the verified
- * fold's completion (GH-349 API-5, TDR-0049 §4).
+ * fold's completion (GH-349 API-5, TDR-0055 §4).
  *
  * Scope: phases the ledger has at least one transition for, compared on
  * `completed` only — a null and a timestamp are different facts. A phase with no

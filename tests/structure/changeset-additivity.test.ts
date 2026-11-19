@@ -1,7 +1,9 @@
 /**
  * TC-SYNC-011 — the release additivity pin. The delivered `.changeset/*.md` set
- * equals the phase-1 baseline plus exactly the two declared added files; each of
- * them declares exactly the five fixed-group packages at `minor` with
+ * equals the phase-1 baseline plus exactly the three declared added files — the
+ * GH-349 delivery's own changeset plus the two upstream deliveries that landed on
+ * the integration base after the pin was captured (PR #363, PR #364); each of them
+ * declares exactly the five fixed-group packages at `minor` with
  * `@delivery-os/testkit` absent, no sixth package and a non-empty body; all 64
  * baseline files keep
  * their SHA-256 digest; and each of the five package `version` values equals its
@@ -11,6 +13,9 @@
  * (`tests/fixtures/pins/changeset-baseline.json`) and is read-only afterwards:
  * a permanent suite must not assert a diff against a moving base branch, so the
  * pin is a tree fixture rather than a `git diff` (`.ai/rules/testing-strategy.md`).
+ * The baseline keeps the pre-GH-349 file set; upstream's two later deliveries are
+ * recognised as declared additions, never as violations, so the pin still proves
+ * the GH-349 delivery adds exactly its own one changeset.
  * Every failure mode of the register M117..M123 is a mutation control over the
  * same validator the live assertion runs, so a control cannot pass vacuously.
  */
@@ -22,7 +27,13 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const PIN_PATH = "tests/fixtures/pins/changeset-baseline.json";
 const CHANGESET_DIR = ".changeset";
+/**
+ * The declared additions over the pre-GH-349 baseline, sorted: the two upstream
+ * deliveries that landed on the integration base after capture (PR #363's install
+ * lifecycle, PR #364's dispatch core parity) and GH-349's own changeset.
+ */
 const ADDED_CHANGESETS = [
+  "gh-347-dispatch-core-parity-minor.md",
   "gh-349-merge-closeout-queue-repair-minor.md",
   "install-lifecycle-minor.md",
 ] as const;
@@ -252,6 +263,16 @@ const controlTree = (): TreeSnapshot => ({
   versions: controlVersions(),
 });
 
+/**
+ * The control baseline with its expected set replaced by the live declared
+ * additions, so the zero- and two-added controls exercise the same declared set
+ * the live assertion reads.
+ */
+const declaredControlBaseline = (): ChangesetBaseline => ({
+  ...controlBaseline(),
+  expectedAdded: [...ADDED_CHANGESETS],
+});
+
 describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
   test("the pin holds the 64 delivered changesets and the five fixed packages", () => {
     expect(baseline.provenance.length).toBeGreaterThan(0);
@@ -263,7 +284,7 @@ describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
     }
   });
 
-  test("the delivered changeset directory is the baseline plus exactly the two declared additions", () => {
+  test("the delivered changeset directory is the baseline plus exactly the three declared additions", () => {
     const added = addedFrom(readTree());
     expect(added).toEqual([...ADDED_CHANGESETS].sort());
   });
@@ -290,10 +311,15 @@ describe("TC-SYNC-011 mutation controls fail by name", () => {
   test("M117 — zero added changesets", () => {
     const violations = releaseViolations(
       { files: controlFiles(), versions: controlVersions() },
-      controlBaseline(),
+      declaredControlBaseline(),
     );
     expect(codesOf(violations)).toContain("changeset.added.zero");
     expect(violations).toHaveLength(1);
+    const detail = detailOf(violations, "changeset.added.zero");
+    for (const name of ADDED_CHANGESETS) {
+      expect(detail).toContain(name);
+    }
+    expect(detail).toContain("found none");
   });
 
   test("M118 — two added changesets", () => {
@@ -302,11 +328,17 @@ describe("TC-SYNC-011 mutation controls fail by name", () => {
       ...tree.files,
       "control-second-minor.md": validAddedText(fiveMinorLines()),
     };
-    const violations = releaseViolations({ files, versions: tree.versions }, controlBaseline());
+    const violations = releaseViolations(
+      { files, versions: tree.versions },
+      declaredControlBaseline(),
+    );
     expect(codesOf(violations)).toContain("changeset.added.multiple");
     const detail = detailOf(violations, "changeset.added.multiple");
     expect(detail).toContain("control-added-minor.md");
     expect(detail).toContain("control-second-minor.md");
+    for (const name of ADDED_CHANGESETS) {
+      expect(detail).toContain(name);
+    }
   });
 
   test("M119 — a patch bump on one of the five packages", () => {

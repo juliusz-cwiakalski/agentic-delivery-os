@@ -1,6 +1,6 @@
 /**
  * TC-SYNC-006 — the lint registry read gains the verified fold additively
- * (DM-8, TDR-0049 §4).
+ * (DM-8, TDR-0055 §4).
  *
  * The delivered fields keep their exact values and types, the new fold field
  * carries the phases map `foldPhaseState` produces for the same transitions, and

@@ -1,6 +1,6 @@
 /**
  * TC-F5-001..003 — the pm-notes mirror is derived from the post-transition fold
- * on every document branch (F-5, API-6, TDR-0049 §2/§3).
+ * on every document branch (F-5, API-6, TDR-0055 §2/§3).
  *
  * The F4 regression is the named case: complete → reopen → re-complete leaves the
  * SECOND completion on the fold, `phase list` and the document, and the no-op
