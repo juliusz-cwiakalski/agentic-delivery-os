@@ -302,6 +302,14 @@ export {
   evaluateDispatchLiveness,
 } from "./dispatch-liveness.js";
 export {
+  buildLifecyclePrompt,
+  DISPATCH_LIFECYCLE_SECTION_TITLES,
+  DISPATCH_LIFECYCLE_SECTIONS,
+  type DispatchLifecyclePromptInput,
+  type DispatchLifecycleSection,
+  lifecyclePromptSectionsPresent,
+} from "./dispatch-prompt.js";
+export {
   classifyDispatchFailure,
   classifySpawnRefusal,
   DISPATCH_FAILURE_KINDS,
@@ -323,13 +331,14 @@ export {
   deriveDispatchResult,
 } from "./dispatch-result.js";
 export {
-  buildLifecyclePrompt,
-  DISPATCH_LIFECYCLE_SECTION_TITLES,
-  DISPATCH_LIFECYCLE_SECTIONS,
-  type DispatchLifecyclePromptInput,
-  type DispatchLifecycleSection,
-  lifecyclePromptSectionsPresent,
-} from "./dispatch-prompt.js";
+  admissionRefusalPair,
+  admitDispatchRestart,
+  type DispatchRestartDecision,
+  type DispatchResumeEconomics,
+  type DispatchResumePlan,
+  evaluateDispatchResumeEconomics,
+  planDispatchResume,
+} from "./dispatch-resume.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
   DISPATCH_TRACKER_LADDER_ATTEMPTS,
@@ -339,15 +348,6 @@ export {
   dispatchTrackerLadderWait,
   runDispatchTrackerLadder,
 } from "./dispatch-tracker.js";
-export {
-  admissionRefusalPair,
-  admitDispatchRestart,
-  type DispatchRestartDecision,
-  type DispatchResumeEconomics,
-  type DispatchResumePlan,
-  evaluateDispatchResumeEconomics,
-  planDispatchResume,
-} from "./dispatch-resume.js";
 export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
@@ -1118,6 +1118,44 @@ export {
   type ProjectedEvent,
   type ProjectionWatermarkEntry,
 } from "./event-projection.js";
+/* ------------------------ loop supervision (GH-348) ---------------------- */
+export {
+  detectionBoundMs,
+  historyReference,
+  LOOP_RESTART_DELAYS_MS,
+  restartDelayMs,
+  SHIPPED_DETECTION_BOUND_MS,
+  totalBackoffMs,
+} from "./loop-backoff.js";
+export {
+  type LoopLogAppendPlan,
+  logByteLength,
+  planLogAppend,
+  renderLogLine,
+} from "./loop-log.js";
+export {
+  LOOP_PROMPT_PRIMITIVES,
+  LOOP_STOP_INSTRUCTION,
+  type LoopPromptPrimitive,
+  loopPromptFor,
+  loopSessionTitle,
+  promptNamesPrimitives,
+} from "./loop-prompt.js";
+export {
+  booleanStatusKeys,
+  type LoopStatusFacts,
+  orderDegradations,
+  projectLoopStatus,
+  renderStatusBlock,
+} from "./loop-status.js";
+export {
+  evaluateLoopVerdict,
+  evidenceCorpus,
+  LOOP_MAX_EVIDENCE_BYTES,
+  type LoopVerdictInput,
+  type LoopVerdictResult,
+  observeProgress,
+} from "./loop-verdict.js";
 /**
  * The project group configuration validator (GH-309 F-1, F-2, OQ-1): the
  * pinned load-time rules and the declared-member resolution helpers.
@@ -1128,7 +1166,6 @@ export {
   selectProjectGroups,
   validateProjectGroupsDocument,
 } from "./project-groups.js";
-
 /** The pure steering domain (GH-298 F-1..F-10, DM-1..DM-6, DM-8). */
 export {
   buildSteerCompleteData,
@@ -1166,7 +1203,6 @@ export {
   validateSteerMessage,
   validateSteerSend,
 } from "./steer.js";
-
 /**
  * The supervision tri-state fold (GH-295 F-2..F-4, DEC-4, DEC-5): pure
  * classification over artifact facts, the report-count derivation, the lane

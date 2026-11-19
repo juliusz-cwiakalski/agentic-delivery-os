@@ -1,0 +1,133 @@
+/**
+ * The loop's own two-signal stuck predicate (GH-348 F-5, DM-6, DEC-3).
+ *
+ * A pure total function over three injected fact sets — sourced progress,
+ * artifact advance, and the read-only delivery corroborator — because the
+ * delivered `evaluateStuck` decides a delivery expectation and would kill a CEO
+ * blocked on a healthy delivery. The delivered verdict vocabulary and the
+ * delivered persisted reasons are reused; no new verdict, reason, or evidence
+ * class is introduced.
+ *
+ * `stuck` requires ALL of: a live session; sourced progress `zero` for at least
+ * `stuck-window` measured from the last observation the running supervisor
+ * holds; no artifact advance since that observation; and a READABLE
+ * corroborator reporting `none`. Any unreadable input is `unevaluable`, which
+ * never kills.
+ */
+import {
+  type CoordinatorProgressState,
+  type CoordinatorVerdict,
+  LOOP_RESTART_REASON,
+  LOOP_UNEVALUABLE_REASON,
+  type LoopDeliveryReading,
+} from "#contracts";
+
+/** The evidence-corpus byte bound (NFR-10, DM-6). */
+export const LOOP_MAX_EVIDENCE_BYTES = 512 as const;
+
+export type LoopVerdictInput = {
+  /** Whether a session is live at this evaluation. */
+  readonly liveSession: boolean;
+  /** The projected new-turn fact from the delivered mapper. */
+  readonly progress: CoordinatorProgressState;
+  /** When the progress reading was taken, or `null` when absent. */
+  readonly progressObservedAtMs: number | null;
+  /** The last sourced-progress observation this supervisor holds. */
+  readonly lastProgressAtMs: number | null;
+  readonly nowMs: number;
+  readonly stuckWindowMs: number;
+  readonly progressBoundMs: number;
+  /** Whether a merge or blocker-answer record landed since the observation. */
+  readonly artifactAdvanced: boolean;
+  /** The read-only delivery corroborator reading. */
+  readonly delivery: LoopDeliveryReading;
+};
+
+export type LoopVerdictResult = {
+  readonly verdict: CoordinatorVerdict;
+  readonly reason: typeof LOOP_RESTART_REASON | typeof LOOP_UNEVALUABLE_REASON | null;
+  readonly evidence: string | null;
+};
+
+/** The bounded, single-line, identifier-only evidence corpus (NFR-10). */
+export const evidenceCorpus = (input: {
+  readonly traffic: CoordinatorProgressState;
+  readonly delivery: LoopDeliveryReading;
+  readonly progressAgeMs: number | null;
+  readonly windowMs: number;
+}): string => {
+  const age =
+    input.progressAgeMs === null ? "none" : String(Math.max(0, Math.trunc(input.progressAgeMs)));
+  const corpus = `traffic=${input.traffic} delivery=${input.delivery} progressAgeMs=${age} windowMs=${String(
+    input.windowMs,
+  )}`;
+  return corpus.length > LOOP_MAX_EVIDENCE_BYTES
+    ? corpus.slice(0, LOOP_MAX_EVIDENCE_BYTES)
+    : corpus;
+};
+
+const progressing: LoopVerdictResult = { verdict: "progressing", reason: null, evidence: null };
+
+/**
+ * Decide the verdict. The fold order is explicit so no unreadable input can be
+ * laundered into a kill: unknown progress first, then an unreadable
+ * corroborator, then the two progressing causes, then the window test.
+ */
+export const evaluateLoopVerdict = (input: LoopVerdictInput): LoopVerdictResult => {
+  const windowMs = input.stuckWindowMs;
+  const observedAt = input.lastProgressAtMs ?? input.progressObservedAtMs;
+  const progressAgeMs = observedAt === null ? null : input.nowMs - observedAt;
+
+  if (!input.liveSession) return progressing;
+
+  if (input.progress === "unknown" || input.delivery === "unknown") {
+    return {
+      verdict: "unevaluable",
+      reason: LOOP_UNEVALUABLE_REASON,
+      evidence: evidenceCorpus({
+        traffic: input.progress,
+        delivery: input.delivery,
+        progressAgeMs,
+        windowMs,
+      }),
+    };
+  }
+
+  // A corroborated healthy delivery vetoes a kill: a CEO blocked on a
+  // progressing delivery has not stalled (INV-DM-3, AC-F5-3).
+  if (input.delivery === "in-progress") return progressing;
+
+  if (input.progress === "positive") return progressing;
+
+  const aged = progressAgeMs !== null && progressAgeMs >= windowMs;
+  if (!aged || input.artifactAdvanced) return progressing;
+
+  return {
+    verdict: "stuck",
+    reason: LOOP_RESTART_REASON,
+    evidence: evidenceCorpus({
+      traffic: input.progress,
+      delivery: input.delivery,
+      progressAgeMs,
+      windowMs,
+    }),
+  };
+};
+
+/**
+ * The progress reading the predicate judges: a positive delta within
+ * `progress-bound` is a fresh sourced observation; a sourced zero or an unknown
+ * is not.
+ */
+export const observeProgress = (input: {
+  readonly progress: CoordinatorProgressState;
+  readonly observedAtMs: number | null;
+  readonly nowMs: number;
+  readonly progressBoundMs: number;
+  readonly lastProgressAtMs: number | null;
+}): number | null => {
+  if (input.progress !== "positive") return input.lastProgressAtMs;
+  const at = input.observedAtMs ?? input.nowMs;
+  if (input.nowMs - at > input.progressBoundMs) return input.lastProgressAtMs;
+  return Math.max(at, input.lastProgressAtMs ?? at);
+};

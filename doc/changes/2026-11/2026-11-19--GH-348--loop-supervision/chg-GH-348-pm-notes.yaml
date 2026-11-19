@@ -655,3 +655,14 @@ notes:
       the deviation line verbatim."
     type: decision
     date: "2026-11-19"
+  - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
+      folds, and the pure verdict/backoff/log/status/prompt tier). Commit: the
+      phase-1 delivery commit (see the branch log; recorded below once the
+      commit hash exists). Gates all exit 0: bun test
+      tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts (7
+      pass, 0 fail, including the M93 ambient-timer control failing by name);
+      bun test tests/checks/decision-record.test.ts (11 pass); pnpm typecheck;
+      git diff --check; both TDR paths tracked and `git status --porcelain --
+      doc/decisions` empty (verification only - neither record edited)."
+    type: info
+    date: "2026-11-19"

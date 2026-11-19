@@ -144,6 +144,21 @@ export {
   readHarnessTelemetry,
 } from "./harness-telemetry.js";
 export {
+  appendLoopSession,
+  appendLoopStop,
+  foldedStopMode,
+  foldLoopSession,
+  foldLoopStop,
+  isStopFolded,
+  LOOP_RECORD_KINDS,
+  type LoopAppendOutcome,
+  type LoopRecordsRead,
+  type LoopStopFold,
+  loopSessionKey,
+  loopStopKey,
+  readLoopRecords,
+} from "./loop.js";
+export {
   appendMergeGateVerification,
   appendMergeTransaction,
   appendMergeWaiver,
