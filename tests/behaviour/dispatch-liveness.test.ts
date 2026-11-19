@@ -203,17 +203,55 @@ describe("GH-347 the terminal pre-restart verdict set is the only short-circuit"
     }
   });
 
-  test("undecidable truth is named, and a readable tracker or artifact is not", () => {
-    const undecidable = {
-      tracker: { ok: false as const, reason: "tracker" as const },
-      artifacts: { ok: false as const, reason: "artifact" as const },
+  test("undecidable truth is any unreadable required read with no decisive artifact", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F6-3; Appendix F(C)(10)/F(D)
+    // "any required read unreadable and no decisive artifact"; review M3): the
+    // delivered assertion treated a READABLE tracker beside an unreadable
+    // artifact as decidable, so the stall restarted on truth it could not read.
+    // The artifact read is required for the stall decision; only a decisive
+    // artifact (Appendix F(C) arms 4-7) makes an unreadable tracker decidable.
+    const unreadableTracker = { ok: false as const, reason: "tracker" as const };
+    const unreadableArtifacts = { ok: false as const, reason: "artifact" as const };
+    const readableTracker = {
+      ok: true as const,
+      value: { state: "in-progress" as const, blocking: false },
     };
-    expect(dispatchStallUndecidable(undecidable)).toBe(true);
+    const noArtifact = {
+      ok: true as const,
+      value: {
+        branchCommits: 0,
+        pr: { state: "none" as const, url: null, mergeReady: false },
+        pmNotes: "complete" as const,
+      },
+    };
+    const commitsArtifact = {
+      ok: true as const,
+      value: {
+        branchCommits: 2,
+        pr: { state: "none" as const, url: null, mergeReady: false },
+        pmNotes: "complete" as const,
+      },
+    };
+
     expect(
-      dispatchStallUndecidable({
-        ...undecidable,
-        tracker: { ok: true, value: { state: "in-progress", blocking: false } },
-      }),
+      dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: unreadableArtifacts }),
+    ).toBe(true);
+    // A readable NON-TERMINAL tracker beside an unreadable artifact is terminal
+    // state-unverified, never a restart.
+    expect(
+      dispatchStallUndecidable({ tracker: readableTracker, artifacts: unreadableArtifacts }),
+    ).toBe(true);
+    // An unreadable tracker with NO decisive artifact is undecidable.
+    expect(dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: noArtifact })).toBe(
+      true,
+    );
+    // A decisive artifact keeps the truth decidable even with no tracker.
+    expect(
+      dispatchStallUndecidable({ tracker: unreadableTracker, artifacts: commitsArtifact }),
     ).toBe(false);
+    // Readable truth with no decisive artifact is decidable.
+    expect(dispatchStallUndecidable({ tracker: readableTracker, artifacts: noArtifact })).toBe(
+      false,
+    );
   });
 });

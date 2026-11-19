@@ -47,6 +47,13 @@ export type SessionScript = {
 
 export type GuardedRunnerOptions = {
   /**
+   * The PLANTED CONTROL (GH-347 AC-F9-4, review M5): when true the guard
+   * PERMITS the start and counts it, so `realChildStarts` is observed moving.
+   * The battery never sets it, so its own count reads 0 because no start was
+   * permitted — never because the field is a literal.
+   */
+  readonly permitStarts?: boolean;
+  /**
    * The scripted session output per invocation. The default identifies the
    * session from the `--session <id>` resume marker and stays complete, so a
    * resume reports the caller's identity (the adapter refuses a different one).
@@ -84,10 +91,15 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
   const violations: string[] = [];
   let spawns = 0;
   let resumes = 0;
+  let childStarts = 0;
 
   const guard = (seam: GuardedSeam, file: string, args: readonly string[]): void => {
     const record: GuardedInvocation = { seam, file, args: [...args] };
     records.push(record);
+    // The live start counter observes every start the guard PERMITS. The guard
+    // never starts a process itself, so the battery's count is 0 only because no
+    // start was permitted (the planted control permits one and reads 1).
+    if (options.permitStarts === true) childStarts += 1;
     const shell = shellOf(file);
     if (SHELL_EXECUTABLES.has(shell)) {
       violations.push(`shell invocation recorded: ${file} ${args.join(" ")}`);
@@ -175,7 +187,9 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
     get resumes() {
       return resumes;
     },
-    realChildStarts: 0,
+    get realChildStarts() {
+      return childStarts;
+    },
     get shellInvocations() {
       return violations.filter((entry) => entry.startsWith("shell invocation")).length;
     },
@@ -187,6 +201,7 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
       violations.length = 0;
       spawns = 0;
       resumes = 0;
+      childStarts = 0;
     },
   };
 };

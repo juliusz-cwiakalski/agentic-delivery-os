@@ -151,25 +151,51 @@ describe("TC-PARITY-003 two consecutive runs are identical with zero live I/O", 
     expect(second).toHaveLength(PARITY_CASES.length);
     expect(PARITY_CASES).toHaveLength(29);
 
-    const summary = (
+    /**
+     * The determinism projection (GH-347 AC-F9-3, NFR-1): the FULL canonical
+     * envelope, the attempt count and its tokens, the lane count, the restart /
+     * spawn / resume counts, the injected waits, and the class coverage. A
+     * token-plus-exit projection is deliberately NOT enough — an envelope or an
+     * attempt count that drifted would pass it.
+     */
+    const snapshot = (
       runs: Awaited<ReturnType<typeof runAllParityCases>>,
-    ): readonly { readonly id: string; readonly observed: unknown; readonly exit: number }[] =>
-      runs.map((run) => {
-        const observed = run.observation.token;
-        return { id: run.entry.id, observed, exit: run.observation.exit };
-      });
-    expect(canonicalize(summary(second), ROOT)).toBe(canonicalize(summary(first), ROOT));
+    ): readonly Record<string, unknown>[] =>
+      runs.map((run) => ({
+        id: run.entry.id,
+        group: run.entry.group,
+        result: run.observation.token,
+        exit: run.observation.exit,
+        envelopes: run.observation.envelopes,
+        attemptCount: run.observation.attempts.length,
+        attemptTokens: run.observation.attempts.map((attempt) => attempt.token),
+        laneCount: run.observation.lanes.length,
+        divergences: run.observation.divergences,
+        economicsRestarts: run.observation.economicsRestarts,
+        spawns: run.observation.spawns,
+        resumes: run.observation.resumes,
+        waits: run.observation.waits,
+        violations: run.observation.violations,
+      }));
+    expect(canonicalize(snapshot(second), ROOT)).toBe(canonicalize(snapshot(first), ROOT));
 
     for (const run of [...first, ...second]) {
+      // A zero-length violation list is a real assertion: the guarded runner and
+      // the process-tree model both record one when they refuse an act.
       expect(run.observation.violations, run.entry.id).toEqual([]);
-      expect(run.observation.spawns, run.entry.id).toBeGreaterThanOrEqual(0);
     }
-    // Class coverage is 11/11 in both runs.
+    // Class coverage is 11/11 and identical in both runs.
     const classes = (runs: Awaited<ReturnType<typeof runAllParityCases>>): number =>
       new Set(runs.filter((run) => run.entry.group === "class").map((run) => run.observation.token))
         .size;
     expect(classes(first)).toBe(11);
     expect(classes(second)).toBe(11);
+    const coverage = (runs: Awaited<ReturnType<typeof runAllParityCases>>): readonly string[] =>
+      runs
+        .filter((run) => run.entry.group === "class")
+        .map((run) => run.observation.token ?? "")
+        .sort();
+    expect(coverage(second)).toEqual(coverage(first));
   });
 });
 

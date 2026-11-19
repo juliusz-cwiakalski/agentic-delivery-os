@@ -7,7 +7,7 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import {
   createEnvironmentCredentialPort,
@@ -493,6 +493,62 @@ const repositoryTargetOf = (originUrl: string | undefined): RepositoryTarget | u
 /** The production caller principal the handover/resolution records carry. */
 const DISPATCH_PRINCIPAL = LOCAL_CALLER_PRINCIPAL.kind;
 
+/** One entry of the host process table (the exact-identity reap's only input). */
+type ProductionProcessEntry = {
+  readonly pid: number;
+  readonly argv: readonly string[];
+};
+
+/**
+ * The host process table the terminate seam reads (GH-347 AC-F5-5, TDR-0046
+ * DC-3): `/proc` command lines on Linux, nothing elsewhere. It starts no
+ * process, runs no shell, and matches no name pattern — the adapter compares
+ * this lane's session id or its deterministic `ticket-<REF>` title against the
+ * argv elements.
+ */
+const readProductionProcessTable = (): readonly ProductionProcessEntry[] => {
+  if (process.platform !== "linux") return [];
+  let entries: string[];
+  try {
+    entries = readdirSync("/proc");
+  } catch {
+    return [];
+  }
+  const table: ProductionProcessEntry[] = [];
+  for (const entry of entries) {
+    const pid = Number(entry);
+    if (!Number.isInteger(pid) || pid <= 0 || pid === process.pid) continue;
+    try {
+      const argv = readFileSync(`/proc/${entry}/cmdline`, "utf8")
+        .split("\u0000")
+        .filter((value) => value.length > 0);
+      if (argv.length > 0) table.push({ pid, argv });
+    } catch {
+      // The process exited between the listing and the read; never fabricated.
+    }
+  }
+  return table;
+};
+
+/**
+ * The production terminate seam the opencode adapter receives (GH-347 AC-F5-5,
+ * TDR-0046 DC-2/DC-3). The tree signal reaches the group the runtime leads and
+ * falls back to the matched process only; it never widens the target.
+ */
+const productionTerminateTree = {
+  list: readProductionProcessTable,
+  signalTree: (pid: number, signal: "SIGTERM" | "SIGKILL"): boolean => {
+    // The delivered process port is the composition's one signalling seam; a
+    // negative pid addresses the group the runtime leads, and the direct pid is
+    // the fallback when it leads no group.
+    const signals = createNodeProcessPort();
+    if (signals.signal(-pid, signal).ok) return true;
+    return signals.signal(pid, signal).ok;
+  },
+  signalProcess: (pid: number, signal: "SIGTERM" | "SIGKILL"): boolean =>
+    createNodeProcessPort().signal(pid, signal).ok,
+};
+
 /** The declared harness kinds, used to validate a persisted lane fact. */
 const harnessKindOf = (value: string | undefined): HarnessKind | undefined =>
   value !== undefined && (HARNESS_KINDS as readonly string[]).includes(value)
@@ -510,6 +566,14 @@ export type ProductionCompositionFacts = {
    * tests inject a fixed remote so composition is proven without a real origin.
    */
   readonly repositoryFacts?: { readonly originUrl?: string };
+  /**
+   * The RESOLVED base branch a dispatch's lifecycle prompt targets (GH-347
+   * AC-F7-3, DM-6). The composition is the resolution site: an embedder that
+   * knows its integration base supplies it, and the delivered integration base
+   * is the declared fallback. The prompt never carries a second hardcoded
+   * literal, and no configuration key is added.
+   */
+  readonly dispatchBaseBranch?: string;
   /**
    * The injected harness spawn runner. Production uses the host runner; tests
    * inject a recording runner so composition is proven without a harness process.
@@ -2090,6 +2154,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     /** The declared integration base the checkout's base reference resolves to. */
     const mergeBaseRef = CLOSEOUT_INTEGRATION_BASE;
+    /**
+     * The RESOLVED base branch the dispatch lifecycle prompt interpolates
+     * (GH-347 AC-F7-3, DM-6): the composition fact is the resolution, and the
+     * delivered integration base is the declared fallback. It never reads the
+     * constant at the prompt's own build site.
+     */
+    const dispatchBaseBranch =
+      facts.dispatchBaseBranch !== undefined && facts.dispatchBaseBranch.length > 0
+        ? facts.dispatchBaseBranch
+        : CLOSEOUT_INTEGRATION_BASE;
     /** The checkout's own current branch, read from its git facts. */
     const mergeBranch = resolvedRepositoryFacts.head.branch;
 
@@ -2356,6 +2430,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             // GH-347 DEC-4: the declared grace is waited through the one
             // injected delay fact with reason `terminate-grace`.
             terminateWait: (ms) => dispatchDelay(ms, "terminate-grace"),
+            // GH-347 AC-F5-5, TDR-0046 DC-2/DC-3: the process-tree seam is
+            // bound HERE, at the composition edge, so the adapter carries no
+            // ambient process access.
+            terminateTree: productionTerminateTree,
             telemetrySinkFor: ({ workItemRef }) => {
               const resolution = resolveProductionHarnessSettings();
               if (!resolution.ok) return undefined;
@@ -3056,8 +3134,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         environment: harnessEnvironmentEntries(settings),
       },
       // GH-347 F-7, DEC-8: the fresh prompt is the delivery-lifecycle prompt
-      // parameterized by the ref and the resolved base branch.
-      prompt: (ref) => buildLifecyclePrompt({ ref, baseBranch: CLOSEOUT_INTEGRATION_BASE }),
+      // parameterized by the ref and the RESOLVED base branch.
+      prompt: (ref) => buildLifecyclePrompt({ ref, baseBranch: dispatchBaseBranch }),
       // The lifecycle agent identity is `pm` through the existing caller-agent
       // member; the binding is the delivered pure resolution's single seat.
       harnessAgent: () => "pm",

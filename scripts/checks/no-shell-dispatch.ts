@@ -7,15 +7,18 @@
  *       `deliver-ticket`. Anchored on the literal's VALUE, never a substring.
  *   R2  a declared `shell: true`.
  *   R3  a shell-capable child-process import or call, bound to the
- *       `child_process` receiver: only `spawn` may be imported, and a call on a
- *       `child_process` namespace binding must be `spawn(`.
+ *       `child_process` receiver: only `spawn` may be imported, a call on a
+ *       `child_process` namespace binding must be `spawn(`, and every static or
+ *       dynamic route to the module is covered — a named import, a default
+ *       import, a namespace import, `require(...)`, a destructured `require`,
+ *       `await import(...)`, and an alias (`const s = spawn`).
  *   R4  the one permitted child-process `spawn(` call must carry a literal
- *       `shell: false`.
+ *       `shell: false`, including when it is reached through an alias.
  *
  * A `RegExp.prototype.exec` call and a port object's `.spawn(` call are NOT
- * child-process calls and are asserted false-positive controls. The line
- * allowlist is declared EMPTY; a future entry needs a written justification in
- * this file.
+ * child-process calls and are asserted false-positive controls. R1 also covers
+ * a SUBSTITUTED template path (`` `scripts/${name}.sh` ``), because a path
+ * assembled from parts is still a script-path route.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -47,8 +50,19 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/adapters/src/daemon/lane-executor.ts",
 ] as const;
 
-/** The declared line allowlist. Empty by construction; a hit is never silenced. */
+/**
+ * The declared line allowlist: `file:line` entries a justification could excuse.
+ *
+ * It is CONSULTED by `scan`, and it is declared EMPTY. A future entry needs a
+ * written justification here, and the suite asserts both that the live list is
+ * empty and that a supplied entry is actually honoured — so "the allowlist is
+ * empty" is a measurement of the mechanism, never a tautology.
+ */
 export const NO_SHELL_ALLOWLIST: readonly string[] = [];
+
+/** The identity of one violation, as an allowlist entry spells it. */
+export const allowlistKey = (violation: NoShellViolation): string =>
+  `${violation.file}:${violation.line}`;
 
 export const NO_SHELL_RULES = [
   "script-path literal",
@@ -75,11 +89,21 @@ const FORBIDDEN_MEMBERS = new Set([
   "fork",
 ]);
 
-const isScriptPathLiteral = (value: string): boolean =>
+const isScriptPathValue = (value: string): boolean =>
   value.endsWith(".sh") ||
   value.startsWith("scripts/") ||
   value.startsWith("tools/") ||
   value.includes("deliver-ticket");
+
+/**
+ * A substituted template path: its STATIC parts still spell a script route
+ * (`` `${root}/scripts/deliver-ticket.sh` ``), so a path assembled from parts is
+ * not a way around the invariant.
+ */
+const isScriptPathTemplate = (node: ts.TemplateExpression): boolean =>
+  [node.head, ...node.templateSpans.map((span) => span.literal)].some((part) =>
+    isScriptPathValue(part.text),
+  );
 
 const lineOf = (source: ts.SourceFile, node: ts.Node): number =>
   source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
@@ -88,16 +112,24 @@ const lineOf = (source: ts.SourceFile, node: ts.Node): number =>
 export const scanSource = (file: string, text: string): NoShellViolation[] => {
   const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const violations: NoShellViolation[] = [];
-  const childProcessNamespaceBindings = new Set<string>();
+  const childProcessModuleBindings = new Set<string>();
   const childProcessSpawnBindings = new Set<string>();
+  const isChildProcessModule = (node: ts.Expression | undefined): boolean =>
+    node !== undefined &&
+    (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+    CHILD_PROCESS_MODULES.has(node.text);
   const push = (rule: NoShellRule, node: ts.Node): void => {
     violations.push({ rule, file, line: lineOf(source, node) });
   };
 
   const visit = (node: ts.Node): void => {
-    // R1 — script-path literals (value-anchored).
+    // R1 — script-path literals (value-anchored), including a substituted
+    // template whose STATIC parts spell the route.
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
-      if (isScriptPathLiteral(node.text)) push("script-path literal", node);
+      if (isScriptPathValue(node.text)) push("script-path literal", node);
+    }
+    if (ts.isTemplateExpression(node) && isScriptPathTemplate(node)) {
+      push("script-path literal", node);
     }
     // R2 — a declared shell: true.
     if (ts.isPropertyAssignment(node)) {
@@ -106,11 +138,12 @@ export const scanSource = (file: string, text: string): NoShellViolation[] => {
         push("shell-enabled spawn", node);
       }
     }
-    // R3 — child-process imports.
+    // R3 — child-process imports, static and dynamic.
     if (ts.isImportDeclaration(node)) {
       const moduleName = ts.isStringLiteral(node.moduleSpecifier) ? node.moduleSpecifier.text : "";
       if (CHILD_PROCESS_MODULES.has(moduleName)) {
-        const named = node.importClause?.namedBindings;
+        const clause = node.importClause;
+        const named = clause?.namedBindings;
         if (named !== undefined && ts.isNamedImports(named)) {
           for (const element of named.elements) {
             const imported = element.propertyName?.text ?? element.name.text;
@@ -119,15 +152,75 @@ export const scanSource = (file: string, text: string): NoShellViolation[] => {
           }
         }
         if (named !== undefined && ts.isNamespaceImport(named)) {
-          childProcessNamespaceBindings.add(named.name.text);
+          childProcessModuleBindings.add(named.name.text);
         }
+        // A DEFAULT import of the module is the module object.
+        if (clause?.name !== undefined && named === undefined) {
+          childProcessModuleBindings.add(clause.name.text);
+        }
+      }
+    }
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      isChildProcessModule(node.arguments[0])
+    ) {
+      // A dynamic import cannot be verified statically.
+      push("shell-exec import", node);
+    }
+    // A `require("child_process")` route: a destructured binding is followed as
+    // a spawn/namespace binding, a bare require is refused outright.
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "require" &&
+      isChildProcessModule(node.arguments[0])
+    ) {
+      const declaration = node.parent;
+      if (ts.isVariableDeclaration(declaration) && ts.isIdentifier(declaration.name)) {
+        childProcessModuleBindings.add(declaration.name.text);
+      } else if (
+        ts.isVariableDeclaration(declaration) &&
+        ts.isObjectBindingPattern(declaration.name)
+      ) {
+        for (const element of declaration.name.elements) {
+          const imported = element.propertyName?.getText(source) ?? element.name.getText(source);
+          if (FORBIDDEN_MEMBERS.has(imported)) push("shell-exec import", element);
+          if (imported === "spawn" && ts.isIdentifier(element.name)) {
+            childProcessSpawnBindings.add(element.name.text);
+          }
+        }
+      } else {
+        push("shell-exec import", node);
+      }
+    }
+    // R3 — an ALIAS of a child-process binding (`const s = spawn`,
+    // `const cp = childProcess`, `const s = childProcess.spawn`).
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      const initializer = node.initializer;
+      if (initializer !== undefined && ts.isIdentifier(initializer)) {
+        if (childProcessSpawnBindings.has(initializer.text)) {
+          childProcessSpawnBindings.add(node.name.text);
+        }
+        if (childProcessModuleBindings.has(initializer.text)) {
+          childProcessModuleBindings.add(node.name.text);
+        }
+      }
+      if (
+        initializer !== undefined &&
+        ts.isPropertyAccessExpression(initializer) &&
+        ts.isIdentifier(initializer.expression) &&
+        childProcessModuleBindings.has(initializer.expression.text) &&
+        initializer.name.text === "spawn"
+      ) {
+        childProcessSpawnBindings.add(node.name.text);
       }
     }
     // R3/R4 — child-process calls.
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const object = node.expression.expression;
       const member = node.expression.name.text;
-      if (ts.isIdentifier(object) && childProcessNamespaceBindings.has(object.text)) {
+      if (ts.isIdentifier(object) && childProcessModuleBindings.has(object.text)) {
         if (member !== "spawn") {
           push("shell-exec import", node);
         } else {
@@ -167,16 +260,26 @@ export const missingSurfaceFiles = (
   surface: readonly string[] = DISPATCH_FLOW_SURFACE,
 ): string[] => surface.filter((relative) => !existsSync(join(root, relative)));
 
-/** Scan the declared surface under `root` (existence is asserted separately). */
+/**
+ * Scan the declared surface under `root` (existence is asserted separately).
+ *
+ * The allowlist is consulted here: a hit whose `file:line` is declared is
+ * suppressed. The live list is empty, and the suite proves the mechanism by
+ * supplying one entry, so an empty allowlist can never be a vacuous claim.
+ */
 export const scan = (
   root: string,
   surface: readonly string[] = DISPATCH_FLOW_SURFACE,
+  allowlist: readonly string[] = NO_SHELL_ALLOWLIST,
 ): NoShellViolation[] => {
   const violations: NoShellViolation[] = [];
   for (const relative of surface) {
     if (!existsSync(join(root, relative))) continue;
     const text = readFileSync(join(root, relative), "utf8");
-    violations.push(...scanSource(relative, text));
+    for (const violation of scanSource(relative, text)) {
+      if (allowlist.includes(allowlistKey(violation))) continue;
+      violations.push(violation);
+    }
   }
   return violations;
 };

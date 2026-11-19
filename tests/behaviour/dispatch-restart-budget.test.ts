@@ -75,6 +75,10 @@ describe("TC-LOOP-006 a persisted count at or above the bound admits one iterati
         expect(run.envelope?.data?.result).toBe("max-restarts");
         expect(run.envelope?.data?.outcome).toBe("failed");
         expect(run.envelope?.data?.error?.code).toBe("dispatch.restart-budget-exceeded");
+        // RESTORED (GH-347 review M6; test plan §7.4 non-vacuity): the delivered
+        // assertion of the error row's category was deleted with no clause. The
+        // row is unchanged, so the assertion is restored, not relaxed.
+        expect(run.envelope?.data?.error?.category).toBe("user");
         expect(run.envelope?.data?.restarts).toBe(count);
         // One iteration: one session acquisition, one attempt, one exhaustion.
         expect(scenario.scripted.calls.filter((call) => call === "spawn")).toHaveLength(1);
@@ -85,6 +89,8 @@ describe("TC-LOOP-006 a persisted count at or above the bound admits one iterati
         expect(read.records).toHaveLength(1);
         const record = read.records[0];
         expect(record?.token).toBe("max-restarts");
+        // RESTORED (review M6): the attempt record's delivered outcome.
+        expect(record?.outcome).toBe("failed");
         expect(record?.evidenceRefs).toContain("economics:exhaustion");
         expect(record?.comparison).toEqual({
           class: "not-applicable",

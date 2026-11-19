@@ -188,7 +188,13 @@ describe("TC-TERM-002 the engine invokes no terminate on a clean exit or a clear
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
-      expect(run.exit).toBe(1);
+      // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 4-7
+      // precede arm 9; §8.5 artifact-first): a tool-failure end whose truth
+      // carries an open pull request now resolves `pr-open` at exit 0 instead of
+      // the classifier token. The case's subject — no terminate and no restart
+      // for a stall that later progress clears — is unchanged.
+      expect(run.exit).toBe(0);
+      expect(run.envelope?.data?.result).toBe("pr-open");
       expect(stallPort.terminateCalls).toHaveLength(0);
       expect(restartsOf(scenario)).toHaveLength(0);
       const attempt = attemptsOf(scenario)[0];
@@ -316,6 +322,9 @@ describe("TC-TERM-005 a terminate-incapable adapter starts no second session", (
       expect(run.exit).toBe(0);
       expect(restartsOf(scenario)).toHaveLength(0);
       expect(stallPort.acquisitions()).toBe(1);
+      // The incapable adapter was never asked: no termination call, no model
+      // violation, and never a second session (GH-347 AC-F5-4).
+      expect(stallPort.terminateCalls).toHaveLength(0);
       expect(stallPort.violations).toEqual([]);
     } finally {
       scenario.dispose();
@@ -340,6 +349,100 @@ describe("TC-TERM-005 a terminate-incapable adapter starts no second session", (
       expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:stalled");
       expect(restartsOf(scenario)).toHaveLength(0);
       expect(stallPort.acquisitions()).toBe(1);
+      expect(stallPort.terminateCalls).toHaveLength(0);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-TERM-007 an incapable adapter never starts a second session", () => {
+  test("a below-bound stall with an outside-set artifact is terminal state-unverified", async () => {
+    // GH-347 AC-F5-4, F-5 ("On an adapter that declares no terminate capability,
+    // the engine starts no second session and applies the same short-circuit
+    // rule"): a decisive artifact OUTSIDE the terminal pre-restart set does not
+    // short-circuit, and the incapable adapter cannot be confirmed dead, so the
+    // verdict is a terminal `state-unverified` with the stall evidence.
+    const { scenario, stallPort } = build({
+      label: "term-007-incapable-below-bound",
+      iterations: [stallScript(), cleanScript()],
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      readsSequence: [outsideSetReads(), readsFrom()],
+      restartBudget: 3,
+      restartCount: 0,
+      terminateCapable: false,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.restarts).toBe(0);
+      expect(attemptsOf(scenario)).toHaveLength(1);
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:stalled");
+      expect(restartsOf(scenario)).toHaveLength(0);
+      expect(stallPort.calls.filter((call) => call === "spawn")).toHaveLength(1);
+      expect(stallPort.calls.filter((call) => call === "resume")).toHaveLength(0);
+      expect(stallPort.acquisitions()).toBe(1);
+      expect(stallPort.terminateCalls).toHaveLength(0);
+      expect(stallPort.violations).toEqual([]);
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("a second stall on a capable adapter is signalled again", async () => {
+    // GH-347 AC-F5-1/AC-F5-5, TDR-0046 DC-4 (review M2): the termination fact is
+    // per acquisition, so iteration 2's stall of the resuming session IS
+    // signalled. Inheriting the first termination would leave it alive.
+    const { scenario, stallPort, model } = build({
+      label: "term-007-second-stall",
+      iterations: [stallScript(), stallScript(), cleanScript()],
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      readsSequence: [outsideSetReads(), outsideSetReads(), readsFrom()],
+      restartBudget: 3,
+      restartCount: 0,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.envelope?.data?.result).toBe("pr-open");
+      expect(restartsOf(scenario)).toHaveLength(2);
+      expect(stallPort.terminateCalls).toHaveLength(2);
+      const pid = Number(stallPort.terminateCalls[0]?.handle.treeRoot);
+      const terms = model.signalsFor(pid).filter((signal) => signal.signal === TERM);
+      expect(terms).toHaveLength(2);
+      expect(stallPort.violations).toEqual([]);
+    } finally {
+      scenario.dispose();
+    }
+  });
+});
+
+describe("TC-LOOP-007 an unreadable required read beside readable truth is terminal", () => {
+  test("a readable non-terminal tracker with an unreadable artifact is state-unverified", async () => {
+    // GH-347 AC-F6-3; Appendix F(C)(10)/F(D) "any required read unreadable and no
+    // decisive artifact" (review M3): the artifact read is required for the stall
+    // decision, so this stall consumes no ordinal and starts no second session.
+    const { scenario, stallPort } = build({
+      label: "loop-007-artifact-unreadable",
+      iterations: [stallScript(), cleanScript()],
+      nowMs: () => Date.parse("2026-11-08T10:00:00.000Z"),
+      reads: readsFrom({
+        tracker: readOk(tracker({ state: "in-progress", blocking: false })),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
+      restartBudget: 3,
+      restartCount: 0,
+    });
+    try {
+      const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+      expect(run.envelope?.data?.result).toBe("state-unverified");
+      expect(run.exit).toBe(2);
+      expect(run.envelope?.data?.restarts).toBe(0);
+      expect(restartsOf(scenario)).toHaveLength(0);
+      expect(stallPort.acquisitions()).toBe(1);
+      expect(attemptsOf(scenario)).toHaveLength(1);
+      expect(attemptsOf(scenario)[0]?.evidenceRefs).toContain("liveness:stalled");
     } finally {
       scenario.dispose();
     }
@@ -396,6 +499,32 @@ describe("TC-TERM-006 terminate is idempotent and reaps only the exact identity"
     expect(reaped).not.toContain(9103);
     expect(reaped).not.toContain(9104);
     expect(reaped).not.toContain(9105);
+    // The model itself observed no signal outside this lane's identity.
+    expect(model.violations).toEqual([]);
+  });
+
+  test("the planted broad pattern reaches another lane, so the negative can fail", () => {
+    // GH-347 review M5(b): the "0 unrelated processes signalled" assertion is
+    // only meaningful if a broad matcher CAN reach pid 9103/9104. This control
+    // runs the forbidden matcher through the same model and observes both the
+    // hit and the violation the model records.
+    const nowMs = () => Date.parse("2026-11-08T10:00:00.000Z");
+    const model = createProcessTreeModel({ nowMs });
+    model.addProcess({ pid: 9101, escaped: true, sessionId: "ses-loop-1" });
+    model.addProcess({ pid: 9102, escaped: true, title: "ticket-GH-301" });
+    model.addProcess({ pid: 9103, sessionId: "ses-999", title: "ticket-GH-348" });
+    model.addProcess({ pid: 9104, title: "ticket-GH-348" });
+
+    // The exact identity the contract allows reaps only this lane's runtimes.
+    expect(model.reapExact({ sessionId: "ses-loop-1", title: "ticket-GH-301" })).toBe(2);
+    expect(model.reaped()).toEqual([9101, 9102]);
+    expect(model.violations).toEqual([]);
+
+    // The forbidden broad pattern reaps the other delivery's runtimes, and the
+    // model names the violation: a broad matcher is observably wrong.
+    const broad = model.reapByPattern(/GH-3/u);
+    expect(broad).toEqual([9103, 9104]);
+    expect(model.violations.length).toBeGreaterThan(0);
   });
 });
 

@@ -47,6 +47,15 @@ export const SEAM_MANIFEST: readonly SeamManifestEntry[] = [
     mountedIn: "packages/cli/src/production.ts",
   },
   {
+    // GH-347 AC-F9-2 / review M5: the terminate seam is the opencode adapter the
+    // production composition mounts, so its "real production seam" membership is
+    // proven by import identity and not only asserted in prose.
+    seam: "terminate",
+    symbol: "createOpencodeSession",
+    module: "packages/adapters/src/harness/opencode",
+    mountedIn: "packages/cli/src/production.ts",
+  },
+  {
     seam: "derive",
     symbol: "deriveDispatchResult",
     module: "packages/core/src/domain/dispatch-result",

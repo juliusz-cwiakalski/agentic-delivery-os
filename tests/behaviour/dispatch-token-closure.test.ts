@@ -93,12 +93,33 @@ describe("TC-DISP-008 every derivation branch stays inside the eleven", () => {
 });
 
 describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () => {
-  test("completed-with-tool-failure and premature end both derive partial with an outcome", () => {
+  test("a tool failure or premature end WITH a decisive artifact resolves the artifact", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 6-7
+    // precede arm 9; §8.5 "After a completed session, derivation is
+    // artifact-first"; DEC-6): a non-clean END with commits and complete
+    // pm-notes takes the artifact arm and resolves `finished`, not the
+    // classifier token. The assertion is updated with its clause, not deleted.
     for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
       const result = deriveDispatchResult(
         truthInput({
           harness: readOk(harnessFacts(evidence)),
           artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
+        }),
+      );
+      expect(result.token).toBe("finished");
+      expect(result.outcome.length).toBeGreaterThan(0);
+      expect(result.projectionClass).toBe("success");
+    }
+  });
+
+  test("a tool failure or premature end WITHOUT a decisive artifact keeps partial", () => {
+    // Appendix F(C)(9): the classifier's token is still reachable, so `partial`
+    // is proven by its own arm (no commits, no pull request, readable tracker).
+    for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
+      const result = deriveDispatchResult(
+        truthInput({
+          harness: readOk(harnessFacts(evidence)),
+          artifacts: readOk({ branchCommits: 0, pr: prNone, pmNotes: "complete" }),
         }),
       );
       expect(result.token).toBe("partial");
@@ -150,15 +171,39 @@ describe("TC-DISP-012 noop-lane-nothing-to-do only under the shell arm", () => {
   });
 
   test("a non-completed session never derives the no-work token", () => {
-    const result = deriveDispatchResult(
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 6-7;
+    // §8.5 artifact-first): a premature end WITH commits and a complete pm-notes
+    // resolves `finished`. The no-work claim is still refused, which is this
+    // case's subject.
+    const artifactBacked = deriveDispatchResult(
       truthInput({
         artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
         ledger: readOk(ledger({ completed: 5, total: 7, workRemaining: true, progressed: false })),
         harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
       }),
     );
-    expect(result.token).not.toBe("noop-lane-nothing-to-do");
-    expect(result.token).toBe("partial");
+    expect(artifactBacked.token).not.toBe("noop-lane-nothing-to-do");
+    expect(artifactBacked.token).toBe("finished");
+
+    // With NO decisive artifact the classifier arm (F(C)(9)) still decides, and
+    // it is never the no-work token either.
+    const classifierBacked = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk({ branchCommits: 0, pr: prNone, pmNotes: "complete" }),
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+      }),
+    );
+    expect(classifierBacked.token).not.toBe("noop-lane-nothing-to-do");
+    expect(classifierBacked.token).toBe("partial");
+  });
+
+  test("the shell arm asserts that no work remains", () => {
+    // RESTORED (GH-347 AC-F8-4; test plan §7.4 non-vacuity): the delivered
+    // assertion naming the production message was dropped with the
+    // TC-DISP-012 rename and is restored here in its own case.
+    const result = deriveDispatchResult(noArtifactInput());
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.lastMessage).toContain("no remaining work");
   });
 
   test("the happy-path open-PR lane is not a no-work claim", () => {

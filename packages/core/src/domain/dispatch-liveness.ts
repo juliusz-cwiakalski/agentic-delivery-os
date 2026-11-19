@@ -176,8 +176,25 @@ export const dispatchStallShortCircuit = (input: {
   return undefined;
 };
 
-/** Whether a stalled session's truth is undecidable (no tracker, no artifact). */
+/**
+ * Whether a stalled session's truth is undecidable (Appendix F(C)(10)/F(D)):
+ * "any required read unreadable and no decisive artifact".
+ *
+ * Both stall reads are required. An unreadable artifact read is undecidable
+ * unless a tracker-terminal short-circuit already decided the stall (the
+ * caller evaluates `dispatchStallShortCircuit` first). An unreadable tracker is
+ * undecidable only when no decisive artifact arm (Appendix F(C) 4-7) can
+ * decide: an open/merged pull request or a branch carrying commits.
+ */
 export const dispatchStallUndecidable = (input: {
   readonly tracker: DispatchRead<DispatchTrackerFacts>;
   readonly artifacts: DispatchRead<DispatchArtifactFacts>;
-}): boolean => !input.tracker.ok && !input.artifacts.ok;
+}): boolean => {
+  if (!input.artifacts.ok) return true;
+  const artifacts = input.artifacts.value;
+  const decisiveArtifact =
+    artifacts.pr.state === "open" ||
+    artifacts.pr.state === "already-merged" ||
+    artifacts.branchCommits > 0;
+  return !input.tracker.ok && !decisiveArtifact;
+};

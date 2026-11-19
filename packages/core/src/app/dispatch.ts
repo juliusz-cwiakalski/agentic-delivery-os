@@ -645,6 +645,26 @@ const corroborationFactsOf = (reads: DispatchTruthReads): CorroborationFacts => 
     : "unreadable",
 });
 
+/**
+ * The adapter's own terminate-capability declaration (GH-347 F-5, DM-5,
+ * AC-F5-4).
+ *
+ * A session port that carries a capability declaration is authoritative: an
+ * absent `terminate` operation means the engine starts no second session. A
+ * port that declares nothing keeps the delivered restart behaviour — the
+ * default direction is never "incapable", which would silently stop restarting
+ * on a capable adapter.
+ */
+const declaresTerminate = (port: HarnessSessionPort): boolean => {
+  const declaration = (
+    port as {
+      readonly capabilities?: { readonly supportedOperations?: readonly string[] };
+    }
+  ).capabilities;
+  const operations = declaration?.supportedOperations;
+  return operations === undefined ? true : operations.includes("terminate");
+};
+
 /** Map the harness liveness report into the dispatch liveness readings. */
 const livenessReadings = (
   readings: readonly {
@@ -759,6 +779,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     // The 1-based iteration ordinal within this dispatch; phase 5 increments it
     // per consumed restart.
     let iterationOrdinal = 1;
+    /**
+     * The stalled iterations' liveness/termination evidence, carried forward so
+     * a restarted stall stays durable on the terminal attempt (GH-347 F-5,
+     * AC-F5-1, §10).
+     */
+    const carriedStallRefs: string[] = [];
     let heldSession: HarnessSessionHandle | undefined;
     const budget = ports.restartBudget ?? 0;
     let resumeMode = ports.resumeMode;
@@ -804,9 +830,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         });
         if (!terminal.ok) laneAppendFailed = true;
       }
+      // Disclosure refs are RESERVED ahead of the 16-slice (GH-347 AC-F1-3,
+      // NFR-7): a resumability disclosure is never silently truncated away.
       const attemptEvidenceRefs = [
-        ...input.evidenceRefs,
         ...(laneAppendFailed ? ["lane:append-failed"] : []),
+        ...input.evidenceRefs,
       ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const attempt: DispatchAttemptRecord = {
         schema: DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
@@ -1132,16 +1160,27 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         // incapable adapter is never asked and (per AC-F5-4) never causes a
         // second session.
         const terminate = ports.harness.terminate;
+        const terminateCapable = declaresTerminate(ports.harness);
         const terminationRefs: string[] = [];
-        if (terminate !== undefined) {
+        // A composed terminate operation must CONFIRM the termination before a
+        // restart (F-5). A capable composition that composes no operation keeps
+        // the delivered restart, which is a composition gap and not capability
+        // dishonesty.
+        const confirmationRequired = terminate !== undefined && terminateCapable;
+        let terminationConfirmed = !confirmationRequired;
+        if (terminate !== undefined && terminateCapable) {
           try {
             const terminated = await terminate({
               handle: session.value,
               graceMs: ports.killGraceMs ?? 20_000,
             });
-            if (!terminated.ok) terminationRefs.push("terminate:failed");
-            else {
-              if (terminated.value.terminated) terminationRefs.push("terminate:terminated");
+            if (!terminated.ok || !terminated.value.terminated) {
+              // An unconfirmed termination never claims success (F-5: no second
+              // session starts until the first is confirmed terminated).
+              terminationRefs.push("terminate:failed");
+            } else {
+              terminationConfirmed = true;
+              terminationRefs.push("terminate:terminated");
               if (terminated.value.escalated) terminationRefs.push("terminate:escalated");
               if (terminated.value.reaped) terminationRefs.push("terminate:reaped");
             }
@@ -1149,7 +1188,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
             terminationRefs.push("terminate:failed");
           }
         }
-        const stallRefs = [...livenessRefs, ...terminationRefs];
+        const stallRefs = [...carriedStallRefs, ...livenessRefs, ...terminationRefs];
         const shortCircuit = dispatchStallShortCircuit({
           tracker: reads.tracker,
           artifacts: reads.artifacts,
@@ -1197,6 +1236,32 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
             prUrl: "",
             urlResolved: false,
             lastMessage: "liveness stalled; truth is undecidable",
+            evidenceRefs: stallRefs,
+          });
+        }
+        // GH-347 AC-F5-4, F-5: on an adapter that declares no terminate
+        // capability the engine starts NO second session. The terminal
+        // pre-restart verdict already had its chance above; the only remaining
+        // honest verdict is a terminal `state-unverified` at exit 2 with the
+        // stall evidence. No ordinal is consumed and no iteration follows.
+        if (!terminateCapable || !terminationConfirmed) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: terminateCapable
+              ? "liveness stalled; termination was not confirmed"
+              : "liveness stalled; the adapter declares no terminate capability",
             evidenceRefs: stallRefs,
           });
         }
@@ -1272,6 +1337,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         }
         handle = session.value;
         spawnPrompt = undefined;
+        // The stalled iteration appends no attempt of its own (Appendix F(E)),
+        // so its verdict and termination result are carried onto the terminal
+        // attempt (GH-347 F-5, AC-F5-1, §10).
+        carriedStallRefs.push(...livenessRefs, ...terminationRefs);
         continue;
       }
 
@@ -1395,11 +1464,12 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           ? ["tracker:exhausted"]
           : [];
       const evidenceRefs = [
-        `attempt:${attemptId}`,
         ...trackerExhausted,
+        `attempt:${attemptId}`,
         ...(truthRef === undefined ? [] : [truthRef]),
         ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
         ...livenessRefs,
+        ...carriedStallRefs,
       ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const lastMessage =
         appendFailureCode === undefined

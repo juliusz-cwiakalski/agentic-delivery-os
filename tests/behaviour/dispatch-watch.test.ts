@@ -173,8 +173,10 @@ describe("the one-shot watch routes a corroborated stall through restart admissi
       expect(run.exit).toBe(0);
       const record = evidenceOf(scenario);
       expect(record.token).toBe("pr-open");
-      // The stall is recorded on the restart, not on the terminal attempt (the
-      // restarted iteration appends no attempt of its own).
+      // RESTORED (GH-347 review m1; F-5, AC-F5-1, §10 telemetry): the stalled
+      // iteration appends no attempt of its own (Appendix F(E)), so its verdict
+      // is CARRIED onto the terminal attempt instead of being dropped.
+      expect(record.evidenceRefs).toContain("liveness:stalled");
       const spawns = scenario.scripted.calls.filter((call) => call === "spawn");
       const resumes = scenario.scripted.calls.filter((call) => call === "resume");
       expect(spawns).toHaveLength(1);

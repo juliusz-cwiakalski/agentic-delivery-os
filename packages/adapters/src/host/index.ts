@@ -155,6 +155,10 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
     const child = spawn(file, [...args], {
       cwd: options.cwd,
       env: { ...options.env },
+      // GH-347 API-5, TDR-0046 DC-2: the runtime leads its OWN process group, so
+      // the session's process tree can be signalled as a group and the caller's
+      // group is never at risk.
+      detached: true,
       shell: false,
       windowsHide: true,
     });
@@ -189,6 +193,12 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
       }
     };
 
+    /**
+     * The delivered probe escalation: the first call sends SIGTERM and
+     * schedules SIGKILL after the fixed 100 ms probe grace; a second call is a
+     * no-op. It is the handle-bound/mismatch budget and is NOT reused for
+     * termination (GH-347 TDR-0046 C-2).
+     */
     const kill = (): void => {
       killCount += 1;
       if (killCount > 1) return;

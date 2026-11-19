@@ -8,6 +8,7 @@
 import { describe, expect, test } from "bun:test";
 import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
 import { DISPATCH_LIFECYCLE_SECTION_TITLES } from "../../../packages/core/src/domain/dispatch-prompt";
+import { CLOSEOUT_INTEGRATION_BASE } from "../../../packages/core/src/contracts/index";
 import { createCommandScenario } from "../../fixtures/dispatch/golden/harness";
 import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
 import {
@@ -82,17 +83,32 @@ describe("TC-SPAWN-002 exactly one deterministic ticket-<REF> title on a fresh s
 });
 
 describe("TC-SPAWN-003 the prompt is the lifecycle prompt parameterized by ref and base branch", () => {
-  test("the fresh prompt carries the ref, the base branch, and the five sections", async () => {
+  test("the fresh prompt carries the ref, the RESOLVED base branch, and the five sections", async () => {
     const observation = await spawnFreshObservation();
     const invocation = observation.invocations.find((entry) => entry.stdin !== undefined);
     const prompt = invocation?.stdin ?? "";
     expect(prompt).toContain("GH-347");
-    expect(prompt).toContain("main-tools");
+    // DELIVERED EXPECTATION UPDATE (GH-347 review m2; AC-F7-3, F-7, DM-6): the
+    // delivered assertion pinned the literal "main-tools", which proved the
+    // constant rather than the resolution. The value is the resolved base branch
+    // (its delivered default), and the case below proves it FOLLOWS a
+    // non-default resolution. The assertion is updated, never deleted.
+    expect(prompt).toContain(CLOSEOUT_INTEGRATION_BASE);
     for (const title of Object.values(DISPATCH_LIFECYCLE_SECTION_TITLES)) {
       expect(prompt).toContain(`## ${title}`);
     }
     // Not the delivered constant sentence.
     expect(prompt.trim()).not.toBe("Deliver change GH-347 through the delivery lifecycle.");
+  });
+
+  test("a non-default resolved base branch reaches the prompt", async () => {
+    const observation = await spawnFreshObservation({ baseBranch: "release/2" });
+    const prompt = observation.invocations.find((entry) => entry.stdin !== undefined)?.stdin ?? "";
+    expect(prompt).toContain("release/2");
+    expect(prompt).not.toContain(CLOSEOUT_INTEGRATION_BASE);
+    for (const title of Object.values(DISPATCH_LIFECYCLE_SECTION_TITLES)) {
+      expect(prompt).toContain(`## ${title}`);
+    }
   });
 
   test("two refs produce different prompts", async () => {

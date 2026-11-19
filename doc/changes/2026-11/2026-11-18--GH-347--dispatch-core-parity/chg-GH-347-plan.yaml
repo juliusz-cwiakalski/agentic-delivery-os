@@ -65,14 +65,16 @@
 #               section, the SCOPE DECLARATION RULE, and spec reconciliation
 #               declared for STAGING ONLY in the release phase).
 #
-# PLAN SHAPE: eight phases, all `kind: delivery` (each edits the repository and
+# PLAN SHAPE: nine phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. A planning
 #   phase would declare no scope to compute and this change has no design work
-#   left: the spec is complete at v1.6, the test plan is complete (v0.4), and the six
-#   governing records are authored. `tier.phases` below lists the LIFECYCLE phase
-#   ids [1..11] (the ceremony tier engine's vocabulary), not this plan's eight
-#   phase ids; the two are different namespaces and the plan never renumbers the
-#   lifecycle.
+#   left: the spec is complete at v1.6, the test plan is complete (v0.4), the six
+#   governing records are authored, and phase 9 is the review-iteration-1
+#   remediation appended after review iteration 1 = FAIL (it owns no AC and no TC
+#   and re-establishes evidence for findings B1, B2, M1–M6 and m1–m6). `tier.phases`
+#   below lists the LIFECYCLE phase ids [1..11] (the ceremony tier engine's
+#   vocabulary), not this plan's nine phase ids; the two are different namespaces
+#   and the plan never renumbers the lifecycle.
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
 #   The six decision records are UNTRACKED in the worktree at plan time because
@@ -166,7 +168,8 @@
 # SEQUENCING (spec §19 "by outcome, so each contract is proven with the evidence
 #   that depends on it"), made concrete. Every phase is independently committable
 #   and gate-green at its own boundary; the aggregate `pnpm check` is phase 8's
-#   alone.
+#   alone among the phases that author the change, and phase 9 re-runs it because
+#   remediation invalidates the HEAD phase 8 measured.
 #
 #   Phase 1  Layer and contract scaffolding: the `dispatch.lane` record kind,
 #            schema, key prefix, record type and read/append helpers; the
@@ -203,6 +206,13 @@
 #   Phase 8  Release obligations: the single five-package minor changeset,
 #            plan validation, the aggregate gate, and the current-truth pages
 #            declared for STAGING ONLY (lifecycle phase 7 reconciles them).
+#   Phase 9  Review-iteration-1 remediation: the artifact-first ladder for every
+#            ended session, the capability-gated no-second-session stall, the
+#            declared production terminate with resume-cleared idempotence, the
+#            total undecidable predicate, the full-envelope determinism oracle,
+#            the five non-vacuous controls, and the three restored delivered
+#            assertions. Owns no AC and no TC; re-establishes evidence for the
+#            ACs the review found unimplemented or unproven. No decision reopened.
 #
 #   WHY THIS ORDER AND NOT ANOTHER: phase 2 must precede phase 3 because a lane
 #   write only exists for an ADMITTED dispatch, so the admission verdict is the
@@ -211,8 +221,12 @@
 #   completed dispatch exposes. Phase 5 must precede phase 7 because the parity
 #   battery's stall arm needs the terminate decision and the loop. Phase 6 is
 #   independent of 4 and 5 but precedes 7 because the battery asserts `--agent`,
-#   `--title`, and the prompt on a fresh spawn. Phase 8 is last because the
-#   aggregate gate and the doc reconciliation range over the assembled change.
+#   `--title`, and the prompt on a fresh spawn. Phase 8 closes the authoring
+#   sequence because the aggregate gate and the doc reconciliation range over the
+#   assembled change. Phase 9 is appended LAST because a review finding is only
+#   closed by a commit that post-dates the review that raised it, and because its
+#   evidence must be re-measured over the remediated tree rather than inherited
+#   from the HEAD the review rejected.
 #
 #   FIVE INVARIANTS WOULD CROSS A PHASE BOUNDARY; EACH IS PLACED WHOLE AND THE
 #   REASON IS STATED (test plan §8.3's warning, honoured rather than papered
@@ -311,7 +325,14 @@
 #   Phase 8 (0):  the release floor re-establishes evidence for the whole set; it
 #                 owns no AC and moves none. A reviewer who wants ownership to
 #                 move is asking for a plan revision, not a silent transfer.
-#   COUNT: 0 + 5 + 6 + 9 + 13 + 4 + 5 + 0 = 42.
+#   Phase 9 (0):  the review-iteration-1 remediation re-establishes the evidence
+#                 for the ACs the review found unimplemented or unproven —
+#                 AC-F1-3, AC-F4-3, AC-F5-1, AC-F5-4, AC-F5-5, AC-F6-3, AC-F7-3,
+#                 AC-F8-5, AC-F9-3, AC-F9-5 — under their EXISTING owners (phases
+#                 3, 4, 5, 6 and 7). It owns no AC and moves none: every one of
+#                 those ACs keeps the owner named above and its case keeps its
+#                 stable id.
+#   COUNT: 0 + 5 + 6 + 9 + 13 + 4 + 5 + 0 + 0 = 42.
 #   Per-feature reconciliation against spec §17: F-1 4 (3 in phase 3, 1 in
 #   phase 5), F-2 5 (phase 2), F-3 4 (3 in phase 3, 1 in phase 5), F-4 4
 #   (phase 4), F-5 5 (phase 5), F-6 6 (phase 5), F-7 4 (phase 6), F-8 5
@@ -331,8 +352,9 @@
 #   Phase 7 (9):   TC-PARITY-001..006 (6), TC-SHELL-001, TC-SHELL-002 (2),
 #                  TC-CONTRACT-001 (1)
 #   Phase 8 (0)
-#   COUNT: 0 + 6 + 7 + 10 + 14 + 4 + 9 + 0 = 50. 0 orphans (every id above), 0
-#   double-owned (each id appears once), 0 unmapped (the eleven group totals
+#   Phase 9 (0)
+#   COUNT: 0 + 6 + 7 + 10 + 14 + 4 + 9 + 0 + 0 = 50. 0 orphans (every id above),
+#   0 double-owned (each id appears once), 0 unmapped (the eleven group totals
 #   LANE 5 + ADMIT 6 + RESUME 4 + TRACKER 4 + TERM 6 + LOOP 6 + SPAWN 4 +
 #   DERIVE 6 + PARITY 6 + SHELL 2 + CONTRACT 1 = 50).
 #   TCs DELIBERATELY OWNED BY THE PHASE THAT ALSO OWNS THEIR FIXTURE:
@@ -365,11 +387,13 @@
 #   owner):
 #     1. `packages/core/src/app/dispatch.ts` is edited in phases 1 (delay fact),
 #        2 (kind preservation/refusal path), 3 (lane writes/resume), 4
-#        (derivation wiring), and 5 (terminate decision/loop). Ownership is per
-#        case, never per file.
+#        (derivation wiring), 5 (terminate decision/loop), and 9 (capability
+#        gating, carried stall/termination refs, the 16-slice disclosure order).
+#        Ownership is per case, never per file.
 #     2. `packages/cli/src/production.ts` is edited in phases 1 (delay binding),
 #        2 (claim mount), 3 (lane-resolver mount), 4 (ladder + pmNotes), 5
-#        (grace + loop bound), and 6 (agent/title/prompt supply).
+#        (grace + loop bound), 6 (agent/title/prompt supply), and 9 (the resolved
+#        base branch).
 #     3. `tests/fixtures/dispatch/parity/harness.ts` is created in phase 2 and
 #        EXTENDED in phases 3, 4, 5, 6, and 7. The case that reads it belongs to
 #        the phase that extends it for that case.
@@ -396,10 +420,23 @@
 #        the file and appends only its own group, so no phase edits another
 #        phase's row.
 #     8. `tests/behaviour/dispatch-watch.test.ts` is declared by phase 4 (the
-#        artifact-facts literal gained the required `pmNotes` member) and by
-#        phase 5 (its below-bound stall case moves from "recorded and deferred"
-#        to "resumed in-process", delivered expectation 5). Each phase edits only
-#        its own assertion.
+#        artifact-facts literal gained the required `pmNotes` member), by phase 5
+#        (its below-bound stall case moves from "recorded and deferred" to
+#        "resumed in-process", delivered expectation 5), and by phase 9 (the
+#        stall/termination evidence assertion is RESTORED, delivered
+#        expectation 11c). Each phase edits only its own assertion.
+#     9. Phase 9 (review remediation) re-declares files owned by earlier phases
+#        because it edits a DIFFERENT assertion or a different arm in each:
+#        `dispatch-token-closure.test.ts` (R9 restoration, phase 4/5 rows
+#        untouched), `dispatch-restart-budget.test.ts` and
+#        `dispatch-composition.test.ts` (R9 restorations),
+#        `dispatch-truth-derivation.test.ts` (R2 extension of phase 4's
+#        TC-DERIVE-006), `dispatch-parity-battery.test.ts` /
+#        `dispatch-parity-no-shell.test.ts` / `dispatch-parity-stall-loop.test.ts`
+#        (R7/R4 extensions of phase 7/5 cases), and
+#        `tests/fixtures/dispatch/parity/{terminate,process-runner,seams,cases}.ts`
+#        (R4/R7/R8 extensions; group ownership is unchanged and no phase edits
+#        another phase's row). No AC and no TC changes owner.
 #
 # TEST-PLAN DEVIATIONS (declared, not silent):
 #     (a) §7.3 maps TC-LANE-003 to the lane/resume suite and TC-LANE-001..005 to
@@ -480,6 +517,11 @@
 #   phase 4 = 22; phase 5 = 24; phase 6 = 6; phase 7 = 24; phase 8 = 0.
 #   Check: 0+10+4+22+24+6+24+0 = 90. Every row M1–M90 appears exactly once in
 #   the allocation, and every row's named case is reachable at its phase.
+#   PHASE 9 RE-ARMS ROWS; IT ALLOCATES NONE. The register stays 90 rows and the
+#   per-phase totals above are unchanged: review remediation makes the rows named
+#   in phase 9's block FAIL AGAIN at their existing owning cases (they pass
+#   against the reviewed HEAD, which is the defect). Phase 9 adds no row, moves
+#   no row, and takes no case ownership.
 #   NON-VACUITY STATEMENT (binding on every owning phase): a mutation that stops
 #   producing its NAMED failure is a BLOCKING finding; it is never repaired by
 #   deleting the mutation or relaxing the expected failure family.
@@ -691,9 +733,11 @@
 #   - TARGETED GATES (per phase): the `bun test` lines named in each phase,
 #     `pnpm typecheck` only where a type surface moved, and
 #     `git diff --check` before every commit.
-#   - THE AGGREGATE `pnpm check` IS PHASE 8'S ALONE and is never substituted by a
-#     narrow pass. `bun run scripts/checks/no-shell-dispatch.ts` is a phase-7 gate
-#     and is also discovered by `bun test` through its own suite, so `pnpm check`
+#   - THE AGGREGATE `pnpm check` IS PHASE 8'S ALONE AMONG THE AUTHORING PHASES
+#     and is never substituted by a narrow pass; phase 9 re-runs it because
+#     remediation invalidates the HEAD phase 8 measured.
+#     `bun run scripts/checks/no-shell-dispatch.ts` is a phase-7/phase-9 gate and
+#     is also discovered by `bun test` through its own suite, so `pnpm check`
 #     runs it without a package.json or CI-topology change.
 #   - The branch-range commit-message gate
 #     (`./scripts/lint-commit-range.sh --base origin/main-tools`) is LIFECYCLE
@@ -712,6 +756,7 @@
 #   phase 6  feat(GH-347): dispatch spawn identity, title and lifecycle prompt
 #   phase 7  feat(GH-347): parity battery and no-shell invariant
 #   phase 8  chore(GH-347): release obligations and spec reconciliation
+#   phase 9  fix(GH-347): review-iteration-1 remediation
 #
 # DELIVERED EXPECTATIONS THE SPEC CHANGES (a DoR concern; every file below is
 #   declared by the phase that owns the change, and every edit cites its clause —
@@ -780,6 +825,18 @@
 #      already asserted in the same test is unchanged. Clause: §8.5
 #      "Persisted-bound re-key narrowed", AC-F6-4, AC-F6-6, Appendix F(D), DEC-5.
 #      Phase 5.
+#  11. Review-iteration-1 remediation (phase 9) edits or restores three delivered
+#      expectations, each with its clause: (a)
+#      tests/conformance/dispatch/dispatch-parity-spawn.test.ts — the prompt case
+#      asserts the literal "main-tools"; it becomes the RESOLVED base branch plus a
+#      non-default-base case (AC-F7-3, F-7, DM-6). (b)
+#      tests/behaviour/dispatch-liveness.test.ts — "a readable tracker or artifact
+#      is not [undecidable]" flips for the artifact-unreadable case (AC-F6-3,
+#      Appendix F(C)(10)). (c) tests/behaviour/dispatch-watch.test.ts — the
+#      below-bound restart case RESTORES the stall/termination evidence assertion
+#      (F-5, AC-F5-1, §10). The three files named by R9 restore assertions that
+#      were deleted or relaxed without a clause; the authorising clause for a
+#      restoration is the delivered-expectation rule itself plus test plan §7.4.
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
 #   1.  The eleven tokens, projections, exits, attempt-record schema version,
@@ -2434,6 +2491,11 @@ phases:
   #   changeset, plan validation and lint, the aggregate gate) and the doc pages
   #   staged for lifecycle phase 7, which no delivery phase may reconcile. Phase 8
   #   owns no AC and no TC by design.
+  #   PHASE 9 FOLLOWS THIS PHASE: review iteration 1 returned FAIL after this
+  #   phase's green, so the aggregate result recorded here describes the
+  #   pre-remediation HEAD. Phase 9 lands the remediation and re-runs the aggregate;
+  #   this phase's changeset, page declarations and done artifacts are unchanged,
+  #   and no reconciliation is performed twice.
   #
   # Release obligations:
   #   8.1 Author `.changeset/gh-347-dispatch-core-parity-minor.md`: exactly ONE
@@ -2526,4 +2588,392 @@ phases:
     doneArtifacts:
       mergeRequestUrl: "pull request for feat/GH-347/dispatch-core-parity targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
       pipelineId: "CI pipeline for the GH-347 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Review-iteration-1 remediation: the artifact-first ladder for every
+  # ended session (B1), the capability-gated no-second-session stall (B2), the
+  # declared production terminate (M1/M2), the total undecidable predicate (M3),
+  # the full-envelope determinism oracle (M4), the non-vacuous controls (M5), and
+  # the restored delivered assertions (M6) — no decision reopened.
+  #
+  # GOAL: close B1 and B2 and the six majors coupled to the same proofs, using
+  #   only the clauses that already authorise each change, so the change returns
+  #   to review against the SAME spec v1.6, test plan v0.4, and TDR-0044..TDR-0049.
+  #   No decision is reopened, no AC is redefined, nothing moves in the closed
+  #   surface (tokens, projections, exits, attempt schema, error table, domain
+  #   kinds, configuration defaults), and no scope is added to the ticket: every
+  #   task below corrects delivered code or a delivered test's strength.
+  #
+  # Source of truth: ./code-review/review-iter-1.yaml (iteration 1, status FAIL;
+  #   `remediation.tasks` R1..R12 plus the reviewer's verdict rationale). The task
+  #   text is transcribed from that block and the reviewer's ordering is
+  #   preserved; every clause below is a verbatim quotation of the record.
+  #
+  # FINDINGS ADDRESSED (the review's whole actionable set):
+  #   B1  blocker — the artifact ladder is reachable only when
+  #       `harness.token === "finished"`, so a failed / premature-end /
+  #       completed-with-tool-failure session returns the classifier token BEFORE
+  #       consulting a decisive artifact (AC-F4-3; Appendix F(C) arms 4-8 precede
+  #       arm 9; §8.5 artifact-first). Closed by R1, proven by R2.
+  #   B2  blocker — a terminate-incapable adapter restarts a below-bound stall and
+  #       starts a second session (AC-F5-4). Closed by R3, proven by R4.
+  #   M1  major — the production opencode `terminate` is materially narrower than
+  #       the published contract (fixed 100 ms KILL escalation, direct child only,
+  #       no exact-identity reap, literal `reaped:false`/`escalated:true`). R5.
+  #   M2  major — the `terminated` flag is inherited across resume, so a later
+  #       iteration is never signalled. R5.
+  #   M3  major — the stall-undecidable predicate requires BOTH reads to fail, so
+  #       a readable non-terminal tracker with an unreadable artifact restarts. R6.
+  #   M4  major — the AC-F9-3 determinism oracle compares only {id, token, exit};
+  #       envelopes and attempt counts are never compared. R7.
+  #   M5  major — five non-vacuity controls cannot fail: `realChildStarts`, the
+  #       terminate double's incapable-port violation, the broad-pattern control,
+  #       `NO_SHELL_ALLOWLIST`, and the missing `terminate` SEAM_MANIFEST entry.
+  #       R8.
+  #   M6  major — three delivered assertions were deleted/relaxed without an
+  #       authorising clause. R9.
+  #   m1  minor — the stalled iteration's `liveness:*`/`terminate:*` refs are lost
+  #       (only the economics.restart reason survives). R10.
+  #   m2  minor — the lifecycle prompt carries the constant
+  #       `CLOSEOUT_INTEGRATION_BASE`, not the resolved base branch. R11.
+  #   m3  minor — no-shell detection gaps (require/default import/alias/dynamic
+  #       import, non-literal path) and a static, unguarded surface list. R12.
+  #   m4  minor — `lane:append-failed`/`tracker:exhausted` are appended BEFORE the
+  #       16-slice, so a disclosure can be truncated away. R12.
+  #   m5  minor — TC-DERIVE-006 step 2's per-input disjointness is never asserted
+  #       and row C10 never exercises the classifier arm. R2.
+  #   m6  minor — the planted-control tmp parent is never created, so the test
+  #       throws ENOENT on a clean clone. R12.
+  #   NOT ADDRESSED, by the review's own disposition: i1..i4 are info findings
+  #       whose suggestion is "no change required for this change" / "no action".
+  #       Phase 9 leaves them alone and does not claim them closed.
+  #
+  # TASK OBLIGATIONS (id, file, change, clause — execute as written; the design is
+  #   settled in the review record and is NOT re-derived here):
+  #
+  #   R1 [B1] packages/core/src/domain/dispatch-result.ts (artifact ladder gate,
+  #      ~266-334)
+  #     change: remove the `completedSession = harness.token === fin` early
+  #       return; apply arms 2-8 to every ended (non-stall) session in the pinned
+  #       order (tracker arms already precede; then PR open/already-merged;
+  #       commits+pm-notes; nothing-to-do requiring a readable tracker), then fall
+  #       to the classifier token (arm 9) and finally to state-unverified (arm
+  #       10); keep the persisted-bound timeout re-key before the harness-read arm.
+  #     clause: "Spec Appendix F(C) arms 4-8 precede arm 9; AC-F4-3 'completed
+  #       session ... the artifact verdict is the result'; §8.5 'After a completed
+  #       session, derivation is artifact-first'; DEC-6."
+  #
+  #   R2 [B1, m5] tests/behaviour/dispatch-truth-derivation.test.ts (TC-DERIVE-006)
+  #     change: add rows failed+open-PR -> pr-open, failed+commits-complete ->
+  #       finished, premature-end+open-PR -> pr-open,
+  #       completed-with-tool-failure+commits-complete -> finished; rebuild C10 so
+  #       it exercises the classifier arm; return/assert a declared arm id and
+  #       assert exactly one arm matches each input (test plan TC-DERIVE-006 step
+  #       2).
+  #     clause: "AC-F8-5; AC-F4-3; test plan TC-DERIVE-006 step 2."
+  #
+  #   R3 [B2] packages/core/src/app/dispatch.ts (stall branch ~1129-1276)
+  #     change: thread a terminate-capability fact through DispatchPorts; in the
+  #       stall branch, if the adapter is not terminate-capable, return the
+  #       terminal pre-restart verdict if dispatchStallShortCircuit matches;
+  #       otherwise record terminal state-unverified at exit 2 with the stall
+  #       evidence; never consume an ordinal or start a second iteration.
+  #     clause: "Spec F-5 'On an adapter that declares no terminate capability,
+  #       the engine starts no second session'; AC-F5-4; DM-5."
+  #
+  #   R4 [B2] tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #      (+ tests/fixtures/dispatch/parity/terminate.ts)
+  #     change: add an incapable-adapter below-bound stall whose decisive artifact
+  #       is OUTSIDE the terminal set (commits + complete pm-notes): assert one
+  #       iteration, zero economics.restart, terminal state-unverified, spawns 1,
+  #       resumes 0; add a second-stall capable case asserting the second stall IS
+  #       signalled (guards finding M2).
+  #     clause: "AC-F5-4; AC-F5-1; AC-F6-3."
+  #
+  #   R5 [M1, M2] packages/adapters/src/harness/opencode.ts (terminate ~670-688;
+  #      resume record ~638-652) + packages/adapters/src/host/index.ts (kill)
+  #     change: implement the declared terminate — escalate on the CONFIGURED
+  #       graceMs (not KILL_GRACE_MS=100), signal the session's process tree,
+  #       perform the exact-identity reap (session id or ticket-<REF> title, no
+  #       broad pattern), and report terminated/escalated/reaped from the observed
+  #       acts; clear `terminated` when a resume registers a new live stream (or
+  #       key idempotence per acquisition); add a test invoking the real adapter
+  #       terminate (with a faithful tree double) and a non-vacuous broad-pattern
+  #       negative control.
+  #     clause: "TDR-0046 C-2/C-4 (do not reuse the 100 ms probe escalation;
+  #       booleans match observed acts); API-5; AC-F5-1; AC-F5-5; NFR-6."
+  #
+  #   R6 [M3] packages/core/src/domain/dispatch-liveness.ts
+  #      (dispatchStallUndecidable ~179-183)
+  #     change: treat an unreadable artifact read with no tracker-terminal
+  #       short-circuit as undecidable; add a LOOP/TERM row with tracker readable
+  #       non-terminal + artifact unreadable asserting terminal state-unverified
+  #       and no ordinal.
+  #     clause: "Appendix F(C)(10)/F(D) 'any required read unreadable and no
+  #       decisive artifact'; AC-F6-3."
+  #
+  #   R7 [M4] tests/conformance/dispatch/dispatch-parity-battery.test.ts
+  #      (TC-PARITY-003) + dispatch-parity-no-shell.test.ts
+  #     change: compare full canonicalized envelopes AND attempt counts across the
+  #       two runs; delete the `spawns >= 0` assertion; state and assert which
+  #       registry rows invoke a process (or drive the rest through the guarded
+  #       runner).
+  #     clause: "AC-F9-3; NFR-1; AC-F9-4."
+  #
+  #   R8 [M5] tests/fixtures/dispatch/parity/process-runner.ts + terminate.ts +
+  #      tests/checks/no-shell-dispatch.test.ts
+  #     change: implement realChildStarts (record actual starts) or remove the
+  #       field and its assertion; make the terminate double record a violation
+  #       when an incapable port is asked; add a broad-pattern control a correct
+  #       exact-identity matcher does not reap; wire or remove NO_SHELL_ALLOWLIST;
+  #       add a `terminate` entry to SEAM_MANIFEST.
+  #     clause: "AC-F9-5; AC-F9-2; NFR-5; NFR-10."
+  #
+  #   R9 [M6] tests/behaviour/dispatch-token-closure.test.ts +
+  #      dispatch-restart-budget.test.ts + tests/structure/dispatch-composition.test.ts
+  #     change: restore the nothing-to-do `lastMessage` assertion and an
+  #       `error.category === 'user'` assertion for dispatch.restart-budget-exceeded;
+  #       restore a positive `run.exit`/`result` in the composition operator-resume
+  #       case (or record an explicit ruling that TC-RESUME-102 supersedes it);
+  #       rename the stale 'refusal' test name; correct the PM note's "no assertion
+  #       was deleted, renamed, or relaxed" claim.
+  #     clause: "The plan's absolute delivered-expectation rule; test plan §7.4
+  #       non-vacuity."
+  #
+  #   R10 [m1] packages/core/src/app/dispatch.ts (stall/restart path)
+  #     change: carry the stalled iteration's `liveness:*` and `terminate:*` refs
+  #       onto the terminal attempt (or the next active lane record /
+  #       economics.restart evidence) so the termination result is durable;
+  #       restore an assertion that the terminal attempt/lane records the
+  #       stall/termination.
+  #     clause: "F-5; AC-F5-1; §10 telemetry."
+  #
+  #   R11 [m2] packages/cli/src/production.ts (dispatchComposition prompt)
+  #     change: resolve the base branch (not the CLOSEOUT_INTEGRATION_BASE
+  #       constant) and pass it to buildLifecyclePrompt; add a non-default-base
+  #       case.
+  #     clause: "AC-F7-3; F-7; DM-6."
+  #
+  #   R12 [m3, m4, m6] scripts/checks/no-shell-dispatch.ts +
+  #      tests/checks/no-shell-dispatch.test.ts + packages/core/src/app/dispatch.ts
+  #      (evidence-ref slice)
+  #     change: extend no-shell detection (require/default import/alias/dynamic
+  #       import, non-literal path); derive/guard the surface list; prepend or
+  #       reserve the lane:append-failed and tracker:exhausted disclosure refs
+  #       before the 16-slice; add the recursive tmp parent guard.
+  #     clause: "NFR-5; AC-F9-5; AC-F1-3; NFR-7."
+  #
+  # B1 PRECEDENCE THE R1 COMMIT MUST IMPLEMENT (stated, not improvised). R1's
+  #   decisive-artifact half is unambiguous and is the clause AC-F4-3 quotes. The
+  #   nothing-to-do arm is the one arm whose "no decisive artifact" reading is not
+  #   settled by AC-F4-3's own evidence list ("open PR, already-merged PR, commits
+  #   with complete or incomplete pm-notes"), and a literal application of it to
+  #   every ended session has an observable consequence:
+  #     - class-failed in tests/fixtures/dispatch/parity/evidence.ts is a
+  #       completed harness with status 1, failureReported, 0 commits, no PR, and
+  #       a readable in-progress tracker. Arms 4-7 do not match; arm 8 WOULD, so
+  #       the row would resolve nothing-to-do at exit 0 and the eleven-token
+  #       coverage (TC-PARITY-001, AC-F8-5, AC-F9-1) would lose `failed`.
+  #     - tests/behaviour/dispatch-false-success.test.ts:41-58 asserts the same
+  #       input shape keeps `failed` through F(C)(9).
+  #   The precedence this phase implements is therefore: arms 4-7 (the decisive
+  #   artifacts) apply to EVERY ended, non-stall session; arm 8 keeps the SAME
+  #   `completedSession` fact R1 removes from arms 4-7, because "nothing was
+  #   attempted" is a tracker judgement about a clean completion, not an artifact
+  #   verdict; then arm 9 (the classifier token) and arm 10 (state-unverified).
+  #   That is the only reading that satisfies AC-F4-3, keeps `failed`/`partial`
+  #   reachable exactly as Appendix F(C)(9) assigns them, and leaves the delivered
+  #   class table and the false-success assertion green without editing either.
+  #   R2's four new rows all carry a decisive artifact, so they are unaffected by
+  #   the arm-8 question and prove the R1 half that matters.
+  #   STOP CONDITION: if @coder concludes the literal reading is required, STOP and
+  #   report. Re-pointing a parity row or flipping a delivered expectation to keep
+  #   a run green is exactly the M6 defect this phase exists to close, and it is a
+  #   plan revision (scope + an AC reading), never an in-phase improvisation.
+  #
+  # PLACEMENT NOTES (the review sometimes names a change or a symbol, not a path;
+  #   each home below is derived, stated, and closed so no undeclared file is
+  #   authored):
+  #   1. R5's "test invoking the real adapter terminate ... and a non-vacuous
+  #      broad-pattern negative control" names NO path. Home:
+  #      tests/behaviour/harness-opencode-resume-stream.test.ts — it already drives
+  #      the real `createOpencodeSession` over a recording stream starter (its
+  #      `kills` counter) and R5's second half ("clear `terminated` when a resume
+  #      registers a new live stream") is that suite's subject. The process-tree
+  #      facts come from the declared parity/terminate.ts model. No new suite.
+  #   2. R8's "add a `terminate` entry to SEAM_MANIFEST" names the SYMBOL; its only
+  #      home is tests/fixtures/dispatch/parity/seams.ts (declared).
+  #   3. R8's `realChildStarts` lives in parity/process-runner.ts and is asserted
+  #      in dispatch-parity-no-shell.test.ts (both declared).
+  #   4. R12's `NO_SHELL_ALLOWLIST` is exported by scripts/checks/no-shell-dispatch.ts
+  #      and asserted by tests/checks/no-shell-dispatch.test.ts (both declared).
+  #      "Wire or remove": REMOVE the unused constant (or assert it stays empty) —
+  #      wiring it into `pnpm check` moves the aggregate chain and the CI topology
+  #      invariant, which is a plan revision, not an in-phase edit. The suite stays
+  #      bun-test-discovered, and the test states that it is the sole gate.
+  #   5. R11's non-default-base case lands in dispatch-parity-spawn.test.ts, the
+  #      TC-SPAWN-003 suite that today asserts the literal "main-tools" (the m2
+  #      defect). That assertion is UPDATED with its clause (AC-F7-3), never
+  #      deleted; the file is declared.
+  #   6. R10's restored stall/termination-evidence assertion lands in
+  #      tests/behaviour/dispatch-watch.test.ts, which today comments that "the
+  #      stall is recorded on the restart, not on the terminal attempt". The
+  #      assertion is RESTORED in the appropriate form with its clause (F-5,
+  #      AC-F5-1, §10); the file is declared.
+  #   7. R6 flips the delivered pure-domain assertion in
+  #      tests/behaviour/dispatch-liveness.test.ts ("undecidable truth is named,
+  #      and a readable tracker or artifact is not") for the artifact-unreadable
+  #      case. Declared, with the clause AC-F6-3 / Appendix F(C)(10).
+  #   8. R7's "state and assert which registry rows invoke a process" is a
+  #      registry-level fact, so tests/fixtures/dispatch/parity/cases.ts is
+  #      declared for an ADD-ONLY per-row fact (never a scenario or expected-value
+  #      change; group ownership stays with the authoring phase). If the assertion
+  #      can be made from the existing observation without a registry edit, the
+  #      file is simply not touched and `plan diff` reports an advisory
+  #      `undeclared-missing` at most.
+  #
+  # SCOPE NOTES (binding):
+  #   - NO PINNED SURFACE MOVES: phase 9 adds no package module and no exported
+  #     name, so inventory.json, the content-inventory allowances, the ports
+  #     contract inventory, and the subpath list stay byte-identical. A new export
+  #     appearing anyway is an ESCALATION (it reopens the pinned-surface decision),
+  #     not a silent edit.
+  #   - The terminate-capability fact is APP-LOCAL: either an optional
+  #     DispatchPorts member whose default direction reads the port's required
+  #     `capabilities.supportedOperations` (never a default of "incapable", which
+  #     would silently stop restarting on a capable adapter), or a direct read of
+  #     that declaration. Either way there is no contract-file edit, no new
+  #     composition fact, and no configuration key (NFR-11).
+  #   - `packages/cli/src/edge.ts` is NOT declared: the capability fact does not
+  #     need a composition fact, and the base-branch resolution (R11) lives in
+  #     production.ts, where the constant is.
+  #   - NO DOC PAGE IS AUTHORED HERE. lifecycle phase 7 (@doc-syncer) is re-run
+  #     after this commit (the terminate contract and the derivation order are
+  #     documented claims and the PM routing note says so); the page paths are
+  #     already declared by phase 8 for staging. Phase 9 therefore takes no doc
+  #     scope and must not edit a current-truth page in its own commit.
+  #   - The PM-note correction (R9) is a NOTES APPEND through the notes primitive
+  #     naming the assertion restorations and their clauses — never a hand edit of
+  #     an existing note, a timestamp, or the phase state.
+  #   - The spec stays v1.6 and the test plan stays v0.4. No AC, TC, fixture
+  #     inventory row, or mutation row changes: R1-R12 correct delivered code and
+  #     test strength, they do not change what was specified. If a task appears to
+  #     need a spec or test-plan edit, STOP and report — that is a plan revision.
+  #
+  # ACCEPTANCE: NO AC and NO TC. Phase 9 owns none and moves none, so the plan's
+  #   arithmetic is unchanged: AC ownership 0+5+6+9+13+4+5+0+0 = 42/42 and the TC
+  #   map 0+6+7+10+14+4+9+0+0 = 50/50, with 0 orphans, 0 double-owned, 0 unmapped.
+  #   What the phase does is RE-ESTABLISH EVIDENCE for the ACs the review found
+  #   unimplemented or unproven — AC-F1-3, AC-F4-3, AC-F5-1, AC-F5-4, AC-F5-5,
+  #   AC-F6-3, AC-F7-3, AC-F8-5, AC-F9-3, AC-F9-5 — under their EXISTING owners
+  #   (phases 3, 4, 5, 6 and 7). A reviewer who wants an owner to move is asking
+  #   for a plan revision, not a silent transfer.
+  #
+  # MUTATION ROWS RE-ARMED (the register stays 90 rows M1-M90 and the per-phase
+  #   allocation above is unchanged: phase 9 allocates none and takes no case
+  #   ownership; it makes these rows FAIL AGAIN at their existing owning cases,
+  #   which is the point — they pass against the reviewed HEAD):
+  #   R1/R2 (B1)  M4, M6, M7, M8 (arms 4-7 now reachable for a non-finished
+  #               session), M9 (arm 8 keeps its clean-completion scope), M10 (arm 9
+  #               is now exercised by C10), M32 (state-unverified stays behind the
+  #               artifacts), M70 (per-input arm disjointness is now asserted).
+  #   R3/R4 (B2)  M42 (no second session on an incapable adapter), M40 (an
+  #               outside-set artifact does not short-circuit), M41 (a set member
+  #               still short-circuits), M50 (an unverified stall consumes no
+  #               slot), M37 (the second stall is signalled).
+  #   R5 (M1/M2)  M35 (TERM before KILL), M36 (no escalation before the configured
+  #               grace — this is the 100 ms defect), M43 (exact-identity reap, no
+  #               broad pattern), M44 (idempotence), M37 (resume clears
+  #               `terminated` so a later iteration IS signalled).
+  #   R6 (M3)     M11 (an undecidable truth never resolves a success arm), M50.
+  #   R7 (M4)     M80 (two runs must differ by field, not only by token/exit), M81
+  #               (zero live process/network), M79 (no seam reimplementation).
+  #   R8 (M5)     M42 (the incapable double records a violation), M43 (a
+  #               broad-pattern negative control), M79 and M87 (the terminate seam
+  #               is in the manifest and no row declares a not-proven surface).
+  #   R9 (M6)     M9 (the nothing-to-do lastMessage), M24 (the operator-resume
+  #               error category), M51 (the composition's positive exit/result).
+  #   R10 (m1)    M33 (a required bounded evidence ref is never dropped), M82 (the
+  #               16-ref bound is respected, not exceeded).
+  #   R11 (m2)    M58 (the prompt still carries the ref, the base branch and the
+  #               five sections).
+  #   R12 (m3-m6) M76, M77, M78 (the extended detection still catches a shell
+  #               invocation, `shell: true`, and a script-path literal), M82 (the
+  #               disclosure refs survive the 16-slice). m6's missing tmp parent
+  #               re-arms no register row: it is fixture hermeticity, covered by
+  #               the TMPDIR prerequisite and the suite's own planted control.
+  #
+  # Gate (expected signal: exit 0 at every line; the derived verification, the
+  #   capable/incapable stall pair, the real-adapter terminate, the extended
+  #   no-shell rules and the two-run envelope equality all green; the aggregate
+  #   gate green at the REMEDIATED HEAD because phase 8's green no longer
+  #   describes it):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/behaviour/dispatch-token-closure.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-watch.test.ts tests/behaviour/dispatch-liveness.test.ts tests/behaviour/dispatch-restart-budget.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-opencode-resume-stream.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-battery.test.ts tests/conformance/dispatch/dispatch-parity-no-shell.test.ts tests/conformance/dispatch/dispatch-parity-spawn.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/dispatch-contract-invariance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts tests/structure/dispatch-imports.test.ts tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check   <-- the BINDING boundary gate
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Review-iteration-1 remediation: the artifact-first ladder for every ended session, the capability-gated no-second-session stall, the declared production terminate with its resume-cleared idempotence, the total undecidable predicate, the full-envelope determinism oracle, the five non-vacuous controls, and the three restored delivered assertions"
+    kind: delivery
+    summary: "fix(GH-347): review-iteration-1 remediation"
+    scope:
+      files:
+        # R1/R2 — B1: the artifact ladder order and its derivation proof.
+        - packages/core/src/domain/dispatch-result.ts
+        - tests/behaviour/dispatch-truth-derivation.test.ts
+        # R3/R10/R12 — B2, m1, m4: the stall branch, the carried evidence refs
+        # and the 16-slice disclosure ordering.
+        - packages/core/src/app/dispatch.ts
+        # R4 — B2 proof: the capable/incapable stall pair and the terminate double.
+        - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+        - tests/fixtures/dispatch/parity/terminate.ts
+        # R5 — M1/M2: the production terminate, the shared starter kill, and the
+        # real-adapter test home (placement note 1).
+        - packages/adapters/src/harness/opencode.ts
+        - packages/adapters/src/host/index.ts
+        - tests/behaviour/harness-opencode-resume-stream.test.ts
+        # R6 — M3: the total undecidable predicate and its delivered assertion.
+        - packages/core/src/domain/dispatch-liveness.ts
+        - tests/behaviour/dispatch-liveness.test.ts
+        # R7 — M4: the determinism oracle and the registry's per-row process fact.
+        - tests/conformance/dispatch/dispatch-parity-battery.test.ts
+        - tests/conformance/dispatch/dispatch-parity-no-shell.test.ts
+        - tests/fixtures/dispatch/parity/cases.ts
+        # R8 — M5: the non-vacuous controls, the guarded runner and the seam
+        # manifest entry (placement note 2).
+        - tests/fixtures/dispatch/parity/process-runner.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        # R9 — M6: the three restored delivered assertions and the composition
+        # operator-resume case.
+        - tests/behaviour/dispatch-token-closure.test.ts
+        - tests/behaviour/dispatch-restart-budget.test.ts
+        - tests/structure/dispatch-composition.test.ts
+        # R10 — m1: the restored stall/termination evidence assertion
+        # (placement note 6).
+        - tests/behaviour/dispatch-watch.test.ts
+        # R11 — m2: the resolved base branch and the non-default-base case
+        # (placement note 5).
+        - packages/cli/src/production.ts
+        - tests/conformance/dispatch/dispatch-parity-spawn.test.ts
+        # R12 — m3/m4/m6: the extended invariant and its planted controls.
+        - scripts/checks/no-shell-dispatch.ts
+        # R9 — the PM-note correction is a notes APPEND (scope note), declared so
+        # the commit primitive can stage it.
+        - doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/chg-GH-347-pm-notes.yaml
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/host/index.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-347 phase-9 commit (the remediation's targeted suites, the re-armed mutation rows and the aggregate gate green at the remediated HEAD)"
       trackerTransition: "in-review"

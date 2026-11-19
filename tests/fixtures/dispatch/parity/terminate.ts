@@ -47,11 +47,28 @@ export type ProcessRecord = {
 export type ProcessTreeModel = {
   readonly processes: ProcessRecord[];
   readonly signals: SignalRecord[];
+  /**
+   * The signal-discipline violations the model itself observed: a signal to a
+   * pid that is neither this lane's tree member nor this lane's escaped
+   * runtime. A correct adapter never produces one, and the planted
+   * broad-pattern control does — which is what makes the "0 unrelated
+   * processes signalled" assertion able to fail.
+   */
+  readonly violations: string[];
   /** The virtual clock advanced only by the injected delay. */
   readonly nowMs: () => number;
   readonly addProcess: (record: Omit<ProcessRecord, "exited" | "reaped">) => void;
   readonly signalTree: (pid: number, signal: string) => void;
+  readonly signalProcess: (pid: number, signal: string) => boolean;
   readonly reapExact: (input: { readonly sessionId?: string; readonly title?: string }) => number;
+  /**
+   * The PLANTED CONTROL ONLY: a broad substring matcher over identity, which
+   * the exact-identity contract forbids. It exists so the negative control can
+   * be observed to fail; the double's real path never calls it.
+   */
+  readonly reapByPattern: (pattern: RegExp) => readonly number[];
+  /** The pids a reap marked reaped, in process order. */
+  readonly reaped: () => readonly number[];
   readonly signalsFor: (pid: number) => readonly SignalRecord[];
 };
 
@@ -61,21 +78,38 @@ export const createProcessTreeModel = (options: {
 }): ProcessTreeModel => {
   const processes: ProcessRecord[] = [];
   const signals: SignalRecord[] = [];
+  const violations: string[] = [];
   const model: ProcessTreeModel = {
     processes,
     signals,
+    violations,
     nowMs: options.nowMs,
     addProcess: (record) => {
       processes.push({ ...record, exited: false, reaped: false });
     },
+    signalProcess: (pid, signal) => {
+      const target = processes.find((process) => process.pid === pid);
+      if (target === undefined) {
+        violations.push(`signal to unknown pid ${pid}`);
+        return false;
+      }
+      // Only this lane's tree members and this lane's exact-identity escaped
+      // runtimes may ever be signalled.
+      if (target.treeOf === undefined && target.escaped !== true) {
+        violations.push(`signal to unrelated pid ${pid}`);
+        return false;
+      }
+      signals.push({ signal, pid, atMs: options.nowMs() });
+      if (signal === KILL) target.exited = true;
+      return true;
+    },
     signalTree: (pid, signal) => {
-      // The tree is the root plus its recorded descendants; an unrelated
-      // process (no treeOf) is never signalled.
+      // The tree is the group leader plus its recorded descendants; an
+      // unrelated process (no treeOf) is never signalled.
       for (const process of processes) {
         if (process.treeOf === undefined || process.treeOf !== pid) continue;
         if (process.exited) continue;
-        signals.push({ signal, pid: process.pid, atMs: options.nowMs() });
-        if (signal === KILL) process.exited = true;
+        model.signalProcess(process.pid, signal);
       }
     },
     reapExact: (input) => {
@@ -85,12 +119,28 @@ export const createProcessTreeModel = (options: {
         const bySession = input.sessionId !== undefined && process.sessionId === input.sessionId;
         const byTitle = input.title !== undefined && process.title === input.title;
         if (!bySession && !byTitle) continue;
+        model.signalProcess(process.pid, TERM);
         process.reaped = true;
         process.exited = true;
         reaped += 1;
       }
       return reaped;
     },
+    reapByPattern: (pattern) => {
+      const matched = processes.filter(
+        (process) =>
+          !process.reaped &&
+          ((process.sessionId !== undefined && pattern.test(process.sessionId)) ||
+            (process.title !== undefined && pattern.test(process.title))),
+      );
+      for (const process of matched) {
+        model.signalProcess(process.pid, TERM);
+        process.reaped = true;
+        process.exited = true;
+      }
+      return matched.map((process) => process.pid);
+    },
+    reaped: () => processes.filter((process) => process.reaped).map((process) => process.pid),
     signalsFor: (pid) => signals.filter((record) => record.pid === pid),
   };
   return model;
@@ -139,7 +189,9 @@ const completedEvidence = (): HarnessEvidence => ({
 export const createStallPort = (options: StallPortOptions): StallPort => {
   const calls: string[] = [];
   const terminateCalls: HarnessTerminateInput[] = [];
-  const violations: string[] = [];
+  // The terminated set is PER ACQUISITION: a resume registers a NEW live stream,
+  // so a later stall of iteration 2+ IS signalled (GH-347 AC-F5-5, review M2).
+  const terminated = new Set<string>();
   let iteration = 0;
   let polls = 0;
   let resolveCollect: (() => void) | undefined;
@@ -174,7 +226,18 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
     return { ok: true, value: handle };
   };
 
-  const port: HarnessSessionPort = {
+  const port: HarnessSessionPort & {
+    readonly capabilities: { readonly supportedOperations: readonly string[] };
+  } = {
+    // The declaration the engine reads to decide capability (GH-347 DM-5,
+    // AC-F5-4): an incapable adapter omits `terminate`, so the engine starts no
+    // second session and never has to ask.
+    capabilities: {
+      supportedOperations:
+        options.terminateCapable === false
+          ? ["spawn", "deliver", "resume", "collect", "session-list"]
+          : ["spawn", "deliver", "resume", "collect", "session-list", "terminate"],
+    },
     spawn: async () => {
       calls.push("spawn");
       return open("ses-loop-1");
@@ -190,6 +253,13 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
       acquisitions += 1;
       polls = 0;
       handle = input.handle;
+      // A resumed stream is a NEW live process tree: the previous termination
+      // fact is cleared and this lane's tree is revived.
+      terminated.delete(input.handle.sessionId);
+      const root = Number(input.handle.treeRoot);
+      for (const process of options.model.processes) {
+        if (process.treeOf !== undefined && process.treeOf === root) process.exited = false;
+      }
       return { ok: true, value: input.handle };
     },
     collect: async () => {
@@ -238,15 +308,15 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
   };
 
   if (options.terminateCapable !== false) {
-    const terminated = new Set<string>();
     port.terminate = async (
       input: HarnessTerminateInput,
     ): Promise<HarnessResult<HarnessTerminateResult>> => {
       calls.push("terminate");
       terminateCalls.push(input);
       const pid = Number(input.handle.treeRoot);
-      // Idempotent: a second call reports the same terminal facts and signals
-      // nothing further (GH-347 AC-F5-5, TDR-0046 DC-4).
+      // Idempotent PER ACQUISITION: a repeated call before a resume reports the
+      // same terminal facts and signals nothing further (GH-347 AC-F5-5,
+      // TDR-0046 DC-4). A resume clears the entry, so iteration 2+ IS signalled.
       if (terminated.has(input.handle.sessionId)) {
         return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
       }
@@ -264,14 +334,16 @@ export const createStallPort = (options: StallPortOptions): StallPort => {
       };
     };
   }
-  // An incapable adapter exposes NO member (the port type keeps it optional), so
-  // the engine can never ask it; `violations` stays empty by construction.
+  // An incapable adapter exposes NO `terminate` member and declares it absent in
+  // its capability declaration, so the engine starts no second session and never
+  // asks. The model itself records a violation if a signal ever reaches an
+  // unrelated pid (`violations`), which the planted control exercises.
 
   return {
     port,
     calls,
     terminateCalls,
-    violations,
+    violations: options.model.violations,
     acquisitions: () => acquisitions,
   };
 };

@@ -1041,7 +1041,7 @@ describe("the production composer resumes the existing lane", () => {
     }
   });
 
-  test("a restart-budget refusal appends the terminal exhaustion record", async () => {
+  test("an operator resume at the persisted bound is admitted and appends no exhaustion record", async () => {
     const harness = createProductionHarness({ label: "gh239-budget-", originUrl: GITHUB_ORIGIN });
     try {
       const queued = declareQueueEntry(harness.store, {
@@ -1093,6 +1093,16 @@ describe("the production composer resumes the existing lane", () => {
         "dispatch.restart-budget-exceeded",
       );
       expect(run.data?.result).not.toBe("max-restarts");
+      // RESTORED (GH-347 review M6; test plan §7.4 non-vacuity): the delivered
+      // positive exit/result assertion was deleted when the refusal was
+      // superseded, and the case asserted only negatives. The positive half is
+      // restored: the resume ran and resolved a classified verdict at its mapped
+      // exit (state-unverified -> platform-provider -> 2). Authorising clause:
+      // AC-F3-2 / §8.5 operator-resume supersession; the exit is the taxonomy's
+      // projection, never a re-declared literal.
+      expect(run.exit).toBe(2);
+      expect(run.data?.result).toBe("state-unverified");
+      expect(run.data?.outcome).toBe("failed");
       expect(run.data?.restarts).toBe(3);
       // One session invocation, and it is a RESUME of the recorded session.
       expect(harness.spawns).toHaveLength(1);

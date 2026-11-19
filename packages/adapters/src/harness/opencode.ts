@@ -27,8 +27,11 @@ import {
   type HarnessLivenessAssembler,
   type HarnessLivenessKind,
   type HarnessLivenessSourcedReading,
+  type HarnessMode,
+  type HarnessModeOrigin,
   type HarnessResult,
   type HarnessResumeInput,
+  type HarnessSeatBinding,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnInput,
@@ -37,9 +40,8 @@ import {
   type HarnessSpawnStarter,
   type HarnessSpawnStream,
   type HarnessSpawnStreamOptions,
-  type HarnessMode,
-  type HarnessModeOrigin,
-  type HarnessSeatBinding,
+  type HarnessTerminateInput,
+  type HarnessTerminateResult,
   type HarnessVersionVerdict,
   type HarnessVersionWarning,
   type TelemetryIngestSink,
@@ -107,6 +109,23 @@ export type OpencodeHarnessOptions = {
    */
   readonly terminateWait?: (ms: number) => Promise<void>;
   /**
+   * The injected process-tree seam for the terminate contract (GH-347 AC-F5-5,
+   * TDR-0046 DC-2/DC-3). The composition binds the real seam; a test injects a
+   * faithful model so TERM-before-KILL, the declared grace, and "0 unrelated
+   * runtimes signalled" are observable without a kernel. Absent means no
+   * signalling capability is available, and the adapter reports that honestly.
+   */
+  readonly terminateTree?: {
+    readonly list: () => readonly {
+      readonly pid: number;
+      readonly argv: readonly string[];
+    }[];
+    /** Signal a matched runtime's own tree (the group it leads), then the runtime. */
+    readonly signalTree: (pid: number, signal: "SIGTERM" | "SIGKILL") => boolean;
+    /** Signal one exact-identity process that is outside this lane's tree. */
+    readonly signalProcess: (pid: number, signal: "SIGTERM" | "SIGKILL") => boolean;
+  };
+  /**
    * The evaluated supported-window verdict and the normalized version the
    * resolution produced (GH-335 F-1). The production composition always supplies
    * both; an adapter constructed without them is a delivered test double, never
@@ -166,6 +185,24 @@ export type OpencodeExpressibility =
 
 const DEFAULT_TIMEOUT_MS = 300_000;
 const DEFAULT_HANDLE_TIMEOUT_MS = 60_000;
+
+/** One entry of the host process table (the exact-identity reap's only input). */
+type ProcessTableEntry = {
+  readonly pid: number;
+  readonly argv: readonly string[];
+};
+
+/** The exact-identity reap targets: this lane's session id or its title only. */
+const exactIdentityTargets = (input: {
+  readonly table: readonly ProcessTableEntry[];
+  readonly sessionId: string;
+  readonly title: string;
+}): readonly number[] => {
+  const identities = [input.sessionId, input.title];
+  return input.table
+    .filter((entry) => entry.argv.some((argument) => identities.includes(argument)))
+    .map((entry) => entry.pid);
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -379,10 +416,10 @@ type SessionRecord = {
   readonly completion: Promise<HarnessEvidence>;
   /** The single-seat binding the spawn was resolved for (TDR-0040 A-4). */
   readonly binding?: HarnessSeatBinding;
-  /** The streaming starter's idempotent TERM→KILL (GH-347 API-5). */
-  readonly kill?: () => void;
-  /** Whether this session was already terminated (idempotence, TDR-0046). */
-  terminated?: boolean;
+  /** The deterministic `ticket-<REF>` title this lane spawned with (DC-3). */
+  readonly title?: string;
+  /** The observed termination facts, replayed by a second terminate (DC-4). */
+  termination?: HarnessTerminateResult;
 };
 
 /** Build the opencode session port over injected I/O seams. */
@@ -556,7 +593,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: input.descriptor,
       completion: outcome.completion,
-      kill: stream.kill,
+      ...(input.title === undefined ? {} : { title: input.title }),
       ...(binding === undefined ? {} : { binding }),
     });
     return { ok: true, value: handle };
@@ -646,8 +683,11 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: record?.descriptor ?? descriptor,
       completion: outcome.completion,
-      kill: stream.kill,
-      ...(record?.terminated === undefined ? {} : { terminated: record.terminated }),
+      // GH-347 AC-F5-5, TDR-0046 DC-4: a resumed stream is a NEW live process
+      // tree, so the previous termination fact is CLEARED. Inheriting it would
+      // make iteration 2+ of the restart loop unsignalable while its process is
+      // still alive.
+      ...(record?.title === undefined ? {} : { title: record.title }),
       ...(binding === undefined ? {} : { binding }),
     });
     return { ok: true, value: handle };
@@ -667,7 +707,9 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       ),
     deliver: resume,
     resume,
-    terminate: async (input) => {
+    terminate: async (
+      input: HarnessTerminateInput,
+    ): Promise<HarnessResult<HarnessTerminateResult>> => {
       if (!capabilities.supportedOperations.includes("terminate")) return gap("terminate");
       const record = sessions.get(input.handle.sessionId);
       // An already-exited or unknown session is SUCCESS, never an error
@@ -675,16 +717,57 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       if (record === undefined) {
         return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
       }
-      if (record.terminated === true || record.kill === undefined) {
-        return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
+      // Idempotent: a second terminate signals nothing further and replays the
+      // facts the FIRST call observed.
+      if (record.termination !== undefined) {
+        return { ok: true, value: record.termination };
       }
-      record.terminated = true;
-      // TERM goes to the session's process tree through the starter, which
-      // escalates to KILL after its own grace; the declared grace is then
-      // waited through the injected fact so the report is bounded.
-      record.kill();
+      // A composition that supplies no process-tree seam has not given the
+      // adapter a way to signal anything; it reports the absence honestly rather
+      // than claiming a termination it did not perform. Production injects the
+      // seam at the composition edge (no ambient process access lives here).
+      const tree = options.terminateTree;
+      if (tree === undefined) {
+        const value: HarnessTerminateResult = {
+          terminated: false,
+          escalated: false,
+          reaped: false,
+        };
+        record.termination = value;
+        return { ok: true, value };
+      }
+      const title = record.title ?? `ticket-${input.handle.workItemRef}`;
+      // The exact-identity match: this lane's session id or its deterministic
+      // `ticket-<REF>` title, never a broad name or substring.
+      const targets = exactIdentityTargets({
+        table: tree.list(),
+        sessionId: input.handle.sessionId,
+        title,
+      });
+      // 1. The terminal signal first, over each matched process's own tree (the
+      //    group it leads), which reaches the runtime's children too.
+      const termSignals = targets.filter((pid) => tree.signalTree(pid, "SIGTERM")).length;
+      // 2. The DECLARED grace — the resolved `coordinator.kill-grace`, never the
+      //    100 ms probe escalation — waited through the one injected fact.
       if (options.terminateWait !== undefined) await options.terminateWait(input.graceMs);
-      return { ok: true, value: { terminated: true, escalated: true, reaped: false } };
+      // 3. The kill signal only AFTER the grace, and only for a target that is
+      //    still listed: an escalation runs because an act is observable.
+      const live = new Set(tree.list().map((entry) => entry.pid));
+      const survivors = targets.filter((pid) => live.has(pid));
+      const escalated = survivors.length > 0;
+      if (escalated) {
+        for (const pid of survivors) tree.signalTree(pid, "SIGKILL");
+      }
+      // Every reported boolean is an OBSERVED act: the terminal signal was
+      // issued to a matched tree, the escalation ran, and the exact-identity
+      // reap predicate matched this lane's runtime(s).
+      const value: HarnessTerminateResult = {
+        terminated: termSignals > 0,
+        escalated,
+        reaped: targets.length > 0,
+      };
+      record.termination = value;
+      return { ok: true, value };
     },
     collect: async (input) => {
       const record = sessions.get(input.handle.sessionId);

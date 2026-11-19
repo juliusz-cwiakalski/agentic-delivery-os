@@ -66,9 +66,16 @@ const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
       });
       return;
     case "partial":
+      // GH-347 AC-F4-3, Appendix F(C) arms 6-7 before arm 9: a session that
+      // carries commits takes the artifact ladder, so the `partial` class is
+      // produced by the commits-with-INCOMPLETE-pm-notes arm. The same input
+      // with complete pm-notes resolves `finished` (the R2 row in
+      // dispatch-truth-derivation.test.ts proves that half).
       await repo.run({
         evidence: TOOL_FAILURE_EVIDENCE,
-        reads: { artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone })) },
+        reads: {
+          artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })),
+        },
       });
       return;
     case "max-restarts":

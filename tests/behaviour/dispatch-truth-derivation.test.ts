@@ -29,7 +29,11 @@ import {
   dispatchTrackerLadderWait,
   runDispatchTrackerLadder,
 } from "../../packages/core/src/domain/dispatch-tracker";
-import { COMPLETED_EVIDENCE, PREMATURE_END_EVIDENCE } from "../fixtures/dispatch/harness";
+import {
+  COMPLETED_EVIDENCE,
+  PREMATURE_END_EVIDENCE,
+  TOOL_FAILURE_EVIDENCE,
+} from "../fixtures/dispatch/harness";
 import {
   artifacts,
   blockedInput,
@@ -308,38 +312,60 @@ const NP = "noop-lane-permission";
 const NN = "noop-lane-nothing-to-do";
 const POU = "pr-open-unverified";
 
+/** A harness-reported failure (Appendix F(C)(9): failed). */
+const REPORTED_FAILURE_EVIDENCE = {
+  completionMarker: true,
+  exitStatus: 1,
+  timedOut: false,
+  spawnRefused: false,
+  failureReported: true,
+  toolFailure: false,
+};
+
 describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary is unchanged", () => {
   type Row = {
     readonly id: string;
     readonly arm: string;
+    /** The ONE closed ladder arm this input must match (AC-F8-5 step 2). */
+    readonly declaredArm: string;
     readonly input: DispatchTruthInput;
     readonly token: string;
   };
   const rows: readonly Row[] = [
     // B — attempt-stage failures.
-    { id: "B1", arm: "spawn-failure", input: truthInput({ spawnFailure: true }), token: "failed" },
+    {
+      id: "B1",
+      arm: "spawn-failure",
+      declaredArm: "spawn-failure",
+      input: truthInput({ spawnFailure: true }),
+      token: "failed",
+    },
     {
       id: "B2",
       arm: "resume-uneconomical",
+      declaredArm: "resume-uneconomical",
       input: truthInput({ resumeAdmission: { admitted: false, reason: "uneconomical" } }),
       token: "failed",
     },
     {
       id: "B3",
       arm: "resume-unreadable",
+      declaredArm: "resume-unreadable",
       input: truthInput({ resumeAdmission: { admitted: false, reason: "unreadable-facts" } }),
       token: SU,
     },
     {
       id: "B4",
       arm: "harness-unreadable",
+      declaredArm: "harness-unreadable",
       input: truthInput({ harness: readFail("state", "state.store.torn") }),
       token: SU,
     },
-    // C — the completed-session ladder.
+    // C — the ended-session ladder (arms 4-7 reachable for EVERY ended session).
     {
       id: "C1",
       arm: "spawn-refused",
+      declaredArm: "spawn-refused",
       input: truthInput({
         harness: readOk(
           harnessFacts({
@@ -354,14 +380,33 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
       }),
       token: NP,
     },
-    { id: "C2", arm: "tracker-done", input: doneInput(), token: "merged" },
-    { id: "C3", arm: "blocking", input: blockedInput(), token: "blocked" },
-    { id: "C4", arm: "open-pr", input: truthInput(), token: "pr-open" },
-    { id: "C5", arm: "open-pr-unverified", input: unverifiedUrlInput(), token: POU },
-    { id: "C6", arm: "already-merged", input: mergedInput(), token: "merged" },
+    {
+      id: "C2",
+      arm: "tracker-done",
+      declaredArm: "tracker-done",
+      input: doneInput(),
+      token: "merged",
+    },
+    { id: "C3", arm: "blocking", declaredArm: "blocking", input: blockedInput(), token: "blocked" },
+    { id: "C4", arm: "open-pr", declaredArm: "open-pr", input: truthInput(), token: "pr-open" },
+    {
+      id: "C5",
+      arm: "open-pr-unverified",
+      declaredArm: "open-pr-unverified",
+      input: unverifiedUrlInput(),
+      token: POU,
+    },
+    {
+      id: "C6",
+      arm: "already-merged",
+      declaredArm: "already-merged",
+      input: mergedInput(),
+      token: "merged",
+    },
     {
       id: "C7",
       arm: "commits-complete",
+      declaredArm: "commits-complete",
       input: truthInput({
         artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
       }),
@@ -370,6 +415,7 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "C8",
       arm: "commits-incomplete",
+      declaredArm: "commits-incomplete",
       input: truthInput({
         artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
       }),
@@ -378,28 +424,77 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "C9",
       arm: "nothing-to-do",
+      declaredArm: "nothing-to-do",
       input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })) }),
       token: NN,
     },
     {
+      // REBUILT (GH-347 review m5, AC-F4-3, Appendix F(C)(9)): the classifier
+      // arm is arm 9, so its input must be a NON-clean end with NO decisive
+      // artifact. The delivered row carried commits and actually matched arm 7.
       id: "C10",
       arm: "classifier",
+      declaredArm: "classifier",
       input: truthInput({
-        harness: readOk(harnessFacts(COMPLETED_EVIDENCE)),
-        artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })),
+        harness: readOk(harnessFacts(TOOL_FAILURE_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone, pmNotes: "complete" })),
       }),
       token: "partial",
+    },
+    // C11-C14 — the B1 rows: a decisive artifact beats a non-clean classifier
+    // token (AC-F4-3; Appendix F(C) arms 4-7 precede arm 9; §8.5).
+    {
+      id: "C11",
+      arm: "failed-open-pr",
+      declaredArm: "open-pr",
+      input: truthInput({
+        harness: readOk(harnessFacts(REPORTED_FAILURE_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prOpen() })),
+      }),
+      token: "pr-open",
+    },
+    {
+      id: "C12",
+      arm: "failed-commits-complete",
+      declaredArm: "commits-complete",
+      input: truthInput({
+        harness: readOk(harnessFacts(REPORTED_FAILURE_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
+      }),
+      token: "finished",
+    },
+    {
+      id: "C13",
+      arm: "premature-end-open-pr",
+      declaredArm: "open-pr",
+      input: truthInput({
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 0, pr: prOpen() })),
+      }),
+      token: "pr-open",
+    },
+    {
+      id: "C14",
+      arm: "tool-failure-commits-complete",
+      declaredArm: "commits-complete",
+      input: truthInput({
+        harness: readOk(harnessFacts(TOOL_FAILURE_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
+      }),
+      token: "finished",
     },
     // Collisions — the order decides.
     {
       id: "X1",
       arm: "done-and-blocking",
+      declaredArm: "tracker-done",
       input: truthInput({ tracker: readOk(tracker({ state: "done", blocking: true })) }),
       token: "merged",
     },
     {
       id: "X2",
       arm: "done-and-open-pr",
+      declaredArm: "tracker-done",
       input: truthInput({
         tracker: readOk(tracker({ state: "done" })),
         artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })),
@@ -409,12 +504,14 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "X3",
       arm: "open-pr-and-commits",
+      declaredArm: "open-pr",
       input: truthInput({ artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen() })) }),
       token: "pr-open",
     },
     {
       id: "X4",
       arm: "no-commits-complete-ledger",
+      declaredArm: "nothing-to-do",
       input: truthInput({
         artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
         ledger: readOk(ledger({ completed: 9, total: 9, progressed: false, workRemaining: false })),
@@ -425,6 +522,7 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "R1",
       arm: "done-artifact-unreadable",
+      declaredArm: "tracker-done",
       input: truthInput({
         tracker: readOk(tracker({ state: "done" })),
         artifacts: readFail("artifact", "artifact.read-unreadable"),
@@ -434,6 +532,7 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "R2",
       arm: "blocking-artifact-unreadable",
+      declaredArm: "blocking",
       input: truthInput({
         tracker: readOk(tracker({ state: "delivery-blocked", blocking: true })),
         artifacts: readFail("artifact", "artifact.read-unreadable"),
@@ -443,6 +542,7 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     {
       id: "R3",
       arm: "done-ledger-unreadable",
+      declaredArm: "tracker-done",
       input: truthInput({
         tracker: readOk(tracker({ state: "done" })),
         ledger: readFail("ledger", "ledger.read-unreadable"),
@@ -451,7 +551,7 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     },
   ];
 
-  test("every declared arm projects its token; 21 inputs, 10 distinct tokens", () => {
+  test("every declared arm projects its token; 25 inputs, 10 distinct tokens", () => {
     const observed = rows.map((row) => deriveDispatchResult(row.input).token);
     for (const [index, row] of rows.entries()) {
       expect(observed[index], `${row.id} ${row.arm}`).toBe(row.token);
@@ -460,6 +560,41 @@ describe("TC-DERIVE-006 the total order is one disjoint order and the vocabulary
     // max-restarts is the eleventh token and is a loop/bound outcome, not a
     // derivation input (TC-LOOP-002/006).
     expect(new Set(observed).has("max-restarts")).toBe(false);
+  });
+
+  test("exactly one declared arm matches each input (test plan TC-DERIVE-006 step 2)", () => {
+    // The ONE derivation returns the arm that fired, so a row can never be
+    // mislabelled: C10's delivered arm tag claimed "classifier" while matching
+    // the commits arm, which is the defect this assertion closes.
+    for (const row of rows) {
+      const derivation = deriveDispatchResult(row.input);
+      expect(derivation.armId, `${row.id} ${row.arm}`).toBe(row.declaredArm);
+    }
+    // Every arm id the table observes is one of the declared closed set: no
+    // input reaches two arms and no arm is invented.
+    const declared = new Set([
+      "spawn-failure",
+      "resume-uneconomical",
+      "resume-unreadable",
+      "harness-unreadable",
+      "spawn-refused",
+      "tracker-done",
+      "blocking",
+      "open-pr",
+      "open-pr-unverified",
+      "already-merged",
+      "commits-complete",
+      "commits-incomplete",
+      "nothing-to-do",
+      "classifier",
+    ]);
+    for (const row of rows) {
+      expect(declared.has(row.declaredArm), `${row.id} ${row.declaredArm}`).toBe(true);
+    }
+    // More than one arm reaches `merged`: an arm is not a token, and the table
+    // proves distinct arms map onto the same token.
+    expect(rows.filter((row) => row.declaredArm === "tracker-done")).toHaveLength(5);
+    expect(rows.filter((row) => row.declaredArm === "open-pr")).toHaveLength(4);
   });
 
   test("the collisions prove the order: done beats blocking, blocking beats PR, PR beats commits", () => {

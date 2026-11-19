@@ -169,6 +169,13 @@ export type ParityHarnessOptions = {
   readonly environment?: Readonly<Record<string, string | undefined>>;
   readonly secrets?: readonly string[];
   readonly originUrl?: string;
+  /**
+   * The RESOLVED base branch the lifecycle prompt interpolates (GH-347
+   * AC-F7-3, DM-6). The default is the delivered integration base, so a case
+   * that omits it proves the resolved default; a non-default value proves the
+   * prompt follows the resolution.
+   */
+  readonly baseBranch?: string;
   /** Observes every landed store append (the interleaving latch wires its release). */
   readonly onAppend?: (record: { readonly kind: string }) => void;
   /** The on-disk pm-notes fixture; defaults to a complete document. */
@@ -368,6 +375,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     homeDirectory: home,
     workingName: "delivery-os",
     repositoryFacts: { originUrl: options.originUrl ?? GITHUB_ORIGIN },
+    ...(options.baseBranch === undefined ? {} : { dispatchBaseBranch: options.baseBranch }),
     harnessSpawnRunner: guarded.runner,
     harnessSpawnStarter: guarded.starter,
     credentials: credentialPort,
@@ -534,10 +542,14 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
 
 /** A fresh production spawn: one --agent pm, one --model, one fresh --title. */
 export const spawnFreshObservation = async (
-  options: { readonly ref?: string } = {},
+  options: { readonly ref?: string; readonly baseBranch?: string } = {},
 ): Promise<ParityObservation> => {
   const ref = options.ref ?? "GH-347";
-  const h = createParityHarness({ label: `spawn-fresh-${ref}`, ref });
+  const h = createParityHarness({
+    label: `spawn-fresh-${ref}`,
+    ref,
+    ...(options.baseBranch === undefined ? {} : { baseBranch: options.baseBranch }),
+  });
   try {
     await h.run(["dispatch", ref, "--json"]);
     return h.observe();

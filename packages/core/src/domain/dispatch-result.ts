@@ -112,6 +112,35 @@ export type DispatchTruthInput = {
   readonly resumeAdmission?: DispatchResumeAdmission;
 };
 
+/**
+ * The closed arm ids of the total ladder (GH-347 Appendix F, AC-F8-5).
+ *
+ * Module-internal by design: it instruments the one derivation for the
+ * per-input disjointness assertion and is never a contract, a token, or a
+ * projection. Each derivation return names exactly the ONE arm that produced
+ * it, so no two arms can claim the same input.
+ */
+const DISPATCH_RESULT_ARM_IDS = [
+  "spawn-failure",
+  "resume-uneconomical",
+  "resume-unreadable",
+  "restart-budget",
+  "harness-unreadable",
+  "spawn-refused",
+  "tracker-done",
+  "blocking",
+  "open-pr",
+  "open-pr-unverified",
+  "already-merged",
+  "commits-complete",
+  "commits-incomplete",
+  "nothing-to-do",
+  "classifier",
+  "undecidable",
+] as const;
+
+type DispatchResultArmId = (typeof DISPATCH_RESULT_ARM_IDS)[number];
+
 /** The pure derivation verdict: a token, its outcome, and its projection class. */
 export type DispatchDerivation = {
   readonly token: DispatchToken;
@@ -123,6 +152,12 @@ export type DispatchDerivation = {
   readonly urlResolved: boolean;
   readonly lastMessage: string;
   readonly missingArtifact?: "branch-commit" | "pull-request" | "ledger-progress";
+  /**
+   * The one closed ladder arm that produced this verdict (AC-F8-5
+   * disjointness). Instrumentation for the derivation's own proof; it is not a
+   * token, a projection, or a persisted field.
+   */
+  readonly armId?: string;
   /** The classified error identity for a derived failure, never prose. */
   readonly errorCode?: string;
   readonly readFailure?: DispatchReadFailure;
@@ -149,6 +184,7 @@ const base = (
     readonly urlResolved?: boolean;
     readonly lastMessage: string;
     readonly missingArtifact?: DispatchDerivation["missingArtifact"];
+    readonly armId: DispatchResultArmId;
     readonly errorCode?: string;
     readonly readFailure?: DispatchReadFailure;
     readonly corroborationArm?: DispatchCorroborationArm;
@@ -161,6 +197,7 @@ const base = (
   handoverState: input.handoverState,
   urlResolved: fields.urlResolved ?? false,
   lastMessage: fields.lastMessage,
+  armId: fields.armId,
   ...(fields.missingArtifact === undefined ? {} : { missingArtifact: fields.missingArtifact }),
   ...(fields.errorCode === undefined ? {} : { errorCode: fields.errorCode }),
   ...(fields.readFailure === undefined ? {} : { readFailure: fields.readFailure }),
@@ -181,6 +218,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: f,
       outcome: O_FAILED,
       lastMessage: "spawn failed before a session existed",
+      armId: "spawn-failure",
       errorCode: "dispatch.session.spawn-failed",
     });
   }
@@ -191,6 +229,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         token: f,
         outcome: O_FAILED,
         lastMessage: "resume refused: the prefill re-pay is uneconomical",
+        armId: "resume-uneconomical",
         errorCode: "dispatch.resume-uneconomical",
       });
     }
@@ -198,6 +237,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: su,
       outcome: O_FAILED,
       lastMessage: "resume admission could not read its token or cost facts",
+      armId: "resume-unreadable",
       errorCode: "dispatch.state-unverified",
       readFailure: "state",
     });
@@ -218,6 +258,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: mr,
       outcome: O_FAILED,
       lastMessage: `restart budget exhausted at ${input.restarts.count} of ${input.restarts.bound}`,
+      armId: "restart-budget",
       errorCode: "dispatch.restart-budget-exceeded",
     });
   }
@@ -227,6 +268,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: su,
       outcome: O_FAILED,
       lastMessage: `harness read unreadable (${input.harness.identity ?? "harness"})`,
+      armId: "harness-unreadable",
       errorCode: "dispatch.state-unverified",
       readFailure: "state",
     });
@@ -237,6 +279,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: np,
       outcome: O_REFUSED,
       lastMessage: "the harness refused before a session existed (spawn-refused)",
+      armId: "spawn-refused",
     });
   }
 
@@ -251,6 +294,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         token: m,
         outcome: harness.outcome,
         lastMessage: "the tracker work item is done",
+        armId: "tracker-done",
         corroborationArm: "tracker-done-merged",
       });
     }
@@ -259,26 +303,33 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         token: b,
         outcome: harness.outcome,
         lastMessage: "the tracker reports a delivery-blocking state",
+        armId: "blocking",
       });
     }
   }
 
-  // Appendix F(C) is the COMPLETED-session ladder; a non-completed outcome
-  // (failure, timeout, premature end, tool failure) uses arm 9: the shared
-  // classifier's token. A stall is Appendix F(D) and is the loop's decision,
-  // never this ladder's.
+  // Appendix F(C) arms 4-7 are the DECISIVE ARTIFACT arms and apply to EVERY
+  // ENDED, non-stall session — never only to a `finished` classifier token
+  // (AC-F4-3: "completed session ... the artifact verdict is the result"; §8.5
+  // "After a completed session, derivation is artifact-first"). A harness-
+  // reported timeout IS a terminal stall (Appendix F(D)) and is the loop's
+  // decision, so it never takes an artifact arm.
   const completedSession = harness.token === fin;
-  if (!completedSession) {
-    return base(input, {
-      token: harness.token,
-      outcome: harness.outcome,
-      lastMessage: `the shared classifier reported ${harness.outcome}`,
-    });
-  }
+  const stalledSession = harness.outcome === "timed-out";
 
   if (input.artifacts.ok) {
     const artifacts = input.artifacts.value;
     const pr = artifacts.pr;
+    if (stalledSession) {
+      // A harness-reported timeout belongs to the stall ladder (Appendix F(D)):
+      // this ladder yields only the shared classifier's token for it.
+      return base(input, {
+        token: harness.token,
+        outcome: harness.outcome,
+        lastMessage: `the shared classifier reported ${harness.outcome}`,
+        armId: "classifier",
+      });
+    }
     if (pr.state === "open") {
       const resolved = pr.url !== null && pr.url.length > 0;
       return base(input, {
@@ -289,6 +340,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         lastMessage: resolved
           ? "the pull request is open and awaits the coordinator's merge decision"
           : "the pull request is open; its URL could not be resolved",
+        armId: resolved ? "open-pr" : "open-pr-unverified",
       });
     }
     if (pr.state === "already-merged") {
@@ -298,6 +350,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         prUrl: pr.url ?? "",
         urlResolved: pr.url !== null && pr.url.length > 0,
         lastMessage: "the pull request is already merged (detection only)",
+        armId: "already-merged",
       });
     }
     if (artifacts.branchCommits > 0) {
@@ -306,12 +359,26 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
             token: fin,
             outcome: harness.outcome,
             lastMessage: "the branch carries commits and the pm-notes are complete",
+            armId: "commits-complete",
           })
         : base(input, {
             token: par,
             outcome: harness.outcome,
             lastMessage: "the branch carries commits but the pm-notes are not complete",
+            armId: "commits-incomplete",
           });
+    }
+    // Arm 8 is the ONE arm whose reading is a tracker judgement about a clean
+    // completion, not an artifact verdict: "nothing was attempted" is only
+    // observable when the session completed. A non-clean end keeps its own
+    // classifier token at arm 9 (Appendix F(C)(9)).
+    if (!completedSession) {
+      return base(input, {
+        token: harness.token,
+        outcome: harness.outcome,
+        lastMessage: `the shared classifier reported ${harness.outcome}`,
+        armId: "classifier",
+      });
     }
     // No commits and no pull request: the shell arm needs a READABLE, non-done,
     // non-blocked tracker (already established above). An unreadable tracker
@@ -321,6 +388,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
         token: su,
         outcome: O_FAILED,
         lastMessage: `truth read unreadable (${input.tracker.identity ?? input.tracker.reason})`,
+        armId: "undecidable",
         errorCode: "dispatch.state-unverified",
         readFailure: input.tracker.reason,
       });
@@ -329,7 +397,20 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: nn,
       outcome: harness.outcome,
       lastMessage: "the lane has no remaining work",
+      armId: "nothing-to-do",
       corroborationArm: "nothing-to-do",
+    });
+  }
+
+  // Arm 9 precedes arm 10: a non-clean end with no readable artifact keeps the
+  // shared classifier's token (its arm is exhaustive over the session outcome),
+  // and only a clean completion whose truth is unreadable is undecidable.
+  if (!completedSession) {
+    return base(input, {
+      token: harness.token,
+      outcome: harness.outcome,
+      lastMessage: `the shared classifier reported ${harness.outcome}`,
+      armId: "classifier",
     });
   }
 
@@ -342,6 +423,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
       token: su,
       outcome: O_FAILED,
       lastMessage: `truth read unreadable (${input.tracker.identity ?? input.tracker.reason})`,
+      armId: "undecidable",
       errorCode: "dispatch.state-unverified",
       readFailure: input.tracker.reason,
     });
@@ -350,6 +432,7 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     token: su,
     outcome: O_FAILED,
     lastMessage: `truth read unreadable (${input.artifacts.identity ?? input.artifacts.reason})`,
+    armId: "undecidable",
     errorCode: "dispatch.state-unverified",
     readFailure: input.artifacts.reason,
   });
