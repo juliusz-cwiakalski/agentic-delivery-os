@@ -369,6 +369,68 @@
 #   the pin count stays EIGHTEEN, the register stays 123, and every other phase's
 #   scope is unchanged. The DoR verdict stands.
 #
+# PHASE 5 IN PROGRESS (delivery planning reopened; declaration correction only):
+#   The coder began phase 5 and STOPPED on the plan's own condition — a pin
+#   outside the declared scope failed its own gate. That is the plan working as
+#   designed (a pin discovered during delivery is reported, never "just fixed"),
+#   and NO SOURCE WAS EDITED OUTSIDE SCOPE: the working tree's uncommitted
+#   phase-5 changes are exactly the files this phase already declared (the
+#   contracts, `domain/closeout.ts`, `state/closeout.ts`, the four adapter
+#   capability/client files, `cli/production.ts`, and the six
+#   `testkit/src/conformance/*` modules). The stop is resolved by DECLARING the
+#   two pins that failed, both of which are phase-5 work by subject:
+#     - `tests/conformance/stateful-double.test.ts` — pins the FLATTENED
+#       conformance step count **14 → 15** (the appended
+#       `change-lifecycle.close-milestone` step). This is a FLOW-STEP-SET pin, not
+#       an operation pin: the operation set is the eighteen-pin class of
+#       Appendix H and this file asserts nothing about membership.
+#     - `tests/fixtures/ports/v1-contract-inventory.json` — pins the EXACT export
+#       surface of `packages/core/src/contracts/*.ts`. The milestone contract adds
+#       ELEVEN distinct names, which surface as **22 module-qualified
+#       unexpected-export entries** (`closeout.ts` 11, `index.ts` 11, `ports.ts`
+#       5), so the inventory must be REGENERATED from the actual surface: set
+#       equality both ways, where a missing export and an extra export each fail
+#       and NO count is pinned. It is a regenerate-on-change inventory, not a
+#       hand-edited list.
+#   The phase resumes after these declarations; no other phase's scope, the
+#   ownership vectors, the eighteen operation pins, the 88 TCs or the 123
+#   controls move.
+#
+# PIN CLASSIFICATION (three kinds) — the lesson from phases 1, 2 and 5:
+#   A "pin" in this repository is not one thing, and a plan that declares only
+#   the first kind keeps stopping in delivery. There are THREE kinds, and **a file
+#   carrying ANY of them is an EDITABLE SURFACE** that must appear in the scope of
+#   the phase whose delta moves it:
+#   (A) OPERATION-MEMBERSHIP PINS (18 files; Appendix H). They assert the
+#       `ADAPTER_OPERATIONS` set's SIZE or an exact membership array / exhaustive
+#       arm. Moving one is a 9→10 exercise; `TC-SYNC-009` is their oracle.
+#       Examples: the transport key map and its key-set test, the two exact
+#       arrays, the client-surface `Object.keys` array.
+#   (B) CLOSED-SET COUNT PINS. They assert the SIZE of a different closed set and
+#       are invisible to (A) because the set name never appears: conformance
+#       FLOW STEPS (14→15), CLOSEOUT STEPS (12→13), RESIDUE KINDS (8→9),
+#       ASSERTION FAMILIES (6→7) and PARITY CELLS (27→30). `TC-SYNC-002`,
+#       `TC-SYNC-003` and `TC-SYNC-009` share this class.
+#       `tests/conformance/stateful-double.test.ts` is the canonical miss: it
+#       emits a `toHaveLength(14)` over `CONFORMANCE_FLOWS.flatMap(…steps)` and
+#       names no operation at all.
+#   (C) REGENERATE-ON-CHANGE INVENTORIES. They assert an exact SET of names —
+#       contract exports, mock projections — against the live surface, with
+#       missing and extra both failing. They are never hand-edited: they are
+#       REGENERATED from the artifact they describe, in the same commit.
+#       `tests/fixtures/ports/v1-contract-inventory.json` is the canonical case:
+#       it grows by eleven distinct names, which appear as **22 module-qualified
+#       unexpected-export entries** in the worktree (`closeout.ts` 11,
+#       `index.ts` 11, `ports.ts` 5) — the entry count is the SUITE's reading of
+#       the gap, never a pinned number.
+#   THE RULE: before a phase is declared ready, sweep for all three kinds over
+#   the closed sets its delta touches. Phases 1, 2 and 5 each stopped once on a
+#   kind the sweep had not looked for — (A) missed the mirror allowlist in phase
+#   1, (B) missed the pilot/count pins in phase 2, and (B)+(C) missed the two
+#   declared here. A pin found later is still a SPECIFICATION/DECLARATION DEFECT
+#   that returns for revision (Appendix H's residue rule), never a delivery
+#   decision.
+#
 # SCOPE DECLARATION RULE (binding on every phase; inherited from GH-338/GH-339):
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
 #   gives the commit primitive staging authority. A file that is only RE-RUN as a
@@ -618,7 +680,8 @@
 #   (phase 5).
 #   There is no fourth move, and no surface moves in two commits.
 #
-# THE RIPPLE IS ALL-OR-NOTHING (Appendix E plus Appendix H, binding on phase 5):
+# THE RIPPLE IS ALL-OR-NOTHING (Appendix E plus Appendix H plus the three pin
+#   kinds, binding on phase 5):
 #   An operation-set change is not complete until EVERY item below lands in the
 #   SAME commit: (1) the closed set gains `close-milestone` by APPEND with no
 #   index moving; (2) the flow registry represents it with a step (executing on
@@ -671,7 +734,14 @@
 #   the values this change writes (both round trips proven); (18) the fourth
 #   delivered-check-bound carrier page
 #   (`doc/spec/features/feature-adapter-reference-behavior.md`) moves with the
-#   table set-equality it satisfies. A partial move is a RED GATE, not a partial
+#   table set-equality it satisfies; **(19) the CLOSED-SET COUNT PIN in
+#   `tests/conformance/stateful-double.test.ts` moves 14 → 15** (the flattened
+#   conformance step count — a flow-step-set pin, not an operation pin), **and
+#   (20) the REGENERATE-ON-CHANGE INVENTORY
+#   `tests/fixtures/ports/v1-contract-inventory.json` is regenerated** so its
+#   export-set equality holds (eleven new contract names, surfacing as **22
+#   module-qualified unexpected-export entries** until it is regenerated;
+#   `closeout.ts` 11, `index.ts` 11, `ports.ts` 5). A partial move is a RED GATE, not a partial
 #   success: TC-SYNC-003 fails naming the missing item, TC-SYNC-009 names the pin
 #   left at nine, and M83/M93/M94/M95/M101/M102/M103/M104/M105/M106/M109/M110/M111/M112/M113/M114/M115/M116
 #   mutate each supplied item.
@@ -2199,8 +2269,9 @@ phases:
   #     verified outcome is the attachment check plus a recorded exit-review
   #     verdict; any case asserting a closed M4 record is a blocking finding.
   #
-  # THE RIPPLE — ALL-OR-NOTHING IN THIS COMMIT (the header's eighteen-item list and
-  #   Appendix H's pin table are the checklist; a partial move is a RED GATE):
+  # THE RIPPLE — ALL-OR-NOTHING IN THIS COMMIT (the header's twenty-item list,
+  #   Appendix H's eighteen-pin table and the three PIN KINDS are the checklist; a
+  #   partial move is a RED GATE):
   #   the tenth operation appended (no index moving); **the EIGHTEEN enforcing
   #   pins of Appendix H all moving 9→10** — the GitHub transport key map (a type
   #   error until the key exists), the exhaustive `operationLabel` probe (a `never`
@@ -2244,7 +2315,22 @@ phases:
   #   unchanged help/reference command set; the unchanged topology pin; and **the
   #   FOURTH delivered-check-bound carrier page**
   #   (`feature-adapter-reference-behavior.md`) moving with the table it satisfies
-  #   (M111 fails the wrong-phase owner). The six-TRAP-family × three-adapter accounting stays 18 and neither
+  #   (M111 fails the wrong-phase owner).
+  #   TWO PINS OF THE OTHER KINDS (the stop that reopened planning; see the
+  #   header's PIN CLASSIFICATION and PHASE 5 IN PROGRESS notes):
+  #   **`tests/conformance/stateful-double.test.ts` moves its flattened
+  #   conformance step count 14 → 15** — a CLOSED-SET COUNT pin, not an operation
+  #   pin (it asserts `CONFORMANCE_FLOWS.flatMap(flow => flow.steps)` has fifteen
+  #   entries and names no operation), so it is invisible to the eighteen-pin
+  #   sweep; **and `tests/fixtures/ports/v1-contract-inventory.json` is
+  #   REGENERATED** from the actual `packages/core/src/contracts/*.ts` export
+  #   surface — a REGENERATE-ON-CHANGE INVENTORY whose equality fails both ways
+  #   (missing export and unexpected export), where the milestone contract adds
+  #   ELEVEN distinct names that surface as **22 module-qualified
+  #   unexpected-export entries** (`closeout.ts` 11, `index.ts` 11, `ports.ts` 5)
+  #   until it is regenerated. Neither is hand-edited: the inventory is
+  #   regenerated from the surface it describes, in this commit.
+  #   The six-TRAP-family × three-adapter accounting stays 18 and neither
   #   the new operation nor the new assertion family may enter the trap-family
   #   vocabulary (M95).
   #   READ-ONLY, NARROWED (spec v1.5 M2 → spec v1.6 B1c; §7.6(x)):
@@ -2314,6 +2400,27 @@ phases:
   #               asserts BOTH, naming the second as the client-surface pin
   #               (M102's naming covers all eighteen files, and this file carries
   #               two of them).
+  #   5.3c **MOVE THE TWO PINS THE STOP FOUND — they are part of the all-or-nothing
+  #        ripple (header items (19)/(20)), and neither is an operation pin:**
+  #          (i)  `tests/conformance/stateful-double.test.ts` — the FLATTENED
+  #               conformance step count moves **14 → 15**
+  #               (`CONFORMANCE_FLOWS.flatMap(flow => flow.steps)`), the
+  #               CLOSED-SET COUNT kind. Do not touch its three-flow and
+  #               three-adapter assertions; it asserts no operation membership, so
+  #               it is not part of the eighteen.
+  #          (ii) `tests/fixtures/ports/v1-contract-inventory.json` — REGENERATE
+  #               the inventory from the actual `packages/core/src/contracts/*.ts`
+  #               export surface (the milestone contract adds ELEVEN distinct
+  #               names; the worktree reports **22 module-qualified
+  #               unexpected-export entries** — `closeout.ts` 11, `index.ts` 11,
+  #               `ports.ts` 5 — until it is regenerated). It is a
+  #               REGENERATE-ON-CHANGE INVENTORY: set equality both ways, so a
+  #               missing export and an unexpected export each fail by name, and
+  #               no count is pinned. Never hand-edit the JSON to match a broken
+  #               surface — regenerate it from the surface.
+  #        A file carrying ANY pin kind is an editable surface (PIN CLASSIFICATION
+  #        in the header); these two were the phase-5 stop, and the phase resumes
+  #        with them declared.
   #   5.4 Author the milestone suites (outcome matrix with the ORDERED
   #       fixture↔outcome pairing, the withholding facts including the unknown
   #       state sharing `closure-withheld` with its state in evidence, the
@@ -2348,8 +2455,9 @@ phases:
   # adapter-not-implemented, Jira provider-unsupported, seed postures 9→10 /
   # 7→8 / 6→7, the tenth WRITE_METHODS arm, operationLabel's tenth case), BOTH
   # arrays in `provider-surface` moving (supported operations AND the client
-  # method set) and the control coverage at 10 of 10,
-  # FIFTEEN flow steps, SEVEN assertion families, 30 parity cells with three
+  # method set) and the control coverage at 10 of 10, the CLOSED-SET COUNT pin
+  # in `stateful-double` reading FIFTEEN, the regenerated contract-export
+  # inventory at set equality, FIFTEEN flow steps, SEVEN assertion families, 30 parity cells with three
   # adjudicated, the registry and both gates at ten, the GitHub route and
   # projection present, SIX trap families / 18 cells unchanged, the inventory
   # exact):
@@ -2359,6 +2467,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/adapter-operation-consumers.test.ts tests/structure/registration-participation.test.ts tests/structure/provider-surface.test.ts tests/structure/reference-behavior.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers/github-cli-transport.test.ts tests/behaviour/providers/github-landing.test.ts tests/behaviour/providers/github-collection.test.ts tests/behaviour/providers/provider-capabilities.test.ts tests/behaviour/closeout-capabilities.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/types/merge-delivery-request.type-test.ts tests/behaviour/port-capabilities.test.ts     (the exhaustive operationLabel probe + the derived posture consumer)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/stateful-double.test.ts tests/structure/port-contract-inventory.test.ts     (the two pins the stop found)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/control-registration.test.ts tests/conformance/broken-adapter-control.test.ts tests/conformance/live/live-entrypoint.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/closeout-human.test.ts tests/golden/closeout-envelope.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/capsule-bounds.test.ts
@@ -2460,6 +2569,20 @@ phases:
         - tests/checks/capsule-bounds.test.ts
         - tests/conformance/parity-gate.test.ts
         - tests/conformance/mock-conformance.test.ts
+        # PHASE-5 STOP #1 (see the header's PHASE 5 IN PROGRESS / PIN
+        # CLASSIFICATION notes): a CLOSED-SET COUNT pin, not an operation pin —
+        # it asserts the FLATTENED conformance step count and names no operation,
+        # so the eighteen-pin sweep cannot see it. Moves 14 → 15 with the
+        # appended `change-lifecycle.close-milestone` step.
+        - tests/conformance/stateful-double.test.ts
+        # PHASE-5 STOP #2: a REGENERATE-ON-CHANGE INVENTORY over the exact export
+        # surface of `packages/core/src/contracts/*.ts`. The milestone contract
+        # adds ELEVEN distinct names, which appear as **22 module-qualified
+        # unexpected-export entries** until regenerated (`closeout.ts` 11,
+        # `index.ts` 11, `ports.ts` 5). It is regenerated from the surface, never
+        # hand-edited; set equality fails both ways (missing export and unexpected
+        # export), and no count is pinned.
+        - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/closeout-milestone-contract.test.ts
         - tests/types/closeout-milestone.type-test.ts
         - tests/types/forbidden-acts.type-test.ts
