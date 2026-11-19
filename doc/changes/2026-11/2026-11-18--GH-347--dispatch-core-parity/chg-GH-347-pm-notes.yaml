@@ -5,12 +5,12 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
-  specification: { started: null, completed: 2026-11-19T00:19:45.659Z }
-  test_planning: { started: null, completed: 2026-11-19T00:19:56.017Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-19T00:20:05.234Z }
   dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
   delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: 2026-11-19T03:23:18.531Z }
+  system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -775,56 +775,138 @@ notes:
       deleted, renamed, or relaxed'. Review iteration 1 found three delivered
       assertions deleted with no authorising clause, and the claim is wrong as
       written: (1) expect(result.lastMessage).toContain('no remaining work') in
-      dispatch-token-closure.test.ts; (2) expect(run.envelope?.data?.error?.category)
-      .toBe('user') in dispatch-restart-budget.test.ts; (3) expect(run.exit).toBe(1)
-      in the dispatch-composition operator-resume case. Phase 9 RESTORES all
-      three (the first two behaviours were unchanged; the third is restored
-      positively as state-unverified at exit 2, the taxonomy's projection for the
-      admitted resume's classification), and the stale 'a restart-budget refusal'
-      test name is renamed to describe the admission it now asserts. The claim
-      'no assertion was deleted' therefore stands corrected to: three assertions
+      dispatch-token-closure.test.ts; (2)
+      expect(run.envelope?.data?.error?.category) .toBe('user') in
+      dispatch-restart-budget.test.ts; (3) expect(run.exit).toBe(1) in the
+      dispatch-composition operator-resume case. Phase 9 RESTORES all three (the
+      first two behaviours were unchanged; the third is restored positively as
+      state-unverified at exit 2, the taxonomy's projection for the admitted
+      resume's classification), and the stale 'a restart-budget refusal' test
+      name is renamed to describe the admission it now asserts. The claim 'no
+      assertion was deleted' therefore stands corrected to: three assertions
       were deleted without a clause, and all three are restored with clauses."
     type: info
     date: "2026-11-19"
   - text: "Plan phase 9 (review-iteration-1 remediation) implemented before its
       commit. R1/R2: the artifact ladder's decisive arms 4-7 now apply to EVERY
       ended, non-stall session (a harness-reported timeout stays on the stall
-      ladder, and arm 8 keeps the clean-completion fact), the derivation returns a
-      declared closed armId, TC-DERIVE-006 gains the four B1 rows and a rebuilt
-      C10 that actually matches arm 9, and per-input arm disjointness is asserted
-      (25 inputs, 10 tokens, arm ids checked). R3/R4: the terminate capability is
-      read from the adapter's own declaration (an undeclared port keeps the
-      delivered restart behaviour; an incapable one starts no second session and
-      returns a terminal state-unverified, and an UNCONFIRMED termination stops the
-      restart too), with the incapable below-bound pair and a second-stall capable
-      case. R5: the production opencode terminate now signals each exact-identity
-      process's tree with TERM, waits the CONFIGURED grace through the injected
-      delay, escalates to KILL only over a survivor still listed, reports
-      terminated/escalated/reaped from those acts, reaps by session id or
-      ticket-<REF> title only (a /proc read, no shell, no broad pattern), and a
-      resume clears the termination fact. The starter's 100 ms probe kill is
-      untouched and is never used by termination. R6: the stall-undecidable
-      predicate is 'any required read unreadable and no decisive artifact'. R7:
-      TC-PARITY-003 compares full canonical envelopes, attempt counts and tokens,
-      lane counts, spawns/resumes/waits/violations and class coverage, and the
-      registry's eight process-invoking rows are declared and asserted in
-      TC-SHELL-001. R8: realChildStarts is a live guarded-runner counter (a fresh
-      unused runner proves nothing; a composed run does, and a permitted-start
-      control observes 1), the terminate double's model records a signal-discipline
-      violation and carries a planted broad-pattern control, the previously
-      unconsulted NO_SHELL_ALLOWLIST is now CONSULTED by `scan` and stays EMPTY
-      (a supplied entry is proven to suppress exactly its own hit, so 'empty' is
-      a measurement of the mechanism), and SEAM_MANIFEST gains the terminate
-      entry. R9: the three assertions above are restored. R10: the stalled
-      iteration's
+      ladder, and arm 8 keeps the clean-completion fact), the derivation returns
+      a declared closed armId, TC-DERIVE-006 gains the four B1 rows and a
+      rebuilt C10 that actually matches arm 9, and per-input arm disjointness is
+      asserted (25 inputs, 10 tokens, arm ids checked). R3/R4: the terminate
+      capability is read from the adapter's own declaration (an undeclared port
+      keeps the delivered restart behaviour; an incapable one starts no second
+      session and returns a terminal state-unverified, and an UNCONFIRMED
+      termination stops the restart too), with the incapable below-bound pair
+      and a second-stall capable case. R5: the production opencode terminate now
+      signals each exact-identity process's tree with TERM, waits the CONFIGURED
+      grace through the injected delay, escalates to KILL only over a survivor
+      still listed, reports terminated/escalated/reaped from those acts, reaps
+      by session id or ticket-<REF> title only (a /proc read, no shell, no broad
+      pattern), and a resume clears the termination fact. The starter's 100 ms
+      probe kill is untouched and is never used by termination. R6: the
+      stall-undecidable predicate is 'any required read unreadable and no
+      decisive artifact'. R7: TC-PARITY-003 compares full canonical envelopes,
+      attempt counts and tokens, lane counts, spawns/resumes/waits/violations
+      and class coverage, and the registry's eight process-invoking rows are
+      declared and asserted in TC-SHELL-001. R8: realChildStarts is a live
+      guarded-runner counter (a fresh unused runner proves nothing; a composed
+      run does, and a permitted-start control observes 1), the terminate
+      double's model records a signal-discipline violation and carries a planted
+      broad-pattern control, the previously unconsulted NO_SHELL_ALLOWLIST is
+      now CONSULTED by `scan` and stays EMPTY (a supplied entry is proven to
+      suppress exactly its own hit, so 'empty' is a measurement of the
+      mechanism), and SEAM_MANIFEST gains the terminate entry. R9: the three
+      assertions above are restored. R10: the stalled iteration's
       liveness/termination refs are carried onto the terminal attempt, and the
       dispatch-watch liveness:stalled assertion is restored. R11: the prompt's
       base branch is the RESOLVED composition fact (default = the delivered
       integration base) with a non-default-base spawn case. R12: the no-shell
       invariant also detects default imports, require/require-destructuring,
-      dynamic import, aliases and substituted template paths; the surface list is
-      guarded by glob equality and reachability from the declared entries; the
-      lane:append-failed / tracker:exhausted disclosure refs are RESERVED ahead of
-      the 16-slice; and the planted-control tmp parent is created recursively."
+      dynamic import, aliases and substituted template paths; the surface list
+      is guarded by glob equality and reachability from the declared entries;
+      the lane:append-failed / tracker:exhausted disclosure refs are RESERVED
+      ahead of the 16-slice; and the planted-control tmp parent is created
+      recursively."
     type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 9 EVIDENCE (review-iteration-1 remediation). Plan phase id 9
+      (`fix(GH-347): review-iteration-1 remediation`) is implemented and landed
+      in commit 9742e6a871458bad4cc3ef659f60ecfeb599e070 (messageSource:
+      template — the primitive computed the subject; no message was
+      hand-composed and no --phase was passed, so the lifecycle delivery phase
+      stays open for the PM). Gate at that HEAD: truth-derivation +
+      token-closure 42 pass; watch + liveness + restart-budget 24 pass;
+      harness-opencode-resume-stream 12 pass; parity-stall-loop 29 pass;
+      parity-battery + parity-no-shell + parity-spawn 26 pass; no-shell +
+      contract-invariance 21 pass; dispatch-composition + dispatch-imports +
+      content-inventory 41 pass; the no-shell static invariant clean over 22
+      surface files; typecheck green; git diff --check clean; and the BINDING
+      aggregate `pnpm check` exit 0 at 11140 pass / 4 skip / 0 fail across 11144
+      tests in 1376 files (lint, format, typecheck, boundaries, memory,
+      prompt-conformance 5, help-guide coverage, exports-parity 5 publishables).
+      Stop-and-report check: the class-failed parity row and
+      dispatch-false-success.test.ts both KEEP `failed` (arm 8 keeps the
+      clean-completion fact), so the plan's STOP condition was not hit. Two
+      delivered fixture rows changed outside this phase's own file list, both as
+      a direct consequence of R1 and both updated with clauses: the phase-4
+      dispatch-envelope partial case and the phase-7 dispatch-e2e partial drive
+      row now declare incomplete pm-notes so the `partial` CLASS is still
+      produced by Appendix F(C)(7), while the commits-with-complete case
+      resolves `finished` (proved by R2's rows). Both paths are declared by the
+      plan (their authoring phases), so the commit primitive staged them with no
+      scope drift."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-remediation documentation re-verification: four current-truth pages
+      corrected - feature-dispatch-engine (the ended-session artifact-first order,
+      the total undecidable predicate, the termination-capability gate, the
+      exact-identity terminate with resume clearing the fact, the composition-edge
+      process-tree seam, the resolved base branch, the removal of the false
+      reaped:false claim, and the reserved disclosure refs),
+      feature-session-lifecycle-economics (exact-identity terminate, KILL only
+      after the configured grace over a still-listed target, resume clearing the
+      fact, the incapable/unconfirmed terminal outcome),
+      feature-harness-adapters (the injected terminateTree seam, exact-identity
+      match, observed booleans, no-seam false report, the starter kill is not
+      terminate), and test-spec-dispatch-engine (the ended-session rows and the
+      incapable-adapter case). Pages checked and unchanged: delivery-lifecycle,
+      resident-daemon, glossary (accurate), and the reference dispatch page
+      (outside the writable root, contains no false claim). Gates: doc trio 28
+      pass, doc-distribution no drift (96 docs), zero stale-phrase hits, git diff
+      --check clean."
+    type: info
+    date: "2026-11-19"
+  - text: "Spec v1.7 and test plan v0.5 close the artifact gap the re-verification
+      found: Appendix F(C) and DM-4 now scope arms 4-7 to every ended, non-stall
+      session with arm 8 clean-completion-only and arm 9 the non-clean-end
+      classifier token; F-4, AC-F4-3, section 8.5 and the glossary say
+      ended-session; Appendix F(D) carries the termination-capability gate; DM-5
+      states the delivered two-case terminate booleans (unknown handle true;
+      known-but-gone false, both success). Test plan v0.5 corrects the derivation
+      input count from 21 to 25 and names C10 rebuilt plus C11-C14."
+    type: info
+    date: "2026-11-19"
+  - text: "Residuals recorded for the re-review and the owner gate, none a code
+      defect: (1) TDR-0046 DC-4 still says an already-exited session returns
+      terminated:true; the adapter returns false for a known-but-gone runtime
+      (still success), and the spec now records the delivered semantics with the
+      owner reconciliation noted - the record is Proposed and not accepted.
+      (2) The mutation register has no row that hoists the classifier arm above
+      the artifact arms; the new TC-DERIVE-006 C11-C14 rows would fail if it
+      were hoisted, so the case is non-vacuous, but the register gap is noted.
+      (3) The m1 reference page omits the incapable-terminate outcome and the
+      resume-clears fact; it contains no false claim and is outside the
+      doc-syncer's writable root."
+    type: risk
+    date: "2026-11-19"
+  - text: "RETRO (review remediation cycle): the second pass cost four artifact
+      reopenings (specification, test_planning, system_spec_update, delivery) for
+      one code fix. The expensive part was not the fix but the trailing truth:
+      the docs, the spec's normative table and the test plan's count each had to
+      catch up with a behaviour that changed in one commit. Process note: when a
+      remediation changes a documented contract, list every artifact that states
+      it BEFORE starting the code edit and reopen them together; that would have
+      collapsed this cycle into one."
+    type: retro
     date: "2026-11-19"

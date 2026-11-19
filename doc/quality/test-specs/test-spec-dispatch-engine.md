@@ -118,6 +118,10 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Then** the result is `merged` (the tracker arm precedes the blocking arm) and corroborated by the tracker fact alone.
 - **And given** branch commits with incomplete or absent pm-notes
 - **Then** the result is `partial` at exit `1`; with complete pm-notes it is `finished`.
+- **And given** a non-clean end — a reported failure, a tool failure, or a premature end — with a decisive artifact
+- **Then** the artifact arm decides (`pr-open` for an open pull request, `finished` for commits with complete pm-notes); the shared classifier's token is used only when no artifact is decisive.
+- **And given** a harness-reported timeout
+- **Then** it takes no artifact arm: the stall ladder decides, and the derivation yields the session token.
 
 ### Scenario: open PR with an unresolvable URL
 
@@ -227,7 +231,7 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **And given** a stall still current when evidence collection resolves
 - **Then** at or above the restart bound the attempt is `max-restarts`/`failed` with the terminal exhaustion record and no second spawn, and below the bound the stalled session is terminated through the declared `terminate` operation, one ordinal is consumed, one `economics.restart` with reason `watchdog.liveness-stalled` is appended, the recorded session is resumed in-process, and the restarted iteration appends no attempt record.
 - **And given** an adapter that declares no terminate capability
-- **Then** it is never asked, the stall is still recorded, and no second session starts.
+- **Then** it is never asked, the stall is still recorded, the attempt is terminal `state-unverified` at exit `2`, and no second session starts.
 - **And given** a clean session exit
 - **Then** it is terminal: nothing is terminated and nothing is restarted, even at or above the persisted bound.
 

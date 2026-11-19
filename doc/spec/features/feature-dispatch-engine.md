@@ -80,18 +80,19 @@ Refusals before any session attempt exists are: an unknown harness, rejected inp
 6. **Resolve a recorded attempt on `--resume-prompt`.** The lane resolver returns the newest recorded lane for the ref that carries a session identity — dispatch-owned (`dispatch.lanes:<ref>`) in any state, or a daemon lane in `delivering`, `detached`, or `preempted` — and the newest record wins, with the dispatch-owned record winning a timestamp tie. A recorded `pr-open` attempt is therefore resumable. A resolved lane is resumed, never replaced by a fresh spawn, and the recorded resume mode is `attach-continue`, or `resume-prompt-reentry` with its acknowledged prefill cost when the adapter lacks resume injection; completed phases are skipped idempotently. The operator resume is admitted regardless of the persisted restart bound, consumes no restart ordinal, and never re-nominates: a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable. An unknown session is a classified failure, never a silent fresh spawn. With no recorded lane, the operator text is an explicit fresh spawn, never a fabricated resume.
 7. **Append the durable lane record at acquisition.** Each successful acquisition — the first iteration and every restarted iteration — appends one `dispatch.lane` record with `state: "active"`, the session identity, the normalized repository, the attempt identity, the harness kind, the advisory owner facts (`processId` and `startedAt`), the 1-based iteration ordinal, the restarts consumed so far, and the recorded time. Records are append-only and the latest record for the ref is the lane; a differing record for the same ref is a new append, never a rewrite. No prompt, transcript, diff, credential, or provider payload is carried. A failed lane append leaves the token unchanged and is disclosed as a bounded `lane:append-failed` evidence reference.
 8. **Watch with progress-based liveness.** Token delta, session traffic, worktree activity, or prefill advancement anywhere in the observed session tree counts as progress. A stall requires two consecutive sourced evaluations with no advance; a bare elapsed timer never stalls a lane. An absent reading stays absent or unknown and is never coerced to zero. The evaluation cadence is `lane.liveness-interval`. In the shipped composition the watch polls at that cadence while evidence collection is pending, records the observed verdict trail as bounded `liveness:<verdict>` evidence, and cancels its timer when collection finishes. A stall is a current-state verdict, not a latch: any later advancing observation clears it, so a transient mid-run stall stays recorded as liveness evidence and the collected evidence still classifies normally.
-9. **Terminate a stall, then decide the next iteration.** A stall that is still current when collection resolves, or a harness-reported timeout, is restart-eligible; a clean session exit is always terminal. Before any restart decision the stalled session is terminated when the adapter declares the capability: TERM reaches the session's process tree first, KILL only after the declared grace, an escaped runtime is reaped only by exact identity (this lane's session id or its `ticket-<REF>` title), and the operation is idempotent — an already-exited or unknown session is success. The grace is the declared `coordinator.kill-grace` (default 20 000 ms), reused rather than duplicated, and the wait is the injected delay with reason `terminate-grace`. An adapter that declares no terminate capability is never asked, produces `harness.capability.gap` by name if it is, and never causes a second session. The stall ladder then runs in the order below.
+9. **Terminate a stall, then decide the next iteration.** A stall that is still current when collection resolves, or a harness-reported timeout, is restart-eligible; a clean session exit is always terminal. Before any restart decision the stalled session is terminated when the adapter declares the capability: the host process table is matched by exact identity, TERM reaches the matched session's process tree first, KILL only after the declared grace and only over a target still listed, an escaped runtime is chosen only by exact identity (this lane's session id or its `ticket-<REF>` title), and the operation is idempotent — an unknown session is success, and a repeated call appends no signal and replays the facts the first call observed. A resume re-enters as a new live process tree and clears the recorded termination fact, so a restarted iteration is signalable rather than inheriting the prior iteration's result. The grace is the declared `coordinator.kill-grace` (default 20 000 ms), reused rather than duplicated, and the wait is the injected delay with reason `terminate-grace`. An adapter that declares no terminate capability is never asked, produces `harness.capability.gap` by name if it is, and never causes a second session. The stall ladder then runs in the order below.
 10. **Classify and derive truth.** The shared classifier yields a harness outcome and token; the one total derivation decides the final token from tracker state, PR state and URL, branch commits, pm-notes completeness, ledger progress, and CI. A success claim is never accepted on an exit code alone.
 11. **Record and render.** One attempt record is appended under the state fence at the terminal classification, the terminal `dispatch.lane` record carrying `state: "terminal"`, `lastToken`, and `lastOutcome` is appended when the dispatch held a session, and the command renders either the four-key bash-continuity text (which gains one bounded `detail:` prose line in verbose human mode) or the machine envelope.
 
 ### Stall ladder
 
-The stall decision is a total, ordered ladder and it is not the completed-session derivation ladder (TDR-0047):
+The stall decision is a total, ordered ladder and it is not the artifact-first derivation ladder an ended session uses (TDR-0047):
 
 1. **Terminal pre-restart verdict set.** Exactly three truths short-circuit a stall without a restart: `merged` from a tracker-done work item, `blocked` from a blocking tracker state, and `pr-open` from an open pull-request artifact. A decisive artifact outside the set — `finished`, `partial`, `noop-lane-nothing-to-do` — does not stop a stall.
-2. **Undecidable truth.** An unreadable tracker and an unreadable artifact resolve `state-unverified` at exit `2`, consume no ordinal, and start no second session.
-3. **Below the bound.** One ordinal is consumed, exactly one `economics.restart` record is appended with reason `watchdog.liveness-stalled`, and the recorded session is resumed for the next iteration. A fresh spawn happens only when no session was ever recorded.
-4. **At or above the bound.** The attempt is `max-restarts` with the delivered terminal exhaustion record, the stall and termination evidence, and no second spawn.
+2. **Undecidable truth.** Any required read unreadable with no decisive artifact — an unreadable artifact, or an unreadable tracker with no open or already-merged pull request and no branch commits — resolves `state-unverified` at exit `2`, consumes no ordinal, and starts no second session.
+3. **Termination capability.** A stall on an adapter that declares no terminate capability, or whose termination is not confirmed, is the same terminal `state-unverified` at exit `2` with the stall evidence: no ordinal is consumed and no second session starts.
+4. **Below the bound.** One ordinal is consumed, exactly one `economics.restart` record is appended with reason `watchdog.liveness-stalled`, and the recorded session is resumed for the next iteration. A fresh spawn happens only when no session was ever recorded.
+5. **At or above the bound.** The attempt is `max-restarts` with the delivered terminal exhaustion record, the stall and termination evidence, and no second spawn.
 
 An admitted iteration at or above a persisted count still runs once; only a stall in it produces `max-restarts`, and a clean exit keeps its own classification. A composition with no positive bound composes no restart policy, so the loop never restarts automatically: it classifies the stall `max-restarts` instead of spinning on a permanently stalled session.
 
@@ -234,7 +235,9 @@ no `dispatch.lane` records simply resolves "no lane".
 ## Result derivation and exit projection
 
 Derivation is one total order — the same derivation, with no second mode, is
-called by the one-shot path and by the daemon path (TDR-0048). First match wins:
+called by the one-shot path and by the daemon path (TDR-0048). First match wins;
+the pull-request and artifact arms apply to every ended, non-stall session, not
+only to a clean completion:
 
 1. A spawn failure before a session existed is `failed` with
    `dispatch.session.spawn-failed` and one attempt record.
@@ -244,18 +247,17 @@ called by the one-shot path and by the daemon path (TDR-0048). First match wins:
    positive bound is `max-restarts`. A clean exit, a premature end, a tool
    failure, or any other non-zero exit at the bound keeps its own classification
    and is never re-keyed by an already-reached bound.
-4. A spawn refusal before a session existed is a recorded attempt with token
+4. An unreadable harness read is `state-unverified` at exit `2` with the
+   classified state identity and one attempt record.
+5. A spawn refusal before a session existed is a recorded attempt with token
    `noop-lane-permission` and outcome `refused`; from the harness path the token
    means spawn-refused, never a lane-permission policy verdict.
-5. A readable tracker whose native state is done is `merged`, corroborated by the
+6. A readable tracker whose native state is done is `merged`, corroborated by the
    tracker fact alone and with no visible pull request required. This arm precedes
    the blocking arm, so a done work item that also carries a blocking label
    resolves `merged`.
-6. A readable tracker that is blocking or in a delivery-blocked state is
+7. A readable tracker that is blocking or in a delivery-blocked state is
    `blocked`.
-7. A non-completed session that reached no decisive tracker arm uses the shared
-   classifier's token: a reported failure or non-zero exit is `failed`; a tool
-   failure or premature end is `partial`.
 8. An open pull request is `pr-open`; an open pull request whose URL cannot be
    resolved is `pr-open-unverified`. The independent tracker comparison token for
    either is `pr-open`, and URL resolution is the comparison's `urlResolved`
@@ -271,9 +273,19 @@ called by the one-shot path and by the daemon path (TDR-0048). First match wins:
     tracker fact alone. This is the only arm that produces the token: the retired
     phase-ledger no-work arm no longer derives it, so a complete ledger with
     commits resolves `finished` or `partial` and a complete ledger with no commits
-    takes this arm only under the shell condition.
-12. Truth undecidable — a required read unreadable and no decisive artifact — is
-    `state-unverified` at exit `2`.
+    takes this arm only under the shell condition. It is the one arm read as a
+    judgement about a clean completion, so it applies only when the classifier's
+    token is `finished`.
+12. Otherwise a non-clean end uses the shared classifier's token: a reported
+    failure or non-zero exit is `failed`; a tool failure or premature end is
+    `partial`. This arm is exhaustive over the session outcome and precedes the
+    undecidable arm, so a non-clean end whose truth read is unreadable keeps its
+    classifier token. A harness-reported timeout is a terminal stall: it takes no
+    artifact arm, and this ladder yields its classifier token while the stall
+    ladder decides the outcome.
+13. Truth undecidable — a session whose classifier token is `finished` and whose
+    required read is unreadable with no decisive artifact — is `state-unverified`
+    at exit `2`.
 
 The closed eleven-token vocabulary and projection are unchanged:
 
@@ -399,7 +411,7 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Comparison | Class (`verify-change`, `tracker-truth`, `not-applicable`), token or null, outcome (`match`, `mismatch`, `not-applicable`), optional reason, and `urlResolved` for tracker facts. |
 | Classification | False-success flag, divergence reference when a comparison mismatches, tri-state corroboration per source (`pm-notes`, `tracker`, `ci`). |
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |
-| Bounds | At most 16 bounded evidence references; no prompt, transcript, diff, credential, or raw provider payload. |
+| Bounds | At most 16 bounded evidence references, with `lane:append-failed` and `tracker:exhausted` reserved ahead of the slice so a disclosure is never truncated away; no prompt, transcript, diff, credential, or raw provider payload. |
 
 The attempt record's shape is unchanged by the lane: it gains no lane field, and
 the durable lane record is the resumable artifact. The record is appended once at
@@ -553,7 +565,7 @@ Repository identity is rename-invariant and scoped to the checkout. The first su
 
 The production composition supplies the real harness session port for the configured kind. It builds opencode over the host streaming spawn starter for spawn, resume, and deliver and the host one-shot runner for read-only session listing, with the deny-by-default environment builder and the shared classifier/liveness assembly; the Claude Code adapter supplies its declared spawn and collect capabilities over the one-shot runner. A healthy opencode spawn or resume returns its session handle as soon as the first identified stream line arrives, so the watch observes liveness and progress while the session is still running and collection resolves at process close. No default whole-session process cap applies to an opencode spawn or resume; the one-shot runner's bounded listing timeout is listing-only, and a handle-acquisition bound (60 s by default) refuses an opencode spawn or resume that never identifies its session. Dispatch spawns through the port and never branches on harness kind outside the adapter.
 
-The production composition also resolves the `lane` policy branch and composes the run path end to end: the newest recorded lane carrying a session identity supplies the existing session handle on `--resume-prompt` (a dispatch lane in any state, or a resumable daemon lane), the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, the verified economics records supply the persisted restart count, the atomic dispatch claim supplies the lease, the composition's lane owner facts and the store supply the durable lane record, the injected delay binds the real timer for the fence wait, the tracker ladder, and the terminate grace, the composition supplies the `pm` agent identity, the resolved binding, and the `ticket-<REF>` title, and `coordinator.kill-grace` supplies the terminate grace. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
+The production composition also resolves the `lane` policy branch and composes the run path end to end: the newest recorded lane carrying a session identity supplies the existing session handle on `--resume-prompt` (a dispatch lane in any state, or a resumable daemon lane), the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, the verified economics records supply the persisted restart count, the atomic dispatch claim supplies the lease, the composition's lane owner facts and the store supply the durable lane record, the injected delay binds the real timer for the fence wait, the tracker ladder, and the terminate grace, the composition binds the terminate process-tree seam, the composition supplies the `pm` agent identity, the resolved binding, the `ticket-<REF>` title, and the resolved base branch, and `coordinator.kill-grace` supplies the terminate grace. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
 
 Every dispatch-flow process is started with a fixed argv and no shell, and no script path appears in the flow (API-7, NFR-5). The static invariant is the named package script `check:no-shell` (`bun run scripts/checks/no-shell-dispatch.ts`), which scans a declared dispatch-flow surface file list with an empty allowlist and four named rules — a script-path literal, a `shell: true`, a shell-capable child-process import or call, and a child-process `spawn` without a literal `shell: false` — and is also discovered by `bun test` through its own suite.
 
@@ -573,7 +585,7 @@ The offline parity battery replays all eleven result classes through the real co
 
 **Not proven (six, in declared order):** `live-opencode`, `live-provider`, `os-termination`, `real-lifecycle-outcome`, `cross-process-race`, `long-run-outage`.
 
-The not-proven list is deliberate. The battery does not prove live opencode behaviour (a real session's resume after a real process exit, real stdout framing, real prefill timing), live provider behaviour (real reads, throttling, authentication failure shapes), OS-level process-tree termination of a real child and a real escaped runtime — it proves the terminate contract and the exact-identity selection, not kernel signal delivery, so the shipped opencode terminate reports `reaped: false` — a real lifecycle-agent outcome or a real merge, cross-process race freedom beyond the state store's fence guarantee (the two-invocation interleaving is deterministic, not an arbitrary OS schedule), or long-run retry behaviour under a real 30-second outage (the injected delay advances a virtual clock).
+The not-proven list is deliberate. The battery does not prove live opencode behaviour (a real session's resume after a real process exit, real stdout framing, real prefill timing), live provider behaviour (real reads, throttling, authentication failure shapes), OS-level process-tree termination of a real child and a real escaped runtime — it proves the terminate contract and the exact-identity selection over the injected process-tree double, not kernel signal delivery — a real lifecycle-agent outcome or a real merge, cross-process race freedom beyond the state store's fence guarantee (the two-invocation interleaving is deterministic, not an arbitrary OS schedule), or long-run retry behaviour under a real 30-second outage (the injected delay advances a virtual clock).
 
 Whole-change parity means the eleven classes and the shell's supervision semantics are reproduced by the typed lane, which invokes no shell and no script path; the shell entry points stay on disk as the documented fallback and their retirement is a separate owner act.
 

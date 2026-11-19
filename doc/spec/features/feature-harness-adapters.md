@@ -137,21 +137,31 @@ The operation ends one session, and it is bounded and exact:
 - **Exact-identity reap.** An escaped runtime is reaped only when it matches this
   lane's session id or its deterministic `ticket-<REF>` title. The operation never
   signals by a broad pattern and never signals an unrelated process.
-- **Idempotent.** Terminating an already-exited or unknown session is success with
-  `terminated: true`, not an error. A repeated terminate appends no signal.
+- **Idempotent.** Terminating an unknown session is success with
+  `terminated: true` and no signal, and a repeated terminate appends no signal and
+  replays the facts the first call observed. A terminate result adds no error
+  identity.
 - **Capability-gated, never a new identity.** A missing capability reuses the
   delivered `harness.capability.gap`; it adds no failure identity, and the engine
   records the stall and resolves truth without synthesizing one.
 
-The shipped opencode adapter supports `terminate`. Its stream seam owns the kill,
-so the adapter signals the session tree through it and then waits the declared
-grace through the injected fact; a session it never started, or one already
-terminated, is reported as terminated without a second signal. The adapter does
-not reap an OS process itself, so its report is `reaped: false`; the reap contract
-is proven over the injected process-tree double and OS-level termination of a real
-child stays outside the parity battery's proof boundary. The shipped Claude Code
-adapter declares the `terminate` gap (`headless-mode-limitation`) and is never
-asked.
+The shipped opencode adapter supports `terminate` over an injected process-tree
+seam. The composition supplies that seam — a host process listing plus a tree
+signal and a single-process signal — so the adapter carries no ambient process
+access: it matches the listing by exact identity (this lane's session id or its
+`ticket-<REF>` title), sends TERM to each matched runtime's own tree, waits the
+configured grace through the injected wait, and sends KILL only to a target that
+is still listed. Every reported boolean is an observed act — `terminated` when a
+terminal signal was issued, `escalated` when the kill ran, `reaped` when the
+exact-identity predicate matched — so an adapter composed without the seam reports
+`terminated: false`, `escalated: false`, and `reaped: false` rather than claiming
+an act it did not perform. A resume creates a new live process tree and clears the
+recorded termination fact, so a restarted iteration is signalable. The shipped
+composition binds the seam at the composition edge over the host process table
+(`/proc` on Linux), and OS-level termination of a real child stays outside the
+parity battery's proof boundary; the reap contract is proven over the injected
+process-tree double. The shipped Claude Code adapter declares the `terminate` gap
+(`headless-mode-limitation`) and is never asked.
 
 `HarnessCapabilityDeclaration` carries the additive `sourcedSignalSources` and
 `sourcedSignalGaps` members; `HarnessLivenessFacts` and `HarnessLivenessReport`
@@ -510,8 +520,11 @@ serves read-only session listing and the Claude Code adapter. The streaming
 stdout as lines while buffering the same 16 MiB stdout bound with the truncation
 marker, resolves `completion` on close or error and never rejects, cancels its
 handle-acquisition bound when the adapter acknowledges acquisition, applies no
-whole-session bound unless the caller injects one, and exposes an idempotent
-`kill` that sends `SIGTERM` and escalates to `SIGKILL` after a short grace. Both
+whole-session bound unless the caller injects one, starts each child in its own
+process group so the session's tree can be signalled as a group, and exposes an
+idempotent `kill` that sends `SIGTERM` and escalates to `SIGKILL` after a short
+grace. That `kill` is the handle-acquisition and identity-mismatch probe budget,
+not the `terminate` operation. Both
 seams carry the delivered benign child-stdin observer: each attaches an `error`
 listener to the child's stdin before writing the prompt, so a child that exits
 without reading cannot surface an uncaught stream error. The listener never
