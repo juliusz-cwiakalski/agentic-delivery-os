@@ -412,7 +412,7 @@ while nothing but the delivered launcher is at that path. See
   `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`.
   `tests/behaviour/blockers-records.test.ts`, `blockers-record-integrity.test.ts`,
   `blockers-read-cost.test.ts`.
-- Closeout is a twelve-step transaction, plan by default, `--apply` for mutation.
+- Closeout is a thirteen-step transaction, plan by default, `--apply` for mutation.
   Command-specific production composition bridges raw clients, real git, state,
   the capsule runtime, and resolved harness settings; it derives real worktree
   facts and the bounded merged-diff read, derives session attribution from the

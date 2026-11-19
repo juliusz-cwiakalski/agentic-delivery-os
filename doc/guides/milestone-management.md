@@ -9,7 +9,7 @@ created: 2026-11-14
 owners: ["engineering"]
 summary: "The milestone-first operating rule: naming, creation, attachment, entry and exit review, planned scope, closure, extension and reopening, and enforcement."
 links:
-  decisions: ["PDR-0005"]
+  decisions: ["PDR-0005", "ODR-0005"]
 ---
 
 # Milestone Management
@@ -100,7 +100,9 @@ read-back-verified `close-milestone` operation. It withholds rather than
 guesses: an absent or mismatched declaration, an open attached ticket, an
 unavailable or unknown record state, or a page whose truncation marker says the
 full set was not observed all leave the record open with one recorded reason,
-and a project that declares `none` reports a declared gap. The vocabulary
+and a project that declares `none` reports a declared gap. A withheld closure is
+the routine outcome for a milestone that is not on its last ticket, and it is a
+success-shaped step result with one residue item, not a failure. The vocabulary
 cannot express create, attach, detach, rename, or reopen, so those remain owner
 acts performed in the tracker, never agent decisions.
 

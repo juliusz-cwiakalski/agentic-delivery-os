@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic thirteen-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the change-capsule validation and promotion ceremony, the automatic `landed` queue-entry removal after the closeout writes inside the held fence with its additive non-step `queueRemoval` disclosure and fail-open skips, the additive per-member report `data.members[]` for a plan declaring members (repo key, branch, mode-scoped cleanup, delivery request, mode-scoped issue closure, merge-truth landed) with one landing removal per member, the member tracked-issue identity `issue` as the only permitted member `ticket-to-done` target, the mode-scoped worst-case aggregate fold for member-mode `branch-cleanup` and `ticket-to-done` in which a member refusal keeps the delivered `closeout.branch.unsafe` refusal reachable and the change-level `ticket-to-done` transition is never dropped, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
+summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic thirteen-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the exit-review-gated milestone synchronization with its bounded attached-set read, one read-back-verified `close-milestone` operation and its closed withheld-reason residue, the change-capsule validation and promotion ceremony, the automatic `landed` queue-entry removal after the closeout writes inside the held fence with its additive non-step `queueRemoval` disclosure and fail-open skips, the additive per-member report `data.members[]` for a plan declaring members (repo key, branch, mode-scoped cleanup, delivery request, mode-scoped issue closure, merge-truth landed) with one landing removal per member, the member tracked-issue identity `issue` as the only permitted member `ticket-to-done` target, the mode-scoped worst-case aggregate fold for member-mode `branch-cleanup` and `ticket-to-done` in which a member refusal keeps the delivered `closeout.branch.unsafe` refusal reachable and the change-level `ticket-to-done` transition is never dropped, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
 links:
-  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292", "GH-301", "GH-310", "GH-335", "GH-338"]
-  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0026", "TDR-0035", "TDR-0040"]
+  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292", "GH-301", "GH-310", "GH-335", "GH-338", "GH-349"]
+  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0026", "TDR-0035", "TDR-0040", "ODR-0005"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
     - "packages/core/src/contracts/capsule.ts"
@@ -59,6 +59,7 @@ Provider writes are delivered for GitHub and Jira. GitLab remains a read slice w
 - Source-code edits, marker removal, feature-flag code rewrites, commits, pushes, or history rewrites by closeout; the diff sweep detects and attributes only.
 - Retro collection or report execution, retro evidence writes, or a synthetic `retro.run` record; a closeout coverage read never appends to the retro registry.
 - Owner-gate SLA mechanics, board escalation, brief rendering, queue/lane/dispatch, or supervision behavior.
+- Milestone creation, attachment, detachment, rename, reopen, entry review, planned-scope verification, or any `milestone` command family; the `milestone-sync` step closes an existing record and cannot express any of those acts.
 - Changing the behavior or guarantees of the read-only commands.
 
 ## 3. User Experience & Functionality
@@ -216,6 +217,69 @@ With no harness configured the step is `skipped-noop` with `no-sessions` and wri
 
 The harness context-compaction invocation is a declared capability gap: no adapter surface exists, and closeout invents no API. The checkpoint event key derives from the sorted session-id set plus the last verified commit, so a changed session set or commit appends a new checkpoint and an identical re-run appends nothing. The `db` command family is unchanged: no subcommand or field is added, and `db list` remains a metadata administration surface with no work-item attribution.
 
+#### Milestone synchronization
+
+`milestone-sync` is step 12, immediately before the terminal `capsule` step. It
+verifies the change's declared milestone against the provider-asserted
+attachment, evaluates the exit review, and closes the record only when that
+review holds.
+
+The declared milestone is the change's pm-notes `milestone`, recorded at intake.
+The observed attachment is the provider-asserted milestone on the change's own
+work item. An absent declaration, a declaration that is not shaped `M<n>: <title>`,
+or a declaration that does not equal the observed title never becomes a target:
+the step is `skipped-noop` with `declared-milestone-missing` or
+`attachment-mismatch`, performs zero writes, and never guesses a target by title
+similarity or derivation. A declaration of `none` is `skipped-gap` with
+`milestone-construct-absent`: the project has no milestone construct, which is a
+declared gap rather than a withheld closure.
+
+The exit review is the gate. One bounded adapter-local read returns the record
+(identity, title, state, the attached items with their delivery states) and a
+truncation marker, with the attached set read as exactly one provider page at
+the declared page size (`CLOSEOUT_MILESTONE_PAGE_SIZE`, 100) and no follow-up
+pagination, poll, or retry. The declared logical cap
+(`CLOSEOUT_MILESTONE_LOGICAL_CAP`, 200) is a ceiling realized only up to that
+page, so the effective bound is one page. Closure holds only when the record is
+open, the page's truncation marker says nothing was omitted, and every attached
+item in the page is `done` or `canceled`. Absence of the composed read surfaces
+as a declared gap; an unobserved or invalid read, an unknown record state, and a
+truncated attached set each withhold closure, because a partial view never closes
+a scope commitment.
+
+| Condition | Outcome | Withheld reason |
+|---|---|---|
+| Declared and attached, exit review passing, record open | `would-apply` in plan, `applied` in apply | — |
+| Record already closed | `satisfied` in both modes, zero writes | — |
+| Absent or non-conforming declaration | `skipped-noop` | `declared-milestone-missing` |
+| Declaration of `none` | `skipped-gap` | `milestone-construct-absent` |
+| Declaration ≠ observed attachment | `skipped-noop` | `attachment-mismatch` |
+| An open attached item, or an unknown record state | `skipped-noop` | `closure-withheld` (an unknown state keeps its identity in bounded evidence) |
+| Truncated attached set | `skipped-noop` | `attached-set-truncated` |
+| Unavailable or invalid read | `skipped-noop` | `milestone-signal-unavailable` |
+| Adapter gap for the close | `skipped-gap` | the declared gap reason |
+| Close write did not land, or read-back did not observe closed | `failed` in apply | returns `closeout.write.failed` at exit 2 |
+
+The effect is one closed operation, `close-milestone`, whose canonical arguments
+name only the milestone identity and whose one effect is to set the record
+closed. The argument and effect vocabulary cannot express creating, attaching,
+detaching, renaming, or reopening a milestone; those remain owner acts in the
+tracker. The write is read-back verified (the provider must assert the closed
+state), issued at most once per run, and never retried. GitHub supports the
+operation; GitLab declares `adapter-not-implemented`; Jira declares
+`provider-unsupported`; an adapter gap is the `skipped-gap` outcome above, never a
+silent skip. The close is recorded as one ordinary `closeout.operation` under the
+`close-milestone` name, so it round-trips through the verified history read like
+every other operation.
+
+Plan mode performs the read and renders the verdict with zero writes, zero
+appends, and zero fence acquisitions. Apply mode folds the ledger and reuses any
+terminal outcome, so two consecutive applies perform at most one close and the
+second reports `satisfied`. The withheld outcome is success-shaped: `skipped-noop`
+plus exactly one `milestone-sync-withheld` residue item carrying the closed reason
+as its bounded item text and the work-item ref as its location, so a run with any
+other residue still exits 1 through `attention`.
+
 #### Capsule validation, promotion, and close
 
 The terminal `capsule` step runs the memory-consolidation ceremony for the change capsule. The capsule is the existing change folder plus `events.jsonl` and `candidates/`; its artifact contract, producers, candidate schema, and promotion rules are specified in [Change Capsule](feature-capsule.md).
@@ -251,7 +315,7 @@ The outcome is disclosed in one additive non-step `data` block, `queueRemoval`:
 
 #### Judgment residue and exit semantics
 
-The transaction reports a bounded `residue[]` of `{item, kind, location}` items. The `kind` vocabulary is closed: `unresolved-human-thread`, `ambiguous-flip-hit`, `capsule-event-gap`, `review-verdict-unreadable`, `retro-coverage-unavailable`, `worktree-retained`, `session-attribution-gap`, and `capsule-cap-reached`. Items are deduplicated by `(kind, location, item)`, then ordered by kind order then location. The list holds at most 50 real items; when items are omitted, an additional `capsule-cap-reached` sentinel item (`+N more items`, location `residue`) is appended and is not counted toward the 50-item cap. No item contains a comment body, title, transcript, credential, or free-form prose.
+The transaction reports a bounded `residue[]` of `{item, kind, location}` items. The `kind` vocabulary is closed at nine kinds: `unresolved-human-thread`, `ambiguous-flip-hit`, `capsule-event-gap`, `review-verdict-unreadable`, `retro-coverage-unavailable`, `worktree-retained`, `session-attribution-gap`, `capsule-cap-reached`, and `milestone-sync-withheld` (whose item text is one of the closed milestone withheld reasons and whose location is the work-item ref). Items are deduplicated by `(kind, location, item)`, then ordered by kind order then location. The list holds at most 50 real items; when items are omitted, an additional `capsule-cap-reached` sentinel item (`+N more items`, location `residue`) is appended and is not counted toward the 50-item cap. No item contains a comment body, title, transcript, credential, or free-form prose.
 
 Plan mode renders the planned residue (machine data and the human `JUDGMENT RESIDUE` section) and exits 0 unless a hard plan failure occurs. Apply mode returns `data` with the residue and exits 1 through the additive `attention` projection class when residue remains on a run that completes without a command-level failure; the scripted success line is unchanged. A command-level failure returns the error envelope and emits no structured `residue[]`; the failed step's bounded evidence and the human diagnostic stream name the refused or preserved items, and the same residue remains assertable in plan mode for the same facts. A step failure uses the delivered classified identity where one exists, or `closeout.capsule-invalid` for capsule content damage, or the `closeout.step.<id>.failed` family row for another capsule-step failure. Exit literals exist only in the CLI projection module.
 
@@ -270,8 +334,9 @@ Every closeout operation maps to one declared adapter operation. An operation ab
 | `write-comment` | supported (carrier-free text only) | gap (`adapter-not-implemented`) | gap (`adapter-not-implemented`) |
 | `resolve-delivery-thread` | supported | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
 | `merge-delivery-request` | supported (no closeout step maps to it) | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
+| `close-milestone` | supported (read-back verified; the `milestone-sync` step) | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
 
-`resolve-delivery-thread` is an additive member of the closed operation set, governed by TDR-0008. GitHub implements it; Jira declares it provider-unsupported; GitLab declares it adapter-not-implemented. GitLab's slice also has no work-item read, so its ticket, label, unassign, owed-flip, and thread steps are gaps while checkout restore and local branch cleanup still run from read evidence. The bounded reverse-dependent query is a query-shaped form of `read-work-item` and adds no closed operation. The matrix states adapter posture, not closeout reach: closeout issues no comment and no delivery-request content write, and it never composes the adapter's provider-side landing. The per-operation transport, failure identities, and absence rules are stated in [Adapter Reference Behavior](feature-adapter-reference-behavior.md).
+`resolve-delivery-thread` is an additive member of the closed operation set, governed by TDR-0008. GitHub implements it; Jira declares it provider-unsupported; GitLab declares it adapter-not-implemented. GitLab's slice also has no work-item read, so its ticket, label, unassign, owed-flip, and thread steps are gaps while checkout restore and local branch cleanup still run from read evidence. The bounded reverse-dependent query is a query-shaped form of `read-work-item` and adds no closed operation. The milestone read is one bounded adapter-local read returning the provider-neutral record and one attached-item page: it adds no closed operation and no capability flag. The matrix states adapter posture, not closeout reach: closeout issues no comment and no delivery-request content write, and it never composes the adapter's provider-side landing. The per-operation transport, failure identities, and absence rules are stated in [Adapter Reference Behavior](feature-adapter-reference-behavior.md).
 
 #### Merged delivery request and merged head
 
@@ -462,7 +527,7 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 
 **Plan (default).** Resolve config, provider instance, read credentials, work item, merged request, base ref, local branches, local worktrees (listed, current, and clean), the recorded merge transaction's bounded diff, the retro-coverage state, the dispatch-attempt-derived session attribution, and the capsule pre-flight; read persisted closeout history through a verified read; compute the thirteen-step plan and canonical arguments; evaluate the checkout, worktree, and branch safety predicates and the candidate plan; read the queue-removal facts and report `would-remove`, `satisfied`, or `skipped` without appending; render the plan with any planned residue; exit 0 with zero writes, git mutations, state appends, capsule appends, promotion writes, telemetry appends, or fence acquisitions.
 
-**Apply.** Validate the capsule read-only before any mutation; acquire the single-writer fence; read history and fold terminal outcomes; execute the ordered steps, reusing terminal outcomes and appending each outcome; provider steps run in order, then checkout restore, worktree cleanup, squash-safe branch cleanup, the merged-diff sweep, retro coverage, session compaction, and the capsule close; after those writes and still inside the fence, run the queue-removal hook; release the fence; extract and append the harness session statistics from the constructed capture without changing any step outcome; render the applied summary including the `queueRemoval` block. The run exits 0 when no residue remains, exits 1 through `attention` when data carries residue, and returns the classified error envelope on a command-level failure.
+**Apply.** Validate the capsule read-only before any mutation; acquire the single-writer fence; read history and fold terminal outcomes; execute the ordered steps, reusing terminal outcomes and appending each outcome; provider steps run in order, then checkout restore, worktree cleanup, squash-safe branch cleanup, the merged-diff sweep, retro coverage, session compaction, milestone synchronization, and the capsule close; after those writes and still inside the fence, run the queue-removal hook; release the fence; extract and append the harness session statistics from the constructed capture without changing any step outcome; render the applied summary including the `queueRemoval` block. The run exits 0 when no residue remains, exits 1 through `attention` when data carries residue, and returns the classified error envelope on a command-level failure.
 
 **Capsule close and promotion.** Validate the capsule; complete a pre-contract folder with `capsule.opened` and `capsule.backfill-gap`; ingest readable review verdicts; evaluate every candidate against the capture bar and evidence link; home-write accepted lessons/tacit as canonical schema-rendered records with one read-when index row each; refuse a non-projectable `scope: fleet` promotion through `closeout.capsule-invalid`; record sanctioned handoffs; reject preference/fleet and unsupported candidates with declared reasons; append one `capsule.promotion` event per decision and one terminal `capsule.closed` event; report the closed state and per-candidate projection.
 
@@ -514,6 +579,7 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 - A missing expected capsule event is residue, never capsule damage.
 - A re-run appends no duplicate capsule event, promotion decision, thread resolution, branch deletion, worktree removal, or telemetry record, and appends no second queue removal.
 - A queue removal with no observed merge is skipped with `no-merge-truth`; a live lane lease skips it with `lease-held`; unreadable queue state skips it with `state-unavailable`; a non-canonical ref skips it with `ref-not-canonical`. Each leaves the entry in place and changes no step outcome or exit code. A stale lane lease (heartbeat age at or beyond the TTL) is not live and does not skip.
+- A milestone that cannot be safely closed withholds rather than fails: an absent or non-conforming declaration, a declaration that does not equal the observed attachment, an open attached ticket, an unknown record state, an unavailable or invalid read, and a truncated attached set are each `skipped-noop` with one closed reason, while an adapter without the close surface is a declared gap. Only a close write that did not land, or a read-back that did not observe the closed state, fails the step and gates at `closeout.write.failed`.
 - An already-removed entry and a ref that never entered the queue both report the queue removal as `satisfied` at exit 0, so a converging re-run never fails on work it already did.
 - Output over the machine or human bounds is truncated deterministically with a marker; payload shape never changes. The human digest renders the bounded `JUDGMENT RESIDUE` section and capsule summary without an extra read.
 - Residue over the declared cap is truncated to 50 real items with an additional `+N` `capsule-cap-reached` sentinel item that is not counted toward the cap; no item contains a body, title, transcript, or credential.
@@ -589,6 +655,10 @@ The plan and output are bounded contract data. The durable record is one append-
 | `CLOSEOUT_OPERATION_PAYLOAD_SCHEMA` | `delivery.closeout.operation.v1` | Ledger payload schema. |
 | `CLOSEOUT_OPERATION_RECORD_KIND` | `closeout.operation` | Additive state record kind. |
 | `CLOSEOUT_STEP_IDS` | thirteen ordered ids | Binding plan order. |
+| `CLOSEOUT_OPERATION_NAMES` | seven ordered names (`transition-work-item`, `write-work-item`, `resolve-delivery-thread`, `restore-checkout`, `delete-branch`, `remove-worktree`, `close-milestone`) | The closed recorded-operation vocabulary; each name has its matching canonical-argument arm. |
+| `CLOSEOUT_MILESTONE_PAGE_SIZE` | `100` | The one attached-item page the milestone read requests. |
+| `CLOSEOUT_MILESTONE_LOGICAL_CAP` | `200` | Declared ceiling realized only up to the one page. |
+| `CLOSEOUT_MILESTONE_WITHHELD_REASONS` | `declared-milestone-missing`, `attachment-mismatch`, `closure-withheld`, `attached-set-truncated`, `milestone-signal-unavailable` | The closed reasons carried as `milestone-sync-withheld` residue item text. |
 | `CLOSEOUT_MAX_DEPENDENTS` | `200` | Owed-flip cap. |
 | `CLOSEOUT_MAX_THREADS` | `100` | Thread-resolution cap per merged request. |
 | `CAPSULE_MAX_RESIDUE_ITEMS` | `50` | Real residue item cap; the `+N` sentinel is additional. |
@@ -612,7 +682,8 @@ The plan's step sequence is the declared `CLOSEOUT_STEP_IDS` order, and each ste
 - **`CloseoutData`** — `delivery.closeout.v1` machine payload with plan/applied mode, base ref, optional delivery summary, ordered steps, summary counts, ledger key, optional `telemetryCapture`, optional `residue[]`, optional applied `capsule`, and optional non-step `queueRemoval` (`outcome`, optional `ref`, optional `reason`, optional `skipReason`).
 - **`CloseoutQueueRemovalData`** — the additive queue-removal disclosure, with the closed outcome set `removed | would-remove | satisfied | skipped` and the closed skip-reason set `no-merge-truth | lease-held | state-unavailable | ref-not-canonical`.
 - **`CloseoutOperationRecord`** — append-only ledger payload described in §3.1 and §4.4.
-- **`CloseoutProviderRuntime`** — closeout-relevant provider reads and writes: `CloseoutReadObservation` work-item read, optional merged-request lookup, optional bounded reverse-dependent read returning `CloseoutReverseDependentObservation`, label/assignee write, done transition, and thread resolution.
+- **`CloseoutProviderRuntime`** — closeout-relevant provider reads and writes: `CloseoutReadObservation` work-item read, optional merged-request lookup, optional bounded reverse-dependent read returning `CloseoutReverseDependentObservation`, label/assignee write, done transition, thread resolution, and an optional `closeMilestone({ milestone })` write whose success requires a read-back that observes the closed state.
+- **`CloseoutMilestoneFacts` / `MilestoneReadObservation` / `MilestoneRecord` / `MilestoneAttachedItem` / `MilestoneObservationTruncation`** — the declared milestone plus the one bounded read's provider-neutral result: record identity, title, state (`open` | `closed` | `unknown`), the attached items with their delivery states, and the truncation marker with the declared cap. Absent surface, unavailable read, invalid read, unknown state, and truncation are distinct facts and never collapse into an empty set.
 - **`CloseoutGitRuntime`** — checkout facts, branch list/read, foreign-worktree and cleanliness checks, ref resolution, checkout restore, branch deletion whose optional `expectedHead` is re-checked immediately before deletion, optional `listWorktrees`, optional `currentWorktreePath`, optional `isWorktreeClean`, optional `readMergedDiff`, and optional `removeWorktree`.
 - **`CloseoutStateRuntime`** — fence acquisition/release, append, and verified history read over the real `StateStorePort` ledger.
 - **`CloseoutCapsuleFacts` / `CloseoutExpectedCapsuleEvent` / `CloseoutPromotionRuntime`** — the read-only capsule pre-flight facts, the expected events derived from durable state records, and the injected candidate/memory/write/preflight promotion runtime.
@@ -659,13 +730,14 @@ No localization or accessibility surface is added. The human digest is determini
 | Behaviour | `tests/behaviour/closeout-{plan,idempotency,request,branch,checkout,ticket-labels,unassign,owed-flip,threads,capabilities,output,read-observation,hermetic,integration,bounds}.test.ts` | Determinism, restart and retry, merged-request selection, branch safety, checkout restore, label sweep, unassign, owed-flip, thread resolution, capability gaps, UTF-8 bounds, output, read observations, the real JSONL ledger, and in-process CLI integration through the production composition over the real git seam. |
 | Member report | `tests/behaviour/closeout-members.test.ts`, `closeout-plan.test.ts`, `closeout-queue-removal{,-skips}.test.ts`; `tests/fixtures/cross-repository/` | The declared-order member report, both mode-scoped columns, per-member derivation from the observation and that member's operations, merge-truth `landed`, the member tracked-issue identity and its precedence over the observed fact, the mode-scoped worst-case aggregate fold including operation-level `failed` and safety refusal, partial landing, unsafe-member refusal with the delivered `closeout.branch.unsafe` and `closeout.write.failed` projections, per-member landing removal, and the member-less byte parity of the plan, steps, ledger, and output. |
 | Ceremony behaviour | `tests/behaviour/closeout-{worktree,worktree-refusal,worktree-idempotency,merged-diff,merged-diff-ambiguous,merged-diff-bounds,merged-diff-gap,retro-coverage,compaction,compaction-edges,residue,residue-provenance,attention-exit,thread-caps,telemetry-production,convergence}.test.ts`; `github-closeout-thread-{authorship,privacy}.test.ts` | Worktree cleanup and refusal matrix, diff attribution and bounds, retro coverage, compaction edges, residue ordering and provenance, the attention exit matrix, thread caps, production telemetry wiring, and convergence. |
+| Milestone synchronization | `tests/behaviour/closeout-milestone-sync.test.ts`, `closeout-milestone-write-failure.test.ts`; `tests/structure/closeout-milestone-contract.test.ts`, `closeout-contract.test.ts`; `tests/types/closeout-milestone.type-test.ts`; `tests/fixtures/closeout/{milestone,m4-attached-set}.ts` | One case per outcome row (applied, satisfied, and each `skipped-noop` / `skipped-gap` reason), the attachment check by exact provider title, the one-page exit review with truncation withholding, plan-mode zero writes, at most one close across two applies, the gating `closeout.write.failed` on a write or read-back failure, the recorded-operation round trip, and the structure proof that the operation vocabulary cannot express create, attach, detach, rename, or reopen. |
 | Production composition | `tests/behaviour/closeout-composition-facts.test.ts`; `tests/behaviour/github-closeout-thread-{authorship,privacy}.test.ts` | A real composition over a temp repository and harness store: worktree-cleanup and merged-diff-sweep reach `would-apply`/`applied`, session attribution feeds the checkpoint, an empty session-identity union is a gap plus residue, no configured harness is a no-op, harness telemetry lands in the state log while the capsule stays statistics-free, retro coverage reads the real registry, a human thread remains unresolved with identity-only residue, and an invalid capsule produces zero provider/git effects. |
 | Capsule behaviour | `tests/behaviour/closeout-capsule-{validation,close,backfill,review-ingest,plan,schema,dedup,decisions,supersession,payload,gap,idempotency,promotion,routing,naming}.test.ts`; `tests/behaviour/capsule-{append,lock,reader,bounds,commit-producer,phase-producer,verify-producer,producer-nongating}.test.ts` | Capsule validation and backfill (including first-event and decision completeness), candidate file naming, review ingestion, candidate schema and dedup, promotion routing and confinement, cross-check residue, terminal close, re-run convergence, and the producer append points. |
 | Provider behaviour | `tests/behaviour/providers/{github,jira,gitlab}-closeout.test.ts` and shared support | Provider write normalization, label/relation availability signals, auth/5xx → `invalid` mapping, merged head presence/absence, GraphQL thread resolution and root-author normalization, Jira label replace and transition, and reverse-dependent `no-surface` versus `unavailable` reads. |
 | Golden | `tests/golden/closeout-{envelope,human,residue}.test.ts` | Recorded machine envelopes, human digests, and residue output for plan/apply outcomes. |
 | Checks | `tests/checks/closeout-mutants.test.ts`, `capsule-{bounds,determinism,latency,mutants,privacy,ci-parity,cli-parity}.test.ts`, `error-table-sync.test.ts`, `fixture-sanitization.test.ts` | Source-mutation non-vacuity controls, capsule bounds/determinism/latency/privacy, bidirectional table sync, family-slot validation, and fixture hygiene. |
 | Types | `tests/types/closeout-{headsha,attention}.type-test.ts`, `capsule.type-test.ts` | Optional `headSha`, the additive `attention` class, and capsule shapes through the root `typecheck`. |
-| Conformance | `tests/conformance/mock-conformance.test.ts`, `broken-adapter-control.test.ts`, `capsule-events.test.ts` | Production write execution in the mock tier, capability-gated skips, runtime coverage over the nine operations, and capsule event conformance. |
+| Conformance | `tests/conformance/mock-conformance.test.ts`, `broken-adapter-control.test.ts`, `capsule-events.test.ts` | Production write execution in the mock tier, capability-gated skips, runtime coverage over the ten operations, and capsule event conformance. |
 | Aggregate | The whole workspace | `pnpm check`. |
 
 ### 6.2 Test Data & Scenarios
@@ -730,6 +802,9 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 | Worktree cleanup | Local removal of a delivery-owned worktree under the full safety predicate; fixed argv, no force, no remote. |
 | Retro coverage | Whether the delivered `retro.run` registry already holds a change-level run for the work item; recorded as a capsule event, never as a synthetic run. |
 | Compaction checkpoint | The pre-compaction capsule event: bounded session identities or counted truncation, flushed working state/event log, unresolved-question count, last verified commit, and the declared harness gap; its event key derives from the sorted session-id set plus the last verified commit. |
+| Milestone sync | The closeout step that verifies the change's declared `M<n>:` milestone against the provider-asserted attachment on its own work item, evaluates the exit review over one bounded attached-item page, and closes an open record through one read-back-verified `close-milestone` operation. |
+| Withheld closure | The success-shaped milestone outcome when closure cannot safely happen: `skipped-noop` plus one `milestone-sync-withheld` residue item naming the closed reason, with no write. |
+| Exit-review gate | The predicate that permits milestone closure: the record is open, the one page carries no truncation marker, and every attached item in it is `done` or `canceled`. |
 | Change capsule | The change folder plus append-only `events.jsonl` and `candidates/`; see [Change Capsule](feature-capsule.md). |
 | Promotion decision | Exactly one `promoted` or `rejected` verdict per candidate, with a home/mode or a closed rejection reason. |
 | Judgment residue | The bounded, ordered, body-free `residue[]` of items needing human attention after the sweep: human threads, ambiguous diff hits, capsule gaps, unreadable verdicts, retained worktrees, coverage/attribution gaps, and cap marks. Human mode renders it as a bounded `JUDGMENT RESIDUE` section. |
@@ -749,7 +824,7 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 
 See also: [Change Capsule](feature-capsule.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Harness Adapters](feature-harness-adapters.md), [Retro Evidence Pipeline](feature-retro-pipeline.md), [Session Database Administration](feature-session-database-admin.md), [Merge and Verify Deploy](feature-merge-verify-deploy.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
-**Change records:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the automatic `landed` queue removal and its `queueRemoval` block), `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/` (the additive per-member report, the member tracked-issue identity, the member-mode aggregate fold, and per-member landing removal).
+**Change records:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the automatic `landed` queue removal and its `queueRemoval` block), `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/` (the additive per-member report, the member tracked-issue identity, the member-mode aggregate fold, and per-member landing removal), and `doc/changes/2026-11/2026-11-18--GH-349--merge-closeout-queue-repair/` (the `milestone-sync` step, the `close-milestone` operation and its bounded read, and the ninth residue kind).
 
 ## Related
 
@@ -758,6 +833,7 @@ See also: [Change Capsule](feature-capsule.md), [Adapter Ports, Credential Resol
 - [Result Contract and Error Table](feature-result-contract.md) owns the `harness` error family raised by the adapters, the additive `attention` projection class, the `closeout` rows and step family, and the delivery-result token projection used by classification.
 - [Retro Evidence Pipeline](feature-retro-pipeline.md) owns the read-only `retro.run`/level registry that the coverage step consults.
 - [Session Database Administration](feature-session-database-admin.md) owns the unchanged metadata-only `db` surface; session attribution for the checkpoint does not come from `db`.
-- [Merge and Verify Deploy](feature-merge-verify-deploy.md) owns the `merge.transaction` squash SHA and landing record that anchor the merged-diff sweep.
+- [Merge and Verify Deploy](feature-merge-verify-deploy.md) owns the `merge.transaction` record, its provider-asserted landing identity, and the landing record that anchor the merged-diff sweep.
+- [Milestone Management](../../guides/milestone-management.md) owns the milestone-first operating rule this step executes; [ODR-0005](../../decisions/ODR-0005-closeout-milestone-synchronization.md) records the scoped reading of the "no milestone writes" boundary.
 - [Spend Read Side](feature-spend.md) reads the `harness.telemetry` records this transaction captures into the state log.
 - [Scheduling Engine](feature-scheduling-engine.md) owns the removal record, the append-position presence rule, and the lease-liveness test the landing removal uses; [TDR-0026](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md) is the binding decision.
