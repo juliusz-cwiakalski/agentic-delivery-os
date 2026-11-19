@@ -424,12 +424,12 @@ export const CAPSULE_MUTANTS: readonly CapsuleMutant[] = [
   },
   {
     id: "MUT-CAP-43",
-    guard: "orphan disclosure unscoped",
+    guard: "orphan attribution unscoped",
     file: "packages/adapters/src/harness/telemetry-opencode.ts",
-    find: "...(outOfPortOrphans === 0",
-    replace: "...(true",
+    find: "const held = [...new Set(heldSessionIds)].sort();",
+    replace: 'const held = [...new Set([...heldSessionIds, "ses_other_root"])].sort();',
     suite: "tests/behaviour/harness-telemetry-opencode-orphan-scope.test.ts",
-    signal: "out-of-port-orphans",
+    signal: "unrelated root",
   },
   {
     id: "MUT-CAP-44",

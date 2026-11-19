@@ -1,12 +1,14 @@
 # M3 test scenarios (planned)
 
-## TC-M3-HARNESS-001 opencode v2.x dispatch with profile propagation
+## TC-M3-HARNESS-001 opencode v2.x dispatch with profile propagation — delivered (GH-335)
 Given a resolved model profile and an installed opencode v2.x,
-When the harness port spawns an agent session in standalone mode,
-Then the session reports the resolved per-seat models and emits versioned
-telemetry rows with tokens and cost.
+When a harness-port spawn is called with a caller-supplied agent identity in
+standalone mode (the shipped generic `dispatch` supplies none — DEC-15),
+Then the invocation carries exactly one `--agent` and one `--model` for the
+resolved seat, the session reports that seat's resolved model where the harness
+reports one, and versioned telemetry rows carry tokens and cost.
 
-## TC-M3-HARNESS-002 unsupported harness version
+## TC-M3-HARNESS-002 unsupported harness version — delivered (GH-335)
 Given an opencode version outside the supported window,
 When a dispatch is attempted,
 Then it refuses with `harness.version.unsupported` and no session is spawned.

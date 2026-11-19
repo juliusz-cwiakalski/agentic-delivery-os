@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "gitlab-read-pipeline-run",
+  "class": "pipeline-model",
+  "referenceValue": "check-run-unit+jobs+check-run-evidence",
+  "adapterValue": "pipeline-unit+jobs+trace",
+  "reproduces": true
+}

@@ -55,6 +55,10 @@ const listTypeScriptFiles = (root: string, relative: string): string[] => {
   return files.sort();
 };
 
+/** List every testkit source file under the repository root, including the double. */
+export const testkitSourceFiles = (root: string): string[] =>
+  listTypeScriptFiles(root, "packages/testkit/src");
+
 /** Scan every testkit source file under the repository root. */
 export const scanTestkitSource = (root: string): SourceHit[] =>
   listTypeScriptFiles(root, "packages/testkit/src").flatMap((file) =>

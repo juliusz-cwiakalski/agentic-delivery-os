@@ -37,6 +37,7 @@ const invoke = async (options: {
   const stdout = bufferSink();
   const stderr = bufferSink();
   const composer = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: options.environment,
     cwd: options.cwd,
     homeDirectory: options.home,
@@ -76,6 +77,10 @@ describe("TC-DAEMON-010 the family is prompt-required and composed unconditional
     const harness = createMountHarness({ label: "prod-010" });
     try {
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: harness.home, PATH: "/usr/bin" },
         cwd: harness.root,
         homeDirectory: harness.home,
@@ -94,6 +99,10 @@ describe("TC-DAEMON-010 the family is prompt-required and composed unconditional
     const harness = createMountHarness({ label: "prod-010b" });
     try {
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: harness.home, PATH: "/usr/bin" },
         cwd: harness.root,
         homeDirectory: harness.home,
@@ -128,6 +137,10 @@ describe("TC-DAEMON-014 a composition with every optional input absent", () => {
     const harness = createMountHarness({ label: "prod-014" });
     try {
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: harness.home, PATH: "/usr/bin" },
         cwd: harness.root,
         homeDirectory: harness.home,
@@ -159,6 +172,10 @@ describe("TC-DAEMON-014 a composition with every optional input absent", () => {
       ];
       for (const facts of factSets) {
         const program = createProductionComposer({
+          harnessVersionProbe: async () => ({
+            status: "answered" as const,
+            stdout: "opencode v2.3.2",
+          }),
           cwd: harness.root,
           homeDirectory: harness.home,
           workingName: harness.brand.binaryName,
@@ -314,6 +331,7 @@ describe("TC-DAEMON-063/070 the production configuration-acquisition path", () =
 
   const compose = (harness: ReturnType<typeof createMountHarness>) =>
     createProductionComposer({
+      harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
       environment: {
         HOME: harness.home,
         PATH: "/usr/bin",

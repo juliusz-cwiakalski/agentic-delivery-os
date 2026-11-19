@@ -5,6 +5,7 @@
  * a failed check run, swap the assignee) and must fail naming their trap entry.
  */
 import { describe, expect, test } from "bun:test";
+import { TRACKER_ERROR_CLASS_IDS, TRACKER_FAMILY_OUTCOMES } from "@delivery-os/testkit";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
   createGithubCliTransport,
@@ -791,6 +792,25 @@ const workflowMapSeedCheck = async (): Promise<void> => {
   expect(item.status.deliveryState).toBe("in-review");
 };
 
+const familyFixture = (family: string): void => {
+  const document = readJson(`tests/fixtures/providers/github/families/${family}.json`);
+  if (!isRecord(document)) throw new Error(`${family}: fixture is not an object`);
+  if (document.provenance !== "hand-authored-synthetic 2026-11-18") {
+    throw new Error(`${family}: provenance marker is missing`);
+  }
+  const expected = document.expected;
+  if (!isRecord(expected) || typeof expected.classification !== "string") {
+    throw new Error(`${family}: expected classification is missing`);
+  }
+  const outcome = TRACKER_FAMILY_OUTCOMES[family as keyof typeof TRACKER_FAMILY_OUTCOMES];
+  if (outcome === undefined) throw new Error(`${family}: family is not declared`);
+  const classification = expected.classification;
+  const valid =
+    classification === "bounded-observation" ||
+    (TRACKER_ERROR_CLASS_IDS as readonly string[]).includes(classification);
+  if (!valid) throw new Error(`${family}: classification ${classification} is not declared`);
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
@@ -918,6 +938,12 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-CHECKRUN-404": () => absenceCheck((client) => client.readPipelineRun(SHA_A)),
   "GITHUB-ISSUE-404": () => absenceCheck((client) => client.readWorkItem(178)),
   "GH-PAYLOAD-HTTP-STATUS": httpStatusTrapCheck,
+  "GH339-AUTH-SHAPE": () => familyFixture("auth-shape"),
+  "GH339-TRANSPORT-FAILURE": () => familyFixture("transport-failure"),
+  "GH339-RATE-LIMIT": () => familyFixture("rate-limit"),
+  "GH339-PAYLOAD-SHAPE": () => familyFixture("payload-shape"),
+  "GH339-WORKFLOW-STATE-MISMATCH": () => familyFixture("workflow-state-mismatch"),
+  "GH339-PAGINATION-TRUNCATION": () => familyFixture("pagination-truncation"),
 };
 
 const mutationsForNewTraps = [
@@ -1079,6 +1105,12 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-CHECK-RUN-TIMINGS",
       "GITHUB-LOG-EXCERPT-CAP",
       "GITHUB-THREAD-DISCUSSION-CAPS",
+      "GH339-AUTH-SHAPE",
+      "GH339-TRANSPORT-FAILURE",
+      "GH339-RATE-LIMIT",
+      "GH339-PAYLOAD-SHAPE",
+      "GH339-WORKFLOW-STATE-MISMATCH",
+      "GH339-PAGINATION-TRUNCATION",
     ]);
   });
 

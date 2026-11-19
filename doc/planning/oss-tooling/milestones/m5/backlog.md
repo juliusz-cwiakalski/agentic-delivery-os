@@ -66,3 +66,18 @@ Moved from `doc/planning/oss-tooling/backlog.md` (per-milestone split, 2026-11-1
   with no remote service configured; the hook surface is a documented
   versioned contract; no proprietary content enters committed files.
 - Depends on: M0-S5.
+
+### M5-S7 Service socket contract for external observers
+- Goal: a local sidecar or UI reads delivery state over a documented, versioned
+  contract instead of shelling out or scraping files.
+- Tasks: stabilize the daemon Unix-socket RPC (transport exists); read-only
+  projections first (status, lanes, queue, questions, provider/quota/parks,
+  spend, history); version negotiation; local token or peer-credential
+  authorization; bounded payloads and pagination; additive evolution; error
+  taxonomy; sidecar conformance test.
+- AC: a sidecar reads status, lanes, queue, questions, and history over the
+  socket; unknown fields are ignored forward-compatibly; unauthorized peers are
+  refused; versioning and deprecation rules are documented.
+- Depends on: M4-S5, M4-S6, M4-S13.
+- Ticket: GH-361 (milestone M5)
+

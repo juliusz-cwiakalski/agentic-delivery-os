@@ -37,6 +37,7 @@ const DELIVERED = [
 const composeProduction = () => {
   const root = mkdtempSync(join(tmpdir(), "board-mount-"));
   const composer = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: { HOME: root, PATH: "/usr/bin" },
     cwd: root,
     homeDirectory: root,

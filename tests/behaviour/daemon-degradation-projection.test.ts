@@ -69,6 +69,10 @@ describe("TC-DAEMON-070 a live instance yields an empty marker on both reads", (
       });
       const brand = harness.brand;
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",
@@ -116,6 +120,10 @@ describe("TC-DAEMON-071 and TC-DAEMON-072 released and absent stores degrade", (
       });
       const brand = harness.brand;
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",
@@ -148,6 +156,10 @@ describe("TC-DAEMON-071 and TC-DAEMON-072 released and absent stores degrade", (
     try {
       const brand = harness.brand;
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",

@@ -91,6 +91,46 @@ export type ConformanceFlow = {
 /** The closed transport method set the mock tenant can address. */
 export type ConformanceHttpMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
+/** One scalar value the declared state model can hold. */
+export type MockTenantStateValue = string | number | boolean | null;
+
+/** One declared collection entry (created identities are declared, never minted). */
+export type MockTenantStateEntry = Readonly<Record<string, MockTenantStateValue>>;
+
+/** One declared resource: scalar fields, collections, and sub-resources. */
+export type MockTenantStateResource = {
+  readonly fields: Readonly<Record<string, MockTenantStateValue>>;
+  readonly collections?: Readonly<Record<string, readonly MockTenantStateEntry[]>>;
+  readonly subResources?: Readonly<Record<string, { readonly resolved: boolean }>>;
+};
+
+/** The declared initial state of a stateful tenant. */
+export type MockTenantState = Readonly<Record<string, MockTenantStateResource>>;
+
+/** The closed five-effect vocabulary (TDR-0038 §3). */
+export type MockTenantEffect =
+  | {
+      readonly kind: "set-field";
+      readonly resource: string;
+      readonly field: string;
+      readonly value: MockTenantStateValue;
+    }
+  | { readonly kind: "reset-field"; readonly resource: string; readonly field: string }
+  | {
+      readonly kind: "replace-collection";
+      readonly resource: string;
+      readonly collection: string;
+      readonly entries: readonly MockTenantStateEntry[];
+    }
+  | {
+      readonly kind: "append-entry";
+      readonly resource: string;
+      readonly collection: string;
+      readonly entry: MockTenantStateEntry;
+      readonly identityField: string;
+    }
+  | { readonly kind: "mark-resolved"; readonly resource: string; readonly subResource: string };
+
 /** One exact method-plus-URL mock route. */
 export type MockTenantRoute = {
   readonly method: ConformanceHttpMethod;
@@ -99,6 +139,10 @@ export type MockTenantRoute = {
   readonly body: unknown;
   /** Optional exact request body; when present, a mismatch does not match. */
   readonly requestBody?: string;
+  /** Optional one-effect declaration applied when this route matches. */
+  readonly effect?: MockTenantEffect;
+  /** Optional resource whose fields and collections shape the response body. */
+  readonly responseFromState?: string;
 };
 
 /** GitHub addressing the flows consume. */
@@ -139,6 +183,10 @@ export type MockTenant = {
   readonly addressing: MockTenantAddressing;
   readonly routes: readonly MockTenantRoute[];
   readonly expected: Readonly<Record<string, unknown>>;
+  /** Optional declared initial state; absence means the stateless replay. */
+  readonly initialState?: MockTenantState;
+  /** Declared created-entry identity sequences, keyed `resource.collection`. */
+  readonly identitySequences?: Readonly<Record<string, readonly string[]>>;
 };
 
 /** Decode outcome for untrusted tenant data. */

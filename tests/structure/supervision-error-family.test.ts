@@ -76,23 +76,23 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   });
 
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
-    expect(baseline.rows).toHaveLength(146);
-    // The captured baseline predates GH-299's `metrics` row, the two supervise
-    // rows, and GH-346's eleven install rows, so the delivered comparison
-    // excludes those three kinds.
+    expect(baseline.rows).toHaveLength(150);
+    // The captured baseline includes GH-335's four harness rows; it predates
+    // GH-299's `metrics` row, the two supervise rows, and GH-346's eleven
+    // install rows, so the delivered comparison excludes those three kinds.
     const live = entries.filter(
       (entry) =>
         entry.domainKind !== "supervise" &&
         entry.domainKind !== "metrics" &&
         entry.domainKind !== "install",
     );
-    expect(live).toHaveLength(146);
+    expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
     // The new rows are appended after every delivered row: no reordering.
-    expect(entries.slice(0, 146).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // Indices 146..148 hold supervise/metrics and 149..159 hold the eleven
+    expect(entries.slice(0, 150).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
+    // Indices 150..152 hold supervise/metrics and 153..163 hold the eleven
     // install rows, so the baseline prefix index stays while its meaning narrows.
-    expect(entries.slice(146).map((entry) => entry.domainKind)).toEqual([
+    expect(entries.slice(150).map((entry) => entry.domainKind)).toEqual([
       "supervise",
       "supervise",
       "metrics",

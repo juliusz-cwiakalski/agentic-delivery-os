@@ -36,3 +36,4 @@ Reading notes:
 | 4 | M5-S4 Merge the tooling branch to the default branch | M5-S2 | Installs move to the default branch only after a real release |
 | 5 | M5-S5 Bash stack retirement | M4-S8, M5-S4 | Wrappers outlived their purpose once installs come from the default branch |
 | 6 | M5-S6 Extension hooks (open-source side) | M0-S5 | Ships with the public surface; independent of release mechanics and off by default |
+| 7 | M5-S7 Service socket contract for external observers | M4-S5, M4-S6, M4-S13 | Last: consumes the project, history, and runner foundations |

@@ -6,7 +6,7 @@ last_updated: 2026-11-19
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-346]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339, GH-346]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -172,6 +172,8 @@ while nothing but the delivered launcher is at that path. See
 | [Board](features/feature-board.md#non-functional-requirements) | Pure board projection and rendering within 50 ms; one bounded pass per included repository (shared facts, lane/phase fold, parks, one bounded action-registry read, one decision-history read) and zero host-index reads for the default form; at most 128 included repositories. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Blockers](features/feature-blockers.md#non-functional-requirements) | Pure validation/guard/ranking/rendering within 50 ms; one verified blocker-ledger read per list, digest, or brief invocation; one business read plus one fence, append, and coverage read per publish or answer; zero outbound requests. | `tests/behaviour/blockers-performance.test.ts`, `blockers-read-cost.test.ts`. |
 | [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
+| [Harness Adapters](features/feature-harness-adapters.md) — version gate and refusals | Exactly one bounded, shell-free version probe per dispatch through a single production construction site, completed and reaped before the verdict, with the declared 5 000 ms bound and the injected clock; an outside or indeterminate version and an unavailable mode refuse before a lease is claimed, while an unrepresentable seat model, an unassigned or invalid named agent, and a caller-supplied agent with no resolvable profile context refuse at the port before any session-bearing process; every pre-session refusal appends no attempt record and writes no telemetry row, and the lease a later refusal held is released; the window is pinned data with no configuration key. | `tests/behaviour/harness-version-gate.test.ts`, `harness-version-probe-seam.test.ts`, `harness-mode-refusal.test.ts`, `harness-profile-unrepresentable.test.ts`, `harness-refusal-side-effects.test.ts`, `tests/structure/harness-probe-construction-site.test.ts`, `tests/checks/harness-mutants.test.ts`, `harness-hermetic.test.ts` pin the seam, the bound, the refusal side-effect freedom, and the single construction site. |
+| [Telemetry v2](features/feature-telemetry-v2.md) — observed store and absence | Capture reads the observed store generations only, scoped by the held session identities (no work-item column, no store-wide scan, no content projection), with store-sourced durations and a reported zero cost preserved; an unstated observed axis lands with the declared marker and the placeholder rather than a fabricated value or a widened nullable field; absence, degraded capture, and extraction failure stay three classifications and capture stays non-gating. | `tests/behaviour/harness-telemetry-shape.test.ts`, `generation.test.ts`, `durations.test.ts`, `observed-axis-absence.test.ts`, `classification.test.ts`, `extraction-failure.test.ts`, `mandatory-usage.test.ts`, `attribution.test.ts`, `tests/checks/fixture-store-shape.test.ts` pin the shape, the absence taxonomy, and the union scope. |
 | [Change capsule](features/feature-capsule.md#5-non-functional-requirements) | At most 2,000 events and 2 MiB per capsule, 4 KiB per event payload, 100 candidates at 8 KiB each, one writer at a time per capsule with bounded retry, and a terminal close; a non-empty capsule starts with `capsule.opened`, every candidate is `<id>.yaml`, and every candidate has exactly one promotion decision; validation ≤ 2 s on reference fixtures; identical injected facts yield byte-identical event ordering, promotion decisions, and digest. | `tests/checks/capsule-{bounds,determinism,latency,privacy}.test.ts`, `tests/behaviour/capsule-{append,lock,reader,bounds}.test.ts`, `tests/behaviour/closeout-capsule-{validation,naming}.test.ts`. |
 | [Session lifecycle economics](features/feature-session-lifecycle-economics.md) | Pure deterministic budget, resume, evidence, and view folds with no clock or ambient read; the view derives from durable records alone with zero harness-store queries and zero writes. | `tests/checks/economics-determinism.test.ts`, `tests/behaviour/economics-view.test.ts` pin replay identity and the zero-query read posture. |
 | [Doctor](features/feature-doctor.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most two single-page network reads (tracker and CI), one configuration resolve, one shared verified ledger read; no pagination, retry, or write. | `tests/behaviour/doctor-performance.test.ts` samples the median of 21 runs after warm-ups; `doctor-network-posture.test.ts` pins the read budget and shared-source read-once posture. |
@@ -349,15 +351,36 @@ while nothing but the delivered launcher is at that path. See
   live child processes, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
+- Cross-adapter parity is a declared matrix over the nine closed operations and the
+  registered adapters with a six-dimension basis, an adjudicated class-set
+  difference register, and a pure gate over a gate-local observation record whose
+  violations name provider, operation, and one of nine closed clause ids. The gate
+  and the double-backed flows ride the existing TypeScript test job through the
+  aggregate test path: no workflow file, job, trigger, permission, or upload
+  changes, and the `delivery.conformance.v1` artifact gains no parity field. A
+  conformance-level tracker error taxonomy maps the four classes onto delivered
+  structured identities and is never an emitted failure identity; each adapter
+  accounts for all six trap families (9 covered / 7 recorded-difference /
+  2 gap-backed across the 18-cell square). The stateful double is deterministic,
+  runtime-neutral, and fail-closed, and registration-only participation is proven
+  by an identity-construct scan plus a composition-injected control registration.
 - [Harness conformance](features/feature-harness-adapters.md) registers exactly the
   two shipped harnesses, each covering the six-scenario classification floor
-  through the one shared classifier plus a liveness read over injected facts; the
-  coverage meta-check fails an unregistered closed-vocabulary kind or a missing
-  scenario.
+  through the one shared classifier, the four additive extension scenarios
+  (version-window, version-unknown, mode-unavailable, profile-propagation), and a
+  liveness read over injected facts; the coverage meta-check fails an unregistered
+  closed-vocabulary kind, a missing floor or extension scenario, or a refusal
+  identity with no mapped scenario.
 - Evidence/test: `tests/conformance/mock-conformance.test.ts`,
   `tests/conformance/github-transport-parity.test.ts`,
   `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`,
   `tests/structure/reference-behavior.test.ts`,
+  `tests/conformance/parity-gate.test.ts`, `tracker-taxonomy.test.ts`,
+  `family-classification.test.ts`, `stateful-double.test.ts`,
+  `control-registration.test.ts`, `tests/structure/conformance-family-accounting.test.ts`,
+  `tests/structure/registration-participation.test.ts`,
+  `tests/structure/ci-topology-pin.test.ts`, `tests/checks/parity-gate-wiring.test.ts`,
+  `tests/checks/tracker-literal-scan.test.ts`,
   `tests/conformance/harness-classification.test.ts`,
   `harness-liveness.test.ts`, `tests/structure/harness-neutrality.test.ts`.
 - Live v1 is GET-only, zero mutations/created artifacts, and scheduled evidence,

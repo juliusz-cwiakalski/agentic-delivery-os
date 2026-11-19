@@ -1,5 +1,5 @@
 ---
-id: TDR-0036
+id: TDR-0044
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -74,13 +74,13 @@ links:
     - "scripts/install.sh"
     - "scripts/uninstall.sh"
   diagrams: []
-  decisions: ["TDR-0037", "TDR-0038", "TDR-0039", "TDR-0040", "ADR-0009"]
+  decisions: ["TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048", "ADR-0009"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S1", "M4-S2", "M4-S7", "M4-S8"]
 ---
 
-# TDR-0036: Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition
+# TDR-0044: Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition
 
 ## Context
 
@@ -99,7 +99,7 @@ links:
 - **FACT:** `brand.binaryName` is the sanitized derivation of the *invoking* process's effective working name (`packages/core/src/branding/index.ts:108-137`), so in the alias process it names the alias and never the owning identity.
 - **FACT:** Moving both identity names into side-effect-free shared code rewrites a documented branding claim: `doc/spec/features/feature-branding-seam.md:23` states "exactly five sites" and "the three CLI selector sites", pinned by `tests/checks/doc-conformance.test.ts:434-452`, and the structure inventory's `packages/cli/bin/` count would move from three to one (read 2026-11-18).
 - **FACT:** M4 EC-1 requires the installed binary to perform all delivery, EC-7 requires prompts to call Jaiship commands only with no shell-orchestration imperatives, and EC-8 rewrites `deliver-ticket.sh`/`ceo-loop.sh` as thin wrappers over the product (`doc/planning/oss-tooling/milestones/m4/README.md`, read 2026-11-18). M4-S7 rewrites `pm`, `ceo`, `coder`, `reviewer`, `committer`, `pr-manager`, `doc-syncer` prompts around product commands (`backlog.md`, read 2026-11-18).
-- **FACT:** The product can install itself without a bootstrap script: `bun build --compile` produced a working artifact from `packages/cli/bin/jaiship.ts` in this checkout and the artifact answered `--version`, `--help`, and `--print-install-path` correctly, with `process.execPath` naming the artifact (measured 2026-11-18; see TDR-0037).
+- **FACT:** The product can install itself without a bootstrap script: `bun build --compile` produced a working artifact from `packages/cli/bin/jaiship.ts` in this checkout and the artifact answered `--version`, `--help`, and `--print-install-path` correctly, with `process.execPath` naming the artifact (measured 2026-11-18; see TDR-0045).
 
 ## Problem Framing (Clarified)
 
@@ -154,7 +154,7 @@ The identity question has a second half that is easy to state wrongly: **what ma
 
 ### C-6: The delivered installer contract is not silently broken
 
-- **Statement:** The delivered launcher step, its two classified failures, and its plan-only `DRY_RUN` preview keep their documented behaviour when nothing but the delivered launcher (or nothing at all) is at the brand install path; when anything else is at that path the step refuses, classified, instead of overwriting it. Both arms are keyed on what is at the path, never on the install record (TDR-0040 §1).
+- **Statement:** The delivered launcher step, its two classified failures, and its plan-only `DRY_RUN` preview keep their documented behaviour when nothing but the delivered launcher (or nothing at all) is at the brand install path; when anything else is at that path the step refuses, classified, instead of overwriting it. Both arms are keyed on what is at the path, never on the install record (TDR-0048 §1).
 - **Source:** GH-320 §8.5 ("Install set is unchanged except for the launcher"); `doc/spec/features/feature-doc-distribution-marker.md`; `scripts/.tests/test-install.sh`.
 - **Verification:** Test — the delivered installer suite stays green; a new case asserts the managed-binary refusal and that no launcher is written.
 - **Negotiable:** no.
@@ -297,7 +297,7 @@ Legend: ✅ passes · ❌ fails. ALT-3 is eligible but ranks below ALT-2 on driv
   - `--add-to-path` (+ `--shell-profile <path>`): appends exactly one managed block to the operator's shell profile, only when explicitly requested; derived from `$SHELL` when `--shell-profile` is absent, and refused with a typed error when neither yields a file.
   - `--migrate`: the migration **hook** (see §6).
   - `--dry-run`: plan-only preview for every write path — `install`, `install rollback`, `install uninstall`, `install purge` — printing the exact plan and writing nothing.
-  - `--stop-daemon`: permits replacing the artifact while a live daemon is recorded (see TDR-0040 §4).
+  - `--stop-daemon`: permits replacing the artifact while a live daemon is recorded (see TDR-0048 §4).
 - **Global flags unchanged:** `--json`, `--verbose`, `--pretty` behave as on every other family; `install status` is the JSON-bearing surface.
 
 ### 2. Composition and reachability rules
@@ -317,8 +317,8 @@ Legend: ✅ passes · ❌ fails. ALT-3 is eligible but ranks below ALT-2 on driv
 ### 4. The shell installer's remaining role (delivered contract preserved)
 
 - `scripts/install.sh` keeps its delivered launcher step unchanged **when nothing but the delivered launcher (or nothing at all) is at the install path**: same target, same idempotence, same two classified failures, same plan-only `DRY_RUN`, same `--tool` independence.
-- When anything else is present at the brand install path — the managed artifact, the rollback slot, or any other content — the launcher step **refuses classified, names `jaiship install` as the update path, and writes nothing**. One predicate governs the guard: **what is at the path**, never the install record. An absent, `record-stale`, or deleted record is a legitimate reachable state (TDR-0040 §1), and keying the guard on it would let the launcher overwrite a managed artifact. This is the guard that stops the delivered shim from silently downgrading an installed product to a checkout pointer — the live defect class.
-- `scripts/uninstall.sh` keeps its own scope and never deletes `~/.jaiship*` (see TDR-0040 §9 for the ownership split).
+- When anything else is present at the brand install path — the managed artifact, the rollback slot, or any other content — the launcher step **refuses classified, names `jaiship install` as the update path, and writes nothing**. One predicate governs the guard: **what is at the path**, never the install record. An absent, `record-stale`, or deleted record is a legitimate reachable state (TDR-0048 §1), and keying the guard on it would let the launcher overwrite a managed artifact. This is the guard that stops the delivered shim from silently downgrading an installed product to a checkout pointer — the live defect class.
+- `scripts/uninstall.sh` keeps its own scope and never deletes `~/.jaiship*` (see TDR-0048 §9 for the ownership split).
 
 ### 5. Declared conformance surface (the cost of this decision)
 
@@ -352,7 +352,7 @@ This record was amended before acceptance. §3 first required the non-owning ref
   - *(3) Keep a concrete binary name without a new literal and without module-load side effects.* No such route exists: the name cannot be derived in the refusing process, an export is rejected by the structure guard, an import composes a second launcher, and a shared side-effect-free module relocates two declared sites plus a documented branding claim. Each sub-route was checked against the delivered guard and rejected on the evidence above.
 - **Correction.** §3 now states ownership as a bin declaration that is independent of the brand name and of the working-name override, and fixes the refusal's content as invoked identity + owning role + remedy. §1's table gains the note that the alias reaches the same five invocations and refuses all five. §5 now records that no identity-literal or branding-seam surface moves.
 - **Consequence for the specifications that consume this record.** `AC-F4-2` and the `delivery-os install …` row must stop requiring the owning binary's name and name the invoked identity and the owning role instead; `TC-INST-004` asserts one line carrying those two facts plus the remedy (its zero-write and no-alias-namespace arms are unchanged); `TC-INST-002`'s restriction assertion keeps its structure and re-words the expectation to "the entry states that the alias does not own installation and where to run the lifecycle". No identity-literal inventory row, `feature-branding-seam.md` sentence, or `doc-conformance` row moves, and no phase gains a document.
-- **Same-amendment correction (§4 guard predicate).** This correction rides the same DoR iteration-1 amendment: §4's launcher guard is keyed on one content predicate — anything at the brand install path that is not the delivered launcher — and never on the install record, whose tolerance states are declared in TDR-0040 §1.
+- **Same-amendment correction (§4 guard predicate).** This correction rides the same DoR iteration-1 amendment: §4's launcher guard is keyed on one content predicate — anything at the brand install path that is not the delivered launcher — and never on the install record, whose tolerance states are declared in TDR-0048 §1.
 
 ### Constraint Compliance Attestation
 
@@ -383,7 +383,7 @@ The chosen alternative (ALT-2) satisfies every constraint C-1 through C-7. No ac
 
 - [ ] Whether `install status` should be part of a broader operator preflight later (for example under `doctor`, which is currently unreachable). Owner: M4-S3 conformance work; nothing in this decision depends on it.
 - [ ] The exact wording of the alias refusal and whether the alias's help row should appear in the "not available for this identity" section rather than the family table. Owner: `@spec-writer` (presentation, not contract).
-- [ ] Whether `--add-to-path` should also offer a removal mode (a managed block without a remover is a small asymmetry). Owner: `@spec-writer`; `install uninstall` removing its own block is the natural home and is decided in TDR-0040.
+- [ ] Whether `--add-to-path` should also offer a removal mode (a managed block without a remover is a small asymmetry). Owner: `@spec-writer`; `install uninstall` removing its own block is the natural home and is decided in TDR-0048.
 
 ## Implementation Plan
 
@@ -420,8 +420,8 @@ The chosen alternative (ALT-2) satisfies every constraint C-1 through C-7. No ac
 - Shell-side uninstaller scope — `scripts/uninstall.sh`
 - Typed-error contract — `packages/core/src/contracts/error-table.ts`, `packages/cli/src/projection.ts`, `.ai/rules/typescript.md` §7
 - Conformance surfaces — `scripts/checks/help-guide-coverage.ts`, `tests/fixtures/help-guide/coverage.json`, `scripts/checks/prompt-conformance.ts`, `scripts/checks/error-table-sync.ts`, `pnpm check`
-- [TDR-0037](TDR-0037-self-contained-binary-build-identity.md) — the compiled artifact this family installs
-- [TDR-0038](TDR-0038-install-target-stability-and-dev-build-exclusion.md) — the stability refusal this family carries
-- [TDR-0039](TDR-0039-installed-binary-state-format-compatibility-check.md) — the compatibility verdict `install status` reports
-- [TDR-0040](TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md) — the operation semantics behind this surface
+- [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) — the compiled artifact this family installs
+- [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) — the stability refusal this family carries
+- [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) — the compatibility verdict `install status` reports
+- [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) — the operation semantics behind this surface
 - [ADR-0009](ADR-0009-release-model-v1.md) — the release unit whose artifacts this family installs

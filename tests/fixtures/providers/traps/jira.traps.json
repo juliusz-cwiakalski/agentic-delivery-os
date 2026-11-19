@@ -49,6 +49,36 @@
         "tests/fixtures/providers/jira/closeout-labels-replace-write-before.json",
         "tests/fixtures/providers/jira/closeout-labels-replace-write-after.json"
       ]
+    },
+    {
+      "trapName": "JIRA339-AUTH-SHAPE",
+      "providerBehavior": "A Jira non-2xx response is built without a structured status, so an authorization rejection is not distinguishable from a transport failure.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.transport.failed and the failure owns no httpStatus property; the difference is recorded as failure-classification.",
+      "fixtureReference": "tests/fixtures/providers/jira/families/auth-shape.json#/stimulus"
+    },
+    {
+      "trapName": "JIRA339-TRANSPORT-FAILURE",
+      "providerBehavior": "A Jira transport rejection produces no provider response at all.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.transport.failed and owns no httpStatus property.",
+      "fixtureReference": "tests/fixtures/providers/jira/families/transport-failure.json#/stimulus"
+    },
+    {
+      "trapName": "JIRA339-RATE-LIMIT",
+      "providerBehavior": "A Jira throttled response is built without a structured status.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.transport.failed because the status is structurally absent.",
+      "fixtureReference": "tests/fixtures/providers/jira/families/rate-limit.json#/stimulus"
+    },
+    {
+      "trapName": "JIRA339-PAYLOAD-SHAPE",
+      "providerBehavior": "A Jira 2xx body that does not decode is a status-less payload failure.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.transport.failed and the difference is recorded as failure-classification.",
+      "fixtureReference": "tests/fixtures/providers/jira/families/payload-shape.json#/stimulus"
+    },
+    {
+      "trapName": "JIRA339-WORKFLOW-STATE-MISMATCH",
+      "providerBehavior": "A Jira transition for an alias the declared map cannot resolve is refused before any provider request.",
+      "expectedNormalizedOutcome": "transition-work-item resolves to tracker.payload.invalid with zero provider requests and no status.",
+      "fixtureReference": "tests/fixtures/providers/jira/families/workflow-state-mismatch.json#/stimulus"
     }
   ]
 }

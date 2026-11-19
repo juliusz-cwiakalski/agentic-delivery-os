@@ -65,7 +65,9 @@ import {
 import {
   CLAUDE_CAPABILITIES,
   createBunSqliteStoreOpener,
+  createClaudeInstance,
   createClaudeSession,
+  createOpencodeInstance,
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
   mapCoordinatorNewTurn,
@@ -165,6 +167,21 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
+import {
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
+  evaluateHarnessModeAvailability,
+  evaluateModelExpressibility,
+  harnessAgentIdentityViolation,
+  resolveBinding,
+  resolveHarnessInstance,
+} from "@delivery-os/core";
+import type {
+  HarnessAdapterRegistration,
+  HarnessBindingResolution,
+  HarnessProfileView,
+  HarnessSelectionView,
+} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
@@ -188,17 +205,25 @@ import {
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
+  type CommandFailureHarnessDetail,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
+  type HarnessFailure,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
+  type HarnessMode,
+  type HarnessModeOrigin,
+  type HarnessSeatBinding,
+  type HarnessResult,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
+  type HarnessVersionProbe,
+  type HarnessVersionVerdict,
   HOST_INDEX_INITIAL_REVISION,
   type HostIndexEntry,
   IMPLEMENTED_TRACKER_KINDS,
@@ -241,6 +266,7 @@ import {
   nominateProviderProfile,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  selectProfile,
 } from "@delivery-os/core/provider";
 import {
   appendBlockerQuestion,
@@ -498,6 +524,12 @@ export type ProductionCompositionFacts = {
    */
   readonly harnessSpawnRunner?: HarnessSpawnRunner;
   /**
+   * The injected version probe (GH-335 F-1). Production builds it over the host
+   * runner; a composed test supplies a deterministic answer so composition is
+   * proven without a harness process.
+   */
+  readonly harnessVersionProbe?: HarnessVersionProbe;
+  /**
    * The injected streaming spawn starter. Production uses the host starter; tests
    * inject a recording starter so composition is proven without a harness process.
    */
@@ -562,7 +594,7 @@ export type ProductionCompositionFacts = {
    */
   readonly runningArtifactPath?: string;
   /**
-   * The owning-role fact (GH-346 D6, TDR-0036 §3): the primary bin declares
+   * The owning-role fact (GH-346 D6, TDR-0044 §3): the primary bin declares
    * `true`; the alias declares nothing, and an absent fact means NOT owning.
    */
   readonly ownsInstallation?: boolean;
@@ -940,6 +972,415 @@ export const createSupervisionEconomicsWritePort = (input: {
   };
 };
 
+/* ------------------------------------------------------------------------- */
+/* GH-335 — the harness plane's single production seams.                      */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Build the single production version probe (GH-335 F-1, DEC-11, §17.2 clause 6).
+ *
+ * One bounded, shell-free invocation of the harness's own version surface. The
+ * declared deadline is handed to the child-process runner's `timeout:` option;
+ * a timeout answers `timed-out`, and a non-zero exit is a rejection (which the
+ * resolver classifies as indeterminate). No shell, no prompt, no session args.
+ */
+export const createHarnessVersionProbe = (input: {
+  readonly runner: HarnessSpawnRunner;
+  readonly command: string;
+  readonly cwd: string;
+  readonly environment: Readonly<Record<string, string>>;
+}): HarnessVersionProbe => {
+  return async (probe) => {
+    const result = await input.runner(input.command, ["--version"], {
+      cwd: input.cwd,
+      env: input.environment,
+      timeout: probe.deadlineMs,
+    });
+    if (result.timedOut) return { status: "timed-out" };
+    if (result.status !== 0) {
+      throw new Error(`harness version probe exited ${String(result.status)}`);
+    }
+    return { status: "answered", stdout: result.stdout };
+  };
+};
+
+/** One pre-session harness refusal, classified and recordless. */
+export type ProductionHarnessRefusal = {
+  readonly kind: "harness" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly field?: string;
+  readonly harness?: CommandFailureHarnessDetail;
+};
+
+/** The resolved harness facts one admission discloses (TDR-0041). */
+export type ProductionHarnessFacts = {
+  readonly kind: HarnessKind;
+  readonly observedVersion: string | null;
+  readonly versionVerdict: HarnessVersionVerdict;
+  readonly mode: HarnessMode;
+  /** The mode origin: the delivered default or a declared value (DM-3). */
+  readonly modeOrigin?: HarnessModeOrigin;
+};
+
+/** The refusal a resolved facts set implies, or `undefined` when it admits. */
+export const harnessFactsRefusal = (
+  facts: ProductionHarnessFacts,
+): ProductionHarnessRefusal | undefined => {
+  if (facts.versionVerdict === "outside") {
+    return {
+      kind: "harness",
+      code: "harness.version.unsupported",
+      summary: `observed harness version ${facts.observedVersion ?? "unknown"} is outside the supported window`,
+      harness: {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "outside",
+      },
+    };
+  }
+  if (facts.versionVerdict === "indeterminate") {
+    return {
+      kind: "harness",
+      code: "harness.version.unknown",
+      summary: "the harness version could not be determined",
+      harness: { kind: facts.kind, observedVersion: null, versionVerdict: "indeterminate" },
+    };
+  }
+  const availability = evaluateHarnessModeAvailability(facts.mode);
+  if (!availability.available) {
+    return {
+      kind: "harness",
+      code: "harness.mode.unavailable",
+      summary: `requested mode ${availability.requested} is unavailable; the available mode is ${availability.availableMode}`,
+      harness: {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "inside",
+        mode: availability.requested,
+      },
+    };
+  }
+  return undefined;
+};
+
+/**
+ * Build the pre-session harness admission (GH-335 F-1/F-2, NFR-1).
+ *
+ * One resolution per dispatch: the injected probe runs once, the window is
+ * evaluated once, and the mode availability is classified. The admission runs
+ * before the lease claim, so a refusal claims no lease, starts no child, and
+ * appends no attempt record.
+ */
+export const createHarnessAdmission = (input: {
+  readonly kind: HarnessKind;
+  readonly mode: HarnessMode;
+  readonly modeOrigin?: HarnessModeOrigin;
+  readonly registrations: readonly HarnessAdapterRegistration[];
+  readonly versionProbe: HarnessVersionProbe;
+  readonly now: () => number;
+}): (() => Promise<
+  | { readonly ok: true; readonly facts: ProductionHarnessFacts }
+  | { readonly ok: false; readonly error: ProductionHarnessRefusal }
+>) => {
+  return async () => {
+    const instance = await resolveHarnessInstance({
+      kind: input.kind,
+      registrations: input.registrations,
+      versionProbe: input.versionProbe,
+      now: input.now,
+      mode: input.mode,
+      ...(input.modeOrigin === undefined ? {} : { modeOrigin: input.modeOrigin }),
+    });
+    if (!instance.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: instance.error.code,
+          ...(instance.error.field === undefined ? {} : { field: instance.error.field }),
+          ...(instance.error.summary === undefined ? {} : { summary: instance.error.summary }),
+        },
+      };
+    }
+    const facts: ProductionHarnessFacts = {
+      kind: input.kind,
+      observedVersion: instance.value.observedVersion,
+      versionVerdict: instance.value.versionVerdict ?? "indeterminate",
+      mode: instance.value.mode ?? input.mode,
+      ...(instance.value.modeOrigin === undefined && input.modeOrigin === undefined
+        ? {}
+        : { modeOrigin: instance.value.modeOrigin ?? input.modeOrigin }),
+    };
+    const refusal = harnessFactsRefusal(facts);
+    return refusal === undefined ? { ok: true, facts } : { ok: false, error: refusal };
+  };
+};
+
+/** The delivered harness adapter registrations (one per closed kind). */
+export const productionHarnessRegistrations: readonly HarnessAdapterRegistration[] = [
+  { kind: "opencode", create: createOpencodeInstance },
+  { kind: "claude-code", create: createClaudeInstance },
+];
+
+/** The declared bound for one caller-supplied value inside a refusal summary. */
+export const PROFILE_SUMMARY_MAX_CHARS = 64 as const;
+
+/** Single-line and bound one caller-supplied value for a refusal summary (F-9). */
+export const boundedSummaryValue = (value: string): string => {
+  // Control characters (including newlines and tabs) become spaces, then runs
+  // of whitespace collapse: the value can never open a second summary line.
+  const single = [...value]
+    .map((character) => ((character.codePointAt(0) ?? 0) < 0x20 ? " " : character))
+    .join("")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return single.length <= PROFILE_SUMMARY_MAX_CHARS
+    ? single
+    : `${single.slice(0, PROFILE_SUMMARY_MAX_CHARS - 1)}…`;
+};
+
+/**
+ * Resolve one spawn's single-seat binding, or the pre-session refusal it implies
+ * (GH-335 F-3, DEC-16, TDR-0040 A-2).
+ *
+ * The caller supplies the agent identity; this is the composition's resolution
+ * call site. An unassigned named agent refuses through the delivered
+ * `provider.profile.invalid` with its agent, profile, and declared seats in the
+ * bounded summary, and an unrepresentable seat model refuses through
+ * `harness.profile.model-unrepresentable`.
+ */
+export const resolveHarnessAdmissionBinding = (request: {
+  readonly agent: string;
+  readonly profile: HarnessProfileView;
+  readonly selection: HarnessSelectionView;
+  readonly profileName?: string;
+  readonly resolve?: (
+    profile: HarnessProfileView,
+    selection: HarnessSelectionView,
+    agent?: string,
+  ) => HarnessBindingResolution;
+}):
+  | { readonly ok: true; readonly binding: HarnessSeatBinding }
+  | { readonly ok: false; readonly error: HarnessFailure } => {
+  // DEC-17 / AC-F3-1: a present empty or whitespace-only identity is invalid
+  // input naming the agent-identity field, never a profile refusal.
+  const violation = harnessAgentIdentityViolation(request.agent);
+  if (violation !== undefined) {
+    return {
+      ok: false,
+      error: {
+        kind: "config",
+        code: "config.value.invalid",
+        field: violation.field,
+        summary: violation.summary,
+      },
+    };
+  }
+  const resolve = request.resolve ?? resolveBinding;
+  const resolution = resolve(request.profile, request.selection, request.agent);
+  if (resolution.outcome === "unassigned") {
+    const seats = Object.keys(request.profile.seats).sort();
+    const profile = boundedSummaryValue(request.profileName ?? "selected");
+    return {
+      ok: false,
+      error: {
+        kind: "provider",
+        code: "provider.profile.invalid",
+        field: "agent",
+        summary: `agent ${boundedSummaryValue(request.agent)} has no seat in profile ${profile} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
+      },
+    };
+  }
+  if (resolution.outcome === "no-agent") {
+    return {
+      ok: false,
+      error: {
+        kind: "config",
+        code: "config.value.invalid",
+        field: "agent",
+        summary: "a named agent resolved no seat",
+      },
+    };
+  }
+  const expressibility = evaluateModelExpressibility(resolution.binding);
+  if (!expressibility.ok) {
+    return {
+      ok: false,
+      error: {
+        kind: "harness",
+        code: "harness.profile.model-unrepresentable",
+        field: "seat",
+        summary: expressibility.summary,
+      },
+    };
+  }
+  return { ok: true, binding: resolution.binding };
+};
+
+/**
+ * Resolve the dispatch's selected profile context from already-resolved
+ * configuration values (GH-335 F-2, review F-7).
+ *
+ * The single home of the configuration → selected-profile → context mapping: the
+ * composition calls it with the resolved values and a test drives it directly, so
+ * the mount's context half has an oracle instead of only a source-text assertion.
+ */
+export const resolveProfileContextFrom = (
+  values: Readonly<Record<string, ConfigValue>>,
+  nowMs: number,
+): HarnessProfileContext | undefined => {
+  const providerParsed = parseAndValidateProviderConfiguration(values);
+  if (!providerParsed.ok) return undefined;
+  const profileParsed = parseAndValidateProfileConfiguration(values, providerParsed.config);
+  if (!profileParsed.ok) return undefined;
+  const selection = selectProfile({
+    profiles: profileParsed.config,
+    probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs),
+    nowMs,
+  });
+  if (!selection.ok) return undefined;
+  const profile = profileParsed.config.profiles[selection.decision.profile];
+  if (profile === undefined) return undefined;
+  return {
+    profile: { seats: profile.seats, agentOverrides: profile.agentOverrides },
+    selection: {
+      agentOverrides: selection.decision.agentOverrides,
+      seatModels: selection.decision.seatModels,
+    },
+    profileName: selection.decision.profile,
+  };
+};
+
+/**
+ * Wrap a harness session port in the composition's per-spawn resolution.
+ *
+ * The caller's agent identity is read from the port input's own member, the
+ * pure resolver is called once per spawn, and the returned single-seat binding
+ * is supplied on the sibling member. A role-less call binds nothing. This is the
+ * production resolution call site (DEC-16): the composition mounts it on the
+ * opencode port and supplies the selected profile through `context`.
+ *
+ * An `unassigned` named agent refuses through the delivered
+ * `provider.profile.invalid`, naming the agent, the profile, and the declared
+ * seats (AC-F3-4, TDR-0040 A-2); `config.value.invalid` is reserved for the
+ * invalid identity and the contract-violation case.
+ */
+export type HarnessProfileContext = {
+  readonly profile: HarnessProfileView;
+  readonly selection: HarnessSelectionView;
+  readonly profileName?: string;
+};
+
+export const createHarnessProfilePort = (request: {
+  readonly port: HarnessSessionPort;
+  readonly profile?: HarnessProfileView;
+  readonly selection?: HarnessSelectionView;
+  readonly profileName?: string;
+  /** The lazily resolved profile context, preferred over the static pair. */
+  readonly context?: (input: { readonly workItemRef: string }) => HarnessProfileContext | undefined;
+  readonly resolve?: (
+    profile: HarnessProfileView,
+    selection: HarnessSelectionView,
+    agent?: string,
+  ) => HarnessBindingResolution;
+}): HarnessSessionPort => {
+  const bind = <TInput extends { readonly agent?: string; readonly binding?: HarnessSeatBinding }>(
+    call: (callInput: TInput) => Promise<HarnessResult<HarnessSessionHandle>>,
+  ) => {
+    return async (callInput: TInput): Promise<HarnessResult<HarnessSessionHandle>> => {
+      if (callInput.agent === undefined) return call(callInput);
+      const violation = harnessAgentIdentityViolation(callInput.agent);
+      if (violation !== undefined) {
+        return {
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.value.invalid",
+            field: violation.field,
+            summary: violation.summary,
+          },
+        };
+      }
+      const context =
+        request.context?.({
+          workItemRef: (callInput as { readonly workItemRef?: string }).workItemRef ?? "",
+        }) ??
+        (request.profile === undefined || request.selection === undefined
+          ? undefined
+          : {
+              profile: request.profile,
+              selection: request.selection,
+              ...(request.profileName === undefined ? {} : { profileName: request.profileName }),
+            });
+      if (context === undefined) {
+        // DEC-18: an unresolvable profile context is a pre-resolution input
+        // failure on the delivered `config.value.invalid` identity, naming the
+        // agent-identity field with a FIXED bounded summary (no interpolated
+        // caller value) — never a fourth resolution outcome.
+        return {
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.value.invalid",
+            field: "agent",
+            summary: "no provider profile could be resolved for the supplied agent",
+          },
+        };
+      }
+      // One mapping: the wrapper delegates to the pure helper above.
+      const resolved = resolveHarnessAdmissionBinding({
+        agent: callInput.agent,
+        profile: context.profile,
+        selection: context.selection,
+        ...(context.profileName === undefined ? {} : { profileName: context.profileName }),
+        ...(request.resolve === undefined ? {} : { resolve: request.resolve }),
+      });
+      if (!resolved.ok) return { ok: false, error: resolved.error };
+      return call({ ...callInput, binding: resolved.binding });
+    };
+  };
+  const { port } = request;
+  return {
+    ...port,
+    spawn: bind(port.spawn),
+    deliver: bind(port.deliver),
+    resume: bind(port.resume),
+  };
+};
+
+/**
+ * Resolve the opencode store path at the runtime-aware edge (GH-335 F-5, §7.1).
+ *
+ * The delivered default names the harness's own data directory with a `~/`
+ * prefix, and the harness's observed `OPENCODE_DB` override wins when the
+ * injected environment record carries it. Core reads no ambient environment:
+ * both the value and the home directory arrive injected.
+ */
+export const reconcileOpencodeStorePath = (input: {
+  readonly configured: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly homeDirectory: string;
+}): string => {
+  const override = input.environment.OPENCODE_DB;
+  const chosen =
+    override !== undefined && override.trim().length > 0 ? override.trim() : input.configured;
+  if (chosen === "~") return input.homeDirectory;
+  if (chosen.startsWith("~/")) return `${input.homeDirectory}/${chosen.slice(2)}`;
+  return chosen;
+};
+
+/**
+ * The opencode invocation args per mode surface (GH-335 F-2, TDR-0042).
+ *
+ * The default mode's observed surface is `--standalone`; the composition owns
+ * the surface selection, so the adapter never invents a mode flag.
+ */
+export const PRODUCTION_OPENCODE_ARGS = {
+  spawn: ["--standalone", "run", "--format", "json"],
+  resume: ["--standalone", "run", "--format", "json", "--session"],
+  list: ["--standalone", "session", "list", "--format", "json"],
+} as const;
 /**
  * The composition-edge transport facts (DM-10, Table C).
  *
@@ -1852,8 +2293,43 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         record: { DELIVERY_WORK_PATH: descriptor.workDirectory },
       });
 
+    /**
+     * The harness facts the dispatch admission resolved for the run in flight.
+     *
+     * Composition-instance scoped, never process-global: the admission writes it
+     * once per dispatch and the composed port's lazy gate reads it at spawn
+     * time, so the adapter can never fall back to "inside" on a refused run.
+     *
+     * Invariant: one dispatch per composed instance (the delivery path composes
+     * one dispatch per invocation, and the per-ref single-flight admission keeps
+     * a second concurrent dispatch out). The per-spawn binding itself is NOT
+     * carried here — it travels on the spawn input as per-spawn data (DEC-16).
+     */
+    let dispatchHarnessFacts: ProductionHarnessFacts | undefined;
+
+    /** The gate the dispatch port reads; absent for the non-dispatch lanes. */
+    const dispatchVersionGate = () =>
+      dispatchHarnessFacts === undefined
+        ? {
+            verdict: "indeterminate" as const,
+            observedVersion: null,
+            mode: "per-invocation-private-server" as const,
+          }
+        : {
+            verdict: dispatchHarnessFacts.versionVerdict,
+            observedVersion: dispatchHarnessFacts.observedVersion,
+            mode: dispatchHarnessFacts.mode,
+          };
+
     /** Build the delivered session port for one configured kind. */
-    const harnessFor = (kind: HarnessKind): HarnessSessionPort => {
+    const harnessFor = (
+      kind: HarnessKind,
+      gate?: () => {
+        readonly verdict: "inside" | "outside" | "indeterminate";
+        readonly observedVersion: string | null;
+        readonly mode: HarnessMode;
+      },
+    ): HarnessSessionPort => {
       const common = {
         runner: harnessSpawnRunner,
         buildEnvironment: buildHarnessEnvironment,
@@ -1866,9 +2342,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             ...common,
             starter: harnessSpawnStarter,
             command: "opencode",
-            spawnArgs: ["run", "--format", "json"],
-            resumeArgs: ["run", "--format", "json", "--session"],
-            listArgs: ["session", "list", "--format", "json"],
+            // The gate reads the facts the dispatch admission resolved for this
+            // run, so a refusal cannot be bypassed by the adapter's default.
+            ...(gate === undefined ? {} : { versionGate: gate }),
+            // The binding's surface mapping is injected: the adapter owns no
+            // second copy of the rules (GH-335 F-3, TDR-0040).
+            bindingSeams: {
+              identityViolation: harnessAgentIdentityViolation,
+              expressibility: evaluateModelExpressibility,
+              invocationArgs: bindingInvocationArgs,
+              environmentRecords: bindingEnvironmentRecords,
+            },
+            spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
+            resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
+            listArgs: PRODUCTION_OPENCODE_ARGS.list,
             telemetrySinkFor: ({ workItemRef }) => {
               const resolution = resolveProductionHarnessSettings();
               if (!resolution.ok) return undefined;
@@ -2420,6 +2907,28 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * installation declares nothing and refuses `provider.profile.absent`
      * until it declares its profiles (the branch's own fail-closed contract).
      */
+    /**
+     * Resolve the dispatch's selected profile context for the resolution call
+     * site (GH-335 F-2, DEC-16). The same configuration the nomination gate reads;
+     * an unresolvable context means a caller-supplied agent is refused, never
+     * silently bound.
+     */
+    // Resolved once per composition instance and reused for every spawn of the
+    // run, so the context the port resolves cannot drift from the one admission
+    // read (review F-8; the composition holds one dispatch per instance).
+    let dispatchProfileContext: HarnessProfileContext | undefined;
+    let profileContextResolved = false;
+    const resolveProfileContext = (): HarnessProfileContext | undefined => {
+      if (profileContextResolved) return dispatchProfileContext;
+      profileContextResolved = true;
+      const acquired = acquireProjectConfiguration(gitRootForConfig());
+      if (!acquired.ok) return undefined;
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) return undefined;
+      dispatchProfileContext = resolveProfileContextFrom(resolved.value.values, nowMs());
+      return dispatchProfileContext;
+    };
+
     const nominationPredicate = (): ReturnType<typeof nominateProviderProfile> => {
       const closedSet = [
         "provider.profile.absent",
@@ -2472,6 +2981,62 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       });
     };
 
+    /**
+     * The pre-session harness admission for one dispatch (GH-335 F-1, F-2).
+     *
+     * The version window is evaluated on the opencode delivery harness only:
+     * claude-code stays a registered compatibility surface (NG-1) and keeps its
+     * delivered behaviour. The probe runs once, in the declared allowlist
+     * environment, and its facts are memoized for the composed port's gate.
+     */
+    const dispatchHarnessAdmission = (settings: HarnessSettings) => async () => {
+      if (settings.kind !== "opencode") return { ok: true as const };
+      const descriptor: HarnessExecutionEnvironmentDescriptor = {
+        kind: settings.executionKind,
+        workDirectory: cwd,
+        environment: harnessEnvironmentEntries(settings),
+      };
+      const built = buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: environment,
+        credentials: harnessCredentials,
+        record: { DELIVERY_WORK_PATH: cwd },
+      });
+      if (!built.ok) {
+        return {
+          ok: false as const,
+          error: {
+            kind: "harness" as const,
+            code: built.error.code,
+            ...(built.error.field === undefined ? {} : { field: built.error.field }),
+            ...(built.error.summary === undefined ? {} : { summary: built.error.summary }),
+          },
+        };
+      }
+      const probe =
+        facts.harnessVersionProbe ??
+        createHarnessVersionProbe({
+          runner: harnessSpawnRunner,
+          command: "opencode",
+          cwd,
+          environment: built.value,
+        });
+      const admitted = await createHarnessAdmission({
+        kind: settings.kind,
+        mode: settings.mode,
+        modeOrigin: settings.modeOrigin,
+        registrations: productionHarnessRegistrations,
+        versionProbe: probe,
+        now: nowMs,
+      })();
+      if (!admitted.ok) {
+        dispatchHarnessFacts = undefined;
+        return admitted;
+      }
+      dispatchHarnessFacts = admitted.facts;
+      return { ok: true as const, facts: admitted.facts };
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -2483,8 +3048,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowIso,
       newAttemptId: (ref) => `attempt-${ref}-${nowMs()}-${newFenceToken()}`,
       newDivergenceId: (ref) => `DIV-${ref}-${newFenceToken()}`,
-      harnesses: { opencode: harnessFor("opencode"), "claude-code": harnessFor("claude-code") },
+      harnesses: {
+        // DEC-16: the composition is the resolver's production call site. A
+        // caller-supplied agent is resolved from the selected profile; a
+        // role-less call is an unchanged passthrough (DEC-15).
+        opencode: createHarnessProfilePort({
+          port: harnessFor("opencode", dispatchVersionGate),
+          context: () => resolveProfileContext(),
+          resolve: resolveBinding,
+        }),
+        "claude-code": harnessFor("claude-code"),
+      },
       defaultHarness: settings.kind,
+      harnessAdmission: dispatchHarnessAdmission(settings),
+      harnessFacts: () => dispatchHarnessFacts,
       descriptor: {
         kind: settings.executionKind,
         workDirectory: cwd,
@@ -2594,9 +3171,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (!resolved.ok) return { ok: false, code: resolved.error.code };
       const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
       if (!settings.ok) return { ok: false, code: settings.error.code };
+      // GH-335 §7.1: reconcile the store location at the edge (the default's
+      // `~/` home expansion plus the harness's observed override).
+      const reconciled: HarnessSettings = {
+        ...settings.value,
+        opencodeDatabasePath: reconcileOpencodeStorePath({
+          configured: settings.value.opencodeDatabasePath,
+          environment,
+          homeDirectory,
+        }),
+      };
       const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
       return lane.ok
-        ? { ok: true, settings: settings.value, lane: lane.value }
+        ? { ok: true, settings: reconciled, lane: lane.value }
         : { ok: false, code: lane.error.code };
     };
 

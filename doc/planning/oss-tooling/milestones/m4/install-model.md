@@ -7,7 +7,7 @@ out-of-scope list — are preserved as behaviour. The **surface** is the compose
 `install` lifecycle family of the installed product; the shell lifecycle script
 and its flag forms (`--rollback`, `--uninstall`, `--purge`) described in the
 earlier draft are superseded by that family, and the decision records
-(TDR-0036 … TDR-0040) win on surface.
+(TDR-0044 … TDR-0048) win on surface.
 
 ## Constraints
 

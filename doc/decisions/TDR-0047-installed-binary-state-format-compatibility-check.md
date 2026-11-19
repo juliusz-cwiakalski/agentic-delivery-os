@@ -1,5 +1,5 @@
 ---
-id: TDR-0039
+id: TDR-0047
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -65,13 +65,13 @@ links:
     - "packages/core/src/state/index.ts"
     - "packages/core/src/contracts/error-table.ts"
   diagrams: []
-  decisions: ["TDR-0022", "TDR-0004", "TDR-0036", "TDR-0037"]
+  decisions: ["TDR-0022", "TDR-0004", "TDR-0044", "TDR-0045"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S1", "M4-S2"]
 ---
 
-# TDR-0039: Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking
+# TDR-0047: Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking
 
 ## Context
 
@@ -82,7 +82,7 @@ links:
 - **FACT:** State roots are per project under a host root (`<host>/projects/<project key>`), and the host root itself is selected by an override or a brand default (TDR-0022; `doc/spec/features/feature-projects.md`, read 2026-11-18). A machine can therefore hold several independent stores with independent headers.
 - **FACT:** M4-S1's scope line names "a compatibility check between installed binary and repository state version" (`doc/planning/oss-tooling/milestones/m4/backlog.md`, read 2026-11-18).
 - **FACT:** M4 constraints forbid a second state contract; GH-346 restates it ("additive contracts; no second state contract").
-- **FACT:** The artifact now carries an injected build identity and a machine-readable status surface is being added by the install family (TDR-0036 §1, TDR-0037 §4), so there is a natural, non-self-description place to report a verdict.
+- **FACT:** The artifact now carries an injected build identity and a machine-readable status surface is being added by the install family (TDR-0044 §1, TDR-0045 §4), so there is a natural, non-self-description place to report a verdict.
 
 ## Problem Framing (Clarified)
 
@@ -124,7 +124,7 @@ The remaining design questions are behavioural, not representational:
 ### C-4: The verdict is observable and typed
 
 - **Statement:** `install status` reports a compatibility verdict per root and, when any root is not accepted, exits `1` with a registered identity naming the root, the observed version, and the accepted version.
-- **Source:** `packages/cli/src/projection.ts`; the report surface in TDR-0036 §1.
+- **Source:** `packages/cli/src/projection.ts`; the report surface in TDR-0044 §1.
 - **Verification:** Test — verdict fields and exit `1` for the incompatible case; exit `0` for accepted and unchecked cases, with the state visible in the payload.
 - **Negotiable:** no.
 
@@ -245,7 +245,7 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only as a narrower promise (ALT
 - **Driver fit:** Excellent on 2; silent on 1.
 - **Pros:** Free once the install record exists.
 - **Cons:** Answers a different question; shipping it as "the compatibility check" would be a mislabel.
-- **Why rejected as the check, adopted as a component:** the install-vs-running comparison is part of `install status` (TDR-0037 §4) but is not this check.
+- **Why rejected as the check, adopted as a component:** the install-vs-running comparison is part of `install status` (TDR-0045 §4) but is not this check.
 
 ### Alternative 4 — Compare the Accepted Store Format Against Each Root's Header (chosen)
 
@@ -379,5 +379,5 @@ The chosen alternative (ALT-4) satisfies every constraint C-1 through C-7. No ac
 - State-root layout and host-root policy — [TDR-0022](TDR-0022-multi-repository-workstation-state-scope.md), `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-state-layer.md`
 - State engine contract — [TDR-0004](TDR-0004-state-storage-engine.md)
 - Self-description isolation — `doc/spec/features/feature-cli-entrypoint.md` §Runtime neutrality; `doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md` §9 (NFR-2)
-- [TDR-0036](TDR-0036-install-lifecycle-composed-command-family.md) — the surface that reports the verdict
-- [TDR-0037](TDR-0037-self-contained-binary-build-identity.md) — the identity fields the status payload carries alongside the verdict
+- [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) — the surface that reports the verdict
+- [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) — the identity fields the status payload carries alongside the verdict

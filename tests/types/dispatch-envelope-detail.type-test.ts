@@ -37,6 +37,40 @@ const failureWithDetail: CommandResultFailure = {
   detail: refusalDetail,
 };
 
+/** The declared harness evidence member (TDR-0041): four closed facts. */
+const harnessEvidence: CommandResultDetail = {
+  harness: {
+    kind: "opencode",
+    observedVersion: "2.3.2",
+    versionVerdict: "inside",
+    mode: "per-invocation-private-server",
+  },
+};
+
+/** The indeterminate case: explicit null and no mode member at all. */
+const harnessEvidenceIndeterminate: CommandResultDetail = {
+  harness: { kind: "opencode", observedVersion: null, versionVerdict: "indeterminate" },
+};
+
+const rejectedHarnessVerdict: CommandResultDetail = {
+  harness: {
+    kind: "opencode",
+    observedVersion: "2.3.2",
+    // @ts-expect-error — the verdict vocabulary is closed.
+    versionVerdict: "probable",
+  },
+};
+
+const rejectedHarnessMember: CommandResultDetail = {
+  harness: {
+    kind: "opencode",
+    observedVersion: "2.3.2",
+    versionVerdict: "outside",
+    // @ts-expect-error — the slot is closed; it never becomes an open key-value map.
+    availableModes: ["per-invocation-private-server"],
+  },
+};
+
 /** A failure without the member carries no detail key. */
 const failureWithoutDetail: CommandResultFailure = {
   schemaVersion: "delivery.result.v1",
@@ -123,9 +157,13 @@ export {
   failureWithDetail,
   failureWithoutDetail,
   harnessDetail,
+  harnessEvidence,
+  harnessEvidenceIndeterminate,
   refusalDetail,
   rejectedDetailKindType,
   rejectedDetailMember,
+  rejectedHarnessMember,
+  rejectedHarnessVerdict,
   rejectedKind,
   rejectedSharedField,
   rejectedSharedWidening,

@@ -164,3 +164,75 @@ describe("TC-HARN-023 durable closeout capture", () => {
     }
   });
 });
+
+/**
+ * GH-335 review remediation F-4 — the capture's bounded facts survive into the
+ * closeout disclosure and the durable capture-outcome record.
+ */
+describe("F-4 durable disclosure of absence, unattributed attempts, truncation", () => {
+  test("an absent held session and a counted unattributed attempt reach both surfaces", async () => {
+    const { appendHarnessCaptureOutcome, appendHarnessTelemetry } = await import(
+      "../../packages/core/src/state/harness-telemetry"
+    );
+    const { HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    const store = realStore();
+    const capture = {
+      ...makeTelemetryCapture({ workItemRef: WORK_ITEM_REF, runId: TELEMETRY_RUN_ID }),
+      absences: [{ sessionId: "ses_gone", reason: "session-not-in-store" }],
+      unattributedAttempts: 2,
+      attemptTruncation: { truncated: true, omitted: 3, cap: 5000 },
+    };
+    const telemetry = {
+      runtime: {
+        extract: async () => ({ ok: true, value: capture }),
+        append: (value: typeof capture) => {
+          for (const record of value.records) {
+            const appended = appendHarnessTelemetry(store, "fence-telemetry", record);
+            if (!appended.ok) return appended;
+          }
+          return appendHarnessCaptureOutcome(store, "fence-outcome", {
+            schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+            workItemRef: value.workItemRef,
+            runId: value.runId,
+            captured: value.records.length,
+            degraded: 0,
+            failed: value.failedSessions.length,
+            warnings: value.warnings,
+            absences: [{ reason: "session-not-in-store", count: 1 }],
+            unattributedAttempts: 2,
+            attemptTruncation: { truncated: true, omitted: 3, cap: 5000 },
+            capturedAt: value.capturedAt,
+          });
+        },
+      },
+    };
+    const result = await runCloseout({
+      plan: buildCloseoutPlan(makeFacts()),
+      provider: makeProvider().runtime,
+      git: makeGit().runtime,
+      state: makeState().runtime,
+      timestamp: CLOSEOUT_TIMESTAMP,
+      fenceToken: "fence-closeout",
+      apply: true,
+      runId: TELEMETRY_RUN_ID,
+      telemetry: telemetry.runtime as never,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.telemetryCapture).toMatchObject({
+      absences: [{ reason: "session-not-in-store", count: 1 }],
+      unattributedAttempts: 2,
+      attemptTruncation: { truncated: true, omitted: 3, cap: 5000 },
+    });
+    const outcome = readHarnessCaptureOutcome(store, WORK_ITEM_REF, TELEMETRY_RUN_ID);
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.value).toMatchObject({
+      absences: [{ reason: "session-not-in-store", count: 1 }],
+      unattributedAttempts: 2,
+      attemptTruncation: { truncated: true, omitted: 3, cap: 5000 },
+    });
+  });
+});

@@ -717,27 +717,38 @@ const GH346_ROWS: readonly PageClaimRow[] = [
   },
   {
     page: "doc/spec/features/feature-result-contract.md",
-    stale: ["The table declares 149 machine identities", "allowlist of 65 declared identities"],
+    stale: [
+      "The table declares 149 machine identities",
+      "The table declares 153 machine identities",
+      "allowlist of 65 declared identities",
+    ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 160 machine identities",
+      "The table declares 164 machine identities",
       "allowlist of 66 declared identities",
       "the eleven `install` rows",
+      "the thirteen `harness` rows",
     ],
   },
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
-    stale: ["149 identities", "65-entry allowlist"],
-    required: ["160 identities", "66-entry allowlist"],
+    stale: ["149 identities", "153 identities", "65-entry allowlist"],
+    required: ["164 identities", "66-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
-    stale: ["149 entries", "BASELINE_ROWS.length + 115", "family count (25)"],
+    stale: [
+      "149 entries",
+      "153 entries",
+      "BASELINE_ROWS.length + 115",
+      "BASELINE_ROWS.length + 119",
+      "family count (25)",
+    ],
     required: [
-      "160 entries",
-      "159 delivered rows",
+      "164 entries",
+      "163 delivered rows",
       "66 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 126",
+      "BASELINE_ROWS.length + 130",
       "family count (26)",
     ],
   },
@@ -860,10 +871,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("160 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("164 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 160 identities",
+      "missing required phrase: 164 identities",
     );
   });
 

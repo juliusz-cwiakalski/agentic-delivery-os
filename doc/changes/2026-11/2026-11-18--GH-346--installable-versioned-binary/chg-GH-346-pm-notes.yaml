@@ -16,7 +16,7 @@ phases:
   dod_check: { started: null, completed: 2026-11-19T04:00:20.097Z }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "TDR-0036 — Install lifecycle is one composed `install` command family in
+  - text: "TDR-0044 — Install lifecycle is one composed `install` command family in
       PROMPT_REQUIRED_COMMANDS (`install`, `install status`, `rollback`,
       `uninstall`, `purge`), because the installed binary is the only reachable
       surface and the only one that can carry a registered typed error. Flags:
@@ -24,28 +24,28 @@ decisions:
       installer keeps only its delivered launcher step. The `delivery-os` alias
       composes the family and refuses it typedly, creating no legacy path."
     date: "2026-11-18"
-  - text: "TDR-0037 — One Bun-compiled executable at `dist/<binary-name>`;
+  - text: "TDR-0045 — One Bun-compiled executable at `dist/<binary-name>`;
       version/commit/built-at/dirty are compile-time constants injected with
       `--define`. `--version` keeps its delivered text shape with the commit in
       the existing build slot (`jaiship <version> (build <shortsha>)`);
       `builtAt` and the full commit live on `install status --json`. A
       non-compiled run reports `0.0.0 (build dev)` and cannot install."
     date: "2026-11-18"
-  - text: "TDR-0038 — Install target is the running artifact plus the checkout it
+  - text: "TDR-0046 — Install target is the running artifact plus the checkout it
       resolves to; refused typedly when that checkout is a linked worktree
       (`--git-dir` differs from `--git-common-dir`), admitted as `unverified`
       for a primary checkout, plain directory, or no git, and never refused for
       a dirty tree. Dev builds are excluded by requiring an injected identity. A
       legacy launcher is discarded, never promoted into the rollback slot."
     date: "2026-11-18"
-  - text: "TDR-0039 — Compatibility compares the artifact's accepted
+  - text: "TDR-0047 — Compatibility compares the artifact's accepted
       STATE_SCHEMA_VERSION with each state root's existing
       header.<workspace>.json: no aggregate version, no record scan, no rewrite.
       Advisory at install/rollback (the fix must remain installable) and a typed
       `install.state.incompatible` verdict at exit 1 in `install status`;
       `state.schema.mismatch` stays the hard gate."
     date: "2026-11-18"
-  - text: "TDR-0040 — Seven-step atomic replace with a working install at every
+  - text: "TDR-0048 — Seven-step atomic replace with a working install at every
       instant; upgrade is an install of a different compiled artifact (no
       download or build); rollback is an involutive swap of the single
       compiled-artifact slot; `uninstall` removes artifact, slot, record and the
@@ -76,7 +76,7 @@ notes:
       ticket/blueprint reference or the file set."
     type: risk
     date: "2026-11-18"
-  - text: "Conformance consequence of TDR-0036: the `install` family must be added
+  - text: "Conformance consequence of TDR-0044: the `install` family must be added
       to PROMPT_REQUIRED_COMMANDS, the help inventory,
       tests/fixtures/help-guide/coverage.json, and get a reference page under
       doc/planning/oss-tooling/milestones/<m>/commands/, or `pnpm check:help`
@@ -95,7 +95,7 @@ notes:
     date: "2026-11-18"
   - text: "Staging fact for planning: with no plan artifact the commit scope is the
       change folder, so the five decision records
-      (doc/decisions/TDR-0036..TDR-0040) are staged as strays and stay
+      (doc/decisions/TDR-0044..TDR-0048) are staged as strays and stay
       untracked, while the tracked doc/decisions/00-index.md lands as disclosed
       scope drift. The plan must include doc/decisions/ in the scope of a plan
       phase so the five TDR files are committed in this change. GH-338's plan
@@ -131,7 +131,7 @@ notes:
       (destination + slot valid, record stale) the run proceeds to step 5 and
       renames the destination onto the slot, destroying the still-valid previous
       artifact. C.2 has no row for compiled-artifact-plus-stale-record, and
-      TC-INST-022 narrows the AC to a valid record so nothing tests it. TDR-0040
+      TC-INST-022 narrows the AC to a valid record so nothing tests it. TDR-0048
       carries the same tension (2 step 4 vs 3 'no-op by identity comparison')."
     type: blocker
     date: "2026-11-18"
@@ -170,14 +170,14 @@ notes:
       time."
     type: retro
     date: "2026-11-18"
-  - text: "DoR iteration 1 remediation landed. TDR-0040 now decides the no-op by
+  - text: "DoR iteration 1 remediation landed. TDR-0048 now decides the no-op by
       artifact-content agreement (identity is a compile-time constant and cannot
       be read from a file) with in-place record reconciliation, a step-5 skip
       when the destination is absent, and a declared unknown-previous residual.
-      TDR-0036 now declares ownership as a boolean ownsInstallation role fact
+      TDR-0044 now declares ownership as a boolean ownsInstallation role fact
       and fixes the alias refusal at invoked-identity + owning-role + documented
       remedy, with no literal, no export, no module-load side effect, and no
-      branding-seam move. TDR-0038 §5 restated to content agreement without an
+      branding-seam move. TDR-0046 §5 restated to content agreement without an
       amendment section."
     type: resolved
     date: "2026-11-18"
@@ -206,7 +206,7 @@ notes:
       test_planning and delivery_planning again."
     type: blocker
     date: "2026-11-18"
-  - text: "Iteration-2 remediation: TDR-0040 second amendment rules that `install
+  - text: "Iteration-2 remediation: TDR-0048 second amendment rules that `install
       rollback` REFUSES with the existing install.record.unreadable unless the
       record can name the artifact the swap would install (absent, unreadable,
       record-stale, or naming no previous), refuses write nothing, eleven rows
@@ -229,7 +229,7 @@ notes:
       whose precondition could not exist in its phase, or a predicate stated two
       ways (rollback's record precondition). No iteration repeated a blocked
       finding. Remediation: spec v1.3/v1.4/v1.5, test plan v1.3/v1.4/v1.5, plan
-      v1.3/v1.4, TDR-0040 step-5 qualification and the pair-inversion ruling."
+      v1.3/v1.4, TDR-0048 step-5 qualification and the pair-inversion ruling."
     type: blocker
     date: "2026-11-18"
   - text: "PM decision (recorded because it exceeds the documented 3-iteration DoR
@@ -269,7 +269,7 @@ notes:
       closed on the merits (every arm (g) assertion is satisfiable without a
       slot read); both original blockers remain closed. No artifact phase needs
       reopening. Accepted residual risks recorded by the gate: entrypoint mount
-      ordinals unowned, TDR-0040 amended in place without a header, spec
+      ordinals unowned, TDR-0048 amended in place without a header, spec
       'pending amendment' phrasing, the pre-existing feature-metrics 'pins read
       24' drift, an error-table title, the phase-1 TC-BIN-067 parenthetical, the
       pm-notes clarify_scope timestamp inversion, and the inherent fact that a

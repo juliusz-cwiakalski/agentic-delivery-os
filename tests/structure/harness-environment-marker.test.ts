@@ -67,7 +67,7 @@ describe("TC-HDA-001 additive, variable-only optional marker", () => {
   });
 
   test("the marker adds no failure code or outcome vocabulary", () => {
-    expect([...HARNESS_FAILURE_CODES]).toHaveLength(9);
+    expect([...HARNESS_FAILURE_CODES]).toHaveLength(13);
     expect([...HARNESS_OUTCOMES]).toEqual([
       "completed",
       "premature-end",

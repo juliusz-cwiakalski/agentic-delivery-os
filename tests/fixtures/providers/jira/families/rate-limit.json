@@ -1,0 +1,17 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "jira",
+  "family": "rate-limit",
+  "stimulus": {
+    "kind": "response",
+    "status": 429,
+    "body": {
+      "message": "request quota exceeded"
+    }
+  },
+  "expected": {
+    "classification": "tracker.transport.failed",
+    "ownsHttpStatus": false,
+    "zeroProviderRequests": false
+  }
+}

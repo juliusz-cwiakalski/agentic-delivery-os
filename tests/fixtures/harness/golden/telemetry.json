@@ -65,27 +65,38 @@
     "workItemRef": "GH-233"
   },
   "opencode": {
-    "agents": [{ "agent": "agent-a", "calls": 3 }, { "agent": "agent-b", "calls": 1 }],
+    "agents": [{ "agent": "agent-a", "calls": 2 }, { "agent": "agent-b", "calls": 1 }],
     "capturedAt": "2026-11-06T00:00:00Z",
     "failedSessions": [],
-    "models": [{ "calls": 2, "model": "model-a" }, { "calls": 2, "model": "model-b" }],
+    "models": [
+      { "calls": 2, "model": "zai/glm-5#judgment" },
+      { "calls": 1, "model": "deepseek/deepseek-flash" }
+    ],
     "records": [
       {
         "agent": "agent-a",
         "calls": 2,
         "capturedAt": "2026-11-06T00:00:00Z",
         "cost": 0.75,
+        "durations": {
+          "elapsedMs": 2000,
+          "end": "2023-11-14T22:13:22.000Z",
+          "start": "2023-11-14T22:13:20.000Z",
+          "status": "sourced"
+        },
         "harnessKind": "opencode",
-        "harnessVersion": "1.0.0",
-        "model": "model-a",
+        "harnessVersion": "2.2.5",
+        "model": "zai/glm-5#judgment",
         "parentChain": [],
+        "resolvedModel": "zai/glm-5#judgment",
         "runId": "run-golden",
         "schemaId": "delivery.harness.telemetry.v1",
+        "seat": "seat-judgment",
         "sessionId": "ses_root",
         "tokens": { "cacheRead": 3, "cacheWrite": 1, "input": 15, "output": 8, "reasoning": 2 },
-        "toolCounts": [{ "calls": 2, "tool": "edit" }],
+        "toolCounts": [],
         "treeRoot": "ses_root",
-        "warnings": [],
+        "warnings": [{ "field": "toolCounts", "reason": "no-tool-source" }],
         "workItemRef": "GH-233"
       },
       {
@@ -93,40 +104,39 @@
         "calls": 1,
         "capturedAt": "2026-11-06T00:00:00Z",
         "cost": 0.4,
+        "durations": {
+          "elapsedMs": 1000,
+          "end": "2023-11-14T22:13:24.000Z",
+          "start": "2023-11-14T22:13:23.000Z",
+          "status": "sourced"
+        },
         "harnessKind": "opencode",
-        "harnessVersion": "1.0.0",
-        "model": "model-b",
+        "harnessVersion": "2.2.5",
+        "model": "deepseek/deepseek-flash",
         "parentChain": ["ses_root"],
+        "resolvedModel": null,
         "runId": "run-golden",
         "schemaId": "delivery.harness.telemetry.v1",
+        "seat": null,
         "sessionId": "ses_child_a",
         "tokens": { "cacheRead": 2, "cacheWrite": 1, "input": 6, "output": 3, "reasoning": 1 },
-        "toolCounts": [{ "calls": 1, "tool": "bash" }],
+        "toolCounts": [],
         "treeRoot": "ses_root",
-        "warnings": [],
-        "workItemRef": "GH-233"
-      },
-      {
-        "agent": "agent-a",
-        "calls": 1,
-        "capturedAt": "2026-11-06T00:00:00Z",
-        "cost": 0.1,
-        "harnessKind": "opencode",
-        "harnessVersion": "1.0.0",
-        "model": "model-b",
-        "parentChain": ["ses_root"],
-        "runId": "run-golden",
-        "schemaId": "delivery.harness.telemetry.v1",
-        "sessionId": "ses_child_b",
-        "tokens": { "cacheRead": 1, "cacheWrite": 0, "input": 4, "output": 2, "reasoning": 1 },
-        "toolCounts": [{ "calls": 1, "tool": "edit" }],
-        "treeRoot": "ses_root",
-        "warnings": [],
+        "warnings": [
+          { "field": "seat", "reason": "unresolved-seat" },
+          { "field": "agent", "reason": "agent-divergence" },
+          { "field": "toolCounts", "reason": "no-tool-source" }
+        ],
         "workItemRef": "GH-233"
       }
     ],
     "runId": "run-golden",
-    "warnings": [],
+    "warnings": [
+      { "field": "toolCounts", "reason": "no-tool-source" },
+      { "field": "seat", "reason": "unresolved-seat" },
+      { "field": "agent", "reason": "agent-divergence" },
+      { "field": "toolCounts", "reason": "no-tool-source" }
+    ],
     "workItemRef": "GH-233"
   }
 }

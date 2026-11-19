@@ -11,7 +11,14 @@
  */
 
 import type { DeliveryResultToken } from "./delivery-result.js";
-import type { HarnessKind, HarnessOutcome } from "./harness.js";
+import type {
+  HarnessKind,
+  HarnessMode,
+  HarnessModeOrigin,
+  HarnessOutcome,
+  HarnessSeatBinding,
+  HarnessVersionVerdict,
+} from "./harness.js";
 import type { CommandResultError } from "./result.js";
 
 /** The result-token alias; keeps the payload field types readable and bounded. */
@@ -231,6 +238,30 @@ export type DispatchAttemptRecord = {
   readonly prefillCostAcknowledged?: boolean;
   /** The nominated provider profile recorded at admission (GH-294 DM-1); classified absence on pre-change records. */
   readonly providerProfile?: string;
+  /**
+   * The session identities this attempt held — one per spawn/resume (GH-335
+   * DM-8). Absent on a pre-change record and on an attempt that held none; an
+   * attempt with no identity is disclosed as a counted unattributed attempt by
+   * the capture, never inferred.
+   */
+  readonly sessionIds?: readonly string[];
+  /**
+   * The single-seat binding the composition resolved for this attempt's spawn
+   * (GH-335 DM-4, TDR-0040 decision 4). Absent on a pre-change record and on a
+   * role-less run; capture cites it rather than re-deriving a seat from the
+   * current profile.
+   */
+  readonly binding?: HarnessSeatBinding;
+  /**
+   * The normalized observed harness version this attempt ran on (GH-335 F-1;
+   * TDR-0041 decision 4). Absent on a pre-change record; never fabricated.
+   */
+  readonly harnessVersion?: string | null;
+  /** The window verdict the attempt ran under. */
+  readonly versionVerdict?: HarnessVersionVerdict;
+  /** The selected integration mode, and its origin (DEC-2, TDR-0042). */
+  readonly mode?: HarnessMode;
+  readonly modeOrigin?: HarnessModeOrigin;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];
   readonly recordedAt: string;
 };

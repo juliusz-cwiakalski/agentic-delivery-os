@@ -91,7 +91,11 @@ describe("TC-CAP-056 measured latency", () => {
           opener: (path) => createBunSqliteStoreOpener()(path),
           storePath: store.path,
           now: () => "2026-11-07T00:00:00Z",
-        }).extract({ workItemRef: WORK_ITEM_REF, runId: "run-latency" });
+        }).extract({
+          workItemRef: WORK_ITEM_REF,
+          runId: "run-latency",
+          heldSessionIds: store.heldSessionIds,
+        });
         if (!result.ok) throw new Error(result.error.summary ?? "extraction failed");
         const capture: HarnessTelemetryCapture = result.value;
         if (capture.records.length === 0) throw new Error("no records");

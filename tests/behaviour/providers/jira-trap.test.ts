@@ -7,6 +7,7 @@
  * normalization subject (never the committed fixtures) and must fail by name.
  */
 import { describe, expect, test } from "bun:test";
+import { TRACKER_ERROR_CLASS_IDS, TRACKER_FAMILY_OUTCOMES } from "@delivery-os/testkit";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import { JIRA_ADAPTER_CONTRACT } from "../../../packages/adapters/src/jira/capabilities";
 import { createJiraClient, type JiraClient } from "../../../packages/adapters/src/jira/client";
@@ -308,6 +309,25 @@ const closeoutLabelPreserve = async (): Promise<void> => {
   ]);
 };
 
+const familyFixture = (family: string): void => {
+  const document = recordField(
+    { fixture: readJson(`tests/fixtures/providers/jira/families/${family}.json`) },
+    "fixture",
+  );
+  if (document.provenance !== "hand-authored-synthetic 2026-11-18") {
+    throw new Error(`${family}: provenance marker is missing`);
+  }
+  const expected = recordField(document, "expected");
+  const outcome = TRACKER_FAMILY_OUTCOMES[family as keyof typeof TRACKER_FAMILY_OUTCOMES];
+  if (outcome === undefined) throw new Error(`${family}: family is not declared`);
+  const classification = expected.classification;
+  const valid =
+    classification === "bounded-observation" ||
+    (TRACKER_ERROR_CLASS_IDS as readonly string[]).includes(String(classification));
+  if (!valid)
+    throw new Error(`${family}: classification ${String(classification)} is not declared`);
+};
+
 const defaultAssertions: TrapAssertions = {
   "JIRA-LABEL-REPLACE": () => labelReplaceCheck(defaultLabels),
   "JIRA-CUSTOM-FIELD-TYPING": async () => {
@@ -320,6 +340,11 @@ const defaultAssertions: TrapAssertions = {
   "JIRA-UPDATED-ABSENT": () => updatedAbsentCheck(normalize),
   "JIRA-CLOSEOUT-DONE-TRANSITION": closeoutDoneTransition,
   "JIRA-CLOSEOUT-LABEL-PRESERVE": closeoutLabelPreserve,
+  "JIRA339-AUTH-SHAPE": () => familyFixture("auth-shape"),
+  "JIRA339-TRANSPORT-FAILURE": () => familyFixture("transport-failure"),
+  "JIRA339-RATE-LIMIT": () => familyFixture("rate-limit"),
+  "JIRA339-PAYLOAD-SHAPE": () => familyFixture("payload-shape"),
+  "JIRA339-WORKFLOW-STATE-MISMATCH": () => familyFixture("workflow-state-mismatch"),
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -348,6 +373,11 @@ describe("TC-TRAP-002 Jira trap catalog replays offline", () => {
       "JIRA-UPDATED-ABSENT",
       "JIRA-CLOSEOUT-DONE-TRANSITION",
       "JIRA-CLOSEOUT-LABEL-PRESERVE",
+      "JIRA339-AUTH-SHAPE",
+      "JIRA339-TRANSPORT-FAILURE",
+      "JIRA339-RATE-LIMIT",
+      "JIRA339-PAYLOAD-SHAPE",
+      "JIRA339-WORKFLOW-STATE-MISMATCH",
     ]);
   });
 

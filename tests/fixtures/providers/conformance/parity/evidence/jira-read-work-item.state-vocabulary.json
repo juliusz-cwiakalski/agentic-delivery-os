@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "jira-read-work-item",
+  "class": "state-vocabulary",
+  "referenceValue": "native-status+label-tokens+refusal",
+  "adapterValue": "native-status-row+refusal",
+  "reproduces": true
+}

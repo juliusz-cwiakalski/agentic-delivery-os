@@ -1,0 +1,653 @@
+change_id: GH-335
+title: "M3-S1: opencode v2.x harness and telemetry (M3)"
+delivery_mode: autonomous
+milestone: "M3: Harness and tracker integrations"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
+  specification: { started: null, completed: 2026-11-18T10:58:26.802Z }
+  test_planning: { started: null, completed: 2026-11-18T10:58:47.049Z }
+  delivery_planning: { started: null, completed: 2026-11-18T10:59:06.975Z }
+  dor_check: { started: null, completed: 2026-11-18T11:07:59.204Z }
+  delivery: { started: null, completed: 2026-11-18T15:06:36.221Z }
+  system_spec_update: { started: null, completed: 2026-11-18T15:24:57.132Z }
+  review_fix: { started: null, completed: 2026-11-18T18:12:43.982Z }
+  quality_gates: { started: null, completed: 2026-11-18T18:35:08.879Z }
+  dod_check: { started: null, completed: 2026-11-18T18:36:16.103Z }
+  pr_creation: { started: null, completed: 2026-11-18T22:11:26.443Z }
+decisions:
+  - text: "TDR-0040 — harness seat-to-spawn cardinality and seat resolution (one
+      spawn binds exactly one seat; the caller supplies the agent identity, the
+      resolver returns the binding; Amendments A-1..A-4). Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0041 — harness dispatch-outcome disclosure on the failure-envelope
+      detail slot (one declared harness member on the four pre-session
+      refusals). Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0042 — opencode integration mode. Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0043 — opencode harness adapter contract. Status: Proposed."
+    date: "2026-11-18"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope source: ticket body GH-335 (M3-S1) + blueprint
+      doc/planning/oss-tooling/milestones/m3/ (README.md, architecture.md,
+      contracts.md, test-scenarios.md TC-M3-HARNESS-001/002) + backlog.md
+      M3-S1."
+    type: info
+    date: "2026-11-17"
+  - text: "Ticket AC: dispatch through the installed harness port runs with the
+      resolved profile; telemetry rows land with schema version and per-seat
+      models; unsupported versions refuse with a typed error; integration-mode
+      decision recorded. Depends on M1-S11 and M2-S14 (both delivered)."
+    type: info
+    date: "2026-11-17"
+  - text: "Cross-check vs system spec: doc/spec/features/feature-harness-adapters.md
+      is current truth for the harness seam — HarnessInstance (kind,
+      observedVersion, capability declaration), HarnessSessionPort
+      (spawn/deliver/resume/collect/classify/liveness/listSessions), opencode
+      streaming JSONL adapter, deny-by-default spawn environment with optional
+      profile record map, read-only bounded telemetry extraction into
+      delivery.harness.telemetry.v1, conformance registry with exactly two
+      harnesses and a six-scenario classification floor. Change must extend
+      these additively."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G1 (version window): observedVersion is injected and probe failure
+      yields version-probe-failed, but there is no supported-window evaluation
+      and no typed refusal. m3/contracts.md declares
+      harness.version.unsupported; HARNESS_FAILURE_CODES has no such identity.
+      AC and EC-1 require the typed refusal."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G2 (per-spawn model propagation):
+      packages/core/src/provider/profile-env-record.ts derives per-seat model
+      env record names (OC_<PREFIX>_AGENT_<SEAT>_MODEL). Plan must confirm the
+      record map reaches the spawn descriptor for opencode v2.x and that the
+      resolved profile is authoritative per spawn, or declare a typed refusal
+      where it cannot be."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G3 (integration mode): opencode v2.2.5 on PATH exposes
+      run/session/service/serve/api/--standalone and a local store
+      (~/.local/share/opencode/opencode.db). No integration-mode decision record
+      exists in doc/decisions. The spike and its record are in-change work; an
+      adapter-contract change also owes a decision record per the repo rule."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G4 (telemetry under v2.x): extraction exists over the opencode store
+      with schema delivery.harness.telemetry.v1 and per-record model identity;
+      v2.x store shape, per-seat model attribution, and version stamping must be
+      verified and pinned, without a schema break (OQ-M3-07: additive only)."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G5 (conformance): the conformance registry covers the six-scenario
+      classification floor for two harnesses but has no version-window refusal
+      scenario and no opencode v2.x profile-propagation case; AC requires
+      conformance against the harness port."
+    type: info
+    date: "2026-11-17"
+  - text: "Open question Q-06 (opencode version window) in GH-342 is unanswered; its
+      stated default therefore applies: current minor line at delivery time plus
+      one previous minor, unsupported versions refuse with a typed error.
+      Observed harness version at intake: opencode v2.2.5."
+    type: info
+    date: "2026-11-17"
+  - text: "No contradiction requiring human input found: M3 keeps opencode as the
+      only delivery harness while the delivered claude-code adapter stays
+      registered as a generated-artifact/harness surface and is simply not
+      extended in this change. Blueprint wording 'degrade with a typed refusal'
+      (README) and 'refuse with a typed error' (ticket AC) resolve to a typed
+      refusal."
+    type: info
+    date: "2026-11-17"
+  - text: "Anticipated doc impacts for phase 7:
+      doc/spec/features/feature-harness-adapters.md (version window, typed
+      refusal, profile propagation, v2.x integration mode), possibly a new
+      feature spec section for integration mode, doc/decisions/<TDR>-* for the
+      integration-mode and adapter-contract decisions, and
+      doc/planning/oss-tooling milestone status markers."
+    type: info
+    date: "2026-11-17"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through the commit primitive with
+      conventional subjects and body/footer lines <= 100 chars; gate commands
+      recorded in pm-notes MUST use TMPDIR=$PWD/tmp/tmpdir; PR targets
+      main-tools and stays open (merge authority: CEO)."
+    type: info
+    date: "2026-11-17"
+  - text: "dor_check iteration 1: NOT_READY (19 findings: 3 critical, 8 major, 6
+      minor, 2 nit). Verdict artifact: readiness-review/readiness-iter-1.md.
+      Remediation reopened specification, test_planning, and delivery_planning."
+    type: info
+    date: "2026-11-17"
+  - text: "DoR critical findings: (1) real opencode v2.2.5 store schema lacks
+      work_item_ref/harness_version columns and the config default store path is
+      absent, so fixtures modelled a synthetic shape and AC-F5-1 could pass
+      while production lands zero rows; (2) AC-F6-1/AC-F6-2 assert a
+      telemetry-refusal surface that does not exist and NG-9 forbids adding one;
+      (3) per-seat telemetry fields are dropped by the state-layer payload
+      allowlist in packages/core/src/state/harness-telemetry.ts, which is in no
+      plan phase."
+    type: info
+    date: "2026-11-17"
+  - text: "DoR major findings: RSK-1 confirmed worse than assumed (v2.2.5 exposes no
+      OC_*_AGENT_*_MODEL; models resolve through opencode's own config surface);
+      the per-spawn record seam is missing from the environment builder;
+      detail.harness is blocked by the closed envelope detail type; the version
+      probe contract is unpinned ('opencode v2.2.5' vs fixtures '2.2.5');
+      TC-006's 5s probe bound is unprovable; AC-N1-1 self-contradicts; no
+      Definition of Done; TC-010 phase conflict."
+    type: info
+    date: "2026-11-17"
+  - text: "First-pass analysis trusted the delivered extractor's SQL rather than the
+      installed harness store, so three artifacts encoded a store shape the real
+      v2.2.5 database does not have. Adversarial readiness review against the
+      live store caught it before delivery. Standing lesson: for a harness
+      integration change, inspect the installed harness's real store and real
+      CLI output first, then write requirements."
+    type: retro
+    date: "2026-11-17"
+  - text: "Commit primitive requires repo-local binaries on PATH: commitlint is
+      resolved by bare name, so `jaiship phase complete` fails
+      commit.commitlint-failed unless node_modules/.bin is on PATH. Appending
+      (never prepending) node_modules/.bin keeps the installed jaiship
+      resolution intact."
+    type: retro
+    date: "2026-11-17"
+  - text: "New untracked decision records cannot be committed standalone: the
+      deterministic commit-message validator matches any XXX-NNN token, so a
+      TDR/ADR id in the composed template subject (derived from the top staged
+      path) is rejected as an invented tracker reference. Precedent GH-275
+      (TDR-0016) and GH-322. TDR-0041 therefore stays untracked until delivery
+      Phase 1, where a lower-sorting path takes the template subject."
+    type: blocker
+    date: "2026-11-17"
+  - text: "Decision recorded: TDR-0041
+      (doc/decisions/TDR-0041-harness-dispatch-outcome-envelope-detail.md, R2,
+      Proposed — human decides at PR review). The failure-envelope detail slot
+      gains one harness member (kind, observedVersion|null, versionVerdict
+      inside|outside|indeterminate, mode omitted when unresolved), present only
+      on the four new pre-session harness refusals, additive within
+      delivery.result.v1."
+    type: decision
+    date: "2026-11-17"
+  - text: "Adjudication of plan conflicts after 1: NOT_READY remediation: (a)
+      TDR-0041's declaration, projection, pins, validator, fixture and doc
+      sentence land in Phase 2 while the behaviour file spans Phases 4 and 7 —
+      accepted, because the record itself already names that file as push-later
+      scope and the behaviour cannot exist before the refusals do; (b)
+      feature-dispatch-engine.md lands with the declaration in Phase 2 rather
+      than with the emitter in Phase 4 — accepted, the declaration is the
+      contract and phase 7 reconciles the page; (c) the test plan's 'unchanged
+      suites' list is superseded by the plan's owned Phase-5 updates for the
+      opencode telemetry suites, corrected by a test-plan erratum; (d) AC-F2-2's
+      change-side link rests on the Phase-1 spike evidence and these pm-notes
+      decisions, not on a spec edit; (e) pm-notes decisions/notes are
+      PM-authored — the coder only needs the file in staging scope; (f) the
+      store-override layer stays a Phase-5 obligation resolved through the
+      configuration environment source, not a new ambient read; (g) TC-011 and
+      TC-042 ownership follows 'the phase that first makes the suite green',
+      which is a rule-based deviation from the test plan's suggestion with no
+      oracle change."
+    type: decision
+    date: "2026-11-18"
+  - text: "dor_check iteration 1 remediation complete: spec revised (23 to 26 ACs,
+      four refusal identities, observed-store requirements, DoD section), test
+      plan revised (41 to 45 TCs, fixtures rebuilt from the observed store,
+      deadline seam pinned), plan revised (8 phases, 45/45 TCs, 26/26 ACs,
+      validate + lint plan both valid). Re-running the gate as iteration 2."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check iteration 2: NOT_READY (13 findings: 3 critical, 3 major, 5
+      minor, 1 nit, 1 partial carry-over). Verdict artifact:
+      readiness-review/readiness-iter-2.md. Iteration-1 findings 1-16, 18 and 19
+      are resolved; 17 is partially resolved. Remediation reopens specification,
+      test_planning, and delivery_planning."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR iteration 2 critical findings: (C1) seat to spawn mapping is
+      undefined and 'per-seat models' is unsatisfiable on the chosen carrier —
+      opencode run takes single-valued --agent/--model and the store holds one
+      agent/model per session, so a spawn binds exactly one seat and nothing in
+      F-3 says which; (C2) TC-011 asserts three agent/model pairs on one spawn,
+      which only a recording double can satisfy, so the suite would be green
+      while the production argv is invalid; (C3) attribution reaches undeclared
+      files (contracts/closeout.ts, domain/closeout.ts, cli/src/edge.ts,
+      golden/regenerate.ts, golden/telemetry.json, capsule-latency.test.ts,
+      closeout-composition-facts.test.ts), so Phase 5 cannot commit green under
+      declared-scope staging."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR iteration 2 also flagged: Phase 7.5 claims a Phase-4-created
+      behaviour file that Phase 4 does not scope (M1, challenging adjudication
+      (a)); a Phase-7 gate runs a non-existent dispatch-contract.test.ts (M2);
+      AC-F3-4's 'harness does not recognise' has no production catalogue source
+      and the only observed read is a second child process colliding with the
+      single-probe exception (M3); plus minors on DoD verifiability, review of
+      decision records, self-deferrable ACs, section 21 ownership claims, the
+      section 10 disclosure wording, and a nit on Appendix C accuracy."
+    type: info
+    date: "2026-11-18"
+  - text: "Adjudication of iteration-2 PM challenges: adjudication (a) is withdrawn
+      — the plan must scope the behaviour file in the phase that creates it;
+      adjudication (g) stands for TC-042 but not for TC-011, whose oracle is the
+      defect, not its ownership. Adjudications (b), (c), (d), (e) and (f) are
+      upheld; (f) must additionally name the override variable and the config
+      path."
+    type: decision
+    date: "2026-11-18"
+  - text: "Decision recorded: TDR-0040 (R2, Proposed — human decides at PR review).
+      One spawn binds exactly one seat; N seats are N spawns, N sessions, N row
+      sets; the seat resolves from the spawn's agent identity; exactly one
+      --agent (the agent identity, never the seat name) and one --model per
+      invocation; the run's recorded binding supplies seat and resolved model
+      beside the store's observed agent and model. Amended (A-1/A-2/A-3) so a
+      role-less spawn binds nothing at any seat count, the unassigned-agent
+      refusal discloses through the bounded error summary and remediation hint
+      with no envelope member and no new identity, and the field literals are
+      contract obligations rather than copied names."
+    type: decision
+    date: "2026-11-18"
+  - text: "Adjudication of the plan's remaining conflicts after iteration 2: (h)
+      TC-015 stays in Phase 5 because its oracle reads the recorded binding and
+      the null-seat rows; (i) the closeout session-facts source moving from a
+      work-item query to the run's attempt record is accepted, and a delivery
+      that records no held identities yields the delivered skipped-gap outcome
+      rather than a session list; (j) harness-mutants.test.ts spanning Phases 5
+      and 6 is scheduling only, with each phase stating its half; (k) daemon
+      lane seat attribution is explicitly out of scope for this change and stays
+      behind the undeclared-semantic-edit escalation trigger."
+    type: decision
+    date: "2026-11-18"
+  - text: "dor_check iteration 2 remediation complete: spec (26 ACs, DEC-13/14,
+      TDR-0040 applied, DoD narrowed, sections 21 and 10 corrected, Appendix C
+      corrected), test plan (46 TCs, TC-011 re-cut to one pair per spawn, TC-046
+      added for the probe construction site), plan (8 phases, 46/46 TCs, 26/26
+      ACs, validate + lint both valid, capsule and telemetry route files
+      declared). TDR-0040 amended by its author. Re-running the gate as
+      iteration 3."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check iteration 3: NOT_READY with Pause Required — a human scope
+      decision is needed, so delivery is stopped. Verdict artifact:
+      readiness-review/readiness-iter-3.md. Iteration-2 findings 1-13 are
+      verified resolved; the seat model, refusal projections, telemetry route,
+      gate feasibility and AC/TC/phase arithmetic all passed re-verification."
+    type: info
+    date: "2026-11-18"
+  - text: "Blocking finding (critical, needs the owner): no shipped invocation names
+      an agent through the harness port. HarnessSpawnInput has no agent,
+      spawnArgs carries no --agent, the dispatch command has no flag, and the
+      scripts that do name an agent (deliver-ticket.sh, ceo-loop.sh,
+      opencode-session.sh) exec opencode directly. So the ticket AC 'dispatch
+      through the installed harness port runs with the resolved profile' has no
+      production path today, and DoD clause 4 / TC-045's mandatory live
+      observation cannot be executed as scoped."
+    type: blocker
+    date: "2026-11-18"
+  - text: "Three remaining findings are artifact-remediable once the scope question
+      is answered: the ports v1 contract inventory fixture is not declared in
+      any Phase-2 scope or gate; the plan adds observedModel and agentRole as
+      new record fields although they are the delivered model and agent, while
+      null agent/model rows still have no representation; and the run whose held
+      identities supply attribution is undefined at the closeout capture point,
+      which no TC models for a two-attempt work item."
+    type: info
+    date: "2026-11-18"
+  - text: "Adjudication (k) is corrected: the daemon lane files are touched by
+      Phases 5 and 7 for the record-shape halves; what stays out of scope is
+      daemon-level seat attribution (no seat resolution or claim on the
+      supervisory path)."
+    type: decision
+    date: "2026-11-18"
+  - text: "Three DoR iterations produced a materially better artifact set but the
+      gate has now surfaced a scope question it cannot settle: the headline AC
+      assumes a production path that does not exist. Iterating further on the
+      artifacts would bake in an answer the owner has not given, so the correct
+      move is to stop and ask rather than to narrow the ticket's AC
+      unilaterally."
+    type: retro
+    date: "2026-11-18"
+  - text: "SCOPE DECISION (resume, owner-directed continuation): the owner directed
+      delivery to proceed through pr_creation without selecting one of the three
+      options, so the recorded default applies — option 2, narrow the claim. The
+      propagation contract is proven at the harness-port boundary for a spawn
+      that names an agent (exactly one --agent and one --model, one seat per
+      spawn), and the shipped role-less dispatch path is disclosed as
+      unresolved-seat rather than claiming a resolved profile. AC-F3-1, DoD
+      clause 4, TC-HARNESS-045 and the plan's Phase-4 premise are narrowed to
+      match. Adding an agent-naming surface to dispatch stays out of scope and
+      is surfaced at PR review as a deliberate reduction of the ticket's
+      headline AC."
+    type: decision
+    date: "2026-11-18"
+  - text: "Iteration-3 findings to remediate: (1) the production agent source —
+      resolved by the scope decision above; (2) observedModel/agentRole
+      duplicate the delivered model/agent while null agent/model rows have no
+      representation; (3) the attribution scope across dispatch attempts at the
+      closeout capture point is undefined; (4) the ports v1 contract inventory
+      fixture must be declared and gated in Phase 2; (5) section 10 overclaims
+      the detail member for the reused identity and the scripted projection; (6)
+      TC-041 must name four records; (7) Phase 5 must gate the harness-contract
+      and privacy-literals test files; (8) pm-notes decisions must carry the
+      four record entries; (9) Appendix A must show which blueprint refusal was
+      dropped; (10) adjudication (k) wording must match the daemon record-shape
+      edits."
+    type: info
+    date: "2026-11-18"
+  - text: "Resume sync: merged origin/main-tools (GH-293 engine-first operations, 75
+      files) into the change branch. One conflict in doc/decisions/00-index.md,
+      resolved as a row union. The merge exposed a decision-record id collision:
+      main-tools now owns TDR-0031 (engine-first evaluation surfaces, GH-293),
+      so this change's envelope record was renumbered TDR-0031 -> TDR-0041 (file
+      renamed, front matter id, the TDR-0040 links and 61 references across the
+      spec, plan, test plan and pm-notes). The readiness-review history keeps
+      the id it reviewed, deliberately."
+    type: info
+    date: "2026-11-18"
+  - text: "Post-merge integration fact for delivery: packages/cli/src/production.ts
+      moved in GH-293; the harness block is now around lines 1751-1800, and
+      harnessFor(kind) gained an engine-path consumer (~2681) beside the
+      registry (~2390). The Phase-4 binding change must keep those callers
+      working."
+    type: risk
+    date: "2026-11-18"
+  - text: "Adjudication of the plan's iteration-3 residuals: (l) an absent observed
+      agent/model is represented by one additive marker member with a closed
+      axis vocabulary plus the delivered empty-string placeholder and the
+      delivered absence warning, never by making the delivered non-null fields
+      nullable — DEC-4 forbids widening them and a nullable pair would be a
+      larger delivered-contract change than this ticket needs; (m) the
+      invalid-session-identity supersession and the bounded attempt-ledger
+      truncation are stated in the spec so the taxonomy and the union scope are
+      not left implicit; (n) the union's identity cap is CAPSULE_MAX_SESSIONS
+      (64), the cap the checkpoint actually applies; (o) the readiness review
+      history keeps the record id it reviewed, so it is intentionally stale
+      after the TDR-0031 to TDR-0041 renumbering."
+    type: decision
+    date: "2026-11-18"
+  - text: "dor_check iteration 4: NOT_READY (3 major, 2 minor, 3 nit). Verdict
+      artifact: readiness-review/readiness-iter-4.md. Iteration-1..3 findings
+      are all verified resolved, including the DEC-15 settlement. New blockers:
+      the installed harness moved to opencode v2.3.2 while every artifact pinned
+      2.2.x+2.1.x; the caller's agent identity had no declared carrier, so the
+      resolution rule was provable only by a test-built fixture; and the
+      observed-axis absence representation had no criterion."
+    type: info
+    date: "2026-11-18"
+  - text: "Quality gate run after the sync merge (TMPDIR=$PWD/tmp/tmpdir pnpm
+      check): lint, format:check and typecheck PASS; test FAILED with 4 failures
+      — one genuine (TC-PRIVACY-020: absolute home paths in this change's spec,
+      now redacted to home-relative notation) and three load-sensitive
+      cascades/timeouts that pass in isolation (privacy-ci-wiring,
+      prior-identity-hermetic). Remaining stages unverified because the chain
+      stops at test."
+    type: info
+    date: "2026-11-18"
+  - text: "Iteration-4 remediation: spec v1.4 (window re-derived to 2.3.x+2.2.x
+      under DEC-1's rule as applied at delivery time, 27 ACs with the new
+      AC-F5-7 for observed-axis absence, additive agent-identity member declared
+      as the caller's carrier, privacy paths redacted, DEC-16 added), test plan
+      rev 1.6 (47 TCs, new TC-047, window matrix re-derived, TC-028 narrowed,
+      seat oracles extended, TC-011/015 now assert the caller-supplied agent),
+      plan (47/47 TCs, 27/27 ACs, both contract members declared once in Phase 2
+      with a no-later-member rule, feature-closeout added to Phase 8, validate +
+      lint both valid)."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check iteration 5: NOT_READY (1 major, 5 minor, 4 nit). All facets
+      pass except cross-artifact consistency and decision capture, both on the
+      single major: TDR-0040 still described a one-member carrier while the
+      settled design is two. Everything else was minor or nit."
+    type: info
+    date: "2026-11-18"
+  - text: "Iteration-5 remediation: TDR-0040 amended (A-4 — the caller supplies the
+      agent identity on its own additive optional member, the binding member
+      carries the resolver's return value, both in the contract phase, shipped
+      dispatch sets neither); spec nits (DoD clause 6 split into construction vs
+      invocation sites, section 1 qualified to the port boundary, Appendix C
+      figures refreshed); test plan (TC-011 empty-string rule, TC-047
+      absence-marker property, stale 41 figure); plan (harness-contract phase
+      rule narrowed to the harness surface, Phase-5 gate re-runs the Phase-4
+      propagation suite, agent-divergence reserved for a stated observed agent,
+      Phase 2.1 cites TDR-0040 A-4 beside DEC-16). validate + lint both valid."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check iteration 6: READY — all ten facets PASS, no critical or major
+      gap. Verdict artifact: readiness-review/readiness-iter-6.md. Five
+      non-blocking findings ride delivery: TDR-0040 Alternative 3's leftover
+      single-carrier sentence; three second-order sentences attributing the
+      binding to the caller; the empty-string agent boundary enforced nowhere;
+      Phase 1.3 needing the adapters-contract record to be reference-only so the
+      carrier gains no fourth home; and an Appendix C figure drift covered by
+      the observation-not-constant rule."
+    type: info
+    date: "2026-11-18"
+  - text: "dor_check passed after six adversarial iterations. The sequence cost a
+      lot of wall-clock. Every round found at least one real defect (a synthetic
+      store shape, an invented AC surface, a dropped payload field, a seat
+      cardinality the CLI cannot express, a version window that aged out, and a
+      carrier that made the headline rule unfalsifiable), so the gate was not
+      ceremony — but three of those followed from writing requirements before
+      observing the installed harness. Observing first would have collapsed two
+      iterations."
+    type: retro
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 1 (decision records, spike evidence,
+      independent review): commit 1be1e49a; gate `bun test` decision-record +
+      doc-conformance + fixture-privacy = 32 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 2 (contract layer): commit 79746a0b; gate
+      `pnpm typecheck` + 10 suites + error-table-sync + exports-parity = 336
+      pass, sync 153/153, parity OK."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 3 (pure evaluation): commit f66a9d48; gate
+      `pnpm typecheck` + 7 suites + 3 controls + ambient-globals = 85 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 4 (dispatch path): commit 8c8d7550; gate
+      `pnpm typecheck` + 14 suites + 5 controls = 83 + 156 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 5 (attribution and per-seat telemetry,
+      including the production admission wiring and the observed-store extractor
+      rewrite): commit 031ec80d; gate `pnpm typecheck` + 29 named suites/checks
+      = 190 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 6 (conformance split and honesty battery):
+      commit 4cd235e3; gate `pnpm typecheck` + conformance/checks/structure
+      battery = 274 pass, 39 mutant tests."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 7 (recorded-outcome disclosure): commit
+      8744e748; gate `pnpm typecheck` + 13 suites = 117 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 8 (docs reconciliation, live observation,
+      release): commit 8f2ff139; gate `plan validate`, `lint plan`, `pnpm
+      check`, range gate, doc-distribution, changesets = all green."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery boundary: `jaiship phase complete GH-335 delivery` landed as
+      f4140153. Post-boundary remediation commits: ce9899df (error-table-sync
+      literals), e1a65b16 (depcruise tier rule), 2e2720bb (privacy-literal path
+      in spike evidence), 2afbf380 (mirror counts + changeset)."
+    type: info
+    date: "2026-11-18"
+  - text: "Aggregate gate after delivery: `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0
+      — lint, format:check, typecheck, test, boundaries, memory, prompt
+      conformance, help-guide coverage and exports parity all green; 10554 pass
+      / 4 skip / 0 fail across 1348 files. Branch-range commit gate
+      `./scripts/lint-commit-range.sh --base main-tools` = PASS, 37 commits, 0
+      offending. doc-distribution and changesets-group green."
+    type: info
+    date: "2026-11-18"
+  - text: "Live observation recorded per DoD clause 4, re-recorded in Phase 9
+      through the delivered port path (the first record was a raw CLI invocation
+      and was withdrawn as evidence): a harness-port spawn with caller-supplied
+      agent `coder` / `deepseek/deepseek-flash` on opencode v2.3.2, with the
+      resolved binding recorded on the attempt; the landed row carries version
+      2.3.2, agent/model agreement, seat `coder-seat`, sourced durations (4460
+      ms), a reported non-zero cost and a no-tool-source warning."
+    type: info
+    date: "2026-11-18"
+  - text: "Declared gaps, corrected after Phase 9 remediation and the review's F-11:
+      the plan's `tests/fixtures/harness/scenarios/` folder does exist — only an
+      additional file under it was not needed, because the extension executor
+      supplies its facts inline with an equivalent data path;
+      `OpencodeBindingSeams` is now re-exported from the adapters harness barrel
+      (F-9 closed, so the fixture's barrel import resolves for real); and
+      `doc/00-index.md` WAS updated in cbf3b236 — an earlier note in this file
+      claiming it was untouched was wrong."
+    type: info
+    date: "2026-11-18"
+  - text: "Phase 10 gate result as it actually ran: `pnpm check` EXIT=0 — 10573 pass
+      / 4 skip / 0 fail across 1349 files, with boundaries, memory, prompt,
+      help-guide coverage and exports parity green; declared Phase-10 suites
+      9+9+9 pass plus doc-conformance 19 pass; broader affected set 125 pass / 0
+      fail; range gate PASS over 41 commits; `plan validate` and `lint plan`
+      valid. A later independent re-run by the reviewer produced one failing
+      suite (dispatch-attempts-ref, 5861 ms against a 5000 ms bound, 26/26 in
+      1.96 s alone); the failing identity has changed in every run across three
+      iterations, which is environmental load sensitivity, not a regression.
+      Recorded trap: an unset TMPDIR fails ci-baseline-parity with a
+      cross-device git clone hardlink, so the documented
+      `TMPDIR=$PWD/tmp/tmpdir` invocation is load-bearing."
+    type: info
+    date: "2026-11-18"
+  - text: "Accepted deviations recorded for the Phase-9 and Phase-10 scope
+      declarations: Phase 9 touched contracts/harness.ts and app/dispatch.ts
+      because the delivered provider-kind widening and the attempt-stage detail
+      clamp are the pre-session refusal path's own contract surface, plus the
+      two fail-closed inventories that depend on any contracts export; Phase 10
+      adds contracts/index.ts re-exports and the same inventories for its two
+      new names. No iteration modified an earlier phase. Phase 10's task 10.2
+      therefore stands as an accepted deviation rather than an undeclared edit."
+    type: decision
+    date: "2026-11-18"
+  - text: "Review iteration 3: PASS (spec compliance PASS, plan compliance PASS, 11
+      non-blocking findings). Verdict artifacts: review/review-iter-3.md and
+      review-iter-3.yaml. Remaining notes are maintainability items: Phase-10
+      scope.files omits nine carried files; a memoisation comment overclaims;
+      the F-5 source-text guard is double-escaped and cannot match its regex
+      form; the spec revision log says no DEC count change while adding DEC-18;
+      F-11 (edge.ts projections) and F-12 carry-overs remain unrecorded in
+      code."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 9 (code-review remediation, iteration 1):
+      commit 435c74f0; declared gate suites 83 pass / 0 fail; `pnpm typecheck`
+      green; `pnpm check` on that tree 10565 pass / 4 skip / 2 fail, both
+      load-sensitive and passing in isolation; range gate PASS over 40 commits."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 10 (code-review remediation, iteration 2):
+      commit 30f89e62; declared gate suites 9 + 9 + 9 pass plus doc-conformance
+      19 pass; broader affected set 125 pass / 0 fail; `pnpm check` EXIT 0 —
+      10573 pass / 4 skip / 0 fail across 1349 files; `plan validate` and `lint
+      plan` valid; range gate PASS over 41 commits."
+    type: info
+    date: "2026-11-18"
+  - text: "Phase-9 quality gates (authoritative run, TMPDIR=$PWD/tmp/tmpdir): `pnpm
+      check` PASS exit 0 — lint 2952 files (109 warnings, 0 errors),
+      format:check 2806 files, typecheck 6 packages plus tests/types, test 10573
+      pass / 4 skip / 0 fail across 1349 files, boundaries (458 modules), memory
+      (3 records / 8 areas / 0 errors), prompt conformance (5 prompts),
+      help-guide coverage, exports parity (5 publishables). Range commit gate
+      `./scripts/lint-commit-range.sh --base origin/main-tools`: VERDICT PASS,
+      42 commits in range, 0 offending, 0 distinct rules hit, remediation mode
+      none named, commitlint binary node_modules/.bin/commitlint with origin
+      repository-local. Doc distribution: OK, 96 in-scope docs, no drift."
+    type: info
+    date: "2026-11-18"
+  - text: "Phase 9 gate result as it actually ran (the finding was that no result
+      was recorded): the declared gate suites ran 83 pass / 0 fail; `pnpm
+      typecheck` green; `pnpm check` on the remediated tree reported 10565 pass
+      / 4 skip / 2 fail, where both failures are load-sensitive subprocess tests
+      (TC-WIRE-002's 5 s spawn of check:privacy-literals and TC-BIN-084's
+      preloaded run) and both pass in isolation (14 pass / 16.6 s and 5 pass /
+      50.2 s respectively). The branch-range commit gate passed over 40
+      commits."
+    type: info
+    date: "2026-11-18"
+  - text: "PR-review carry-over from the independent decision review: TDR-0040
+      predates DEC-17/AC-F5-7 (no invalid-identity outcome and no single-seat
+      empty-string criterion; A-5/A-6 suggested), and TDR-0040/TDR-0043 both
+      speak to the expressibility and binding-attachment homes. Records were not
+      edited; all four remain Proposed for human acceptance at the PR."
+    type: risk
+    date: "2026-11-18"
+  - text: "Second decision-record id collision, found on the first PR sync merge:
+      GH-338 landed TDR-0032..TDR-0035 on main-tools first, so this change's
+      four records were renumbered to TDR-0036 (seat/spawn), TDR-0037 (envelope
+      detail), TDR-0038 (integration mode) and TDR-0039 (adapter contract).
+      Files renamed, front-matter ids, cross-references, the decisions index and
+      register, this change's artifacts and the harness pages were updated
+      together. GH-338's own citations were deliberately left at 0032..0035.
+      Same rule that renumbered the envelope record 0031 to 0033 earlier today."
+    type: info
+    date: "2026-11-18"
+  - text: "Third decision-record id collision, found on the second PR sync merge:
+      main-tools moved to 1e7ecf07 (GH-339, PR #356) after the first sync and
+      GH-339 owns TDR-0036..TDR-0039 (cross-adapter parity matrix, tracker error
+      taxonomy, simulated stateful double, registration-only extensibility
+      proof), so this change's four records moved again to TDR-0040
+      (seat/spawn), TDR-0041 (envelope detail), TDR-0042 (integration mode) and
+      TDR-0043 (adapter contract). Files renamed, front-matter ids,
+      cross-references, the decisions index and register, this change's live
+      artifacts, the harness code and test comments and the harness pages were
+      updated together. GH-338's and GH-339's own citations were deliberately
+      left untouched. Rule unchanged: the record that lands on main-tools first
+      owns the id."
+    type: info
+    date: "2026-11-18"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/357 (base
+      main-tools, head feat/GH-335/opencode-harness-telemetry). Open, not draft,
+      not merged, no auto-merge — merge authority stays with the CEO. Title:
+      feat(GH-335): version-gate opencode and capture per-seat telemetry
+      (M3-S1). Body carries the DEC-15 scope boundary, the four Proposed records
+      needing acceptance (TDR-0040..0043), the non-blocking carry-overs and a
+      review reading order."
+    type: info
+    date: "2026-11-18"
+  - text: "Final state at hand-off: branch head bd9ab91a (final docs-only sync onto
+      main-tools tip 3bbd9466), 50 commits in range, merge-tree against the tip
+      clean, review iteration 5 PASS (0 critical / 0 high / 0 medium). Three
+      decision-record id collisions were absorbed during the two syncs — the
+      moving base kept claiming the ids this change had just allocated — so the
+      records moved 0032..0035 to 0036..0039 to 0040..0043. Each collision was
+      resolved by the first-to-land rule, and the other changes' records were
+      never touched."
+    type: info
+    date: "2026-11-18"
+  - text: "Process cost worth recording: the branch was synced three times because
+      main-tools advanced during a long delivery (GH-293, GH-338, GH-339, then
+      #362), and each advance moved the decision-record id frontier. Allocating
+      ids late in the change, rather than at authoring time, is what turned a
+      moving base into three renumbering sweeps. The cheaper pattern is to
+      allocate decision-record ids at the moment the record is first written and
+      to reserve the block on the base branch early."
+    type: retro
+    date: "2026-11-18"
+  - text: "Second sync merge onto current main-tools (GH-339 plus GH-338) resolved
+      as commit 1e554edc: seven content conflicts resolved as unions
+      (doc/00-index.md, doc/decisions/00-index.md, the glossary, the
+      conformance, ports and result-contract pages, and
+      doc/spec/nonfunctional.md), the four harness records renumbered 0036..0039
+      to 0040..0043. Review and readiness history is frozen at the ids each
+      iteration reviewed and is not renumbered with the live artifacts."
+    type: info
+    date: "2026-11-18"
+  - text: "Sync merge onto current main-tools (GH-338 plus three docs commits)
+      resolved as commit c4f519dc: eight content conflicts resolved as unions,
+      with both behaviours preserved in production.ts (this change's harness
+      composition mount and GH-338's transport selection). Re-verified after the
+      merge: `pnpm check` EXIT 0 — 10791 pass / 4 skip / 0 fail across 1359
+      files; range gate PASS over 45 commits, 0 offending."
+    type: info
+    date: "2026-11-18"

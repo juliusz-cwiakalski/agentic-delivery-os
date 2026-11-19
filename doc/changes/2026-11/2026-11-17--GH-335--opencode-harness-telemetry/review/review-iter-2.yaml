@@ -1,0 +1,273 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-335
+branch: feat/GH-335/opencode-harness-telemetry
+status: FAIL
+summary: >
+  The three iteration-1 blockers are closed and all 27 ACs pass. F-1's live
+  observation is now a genuinely different run through the delivered wrapper
+  (resolver output, recorded attempt, attribution union, verbatim capture row,
+  separate query_only store read; timestamps convert exactly, store agent/model
+  match the row, the warning set is exactly what the extractor emits). F-2 mounts
+  createHarnessProfilePort on the production opencode port with a byte-identical
+  role-less passthrough (DEC-15 intact). F-3 puts both refusal identities in their
+  correct homes with oracles; the HarnessFailure widening leaks nothing, keeps the
+  closed 13-code vocabulary, and preserves the delivered exit projection. The
+  touched suites are green (six runs, 27/34/79/34/48/51 tests, 0 fail each) and
+  typecheck, lint, boundaries,
+  and the 40-commit range gate pass. The FAIL is compliance, not code: Phase 9
+  records no gate result while its declared pnpm check exit is not green (two
+  load-only subprocess failures that pass in isolation); the current system spec
+  misstates the delivered mount (it says the shipped dispatch mounts no profile
+  wrapper); the closeout spec was not reconciled to the F-4/F-7 additions; the
+  wrapper adds an undeclared fourth refusal condition; and the stored-version
+  normalizer is a second authored grammar. A doc/evidence/decision Phase 10 is
+  appended; no behavioural AC remediation is needed.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 4
+  low: 5
+  info: 5
+spec_compliance: PASS
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-harness-adapters.md:285-289
+    message: >
+      The current system spec states that the shipped generic dispatch "composes
+      neither member and mounts no profile wrapper", and names
+      resolveHarnessAdmissionBinding a production caller of resolveBinding. Phase 9
+      mounts createHarnessProfilePort on the production opencode port
+      (packages/cli/src/production.ts:2937), so the first clause is now false, and
+      the admission helper still has no production caller. A reader of current
+      truth would conclude the F-2 mount is absent.
+    suggestion: >
+      @doc-syncer: reword to state that the dispatch composition mounts the wrapper,
+      which passes a role-less call through unchanged and binds nothing because the
+      shipped generic dispatch supplies no agent, and correct the helper claim
+      (test-facing helper, not a production caller).
+    suppressed: false
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-closeout.md:610-613; doc/spec/features/feature-telemetry-v2.md:41-75
+    message: >
+      The closeout spec's type summary omits CloseoutSessionFacts.observedVersion,
+      CloseoutTelemetryRuntime.extract.pinnedVersion, and
+      CloseoutTelemetryDisclosure.absences / unattributedAttempts /
+      attemptTruncation, all delivered in 435c74f0. The telemetry spec's captured-row
+      section also does not state the normalized stored-version stamp and drift or the
+      agent-switched/model-switched transitions.
+    suggestion: >
+      @doc-syncer: reconcile the three closeout definitions and the captured-row
+      section to the delivered shapes; no code change.
+    suppressed: false
+  - id: F-3
+    severity: high
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml:481,507-513
+    message: >
+      Phase 9's pm-notes entry names the plan phase and commit 435c74f0 but records no
+      gate result, and the only aggregate gate note (10554 pass / 0 fail) predates the
+      remediation. The post-remediation pnpm check is 10565 pass / 4 skip / 2 fail. The
+      failing pair is nondeterministic: the reported run failed privacy-ci-wiring
+      TC-WIRE-002 and prior-identity-hermetic TC-BIN-084, while an independent full
+      run reproduced the same totals with forbidden-literals "docs-scope lifetime"
+      (5 s git) and daemon-bounds "GH-238 reconciliation lane bound" (20 s). All four
+      pass in isolation (14/16.6 s, 5/50.2 s, 27/10.5 s, 3/4.9 s), so the failures are
+      load-only, but the phase gate is not green as written and nothing is recorded.
+      Gap type EVIDENCE_MISSING.
+    suggestion: >
+      @pm: add the standard "Delivery evidence, plan phase 9: commit 435c74f0; gate
+      ..." note recording the post-remediation pnpm check, the two load-only
+      subprocess failures with their isolation passes, and the 40-commit range-gate
+      PASS.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: api-contract
+    location: packages/cli/src/production.ts:1214-1233
+    message: >
+      When the profile context is unavailable the wrapper adds a fourth
+      pre-resolution refusal: config.value.invalid, field agent, summary "the
+      composition resolved no profile for a caller-supplied agent". The spec (section
+      8.2, DEC-17) enumerates only binding, unassigned, and invalid-identity for an
+      agent-bearing spawn, and the mount test locks the new condition in. It is
+      fail-closed but undeclared, and it classifies an unresolvable profile as an
+      invalid agent.
+    suggestion: >
+      @spec-writer/@coder: declare the condition in section 8.2 and section 10 (and
+      DEC-17) with its identity, or map it to a delivered profile identity
+      (provider.profile.absent or provider.profile.invalid) instead of
+      config.value.invalid on a valid agent.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: packages/adapters/src/harness/telemetry-opencode.ts:311-329
+    message: >
+      normalizeStoredVersion re-authors a version grammar (/^v?(\d+)\.(\d+)\.(\d+)$/)
+      although plan 9.7 says to normalize through normalizeHarnessVersion, and its
+      comment asserts the grammar "is not duplicated here" when it is. It also does
+      not enforce HARNESS_VERSION_MAX_CHARS, so a pathological stored version can
+      exceed the 32-character stamp bound. The contract probe pattern requires a
+      product token, so a bare-version normalizer is genuinely needed, but it belongs
+      in the contracts tier as the single home.
+    suggestion: >
+      @coder/@spec-writer: add or import one bounded bare-version normalizer in
+      @delivery-os/core/contracts, or record the 9.7 deviation with its reason and the
+      enforced bound.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-plan.yaml (phase 9 scope.files)
+    message: >
+      Commit 435c74f0 changes four files outside Phase 9's declared scope:
+      packages/core/src/app/dispatch.ts (the detailOf provider-to-config narrowing),
+      packages/core/src/contracts/harness.ts (the provider kind/code widening),
+      tests/fixtures/ports/v1-contract-inventory.json (HarnessCaptureAbsenceCount), and
+      tests/behaviour/harness-telemetry-extraction-failure.test.ts (the TC-024
+      comment). All are declared in phases 2/4/5/7, so the overall plan covers them,
+      but the contract widening should have been attributed to task 9.2. Gap type
+      SCOPE_DEVIATION.
+    suggestion: >
+      @pm: record the four files as an accepted Phase 9 scope deviation; do not rewrite
+      earlier phases.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/harness-profile-composition-mount.test.ts:168-173
+    message: >
+      The production mount is proven by a source-text toContain assertion plus a direct
+      createHarnessProfilePort unit test; no test drives createProductionComposer or
+      resolveProfileContext, so the context half (real configuration to selected
+      profile) has no oracle, and a future divergence between resolveProfileContext
+      and nominationPredicate would be unobserved.
+    suggestion: >
+      @coder: add a composition-seam test that drives the composer's context resolver
+      (or extract and test it), replacing the source-grep where feasible.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: high
+    category: maintainability
+    location: packages/cli/src/production.ts:1106-1155,1178-1260,2784-2812
+    message: >
+      The unassigned/invalid mapping is implemented twice (helper and wrapper) rather
+      than the wrapper delegating to the helper, and resolveProfileContext re-parses
+      configuration and re-runs selectProfile instead of using the nominated profile
+      (plan 9.1 said "using the nominated profile/selection"), so the binding's
+      profileName can differ from the attempt's recorded providerProfile if selection
+      is non-deterministic or config changes between admission and spawn.
+    suggestion: >
+      @coder: have the wrapper delegate to resolveHarnessAdmissionBinding, and resolve
+      the context from the nominated decision (or document why a re-resolution is
+      safe).
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: robustness
+    location: packages/cli/src/production.ts:1124-1140,1230-1250
+    message: >
+      Refusal summaries interpolate the unbounded caller-supplied agent and the
+      declared seat list without sanitization or a length bound; only the dispatch
+      envelope's boundLastMessage bounds it, so a direct port caller can receive an
+      unbounded or multi-line summary (NFR-4's bounded, single-line requirement).
+    suggestion: >
+      @coder: clamp and single-line the summary at the port boundary, or bound the
+      agent identity where it enters the port.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml:496-513
+    message: >
+      The DoD-clause-4 note still says "sourced durations (5428 ms)", the withdrawn
+      raw-CLI run, while the re-recorded observation is 4460 ms with a different
+      session. The F-11 pm-notes correction is also uncommitted at review time.
+    suggestion: >
+      @pm: update the duration and session to the re-recorded run and commit the
+      pm-notes correction with the review artifacts.
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/cli/src/edge.ts:2502-2520
+    message: >
+      The edge F-4 projection uses Map<string, number> and "reason as never", erasing
+      the closed reason type; the same absence-count projection is written in both the
+      edge and packages/core/src/domain/closeout.ts.
+    suggestion: >
+      @coder (optional): type the map as HarnessAbsenceReason and factor the
+      projection once.
+    suppressed: false
+  - id: F-12
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-live-observation.md:128
+    message: >
+      Section 5 attributes the section-3 versus section-4 token/cost delta to a
+      "point-in-time read", but the timestamp pair is byte-identical; the delta is the
+      row's per-message sums versus the session row's aggregate columns. No value is
+      false; the explanation is imprecise.
+    suggestion: >
+      @pm: state the two sources explicitly.
+    suppressed: false
+  - id: F-13
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/harness/telemetry-opencode.ts:246-252
+    message: >
+      messageSql now selects assistant and switch rows under one LIMIT, so a
+      switch-heavy session can displace usage rows from the bounded read that the
+      previous type='assistant' filter would have included. The bound is rows, not
+      usage rows.
+    suggestion: >
+      @coder (optional): note the bound's basis in the extractor comment and spec.
+    suppressed: false
+  - id: F-14
+    severity: info
+    confidence: high
+    category: test-quality
+    location: full-suite run
+    message: >
+      The full suite reproduces 10565 / 4 skip / 2 fail, but the failing pair is
+      nondeterministic: TC-WIRE-002 (5 s spawn) and TC-BIN-084 (preloaded run) in the
+      reported run; forbidden-literals "docs-scope lifetime" (5 s git) and
+      daemon-bounds (20 s) in an independent run. All four pass in isolation (14/16.6
+      s, 5/50.2 s, 27/10.5 s, 3/4.9 s). Pre-existing load-sensitive test hygiene, not a
+      GH-335 regression.
+    suggestion: >
+      Record in the Phase 9 gate evidence with the nondeterminism noted; no code change.
+    suppressed: false
+  - id: F-15
+    severity: info
+    confidence: high
+    category: commit-discipline
+    location: commit 435c74f0
+    message: >
+      The remediation subject docs(GH-335) - update doc/changes/... mislabels a
+      12-source-file change as docs; branch subjects remain the commit primitive's
+      mechanical chore(GH-335) - update <path>. Conventional and range-gate PASS.
+    suggestion: none
+    suppressed: false
+reviewed_at: 2026-11-18T18:30:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

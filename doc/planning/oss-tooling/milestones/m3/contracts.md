@@ -13,8 +13,12 @@ pluggable.
   tokens, cost, timings.
 - `capabilities() -> CapabilitySet`
 
-Typed refusals: `harness.version.unsupported`, `harness.mode.unavailable`,
-`harness.telemetry.absent`.
+Typed refusals (delivered, GH-335): `harness.version.unsupported`,
+`harness.version.unknown`, `harness.mode.unavailable`, and
+`harness.profile.model-unrepresentable`. Telemetry absence is a classification
+inside the delivered capture and read envelopes, not a refusal identity. The
+version window is pinned data (`2.3.x` plus `2.2.x` at delivery) and the delivered
+integration mode is `per-invocation-private-server`.
 
 ## TrackerPort (primitives)
 

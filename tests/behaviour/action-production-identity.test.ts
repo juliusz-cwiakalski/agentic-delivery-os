@@ -66,6 +66,7 @@ const invokeInFreshComposition = async (
   runId: string,
 ): Promise<Invocation> => {
   const composer = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: { HOME: root, PATH: "/usr/bin" },
     cwd: root,
     homeDirectory: root,

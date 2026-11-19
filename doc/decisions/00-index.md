@@ -63,12 +63,20 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0033](TDR-0033-github-adapter-completion-contract-extensions.md) | TDR | GitHub Adapter Completion Contract Extensions — `merge-delivery-request`, Pipeline-Job Timings, and a Bounded Log-Excerpt Read | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
 | [TDR-0034](TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md) | TDR | Review-Thread Discussion Bodies — A Bounded Adapter-Local Read with the Core Contract Left Body-Free | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
 | [TDR-0035](TDR-0035-github-issues-transition-mapping-injected-workflow-map.md) | TDR | GitHub Issues Transition Mapping — The Core `WorkflowMap` as Injected, Seeded Construction Data | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
-| [TDR-0036](TDR-0036-install-lifecycle-composed-command-family.md) | TDR | Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0037](TDR-0037-self-contained-binary-build-identity.md) | TDR | Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0038](TDR-0038-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0039](TDR-0039-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0040](TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0036](TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md) | TDR | Cross-Adapter Parity Matrix, Declared-Difference Register, and the Parity Gate | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0037](TDR-0037-tracker-error-taxonomy-delivered-identities.md) | TDR | Tracker Error Taxonomy — Parity Assertion over Delivered Identities, Not a New Closed Identity Set | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0038](TDR-0038-simulated-stateful-tracker-double-declared-effects.md) | TDR | Simulated Stateful Tracker Double — A Runtime-Neutral In-Memory Tenant with Declared Effects | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0039](TDR-0039-registration-only-adapter-extensibility-proof.md) | TDR | Registration-Only Adapter Extensibility — Five Supplied Items, a Provider-Name-Free Core, and a Synthetic Registration Proof | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0040](TDR-0040-harness-seat-spawn-cardinality-and-seat-resolution.md) | TDR | Harness Seat–Spawn Cardinality and Seat Resolution — One Spawn Binds Exactly One Seat (Agent Identity → `--agent`, Resolved Model → `--model`, N Seats ⇒ N Spawns), No Configuration-Document Carrier, and Seat/Resolved-Model Telemetry Identity Beside the Harness-Reported Agent and Model | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0041](TDR-0041-harness-dispatch-outcome-envelope-detail.md) | TDR | Harness Dispatch-Outcome Disclosure on the Failure-Envelope `detail` Slot — One Declared `harness` Member (`kind`, `observedVersion`, `versionVerdict`, `mode`) on the Four Pre-Session Harness Refusals, Additive Within `delivery.result.v1` | Proposed | 2026-11-17 | Juliusz Ćwiąkalski |
+| [TDR-0042](TDR-0042-opencode-integration-mode.md) | TDR | opencode Integration Mode — One Declared Default Selected Never Inferred | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0043](TDR-0043-opencode-harness-adapter-contract.md) | TDR | opencode Harness Adapter Contract — Version Window, Mode, Propagation Reference, and Observed-Store Telemetry | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) | TDR | Install Lifecycle Surface — One Composed `install` Family Inside the Prompt-Required Composition | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) | TDR | Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 
-Decisions TDR-0036 … TDR-0040 are the binding design of change GH-346; their owner
+Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.

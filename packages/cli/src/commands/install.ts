@@ -1,5 +1,5 @@
 /**
- * `install` — the composed install lifecycle family (GH-346 F-4..F-13; TDR-0036).
+ * `install` — the composed install lifecycle family (GH-346 F-4..F-13; TDR-0044).
  *
  * Five entry points registered unconditionally in both composed programs:
  * `install`, `install status`, `install rollback`, `install uninstall`, and
@@ -392,7 +392,7 @@ const applyPathBlock = (
 };
 
 /**
- * The replacing install (TDR-0040 §2). The agreement gate is evaluated BEFORE
+ * The replacing install (TDR-0048 §2). The agreement gate is evaluated BEFORE
  * staging, so a no-op creates no staging file at all.
  */
 const runInstall = async (

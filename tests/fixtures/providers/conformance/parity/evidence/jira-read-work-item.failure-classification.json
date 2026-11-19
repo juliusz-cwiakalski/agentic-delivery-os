@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "jira-read-work-item",
+  "class": "failure-classification",
+  "referenceValue": "tracker.auth.rejected",
+  "adapterValue": "tracker.transport.failed",
+  "reproduces": true
+}

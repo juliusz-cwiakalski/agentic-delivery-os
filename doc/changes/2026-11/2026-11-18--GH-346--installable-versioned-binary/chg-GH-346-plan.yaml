@@ -7,6 +7,19 @@
 # no progress log. Plan-phase progress is a pm-notes `notes:` entry naming the
 # plan phase id, the commit hash, and the test result.
 #
+# POST-MERGE INTEGRATION (2026-11-19): this plan was authored against the
+# pre-GH-335 base and then merged with `main-tools`, which carries GH-335's four
+# additive `harness` rows (and GH-339's parity records). The count arithmetic in
+# the comments below is re-derived against the integrated tree: the error-table
+# total moves 153 -> 164 (GH-335's 153 + this change's eleven `install` rows), the
+# delivered pin 152 -> 163, the sync-suite arithmetic `BASELINE_ROWS.length + 119`
+# -> `+ 130`, the corpus stays 81 (GH-335 added no corpus rows; 70 + 11), the
+# `harness` kind reads thirteen rows, the supervision baseline slice moves
+# 146 -> 150 and the live set 157 -> 161. The five binding decision records are
+# renumbered TDR-0036..TDR-0040 -> TDR-0044..TDR-0048 because `main-tools` already
+# holds TDR-0036..TDR-0043. Phases, scope, AC/TC acceptance and gates are
+# unchanged; only the integrated counts and the record ids move.
+#
 # SOURCES (single source of truth; this plan invents no requirement):
 #   - Spec:      ./chg-GH-346-spec.md (v1.6: F-1..F-16; DM-1..DM-8;
 #                NFR-1..NFR-17; 34 ACs AC-F1-1..AC-F16-1; DEC-1..DEC-14;
@@ -16,7 +29,7 @@
 #                documentation obligations (TWELVE rows, the branding-seam
 #                restatement and the three count-bearing pages among them), the
 #                contract surfaces this change moves
-#                and §16's "error-table count surface" (149 -> 160, the seven named
+#                and §16's "error-table count surface" (153 -> 164, the seven named
 #                delivered count/membership suites, the four result-contract prose
 #                facts); §17 acceptance criteria with the ticket traceability and
 #                verification intent; §18 rollout order; normative Appendix A
@@ -54,7 +67,7 @@
 #                `previous`, the artifact the swap would install"; the ordered
 #                refusal set is stated to be evaluated BEFORE the daemon stop; the
 #                branding-seam page's KPI, NFR-9 and summary identity-literal
-#                sentences are named as false and restated; and TDR-0040 §2 step 5
+#                sentences are named as false and restated; and TDR-0048 §2 step 5
 #                carries its destination qualification.
 #                v1.4 was the DoR iteration-4 remediation, and its three
 #                corrections are carried forward here:
@@ -80,15 +93,15 @@
 #                rows and the zero-write claim are unchanged.
 #                v1.5 closed the one cross-artifact disagreement v1.4 carried rather
 #                than smoothed: ROLLBACK'S `previous` LEG IS CHECKED FOR PRESENCE ONLY.
-#                TDR-0040 §4 declares the limit — DM-2 stores no slot digest, so the
+#                TDR-0048 §4 declares the limit — DM-2 stores no slot digest, so the
 #                slot leg is never knowable: the run takes the record's `previous` at
 #                its word and the refusal is about a MISSING name, never a WRONG one —
 #                and spec v1.5 restated it across F-8, F-9, §8.1, §12, DEC-13, Appendix
 #                C.4 and AC-F8-2. THE RULING IS `MISSING REFUSED / WRONG ADMITTED BY
-#                DECLARED LIMIT`, sourced to TDR-0040 §4 (amended). The wrong-name cell
+#                DECLARED LIMIT`, sourced to TDR-0048 §4 (amended). The wrong-name cell
 #                of rollback's pair precondition (TC-INST-042 arm (g)) is therefore a
 #                DECLARED-LIMIT PROCEED, not a refusal. OQ-TP-9 / TR-11 is RESOLVED on
-#                that reading (TDR-0040 §4 is the authority, and test plan v1.5
+#                that reading (TDR-0048 §4 is the authority, and test plan v1.5
 #                rewrote TR-11 as the live risk arm (g) guards — the limit being
 #                hardened into an undeclared refusal). The four causes are stated as
 #                MISSING-NAME conditions only: absent; unreadable; a readable `current`
@@ -130,7 +143,7 @@
 #                the 36 declared rows at v1.6 (35 at v1.2 — 32 that move, one
 #                contingent row and two no-edit control rows, plus the row for the
 #                three count-bearing pages); §8.3 open questions OQ-TP-1..9, all nine
-#                RESOLVED — OQ-TP-9 by TDR-0040 §4 and spec v1.6 (a missing `previous`
+#                RESOLVED — OQ-TP-9 by TDR-0048 §4 and spec v1.6 (a missing `previous`
 #                name refuses, a wrong one is admitted by declared limit), so no
 #                question reaches delivery open).
 #                v1.3 is the same iteration-3 remediation on the test side, and it
@@ -144,7 +157,7 @@
 #                gain the three count-bearing pages and the branding page's
 #                KPI/NFR/summary identity-literal sentences; §7.2 gains the omitted
 #                in-file moves, a row for the three count-bearing pages, and the
-#                corrected 146-row pre-change comparison (143-row events baseline +
+#                corrected 150-row pre-change comparison (143-row events baseline +
 #                3 `events` rows).
 #                v1.4 was the iteration-4 remediation on the test side, and it keeps
 #                the case count at 84: TC-INST-111/112's ENTRYPOINT row gains the
@@ -174,12 +187,12 @@
 #                record and the disk, and NO rollback run.
 #   - PM record: ./chg-GH-346-pm-notes.yaml (milestone "M4: Jaiship-native
 #                delivery", story M4-S1; the five binding decisions
-#                TDR-0036..TDR-0040; the clarify-scope defect evidence; the
+#                TDR-0044..TDR-0048; the clarify-scope defect evidence; the
 #                staging fact that the five TDRs are untracked; the retro that
 #                lifecycle commands need `PATH="$PWD/node_modules/.bin:$PATH"`).
-#   - Decisions: doc/decisions/TDR-0036 (composed family; amended at DoR
-#                iteration 1), TDR-0037 (artifact and identity), TDR-0038 (stability
-#                and dev exclusion), TDR-0039 (compatibility check), TDR-0040
+#   - Decisions: doc/decisions/TDR-0044 (composed family; amended at DoR
+#                iteration 1), TDR-0045 (artifact and identity), TDR-0046 (stability
+#                and dev exclusion), TDR-0047 (compatibility check), TDR-0048
 #                (upgrade/rollback/uninstall/purge boundaries; amended at DoR
 #                iterations 1, 2, 3, 4 and 5 — §4 now carries the record/disk
 #                pair-inversion precondition AND its declared limit: the `previous`
@@ -209,11 +222,11 @@
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1 — the untracked decision records):
 #   Five decision records are UNTRACKED in the worktree at plan time:
-#     doc/decisions/TDR-0036-install-lifecycle-composed-command-family.md
-#     doc/decisions/TDR-0037-self-contained-binary-build-identity.md
-#     doc/decisions/TDR-0038-install-target-stability-and-dev-build-exclusion.md
-#     doc/decisions/TDR-0039-installed-binary-state-format-compatibility-check.md
-#     doc/decisions/TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md
+#     doc/decisions/TDR-0044-install-lifecycle-composed-command-family.md
+#     doc/decisions/TDR-0045-self-contained-binary-build-identity.md
+#     doc/decisions/TDR-0046-install-target-stability-and-dev-build-exclusion.md
+#     doc/decisions/TDR-0047-installed-binary-state-format-compatibility-check.md
+#     doc/decisions/TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md
 #   The commit primitive stages only plan-declared scope plus the change folder,
 #   so a phase that declares nothing for them would leave them untracked and the
 #   change would ship without its binding design. Phase 1 therefore declares the
@@ -272,8 +285,8 @@
 #       entrypoint-version, identity-override) is re-run with no edit (SCOPE
 #       DECLARATION RULE above); and
 #       `tests/fixtures/events/error-table-baseline.json` is READ, never edited —
-#       it holds 143 rows and the comparison adds the 3 `events` rows (146), so the
-#       `+ 115` arithmetic base moves in the SUITE, not in this fixture.
+#       it holds 143 rows and the comparison adds the 3 `events` rows (150), so the
+#       `+ 119` arithmetic base moves in the SUITE, not in this fixture.
 #     - The DOCUMENTATION OBLIGATION SET (§16's rows and AC-F16-1's page set) is
 #       exhausted by two phases over TWELVE declared documentation paths. Phase 6
 #       owns the local install guide, the entrypoint page, the doc-distribution
@@ -367,7 +380,7 @@
 #       doc/spec/features/feature-result-contract.md and the corpora fixtures.
 #       Adding the `install` kind therefore cannot be done in two commits: phase 2
 #       declares the kind and all ELEVEN rows, documents them, moves the declared
-#       table total 149 -> 160, moves the closed two-segment allowlist 65 -> 66
+#       table total 153 -> 164, moves the closed two-segment allowlist 65 -> 66
 #       (exactly one row, `install.dev-build`, is kind-first two-segment) and adds
 #       one corpus row per identity (corpusRows 70 -> 81). THE TOTAL IS PINNED BY
 #       NINE DELIVERED COUNT/MEMBERSHIP SUITES — the two mirrors plus the seven
@@ -379,7 +392,7 @@
 #   (3) DOCUMENTED-TABLE AND REFERENCE-PAGE OBLIGATIONS RIDE WITH THEIR GATE.
 #       Because of (2), doc/spec/features/feature-result-contract.md moves in
 #       phase 2 (documented rows plus the four prose facts — the `DOMAIN_KINDS`
-#       enumeration, the exact-code classification chain, the 149 -> 160 total and
+#       enumeration, the exact-code classification chain, the 153 -> 164 total and
 #       the 65 -> 66 allowlist sentence), and
 #       because of (1) the M4 reference page doc/planning/oss-tooling/milestones/
 #       m4/commands/install.md moves in phase 2. These are the only two
@@ -459,7 +472,7 @@
 #   record precondition with its explicit zero-write claim, stated as the
 #   record/disk PAIR-INVERSION test — `current` against the destination, `previous`
 #   for PRESENCE only — whose wrong-name cell (arm (g)) is the RESOLVED
-#   DECLARED-LIMIT PROCEED ruled by TDR-0040 §4 and spec v1.6), AC-F14-1 and AC-F14-2
+#   DECLARED-LIMIT PROCEED ruled by TDR-0048 §4 and spec v1.6), AC-F14-1 and AC-F14-2
 #   (phase 5: the content predicate with its record-free arm, and the uninstaller's
 #   probe-sourced detection with its no-binary arm), AC-F16-1 (phase 6: the
 #   branding-seam page joins its page set with the scoped five-site wording and the
@@ -517,7 +530,7 @@
 #   explained by a missing name — that is what discriminates the pair predicate from a
 #   "`previous` exists" rule — and arm (f2) carries the daemon-log assertion: the same
 #   refused run repeated WITH `--stop-daemon` leaves the EMPTY ordered daemon log.
-#   ARM (g) IS THE WRONG-NAME CELL, AND IT IS A DECLARED-LIMIT PROCEED (TDR-0040 §4;
+#   ARM (g) IS THE WRONG-NAME CELL, AND IT IS A DECLARED-LIMIT PROCEED (TDR-0048 §4;
 #   spec v1.6 F-8/F-9/§8.1/§12/DEC-13/AC-F8-2; test plan v1.6): a readable `current`
 #   record whose `current` names the destination artifact A while `previous` names X,
 #   a NON-OCCUPANT, PRESENTS the name the precondition requires, and the run PROCEEDS
@@ -610,7 +623,7 @@
 #   any of them). ALL NINE ARE RESOLVED, and none is carried into delivery open.
 #   OQ-TP-9 / TR-11 (the wrong-name cell of rollback's pair precondition) was the one
 #   question this plan routed instead of deciding, and it is now RESOLVED by its own
-#   authority: TDR-0040 §4 (amended) and spec v1.6 / test plan v1.6 rule that a
+#   authority: TDR-0048 §4 (amended) and spec v1.6 / test plan v1.6 rule that a
 #   MISSING `previous` name refuses and a WRONG one is ADMITTED BY DECLARED LIMIT,
 #   because DM-2 stores no slot digest and the slot leg is therefore never knowable.
 #   TC-INST-042 arm (g) carries the PROCEED — exit 0, the swap performed, the record's
@@ -826,7 +839,7 @@
 #         - Replacing is atomic and never in place: the destination is only ever
 #           replaced by a rename of a verified staged copy, so the invariant ("a
 #           runnable artifact exists at a known path") holds at every instant, and
-#           a failure leaves the destination untouched. TDR-0040's C-1 forbids
+#           a failure leaves the destination untouched. TDR-0048's C-1 forbids
 #           breaking a working install; a completed replace does not.
 #         - Nothing claims the capability that is missing: no phase-2 case asserts a
 #           slot (TC-INST-020/021 are phase 3's), and `install status` reports slot
@@ -855,7 +868,7 @@
 #       compatibility verdict is computed per run. A phase that needs an ambient
 #       value takes it from the injected environment record instead.
 #   D6. THE ALIAS REFUSAL NAMES THE INVOKED IDENTITY, THE OWNING ROLE AND THE
-#       DOCUMENTED REMEDY — AND NOTHING ELSE (TDR-0036 §3 as amended). AC-F4-2 no
+#       DOCUMENTED REMEDY — AND NOTHING ELSE (TDR-0044 §3 as amended). AC-F4-2 no
 #       longer requires the owning binary's name; the earlier "the alias imports
 #       the primary bin's declared name" mechanism is IMPOSSIBLE and withdrawn
 #       (readiness iteration 1, finding 2).
@@ -900,7 +913,7 @@
 #           lives anywhere else" claim is scoped. Its scoped phrase moves in
 #           tests/checks/doc-conformance.test.ts in the same commit. PHASE 6
 #           DECLARES BOTH; D6 neither forbids nor requires them.
-#         - TDR-0036 §3 owns the refusal's CONTENT (invoked identity, owning role,
+#         - TDR-0044 §3 owns the refusal's CONTENT (invoked identity, owning role,
 #           remedy); phase 2 declares only the boolean fact that carries it.
 #       The diagnostic is therefore narrow, and this is the sentence to keep:
 #       PHASE 6's coder editing feature-branding-seam.md is doing its documented
@@ -976,10 +989,10 @@
 #   in the §6.3 shape naming the commit and the exact counts (26 families, 66
 #   two-segment identities, eleven `install` rows).
 #
-# INCONSISTENCIES: none blocking between spec v1.6, the five TDRs (TDR-0036 as
-#   amended at DoR iteration 1; TDR-0040 as amended at DoR iterations 1, 2, 3, 4 and 5
+# INCONSISTENCIES: none blocking between spec v1.6, the five TDRs (TDR-0044 as
+#   amended at DoR iteration 1; TDR-0048 as amended at DoR iterations 1, 2, 3, 4 and 5
 #   — its §4 carries both the pair-inversion precondition and the declared limit, so
-#   the record and the spec now say the same thing — and TDR-0038 §5 read alongside
+#   the record and the spec now say the same thing — and TDR-0046 §5 read alongside
 #   its destination table) and test plan v1.6.
 #   Ten points are resolved rather than papered over:
 #   (a) DM-8, as corrected in spec v1.1, states that the admission predicate
@@ -1019,12 +1032,12 @@
 #       rollback performs no daemon action, and the plan's ordered set (phase 3)
 #       and TC-INST-026/042 assert that order rather than a read-the-record-first
 #       reading.
-#   (h) TDR-0040 §2 step 5 IS QUALIFIED, AND THE QUALIFICATION IS WHAT PHASE 3
+#   (h) TDR-0048 §2 step 5 IS QUALIFIED, AND THE QUALIFICATION IS WHAT PHASE 3
 #       IMPLEMENTS (DoR iteration 3 finding 4, persisting from iteration 2). The
 #       record's step 5 now promotes ONLY a differing regular compiled artifact,
 #       discards a launcher with the slot unchanged, and replaces a symlink
 #       without promoting it (slot unchanged, target untouched) — mirroring
-#       TDR-0038 §5 and spec Appendix B/C.2. Phase 3's contract states the
+#       TDR-0046 §5 and spec Appendix B/C.2. Phase 3's contract states the
 #       qualification, so the phase contract and the record agree sentence for
 #       sentence.
 #   (i) THE SUPERVISION PAGE'S ORDINAL IS NOT A COUNT (spec v1.6 §16's supervision
@@ -1038,7 +1051,7 @@
 #       false current-truth sentence on a specification page and is refused by name.
 #   (j) ROLLBACK'S RECORD PRECONDITION IS THE RECORD/DISK PAIR-INVERSION TEST, AND
 #       `recordState` IS A DIFFERENT COMPARISON (spec v1.6 F-8/F-9/§8.1/DEC-13/
-#       Appendix E; TDR-0040 §4 as amended at iterations 4 and 5; DoR iterations 4
+#       Appendix E; TDR-0048 §4 as amended at iterations 4 and 5; DoR iterations 4
 #       and 5). The run proceeds only when the record is readable, names the
 #       artifact at the DESTINATION in `current`, and carries a `previous` name —
 #       checked for PRESENCE only — and refuses `install.record.unreadable` otherwise,
@@ -1052,7 +1065,7 @@
 #       set states this once. OQ-TP-9 / TR-11 IS RESOLVED, and it is resolved on the
 #       record's own side: the `previous` leg is never knowable because DM-2 stores no
 #       slot digest, so a MISSING name refuses and a WRONG one is ADMITTED BY DECLARED
-#       LIMIT (TDR-0040 §4's declared limit; spec v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2).
+#       LIMIT (TDR-0048 §4's declared limit; spec v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2).
 #       TC-INST-042 therefore carries the causes in step 3, (d), (e) and (f1)/(f2) and
 #       carries arm (g) as a PROCEED: exit 0, the swap performed, the record's new
 #       `current` carrying the claim X VERBATIM with `previous` the displaced destination
@@ -1071,7 +1084,7 @@ tier:
   name: full
   phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
-    - "A phase boundary leaves the family count, the reference-page set, the coverage inventory, the declared error-table total (149 -> 160) or the two-segment allowlist between the old and the new value (AC-F15-1, AC-F15-2, NFR-14)"
+    - "A phase boundary leaves the family count, the reference-page set, the coverage inventory, the declared error-table total (153 -> 164) or the two-segment allowlist between the old and the new value (AC-F15-1, AC-F15-2, NFR-14)"
     - "A pinned count is relaxed to a floor, a family is removed to make a gate green, or a delivered row or assertion is renamed instead of moved exactly (NFR-14, test plan §4.4)"
     - "A delivered specification page still states the outgoing error-table total, delivered-row count, allowlist size, `BASELINE_ROWS` arithmetic or mounted family count at a phase boundary, or a page's sentence moves without its number (AC-F15-2, AC-F16-1, NFR-14)"
     - "The supervision page's `25th`/`twenty-fifth` family ordinal is rewritten to `26th`, or a phrase table, stale-phrase list or leftover scan requires its absence — `install` is appended as the 26th and `supervise` stays the 25th, so an ordinal move is a new false statement, not a count move (AC-F16-1, NFR-17; DoR iteration 4 finding 2)"
@@ -1084,7 +1097,7 @@ tier:
     - "The uninstall residual set and purge's removal set differ at one machine state, or purge removes a root without its confirmation input (AC-F10-1, AC-F10-2, RSK-11)"
     - "Any dry-run writes, creates a directory, or takes a daemon action (AC-F11-1, NFR-5)"
     - "The install record carries a credential, is written in place instead of staged and renamed, or a reader throws on an absent or damaged record (AC-F8-1, AC-F8-2, NFR-12)"
-    - "Rollback's `previous` leg is hardened into an undeclared refusal — a slot digest or slot-derived identity field is added to `install.record.v1`, `previous` is compared with the slot's occupant instead of being taken at its word, or a recorded claim is normalized to the occupant — since TDR-0040 §4 declares a wrong name admitted and only a missing one refused, and the declared limit must stay declared and observable (AC-F8-2, TR-11, NFR-12; spec v1.6)"
+    - "Rollback's `previous` leg is hardened into an undeclared refusal — a slot digest or slot-derived identity field is added to `install.record.v1`, `previous` is compared with the slot's occupant instead of being taken at its word, or a recorded claim is normalized to the occupant — since TDR-0048 §4 declares a wrong name admitted and only a missing one refused, and the declared limit must stay declared and observable (AC-F8-2, TR-11, NFR-12; spec v1.6)"
     - "A new configuration key, environment variable, state record kind, event topic or state-root write is introduced (NG-11, NFR-13)"
     - "The shell installer or uninstaller gains lifecycle semantics, deletes the other surface's artifacts, or fails to name the owner (AC-F14-1, AC-F14-2, NG-12)"
     - "The artifact build joins the package build chain, an installer array, or the aggregate gate, or the change adds a CI job (RSK-15, test plan §1.2)"
@@ -1233,11 +1246,11 @@ phases:
         # `Proposed` status; it is declared so a status/typo touch stages with
         # them, and an unchanged index produces at most an advisory plan-diff
         # finding.
-        - doc/decisions/TDR-0036-install-lifecycle-composed-command-family.md
-        - doc/decisions/TDR-0037-self-contained-binary-build-identity.md
-        - doc/decisions/TDR-0038-install-target-stability-and-dev-build-exclusion.md
-        - doc/decisions/TDR-0039-installed-binary-state-format-compatibility-check.md
-        - doc/decisions/TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md
+        - doc/decisions/TDR-0044-install-lifecycle-composed-command-family.md
+        - doc/decisions/TDR-0045-self-contained-binary-build-identity.md
+        - doc/decisions/TDR-0046-install-target-stability-and-dev-build-exclusion.md
+        - doc/decisions/TDR-0047-installed-binary-state-format-compatibility-check.md
+        - doc/decisions/TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md
         - doc/decisions/00-index.md
       folders:
         - doc/decisions
@@ -1265,7 +1278,7 @@ phases:
   # `install uninstall`, `install purge`) registered unconditionally in the
   # production composer with their runtime (home, process facts, file-system port,
   # clock, daemon status read, git worktree read) and composed for BOTH bins.
-  # OWNERSHIP (D6, TDR-0036 §3 as amended): the primary bin declares the one
+  # OWNERSHIP (D6, TDR-0044 §3 as amended): the primary bin declares the one
   # boolean role fact `ownsInstallation: true` at the process edge; the alias bin
   # declares NOTHING and the composer defaults to NOT owning; the fact threads
   # bin -> BinLauncherOptions -> the production composer and is independent of the
@@ -1358,54 +1371,54 @@ phases:
   # family code.
   #
   # THE ERROR-TABLE COUNT SURFACE MOVES IN THIS COMMIT (spec §16, coupling 2). The
-  # eleven rows take the declared table from 149 to 160 machine identities, so NINE
+  # eleven rows take the declared table from 153 to 164 machine identities, so NINE
   # delivered count/membership suites move with the domain — the two mirrors
   # (tests/structure/error-table.test.ts: DOMAIN_KINDS gains `install`, eleven row
-  # tests, the allowlist 65 -> 66, and every 149 total becomes 160, including the
+  # tests, the allowlist 65 -> 66, and every 153 total becomes 164, including the
   # per-kind blocks that re-assert it; tests/checks/error-table-sync.test.ts:
-  # `sourceEntries`/`documentedRows` 149 -> 160 and the page-total assertion) and
+  # `sourceEntries`/`documentedRows` 153 -> 164 and the page-total assertion) and
   # the seven suites spec §16 names, each with its named move:
   #   tests/structure/cross-repository-contract.test.ts — the `additive` set gains
-  #     the eleven `install` codes, so `delivered` still equals the 146-ROW
+  #     the eleven `install` codes, so `delivered` still equals the 150-ROW
   #     PRE-CHANGE COMPARISON (the 143-row events baseline fixture PLUS the 3
   #     `events` rows), which is what the delivered assertion compares against —
-  #     NOT "the 149-row events baseline", a description that confuses the current
+  #     NOT "the 153-row events baseline", a description that confuses the current
   #     table total with the fixture and would make the expectation wrong;
   #     `DOMAIN_KINDS` becomes the baseline kinds + `events` + `install` and its
   #     length assertion moves +1 -> +2.
   #   tests/structure/supervision-error-family.test.ts — `DOMAIN_KINDS.at(-2)` /
   #     `.at(-1)` (today `supervise`/`metrics`) move to `.at(-3)`/`.at(-2)` because
   #     `install` appends and is the NEW TAIL (the tail is re-expressed, not
-  #     renumbered away); `live` moves 146 -> 157; `entries.slice(0, 146)` keeps its
-  #     index while indices 146..148 hold supervise/metrics and 149..159 hold the
+  #     renumbered away); `live` moves 150 -> 161; `entries.slice(0, 150)` keeps its
+  #     index while indices 150..152 hold supervise/metrics and 153..163 hold the
   #     eleven `install` rows.
-  #   tests/checks/supervision-error-socialization.test.ts — `sourceEntries` 149 ->
-  #     160, `documentedRows` 149 -> 160, `corpusRows` 70 -> 81.
-  #   tests/structure/ceremony-contract.test.ts — the page phrase `149 machine
-  #     identities` becomes `160 machine identities`.
+  #   tests/checks/supervision-error-socialization.test.ts — `sourceEntries` 153 ->
+  #     164, `documentedRows` 153 -> 164, `corpusRows` 70 -> 81.
+  #   tests/structure/ceremony-contract.test.ts — the page phrase `153 machine
+  #     identities` becomes `164 machine identities`.
   #   tests/structure/dispatch-attempts-taxonomy.test.ts — the declared total
-  #     149 -> 160 (the assertion and the docblock it narrates); the four
+  #     153 -> 164 (the assertion and the docblock it narrates); the four
   #     `dispatch` rows and the no-`attempts.*` assertion are unchanged.
   #   tests/structure/verify-gates-suite-map-contract.test.ts — the
-  #     `sourceEntries`/`documentedRows` pair 149/149 -> 160/160.
-  #   tests/behaviour/ceremony-nonregression.test.ts — `ERROR_TABLE` length 149 ->
-  #     160; the two-row `ceremony` count is unchanged.
+  #     `sourceEntries`/`documentedRows` pair 153/153 -> 164/164.
+  #   tests/behaviour/ceremony-nonregression.test.ts — `ERROR_TABLE` length 153 ->
+  #     164; the two-row `ceremony` count is unchanged.
   # THE MOVES INSIDE THE DECLARED FILES THAT THE ROWS ABOVE DID NOT NAME (DoR
   # iteration 3 finding 6 — every one is a LOUD failure inside an already-declared
   # file, so this is precision, not silent drift; named so no coder has to discover
   # them from a red gate):
-  #   tests/checks/error-table-sync.test.ts — `BASELINE_ROWS.length + 115` becomes
-  #     `BASELINE_ROWS.length + 126` (34 baseline rows + 126 = 160) in FOUR
+  #   tests/checks/error-table-sync.test.ts — `BASELINE_ROWS.length + 119` becomes
+  #     `BASELINE_ROWS.length + 130` (34 baseline rows + 130 = 164) in FOUR
   #     occurrences at THREE sites: the length guard and its failure message, the
   #     reported counts block, and the `sourceEntries` assertion. A miss reads
-  #     `table length 160 != baseline + 115`.
+  #     `table length 164 != baseline + 119`.
   #   tests/structure/error-table.test.ts — the TWO per-kind TUPLE STUBS carry
-  #     `entries: 149, documented: 149, delivered: 148, allowlist: 65` (one stub
-  #     omits `delivered`; both move to 160 / 160 / 159 / 66); the THREE
-  #     `the same 149 identities` assertions become `the same 160 identities`; the
+  #     `entries: 153, documented: 153, delivered: 152, allowlist: 65` (one stub
+  #     omits `delivered`; both move to 164 / 164 / 163 / 66); the THREE
+  #     `the same 153 identities` assertions become `the same 164 identities`; the
   #     THREE `exact two-segment allowlist of 65 declared identities` assertions
-  #     become 66; and the per-kind blocks carry FOUR `149 machine identities`
-  #     assertions, three of them beside the one "`149 identities`" doc assertion
+  #     become 66; and the per-kind blocks carry FOUR `153 machine identities`
+  #     assertions, three of them beside the one "`153 identities`" doc assertion
   #     the row already names — all four move, none is a title.
   #   tests/structure/supervision-mounting.test.ts — the tail positions move by one
   #     beyond the `.at(-1)` supervise assertion the row names:
@@ -1416,10 +1429,10 @@ phases:
   #   tests/structure/error-table.test.ts, THE LEFTOVER SCAN — `APPENDIX_D_FILES`
   #     gains doc/spec/features/feature-metrics.md and feature-supervise.md beside
   #     the already-listed feature-ceremony-runner.md, and the legacy token set
-  #     gains this change's outgoing whole forms (`toHaveLength(149)`,
-  #     `149 identities`, `149 machine identities`, `149 entries`,
-  #     `allowlist of 65` / `65 declared identities`, `BASELINE_ROWS.length + 115`).
-  #     The forms are matched WHOLE so the declared delta shapes `149 -> 160` and
+  #     gains this change's outgoing whole forms (`toHaveLength(153)`,
+  #     `153 identities`, `153 machine identities`, `153 entries`,
+  #     `allowlist of 65` / `65 declared identities`, `BASELINE_ROWS.length + 119`).
+  #     The forms are matched WHOLE so the declared delta shapes `153 -> 164` and
   #     `65 -> 66` do not trip the scan; this is what turns the count-bearing-page
   #     class into a gate rather than a review habit (spec v1.6 §16, and the
   #     mechanical-expression sentence that closes its class paragraph). THE SCAN
@@ -1433,16 +1446,16 @@ phases:
   #     `supervise`/`metrics` move one place earlier. They are named here for the same
   #     reason the row above is: they are loud inside an already-declared file, and a
   #     coder who moves only the count assertions meets them one at a time.
-  #   TWO TEST TITLES still name 149 (one in each mirror). A title is ALLOWED to
+  #   TWO TEST TITLES still name 153 (one in each mirror). A title is ALLOWED to
   #     keep a historical number, but the total it narrates moved, so each title is
   #     either moved or left — the grep rule below makes the coder choose
   #     deliberately rather than miss it.
   # THE GREP RULE INSIDE EACH DECLARED FILE — applies to all NINE count/membership
   #   suites, the three count-bearing pages below and the two result-contract prose
-  #   moves: search every declared file for EACH outgoing token — `149`, `148`,
-  #   `65`, `+ 115`, the family count `25` where it means the mounted family count,
+  #   moves: search every declared file for EACH outgoing token — `153`, `152`,
+  #   `65`, `+ 119`, the family count `25` where it means the mounted family count,
   #   and the `at(-2)` metrics tail — and ACCOUNT FOR EVERY HIT in exactly one of
-  #   two ways: it MOVES to the new value (160 / 159 / 66 / + 126 / 26 / the
+  #   two ways: it MOVES to the new value (164 / 163 / 66 / + 130 / 26 / the
   #   appended tail position), or it is a TITLE, a docblock, or a literal naming
   #   something else and stays with a one-line reason. A hit that is neither is the
   #   half-move this phase's gate is designed to catch. No file is satisfied by
@@ -1464,8 +1477,8 @@ phases:
   # HALF-MOVE — page updated and mirror not, or mirror updated and page not — leaves
   # the sync gate RED at this boundary instead of passing quietly. The four
   # result-contract PROSE facts move in that same edit-set: the `DOMAIN_KINDS`
-  # enumeration, the exact-code classification chain, the `149 machine identities`
-  # total (-> 160), and the allowlist `65 -> 66` sentence.
+  # enumeration, the exact-code classification chain, the `153 machine identities`
+  # total (-> 164), and the allowlist `65 -> 66` sentence.
   #
   # THREE DELIVERED SPECIFICATION PAGES STATE THOSE SAME NUMBERS, SO THEY MOVE IN
   # THIS COMMIT TOO (spec v1.6 §16's count-bearing-page class and AC-F16-1's page
@@ -1477,16 +1490,16 @@ phases:
   # is exactly the silent-drift class this plan refuses — and the same commit
   # therefore gives the class its MECHANICAL expression (the leftover-scan move
   # named above):
-  #   doc/spec/features/feature-ceremony-runner.md — "two-way sync at 149 identities
-  #     and a 65-entry reserved two-segment allowlist", "Delivered at 149 identities
-  #     and a 65-entry allowlist", and "Two-way error sync, 149 identities,
-  #     65-entry allowlist" become 160 identities and a 66-entry allowlist.
-  #   doc/spec/features/feature-metrics.md — "the table holds 149 entries, 148
+  #   doc/spec/features/feature-ceremony-runner.md — "two-way sync at 153 identities
+  #     and a 65-entry reserved two-segment allowlist", "Delivered at 153 identities
+  #     and a 65-entry allowlist", and "Two-way error sync, 153 identities,
+  #     65-entry allowlist" become 164 identities and a 66-entry allowlist.
+  #   doc/spec/features/feature-metrics.md — "the table holds 153 entries, 152
   #     delivered rows, and 65 allowlisted two-segment codes, with the sync-suite
-  #     arithmetic at `BASELINE_ROWS.length + 115`", the "149 entries / 148
-  #     delivered / 65 allowlist / +115" row, and "The error-table counts (149 /
-  #     148 / 65 / +115) and the mounted family count (25) are pinned …" become
-  #     160 entries / 159 delivered / 66 allowlist / + 126, and 26. The last of the
+  #     arithmetic at `BASELINE_ROWS.length + 119`", the "153 entries / 152
+  #     delivered / 65 allowlist / +119" row, and "The error-table counts (153 /
+  #     152 / 65 / +119) and the mounted family count (25) are pinned …" become
+  #     164 entries / 163 delivered / 66 allowlist / + 130, and 26. The last of the
   #     three is the page that INSTRUCTS that a future identity or family addition
   #     moves these counts; this change is that addition, so the instruction is
   #     followed here rather than quoted. THIS PAGE CARRIES THE FAMILY COUNT MOVE:
@@ -1533,7 +1546,7 @@ phases:
   # Decision to close in this phase: the exact wording of the alias restriction in
   # the family help entry, and the exact rendering of the refusal's three facts
   # (invoked identity, owning role, documented remedy) — a single line, no owner
-  # name, no literal (D6, TDR-0036 §3 as amended). Failure mode: TC-INST-002's
+  # name, no literal (D6, TDR-0044 §3 as amended). Failure mode: TC-INST-002's
   # restriction assertion and TC-INST-004's single-line assertion fail by name; a
   # second line, an owner-name derivation, or a hard-coded owning-name literal
   # fails TC-INST-004 or TC-INST-107's literal inventory.
@@ -1544,7 +1557,7 @@ phases:
   # the plain and the working-name-override arm, with no owner-name derivation and
   # no new literal), AC-F4-3 (TC-INST-005, 006), AC-F5-1 (TC-INST-010), AC-F6-1
   # (TC-INST-013, 014), AC-F15-1 (TC-INST-100, 101, 102, 103, 104), AC-F15-2
-  # (TC-INST-105, 106; the table at 160 across the source, the documented page, the
+  # (TC-INST-105, 106; the table at 164 across the source, the documented page, the
   # corpora and the nine count suites, allowlist exactly 66). AC-F9-4's INSTALL-ARM
   # BEHAVIOUR is produced here (the step-1 daemon guard); its case evidence lands
   # with the cases that own it
@@ -1553,7 +1566,7 @@ phases:
   #
   # Gate (expected signal: exit 0 at every line; the parsed family list is exactly
   # the declared 26 in order, every prompt-required command has a page, the
-  # allowlist reads 66 with eleven `install` rows, and the declared total reads 160
+  # allowlist reads 66 with eleven `install` rows, and the declared total reads 164
   # in the source, the page, the corpora and all nine count suites):
   #   NOTE — the daemon guard ships in this phase's step 1, but its case evidence
   #   lands with the cases that own it: TC-INST-030's live-daemon gate arm is phase
@@ -1574,10 +1587,10 @@ phases:
   #   tests/structure/error-table.test.ts gains the class: `APPENDIX_D_FILES` gains
   #   feature-metrics.md and feature-supervise.md beside the already-listed
   #   feature-ceremony-runner.md, and the legacy token set gains THIS change's
-  #   outgoing whole FORMS (`toHaveLength(149)`, `149 identities`, `149 machine
-  #   identities`, `149 entries`, `allowlist of 65` / `65 declared identities`,
-  #   `BASELINE_ROWS.length + 115`) — matched as whole forms, so the declared delta
-  #   shapes `149 -> 160` and `65 -> 66` do not trip the scan. A page or suite left
+  #   outgoing whole FORMS (`toHaveLength(153)`, `153 identities`, `153 machine
+  #   identities`, `153 entries`, `allowlist of 65` / `65 declared identities`,
+  #   `BASELINE_ROWS.length + 119`) — matched as whole forms, so the declared delta
+  #   shapes `153 -> 164` and `65 -> 66` do not trip the scan. A page or suite left
   #   at the outgoing form therefore FAILS BY NAME at this boundary, and the class
   #   is caught by a gate the next time a domain lands rather than by a reviewer
   #   remembering three file names. The accounted-for grep below remains the
@@ -1592,7 +1605,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/prompt-conformance.ts     (check:prompt)
   #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/help-guide-coverage.ts    (check:help)
   #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts       (G6)
-  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                       (G1, binding: the family count, the help coverage, the error register, the declared total 149 -> 160 and the allowlist meet only here)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                       (G1, binding: the family count, the help coverage, the error register, the declared total 153 -> 164 and the allowlist meet only here)
   #
   # Commit: feat(GH-346): install family, admission gates and conformance surface
   # ---------------------------------------------------------------------------
@@ -1617,7 +1630,7 @@ phases:
         - packages/cli/src/production.ts
         - packages/cli/src/help.ts
         - packages/cli/src/help/prompt-required-commands.ts
-        # The owning-role FACT (D6, TDR-0036 §3 as amended): one BOOLEAN declared
+        # The owning-role FACT (D6, TDR-0044 §3 as amended): one BOOLEAN declared
         # at the process edge by the primary bin and threaded through
         # BinLauncherOptions into the production composer. The alias bin declares
         # nothing (the composer defaults to not owning), so it needs no edit and is
@@ -1642,8 +1655,8 @@ phases:
         - doc/planning/oss-tooling/milestones/m4/commands/install.md
         # THE THREE COUNT-BEARING PAGES (spec v1.6 §16's class rule, AC-F16-1's
         # page set, DoR iterations 3 and 4). Each states the outgoing numbers in
-        # the present tense — the ceremony page the 149/65 pair, the metrics page
-        # the 149/148/65/`+ 115` tuple and the `25` family COUNT, the supervise page
+        # the present tense — the ceremony page the 153/65 pair, the metrics page
+        # the 153/152/65/`+ 119` tuple and the `25` family COUNT, the supervise page
         # the 65-member ALLOWLIST only — and their numbers move in
         # THIS commit. The supervise page's `25th`-family statements are `supervise`'s
         # ORDINAL, are true before and after, and are NOT touched here: `install`
@@ -1670,8 +1683,8 @@ phases:
         # plus the two mirrors declared above (error-table.test.ts and
         # error-table-sync.test.ts) are the NINE suites the phase-2 G1 count surface
         # moves. Each is a
-        # named assertion MOVED, never relaxed: 149 -> 160, the `DOMAIN_KINDS` tail
-        # re-expressed, `live` 146 -> 157, `corpusRows` 70 -> 81, and the page
+        # named assertion MOVED, never relaxed: 153 -> 164, the `DOMAIN_KINDS` tail
+        # re-expressed, `live` 150 -> 161, `corpusRows` 70 -> 81, and the page
         # phrase moved with the page. The full per-suite mapping is in the phase
         # comment above; a half-move leaves the sync gate red.
         - tests/structure/cross-repository-contract.test.ts
@@ -1752,7 +1765,7 @@ phases:
   # `install` overwrites damage, `uninstall` removes what it can and reports the
   # block as unknown, `rollback` refuses `install.record.unreadable`). The replace
   # is the seven normative steps of Appendix B with the STEP-4 ARTIFACT-CONTENT
-  # AGREEMENT GATE (TDR-0040 §2 step 4, §2.1, §3 as amended): the destination is
+  # AGREEMENT GATE (TDR-0048 §2 step 4, §2.1, §3 as amended): the destination is
   # read, and if it is a REGULAR, non-empty, executable compiled artifact — never a
   # symlink — whose CONTENT equals the running artifact's, then the destination IS
   # this artifact, so the run STOPS with no staged copy, no destination rename, no
@@ -1778,8 +1791,8 @@ phases:
   # runnable artifact. The replace also carries the one-slot rule that admits only
   # a compiled artifact carrying an injected identity (a launcher is discarded with
   # a report naming its recorded target and is never promoted). THAT ONE-SLOT RULE
-  # IS TDR-0040 §2 STEP 5 AS QUALIFIED AT DoR ITERATION 3, and it now MIRRORS
-  # TDR-0038 §5 and spec Appendix B/C.2 sentence for sentence — only a DIFFERING
+  # IS TDR-0048 §2 STEP 5 AS QUALIFIED AT DoR ITERATION 3, and it now MIRRORS
+  # TDR-0046 §5 and spec Appendix B/C.2 sentence for sentence — only a DIFFERING
   # REGULAR COMPILED ARTIFACT is promoted into the slot; a delivered launcher is
   # DISCARDED with a report and the EXISTING SLOT IS LEFT UNCHANGED; a SYMLINK is
   # REPLACED (never written through) and is NOT PROMOTED, so the slot is unchanged
@@ -1794,7 +1807,7 @@ phases:
   # two renames in reverse order and is INVOLUTIVE. ROLLBACK'S REFUSALS ARE ONE
   # ORDERED SET, in THIS order — slot absent, then slot invalid, then the record
   # precondition — and the whole set is evaluated BEFORE ANY WRITE AND BEFORE THE
-  # DAEMON STOP (spec v1.6 F-8/F-9/§8.1 and TDR-0040 §4; DoR iteration 3 findings 3
+  # DAEMON STOP (spec v1.6 F-8/F-9/§8.1 and TDR-0048 §4; DoR iteration 3 findings 3
   # and 7). Because the record precondition is decided ahead of the stop, a REFUSED
   # ROLLBACK PERFORMS NO DAEMON ACTION EVEN WITH `--stop-daemon`: a `--stop-daemon`
   # run that refuses leaves the daemon RUNNING and the ordered daemon log EMPTY, not
@@ -1835,7 +1848,7 @@ phases:
   #   follows from what is knowable: the DESTINATION leg is knowable exactly when the
   #   invoked artifact is the one at the destination (the ordinary invocation), while
   #   the SLOT leg is NEVER knowable, because DM-2 stores no slot digest — so that
-  #   leg is presence-only by DECLARED LIMIT (TDR-0040 §4; spec v1.6).
+  #   leg is presence-only by DECLARED LIMIT (TDR-0048 §4; spec v1.6).
   #   THE FOUR CAUSES AND THE PAIR ARMS (test plan v1.6 §5.2.6). The causes are
   #   carried by TC-INST-042 steps 3, (d), (e) and (f), one step per cause and none
   #   shared: step 3 = the present-but-UNREADABLE record; step 4/arm (d) = the ABSENT
@@ -1853,7 +1866,7 @@ phases:
   #   the refusing pair legs and stay refusals; nothing else in the arm set refuses on
   #   the `previous` leg.
   #   ARM (g) IS THE WRONG-NAME CELL, AND IT IS A DECLARED-LIMIT PROCEED — a settled
-  #   reading, not an open ruling (OQ-TP-9 / TR-11 RESOLVED by TDR-0040 §4 as amended
+  #   reading, not an open ruling (OQ-TP-9 / TR-11 RESOLVED by TDR-0048 §4 as amended
   #   and spec v1.6 / test plan v1.6). The fixture is a readable `current` record whose
   #   `current` names the destination artifact A while its `previous` names X, an
   #   artifact that is NOT the slot's occupant P: PRESENT, and wrong. The arm asserts
@@ -1955,7 +1968,7 @@ phases:
   # CANDIDATE-RUN state is a
   # `recordState` report whose pair still holds — asserted as reported data, with no
   # rollback run (TC-INST-044 steps 7-8). Arm (g)'s direction is the SETTLED reading
-  # ruled by TDR-0040 §4 and spec v1.6: a missing name refuses, a wrong one is
+  # ruled by TDR-0048 §4 and spec v1.6: a missing name refuses, a wrong one is
   # admitted by declared limit — and its REPORT is the record's own claim (X in
   # `current`), never a slot read.
   # The daemon guard's INSTALL arm shipped in phase 2 (step 1's fourth gate); THIS
@@ -1977,7 +1990,7 @@ phases:
   # placement of the port's consultation inside the replace transaction, and the
   # reconciliation's reporting line (which condition it repaired and the previous
   # identity it recorded, or that none was available) — both delivery-bound. OQ-TP-9 /
-  # TR-11 is NOT on this list: it is RESOLVED before delivery by TDR-0040 §4 as
+  # TR-11 is NOT on this list: it is RESOLVED before delivery by TDR-0048 §4 as
   # amended and spec v1.6 — a MISSING `previous` name refuses, a WRONG one is admitted
   # by declared limit — and this phase implements the pair predicate on that reading,
   # with arm (g) asserting the proceed and the absence of any slot-digest comparison.
@@ -2014,7 +2027,7 @@ phases:
   # read), and `install status` reporting `current` per the record — with the
   # STRUCTURAL GUARD that the declared record field set carries no slot digest, no
   # slot-derived identity field, and the composition holds no `previous`-versus-slot
-  # comparison (TDR-0040 §4's declared limit; spec
+  # comparison (TDR-0048 §4's declared limit; spec
   # v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2; OQ-TP-9 / TR-11 RESOLVED). AC-F8-2's four
   # refusing causes are MISSING-NAME conditions and nothing else),
   # AC-F9-1 (TC-INST-030..037: 7/7 injected steps leave a runnable artifact at a
@@ -2201,7 +2214,7 @@ phases:
   # binary — becomes impossible by a classified refusal, and the delivered shell
   # uninstaller reports a managed install instead of touching it.
   #
-  # Contract: ONE predicate governs the launcher step's guard (TDR-0036 §4,
+  # Contract: ONE predicate governs the launcher step's guard (TDR-0044 §4,
   # spec v1.6 F-14/AC-F14-1): ANYTHING present at the brand install path that is
   # not the delivered launcher — the installed artifact, the slot, or any other
   # content — is a managed or foreign artifact. Detection is by WHAT IS AT THE
@@ -2408,9 +2421,9 @@ phases:
   # the FOUR current-truth pages this phase edits (entrypoint, doc-distribution, state
   # layer, branding seam), plus the FOUR pages PHASE 2 EDITED (the result-contract page
   # and the three count-bearing pages), each in its OWN row with AT LEAST ONE required
-  # and ONE stale phrase (160 identities / 66-entry allowlist; 160 entries / 159
-  # delivered / 66 allowlist / `BASELINE_ROWS.length + 126`; the 66-member allowlist —
-  # against the outgoing `149`/`65`/`+ 115` forms), so no row can pass with an empty
+  # and ONE stale phrase (164 identities / 66-entry allowlist; 164 entries / 163
+  # delivered / 66 allowlist / `BASELINE_ROWS.length + 130`; the 66-member allowlist —
+  # against the outgoing `153`/`65`/`+ 119` forms), so no row can pass with an empty
   # list (TC-INST-112 step 5). The ENTRYPOINT row carries the scoped identity-literal
   # sentence as its required phrase and the unqualified five-site inventory (both
   # wordings) as its stale phrase. The SUPERVISION row moves only its allowlist: its
@@ -2434,7 +2447,7 @@ phases:
   # battery G0..G7 and records ONE pm-notes evidence entry in the test plan §6.3
   # shape (artifact size and host target; `pnpm check` all tests, 0 fail; the narrow
   # tier count; three bash suite counts; the allowlist at exactly 66 with eleven
-  # `install` rows and the declared total at 160 across source, page, corpora and
+  # `install` rows and the declared total at 164 across source, page, corpora and
   # the nine count suites; the range gate verdict; the gated commit = the
   # change-branch head). A FAIL names the failing suite and the remediation mode; an unresolved
   # ERROR is recorded as ERROR and never rounded to PASS. Lifecycle phases 7-11

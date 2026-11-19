@@ -1,5 +1,5 @@
 ---
-id: TDR-0038
+id: TDR-0046
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -66,13 +66,13 @@ links:
     - "packages/core/src/contracts/error-table.ts"
     - "packages/cli/src/entrypoint.ts"
   diagrams: []
-  decisions: ["TDR-0036", "TDR-0037", "TDR-0040"]
+  decisions: ["TDR-0044", "TDR-0045", "TDR-0048"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S1", "M4-S2", "M4-S8"]
 ---
 
-# TDR-0038: Install-Target Stability Rule and Dev-Build Exclusion
+# TDR-0046: Install-Target Stability Rule and Dev-Build Exclusion
 
 ## Context
 
@@ -82,7 +82,7 @@ links:
 - **FACT:** The delivered git adapter exposes `currentWorktreePath` (`rev-parse --show-toplevel`), `listWorktrees` (`worktree list --porcelain`), `isCheckedOutElsewhere`, and `isWorktreeClean`; it exposes **no** `--git-dir`/`--git-common-dir` read, so "is this a linked worktree" is not answerable through the delivered port (`packages/adapters/src/git/index.ts`, read 2026-11-18).
 - **FACT:** The delivered launcher's failure mode for a vanished target is one bounded stderr line naming the expected target and the remedy, with a non-zero exit; the documentation states that re-running the local install repoints it (`scripts/install.sh` `install_local_launcher`; `doc/guides/local-install.md`, read 2026-11-18).
 - **FACT:** `install-model.md` states the safety rules as atomic replace and "failed builds never replace a working install", but contains no worktree rule and no dev-build rule (read 2026-11-18).
-- **FACT:** A compiled artifact carries an injected identity, while a non-compiled run falls back to `version: 0.0.0`, `commit: unknown`, `channel: dev` (TDR-0037). That difference is the only reliable in-process signal distinguishing a product artifact from a development run.
+- **FACT:** A compiled artifact carries an injected identity, while a non-compiled run falls back to `version: 0.0.0`, `commit: unknown`, `channel: dev` (TDR-0045). That difference is the only reliable in-process signal distinguishing a product artifact from a development run.
 - **FACT:** The install destination is derived, never supplied: the brand install path comes from the executable's own read-free `--print-install-path` (`~/.jaiship/bin/jaiship` for the primary identity), and the installer already removes the working-name override from that child's environment so an ambient value cannot redirect it (`scripts/install.sh` `resolve_launcher_path`; `feature-cli-entrypoint.md` §Install posture, read 2026-11-18).
 
 ## Problem Framing (Clarified)
@@ -125,7 +125,7 @@ The residual risk is false refusal. Most machines that run an install have git; 
 ### C-4: A dev build cannot enter the delivery path
 
 - **Statement:** An install requires a running artifact that carries an injected build identity; a non-compiled run refuses with a typed error, and no install invokes a build tool or a downloader.
-- **Source:** GH-346 ("dev builds kept out of the delivery path"); TDR-0037 §3.
+- **Source:** GH-346 ("dev builds kept out of the delivery path"); TDR-0045 §3.
 - **Verification:** Test — a workspace (non-compiled) invocation refuses; a structure assertion proves the composition spawns nothing and opens no network port.
 - **Negotiable:** no.
 
@@ -139,7 +139,7 @@ The residual risk is false refusal. Most machines that run an install have git; 
 ### C-6: The install record may only contain admissible paths
 
 - **Statement:** Every path the install persists (provenance checkout, launcher disposition) must satisfy C-1; a path that would not be admissible is never written.
-- **Source:** C-1; the record's own claim to be truthful (TDR-0037 §4).
+- **Source:** C-1; the record's own claim to be truthful (TDR-0045 §4).
 - **Verification:** Review and test — the record's `sourceCheckout` is asserted admissible in the same test that asserts the refusal.
 - **Negotiable:** no.
 
@@ -178,7 +178,7 @@ The residual risk is false refusal. Most machines that run an install have git; 
 | A linked worktree is distinguishable by `--git-dir` ≠ `--git-common-dir`. | FACT | Probed in this checkout (`<primary>/.git/worktrees/<name>` vs `<primary>/.git`), 2026-11-18 | A different discriminator would be needed (ALT-1). | High |
 | The delivered git port exposes no `--git-dir`/`--git-common-dir` read. | FACT | `packages/adapters/src/git/index.ts`, read 2026-11-18 | The rule could be implemented without touching the port. | High |
 | The destination is brand-derived and not operator-selectable today. | FACT | `scripts/install.sh` `resolve_launcher_path`; `feature-cli-entrypoint.md` §Install posture, read 2026-11-18 | C-5 would be a new decision rather than a preservation. | High |
-| A compiled artifact and a workspace run are distinguishable by the injected identity. | FACT | TDR-0037 §3 (measured) | The dev-build exclusion would need an environment signal. | High |
+| A compiled artifact and a workspace run are distinguishable by the injected identity. | FACT | TDR-0045 §3 (measured) | The dev-build exclusion would need an environment signal. | High |
 | The delivered launcher reports a vanished target with one line and a non-zero exit. | FACT | `scripts/install.sh`; `doc/guides/local-install.md`, read 2026-11-18 | The stale-target disposition would be a new behaviour rather than a report. | High |
 | Every machine that installs has git available. | ASSUMPTION — deliberately not relied on | — | C-3 exists precisely so this assumption is unnecessary. | n/a |
 | `git rev-parse --git-common-dir` is stable across git versions in use. | ASSUMPTION (bounded) | Git documentation | A different normalization could be needed; the read normalizes to an absolute path before comparing, and a failure falls into C-3's allowed-and-unverified branch rather than a false refusal. | Medium-High |
@@ -303,7 +303,7 @@ An install proceeds only when all of the following hold; each failure is a disti
 
 | Rule | Predicate | Outcome |
 |---|---|---|
-| **D-1 product artifact** | the running artifact carries an injected build identity (`TDR-0037` §2) | Admit |
+| **D-1 product artifact** | the running artifact carries an injected build identity (`TDR-0045` §2) | Admit |
 | **D-2 development run** | the running artifact carries the dev fallback identity | Refuse: `install.dev-build` (exit `1`), naming the build command and the artifact path convention |
 | **D-3 no build, no download** | the install never invokes a build tool, a package manager, or a network client | Enforced by construction and by a structure assertion over the composition |
 
@@ -312,13 +312,13 @@ An install proceeds only when all of the following hold; each failure is a disti
 
 ### 5. Existing artifacts at the destination
 
-Disposition is decided by **content agreement** with the running artifact — never by a claimed identity, which is a compile-time constant no process can read out of a file, and never by the install record, which is a repair source and not a gate (TDR-0040 §2 step 4, §2.1).
+Disposition is decided by **content agreement** with the running artifact — never by a claimed identity, which is a compile-time constant no process can read out of a file, and never by the install record, which is a repair source and not a gate (TDR-0048 §2 step 4, §2.1).
 
 | Situation found at the destination | Disposition |
 |---|---|
-| Content equals the running artifact; record `current` | **Left as it is**: no staged copy, no rename, no slot swap, and nothing written (TDR-0040 §2 step 4, §2.1) |
-| Content equals the running artifact; record `record-stale`, damaged, or absent | **Left as it is**: no rename and no slot swap; the record is reconciled in place to `current`, with `previous` taken from a readable record or written absent and reported unknown (TDR-0040 §2.1) |
-| Content differs (a compiled artifact that is not the running artifact) | Becomes the rollback slot, only through the step-5 rename of the atomic replace (TDR-0040 §2) |
+| Content equals the running artifact; record `current` | **Left as it is**: no staged copy, no rename, no slot swap, and nothing written (TDR-0048 §2 step 4, §2.1) |
+| Content equals the running artifact; record `record-stale`, damaged, or absent | **Left as it is**: no rename and no slot swap; the record is reconciled in place to `current`, with `previous` taken from a readable record or written absent and reported unknown (TDR-0048 §2.1) |
+| Content differs (a compiled artifact that is not the running artifact) | Becomes the rollback slot, only through the step-5 rename of the atomic replace (TDR-0048 §2) |
 | Delivered bash launcher (GH-320 shape) | **Discarded with a report**, never promoted to the rollback slot; its recorded target is reported, including the case where the target is missing or inside a worktree — the live defect is repaired, not inherited |
 | Bash launcher whose recorded target vanished | Same as above: discarded with a report naming the missing target |
 | Symlink to another artifact | Replaced (the link is replaced, not written through); the reported disposition names the link and its target |
@@ -326,7 +326,7 @@ Disposition is decided by **content agreement** with the running artifact — ne
 
 - **`jaiship.previous` may only ever hold a compiled artifact.** Rollback refuses with a typed error when the slot is absent or does not carry an injected identity, rather than restoring a launcher.
 - **A legacy launcher is not a rollback candidate** because restoring it restores the defect the rule exists to remove.
-- **Amendment note:** the content-agreement restatement above rides the same DoR iteration-1 amendment that TDR-0040 carries (§2 step 4, §2.1). This record has no `### Amendment` section of its own because the decision is unchanged; only the disposition wording is restated to match that amendment.
+- **Amendment note:** the content-agreement restatement above rides the same DoR iteration-1 amendment that TDR-0048 carries (§2 step 4, §2.1). This record has no `### Amendment` section of its own because the decision is unchanged; only the disposition wording is restated to match that amendment.
 
 ### 6. What is explicitly not refused
 
@@ -334,7 +334,7 @@ Disposition is decided by **content agreement** with the running artifact — ne
 - A non-worktree clone or a plain directory holding a released artifact.
 - A host with no git, or a directory that is not a repository (allowed and recorded `unverified`).
 - A dirty or mid-change repository: the rule is about *where* the target lives, never about its working-tree state — the AC requires delivery to keep running while the repository is dirty or mid-change.
-- A compiled artifact built from a dirty tree: admitted, reported as `<commit>-dirty` (TDR-0037 §3), and visible in `install status`.
+- A compiled artifact built from a dirty tree: admitted, reported as `<commit>-dirty` (TDR-0045 §3), and visible in `install status`.
 
 ### 7. Read and purity
 
@@ -370,7 +370,7 @@ The chosen alternative (ALT-4) satisfies every constraint C-1 through C-7. No ac
 
 - [ ] Whether `install status` should surface the legacy launcher's recorded target *after* it has been discarded (the disposition is reported once at install time; a later status read has nothing to report). Owner: `@spec-writer`; the install record's launcher-disposition field is the natural home.
 - [ ] Whether the rule should also cover a **hard link** at the destination (a hard link cannot be detected portably from the link side). Owner: `@spec-writer`; the delivered atomic replace overwrites the directory entry regardless, so the current answer is "not covered, and the replace still makes the destination stable".
-- [ ] Whether `--migrate` should be subject to the same admission rule for the artifacts it would move (yes by construction, since it never moves anything in this increment — see TDR-0040 §8).
+- [ ] Whether `--migrate` should be subject to the same admission rule for the artifacts it would move (yes by construction, since it never moves anything in this increment — see TDR-0048 §8).
 
 ## Implementation Plan
 
@@ -393,7 +393,7 @@ The chosen alternative (ALT-4) satisfies every constraint C-1 through C-7. No ac
 
 ## Confidence Rating
 
-**High** for the discriminator: the two-directory difference was verified in this repository's own topology, and it is the property git documents for linked worktrees rather than an inference from output ordering. **High** for the refusal class and its exit projection: the error register and the projection module are delivered and pinned. **High** for the dev-build gate: the identity distinction is a measured property of the artifact (TDR-0037). **Medium** for the operating rule "install from the primary checkout": it is the right default, but it is a workflow constraint the owner should confirm accepts the inconvenience; the revisit trigger records the alternative route.
+**High** for the discriminator: the two-directory difference was verified in this repository's own topology, and it is the property git documents for linked worktrees rather than an inference from output ordering. **High** for the refusal class and its exit projection: the error register and the projection module are delivered and pinned. **High** for the dev-build gate: the identity distinction is a measured property of the artifact (TDR-0045). **Medium** for the operating rule "install from the primary checkout": it is the right default, but it is a workflow constraint the owner should confirm accepts the inconvenience; the revisit trigger records the alternative route.
 
 ## References
 
@@ -405,6 +405,6 @@ The chosen alternative (ALT-4) satisfies every constraint C-1 through C-7. No ac
 - Delivered git reads — `packages/adapters/src/git/index.ts`, `doc/spec/features/feature-adapter-reference-behavior.md`
 - Refusal contract — `packages/core/src/contracts/error-table.ts`, `packages/cli/src/projection.ts`, `.ai/rules/typescript.md` §7
 - Prior change record — `doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md` §8.5, §17 (AC-F6-8), §22
-- [TDR-0036](TDR-0036-install-lifecycle-composed-command-family.md) — the surface that carries this rule
-- [TDR-0037](TDR-0037-self-contained-binary-build-identity.md) — the artifact and identity this rule gates
-- [TDR-0040](TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md) — the atomic replace and rollback slot this rule protects
+- [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) — the surface that carries this rule
+- [TDR-0045](TDR-0045-self-contained-binary-build-identity.md) — the artifact and identity this rule gates
+- [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) — the atomic replace and rollback slot this rule protects

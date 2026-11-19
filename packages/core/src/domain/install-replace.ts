@@ -1,6 +1,6 @@
 /**
  * The seven-step replace plan, the rollback precondition, and the record
- * reconciliation (F-9; Appendix B, TDR-0040).
+ * reconciliation (F-9; Appendix B, TDR-0048).
  *
  * The replace is one plan over what is on disk: the step-4 agreement gate is on
  * CONTENT (never an identity test on a file, never the record), step 5 promotes

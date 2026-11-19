@@ -20,6 +20,7 @@ created (after plan approval).
 - AC: clean-profile install works; delivery runs while the repository is dirty
   or mid-change; upgrade is explicit, reversible, version-reported.
 - Depends on: M4-S1a (binary seed, delivered), M3.
+- Ticket: GH-346 (milestone M4)
 
 ### M4-S2 Jaiship namespace migration
 - Goal: One product identity across every surface.
@@ -30,6 +31,46 @@ created (after plan approval).
 - AC: fresh install creates only Jaiship paths; migration moves existing
   state; scan fails on new old-namespace identifiers.
 - Depends on: none.
+
+### M4-S9 Dispatch core parity — durable lane, resume, admission, classifier
+- Goal: `dispatch` is a complete typed replacement for the shell lane.
+- Tasks: harness spawn; session capture/attach/resume; heartbeat and stuck
+  detection; restart budget; eleven result classes; poll exhaustion fallback;
+  concurrent admission; resume over a pr-open attempt; status/log queries.
+- AC: parity battery green for all eleven classes; two concurrent dispatches
+  admit; poll exhaustion never reports success.
+- Depends on: M4-S1, M3-S1.
+- Ticket: GH-347 (milestone M4)
+
+### M4-S12 Dispatch operator surface
+- Goal: per-ref inspection without the shell lane.
+- Tasks: per-ref status (delivering, pid, session, stale); bounded per-ref log;
+  is-delivering query; last-message from the persisted transcript; persist
+  harness output per ref.
+- AC: the four queries answer for live, finished, and absent refs; the log is
+  bounded; last-message is the PM's final message; no shell script is read.
+- Depends on: M4-S9.
+- Ticket: GH-354 (milestone M4)
+
+### M4-S10 CEO loop supervision inside jaiship
+- Goal: the outer loop is a jaiship command; the shell loop is not needed.
+- Tasks: loop start/stop/status/log/reset over the supervision engine; CEO
+  agent spawned through the harness port; restart backoff; durable stop;
+  liveness watchdog; single-instance lock.
+- AC: parity with the shell loop surface; durable stop across restarts; stuck
+  session restarted; one full cycle with primitives only.
+- Depends on: M4-S9.
+- Ticket: GH-348 (milestone M4)
+
+### M4-S11 Merge, closeout, and queue repair on the primitives
+- Goal: merge and cleanup are primitives only.
+- Tasks: merge fallback and UNKNOWN recovery; merge-queue rebase; required
+  checks; crafted squash metadata; one phase truth source; idempotent
+  closeout --apply; queue integrity; regression per named defect.
+- AC: merge without a platform CLI; typed sync-required for DIRTY/BEHIND;
+  closeout leaves no leftovers; phase sources agree.
+- Depends on: M4-S1.
+- Ticket: GH-349 (milestone M4)
 
 ### M4-S3 Delivery command conformance and repair
 - Goal: Every primitive works reliably on the installed binary.
@@ -51,25 +92,33 @@ created (after plan approval).
 - AC: policy expressed only in Jaiship config; simulated quota states produce
   the documented routing; soak delivery passes without the shell hook.
 - Depends on: M4-S2.
+- Ticket: GH-350 (milestone M4)
 
 ### M4-S5 Project-scoped queues and parallel projects
 - Goal: Multiple projects, isolated queues, one operator.
-- Tasks: project definition (named set of repositories); per-project backlog
-  view, priorities, queue, pacing overrides; concurrent delivery; project
-  identity on every event; history/audit filtering by project or list;
-  per-project brief/status.
+- Tasks: project definition (named set of repositories; a project may have
+  several repositories and a work item may produce several repository tracks);
+  per-project backlog view, priorities, queue, pacing overrides; concurrent
+  delivery; project identity on every event; history/audit filtering by project
+  or list; per-project brief/status; nullable project and runner attribution on
+  records that can carry them.
 - AC: two projects deliver in parallel with no queue interference; every event
   is project-attributable; filters return exact sets.
 - Depends on: M4-S3, M3-S6.
+- Ticket: none yet (follows the flip)
 
 ### M4-S6 Delivery history and statistics export
 - Goal: A stable machine-readable contract for delivery history.
 - Tasks: versioned JSON schema (ticket start/end, phase timings, outcomes,
-  spend, durations, planned vs delivered); `history`/`report --json`; schema
-  tests; retention rules; contract documentation.
+  spend, durations, planned vs delivered, wait reasons with cause, provider and
+  model per session, CI run id/attempt/timestamps); `history`/`report --json`;
+  planned and observed events stored separately; schema tests; retention rules
+  that are configured rather than silent; additively extensible fields;
+  contract documentation.
 - AC: contract documented and schema-tested; covers planned, in-flight, and
   delivered work; additive-only evolution.
 - Depends on: M4-S5.
+- Ticket: none yet (follows the flip)
 
 ### M4-S7 Agent prompts on Jaiship primitives
 - Goal: The agent team drives Jaiship, not shell scripts.
@@ -80,6 +129,7 @@ created (after plan approval).
 - AC: no shell-orchestrator imperatives in prompts; scan green; end-to-end
   delivery succeeds with rewritten prompts.
 - Depends on: M4-S3, M4-S4.
+- Ticket: GH-351 (milestone M4)
 
 ### M4-S8 Dogfood window and shell entry-point rewrite
 - Goal: Prove it on the installed binary, then make the wrappers thin.
@@ -91,3 +141,42 @@ created (after plan approval).
   unresolved divergence, zero fallback); wrappers call `jship` only and are
   unused for internal development.
 - Depends on: M4-S1..S7.
+- Ticket: GH-352 (milestone M4)
+
+### M4-S13 Runner identity and execution topology
+- Goal: delivery activity is attributable to a stable runner identity.
+- Tasks: stable runner id created at install (not hostname or path); lifecycle
+  and health with last-seen; attribute sessions, queue claims, lane records,
+  provider parks, and spend to runner and project; `runners list|show --json`;
+  nullable attribution, never invented.
+- AC: two runners on one host have distinct ids; sessions and spend carry
+  runner and project attribution; restart preserves the id; health and
+  last-seen are reported; no machine name is used as identity.
+- Depends on: M4-S5, M3-S1.
+- Ticket: GH-358 (milestone M4)
+
+### M4-S14 Artifact reference model (binaries out of Git)
+- Goal: delivery evidence can be referenced and browsed without bloating Git.
+- Tasks: artifact reference record (id, kind, media type, size, content hash,
+  storage uri, producer, iteration, work item, session, CI run, question);
+  storage adapter boundary (local now, S3-compatible later); `artifacts
+  list|show|add --json`; retention metadata; a guard test against committed
+  binaries.
+- AC: a reference resolves through the storage adapter or fails typed; context
+  links are present; no binary is committed; filters by work item, kind, and
+  time range.
+- Depends on: M4-S6.
+- Ticket: GH-359 (milestone M4)
+
+### M4-S15 Human question inbox completion
+- Goal: a cross-project, restart-safe question inbox with real answer
+  hand-back.
+- Tasks: blocking versus non-blocking, urgency and impact, answered/deferred/
+  superseded history, correlation to project/work item/session, survival across
+  restarts and offline periods, answer resumes the waiting dispatch,
+  `blockers list --json` filters.
+- AC: a question survives a restart and stays answerable; an answer resumes the
+  work or is recorded as consumed; cross-project listing returns exact sets;
+  deferred and superseded are distinguishable; nothing is silently dropped.
+- Depends on: M4-S9, M4-S5.
+- Ticket: GH-360 (milestone M4)

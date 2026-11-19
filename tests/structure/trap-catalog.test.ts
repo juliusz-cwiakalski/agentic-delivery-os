@@ -225,7 +225,7 @@ describe("TC-TRAP-001 trap catalog schema and coverage", () => {
     const catalogs = loadCatalogs(ROOT);
     const github = catalogs.github;
     if (github === undefined) throw new Error("github catalog missing");
-    github.entries.pop();
+    github.entries = github.entries.filter((entry) => entry.trapName !== "GH-REVIEW-STATE");
     const failures = validateCatalogs(ROOT, catalogs);
     expect(failures.some((message) => message.startsWith("github:"))).toBe(true);
   });
@@ -329,6 +329,16 @@ const EVIDENCE_GITHUB_TRAPS: readonly string[] = [
 /** The phase-5 discussion entry. */
 const THREAD_GITHUB_TRAPS: readonly string[] = ["GITHUB-THREAD-DISCUSSION-CAPS"];
 
+/** The GH-339 family stimuli appended for conformance-level family accounting. */
+const GH339_FAMILY_GITHUB_TRAPS: readonly string[] = [
+  "GH339-AUTH-SHAPE",
+  "GH339-TRANSPORT-FAILURE",
+  "GH339-RATE-LIMIT",
+  "GH339-PAYLOAD-SHAPE",
+  "GH339-WORKFLOW-STATE-MISMATCH",
+  "GH339-PAGINATION-TRUNCATION",
+];
+
 /** The single declared `expectedNormalizedOutcome` amendment. */
 const DECLARED_OUTCOME_AMENDMENT =
   "labelled `review`/`in-progress` issues resolve to `in-review`/`in-progress` by declared precedence, and an exact-case label equal to a declared `label-swap` token wins";
@@ -349,6 +359,7 @@ describe("TC-FLOOR-001 delivered trap names frozen with one declared outcome ame
       ...BACKLOG_GITHUB_TRAPS,
       ...EVIDENCE_GITHUB_TRAPS,
       ...THREAD_GITHUB_TRAPS,
+      ...GH339_FAMILY_GITHUB_TRAPS,
     ]);
   });
 

@@ -1,0 +1,157 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-335
+branch: feat/GH-335/opencode-harness-telemetry
+status: FAIL
+summary: >
+  Iteration 4 re-review of the sync merge c4f519dc (origin/main-tools ec1a2626 into the
+  PASSed head 0d729713) verdict: FAIL, on two blocking findings that share one cause. The
+  eight conflicts are resolved as genuine unions — I diffed the merge against both parents
+  for every conflicted file and every file both branches touched, and no GH-338 or GH-335
+  statement was lost or contradicted; production.ts carries both the harness composition
+  mount (with the memoised profile context, admission and facts wiring) and GH-338's
+  composition transport selection; and every GH-335-owned source file the merge touched
+  differs from the reviewed head only in TDR id text (112 changed lines, all ids), so
+  DEC-15, DEC-17/DEC-18, the two-member carrier, the telemetry bounds, the conformance floor
+  and the deny-by-default environment are unchanged by construction. The renumber itself is
+  internally complete and directionally correct: 523 citations of 0036-0039 across 57 files,
+  and every surviving 0032-0035 citation genuinely denotes a GH-338 record. But the target
+  ids are already taken: origin/main-tools head 1e7ecf07 (GH-339, PR #356, landed 19:50:33,
+  three minutes after the sync at 19:47:37) owns TDR-0036..0039 with 294 citations, so the
+  four harness records must move again to TDR-0036..0043; and the head does not merge with
+  the current base (seven doc conflicts), while PR #357 still points at the pre-sync head.
+  Gates are otherwise green: TMPDIR-scoped pnpm check EXIT 0 with 10791 pass / 4 skip /
+  0 fail across 1356 files, the 45-commit range gate PASS, doc-distribution PASS, and
+  plan validate valid; the iteration-3 load-sensitive flake did not reproduce.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 0
+  low: 1
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: decision-record-identity
+    location: doc/decisions/TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md (and 56 other citing files)
+    message: >
+      BLOCKING. The sync renumbered this change's four harness records to TDR-0036 (seat/spawn),
+      0037 (envelope detail), 0038 (integration mode) and 0039 (adapter contract), but
+      origin/main-tools head 1e7ecf07 (GH-339, PR #356, committed 2026-11-18 19:50:33 +0100) already
+      owns those exact ids for its cross-adapter parity matrix, tracker error taxonomy, simulated
+      stateful double and registration-only extensibility proof, with 294 citations across
+      packages/testkit/src/conformance/**, tests/fixtures/providers/conformance/** and the
+      conformance/ports/reference-behavior/provider-seeds spec pages. The chosen mapping is correct
+      against the base that was actually merged (ec1a2626) and is internally complete (523 citations
+      across 57 files, no wrong-direction citation), but against the branch the PR targets it
+      produces two different records per id. GH-339 landed first, so this change must renumber.
+    suggestion: >
+      Renumber to TDR-0036 (seat/spawn), TDR-0037 (envelope detail), TDR-0038 (integration mode),
+      TDR-0039 (adapter contract; 0040-0043 are free on main-tools): rename the four files, update
+      front-matter ids, mutual cross-references, doc/decisions/00-index.md and 00-register.md, this
+      change's spec/test-plan/plan/pm-notes/decision-review/spike-evidence and the harness spec
+      pages and code comments. Leave GH-338's 0032-0035 and GH-339's 0036-0039 untouched.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: mergeability
+    location: merge commit c4f519dc vs origin/main-tools
+    message: >
+      BLOCKING. The reviewed head does not merge with the current base: git merge-tree HEAD
+      origin/main-tools reports seven content conflicts (doc/00-index.md, doc/decisions/00-index.md,
+      doc/overview/glossary.md, feature-adapter-conformance.md, feature-adapter-ports.md,
+      feature-result-contract.md, doc/spec/nonfunctional.md) plus four auto-merged files that need a
+      gate re-run (packages/testkit/src/index.ts, tests/structure/conformance-coverage.test.ts,
+      content-inventory.test.ts, inventory.json). PR #357's head is still 0d729713, so the sync is
+      unpushed and the PR keeps reporting CONFLICTING.
+    suggestion: >
+      Second sync onto 1e7ecf07, resolving the doc conflicts with the same union discipline, in the
+      same pass as the TDR-0036..0043 renumber, then re-run TMPDIR-scoped pnpm check, the range gate
+      and the doc-distribution test before pushing.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/readiness-review/readiness-iter-2.md
+    message: >
+      Readiness history is a hybrid after the merge: iters 3-6 were partially renumbered (0032 to
+      0036) while iters 1-2 were not, so readiness-iter-2.md and readiness-iter-3.md still cite the
+      non-existent path TDR-0031-harness-dispatch-outcome-envelope-detail.md and twenty TDR-0031
+      references across the two files (ten each) now read as GH-293's unrelated engine-first record.
+      Adjudication (o) in pm-notes says the readiness history keeps the id it reviewed, so the
+      correct state is either fully frozen or fully renumbered, not this mixture; the pending
+      TDR-0036..0043 renumber would make a third variant.
+    suggestion: >
+      Freeze readiness/review history at the ids it reviewed with one explicit line saying so, and
+      renumber only live artifacts; or complete the renumber everywhere including the envelope
+      record's original 0031 references and the old filename. Freezing is the lower-churn option now
+      that a third renumber is required.
+    suppressed: false
+  - id: F-4
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/checks/decision-record.test.ts; scripts/checks/
+    message: >
+      No invariant checks decision-id uniqueness, so pnpm check was green on a tree whose four new
+      ids were already taken on the target branch; the only id assertions are the fixed four-id list
+      in the decision-record test and the index-row presence check. The collision therefore surfaces
+      only at merge time.
+    suggestion: >
+      Add a repository check that decision front-matter ids are unique across doc/decisions/** and
+      that the index matches the directory in both directions; wire it into pnpm check beside
+      memory-lint.
+    suppressed: false
+  - id: F-5
+    severity: info
+    confidence: high
+    category: bookkeeping
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml
+    message: >
+      The two notes describing this collision round (second-collision narrative and post-merge gate
+      evidence) are uncommitted working-tree changes; the reviewed commit records only the first
+      collision (0031 to 0037). They will need a third entry after the TDR-0036..0043 renumber.
+    suggestion: Commit the notes with the re-sync and extend them to the new ids.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documentation
+    location: chg-GH-335-pm-notes.yaml (post-merge gate note)
+    message: >
+      The gate note claims 10791 pass / 4 skip / 0 fail across 1359 files; the test counts reconcile
+      exactly with this run but the file count does not (measured 1356, matching bun's own Ran line
+      and find tests -name '*.test.ts').
+    suggestion: Correct the file count to 1356 on the next touch.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: commit c4f519dc
+    message: >
+      The sync commit changes 168 files (159 code/doc/fixture/decision files plus GH-338's nine
+      change artifacts), almost none inside any declared phase scope.files. This is inherent to a
+      branch sync and repeats the Phase-9/Phase-10 under-declaration class of iteration 3.
+    suggestion: Record it as an accepted scope deviation in the dod_check note, with the second sync's file set.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: carry-over
+    location: iteration-3 findings F-1..F-11
+    message: >
+      Iteration-3 residuals remain open and unchanged: Phase-10 scope under-declaration and the
+      missing Phase-10 evidence note, the memoisation comment overclaim, the self-escaping single-home
+      source guard, the spec 1.4 revision-log DEC-count clause, the unreachable fifth refusal shape,
+      DM-10's missing stored-stamp clause, and the documentary nits. None is re-graded here.
+    suggestion: none
+    suppressed: true
+reviewed_at: 2026-11-18T20:52:00Z
+next_step: CALL_CODER

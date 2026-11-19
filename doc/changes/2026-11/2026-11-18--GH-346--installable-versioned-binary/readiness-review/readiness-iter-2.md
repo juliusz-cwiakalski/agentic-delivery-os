@@ -12,8 +12,8 @@ Both iteration-1 blockers are genuinely closed. No `delivery` finding exists; th
 
 | # | Iter-1 finding | Status | Where it is closed |
 |---|---|---|---|
-| 1 | BLOCKER `ac_quality` — identical re-install destroyed the slot on a stale record | **CLOSED** | Spec v1.1 F-5 (line 179), F-9 (187), Appendix B step 4 and the step-5 skip (757–764), C.2 rows (786–787), C.4 (812), AC-F5-3 (613), AC-F9-1 (620), AC-F9-2 (621), NFR-3/NFR-4 (435–436); TDR-0040 §2 step 4 + new §2.1 (333–352); TC-INST-022/033/036/037 (test plan 450, 463, 466, 467); plan phase-3 contract (977–993). State matrix re-derived below. |
-| 2 | BLOCKER `cross_artifact_consistency` — D6's owning-name mechanism was impossible | **CLOSED** | Plan D6 (485–519) and phase 2 (751–760, 885–891) now declare a boolean `ownsInstallation`; TDR-0036 §3 (311) and its amendment (344–372). Verified implementable against `bin-launcher.ts`, `production.ts`, the literal scan, `validateSeam`, and the executable-allowance rules — see the adversarial check below. |
+| 1 | BLOCKER `ac_quality` — identical re-install destroyed the slot on a stale record | **CLOSED** | Spec v1.1 F-5 (line 179), F-9 (187), Appendix B step 4 and the step-5 skip (757–764), C.2 rows (786–787), C.4 (812), AC-F5-3 (613), AC-F9-1 (620), AC-F9-2 (621), NFR-3/NFR-4 (435–436); TDR-0048 §2 step 4 + new §2.1 (333–352); TC-INST-022/033/036/037 (test plan 450, 463, 466, 467); plan phase-3 contract (977–993). State matrix re-derived below. |
+| 2 | BLOCKER `cross_artifact_consistency` — D6's owning-name mechanism was impossible | **CLOSED** | Plan D6 (485–519) and phase 2 (751–760, 885–891) now declare a boolean `ownsInstallation`; TDR-0044 §3 (311) and its amendment (344–372). Verified implementable against `bin-launcher.ts`, `production.ts`, the literal scan, `validateSeam`, and the executable-allowance rules — see the adversarial check below. |
 | 3 | MAJOR `plan_code_area_coverage` — `content-inventory.test.ts` undeclared | **CLOSED** | Declared in phases 1–4 (plan 710, 939, 1110, 1207) with the file-set / executable-allowance split stated (D4, 466–479). The per-file allowance rule matches `executableViolations` exactly. |
 | 4 | MAJOR `entrypoint-bin.test.ts` only in phase 1 | **CLOSED** | Declared in phase 1 (703) *and* phase 2 (946), with the two halves named at both ends (697–702, 940–945). All 12 `PINNING_FILES` members are declared by phase 2; every `twenty-five` / `toHaveLength(25)` / `at(-1) === "supervise"` site lives in one of them (checked file by file). |
 | 5 | MAJOR `TC-BIN-061` drove a phase-2 command in phase 1 | **CLOSED** | Test plan 411 now drives `phase list <ref> --json`; plan phase 1 (667–670) names it. Verified composed (`phase` is in `PROMPT_REQUIRED_COMMANDS`), read-only (`listTarget` → `store.read` only), and payload-true (`delivery.registry.v1`, `verifiedEmpty`, `phases`; empty store returns `verifiedEmpty: true`). |
@@ -26,7 +26,7 @@ Both iteration-1 blockers are genuinely closed. No `delivery` finding exists; th
 
 ### Blocker 1, re-derived adversarially
 
-Every reachable cell of (destination content, slot, record), read across Appendix B, C.2, TDR-0040 §2/§2.1 and the phase-3 contract:
+Every reachable cell of (destination content, slot, record), read across Appendix B, C.2, TDR-0048 §2/§2.1 and the phase-3 contract:
 
 | Destination | Record | Disposition (all four artifacts agree) | Slot survives? |
 |---|---|---|---|
@@ -52,7 +52,7 @@ A no-op can no longer reach step 5, so no reachable no-op state destroys the slo
 - plan_coverage: PASS — all 34 ACs and all 84 cases are owned exactly once; findings 7 and 8 are MINOR cleanliness gaps in the plan's stated posture, not uncovered requirements or ACs.
 - test_traceability: PASS — 84/84 in §3, §5.1, §5.2 and §7.3; AC↔TC bidirectional in both directions (verified programmatically); no orphan.
 - cross_artifact_consistency: FAIL — findings 1, 2, 4, 5, 6, 7.
-- decision_capture: PASS — TDR-0036/0038/0040 amendments are in the right place; all five remain `Proposed` for PR acceptance.
+- decision_capture: PASS — TDR-0044/0038/0040 amendments are in the right place; all five remain `Proposed` for PR acceptance.
 - system_spec_consistency: FAIL — finding 2 (`feature-branding-seam.md` becomes false; no phase owns it).
 - plan_doc_update_coverage: FAIL — finding 2 (a `doc/spec/**` page that must change is in no phase).
 - plan_code_area_coverage: FAIL — finding 1 (seven delivered suites), finding 9 (uninstaller detection).
@@ -60,7 +60,7 @@ A no-op can no longer reach step 5, so no reachable no-op state destroys the slo
 
 ## Verified, not findings
 
-- **Ticket fidelity holds.** The twelve tasks and six acceptance clauses still trace (spec §17, 636–647); `install status` is delivered by TDR-0036 §1; the M4-S1 backlog line still carries the compatibility task. No requirement dropped in remediation.
+- **Ticket fidelity holds.** The twelve tasks and six acceptance clauses still trace (spec §17, 636–647); `install status` is delivered by TDR-0044 §1; the M4-S1 backlog line still carries the compatibility task. No requirement dropped in remediation.
 - **Artifact/phase arithmetic.** 34 ACs owned 8+7+10+6+2+1; 84 cases owned 13+16+24+20+4+7; every id in the phase map exists in the test plan and vice versa. Phase 1's 13 cases all have gate lines; phase 3's 24 all map to the five declared suites; `TC-INST-037` is phase 3, `install-crash-matrix`, and carries AC-F9-1/-F9-2/-F8-2.
 - **`AC-F1-1` does not name the command** (line 601 says "one composed command"); the naming lives in TC-BIN-061 and the plan. That is legitimate: the AC is satisfiable by any composed command and the case picks one that exists in phase 1.
 - **The phase-2 intermediate posture is honest where it is declared.** `pnpm check` at the phase-2 boundary runs with the family at 26, the page present, the error kind present, and the install record writer absent; no case claims a record or a slot before phase 3, and `rollback` answers the true `install.slot.absent`.
@@ -101,21 +101,21 @@ A no-op can no longer reach step 5, so no reachable no-op state destroys the slo
    Suggested remediation target phase: `specification` (adjudicate; `test_planning` adds one arm).
    Suggested fix: widen F-8/DEC-13/Appendix E to "rollback refuses when the record is absent, unreadable, or unable to name the slot's occupant", keep `install.record.unreadable` (no twelfth row, no count move), align AC-F8-2's wording, and add one TC-INST-042 arm (record absent + slot present → refusal, zero writes). If instead "proceed" is intended, DM-2 must gain an explicit unknown allowance for `current` and F-9's "both identities" must become "both, or unknown".
 
-4. **[MINOR] `cross_artifact_consistency` — Appendix B step 5 renames *any* destination into the slot, while C.2/F-5/TDR-0038 forbid promoting a launcher or a symlink.**
-   Gap: step 5 reads "Rename the destination to the slot (replacing any existing slot); skipped when the destination is absent" (758) with no disposition conditional, and TDR-0040 §2 step 5 says the same. But C.2 (789–790) says the launcher is "Discarded … never promoted" and the symlink is "Replaced", F-5 (179) says "The slot may only ever hold a compiled artifact carrying an injected identity", AC-F5-3 (613) asserts "the slot … holds only a compiled artifact", and TC-INST-020 (448) asserts the launcher is "**not** in the slot". The symlink's slot fate is stated nowhere at all (a symlink renamed into the slot is not a compiled artifact and would make rollback refuse). An implementer following the normative table literally gets the wrong slot.
-   Evidence: spec 758, 789–790, 179, 613; TDR-0040 §2 step 5; TDR-0038 §5; test plan 448–449.
-   Suggested remediation target phase: `specification` (with the TDR-0040 wording; `test_planning` already asserts the outcome).
+4. **[MINOR] `cross_artifact_consistency` — Appendix B step 5 renames *any* destination into the slot, while C.2/F-5/TDR-0046 forbid promoting a launcher or a symlink.**
+   Gap: step 5 reads "Rename the destination to the slot (replacing any existing slot); skipped when the destination is absent" (758) with no disposition conditional, and TDR-0048 §2 step 5 says the same. But C.2 (789–790) says the launcher is "Discarded … never promoted" and the symlink is "Replaced", F-5 (179) says "The slot may only ever hold a compiled artifact carrying an injected identity", AC-F5-3 (613) asserts "the slot … holds only a compiled artifact", and TC-INST-020 (448) asserts the launcher is "**not** in the slot". The symlink's slot fate is stated nowhere at all (a symlink renamed into the slot is not a compiled artifact and would make rollback refuse). An implementer following the normative table literally gets the wrong slot.
+   Evidence: spec 758, 789–790, 179, 613; TDR-0048 §2 step 5; TDR-0046 §5; test plan 448–449.
+   Suggested remediation target phase: `specification` (with the TDR-0048 wording; `test_planning` already asserts the outcome).
    Suggested fix: qualify step 5 — "rename the destination to the slot only when it is a regular compiled artifact whose content differs; a launcher or symlink is discarded (reported) and the existing slot is left unchanged" — and state the symlink's slot disposition explicitly in C.2.
 
-5. **[MINOR] `cross_artifact_consistency` — `recordState`'s predicate is defined only in TDR-0040, and it is not the predicate DM-4/AC-F8-2 state.**
-   Gap: TDR-0040 §2.1 (348) defines `recordState` as "comparing the record's identity with the **running** identity — a comparison of two records, never a content read". DM-4 (406) and AC-F8-2 (619) define `record-stale` as "a record that no longer **matches the destination**". The two coincide when status is invoked through the installed artifact and diverge when it is invoked through a candidate artifact before installing it (a legitimate pre-upgrade question): the record still matches the destination but is reported `record-stale`. TC-INST-036/037/041 pass either way, so nothing forces the spec to pick.
-   Evidence: TDR-0040 §2.1 line 348; spec 406, 619; test plan 466–467, 474.
+5. **[MINOR] `cross_artifact_consistency` — `recordState`'s predicate is defined only in TDR-0048, and it is not the predicate DM-4/AC-F8-2 state.**
+   Gap: TDR-0048 §2.1 (348) defines `recordState` as "comparing the record's identity with the **running** identity — a comparison of two records, never a content read". DM-4 (406) and AC-F8-2 (619) define `record-stale` as "a record that no longer **matches the destination**". The two coincide when status is invoked through the installed artifact and diverge when it is invoked through a candidate artifact before installing it (a legitimate pre-upgrade question): the record still matches the destination but is reported `record-stale`. TC-INST-036/037/041 pass either way, so nothing forces the spec to pick.
+   Evidence: TDR-0048 §2.1 line 348; spec 406, 619; test plan 466–467, 474.
    Suggested remediation target phase: `specification` (one sentence; optionally one case arm in `test_planning`).
    Suggested fix: state the predicate in F-8/DM-4 ("the record's identity compared with the running identity; `record-stale` means the record and the running artifact disagree") and re-word AC-F8-2's parenthesis accordingly; alternatively persist a destination digest (a DM-2 change and a status read cost).
 
 6. **[MINOR] `cross_artifact_consistency` — "evaluating the agreement read before staging is permitted", while the case requires that it *is* done.**
-   Gap: Appendix B numbers stage (2) and verify (3) before the agreement read (4), then says an agreement run "evaluates steps 1 and 4 only" and that "Evaluating that read before staging is **permitted**" (762). TC-INST-033 step 2 asserts the run "created no staging file" (463), and NFR-4's zero-byte claim is stated as 0 artifact bytes. If pre-stage evaluation is merely permitted, a conforming implementation may stage a ~107 MB temp copy and stop, which the case then fails. TDR-0040 §2 states the stronger form ("it creates no staging file"), so the spec is the weaker outlier.
-   Evidence: spec 755–757, 762; TDR-0040 §2; test plan 463; NFR-4 436.
+   Gap: Appendix B numbers stage (2) and verify (3) before the agreement read (4), then says an agreement run "evaluates steps 1 and 4 only" and that "Evaluating that read before staging is **permitted**" (762). TC-INST-033 step 2 asserts the run "created no staging file" (463), and NFR-4's zero-byte claim is stated as 0 artifact bytes. If pre-stage evaluation is merely permitted, a conforming implementation may stage a ~107 MB temp copy and stop, which the case then fails. TDR-0048 §2 states the stronger form ("it creates no staging file"), so the spec is the weaker outlier.
+   Evidence: spec 755–757, 762; TDR-0048 §2; test plan 463; NFR-4 436.
    Suggested remediation target phase: `specification`.
    Suggested fix: replace "is permitted" with "the gate is evaluated before staging, so an agreement run creates no staging file".
 

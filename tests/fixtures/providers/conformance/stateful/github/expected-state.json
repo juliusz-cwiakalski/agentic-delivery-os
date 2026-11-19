@@ -1,0 +1,30 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "state": {
+    "issue": {
+      "fields": {
+        "number": 601,
+        "title": "Set field value",
+        "state": "open"
+      },
+      "collections": {
+        "labels": [
+          {
+            "name": "delivered"
+          }
+        ],
+        "comments": [
+          {
+            "id": "comment-1001",
+            "body": "first"
+          }
+        ]
+      },
+      "subResources": {
+        "thread": {
+          "resolved": true
+        }
+      }
+    }
+  }
+}

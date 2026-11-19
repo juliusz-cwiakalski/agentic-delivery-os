@@ -8,8 +8,8 @@ owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-346"]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035, TDR-0036, TDR-0037, TDR-0038, TDR-0039, TDR-0040, TDR-0041, TDR-0042, TDR-0043, TDR-0044, TDR-0045, TDR-0046, TDR-0047, TDR-0048]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-335", "GH-346"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -110,7 +110,7 @@ production composes no lane executor, so a resident daemon runs the declared
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
 | `adapters/src/session/` | OpenCode CLI-backed metadata reads, dry-run-first prune and guarded checkpoint through separate read/admin ports. |
 | `adapters/src/io/` | Internal metadata codec, content policy, privacy rules and transport types; not a public package export. |
-| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and store-scoped orphan disclosure, the opencode per-step stream ingest sink with session-close baseline capture, harness-store session attribution, the review-deferral record, and the read-only SQLite session-store loader. |
+| `adapters/src/harness/` | The opencode and Claude Code delivery adapters, read-only telemetry extractors with a bounded Claude byte read and held-identity-scoped store reads, the opencode per-step stream ingest sink with session-close baseline capture, the review-deferral record, and the read-only SQLite session-store loader. Session attribution for the closeout checkpoint is derived in the CLI edge from the dispatch attempt ledger. |
 | `adapters/src/host/` | The harness seam's single child-process module, a pinned entry in the exact repository-wide `node:child_process` allowlist, exposing the one-shot runner (listing and Claude Code) and the streaming spawn starter (opencode spawn, resume, deliver): both receive the constructed environment as data and read no ambient environment. |
 | `adapters/src/azure/`, `ci/`, `registry/` | Type-only placeholders; provider clients implement some CI reads without making `./ci` runnable. |
 | `mcp/src/` | Closed three-tool catalog, pure toolset seam and payload adapter, the in-package stdio JSON-RPC 2.0 protocol, the lifecycle exit owner, and the Node-hosted `./serve` composition root. The three read-only tools mirror the status, verify-change, and verify-gates engines. |
@@ -251,8 +251,8 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   provider clients, the real git seam, `StateStorePort`, the capsule runtime, and
   resolved harness settings; `planFacts` reads issue, merged request, dependents,
   checkout, branches, worktrees, the recorded squash diff, persisted history,
-  capsule pre-flight, and harness-derived session facts, and constructs the
-  telemetry capture from the settings unless an injected runtime overrides it.
+  capsule pre-flight, and dispatch-attempt-derived session facts, and constructs
+  the telemetry capture from the settings unless an injected runtime overrides it.
   This is command-specific production composition, not shared-root or
   installed-binary completion.
 - The [change capsule](../spec/features/feature-capsule.md) is the change folder
@@ -272,17 +272,25 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   typed `HarnessInstance`/`HarnessSession` ports, the opencode and Claude Code
   delivery adapters, the additive streaming spawn starter beside the one-shot
   runner, the deny-by-default execution-environment descriptor, and read-only
-  telemetry extraction consumed by non-gating closeout capture. The opencode
-  adapter acquires its session handle from the first identified line of the
-  `opencode run --format json` stream, keeps draining to process close, and
+  telemetry extraction consumed by non-gating closeout capture. Harness
+  resolution evaluates one pinned supported-version window and one declared
+  integration mode before the lease, and the dispatch composition mounts the
+  per-spawn profile wrapper on the opencode port: a caller-supplied agent on the
+  spawn or resume input is resolved by the pure resolver against the selected
+  profile and supplies exactly one seat expressed as one `--agent`/`--model` pair,
+  while a role-less call passes through unchanged. The shipped generic `dispatch`
+  supplies no agent and therefore binds nothing and discloses `unresolved-seat`. The
+  opencode adapter acquires its session handle from the first identified line of
+  the `opencode run --format json` stream, keeps draining to process close, and
   resolves `collect` there, so a long lifecycle is never completion-gated and
   carries no fixed whole-session process cap. The closeout composition constructs
-  the capture from the resolved harness settings and uses the same extractors to
-  attribute sessions for the compaction checkpoint; the Claude reader bounds the
-  byte read before parsing and opencode discloses out-of-port orphans as
-  store-level warnings. The GH-233 review F-8/F-11 items and F-9 are resolved;
-  dispatch (GH-239) is the first production consumer of host-runner sessions, so
-  cross-harness dispatch parity is exercised through the delivered session port.
+  the capture from the resolved harness settings and scopes it to the union of
+  the session identities the work item's dispatch attempts hold; the Claude reader
+  bounds the byte read before parsing, and extraction reads only held identities
+  rather than scanning the store. The GH-233 review F-8/F-11 items and F-9 are
+  resolved; dispatch (GH-239) is the first production consumer of host-runner
+  sessions, so cross-harness dispatch parity is exercised through the delivered
+  session port.
 - [Session lifecycle economics](../spec/features/feature-session-lifecycle-economics.md)
   ships the adapter-sourced liveness bridge, the prefill-safe corroboration rule,
   the classified `watchdog.liveness-stalled` identity, the single restart-budget
@@ -437,7 +445,7 @@ rules passing does not establish project-specific literal coverage.
 | Unit / dependency | Current topology, ownership and criticality |
 |---|---|
 | Standalone CLI target | Local Bun-targeted design; the implemented runner is the in-process `runCli` surface behind an executable entrypoint. The CLI manifest declares two `bin` entries (`delivery-os` and `jaiship`) over one shared launcher composition plus a `main` composition entry. The product artifact is one self-contained executable built by the additive `build:binary` entry at `dist/<binary-name>`, and its `install` family copies it to the brand install path with one rollback slot, one `install.record.v1` record, and a read-only state-format check; the shell installer registers a user-level `jaiship` launcher at that path only while nothing but the delivered launcher is there, while the installer's delivery script and tool arrays name no binary and no build entry. The prior-identity read keeps the previous identity's project configuration and host state visible until the public move. |
-| Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the deny-by-default execution-environment descriptor, read-only telemetry extraction with a bounded Claude byte read and store-scoped orphan disclosure, harness-store session attribution, and non-gating closeout capture constructed from the resolved harness settings. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
+| Harness adapter seam | The typed `HarnessInstance`/`HarnessSession` ports with the opencode and Claude Code delivery adapters, the pinned supported-version window and probe grammar with typed refusals, the declared integration mode, per-spawn caller-supplied agent identity and single-seat binding, the deny-by-default execution-environment descriptor, read-only telemetry extraction over the observed store contract with a bounded Claude byte read and held-identity-scoped reads, union session attribution for closeout, and non-gating closeout capture constructed from the resolved harness settings. See [feature-harness-adapters.md](../spec/features/feature-harness-adapters.md). |
 | Change documents and capsule | Local operator-owned change folders. Each folder may carry the append-only capsule `events.jsonl` and `candidates/`; closeout validates and closes it and home-writes accepted lessons/tacit to `.ai/memory/`. See [feature-capsule.md](../spec/features/feature-capsule.md). |
 | Existing harness/prompt stack | Locally installed canonical `.opencode/` definitions, generated Claude Code plugin and shell automation. Independent of the empty typed integration package. See [plugin build](../../scripts/build-claude-plugin.sh). |
 | State and change documents | Local operator-owned files; only local store level implemented. JSONL forever-retention direction; project/global levels are declared seams, not shared stores. |
@@ -490,7 +498,7 @@ The optional resident daemon sits above the delivered state, queue, economics, b
 
 ## Typed dispatch engine (GH-239)
 
-The `dispatch` family is the typed per-ticket delivery path. One-shot dispatch resolves a harness, applies the per-ref single-flight admission predicate, claims the repository queue lease, spawns or resumes through the harness session port, watches with progress-based liveness at the `lane.liveness-interval` cadence, classifies through the shared classifier, and derives the final token from artifact, tracker, ledger, and CI truth. A live lease that already records the requested ref refuses `queue.single-flight` before any session, naming the holder at the failure-envelope root; a live lease on another ref refuses `queue.lease-conflict`; neither appends a record, publishes an event, or starts a session. Every dispatch that reaches classification appends one durable dual-run attempt record; a comparison mismatch appends a divergence, and a readable contradiction of a success claim is recorded as a false-success incident. An unreadable corroboration source blocks the claim without resetting the window, and a post-spawn collection failure records an unevaluable attempt at exit `2`. `dispatch attempts [--ref <ref>] [--limit <n>]` reads that record back as a bounded, repository-scoped digest or the `attempts.v1` machine envelope; coverage and floor stay on `dispatch dual-run summary`, which the read side names as the next step.
+The `dispatch` family is the typed per-ticket delivery path. One-shot dispatch resolves a harness, evaluates the pinned supported-version window and the declared integration mode before the lease (refusing an outside/indeterminate version or an unavailable mode), applies the per-ref single-flight admission predicate, claims the repository queue lease, spawns or resumes through the harness session port, watches with progress-based liveness at the `lane.liveness-interval` cadence, classifies through the shared classifier, and derives the final token from artifact, tracker, ledger, and CI truth. A live lease that already records the requested ref refuses `queue.single-flight` before any session, naming the holder at the failure-envelope root; a live lease on another ref refuses `queue.lease-conflict`; neither appends a record, publishes an event, or starts a session. Every dispatch that reaches classification appends one durable dual-run attempt record; a comparison mismatch appends a divergence, and a readable contradiction of a success claim is recorded as a false-success incident. An unreadable corroboration source blocks the claim without resetting the window, and a post-spawn collection failure records an unevaluable attempt at exit `2`. `dispatch attempts [--ref <ref>] [--limit <n>]` reads that record back as a bounded, repository-scoped digest or the `attempts.v1` machine envelope; coverage and floor stay on `dispatch dual-run summary`, which the read side names as the next step.
 
 Authority is per repository and defaults to `dual-run`, where the bash stack remains authoritative and dispatch records evidence only. The four-condition evidence gate (truth, class coverage as exposure, the exposure floor, and corroboration of success claims) governs `dispatch handover`; a met bar appends a handover record and the derived, atomically replaced authority view, and `--revert` restores `dual-run` without deleting history. The shipped production composition wires the run path, the attempt read side, the evidence-gate runtime, the resume lane and restart-budget facts, and the rename-invariant identity resolver with its checkout-scoped first-use marker, so the attempts, summary, resolution, handover, and resume surfaces run in the delivered CLI. The four bash entry points read the authority view as a plain file and keep running when the typed CLI is absent. See [dispatch engine](../spec/features/feature-dispatch-engine.md).
 

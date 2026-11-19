@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os provider adapters
 summary: "The normative reference behavior of the closed adapter contract: per-operation preferred and fallback transports, primary failure identities, absence semantics, the two bounded evidence reads with their fixed caps and truncation signals, the CLI probe and composition-edge transport selection value, the mechanism-scoped GitHub Issues transition mapping with its injected seeded map and four read outcomes, and the deliberate limitations of both."
 links:
-  related_changes: ["GH-338"]
-  related_decisions: ["ADR-0005", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035"]
+  related_changes: ["GH-338", "GH-339"]
+  related_decisions: ["ADR-0005", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035", "TDR-0036"]
   contracts:
     - "packages/core/src/contracts/adapter-capabilities.ts"
     - "packages/core/src/contracts/ports.ts"
@@ -24,6 +24,8 @@ links:
 ## Overview
 
 This page states the normative reference behavior of the closed adapter contract and the two bounded evidence reads that sit outside it. The GitHub adapter is the reference implementation: every other adapter is compared against these declarations, and a documented value that disagrees with the shipped data is a defect in either the document or the declaration, never in the reader of this page.
+
+These declarations are also the parity bar. The conformance suite's declared matrix records, per closed operation and registered adapter, whether that adapter behaves as this reference does; its difference register is the machine-readable record of every adjudicated divergence, carrying the differing dimensions, a rationale, per-class evidence, and an adjudication reference. A divergence is therefore a reviewed entry rather than undocumented drift, and an entry whose evidence stops reproducing the declared difference fails the parity gate. The matrix, the six-dimension basis, and the gate are specified in [Adapter Conformance Suite](feature-adapter-conformance.md).
 
 The document is current truth, not a migration record. The values here are mechanically compared with the exported transport matrix, the three capability declarations, the exported workflow seed, and the fixed evidence caps.
 

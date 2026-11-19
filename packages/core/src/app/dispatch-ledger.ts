@@ -93,6 +93,24 @@ const isCorroboration = (value: unknown): boolean => {
 export const isEvidenceClass = (value: unknown): boolean =>
   typeof value === "string" && (DISPATCH_EVIDENCE_CLASSES as readonly string[]).includes(value);
 
+/** A held-identity list: bounded, non-empty strings, no duplicates. */
+const isSessionIds = (value: unknown): value is readonly string[] =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((entry) => typeof entry === "string" && entry.length > 0) &&
+  new Set(value).size === value.length;
+
+/** One recorded single-seat binding (GH-335 DM-4): three non-empty strings. */
+const isRecordedBinding = (value: unknown): value is Record<string, unknown> =>
+  isRecord(value) &&
+  typeof value.agent === "string" &&
+  value.agent.length > 0 &&
+  typeof value.seat === "string" &&
+  value.seat.length > 0 &&
+  typeof value.resolvedModel === "string" &&
+  value.resolvedModel.length > 0 &&
+  (value.envName === undefined || (typeof value.envName === "string" && value.envName.length > 0));
+
 const isAttemptRecord = (value: unknown): value is DispatchAttemptRecord =>
   isRecord(value) &&
   value.schema === DISPATCH_ATTEMPT_PAYLOAD_SCHEMA &&
@@ -110,7 +128,26 @@ const isAttemptRecord = (value: unknown): value is DispatchAttemptRecord =>
   typeof value.falseSuccess === "boolean" &&
   isCorroboration(value.corroboration) &&
   isBoundedRefs(value.evidenceRefs) &&
-  isInstant(value.recordedAt);
+  isInstant(value.recordedAt) &&
+  // GH-335 additive facts: both optional, each validated when present so a
+  // malformed binding is refused and a role-less record stays valid.
+  (value.sessionIds === undefined || isSessionIds(value.sessionIds)) &&
+  (value.binding === undefined || isRecordedBinding(value.binding)) &&
+  // GH-335 F-1/F-2 recorded-outcome facts: optional, validated when present.
+  (value.harnessVersion === undefined ||
+    value.harnessVersion === null ||
+    (typeof value.harnessVersion === "string" && value.harnessVersion.length > 0)) &&
+  (value.versionVerdict === undefined ||
+    value.versionVerdict === "inside" ||
+    value.versionVerdict === "outside" ||
+    value.versionVerdict === "indeterminate") &&
+  (value.mode === undefined ||
+    value.mode === "per-invocation-private-server" ||
+    value.mode === "managed-background-service" ||
+    value.mode === "running-server-client") &&
+  (value.modeOrigin === undefined ||
+    value.modeOrigin === "defaults" ||
+    value.modeOrigin === "configured");
 
 const isDivergenceRecord = (value: unknown): value is DispatchDivergenceRecord =>
   isRecord(value) &&

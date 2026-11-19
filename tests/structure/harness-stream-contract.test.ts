@@ -118,8 +118,8 @@ describe("TC-OCS-002 the session port and one-shot runner are unchanged", () => 
     expect("abort" in port).toBe(false);
   });
 
-  test("the failure vocabulary is the delivered nine codes", () => {
-    expect([...HARNESS_FAILURE_CODES]).toHaveLength(9);
+  test("the failure vocabulary is the delivered nine plus the four GH-335 refusals", () => {
+    expect([...HARNESS_FAILURE_CODES]).toHaveLength(13);
     for (const code of [
       "harness.session.unknown",
       "harness.spawn.refused",

@@ -1,0 +1,66 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "workflows": {
+    "ci.yml": {
+      "jobs": [
+        "bash-tests",
+        "doc-distribution-guard",
+        "inception-doc-consistency",
+        "mutation-sandbox",
+        "result-tuple-guard",
+        "shellcheck",
+        "ts-aggregate",
+        "ts-boundaries",
+        "ts-build",
+        "ts-commitlint",
+        "ts-exports",
+        "ts-forbidden-literals",
+        "ts-format",
+        "ts-fresh-clone",
+        "ts-invariants",
+        "ts-license-audit",
+        "ts-lint",
+        "ts-pins",
+        "ts-publish-guard",
+        "ts-test",
+        "ts-typecheck",
+        "ts-vuln",
+        "verify-claude-build"
+      ],
+      "triggers": ["pull_request", "push"]
+    },
+    "conformance-live.yml": {
+      "jobs": ["live"],
+      "triggers": ["schedule", "workflow_dispatch"]
+    },
+    "pr-base-guard.yml": {
+      "jobs": ["check-pr-base"],
+      "triggers": ["pull_request"]
+    },
+    "release.yml": {
+      "jobs": ["publish", "publish-guard"],
+      "triggers": ["workflow_dispatch"]
+    },
+    "ticket-milestone-check.yml": {
+      "jobs": ["milestone-check"],
+      "triggers": ["issues", "workflow_dispatch"]
+    }
+  },
+  "checkNames": {
+    "tests/checks/ci-checks.test.ts": [
+      "pin equality",
+      "CI bindingness",
+      "CI supply chain",
+      "vulnerability gate",
+      "CI topology",
+      "forbidden-literal CI job",
+      "DEC-7 scoped ci-topology allowance",
+      "GH-172 CI binding",
+      "GH-181 secret-read invariant binding"
+    ],
+    "tests/checks/conformance-workflow.test.ts": [
+      "TC-CONF-026 scheduled workflow contract",
+      "TC-CONF-027 workflow mutation controls"
+    ]
+  }
+}

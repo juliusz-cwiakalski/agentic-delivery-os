@@ -1,5 +1,5 @@
 ---
-id: TDR-0037
+id: TDR-0045
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -69,13 +69,13 @@ links:
     - "packages/cli/package.json"
     - "package.json"
   diagrams: []
-  decisions: ["TDR-0036", "TDR-0038", "TDR-0039", "ADR-0009", "ADR-0003"]
+  decisions: ["TDR-0044", "TDR-0046", "TDR-0047", "ADR-0009", "ADR-0003"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S1", "M4-S2", "M4-S3"]
 ---
 
-# TDR-0037: Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot
+# TDR-0045: Self-Contained Artifact and Build Identity — `bun --compile` with `--define`-Injected Identity, Commit in the Delivered Build Slot
 
 ## Context
 
@@ -196,7 +196,7 @@ Finally, the compiled shape changes the process edge's facts. `process.argv[1]` 
 - **First principles:** What must be true for `--version` to report a commit without reading anything? The commit must be a constant in the binary. What must be true for a binary to be a constant? It must be built from the commit. That chain forces build-time injection and nothing else.
 - **Inversion:** How does this fail? A binary that reports `dev` forever (delivered today); a binary that reads git and dies outside a checkout; a version line that grows a field and breaks a pinned contract; a compiled daemon that respawns a virtual path; a build that mutates the source tree to record identity. C-2, C-3, C-5, C-7 and ALT-4 exclude each.
 - **Second-order thinking:** Putting the commit in the existing build slot costs nothing today and makes every later evidence artifact (M4-S8 dogfood window, M4-S2 release provenance) self-identifying. Adding a second identity field to the line would cost a contract change now and a compatibility story later.
-- **Systems thinking:** The artifact is consumed by the installer (TDR-0036/0040), the compatibility check (TDR-0039), the daemon, and the release train (M4-S2). An identity that only `--version` can see would leave four consumers to invent their own.
+- **Systems thinking:** The artifact is consumed by the installer (TDR-0044/0040), the compatibility check (TDR-0047), the daemon, and the release train (M4-S2). An identity that only `--version` can see would leave four consumers to invent their own.
 - **Least privilege:** one build-side literal, one identity module, zero new runtime reads, zero network.
 - **Paved road:** Bun is already the pinned runtime and already executes every entry; `--define` is the toolchain's own build-time constant mechanism.
 - **Reversibility:** the identity module can be reverted to the dev fallback and the artifact to a bundled entry; nothing is persisted in the repository.
@@ -318,7 +318,7 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only with new unproven work (se
 
 ### 4. The machine surface
 
-- **`jaiship install status --json`** carries, under its own schema version, the **running** identity (`version`, `commit` full, `builtAt`, `dirty`, `channel`, artifact path), the **installed record** identity from the install record, the rollback slot identity, target stability, and the state-format verdict (TDR-0039).
+- **`jaiship install status --json`** carries, under its own schema version, the **running** identity (`version`, `commit` full, `builtAt`, `dirty`, `channel`, artifact path), the **installed record** identity from the install record, the rollback slot identity, target stability, and the state-format verdict (TDR-0047).
 - This is the *only* new place the full identity is exposed. `--version` stays a one-line human self-description; a machine that needs more asks a command that is allowed to read.
 - The installed record repeats the artifact's identity fields at install time, so "installed vs running" is a comparison of two records, not a computation.
 
@@ -359,7 +359,7 @@ The chosen alternative (ALT-2) satisfies every constraint C-1 through C-7, with 
 
 - [ ] Whether the artifact should embed a declared build channel (`dev`, `local`, `release`) alongside the identity, so a release artifact can be distinguished from a local compile of the same commit. Owner: `@spec-writer`; the identity object already reserves a `channel` field with `dev` as the only value this increment defines.
 - [ ] Whether M4-S2 wants the artifact name to include the version (`<binary-name>-<version>-<os>-<arch>`) for release assets. Owner: M4-S2; this decision fixes only the local build output path.
-- [ ] The exact `install.status` schema version string and field names. Owner: `@spec-writer` together with TDR-0039.
+- [ ] The exact `install.status` schema version string and field names. Owner: `@spec-writer` together with TDR-0047.
 
 ## Implementation Plan
 
@@ -394,6 +394,6 @@ The chosen alternative (ALT-2) satisfies every constraint C-1 through C-7, with 
 - Delivered installer probe of the install path — `scripts/install.sh` (`resolve_launcher_path`), `doc/guides/local-install.md`
 - Version and release line — `package.json`, `packages/cli/package.json`, `.bun-version`, [ADR-0009](ADR-0009-release-model-v1.md), [ADR-0003](ADR-0003-oss-monorepo-structure.md)
 - Prior change record — `doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md` §8.4, §8.5, §9 (NFR-2), §17, §22
-- [TDR-0036](TDR-0036-install-lifecycle-composed-command-family.md) — the surface that installs this artifact
-- [TDR-0038](TDR-0038-install-target-stability-and-dev-build-exclusion.md) — the dev-build exclusion that uses this identity
-- [TDR-0039](TDR-0039-installed-binary-state-format-compatibility-check.md) — the compatibility verdict that reports this identity
+- [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) — the surface that installs this artifact
+- [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) — the dev-build exclusion that uses this identity
+- [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) — the compatibility verdict that reports this identity

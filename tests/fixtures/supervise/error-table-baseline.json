@@ -1,5 +1,5 @@
 {
-  "capturedFrom": "ERROR_TABLE at the GH-295 base",
+  "capturedFrom": "ERROR_TABLE at the GH-335 base (GH-295 base plus the four GH-335 harness refusal rows)",
   "rows": [
     [
       "fallback.invocation",
@@ -900,6 +900,46 @@
       "Verify the configured harness store location and read permissions, then re-run the closeout capture.",
       "platform-provider",
       "The harness store could not be read for telemetry extraction."
+    ],
+    [
+      "harness.version.unsupported",
+      "harness",
+      "user",
+      false,
+      "not_landed",
+      "Install or select a harness line inside the declared supported window, then retry the dispatch.",
+      "user-validation",
+      "The installed harness version is outside the supported window."
+    ],
+    [
+      "harness.version.unknown",
+      "harness",
+      "user",
+      false,
+      "not_landed",
+      "Verify the harness answers its version surface with the declared product line, then retry the dispatch; no version was fabricated.",
+      "user-validation",
+      "The installed harness version could not be determined."
+    ],
+    [
+      "harness.mode.unavailable",
+      "harness",
+      "user",
+      false,
+      "not_landed",
+      "Set the harness mode to the delivered default or unset it, then retry the dispatch; no runtime fallback is applied.",
+      "user-validation",
+      "The requested harness integration mode is not the available mode."
+    ],
+    [
+      "harness.profile.model-unrepresentable",
+      "harness",
+      "user",
+      false,
+      "not_landed",
+      "Declare the named seat's model as provider/model[#variant] within the adapter's declared bound, then retry the dispatch.",
+      "user-validation",
+      "A seat's resolved model cannot be expressed on the honoured surface."
     ],
     [
       "retro.evidence.malformed-entry",

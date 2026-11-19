@@ -159,6 +159,7 @@ const runComposed = async (
       : { [`${brand.environmentPrefix}CONFIG`]: options.selectedConfig }),
   };
   const composer = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment,
     cwd: target.cwd,
     homeDirectory: target.home,
@@ -402,6 +403,10 @@ describe("TC-SMAP-004 the shipped production composer supplies the map seam", ()
     const target = checkout("registration");
     try {
       const composer = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: target.home },
         cwd: target.cwd,
         homeDirectory: target.home,

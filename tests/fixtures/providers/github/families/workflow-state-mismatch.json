@@ -1,0 +1,14 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "github",
+  "family": "workflow-state-mismatch",
+  "stimulus": {
+    "kind": "transition",
+    "deliveryState": "canceled"
+  },
+  "expected": {
+    "classification": "tracker.payload.invalid",
+    "ownsHttpStatus": false,
+    "zeroProviderRequests": true
+  }
+}
