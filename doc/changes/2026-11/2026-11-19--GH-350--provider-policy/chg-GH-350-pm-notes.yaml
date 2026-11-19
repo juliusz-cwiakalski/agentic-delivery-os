@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-19T05:54:41.790Z }
   specification: { started: null, completed: 2026-11-19T10:11:13.277Z }
   test_planning: { started: null, completed: 2026-11-19T10:11:22.529Z }
-  delivery_planning: { started: null, completed: 2026-11-19T10:11:36.040Z }
+  delivery_planning: { started: null, completed: 2026-11-19T11:02:17.420Z }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -175,6 +175,26 @@ notes:
       seconds-of-day, not instants. Reopened: specification, test_planning,
       delivery_planning."
     type: blocker
+    date: "2026-11-19"
+  - text: "Phase 2 escalation (0 commits; work preserved in
+      tmp/tmpdir/phase2-escalation.patch, 2316 lines): five undeclared consumers
+      — privacy-release needs a new changeset because publishable packages
+      change; packages/cli/package.json needs the ./time-zone workspace import;
+      queue-additivity (TC-QLC-085) and session-admin-imports (TC-DB-002) assert
+      the adapter subpath set is unchanged; and the peak-invalid-timezone
+      fixture asserts the old UTC-only refusal. Zone implementation itself is
+      green (136 zone/boundary suites pass, typecheck clean); six full-suite
+      failures were these five plus a known pre-existing 5 s timeout flake in
+      prior-identity-config-fallback TC-BIN-026."
+    type: blocker
+    date: "2026-11-19"
+  - text: "Retro (third scope-discovery cycle): every escalation has been an
+      undeclared consumer of a set the change widens — closed-set switches,
+      count assertions, then subpath/export-map sets. The lesson is now a rule
+      in the plan: derive scope by sweeping the suites that assert the affected
+      sets, and treat the first red suite at a boundary as an inventory prompt,
+      not a one-off."
+    type: retro
     date: "2026-11-19"
   - text: "DoR status after the zone-contract amendment: the READY verdict stands
       without a new gate iteration. The amendment resolves an unsatisfiable
