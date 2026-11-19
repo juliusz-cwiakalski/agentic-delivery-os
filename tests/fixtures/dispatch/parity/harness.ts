@@ -29,6 +29,7 @@ import type {
   DispatchDelay,
   DispatchEnvelopeData,
   DispatchLaneRecord,
+  DispatchLogFileSystem,
   DispatchOwnerProbe,
   StateFenceHandle,
   StateStorePort,
@@ -187,6 +188,10 @@ export type ParityHarnessOptions = {
    * composition supplies no probe.
    */
   readonly ownerProbe?: DispatchOwnerProbe;
+  /** The artifact-family root (GH-354 DM-2); absent uses the state directory. */
+  readonly artifactRoot?: string;
+  /** The artifact-family filesystem edge (GH-354 DM-2). */
+  readonly artifactFs?: DispatchLogFileSystem;
   /**
    * An observability seam over the main state store (GH-354 §7.2). The composed
    * program keeps using the returned port, so a case can count reads without
@@ -400,6 +405,8 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     dispatchDelay: delay,
     clock: { nowMs: clock.nowMs, nowIso: clock.nowIso },
     ...(options.ownerProbe === undefined ? {} : { ownerProbe: options.ownerProbe }),
+    ...(options.artifactRoot === undefined ? {} : { dispatchLogFamilyRoot: options.artifactRoot }),
+    ...(options.artifactFs === undefined ? {} : { dispatchLogFileSystem: options.artifactFs }),
     ...(options.onAppend === undefined && options.storeWrap === undefined
       ? {}
       : {

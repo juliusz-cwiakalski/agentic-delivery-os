@@ -107,6 +107,13 @@ export {
   readOperatorStatus,
 } from "./app/dispatch-lane-view.js";
 export {
+  createDispatchLogSink,
+  type DispatchLogSinkInput,
+  dispatchLogsDirectoryName,
+  dispatchLogsFamilyRoot,
+  dispatchLogsRefDirectory,
+} from "./app/dispatch-log-sink.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverData,
   type DispatchHandoverResult,
@@ -719,6 +726,29 @@ export {
   evaluateDispatchResumeEconomics,
   planDispatchResume,
 } from "./domain/dispatch-resume.js";
+export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+  type OperatorLaneVerdict,
+} from "./domain/dispatch-operator-view.js";
+export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  type DispatchLogWrite,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./domain/dispatch-log.js";
 export {
   type CommitQueryOutcome,
   commitIdempotencyKey,

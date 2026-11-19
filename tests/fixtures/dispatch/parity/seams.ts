@@ -9,7 +9,7 @@
  *     retry, a local kill sequence, a local token ladder);
  *  3. a planted control that must be rejected BY NAME.
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 export type SeamManifestEntry = {
@@ -67,6 +67,27 @@ export const SEAM_MANIFEST: readonly SeamManifestEntry[] = [
     module: "packages/core/src/app/dispatch",
     mountedIn: "packages/cli/src/edge.ts",
   },
+  {
+    // GH-354 S-laneview: the repository-filtered newest-per-ref fold.
+    seam: "lane-view",
+    symbol: "readOperatorStatus",
+    module: "packages/core/src/app/dispatch-lane-view",
+    mountedIn: "packages/cli/src/edge.ts",
+  },
+  {
+    // GH-354 S-fold: the delivering fold over the same lane view.
+    seam: "delivering-fold",
+    symbol: "readOperatorDelivering",
+    module: "packages/core/src/app/dispatch-lane-view",
+    mountedIn: "packages/cli/src/edge.ts",
+  },
+  {
+    // GH-354 S-sink: the per-stream stdout artifact sink.
+    seam: "log-sink",
+    symbol: "createDispatchLogSink",
+    module: "packages/core/src/app/dispatch-log-sink",
+    mountedIn: "packages/cli/src/production.ts",
+  },
 ];
 
 /** The dispatch battery's test surface (the scan's declared scope). */
@@ -119,6 +140,19 @@ export const REIMPLEMENTATION_SIGNATURES: readonly {
   {
     seam: "loop",
     test: (source) => /const TOKEN_LADDER|function deriveToken\(/iu.test(source),
+  },
+  {
+    // GH-354: a test-local stitch/split/tail loop, a local 1 048 576 cap, or a
+    // local 512-character message bound re-expresses a read decision.
+    seam: "artifact-tail",
+    test: (source) =>
+      /1_048_576|1048576/u.test(source) &&
+      !source.includes("DISPATCH_LOG_FILE_CAP_BYTES") &&
+      !source.includes("capBytes"),
+  },
+  {
+    seam: "transcript-read",
+    test: (source) => /slice\(0,\s*512\)|substring\(0,\s*512\)/u.test(source),
   },
 ];
 

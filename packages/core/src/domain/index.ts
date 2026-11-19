@@ -361,6 +361,17 @@ export {
   type OperatorLaneVerdict,
 } from "./dispatch-operator-view.js";
 export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  type DispatchLogWrite,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./dispatch-log.js";
+export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
   renderDoctorHuman,

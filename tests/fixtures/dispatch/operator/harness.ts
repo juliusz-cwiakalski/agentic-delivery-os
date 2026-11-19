@@ -9,16 +9,24 @@
  * cases drive are the production read functions mounted at the same CLI edge
  * that mounts `attempts`/`lease`/`existence`.
  */
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { createNodeDispatchLogFileSystem } from "../../../../packages/adapters/src/file/dispatch-logs";
+import { createOpencodeSession } from "../../../../packages/adapters/src/harness/opencode";
 import { readDispatchLanes } from "../../../../packages/core/src/app/dispatch-ledger";
+import { createDispatchLogSink } from "../../../../packages/core/src/app/dispatch-log-sink";
 import type {
   DispatchLaneRecord,
   DispatchLogFileSystem,
   DispatchOwnerProbe,
+  HarnessSessionPort,
   StateRecord,
   StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
+import {
+  assembleHarnessLiveness,
+  classifyHarnessEvidence,
+} from "../../../../packages/core/src/domain/index";
 import { countStore, type StoreCounters } from "../attempts-harness";
 import { createParityHarness, PARITY_REPOSITORY } from "../parity/harness";
 import {
@@ -28,6 +36,7 @@ import {
   seedDispatchLaneSequence,
   seedForeignRepositoryLane,
 } from "../parity/lane";
+import { createScriptedStreams, type ScriptedStream, type StreamsFixture } from "./streams";
 
 /** The reference every operator case addresses unless it says otherwise. */
 export const OPERATOR_REF = "GH-354";
@@ -119,6 +128,143 @@ const countTarget = (): {
   replaceDocument: 0,
 });
 
+/** One recorded artifact-family operation, with its absolute path. */
+export type LogFsRecord = {
+  readonly op:
+    | "ensureDirectory"
+    | "create"
+    | "append"
+    | "remove"
+    | "list"
+    | "read"
+    | "size"
+    | "mode";
+  readonly path: string;
+  readonly text?: string;
+};
+
+/** One refused operation: a path outside the addressed family root. */
+export type LogFsViolation = { readonly op: string; readonly path: string };
+
+export type RecordingLogFs = {
+  readonly fs: DispatchLogFileSystem;
+  readonly records: LogFsRecord[];
+  readonly violations: LogFsViolation[];
+  /** The exact order of creates and removes (the retention-order proof). */
+  readonly mutations: readonly { readonly op: "create" | "remove"; readonly path: string }[];
+  readonly clear: () => void;
+};
+
+/**
+ * A recording filesystem edge over the real node edge (GH-354 §6.2).
+ *
+ * Every listing, stat, open, read, create, append, and remove is recorded with
+ * an absolute path; any path outside the addressed family root is REFUSED by
+ * name rather than performed, so "only the addressed directory is listed",
+ * "0 deletions" and "0 in-place modification" are measurements.
+ */
+export const createRecordingLogFs = (options: {
+  readonly familyRoot: string;
+  readonly inner?: DispatchLogFileSystem;
+  /** Fail the listed operation on a path containing this fragment. */
+  readonly fail?: {
+    readonly op: "create" | "append" | "remove" | "read" | "list";
+    readonly path: string;
+  };
+  /** Serve this text on read regardless of the file's bytes (in-flight append). */
+  readonly readOverride?: (path: string) => string | undefined;
+}): RecordingLogFs => {
+  const inner = options.inner ?? createNodeDispatchLogFileSystem();
+  const records: LogFsRecord[] = [];
+  const violations: LogFsViolation[] = [];
+  const mutations: { readonly op: "create" | "remove"; readonly path: string }[] = [];
+  const root = options.familyRoot;
+
+  const allowed = (path: string): boolean => path === root || path.startsWith(`${root}/`);
+  const refuse = (op: string, path: string): boolean => {
+    violations.push({ op, path });
+    return false;
+  };
+  const fails = (op: string, path: string): boolean =>
+    options.fail !== undefined && options.fail.op === op && path.includes(options.fail.path);
+
+  return {
+    fs: {
+      ensureDirectory: (directory) => {
+        records.push({ op: "ensureDirectory", path: directory });
+        if (!allowed(directory)) return refuse("ensureDirectory", directory);
+        return inner.ensureDirectory(directory);
+      },
+      create: (path) => {
+        records.push({ op: "create", path });
+        if (!allowed(path)) return refuse("create", path);
+        if (fails("create", path)) return false;
+        const created = inner.create(path);
+        if (created) mutations.push({ op: "create", path });
+        return created;
+      },
+      append: (path, text) => {
+        records.push({ op: "append", path, text });
+        if (!allowed(path)) return refuse("append", path);
+        if (fails("append", path)) return false;
+        return inner.append(path, text);
+      },
+      remove: (path) => {
+        records.push({ op: "remove", path });
+        if (!allowed(path)) return refuse("remove", path);
+        if (fails("remove", path)) return false;
+        const removed = inner.remove(path);
+        if (removed) mutations.push({ op: "remove", path });
+        return removed;
+      },
+      size: (path) => {
+        records.push({ op: "size", path });
+        if (!allowed(path)) {
+          refuse("size", path);
+          return undefined;
+        }
+        return inner.size(path);
+      },
+      mode: (path) => {
+        records.push({ op: "mode", path });
+        if (!allowed(path)) {
+          refuse("mode", path);
+          return undefined;
+        }
+        return inner.mode(path);
+      },
+      list: (directory) => {
+        records.push({ op: "list", path: directory });
+        if (!allowed(directory)) {
+          refuse("list", directory);
+          return undefined;
+        }
+        if (fails("list", directory)) return undefined;
+        return inner.list(directory);
+      },
+      read: (path) => {
+        records.push({ op: "read", path });
+        if (!allowed(path)) {
+          refuse("read", path);
+          return undefined;
+        }
+        const override = options.readOverride?.(path);
+        if (override !== undefined) return override;
+        if (fails("read", path)) return undefined;
+        return inner.read(path);
+      },
+    },
+    records,
+    violations,
+    mutations,
+    clear: () => {
+      records.length = 0;
+      violations.length = 0;
+      mutations.length = 0;
+    },
+  };
+};
+
 export const createOperatorHarness = (options: OperatorHarnessOptions = {}): OperatorHarness => {
   const label = options.label ?? "operator";
   // The approved repository-local base; `mkdtemp` never escapes the repo.
@@ -200,4 +346,115 @@ export const createOperatorHarness = (options: OperatorHarnessOptions = {}): Ope
     },
     dispose: () => parity.dispose(),
   };
+};
+
+/* ------------------------------------------------------------------------- */
+/* S1 — the real opencode adapter over the scripted streaming starter.        */
+/* ------------------------------------------------------------------------- */
+
+export type ArtifactObservationOptions = {
+  readonly label?: string;
+  readonly ref?: string;
+  readonly scripts: readonly ScriptedStream[];
+  readonly artifactFs?: DispatchLogFileSystem;
+  readonly now?: string;
+  /** Called at each stream's first pull (the creation-order probe). */
+  readonly onFirstPull?: (invocation: {
+    readonly index: number;
+    readonly args: readonly string[];
+  }) => void;
+};
+
+export type ArtifactObservation = {
+  readonly ref: string;
+  readonly familyRoot: string;
+  readonly directory: string;
+  readonly session: HarnessSessionPort;
+  readonly streams: StreamsFixture;
+  readonly logFs: RecordingLogFs;
+  /** The family listing at each stream's first pull (the creation-order proof). */
+  readonly firstPullListings: readonly (readonly string[])[];
+  /** The real directory's file names in lexical order. */
+  readonly fileNames: () => readonly string[];
+  readonly fileText: (name: string) => string;
+  readonly fileMode: (name: string) => number | undefined;
+  readonly dispose: () => void;
+};
+
+/**
+ * Compose the real adapter, the real sink orchestration, and a recording
+ * filesystem edge over one temporary family root.
+ */
+export const createArtifactObservation = (
+  options: ArtifactObservationOptions,
+): ArtifactObservation => {
+  const label = options.label ?? "artifact";
+  const ref = options.ref ?? OPERATOR_REF;
+  const base = join(process.cwd(), "tmp", "tmpdir");
+  mkdirSync(base, { recursive: true });
+  const root = join(base, `gh354-${label}-${Math.abs(hashOf(label + ref))}`);
+  mkdirSync(root, { recursive: true });
+  const familyRoot = join(root, "dispatch-logs.default");
+  const directory = join(familyRoot, ref);
+  const nodeFs = createNodeDispatchLogFileSystem();
+  const listNames = (): readonly string[] =>
+    (nodeFs.list(directory) ?? [])
+      .map((entry) => entry.name)
+      .sort((a, b) => a.localeCompare(b, "en"));
+  const firstPullListings: string[][] = [];
+  const logFs = createRecordingLogFs({
+    familyRoot,
+    ...(options.artifactFs === undefined ? {} : { inner: options.artifactFs }),
+  });
+  const streams = createScriptedStreams({
+    scripts: options.scripts,
+    onFirstPull: (invocation) => {
+      firstPullListings.push([...listNames()]);
+      options.onFirstPull?.(invocation);
+    },
+  });
+  const session = createOpencodeSession({
+    command: "synthetic-opencode",
+    runner: async () => ({ stdout: "", stderr: "", status: 0, timedOut: false }),
+    starter: streams.starter,
+    buildEnvironment: () => ({ ok: true, value: {} }),
+    classify: classifyHarnessEvidence,
+    assembleLiveness: assembleHarnessLiveness,
+    now: () => options.now ?? "2026-11-19T00:00:00.000Z",
+    handleTimeoutMs: 50,
+    streamSinkFor: (context) =>
+      createDispatchLogSink({
+        context: {
+          ref: context.workItemRef,
+          familyRoot,
+          recordedAt: context.recordedAt,
+          streamKind: context.streamKind,
+          ...(context.attemptId === undefined ? {} : { attemptId: context.attemptId }),
+          ...(context.iterationOrdinal === undefined
+            ? {}
+            : { iterationOrdinal: context.iterationOrdinal }),
+        },
+        fs: logFs.fs,
+      }),
+  });
+  return {
+    ref,
+    familyRoot,
+    directory,
+    session,
+    streams,
+    logFs,
+    firstPullListings,
+    fileNames: listNames,
+    fileText: (name) => readFileSync(join(directory, name), "utf8"),
+    fileMode: (name) => nodeFs.mode(join(directory, name)),
+    dispose: () => rmSync(root, { recursive: true, force: true }),
+  };
+};
+
+/** A deterministic, dependency-free label hash (never a random value). */
+const hashOf = (value: string): number => {
+  let hash = 0;
+  for (const character of value) hash = (hash * 31 + (character.codePointAt(0) ?? 0)) | 0;
+  return hash;
 };

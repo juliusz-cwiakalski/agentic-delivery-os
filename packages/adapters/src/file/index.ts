@@ -86,6 +86,10 @@ export {
   replaceDispatchIdentityMarkerText,
 } from "./dispatch-identity.js";
 export {
+  createNodeDispatchLogFileSystem,
+  DISPATCH_LOG_FILE_MODE,
+} from "./dispatch-logs.js";
+export {
   createHostIndexAccess,
   type HostIndexAccess,
   type HostIndexRead,

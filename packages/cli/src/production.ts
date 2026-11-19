@@ -18,6 +18,7 @@ import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapter
 import {
   acquireFileConfig,
   createHostIndexAccess,
+  createNodeDispatchLogFileSystem,
   createNodeInstallFilePort,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
@@ -103,6 +104,7 @@ import {
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
+  createDispatchLogSink,
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
   type DaemonComposition,
@@ -115,6 +117,7 @@ import {
   type DispatchTrackerFacts,
   type DispatchTruthReads,
   detectPriorNamespace,
+  dispatchLogsFamilyRoot,
   EvaluateVerifyChange,
   emptyHandoverGate,
   evaluateHarnessModeAvailability,
@@ -210,6 +213,7 @@ import {
   DISPATCH_PROBE_TOLERANCE_MS,
   type DispatchDelay,
   type DispatchLedgerVariant,
+  type DispatchLogFileSystem,
   type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
@@ -781,6 +785,15 @@ export type ProductionCompositionFacts = {
    * tolerance, and the reused-pid rejection are observable without a kernel.
    */
   readonly ownerProbe?: DispatchOwnerProbe;
+  /**
+   * The artifact-family root and its filesystem edge (GH-354 DM-2).
+   *
+   * Production places the family beside the ledger and binds the node edge; a
+   * composition proof injects a recording or faulty edge so the one-writer rule,
+   * the retention order, and the non-gating fault are observable.
+   */
+  readonly dispatchLogFamilyRoot?: string;
+  readonly dispatchLogFileSystem?: DispatchLogFileSystem;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
@@ -1894,6 +1907,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     );
     const store = facts.stateStoreWrap?.(openedStore) ?? openedStore;
 
+    // The artifact-family filesystem edge (GH-354 DM-2): the runtime filesystem
+    // lives in the adapter tier, and the family root sits beside the ledger.
+    const dispatchLogFs = facts.dispatchLogFileSystem ?? createNodeDispatchLogFileSystem();
+    const dispatchLogRoot =
+      facts.dispatchLogFamilyRoot ?? dispatchLogsFamilyRoot(stateDirectory, workspaceId);
+
     /**
      * Resolve the daemon settings and the lane restart bound over one
      * configuration acquisition. A missing configuration resolves the same
@@ -2733,6 +2752,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                   }),
                 });
               },
+              // GH-354 API-8: the per-stream stdout artifact sink, bound per
+              // stream before its first yielded value. The family root lives
+              // beside the ledger, outside the store's record set.
+              streamSinkFor: (context) =>
+                createDispatchLogSink({
+                  context: {
+                    ref: context.workItemRef,
+                    familyRoot: dispatchLogRoot,
+                    recordedAt: context.recordedAt,
+                    streamKind: context.streamKind,
+                    ...(context.attemptId === undefined ? {} : { attemptId: context.attemptId }),
+                    ...(context.iterationOrdinal === undefined
+                      ? {}
+                      : { iterationOrdinal: context.iterationOrdinal }),
+                  },
+                  fs: dispatchLogFs,
+                }),
             })
           : createClaudeSession({
               ...common,

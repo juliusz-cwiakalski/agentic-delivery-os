@@ -251,6 +251,26 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/app/dispatch-lane.ts": ["DISPATCH_RESUMABLE_DAEMON_STATES", "resolveDispatchLane"],
   "core/src/app/dispatch-lane-view.ts": ["readOperatorDelivering", "readOperatorStatus"],
+  "core/src/app/dispatch-log-sink.ts": [
+    "createDispatchLogSink",
+    "dispatchLogsDirectoryName",
+    "dispatchLogsFamilyRoot",
+    "dispatchLogsRefDirectory",
+  ],
+  "core/src/domain/dispatch-log.ts": [
+    "boundDispatchLogLines",
+    "cutAtByteCap",
+    "dispatchLogByteLength",
+    "dispatchLogFileName",
+    "dispatchLogTimestamp",
+    "planDispatchLogWrites",
+    "retainedDispatchLogNames",
+    "stitchDispatchLogLines",
+  ],
+  "adapters/src/file/dispatch-logs.ts": [
+    "createNodeDispatchLogFileSystem",
+    "DISPATCH_LOG_FILE_MODE",
+  ],
   "core/src/domain/dispatch-operator-view.ts": [
     "boundDeliveringRefs",
     "buildRefDeliveringData",
@@ -263,6 +283,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "operatorMarkerOf",
   ],
   "core/src/contracts/dispatch-operator.ts": [
+    "DISPATCH_LOG_STREAM_ORDINALS",
     "DISPATCH_LOG_DIRECTORY_PREFIX",
     "DISPATCH_LOG_FAMILY_BYTES",
     "DISPATCH_LOG_FILE_CAP_BYTES",

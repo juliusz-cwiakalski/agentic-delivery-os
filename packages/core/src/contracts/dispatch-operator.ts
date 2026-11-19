@@ -73,6 +73,19 @@ export const DISPATCH_LOG_FAMILY_BYTES = DISPATCH_LOG_FILE_CAP_BYTES * DISPATCH_
 export const DISPATCH_LOG_STREAM_KINDS = ["spawn", "resume", "deliver"] as const;
 export type DispatchLogStreamKind = (typeof DISPATCH_LOG_STREAM_KINDS)[number];
 
+/**
+ * The declared stream ordinal of each stream kind.
+ *
+ * It is a property of the kind (not a shared counter), so two streams of one
+ * attempt and iteration at one recorded instant cannot collide on one name and
+ * lexical order still equals creation order.
+ */
+export const DISPATCH_LOG_STREAM_ORDINALS: Readonly<Record<DispatchLogStreamKind, number>> = {
+  spawn: 1,
+  resume: 2,
+  deliver: 3,
+};
+
 /** Zero-padded width of the segment ordinal in a file name. */
 export const DISPATCH_LOG_SEGMENT_WIDTH = 4 as const;
 /** Zero-padded width of the per-stream ordinal in a file name. */
@@ -198,10 +211,25 @@ export type DispatchLogFileEntry = {
  * The injected artifact-family filesystem edge (DM-2, §6.2).
  *
  * Every call takes an absolute path; the edge records it and refuses a path
- * outside the addressed ref's directory. Reads are bounded by the caller.
+ * outside the addressed ref's directory. The writer half refuses to modify a
+ * written byte (create only, append only, remove only for retention); the read
+ * half is bounded by the caller.
  */
 export type DispatchLogFileSystem = {
-  readonly list: (directory: string) => readonly DispatchLogFileEntry[] | undefined;
-  readonly read: (path: string) => string | undefined;
+  /** Ensure the directory exists (recursively); `false` on failure. */
+  readonly ensureDirectory: (directory: string) => boolean;
+  /** Create one file `0600`; `false` when it already exists or fails. */
+  readonly create: (path: string) => boolean;
+  /** Append text to an existing file (one `O_APPEND` write); `false` on failure. */
+  readonly append: (path: string, text: string) => boolean;
+  /** Remove one file (retention only); `false` on failure. */
+  readonly remove: (path: string) => boolean;
+  /** The current byte size, or `undefined` when it cannot be read. */
+  readonly size: (path: string) => number | undefined;
+  /** The file mode, or `undefined` when it cannot be read. */
   readonly mode: (path: string) => number | undefined;
+  /** The names inside one directory, or `undefined` when it cannot be listed. */
+  readonly list: (directory: string) => readonly DispatchLogFileEntry[] | undefined;
+  /** The file's text, or `undefined` when it cannot be read. */
+  readonly read: (path: string) => string | undefined;
 };
