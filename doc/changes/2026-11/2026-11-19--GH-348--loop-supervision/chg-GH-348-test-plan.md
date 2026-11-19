@@ -55,11 +55,13 @@ Two observations this plan deliberately does **not** encode as permanent cases, 
 - **`DOD-7` (shell and prompts untouched).** The shell half is already a permanent tree invariant (`tests/structure/provider-surface.test.ts` sha256-pins `scripts/ceo-loop.sh`, and must stay byte-unchanged and green); the prompt half is a PR-time change-surface review recorded in §10, not a diff assertion. `TC-CONTRACT-001` additionally proves the loop composition imports no agent-file or script writer.
 - **`DOD-3` (commit-message gate).** That is the phase-9 branch-range gate, listed in §7.5, not a case.
 
+**Recorded authorized deviation (Option B).** Per the recorded Option-B decision (pm-notes `STOPPED AND REPORTED per the human's instruction`; readiness iteration 4), **six phase-2 cases are proven at a narrower surface than an earlier version of this plan claimed**. Their phase-2 execution is the **D2 spawn/status/log-sink** surface only: `TC-SPAWN-001`, `TC-SPAWN-004`, `TC-SPAWN-005`, `TC-PARITY-008` and `TC-LOG-004` (plus `TC-SPAWN-002`'s D2-only title/reap half), whose **D1 halves are phase-7 re-observations** because `loop` is not prompt-required until the inventory repin; and `TC-LOG-004`'s **stuck-episode log lines are phase-4 observations**, because no verdict path exists at phase 2. The readiness gate is **not** re-run for this class; the deviation is recorded here and in the PR body. Nothing in the suite set, the case count, the AC links, or the mutation allocation changes because of it.
+
 ## 2. References
 
 | Reference | Use |
 |-----------|-----|
-| `./chg-GH-348-spec.md` (v1.1) | Source of the 41 ACs, `F-1`…`F-8`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, `DOD-1`…`DOD-9`, §8.5 (ten divergences and the three pinned surfaces), Appendix C (proof boundary), Appendix F (parity mapping, normative), Appendix G (proof-boundary constant), Appendix D (implementation-decided details), and the v1.1 rulings R1–R4 that close this plan's four prior questions |
+| `./chg-GH-348-spec.md` (v1.4) | Source of the 41 ACs, `F-1`…`F-8`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, `DOD-1`…`DOD-9`, §8.5 (ten divergences and the three pinned surfaces), Appendix C (proof boundary), Appendix F (parity mapping, normative), Appendix G (proof-boundary constant), Appendix D (implementation-decided details), and the v1.1 rulings R1–R4 that close this plan's four prior questions |
 | `./chg-GH-348-pm-notes.yaml` | The `BINDING for delivery_planning` note (pinned surfaces are pin updates with mutation controls intact), the `PM rulings on the four open questions` decision entry (R1–R4), the two cross-file pins, the `TMPDIR`/`PATH` operational prerequisite, the declared-divergence note, the TDR-0055/TDR-0056 staging note |
 | `.ai/rules/testing-strategy.md` | Layers, module→test mapping, invariant-authoring rules, `pnpm check` as the aggregate |
 | `.ai/rules/typescript.md` §9–§10 | `bun:test` authoring rules, determinism, fixtures never named `*.test.ts`, gate commands |
@@ -275,7 +277,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-LOG-001` | Every event renders one bounded, ANSI-free, identifier-only line | Unit | Behaviour | Critical | `AC-F7-1` | New |
 | `TC-LOG-002` | A full scenario log carries no prompt, transcript, credential, environment value, model, or seat | Integration | Conformance | Critical | `AC-F7-1` | New |
 | `TC-LOG-003` | Rotation past the bound keeps the newest data and drops the oldest generation | Unit | Behaviour | Critical | `AC-F7-2` | New |
-| `TC-LOG-004` | A failing append or rotation leaves the verdict, exit, and records unchanged | Unit | Behaviour | Critical | `AC-F7-2` | New |
+| `TC-LOG-004` | A failing append or rotation leaves the exit, the records, and the log disclosure unchanged | Unit | Behaviour | Critical | `AC-F7-2` | New |
 | `TC-LOG-005` | `log --lines` bounds hold in lines and bytes with a correct truncation flag | Integration | Behaviour | Critical | `AC-F1-3`, `AC-F7-3` | New |
 | `TC-LOG-006` | The log path is the state directory beside the ledger, per identity, and a read creates nothing | Structure | Behaviour | Critical | `AC-F7-4` | New |
 | `TC-LOG-007` | An unreadable log yields zero lines with the marker at exit 0 | Integration | Behaviour | Critical | `AC-F7-4` | New |
@@ -565,20 +567,22 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/structure/loop-production-composition.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-spawn` — the composition's mounted resolution symbols
-**Fixture mechanism**: source import-identity assertions plus the D1 argv observation.
+**Fixture mechanism**: source import-identity assertions plus the recording starter's argv observation. **Driver: D2 at the phase-2 boundary** (DoR R-34).
 
 **Preconditions**:
 - The loop composition module and the delivery composition module.
+- **The phase-2 assertion is the D2 spawn refusal/binding path only.** Until phase 7's inventory repin, `loop` is not prompt-required, so `runEntrypoint` drops the family and a D1 invocation would reach no command definition; the D1 half is deferred, not deleted (see the re-observation line below).
 
 **Steps**:
 1. Assert the loop composition imports `createHarnessProfilePort` from `packages/cli/src/production.ts` and calls `resolveHarnessAdmissionBinding` there.
 2. Assert no second resolver symbol is imported by the loop modules (`provider-*` resolver, `policy`, `quota`, `route`), and that no loop module reads an operator override for the seat.
-3. Run the D1 fresh spawn and assert the resolved seat model reaches the argv (shared with `TC-SPAWN-001`).
+3. Run the **D2** fresh spawn and assert the resolved seat model reaches the argv (the same D2 spawn `TC-SPAWN-001` asserts).
 
 **Expected Outcome**:
 - Import identity holds: one resolution helper, one profile-port wrapper, both the delivered ones.
 - Zero occurrences of a policy/quota/router symbol in the loop surface; zero operator flags for agent/model/title.
-- The argv carries the resolved seat model observed from the same composed path the `dispatch` surface uses.
+- The argv carries the resolved seat model observed from the same composed path the `dispatch` surface uses, as reached through **D2**.
+- **PHASE-7 RE-OBSERVATION:** the same argv assertion is re-run through **D1** (`createProductionComposer` → `runEntrypoint`) only after the phase-7 inventory repin, when `loop` is prompt-required and the production entrypoint composes it. Until then this case asserts the D2 behaviour only.
 
 #### TC-SPAWN-005 - The additive handle `pid` is filled when the starter supplies one and absent otherwise
 
@@ -1175,7 +1179,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts` + `tests/structure/loop-imports.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-verdict` + `S-backoff` + `S-terminate` — the composed bound formula and the unconfirmed branch
-**Fixture mechanism**: the recording clock plus the recording delay; two resolved-settings sets (the shipped defaults and a raised interval); a session whose last sourced progress is stamped at a known virtual instant; a process-tree model armed to fail or mismatch on the unconfirmed rows.
+**Fixture mechanism**: the recording clock plus the recording delay; two resolved-settings sets (the shipped defaults and a raised interval); a session whose last sourced progress is stamped at a known virtual instant; a process-tree model armed to fail or mismatch on the unconfirmed rows. **Suite boundary (DoR R-37):** this case keeps its `loop-stuck.test.ts` host, and **phase 5 authors and gates that suite for it** — the delivery plan declares `tests/behaviour/loop-stuck.test.ts` in phase 5's file scope and adds it to the phase-5 gate, because the bound formula and the unconfirmed branch are phase-5 behaviour.
 
 **Preconditions**:
 - The formula is `stuck-window + collection-interval + kill-grace + first backoff`.
@@ -1527,7 +1531,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Preconditions**:
 - A recorded `active` session with `pid: null` and `processStartTimeMs: null`, session id `ses-resumable-1`.
 - The session port's `resume` returns a handle carrying `sessionId: "ses-resumable-1"` (the delivered resume contract: the resumed session keeps its identity).
-- The progress source is `zero` for more than the window.
+- The progress source is `zero` for more than the window — present only so the "no kill" assertion is non-vacuous, **not** to exercise a verdict (DoR R-39).
 
 **Steps**:
 1. Run three cycles.
@@ -1536,7 +1540,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 4. Run `loop status --json`.
 
 **Expected Outcome**:
-- Verdict: never `stuck` (unknown liveness is not a stuck condition); the window is never counted as progress either.
+- **No verdict record is produced in this case, because no verdict path exists at the phase-3 boundary** — the positive, executable form of the old "never stuck" clause (DoR R-39). The verdict rule itself is asserted where it exists: `TC-STUCK-001`/`TC-STUCK-003` in phase 4, and the pid-less session's non-kill consequence is asserted here as "0 kills and no second acquisition". This case must not be read as evidence about the verdict.
 - **Exactly one `resume` call** in the whole run, targeting `ses-resumable-1`, with **no** `--title` in its argv (the title is a fresh-spawn-only fact, `AC-F2-2`), and the returned handle carries `sessionId: "ses-resumable-1"` — the same session, not a new one.
 - 0 spawns and 0 kills. There is no reading of this case under which an implementation that merely *observes* the session passes: the resume count is asserted `toBe(1)`, and the observation-only variant fails by name (register `M103`).
 - `loop status` reports `ceo_pid` empty (no live identity), `ceo_session` empty (live-only, `R-06`), and `degraded` contains `session-pid-unknown` (plus `live-facts-unknown` where the kind supplies no liveness).
@@ -1650,7 +1654,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - The newest lines are present (the newest data is always retained) and the oldest are the ones missing.
 - Rotation happened at an append, never at a read.
 
-#### TC-LOG-004 - A failing append or rotation leaves the verdict, exit, and records unchanged
+#### TC-LOG-004 - A failing append or rotation leaves the exit, the records, and the log disclosure unchanged
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -1660,21 +1664,24 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/loop-log.test.ts`
 **Tags**: @backend, @loop, @offline
-**Seam**: `S-log` — the failure-swallowing path
-**Fixture mechanism**: the log double configured to fail the next append, then the next rotation; a stuck scenario driven twice (failing and not).
+**Seam**: `S-log` — the failure-swallowing path over the D2 cycle surface
+**Fixture mechanism**: the log double configured to fail the next append, then the next rotation; a D2 cycle run driven twice (failing and not), emitting the phase-2 event lines. **Driver: D2.**
+
+> **Phase scope (DoR R-36).** This case is owned by **phase 2**, so its scenario is the **D2 cycle surface** — the `start`, `cycle`, `session`, `release` and `error` event lines and their bounds — with no stuck verdict, no termination and no restart. The failure-swallowing property (one bounded attempt, then swallowed, disclosed only as `log-unavailable`) is phase 2's and is asserted here.
 
 **Preconditions**:
-- A stuck episode that produces a verdict, a termination, an outcome, and a restart.
+- A spawned session with at least three recorded cycles, so the log carries `start`, `cycle`, `session` and `release` lines.
 - Row A: the log append fails once. Row B: the rotation fails once. Row C: both fail.
 
 **Steps**:
-1. Run each row and record the verdict, the exit, the record set, and the status degradation list.
+1. Run each row and record the exit, the record set, the emitted event lines, and the status degradation list.
 2. Run the control (no failure) and compare.
 
 **Expected Outcome**:
-- Verdict, exit, and the record set are byte-identical to the control in all three rows.
+- Exit and the record set are byte-identical to the control in all three rows; the event lines present are the phase-2 set, unchanged in count and content.
 - Exactly one bounded attempt is made per append/rotation (asserted by the double's call count), then swallowed.
 - The only disclosure is `log-unavailable` on the status degradation list; no failure identity is borrowed, no exit changes, and no `error` event line is fabricated.
+- **PHASE-4 OBSERVATION:** the `stuck-verdict`, `kill` and `restart` event lines are **not** exercised here — they are observed in **phase 4**, where the verdict and terminate path exist, by `TC-BACKOFF-007` (the stuck-restart evidence line) and `TC-STUCK-001` (the verdict/outcome records the log narrates). This case's assertion set is the phase-2 surface only; the cross-phase identity property ("a failed append changes no verdict, exit, record or disclosure") is completed there.
 
 #### TC-LOG-005 - `log --lines` bounds hold in lines and bytes with a correct truncation flag
 
@@ -2151,7 +2158,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 **Expected Outcome**:
 - Live tree: 0 violations for all three assertions.
-- Each planted mutant reported by name and file (`loop-backoff.ts: ambient clock/timer Date.now`, `loop-log-line.ts: forbidden module node:fs`, and the equivalent for the timer).
+- Each planted mutant reported by name and file (`loop-backoff.ts: ambient clock/timer Date.now`, `loop-log.ts: forbidden module node:fs`, and the equivalent for the timer).
 - The consequence is asserted, not assumed: `TC-BACKOFF-002`'s recorded-only waits and `TC-BATTLE-003`'s zero real timers depend on this purity.
 
 #### TC-CONTRACT-006 - The loop imports the delivered engine primitives and reimplements no lease, budget, kill, or lock
@@ -2375,14 +2382,15 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-spawn.test.ts` + `tests/checks/loop-contract-invariance.test.ts`
 **Tags**: @backend, @loop, @parity, @offline
 **Seam**: `S-spawn` — the pre-spawn step set
-**Fixture mechanism**: an environment whose `HOME` contains a planted `~/.ados/hooks/pre-opencode-iteration` script, and a guarded runner that would record its execution.
+**Fixture mechanism**: an environment whose `HOME` contains a planted `~/.ados/hooks/pre-opencode-iteration` script, and a guarded runner that would record its execution. **Driver: D2 at the phase-2 boundary** (DoR R-35).
 
 **Preconditions**:
 - A planted hook script in the fixture home, executable, with a sentinel side effect path that the guarded runner would record if it ran.
 - The environment variable names the shell used (`ADOS_HOOK_ENV_V1`-shaped data) are also present.
+- **The phase-2 assertion runs on D2**, the only driver that can reach the family before the phase-7 repin.
 
 **Steps**:
-1. Spawn through D1 with the planted home.
+1. Spawn through **D2** with the planted home.
 2. Assert the guarded runner recorded no hook invocation and no process ran the planted path.
 3. Assert no loop module reads a hook path (source scan) and the sentinel side-effect file was not created.
 
@@ -2390,6 +2398,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - 0 hook executions; 0 reads of a hook path; the sentinel file is absent.
 - The spawn's step set is exactly: resolve the binding, build the fixed argv, spawn, record the session.
 - The hook's absence is intended (`NG-11`): provider policy (F2) replaces it, not a port of the hook.
+- **PHASE-7 RE-OBSERVATION:** the same no-hook assertion is re-run through **D1** (`createProductionComposer` → `runEntrypoint`) only after the phase-7 inventory repin, when `loop` is prompt-required. Until then this case asserts the D2 behaviour only; the static-scan half keeps its existing phase-8 re-observation.
 
 #### TC-PARITY-009 - No `CEO_LOOP_*` environment knob participates; the loop is unbounded
 
@@ -2933,6 +2942,7 @@ The three pinned help-inventory surfaces are therefore `tests/checks/install-con
 | 0.3 | 2026-11-19 | @test-plan-writer | DoR-iteration-1 remediation against spec **v1.2** (`readiness-review/readiness-iter-1.md`; pm-notes `PM rulings for the DoR-iteration-1 remediation`). **R-03 (deliver leg):** `dispatch` is named as the deliver primitive everywhere; `TC-BATTLE-006` drives it through the real command runtime with its nested PM session doubled by the same scripted port, asserts the dispatch envelope plus its attempt/lane records, and states the proof level as command-runtime-and-no-further; `phase complete` survives only as an explicit negation, and the boundary constant stays nine/six with `live-opencode` carrying the nested leg's live behaviour. §3.1 gains a "deliver-leg level" paragraph. **R-07:** `TC-INSTANCE-006` now asserts exactly one `resume` with the recorded session id, no `--title`, and the same id on the returned handle; the "resumed/observed" hedge is gone; `TC-SPAWN-002`'s resume row is bound to that case and AC-F2-2 gains the link. **R-10:** case inventory corrected to **69 AC-linked / 5 NFR-only** with one source of truth (the matrix). **R-11:** both new-suite counts corrected 16 → **17**. **R-12:** `TC-STUCK-004` asserts `progress-unreadable` present and `delivery-corroborator-unreadable` absent, so all five closed degradation values have an owner. **R-13:** `TC-VERB-002` gains the two required-flag refusal rows and the global-flag acceptance rows. **R-16:** `TC-CONTRACT-001`'s baseline is now a **committed literal inside `tests/checks/loop-contract-invariance.test.ts`** (no fixture file) and the coordinator-suite observation moves to the gate battery. **Spec-v1.2 alignment:** `TC-STUCK-010` rewritten as the exact 16-row table (D1–D6, M1–M6, F0–F3) plus the pid-reuse and live-shape observations and the start-time ban; `TC-STUCK-003` seeds a composition-shaped `startedAt` and arms a start-time probe; `TC-STUCK-009` asserts no `startedAt`/start-time/age read; `TC-STUCK-001`/`-008` assert `iterationId = <loopId>:<cycle ordinal>` and `killFailureReason` only on a failed kill; `TC-STUCK-006` asserts the bound **formula** at 30 000 and 60 000 ms plus the shipped 652 000 ms and a source-level literal ban; `TC-VERB-003` follows the status-key source table (`loop_id=loop-main` always, live-only `ceo_pid`/`ceo_session`, `restarts=0/<bound>`, a `none` scan scoped away from the enum); `TC-VERB-001` and `TC-BATTLE-006` use the declared clean-end cause; `TC-BACKOFF-004` asserts `epoch-<n>;restarts=<count>;seq=<sequence>`; `TC-INSTANCE-004`'s harness registers both families. Registers `M102`–`M115` added (101 → **115** mutations, contiguous). Counts: **74 cases (unchanged, none added), 41/41 ACs, 78 links (37 extras), 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 existing / 9 authored / 9 extended** (no new fixture). |
 | 0.4 | 2026-11-19 | @test-plan-writer | DoR-iteration-2 remediation against spec **v1.3** (`readiness-review/readiness-iter-2.md`; pm-notes `PM rulings for the DoR-iteration-2 remediation`). **R-23 segment split:** `TC-STUCK-001` is now the phase-4 segment — verdict record, termination, outcome record, and the restart **admission decision** (invoked exactly once with `ordinal: 1` and the epoch preconditions) — and the delivered `coordinator.restart` record plus the second session became a labelled **phase-5 re-observation row A of `TC-BACKOFF-001`** (`ordinal: 1`, ≤1 live session), with the pre-existing ordinal-2 row kept as row B. `TC-INSTANCE-005` is now the phase-4 segment (takeover + unconfirmed termination: 0 restarts, 0 spawns, released lease, ≤1 live `active` session) and no longer composes the restart or immediate-stop segments; the restart segment is re-observed in `TC-BACKOFF-001` row A and the stop segment in `TC-STOP-005` row B, which now asserts ≤1 live session and is cross-referenced from `TC-INSTANCE-005`. §3.1 gained the **phase-gate segment table** and the ownership consequence — **AC-F5-1 follows to phase 5** (its last observation is `TC-BACKOFF-001` row A) and **AC-F6-4 to phase 6** (its last observation is `TC-STOP-005` row B) — with the matrix links added so the move is machine-readable; §7.5 gained the **phase-gate self-sufficiency rule**. **R-24:** `TC-INSTANCE-007` row B is narrowed to the admission the delivered claim gate performs (no pre-claim start-time gap) and the start-time-capability gap moves to the kill path as `TC-STUCK-008` row E, which asserts the delivered `capability-gap` outcome, 0 signals and the terminal consequences without inventing an exit identity. **R-25:** the seam count is corrected to **13** with the §7.1 table named as the reference set. **R-26:** `TC-SPAWN-002` step 5 is a pointer only. **Spec v1.3 verified:** no contradiction — AC-F8-5's page/constant agreement and DOD-9's stale-statement grep were already stated as documentation-phase checks (§1.2, `TC-BATTLE-007`), and the coordinator page's pid reconciliation concerns the docs phase, not a case. Registers `M116`–`M120` added (115 → **120** mutations, contiguous). Counts: **74 cases (no case added), 41/41 ACs, 80 links (39 extras), 69 AC-linked / 5 NFR-only, 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 existing / 9 authored / 9 extended**. |
 | 0.5 | 2026-11-19 | @test-plan-writer | Human-authorized fourth pass: exactly five findings from `readiness-review/readiness-iter-3.md`, no new AC and no new case. **R-29 (option b):** `TC-PARITY-005` is narrowed to the **ended-session replacement** path — one fresh spawn (`--agent ceo`, one `--model`, one `--title`), zero `resume` calls for the previous session id, a new session id — with no stuck verdict and no restart precondition; retitled, re-homed to `tests/behaviour/loop-instance.test.ts`, and stated as **owned by phase 3** with its phase-2 appearance named as the R-29 defect. §3.1 states that **AC-F2-2's last observation is now phase 3, so AC-F2-2's owner becomes phase 3**, while **AC-F2-1 stays phase 2**; the phase-3 note and the segment table carry the re-home. **R-30:** the D1 (`runEntrypoint`) halves are removed from `TC-SPAWN-001` and `TC-SPAWN-005` phase-2 execution, which is **D2 only**; each case carries a labelled **PHASE-7 RE-OBSERVATION** line for the post-repin D1 half; §7.5 gains the entrypoint rule and §4 states the same boundary. D1 is not redefined and no driver was added. **R-26 residual:** `TC-SPAWN-002` no longer asserts the phase-3 resume path — step 5 is a pointer to `TC-INSTANCE-006` with no assertion of its own, the no-title assertion lives only in `TC-INSTANCE-006`, and the case title drops the resume claim. **R-32:** §5.1 gains `AC-F2-2` on `TC-INSTANCE-006`'s row and `AC-F1-5` on `TC-CONTRACT-003`'s, so the index recomputes to **69 AC-linked / 5 NFR-only**; §3.1 states the index mirrors the matrix verbatim. **N-06:** `TC-BACKOFF-003` row A seeds a `requested`/`drain` `loop.stop` record through the phase-1 reader at the wait boundary, explicitly **not** invoking the phase-6 verb. Register: `M18`'s named case moves to `TC-INSTANCE-006` (no row added or removed; **M1–M120 still contiguous**). Counts: **74 cases (none added or removed), 41/41 ACs, 80 links (39 extras), 69 AC-linked / 5 NFR-only, 0 unmapped, 0 orphan, 0 open questions, no deferred assertion**; fixtures **15 / 9 / 9**. |
+| 0.6 | 2026-11-19 | @test-plan-writer | **Recorded Option-B deviation** (human-authorized; the readiness gate is not re-run for this class). Seven corrections from `readiness-review/readiness-iter-4.md`, all phase/driver-alignment edits: **R-34** `TC-SPAWN-004` phase-2 execution is **D2 only** (import identity + the D2 spawn/binding path) with a labelled **PHASE-7 RE-OBSERVATION** for the `runEntrypoint` half; **R-35** `TC-PARITY-008` likewise — `Spawn through D2` at phase 2, the D1 no-hook assertion a labelled phase-7 re-observation, the static-scan half keeping its phase-8 re-observation; **R-36** `TC-LOG-004` drops the stuck episode and asserts the log contract over the **D2 cycle surface** (`start`/`cycle`/`session`/`release`/`error` lines and bounds), with a labelled **PHASE-4 OBSERVATION** naming `TC-BACKOFF-007` and `TC-STUCK-001` as the owners of the `stuck-verdict`/`kill`/`restart` lines; **R-37** `TC-STUCK-006` keeps its `loop-stuck.test.ts` host, with the suite boundary stated — **phase 5 authors and gates that suite** for the case (the plan declares it); **R-38** the mutant example now names the plan-declared module `loop-log.ts`; **R-39** `TC-INSTANCE-006`'s vacuous "never `stuck`" clause becomes the positive, executable assertion **no verdict record is produced because no verdict path exists at the phase-3 boundary**, with the verdict rule pointed at `TC-STUCK-001`/`TC-STUCK-003`; **N-07** §2 cites the spec at **v1.4**. §1.2 records the deviation itself (six phase-2 cases proven at the D2 spawn/status/log-sink surface, D1 halves phase-7, stuck-episode log lines phase-4) and attributes it to the recorded Option-B decision. **Counts unchanged:** 74 cases, 41/41 ACs, 80 links (39 extras), 69 AC-linked / 5 NFR-only, **120 mutation rows M1–M120 contiguous with no row's named case changed**, fixtures 15 / 9 / 9, seams 13. |
 
 ## 10. Test Execution Log
 
@@ -2948,3 +2958,4 @@ Populated during delivery. One row per case group; the battery is run whole befo
 | DoR-iteration-1 findings (R-03, R-07, R-10…R-13, R-16) | — | Closed | Remediated in revision 0.3: R-03 → `TC-BATTLE-006` + `M102`; R-07 → `TC-INSTANCE-006` + `M103`; R-10 → the corrected inventory sentence; R-11 → the 17-suite counts; R-12 → `TC-STUCK-004` + `M105`; R-13 → `TC-VERB-002` + `M104`; R-16 → the in-suite literal baseline plus this gate read. |
 | DoR-iteration-2 findings (R-23, R-24, R-25, R-26) | — | Closed | Remediated in revision 0.4: R-23 → the `TC-STUCK-001` phase-4 segment plus `TC-BACKOFF-001` row A (phase 5) and `TC-STOP-005` row B (phase 6), with `TC-INSTANCE-005` narrowed to its phase-4 segment, the §3.1 segment table and the §7.5 self-sufficiency rule, and AC-F5-1/AC-F6-4 ownership following; controls `M116`/`M117`/`M120`. R-24 → `TC-INSTANCE-007` row B narrowed and the gap moved to `TC-STUCK-008` row E; controls `M118`/`M119`. R-25 → thirteen seams. R-26 → `TC-SPAWN-002` step 5 is a pointer. |
 | DoR-iteration-3 findings (R-29, R-30, R-26 residual, R-32, N-06) | — | Closed | Remediated in revision 0.5, five findings only: R-29 → `TC-PARITY-005` narrowed to the ended-session replacement and owned by phase 3, so AC-F2-2 follows to phase 3 (stated in §3.1; the plan recomputes ownership). R-30 → D2-only phase-2 execution for `TC-SPAWN-001`/`-005` with a labelled phase-7 D1 re-observation, plus the §7.5 entrypoint rule. R-26 residual → `TC-SPAWN-002` step 5 is a pointer only; `M18` now names `TC-INSTANCE-006`. R-32 → the two index rows now mirror the matrix, so the index recomputes to 69/5. N-06 → `TC-BACKOFF-003` row A seeds the stop fold and does not invoke the phase-6 verb. |---
+| DoR-iteration-4 findings (R-34, R-35, R-36, R-37, R-38, R-39, N-07) | — | Closed by Option B | Remediated in revision 0.6 as a **recorded deviation, not a re-gated pass**: R-34/R-35 → D2-only phase-2 execution with labelled phase-7 D1 re-observations; R-36 → `TC-LOG-004` narrowed to the D2 cycle surface with a phase-4 observation for the stuck-episode lines; R-37 → the `loop-stuck.test.ts` host kept with phase 5 declared as its author/gate; R-38 → `loop-log.ts`; R-39 → a positive, executable no-verdict assertion at phase 3; N-07 → spec v1.4. The class is closed by narrowing phase 2's claimed surface, as the recorded Option-B decision authorizes; the readiness gate was not re-run. |

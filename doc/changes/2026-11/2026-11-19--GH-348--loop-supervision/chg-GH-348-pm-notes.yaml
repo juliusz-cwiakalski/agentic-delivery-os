@@ -5,7 +5,7 @@ milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
   specification: { started: null, completed: 2026-11-19T12:15:47.236Z }
-  test_planning: { started: null, completed: 2026-11-19T12:16:04.965Z }
+  test_planning: { started: null, completed: 2026-11-19T12:39:42.198Z }
   delivery_planning: { started: null, completed: 2026-11-19T12:22:39.254Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -573,21 +573,22 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "DoR re-run after Option A = NOT_READY
-      (readiness-review/readiness-iter-4.md). Eight authorized findings:
-      7 Resolved (R-26, R-29, R-31, R-32, R-33, N-05, N-06) and 1 NOT CLOSED
-      (R-30 - its two named cases were fixed but its closure criterion was false).
-      Three NEW blocking instances of the SAME class, all in the phase-2 inventory
-      and all at locations no pass had rewritten: R-34 TC-SPAWN-004 step 3 runs a
-      D1 fresh spawn; R-35 TC-PARITY-008 step 1 spawns through D1; R-36
-      TC-LOG-004's precondition requires a stuck verdict, termination, outcome and
-      restart (phases 4-5) and M72 is allocated to phase 2 for a phase-4 verdict.
-      Four small non-blocking items: R-37 (TC-STUCK-006 declared in a suite the
-      plan does not author), R-38 (TC-CONTRACT-005 expects loop-log-line.ts while
-      the plan declares loop-log.ts), R-39 (a vacuous 'never stuck' clause in
-      TC-INSTANCE-006), N-07 (test plan cites the spec at v1.1). Class check by
-      the gate: 71 of 74 cases pass the implementer-ordinal and
-      driver-reachability property; the three failures are exactly the phase-2
-      cases whose assertion path leaves the D2 spawn/status/log-sink surface."
+      (readiness-review/readiness-iter-4.md). Eight authorized findings: 7
+      Resolved (R-26, R-29, R-31, R-32, R-33, N-05, N-06) and 1 NOT CLOSED (R-30
+      - its two named cases were fixed but its closure criterion was false).
+      Three NEW blocking instances of the SAME class, all in the phase-2
+      inventory and all at locations no pass had rewritten: R-34 TC-SPAWN-004
+      step 3 runs a D1 fresh spawn; R-35 TC-PARITY-008 step 1 spawns through D1;
+      R-36 TC-LOG-004's precondition requires a stuck verdict, termination,
+      outcome and restart (phases 4-5) and M72 is allocated to phase 2 for a
+      phase-4 verdict. Four small non-blocking items: R-37 (TC-STUCK-006
+      declared in a suite the plan does not author), R-38 (TC-CONTRACT-005
+      expects loop-log-line.ts while the plan declares loop-log.ts), R-39 (a
+      vacuous 'never stuck' clause in TC-INSTANCE-006), N-07 (test plan cites
+      the spec at v1.1). Class check by the gate: 71 of 74 cases pass the
+      implementer-ordinal and driver-reachability property; the three failures
+      are exactly the phase-2 cases whose assertion path leaves the D2
+      spawn/status/log-sink surface."
     type: info
     date: "2026-11-19"
   - text: "STOPPED AND REPORTED per the human's instruction: 'if the same class
@@ -600,22 +601,57 @@ notes:
       TC-SPAWN-001/-005); (ii) TC-LOG-004's precondition drops the stuck episode
       and asserts the log contract over the D2 cycle surface, with the
       stuck-episode log lines observed in phase 4; (iii) M72 moves to the phase
-      owning its named case. The four non-blocking items (R-37, R-38, R-39, N-07)
-      ride the same edit. The deviation itself - that six phase-2 cases are proven
-      at a narrower surface than the original plan claimed - must be stated in the
-      PR body. Delivery has NOT started and no source file was written; the branch
-      carries artifacts only."
+      owning its named case. The four non-blocking items (R-37, R-38, R-39,
+      N-07) ride the same edit. The deviation itself - that six phase-2 cases
+      are proven at a narrower surface than the original plan claimed - must be
+      stated in the PR body. Delivery has NOT started and no source file was
+      written; the branch carries artifacts only."
     type: blocker
     date: "2026-11-19"
   - text: "RETRO (DoR iteration 4 and the stop): three authorized passes each fixed
       every finding they were handed and each left the class in place, because
-      remediation was driven by the FINDING LIST and never by a sweep of the phase
-      inventory. The gate found the survivors at locations no pass had rewritten -
-      exactly what a finding-driven pass cannot reach. If a fifth pass is ever
-      authorized, the only defensible method is the sweep the gate performed: for
-      every case in the phase, enumerate its assertion path and check the
-      implementer ordinal and driver reachability, then edit whatever the sweep
-      names. The cheaper alternative, now recommended, is to narrow phase 2's
-      claimed surface once and record it, which is Option B."
+      remediation was driven by the FINDING LIST and never by a sweep of the
+      phase inventory. The gate found the survivors at locations no pass had
+      rewritten - exactly what a finding-driven pass cannot reach. If a fifth
+      pass is ever authorized, the only defensible method is the sweep the gate
+      performed: for every case in the phase, enumerate its assertion path and
+      check the implementer ordinal and driver reachability, then edit whatever
+      the sweep names. The cheaper alternative, now recommended, is to narrow
+      phase 2's claimed surface once and record it, which is Option B."
     type: retro
+    date: "2026-11-19"
+  - text: "HUMAN DECISION (2026-11-19): OPTION B authorized, exactly as recorded in
+      GitHub comment 7009199676 - TC-SPAWN-004 and TC-PARITY-008 become
+      D2-at-phase-2 with the D1 half as a labelled phase-7 re-observation;
+      TC-LOG-004 drops the stuck episode from its precondition and observes it
+      in phase 4; M72 moves to its owning phase; R-37/R-38/R-39/N-07 ride along.
+      Counts stay 41/74/120. The readiness gate is NOT re-run for this class -
+      this instruction is the explicit recorded override for the DoR gate, so
+      dor_check is completed on it and delivery proceeds. The PR body must carry
+      the deviation verbatim: 'six phase-2 cases are proven at a narrower
+      surface (D2 spawn/status/log-sink) than the original plan claimed.'"
+    type: decision
+    date: "2026-11-19"
+  - text: "Option B applied: test plan r0.6 (TC-SPAWN-004 and TC-PARITY-008 D2 at
+      phase 2 with labelled phase-7 D1 re-observations, TC-LOG-004 narrowed to
+      the D2 cycle surface with the stuck-episode lines observed in phase 4,
+      TC-STUCK-006 keeping its loop-stuck.test.ts host, loop-log.ts naming, the
+      TC-INSTANCE-006 clause made non-vacuous, the spec version corrected to
+      v1.4) and the plan aligned (phase 2 states no runEntrypoint execution for
+      the family, phase 4 declares loop-log.test.ts for the stuck-episode lines,
+      phase 7 hosts four D1 re-observations, phase 5 declares and gates
+      loop-stuck.test.ts, M72 stays in phase 2 with its reason stated, and the
+      recorded-deviation block quotes the PR-body line verbatim). Partitions
+      unchanged: 41 ACs, 74 TCs, 120 mutation rows; declared paths 123 -> 125
+      for the two required suite declarations."
+    type: info
+    date: "2026-11-19"
+  - text: "dor_check completed on the recorded override: the readiness gate verdict
+      at this boundary is NOT_READY (iteration 4), and the human explicitly
+      directed that the gate NOT be re-run for this class, that dor_check be
+      completed, and that delivery proceed with the deviation recorded. This is
+      the documented override the lifecycle permits; it is not a silent skip.
+      The readiness record stays in the change folder and the PR body reproduces
+      the deviation line verbatim."
+    type: decision
     date: "2026-11-19"

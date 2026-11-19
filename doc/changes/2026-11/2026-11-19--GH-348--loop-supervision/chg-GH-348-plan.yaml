@@ -49,7 +49,7 @@
 #               page's restart-reason content and the named DOD-9/AC-F8-5
 #               mechanisms; no AC, case, requirement or decision changed, so this
 #               plan's contract obligations are unchanged by it.
-#   - Tests:    ./chg-GH-348-test-plan.md (revision 0.5; 74 cases in ten
+#   - Tests:    ./chg-GH-348-test-plan.md (revision 0.6; 74 cases in ten
 #               groups — VERB 5, SPAWN 6, BACKOFF 7, STOP 7, STUCK 11,
 #               INSTANCE 7, LOG 7, BATTLE 8, CONTRACT 6, PARITY 10; 41/41 ACs
 #               mapped with 80 AC→case links (25 criteria multi-observation),
@@ -64,8 +64,21 @@
 #               file map; §7.4 the 120-row mutation register M1–M120; §7.5 the
 #               per-group gate battery, the PHASE-GATE SELF-SUFFICIENCY RULE and
 #               its ENTRYPOINT RULE; §7.6 non-functional verification; §8.3 the
-#               open-questions disposition (zero open)). Revision 0.5's
-#               delivery-facing changes this plan reflects: R-29's re-home
+#               open-questions disposition (zero open)). Revision 0.6 records the
+#               human-authorized OPTION-B DEVIATION (its §1.2): six phase-2 cases
+#               (`TC-SPAWN-001`, `TC-SPAWN-002`'s D2-only title/reap half,
+#               `TC-SPAWN-004`, `TC-SPAWN-005`, `TC-PARITY-008`, `TC-LOG-004`) are
+#               proven at the narrower D2 spawn/status/log-sink surface; their D1
+#               halves are phase-7 re-observations and `TC-LOG-004`'s stuck-episode
+#               log lines are phase-4 observations. Revision 0.6's other
+#               delivery-facing alignments this plan reflects: R-34
+#               (TC-SPAWN-004 D2-only at phase 2), R-35 (TC-PARITY-008 D2-only at
+#               phase 2), R-36 (TC-LOG-004 narrowed to the D2 cycle surface),
+#               R-37 (TC-STUCK-006 keeps its `loop-stuck.test.ts` host, which
+#               phase 5 authors and gates), R-38 (`loop-log.ts` naming), R-39
+#               (TC-INSTANCE-006's no-verdict assertion), N-07 (spec v1.4
+#               citation). Revision 0.5's
+#               delivery-facing changes: R-29's re-home
 #               (TC-PARITY-005 narrowed to the ended-session replacement path and
 #               moved to phase 3, so AC-F2-2's last observation and owner are phase
 #               3 while AC-F2-1 stays phase 2); R-30's driver boundary (phase-2
@@ -129,11 +142,31 @@
 #
 # PLAN SHAPE: nine phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. The spec
-#   is complete at v1.4 and the test plan at revision 0.5, so no design work
+#   is complete at v1.4 and the test plan at revision 0.6, so no design work
 #   remains; a planning phase would declare no scope to compute. The nine phases
 #   are the change's own ids; `tier.phases` below lists the LIFECYCLE phase ids
 #   [1..11] (the ceremony tier engine's vocabulary) and the two namespaces are
 #   never conflated.
+#
+# RECORDED AUTHORIZED DEVIATION (Option B) — binding, and NOT to be re-derived:
+#   "six phase-2 cases are proven at a narrower surface (D2 spawn/status/log-sink)
+#   than the original plan claimed". The six are `TC-SPAWN-001`, `TC-SPAWN-002`'s
+#   D2-only title/reap half, `TC-SPAWN-004`, `TC-SPAWN-005`, `TC-PARITY-008` and
+#   `TC-LOG-004`. Their phase-2 execution is the D2 edge over the spawn / `status`
+#   / log-sink surface only (their D1 `runEntrypoint` halves are PHASE-7
+#   re-observations, because the delivered entrypoint drops a family that is not
+#   prompt-required), and `TC-LOG-004`'s `stuck-verdict` / `kill` / `restart` log
+#   lines are PHASE-4 observations, because no verdict path exists at phase 2.
+#   SOURCE: the human decision recorded in the pm-notes
+#   ("HUMAN DECISION (2026-11-19): OPTION B authorized") and reproduced in test
+#   plan revision 0.6 §1.2. CONSEQUENCE: the readiness gate is NOT re-run for this
+#   class — the human instruction is the explicit recorded override for the DoR
+#   gate, so `dor_check` is completed on it and delivery proceeds. The PR body MUST
+#   carry the quoted line verbatim, naming the same six cases. Nothing in the
+#   AC/TC/mutation partitions moves because of the deviation: no phase is added or
+#   removed and no AC, case or mutation row changes. (The two declared-path
+#   additions in phases 4 and 5 and the phase-5/phase-7 gate lines come from the
+#   separate R-37 and stuck-episode-log-line alignments, never from the narrowing.)
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
 #   The two decision records are ALREADY COMMITTED on this branch: the bare
@@ -253,10 +286,12 @@
 #   composed program to `PROMPT_REQUIRED_COMMANDS` and drops extras
 #   (`selectPromptRequiredProgram`), and `loop` joins that inventory only in PHASE
 #   7 — so every pre-phase-7 case runs on D2 (the test edge), and the D1
-#   (`createProductionComposer` → `runEntrypoint`) half of TC-SPAWN-001 and
-#   TC-SPAWN-005 is a labelled PHASE-7 RE-OBSERVATION in
-#   `tests/structure/loop-production-session.test.ts`. D1 is not redefined and no
-#   second driver is added.
+#   (`createProductionComposer` → `runEntrypoint`) halves of TC-SPAWN-001,
+#   TC-SPAWN-004, TC-SPAWN-005 and TC-PARITY-008 are labelled PHASE-7
+#   RE-OBSERVATIONS in `tests/structure/loop-production-session.test.ts`. D1 is not
+#   redefined and no second driver is added. See also the RECORDED AUTHORIZED
+#   DEVIATION (Option B) block: six phase-2 cases are proven at that narrower
+#   D2 spawn/status/log-sink surface.
 #   Where one AC spans two phases the case is SPLIT into labelled segments (test
 #   plan §3.1's phase-gate segment table): the earlier phase asserts its segment,
 #   the later phase's case asserts the remainder, and AC ownership follows the
@@ -1140,21 +1175,41 @@ phases:
   #       scenario is expressed twice.
   #   2.7 Author `tests/behaviour/loop-spawn.test.ts` (SPAWN-001, SPAWN-002,
   #       SPAWN-003, SPAWN-005, SPAWN-006, PARITY-008 — all on D2), and
-  #       `tests/structure/loop-production-composition.test.ts` (SPAWN-004), and
+  #       `tests/structure/loop-production-composition.test.ts` (SPAWN-004, on
+  #       D2), and
   #       `tests/behaviour/loop-log.test.ts` (LOG-001, LOG-003, LOG-004 — the
   #       renderer, the rotation/retention arithmetic, and the failing-write
-  #       path). `loop-log.test.ts` is EXTENDED in phase 7 with the three read
+  #       path over the D2 CYCLE surface). `loop-log.test.ts` is EXTENDED in
+  #       phase 7 with the three read
   #       cases; this phase lands only its own three. This phase does NOT declare
   #       or gate `tests/structure/loop-production-session.test.ts`: its D1
-  #       (`createProductionComposer` → `runEntrypoint`) half is a labelled
-  #       PHASE-7 RE-OBSERVATION, because the delivered entrypoint drops a family
+  #       (`createProductionComposer` → `runEntrypoint`) halves are labelled
+  #       PHASE-7 RE-OBSERVATIONS, because the delivered entrypoint drops a family
   #       that is not prompt-required and `loop` is repinned only in phase 7
   #       (ENTRYPOINT RULE, DoR R-30).
+  #       DRIVER CONFIRMATION (Option B / DoR R-34, R-35, R-36): the three cases
+  #       whose text once named a pre-repin D1 or a stuck-restart scenario run on
+  #       **D2 ONLY** at this boundary, and NO phase-2 obligation, suite or gate
+  #       assigns them a `runEntrypoint` execution:
+  #         - `TC-SPAWN-004` — D2 spawn + import-identity/argv observation (its D1
+  #           argv half is a phase-7 re-observation);
+  #         - `TC-PARITY-008` — D2 spawn with the planted home (its D1 no-hook half
+  #           is a phase-7 re-observation; its static-scan half stays phase 8's);
+  #         - `TC-LOG-004` — the error-swallowing property over the D2 cycle
+  #           surface (`start`, `cycle`, `session`, `release`, `error` lines), with
+  #           NO stuck verdict, NO termination and NO restart; the
+  #           `stuck-verdict` / `kill` / `restart` lines are phase 4's (obligation
+  #           4.8).
   #   2.8 Mutation rows owned here (test plan §7.4, 16 rows): M15–M17, M19–M24
   #       (spawn identity, session record cardinality), M27 (`pid` not a
   #       capability), M68–M73 (log line, ANSI, rotation, failed append, forbidden
   #       content). M18 is PHASE 3's: its named case moved to TC-INSTANCE-006
-  #       (revision 0.5 / N-05). CROSS-CONTROLS, not ownership: M22's
+  #       (revision 0.5 / N-05). M72 STAYS HERE and is NOT moved (R-36 / Option B):
+  #       after the narrowing its named case TC-LOG-004 asserts the
+  #       error-swallowing property at the PHASE-2 CYCLE surface (a failed append
+  #       changes no exit, no record and no disclosure beyond the bounded attempt),
+  #       so the row is exercised at the boundary that owns it and the allocation is
+  #       consistent with the register's rule. CROSS-CONTROLS, not ownership: M22's
   #       TC-INSTANCE-006 half re-fails at phase 3's instance case, and M27's
   #       TC-CONTRACT-001 half re-fails at phase 8's closed-surface case; each row
   #       stays allocated once. A mutation that stops failing is blocking.
@@ -1198,17 +1253,22 @@ phases:
   #   AC claim here: its block/golden assertions (VERB-003/004) are phase 7's. It
   #   is mounted because phases 3, 4 and 6 gate cases read it (R-22).
   #
-  # Gate (D2 SUITES ONLY — ENTRYPOINT RULE, DoR R-30. Expected signal: exit 0; one
+  # Gate (D2 SUITES ONLY — ENTRYPOINT RULE DoR R-30 and the Option-B recorded
+  #   deviation: NO `runEntrypoint` execution for this family at this boundary, so
+  #   `tests/structure/loop-production-session.test.ts` is NOT here. Expected
+  #   signal: exit 0; one
   #   `--agent ceo`, one resolved `--model`, one
   #   `ceo-loop-<fixed stamp>` title on a fresh spawn; each
   #   pre-session refusal at its delivered identity with a released lease and 0
   #   session records; the pid present when supplied and ABSENT (never 0) when
   #   not; one session record per acquisition and per state change; `loop status`
   #   composes and returns a `delivery.loop.v1` payload with zero appends and zero
-  #   handler configuration reads; every log line
+  #   handler configuration reads; every log line over the CYCLE surface only
+  #   (`start`, `cycle`, `session`, `release`, `error`)
   #   <= 512 B and ANSI-free with whole-pair dropping; rotation keeps the newest
-  #   data and drops the oldest generation; a failed append changes no verdict,
-  #   exit, or record; the delivered handle doubles still compile):
+  #   data and drops the oldest generation; a failed append changes no exit, no
+  #   record and no disclosure beyond the bounded attempt; the delivered handle
+  #   doubles still compile):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-spawn.test.ts tests/behaviour/loop-log.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-production-composition.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-stream-contract.test.ts tests/behaviour/coordinator-foreground-loop.test.ts
@@ -1539,6 +1599,20 @@ phases:
   #       whose port declares no start-time identity instead of returning the
   #       capability gap). A mutation that stops failing is blocking.
   #
+  #   4.8 STUCK-EPISODE LOG LINES (Option B / DoR R-36). This phase carries the log
+  #       narration of the stuck episode that earlier read as a phase-2 concern:
+  #       the `stuck-verdict` and `kill` lines are asserted with TC-STUCK-001's
+  #       phase-4 segment (the verdict, the termination and the outcome it emits),
+  #       and the `restart` line is the one TC-BACKOFF-007 narrates — the test plan
+  #       names TC-BACKOFF-007 and TC-STUCK-001 as the owners of the
+  #       `stuck-verdict`/`kill`/`restart` lines. TC-LOG-004's phase-2 assertion is
+  #       the CYCLE surface only (`start`, `cycle`, `session`, `release`, `error`);
+  #       the stuck-episode lines are this phase's, and the `restart` line's own
+  #       evidence rides the same episode's phase-5 re-observation
+  #       (TC-BACKOFF-001 row A), so no phase-4 gate depends on a phase-5 case.
+  #       EXTEND `tests/behaviour/loop-log.test.ts` with those line assertions
+  #       (it is authored in phase 2 and declared here for this extension).
+  #
   # Code areas (concrete):
   #   packages/core/src/app/loop-supervisor.ts   (verdict + terminate step)
   #   packages/core/src/app/loop-corroborator.ts (new: lane corroborator)
@@ -1548,6 +1622,7 @@ phases:
   #   packages/cli/src/production.ts             (progress reader, corroborator,
   #                                               process port, kill grace)
   #   tests/behaviour/loop-stuck.test.ts         (new)
+  #   tests/behaviour/loop-log.test.ts           (extend: stuck-episode lines)
   #   tests/behaviour/loop-instance.test.ts      (extend: INSTANCE-005)
   #   tests/structure/loop-imports.test.ts       (extend: CONTRACT-006, STUCK-009)
   #   tests/fixtures/loop/facts.ts               (new)
@@ -1576,9 +1651,11 @@ phases:
   #   decision recorded with ordinal 1 after a confirmed termination and NO
   #   `coordinator.restart` record and NO second session (those are phase 5's —
   #   this gate is GREEN IN ISOLATION); a start-time-capability-gap kill with 0
-  #   signals and the same terminal consequences; the loop importing the delivered
+  #   signals and the same terminal consequences; the `stuck-verdict` and `kill`
+  #   log lines asserted over the same episode (the `restart` line's own evidence
+  #   is phase 5's row A); the loop importing the delivered
   #   primitives):
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stuck.test.ts tests/behaviour/loop-instance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stuck.test.ts tests/behaviour/loop-instance.test.ts tests/behaviour/loop-log.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-imports.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/coordinator-foreground-loop.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
@@ -1597,6 +1674,7 @@ phases:
         - packages/cli/src/commands/loop.ts
         - packages/cli/src/production.ts
         - tests/behaviour/loop-stuck.test.ts
+        - tests/behaviour/loop-log.test.ts
         - tests/behaviour/loop-instance.test.ts
         - tests/structure/loop-imports.test.ts
         - tests/fixtures/loop/facts.ts
@@ -1686,9 +1764,12 @@ phases:
   #       `coordinator.restart` at ordinal 1, one new active session record, one
   #       spawn after the outcome, at most one live session — plus row B, the
   #       contiguous ordinal at a seeded count), BACKOFF-002, BACKOFF-003,
-  #       BACKOFF-004, BACKOFF-005, BACKOFF-006, BACKOFF-007, STUCK-006,
+  #       BACKOFF-004, BACKOFF-005, BACKOFF-006, BACKOFF-007,
   #       PARITY-003 and PARITY-004 with the recording
-  #       delay double and the virtual clock. STUCK-006 asserts BOTH the formula at
+  #       delay double and the virtual clock. `TC-STUCK-006` KEEPS its
+  #       `tests/behaviour/loop-stuck.test.ts` HOST (DoR R-37 / revision 0.6): this
+  #       phase ADDS that case to the suite phase 4 authored, and therefore DECLARES
+  #       and GATES `loop-stuck.test.ts` here. STUCK-006 asserts BOTH the formula at
   #       the shipped defaults (652 000 ms) AND a non-default interval case whose
   #       bound is recomputed (e.g. 682 000 ms at a 60 000 ms interval). APPEND the
   #       `backoff-budget` group to `tests/fixtures/loop/parity/cases.ts` and
@@ -1716,6 +1797,8 @@ phases:
   #   packages/cli/src/output/loop-text.ts       (exhaustion summary)
   #   packages/cli/src/production.ts             (real timer binding)
   #   tests/behaviour/loop-backoff.test.ts       (new)
+  #   tests/behaviour/loop-stuck.test.ts         (extend: STUCK-006 — declared and
+  #                                               gated here per R-37)
   #   tests/structure/loop-imports.test.ts       (extend: schedule purity)
   #   tests/checks/loop-mutants.test.ts          (extend: ambient-timer mutant)
   #   tests/fixtures/loop/harness.ts             (extend: delay recorder)
@@ -1737,8 +1820,9 @@ phases:
   #   `--fresh-budget` opening a durable epoch; a stop/signal cancelling the wait
   #   with no session effect; detection-to-next-session equal to the FORMULA at the
   #   shipped defaults (652 000 virtual ms) and recomputed for a non-default
-  #   interval):
+  #   interval; STUCK-006 green in its declared `loop-stuck.test.ts` host):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-backoff.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-stuck.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
@@ -1755,6 +1839,7 @@ phases:
         - packages/cli/src/output/loop-text.ts
         - packages/cli/src/production.ts
         - tests/behaviour/loop-backoff.test.ts
+        - tests/behaviour/loop-stuck.test.ts
         - tests/structure/loop-imports.test.ts
         - tests/checks/loop-mutants.test.ts
         - tests/fixtures/loop/harness.ts
@@ -2014,13 +2099,20 @@ phases:
   #       `tests/fixtures/loop/harness.ts` with the handler-configuration counter
   #       and the read-only file-system double.
   #   7.7 Author `tests/structure/loop-production-session.test.ts` as the
-  #       PHASE-7 D1 RE-OBSERVATION of TC-SPAWN-001 and TC-SPAWN-005 (DoR R-30):
-  #       `createProductionComposer` → `runEntrypoint`, now that the inventory
-  #       repin in obligation 7.2 makes `loop` prompt-required. Until this commit
-  #       the delivered entrypoint DROPS the family (the ENTRYPOINT RULE), so these
-  #       two rows were never executable earlier and phase 2 neither declares nor
-  #       gates this file. D1 is not redefined and no second driver is added; the
-  #       case ids and their ACs do not move.
+  #       PHASE-7 D1 RE-OBSERVATIONS of FOUR cases — TC-SPAWN-001, TC-SPAWN-005
+  #       (DoR R-30) and TC-SPAWN-004, TC-PARITY-008 (Option B / DoR R-34, R-35) —
+  #       through `createProductionComposer` → `runEntrypoint`, now that the
+  #       inventory repin in obligation 7.2 makes `loop` prompt-required. This file
+  #       is the DECLARED HOST for those four D1 halves:
+  #         - TC-SPAWN-001 / TC-SPAWN-005: the fresh-spawn argv and the pid rows;
+  #         - TC-SPAWN-004: the resolved-seat-model argv row through D1;
+  #         - TC-PARITY-008: the no-pre-iteration-hook assertion through D1 (its
+  #           separate static-scan half stays phase 8's re-observation).
+  #       Until this commit the delivered entrypoint DROPS the family (the
+  #       ENTRYPOINT RULE), so these rows were never executable earlier and phase 2
+  #       neither declares nor gates this file. D1 is not redefined and no second
+  #       driver is added; the case ids, their owning phase and their ACs do not
+  #       move — only the surface at which their D1 half is proven.
   #   7.8 Mutation rows owned here (26): M1–M4 (the pin), M9–M14 (grammar/status),
   #       M74–M75 (log path/read), M86 (grammar exit 1), M88 (no transcript), M89
   #       (a second state read per cycle — its named case TC-CONTRACT-003 is this
