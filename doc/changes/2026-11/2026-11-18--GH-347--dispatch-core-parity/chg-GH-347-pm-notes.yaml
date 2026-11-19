@@ -5,7 +5,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-19T06:20:03.852Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-19T00:20:05.234Z }
   dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
@@ -859,11 +859,11 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "Post-remediation documentation re-verification: four current-truth pages
-      corrected - feature-dispatch-engine (the ended-session artifact-first order,
-      the total undecidable predicate, the termination-capability gate, the
-      exact-identity terminate with resume clearing the fact, the composition-edge
-      process-tree seam, the resolved base branch, the removal of the false
-      reaped:false claim, and the reserved disclosure refs),
+      corrected - feature-dispatch-engine (the ended-session artifact-first
+      order, the total undecidable predicate, the termination-capability gate,
+      the exact-identity terminate with resume clearing the fact, the
+      composition-edge process-tree seam, the resolved base branch, the removal
+      of the false reaped:false claim, and the reserved disclosure refs),
       feature-session-lifecycle-economics (exact-identity terminate, KILL only
       after the configured grace over a still-listed target, resume clearing the
       fact, the incapable/unconfirmed terminal outcome),
@@ -873,8 +873,8 @@ notes:
       incapable-adapter case). Pages checked and unchanged: delivery-lifecycle,
       resident-daemon, glossary (accurate), and the reference dispatch page
       (outside the writable root, contains no false claim). Gates: doc trio 28
-      pass, doc-distribution no drift (96 docs), zero stale-phrase hits, git diff
-      --check clean."
+      pass, doc-distribution no drift (96 docs), zero stale-phrase hits, git
+      diff --check clean."
     type: info
     date: "2026-11-19"
   - text: "Spec v1.7 and test plan v0.5 close the artifact gap the re-verification
@@ -883,30 +883,30 @@ notes:
       classifier token; F-4, AC-F4-3, section 8.5 and the glossary say
       ended-session; Appendix F(D) carries the termination-capability gate; DM-5
       states the delivered two-case terminate booleans (unknown handle true;
-      known-but-gone false, both success). Test plan v0.5 corrects the derivation
-      input count from 21 to 25 and names C10 rebuilt plus C11-C14."
+      known-but-gone false, both success). Test plan v0.5 corrects the
+      derivation input count from 21 to 25 and names C10 rebuilt plus C11-C14."
     type: info
     date: "2026-11-19"
   - text: "Residuals recorded for the re-review and the owner gate, none a code
       defect: (1) TDR-0046 DC-4 still says an already-exited session returns
       terminated:true; the adapter returns false for a known-but-gone runtime
       (still success), and the spec now records the delivered semantics with the
-      owner reconciliation noted - the record is Proposed and not accepted.
-      (2) The mutation register has no row that hoists the classifier arm above
-      the artifact arms; the new TC-DERIVE-006 C11-C14 rows would fail if it
-      were hoisted, so the case is non-vacuous, but the register gap is noted.
-      (3) The m1 reference page omits the incapable-terminate outcome and the
+      owner reconciliation noted - the record is Proposed and not accepted. (2)
+      The mutation register has no row that hoists the classifier arm above the
+      artifact arms; the new TC-DERIVE-006 C11-C14 rows would fail if it were
+      hoisted, so the case is non-vacuous, but the register gap is noted. (3)
+      The m1 reference page omits the incapable-terminate outcome and the
       resume-clears fact; it contains no false claim and is outside the
       doc-syncer's writable root."
     type: risk
     date: "2026-11-19"
   - text: "RETRO (review remediation cycle): the second pass cost four artifact
-      reopenings (specification, test_planning, system_spec_update, delivery) for
-      one code fix. The expensive part was not the fix but the trailing truth:
-      the docs, the spec's normative table and the test plan's count each had to
-      catch up with a behaviour that changed in one commit. Process note: when a
-      remediation changes a documented contract, list every artifact that states
-      it BEFORE starting the code edit and reopen them together; that would have
-      collapsed this cycle into one."
+      reopenings (specification, test_planning, system_spec_update, delivery)
+      for one code fix. The expensive part was not the fix but the trailing
+      truth: the docs, the spec's normative table and the test plan's count each
+      had to catch up with a behaviour that changed in one commit. Process note:
+      when a remediation changes a documented contract, list every artifact that
+      states it BEFORE starting the code edit and reopen them together; that
+      would have collapsed this cycle into one."
     type: retro
     date: "2026-11-19"
