@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-19T16:44:54.841Z }
   quality_gates: { started: null, completed: 2026-11-19T19:32:25.870Z }
   dod_check: { started: null, completed: 2026-11-19T19:37:44.892Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-19T19:40:04.430Z }
 decisions:
   - text: "Scope source: the GH-349 ticket body (M4-S11) plus the committed M4
       blueprint (doc/planning/oss-tooling/milestones/m4/flip-plan.md F4,
@@ -1175,5 +1175,26 @@ notes:
       re-evaluates only the merge projection; that keeps AC-F2-2's checks
       posture reachable for a declared job while AC-F3-3 still excludes every
       undeclared page job."
+    type: info
+    date: "2026-11-19"
+  - text: "PR ready for review:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/370 — base
+      `main-tools`, head `feat/GH-349/merge-closeout-queue-repair`, OPEN, not
+      draft, no auto-merge, no approval submitted by this session; `mergeable:
+      MERGEABLE`, `mergeStateStatus: BLOCKED` is the branch-protection review
+      requirement, not a conflict. Head `f8ee0e0a`, 66 commits ahead of the
+      merge-base. Delivery evidence: 10 lifecycle phases complete (this
+      transition closes the eleventh); DoR six iterations to READY; review
+      iteration 1 FAIL (1 blocker + 5 majors) remediated, iteration 2
+      PASS_WITH_NOTES with 0 blockers and 0 failing ACs, iteration 3 verifies
+      the two iteration-2 majors with mutation proofs. Quality gates: full suite
+      11645 pass / 4 skip / 0 fail; branch-range commitlint PASS — 64 commits, 0
+      offending. Gate environment controls, disclosed in the PR body: `HOME`
+      isolated because a foreign `~/.jaiship/bin/jaiship` makes the
+      doc-distribution guard's sandbox install refuse to own it, and a 20s
+      per-test budget because pre-existing git-heavy bin/perf tests time out at
+      the default 5s under full-suite load and pass in isolation. Merge
+      authority stays with the owner/CEO; nothing was merged, auto-merged or
+      approved."
     type: info
     date: "2026-11-19"
