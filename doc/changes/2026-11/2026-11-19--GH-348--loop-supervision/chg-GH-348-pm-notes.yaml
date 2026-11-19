@@ -499,3 +499,52 @@ notes:
       valid/full/readyForDevelopment=true, lint plan valid."
     type: info
     date: "2026-11-19"
+  - text: "DoR gate iteration 3 = NOT_READY, Pause Required: YES
+      (readiness-review/readiness-iter-3.md). Facets: eight PASS; plan_coverage
+      and cross_artifact_consistency FAIL. Iteration-2 dispositions: 7 Resolved
+      (R-22, R-23, R-24, R-25, R-27, R-28, N-04 plus R-15's page half),
+      1 Partially resolved and REPEATED (R-26), 0 unresolved, 0 regressed. New:
+      R-29 (major) TC-PARITY-005 in the phase-2 gate carries a phase-4/5
+      precondition; R-30 (major) phase 2 assigns D1 halves of TC-SPAWN-001/-005
+      but the production entrypoint drops non-prompt-required commands, which the
+      plan itself states; R-31 (minor) phase 5's Acceptance block omits AC-F5-1
+      and the nine Acceptance summaries sum to 40; R-32 (minor) section 5.1's
+      index AC column lags the matrix on TC-INSTANCE-006 and TC-CONTRACT-003, so
+      the index computes 68/6; R-33 (nit) AC-F6-4's proof sentence omits the
+      immediate-stop flow; N-05 (nit) M89 sits in phase 8 though its case is phase
+      7's; N-06 (nit) TC-BACKOFF-003 row A reads as the phase-6 stop verb in a
+      phase-5 case. Counts otherwise recompute clean: 41 ACs, 74 cases, 80 links,
+      120 mutation ids partitioned exactly, ownership 41/41 and 74/74, 123
+      declared entries over 79 paths, 13 seams, plan validate and lint green."
+    type: info
+    date: "2026-11-19"
+  - text: "ESCALATION (DoR iteration cap reached, 3 of 3). The gate recorded Pause
+      Required: yes and named the pattern rather than single cases: PHASE-GATE
+      SELF-SUFFICIENCY keeps surviving remediation - R-26 is a repeat, and R-29
+      and R-30 are fresh instances of the same class that iteration 3 was
+      specifically asked to prove absent. The PM is NOT overriding the gate: an
+      override is reserved for a genuinely trivial change, and this is not one.
+      The decision needed from the human is one of: (A) authorize a FOURTH,
+      tightly scoped artifact pass that also fixes R-26/R-29/R-30/R-31/R-32/R-33/
+      N-05/N-06 under a stricter per-assertion rule - every case's every
+      assertion must name the phase implementing it, the driver (D1 vs D2) must
+      exist in that phase, and the prompt-required entrypoint constraint must be
+      applied; or (B) accept a RECORDED DEVIATION: keep the current three
+      artifacts, narrow the two blocking cases (TC-PARITY-005's precondition and
+      the phase-2 D1 halves) to what the owning phases can execute, declare the
+      remainder in the proof boundary, and proceed. Both options are small; (A)
+      costs one more author cycle and one gate run, (B) ships a slightly narrower
+      phase-2 proof and must be visible in the PR body. No source code has been
+      written; delivery has not started."
+    type: blocker
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 3): three passes fixed 30 of 31 findings but the
+      same CLASS survived each time, which is the signal the gate named. The
+      artifacts are verified per-document, and the class lives BETWEEN two
+      documents: a case's precondition names a behaviour, and only the plan knows
+      which phase implements it. Cheapest durable fix: make phase-gate
+      self-sufficiency a checked property of the ARTIFACT (a table row per case
+      naming its implementing phase and driver), not a review instruction. That is
+      the (A)-option's first deliverable if the human authorizes it."
+    type: retro
+    date: "2026-11-19"
