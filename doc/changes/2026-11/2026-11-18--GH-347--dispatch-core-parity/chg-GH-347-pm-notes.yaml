@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
   delivery: { started: null, completed: 2026-11-19T07:40:27.717Z }
   system_spec_update: { started: null, completed: 2026-11-19T07:40:18.018Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-19T07:47:29.914Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -1058,4 +1058,33 @@ notes:
       the glossary Terminate entry lists terminated/escalated/reaped without the
       match semantics or the port-carried declaration."
     type: info
+    date: "2026-11-19"
+  - text: "Review iteration 3 = PASS_WITH_NOTES (code-review/review-iter-3.yaml;
+      schema status PASS). 0 critical, 0 high, 0 medium, 0 low, 3 info. All four
+      iteration-2 findings resolved with production proof: N1 the production
+      adapters carry their capability declarations, declaresTerminate reads the
+      typed member, harnessWithDeclaration fills an absent declaration and never
+      overrides, and the production-composed TC-TERM-007 drives
+      createClaudeSession's own port through a below-bound stall to terminal
+      state-unverified with no second session; N2 the unconfirmed-termination
+      case exercises the terminate:failed half; N3 the 16-id canonical set; N4
+      the signalProcess removal and the matched-not-reaped wording. The
+      iteration-1 re-checks (B2, M1/M2, M5, M6) are all resolved. The reviewer's
+      independent run is green: plan validate valid, typecheck, boundaries (469
+      modules), the targeted suites (234 tests) and doc-distribution (96 docs).
+      Diff reviewed: 119 files, +21721/-918. Merged view: the change is accepted
+      with three informational notes."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration-3 info notes accepted as non-blocking and recorded for
+      the owner: (F1) three current-truth pages and the glossary still use
+      'exact-identity reap' wording and omit the match/port-carried nuance -
+      they assert nothing false (the adapter signals only exact-identity
+      matches), and a future doc touch can tighten it; (F2) the derivation test
+      mirrors the 16-id arm set with a size-16 assertion rather than identity
+      equality with DISPATCH_RESULT_ARM_IDS - today's ids match exactly, a
+      future arm without a row would not be caught; (F3) the fail-open default
+      for an undeclared port is retained, documented, and reachable only by an
+      explicitly undeclared double."
+    type: risk
     date: "2026-11-19"
