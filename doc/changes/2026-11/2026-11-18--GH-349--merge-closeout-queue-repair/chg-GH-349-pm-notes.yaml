@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-18T21:41:20.473Z }
   delivery: { started: null, completed: 2026-11-19T12:49:05.166Z }
   system_spec_update: { started: null, completed: 2026-11-19T13:32:40.618Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-19T16:44:54.841Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -1129,8 +1129,8 @@ notes:
     date: "2026-11-19"
   - text: "Review-iteration-1 remediation, code half (2026-11-19; commit
       a832c8617eb84d687a9ff76c9e6553da62489efa): B1, M1, M2, M3 and M5 fixed in
-      code and tests; M4 is the artifacts owners' correction and was not
-      touched (the probe work stands). B1: `packages/core/src/domain/closeout.ts`
+      code and tests; M4 is the artifacts owners' correction and was not touched
+      (the probe work stands). B1: `packages/core/src/domain/closeout.ts`
       compares the declared milestone against the provider's VERBATIM work-item
       milestone title through ONE shared `normalizeMilestoneTitle` (whitespace
       collapsed; `M<n>:` prefix canonicalized; the milestone number is kept, so
@@ -1163,11 +1163,11 @@ notes:
       suites 130 pass / 0 fail across 10 files; `bun test tests/structure
       tests/checks` 3270 pass / 0 fail across 352 files (530.76s); `bun test
       tests/behaviour tests/golden` 7807 pass / 4 skip / 0 fail across 1038
-      files (1645.63s) — an earlier contended run flaked on three unrelated
-      5s timeouts (metrics-read-cost, watchdog-memory, prior-identity-notice),
-      each green in isolation and in the clean rerun; `pnpm typecheck` clean;
-      and `pnpm check` exit 0 — biome lint/format clean, 11645 pass / 4 skip /
-      0 fail across 1424 files (1993.59s), boundaries 485 modules with no
+      files (1645.63s) — an earlier contended run flaked on three unrelated 5s
+      timeouts (metrics-read-cost, watchdog-memory, prior-identity-notice), each
+      green in isolation and in the clean rerun; `pnpm typecheck` clean; and
+      `pnpm check` exit 0 — biome lint/format clean, 11645 pass / 4 skip / 0
+      fail across 1424 files (1993.59s), boundaries 485 modules with no
       violations, memory 0 errors / 0 advisories, prompt conformance 5 clean,
       help-guide coverage complete, exports parity OK. DEVIATION RECORDED: the
       posture candidates are the gate set's declared `required-ci-job` entries
