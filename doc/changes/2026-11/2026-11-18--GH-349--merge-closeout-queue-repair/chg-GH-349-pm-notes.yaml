@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
   specification: { started: null, completed: 2026-11-18T23:17:15.188Z }
   test_planning: { started: null, completed: 2026-11-18T23:17:23.579Z }
-  delivery_planning: { started: null, completed: 2026-11-18T23:17:29.947Z }
+  delivery_planning: { started: null, completed: 2026-11-19T02:13:28.823Z }
   dor_check: { started: null, completed: 2026-11-18T21:41:20.473Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -481,100 +481,105 @@ notes:
       that fails by name. NO package version was edited by hand: core, adapters,
       cli, mcp, opencode and testkit all stay 0.0.0 because changesets owns the
       bump. Commit 5c933ea52915457bf658aa4ca56a3947a27fc4cd, subject
-      docs(GH-349): update .changeset/gh-349-merge-closeout-queue-repair-mino...,
-      messageSource template, no lifecycle transition, no scopeDrift. Gates, all
-      exit 0 with TMPDIR=$PWD/tmp/tmpdir: bun test
-      tests/structure/changeset-additivity.test.ts tests/checks/privacy-release.test.ts
-      (18 pass); the nine named phase-1 suites (319 pass); G6 pnpm typecheck; G2
-      bun test tests/structure (1726 pass across 187 files); G3 bun test
-      tests/checks (1251 pass across 133 files); G9 git diff --check. G12 pnpm
-      check was deliberately NOT run here: phase 9 owns the aggregate."
+      docs(GH-349): update
+      .changeset/gh-349-merge-closeout-queue-repair-mino..., messageSource
+      template, no lifecycle transition, no scopeDrift. Gates, all exit 0 with
+      TMPDIR=$PWD/tmp/tmpdir: bun test
+      tests/structure/changeset-additivity.test.ts
+      tests/checks/privacy-release.test.ts (18 pass); the nine named phase-1
+      suites (319 pass); G6 pnpm typecheck; G2 bun test tests/structure (1726
+      pass across 187 files); G3 bun test tests/checks (1251 pass across 133
+      files); G9 git diff --check. G12 pnpm check was deliberately NOT run here:
+      phase 9 owns the aggregate."
     type: info
     date: "2026-11-19"
   - text: >-
-      Plan phase 2 complete (the provider-side landing path and the total refusal
-      taxonomy). ONE landing mechanism: the transaction composes the canonical
-      MergeDeliveryRequestInput (request identity, squash strategy, the verified
-      head as the expected head, the provider title or the declared fallback
-      merge(<ref>): squash <sourceRef>, and the verbatim message "Landed by the
-      delivery lifecycle merge primitive.") through one land port, and the
-      production composition maps it onto the closed mergeDeliveryRequest
-      operation; the local squashLand and refresh stay declared seam capabilities
-      with zero composed callers (the transaction's port set no longer declares
-      refresh, the scan covers every product source, and a planted call site and a
-      planted platform literal are both found by file and line). Provider truth is
-      the only landing verdict (requestState "merged"); a fired landing that the
-      provider did not assert is merge.landing-unverified at exit 2, and local
-      containment is never evidence. landing.shaOnBase widens to boolean |
-      "unknown" with the state-layer validator widened in the SAME commit, a
-      three-value write-then-verified-read round trip (true, false, unknown) plus a
-      legacy boolean read (TC-F1-012), and the human line renders
-      sha-on-base:unknown. The taxonomy: conflicting -> one merge.sync-required
-      reason dirty with both heads, zero refresh, zero landing, head unchanged;
-      not-mergeable -> one guarded landing, then exactly one bounded post-refusal
-      re-read -> a checks posture yields merge.gate.ci-green.failed with ci-pending
-      or ci-failed, any other re-read yields merge.sync-required reason
-      behind-unconfirmed naming the observed state; unknown/absent -> exactly one
-      exact-head re-read -> recovered (re-classified), changed head ->
+      Plan phase 2 complete (the provider-side landing path and the total
+      refusal taxonomy). ONE landing mechanism: the transaction composes the
+      canonical MergeDeliveryRequestInput (request identity, squash strategy,
+      the verified head as the expected head, the provider title or the declared
+      fallback merge(<ref>): squash <sourceRef>, and the verbatim message
+      "Landed by the delivery lifecycle merge primitive.") through one land
+      port, and the production composition maps it onto the closed
+      mergeDeliveryRequest operation; the local squashLand and refresh stay
+      declared seam capabilities with zero composed callers (the transaction's
+      port set no longer declares refresh, the scan covers every product source,
+      and a planted call site and a planted platform literal are both found by
+      file and line). Provider truth is the only landing verdict (requestState
+      "merged"); a fired landing that the provider did not assert is
+      merge.landing-unverified at exit 2, and local containment is never
+      evidence. landing.shaOnBase widens to boolean | "unknown" with the
+      state-layer validator widened in the SAME commit, a three-value
+      write-then-verified-read round trip (true, false, unknown) plus a legacy
+      boolean read (TC-F1-012), and the human line renders sha-on-base:unknown.
+      The taxonomy: conflicting -> one merge.sync-required reason dirty with
+      both heads, zero refresh, zero landing, head unchanged; not-mergeable ->
+      one guarded landing, then exactly one bounded post-refusal re-read -> a
+      checks posture yields merge.gate.ci-green.failed with ci-pending or
+      ci-failed, any other re-read yields merge.sync-required reason
+      behind-unconfirmed naming the observed state; unknown/absent -> exactly
+      one exact-head re-read -> recovered (re-classified), changed head ->
       merge.gates-stale, still unknown -> merge.mergeability-unknown at exit 2
-      retryable; a declared landing gap refuses merge.transaction-aborted at exit 1
-      with the operation and the declared CapabilityGapReason in evidence and zero
-      landing attempts. No internal rebase, no force, no retry, no prose matching;
-      merge.rebase-conflict stays declared, reserved and unreachable. The emittable
-      declaration gains merge.sync-required and merge.mergeability-unknown and
-      declares the merge.gate.<gate-id>.failed FAMILY as the template-literal type
-      MergeCompositionEmittableFamily (contract prefix/suffix, never a gate-id
-      list); the totality proof expands it over every id the default and a declared
-      effective set resolve, scans the transaction's emitted codes (literals plus
-      failureCode family emissions) against the declaration, and keeps the live
-      mismatch control containing. Golden arithmetic: the refusal-rebase pair and
-      its goldenScenarios entry are DELETED and the identity stays declared; 13
+      retryable; a declared landing gap refuses merge.transaction-aborted at
+      exit 1 with the operation and the declared CapabilityGapReason in evidence
+      and zero landing attempts. No internal rebase, no force, no retry, no
+      prose matching; merge.rebase-conflict stays declared, reserved and
+      unreachable. The emittable declaration gains merge.sync-required and
+      merge.mergeability-unknown and declares the merge.gate.<gate-id>.failed
+      FAMILY as the template-literal type MergeCompositionEmittableFamily
+      (contract prefix/suffix, never a gate-id list); the totality proof expands
+      it over every id the default and a declared effective set resolve, scans
+      the transaction's emitted codes (literals plus failureCode family
+      emissions) against the declaration, and keeps the live mismatch control
+      containing. Golden arithmetic: the refusal-rebase pair and its
+      goldenScenarios entry are DELETED and the identity stays declared; 13
       files remain, of which the 11 pinned ones are byte-identical and the gate
-      pair is still at its delivered bytes (phase 3 moves it); the success golden is
-      untouched. The EIGHT changed merge suites carry their post-change obligation
-      (three inverted, three re-pointed, two mechanically edited) and the EIGHT
-      green ones are unedited, asserted both ways by
+      pair is still at its delivered bytes (phase 3 moves it); the success
+      golden is untouched. The EIGHT changed merge suites carry their
+      post-change obligation (three inverted, three re-pointed, two mechanically
+      edited) and the EIGHT green ones are unedited, asserted both ways by
       tests/structure/merge-suite-obligations.test.ts with three token-absence
-      scans and the green inventories. Two design decisions worth review: (a) the
-      request-detail read is the bounded list page with a new includeGateFacts
-      option, because the single-request read's exact key-set and the conformance
-      tenant projection are pinned elsewhere, and the provider title is surfaced on
-      that bounded list read only; (b) the post-landing branch deletion first
-      returns the checkout to the base through a restoreCheckout seam, because a
-      provider landing leaves the checkout on the delivery branch and closeout
-      otherwise refuses closeout.branch.unsafe. Commit
-      f9f9c06d5b3a78e8a4fb577245a671a08123a9de (43 files, 3107 insertions, 609
-      deletions), subject docs(GH-349): update
+      scans and the green inventories. Two design decisions worth review: (a)
+      the request-detail read is the bounded list page with a new
+      includeGateFacts option, because the single-request read's exact key-set
+      and the conformance tenant projection are pinned elsewhere, and the
+      provider title is surfaced on that bounded list read only; (b) the
+      post-landing branch deletion first returns the checkout to the base
+      through a restoreCheckout seam, because a provider landing leaves the
+      checkout on the delivery branch and closeout otherwise refuses
+      closeout.branch.unsafe. Commit f9f9c06d5b3a78e8a4fb577245a671a08123a9de
+      (43 files, 3107 insertions, 609 deletions), subject docs(GH-349): update
       doc/changes/2026-11/2026-11-18--GH-349--merge-clos..., messageSource
       template, no lifecycle transition, no push. Gates, ALL exit 0 with
-      TMPDIR=$PWD/tmp/tmpdir: the six phase-2 suite commands (29, 30, 10, 30, 61,
-      7 pass); G1 bun test tests/behaviour tests/golden (7582 pass, 4 skip, 0 fail
-      across 7586 tests / 1024 files); G2 bun test tests/structure (1766 pass, 0
-      fail); G3 bun test tests/checks (1258 pass, 0 fail); G6 pnpm typecheck; G9
-      git diff --check; G12 pnpm check (11079 pass, 4 skip, 0 fail, lint / format /
-      typecheck / boundaries / memory / prompt-conformance / help-coverage /
-      exports-parity all OK). SCOPE NOTE, reported not silent: the commit envelope
-      reports scopeDrift for the FIVE pilot-conformance paths
-      tests/fixtures/pilot/harness.ts, tests/fixtures/pilot/matrix.ts and
+      TMPDIR=$PWD/tmp/tmpdir: the six phase-2 suite commands (29, 30, 10, 30,
+      61, 7 pass); G1 bun test tests/behaviour tests/golden (7582 pass, 4 skip,
+      0 fail across 7586 tests / 1024 files); G2 bun test tests/structure (1766
+      pass, 0 fail); G3 bun test tests/checks (1258 pass, 0 fail); G6 pnpm
+      typecheck; G9 git diff --check; G12 pnpm check (11079 pass, 4 skip, 0
+      fail, lint / format / typecheck / boundaries / memory / prompt-conformance
+      / help-coverage / exports-parity all OK). SCOPE NOTE, reported not silent:
+      the commit envelope reports scopeDrift for the FIVE pilot-conformance
+      paths tests/fixtures/pilot/harness.ts, tests/fixtures/pilot/matrix.ts and
       tests/conformance/pilot/{j1-iteration,pilot-records,pilot-isolation}.test.ts
-      — the J1 journey composes the merge command runtime and asserted the retired
-      local squash landing, so its landing double and its evidence moved with the
-      seam (the base no longer advances, the provider identity is recorded,
-      shaOnBase is unknown, and the change-folder evidence is the recorded delivery
-      commit). Two more edited paths are inside the plan's wider scope but outside
-      phase 2's declared list: tests/behaviour/providers/github-collection.test.ts
-      (one of the four provider-path items; it now carries the only title-decode
-      assertion) and tests/structure/reference-behavior.test.ts (its TC-FLOOR-007
+      — the J1 journey composes the merge command runtime and asserted the
+      retired local squash landing, so its landing double and its evidence moved
+      with the seam (the base no longer advances, the provider identity is
+      recorded, shaOnBase is unknown, and the change-folder evidence is the
+      recorded delivery commit). Two more edited paths are inside the plan's
+      wider scope but outside phase 2's declared list:
+      tests/behaviour/providers/github-collection.test.ts (one of the four
+      provider-path items; it now carries the only title-decode assertion) and
+      tests/structure/reference-behavior.test.ts (its TC-FLOOR-007
       "non-decision" pin asserted that the merge transaction does NOT import the
-      provider landing; AC-F1-1 reverses that decision, so the pin was re-expressed
-      as composes-the-closed-provider-landing-only, imports no adapter/transport,
-      composes no local landing or refresh). Neither pin was loosened or deleted
-      without its replacement. NOT DONE, reported for re-planning: F1's
-      internalMergeFailure constructor still declares the merge kind with the
-      containment code; removing it would move packages/core/src/domain/index.ts,
-      packages/core/src/index.ts and tests/structure/content-inventory.test.ts,
-      none of which phase 2 declares, so the contradiction is left in place (it has
-      no production caller and no branch can route through it) for the phase that
-      owns the export inventory.
+      provider landing; AC-F1-1 reverses that decision, so the pin was
+      re-expressed as composes-the-closed-provider-landing-only, imports no
+      adapter/transport, composes no local landing or refresh). Neither pin was
+      loosened or deleted without its replacement. NOT DONE, reported for
+      re-planning: F1's internalMergeFailure constructor still declares the
+      merge kind with the containment code; removing it would move
+      packages/core/src/domain/index.ts, packages/core/src/index.ts and
+      tests/structure/content-inventory.test.ts, none of which phase 2 declares,
+      so the contradiction is left in place (it has no production caller and no
+      branch can route through it) for the phase that owns the export inventory.
     type: info
     date: "2026-11-19"

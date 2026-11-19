@@ -273,9 +273,9 @@
 #     - `tests/fixtures/events/error-table-baseline.json` — the captured baseline
 #       gains the three additive rows.
 #     - `tests/structure/supervision-error-family.test.ts` — its positional
-#       PREFIX oracle is re-expressed as PRESENCE + delivered relative order (146
-#       captured rows still present and byte-identical; the live filtered set
-#       grows 146→149).
+#       PREFIX oracle is re-expressed as PRESENCE + delivered relative order
+#       (**150** captured rows on the merged base, still present and
+#       byte-identical; the live filtered set is **153**).
 #     - `tests/types/delivery-thread.type-test.ts` — the exact `DeliveryRequest`
 #       key-set probe gains `title`.
 #   TWO DECLARED-BY-A-LATER-PHASE FILES MOVED EARLY IN PHASE 1, deliberately,
@@ -329,6 +329,46 @@
 #   register moves 116 → **123** (the seven changeset controls); every phase's
 #   ordering and every other phase's scope is unchanged. The DoR verdict stands.
 #
+# PHASE 2 AS DELIVERED (commits f9f9c06d implementation + 377c7b8b note — a
+#   DECLARATION CORRECTION, not a re-plan; no requirement, criterion, gate or
+#   phase ordering changes):
+#   Phase 2 shipped with every gate green, including `pnpm check` at 11079
+#   passing. Its envelope again reported paths the plan had not declared for this
+#   phase, and the sweep gap has three shapes:
+#   1. FIVE PILOT PATHS had to move for G12 to be green — they compose the merge
+#      runtime end to end and asserted the RETIRED local squash landing, so the
+#      provider-side landing re-pointed them:
+#      `tests/fixtures/pilot/harness.ts`, `tests/fixtures/pilot/matrix.ts`,
+#      `tests/conformance/pilot/j1-iteration.test.ts`,
+#      `tests/conformance/pilot/pilot-records.test.ts`,
+#      `tests/conformance/pilot/pilot-isolation.test.ts`. The J1 sequence now
+#      records the provider-asserted landing identity and the honest
+#      `shaOnBase: "unknown"`, and asserts the base never advances.
+#   2. TWO FILES DECLARED BY LATER PHASES MOVED EARLY here, deliberately, because
+#      phase 2 lands the landing path and the taxonomy they pin:
+#      `tests/behaviour/providers/github-collection.test.ts` (declared phase 5) is
+#      now the ONLY title-decode assertion — the provider-asserted title surfaces
+#      on the bounded request-detail LIST read; and
+#      `tests/structure/reference-behavior.test.ts` (declared phase 5, already
+#      moved early in phase 1 for the `DeliveryRequest` key-set table) carried a
+#      TC-FLOOR-007 "non-decision" pin asserting the merge transaction must NOT
+#      import the provider landing — **AC-F1-1 REVERSES that**, so the pin is
+#      re-expressed as "composes the provider landing ONLY; imports no
+#      adapter/transport; composes no local landing/refresh".
+#   3. F1'S CONSTRUCTOR REPAIR IS STILL PENDING and is declared here as
+#      obligation 2.9 with its three paths (`packages/core/src/domain/index.ts`,
+#      `packages/core/src/index.ts`, `tests/structure/content-inventory.test.ts`):
+#      the exported `internalMergeFailure`-style helper declares the merge kind
+#      with the containment code and has no production caller, so it must be
+#      removed (moving both barrels and the export inventory in one commit) or
+#      re-derived with no new identity.
+#   The later phases must not re-edit the two early-moved files unless their own
+#   delta requires it; `plan diff` shows them `within` at phase 2 and may show an
+#   ADVISORY `undeclared-missing` in phase 5. Nothing else moves: the AC vector is
+#   [0, 15, 4, 7, 9, 6, 5] (46), the TC vector is [3, 23, 7, 9, 20, 12, 14] (88),
+#   the pin count stays EIGHTEEN, the register stays 123, and every other phase's
+#   scope is unchanged. The DoR verdict stands.
+#
 # SCOPE DECLARATION RULE (binding on every phase; inherited from GH-338/GH-339):
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
 #   gives the commit primitive staging authority. A file that is only RE-RUN as a
@@ -377,7 +417,9 @@
 #   `packages/core/src/contracts/index.ts` (phases 1 and 5),
 #   `packages/cli/src/edge.ts` (phases 2 and 4),
 #   `packages/cli/src/production.ts` (phases 2, 4 and 5),
-#   `tests/structure/content-inventory.test.ts` (phases 1 and 5),
+#   `tests/structure/content-inventory.test.ts` (phases 1, 2 and 5 — the export
+#   allowance moves in phase 1, again for F1's constructor removal in phase 2,
+#   and for the closeout/operation exports in phase 5),
 #   `tests/checks/error-table-sync.test.ts` (phases 1 and 7),
 #   `tests/structure/error-table.test.ts` (phases 1 and 7 — the seven identity
 #   pins and the legacy-token scan, then TC-SYNC-001's operation-count-page half),
@@ -390,6 +432,13 @@
 #   `tests/behaviour/ceremony-nonregression.test.ts` (phases 1 and 5 — the
 #   IDENTITY TOTAL here, the STEP COUNT there; spec v1.5 N1b calls it a
 #   two-phase obligation and the plan states the split in both phases),
+#   `tests/structure/reference-behavior.test.ts` (moved in phases 1 and 2 while
+#   declared in phase 5 — the key-set table, then TC-FLOOR-007's reversed
+#   non-decision pin), `tests/behaviour/providers/github-collection.test.ts`
+#   (moved in phase 2 while declared in phase 5 — the title-decode assertion),
+#   `packages/core/src/index.ts` and `packages/core/src/domain/index.ts` (phase 2
+#   only, but named here because their export lists move with the constructor
+#   repair and with content-inventory),
 #   and `packages/adapters/src/github/client.ts` (phases 2 and 5). In each case
 #   the split is an AUTHORING split: the owning phase named in the AC/TC tables
 #   below is the one that closes the case.
@@ -1072,11 +1121,11 @@
 #       so the page must move with the code that suite pins. THREE pages, and
 #       EXACTLY THREE (spec v1.6 N10 keeps this set closed):
 #       a. `doc/spec/features/feature-result-contract.md` — the documented error
-#          table and its `149` statements, read by
+#          table and **the 156 statements**, read by
 #          `tests/checks/error-table-sync.test.ts` and
 #          `tests/structure/error-table.test.ts`                       (phase 1)
 #       b. `doc/spec/features/feature-ceremony-runner.md` — three
-#          `149 identities` statements inside `APPENDIX_D_FILES`        (phase 1)
+#          **156** identity statements inside `APPENDIX_D_FILES`        (phase 1)
 #       c. `doc/spec/features/feature-adapter-reference-behavior.md` — spec v1.5
 #          M2's reclassification: `tests/structure/reference-behavior.test.ts`
 #          set-equals this page's transport table to the closed operation set, so
@@ -1444,8 +1493,8 @@ phases:
         # The captured error-table baseline gains the three additive rows.
         - tests/fixtures/events/error-table-baseline.json
         # The positional PREFIX oracle over the baseline is re-expressed as
-        # presence + delivered relative order (146 captured rows still present and
-        # byte-identical; the live filtered set grows 146→149).
+        # presence + delivered relative order (**150** captured rows on the merged
+        # base, still present and byte-identical; the live filtered set is **153**).
         - tests/structure/supervision-error-family.test.ts
         # The exact `DeliveryRequest` key-set probe gains `title`.
         - tests/types/delivery-thread.type-test.ts
@@ -1632,8 +1681,44 @@ phases:
   #   2.8 Record the production-source scan's mandatory failing control: zero
   #       composed callers of the local landing/refresh, and no platform-CLI
   #       literal on any landing path.
-  #   2.9 Delete the retired golden pair and its scenario entry (see the golden
-  #       obligation); do not touch the `refusal-gate-*` pair.
+  #   2.9 **REMOVE OR RE-DERIVE THE `internalMergeFailure` CONSTRUCTOR — F1's
+  #       remaining repair lands in THIS phase** (spec Appendix F; AC-F7-1's
+  #       containment half; DEC-7). `packages/core/src/domain/merge-transaction.ts`
+  #       exports an `internalMergeFailure`-style helper that declares the
+  #       **merge** domain kind with the containment code (`fallback.internal`)
+  #       while having NO production caller. That is exactly the contradiction
+  #       F1 names: a merge failure may declare a kind its row denies, so the
+  #       containment branch is reachable for a pair the table says cannot exist.
+  #       It must be **removed or re-derived** so that NO merge failure can
+  #       declare a kind its row denies:
+  #         - REMOVAL is the default: delete the export, drop it from BOTH barrels
+  #           (`packages/core/src/domain/index.ts` and `packages/core/src/index.ts`)
+  #           and drop its allowance from
+  #           `tests/structure/content-inventory.test.ts` — all in the SAME
+  #           commit, or `ts-exports`/`content-inventory` fail by name;
+  #         - RE-DERIVATION is permitted only if it introduces **NO new
+  #           identity** (no new error row, no new kind, no projection change):
+  #           the helper must then be built from a row that actually exists and
+  #           its kind must equal that row's declared kind (M32's live mismatch
+  #           control still contains, which is what keeps the F1 proof
+  #           non-vacuous).
+  #       The F1 defect suite (`tests/structure/defect-f1-merge-refusal-containment.test.ts`)
+  #       is authored in phase 7 and asserts the end state; this phase lands the
+  #       repair, so phase 7's totality proof is green the moment it is written.
+  #   2.9a Delete the retired golden pair and its scenario entry (see the golden
+  #        obligation); do not touch the `refusal-gate-*` pair.
+  #   2.10 AS DELIVERED — RECORDED FOR THE REVIEWER (commits f9f9c06d/377c7b8b):
+  #        the post-verification / request-detail read is the BOUNDED LIST PAGE
+  #        with the new `includeGateFacts` option, and the provider-asserted title
+  #        is surfaced on the LIST read only. The single-read key set and the
+  #        conformance projection are pinned elsewhere (phase 5's transport table
+  #        and the conformance registry), so this phase does not touch them.
+  #   2.11 AS DELIVERED — RECORDED FOR THE REVIEWER: post-landing branch deletion
+  #        first returns the checkout to the base (`restoreCheckout`), because a
+  #        provider landing leaves the checkout on the DELIVERY branch and closeout
+  #        would otherwise refuse `closeout.branch.unsafe`. The ordering is part of
+  #        the landing path, not a closeout change; phase 5's automatic-removal and
+  #        step proofs must not assume the pre-change checkout state.
   #
   # Verification (expected signal: exit 0; one landing call with the captured
   # strategy/head/title/message bytes; zero landing calls on a moved head and on a
@@ -1659,7 +1744,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, binding)
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Provider-side landing as the only lifecycle mechanism with crafted squash metadata, the exact-head guard, the shaOnBase unknown state carried by its widened state-layer validator, the total refusal taxonomy over the two-member reason pair, the exhaustive emittable declaration, and the eight changed merge suites claimed"
+    title: "Provider-side landing as the only lifecycle mechanism with crafted squash metadata, the exact-head guard, the shaOnBase unknown state carried by its widened state-layer validator, the total refusal taxonomy over the two-member reason pair, the exhaustive emittable declaration, the eight changed merge suites claimed, and F1's remaining constructor repair"
     kind: delivery
     summary: "feat(GH-349): provider-side landing path and the typed merge refusal taxonomy"
     weightClass: heavy
@@ -1727,6 +1812,40 @@ phases:
         - tests/fixtures/merge/harness.ts
         - tests/fixtures/merge/git-harness.ts
         - tests/fixtures/merge/production-composition.ts
+        # PHASE-2-AS-DELIVERED SWEEP (commits f9f9c06d + 377c7b8b; see the header's
+        # PHASE 2 AS DELIVERED note). The five pilot paths had to move for G12 to be
+        # green: they compose the merge runtime and asserted the RETIRED local squash
+        # landing, so the provider-side landing re-pointed them (the J1 sequence now
+        # records the provider-asserted landing identity and the honest
+        # `shaOnBase: "unknown"`, and the base never advances).
+        - tests/fixtures/pilot/harness.ts
+        - tests/fixtures/pilot/matrix.ts
+        - tests/conformance/pilot/j1-iteration.test.ts
+        - tests/conformance/pilot/pilot-records.test.ts
+        - tests/conformance/pilot/pilot-isolation.test.ts
+        # TWO FILES DECLARED BY LATER PHASES MOVED EARLY HERE (deliberate; phase 2
+        # lands the landing path and the taxonomy both files pin):
+        #   - github-collection: now the ONLY title-decode assertion — the
+        #     provider-asserted title is surfaced on the bounded request-detail
+        #     LIST read (declared phase 5, which must not re-edit it unless its own
+        #     ten-row transport delta requires it).
+        - tests/behaviour/providers/github-collection.test.ts
+        #   - reference-behavior: its TC-FLOOR-007 "non-decision" pin asserted that
+        #     the merge transaction must NOT import the provider landing, which
+        #     AC-F1-1 REVERSES. Re-expressed as "composes the provider landing
+        #     ONLY; imports no adapter/transport; composes no local
+        #     landing/refresh". Already moved early in phase 1 for the
+        #     `DeliveryRequest` key-set table; declared phase 5.
+        - tests/structure/reference-behavior.test.ts
+        # THE F1 CONSTRUCTOR REPAIR (obligation 2.9; spec Appendix F, AC-F7-1's
+        # containment half). `internalMergeFailure` in
+        # `packages/core/src/domain/merge-transaction.ts` declares the **merge**
+        # kind with the containment code and has no production caller; removing it
+        # moves both barrels and the export inventory in ONE commit (re-deriving it
+        # instead must introduce no new identity).
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/content-inventory.test.ts
         # The retired scenario's entry is REMOVED here (one owner with phase 3,
         # which appends the two attribution scenarios).
         - tests/fixtures/merge/golden-scenarios.ts
@@ -2301,7 +2420,6 @@ phases:
         - tests/types/merge-delivery-request.type-test.ts
         - tests/behaviour/providers/github-cli-transport.test.ts
         - tests/behaviour/providers/github-landing.test.ts
-        - tests/behaviour/providers/github-collection.test.ts
         - tests/behaviour/providers/provider-capabilities.test.ts
         - tests/behaviour/closeout-capabilities.test.ts
         - tests/structure/registration-participation.test.ts
@@ -2309,13 +2427,23 @@ phases:
         # supported-operations array at `:192-202` and the provider client's
         # `Object.keys(client).sort()` method array at `:226-241` (P4).
         - tests/structure/provider-surface.test.ts
-        # MOVED EARLY IN PHASE 1 (commit 0a3dc3ff): its exact `DeliveryRequest`
-        # key-set table had to gain `title`, so phase 1 edited it while this phase
-        # owned the declaration. Deliberate; this phase must NOT re-edit it unless
-        # its own delta (the transport-table set-equality at ten rows) requires a
-        # further change, and `plan diff` will show it `within` at phase 1 and may
-        # show an advisory `undeclared-missing` here.
+        # MOVED EARLY IN PHASE 1 (0a3dc3ff) AND AGAIN IN PHASE 2 (f9f9c06d): the
+        # `DeliveryRequest` key-set table gained `title` in phase 1, and phase 2
+        # re-expressed its TC-FLOOR-007 pin from "imports no provider landing" to
+        # "composes the provider landing ONLY; no adapter/transport; no local
+        # landing/refresh" because AC-F1-1 reverses that non-decision. Both moves
+        # were deliberate; this phase must NOT re-edit the file unless its own
+        # delta (the transport-table set-equality at ten rows) requires a further
+        # change, and `plan diff` shows it `within` at phases 1–2 and may show an
+        # advisory `undeclared-missing` here.
         - tests/structure/reference-behavior.test.ts
+        # MOVED EARLY IN PHASE 2 (f9f9c06d): declared here, re-pointed there for
+        # the tenth operation's length pin. Phase 2's second edit is the
+        # title-decode assertion on the bounded request-detail list read (the only
+        # such assertion in the tree), which is a phase-2 concern; this phase keeps
+        # the length pin. Do not re-edit unless the ten-row transport delta needs
+        # it.
+        - tests/behaviour/providers/github-collection.test.ts
         - tests/fixtures/ports/capabilities.ts
         - tests/fixtures/providers/conformance/control/column.ts
         - tests/conformance/broken-adapter-control.test.ts
