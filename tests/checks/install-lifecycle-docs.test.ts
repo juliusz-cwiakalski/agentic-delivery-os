@@ -5,8 +5,9 @@
  * A self-contained requirement table over one page: the cadence, the admissible
  * origins and the worktree refusal with its reason, the dev-build requirement,
  * upgrade and rollback, uninstall versus purge with the residual report, the
- * opt-in PATH block and its removal, the compatibility asymmetry with its
- * rationale, and the ownership split. A missing fact fails by name.
+ * dry-run daemon disposition, the opt-in PATH block and its removal, the
+ * compatibility asymmetry with its rationale, and the ownership split. A missing
+ * fact fails by name.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
@@ -33,6 +34,7 @@ export const GUIDE_REQUIREMENTS = [
   "purge would additionally delete",
   "install.purge.unconfirmed",
   "nothing to remove",
+  "daemon: unchecked",
   "--add-to-path",
   "install.shell-profile.unresolved",
   "shell mapping",
@@ -55,6 +57,7 @@ export const guideViolations = (text: string | undefined): readonly string[] => 
     "launcher-only installation",
     "No uninstall path exists",
     "Removing a registered launcher is an operator action: reinstall to update it",
+    "daemon: absent",
   ]) {
     if (text.includes(retired)) failures.push(`${GUIDE}: retired statement present: ${retired}`);
   }
@@ -73,9 +76,17 @@ describe("TC-INST-110 the guide states the cadence and every declared operating 
     expect(guideViolations(missing).join("\n")).toContain(
       "missing required fact: deleted after merge",
     );
+    const missingDaemon = read(GUIDE).replaceAll("daemon: unchecked", "daemon: unknown");
+    expect(guideViolations(missingDaemon).join("\n")).toContain(
+      "missing required fact: daemon: unchecked",
+    );
     const retired = `${read(GUIDE)}\nNo uninstall path exists.\n`;
     expect(guideViolations(retired).join("\n")).toContain(
       "retired statement present: No uninstall path exists",
+    );
+    const retiredDaemon = `${read(GUIDE)}\ndaemon: absent\n`;
+    expect(guideViolations(retiredDaemon).join("\n")).toContain(
+      "retired statement present: daemon: absent",
     );
   });
 });

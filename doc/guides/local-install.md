@@ -70,7 +70,7 @@ path: <state root>/…
 
 `jaiship install purge` additionally removes the configuration root and the state root, and requires the explicit confirmation `--yes` **even when both roots are absent** (the answer is then "nothing to remove", reported at exit `0`). Without it the run refuses with `install.purge.unconfirmed`, names both roots and the flag, and removes nothing. The removal order is artifact, slot, record, `PATH` block, then the roots, so a partial failure leaves the recoverable members in place. A second `uninstall` removes nothing, reports every member as absent, prints the same residual set, and exits `0`.
 
-All four write paths accept `--dry-run`: each prints its complete plan with absolute paths, one line per path, and performs no write, no directory creation, and no daemon action.
+All four write paths accept `--dry-run`: each prints its complete plan with absolute paths, one line per path, and performs no write, no directory creation, and no daemon read or action. A dry-run never evaluates the daemon guard: it neither reads nor stops the daemon, never answers `install.daemon.running`, and reports `daemon: unchecked` — a real run refuses a live holder unless `--stop-daemon` and otherwise stops it before the swap or removal.
 
 ## The opt-in `PATH` block
 

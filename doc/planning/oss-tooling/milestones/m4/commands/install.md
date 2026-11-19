@@ -21,7 +21,7 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 | Invocation | What it does |
 |---|---|
 | `install` | Install or upgrade from the running compiled artifact: admission, identity gate, daemon guard, compatibility advisory, destination disposition, the seven-step replace, and the record write. An artifact-agreement run stops at step 4 with no staging file, no rename, and no slot swap; the record is reconciled in place when it is not `current`. |
-| `install --dry-run` | Prints the complete plan (running identity and artifact path, destination, the agreement outcome, the disposition, the slot, the record path, the profile file and block when `--add-to-path` is given, the compatibility advisories, and the daemon disposition) and writes nothing. |
+| `install --dry-run` | Prints the complete plan (running identity and artifact path, destination, the agreement outcome, the disposition, the slot, the record path, the profile file and block when `--add-to-path` is given, the compatibility advisories, and the daemon disposition `unchecked`) and writes nothing. A dry-run never evaluates the daemon guard: it neither reads nor stops the daemon, `install.daemon.running` cannot answer a dry-run, and the plan states `daemon: unchecked — a dry-run neither reads nor stops the daemon; a real run refuses a live holder unless --stop-daemon and otherwise stops it before the swap or removal`. |
 | `install status` | Read-only report: running identity, installed record, record condition, slot condition, target stability, the state-format verdict, and the managed PATH block. |
 | `install status --json` | The same facts under `install.status.v1`; the only surface that carries `builtAt` and the full commit. |
 | `install rollback` | Two renames in reverse order against the single slot, then the record update. The ordered refusals are `install.slot.absent`, `install.slot.invalid`, and `install.record.unreadable`, evaluated before any write and before the daemon stop. |
@@ -39,7 +39,9 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 - `--migrate` accepts the migration hook: this build refuses with
   `install.migration.unavailable`, names M4-S2 as the owner, and moves nothing.
   Without the flag, prior-namespace artifacts are detected and advised only.
-- `--dry-run` applies to all four write paths and writes nothing.
+- `--dry-run` applies to all four write paths and writes nothing. It never
+  evaluates the daemon guard — it neither reads nor stops the daemon — and each
+  dry-run reports the daemon disposition as `unchecked`.
 - `--stop-daemon` stops a live daemon through the delivered stop path **before**
   the swap or removal. Without it, a live holder is a typed refusal.
 - `--yes` confirms `install purge`.
