@@ -9,7 +9,7 @@
 # the commit hash, and the gate result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-347-spec.md (v1.4; F-1..F-9; API-1..API-7;
+#   - Spec:     ./chg-GH-347-spec.md (v1.6; F-1..F-9; API-1..API-7;
 #               DM-1..DM-9; NFR-1..NFR-11; NG-1..NG-12; RSK-1..RSK-11;
 #               DEC-1..DEC-11; §6 flows 1–5; §7.1 in-scope list; §8.5 backward
 #               compatibility and the deliberate behaviour changes; §17 the 42
@@ -17,14 +17,17 @@
 #               Appendix A doc impacts; §25.3 Appendix C proof boundary; §25.6
 #               Appendix F the NORMATIVE derivation ladder; §25.7 Appendix G
 #               the parity coverage matrix).
-#   - Tests:    ./chg-GH-347-test-plan.md (50 TCs in eleven stable-id groups —
+#   - Tests:    ./chg-GH-347-test-plan.md (v0.4 FINAL; 50 TCs in eleven
+#               stable-id groups —
 #               LANE 5, ADMIT 6, RESUME 4, TRACKER 4, TERM 6, LOOP 6, SPAWN 4,
 #               DERIVE 6, PARITY 6, SHELL 2, CONTRACT 1; 42/42 AC traceability,
-#               0 unmapped, 0 orphans; §5.2 scenario details; §6.1 fixture
-#               inventory (exists vs must-be-authored vs extended); §6.2 the
-#               fixture mechanisms; §7.1 the five production seams plus S-loop
-#               and S-exec; §7.2 the no-shell proof design; §7.3 the file map;
-#               §7.4 the 82-row mutation register M1..M82; §7.5 the gate battery;
+#               53 AC→case links, 0 unmapped, 0 orphans; §5.2 scenario details;
+#               §6.1 fixture inventory (exists vs must-be-authored vs extended;
+#               `parity/cases.ts` = 29 rows = 11 `class` + 18 non-class); §6.2
+#               the fixture mechanisms; §7.1 the five production seams plus
+#               S-loop and S-exec and the one case registry; §7.2 the no-shell
+#               proof design; §7.3 the file map; §7.4 the 90-row mutation
+#               register M1–M90 contiguous; §7.5 the gate battery;
 #               §7.6 non-functional verification; §8.2 assumptions 1–8; §8.3 the
 #               BINDING seam prerequisite).
 #   - PM record: ./chg-GH-347-pm-notes.yaml (delivery_mode autonomous; scope =
@@ -65,7 +68,7 @@
 # PLAN SHAPE: eight phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. A planning
 #   phase would declare no scope to compute and this change has no design work
-#   left: the spec is complete at v1.4, the test plan is complete, and the six
+#   left: the spec is complete at v1.6, the test plan is complete (v0.4), and the six
 #   governing records are authored. `tier.phases` below lists the LIFECYCLE phase
 #   ids [1..11] (the ceremony tier engine's vocabulary), not this plan's eight
 #   phase ids; the two are different namespaces and the plan never renumbers the
@@ -347,17 +350,17 @@
 #       extends the phase-3 `dispatch-parity-lane-resume.test.ts`; both are
 #       re-run as read-only controls, never re-authored (see SPLIT-FILE NOTE 5).
 #     - TC-PARITY-001..006 ↔ `tests/fixtures/dispatch/parity/{evidence,seams}.ts`
-#       (phase 7 authors both; `harness.ts` is extended, not re-authored). The
-#       whole-battery rows read the one case registry
-#       `tests/fixtures/dispatch/parity/cases.ts` (phase 7 authors it; see
-#       PARITY-COVERAGE MATRIX ALLOCATION).
+#       (phase 7 authors both; `harness.ts` is extended, not re-authored). Every
+#       parity case also reads its entry in the one case registry
+#       `tests/fixtures/dispatch/parity/cases.ts` (authored in phase 2, appended
+#       by phases 3, 4, 5, and 6, completed in phase 7; see PARITY-COVERAGE
+#       MATRIX ALLOCATION).
 #   FIXTURE-FIRST RULE: the shared parity fixture family is authored
 #   INCREMENTALLY at first need, never as one battery-phase drop. That is why the
 #   nine `tests/fixtures/dispatch/parity/*` modules are split across phases 2, 3,
 #   4, 5, and 7 instead of all landing in phase 7: a case never depends on a
 #   fixture committed after it, and the battery phase authors only the fixtures
-#   only it consumes (the class table, the seam manifest, and the case registry;
-#   the registry's entries reference builders authored in phases 2–6).
+#   only it consumes (the class table and the seam manifest).
 #   SPLIT-FILE NOTE (a file touched by more than one phase; each id still has one
 #   owner):
 #     1. `packages/core/src/app/dispatch.ts` is edited in phases 1 (delay fact),
@@ -384,6 +387,19 @@
 #     6. `tests/behaviour/dispatch-token-closure.test.ts` is declared by phase 4
 #        (the DERIVE-006 arm/closure extension) and by phase 5 (the narrowed
 #        persisted-count restart arm). Each phase edits only its own rows.
+#     7. `tests/fixtures/dispatch/parity/cases.ts` is AUTHORED in phase 2 (row
+#        schema, `runParityCase`/`runAllParityCases`, and the `admission` group)
+#        and APPENDED to by phases 3 (`resume` ×3), 4 (`tracker-outage` ×2), 5
+#        (`loop` ×5, `terminate` ×3, the fourth `resume` row), and 6 (`spawn`
+#        ×2), reaching 18 non-class rows; phase 7 appends the 11 `class` rows
+#        wired to `evidence.ts` and reaches the declared 29. Each phase declares
+#        the file and appends only its own group, so no phase edits another
+#        phase's row.
+#     8. `tests/behaviour/dispatch-watch.test.ts` is declared by phase 4 (the
+#        artifact-facts literal gained the required `pmNotes` member) and by
+#        phase 5 (its below-bound stall case moves from "recorded and deferred"
+#        to "resumed in-process", delivered expectation 5). Each phase edits only
+#        its own assertion.
 #
 # TEST-PLAN DEVIATIONS (declared, not silent):
 #     (a) §7.3 maps TC-LANE-003 to the lane/resume suite and TC-LANE-001..005 to
@@ -391,7 +407,7 @@
 #         (and AC-F1-2) to phase 5, because its scenario is a restarted
 #         iteration. Every other LANE id and TC-RESUME-101/103/104 stay where
 #         §7.3 puts them.
-#     (b) §7.4 says the 82-row mutation register is executed by the
+#     (b) §7.4 says the 90-row mutation register is executed by the
 #         reviewer/fixer and is NOT committed as a permanent suite. The plan
 #         therefore carries NO mutation-harness phase: the register is allocated
 #         below to the owning cases, whose planted controls are the permanent
@@ -407,23 +423,63 @@
 #         ordering reason stated in sequencing block (e). The case, its AC, and
 #         its assertions are unchanged; only the owning phase moves.
 #
-# MUTATION REGISTER ALLOCATION (§7.4, 82 rows; each row's owning case is named so
-#   no invariant is uncontrolled):
-#   M1..M11 (per parity arm)      → TC-PARITY-001 (phase 7), with M2 → also
-#                                   TC-DERIVE-001, M8 → TC-DERIVE-003, M9 →
-#                                   TC-DERIVE-005, M11 → TC-TRACKER-002 (phase 4).
-#   M12..M21 (admission paths)    → TC-ADMIT-001..006 (phase 2).
-#   M22..M26 (resume rules)       → TC-RESUME-101/102/103/104 (phase 3 authors
-#                                   the suite; TC-RESUME-102 is phase 5's).
-#   M27..M33 (ladder bounds)      → TC-TRACKER-001..004 (phase 4).
-#   M34..M43 (terminate safety)   → TC-TERM-001..006 (phase 5).
-#   M44..M52 (loop decisions)     → TC-LOOP-001..006 (phase 5).
-#   M53..M59 (spawn facts)        → TC-SPAWN-001..004 (phase 6).
-#   M60..M72 (derivation arms)    → TC-DERIVE-001..006 (phase 4).
-#   M73..M79 (no-shell + battery) → TC-SHELL-001/002, TC-PARITY-002/003/005
-#                                   (phase 7).
-#   M80..M81 (daemon fork/ledger) → TC-PARITY-006 (phase 7).
-#   M82 (closed surface)          → TC-CONTRACT-001 (phase 7).
+# MUTATION REGISTER ALLOCATION (§7.4, 90 rows M1–M90 contiguous; derived row by
+#   row from §7.4's "Must fail" column, not restated by hand). RULE FOR A ROW
+#   THAT NAMES SEVERAL CASES: it is allocated to the phase that owns the LAST
+#   boundary among them (the boundary at which every named case exists, so the
+#   row can be exercised exactly as written), and each earlier-phase case is
+#   named as that phase's cross-control. Per-group table with phase totals:
+#
+#   group (rows)          named case(s) verbatim from §7.4   allocated phase
+#   ---------------------------------------------------------------------------
+#   parity arms (M1–M11)  TC-PARITY-001 for all 11; plus DERIVE-001 (M2),
+#                         DERIVE-003 (M8), DERIVE-005 (M9), TRACKER-002 (M11)
+#                                                             → 11 to phase 7
+#                         cross-controls: M2/M8/M9/M11 also fail in phase 4,
+#                         where DERIVE-001/003/005 and TRACKER-002 live
+#   admission (M12–M21)   ADMIT-001 (M12, M13, M17, M20), ADMIT-002 (M18, M20),
+#                         ADMIT-003 (M15, M20), ADMIT-004 (M14, M16),
+#                         ADMIT-005 (M17, M19), ADMIT-006 (M13, M21)
+#                                                             → 10 to phase 2
+#   resume (M22–M27)      RESUME-101 (M22), RESUME-103 (M26), RESUME-104 (M25)
+#                                                             →  3 to phase 3
+#                         RESUME-102 (M23, M24, M27)          →  3 to phase 5
+#   ladder (M28–M34)      TRACKER-001 (M28, M29), TRACKER-002 (M28, M31, M33),
+#                         TRACKER-003 (M32, M33), TRACKER-004 (M30, M34)
+#                                                             →  7 to phase 4
+#   terminate (M35–M44)   TERM-001 (M35–M37), TERM-002 (M38, M39),
+#                         TERM-003 (M41), TERM-004 (M40), TERM-005 (M42),
+#                         TERM-006 (M43, M44)                 → 10 to phase 5
+#   loop (M45–M53)        LOOP-001 (M46–M48), LOOP-002 (M49, M52),
+#                         LOOP-003 (M50), LOOP-004 (M45), LOOP-005 (M47, M48,
+#                         M52, M53), LOOP-006 (M51), RESUME-102 (M53)
+#                                                             →  9 to phase 5
+#   spawn (M54–M60)       SPAWN-001 (M54, M55), SPAWN-002 (M56, M57),
+#                         SPAWN-003 (M58), SPAWN-004 (M59), CONTRACT-001 (M60)
+#                                                             →  6 to phase 6
+#                         M60 also names CONTRACT-001 (phase 7) →  1 to phase 7,
+#                         with the phase-6 SPAWN-004 half as its cross-control
+#   derivation (M61–M75)  DERIVE-001 (M62, M74), DERIVE-002 (M61, M74),
+#                         DERIVE-003 (M63–M65), DERIVE-004 (M71–M73),
+#                         DERIVE-005 (M66, M67, M75), DERIVE-006 (M68–M70, M74)
+#                                                             → 15 to phase 4
+#   no-shell/parity (M76–M82)
+#                         SHELL-001 (M76, M77), SHELL-002 (M78),
+#                         PARITY-002 (M79), PARITY-003 (M80, M81),
+#                         PARITY-005 (M82)                    →  7 to phase 7
+#   lane/boundary (M83–M87)
+#                         LANE-002 (M86)                      →  1 to phase 3
+#                         LANE-003 (M83, M85; LANE-001 also named for M83/M84)
+#                                                             →  2 to phase 5
+#                         PARITY-004 (M87), PARITY-005 (M84)  →  2 to phase 7
+#   shared derivation/closed contract (M88–M90)
+#                         PARITY-006 (M88, M89), CONTRACT-001 (M90)
+#                                                             →  3 to phase 7
+#
+#   PHASE TOTALS (sum = 90): phase 1 = 0; phase 2 = 10; phase 3 = 4;
+#   phase 4 = 22; phase 5 = 24; phase 6 = 6; phase 7 = 24; phase 8 = 0.
+#   Check: 0+10+4+22+24+6+24+0 = 90. Every row M1–M90 appears exactly once in
+#   the allocation, and every row's named case is reachable at its phase.
 #   NON-VACUITY STATEMENT (binding on every owning phase): a mutation that stops
 #   producing its NAMED failure is a BLOCKING finding; it is never repaired by
 #   deleting the mutation or relaxing the expected failure family.
@@ -436,25 +492,38 @@
 #   S-terminate and S-loop (phase 5), S-spawn (phase 6), S-derive (phase 4, shared
 #   with the daemon path), S-exec (phase 7's guarded runner). No row may be
 #   satisfied by a seam reimplementation (TC-PARITY-002).
-#   THE WHOLE-BATTERY REGISTRY (finding 9): the eleven class rows are NOT the
-#   whole battery. TC-PARITY-003 ("two consecutive runs identical") and
-#   TC-SHELL-001 ("zero shell invocations across the battery") both need a
-#   runnable row list covering the classes PLUS race, resume, outage, loop,
-#   terminate and spawn, and no artifact declared one — which forced those two
-#   cases either to re-author seven suites' scenarios or to under-run. Phase 7
-#   therefore authors `tests/fixtures/dispatch/parity/cases.ts`, the SINGLE case
-#   registry: one entry per parity row, `{id, kind, scenario, seam, expected
-#   token, expected exit}` where `kind` is one of `class | race | resume |
-#   outage | loop | terminate | spawn` and `scenario` is a reference to the
-#   scenario BUILDER the owning suite already uses (imported from
-#   `parity/lane.ts`, `parity/pm-notes.ts`, `parity/terminate.ts`,
-#   `parity/interleave.ts`, `parity/harness.ts`, or `parity/evidence.ts`).
+#   THE WHOLE-BATTERY REGISTRY (§6.1/§7.1: 29 rows = 11 `class` + 18 non-class):
+#   the eleven class rows are NOT the whole battery. TC-PARITY-003 ("two
+#   consecutive runs identical") and TC-SHELL-001 ("zero shell invocations across
+#   the battery") both need a runnable row list covering the classes plus every
+#   non-class group. `tests/fixtures/dispatch/parity/cases.ts` is that registry:
+#   `PARITY_CASES` entries are `{id, group, declaredSeam, scenario, expected}`,
+#   `group` is exactly one of the test plan's SEVEN group names — `class` (11),
+#   `admission` (2), `resume` (4), `tracker-outage` (2), `loop` (5), `terminate`
+#   (3), `spawn` (2) — and `scenario` is the BUILDER the owning suite already
+#   uses (imported from `parity/interleave.ts`, `parity/lane.ts`,
+#   `parity/pm-notes.ts`, `parity/terminate.ts`, `parity/harness.ts`, or
+#   `parity/evidence.ts`). It exports `runParityCase(entry)` and
+#   `runAllParityCases()`.
+#   AUTHORED INCREMENTALLY, EARLIEST NEED FIRST (finding 2): PHASE 2 authors the
+#   file (row schema, both runners, and the `admission` group) because
+#   `dispatch-parity-admission.test.ts` is its suite and must consume entries;
+#   PHASE 3 appends the three `resume` rows its cases own; PHASE 4 appends the
+#   `tracker-outage` rows; PHASE 5 appends the `loop` and `terminate` rows and
+#   the fourth `resume` row (`resume-prompt-reentry`, TC-RESUME-102's second
+#   mode); PHASE 6 appends the `spawn` rows; PHASE 7 appends the 11 `class` rows
+#   (wired to `evidence.ts`, which phase 7 authors) and drives the full registry.
+#   Every phase that appends declares `cases.ts`, and every suite that consumes
+#   the registry is declared by the phase that authors it, so no phase imports a
+#   module that does not exist at its boundary. Run counts at each boundary:
+#   phase 2 → 2 rows, phase 3 → 5, phase 4 → 7, phase 5 → 16, phase 6 → 18,
+#   phase 7 → 29.
 #   `evidence.ts` stays the 11-class table (class, fixture inputs, seam, token,
 #   exit, mutation hooks, `PARITY_PROOF_BOUNDARY`, canonicalizer) and the
-#   registry's `class` rows point at it; the registry adds the six non-class
-#   rows. No scenario is expressed twice: the registry holds a reference, not a
-#   second description. Every dedicated suite consumes its registry entry rather
-#   than re-expressing the scenario, so a scenario change is one edit.
+#   registry's `class` group points at it. FROM PHASE 2 ONWARD (the phase the
+#   registry starts to exist) a suite row may not be added without a registry
+#   entry, and no scenario is expressed twice: the registry holds a reference to
+#   the owning suite's builder, not a second description.
 #
 # PROOF BOUNDARY (spec Appendix C, NORMATIVE; F12-corrected): the boundary's
 #   machine-checked source is the PERMANENT fixture constant
@@ -676,9 +745,19 @@
 #      STAYS TOKEN-LEVEL, so every delivered `dispatch-gate-evidence.test.ts`
 #      assertion is expected green unchanged; a moved assertion there is a
 #      finding, not a licence. Phase 4.
-#   5. tests/behaviour/dispatch-liveness.test.ts — a below-bound stall is now
-#      terminated and restarted, not "left to lane supervision". Clause: §8.5,
-#      DEC-4, DEC-5. Phase 5.
+#   5. tests/behaviour/dispatch-liveness.test.ts — NO delivered assertion exists
+#      for the old "left to lane supervision" behaviour; this file is the pure
+#      liveness evaluator only (advancing signals, absent readings, the
+#      two-consecutive-no-advance rule) and is EXTENDED for TC-TERM-002, never
+#      rewritten. The delivered assertion of "no silent second spawn" lives in
+#      tests/behaviour/dispatch-watch.test.ts (the case "a stall below the bound is
+#      recorded and never leaks a second spawn", which asserts exactly one spawn
+#      and comments that the restart is "deferred to lane supervision"). THAT case
+#      is the delivered expectation this change updates: a below-bound stall now
+#      terminates the stalled session and RESUMES it in-process, so the case
+#      asserts spawns stays 1, resume becomes 1, the run takes 2 iterations, and
+#      exactly one `economics.restart` is appended. Clause: §8.5, AC-F6-1, DEC-4,
+#      DEC-5. Phase 5 declares the file.
 #   6. tests/structure/harness-stream-contract.test.ts — EXTENDED with the
 #      terminate-capability assertion; the seven required members and the
 #      no-`kill`-alias assertion stay. Phase 5.
@@ -781,7 +860,7 @@
 #       five-package minor changeset (`tests/checks/privacy-release.test.ts`
 #       enforces it). Phase 8 authors
 #       `.changeset/gh-347-dispatch-core-parity-minor.md`.
-#   (i) No committed mutation harness: §7.4 makes the 82-row register a
+#   (i) No committed mutation harness: §7.4 makes the 90-row register a
 #       reviewer/fixer exercise, and the permanent non-vacuity proofs are the
 #       planted controls inside the owning cases. Allocation is stated above.
 #   (j) `tests/checks/dispatch-doc-conformance.test.ts` pins REQUIRED phrases on
@@ -831,9 +910,12 @@
 #       and in phase 4's obligations.
 #   (o) THE WHOLE-BATTERY REGISTRY HAD NO OWNER. `tests/fixtures/dispatch/parity/
 #       evidence.ts` is the 11-class table only, while TC-PARITY-003 and
-#       TC-SHELL-001 iterate "all 11 rows + race + resume + outage + loop +
-#       terminate + spawn". Phase 7 now authors
-#       `tests/fixtures/dispatch/parity/cases.ts` as the single row registry; no
+#       TC-SHELL-001 iterate the whole battery. `tests/fixtures/dispatch/parity/
+#       cases.ts` is now the single row registry (§6.1: 29 rows = 11 `class` + 18
+#       non-class across `class`, `admission`, `resume`, `tracker-outage`, `loop`,
+#       `terminate`, `spawn`), authored in PHASE 2 because
+#       `dispatch-parity-admission.test.ts` is the first suite that must consume
+#       an entry, then appended by phases 3–6 and completed in phase 7. No
 #       delivered file is displaced and `evidence.ts` keeps its class table role.
 #
 schemaVersion: delivery.plan.v1
@@ -855,14 +937,14 @@ tier:
     - "The `\"pm-notes\"` corroboration source is re-pointed at the pmNotes artifact fact, falseSuccess is suppressed, or a new incident kind/divergent shape appears (DEC-11, AC-F8-3, TC-DERIVE-004)"
     - "The corroboration requirement becomes arm-aware for any arm other than the tracker-done `merged` arm and the nothing-to-do arm, the already-merged-PR `merged` arm loses a required source, or the evidence-window gate is made arm-aware by adding an arm discriminator to the persisted attempt record (an attempt-schema change) (NFR-3, AC-F8-1, AC-F8-4, DEC-6, TC-DERIVE-001, TC-PARITY-006)"
     - "A caller other than the operator-resume admission admits at or above the bound, the caller-scoped restart flag's default stops refusing, or peak-pause recovery (`recoverInterruptedLane`) loses its bound refusal (AC-F3-2, AC-F6-6, DEC-5, R5, TC-RESUME-102, TC-LOOP-006)"
-    - "A parity suite re-expresses a scenario instead of consuming its `tests/fixtures/dispatch/parity/cases.ts` entry, or the registry omits a class, race, resume, outage, loop, terminate, or spawn row (AC-F9-3, AC-F9-4, NFR-1, TC-PARITY-003, TC-SHELL-001)"
+    - "A parity suite re-expresses a scenario instead of consuming its `tests/fixtures/dispatch/parity/cases.ts` entry, the registry's group vocabulary drifts from the test plan's seven names, or the registry omits a `class`, `admission`, `resume`, `tracker-outage`, `loop`, `terminate`, or `spawn` row (AC-F9-3, AC-F9-4, NFR-1, TC-PARITY-003, TC-SHELL-001)"
     - "A spawn omits `--agent pm`, renders more than one `--agent`/`--model`, omits `--title ticket-<REF>` on a fresh spawn, carries a title on a resume, or builds a constant prompt; or a role-less composition records a binding (API-6, DM-6, AC-F7-1..AC-F7-4, TC-SPAWN-001..004)"
     - "The parity battery performs a live network call, starts a real child process, asserts wall-clock time, or its two runs differ in envelope, attempt count, or class coverage (NFR-1, AC-F9-3, TC-PARITY-003)"
     - "A shell invocation or a script-path literal appears in the dispatch flow, a spawn omits `shell: false`, or the no-shell invariant's surface/list/allowlist is widened to silence a hit (API-7, NFR-5, AC-F9-4, AC-F9-5, TC-SHELL-001/002)"
     - "A provider adapter (github/gitlab/jira) is edited, or an adapter is completed, converged, or changed to make a case pass (constraint 12, NG-4)"
     - "A delivered assertion is deleted, renamed, relaxed, reordered, or skipped, or a delivered expectation is changed without citing the authorising clause (§8.5, DEC-x, or a ruling) (the delivered-expectations block, TC-LOOP-006, TC-RESUME-002)"
     - "A pinned surface (inventory.json, content-inventory allowances, the ports contract inventory, subpaths) is relaxed instead of updated exactly, or a new suite is placed under an ignored path (RSK-8, NFR-10)"
-    - "The change folder leaves an index row pointing at an untracked decision record after phase 1, or the six TDRs are not committed on the branch (COMMIT-BOUNDARY REALITY, DOD-1)"
+    - "The change folder leaves an index row pointing at an untracked decision record after phase 1, or the six TDRs are not committed on the branch (COMMIT-BOUNDARY REALITY; phase 1's mechanical done criterion — `git ls-files --error-unmatch` per path exits 0 and `git status --porcelain -- doc/decisions` is empty — and phase 8 obligation 8.7). No spec DoD item covers the six records; these two phase obligations are the binding evidence"
     - "A phase boundary is not gate-green, or `pnpm check` is reported as green while a check was skipped, disabled, or made vacuous (DOD-2)"
 defaultLeases:
   - repo:main-tools
@@ -1101,6 +1183,15 @@ phases:
   #       `dispatchClaim` fixture helper to the atomic seam WITHOUT changing the
   #       delivered suite's assertions.
   #   2.6 Author the shared parity fixtures this phase first needs:
+  #       `tests/fixtures/dispatch/parity/cases.ts` — the SINGLE whole-battery case
+  #       registry, created HERE because this phase's admission suite is the first
+  #       suite that must consume an entry: the entry shape
+  #       `{id, group, declaredSeam, scenario, expected}`, `runParityCase(entry)`,
+  #       `runAllParityCases()` (iterating `PARITY_CASES`), and the `admission`
+  #       group's 2 rows (`same-ref race`, `other-ref lease`) whose `scenario`
+  #       builders draw on `parity/interleave.ts` and `parity/harness.ts`. Later
+  #       phases append their own groups to the same file (SPLIT-FILE NOTE 7);
+  #       this phase does NOT create rows for them. Also author
   #       `tests/fixtures/dispatch/parity/harness.ts` (driver D1: one composed
   #       production program per run, `run`/`observe()`/`dispose()`),
   #       `tests/fixtures/dispatch/parity/process-runner.ts` (the guarded runner
@@ -1110,6 +1201,8 @@ phases:
   #       fence wait, plus both orderings and the persistent-contention handle),
   #       and forward the injected delay through
   #       `tests/fixtures/dispatch/golden/harness.ts` for the command-level cases.
+  #       From this phase onward a suite row may not be added without a
+  #       `cases.ts` entry.
   #   2.7 Each mutation row M12..M21 fails its named case with the named failure
   #       family; a mutation that stops failing is blocking, never deleted.
   #
@@ -1128,6 +1221,8 @@ phases:
   #   tests/fixtures/queue/single-flight/harness.ts (rewire dispatchClaim)
   #   tests/fixtures/dispatch/golden/harness.ts (forward the injected delay)
   #   tests/fixtures/dispatch/parity/harness.ts (new)
+  #   tests/fixtures/dispatch/parity/cases.ts (new; row schema, runners, and the
+  #                                             `admission` group — 2 of 29 rows)
   #   tests/fixtures/dispatch/parity/process-runner.ts (new)
   #   tests/fixtures/dispatch/parity/interleave.ts (new)
   #   Re-run as read-only controls: tests/behaviour/queue-claim-single-flight.test.ts,
@@ -1144,7 +1239,9 @@ phases:
   #   naming the holder in BOTH interleavings, 0 `fallback.internal`, 0
   #   double-claim, 0 lost request, 0 leases and 0 attempts on the refusal,
   #   cumulative fence wait <= 90 000, a persistent `state.lock.busy` keeping kind
-  #   `state` at exit 2, the sibling renewal still `renewed`):
+  #   `state` at exit 2, the sibling renewal still `renewed`; the admission suite
+  #   imports its two scenarios from the `cases.ts` `admission` group and
+  #   `runAllParityCases()` reports 2 executed rows at this boundary):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-admission.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-single-flight.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/queue-claim-single-flight.test.ts
@@ -1172,6 +1269,7 @@ phases:
         - tests/fixtures/queue/single-flight/harness.ts
         - tests/fixtures/dispatch/golden/harness.ts
         - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/parity/process-runner.ts
         - tests/fixtures/dispatch/parity/interleave.ts
       folders:
@@ -1183,6 +1281,9 @@ phases:
       - kind: contract-file
         target: tests/fixtures/dispatch/parity/interleave.ts
         role: consumer
+      - kind: contract-file
+        target: tests/fixtures/dispatch/parity/cases.ts
+        role: producer
     doneArtifacts:
       pipelineId: "CI pipeline for the GH-347 phase-2 commit (the admission parity suite and the sibling-claim controls green; the aggregate runs in phase 8)"
 
@@ -1259,9 +1360,14 @@ phases:
   #       author `tests/fixtures/dispatch/parity/lane.ts` (seeders/readers for
   #       active and terminal dispatch lanes plus the daemon states, the
   #       store wrapper that fails only `dispatch.lane` appends, and the
-  #       "lane exists before any attempt" probe). TC-RESUME-102 is phase 5's and
-  #       extends this file (sequencing block (e)); phase 3 lands the file
-  #       without it.
+  #       "lane exists before any attempt" probe). APPEND to
+  #       `tests/fixtures/dispatch/parity/cases.ts` (created in phase 2) the
+  #       three `resume` rows this phase's cases own — `pr-open` lane, no lane,
+  #       unknown session — taking the registry to 5 of its 29 rows; the fourth
+  #       `resume` row (`resume-prompt-reentry`) is phase 5's with TC-RESUME-102.
+  #       TC-RESUME-102 is phase 5's and extends this file (sequencing block (e));
+  #       phase 3 lands the file without it. From phase 2 onward a suite row may
+  #       not be added without a registry entry.
   #   3.6 Extend `tests/structure/dispatch-composition.test.ts` with the new mount
   #       and extend `tests/fixtures/dispatch/parity/harness.ts` with the lane
   #       observation; move `tests/structure/inventory.json` and the
@@ -1271,8 +1377,10 @@ phases:
   #       `tests/behaviour/dispatch-resume-economics.test.ts` is re-run here only
   #       as a read-only control (every command-level case seeds a count below the
   #       bound, so it stays green unchanged).
-  #   3.8 Mutation rows M22..M26 fail their named cases (TC-RESUME-102's rows are
-  #       discharged at the phase-5 boundary, where the case lands).
+  #   3.8 Mutation rows allocated to this phase by the MUTATION REGISTER ALLOCATION
+  #       table fail their named cases: M22 (RESUME-101), M25 (RESUME-104),
+  #       M26 (RESUME-103), M86 (LANE-002) — 4 rows. M23/M24/M27 (RESUME-102) are
+  #       discharged at the phase-5 boundary, where that case lands.
   #
   # Code areas (concrete):
   #   packages/core/src/contracts/dispatch.ts  (DispatchLaneFacts relocation)
@@ -1285,6 +1393,7 @@ phases:
   #   packages/cli/src/edge.ts                 (DispatchLaneFacts re-export)
   #   tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts (new)
   #   tests/fixtures/dispatch/parity/lane.ts   (new)
+  #   tests/fixtures/dispatch/parity/cases.ts  (extend; +3 `resume` rows → 5/29)
   #   tests/fixtures/dispatch/golden/harness.ts (forward the lane seed options)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/structure/dispatch-composition.test.ts (extend)
@@ -1306,7 +1415,8 @@ phases:
   #   explicit fresh spawn when no lane exists; an unknown session a classified
   #   failure with exactly one attempt; daemon lanes read unchanged and the
   #   dispatch lane invisible to the daemon family; `dispatch-resume-economics`
-  #   green UNCHANGED as a read-only control):
+  #   green UNCHANGED as a read-only control; `runAllParityCases()` reports 5
+  #   executed rows at this boundary):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
@@ -1331,6 +1441,7 @@ phases:
         - packages/cli/src/edge.ts
         - tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
         - tests/fixtures/dispatch/parity/lane.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/golden/harness.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/structure/dispatch-composition.test.ts
@@ -1472,7 +1583,10 @@ phases:
   #       documents: complete, incomplete, absent, malformed, and the
   #       divergent-ledger document) and extend `tests/fixtures/dispatch/truth.ts`
   #       with the `pmNotes` builders, `tracker({state: "done"})`, and the
-  #       divergent-ledger input. The `artifacts()` builder takes a `pmNotes`
+  #       divergent-ledger input. APPEND to `tests/fixtures/dispatch/parity/
+  #       cases.ts` (created in phase 2) the two `tracker-outage` rows — with a
+  #       decisive artifact and without one — taking the registry to 7 of its 29
+  #       rows. The `artifacts()` builder takes a `pmNotes`
   #       override and defaults to `complete`, which preserves every delivered
   #       expectation that relied on `finished`; a case needing `partial` passes
   #       `incomplete` or `absent`. The ONLY two cases that construct artifact
@@ -1493,10 +1607,15 @@ phases:
   #       window-gate cases move ONLY if a fixture input relied on the old
   #       requirement; a gate verdict change is a finding, not a licence. No
   #       assertion is deleted or relaxed.
-  #   4.11 Mutation rows M1–M11's derivation links (M2, M8, M9, M11), M27..M33, and
-  #       M60..M72 fail their named cases; M61 (require a visible PR for the
-  #       tracker-done arm) is the arm's own control and must still fail
-  #       `TC-DERIVE-001` by name.
+  #   4.11 Mutation rows allocated to this phase by the MUTATION REGISTER
+  #       ALLOCATION table fail their named cases: M28–M34 (ladder bounds) and
+  #       M61–M75 (derivation arms and boundaries, including M74's read-precedence
+  #       restoration) — 7 + 15 = 22 rows. M2/M8/M9/M11 are ALSO exercised here as
+  #       phase-4 cross-controls (DERIVE-001, DERIVE-003, DERIVE-005,
+  #       TRACKER-002) but are counted in phase 7, where their TC-PARITY-001 half
+  #       lands. M62 (require a visible PR for the tracker-done arm) is the arm's
+  #       own control and must still fail `TC-DERIVE-001` by name; M75 is the
+  #       nothing-to-do corroboration control.
   #
   # Code areas (concrete):
   #   packages/core/src/domain/dispatch-tracker.ts (NEW ladder)
@@ -1535,6 +1654,8 @@ phases:
   #   tests/conformance/dispatch/dispatch-fixture.test.ts (conditional)
   #   tests/fixtures/dispatch/truth.ts (extend)
   #   tests/fixtures/dispatch/parity/pm-notes.ts (new)
+  #   tests/fixtures/dispatch/parity/cases.ts (extend; +2 `tracker-outage` rows →
+  #                                             7/29)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
   #   tests/fixtures/ports/v1-contract-inventory.json (arm vocabulary exports)
@@ -1571,7 +1692,8 @@ phases:
   #   `falseSuccess`), not here: this phase's suites exercise the shared
   #   comparison/classification functions, and the daemon lane harness belongs to
   #   the battery. 0 new tokens, projections, exits, attempt-schema
-  #   versions, or config keys):
+  #   versions, or config keys; `runAllParityCases()` reports 7 executed rows at
+  #   this boundary):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-tracker.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-token-closure.test.ts
@@ -1612,6 +1734,7 @@ phases:
         - tests/conformance/dispatch/dispatch-fixture.test.ts
         - tests/fixtures/dispatch/truth.ts
         - tests/fixtures/dispatch/parity/pm-notes.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
@@ -1770,9 +1893,11 @@ phases:
   #       for TERM-001, TERM-003..006, LOOP-001..005 and LANE-003; extend
   #       `tests/behaviour/dispatch-liveness.test.ts` (TERM-002); EXTEND the
   #       phase-3 `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`
-  #       with TC-RESUME-102 (both seeded counts 3 and 4 admitted, session resumed,
-  #       no ordinal consumed, envelope `restarts` at the persisted total, one
-  #       attempt record) without touching its phase-3 cases; and rewrite
+  #       with TC-RESUME-102, which covers BOTH resume modes (attach-continue and
+  #       `resume-prompt-reentry`) at both seeded counts 3 and 4: admitted,
+  #       session resumed, no ordinal consumed in either mode, envelope `restarts`
+  #       at the persisted total, one attempt record — without touching its
+  #       phase-3 cases; and rewrite
   #       `tests/behaviour/dispatch-restart-budget.test.ts`'s TC-RESUME-002 into
   #       TC-LOOP-006 (cite §8.5/AC-F3-2/AC-F6-6/DEC-5/R5; the old expectation is
   #       superseded, not forgotten).
@@ -1780,7 +1905,11 @@ phases:
   #       model with per-pid signal logs, a capable double, an incapable double
   #       that records any call as a violation) and extend
   #       `tests/fixtures/dispatch/harness.ts` with an optional terminate member
-  #       plus a capability flag (existing behaviour stays the default).
+  #       plus a capability flag (existing behaviour stays the default). APPEND to
+  #       `tests/fixtures/dispatch/parity/cases.ts` (created in phase 2) the five
+  #       `loop` rows and the three `terminate` rows this phase's cases own, plus
+  #       the fourth `resume` row (`resume-prompt-reentry`, TC-RESUME-102's second
+  #       mode), taking the registry to 16 of its 29 rows.
   #   5.10 Extend `tests/structure/harness-stream-contract.test.ts` with the
   #       terminate-capability assertion; keep the seven required members and the
   #       no-`kill`-alias assertion. Extend
@@ -1788,16 +1917,22 @@ phases:
   #       the restart-admission caller scope.
   #   5.11 Delivered-expectation edits, each with its clause: the
   #       `dispatch-restart-budget` rewrite (expectation 1), the
-  #       `dispatch-token-closure` arm row (expectation 10), and, ONLY where an
+  #       `dispatch-token-closure` arm row (expectation 10), the
+  #       `dispatch-watch` below-bound stall case — it now asserts resume (not a
+  #       deferred restart), 2 iterations, and one `economics.restart`
+  #       (expectation 5) — and, ONLY where an
   #       expectation encodes admission-time budget refusal for an operator resume,
   #       `tests/behaviour/dispatch-resume-economics.test.ts` /
   #       `tests/structure/dispatch-composition.test.ts` (cite
   #       §8.5/AC-F3-2/AC-F6-6/DEC-5). The `admitDispatchRestart` unit row in
   #       `dispatch-resume-economics.test.ts` is expected GREEN UNCHANGED: it is
   #       the control for the flag's default.
-  #   5.12 Mutation rows M34..M43 (terminate) and M44..M52 (loop) fail their named
-  #        cases, plus M22..M26's TC-RESUME-102 rows discharged here;
-  #        M36/M37/M39/M41/M44/M48/M50 are the load-bearing controls.
+  #   5.12 Mutation rows allocated to this phase by the MUTATION REGISTER
+  #        ALLOCATION table fail their named cases: M35–M44 (terminate),
+  #        M45–M53 (loop), M23/M24/M27 (RESUME-102, including the
+  #        `resume-prompt-reentry` ordinal charge), and M83/M85 (lane record,
+  #        restart shape) — 24 rows. M36/M37/M39/M41/M44/M48/M50 are the
+  #        load-bearing controls.
   #
   # Code areas (concrete):
   #   packages/core/src/contracts/harness.ts        (terminate in the closed set)
@@ -1820,11 +1955,15 @@ phases:
   #   tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts (extend,
   #                                                  TC-RESUME-102 only)
   #   tests/behaviour/dispatch-liveness.test.ts (extend)
+  #   tests/behaviour/dispatch-watch.test.ts (below-bound stall case updated;
+  #                                                  delivered expectation 5)
   #   tests/behaviour/dispatch-restart-budget.test.ts (rewrite TC-RESUME-002)
   #   tests/behaviour/dispatch-token-closure.test.ts (narrowed arm row)
   #   tests/behaviour/dispatch-resume-economics.test.ts (conditional; default
   #                                                  control expected green)
   #   tests/fixtures/dispatch/parity/terminate.ts (new)
+  #   tests/fixtures/dispatch/parity/cases.ts (extend; +5 `loop`, +3 `terminate`,
+  #                                             +1 `resume` → 16/29)
   #   tests/fixtures/dispatch/harness.ts (extend, additive)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/structure/harness-stream-contract.test.ts (extend)
@@ -1864,10 +2003,13 @@ phases:
   #   non-zero exit keeps `failed`, a harness-reported timeout at the bound keeps
   #   `max-restarts` with `dispatch.restart-budget-exceeded`, and a completed
   #   harness at the bound is never re-keyed; one terminal lane and no terminal
-  #   between actives; 0 new config keys):
+  #   between actives; TC-RESUME-102 passes in BOTH resume modes with 0 ordinals
+  #   charged; `runAllParityCases()` reports 16 executed rows at this boundary;
+  #   0 new config keys):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-liveness.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-watch.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-restart-budget.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-token-closure.test.ts
@@ -1899,10 +2041,12 @@ phases:
         - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
         - tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
         - tests/behaviour/dispatch-liveness.test.ts
+        - tests/behaviour/dispatch-watch.test.ts
         - tests/behaviour/dispatch-restart-budget.test.ts
         - tests/behaviour/dispatch-token-closure.test.ts
         - tests/behaviour/dispatch-resume-economics.test.ts
         - tests/fixtures/dispatch/parity/terminate.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/harness.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/structure/harness-stream-contract.test.ts
@@ -1963,10 +2107,16 @@ phases:
   #       unknown options; the help inventory count is unchanged).
   #   6.5 Extend `tests/fixtures/dispatch/parity/harness.ts` to expose the recorded
   #       invocation args and prompt; extend `tests/types/harness.type-test.ts`
-  #       with the title member probes.
+  #       with the title member probes. APPEND to
+  #       `tests/fixtures/dispatch/parity/cases.ts` (created in phase 2) the two
+  #       `spawn` rows — fresh and resume — taking the registry to 18 of its 29
+  #       rows; the 11 `class` rows are phase 7's.
   #   6.6 Move `tests/structure/inventory.json` and the allowance for the new
   #       domain module exactly.
-  #   6.7 Mutation rows M53..M59 fail their named cases.
+  #   6.7 Mutation rows allocated to this phase fail their named cases:
+  #       M54–M59 (spawn facts) — 6 rows. M60's SPAWN-004 half is a phase-6
+  #       cross-control; the row itself is discharged in phase 7 with its
+  #       CONTRACT-001 half.
   #
   # Code areas (concrete):
   #   packages/core/src/domain/dispatch-prompt.ts (NEW lifecycle prompt; the
@@ -1980,6 +2130,7 @@ phases:
   #   tests/conformance/dispatch/dispatch-parity-spawn.test.ts (new)
   #   tests/structure/dispatch-help-inventory.test.ts (extend)
   #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
+  #   tests/fixtures/dispatch/parity/cases.ts (extend; +2 `spawn` rows → 18/29)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/types/harness.type-test.ts (extend)
   #   packages/core/src/state/** is NOT touched.
@@ -1992,7 +2143,8 @@ phases:
   #   resume; a non-constant prompt containing the ref, the base branch, and the
   #   lifecycle sections; a role-less composition records no binding and renders
   #   unchanged args; `--agent`/`--title` rejected as unknown options; the help
-  #   inventory count unchanged; every spawn `shell: false`):
+  #   inventory count unchanged; every spawn `shell: false`;
+  #   `runAllParityCases()` reports 18 executed rows at this boundary):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-spawn.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-help-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-spawn-env.test.ts tests/behaviour/harness-resume-propagation.test.ts
@@ -2015,6 +2167,7 @@ phases:
         - tests/structure/dispatch-help-inventory.test.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/types/harness.type-test.ts
       folders:
@@ -2096,11 +2249,13 @@ phases:
   #     `falseSuccess` is `false` with absent pm-notes and failing CI (AC-F8-1),
   #     which is what makes the shared arm-aware corroboration observable on the
   #     daemon path.
-  #   - The whole battery has ONE row registry: every parity row — the eleven
-  #     classes plus race, resume, outage, loop, terminate, and spawn — is one
-  #     entry in `tests/fixtures/dispatch/parity/cases.ts`, and TC-PARITY-003 and
-  #     TC-SHELL-001 iterate that registry rather than re-expressing any suite's
-  #     scenario.
+  #   - The whole battery has ONE row registry, authored incrementally (phase 2
+  #     onward): `tests/fixtures/dispatch/parity/cases.ts` with 29 rows = 11
+  #     `class` + 18 non-class, groups `class`, `admission`, `resume`,
+  #     `tracker-outage`, `loop`, `terminate`, `spawn`. This phase appends the 11
+  #     `class` rows (wired to `evidence.ts`) and TC-PARITY-003 and TC-SHELL-001
+  #     iterate `runAllParityCases()` over the completed registry rather than
+  #     re-expressing any suite's scenario.
   #   - The closed contract surface is pinned: 0 new/changed tokens, projections,
   #     exits, error rows, domain kinds, or schema versions; 0 new config keys;
   #     the four consumed defaults unchanged.
@@ -2113,20 +2268,16 @@ phases:
   #       the mutation hooks, `PARITY_PROOF_BOUNDARY`, the canonicalizer) and
   #       `tests/fixtures/dispatch/parity/seams.ts` (the import-identity manifest
   #       and reimplementation-signature registry).
-  #   7.2 Author `tests/fixtures/dispatch/parity/cases.ts`, the SINGLE whole-
-  #       battery case registry (finding 9): one entry per parity row with
-  #       `{id, kind, scenario, seam, expectedToken, expectedExit}`, where `kind`
-  #       covers `class | race | resume | outage | loop | terminate | spawn` and
-  #       `scenario` is a reference to the builder the owning suite already uses
-  #       (`parity/lane.ts`, `parity/pm-notes.ts`, `parity/terminate.ts`,
-  #       `parity/interleave.ts`, `parity/harness.ts`, `parity/evidence.ts`).
-  #       `class` rows point at the `evidence.ts` table; the six non-class rows
-  #       are the registry's own. TC-PARITY-003 and TC-SHELL-001 DRIVE THE
-  #       REGISTRY (they iterate every entry instead of enumerating rows), and
-  #       every dedicated suite consumes the same entry for its scenario rather
-  #       than re-expressing it. The registry holds references, never a second
-  #       scenario description, and a row may not be added to a suite without a
-  #       registry entry.
+  #   7.2 COMPLETE the registry `tests/fixtures/dispatch/parity/cases.ts`
+  #       (authored in phase 2, appended by phases 3–6) by adding the 11 `class`
+  #       rows wired to `evidence.ts`, reaching the declared 29 entries (11
+  #       `class` + 18 non-class across the seven groups `class`, `admission`,
+  #       `resume`, `tracker-outage`, `loop`, `terminate`, `spawn`). Do not
+  #       re-author a row another phase owns and do not reorder the group
+  #       vocabulary. TC-PARITY-003 (`runAllParityCases()` twice) and
+  #       TC-SHELL-001 (the same sweep under the guarded runner) DRIVE the
+  #       completed registry and assert its executed count is 29, so neither can
+  #       under-run.
   #   7.3 Extend `tests/conformance/dispatch/controlled-repo.ts` (accept the new
   #       class rows without changing its `provenance()` guard or its no-ledger-
   #       writer surface) and `tests/conformance/dispatch/dispatch-e2e.test.ts`
@@ -2160,8 +2311,12 @@ phases:
   #   7.8 The no-shell invariant is discovered by `bun test` through
   #       `tests/checks/no-shell-dispatch.test.ts`; no package.json script, CI job,
   #       or topology change is made.
-  #   7.9 Mutation rows M1..M11 (parity arms), M73..M79 (no-shell + battery), M80..
-  #       M81 (daemon), and M82 (closed surface) fail their named cases.
+  #   7.9 Mutation rows allocated to this phase by the MUTATION REGISTER
+  #       ALLOCATION table fail their named cases: M1–M11 (parity arms, with
+  #       M2/M8/M9/M11 also controlled in phase 4), M60's CONTRACT-001 half, M76–
+  #       M82 (no-shell and parity machinery), M84 (lane cardinality, PARITY-005
+  #       half) and M87 (proof boundary), and M88–M90 (daemon fork, daemon ledger
+  #       arm, closed surface) — 24 rows.
   #
   # Code areas (concrete):
   #   scripts/checks/no-shell-dispatch.ts            (NEW static invariant)
@@ -2173,7 +2328,10 @@ phases:
   #   tests/conformance/dispatch/dispatch-e2e.test.ts (extend)
   #   tests/conformance/dispatch/controlled-repo.ts (extend)
   #   tests/fixtures/dispatch/parity/evidence.ts (NEW)
-  #   tests/fixtures/dispatch/parity/cases.ts (NEW; the whole-battery registry)
+  #   tests/fixtures/dispatch/parity/cases.ts (COMPLETE the registry; authored in
+  #                                             phase 2, appended by 3–6; this
+  #                                             phase adds the 11 `class` rows
+  #                                             → 29/29)
   #   tests/fixtures/dispatch/parity/seams.ts (NEW)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/behaviour/dispatch-privacy.test.ts (extend)
@@ -2190,9 +2348,10 @@ phases:
   #   AC-F9-4 (SHELL-001), AC-F9-5 (SHELL-002 + PARITY-004).
   #
   # Gate (expected signal: exit 0; 11/11 classes by token and exit; EVERY parity
-  #   row driven from the single `cases.ts` registry (class, race, resume, outage,
-  #   loop, terminate, spawn — no suite enumerates rows of its own and no suite
-  #   re-expresses another suite's scenario); every row's seam imported from its
+  #   row driven from the single `cases.ts` registry over its seven groups
+  #   (`class`, `admission`, `resume`, `tracker-outage`, `loop`, `terminate`,
+  #   `spawn`) — no suite enumerates rows of its own and no suite
+  #   re-expresses another suite's scenario; every row's seam imported from its
   #   production module; the planted reimplementation rejected by name; two runs
   #   byte-identical after normalization with liveNetworkRequests =
   #   realChildStarts = shellInvocations = scriptPathInvocations = 0; the proof
@@ -2203,9 +2362,11 @@ phases:
   #   `merged` for done+blocked, `partial` for incomplete pm-notes, no ledger-arm
   #   nothing-to-do, AND the daemon tracker-done attempt's `corroboration`
   #   `{pmNotes: not-applicable, tracker: satisfied, ci: not-applicable}` with
-  #   `falseSuccess: false`; the closed surface unchanged; the static invariant
-  #   clean live and each planted rule failing by name, with `shell: false` and
-  #   out-of-surface references NOT reported):
+  #   `falseSuccess: false`; the registry reaches its declared 29 rows (11 `class`
+  #   + 18 non-class) and `runAllParityCases()` reports 29 executed rows on each
+  #   of the two determinism runs; the closed surface unchanged; the static
+  #   invariant clean live and each planted rule failing by name, with
+  #   `shell: false` and out-of-surface references NOT reported):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/dispatch-contract-invariance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts

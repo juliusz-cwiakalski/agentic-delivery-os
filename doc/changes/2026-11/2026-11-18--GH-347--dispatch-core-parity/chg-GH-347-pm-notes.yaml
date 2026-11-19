@@ -5,9 +5,9 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
-  specification: { started: null, completed: 2026-11-18T23:57:59.662Z }
-  test_planning: { started: null, completed: 2026-11-18T23:58:07.854Z }
-  delivery_planning: { started: null, completed: 2026-11-18T23:58:16.851Z }
+  specification: { started: null, completed: 2026-11-19T00:19:45.659Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -293,5 +293,55 @@ notes:
       plain commit. For a checkpoint that must not complete anything, either
       reopen immediately afterwards (as here) or accept the plan-union staging
       of a bare `commit <ref>`, which would also stage the six untracked TDRs."
+    type: retro
+    date: "2026-11-19"
+  - text: "DoR gate iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md).
+      0 critical, 5 major, 4 minor, 3 nit. The four iteration-1 criticals are
+      verified closed against the delivered code and every iteration-1 finding
+      is dispositioned; the remaining damage is mostly bookkeeping introduced by
+      the remediation: (1) the plan's mutation allocation still says 82 rows and
+      mis-maps M73/M80/M81/M82 while M83-M88 are unallocated, and cites spec
+      v1.4; (2) cases.ts is declared only in phase 7 although phases 2-6 author
+      the suites that must consume it, and the plan says six non-class rows
+      where the test plan has 17; (3) TC-DERIVE-006 still claims 30/30 inputs
+      yield a token although Appendix F(A)'s nine pre-session arms have no
+      token; (4) AC-F3-2's both-resume-modes clause has no case for
+      resume-prompt-reentry; (5) the test plan's R3/R4 and host/spawn*.ts
+      surface remain unachievable while only the plan carries the correction."
+    type: info
+    date: "2026-11-19"
+  - text: "PM rulings for the DoR-iteration-2 remediation (iteration 3 of 3; a
+      further NOT_READY escalates to the human): (i) the mutation allocation is
+      REGENERATED from the test plan's current 88-row register, one owning case
+      per row, lane rows to phases 3/5, M73 to phase 4, M85 to phase 7. (ii) The
+      registry moves to the earliest phase whose suites need it (phase 2), with
+      its row schema and class wiring there, every consuming suite declared by
+      the phase that authors it, the non-class row count set to the test plan's
+      17, and one group vocabulary used. (iii) TC-DERIVE-006 keeps only the
+      derivation-reachable arms (B and C); the nine pre-session rows are stated
+      as 'no token, typed pre-session refusal' and their evidence stays with the
+      command-level cases that already own them. (iv) A resume-prompt-reentry
+      row is added asserting no economics.restart record and an unchanged
+      restarts total, with a mutation that charges an ordinal on prompt-reentry.
+      (v) R3/R4 are rewritten to bind to the child_process receiver/import, with
+      RegExp.exec and port .spawn as false-positive controls, and the surface
+      names host/index.ts. (vi) TC-PARITY-006 asserts the daemon attempt's
+      corroboration and falseSuccess. (vii) The bogus delivered-expectation
+      claim about dispatch-liveness is removed. (viii) The operator-resume
+      admission change is added to section 8.5. (ix) AC-F8-4 gains the
+      no-false-success clause, with TC-DERIVE-005 asserting not-applicable
+      corroboration and a mutation. (x) Every version citation becomes v1.5, and
+      Appendix F is cited as 25.6."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 2): the remediation fixed the substance and broke
+      the bookkeeping. Two of the five majors exist because a number or a
+      mapping was restated by hand in a second document instead of being derived
+      from the source that owns it (82 vs 88 mutation rows; six vs 17 registry
+      rows), and one exists because a correction was made in the plan while the
+      test plan kept the old rule. Process fix for iteration 3: any count,
+      mapping, or rule that lives in two artifacts is regenerated from the
+      owning artifact in the same pass, and the plan never carries a correction
+      that the case it governs does not carry."
     type: retro
     date: "2026-11-19"

@@ -53,7 +53,7 @@ Also out of scope (spec §7.2, `NG-1`…`NG-12`): the F1b operator surface (`sta
 
 | Reference | Use |
 |-----------|-----|
-| `./chg-GH-347-spec.md` (v1.3) | Source of the 42 ACs, `F-1`…`F-9`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, Appendix C (proof boundary), Appendix F (normative ladder C vs D), Appendix G (coverage matrix) |
+| `./chg-GH-347-spec.md` (v1.6) | Source of the 42 ACs, `F-1`…`F-9`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-11`, Appendix C (proof boundary), Appendix F (normative ladder C vs D), Appendix G (coverage matrix) |
 | `./chg-GH-347-pm-notes.yaml` | Scope, the F1a/GH-354 split, rulings R1–R7, the staging note, the `TMPDIR`/`PATH` operational prerequisite |
 | `doc/decisions/TDR-0044` | Dispatch-owned durable lane record (distinct kind, acquisition/terminal appends, latest-wins) |
 | `doc/decisions/TDR-0045` | Atomic dispatch admission (verdict inside the claim, no dispatch renewal, bounded fence wait) |
@@ -202,7 +202,7 @@ Two drivers are used and both are production code:
 | `TC-ADMIT-005` | Every refusal exits its mapped code with zero records and no crash | Integration | Conformance | High | `AC-F2-4` | New |
 | `TC-ADMIT-006` | Sibling `queue claim` renewal unchanged; the dispatch claim never renews | Integration | Behaviour | Critical | `AC-F2-5` | Extended (`dispatch-single-flight.test.ts`) |
 | `TC-RESUME-101` | `--resume-prompt` over a recorded `pr-open` lane resumes, never spawns | Integration | Conformance | Critical | `AC-F3-1` | New |
-| `TC-RESUME-102` | An operator resume consumes no ordinal and is never budget-refused | Integration | Conformance | Critical | `AC-F3-2` | New |
+| `TC-RESUME-102` | An operator resume consumes no ordinal in either resume mode and is never budget-refused | Integration | Conformance | Critical | `AC-F3-2` | New |
 | `TC-RESUME-103` | No recorded lane → an explicit fresh spawn with a recorded fresh-spawn fact | Integration | Conformance | High | `AC-F3-3` | New |
 | `TC-RESUME-104` | An unknown session is a classified failure with exactly one attempt | Integration | Conformance | Critical | `AC-F3-4` | New |
 | `TC-TRACKER-001` | Transient failure then success: 5-attempt ladder, 2/4/8/16 s waits | Integration | Conformance | Critical | `AC-F4-1` | New |
@@ -573,7 +573,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 - `sessionIds` contains `ses-347`; exactly one attempt record.
 - The interrupted run appended no terminal lane record; the resumed acquisition appends one active lane record with `sessionId === "ses-347"` and `iterationOrdinal === 1`, and the newest lane record is the one the resolver read.
 
-#### TC-RESUME-102 - An operator resume consumes no ordinal and is never budget-refused
+#### TC-RESUME-102 - An operator resume consumes no ordinal in either resume mode and is never budget-refused
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -588,15 +588,18 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Preconditions**:
 - Persisted restart count equal to and greater than the bound (3), seeded as real `economics.restart` records.
 - A resumable lane with a session identity.
+- Two adapter-double rows per count: (i) the double **with** resume injection (`adapterSupportsResumeInjection: true` → mode `attach-continue`); (ii) the double **without** it (`adapterSupportsResumeInjection: false` → mode `resume-prompt-reentry`).
 
 **Steps**:
-1. Run `--resume-prompt` for each persisted count (3 and 4).
+1. Run `--resume-prompt` for each (persisted count × adapter double) cell: 3 and 4 counts × `attach-continue` and `resume-prompt-reentry`.
 2. Read the envelope's `restarts`, the economics restart records, and the attempt record.
 
 **Expected Outcome**:
-- Both runs are admitted (no `dispatch.restart-budget-exceeded`), resume the session, and classify normally.
-- No ordinal is consumed: the count of `economics.restart` records is unchanged, and the envelope's `restarts` stays at the **persisted total** (3 and 4 respectively) — the same persisted-total definition `TC-LOOP-005` pins.
-- Exactly one attempt record per run.
+- Every cell is admitted (no `dispatch.restart-budget-exceeded`), resumes the session, and classifies normally — the budget never gates an operator resume in either mode.
+- **`attach-continue` cells**: `attempt.resumeMode === "attach-continue"`, `prefillCostAcknowledged` absent, no ordinal consumed, `restarts` at the persisted total (3 and 4).
+- **`resume-prompt-reentry` cells**: `attempt.resumeMode === "resume-prompt-reentry"` and `prefillCostAcknowledged === true`; appended `economics.restart` records: **0**; the envelope's `restarts` stays at the **persisted total** (3 and 4) — so the descriptive `consumesRestartOrdinal: true` this mode carries charges nothing.
+- The count of `economics.restart` records is unchanged in every cell, and the envelope `restarts` uses the persisted-total definition `TC-LOOP-005` pins.
+- Exactly one attempt record per cell.
 
 #### TC-RESUME-103 - No recorded lane → an explicit fresh spawn with a recorded fresh-spawn fact
 
@@ -1033,7 +1036,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 - The default bound is 3 and the pinned bound is honoured; `coordinator.restart-budget` (10) is never consulted for this surface (assert by pinning it to a distinct value and observing no effect).
 - No configuration key or default is added (`TC-CONTRACT-001` asserts the surface).
 
-**Notes**: The mutation row `M52` states this definition directly: reporting only this invocation's consumed count where the persisted total is required fails by name.
+**Notes**: The mutation row `M53` states this definition directly: reporting only this invocation's consumed count where the persisted total is required fails by name.
 
 #### TC-LOOP-006 - A persisted count at or above the bound admits one iteration
 
@@ -1214,7 +1217,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 - Done + blocking → `merged` (tracker-done precedes blocking).
 - Blocking without done → `blocked`, exit 0 (the `blocked` row projects `success`; this is the delivered baseline, not a change).
 - Blocking without done **plus an unreadable artifact read** → `blocked`, exit 0: the blocking arm precedes the artifact read, so an unreadable artifact never degrades it to `state-unverified`.
-- The inputs are distinguishable: none yields two tokens, and swapping the ladder order changes the first assertion (see `M60`).
+- The inputs are distinguishable: none yields two tokens, and swapping the ladder order changes the first assertion (see `M61`).
 
 #### TC-DERIVE-003 - Commits + complete pm-notes → `finished`; incomplete/absent → `partial`
 
@@ -1294,7 +1297,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 2. Assert the retraction explicitly: no row's token changes when `workRemaining` flips, except through the arms above.
 
 **Expected Outcome**:
-- (a) `noop-lane-nothing-to-do`, tracked-corroborated (`tracker === "satisfied"`).
+- (a) `noop-lane-nothing-to-do`, tracker-corroborated with no false-success incident: `corroboration` equals `{pmNotes:"not-applicable", tracker:"satisfied", ci:"not-applicable"}` and `falseSuccess === false`, so absent pm-notes and CI raise no incident for a true no-op.
 - (b) `state-unverified` exit 2 — the arm is not taken on an unreadable tracker.
 - (c) `noop-lane-nothing-to-do` only because the shell condition holds (commits 0, PR none, readable tracker) — not because the ledger is complete. Proven by flipping `workRemaining` and `completed/total` while holding the artifact/tracker facts: the token is unchanged.
 - (d) `finished` / (e) `partial` — the retired ledger arm is what makes these two reachable.
@@ -1312,21 +1315,25 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: `S-derive` — the real total order, the real taxonomy, and the real projection
 
 **Preconditions**:
-- A fixture table of **30 inputs**:
-  - **23 declared-arm inputs** — Appendix F arms A1–A9 (pre-session, 9), B1–B4 (attempt-stage, 4), C1–C10 (completed-session ladder, 10). The stall ladder (D) is a loop decision, not a pure-derivation arm: it is covered by `TC-TERM-003`/`TC-TERM-004`/`TC-LOOP-001`…`003` and is deliberately excluded here.
+- A fixture table of **21 derivation-reachable inputs**:
+  - **4 attempt-stage inputs** — Appendix F(B), the only B arms that are real `deriveDispatchResult` inputs: B1 `spawnFailure: true` → `failed`; B2 `resumeAdmission {admitted:false, reason:"uneconomical"}` → `failed`; B3 `resumeAdmission {admitted:false, reason:"unreadable-facts"}` → `state-unverified`; B4 an unreadable harness read (`harness` not ok) → `state-unverified`.
+  - **10 completed-session ladder inputs** — C1–C10.
   - **4 collision inputs** — done+blocking, done+open PR, open PR + commits, commits 0 + complete ledger.
   - **3 read-precedence inputs** — tracker-done + unreadable artifact read, tracker-blocking + unreadable artifact read, tracker-done + unreadable ledger.
+- **Excluded by construction — Appendix F(A), A1–A9 (nine rows): no token, typed pre-session refusal.** `deriveDispatchResult` has no pre-session branch (its first arms are `spawnFailure`, `resumeAdmission`, the harness read, then the truth reads), so a pre-session refusal yields no token, no attempt record and no lane, and cannot be observed by this unit case. Their evidence is owned at the command level and is not re-asserted here: the typed refusals by `TC-ADMIT-001`…`005` and `TC-LANE-002` (zero attempts, zero lanes, declared pair, mapped exit), and the class replay by `TC-PARITY-001`.
+- **Also excluded — the stall ladder (Appendix F(D)) and the restart-budget arm.** Both are loop/bound outcomes, owned by `TC-TERM-003`/`TC-TERM-004`/`TC-LOOP-001`…`003` and `TC-LOOP-002`/`TC-LOOP-006`; this table does not treat them as derivation inputs.
 - Each input declares the one arm it must match and the token that arm projects.
 
 **Steps**:
-1. For each input, assert the derived token equals the token its declared arm projects.
+1. For each of the 21 inputs, assert the derived token equals the token its declared arm projects.
 2. Assert per-input disjointness: exactly one arm matches each input (instrument the ladder with a declared arm identifier returned alongside the derivation, or derive it from the fixture's arm tag and assert the match set has exactly one member).
-3. Assert the observed token set equals the taxonomy subset those arms project — **10 tokens**: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `state-unverified`, `partial`, `noop-lane-permission`, `noop-lane-nothing-to-do`. `max-restarts` is a loop/bound outcome, not an arm in this table, and is covered by `TC-LOOP-002`/`TC-LOOP-006`.
+3. Assert the observed token set equals the taxonomy subset those arms project — **10 tokens**: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `state-unverified`, `partial`, `noop-lane-permission`, `noop-lane-nothing-to-do`. `max-restarts` is the eleventh token and is a loop/bound outcome covered by `TC-LOOP-002`/`TC-LOOP-006`.
 4. Assert the taxonomy: 11 tokens, projection per token, exit per projection (`state-unverified` 2, `partial` 1, `blocked` 0, `max-restarts` 1), attempt-record schema version unchanged.
 
 **Expected Outcome**:
-- 30/30 inputs yield the token their declared arm projects; 0 inputs yield two arms; 0 inputs yield a token outside the projected subset.
-- An arm is not a token: the table's 30 inputs cover **10 of the 11** tokens, with more than one arm each for `merged` (tracker-done, already-merged PR), `partial` (incomplete pm-notes, classifier tool-failure) and `failed` (spawn failure, classifier failure). `max-restarts` is the eleventh token and is proven by the loop cases, not by an arm in this table.
+- 21/21 inputs yield the token their declared arm projects; 0 inputs yield two arms; 0 inputs yield a token outside the projected subset.
+- The nine A rows are explicitly **not** asserted here and cannot be: they produce no token. AC-F8-5's eleven-class obligation is therefore covered jointly — 10 tokens by arm here, `max-restarts` by the loop cases, and all eleven replayed end-to-end by `TC-PARITY-001`.
+- An arm is not a token: the 21 inputs cover **10 of the 11** tokens, with more than one arm each for `merged` (tracker-done, already-merged PR), `partial` (incomplete pm-notes, classifier tool-failure) and `failed` (spawn failure, classifier failure).
 - `DELIVERY_RESULT_TOKENS` length 11 and order unchanged; `DELIVERY_RESULT_TAXONOMY` projections unchanged; the exit of every token equals its projection's exit.
 - `DISPATCH_ATTEMPT_PAYLOAD_SCHEMA` version unchanged.
 
@@ -1486,14 +1493,17 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 **Preconditions**:
 - The delivered daemon lane harness (`createLaneExecutor` + `runSupervisionCycle` + `recordDaemonDispatchResult`) over the same evidence fixtures as the one-shot path.
-- Rows: tracker done + no PR; tracker done + blocking; commits 2 + complete pm-notes; commits 2 + incomplete pm-notes; commits 2 + complete ledger + `workRemaining:false`.
+- Rows: tracker done + no PR (the tracker-done `merged` arm); tracker done + blocking (a second tracker-done `merged` arm); already-merged PR with commits (the PR `merged` arm, the corroboration control); commits 2 + complete pm-notes; commits 2 + incomplete pm-notes; commits 2 + complete ledger + `workRemaining:false`.
 
 **Steps**:
 1. For each row, run the daemon path and the one-shot path over identical evidence.
-2. Assert both tokens and exits; assert the daemon appends exactly one attempt record per classification.
+2. Assert both tokens and exits; read the daemon attempt record's `corroboration` and `falseSuccess`.
+3. Assert the daemon appends exactly one attempt record per classification.
 
 **Expected Outcome**:
-- Daemon tokens: `merged`, `merged`, `finished`, `partial`, `finished` — identical to the one-shot tokens for the same facts (no forked derivation).
+- Daemon tokens: `merged` (tracker-done), `merged` (tracker-done + blocking), `merged` (already-merged PR), `finished`, `partial`, `finished` — identical to the one-shot tokens for the same facts (no forked derivation).
+- **Tracker-done `merged` rows** (both): the daemon attempt's `corroboration` equals `{pmNotes:"not-applicable", tracker:"satisfied", ci:"not-applicable"}` and `falseSuccess === false` — the arm-aware tracker-only corroboration is inherited, and absent pm-notes/CI create no false-success incident on the daemon path.
+- **Already-merged-PR `merged` row**: `corroboration.tracker === "satisfied"` and `falseSuccess === false`. This arm keeps the token-keyed sufficiency (F-8 changes only the tracker-done arm and nothing-to-do), so `corroboration.pmNotes` and `corroboration.ci` carry the injected facts (`"satisfied"` in this fixture) and are **not** `"not-applicable"`; asserting the tracker-only triple here would encode the token-wide weakening F-8/DEC-6 reject.
 - The retired ledger arm holds on the daemon path too: a complete ledger with commits never yields `noop-lane-nothing-to-do`.
 - `recordDaemonDispatchResult` appends one attempt record; a replay/resume appends none (the delivered `TC-DAEMON-002` assertion still holds).
 
@@ -1545,14 +1555,15 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 **Steps**:
 1. Run the invariant over the live tree: assert zero violations and assert every declared surface file exists and is reachable from the dispatch entry (so the list cannot silently rot).
-2. Write a temp workspace with one planted violation per rule class (a string literal `"scripts/deliver-ticket.sh"`; a `spawn(..., {shell:true})`; an `execSync` import) and assert each is reported by rule name and file.
-3. Assert the rules do not fire on the legitimate controls: `shell: false` in the host starter; a `scripts/checks/*.ts` reference outside the surface; `scripts/` in documentation; the `.sha` member accesses in `packages/cli/src/edge.ts` (`facts.head.sha`, `head.sha`, `read.sha`) and any `.sha` member access in `packages/cli/src/production.ts`; and `queue.shift()` in `packages/adapters/src/host/index.ts`. A named control file that carries no such token today gets a planted one in the temp-workspace copy, so the control is never vacuous.
+2. Write a temp workspace with one planted violation per rule class (a string literal `"scripts/deliver-ticket.sh"` for `R1`; a child-process `spawn(cmd, args, { shell: true })` for `R4`; an `import { execSync } from "node:child_process"` for `R3`) and assert each is reported by rule name and file.
+3. Assert the rules do not fire on the legitimate controls: `shell: false` in the host starter; a `scripts/checks/*.ts` reference outside the surface; `scripts/` in documentation; the `.sha` member accesses in `packages/cli/src/edge.ts` (`facts.head.sha`, `head.sha`, `read.sha`) and any `.sha` member access in `packages/cli/src/production.ts`; `queue.shift()` in `packages/adapters/src/host/index.ts`; the five `RegExp.prototype.exec` calls in `packages/cli/src/edge.ts` (`regex.exec(text)`) for `R3`; and the two port `.spawn(` calls (`ports.harness.spawn` in `packages/core/src/app/dispatch.ts`, `resolvedHarness.port.spawn` in `packages/cli/src/production.ts`) for `R4`. A named control file that carries no such token today gets a planted one in the temp-workspace copy, so the control is never vacuous.
 4. Negative control for `R1`'s anchoring: plant a member access/identifier shaped like a violating literal (`head.sha`, `queue.shift`) and assert it is **not** reported; then plant the literal `"head.sh"` and assert it **is** reported — proving the rule distinguishes a literal from a member name.
+5. Negative control for `R3`/`R4`'s receiver binding: plant a `RegExp.prototype.exec` call (`regex.exec(text)`) and a port-method `.spawn(` call in the temp workspace and assert neither is reported; then plant `import { execSync } from "node:child_process"` and assert `R3` reports it by name, and plant `spawn(cmd, args, { shell: true })` against the child-process `spawn` import and assert `R4` reports it by name — proving that a name-only matcher (`exec`, `spawn`) and a shell-flag-only matcher each fail.
 
 **Expected Outcome**:
 - Live tree: 0 violations, surface list non-empty and all files present.
 - Each planted reference fails by name (`no-shell invariant: script-path literal`, `no-shell invariant: shell-enabled spawn`, `no-shell invariant: shell-exec import`) with `file:line`.
-- Zero false positives on all five controls; a `shell:false` call site is accepted, and `.sha`/`shift` never match `R1`.
+- Zero false positives on every control; a `shell:false` call site is accepted, `.sha`/`shift` never match `R1`, `RegExp.prototype.exec` never matches `R3`, and a port `.spawn(` call never matches `R4`.
 - The allowlist is empty; a violation cannot be silenced without a recorded justification in the check source.
 
 #### TC-CONTRACT-001 - The closed contract surface is unchanged against a pinned baseline
@@ -1613,7 +1624,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 | `tests/fixtures/dispatch/parity/interleave.ts` | The deterministic two-invocation interleaving: a latch (`arrive`/`release`) wired to the injected fence wait; an external fence holder handle for the persistent-contention case; the virtual clock and the cumulative-wait recorder. |
 | `tests/fixtures/dispatch/parity/lane.ts` | Seeders and readers for `dispatch.lane` (active/terminal) and daemon lane records; a store wrapper that fails only `dispatch.lane` appends; the "lane exists before any attempt" probe. |
 | `tests/fixtures/dispatch/parity/pm-notes.ts` | Real pm-notes documents on disk: `complete` (delivery phase with a non-null completion), `incomplete` (delivery phase null), `absent` (no file), `malformed` (unparseable), plus the **divergent-ledger** document used by `TC-DERIVE-004` (complete document + a phase ledger that has not progressed and is not complete). |
-| `tests/fixtures/dispatch/parity/cases.ts` | **The one case registry.** `PARITY_CASES` enumerates **every** parity row with `{ id, group, declaredSeam, scenario: (h) => Promise<Observation>, expected }`, where `group` is one of `class` (11), `admission` (same-ref race, other-ref lease), `resume` (`pr-open` lane, no lane, unknown session), `tracker-outage` (with artifact, without artifact), `loop` (below-bound restart, at-bound `max-restarts`, unverified stall, clean-exit terminal, persisted ≥ bound), `terminate` (capable, incapable, exact-identity reap), `spawn` (fresh, resume). Exports `runParityCase(entry)` and `runAllParityCases()`. Every suite consumes its registry entry's `scenario` builder; no suite re-expresses a scenario. `TC-PARITY-001` drives the `class` group, `TC-PARITY-003` and `TC-SHELL-001` drive `runAllParityCases()`. |
+| `tests/fixtures/dispatch/parity/cases.ts` | **The one case registry: 29 rows — 11 `class` rows and 18 non-class rows.** `PARITY_CASES` enumerates every parity row with `{ id, group, declaredSeam, scenario: (h) => Promise<Observation>, expected }`. Group vocabulary and row counts: `class` **11**; `admission` **2** (same-ref race, other-ref lease); `resume` **4** (`pr-open` lane, no lane, unknown session, `resume-prompt-reentry` mode); `tracker-outage` **2** (with artifact, without artifact); `loop` **5** (below-bound restart, at-bound `max-restarts`, unverified stall, clean-exit terminal, persisted ≥ bound); `terminate` **3** (capable, incapable, exact-identity reap); `spawn` **2** (fresh, resume). Exports `runParityCase(entry)` and `runAllParityCases()`. Every suite consumes its registry entry's `scenario` builder; no suite re-expresses a scenario. `TC-PARITY-001` drives the `class` group, `TC-PARITY-003` and `TC-SHELL-001` drive `runAllParityCases()`. |
 | `tests/fixtures/dispatch/parity/evidence.ts` | The 11-row **class** fixture table (class, fixture inputs, production seam, expected token, expected exit) that `cases.ts` composes for its `class` group, the 11-arm mutation hooks, the **permanent `PARITY_PROOF_BOUNDARY`** (8 proven ids and 6 not-proven ids, declared order — the only source for the boundary, asserted by `TC-PARITY-004`), and the canonicalizer (temp-root normalization + stable JSON) for `TC-PARITY-003`. |
 | `tests/fixtures/dispatch/parity/seams.ts` | Import-identity manifest: each production seam symbol → its production module → the battery consumer, plus the reimplementation-signature registry consumed by `TC-PARITY-002`. |
 | `scripts/checks/no-shell-dispatch.ts` | The static invariant: declared surface list, rule set, `scan(root)` returning violations `{rule,file,line}`, exit non-zero and name the offending rule/file. |
@@ -1653,7 +1664,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 The engine (`runDispatch`), the command definition, the CLI runtime, the projection, the attempt ledger, and the state store are always the production ones.
 
-**One case registry (`tests/fixtures/dispatch/parity/cases.ts`).** Every parity case — the 11 classes plus the same-ref race, the other-ref lease, the `pr-open` resume, the no-lane resume, the unknown-session resume, tracker-outage with and without a decisive artifact, the below-bound restart, the at-bound `max-restarts`, the unverified stall, the clean-exit terminal, the persisted-at-bound admission, the three terminate rows, and the two spawn rows — is one entry with a `scenario` builder. The dedicated suites import their entry's builder instead of re-expressing the scenario, so a suite and the whole-battery driver cannot drift. `TC-PARITY-001` drives the `class` group; `TC-PARITY-003` and `TC-SHELL-001` call `runAllParityCases()`, which is what makes "the full battery" a declared, runnable thing rather than a list in a test body.
+**One case registry (`tests/fixtures/dispatch/parity/cases.ts`): 29 rows, 11 `class` + 18 non-class.** Every parity case — the 11 classes plus the same-ref race, the other-ref lease, the four resume rows (incl. the `resume-prompt-reentry` mode), tracker-outage with and without a decisive artifact, the five loop rows, the three terminate rows, and the two spawn rows — is one entry with a `scenario` builder. The dedicated suites import their entry's builder instead of re-expressing the scenario, so a suite and the whole-battery driver cannot drift. `TC-PARITY-001` drives the `class` group; `TC-PARITY-003` and `TC-SHELL-001` call `runAllParityCases()`, which is what makes "the full battery" a declared, runnable thing rather than a list in a test body.
 
 **Reimplementation detection (three independent mechanisms, all in `TC-PARITY-002`):**
 
@@ -1678,10 +1689,13 @@ It also asserts, for every spawn, that the call site passed `shell:false` (the a
 
 **(b) The static invariant.** `scripts/checks/no-shell-dispatch.ts`, mutation-tested by `tests/checks/no-shell-dispatch.test.ts`. It lives beside the repository's other invariant checks and follows `forbidden-literals`' shape (declared surface + precise rules + non-vacuity controls).
 
-- **Surface (declared, not inferred):** the dispatch flow = `packages/core/src/app/dispatch.ts`, `packages/core/src/app/dispatch-*.ts`, `packages/core/src/domain/dispatch-*.ts`, `packages/core/src/domain/harness-spawn-env.ts`, `packages/cli/src/commands/dispatch.ts`, `packages/cli/src/edge.ts`, `packages/cli/src/production.ts`, `packages/adapters/src/harness/opencode.ts`, `packages/adapters/src/host/spawn*.ts`, `packages/adapters/src/daemon/lane-executor.ts`. Each listed file must exist and must be reachable from the dispatch entry, asserted by the check, so the list cannot silently shrink to nothing.
-- **Rules:** `R1` **script-path literals, matched on whole string-literal values, not substrings**: a string literal whose value *ends* in `.sh`, or *is* a path whose first segment is `scripts/` or `tools/`, or *contains* `deliver-ticket`. `R2` no `shell: true`; `R3` no `exec`/`execSync`/`execFile`/`execFileSync`/`spawnSync` import or call inside the surface; `R4` every `spawn(` call site in the surface carries a literal `shell: false` within the same call. `R1`'s literal anchoring is what keeps `.sha` member accesses (`head.sha`, `facts.head.sha`) and `queue.shift()` from matching; an unanchored substring or bare-regex implementation is a defect, and the controls below prove the difference.
+- **Surface (declared, not inferred):** the dispatch flow = `packages/core/src/app/dispatch.ts`, `packages/core/src/app/dispatch-*.ts`, `packages/core/src/domain/dispatch-*.ts`, `packages/core/src/domain/harness-spawn-env.ts`, `packages/cli/src/commands/dispatch.ts`, `packages/cli/src/edge.ts`, `packages/cli/src/production.ts`, `packages/adapters/src/harness/opencode.ts`, `packages/adapters/src/host/index.ts`, `packages/adapters/src/daemon/lane-executor.ts`. Each listed file must exist and must be reachable from the dispatch entry, asserted by the check, so the list cannot silently shrink to nothing.
+- **Rules:** `R1` **script-path literals, matched on whole string-literal values, not substrings**: a string literal whose value *ends* in `.sh`, or *is* a path whose first segment is `scripts/` or `tools/`, or *contains* `deliver-ticket`. `R2` no `shell: true`.
+  - `R3` **no shell-capable child-process import or call, bound to the `child_process` receiver**: the surface may import only `spawn` from `node:child_process`; any import — or call — of `exec`, `execSync`, `execFile`, `execFileSync`, `spawnSync`, or `fork` fails, as does any call on a `child_process` namespace binding whose member is not `spawn(`. `R3` deliberately does **not** match `RegExp.prototype.exec` (`pattern.exec(text)`) or a port method named `spawn` (`ports.harness.spawn(...)`).
+  - `R4` **the one permitted child-process call carries `shell: false`**: every `spawn(` that resolves to the `child_process` import — directly, or through its namespace binding (`cp.spawn(`) — carries a literal `shell: false` in the same call. A port `.spawn(` call is not a child-process call and is outside `R4`'s scope.
+  - `R1`'s literal anchoring is what keeps `.sha` member accesses (`head.sha`, `facts.head.sha`) and `queue.shift()` from matching, and the receiver binding is what keeps `RegExp.prototype.exec` and port `.spawn(` calls from matching. An unanchored substring, a bare-regex, or a name-only matcher is a defect, and the controls below prove the difference.
 - **Avoiding false positives on legitimate shell usage elsewhere:** the surface is an explicit file list, so the repository's real shell scripts (`scripts/**`, `tools/**`, `tests/**/*.test.ts`, `tmp/**`) are out of scope entirely and are never scanned. Within the surface, `shell: false` (which the host starter legitimately uses) is accepted by `R4`; documentation and comment references are excluded by matching code tokens only, and `.md` files are out of scope. A line allowlist exists but starts empty; any future entry needs a written justification in the check source, so it cannot be used to silence a real violation.
-- **Non-vacuity controls:** (i) the surface-existence assertion; (ii) one planted reference per rule class in a temp workspace, each of which must be reported by rule name and `file:line`; (iii) the false-positive controls — `shell: false`, a `scripts/checks` reference outside the surface, a `scripts/` mention in a doc, the `.sha` member accesses in `packages/cli/src/edge.ts` (which also carries the dispatch-flow `.sha`-shaped member names today, e.g. `facts.head.sha`, `head.sha`, `read.sha`), and `queue.shift()` in `packages/adapters/src/host/index.ts` — must report nothing. Where a named control file carries no such token today, the control plants one in the temp-workspace copy so it can never become vacuous. All controls are inside the declared surface where applicable, so a substring implementation fails the suite rather than passing it.
+- **Non-vacuity controls:** (i) the surface-existence assertion; (ii) one planted reference per rule class in a temp workspace, each of which must be reported by rule name and `file:line` (including a planted `childProcess.spawn(cmd, args, { shell: true })` for `R4` and a planted `import { execSync } from "node:child_process"` for `R3`); (iii) the false-positive controls, each of which must report nothing: `shell: false` in the host starter; a `scripts/checks` reference outside the surface; a `scripts/` mention in a doc; the `.sha` member accesses in `packages/cli/src/edge.ts` (e.g. `facts.head.sha`, `head.sha`, `read.sha`); `queue.shift()` in `packages/adapters/src/host/index.ts`; the **five `RegExp.prototype.exec` calls** in `packages/cli/src/edge.ts` (today at lines 1139, 1350, 1945, 3415, 3420) for `R3`; and the **two port `.spawn(` calls** — `ports.harness.spawn(...)` in `packages/core/src/app/dispatch.ts` (today line 859) and `resolvedHarness.port.spawn(...)` in `packages/cli/src/production.ts` (today line 3401) — for `R4`. Where a named control file carries no such token today, the control plants one in the temp-workspace copy so it can never become vacuous. All controls are inside the declared surface where applicable, so a substring/regex/name-only implementation fails the suite rather than passing it.
 
 ### 7.3 File mapping (new vs extended)
 
@@ -1713,7 +1727,7 @@ Split: **9 new test suites** (`dispatch-parity-{lane-resume,admission,tracker,st
 
 Each row is a source mutation applied to the implementation; the named case must fail, with the expected failure-message family. `M` rows are the non-vacuity proof for the load-bearing invariants. The register is executed by the reviewer/fixer, not committed as a permanent suite (a permanent mutation harness belongs to review tooling; the permanent suite is the case list itself).
 
-**Per parity arm (11 arms; spec Appendix F, §25.7).**
+**Per parity arm (11 arms; spec Appendix F, §25.6).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
@@ -1744,7 +1758,7 @@ Each row is a source mutation applied to the implementation; the named case must
 | M20 | Emit `fallback.internal` for an admission outcome | `TC-ADMIT-001`…`003` | `envelope error must not be fallback.internal` |
 | M21 | Narrow or change the sibling `queue claim` renewal | `TC-ADMIT-006` | `expected renewal {ok:true}, received queue.lease-conflict` |
 
-**Resume rules (5).**
+**Resume rules (6).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
@@ -1753,110 +1767,112 @@ Each row is a source mutation applied to the implementation; the named case must
 | M24 | Refuse an operator resume on the restart budget | `TC-RESUME-102` | `expected admitted, received dispatch.restart-budget-exceeded` |
 | M25 | Fall back to a fresh spawn when the session is unknown | `TC-RESUME-104` | `spawn calls expected 0, received 1` / `expected failed, received <success>` |
 | M26 | Fabricate a lane (or refuse) when no lane exists | `TC-RESUME-103` | `expected 1 spawn with the supplied prompt, received 0` |
+| M27 | Charge an ordinal on `resume-prompt-reentry` (honour the descriptive `consumesRestartOrdinal`) | `TC-RESUME-102` | `economics.restart records expected 0, received 1` / `restarts expected 3 (persisted total), received 4` |
 
 **Ladder bounds (7).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M27 | 4 attempts instead of 5 | `TC-TRACKER-001`, `TC-TRACKER-002` | `attempts expected 5, received 4` |
-| M28 | Flat waits (2000 each) | `TC-TRACKER-001` | `waits expected [2000,4000,8000,16000], received [2000,2000,2000,2000]` |
-| M29 | Cap ignored at n >= 5 | `TC-TRACKER-004` | `ladderWait(5) expected 30000, received 32000` |
-| M30 | Exhaustion yields a readable stale tracker fact | `TC-TRACKER-002` | `expected state-unverified, received <success token>` |
-| M31 | Return `state-unverified` before evaluating artifacts | `TC-TRACKER-003` | `expected pr-open, received state-unverified` |
-| M32 | Drop the exhaustion evidence reference | `TC-TRACKER-002`, `TC-TRACKER-003` | `expected evidenceRefs to contain tracker:exhausted` |
-| M33 | Resolve an ambient delay (real timer) instead of the injected one | `TC-TRACKER-004` | `tracker ladder resolves an ambient delay: <symbol>` |
+| M28 | 4 attempts instead of 5 | `TC-TRACKER-001`, `TC-TRACKER-002` | `attempts expected 5, received 4` |
+| M29 | Flat waits (2000 each) | `TC-TRACKER-001` | `waits expected [2000,4000,8000,16000], received [2000,2000,2000,2000]` |
+| M30 | Cap ignored at n >= 5 | `TC-TRACKER-004` | `ladderWait(5) expected 30000, received 32000` |
+| M31 | Exhaustion yields a readable stale tracker fact | `TC-TRACKER-002` | `expected state-unverified, received <success token>` |
+| M32 | Return `state-unverified` before evaluating artifacts | `TC-TRACKER-003` | `expected pr-open, received state-unverified` |
+| M33 | Drop the exhaustion evidence reference | `TC-TRACKER-002`, `TC-TRACKER-003` | `expected evidenceRefs to contain tracker:exhausted` |
+| M34 | Resolve an ambient delay (real timer) instead of the injected one | `TC-TRACKER-004` | `tracker ladder resolves an ambient delay: <symbol>` |
 
 **Terminate safety (10).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M34 | Send KILL before TERM | `TC-TERM-001` | `signal order expected [SIGTERM,SIGKILL], received [SIGKILL,...]` |
-| M35 | Escalate before the grace elapses | `TC-TERM-001` | `SIGKILL recorded at +<n>ms; expected >= 20000` |
-| M36 | Never invoke terminate on a corroborated stall | `TC-TERM-001` | `terminate calls expected 1, received 0` |
-| M37 | Terminate on a clean exit | `TC-TERM-002` | `terminate calls expected 0, received 1` |
-| M38 | Terminate a stall cleared by later progress | `TC-TERM-002` | `terminate calls expected 0 after later progress, received 1` |
-| M39 | Short-circuit a stall on any decisive artifact | `TC-TERM-004` | `expected restart below the bound, received <artifact token>` |
-| M40 | Skip the short-circuit for a set member | `TC-TERM-003` | `expected pr-open, received a restart` |
-| M41 | Start a second session on a terminate-incapable adapter | `TC-TERM-005` | `session acquisitions expected 1, received 2` |
-| M42 | Reap by broad process-name pattern | `TC-TERM-006` | `unrelated pid <unrelated> expected no signal, received SIGTERM` |
-| M43 | Make terminate non-idempotent (error on the second call) | `TC-TERM-006` | `second terminate expected {terminated:true}, received error` |
+| M35 | Send KILL before TERM | `TC-TERM-001` | `signal order expected [SIGTERM,SIGKILL], received [SIGKILL,...]` |
+| M36 | Escalate before the grace elapses | `TC-TERM-001` | `SIGKILL recorded at +<n>ms; expected >= 20000` |
+| M37 | Never invoke terminate on a corroborated stall | `TC-TERM-001` | `terminate calls expected 1, received 0` |
+| M38 | Terminate on a clean exit | `TC-TERM-002` | `terminate calls expected 0, received 1` |
+| M39 | Terminate a stall cleared by later progress | `TC-TERM-002` | `terminate calls expected 0 after later progress, received 1` |
+| M40 | Short-circuit a stall on any decisive artifact | `TC-TERM-004` | `expected restart below the bound, received <artifact token>` |
+| M41 | Skip the short-circuit for a set member | `TC-TERM-003` | `expected pr-open, received a restart` |
+| M42 | Start a second session on a terminate-incapable adapter | `TC-TERM-005` | `session acquisitions expected 1, received 2` |
+| M43 | Reap by broad process-name pattern | `TC-TERM-006` | `unrelated pid <unrelated> expected no signal, received SIGTERM` |
+| M44 | Make terminate non-idempotent (error on the second call) | `TC-TERM-006` | `second terminate expected {terminated:true}, received error` |
 
 **Loop decisions (9).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M44 | Restart a clean exit | `TC-LOOP-004` | `iterations expected 1, received 2` |
-| M45 | Remove the in-process loop (one iteration always) | `TC-LOOP-001` | `iterations expected 2, received 1` |
-| M46 | Consume two ordinals per restart | `TC-LOOP-001`, `TC-LOOP-005` | `economics.restart records expected 1, received 2` |
-| M47 | Append an attempt record for a restarted iteration | `TC-LOOP-001`, `TC-LOOP-005` | `attempts expected 1, received 2` |
-| M48 | Off-by-one bound (restart at the bound) | `TC-LOOP-002` | `expected max-restarts at count 3 of 3, received a 4th iteration` |
-| M49 | Consume a slot for an unverified stall | `TC-LOOP-003` | `restarts expected 0, received 1` |
-| M50 | Refuse admission when the persisted count >= bound | `TC-LOOP-006` | `expected one iteration, received a pre-session refusal` |
-| M51 | Read the loop bound from `coordinator.restart-budget` (10) instead of `lane.restart-budget` (3) | `TC-LOOP-002`, `TC-LOOP-005` | `max-restarts expected at count 3 (iteration 4), received count 10 (iteration 11)` |
-| M52 | Report only this invocation's consumed ordinals instead of the persisted total | `TC-RESUME-102`, `TC-LOOP-005` | `restarts expected 3 (persisted total, 0 consumed), received 0` |
+| M45 | Restart a clean exit | `TC-LOOP-004` | `iterations expected 1, received 2` |
+| M46 | Remove the in-process loop (one iteration always) | `TC-LOOP-001` | `iterations expected 2, received 1` |
+| M47 | Consume two ordinals per restart | `TC-LOOP-001`, `TC-LOOP-005` | `economics.restart records expected 1, received 2` |
+| M48 | Append an attempt record for a restarted iteration | `TC-LOOP-001`, `TC-LOOP-005` | `attempts expected 1, received 2` |
+| M49 | Off-by-one bound (restart at the bound) | `TC-LOOP-002` | `expected max-restarts at count 3 of 3, received a 4th iteration` |
+| M50 | Consume a slot for an unverified stall | `TC-LOOP-003` | `restarts expected 0, received 1` |
+| M51 | Refuse admission when the persisted count >= bound | `TC-LOOP-006` | `expected one iteration, received a pre-session refusal` |
+| M52 | Read the loop bound from `coordinator.restart-budget` (10) instead of `lane.restart-budget` (3) | `TC-LOOP-002`, `TC-LOOP-005` | `max-restarts expected at count 3 (iteration 4), received count 10 (iteration 11)` |
+| M53 | Report only this invocation's consumed ordinals instead of the persisted total | `TC-RESUME-102`, `TC-LOOP-005` | `restarts expected 3 (persisted total, 0 consumed), received 0` |
 
 **Spawn facts (7).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M53 | Drop `--agent pm` | `TC-SPAWN-001` | `args expected exactly one "--agent pm"` |
-| M54 | Drop `--model`, or render two | `TC-SPAWN-001` | `expected exactly one --model <seat>, received <0|2>` |
-| M55 | Omit the title, or make it non-deterministic | `TC-SPAWN-002` | `expected --title ticket-GH-347` |
-| M56 | Carry a title on a resume | `TC-SPAWN-002` | `resume args must not contain --title` |
-| M57 | Restore the constant prompt | `TC-SPAWN-003` | `prompt expected the ref, the base branch, and the lifecycle section <id>` |
-| M58 | Record a binding for a role-less composition | `TC-SPAWN-004` | `binding expected absent, received {...}` |
-| M59 | Expose the agent/title as a CLI flag | `TC-SPAWN-004`, `TC-CONTRACT-001` | `unknown option --agent must be rejected; received exit 0` |
+| M54 | Drop `--agent pm` | `TC-SPAWN-001` | `args expected exactly one "--agent pm"` |
+| M55 | Drop `--model`, or render two | `TC-SPAWN-001` | `expected exactly one --model <seat>, received <0|2>` |
+| M56 | Omit the title, or make it non-deterministic | `TC-SPAWN-002` | `expected --title ticket-GH-347` |
+| M57 | Carry a title on a resume | `TC-SPAWN-002` | `resume args must not contain --title` |
+| M58 | Restore the constant prompt | `TC-SPAWN-003` | `prompt expected the ref, the base branch, and the lifecycle section <id>` |
+| M59 | Record a binding for a role-less composition | `TC-SPAWN-004` | `binding expected absent, received {...}` |
+| M60 | Expose the agent/title as a CLI flag | `TC-SPAWN-004`, `TC-CONTRACT-001` | `unknown option --agent must be rejected; received exit 0` |
 
-**Derivation arms and boundaries (14).**
+**Derivation arms and boundaries (15).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M60 | Check blocking before tracker-done | `TC-DERIVE-002` | `expected merged, received blocked` |
-| M61 | Require a visible PR for the tracker-done arm | `TC-DERIVE-001` | `expected merged, received <token>` |
-| M62 | Let incomplete pm-notes fall through to the classifier | `TC-DERIVE-003` | `expected partial, received finished` |
-| M63 | Invert the completeness arm (`complete` → `partial`) | `TC-DERIVE-003` | `expected finished, received partial` |
-| M64 | Treat a malformed pm-notes document as complete | `TC-DERIVE-003` | `malformed pm-notes must read incomplete; received finished` |
-| M65 | Keep the phase-ledger no-work arm as a token gate | `TC-DERIVE-005` | `complete ledger with commits expected finished|partial, received noop-lane-nothing-to-do` |
-| M66 | Take nothing-to-do with an unreadable tracker | `TC-DERIVE-005` | `expected state-unverified, received noop-lane-nothing-to-do` |
-| M67 | Project `partial` to exit 2 | `TC-DERIVE-006` | `partial exit expected 1, received 2` |
-| M68 | Project `state-unverified` to exit 1 | `TC-DERIVE-006` | `state-unverified exit expected 2, received 1` |
-| M69 | Let two arms claim one input | `TC-DERIVE-006` | `arm disjointness violated for input <id>` |
-| M70 | Force `falseSuccess` to false on the divergent-ledger `finished` | `TC-DERIVE-004` | `falseSuccess expected true, received false` |
-| M71 | Route a divergent-ledger `finished` through the `su`-gated delivered-evidence divergence (drop the `token === su` gate) | `TC-DERIVE-004` | `expected 0 delivered-evidence divergences for a finished token, received 1` |
-| M72 | Suppress the `verify-change` record for a non-complete verify outcome, or change its shape | `TC-DERIVE-004` | `expected 1 verify-change divergence (engineToken finished), received 0` / `divergence outside the delivered shape: <field>` |
-| M73 | Restore the early `state-unverified` return before the tracker arms (the delivered `read`-loop over ledger/tracker/artifact) | `TC-DERIVE-001`, `TC-DERIVE-002`, `TC-DERIVE-006` | `expected merged, received state-unverified (unreadable artifact read)` / `expected blocked, received state-unverified` |
+| M61 | Check blocking before tracker-done | `TC-DERIVE-002` | `expected merged, received blocked` |
+| M62 | Require a visible PR for the tracker-done arm | `TC-DERIVE-001` | `expected merged, received <token>` |
+| M63 | Let incomplete pm-notes fall through to the classifier | `TC-DERIVE-003` | `expected partial, received finished` |
+| M64 | Invert the completeness arm (`complete` → `partial`) | `TC-DERIVE-003` | `expected finished, received partial` |
+| M65 | Treat a malformed pm-notes document as complete | `TC-DERIVE-003` | `malformed pm-notes must read incomplete; received finished` |
+| M66 | Keep the phase-ledger no-work arm as a token gate | `TC-DERIVE-005` | `complete ledger with commits expected finished|partial, received noop-lane-nothing-to-do` |
+| M67 | Take nothing-to-do with an unreadable tracker | `TC-DERIVE-005` | `expected state-unverified, received noop-lane-nothing-to-do` |
+| M68 | Project `partial` to exit 2 | `TC-DERIVE-006` | `partial exit expected 1, received 2` |
+| M69 | Project `state-unverified` to exit 1 | `TC-DERIVE-006` | `state-unverified exit expected 2, received 1` |
+| M70 | Let two arms claim one input | `TC-DERIVE-006` | `arm disjointness violated for input <id>` |
+| M71 | Force `falseSuccess` to false on the divergent-ledger `finished` | `TC-DERIVE-004` | `falseSuccess expected true, received false` |
+| M72 | Route a divergent-ledger `finished` through the `su`-gated delivered-evidence divergence (drop the `token === su` gate) | `TC-DERIVE-004` | `expected 0 delivered-evidence divergences for a finished token, received 1` |
+| M73 | Suppress the `verify-change` record for a non-complete verify outcome, or change its shape | `TC-DERIVE-004` | `expected 1 verify-change divergence (engineToken finished), received 0` / `divergence outside the delivered shape: <field>` |
+| M74 | Restore the early `state-unverified` return before the tracker arms (the delivered `read`-loop over ledger/tracker/artifact) | `TC-DERIVE-001`, `TC-DERIVE-002`, `TC-DERIVE-006` | `expected merged, received state-unverified (unreadable artifact read)` / `expected blocked, received state-unverified` |
+| M75 | Leave `pmNotes: "unsatisfied"` on the nothing-to-do arm (keep the token-keyed `["pm-notes"]` sufficiency instead of the tracker-only arm) | `TC-DERIVE-005` | `corroboration.pmNotes expected "not-applicable", received "unsatisfied"` / `falseSuccess expected false, received true` |
 
 **No-shell and parity machinery (7).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M74 | Invoke a shell with a script path in a parity case | `TC-SHELL-001` | `shell invocation recorded: bash scripts/deliver-ticket.sh` |
-| M75 | Spawn with `shell: true` | `TC-SHELL-001` | `spawn option shell expected false, received true` |
-| M76 | Plant a `.sh` literal in a dispatch-flow file | `TC-SHELL-002` | `no-shell invariant: script-path literal at <file>:<line>` |
-| M77 | Reimplement the claim/ladder/terminate in a battery file | `TC-PARITY-002` | `reimplementation of <seam> in <file>` |
-| M78 | Introduce nondeterminism (ambient clock/random) | `TC-PARITY-003` | `run 1 and run 2 differ: <field>` |
-| M79 | Perform a live network call or start a real process | `TC-PARITY-003` | `live transport request observed: <url>` / `real process started: <file>` |
-| M80 | Append a 17th evidence ref or a forbidden lane field | `TC-PARITY-005` | `evidenceRefs expected <= 16, received 17` / `lane record carries forbidden key <k>` |
+| M76 | Invoke a shell with a script path in a parity case | `TC-SHELL-001` | `shell invocation recorded: bash scripts/deliver-ticket.sh` |
+| M77 | Spawn with `shell: true` | `TC-SHELL-001` | `spawn option shell expected false, received true` |
+| M78 | Plant a `.sh` literal in a dispatch-flow file | `TC-SHELL-002` | `no-shell invariant: script-path literal at <file>:<line>` |
+| M79 | Reimplement the claim/ladder/terminate in a battery file | `TC-PARITY-002` | `reimplementation of <seam> in <file>` |
+| M80 | Introduce nondeterminism (ambient clock/random) | `TC-PARITY-003` | `run 1 and run 2 differ: <field>` |
+| M81 | Perform a live network call or start a real process | `TC-PARITY-003` | `live transport request observed: <url>` / `real process started: <file>` |
+| M82 | Append a 17th evidence ref or a forbidden lane field | `TC-PARITY-005` | `evidenceRefs expected <= 16, received 17` / `lane record carries forbidden key <k>` |
 
 **Lane record and proof boundary (5).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M81 | Write the lane only at classification (drop the acquisition-time append) | `TC-LANE-001`, `TC-LANE-003` | `expected 1 active lane record at acquisition, received a terminal-only record` |
-| M82 | Append two active records per session acquisition | `TC-LANE-001`, `TC-LANE-003`, `TC-PARITY-005` | `expected 1 active record per acquisition, received 2` |
-| M83 | Append a terminal record for a restarted stalled iteration | `TC-LANE-003` | `expected no terminal record between the two active records, received terminal at position 2` |
-| M84 | Append a lane record on a pre-session refusal | `TC-LANE-002` | `expected 0 lane records for a pre-session refusal, received 1` |
-| M85 | Add, drop, or reorder an id in `PARITY_PROOF_BOUNDARY` (or declare a not-proven surface in a parity row) | `TC-PARITY-004` | `proof boundary drift: <control>` / `parity row <id> declares a not-proven seam <seam>` |
+| M83 | Write the lane only at classification (drop the acquisition-time append) | `TC-LANE-001`, `TC-LANE-003` | `expected 1 active lane record at acquisition, received a terminal-only record` |
+| M84 | Append two active records per session acquisition | `TC-LANE-001`, `TC-LANE-003`, `TC-PARITY-005` | `expected 1 active record per acquisition, received 2` |
+| M85 | Append a terminal record for a restarted stalled iteration | `TC-LANE-003` | `expected no terminal record between the two active records, received terminal at position 2` |
+| M86 | Append a lane record on a pre-session refusal | `TC-LANE-002` | `expected 0 lane records for a pre-session refusal, received 1` |
+| M87 | Add, drop, or reorder an id in `PARITY_PROOF_BOUNDARY` (or declare a not-proven surface in a parity row) | `TC-PARITY-004` | `proof boundary drift: <control>` / `parity row <id> declares a not-proven seam <seam>` |
 
 **Shared derivation and closed contract (3).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M86 | Fork the daemon path to the old order | `TC-PARITY-006` | `daemon token expected merged, received blocked` |
-| M87 | Keep the ledger no-work arm on the daemon path | `TC-PARITY-006` | `daemon token expected finished, received noop-lane-nothing-to-do` |
-| M88 | Add a token, projection, error row, domain kind, config key, or schema version | `TC-CONTRACT-001` | `closed surface changed: <surface> +<added>` |
+| M88 | Fork the daemon path to the old order | `TC-PARITY-006` | `daemon token expected merged, received blocked` |
+| M89 | Keep the ledger no-work arm on the daemon path | `TC-PARITY-006` | `daemon token expected finished, received noop-lane-nothing-to-do` |
+| M90 | Add a token, projection, error row, domain kind, config key, or schema version | `TC-CONTRACT-001` | `closed surface changed: <surface> +<added>` |
 
-Total: **88 mutations** (11 parity arms + 10 admission + 5 resume + 7 ladder + 10 terminate + 9 loop + 7 spawn + 14 derivation + 7 no-shell/machinery + 5 lane/boundary + 3 shared-derivation/contract); every load-bearing invariant named in `§1` has at least one row, and every row names the case that must fail.
+Total: **90 mutations**, M1–M90 contiguous (11 parity arms + 10 admission + 6 resume + 7 ladder + 10 terminate + 9 loop + 7 spawn + 15 derivation + 7 no-shell/machinery + 5 lane/boundary + 3 shared-derivation/contract); every load-bearing invariant named in `§1` has at least one row, and every row names the case that must fail.
 
 ### 7.5 Gate battery
 
@@ -1968,6 +1984,7 @@ The one gap this plan cannot close alone: the seam exports in assumption 1 are p
 | 0.1 | 2026-11-19 | @test-plan-writer | Initial test plan for GH-347 against spec v1.3: 50 cases in 11 groups, 42/42 AC traceability (0 unmapped, 0 orphan), the parity battery design with five production seams, the no-shell proof with its static invariant and non-vacuity control, the 82-row mutation register, the fixture inventory (authored vs extended), the gate battery with the `TMPDIR`/`PATH` conventions, the non-functional verification, and the Appendix C not-proven list. |
 | 0.2 | 2026-11-19 | @test-plan-writer | DoR-iteration-1 remediation (findings 1, 5, 6, 8, 9, 10, 13, 14, 15, 18). Corrected the two wrong exit literals (`blocked` 0, `max-restarts` 1), swept §5.2 against the delivered matrix, and added the exit-literal rule (`TC-CONTRACT-001` pins the matrix). Added the three read-precedence observations and mutation `M73`. Declared the whole-battery registry `tests/fixtures/dispatch/parity/cases.ts` and pointed `TC-PARITY-003`/`TC-SHELL-001` at it. Anchored no-shell rule `R1` on whole string literals and added the `head.sha`/`queue.shift()` false-positive controls. Added five lane/proof-boundary mutations (`M81`…`M85`), fixed the derivation heading and `M51`/`M52`. Restated `TC-DERIVE-006` as 30 inputs / 10 projected tokens, `TC-LOOP-002` as 4 iterations, `restarts` as the persisted total, and the `AC-F8-3` (+2) arithmetic. Case count unchanged at 50; mutations 82 → 88. |
 | 0.3 | 2026-11-19 | @test-plan-writer | Finding-12 test half. `TC-PARITY-004` now reads only the permanent fixture constant `PARITY_PROOF_BOUNDARY`: eight proven ids and six not-proven ids in the declared order, every registry row's seam proven, no row on a not-proven surface, and planted add/drop/reorder/live-seam controls that fail by name. Removed the plan and spec reads from the case (seam line, preconditions, steps, outcome) and added a source scan forbidding `doc/changes/` references in the suite. §1.2 and §7.2 now state the permanent source, the phase-7 publication on `doc/spec/features/feature-dispatch-engine.md`, and the doc guard in the aggregate that owns page/constant agreement. Driver note and `M85` aligned. Counts unchanged: 50 cases, 42/42 ACs, 53 links, 88 mutations. |
+| 0.4 | 2026-11-19 | @test-plan-writer | DoR-iteration-2 remediation (findings 3, 4, 5, 6, 9 assertion half, 10, 11). `TC-DERIVE-006` restricted to the 21 derivation-reachable inputs (4 attempt-stage + 10 ladder + 4 collision + 3 read-precedence), with Appendix F(A) A1–A9 declared "no token / typed pre-session refusal" and handed to `TC-ADMIT-*`/`TC-LANE-002`/`TC-PARITY-001`. `TC-RESUME-102` now pins both resume modes (`attach-continue` and `resume-prompt-reentry`) and mutation M27 charges an ordinal on prompt-reentry. §7.2 `R3`/`R4` rebound to the `child_process` receiver, the `.sha`/`RegExp.exec`/port-`.spawn` false-positive controls added, and the surface entry corrected to `packages/adapters/src/host/index.ts`. `TC-PARITY-006` asserts daemon attempt corroboration/false-success; `TC-DERIVE-005` row (a) asserts the arm-aware tracker-only corroboration with mutation M75. §2 cites spec v1.6; the arm citation is now §25.6. Registry counts stated (29 rows: 11 class + 18 non-class). Register renumbered to 90 contiguous rows; historical rows 0.2/0.3 cite the numbering in force at their version, and this row supersedes those ids: `M60`→`M61`, `M51`→`M52`, `M52`→`M53`, `M73`→`M74`, `M81`–`M85`→`M83`–`M87`. Cases unchanged at 50. |
 
 ## 10. Test Execution Log
 
