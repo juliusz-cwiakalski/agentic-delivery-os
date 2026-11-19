@@ -18,7 +18,6 @@ import {
   ERROR_TABLE,
   ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
-  FALLBACK_INTERNAL_CODE,
   MERGE_GATE_FRESHNESS_DEFAULT_SECONDS,
   MERGE_GATE_VERIFICATION_SCHEMA,
   MERGE_MAX_CONFLICT_PATHS,
@@ -1250,14 +1249,6 @@ export const gateSetFromValues = (values: Readonly<Record<string, unknown>>) => 
 
 /** The declared default freshness bound. */
 export const defaultFreshnessSeconds = (): number => MERGE_GATE_FRESHNESS_DEFAULT_SECONDS;
-
-/** The failure shape for an internal/unclassified transaction fault. */
-export const internalMergeFailure = (): MergeFailure => ({
-  code: FALLBACK_INTERNAL_CODE,
-  domainKind: "merge",
-  exit: 2,
-  evidence: {},
-});
 
 /** The post-landing step ids the record carries (declared once). */
 export const mergePostLandingStepIds = (): readonly string[] => MERGE_POST_LANDING_STEP_IDS;

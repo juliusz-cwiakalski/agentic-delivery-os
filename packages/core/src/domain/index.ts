@@ -469,7 +469,6 @@ export {
 export {
   defaultFreshnessSeconds,
   gateSetFromValues,
-  internalMergeFailure,
   type MergeCheckRunPage,
   type MergeFailure,
   type MergeFailureEvidence,

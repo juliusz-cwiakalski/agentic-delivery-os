@@ -1897,7 +1897,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/merge-transaction.ts": [
     "defaultFreshnessSeconds",
     "gateSetFromValues",
-    "internalMergeFailure",
     "mergeBaseRef",
     "mergePostLandingStepIds",
     "policyRowForClass",

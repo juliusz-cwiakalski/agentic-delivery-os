@@ -870,7 +870,6 @@ export {
   globToRegExp,
   ingestReviewArtifacts,
   initialPollState,
-  internalMergeFailure,
   isBlockerAudience,
   isBlockerQuestionType,
   isCloseRank,
