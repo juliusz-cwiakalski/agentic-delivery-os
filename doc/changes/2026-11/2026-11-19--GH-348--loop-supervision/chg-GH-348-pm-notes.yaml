@@ -764,3 +764,27 @@ notes:
   - text: "PLAN PHASE 5 commit hash: recorded after the commit."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 5 commit hash: 4f89db65."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 6 complete (the durable identity-scoped stop: request and
+      clearance, the read-before-claim refusal, the fail-closed unreadable fold,
+      both stop modes, and the immediate-stop session-uniqueness segment).
+      Implemented: the supervisor's stop/reset verbs (one append per transition,
+      idempotent repeats, exit 0), the fold read BEFORE the claim (a folded
+      request returns state=stopped at exit 0 with no lease record and no
+      session), the fail-closed branch (a torn loop record is `state.store.torn`
+      at exit 2, never `not stopped`), the iteration-boundary re-read with drain
+      (no terminate) and immediate (terminate; an unverifiable identity is never
+      signalled), the CLI verbs and receipts, and the ledger append. The stop fold
+      moved to the domain tier (domain/loop-status.ts) so the app tier keeps its
+      no-state-import boundary; that file is declared by phase 1 and is a shared
+      file, reported here as a declaration note rather than a silent change.
+      Gates all exit 0: loop-stop 10 pass; the five earlier suites 51 pass;
+      pnpm typecheck; git diff --check. The phase commit hash is recorded in the
+      note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 6 commit hash: recorded after the commit."
+    type: info
+    date: "2026-11-19"

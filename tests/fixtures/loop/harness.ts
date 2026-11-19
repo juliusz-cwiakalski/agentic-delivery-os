@@ -318,6 +318,12 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
         ? { ok: true, appended: appended.appended }
         : { ok: false, code: appended.code };
     },
+    appendStop: (record) => {
+      const appended = appendLoopStop(guardedStore, newFenceToken(), record);
+      return appended.ok
+        ? { ok: true, appended: appended.appended }
+        : { ok: false, code: appended.code };
+    },
     appendRestart: (record) => {
       const appended = appendCoordinatorRestart(guardedStore, newFenceToken(), record);
       return appended.ok
@@ -530,6 +536,8 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
             loop: createLoopCommandDefinition({
               start: supervisor.start,
               status: supervisor.status,
+              stop: supervisor.stop,
+              reset: supervisor.reset,
             }),
           },
         },

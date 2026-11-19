@@ -1143,7 +1143,11 @@ export {
 } from "./loop-prompt.js";
 export {
   booleanStatusKeys,
+  foldedStopMode,
+  foldLoopStop,
+  isStopFolded,
   type LoopStatusFacts,
+  type LoopStopFold,
   orderDegradations,
   projectLoopStatus,
   renderStatusBlock,

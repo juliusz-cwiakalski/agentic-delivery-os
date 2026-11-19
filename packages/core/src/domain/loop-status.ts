@@ -18,6 +18,7 @@ import {
   type LoopInstanceState,
   type LoopStatusProjection,
   type LoopStopMode,
+  type LoopStopRecord,
 } from "#contracts";
 
 const statusValue = (
@@ -137,4 +138,42 @@ export const orderDegradations = (
     "live-facts-unknown",
     "log-unavailable",
   ].filter((value): value is LoopDegradation => set.has(value as LoopDegradation));
+};
+
+/** One folded durable-stop reading: a request, a clearance, or nothing (DM-2). */
+export type LoopStopFold =
+  | {
+      readonly applied: true;
+      readonly kind: "requested";
+      readonly mode: LoopStopMode;
+      readonly recordedAt: string;
+    }
+  | { readonly applied: true; readonly kind: "cleared"; readonly recordedAt: string }
+  | { readonly applied: false; readonly kind: "none" };
+
+/** Fold the stop transitions in order; the newest record decides (DM-2). */
+export const foldLoopStop = (stops: readonly LoopStopRecord[]): LoopStopFold => {
+  const latest = stops[stops.length - 1];
+  if (latest === undefined) return { applied: false, kind: "none" };
+  if (latest.action === "cleared") {
+    return { applied: true, kind: "cleared", recordedAt: latest.recordedAt };
+  }
+  return {
+    applied: true,
+    kind: "requested",
+    mode: latest.mode ?? "drain",
+    recordedAt: latest.recordedAt,
+  };
+};
+
+/** Whether a `start` must honour a folded request (AC-F4-2). */
+export const isStopFolded = (stops: readonly LoopStopRecord[]): boolean => {
+  const folded = foldLoopStop(stops);
+  return folded.applied && folded.kind === "requested";
+};
+
+/** The folded request's mode, or `null` when no request is folded. */
+export const foldedStopMode = (stops: readonly LoopStopRecord[]): LoopStopMode | null => {
+  const folded = foldLoopStop(stops);
+  return folded.applied && folded.kind === "requested" ? folded.mode : null;
 };

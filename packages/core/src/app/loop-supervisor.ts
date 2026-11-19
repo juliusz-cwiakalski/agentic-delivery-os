@@ -28,6 +28,7 @@ import {
   type LoopLogEvent,
   type LoopSessionRecord,
   type LoopStatusProjection,
+  type LoopStopMode,
   type LoopStopRecord,
   type Result,
   type StateFenceHandle,
@@ -39,7 +40,13 @@ import {
   foldCoordinatorLease,
 } from "../domain/coordinator-fence.js";
 import { restartDelayMs } from "../domain/loop-backoff.js";
-import { orderDegradations, projectLoopStatus } from "../domain/loop-status.js";
+import {
+  foldLoopStop,
+  isStopFolded,
+  orderDegradations,
+  projectLoopStatus,
+} from "../domain/loop-status.js";
+
 import { evaluateLoopVerdict, observeProgress } from "../domain/loop-verdict.js";
 import {
   endedSessionRecord,
@@ -119,6 +126,7 @@ export type LoopLedgerPort = {
   readonly appendSession: (record: LoopSessionRecord) => LoopRecordAppend;
   readonly appendStuck: (record: CoordinatorStuckRecord) => LoopRecordAppend;
   readonly appendRestart: (record: CoordinatorRestartRecord) => LoopRecordAppend;
+  readonly appendStop: (record: LoopStopRecord) => LoopRecordAppend;
   /** The newest restart record's ledger sequence, or `null` when none exists. */
   readonly lastRestartSequence: () => number | null;
   /**
@@ -211,6 +219,16 @@ export type LoopSupervisor = {
     readonly freshBudget: boolean;
   }): Promise<LoopResult<LoopStartReceipt>>;
   status(): Promise<LoopResult<LoopStatusProjection>>;
+  stop(input: { readonly mode: LoopStopMode }): Promise<LoopResult<LoopStopData>>;
+  reset(): Promise<LoopResult<LoopStopData>>;
+};
+
+/** The `stop`/`reset` receipt (API-2, API-3). */
+export type LoopStopData = {
+  readonly loopId: string;
+  readonly state: "requested" | "cleared" | "none";
+  readonly mode: LoopStopMode | null;
+  readonly recordedAt: string | null;
 };
 
 /* -------------------------------- helpers -------------------------------- */
@@ -610,6 +628,21 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   const cycle = async (): Promise<CycleStep> => {
     const nowMs = clock.nowMs();
     const session = ports.session.read();
+    // A running loop re-reads the fold at every iteration boundary (F-4).
+    const stopRead = ledger.read().loop;
+    if (!stopRead.ok) return "stop";
+    const folded = foldLoopStop(stopRead.stops);
+    if (folded.applied && folded.kind === "requested") {
+      log("stop", { mode: folded.mode });
+      if (folded.mode === "immediate") {
+        if (session.pid === null) {
+          // Unverifiable identity: never signalled, reported, ends here.
+          return "stop";
+        }
+        await ports.terminate(settings.killGraceMs);
+      }
+      return "stop";
+    }
     if (lastProgressAtMs === null) lastProgressAtMs = nowMs;
     cycleOrdinal += 1;
 
@@ -762,6 +795,13 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         "loop start requires --foreground in v1; detached hosting is not declared",
       );
     }
+    // The stop is folded BEFORE the claim: a folded request starts nothing.
+    const preflight = ledger.read();
+    if (!preflight.loop.ok) return stateFailure(preflight.loop.code);
+    if (isStopFolded(preflight.loop.stops)) {
+      const data = projection(preflight.loop, preflight.coordinator, absentSessionFacts(), []);
+      return { data: { ...data, state: "stopped", released: false } };
+    }
     const claimed = claim({ freshBudget: input.freshBudget });
     if (!claimed.ok) return claimed.failure;
     const identity = claimed.claimed;
@@ -851,7 +891,64 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     return { data: projection(loopRead, coordinatorRead, facts, degraded) };
   };
 
-  return { start, status };
+  /* ------------------------------ stop/reset ------------------------------- */
+
+  const stop = async (input: {
+    readonly mode: LoopStopMode;
+  }): Promise<LoopResult<LoopStopData>> => {
+    const read = ledger.read().loop;
+    if (!read.ok) return stateFailure(read.code);
+    const folded = foldLoopStop(read.stops);
+    if (folded.applied && folded.kind === "requested") {
+      // Idempotent within a stop episode: a repeat appends nothing.
+      return {
+        data: {
+          loopId,
+          state: "requested",
+          mode: folded.mode,
+          recordedAt: folded.recordedAt,
+        },
+      };
+    }
+    const record: LoopStopRecord = {
+      schemaId: "delivery.loop.stop.v1",
+      stopId: ports.newId("stop"),
+      loopId,
+      action: "requested",
+      mode: input.mode,
+      recordedAt: clock.nowIso(),
+    };
+    const appended = ledger.appendStop(record);
+    if (!appended.ok) return stateFailure(appended.code);
+    log("stop", { mode: input.mode });
+    return {
+      data: { loopId, state: "requested", mode: input.mode, recordedAt: record.recordedAt },
+    };
+  };
+
+  const reset = async (): Promise<LoopResult<LoopStopData>> => {
+    const read = ledger.read().loop;
+    if (!read.ok) return stateFailure(read.code);
+    const folded = foldLoopStop(read.stops);
+    if (!folded.applied || folded.kind !== "requested") {
+      return { data: { loopId, state: "none", mode: null, recordedAt: null } };
+    }
+    const record: LoopStopRecord = {
+      schemaId: "delivery.loop.stop.v1",
+      stopId: ports.newId("stop"),
+      loopId,
+      action: "cleared",
+      mode: null,
+      recordedAt: clock.nowIso(),
+    };
+    const appended = ledger.appendStop(record);
+    if (!appended.ok) return stateFailure(appended.code);
+    return {
+      data: { loopId, state: "cleared", mode: null, recordedAt: record.recordedAt },
+    };
+  };
+
+  return { start, status, stop, reset };
 };
 
 /** The delivered progress vocabulary the projection reuses (DM-6). */

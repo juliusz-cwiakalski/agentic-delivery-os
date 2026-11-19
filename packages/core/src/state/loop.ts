@@ -23,7 +23,6 @@ import {
   LOOP_STOP_PAYLOAD_SCHEMA,
   LOOP_STOP_RECORD_KIND,
   type LoopSessionRecord,
-  type LoopStopMode,
   type LoopStopRecord,
   type StateFailureCode,
   type StateJsonValue,
@@ -172,47 +171,6 @@ export const readLoopRecords = (store: StateStorePort, loopId: string): LoopReco
 /** The newest recorded session for the identity, or `null` (latest wins). */
 export const foldLoopSession = (sessions: readonly LoopSessionRecord[]): LoopSessionRecord | null =>
   sessions[sessions.length - 1] ?? null;
-
-/** One folded durable-stop reading: a request, a clearance, or nothing. */
-export type LoopStopFold =
-  | {
-      readonly applied: true;
-      readonly kind: "requested";
-      readonly mode: LoopStopMode;
-      readonly recordedAt: string;
-    }
-  | { readonly applied: true; readonly kind: "cleared"; readonly recordedAt: string }
-  | { readonly applied: false; readonly kind: "none" };
-
-/** Fold the stop transitions in order; the newest record decides (DM-2). */
-export const foldLoopStop = (stops: readonly LoopStopRecord[]): LoopStopFold => {
-  const latest = stops[stops.length - 1];
-  if (latest === undefined) return { applied: false, kind: "none" };
-  if (latest.action === "cleared")
-    return { applied: true, kind: "cleared", recordedAt: latest.recordedAt };
-  return {
-    applied: true,
-    kind: "requested",
-    mode: latest.mode ?? "drain",
-    recordedAt: latest.recordedAt,
-  };
-};
-
-/**
- * The stop fold that a `start` must honour: a request is a folded stop, a
- * clearance or an empty history is not. The typed unreadable case never reaches
- * this function — the caller keeps `readLoopRecords`' failure and fails closed.
- */
-export const isStopFolded = (stops: readonly LoopStopRecord[]): boolean => {
-  const folded = foldLoopStop(stops);
-  return folded.applied && folded.kind === "requested";
-};
-
-/** The folded request's mode, or `null` when no request is folded. */
-export const foldedStopMode = (stops: readonly LoopStopRecord[]): LoopStopMode | null => {
-  const folded = foldLoopStop(stops);
-  return folded.applied && folded.kind === "requested" ? folded.mode : null;
-};
 
 /* -------------------------------- appends -------------------------------- */
 

@@ -412,6 +412,7 @@ import {
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
   appendLoopSession,
+  appendLoopStop,
   appendMergeGateVerification,
   appendMergeTransaction,
   appendMergeWaiver,
@@ -3946,6 +3947,12 @@ export const createLoopLedgerPort = (
   appendSession: (record) => appendLoopSession(store, newFenceToken(), record),
   appendStuck: (record) => {
     const appended = appendCoordinatorStuck(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
+  appendStop: (record) => {
+    const appended = appendLoopStop(store, newFenceToken(), record);
     return appended.ok
       ? { ok: true, appended: appended.appended }
       : { ok: false, code: appended.code };

@@ -7,7 +7,7 @@
  * handler never writes streams and never chooses an exit code: the envelope and
  * the `{0,1,2}` projection are the command surface's.
  */
-import type { LoopResult, LoopStartReceipt } from "@delivery-os/core";
+import type { LoopResult, LoopStartReceipt, LoopStopData } from "@delivery-os/core";
 import type { LoopStatusProjection } from "@delivery-os/core/contracts";
 import { FALLBACK_INVOCATION_CODE } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
@@ -32,6 +32,10 @@ export type LoopCommandRuntime = {
     readonly freshBudget: boolean;
   }) => Promise<LoopResult<LoopStartReceipt>>;
   readonly status: () => Promise<LoopResult<LoopStatusProjection>>;
+  readonly stop: (input: {
+    readonly mode: "drain" | "immediate";
+  }) => Promise<LoopResult<LoopStopData>>;
+  readonly reset: () => Promise<LoopResult<LoopStopData>>;
 };
 
 const refused = (summary: string): Failure => ({
@@ -44,7 +48,8 @@ const foregroundRequired = (): Failure =>
   refused("loop start requires --foreground in v1; detached hosting is not declared");
 
 export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): CommandDefinition => ({
-  flags: ["--foreground", "--fresh-budget"],
+  flags: ["--foreground", "--fresh-budget", "--mode"],
+  requiresValue: ["--mode"],
   positionals: { max: 1 },
   humanSuccess: true,
   humanFailureText: (error: unknown): string | undefined => {
@@ -56,6 +61,10 @@ export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): Comman
   humanText: (data: unknown): string => {
     if (typeof data !== "object" || data === null) return "";
     const value = data as Record<string, unknown>;
+    if ("state" in value && "loopId" in value && !("schemaVersion" in value)) {
+      const stop = data as LoopStopData;
+      return `loop ${stop.state}  loop_id=${stop.loopId}  mode=${stop.mode ?? ""}\n`;
+    }
     if (value["schemaVersion"] !== "delivery.loop.v1") return "";
     return "released" in value
       ? renderLoopStartHuman(data as LoopStartReceipt)
@@ -66,13 +75,26 @@ export const createLoopCommandDefinition = (runtime: LoopCommandRuntime): Comman
     if (subcommand === undefined || rest.length > 0) return grammar();
     const foreground = invocation.flags["--foreground"] === true;
     const freshBudget = invocation.flags["--fresh-budget"] === true;
+    const modeFlag = invocation.flags["--mode"];
     if (subcommand === "start") {
+      if (modeFlag !== undefined) return grammar();
       if (!foreground) return foregroundRequired();
       return runtime.start({ foreground: true, freshBudget });
     }
     if (subcommand === "status") {
-      if (foreground || freshBudget) return grammar();
+      if (foreground || freshBudget || modeFlag !== undefined) return grammar();
       return runtime.status();
+    }
+    if (subcommand === "stop") {
+      if (foreground || freshBudget) return grammar();
+      if (modeFlag !== undefined && modeFlag !== "drain" && modeFlag !== "immediate") {
+        return grammar();
+      }
+      return runtime.stop({ mode: modeFlag === "immediate" ? "immediate" : "drain" });
+    }
+    if (subcommand === "reset") {
+      if (foreground || freshBudget || modeFlag !== undefined) return grammar();
+      return runtime.reset();
     }
     return grammar();
   },

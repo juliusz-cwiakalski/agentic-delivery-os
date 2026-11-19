@@ -268,6 +268,58 @@ const BACKOFF_BUDGET_CASES: readonly LoopParityCase[] = [
   },
 ];
 
+const STOP_CASES: readonly LoopParityCase[] = [
+  {
+    id: "stop-idempotent",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { stops: 2 },
+    expected: { records: 1, exit: 0 },
+  },
+  {
+    id: "stop-folded-start",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { folded: "requested" },
+    expected: { state: "stopped", leaseRecords: 0, sessions: 0 },
+  },
+  {
+    id: "stop-torn-fold",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { fold: "unreadable" },
+    expected: { exit: 2, sessionEffects: 0 },
+  },
+  {
+    id: "stop-reset",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { folded: "requested", resets: 2 },
+    expected: { cleared: 1, total: 2 },
+  },
+  {
+    id: "stop-drain",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { mode: "drain" },
+    expected: { terminations: 0 },
+  },
+  {
+    id: "stop-immediate",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { mode: "immediate", verified: true },
+    expected: { terminations: 1, boundMs: 50_000, liveSessions: 1 },
+  },
+  {
+    id: "stop-unverified",
+    group: "stop",
+    declaredSeam: "S-stop",
+    scenario: { mode: "immediate", verified: false },
+    expected: { signals: 0, degradation: "session-pid-unknown" },
+  },
+];
+
 export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...SPAWN_CASES,
   ...LOG_CASES,
@@ -275,6 +327,7 @@ export const LOOP_PARITY_CASES: readonly LoopParityCase[] = [
   ...STUCK_CASES,
   ...KILL_CASES,
   ...BACKOFF_BUDGET_CASES,
+  ...STOP_CASES,
 ];
 
 /** The rows of one proven surface, in declaration order. */
