@@ -1036,3 +1036,50 @@ notes:
       changed."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 10 complete (review-iteration-1 remediation) — commit
+      d622e5d5. Scope: the declared fix surface only; 0 AC, 0 TC and 0 mutation
+      rows are owned by it, so the partitions stay 41 ACs / 74 TCs / 120 rows
+      (M1-M120), and every new assertion carries its planted in-case control
+      instead of a new register row. Fixes, each with its authorising clause:
+      F-1 (F-5/AC-F5-1/DM-6) the port is `artifactAdvanced(sinceMs)`; the
+      supervisor passes the baseline it measures the window from and production
+      compares the record `recordedAt`, so a prior merge no longer suppresses a
+      stuck verdict; F-2 (F-5 evidence table/AC-F5-7) the corroborator reduces to
+      the NEWEST dispatch lane per ref through a new `newestLanePerRef` helper, so
+      a superseded active lane reads `none`; F-3 (F-6/AC-F6-2/AC-F6-4)
+      `establishSession` returns the JOINED effect's facts, production's join
+      seeds from the durable newest loop.session, and a recorded pid with a null
+      start time is unknown-liveness (never probed with 0, never replaced);
+      F-4 (AC-F8-4/Appendix C(b)) TC-BATTLE-006 now drives `queue claim`,
+      `dispatch` and `merge` through the REAL composed command runtime over the
+      delivered dispatch conformance fixtures and asserts their real envelopes
+      (`queue.precondition.unmet`, `noop-lane-nothing-to-do`,
+      `merge.state-unverified`), the real lane evidence, zero shell invocations,
+      and the loop staying healthy on the corroborated reading — the boundary
+      stays nine proven / six not-proven; F-5 (AC-F8-1) the battery meta-case
+      executes all nine surfaces with surface-specific observations and rejects a
+      planted off-boundary/empty row by name; F-6 (AC-F2-4, AC-F8-1, plan D-4) the
+      D1 re-observation asserts the composed argv's `--agent ceo`/`--model` on
+      success and the delivered refusal identity otherwise, with the tautological
+      `toBeDefined` removed; F-7 (API-4) the projection carries the last OBSERVED
+      progress state with a golden assertion; F-8 (F-5/AC-F5-2) the verdict
+      consults `progressBoundMs` for the positive-progress cause and a stale
+      positive stays kill-safe `unevaluable`. F-9 (INFO) no action. One pin update
+      rode along: the new selector's executable-allowance row
+      (tests/structure/content-inventory.test.ts). Gate results at this boundary:
+      `bun test tests/behaviour/loop-*.test.ts` 93 pass / 0 fail; `bun test
+      tests/conformance/loop tests/structure/loop-*.test.ts
+      tests/checks/loop-*.test.ts` 36 pass / 0 fail; the pinned suites
+      (install-conformance, metrics-mounting, reference-page-parity,
+      no-shell-dispatch, install-conformance-mutants) 36 pass / 0 fail; the
+      invariant suites (event-mount-guards, event-additivity-inventory,
+      event-taxonomy-single-source, port-contract-inventory,
+      supervision-mounting) 38 pass / 0 fail; `pnpm typecheck` green; `pnpm check`
+      exit 0 at this HEAD (11 432 pass / 0 fail over 1 414 files, with boundaries,
+      memory, prompt-conformance, help-guide-coverage and exports-parity green);
+      `git diff --check` clean. `jaiship plan validate GH-348` -> verdict=valid,
+      tier=full, readyForDevelopment=true; `jaiship lint plan GH-348` -> valid,
+      errors=[]. No lifecycle transition, no push, no PR; the spec and the test
+      plan's ownership are untouched."
+    type: info
+    date: "2026-11-19"
