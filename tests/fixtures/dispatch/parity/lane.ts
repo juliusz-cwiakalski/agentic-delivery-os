@@ -23,7 +23,8 @@ import {
   readDispatchAttempts,
   readDispatchLanes,
 } from "../../../../packages/core/src/app/dispatch-ledger";
-import { createParityHarness, type ParityObservation } from "./harness";
+import { createParityHarness, type ParityEnvelope, type ParityObservation } from "./harness";
+import { readEconomicsRecords } from "../../../../packages/core/src/state/index";
 import { createGuardedRunner } from "./process-runner";
 
 export const LANE_NOW = "2026-11-19T00:00:00.000Z";
@@ -185,3 +186,69 @@ export const resumeUnknownSession = async (): Promise<ParityObservation> => {
     h.dispose();
   }
 };
+
+/* ------------------------------------------------------------------------- */
+/* TC-RESUME-102 — the operator resume in BOTH modes (GH-347 AC-F3-2).        */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The `resume-prompt-reentry` mode: a recorded lane whose adapter does not
+ * inject resume, resumed by an operator prompt. Uses the command-level harness
+ * (D2) because the mode comes from the adapter capability the composition
+ * declares; the lane and the persisted count are real.
+ */
+export const resumePromptReentryObservation = async (input: {
+  readonly restartCount: number;
+  readonly label: string;
+}): Promise<import("./harness").ParityObservation> => {
+  const { createCommandScenario, readsFrom } = await import("../golden/harness");
+  const scenario = createCommandScenario({
+    label: input.label,
+    lane: {
+      completedPhases: [],
+      adapterSupportsResumeInjection: false,
+      restartCount: input.restartCount,
+      prefillCost: 10,
+      uniqueProgress: 100,
+    },
+    restartBudget: 3,
+  });
+  try {
+    const run = await scenario.invoke(["dispatch", "GH-301", "--resume-prompt", "go", "--json"]);
+    const attempts = readDispatchAttempts(scenario.state.store);
+    if (!attempts.ok) throw new Error("attempt read failed");
+    const economicsRead = readEconomicsRecords(scenario.state.store, "GH-301");
+    if (!economicsRead.ok) throw new Error("economics read failed");
+    const economics = economicsRead.restarts.length;
+    return {
+      exit: run.exit,
+      token: run.envelope?.data?.result,
+      results: [
+        {
+          exit: run.exit,
+          stdout: run.stdout,
+          stderr: run.stderr,
+          ...(run.envelope === undefined ? {} : { envelope: run.envelope as ParityEnvelope }),
+        },
+      ],
+      attempts: attempts.records,
+      lanes: [],
+      divergences: 0,
+      economicsRestarts: economics,
+      leaseRecords: 0,
+      leaseAcquisitions: 0,
+      spawns: scenario.scripted.calls.filter((call) => call === "spawn").length,
+      resumes: scenario.scripted.calls.filter((call) => call === "resume").length,
+      waits: [],
+      violations: [],
+      invocations: [],
+      envelopes: run.envelope === undefined ? [] : [run.envelope as ParityEnvelope],
+    };
+  } finally {
+    scenario.dispose();
+  }
+};
+
+/** The registry row: the re-entry mode at a persisted count of 3. */
+export const resumePromptReentry = (): Promise<ParityObservation> =>
+  resumePromptReentryObservation({ restartCount: 3, label: "resume-prompt-reentry" });

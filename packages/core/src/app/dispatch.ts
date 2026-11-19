@@ -53,6 +53,8 @@ import {
 import {
   type DispatchLivenessReading,
   type DispatchLivenessVerdict,
+  dispatchStallShortCircuit,
+  dispatchStallUndecidable,
   evaluateDispatchLiveness,
 } from "../domain/dispatch-liveness.js";
 import {
@@ -325,6 +327,24 @@ export type DispatchPorts = {
   readonly delay?: DispatchDelay;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
   readonly harnessAdmission?: DispatchHarnessAdmissionPort;
+  /**
+   * The borrowed terminate grace (GH-347 DEC-4): `coordinator.kill-grace`
+   * (20 000 ms default), reused rather than duplicated.
+   */
+  readonly killGraceMs?: number;
+  /**
+   * The delivered `economics.restart` append (GH-347 F-6): one record per
+   * consumed ordinal with reason `watchdog.liveness-stalled`. Absent leaves the
+   * ordinal consumed with no record; the composition owns the state write.
+   */
+  readonly appendRestart?: (input: {
+    readonly ref: string;
+    readonly runId: string;
+    readonly sessionId: string;
+    readonly ordinal: number;
+    readonly reason: "watchdog.liveness-stalled";
+    readonly recordedAt: string;
+  }) => boolean;
 };
 
 /** The run result: classified data, or a pre-session/state refusal. */
@@ -901,216 +921,360 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       if (admission.restarts !== undefined) restarts = admission.restarts;
     }
 
-    const session = await (async () => {
-      const propagation = {
-        ...(ports.harnessAgent === undefined ? {} : { agent: ports.harnessAgent }),
-        ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
-      };
-      if (ports.resumePrompt !== undefined && ports.existingHandle !== undefined) {
-        return ports.harness.resume({
-          handle: ports.existingHandle,
-          prompt: ports.resumePrompt,
+    // GH-347 F-6, DEC-5, TDR-0047 — the in-process bounded loop. One dispatch
+    // owns one or more iterations; a clean session exit is ALWAYS terminal, and
+    // only a corroborated liveness stall or a harness-reported timeout is
+    // restart-eligible. Each restarted iteration appends its active lane record
+    // and one `economics.restart`, never an attempt record.
+    let handle: HarnessSessionHandle | undefined = ports.existingHandle;
+    let spawnPrompt: string | undefined = ports.resumePrompt;
+    for (let iteration = 1; ; iteration += 1) {
+      iterationOrdinal = iteration;
+      const session = await (async () => {
+        const propagation = {
+          ...(ports.harnessAgent === undefined ? {} : { agent: ports.harnessAgent }),
+          ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
+        };
+        if (handle !== undefined) {
+          // A restart resumes the recorded session (a fresh spawn only when no
+          // session was ever recorded). An operator resume keeps its text; an
+          // automatic restart re-enters with the lifecycle prompt.
+          return ports.harness.resume({
+            handle,
+            prompt: ports.resumePrompt ?? ports.prompt,
+            descriptor: ports.descriptor,
+            ...propagation,
+          });
+        }
+        // A supplied resume prompt over "no lane" is an EXPLICIT fresh spawn
+        // with the operator's text (GH-347 AC-F3-3), never a fabricated resume.
+        return ports.harness.spawn({
+          workItemRef: ports.ref,
+          prompt: spawnPrompt ?? ports.prompt,
           descriptor: ports.descriptor,
           ...propagation,
         });
-      }
-      // A supplied resume prompt over "no lane" is an EXPLICIT fresh spawn with
-      // the operator's text (GH-347 AC-F3-3), never a fabricated resume.
-      return ports.harness.spawn({
-        workItemRef: ports.ref,
-        prompt: ports.resumePrompt ?? ports.prompt,
-        descriptor: ports.descriptor,
-        ...propagation,
-      });
-    })();
-
-    if (!session.ok) {
-      // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
-      // the envelope carries the typed identity and its disclosed facts.
-      if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
-        const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts?.());
-        return {
-          ok: false,
-          error: {
-            kind: session.error.kind,
-            code: session.error.code,
-            ...(session.error.summary === undefined ? {} : { summary: session.error.summary }),
-            ...(session.error.field === undefined ? {} : { field: session.error.field }),
-            ...(detail === undefined ? {} : { harness: detail }),
-          },
-        };
-      }
-      const reads = staleReads();
-      return record({
-        token: f,
-        outcome: O_FAILED,
-        errorCode: "dispatch.session.spawn-failed",
-        detail: detailOf(session.error),
-        comparison: comparisonFor({
-          token: f,
-          errorCode: "dispatch.session.spawn-failed",
-          reads,
-          urlResolved: false,
-        }),
-        corroboration: buildCorroborationRecord({ token: f }),
-        falseSuccess: false,
-        prUrl: "",
-        urlResolved: false,
-        lastMessage: "spawn failed before a session existed",
-        evidenceRefs: ["harness:spawn-failed"],
-      });
-    }
-
-    heldSessionId = session.value.sessionId;
-    heldSession = session.value;
-    // The active lane record at acquisition (GH-347 AC-F1-1, DM-1): written as
-    // the handle is acquired, before any outcome is known. A pre-session
-    // refusal never reaches this point, so it appends none.
-    if (ports.laneOwner !== undefined) {
-      const active = appendDispatchLane(ports.store, ports.fenceToken, {
-        schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
-        ref: ports.ref,
-        repository: ports.repository,
-        attemptId,
-        sessionId: session.value.sessionId,
-        harnessKind: ports.harnessKind,
-        owner: ports.laneOwner,
-        iterationOrdinal,
-        restartsConsumed: restarts - persistedRestarts,
-        state: "active",
-        recordedAt: now,
-      });
-      if (!active.ok) laneAppendFailed = true;
-    }
-    const collectPromise = ports.harness.collect({ handle: session.value });
-
-    // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`
-    // cadence while `collect` is pending, carrying the previous observation so a
-    // stall needs two consecutive sourced no-advance readings. The verdict trail
-    // is recorded as attempt liveness evidence; a stall that is still current
-    // when collection resolves is routed through restart admission below, while
-    // any later progress clears it.
-    const verdicts: DispatchLivenessVerdict[] = [];
-    let stalled = false;
-    let previousReadings: readonly DispatchLivenessReading[] | undefined;
-    const observeLiveness = (readings: readonly DispatchLivenessReading[]): void => {
-      const evaluation = evaluateDispatchLiveness({
-        readings,
-        ...(previousReadings === undefined ? {} : { previous: previousReadings }),
-        cadenceMs: ports.livenessIntervalMs ?? 30_000,
-      });
-      if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
-      // A stall is a current-state verdict, not a latch: any later advancing
-      // observation clears it, so a transient mid-run stall is recorded as
-      // liveness evidence and the collected evidence still classifies normally.
-      if (evaluation.verdict === "progressing") stalled = false;
-      else if (evaluation.verdict === "stalled") stalled = true;
-      previousReadings = readings;
-    };
-
-    let watching = false;
-    let stopWatching = (): void => {};
-    let watcherDone: Promise<void> = Promise.resolve();
-    if (ports.waitForCadence !== undefined && ports.livenessIntervalMs !== undefined) {
-      watching = true;
-      let stopped = false;
-      let cancelWait: (() => void) | undefined;
-      watcherDone = (async () => {
-        while (!stopped) {
-          let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
-          try {
-            report = await ports.harness.liveness({ handle: session.value });
-          } catch {
-            return;
-          }
-          if (stopped) return;
-          if (report.ok) observeLiveness(livenessReadings(report.value.readings));
-          const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
-          if (wait === undefined) return;
-          cancelWait = wait.cancel;
-          await wait.promise;
-        }
       })();
-      stopWatching = () => {
-        stopped = true;
-        cancelWait?.();
-      };
-    }
 
-    const evidenceResult = await collectPromise;
-    if (watching) {
-      stopWatching();
-      await watcherDone;
-    }
-    if (evidenceResult.ok) {
-      // With no composed cadence the session cannot be watched while it runs;
-      // one post-collect observation is still taken and never fabricated.
-      if (!watching) {
-        try {
-          const liveness = await ports.harness.liveness({ handle: session.value });
-          if (liveness.ok) observeLiveness(livenessReadings(liveness.value.readings));
-        } catch {
-          // A liveness read failure never fabricates progress or a stall.
+      if (!session.ok) {
+        // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
+        // the envelope carries the typed identity and its disclosed facts.
+        if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
+          const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts?.());
+          return {
+            ok: false,
+            error: {
+              kind: session.error.kind,
+              code: session.error.code,
+              ...(session.error.summary === undefined ? {} : { summary: session.error.summary }),
+              ...(session.error.field === undefined ? {} : { field: session.error.field }),
+              ...(detail === undefined ? {} : { harness: detail }),
+            },
+          };
         }
-      }
-    }
-    const livenessRefs = verdicts.map((verdict) => `liveness:${verdict}`);
-    if (!evidenceResult.ok) {
-      // A session existed but its evidence could not be read (Appendix G): the
-      // attempt is recorded as unevaluable at exit 2, never returned unrecorded.
-      const reads = staleReads();
-      return record({
-        token: su,
-        outcome: O_FAILED,
-        errorCode: "dispatch.state-unverified",
-        comparison: comparisonFor({
-          token: su,
-          errorCode: "dispatch.state-unverified",
-          reads,
-          urlResolved: false,
-        }),
-        corroboration: buildCorroborationRecord({ token: su }),
-        falseSuccess: false,
-        prUrl: "",
-        urlResolved: false,
-        lastMessage: `harness evidence unreadable (${evidenceResult.error.code})`,
-        evidenceRefs: ["harness:collect-failed", ...livenessRefs],
-      });
-    }
-    if (stalled) {
-      // A corroborated terminal stall consults the one restart-admission gate. At
-      // or above the bound the attempt is the Appendix G restart-budget refusal;
-      // below the bound the delivered port cannot kill a live session, so the
-      // stall is recorded and left to lane supervision instead of leaking a
-      // silent second spawn.
-      const decision = admitDispatchRestart({ count: restarts, bound: budget });
-      if (!decision.admitted) {
         const reads = staleReads();
-        const exhaustionRef = ensureExhaustion(
-          ports,
-          ports.existingHandle?.sessionId ?? attemptId,
-          restarts,
-          now,
-        );
         return record({
-          token: mr,
+          token: f,
           outcome: O_FAILED,
-          errorCode: "dispatch.restart-budget-exceeded",
+          errorCode: "dispatch.session.spawn-failed",
+          detail: detailOf(session.error),
           comparison: comparisonFor({
-            token: mr,
-            errorCode: "dispatch.restart-budget-exceeded",
+            token: f,
+            errorCode: "dispatch.session.spawn-failed",
             reads,
             urlResolved: false,
           }),
-          corroboration: buildCorroborationRecord({ token: mr }),
+          corroboration: buildCorroborationRecord({ token: f }),
           falseSuccess: false,
           prUrl: "",
           urlResolved: false,
-          lastMessage: `liveness stalled; restart budget exhausted at ${restarts} of ${budget}`,
-          evidenceRefs: [exhaustionRef ?? "economics:exhaustion", ...livenessRefs],
+          lastMessage: "spawn failed before a session existed",
+          evidenceRefs: ["harness:spawn-failed"],
         });
       }
-    }
+
+      heldSessionId = session.value.sessionId;
+      heldSession = session.value;
+      // The active lane record at acquisition (GH-347 AC-F1-1, DM-1): written
+      // as the handle is acquired, before any outcome is known. A pre-session
+      // refusal never reaches this point, so it appends none.
+      if (ports.laneOwner !== undefined) {
+        const active = appendDispatchLane(ports.store, ports.fenceToken, {
+          schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+          ref: ports.ref,
+          repository: ports.repository,
+          attemptId,
+          sessionId: session.value.sessionId,
+          harnessKind: ports.harnessKind,
+          owner: ports.laneOwner,
+          iterationOrdinal,
+          restartsConsumed: restarts - persistedRestarts,
+          state: "active",
+          recordedAt: now,
+        });
+        if (!active.ok) laneAppendFailed = true;
+      }
+      const collectPromise = ports.harness.collect({ handle: session.value });
+
+      // Progress-based liveness (NFR-2, DEC-9): poll at the
+      // `lane.liveness-interval` cadence while `collect` is pending, carrying
+      // the previous observation so a stall needs two consecutive sourced
+      // no-advance readings. The verdict trail is recorded as attempt evidence;
+      // a stall still current when collection resolves is the restart-eligible
+      // one, while any later progress clears it.
+      const verdicts: DispatchLivenessVerdict[] = [];
+      let stalled = false;
+      let previousReadings: readonly DispatchLivenessReading[] | undefined;
+      const observeLiveness = (readings: readonly DispatchLivenessReading[]): void => {
+        const evaluation = evaluateDispatchLiveness({
+          readings,
+          ...(previousReadings === undefined ? {} : { previous: previousReadings }),
+          cadenceMs: ports.livenessIntervalMs ?? 30_000,
+        });
+        if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
+        // A stall is a current-state verdict, not a latch: any later advancing
+        // observation clears it, so a transient mid-run stall is recorded as
+        // liveness evidence and the collected evidence still classifies
+        // normally.
+        if (evaluation.verdict === "progressing") stalled = false;
+        else if (evaluation.verdict === "stalled") stalled = true;
+        previousReadings = readings;
+      };
+
+      let watching = false;
+      let stopWatching = (): void => {};
+      let watcherDone: Promise<void> = Promise.resolve();
+      if (ports.waitForCadence !== undefined && ports.livenessIntervalMs !== undefined) {
+        watching = true;
+        let stopped = false;
+        let cancelWait: (() => void) | undefined;
+        watcherDone = (async () => {
+          while (!stopped) {
+            let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
+            try {
+              report = await ports.harness.liveness({ handle: session.value });
+            } catch {
+              return;
+            }
+            if (stopped) return;
+            if (report.ok) observeLiveness(livenessReadings(report.value.readings));
+            const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
+            if (wait === undefined) return;
+            cancelWait = wait.cancel;
+            await wait.promise;
+          }
+        })();
+        stopWatching = () => {
+          stopped = true;
+          cancelWait?.();
+        };
+      }
+
+      let evidenceResult: Awaited<ReturnType<HarnessSessionPort["collect"]>>;
+      try {
+        evidenceResult = await collectPromise;
+      } finally {
+        if (watching) {
+          stopWatching();
+          await watcherDone;
+        }
+      }
+      if (evidenceResult.ok) {
+        // With no composed cadence the session cannot be watched while it runs;
+        // one post-collect observation is still taken and never fabricated.
+        if (!watching) {
+          try {
+            const liveness = await ports.harness.liveness({ handle: session.value });
+            if (liveness.ok) observeLiveness(livenessReadings(liveness.value.readings));
+          } catch {
+            // A liveness read failure never fabricates progress or a stall.
+          }
+        }
+      }
+      const livenessRefs = verdicts.map((verdict) => `liveness:${verdict}`);
+      if (!evidenceResult.ok) {
+        // A session existed but its evidence could not be read (Appendix G): the
+        // attempt is recorded as unevaluable at exit 2, never returned unrecorded.
+        const reads = staleReads();
+        return record({
+          token: su,
+          outcome: O_FAILED,
+          errorCode: "dispatch.state-unverified",
+          comparison: comparisonFor({
+            token: su,
+            errorCode: "dispatch.state-unverified",
+            reads,
+            urlResolved: false,
+          }),
+          corroboration: buildCorroborationRecord({ token: su }),
+          falseSuccess: false,
+          prUrl: "",
+          urlResolved: false,
+          lastMessage: `harness evidence unreadable (${evidenceResult.error.code})`,
+          evidenceRefs: ["harness:collect-failed", ...livenessRefs],
+        });
+      }
+
+      // GH-347 F-5/F-6, Appendix F(D): a stall is a current-state liveness
+      // verdict or a harness-reported timeout. A clean exit is never a stall.
+      const timedOut = evidenceResult.value.timedOut;
+      const stall = stalled || timedOut;
+      if (stall) {
+        const reads = await ports.readTruth();
+        // Terminate BEFORE any restart decision on a capable adapter; an
+        // incapable adapter is never asked and (per AC-F5-4) never causes a
+        // second session.
+        const terminate = ports.harness.terminate;
+        const terminationRefs: string[] = [];
+        if (terminate !== undefined) {
+          try {
+            const terminated = await terminate({
+              handle: session.value,
+              graceMs: ports.killGraceMs ?? 20_000,
+            });
+            if (!terminated.ok) terminationRefs.push("terminate:failed");
+            else {
+              if (terminated.value.terminated) terminationRefs.push("terminate:terminated");
+              if (terminated.value.escalated) terminationRefs.push("terminate:escalated");
+              if (terminated.value.reaped) terminationRefs.push("terminate:reaped");
+            }
+          } catch {
+            terminationRefs.push("terminate:failed");
+          }
+        }
+        const stallRefs = [...livenessRefs, ...terminationRefs];
+        const shortCircuit = dispatchStallShortCircuit({
+          tracker: reads.tracker,
+          artifacts: reads.artifacts,
+        });
+        if (shortCircuit !== undefined) {
+          const arm =
+            shortCircuit === "merged" && reads.tracker.ok && reads.tracker.value.state === "done"
+              ? ("tracker-done-merged" as const)
+              : undefined;
+          const facts = corroborationFactsOf(reads);
+          const comparison = comparisonFor({ token: shortCircuit, reads, urlResolved: false });
+          const prUrl =
+            shortCircuit === "pr-open" && reads.artifacts.ok
+              ? (reads.artifacts.value.pr.url ?? "")
+              : "";
+          return record({
+            token: shortCircuit,
+            outcome: evidenceResult.value.completionMarker
+              ? ports.harness.classify(evidenceResult.value).outcome
+              : O_FAILED,
+            comparison,
+            corroboration: buildCorroborationRecord({
+              token: shortCircuit,
+              facts,
+              ...(arm === undefined ? {} : { arm }),
+            }),
+            falseSuccess: false,
+            prUrl,
+            urlResolved: prUrl.length > 0,
+            lastMessage: `liveness stalled; the terminal pre-restart verdict is ${shortCircuit}`,
+            evidenceRefs: stallRefs,
+          });
+        }
+        if (dispatchStallUndecidable({ tracker: reads.tracker, artifacts: reads.artifacts })) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "liveness stalled; truth is undecidable",
+            evidenceRefs: stallRefs,
+          });
+        }
+        // The LOOP keeps the budget-consulting scope (AC-F6-2/AC-F6-6): at or
+        // above the bound it records `max-restarts` with the exhaustion record.
+        // A composition with NO positive bound composes no restart policy, so
+        // the loop never restarts automatically (it would otherwise spin on a
+        // permanently stalled session); the delivery stays the delivered
+        // `max-restarts` classification for the timeout.
+        const decision =
+          budget > 0
+            ? admitDispatchRestart({ count: restarts, bound: budget })
+            : {
+                admitted: false as const,
+                reason: "dispatch.restart-budget-exceeded" as const,
+                count: restarts,
+                bound: budget,
+                terminal: true as const,
+                escalation: "restart-budget-exhausted" as const,
+              };
+        if (!decision.admitted) {
+          const exhaustionRef = ensureExhaustion(
+            ports,
+            session.value.sessionId,
+            restarts,
+            now,
+          );
+          return record({
+            token: mr,
+            outcome: O_FAILED,
+            errorCode: "dispatch.restart-budget-exceeded",
+            comparison: comparisonFor({
+              token: mr,
+              errorCode: "dispatch.restart-budget-exceeded",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: mr }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: `liveness stalled; restart budget exhausted at ${restarts} of ${budget}`,
+            evidenceRefs: [exhaustionRef ?? "economics:exhaustion", ...stallRefs],
+          });
+        }
+        // Below the bound: exactly one ordinal, exactly one delivered
+        // `economics.restart` with reason `watchdog.liveness-stalled`, then the
+        // recorded session is resumed for the next iteration.
+        restarts += 1;
+        const restartRecorded =
+          ports.appendRestart === undefined ||
+          ports.appendRestart({
+            ref: ports.ref,
+            runId: attemptId,
+            sessionId: session.value.sessionId,
+            ordinal: restarts,
+            reason: "watchdog.liveness-stalled",
+            recordedAt: now,
+          });
+        if (!restartRecorded) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "liveness stalled; the restart record could not be appended",
+            evidenceRefs: ["economics:restart-failed", ...stallRefs],
+          });
+        }
+        handle = session.value;
+        spawnPrompt = undefined;
+        continue;
+      }
+
     const evidence: HarnessEvidence = evidenceResult.value;
     const classification = ports.harness.classify(evidence);
     const harnessToken = classification.token;
@@ -1256,6 +1420,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       evidenceRefs,
       ...(divergenceRef === undefined ? {} : { divergenceRef }),
     });
+    }
   } finally {
     ports.releaseLease(releaseCause);
   }

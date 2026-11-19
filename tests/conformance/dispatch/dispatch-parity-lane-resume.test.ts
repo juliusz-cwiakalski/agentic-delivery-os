@@ -14,6 +14,9 @@ import { readDaemonLanes } from "../../../packages/core/src/app/daemon";
 import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
 import { createParityHarness, PARITY_REPOSITORY } from "../../fixtures/dispatch/parity/harness";
 import {
+  resumePromptReentryObservation,
+} from "../../fixtures/dispatch/parity/lane";
+import {
   attemptCountFor,
   daemonLanesOf,
   dispatchLanesOf,
@@ -268,4 +271,57 @@ describe("TC-RESUME-101/103/104 recorded-attempt resume", () => {
     expect(observation.spawns).toBe(0);
     expect(observation.resumes).toBe(1);
   });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-RESUME-102 — the operator resume in BOTH modes at counts 3 and 4.       */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-RESUME-102 an operator resume consumes no ordinal in either mode", () => {
+  for (const count of [3, 4]) {
+    test(`attach-continue at persisted count ${count} is admitted with no ordinal`, async () => {
+      const h = createParityHarness({ label: `resume-102-attach-${count}` });
+      try {
+        h.seedRestarts(count);
+        seedDispatchLane(h.store, {
+          ref: "GH-347",
+          sessionId: "ses-347",
+          state: "terminal",
+          lastToken: "pr-open",
+        });
+        const run = await h.run(["dispatch", "GH-347", "--resume-prompt", "go", "--json"]);
+        expect(run.exit).toBe(0);
+        expect(run.envelope?.data?.error?.code).toBeUndefined();
+        expect(run.envelope?.data?.restarts).toBe(count);
+        const observation = h.observe();
+        expect(observation.attempts).toHaveLength(1);
+        expect(observation.attempts[0]?.resumeMode).toBe("attach-continue");
+        // No prefill cost is acknowledged on attach-continue (the delivered
+        // plan carries the explicit false rather than an absent member).
+        expect(observation.attempts[0]?.prefillCostAcknowledged).not.toBe(true);
+        // No restart record was appended; the persisted total is unchanged.
+        expect(observation.economicsRestarts).toBe(count);
+        expect(observation.resumes).toBe(1);
+        expect(observation.spawns).toBe(0);
+      } finally {
+        h.dispose();
+      }
+    });
+
+    test(`resume-prompt-reentry at persisted count ${count} is admitted and charges nothing`, async () => {
+      const observation = await resumePromptReentryObservation({
+        restartCount: count,
+        label: `resume-102-reentry-${count}`,
+      });
+      expect(observation.exit).toBe(0);
+      expect(observation.results[0]?.envelope?.data?.error?.code).toBeUndefined();
+      expect(observation.attempts).toHaveLength(1);
+      expect(observation.attempts[0]?.resumeMode).toBe("resume-prompt-reentry");
+      expect(observation.attempts[0]?.prefillCostAcknowledged).toBe(true);
+      expect(observation.economicsRestarts).toBe(0);
+      expect(observation.resumes).toBe(1);
+      expect(observation.spawns).toBe(0);
+      expect(observation.results[0]?.envelope?.data?.restarts).toBe(count);
+    });
+  }
 });

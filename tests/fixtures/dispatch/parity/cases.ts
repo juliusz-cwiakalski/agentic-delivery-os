@@ -11,8 +11,23 @@
  */
 import type { ParityObservation } from "./harness";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
-import { resumeOverPrOpen, resumeUnknownSession, resumeWithoutLane } from "./lane";
+import {
+  resumeOverPrOpen,
+  resumePromptReentry,
+  resumeUnknownSession,
+  resumeWithoutLane,
+} from "./lane";
 import { trackerOutageWithArtifact, trackerOutageWithoutArtifact } from "./pm-notes";
+import {
+  loopAtBound,
+  loopBelowBound,
+  loopCleanExit,
+  loopPersistedAboveBound,
+  loopUnverifiedStall,
+  terminateCapable,
+  terminateExactIdentity,
+  terminateIncapable,
+} from "./terminate";
 
 /** The seven declared group names; the vocabulary is closed. */
 export const PARITY_GROUPS = [
@@ -91,11 +106,74 @@ export const PARITY_CASES: readonly ParityCase[] = [
     expected: {},
   },
   {
+    id: "resume-prompt-reentry",
+    group: "resume",
+    declaredSeam: "lane",
+    scenario: () => resumePromptReentry(),
+    expected: {},
+  },
+  {
     id: "resume-unknown-session",
     group: "resume",
     declaredSeam: "lane",
     scenario: () => resumeUnknownSession(),
     expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "loop-below-bound-restart",
+    group: "loop",
+    declaredSeam: "loop",
+    scenario: () => loopBelowBound(),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "loop-at-bound-max-restarts",
+    group: "loop",
+    declaredSeam: "loop",
+    scenario: () => loopAtBound(),
+    expected: { token: "max-restarts", exit: 1 },
+  },
+  {
+    id: "loop-unverified-stall",
+    group: "loop",
+    declaredSeam: "loop",
+    scenario: () => loopUnverifiedStall(),
+    expected: { token: SU, exit: 2 },
+  },
+  {
+    id: "loop-clean-exit-terminal",
+    group: "loop",
+    declaredSeam: "loop",
+    scenario: () => loopCleanExit(),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "loop-persisted-at-or-above-bound",
+    group: "loop",
+    declaredSeam: "loop",
+    scenario: () => loopPersistedAboveBound(),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "terminate-capable",
+    group: "terminate",
+    declaredSeam: "terminate",
+    scenario: () => terminateCapable(),
+    expected: { token: "merged", exit: 0 },
+  },
+  {
+    id: "terminate-incapable",
+    group: "terminate",
+    declaredSeam: "terminate",
+    scenario: () => terminateIncapable(),
+    expected: { token: "merged", exit: 0 },
+  },
+  {
+    id: "terminate-exact-identity-reap",
+    group: "terminate",
+    declaredSeam: "terminate",
+    scenario: () => terminateExactIdentity(),
+    expected: { token: "merged", exit: 0 },
   },
   {
     id: "tracker-outage-with-artifact",

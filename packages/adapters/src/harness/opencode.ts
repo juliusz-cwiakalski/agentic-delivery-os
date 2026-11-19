@@ -100,6 +100,13 @@ export type OpencodeHarnessOptions = {
     readonly workItemRef: string;
   }) => TelemetryIngestSink | undefined;
   /**
+   * The injected terminate-grace wait (GH-347 API-5, DEC-4): the composition
+   * binds the one dispatch delay with reason `terminate-grace`, so production
+   * and the offline battery share the declared grace without a wall clock in
+   * the engine.
+   */
+  readonly terminateWait?: (ms: number) => Promise<void>;
+  /**
    * The evaluated supported-window verdict and the normalized version the
    * resolution produced (GH-335 F-1). The production composition always supplies
    * both; an adapter constructed without them is a delivered test double, never
@@ -372,6 +379,10 @@ type SessionRecord = {
   readonly completion: Promise<HarnessEvidence>;
   /** The single-seat binding the spawn was resolved for (TDR-0040 A-4). */
   readonly binding?: HarnessSeatBinding;
+  /** The streaming starter's idempotent TERM→KILL (GH-347 API-5). */
+  readonly kill?: () => void;
+  /** Whether this session was already terminated (idempotence, TDR-0046). */
+  terminated?: boolean;
 };
 
 /** Build the opencode session port over injected I/O seams. */
@@ -545,6 +556,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: input.descriptor,
       completion: outcome.completion,
+      kill: stream.kill,
       ...(binding === undefined ? {} : { binding }),
     });
     return { ok: true, value: handle };
@@ -622,6 +634,8 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       handle,
       descriptor: record?.descriptor ?? descriptor,
       completion: outcome.completion,
+      kill: stream.kill,
+      ...(record?.terminated === undefined ? {} : { terminated: record.terminated }),
       ...(binding === undefined ? {} : { binding }),
     });
     return { ok: true, value: handle };
@@ -631,6 +645,25 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     spawn: (input) => run(input, options.spawnArgs ?? [], input.prompt),
     deliver: resume,
     resume,
+    terminate: async (input) => {
+      if (!capabilities.supportedOperations.includes("terminate")) return gap("terminate");
+      const record = sessions.get(input.handle.sessionId);
+      // An already-exited or unknown session is SUCCESS, never an error
+      // (GH-347 AC-F5-5, TDR-0046 DC-4).
+      if (record === undefined) {
+        return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
+      }
+      if (record.terminated === true || record.kill === undefined) {
+        return { ok: true, value: { terminated: true, escalated: false, reaped: false } };
+      }
+      record.terminated = true;
+      // TERM goes to the session's process tree through the starter, which
+      // escalates to KILL after its own grace; the declared grace is then
+      // waited through the injected fact so the report is bounded.
+      record.kill();
+      if (options.terminateWait !== undefined) await options.terminateWait(input.graceMs);
+      return { ok: true, value: { terminated: true, escalated: true, reaped: false } };
+    },
     collect: async (input) => {
       const record = sessions.get(input.handle.sessionId);
       if (record === undefined) {

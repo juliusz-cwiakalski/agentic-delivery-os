@@ -20,6 +20,7 @@ import {
   TOOL_FAILURE_EVIDENCE,
 } from "../fixtures/dispatch/harness";
 import {
+  artifacts,
   blockedInput,
   exhaustedLaneInput,
   harnessFacts,
@@ -60,20 +61,32 @@ describe("TC-DISP-008 every derivation branch stays inside the eleven", () => {
     expect(emitted.length).toBeGreaterThan(0);
   });
 
-  test("the restart-budget branch refuses a non-completed session at the bound", () => {
-    for (const evidence of [TIMED_OUT_EVIDENCE, PREMATURE_END_EVIDENCE]) {
-      const result = deriveDispatchResult(
-        truthInput({
-          harness: readOk(harnessFacts(evidence)),
-          restarts: { count: 3, bound: 3 },
-        }),
-      );
-      expect(result.token).toBe("max-restarts");
-      expect(result.outcome).toBe("failed");
-      expect(result.lastMessage).toContain("restart budget exhausted");
-    }
-    // The completed-session exemption is the F-16 contract: a completed harness
-    // at an already-reached bound is never re-keyed to the restart refusal.
+  test("the persisted-bound re-key is NARROWED to the restart-eligible timeout", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 §8.5 "Persisted-bound re-key
+    // narrowed", AC-F6-4, AC-F6-6, Appendix F(D), DEC-5): a harness-reported
+    // timeout at the bound keeps `max-restarts` with its delivered identity, and
+    // every CLEAN session exit at the bound keeps its own classification.
+    const timedOut = deriveDispatchResult(
+      truthInput({
+        harness: readOk(harnessFacts(TIMED_OUT_EVIDENCE)),
+        restarts: { count: 3, bound: 3 },
+      }),
+    );
+    expect(timedOut.token).toBe("max-restarts");
+    expect(timedOut.outcome).toBe("failed");
+    expect(timedOut.lastMessage).toContain("restart budget exhausted");
+
+    // A premature end at the bound keeps `partial` (Appendix F(C)(9)).
+    const premature = deriveDispatchResult(
+      truthInput({
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+        restarts: { count: 3, bound: 3 },
+      }),
+    );
+    expect(premature.token).toBe("partial");
+
+    // The completed-session exemption is unchanged: never re-keyed.
     const completed = deriveDispatchResult(truthInput({ restarts: { count: 3, bound: 3 } }));
     expect(completed.token).toBe("pr-open");
   });

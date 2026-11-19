@@ -12,6 +12,7 @@ import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledge
 import type { HarnessLivenessReport } from "../../packages/core/src/contracts/index";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { artifacts, readOk } from "../fixtures/dispatch/truth";
 
 const OBSERVED_AT = "2026-11-08T10:00:00.000Z";
 
@@ -116,6 +117,11 @@ describe("the one-shot watch routes a corroborated stall through restart admissi
       livenessIntervalMs: 30_000,
       livenessOf: () => sourced(5),
       collectAfterPolls: 3,
+      // A decisive artifact OUTSIDE the terminal pre-restart set, so the stall
+      // reaches the bound instead of short-circuiting (GH-347 DM-4).
+      reads: readsFrom({
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })),
+      }),
       restartBudget: 3,
       restartCount: 3,
     });
@@ -138,12 +144,27 @@ describe("the one-shot watch routes a corroborated stall through restart admissi
     }
   });
 
-  test("a stall below the bound is recorded and never leaks a second spawn", async () => {
+  test("a stall below the bound terminates the session and resumes it in-process", async () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 §8.5, AC-F6-1, DEC-4, DEC-5): a
+    // below-bound stall no longer defers to lane supervision. The loop consumes
+    // exactly one ordinal, appends one `economics.restart`, terminates the
+    // stalled session, resumes the recorded one, and runs a second iteration.
+    // The spawn count stays 1 (the restart is a RESUME, never a second spawn).
+    let resolved = false;
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
       livenessIntervalMs: 30_000,
-      livenessOf: () => sourced(5),
+      livenessOf: () => {
+        // The second iteration advances, so it is not a stall.
+        if (resolved) return sourced(9);
+        resolved = scenario.scripted.livenessPolls() >= 3;
+        return sourced(5);
+      },
       collectAfterPolls: 3,
+      readsSequence: [
+        readsFrom({ artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "complete" })) }),
+        readsFrom(),
+      ],
       restartBudget: 3,
       restartCount: 0,
     });
@@ -152,11 +173,16 @@ describe("the one-shot watch routes a corroborated stall through restart admissi
       expect(run.exit).toBe(0);
       const record = evidenceOf(scenario);
       expect(record.token).toBe("pr-open");
-      expect(record.evidenceRefs).toContain("liveness:stalled");
-      // Exactly one session was spawned; an admitted restart is deferred to lane
-      // supervision rather than a silent second spawn in the same run.
+      // The stall is recorded on the restart, not on the terminal attempt (the
+      // restarted iteration appends no attempt of its own).
       const spawns = scenario.scripted.calls.filter((call) => call === "spawn");
+      const resumes = scenario.scripted.calls.filter((call) => call === "resume");
       expect(spawns).toHaveLength(1);
+      expect(resumes).toHaveLength(1);
+      expect(scenario.calls.restarts).toEqual([
+        { ordinal: 1, reason: "watchdog.liveness-stalled" },
+      ]);
+      expect(run.envelope?.data?.restarts).toBe(1);
       expect(scenario.calls.exhaustions).toEqual([]);
     } finally {
       scenario.dispose();

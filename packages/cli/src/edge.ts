@@ -6988,6 +6988,10 @@ export type DispatchComposition = {
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
   /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
   readonly laneOwner?: DispatchPorts["laneOwner"];
+  /** The borrowed terminate grace (GH-347 DEC-4). */
+  readonly killGraceMs?: number;
+  /** The delivered `economics.restart` append (GH-347 F-6). */
+  readonly appendRestart?: DispatchPorts["appendRestart"];
   readonly claimLease: (
     ref: string,
     repository: string,
@@ -7186,9 +7190,12 @@ export const createDispatchCommandRuntime = (
         });
         resumeMode = plan.mode;
         prefillCostAcknowledged = plan.prefillCostAcknowledged;
+        // GH-347 AC-F3-2/DEC-5: the operator resume is admitted regardless of
+        // the persisted bound; only an automatic restart consults it.
         const restart = admitDispatchRestart({
           count: lane.restartCount,
           bound: composition.restartBudget ?? 0,
+          scope: "operator-resume",
         });
         if (!restart.admitted) {
           admission = {
@@ -7260,6 +7267,10 @@ export const createDispatchCommandRuntime = (
         ...(harnessAgent === undefined ? {} : { harnessAgent }),
         ...(harnessBinding === undefined ? {} : { harnessBinding }),
         ...(composition.laneOwner === undefined ? {} : { laneOwner: composition.laneOwner }),
+        ...(composition.killGraceMs === undefined ? {} : { killGraceMs: composition.killGraceMs }),
+        ...(composition.appendRestart === undefined
+          ? {}
+          : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),

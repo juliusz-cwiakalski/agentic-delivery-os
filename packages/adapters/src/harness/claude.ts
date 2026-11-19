@@ -36,6 +36,9 @@ export const CLAUDE_CAPABILITIES: HarnessCapabilityDeclaration = {
     { capability: "token-delta", reason: "provider-unsupported" },
   ],
   declaredGaps: [
+    // GH-347 DM-5: the Claude Code adapter declares the terminate gap and is
+    // never asked; the engine starts no second session on that path.
+    { capability: "terminate", reason: "headless-mode-limitation" },
     { capability: "deliver", reason: "headless-mode-limitation" },
     { capability: "resume", reason: "headless-mode-limitation" },
     { capability: "steer", reason: "headless-mode-limitation" },

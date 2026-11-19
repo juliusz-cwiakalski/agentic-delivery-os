@@ -36,6 +36,7 @@ export const HARNESS_OPERATIONS = [
   "steer",
   "collect",
   "session-list",
+  "terminate",
 ] as const;
 
 export type HarnessOperation = (typeof HARNESS_OPERATIONS)[number];

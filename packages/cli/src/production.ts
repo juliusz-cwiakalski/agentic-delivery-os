@@ -2353,6 +2353,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
             resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
             listArgs: PRODUCTION_OPENCODE_ARGS.list,
+            // GH-347 DEC-4: the declared grace is waited through the one
+            // injected delay fact with reason `terminate-grace`.
+            terminateWait: (ms) => dispatchDelay(ms, "terminate-grace"),
             telemetrySinkFor: ({ workItemRef }) => {
               const resolution = resolveProductionHarnessSettings();
               if (!resolution.ok) return undefined;
@@ -3025,6 +3028,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       settings: HarnessSettings,
       lane: LaneSettings,
       repository: string,
+      killGraceMs: number,
     ): DispatchComposition => ({
       store,
       stateRoot: stateDirectory,
@@ -3082,6 +3086,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return released.ok;
       },
       phaseLedger: phaseSummary,
+      killGraceMs,
+      appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt }) => {
+        const appended = appendEconomicsRestartEvent(store, newFenceToken(), {
+          schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+          workItemRef: ref,
+          runId,
+          sessionId,
+          ordinal,
+          reason,
+          recordedAt,
+        });
+        return appended.ok;
+      },
       ...(ownProcessId > 0
         ? { laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt } }
         : {}),
@@ -3134,7 +3151,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     /** Resolve the typed harness and lane configuration branches. */
     const resolveProductionHarnessSettings = ():
-      | { readonly ok: true; readonly settings: HarnessSettings; readonly lane: LaneSettings }
+      | {
+          readonly ok: true;
+          readonly settings: HarnessSettings;
+          readonly lane: LaneSettings;
+          readonly killGraceMs: number;
+        }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = gitRootForConfig();
       const acquired = acquireProjectConfiguration(gitRoot);
@@ -3154,9 +3176,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }),
       };
       const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
-      return lane.ok
-        ? { ok: true, settings: reconciled, lane: lane.value }
-        : { ok: false, code: lane.error.code };
+      const coordinator = resolveCoordinatorSettings(resolved.value.values, resolved.value.origins);
+      if (!lane.ok) return { ok: false, code: lane.error.code };
+      if (!coordinator.ok) return { ok: false, code: coordinator.error.code };
+      return {
+        ok: true,
+        settings: reconciled,
+        lane: lane.value,
+        killGraceMs: coordinator.value.killGraceMs,
+      };
     };
 
     // The dispatch run surface resolves the typed configuration per invocation,
@@ -3214,7 +3242,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             };
           }
           return createDispatchCommandRuntime(
-            dispatchComposition(resolution.settings, resolution.lane, repository),
+            dispatchComposition(
+              resolution.settings,
+              resolution.lane,
+              repository,
+              resolution.killGraceMs,
+            ),
           ).run.run(input);
         },
       },

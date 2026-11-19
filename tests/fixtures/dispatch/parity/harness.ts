@@ -33,6 +33,7 @@ import type {
   StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
 import {
+  appendEconomicsRestartEvent,
   createNodeStateEdge,
   createStateStore,
   readEconomicsRecords,
@@ -185,6 +186,8 @@ export type ParityHarness = {
   readonly waits: readonly ParityWait[];
   readonly run: (argv?: readonly string[]) => Promise<ParityRunResult>;
   readonly observe: () => ParityObservation;
+  /** Seed N persisted economics.restart records (the operator-resume bound). */
+  readonly seedRestarts: (count: number) => void;
   readonly seedLease: (input: {
     readonly ref: string;
     readonly holder: string;
@@ -422,6 +425,21 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     };
   };
 
+  const seedRestarts = (count: number): void => {
+    for (let ordinal = 1; ordinal <= count; ordinal += 1) {
+      const appended = appendEconomicsRestartEvent(rawStore, `seed-restart-${ordinal}`, {
+        schemaId: "delivery.economics.restart.v1",
+        workItemRef: ref,
+        runId: "seed-run",
+        sessionId: "ses-seed",
+        ordinal,
+        reason: "session-interrupted",
+        recordedAt: clock.nowIso(),
+      });
+      if (!appended.ok) throw new Error(`restart seed failed: ${JSON.stringify(appended)}`);
+    }
+  };
+
   const seedLease = (input: {
     readonly ref: string;
     readonly holder: string;
@@ -460,6 +478,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     },
     run,
     observe,
+    seedRestarts,
     seedLease,
     holdFence: () => {
       const handleStore = secondHandle();

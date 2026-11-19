@@ -35,7 +35,10 @@ import {
   type HarnessSessionPort,
   type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
-import { ensureEconomicsExhaustionRecord } from "../../../../packages/core/src/state/index";
+import {
+  appendEconomicsRestartEvent,
+  ensureEconomicsExhaustionRecord,
+} from "../../../../packages/core/src/state/index";
 import { createDispatchState, createScriptedHarness } from "../harness";
 import { truthInput as defaultTruthInput } from "../truth";
 
@@ -79,6 +82,8 @@ export type CommandScenarioOptions = {
   readonly collectFails?: boolean;
   readonly claim?: DispatchLeaseClaim;
   readonly reads?: DispatchTruthReads;
+  /** A per-call truth-read sequence (the last entry repeats). */
+  readonly readsSequence?: readonly DispatchTruthReads[];
   readonly evidenceClass?: DispatchEvidenceClass;
   readonly repository?: string;
   readonly handover?: "dual-run" | "authoritative";
@@ -126,6 +131,10 @@ export type CommandScenarioOptions = {
   readonly delay?: DispatchDelay;
   /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
   readonly laneOwner?: { readonly processId: number; readonly startedAt: string };
+  /** The borrowed terminate grace (GH-347 DEC-4). */
+  readonly killGraceMs?: number;
+  /** An injected restart append; the default appends a real economics record. */
+  readonly appendRestart?: DispatchPorts["appendRestart"];
   /** An optional store wrapper (for targeted append failures). */
   readonly store?: (store: StateStorePort) => StateStorePort;
 };
@@ -141,6 +150,7 @@ export type CommandScenario = {
     readonly claims: string[];
     readonly releases: string[];
     readonly exhaustions: readonly { readonly ref: string; readonly restarts: number }[];
+    readonly restarts: readonly { readonly ordinal: number; readonly reason: string }[];
   };
   readonly invoke: (argv: readonly string[]) => Promise<CommandRun>;
   readonly dispose: () => void;
@@ -196,6 +206,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     claims: [] as string[],
     releases: [] as string[],
     exhaustions: [] as { readonly ref: string; readonly restarts: number }[],
+    restarts: [] as { readonly ordinal: number; readonly reason: string }[],
   };
   const nowIso = options.nowIso ?? (() => "2026-11-08T10:00:00.000Z");
 
@@ -230,10 +241,36 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     prompt: options.prompt ?? ((ref) => `deliver ${ref}`),
     ...(options.evidenceClass === undefined ? {} : { evidenceClass: options.evidenceClass }),
     repository: () => options.repository ?? "github.com/owner/repo",
-    readTruth: async () => options.reads ?? readsFrom(),
+    readTruth: async () => {
+      const sequence = options.readsSequence;
+      if (sequence !== undefined && sequence.length > 0) {
+        const next = sequence.shift() ?? sequence[sequence.length - 1];
+        if (next !== undefined) return next;
+      }
+      return options.reads ?? readsFrom();
+    },
     ...(options.preflight === undefined ? {} : { preflight: options.preflight }),
     ...(options.delay === undefined ? {} : { delay: options.delay }),
     ...(options.laneOwner === undefined ? {} : { laneOwner: options.laneOwner }),
+    ...(options.killGraceMs === undefined ? {} : { killGraceMs: options.killGraceMs }),
+    appendRestart:
+      options.appendRestart ??
+      ((input) => {
+        calls.restarts = [
+          ...calls.restarts,
+          { ordinal: input.ordinal, reason: input.reason },
+        ];
+        const appended = appendEconomicsRestartEvent(state.store, state.fenceToken, {
+          schemaId: "delivery.economics.restart.v1",
+          workItemRef: input.ref,
+          runId: input.runId,
+          sessionId: input.sessionId,
+          ordinal: input.ordinal,
+          reason: input.reason,
+          recordedAt: input.recordedAt,
+        });
+        return appended.ok;
+      }),
     claimLease: () => {
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };

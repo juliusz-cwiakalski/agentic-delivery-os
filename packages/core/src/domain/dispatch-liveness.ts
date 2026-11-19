@@ -8,6 +8,7 @@
  * their declared absence reason and are never coerced to zero.
  */
 import type { EconomicsSourcedSignalAbsenceReason } from "#contracts";
+import type { DispatchArtifactFacts, DispatchRead, DispatchTrackerFacts } from "./dispatch-result.js";
 
 /** The four declared progress signals. */
 export const DISPATCH_LIVENESS_SIGNALS = [
@@ -131,3 +132,45 @@ export const evaluateDispatchLiveness = (input: {
 
   return { verdict: "stalled", advancing: [], ...echo };
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 — the stall decision (Appendix F(D), DM-4, TDR-0047).               */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The terminal pre-restart verdict set (DM-4): the ONLY truths that
+ * short-circuit a stall. A decisive artifact outside it (`finished`, `partial`,
+ * `noop-lane-nothing-to-do`) does not stop a stall.
+ */
+export const DISPATCH_TERMINAL_PRE_RESTART_VERDICTS = ["merged", "blocked", "pr-open"] as const;
+
+export type DispatchTerminalPreRestartVerdict =
+  (typeof DISPATCH_TERMINAL_PRE_RESTART_VERDICTS)[number];
+
+/**
+ * Decide whether a current stall short-circuits.
+ *
+ * `merged` comes from a tracker-done work item (never from a visible PR),
+ * `blocked` from a blocking tracker state, and `pr-open` from an open
+ * pull-request artifact. Any other decisive artifact returns `undefined`, so the
+ * loop restarts (below the bound) instead of accepting it.
+ */
+export const dispatchStallShortCircuit = (input: {
+  readonly tracker: DispatchRead<DispatchTrackerFacts>;
+  readonly artifacts: DispatchRead<DispatchArtifactFacts>;
+}): DispatchTerminalPreRestartVerdict | undefined => {
+  if (input.tracker.ok) {
+    if (input.tracker.value.state === "done") return "merged";
+    if (input.tracker.value.blocking || input.tracker.value.state === "delivery-blocked") {
+      return "blocked";
+    }
+  }
+  if (input.artifacts.ok && input.artifacts.value.pr.state === "open") return "pr-open";
+  return undefined;
+};
+
+/** Whether a stalled session's truth is undecidable (no tracker, no artifact). */
+export const dispatchStallUndecidable = (input: {
+  readonly tracker: DispatchRead<DispatchTrackerFacts>;
+  readonly artifacts: DispatchRead<DispatchArtifactFacts>;
+}): boolean => !input.tracker.ok && !input.artifacts.ok;

@@ -682,7 +682,12 @@ describe("TC-ADMIT-004 the positive control reaches a real verdict", () => {
 describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", () => {
   test("a direct engine caller without the port still spawns and classifies state-unverified", async () => {
     const scenario = createCommandScenario({
-      reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }),
+      // GH-347 AC-F4-3: a decisive artifact survives an unreadable tracker, so
+      // undecidable truth needs BOTH the tracker and the artifact read to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "config.credential.missing"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
@@ -710,6 +715,33 @@ describe("GH-347 the lane resolver and the delay fact are mounted", () => {
     expect(production).toContain("laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt }");
     // The engine consumes the injected facts and never reads an ambient timer.
     expect(engine).toContain("readonly delay?: DispatchDelay");
+    expect(engine).not.toContain("setTimeout");
+  });
+});
+
+describe("GH-347 the terminate grace, the restart append and the caller scope", () => {
+  test("production wires the borrowed grace and the restart append; the caller scopes are distinct", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
+    const peak = readFileSync(join(ROOT, "packages/core/src/domain/daemon-peak-pause.ts"), "utf8");
+    // The grace is borrowed from coordinator.kill-grace and waits through the one
+    // delay fact with reason terminate-grace.
+    expect(production).toContain("coordinator.value.killGraceMs");
+    expect(production).toContain('terminateWait: (ms) => dispatchDelay(ms, "terminate-grace")');
+    expect(production).toContain("killGraceMs,");
+    // One economics.restart append with the delivered reason.
+    expect(production).toContain("appendEconomicsRestartEvent");
+    expect(production).toContain("appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt })");
+    expect(engine).toContain('reason: "watchdog.liveness-stalled"');
+    // The operator-resume admission passes the admitting caller scope; the loop
+    // keeps the default (budget-consulting) scope, and peak-pause states it.
+    expect(edge).toContain('scope: "operator-resume"');
+    expect(engine).toContain("admitDispatchRestart({ count: restarts, bound: budget })");
+    expect(peak).toContain('scope: "budget-consulting"');
+    // The engine's loop consumes the injected facts and never reads a timer.
+    expect(engine).toContain("readonly killGraceMs?: number");
+    expect(engine).toContain("readonly appendRestart?: (input: {");
     expect(engine).not.toContain("setTimeout");
   });
 });
@@ -1039,6 +1071,11 @@ describe("the production composer resumes the existing lane", () => {
         expect(appended.ok).toBe(true);
       }
 
+      // DELIVERED EXPECTATION UPDATE (GH-347 §8.5 "Operator resume at the
+      // persisted bound is admitted"; AC-F3-2, AC-F6-6, DEC-5): an operator
+      // resume at a persisted count at or above the bound is ADMITTED, resumes
+      // the recorded lane, consumes no ordinal, and appends no exhaustion
+      // record. The former refusal assertion is superseded, not deleted.
       const run = await invokeProduction(harness, [
         "dispatch",
         CHANGE_REF,
@@ -1046,17 +1083,22 @@ describe("the production composer resumes the existing lane", () => {
         "retry",
         "--json",
       ]);
-      expect(run.exit).toBe(1);
-      expect(run.data?.result).toBe("max-restarts");
-      expect((run.data?.error as { code?: string } | undefined)?.code).toBe(
+      // The refusal is gone: the resume ran and the outcome is the classification
+      // the injected reads support, never a restart-budget identity.
+      expect((run.data?.error as { code?: string } | undefined)?.code).not.toBe(
         "dispatch.restart-budget-exceeded",
       );
-      // No spawn and no resume occurred; the refusal is decided before one.
-      expect(harness.spawns).toHaveLength(0);
+      expect(run.data?.result).not.toBe("max-restarts");
+      expect(run.data?.restarts).toBe(3);
+      // One session invocation, and it is a RESUME of the recorded session.
+      expect(harness.spawns).toHaveLength(1);
+      expect(harness.spawns[0]?.args).toContain("--session");
+      expect(harness.spawns[0]?.args).toContain("ses-existing");
       const economics = readEconomicsRecords(harness.store, CHANGE_REF);
-      expect(economics.ok && economics.terminal !== undefined).toBe(true);
+      expect(economics.ok && economics.terminal === undefined).toBe(true);
       const attempts = readDispatchAttempts(harness.store);
       expect(attempts.ok && attempts.records).toHaveLength(1);
+      if (attempts.ok) expect(attempts.records[0]?.resumeMode).toBeDefined();
     } finally {
       harness.dispose();
     }

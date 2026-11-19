@@ -6,6 +6,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  dispatchStallShortCircuit,
+  dispatchStallUndecidable,
   evaluateDispatchLiveness,
   type DispatchLivenessReading,
 } from "../../packages/core/src/domain/dispatch-liveness";
@@ -133,5 +135,74 @@ describe("TC-DISP-005 stall requires two sourced evaluations", () => {
     });
     expect(result.verdict).toBe("unknown");
     expect(result.unknownReason).toBe("all-absent");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-TERM-002 (pure half) and DM-4 — the terminal pre-restart verdict set.    */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-347 the terminal pre-restart verdict set is the only short-circuit", () => {
+  test("a tracker-done work item short-circuits as merged", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: true, value: { state: "done", blocking: false } },
+        artifacts: { ok: true, value: { branchCommits: 0, pr: { state: "none", url: null, mergeReady: false }, pmNotes: "absent" } },
+      }),
+    ).toBe("merged");
+  });
+
+  test("a blocking tracker short-circuits as blocked", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: true, value: { state: "delivery-blocked", blocking: true } },
+        artifacts: { ok: false, reason: "artifact" },
+      }),
+    ).toBe("blocked");
+  });
+
+  test("an open PR artifact short-circuits as pr-open", () => {
+    expect(
+      dispatchStallShortCircuit({
+        tracker: { ok: false, reason: "tracker" },
+        artifacts: {
+          ok: true,
+          value: { branchCommits: 2, pr: { state: "open", url: "https://example.test/1", mergeReady: true }, pmNotes: "complete" },
+        },
+      }),
+    ).toBe("pr-open");
+  });
+
+  test("a decisive artifact OUTSIDE the set does not short-circuit", () => {
+    for (const pmNotes of ["complete", "incomplete", "absent"] as const) {
+      expect(
+        dispatchStallShortCircuit({
+          tracker: { ok: true, value: { state: "in-progress", blocking: false } },
+          artifacts: {
+            ok: true,
+            value: {
+              branchCommits: pmNotes === "absent" ? 0 : 2,
+              pr: { state: "none", url: null, mergeReady: false },
+              pmNotes,
+            },
+          },
+        }),
+        pmNotes,
+      ).toBeUndefined();
+    }
+  });
+
+  test("undecidable truth is named, and a readable tracker or artifact is not", () => {
+    const undecidable = {
+      tracker: { ok: false as const, reason: "tracker" as const },
+      artifacts: { ok: false as const, reason: "artifact" as const },
+    };
+    expect(dispatchStallUndecidable(undecidable)).toBe(true);
+    expect(
+      dispatchStallUndecidable({
+        ...undecidable,
+        tracker: { ok: true, value: { state: "in-progress", blocking: false } },
+      }),
+    ).toBe(false);
   });
 });

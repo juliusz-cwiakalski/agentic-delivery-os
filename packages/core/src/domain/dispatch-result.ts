@@ -203,14 +203,16 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     });
   }
 
-  // The budget governs admission of a further attempt, never a session that
-  // already completed successfully: a completed session keeps its own
-  // classification instead of being re-keyed to a restart refusal.
-  const harnessCompleted = input.harness.ok && input.harness.value.outcome === HARNESS_OUTCOMES[0];
+  // GH-347 AC-F6-4/AC-F6-6, §8.5 "Persisted-bound re-key narrowed": the re-key
+  // fires ONLY for the restart-eligible harness-reported timeout (a terminal
+  // stall). A clean exit, a premature end, a tool failure, or a non-zero exit at
+  // the bound keeps its own classification; the loop remains the producer of
+  // `max-restarts` for the stall path (it records directly and never re-derives).
+  const restartEligibleTimeout = input.harness.ok && input.harness.value.outcome === "timed-out";
   if (
     input.restarts.bound > 0 &&
     input.restarts.count >= input.restarts.bound &&
-    !harnessCompleted
+    restartEligibleTimeout
   ) {
     return base(input, {
       token: mr,

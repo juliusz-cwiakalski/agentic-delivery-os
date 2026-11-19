@@ -462,3 +462,40 @@ notes:
       hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 5 (stall termination, in-process loop, caller-scoped restart
+      admission, narrowed persisted-count arm) implemented before its commit:
+      terminate joins HARNESS_OPERATIONS as an optional capability-gated member
+      (the opencode adapter implements it over the retained streaming starter's
+      idempotent TERM->KILL and waits the declared grace through the injected
+      delay; the Claude Code adapter declares the gap and is never asked); the
+      engine owns the bounded loop (clean exit always terminal, stall-only
+      restart, the terminal pre-restart verdict set short-circuit, undecidable
+      truth with no slot, one ordinal and one economics.restart per restart, one
+      attempt at the terminal classification, active lane per acquisition and one
+      terminal lane); admitDispatchRestart gains the caller-scoped flag with the
+      budget-consulting DEFAULT (the operator-resume admission passes the
+      admitting scope, peak-pause recovery states the consulting scope
+      explicitly), and the derivation's persisted-count re-key is narrowed to the
+      restart-eligible harness timeout. Gate results: conformance dispatch 64
+      pass (incl. the new stall/loop suite 25); the sixteen control suites 139
+      pass; typecheck green; git diff --check clean. DELIVERED EXPECTATION
+      UPDATES, each clause-cited: dispatch-watch's below-bound stall case now
+      asserts terminate+resume in-process with one economics.restart (section
+      8.5, AC-F6-1, DEC-4/5); dispatch-restart-budget's TC-RESUME-002 is rewritten
+      as TC-LOOP-006 (section 8.5 operator-resume bullet, AC-F3-2/AC-F6-6, DEC-5,
+      R5); dispatch-token-closure's restart-budget row is narrowed to the timeout
+      arm (section 8.5, AC-F6-4/AC-F6-6, Appendix F(D)); the composition's
+      operator-resume refusal case now asserts admission (AC-F3-2); its
+      no-preflight control and the delivered-evidence fixture use genuinely
+      undecidable reads (AC-F4-3). No assertion was deleted or relaxed.
+      DEVIATIONS, reported: (1) the production terminate path signals the
+      session's direct child through the delivered starter and reports
+      reaped:false; the process-tree and exact-identity reap contract is proven
+      over the injected process-tree double, which is the declared proof boundary
+      (no OS-level reap exists in the host path). (2) The engine's loop treats a
+      composition with NO positive restart bound as no automatic restart (a
+      permanently stalled session must not spin), while admitDispatchRestart
+      keeps its delivered unbounded semantics for every other caller. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

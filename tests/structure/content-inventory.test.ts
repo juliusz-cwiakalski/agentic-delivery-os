@@ -285,6 +285,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "replaceDispatchIdentityMarkerText",
   ],
   "core/src/domain/dispatch-resume.ts": [
+    "DISPATCH_RESTART_SCOPES",
     "admissionRefusalPair",
     "admitDispatchRestart",
     "evaluateDispatchResumeEconomics",
@@ -308,6 +309,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "deriveDispatchResult",
   ],
   "core/src/domain/dispatch-liveness.ts": [
+    "DISPATCH_TERMINAL_PRE_RESTART_VERDICTS",
+    "dispatchStallShortCircuit",
+    "dispatchStallUndecidable",
     "DISPATCH_LIVENESS_ABSENCE_REASONS",
     "DISPATCH_LIVENESS_SIGNALS",
     "DISPATCH_LIVENESS_UNKNOWN_REASONS",

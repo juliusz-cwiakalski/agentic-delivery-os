@@ -49,6 +49,18 @@ export const planDispatchResume = (input: {
   };
 };
 
+/**
+ * The caller scope of a restart admission (GH-347 AC-F3-2, AC-F6-6, DEC-5).
+ *
+ * `budget-consulting` (the DEFAULT) consults the persisted bound and refuses at
+ * or above it; `operator-resume` admits regardless of the bound because an
+ * operator resume is guidance, not an automatic restart. The default keeps
+ * today's refusing behaviour, so no caller can silently begin admitting.
+ */
+export const DISPATCH_RESTART_SCOPES = ["budget-consulting", "operator-resume"] as const;
+
+export type DispatchRestartScope = (typeof DISPATCH_RESTART_SCOPES)[number];
+
 /** The restart-admission decision (the delivered gate with a data bound). */
 export type DispatchRestartDecision =
   | {
@@ -74,7 +86,14 @@ export type DispatchRestartDecision =
 export const admitDispatchRestart = (input: {
   readonly count: number;
   readonly bound: number;
+  /** Absent keeps the budget-consulting scope (today's refusing behaviour). */
+  readonly scope?: DispatchRestartScope;
 }): DispatchRestartDecision => {
+  // The operator resume is guidance, never an automatic restart: it never
+  // consults the persisted budget and charges no ordinal.
+  if (input.scope === "operator-resume") {
+    return { admitted: true, count: input.count, bound: input.bound, nextOrdinal: input.count };
+  }
   // A zero/absent bound means the lane policy is not composed: admission is
   // unbounded and the delivered gate is not consulted.
   if (input.bound <= 0) {
