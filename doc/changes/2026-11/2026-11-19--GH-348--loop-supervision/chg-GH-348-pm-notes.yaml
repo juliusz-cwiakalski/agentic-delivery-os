@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-19T12:40:00.372Z }
   dor_check: { started: null, completed: 2026-11-19T12:40:11.509Z }
   delivery: { started: null, completed: 2026-11-19T16:17:21.129Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-19T16:56:32.286Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -939,60 +939,67 @@ notes:
       the follow-up commit that records the hash."
     type: info
     date: "2026-11-19"
-  - text: "DOC-SYNC (system_spec_update, phase 7) — current-truth reconciliation
-      for GH-348, committed as dd5948aff195f173f42058cc56e462cad203ecc0 on
-      feat/GH-348/loop-supervision. NEW pages: doc/spec/features/feature-loop-supervision.md
-      (the five-verb grammar and flags, exit vocabulary and shell mapping, the six
-      shell status keys plus the additive keys and the per-key source table, the
-      engine-reuse boundary, the CEO spawn identity, the two-signal verdict with
-      the D1-D6/M1-M6 evidence classes and F0-F3 fold including the pid-only owner
-      rule and its residual risk, the restart-reason compromise, the terminate
-      reuse, the backoff schedule and at-bound history reference, the durable stop
-      and reset, the log retention bounds, single instance and session re-find, the
+  - text: "DOC-SYNC (system_spec_update, phase 7) — current-truth reconciliation for
+      GH-348, committed as dd5948aff195f173f42058cc56e462cad203ecc0 on
+      feat/GH-348/loop-supervision. NEW pages:
+      doc/spec/features/feature-loop-supervision.md (the five-verb grammar and
+      flags, exit vocabulary and shell mapping, the six shell status keys plus
+      the additive keys and the per-key source table, the engine-reuse boundary,
+      the CEO spawn identity, the two-signal verdict with the D1-D6/M1-M6
+      evidence classes and F0-F3 fold including the pid-only owner rule and its
+      residual risk, the restart-reason compromise, the terminate reuse, the
+      backoff schedule and at-bound history reference, the durable stop and
+      reset, the log retention bounds, single instance and session re-find, the
       configuration mapping, and the published nine-proven/six-not-proven proof
       boundary) and doc/quality/test-specs/test-spec-loop-supervision.md (the
-      enduring coverage map, case families and owning suites, battery fixtures and
-      doubled seams, mutation controls, AC-group traceability, and the mirrored
-      boundary). UPDATED pages: feature-coordinator-supervision.md (family split,
-      §3 pid limitation reconciled against the additive handle pid with the
-      coordinator composition still supplying none, the other §3 limitations
-      re-read, §8 record-kind sharing by identity, §10 shell-unchanged), feature-autonomous-delivery.md
-      (Mode A target is jaiship loop, INV-DM-3 corroborator typed source, NFR-5
-      ledger durable stop, script inventory and fallback kept, knob-to-key
-      mapping), feature-resident-daemon.md (loop reads daemon.lane read-only and
-      never writes it; daemon never reads loop records), feature-watchdog-lane-contracts.md
-      (check-only; not the loop's liveness source), feature-harness-adapters.md
-      (optional handle pid and streaming starter pid, CEO spawn identity, title as
-      reap identity, terminate reuse), feature-config-layer.md (zero keys added,
-      six coordinator keys consumed), feature-result-contract.md (zero new
-      identities/domain kinds; the two record kinds are not error identities; the
-      exhaustion remediation rides the loop summary), feature-state-layer.md (the
-      two new kinds with schemas, keys, writer/reader, loop-scoped prefixes, and
-      the unchanged delivery.state.v1 schema version), feature-cli-entrypoint.md
-      and feature-install-lifecycle.md (27-family inventory with loop last; the
-      retained 'twenty-six families' pin phrase kept truthful), doc/overview/glossary.md
-      (the new loop vocabulary and the 27-family set), doc/00-index.md (the new
-      feature page and the M4 loop reference page), doc/guides/delivery-modes.md
-      (typed Mode A beside the shell fallback; troubleshooting valid for both),
-      doc/guides/engine-first-operations.md (typed loop pointer), and
-      doc/planning/oss-tooling/milestones/m4/{README,flip-plan,backlog}.md (M4-S10
-      / F3 delivered; F5/F6 ownership intact). Guard-support data: the two new
-      pages are registered in scripts/checks/forbidden-literals.registry.json
-      (required for the user-facing-doc corpus scan; no check rule changed).
-      GUARDS: `bun test tests/checks` -> 1360 pass, 0 fail; doc-conformance 25/25;
-      reference-page parity + content inventory 42/42; loop contract/privacy/mutants
-      10/10; prior-identity-hermetic 5/5; `bash scripts/.tests/test-doc-distribution.sh`
-      -> OK, no drift across 96 in-scope docs; help-guide-coverage -> all
-      prompt-required commands covered; `git diff --check` clean. PROOF-BOUNDARY
-      EQUALITY: the page and test-spec lists compare equal to
-      LOOP_PARITY_PROOF_BOUNDARY.proven (9, in order) and .notProven (6, in order)
-      by a one-off bun check. STALE-STATE SCAN: zero hits for statements that the
-      outer loop is only scripts/ceo-loop.sh across the reconciled page set and
-      across doc/ excluding doc/changes. SCOPE-DRIFT disclosure: the commit
-      primitive reported three paths outside phase 9's declared staging scope —
+      enduring coverage map, case families and owning suites, battery fixtures
+      and doubled seams, mutation controls, AC-group traceability, and the
+      mirrored boundary). UPDATED pages: feature-coordinator-supervision.md
+      (family split, §3 pid limitation reconciled against the additive handle
+      pid with the coordinator composition still supplying none, the other §3
+      limitations re-read, §8 record-kind sharing by identity, §10
+      shell-unchanged), feature-autonomous-delivery.md (Mode A target is jaiship
+      loop, INV-DM-3 corroborator typed source, NFR-5 ledger durable stop,
+      script inventory and fallback kept, knob-to-key mapping),
+      feature-resident-daemon.md (loop reads daemon.lane read-only and never
+      writes it; daemon never reads loop records),
+      feature-watchdog-lane-contracts.md (check-only; not the loop's liveness
+      source), feature-harness-adapters.md (optional handle pid and streaming
+      starter pid, CEO spawn identity, title as reap identity, terminate reuse),
+      feature-config-layer.md (zero keys added, six coordinator keys consumed),
+      feature-result-contract.md (zero new identities/domain kinds; the two
+      record kinds are not error identities; the exhaustion remediation rides
+      the loop summary), feature-state-layer.md (the two new kinds with schemas,
+      keys, writer/reader, loop-scoped prefixes, and the unchanged
+      delivery.state.v1 schema version), feature-cli-entrypoint.md and
+      feature-install-lifecycle.md (27-family inventory with loop last; the
+      retained 'twenty-six families' pin phrase kept truthful),
+      doc/overview/glossary.md (the new loop vocabulary and the 27-family set),
+      doc/00-index.md (the new feature page and the M4 loop reference page),
+      doc/guides/delivery-modes.md (typed Mode A beside the shell fallback;
+      troubleshooting valid for both), doc/guides/engine-first-operations.md
+      (typed loop pointer), and
+      doc/planning/oss-tooling/milestones/m4/{README,flip-plan,backlog}.md
+      (M4-S10 / F3 delivered; F5/F6 ownership intact). Guard-support data: the
+      two new pages are registered in
+      scripts/checks/forbidden-literals.registry.json (required for the
+      user-facing-doc corpus scan; no check rule changed). GUARDS: `bun test
+      tests/checks` -> 1360 pass, 0 fail; doc-conformance 25/25; reference-page
+      parity + content inventory 42/42; loop contract/privacy/mutants 10/10;
+      prior-identity-hermetic 5/5; `bash
+      scripts/.tests/test-doc-distribution.sh` -> OK, no drift across 96
+      in-scope docs; help-guide-coverage -> all prompt-required commands
+      covered; `git diff --check` clean. PROOF-BOUNDARY EQUALITY: the page and
+      test-spec lists compare equal to LOOP_PARITY_PROOF_BOUNDARY.proven (9, in
+      order) and .notProven (6, in order) by a one-off bun check. STALE-STATE
+      SCAN: zero hits for statements that the outer loop is only
+      scripts/ceo-loop.sh across the reconciled page set and across doc/
+      excluding doc/changes. SCOPE-DRIFT disclosure: the commit primitive
+      reported three paths outside phase 9's declared staging scope —
       feature-cli-entrypoint.md and feature-install-lifecycle.md (the 27-family
-      pin truth) and engine-first-operations.md (the typed-loop fallback pointer);
-      all three are documentation gaps the reconciliation was required to fill,
-      and no source, agent prompt, or scripts/ceo-loop.sh byte changed."
+      pin truth) and engine-first-operations.md (the typed-loop fallback
+      pointer); all three are documentation gaps the reconciliation was required
+      to fill, and no source, agent prompt, or scripts/ceo-loop.sh byte
+      changed."
     type: info
     date: "2026-11-19"
