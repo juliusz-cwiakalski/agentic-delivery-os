@@ -41,7 +41,7 @@ import {
 import { createDispatchClock, DISPATCH_NOW } from "../harness";
 import { makeCheckout } from "../../queue/production/harness";
 import { projectScopeFor } from "../../projects/state-scope";
-import { createGuardedRunner, type GuardedRunner } from "./process-runner";
+import { createGuardedRunner, type GuardedInvocation, type GuardedRunner } from "./process-runner";
 
 const ROOT = process.cwd();
 const BASE = join(ROOT, "tmp", "tmpdir");
@@ -99,6 +99,7 @@ export type ParityObservation = {
   readonly resumes: number;
   readonly waits: readonly ParityWait[];
   readonly violations: readonly string[];
+  readonly invocations: readonly GuardedInvocation[];
   readonly envelopes: readonly ParityEnvelope[];
 };
 
@@ -331,6 +332,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
       resumes: guarded.resumes,
       waits: [...waits],
       violations: [...guarded.violations],
+      invocations: [...guarded.records],
       envelopes: runs.flatMap((entry) =>
         entry.envelope === undefined ? [] : [entry.envelope],
       ),

@@ -1118,6 +1118,7 @@ export {
   type DispatchHandoverOperation,
   type DispatchHandoverRecord,
   type DispatchHandoverState,
+  type DispatchLaneFacts,
   type DispatchLaneOwner,
   type DispatchLaneRecord,
   type DispatchLaneState,

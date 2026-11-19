@@ -11,6 +11,7 @@
  */
 import type { ParityObservation } from "./harness";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
+import { resumeOverPrOpen, resumeUnknownSession, resumeWithoutLane } from "./lane";
 
 /** The seven declared group names; the vocabulary is closed. */
 export const PARITY_GROUPS = [
@@ -70,6 +71,27 @@ export const PARITY_CASES: readonly ParityCase[] = [
     declaredSeam: "claim",
     scenario: () => admissionOtherRefLease(),
     expected: { exit: 1 },
+  },
+  {
+    id: "resume-pr-open-lane",
+    group: "resume",
+    declaredSeam: "lane",
+    scenario: () => resumeOverPrOpen(),
+    expected: { token: "pr-open" },
+  },
+  {
+    id: "resume-no-lane",
+    group: "resume",
+    declaredSeam: "lane",
+    scenario: () => resumeWithoutLane(),
+    expected: {},
+  },
+  {
+    id: "resume-unknown-session",
+    group: "resume",
+    declaredSeam: "lane",
+    scenario: () => resumeUnknownSession(),
+    expected: { token: "failed", exit: 1 },
   },
 ];
 

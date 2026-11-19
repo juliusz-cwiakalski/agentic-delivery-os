@@ -11,6 +11,7 @@
     "src/app/daemon.ts",
     "src/app/dispatch-attempts.ts",
     "src/app/dispatch-gate.ts",
+    "src/app/dispatch-lane.ts",
     "src/app/dispatch-ledger.ts",
     "src/app/dispatch.ts",
     "src/app/effects.ts",
@@ -420,7 +421,11 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",

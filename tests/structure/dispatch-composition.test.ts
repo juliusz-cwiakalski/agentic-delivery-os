@@ -694,6 +694,26 @@ describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", 
   });
 });
 
+describe("GH-347 the lane resolver and the delay fact are mounted", () => {
+  test("production mounts resolveDispatchLane at existingLane and binds the one delay fact", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
+    // The resolver is the seam, mounted by name; the delivered CLI-local
+    // closure is gone (no second implementation).
+    expect(production).toContain("existingLane: (ref) =>");
+    expect(production).toContain("resolveDispatchLane(store, {");
+    expect(production).not.toContain("laneFactsFor");
+    // One injected delay fact with the closed reasons; production binds a timer.
+    expect(production).toContain("delay: dispatchDelay");
+    expect(production).toContain("setTimeout(resolve, ms)");
+    // The advisory owner facts ride the composition.
+    expect(production).toContain("laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt }");
+    // The engine consumes the injected facts and never reads an ambient timer.
+    expect(engine).toContain("readonly delay?: DispatchDelay");
+    expect(engine).not.toContain("setTimeout");
+  });
+});
+
 describe("the production composition supplies and orders the preflight", () => {
   test("production wires the preflight and the engine invokes it before claimLease", () => {
     const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");

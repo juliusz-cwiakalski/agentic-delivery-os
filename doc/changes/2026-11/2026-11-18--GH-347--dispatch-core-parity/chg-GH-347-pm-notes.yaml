@@ -405,3 +405,27 @@ notes:
       removed. The phase commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 3 (durable lane writes and recorded-attempt resume) implemented
+      before its commit: the active lane append at session acquisition and the
+      terminal lane append at final classification through the phase-1 helpers
+      (append-only, latest-wins, no rewrite), the lane:append-failed disclosure
+      that leaves the token unchanged, the new resolver
+      packages/core/src/app/dispatch-lane.ts (dispatch-owned newest-with-session
+      plus the delivered daemon resumable states, newest wins) mounted at
+      existingLane in place of the deleted CLI-local laneFactsFor closure, the
+      relocated DispatchLaneFacts contract type with a CLI re-export (one
+      definition), the explicit fresh-spawn prompt-over-no-lane rule, and the
+      advisory laneOwner composition fact. Gate results: the lane/resume parity
+      suite 11 pass; dispatch-resume and dispatch-resume-economics green
+      unchanged; the composition suite green with the new mount assertion;
+      content/port inventory suites green; typecheck green; git diff --check
+      clean. DEVIATION, reported: packages/adapters/src/harness/opencode.ts
+      gains one additive registration on a successful COLD resume (a session
+      recorded by an earlier process). Without it the resumed handle's collect
+      returns harness.session.unknown, so AC-F3-1's recorded-attempt resume is
+      unachievable through the real adapter; the delivered adapter registered a
+      resumed session only when this process had spawned it or a binding was
+      present. No contract, token, projection, or identity changes. The phase
+      commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"

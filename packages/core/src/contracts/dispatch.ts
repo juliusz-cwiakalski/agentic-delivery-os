@@ -17,6 +17,7 @@ import type {
   HarnessModeOrigin,
   HarnessOutcome,
   HarnessSeatBinding,
+  HarnessSessionHandle,
   HarnessVersionVerdict,
 } from "./harness.js";
 import type { CommandResultError } from "./result.js";
@@ -610,3 +611,19 @@ export const DISPATCH_DELAY_REASONS = ["claim-fence", "tracker-ladder", "termina
 export type DispatchDelayReason = (typeof DISPATCH_DELAY_REASONS)[number];
 
 export type DispatchDelay = (ms: number, reason: DispatchDelayReason) => Promise<void>;
+
+/**
+ * The delivered lane facts a resume admits against (GH-347 API-3, DM-1).
+ *
+ * Relocated here from the CLI edge because the resolver lives in core and core
+ * cannot import CLI; the CLI re-exports this one definition (no second shape).
+ * `restartCount` is the persisted restart total, never a charge.
+ */
+export type DispatchLaneFacts = {
+  readonly handle: HarnessSessionHandle;
+  readonly completedPhases: readonly string[];
+  readonly adapterSupportsResumeInjection: boolean;
+  readonly restartCount: number;
+  readonly prefillCost?: number | null;
+  readonly uniqueProgress?: number | null;
+};

@@ -248,6 +248,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "summarizeRepositoryDivergences",
     "toSummaryData",
   ],
+  "core/src/app/dispatch-lane.ts": [
+    "DISPATCH_RESUMABLE_DAEMON_STATES",
+    "resolveDispatchLane",
+  ],
   "core/src/app/dispatch-ledger.ts": [
     "appendDispatchAttempt",
     "appendDispatchDivergence",

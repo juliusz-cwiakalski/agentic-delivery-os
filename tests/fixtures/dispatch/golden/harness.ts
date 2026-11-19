@@ -124,6 +124,8 @@ export type CommandScenarioOptions = {
   readonly preflight?: DispatchPreflightPort;
   /** The injected delay fact (GH-347 AC-F9-2); absent keeps the delivered order. */
   readonly delay?: DispatchDelay;
+  /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
+  readonly laneOwner?: { readonly processId: number; readonly startedAt: string };
   /** An optional store wrapper (for targeted append failures). */
   readonly store?: (store: StateStorePort) => StateStorePort;
 };
@@ -231,6 +233,7 @@ export const createCommandScenario = (options: CommandScenarioOptions = {}): Com
     readTruth: async () => options.reads ?? readsFrom(),
     ...(options.preflight === undefined ? {} : { preflight: options.preflight }),
     ...(options.delay === undefined ? {} : { delay: options.delay }),
+    ...(options.laneOwner === undefined ? {} : { laneOwner: options.laneOwner }),
     claimLease: () => {
       calls.claims.push("claim");
       return options.claim ?? { ok: true, leaseId: "lease-1" };

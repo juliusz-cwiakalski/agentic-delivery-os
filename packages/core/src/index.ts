@@ -95,6 +95,11 @@ export {
   readDispatchAttemptHistory,
 } from "./app/dispatch-attempts.js";
 export {
+  DISPATCH_RESUMABLE_DAEMON_STATES,
+  type DispatchLaneResolutionInput,
+  resolveDispatchLane,
+} from "./app/dispatch-lane.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverData,
   type DispatchHandoverResult,

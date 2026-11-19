@@ -255,6 +255,7 @@ import {
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
+  type DispatchLaneFacts,
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
   CAPSULE_MAX_SESSIONS,
@@ -333,7 +334,6 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessLivenessFacts,
-  type HarnessSessionHandle,
   type HarnessSessionPort,
   type MetricsReadSeams,
   type MetricsStateRead,
@@ -6986,6 +6986,8 @@ export type DispatchComposition = {
   readonly harnessAgent?: (ref: string) => string | undefined;
   /** The composition-resolved single-seat binding for this run (TDR-0040). */
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
+  /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
+  readonly laneOwner?: DispatchPorts["laneOwner"];
   readonly claimLease: (
     ref: string,
     repository: string,
@@ -7029,15 +7031,13 @@ export type DispatchComposition = {
   };
 };
 
-/** The delivered lane facts a resume admits against. */
-export type DispatchLaneFacts = {
-  readonly handle: HarnessSessionHandle;
-  readonly completedPhases: readonly string[];
-  readonly adapterSupportsResumeInjection: boolean;
-  readonly restartCount: number;
-  readonly prefillCost?: number | null;
-  readonly uniqueProgress?: number | null;
-};
+/**
+ * The delivered lane facts a resume admits against (GH-347 DM-1): one
+ * definition, relocated to `packages/core/src/contracts/dispatch.ts` because the
+ * resolver lives in core and core cannot import CLI. This is an alias, never a
+ * second shape.
+ */
+export type { DispatchLaneFacts };
 
 const isHarnessKind = (value: string): value is HarnessKind =>
   (HARNESS_KINDS as readonly string[]).includes(value);
@@ -7259,6 +7259,7 @@ export const createDispatchCommandRuntime = (
           : { harnessFacts: composition.harnessFacts }),
         ...(harnessAgent === undefined ? {} : { harnessAgent }),
         ...(harnessBinding === undefined ? {} : { harnessBinding }),
+        ...(composition.laneOwner === undefined ? {} : { laneOwner: composition.laneOwner }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),

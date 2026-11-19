@@ -14,6 +14,7 @@ import {
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_PAYLOAD_SCHEMA,
   DISPATCH_MAX_ERROR_DETAIL_CHARS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
@@ -65,6 +66,7 @@ import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-r
 import {
   appendDispatchAttempt,
   appendDispatchDivergence,
+  appendDispatchLane,
   foldDispatchDivergences,
   readDispatchDivergences,
 } from "./dispatch-ledger.js";
@@ -300,6 +302,15 @@ export type DispatchPorts = {
   readonly harnessAgent?: string;
   /** The composition-resolved single-seat binding for this run (TDR-0040 A-4). */
   readonly harnessBinding?: HarnessSeatBinding;
+  /**
+   * The advisory lane owner facts (GH-347 DM-1, TDR-0044): the composition's
+   * process id and the declared start instant. Absent keeps the lane write off
+   * (a direct composition that never gained a lane), never a fabricated owner.
+   */
+  readonly laneOwner?: {
+    readonly processId: number;
+    readonly startedAt: string;
+  };
   /**
    * The resolved harness facts, read lazily: the admission writes them for the
    * run in flight, so a pre-session refusal discloses them and a success records
@@ -715,6 +726,14 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     const now = ports.nowIso();
     const attemptId = ports.newAttemptId();
     let restarts = ports.initialRestarts ?? 0;
+    // The persisted total after this dispatch (the recorded count plus the
+    // ordinals this invocation consumes); the envelope reports it.
+    const persistedRestarts = restarts;
+    let laneAppendFailed = false;
+    // The 1-based iteration ordinal within this dispatch; phase 5 increments it
+    // per consumed restart.
+    let iterationOrdinal = 1;
+    let heldSession: HarnessSessionHandle | undefined;
     const budget = ports.restartBudget ?? 0;
     let resumeMode = ports.resumeMode;
     let prefillCostAcknowledged = ports.prefillCostAcknowledged;
@@ -738,6 +757,31 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly divergenceRef?: string;
       readonly detail?: NonNullable<DispatchEnvelopeError["detail"]>;
     }): DispatchRunResult => {
+      // The terminal lane record (GH-347 AC-F1-2): appended only when this
+      // dispatch held a session, and never rewritten. A failed append leaves
+      // the token unchanged and is disclosed as bounded evidence (AC-F1-3).
+      if (heldSession !== undefined && ports.laneOwner !== undefined) {
+        const terminal = appendDispatchLane(ports.store, ports.fenceToken, {
+          schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+          ref: ports.ref,
+          repository: ports.repository,
+          attemptId,
+          sessionId: heldSession.sessionId,
+          harnessKind: ports.harnessKind,
+          owner: ports.laneOwner,
+          iterationOrdinal,
+          restartsConsumed: restarts - persistedRestarts,
+          state: "terminal",
+          lastToken: input.token,
+          lastOutcome: input.outcome,
+          recordedAt: now,
+        });
+        if (!terminal.ok) laneAppendFailed = true;
+      }
+      const attemptEvidenceRefs = [
+        ...input.evidenceRefs,
+        ...(laneAppendFailed ? ["lane:append-failed"] : []),
+      ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const attempt: DispatchAttemptRecord = {
         schema: DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
         attemptId,
@@ -772,7 +816,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 ...(facts.modeOrigin === undefined ? {} : { modeOrigin: facts.modeOrigin }),
               };
             })()),
-        evidenceRefs: input.evidenceRefs,
+        evidenceRefs: attemptEvidenceRefs,
         recordedAt: now,
       };
       const appended = appendDispatchAttempt(ports.store, ports.fenceToken, attempt);
@@ -870,9 +914,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           ...propagation,
         });
       }
+      // A supplied resume prompt over "no lane" is an EXPLICIT fresh spawn with
+      // the operator's text (GH-347 AC-F3-3), never a fabricated resume.
       return ports.harness.spawn({
         workItemRef: ports.ref,
-        prompt: ports.prompt,
+        prompt: ports.resumePrompt ?? ports.prompt,
         descriptor: ports.descriptor,
         ...propagation,
       });
@@ -916,6 +962,26 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     }
 
     heldSessionId = session.value.sessionId;
+    heldSession = session.value;
+    // The active lane record at acquisition (GH-347 AC-F1-1, DM-1): written as
+    // the handle is acquired, before any outcome is known. A pre-session
+    // refusal never reaches this point, so it appends none.
+    if (ports.laneOwner !== undefined) {
+      const active = appendDispatchLane(ports.store, ports.fenceToken, {
+        schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+        ref: ports.ref,
+        repository: ports.repository,
+        attemptId,
+        sessionId: session.value.sessionId,
+        harnessKind: ports.harnessKind,
+        owner: ports.laneOwner,
+        iterationOrdinal,
+        restartsConsumed: restarts - persistedRestarts,
+        state: "active",
+        recordedAt: now,
+      });
+      if (!active.ok) laneAppendFailed = true;
+    }
     const collectPromise = ports.harness.collect({ handle: session.value });
 
     // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`

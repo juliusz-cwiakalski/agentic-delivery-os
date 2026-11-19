@@ -614,21 +614,16 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       ...input.handle,
       treeRoot: record?.handle.treeRoot ?? input.handle.treeRoot,
     };
-    if (record !== undefined) {
-      sessions.set(input.handle.sessionId, {
-        handle,
-        descriptor: record.descriptor,
-        completion: outcome.completion,
-        ...(binding === undefined ? {} : { binding }),
-      });
-    } else if (binding !== undefined) {
-      sessions.set(input.handle.sessionId, {
-        handle,
-        descriptor,
-        completion: outcome.completion,
-        binding,
-      });
-    }
+    // GH-347 AC-F3-1: a resume continues a session recorded by an earlier
+    // process, so the resumed stream's completion is registered even when this
+    // process never spawned it and the run is role-less. Without this the cold
+    // resume acquires a handle whose collect reports `harness.session.unknown`.
+    sessions.set(input.handle.sessionId, {
+      handle,
+      descriptor: record?.descriptor ?? descriptor,
+      completion: outcome.completion,
+      ...(binding === undefined ? {} : { binding }),
+    });
     return { ok: true, value: handle };
   };
 

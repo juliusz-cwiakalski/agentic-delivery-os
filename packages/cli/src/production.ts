@@ -141,6 +141,7 @@ import {
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
+  resolveDispatchLane,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
@@ -303,7 +304,6 @@ import {
   createVerifyGatesCommandRuntime,
   type DispatchCommandRuntime,
   type DispatchComposition,
-  type DispatchLaneFacts,
   type QueueComposition,
   resolveAgentIdentity,
 } from "./edge.js";
@@ -1571,6 +1571,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
     const nowIso = (): string => facts.clock?.nowIso() ?? new Date().toISOString();
     const nowMs = (): number => facts.clock?.nowMs() ?? Date.now();
+    // The composition's declared start instant rides every lane owner fact.
+    const compositionStartedAt = nowIso();
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
     const workspaceId = "default";
 
@@ -2468,40 +2470,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
-     * The delivered lane facts a resume admits against: the latest resumable
-     * daemon lane record's session, the folded phase ledger position, the
-     * adapter's resume-injection capability, and the recorded restart count.
-     */
-    const laneFactsFor = (ref: string, defaultKind: HarnessKind): DispatchLaneFacts | undefined => {
-      const lanes = readDaemonLanes(store);
-      if (!lanes.ok) return undefined;
-      const latest = [...lanes.records]
-        .reverse()
-        .find(
-          (lane) =>
-            lane.ref === ref &&
-            lane.sessionId !== undefined &&
-            (lane.state === "delivering" ||
-              lane.state === "detached" ||
-              lane.state === "preempted"),
-        );
-      if (latest?.sessionId === undefined) return undefined;
-      const kind = harnessKindOf(latest.harnessKind) ?? defaultKind;
-      const restarts = readEconomicsRecords(store, ref);
-      return {
-        handle: {
-          harnessKind: kind,
-          sessionId: latest.sessionId,
-          treeRoot: cwd,
-          workItemRef: ref,
-        },
-        completedPhases: completedPhaseIds(ref),
-        adapterSupportsResumeInjection: kind === "opencode",
-        restartCount: restarts.ok ? restarts.restarts.length : Math.max(0, latest.spawnOrdinal - 1),
-      };
-    };
-
-    /**
      * The provider web base, derived from the declared API base: the two
      * provider addressings GitHub publishes differ only by the API prefix.
      */
@@ -3092,6 +3060,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         return released.ok;
       },
       phaseLedger: phaseSummary,
+      ...(ownProcessId > 0
+        ? { laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt } }
+        : {}),
       // The one injected delay fact (GH-347 AC-F9-2): production binds the real
       // timer; no configuration key and no ambient timer lives in the engine.
       delay: dispatchDelay,
@@ -3104,7 +3075,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       livenessIntervalMs: lane.livenessIntervalMs,
       waitForCadence,
-      existingLane: (ref) => laneFactsFor(ref, settings.kind),
+      // The lane resolver seam (GH-347 API-3, AC-F9-2): the one function that
+      // resolves the newest recorded lane carrying a session identity.
+      existingLane: (ref) =>
+        resolveDispatchLane(store, {
+          ref,
+          defaultHarnessKind: settings.kind,
+          treeRoot: cwd,
+          completedPhases: completedPhaseIds,
+          restartCount: (target) => {
+            const restarts = readEconomicsRecords(store, target);
+            return restarts.ok ? restarts.restarts.length : 0;
+          },
+        }),
       ensureRestartExhaustion: ({ ref, runId, restarts, recordedAt }) => {
         const ensured = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
           schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
