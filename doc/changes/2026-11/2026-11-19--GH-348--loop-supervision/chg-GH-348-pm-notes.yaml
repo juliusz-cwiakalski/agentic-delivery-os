@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
-  specification: { started: null, completed: 2026-11-19T10:46:54.583Z }
+  specification: { started: null, completed: null }
   test_planning: { started: null, completed: 2026-11-19T10:47:07.675Z }
   delivery_planning: { started: null, completed: 2026-11-19T10:55:43.887Z }
   dor_check: { started: null, completed: null }
@@ -293,4 +293,92 @@ notes:
       permanent non-vacuity proof (GH-347 precedent); one minor changeset in
       phase 9."
     type: decision
+    date: "2026-11-19"
+  - text: "DoR gate iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md),
+      Pause Required: no. 24 findings: 1 critical (R-01), 8 major (R-02..R-09),
+      12 minor (R-10..R-21), 3 nit (N-01..N-03). Facets: plan_coverage and
+      decision_capture PASS; spec_completeness, ac_quality, test_traceability,
+      cross_artifact_consistency, system_spec_consistency,
+      plan_doc_update_coverage, plan_code_area_coverage and dod_defined FAIL.
+      The headline counts are correct (41 ACs, 74 cases, 77 links, 101 mutation
+      rows, 41/41 and 74/74 owned); the findings are semantic and contractual.
+      Owner order per the gate: specification first (R-01, R-02, R-04, R-05,
+      R-06, R-09, R-14, R-15, R-17, R-18, R-19, R-20, R-21, N-01), then
+      test_planning (R-03, R-07, R-10, R-11, R-12, R-13, R-16, plus the case
+      updates that follow the spec rulings), then delivery_planning (R-08,
+      R-16's file declaration, N-02, N-03, and the phase-9 staging additions).
+      No phase is reopened to delivery."
+    type: info
+    date: "2026-11-19"
+  - text: "PM rulings for the DoR-iteration-1 remediation (binding on the three
+      authors; each is a correctness ruling, not new scope): (1) R-01
+      CORROBORATOR IDENTITY. The delivered DispatchLaneOwner carries
+      `{processId, startedAt}` where startedAt is the COMPOSITION start instant,
+      so it can never match the platform process start time. The owner-liveness
+      rule is therefore: `in-progress` when the recorded process id is present
+      AND alive; no start-time comparison and no age bound. A false in-progress
+      only delays a kill (recoverable, and the CEO is genuinely blocked); a
+      false none kills a healthy session, which is the exact failure INV-DM-3
+      exists to prevent. Residual risk (pid reuse producing a delayed kill) is
+      declared on the page. Absent pid or unreadable liveness is `unknown`,
+      never `none`. (2) R-02 DECISION TABLE. The spec publishes the complete
+      corroborator table over (dispatch.lane newest state, owner pid presence,
+      liveness result, daemon.lane newest state, daemon pid presence, store
+      readability): `none` only when the store is readable AND every candidate
+      lane is terminal or its owner is dead AND no daemon lane is delivering;
+      `unknown` for any unreadable input, for a `delivering` daemon lane with an
+      absent pid, and for an unreadable liveness source. (3) R-03 DELIVER LEG.
+      `dispatch` is the deliver primitive; `phase complete` must not be labelled
+      as it. The battery drives the deliver leg through the real `dispatch`
+      command runtime with the nested PM session doubled by the same scripted
+      harness port. If nested execution proves genuinely infeasible, the
+      substitution becomes a named not-proven boundary item with
+      import/mount-level and prompt-content proof, and the ticket traceability
+      claim is narrowed to what is proven - never silently relabelled. (4) R-06
+      STATUS SOURCES. One source table: `loop_id` = the constant supervisor
+      identity `loop-main`, always present and never empty;
+      `loop_running`/`loop_pid` = the live lease holder; `ceo_alive` = live
+      session liveness; `ceo_pid`/`ceo_session` = LIVE session only, empty when
+      not alive (shell parity); `budget_epoch` = the persisted epoch, empty when
+      none; `ceo_title` and `last_*` = the recorded facts. TC-VERB-003's absent
+      world must therefore keep `loop_id=loop-main`. (5) R-09 BOUND. NFR-5
+      states the bound as the FORMULA stuck-window + collection-interval +
+      kill-grace + first backoff, with 652 000 ms named as the shipped-default
+      value; the implementation holds the formula, not a hardcoded literal, and
+      the case asserts both. (6) R-07 RESUME. Keep the spec's `resumes` wording
+      and make the case assert exactly one resume call with the recorded session
+      id, no title, and the same session id returned; do not weaken it to
+      observation. (7) R-08 HARNESS. The loop harness registers the coordinator
+      family as well as the loop family (production already mounts both), so
+      TC-INSTANCE-004 row B executes on its declared harness. (8) R-19 ITERATION
+      IDENTITY. The loop supplies a loop-scoped `iterationId` of the form
+      `<loopId>:<cycle ordinal>` on its stuck records and a `killFailureReason`
+      only on a failed kill; no third record kind is added. (9) R-20 HISTORY
+      REFERENCE. Defined as `epoch-<n>;restarts=<count>;seq=<the newest restart
+      record's ledger sequence>`, derivable from durable state and assertable in
+      the at-bound case. (10) R-18 CLEAN END. The composition's cycle driver
+      reporting its declared end is a declared clean-end cause (state=stopped,
+      exit 0), not a test-only concept. (11) R-21 GLOBAL FLAGS. The delivered
+      global flags `--json`, `--verbose`, `--pretty` are accepted on every verb
+      and are never grammar refusals. (12) R-04/R-05/R-14/R-15/R-17/N-01..N-03
+      are accepted as written: the DoD-7 observation names the two real
+      observations; feature-state-layer.md and the new
+      test-spec-loop-supervision.md join Appendix A, DOD-9 and the plan's
+      staging list; the restart-reason compromise is stated as such; the INV-DM
+      citation becomes INV-DM-3/5; the five-vs-six env-knob wording, the plan's
+      five-field sentence and the M53 double-declaration are corrected. R-10,
+      R-11, R-12, R-13 and R-16 are accepted as test-plan corrections."
+    type: decision
+    date: "2026-11-19"
+  - text: "RETRO (DoR iteration 1): the gate earned its cost. R-01 is the same class
+      of defect the GH-347 retro named - a rule that cites a value the delivered
+      implementation does not produce - this time in prose rather than a table,
+      and it would have implemented a corroborator that returns `none` for every
+      live delivery. R-02 shows the second-order cost of fixing only the
+      headline rule: the decision table around it was never written, so the
+      one-line fix would have left the ambiguous cases in place. Process fix for
+      the remediation pass: every rule that reads a delivered record must state
+      the exact delivered fields it consumes and give the full case table, not
+      only the happy path."
+    type: retro
     date: "2026-11-19"
