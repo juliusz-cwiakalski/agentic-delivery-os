@@ -3442,14 +3442,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       progressBoundMs: PRODUCTION_DEFAULTS.coordinator["progress-bound"],
     });
 
+    /**
+     * Resolve the coordinator settings ONCE per composition: the loop profile
+     * consumes the same resolved values, and a second acquisition would be a
+     * second configuration read at composition time (TC-BIN-012's touch count).
+     */
+    let resolvedCoordinatorSettingsCache: CoordinatorSettings | null = null;
     const resolveProductionCoordinatorSettings = (): CoordinatorSettings => {
+      if (resolvedCoordinatorSettingsCache !== null) return resolvedCoordinatorSettingsCache;
       const gitRoot = gitRootForConfig();
       const acquired = acquireProjectConfiguration(gitRoot);
       if (!acquired.ok) return defaultCoordinatorSettings();
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return defaultCoordinatorSettings();
       const settings = resolveCoordinatorSettings(resolved.value.values, resolved.value.origins);
-      return settings.ok ? settings.value : defaultCoordinatorSettings();
+      const value = settings.ok ? settings.value : defaultCoordinatorSettings();
+      resolvedCoordinatorSettingsCache = value;
+      return value;
     };
 
     /**

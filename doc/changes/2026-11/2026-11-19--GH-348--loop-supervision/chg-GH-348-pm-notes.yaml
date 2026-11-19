@@ -889,3 +889,14 @@ notes:
       fixture commits only (no repository config is changed)."
     type: info
     date: "2026-11-19"
+  - text: "PLAN PHASE 9 remediation commit: 94485b85 (the closed-surface pin
+      updates listed above). One further gate fix follows it: the loop
+      composition resolved the coordinator settings a second time, which made the
+      invalid-override configuration touch count 3 instead of 2 (TC-BIN-012); the
+      resolution is now cached once per composition and shared by the coordinator
+      and the loop profile, so the touch count is unchanged. TC-BIN-084 and the
+      docs-scope lifetime case then pass with the fixture commit signing
+      override, proving the earlier failures were the machine's global
+      commit.gpgsign=true and not the change."
+    type: info
+    date: "2026-11-19"
