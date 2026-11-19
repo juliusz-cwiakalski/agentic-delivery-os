@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-19T12:40:11.509Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: 2026-11-19T16:56:32.286Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-19T19:25:45.916Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -689,32 +689,54 @@ notes:
     type: decision
     date: "2026-11-19"
   - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml). Iteration-1
-      dispositions: 6 CLOSED (F-2, F-4, F-5, F-6, F-8, F-9), F-1 NOT CLOSED,
-      F-3 CLOSED with residual N-3, F-7 PARTIALLY CLOSED. New blocker N-1 is the
+      dispositions: 6 CLOSED (F-2, F-4, F-5, F-6, F-8, F-9), F-1 NOT CLOSED, F-3
+      CLOSED with residual N-3, F-7 PARTIALLY CLOSED. New blocker N-1 is the
       same defect class as F-1 in the sibling arm: artifactAdvanced reads
       `recordedAt` for both kinds, but `blocker.answer` stores its instant as
       `answeredAt`, so the undatable-record fallback fires for every blocker
-      answer and a stuck CEO is never detected in a repository that has answered a
-      blocker; the F-1 harness injects instants and cannot catch it. Other new
+      answer and a stuck CEO is never detected in a repository that has answered
+      a blocker; the F-1 harness injects instants and cannot catch it. Other new
       findings: N-2 (the test plan claims doc-conformance enforces the
-      page/constant boundary; it does not - the phase-7 reconciliation does), N-3
-      (factsOfEffect forces `alive` on the null-start-time join, so the documented
-      unknown-liveness rule is not enforced), N-4 (core app index.ts outside phase
-      10 scope). Verified green by the review: loop behaviour 93, conformance
-      structure/checks 36, pinned/no-shell/inventory 59, doc suites 30,
-      doc-distribution 96 docs, range gate PASS over 41 commits, boundary 9/6,
-      no-shell extended to 10 loop files, ten divergences unchanged."
+      page/constant boundary; it does not - the phase-7 reconciliation does),
+      N-3 (factsOfEffect forces `alive` on the null-start-time join, so the
+      documented unknown-liveness rule is not enforced), N-4 (core app index.ts
+      outside phase 10 scope). Verified green by the review: loop behaviour 93,
+      conformance structure/checks 36, pinned/no-shell/inventory 59, doc suites
+      30, doc-distribution 96 docs, range gate PASS over 41 commits, boundary
+      9/6, no-shell extended to 10 loop files, ten divergences unchanged."
     type: info
     date: "2026-11-19"
   - text: "Review-iteration-2 remediation routing: a NEW plan phase 11 owns N-1
       (read the per-kind instant, including `answeredAt`, plus a case proving a
       prior blocker answer does not suppress a later verdict), N-3 (the null
-      start-time join must stay unknown-liveness), F-7 (persist the last observed
-      progress so a separate-process status projects it), N-2 (correct the test
-      plan sentence to name the phase-7 reconciliation) and N-4 (declare the
-      file in scope). No decision is reopened. Review iteration 3 is the last
-      permitted; if it fails, the PM stops and reports instead of looping."
+      start-time join must stay unknown-liveness), F-7 (persist the last
+      observed progress so a separate-process status projects it), N-2 (correct
+      the test plan sentence to name the phase-7 reconciliation) and N-4
+      (declare the file in scope). No decision is reopened. Review iteration 3
+      is the last permitted; if it fails, the PM stops and reports instead of
+      looping."
     type: decision
+    date: "2026-11-19"
+  - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml). All five
+      iteration-2 findings CLOSED and verified independently: N-1 by reproducing
+      a real `blocker.answer` through the delivered append (payload carries
+      `answeredAt`, no `recordedAt`) and confirming the verdict is `stuck` while
+      the after-baseline control reads `advanced=true`; N-3 by the
+      unknown-liveness join short-circuiting the verdict; F-7 by a second
+      supervisor over the same state root projecting the persisted progress with
+      only two records over three quiet cycles; N-2 and N-4 by inspection.
+      Regression sweep clean: no delivered assertion removed or relaxed, pinned
+      surfaces widened not weakened, no-shell extended (loop glob), boundary
+      nine/six in order, ten divergences unchanged, no new identity/kind/key, no
+      coordinator change. Two INFO findings, both accepted without a code
+      change: N-5 (phase 11's declaration omitted
+      `packages/core/src/domain/index.ts` - now declared, a declaration-only
+      fix) and N-6 (`MERGE_TRANSACTION_RECORD_KIND` re-declared in
+      loop-verdict.ts though `#contracts` exports it; value-identical, clean
+      typecheck and exports-parity, left as recorded). Review checks: behaviour
+      100, conformance/structure/checks 36, pinned 59, doc 25, exports-parity
+      and depcruise clean, range gate PASS over 43 commits."
+    type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
       folds, and the pure verdict/backoff/log/status/prompt tier). Implemented
@@ -1072,43 +1094,43 @@ notes:
       F-1 (F-5/AC-F5-1/DM-6) the port is `artifactAdvanced(sinceMs)`; the
       supervisor passes the baseline it measures the window from and production
       compares the record `recordedAt`, so a prior merge no longer suppresses a
-      stuck verdict; F-2 (F-5 evidence table/AC-F5-7) the corroborator reduces to
-      the NEWEST dispatch lane per ref through a new `newestLanePerRef` helper, so
-      a superseded active lane reads `none`; F-3 (F-6/AC-F6-2/AC-F6-4)
-      `establishSession` returns the JOINED effect's facts, production's join
-      seeds from the durable newest loop.session, and a recorded pid with a null
-      start time is unknown-liveness (never probed with 0, never replaced);
-      F-4 (AC-F8-4/Appendix C(b)) TC-BATTLE-006 now drives `queue claim`,
-      `dispatch` and `merge` through the REAL composed command runtime over the
-      delivered dispatch conformance fixtures and asserts their real envelopes
-      (`queue.precondition.unmet`, `noop-lane-nothing-to-do`,
+      stuck verdict; F-2 (F-5 evidence table/AC-F5-7) the corroborator reduces
+      to the NEWEST dispatch lane per ref through a new `newestLanePerRef`
+      helper, so a superseded active lane reads `none`; F-3
+      (F-6/AC-F6-2/AC-F6-4) `establishSession` returns the JOINED effect's
+      facts, production's join seeds from the durable newest loop.session, and a
+      recorded pid with a null start time is unknown-liveness (never probed with
+      0, never replaced); F-4 (AC-F8-4/Appendix C(b)) TC-BATTLE-006 now drives
+      `queue claim`, `dispatch` and `merge` through the REAL composed command
+      runtime over the delivered dispatch conformance fixtures and asserts their
+      real envelopes (`queue.precondition.unmet`, `noop-lane-nothing-to-do`,
       `merge.state-unverified`), the real lane evidence, zero shell invocations,
       and the loop staying healthy on the corroborated reading — the boundary
       stays nine proven / six not-proven; F-5 (AC-F8-1) the battery meta-case
-      executes all nine surfaces with surface-specific observations and rejects a
-      planted off-boundary/empty row by name; F-6 (AC-F2-4, AC-F8-1, plan D-4) the
-      D1 re-observation asserts the composed argv's `--agent ceo`/`--model` on
-      success and the delivered refusal identity otherwise, with the tautological
-      `toBeDefined` removed; F-7 (API-4) the projection carries the last OBSERVED
-      progress state with a golden assertion; F-8 (F-5/AC-F5-2) the verdict
-      consults `progressBoundMs` for the positive-progress cause and a stale
-      positive stays kill-safe `unevaluable`. F-9 (INFO) no action. One pin update
-      rode along: the new selector's executable-allowance row
-      (tests/structure/content-inventory.test.ts). Gate results at this boundary:
-      `bun test tests/behaviour/loop-*.test.ts` 93 pass / 0 fail; `bun test
-      tests/conformance/loop tests/structure/loop-*.test.ts
+      executes all nine surfaces with surface-specific observations and rejects
+      a planted off-boundary/empty row by name; F-6 (AC-F2-4, AC-F8-1, plan D-4)
+      the D1 re-observation asserts the composed argv's `--agent ceo`/`--model`
+      on success and the delivered refusal identity otherwise, with the
+      tautological `toBeDefined` removed; F-7 (API-4) the projection carries the
+      last OBSERVED progress state with a golden assertion; F-8 (F-5/AC-F5-2)
+      the verdict consults `progressBoundMs` for the positive-progress cause and
+      a stale positive stays kill-safe `unevaluable`. F-9 (INFO) no action. One
+      pin update rode along: the new selector's executable-allowance row
+      (tests/structure/content-inventory.test.ts). Gate results at this
+      boundary: `bun test tests/behaviour/loop-*.test.ts` 93 pass / 0 fail; `bun
+      test tests/conformance/loop tests/structure/loop-*.test.ts
       tests/checks/loop-*.test.ts` 36 pass / 0 fail; the pinned suites
       (install-conformance, metrics-mounting, reference-page-parity,
       no-shell-dispatch, install-conformance-mutants) 36 pass / 0 fail; the
       invariant suites (event-mount-guards, event-additivity-inventory,
       event-taxonomy-single-source, port-contract-inventory,
-      supervision-mounting) 38 pass / 0 fail; `pnpm typecheck` green; `pnpm check`
-      exit 0 at this HEAD (11 432 pass / 0 fail over 1 414 files, with boundaries,
-      memory, prompt-conformance, help-guide-coverage and exports-parity green);
-      `git diff --check` clean. `jaiship plan validate GH-348` -> verdict=valid,
-      tier=full, readyForDevelopment=true; `jaiship lint plan GH-348` -> valid,
-      errors=[]. No lifecycle transition, no push, no PR; the spec and the test
-      plan's ownership are untouched."
+      supervision-mounting) 38 pass / 0 fail; `pnpm typecheck` green; `pnpm
+      check` exit 0 at this HEAD (11 432 pass / 0 fail over 1 414 files, with
+      boundaries, memory, prompt-conformance, help-guide-coverage and
+      exports-parity green); `git diff --check` clean. `jaiship plan validate
+      GH-348` -> verdict=valid, tier=full, readyForDevelopment=true; `jaiship
+      lint plan GH-348` -> valid, errors=[]. No lifecycle transition, no push,
+      no PR; the spec and the test plan's ownership are untouched."
     type: info
     date: "2026-11-19"
   - text: "DOCUMENTATION RE-SYNC after review-iteration-1 remediation (docs commit
@@ -1117,20 +1139,21 @@ notes:
       `progress-bound` freshness, newest-per-ref corroborator, re-find fact
       seeding and the null-start-time unknown-liveness arm, status
       `session.progress`, the real-runtime pick-deliver-merge scenario and the
-      unchanged nine/six boundary), doc/quality/test-specs/test-spec-loop-supervision.md
-      (the same surfaces in the test map and scenarios), and
-      doc/overview/glossary.md (the two-signal and corroborator entries).
-      GUARDS: `bun test tests/checks/doc-conformance.test.ts
+      unchanged nine/six boundary),
+      doc/quality/test-specs/test-spec-loop-supervision.md (the same surfaces in
+      the test map and scenarios), and doc/overview/glossary.md (the two-signal
+      and corroborator entries). GUARDS: `bun test
+      tests/checks/doc-conformance.test.ts
       tests/checks/reference-page-parity.test.ts
       tests/structure/content-inventory.test.ts` -> 42 pass, 0 fail; `bash
       scripts/.tests/test-doc-distribution.sh` -> OK, no drift across 96
       in-scope docs; `git diff --check` clean. PROOF-BOUNDARY EQUALITY: both
       pages carry the nine proven and six not-proven ids in the same order as
       LOOP_PARITY_PROOF_BOUNDARY; the boundary is unchanged. STALE-STATE SCAN:
-      zero hits for the superseded artifact-advance, every-lane, unobserved-join,
-      hardcoded-progress, and stale-positive claims. `ados_distribution:
-      internal` present on all three changed pages. No lifecycle transition, no
-      push, no PR."
+      zero hits for the superseded artifact-advance, every-lane,
+      unobserved-join, hardcoded-progress, and stale-positive claims.
+      `ados_distribution: internal` present on all three changed pages. No
+      lifecycle transition, no push, no PR."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 11 complete (review-iteration-2 remediation) — commit
@@ -1156,34 +1179,36 @@ notes:
       written on the acquisition record from the first reading and afterwards
       only when the state CHANGES (never per cycle), with the `ended` record
       carrying the last observed state; the projection reads the newest recorded
-      value, so a fresh-process `status` carries it (new two-supervisor case over
-      one state root, plus a null-before-first-reading case). DM-1's declared
-      field list stays accurate: the spec enumerates the record's fields and
-      §25.4 Appendix D leaves identifiers 'beyond the declared fields'
-      implementation-decided, so the additive optional member is inside that
-      latitude and the spec was NOT edited. N-2 (MINOR) the test plan's false
-      'doc-conformance enforces the page/constant boundary' claim is corrected to
-      name the actual mechanism (the lifecycle phase-7 one-off reconciliation
-      recorded in pm-notes), keeping AC-F8-5's documentation-phase scope; that is
-      the only test-plan edit. N-4 (INFO) `packages/core/src/app/index.ts` is
-      declared in this phase as a pre-existing contribution (phase 10's re-export;
-      no code change). One pin update rode along: the three new verdict-tier
-      exports' executable-allowance rows. Gate results: `bun test
+      value, so a fresh-process `status` carries it (new two-supervisor case
+      over one state root, plus a null-before-first-reading case). DM-1's
+      declared field list stays accurate: the spec enumerates the record's
+      fields and §25.4 Appendix D leaves identifiers 'beyond the declared
+      fields' implementation-decided, so the additive optional member is inside
+      that latitude and the spec was NOT edited. N-2 (MINOR) the test plan's
+      false 'doc-conformance enforces the page/constant boundary' claim is
+      corrected to name the actual mechanism (the lifecycle phase-7 one-off
+      reconciliation recorded in pm-notes), keeping AC-F8-5's
+      documentation-phase scope; that is the only test-plan edit. N-4 (INFO)
+      `packages/core/src/app/index.ts` is declared in this phase as a
+      pre-existing contribution (phase 10's re-export; no code change). One pin
+      update rode along: the three new verdict-tier exports'
+      executable-allowance rows. Gate results: `bun test
       tests/behaviour/loop-*.test.ts` 100 pass / 0 fail; `bun test
       tests/conformance/loop tests/structure/loop-*.test.ts
       tests/checks/loop-*.test.ts` 36 pass / 0 fail; pinned suites 47 pass / 0
-      fail; invariant suites 38 pass / 0 fail; `pnpm typecheck` green; `pnpm lint`
-      0 errors; `pnpm format:check` clean; `jaiship plan validate GH-348` ->
-      verdict=valid, tier=full, readyForDevelopment=true; `jaiship lint plan
+      fail; invariant suites 38 pass / 0 fail; `pnpm typecheck` green; `pnpm
+      lint` 0 errors; `pnpm format:check` clean; `jaiship plan validate GH-348`
+      -> verdict=valid, tier=full, readyForDevelopment=true; `jaiship lint plan
       GH-348` -> valid, errors=[]. Aggregate `pnpm check` at this HEAD: 11 437
       pass / 2 fail over 1 414 files, where BOTH failures are 5-second test
-      timeouts in subprocess-spawning suites caused by a concurrent full-suite run
-      from another workspace on this machine (TC-INST-020 in
-      install-replace.test.ts and TC-SECRET-001 in privacy-literals.test.ts); each
-      passes in isolation (15 pass / 0 fail and 39 pass / 0 fail) and no loop
-      suite failed. The run also used an isolated HOME because another session
-      installed an artifact at ~/.jaiship/bin/jaiship that the doc-distribution
-      guard's sandbox install refuses to overwrite (documented environment fact,
-      not a change defect). No lifecycle transition, no push, no PR."
+      timeouts in subprocess-spawning suites caused by a concurrent full-suite
+      run from another workspace on this machine (TC-INST-020 in
+      install-replace.test.ts and TC-SECRET-001 in privacy-literals.test.ts);
+      each passes in isolation (15 pass / 0 fail and 39 pass / 0 fail) and no
+      loop suite failed. The run also used an isolated HOME because another
+      session installed an artifact at ~/.jaiship/bin/jaiship that the
+      doc-distribution guard's sandbox install refuses to overwrite (documented
+      environment fact, not a change defect). No lifecycle transition, no push,
+      no PR."
     type: info
     date: "2026-11-19"

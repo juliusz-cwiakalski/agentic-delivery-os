@@ -1,0 +1,265 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-348
+branch: feat/GH-348/loop-supervision
+status: PASS
+
+summary: |
+  Final re-review of the review-iteration-2 remediation over 400461dc..6f1a5bef
+  (and the whole range origin/main-tools..HEAD, base f802f71a) against
+  chg-GH-348-spec.md v1.4 (41 ACs), test plan r0.6, the eleven-phase plan
+  (phase 11 = iteration-2 remediation) and the pm-notes. All five open
+  iteration-2 items are genuinely closed, verified in the code and by running
+  the suites, not from the report. N-1 (the headline failure twice) is CLOSED:
+  the artifact instant is now resolved PER KIND in one pure helper — recordedAt
+  for merge.transaction and answeredAt for blocker.answer — with the
+  undatable→advance fallback confined to records that genuinely carry no instant;
+  the delivered case builds a REAL blocker.answer through the delivered
+  appendBlockerAnswer, and I independently reproduced the full chain (real prior
+  answer → artifactAdvancedSince false → evaluateLoopVerdict stuck) plus the
+  within-window control. N-3 is CLOSED: the null-start-time join carries
+  liveness "unknown" and the cycle now observes the establishment facts, so
+  liveSession is false and no verdict/kill can occur on that arm (the new case
+  asserts 0 kills/0 stuck/0 restarts, live-facts-unknown, 0 spawns). F-7 is
+  CLOSED: the last observed progress is persisted as an additive optional
+  progressState on the loop's own loop.session record (absent before the first
+  reading, appended only on change, never per cycle), and a SECOND supervisor
+  over the same state root projects it. N-2 is CLOSED (the test-plan sentence now
+  names the phase-7 documentation reconciliation and states doc-conformance does
+  not read the loop boundary). N-4 is CLOSED (phase 11 declares
+  packages/core/src/app/index.ts). The regression sweep is clean: no delivered
+  assertion removed or relaxed in the remediation delta (and the only whole-range
+  removals remain the 26→27 command-family repins), pinned surfaces not weakened
+  (content-inventory allowance only widened for the three new exports), the
+  no-shell invariant still EXTENDED (loop-* globbed into DISPATCH_FLOW_SURFACE,
+  not duplicated), the proof boundary still nine/six in the declared order, the
+  ten §8.5 divergences unchanged (doc/spec is untouched), no new error identity,
+  domain kind, or configuration key, and no coordinator source change. Two new
+  INFO observations (no code impact on correctness): phase 11's declared
+  scope.files omits packages/core/src/domain/index.ts (the barrel that re-exports
+  the three new symbols), and the merge-transaction kind label is re-declared in
+  the loop domain rather than imported from #contracts. Neither blocks; the
+  verdict is PASS.
+
+spec_compliance: PASS
+plan_compliance: PASS
+plan_gaps:
+  - "SCOPE_DEVIATION (info, N-5): phase 11 edited packages/core/src/domain/index.ts (re-export of artifactAdvancedSince, artifactInstantOf, MERGE_TRANSACTION_RECORD_KIND) but phase 11's scope.files omits it, although it declares packages/core/src/index.ts, packages/core/src/app/index.ts and packages/core/src/domain/loop-verdict.ts. Necessary barrel re-export; code correct; only the declared scope is incomplete. Amend the phase-11 file list."
+
+diff_scope:
+  range: origin/main-tools..HEAD
+  base: f802f71a
+  head: 6f1a5bef
+  files_changed: 146
+  insertions: 20956
+  deletions: 474
+  by_area:
+    packages: { files: 26, insertions: 3555, deletions: 70 }
+    tests: { files: 82, insertions: 5291, deletions: 182 }
+    scripts: { files: 3, insertions: 18, deletions: 1 }
+    doc: { files: 34, insertions: 12072, deletions: 221 }
+    other: { files: 1, insertions: 20, deletions: 0 }
+  delta_since_iteration_2:
+    range: 400461dc..6f1a5bef
+    commits: 2
+    files_changed: 18
+    insertions: 910
+    deletions: 44
+    by_area:
+      packages: { files: 8, insertions: 147, deletions: 34 }
+      tests: { files: 6, insertions: 161, deletions: 2 }
+      doc: { files: 4, insertions: 602, deletions: 8 }
+    note: >-
+      The 4 doc files are the phase-11 plan/pm-notes, the one-line test-plan
+      correction and review-iter-2.yaml; NO source file outside the phase-11
+      declared set changed except packages/core/src/domain/index.ts (N-5). The
+      delta is the whole iteration-2 remediation: production.ts (helper call),
+      loop-session.ts (record builder), loop-supervisor.ts (liveness, durable
+      progress, projection), contracts/loop.ts (optional progressState),
+      state/loop.ts (parse the optional field), domain/loop-verdict.ts (per-kind
+      instant + helper), domain/index.ts + core/index.ts (re-exports), and the
+      four behaviour suites, the harness, and the content-inventory allowance.
+
+severity_breakdown:
+  blocker: 0
+  major: 0
+  minor: 0
+  info: 2
+
+iteration2_disposition:
+  - id: N-1
+    prior_severity: blocker
+    disposition: CLOSED
+    evidence: >-
+      The instant is resolved PER KIND in one pure helper: artifactInstantOf
+      reads answeredAt for a blocker.answer (BLOCKER_ANSWER_RECORD_KIND) and
+      recordedAt otherwise (domain/loop-verdict.ts:158,166-178), and
+      artifactAdvancedSince compares it to sinceMs, returning true only for
+      records genuinely after the baseline and falling back to "advance" only
+      when the record carries no usable instant (loop-verdict.ts:181-201). The
+      composition delegates verbatim (cli/production.ts:3927-3934), so there is
+      no second predicate to drift. The delivered case builds a REAL
+      blocker.answer through the delivered appendBlockerAnswer
+      (state/blockers.ts:462-486; answerPayload stores answeredAt, not
+      recordedAt) and asserts the payload shape, artifactInstantOf reads
+      answeredAt, a PRIOR answer yields no advance (stuck reachable), an
+      after-baseline answer yields an advance (within-window control), a null
+      baseline yields none, and an undatable record yields an advance
+      (behaviour/loop-stuck.test.ts:126-200). I independently drove the full
+      chain over a real store: appendBlockerAnswer → artifactAdvancedSince false
+      → evaluateLoopVerdict "stuck"/"stuck-artifact-evidence", and the
+      after-baseline control → "progressing". The prior merge path is already
+      closed by the baseline-aware F-1 harness cases (loop-stuck.test.ts:86-124).
+      Note: the case titled "a PRIOR blocker answer does not suppress a later
+      stuck verdict" asserts at the predicate level, not a full verdict; the
+      verdict leg is proven transitively by the production delegation and the
+      F-1 harness, which is sufficient. Genuinely closed end to end.
+  - id: N-3
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      factsOfEffect carries liveness "unknown" for the null-start-time join
+      (loop-supervisor.ts:606-617,640) and the cycle observes the ESTABLISHMENT
+      facts (currentFacts ?? ports.session.read(), loop-supervisor.ts:698), with
+      currentFacts set at establish (911-914) and on replacement spawn (871). An
+      unknown-liveness session yields liveSession false, so evaluateLoopVerdict
+      returns "progressing" before any stuck/kill fold (loop-verdict.ts:83). The
+      new case seeds a pid 4242 with a null start time and a live port, runs zero
+      traffic past the window, and asserts 0 kills, 0 stuck, 0 restarts,
+      live-facts-unknown on status, and 0 spawns (behaviour/loop-instance.test.ts:260-292).
+  - id: F-7
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      The last observed progress is now DURABLE on the loop's own loop.session
+      record: progressState is an additive OPTIONAL member (contracts/loop.ts
+      LoopSessionRecord), carried by sessionRecordFrom/endedSessionRecord
+      (app/loop-session.ts), validated on read to the closed positive|zero|unknown
+      set (state/loop.ts:94-98). The acquisition record carries the FIRST reading;
+      a later record is appended ONLY when the state changes (loop-supervisor.ts:751-767,
+      guarded by persistedProgress), never per cycle; the ended record carries the
+      last state (574). The projection reads newestSession.progressState ?? progress
+      (loop-supervisor.ts:401), so a SECOND supervisor over the same state root
+      projects it (behaviour/loop-status.test.ts:95-118, harness `root` reuse). A
+      quiet 3-cycle run still appends exactly 2 session records (acquisition +
+      ended) and the acquisition record carries progressState
+      (behaviour/loop-spawn.test.ts:117-150), so there is no per-cycle append; an
+      absent reading projects null, never a fabricated token.
+  - id: N-2
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      chg-GH-348-test-plan.md:49 no longer claims doc-conformance.test.ts
+      enforces the page/constant boundary; it now states the page/constant
+      comparison is a documentation-phase check performed ONCE by the phase-7
+      reconciliation (@doc-syncer), recorded in pm-notes, that no permanent
+      delivery case reads the page, that no aggregate suite enforces the
+      equality, and explicitly that tests/checks/doc-conformance.test.ts does not
+      read the loop boundary. Matches AC-F8-5's documentation-phase scope.
+  - id: N-4
+    prior_severity: info
+    disposition: CLOSED
+    evidence: >-
+      Plan phase 11 (id: 11) scope.files now declares packages/core/src/app/index.ts
+      as a pre-existing contribution with no code change in this phase
+      (chg-GH-348-plan.yaml:3088-3090), and plan validate reports
+      verdict=valid / readyForDevelopment=true.
+
+findings:
+  - id: N-5
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: "packages/core/src/domain/index.ts:1156-1161 (plan phase 11 scope.files)"
+    issue: >-
+      The iteration-2 remediation added the three new exports
+      (artifactAdvancedSince, artifactInstantOf, MERGE_TRANSACTION_RECORD_KIND)
+      to packages/core/src/domain/index.ts, but phase 11's scope.files lists
+      packages/core/src/index.ts and packages/core/src/app/index.ts yet omits
+      the domain barrel. The change is correct and necessary; only the declared
+      scope is incomplete (same class as the iteration-2 N-4, which was fixed by
+      declaring app/index.ts).
+    authorising_clause: "chg-GH-348-plan.yaml phase 11 scope; plan-audit SCOPE_DEVIATION"
+    suggestion: >-
+      Add packages/core/src/domain/index.ts to phase 11's scope.files (declared
+      pre-existing re-export, no code change). No source change required.
+    suppressed: false
+    published_url: null
+
+  - id: N-6
+    severity: info
+    confidence: high
+    category: code-quality
+    location: "packages/core/src/domain/loop-verdict.ts:158"
+    issue: >-
+      MERGE_TRANSACTION_RECORD_KIND = "merge.transaction" is re-declared in the
+      loop domain even though contracts/merge.ts already exports the identical
+      constant through #contracts (loop-verdict.ts already imports
+      BLOCKER_ANSWER_RECORD_KIND from the same barrel). Two exported
+      declarations of one record-kind label is an avoidable single-source smell
+      (the event-taxonomy guard does not cover record kinds). Behaviour is
+      identical — the values match — and no consumer is ambiguous under TypeScript
+      (typecheck and exports-parity pass), so this is optional cleanliness only.
+    authorising_clause: "repository single-source-of-truth convention; content-inventory / event-taxonomy intent"
+    suggestion: >-
+      Import MERGE_TRANSACTION_RECORD_KIND from "#contracts" in loop-verdict.ts
+      (as BLOCKER_ANSWER_RECORD_KIND is), re-exporting if external consumers need
+      it through the verdict tier, and drop the content-inventory allowance row
+      if the local export disappears. No behavioural change.
+    suppressed: false
+    published_url: null
+
+positive_observations:
+  - "N-1 is genuinely closed end to end: a real blocker.answer built by the delivered appendBlockerAnswer (answeredAt, no recordedAt) flows through artifactAdvancedSince (per-kind instant) to a stuck verdict; the within-window control returns advancing; a truly undatable record stays kill-safe (advance); a null baseline reports no advance. Independently reproduced, not read from the report."
+  - "N-3: unknown-liveness is carried stickily from the establishment (null-start-time join) and observed by the cycle, so liveSession=false short-circuits the verdict before any stuck/kill; the new zero-traffic case proves no verdict, no kill, and the live-facts-unknown degradation."
+  - "F-7: progress is DURABLE on loop.session (additive optional progressState, validated to positive|zero|unknown), written on acquisition and only on state change (never per cycle; the quiet 3-cycle case still appends exactly 2 records), and a fresh-process status over the same root projects it; absent stays null, never fabricated."
+  - "No delivered assertion was deleted, inverted or relaxed in the remediation delta (0 removed expect/assertion lines in 400461dc..HEAD). The only whole-range removals remain the earlier authorised 26→27 command-family repins and the mounting-baseline additions reviewed in iterations 1–2."
+  - "Pinned surfaces not weakened: content-inventory.executable allowances only GAIN the three new exports; an unlisted export still fails. metrics/steer/supervision mounting and reference-page-parity are untouched by the delta and green."
+  - "The no-shell invariant is still EXTENDED (loop-* under packages/core/src/{app,domain} globbed into DISPATCH_FLOW_SURFACE with the planted-reimplementation control and prompt scan), not duplicated; the suite is green."
+  - "Proof boundary unchanged: LOOP_BOUNDARY_COUNTS is { proven: 9, notProven: 6 } in the declared order and equals the fixture constant (TC-BATTLE-007 green). The ten §8.5 divergences are unchanged — doc/spec/** is untouched in the delta."
+  - "No new error identity, domain kind, or configuration key: the delta adds only re-exports plus the per-kind instant helper; depcruise (497 modules, 1571 deps, no violations), exports-parity (5 publishables pass attw), ambient-globals, workspace-entrypoints, secret-read-boundary and core+cli typecheck are all green. No coordinator source is edited, so no coordinator behaviour change."
+  - "The additive state/loop.ts tolerance (harnessKind may be an empty string when an adapter fact is unresolved, other fields still strict; progressState validated to the closed set) is justified by the record's append-on-state-change policy (DM-1) and Appendix D latitude; no test asserted an empty harnessKind was torn, so nothing was relaxed."
+  - "The new suites are deterministic (injected clock, no real timers/sleeps/network/child processes); behaviour loop suites 100 pass, conformance/structure/checks loop 36 pass, pinned/invariant/content-inventory 59 pass, all 0 fail."
+
+checks_run:
+  - name: "behaviour loop suites (N-1 per-kind cases, N-3 unknown-liveness, F-7 durable/fresh-process, TC-SPAWN-006 field set)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-*.test.ts"
+    result: "100 pass / 0 fail (504 expect calls, 9 files)"
+  - name: "conformance + structure + checks loop suites (real-runtime pick-deliver-merge, nine-surface meta-case, TC-BATTLE-007 nine/six)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop/ tests/structure/loop-*.test.ts tests/checks/loop-*.test.ts"
+    result: "36 pass / 0 fail (175 expect calls, 8 files)"
+  - name: "modified pinned suites + no-shell invariant + content inventory"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/install-conformance.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/event-taxonomy-single-source.test.ts tests/structure/content-inventory.test.ts"
+    result: "59 pass / 0 fail (390 expect calls, 8 files)"
+  - name: "current-truth doc guard + doc distribution (isolated HOME — env fact b)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts; HOME=$PWD/tmp/tmpdir/isolated-home bash scripts/.tests/test-doc-distribution.sh"
+    result: "25 pass / 0 fail; doc-distribution OK (96 in-scope docs, no drift)"
+  - name: "branch-range commit-message gate"
+    command: "bash scripts/lint-commit-range.sh --base origin/main-tools"
+    result: "VERDICT: PASS — 43 commits in range; 0 offending"
+  - name: "workspace invariants (exports parity, boundaries, prompt conformance)"
+    command: "bun run scripts/checks/exports-parity.ts; pnpm check:boundaries; bun run scripts/checks/prompt-conformance.ts"
+    result: "exports-parity OK (5 publishables); no dependency violations (497 modules, 1571 deps); ambient-globals/workspace-entrypoints/secret-read-boundary OK; prompt-conformance 5 clean"
+  - name: "core + cli typecheck"
+    command: "pnpm --filter @delivery-os/core --filter @delivery-os/cli typecheck"
+    result: "tsc --noEmit Done for both (no duplicate-export/ambiguity errors from the re-declared constant)"
+  - name: "plan validation"
+    command: "bun run packages/cli/bin/delivery-os.ts plan validate GH-348"
+    result: "verdict=valid; artifact=yaml:chg-GH-348-plan.yaml; readyForDevelopment=true"
+  - name: "independent N-1 end-to-end reproduction"
+    command: "scratch bun script (removed after use) building a real appendBlockerAnswer record, then artifactAdvancedSince + evaluateLoopVerdict"
+    result: "prior answer → artifactAdvancedSince=false → verdict=stuck/stuck-artifact-evidence; after-baseline control → advanced=true"
+  - name: "full aggregate pnpm check"
+    command: "not re-run by this review"
+    result: >-
+      Not re-run here: (a) this machine sets commit.gpgsign=true so fixture-repo
+      suites need GIT_CONFIG_* signing disabled, (b) a pre-existing
+      ~/.jaiship/bin/jaiship artifact requires an isolated HOME for a clean
+      aggregate, and (c) the phase-11 concurrent aggregate run (11 437 pass / 2
+      timeout failures in subprocess suites under another workspace) both pass in
+      isolation. The quality-gate phase re-runs the aggregate cleanly; this review
+      judges the code via the targeted, pinned, invariant and doc suites above.
+
+reviewed_at: 2026-11-19T21:30:00Z
+next_step: PROCEED

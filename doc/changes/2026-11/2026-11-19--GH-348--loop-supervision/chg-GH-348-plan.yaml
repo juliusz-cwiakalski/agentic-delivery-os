@@ -3088,6 +3088,9 @@ phases:
         # N-4: declared as a PRE-EXISTING contribution (phase 10's re-export);
         # no code change in this phase.
         - packages/core/src/app/index.ts
+        # N-5 (review iteration 3): the domain barrel re-export edited in this
+        # phase was omitted from the original declaration; declared here.
+        - packages/core/src/domain/index.ts
         - packages/cli/src/production.ts
         - tests/fixtures/loop/harness.ts
         - tests/fixtures/loop/golden/status.ts
