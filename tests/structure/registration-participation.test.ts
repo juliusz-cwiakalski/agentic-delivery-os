@@ -311,6 +311,7 @@ describe("TC-REG-005 an out-of-set operation, a lifecycle hook and a runner bran
       "write-comment",
       "resolve-delivery-thread",
       "merge-delivery-request",
+      "close-milestone",
     ]);
     expect(isClosedOperation("read-attachment")).toBe(false);
     expect(isClosedOperation("read-work-item")).toBe(true);

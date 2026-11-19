@@ -156,7 +156,10 @@ const mergeableStateOf = (
 export const normalizePullRequest = (
   payload: unknown,
   context: GithubNormalizationContext,
-  options: { readonly includeGateFacts?: boolean } = {},
+  options: {
+    readonly includeGateFacts?: boolean;
+    readonly includeTitle?: boolean;
+  } = {},
 ): ProviderReadResult<DeliveryRequest> => {
   if (!isRecord(payload)) return providerPayloadFailure("GitHub PR payload is not an object");
   const entityId = identityField(payload, "number");
@@ -192,6 +195,11 @@ export const normalizePullRequest = (
     : [];
 
   const sourceHeadSha = head === undefined ? undefined : stringField(head, "sha");
+  // The provider-asserted title, copied verbatim and never derived (DM-1). The
+  // bounded request-detail read the merge taxonomy consumes is the list read, so
+  // that read surfaces the signal; absence stays absent and is never an empty
+  // string substitute.
+  const title = options.includeTitle === true ? stringField(payload, "title") : undefined;
   const gateFacts =
     options.includeGateFacts === false
       ? {}
@@ -215,6 +223,7 @@ export const normalizePullRequest = (
       threads,
       ...(headSha === undefined ? {} : { headSha }),
       ...(sourceHeadSha === undefined ? {} : { sourceHeadSha }),
+      ...(title === undefined ? {} : { title }),
       ...gateFacts,
     },
   };
@@ -412,6 +421,7 @@ export const normalizeGithubIssueList = (
 export const normalizeGithubPullList = (
   payload: unknown,
   context: GithubNormalizationContext,
+  options: { readonly includeGateFacts?: boolean; readonly includeTitle?: boolean } = {},
 ): ProviderReadResult<{
   readonly items: readonly DeliveryRequest[];
   readonly pageItemCount: number;
@@ -421,7 +431,10 @@ export const normalizeGithubPullList = (
   }
   const items: DeliveryRequest[] = [];
   for (const entry of payload) {
-    const normalized = normalizePullRequest(entry, context, { includeGateFacts: false });
+    const normalized = normalizePullRequest(entry, context, {
+      includeGateFacts: options.includeGateFacts ?? false,
+      includeTitle: true,
+    });
     if (!normalized.ok) return normalized;
     items.push(normalized.value);
   }

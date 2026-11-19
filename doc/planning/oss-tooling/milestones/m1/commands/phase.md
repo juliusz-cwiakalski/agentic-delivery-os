@@ -1,7 +1,8 @@
 # phase(1)
 
 Status: M0-S10 shipped; M1-S14 shipped (GH-227) — atomic
-record-plus-commit. Delivered contract.
+record-plus-commit; the fold-derived mirror shipped in M4-S11 (GH-349).
+Delivered contract.
 
 ## NAME
 
@@ -43,6 +44,18 @@ manufactures a commit. See [commit.md](commit.md).
 The completion runs inside a delivery session, with or without
 `--no-commit`; `list` and `reopen` are unaffected. The completion carries no
 session refusal.
+
+The pm-notes document is a mirror, and every branch that writes it derives the
+target entry's `completed` from the post-transition fold — the completion the
+append records, or the latest completion of the verified history on a
+convergence-only branch — never from a lookup over the transition history.
+`started` is written only when an entry is created and is never rewritten, a
+reopen writes null (the fold's cleared value), and an already-converged re-run
+reports the same fold value as its no-op evidence. The verified ledger is the
+only phase truth; the derived projection and the pm-notes map are both derived
+surfaces. A disagreement between the two surfaces is reported by
+`lint <ref> --pm-notes --registry` as `lint.phases.divergent` and is never
+repaired by a command.
 
 ## OPTIONS
 

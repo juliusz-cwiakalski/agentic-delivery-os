@@ -94,7 +94,7 @@ describe("TC-DOUBLE-001 write-then-read is observable through the client factory
     expect(after.value.title).toBe("Stateful initial title");
 
     expect(CONFORMANCE_FLOWS).toHaveLength(3);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(15);
     expect(CONFORMANCE_ADAPTERS).toHaveLength(3);
   });
 });

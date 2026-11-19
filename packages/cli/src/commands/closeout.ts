@@ -47,8 +47,18 @@ export const createCloseoutCommandDefinition = (
   flags: ["--apply"],
   positionals: { max: 2 },
   humanText: (data: unknown): string => (isCloseoutData(data) ? renderCloseoutHuman(data) : ""),
+  /**
+   * The residue that is the routine, success-shaped outcome (GH-349 AC-F4-3,
+   * AC-F4-7): a withheld milestone closure is the normal result whenever the
+   * change has no conforming declaration or another attached ticket is open. It
+   * still appears in the data; it just never raises the attention exit on its
+   * own. Every other residue kind keeps the delivered projection, and a gated
+   * failure never reaches this projection at all.
+   */
   exitProjection: (data: unknown) =>
-    isCloseoutData(data) && data.mode === "applied" && (data.residue?.length ?? 0) > 0
+    isCloseoutData(data) &&
+    data.mode === "applied" &&
+    (data.residue ?? []).some((item) => item.kind !== "milestone-sync-withheld")
       ? "attention"
       : "success",
   handler: async (invocation) => {

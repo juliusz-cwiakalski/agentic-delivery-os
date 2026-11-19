@@ -83,6 +83,12 @@ export const PM_NOTES_LINT_CODES = [
 
 export type PmNotesLintCode = (typeof PM_NOTES_LINT_CODES)[number];
 
+/**
+ * The declared bound on a rendered completion value in the both-target
+ * `lint.phases.divergent` finding (an ISO timestamp fits).
+ */
+export const DIVERGENT_VALUE_BOUND = 40;
+
 /** A phase entry: `started` and `completed` are timestamps or null. */
 export type PmNotesTimestamp = string | null;
 

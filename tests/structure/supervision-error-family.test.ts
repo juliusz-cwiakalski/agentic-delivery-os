@@ -78,21 +78,38 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
     expect(baseline.rows).toHaveLength(150);
     // The captured baseline includes GH-335's four harness rows; it predates
-    // GH-299's `metrics` row, the two supervise rows, and GH-346's eleven
-    // install rows, so the delivered comparison excludes those three kinds.
+    // GH-299's `metrics` row, the two supervise rows, GH-346's eleven install
+    // rows, and GH-349's three additive rows (the two `merge` rows and the one
+    // `lint` row), so the comparison excludes those three kinds. Every baseline
+    // row must still be present, byte-identical and in its delivered relative
+    // order, so the positional oracle is preserved; the rows outside the
+    // baseline are exactly those three additive declarations, named here so no
+    // fourth row can appear unnoticed.
+    const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) =>
         entry.domainKind !== "supervise" &&
         entry.domainKind !== "metrics" &&
         entry.domainKind !== "install",
     );
-    expect(live).toHaveLength(150);
-    expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // The new rows are appended after every delivered row: no reordering.
-    expect(entries.slice(0, 150).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // Indices 150..152 hold supervise/metrics and 153..163 hold the eleven
-    // install rows, so the baseline prefix index stays while its meaning narrows.
-    expect(entries.slice(150).map((entry) => entry.domainKind)).toEqual([
+    expect(live).toHaveLength(153);
+    for (const row of baseline.rows) {
+      const found = entries.find((entry) => entry.code === row[0]);
+      expect(found, row[0]).toBeDefined();
+      if (found !== undefined) expect(tupleOf(found), row[0]).toEqual([...row]);
+    }
+    expect(entries.map((entry) => entry.code).filter((code) => baselineCodes.has(code))).toEqual(
+      baseline.rows.map((row) => row[0]),
+    );
+    expect(
+      live
+        .filter((entry) => !baselineCodes.has(entry.code))
+        .map((entry) => entry.code)
+        .sort(),
+    ).toEqual(["lint.phases.divergent", "merge.mergeability-unknown", "merge.sync-required"]);
+    // The post-baseline kinds are appended after every delivered row: indices
+    // 153..155 hold supervise/metrics and 156..166 hold the eleven install rows.
+    expect(entries.slice(153).map((entry) => entry.domainKind)).toEqual([
       "supervise",
       "supervise",
       "metrics",

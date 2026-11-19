@@ -451,6 +451,35 @@ const pipelineViolations = (
   return violations;
 };
 
+/**
+ * The `milestone-state` assertion branch (GH-349 DM-7).
+ *
+ * A family with no branch would be asserted with another primitive's invariants.
+ * The normalized close outcome carries exactly the closed state the provider
+ * asserted, so the branch checks that fact and no provider-native key.
+ */
+const milestoneViolations = (value: unknown): InvariantViolation[] => {
+  if (!isRecord(value)) {
+    return [{ assertion: "milestone", expected: "object", received: summarize(value) }];
+  }
+  const violations: InvariantViolation[] = [];
+  for (const path of nativeKeyPaths(value, "", [])) {
+    violations.push({
+      assertion: "primitive-purity",
+      expected: "no provider-native key",
+      received: path,
+    });
+  }
+  if (value.closed !== true) {
+    violations.push({
+      assertion: "milestone-state",
+      expected: "closed=true",
+      received: summarize(value.closed),
+    });
+  }
+  return violations;
+};
+
 const invariantViolations = (
   value: unknown,
   tenant: MockTenant,
@@ -543,6 +572,7 @@ const writeMemberFor = (
   if (operation === "merge-delivery-request") return client.mergeDeliveryRequest;
   if (operation === "write-comment") return client.writeComment;
   if (operation === "write-delivery-request") return client.createDeliveryRequest;
+  if (operation === "close-milestone") return client.closeMilestone;
   return undefined;
 };
 
@@ -832,6 +862,29 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
               ),
             });
             continue;
+          }
+          // The milestone-state family has its own assertion branch: a family
+          // with no branch would be asserted with another primitive's invariants.
+          if (step.assertionFamily === "milestone-state") {
+            const violations = milestoneViolations(outcome.value);
+            const first = violations[0];
+            if (first !== undefined) {
+              flowSteps.push({
+                ...base,
+                status: "failed",
+                skipReason: null,
+                skipKind: null,
+                assertionCount: 0,
+                failure: failureFor(
+                  first.assertion,
+                  first.expected,
+                  first.received,
+                  `tenant:${provider}:${step.stepId}`,
+                  violations.map((entry) => `${entry.assertion} failed`).join("; "),
+                ),
+              });
+              continue;
+            }
           }
           // A write step whose tenant declares an expected projection is
           // compared exactly; a write step with no declared entry behaves as

@@ -7,6 +7,7 @@
  */
 import {
   CLOSEOUT_MAX_DEPENDENTS,
+  CLOSEOUT_MILESTONE_PAGE_SIZE,
   CLOSEOUT_OPERATION_TIMEOUT_MS,
   type CloseoutReadObservation,
   type CloseoutReverseDependentObservation,
@@ -16,6 +17,9 @@ import {
   type ExternalSystemInstance,
   type MergeDeliveryRequestInput,
   type MergeDeliveryRequestOutcome,
+  type MilestoneAttachedItem,
+  type MilestoneRecord,
+  type MilestoneState,
   type PipelineRun,
   type ProviderQualifiedIdentity,
   STATUS_SOURCE_PIPELINE_LIMIT,
@@ -135,7 +139,10 @@ export type GithubClient = {
   ) => Promise<
     ProviderReadResult<{ readonly items: readonly WorkItem[]; readonly pageItemCount: number }>
   >;
-  readonly listDeliveryRequests: (limit: number) => Promise<
+  readonly listDeliveryRequests: (
+    limit: number,
+    options?: { readonly includeGateFacts?: boolean },
+  ) => Promise<
     ProviderReadResult<{
       readonly items: readonly DeliveryRequest[];
       readonly pageItemCount: number;
@@ -175,6 +182,26 @@ export type GithubClient = {
     readonly deliveryRequest: { readonly systemName: string; readonly entityId: string };
     readonly threadId: string;
   }) => Promise<ProviderWriteResult>;
+  /**
+   * The ONE bounded adapter-local milestone read (GH-349 API-4, DM-9).
+   *
+   * The record is the change's own work item's provider-asserted milestone; the
+   * attached set is ONE issues page at the declared page size (default
+   * `CLOSEOUT_MILESTONE_PAGE_SIZE`) with no follow-up pagination, no poll, and
+   * no retry. The truncation marker is derived from the provider's own attached
+   * counts, so a short page never claims completeness.
+   */
+  readonly readMilestone: (input: {
+    readonly entityId: string;
+    readonly pageSize?: number;
+  }) => Promise<ProviderReadResult<MilestoneRecord>>;
+  /**
+   * The single milestone close (GH-349 API-3): one write, read-back verified,
+   * never retried, `alreadyApplied` when the record already reads closed.
+   */
+  readonly closeMilestone: (input: {
+    readonly milestone: string;
+  }) => Promise<ProviderWriteResult<{ readonly closed: true; readonly alreadyApplied?: boolean }>>;
 };
 
 const WORK_ITEM_REF_PATTERN = /^[A-Z][A-Z0-9]*-\d+$/;
@@ -432,13 +459,19 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       if (!response.ok) return response;
       return normalizeGithubIssueList(response.value.body, context);
     },
-    listDeliveryRequests: async (limit) => {
+    listDeliveryRequests: async (limit, options) => {
       if (mapFailure !== undefined) return mapFailure;
       const response = await get(
         `${repositoryPath}/pulls?state=open&per_page=${encodeURIComponent(String(limit))}&sort=updated&direction=desc`,
       );
       if (!response.ok) return response;
-      return normalizeGithubPullList(response.value.body, context);
+      // The default list read keeps its delivered shape (refs, head, draft,
+      // state, and the provider-asserted title); a caller that needs the
+      // per-request gate facts opts in, because the merge taxonomy classifies
+      // the mergeability state the list read deliberately omits (GH-349 DM-1).
+      return normalizeGithubPullList(response.value.body, context, {
+        includeGateFacts: options?.includeGateFacts ?? false,
+      });
     },
     readWorkItemObservation: (entityId) =>
       mapFailure === undefined ? readObservation(entityId) : Promise.resolve(invalidObservation()),
@@ -528,6 +561,106 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       } catch {
         return { observation: "unavailable" };
       }
+    },
+    readMilestone: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
+      const headers = authorizedHeaders();
+      if (!headers.ok) return headers;
+      // Request 1 of 2: the change's own work item carries the
+      // provider-asserted milestone (identity, title, state, attached counts).
+      let issuePayload: unknown;
+      try {
+        const response = await transport.send({
+          url: `${baseUrl}${repositoryPath}/issues/${encodeURIComponent(input.entityId)}`,
+          method: "GET",
+          headers: headers.value,
+          timeoutMs,
+        });
+        if (response.status === 404) {
+          return providerNotFoundFailure("GitHub returned HTTP 404", response.status);
+        }
+        if (response.status < 200 || response.status >= 300) {
+          return providerPayloadFailure(`GitHub returned HTTP ${response.status}`, response.status);
+        }
+        issuePayload = response.body;
+      } catch (error: unknown) {
+        const name = error instanceof Error ? error.name : "unknown error";
+        return providerPayloadFailure(`GitHub milestone read failed (${name})`);
+      }
+      if (!isRecord(issuePayload)) {
+        return providerPayloadFailure("GitHub issue payload is not an object");
+      }
+      const container = issuePayload.milestone;
+      if (!isRecord(container)) {
+        return providerPayloadFailure("the work item carries no provider-asserted milestone");
+      }
+      const number = container.number;
+      if (typeof number !== "number" || !Number.isSafeInteger(number) || number < 1) {
+        return providerPayloadFailure("GitHub milestone has no numeric identity");
+      }
+      const rawState = container.state;
+      const state: MilestoneState =
+        rawState === "open" ? "open" : rawState === "closed" ? "closed" : "unknown";
+      const title = typeof container.title === "string" ? container.title : undefined;
+      const openCount = container.open_issues;
+      const closedCount = container.closed_issues;
+      const attachedTotal =
+        typeof openCount === "number" &&
+        Number.isSafeInteger(openCount) &&
+        openCount >= 0 &&
+        typeof closedCount === "number" &&
+        Number.isSafeInteger(closedCount) &&
+        closedCount >= 0
+          ? openCount + closedCount
+          : undefined;
+      const pageSize = input.pageSize ?? CLOSEOUT_MILESTONE_PAGE_SIZE;
+      // Request 2 of 2: ONE issues page at the declared page size. No cursor, no
+      // second page, no retry.
+      const response = await get(
+        `${repositoryPath}/issues?milestone=${encodeURIComponent(String(number))}&state=all&per_page=${encodeURIComponent(String(pageSize))}`,
+      );
+      if (!response.ok) return response;
+      const normalized = normalizeGithubIssueList(response.value.body, context);
+      if (!normalized.ok) return normalized;
+      const attachedItems: MilestoneAttachedItem[] = normalized.value.items.map((item) => ({
+        identity: item.identity,
+        deliveryState: item.status.deliveryState,
+      }));
+      const truncated =
+        attachedTotal === undefined
+          ? attachedItems.length >= pageSize
+          : attachedTotal > attachedItems.length;
+      const omitted =
+        attachedTotal === undefined ? 0 : Math.max(0, attachedTotal - attachedItems.length);
+      return {
+        ok: true,
+        value: {
+          identity: { systemName: context.systemName, entityId: String(number) },
+          ...(title === undefined ? {} : { title }),
+          state,
+          attachedItems,
+          ...(truncated ? { truncation: { truncated: true, omitted, cap: pageSize } } : {}),
+        },
+      };
+    },
+    closeMilestone: async (input) => {
+      if (mapFailure !== undefined) return mapFailure;
+      if (!/^\d+$/.test(input.milestone)) {
+        return providerPayloadFailure("GitHub milestone identity is not numeric");
+      }
+      const path = `${repositoryPath}/milestones/${encodeURIComponent(input.milestone)}`;
+      const written = await send("PATCH", path, { state: "closed" });
+      if (!written.ok) return written;
+      // Read-back verified: the provider must assert the closed state.
+      const readBack = await get(path);
+      if (!readBack.ok) {
+        return providerPayloadFailure("GitHub milestone close read-back did not answer");
+      }
+      const readState = isRecord(readBack.value.body) ? readBack.value.body.state : undefined;
+      if (readState !== "closed") {
+        return providerPayloadFailure("GitHub milestone close read-back did not observe closed");
+      }
+      return { ok: true, value: { closed: true } };
     },
     writeWorkItem: async (input) => {
       if (mapFailure !== undefined) return mapFailure;

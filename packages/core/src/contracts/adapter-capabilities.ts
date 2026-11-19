@@ -19,7 +19,8 @@ export type CarrierKind = (typeof CARRIER_KINDS)[number];
  * The closed set of operations an adapter can declare (F-2, DM-2).
  *
  * The set appends and is never reordered: index 7 stays
- * `resolve-delivery-thread` and the provider-side landing is the ninth member.
+ * `resolve-delivery-thread`, the provider-side landing is the ninth member, and
+ * the milestone close is appended tenth (GH-349 DM-6).
  */
 export const ADAPTER_OPERATIONS = [
   "read-work-item",
@@ -31,6 +32,7 @@ export const ADAPTER_OPERATIONS = [
   "write-comment",
   "resolve-delivery-thread",
   "merge-delivery-request",
+  "close-milestone",
 ] as const;
 
 /** One adapter operation an adapter may or may not support. */

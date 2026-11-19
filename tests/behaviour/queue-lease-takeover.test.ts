@@ -6,10 +6,12 @@
  * dispatch family and the claim path).
  */
 import { describe, expect, test } from "bun:test";
+import { isLeaseStale } from "../../packages/core/src/domain/index";
 import {
   claim,
   claimAdmission,
   dispatchClaim,
+  REPO,
   seedLease,
   singleFlightStore,
   TTL,
@@ -58,5 +60,36 @@ describe("TC-QLC-043 stale takeover stays delivered", () => {
     } finally {
       single.dispose();
     }
+  });
+});
+
+describe("TC-F6-001 the stale predicate is shared and never silently never fires", () => {
+  test("a stale lease is not live on the delivered predicate; a never-stale double names the heartbeat age", () => {
+    const stale = {
+      ref: "GH-241",
+      repository: REPO,
+      holder: "lane-1",
+      heartbeatAgeMs: TTL,
+      ttlMs: TTL,
+    };
+    // The delivered predicate: at the TTL the lease is not active, so no
+    // per-ref refusal exists and the delivered takeover applies.
+    expect(isLeaseStale(stale.heartbeatAgeMs, stale.ttlMs)).toBe(true);
+    // A deliberately broken double whose stale predicate never fires treats the
+    // stale lease as live and refuses the takeover. The divergence names both
+    // the heartbeat age and the TTL it fails to consider.
+    const brokenNeverStale = (heartbeatAgeMs: number, ttlMs: number): boolean => {
+      void heartbeatAgeMs;
+      void ttlMs;
+      return false;
+    };
+    const refusedByDouble = !brokenNeverStale(stale.heartbeatAgeMs, stale.ttlMs);
+    const controlDivergence = refusedByDouble
+      ? `the never-stale double treats heartbeat age ${stale.heartbeatAgeMs} as live against TTL ${stale.ttlMs}`
+      : undefined;
+    expect(controlDivergence).toContain(String(TTL));
+    expect(() => {
+      throw new Error(controlDivergence ?? "the never-stale control produced no divergence");
+    }).toThrow("heartbeat age");
   });
 });

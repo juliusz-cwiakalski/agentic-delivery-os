@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { readCloseoutHistory, readMergeTransactions } from "../../../packages/core/src/state/index";
 import {
   createPilot,
+  PILOT_LANDING_SHA,
   PILOT_REF,
   type Pilot,
   type PilotSequence,
@@ -72,23 +73,37 @@ describe("TC-PILOT-002 J1 sequence", () => {
     expect(typeof phases?.delivery?.completed).toBe("string");
   });
 
-  test("merge lands one real squash commit on the base and deletes the branch", () => {
+  test("merge records the provider-asserted landing and deletes the branch", () => {
     const run = sequenceOf().merge;
     expect(run.exitCode).toBe(0);
     const data = dataOf(run.envelope);
     expect(data.result).toBe("merged");
-    const squashSha = data.squashSha;
-    expect(typeof squashSha).toBe("string");
-    if (typeof squashSha === "string") {
-      const contained = fixture().repo.run(["merge-base", "--is-ancestor", squashSha, PILOT_BASE]);
-      expect(contained.status).toBe(0);
-    }
+    expect(data.squashSha).toBe(PILOT_LANDING_SHA);
+    // The provider's merge commit is not in the checkout, so the recorded
+    // containment is the honest third state and the base never advanced
+    // (GH-349 DM-3, Appendix G-9).
+    const landing = data.landing as { readonly shaOnBase?: unknown } | undefined;
+    expect(landing?.shaOnBase).toBe("unknown");
+    const contained = fixture().repo.run([
+      "merge-base",
+      "--is-ancestor",
+      PILOT_LANDING_SHA,
+      PILOT_BASE,
+    ]);
+    expect(contained.status).not.toBe(0);
     expect(fixture().repo.branchHead(PILOT_BRANCH)).toBeUndefined();
     const transactions = readMergeTransactions(fixture().store, PILOT_REF);
     expect(transactions.ok).toBe(true);
     if (transactions.ok) {
       expect(transactions.records.at(-1)?.result).toBe("merged");
+      expect(transactions.records.at(-1)?.squashSha).toBe(PILOT_LANDING_SHA);
     }
+    // The one landing mechanism was composed once, through the provider surface.
+    const landings = fixture().stubs.providerCalls.filter(
+      (call) => call.operation === "merge-delivery-request",
+    );
+    expect(landings).toHaveLength(1);
+    expect(landings[0]?.outbound).toBe(false);
   });
 
   test("closeout applies the mechanical sweep through the real state ledger", () => {

@@ -199,6 +199,7 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       "merge-delivery-request",
       "write-comment",
       "write-delivery-request",
+      "close-milestone",
     ]);
     expect(ADAPTER_OPERATIONS.filter((operation) => operation.startsWith("list-"))).toEqual([]);
     const credentials: CredentialPort = {
@@ -224,12 +225,14 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       transport: { send: async () => ({ status: 200, body: [] }) },
     });
     expect(Object.keys(client).sort()).toEqual([
+      "closeMilestone",
       "findMergedDeliveryRequest",
       "listBlockedByDependents",
       "listDeliveryRequests",
       "listWorkItems",
       "mergeDeliveryRequest",
       "readDeliveryRequest",
+      "readMilestone",
       "readPipelineRun",
       "readWorkItem",
       "readWorkItemObservation",

@@ -486,7 +486,7 @@ const mappingClaimFailures = (text: string): string[] => {
 };
 
 describe("TC-REF-001 the surface documents every closed operation and evidence read", () => {
-  test("the document exists, is linked from the index, and covers nine operations", () => {
+  test("the document exists, is linked from the index, and covers ten operations", () => {
     const text = documentText();
     expect(text.length).toBeGreaterThan(1000);
     expect(read(REFERENCE_BEHAVIOR_INDEX)).toContain(`](${REFERENCE_BEHAVIOR_INDEX_TARGET})`);
@@ -504,7 +504,7 @@ describe("TC-REF-001 the surface documents every closed operation and evidence r
     const text = documentText();
     const mutated = text.replace("| `write-comment` | `gh` | `api` |\n", "");
     expect(mutated).not.toBe(text);
-    expect(transportFailures(mutated).some((failure) => failure.includes("8 rows"))).toBe(true);
+    expect(transportFailures(mutated).some((failure) => failure.includes("9 rows"))).toBe(true);
   });
 });
 
@@ -655,18 +655,23 @@ const listTs = (relative: string): string[] => {
 };
 
 describe("TC-FLOOR-007 the change respects the declared non-decisions", () => {
-  test("the lifecycle merge transaction imports no provider landing member and is not rewired", () => {
+  test("the lifecycle merge transaction composes the closed provider landing operation only", () => {
     const merge = read("packages/core/src/domain/merge-transaction.ts");
-    for (const forbidden of [
-      "mergeDeliveryRequest",
-      "MergeDeliveryRequestInput",
-      "@delivery-os/adapters",
-      "createGitHubClient",
-    ]) {
+    // The reconciliation decision (GH-349 F-1): the lifecycle landing IS the
+    // closed provider-side `merge-delivery-request` operation, so the
+    // transaction's one landing port carries that operation's argument shape.
+    expect(merge).toContain("MergeDeliveryRequestInput");
+    // The pure domain module imports no adapter and no transport: the landing
+    // arrives through an injected port, exactly like every other read.
+    for (const forbidden of ["@delivery-os/adapters", "createGitHubClient"]) {
       expect(merge.includes(forbidden), forbidden).toBe(false);
     }
-    expect(merge).toContain("one squash commit");
+    // No local squash landing and no local refresh is composed anywhere on the
+    // command path: both stay declared capabilities at the git seam.
+    expect(merge.includes("squashLand")).toBe(false);
+    expect(merge.includes("readonly refresh:")).toBe(false);
     for (const file of listTs("packages/core/src")) {
+      if (file.endsWith("domain/merge-transaction.ts")) continue;
       const text = read(file);
       expect(text.includes("mergeDeliveryRequest"), file).toBe(false);
     }
@@ -723,6 +728,8 @@ describe("TC-FLOOR-007 the change respects the declared non-decisions", () => {
       "mergeableState",
       "commitCount",
       "changedFileCount",
+      // GH-349's one additive optional field.
+      "title",
     ]);
     const workItemStart = ports.indexOf("export type WorkItem = {");
     const workItemBlock = ports.slice(workItemStart, ports.indexOf("};", workItemStart));

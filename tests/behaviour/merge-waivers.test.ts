@@ -4,15 +4,14 @@
  * missing-declaration refusal is its own identity.
  */
 import { describe, expect, test } from "bun:test";
-import { MERGE_WAIVER_SCHEMA, type PipelineRun } from "../../packages/core/src/contracts/index";
+import { MERGE_WAIVER_SCHEMA } from "../../packages/core/src/contracts/index";
 import { authorizeMergeWaiver } from "../../packages/core/src/domain/merge-waiver";
 import {
-  baseCheckRuns,
   baseWorkItem,
   createMergeHarness,
   MERGE_CLOCK_ISO,
   MERGE_CLOCK_MS,
-  MERGE_HEAD,
+  MERGE_LANDING_SHA,
   verificationRecord,
 } from "../fixtures/merge/harness";
 
@@ -45,21 +44,33 @@ const gatedRecord = () =>
 
 const authorizedFlags = ["--waive", "owner-gate", "--waived-by", "owner-principal"];
 
-const redPage = (): { items: PipelineRun[]; pageItemCount: number; sha: string } => ({
-  items: baseCheckRuns().items.map((run) =>
-    run.pipelineName === "CI / test (18)"
-      ? { ...run, jobs: [{ jobName: run.pipelineName, jobState: "failed" as const }] }
-      : run,
-  ),
-  pageItemCount: 2,
-  sha: MERGE_HEAD,
-});
+/** The gated record whose recorded CI verdict also reports a job not green. */
+const gatedRecordWithRedCi = (): ReturnType<typeof verificationRecord> => {
+  const base = gatedRecord();
+  return {
+    ...base,
+    gates: base.gates.map((gate) =>
+      gate.id === "ci-green"
+        ? {
+            ...gate,
+            verdict: "fail" as const,
+            reason: "ci-failed",
+            citation: {
+              ...gate.citation,
+              names: [{ kind: "failed-jobs" as const, values: ["CI / test (18)"], omitted: 0 }],
+              reasons: ["ci-failed" as const],
+            },
+          }
+        : gate,
+    ),
+  };
+};
 
 const errorOf = (run: { envelope?: Record<string, unknown> }) =>
   run.envelope?.error as Record<string, unknown> | undefined;
 
 describe("TC-MERGE-018 an authorized waiver is recorded before landing and persists", () => {
-  test("the waiver record precedes the first git mutation and the gate passes under it", async () => {
+  test("the waiver record precedes the provider landing and the gate passes under it", async () => {
     const harness = createMergeHarness({
       workItem: gatedWorkItem(),
       ownerPrincipal: "owner-principal",
@@ -76,11 +87,20 @@ describe("TC-MERGE-018 an authorized waiver is recorded before landing and persi
       expect(waiver?.changeRef).toBe("GH-301");
       expect(waiver?.authorizer).toBe("owner-principal");
       expect(waiver?.authorizedAt).toBe(MERGE_CLOCK_ISO);
+      // Recording precedes the one composed landing call, which is the
+      // provider-side operation (GH-349) and not a local squash.
       const waiverIndex = harness.events.indexOf("append-waiver");
-      const landIndex = harness.events.indexOf("git-squash-land");
+      const landingIndex = harness.events.indexOf("provider-land");
       expect(waiverIndex).toBeGreaterThanOrEqual(0);
-      expect(landIndex).toBeGreaterThan(waiverIndex);
-      expect(harness.transactions()[0]?.waiverRefs).toEqual(["owner-gate"]);
+      expect(landingIndex).toBeGreaterThan(waiverIndex);
+      expect(harness.events).not.toContain("git-squash-land");
+      const record = harness.transactions()[0];
+      expect(record?.waiverRefs).toEqual(["owner-gate"]);
+      // The recorded landing identity is the provider's merge commit, and the
+      // containment answer is the local read's own answer.
+      expect(record?.squashSha).toBe(MERGE_LANDING_SHA);
+      expect(record?.landing.requestState).toBe("merged");
+      expect(record?.landing.shaOnBase).toBe(true);
       expect(harness.waivers()).toHaveLength(1);
     } finally {
       harness.cleanup();
@@ -91,14 +111,16 @@ describe("TC-MERGE-018 an authorized waiver is recorded before landing and persi
     const harness = createMergeHarness({
       workItem: gatedWorkItem(),
       ownerPrincipal: "owner-principal",
-      checkRuns: redPage(),
     });
     try {
-      harness.seedVerification(gatedRecord());
+      // The waiver covers the owner gate; the recorded CI verdict is the
+      // remaining, independent refusal, so the later refusal is still reached.
+      harness.seedVerification(gatedRecordWithRedCi());
       const result = await harness.run([harness.ref, ...authorizedFlags]);
       expect(result.exitCode).toBe(1);
       expect(harness.waivers()).toHaveLength(1);
       expect(harness.transactions()).toHaveLength(0);
+      expect(harness.counts.landing).toBe(0);
       expect(harness.events).not.toContain("git-squash-land");
     } finally {
       harness.cleanup();

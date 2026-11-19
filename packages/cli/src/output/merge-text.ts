@@ -44,6 +44,16 @@ const bound = (lines: readonly string[]): string => {
   return `${text}\n`;
 };
 
+/**
+ * The rendered containment token (DM-3, AC-F1-2).
+ *
+ * `true` is a local read that answered positively, `false` one that answered
+ * negatively, and `unknown` a read that could not answer at all — the state a
+ * provider landing produces when its merge commit is not in the checkout.
+ */
+const shaOnBaseToken = (value: MergeReport["landing"]["shaOnBase"]): string =>
+  value === true ? "yes" : value === false ? "no" : "unknown";
+
 /** Render one merged transaction summary. */
 export const renderMergeHuman = (report: MergeReport, brand: BrandIdentity): string => {
   const passed = report.gates.filter((gate) => gate.verdict === "pass").length;
@@ -52,7 +62,7 @@ export const renderMergeHuman = (report: MergeReport, brand: BrandIdentity): str
     "result=merged",
     `change=${report.changeRef}`,
     `squash=${shortSha(report.squashSha)}`,
-    `landing=sha-on-base:${report.landing.shaOnBase ? "yes" : "no"} request-state=${report.landing.requestState}`,
+    `landing=sha-on-base:${shaOnBaseToken(report.landing.shaOnBase)} request-state=${report.landing.requestState}`,
     `refresh=attempts=${report.refresh.attempts} outcome=${report.refresh.outcome}`,
     `waivers=${list(report.waiverRefs)}`,
     `post-landing=${postLandingText(report)}`,

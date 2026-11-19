@@ -43,6 +43,18 @@ describe("TC-QLC-056 the 100-entry cap reports truncated and an exact remainder"
       expect(data.checked).toBe(RECONCILE_CAP);
       expect(data.truncated).toBe(true);
       expect(data.remainder).toBe(5);
+      // TC-F6-010's derived comparison: the remainder is the seeded population
+      // minus the examined cap, and a zeroed remainder is named.
+      const seeded = 105;
+      const independent = seeded - Math.min(seeded, RECONCILE_CAP);
+      expect(data.remainder).toBe(independent);
+      const remainderControl = (reported: number): string | undefined =>
+        reported === independent ? undefined : `remainder ${reported}, declared ${independent}`;
+      expect(remainderControl(data.remainder)).toBeUndefined();
+      expect(() => {
+        const divergence = remainderControl(0);
+        if (divergence !== undefined) throw new Error(divergence);
+      }).toThrow("remainder 0, declared 5");
       expect(data.removed).toHaveLength(RECONCILE_CAP);
       expect(data.retained).toEqual([]);
       expect(data.unobserved).toEqual([]);

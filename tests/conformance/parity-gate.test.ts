@@ -138,31 +138,31 @@ const differentDimensions = (
   });
 
 describe("TC-PARITY-001 the cell set is exactly adapters x closed operations", () => {
-  test("27 cells, nine per column, set equality both directions", () => {
+  test("30 cells, ten per column, set equality both directions", () => {
     expect(PARITY_MATRIX.columns.map((column) => column.provider)).toEqual(
       CONFORMANCE_ADAPTERS.map((entry) => entry.provider),
     );
     const total = PARITY_MATRIX.columns.reduce((count, column) => count + column.cells.length, 0);
-    expect(total).toBe(27);
+    expect(total).toBe(30);
     for (const column of PARITY_MATRIX.columns) {
       expect(column.cells.map((entry) => entry.operation).sort()).toEqual(
         [...ADAPTER_OPERATIONS].sort(),
       );
-      expect(new Set(column.cells.map((entry) => entry.operation)).size).toBe(9);
+      expect(new Set(column.cells.map((entry) => entry.operation)).size).toBe(10);
     }
     clean(gate());
   });
 });
 
 describe("TC-PARITY-002 the reference column is uniformly same-as-reference", () => {
-  test("github is the declared reference, all nine cells agree, no entry names it", () => {
+  test("github is the declared reference, all ten cells agree, no entry names it", () => {
     expect(PARITY_MATRIX.reference).toBe("github");
     expect(CONFORMANCE_ADAPTERS.map((entry) => entry.provider)).toContain(PARITY_MATRIX.reference);
     const referenceColumn = PARITY_MATRIX.columns.find(
       (column) => column.provider === PARITY_MATRIX.reference,
     );
     expect(referenceColumn?.cells.map((entry) => entry.cell.kind)).toEqual(
-      Array(9).fill("same-as-reference"),
+      Array(10).fill("same-as-reference"),
     );
     expect(
       PARITY_MATRIX.register.filter((entry) => entry.adapter === PARITY_MATRIX.reference),
@@ -172,7 +172,7 @@ describe("TC-PARITY-002 the reference column is uniformly same-as-reference", ()
 });
 
 describe("TC-PARITY-003 every gap cell agrees with the capability declaration", () => {
-  test("27 cells compared, with reason character equality in both directions", () => {
+  test("30 cells compared, with reason character equality in both directions", () => {
     let gaps = 0;
     for (const column of PARITY_MATRIX.columns) {
       const adapter = CONFORMANCE_ADAPTERS.find((entry) => entry.provider === column.provider);
@@ -189,7 +189,7 @@ describe("TC-PARITY-003 every gap cell agrees with the capability declaration", 
         }
       }
     }
-    expect(gaps).toBe(13);
+    expect(gaps).toBe(15);
     clean(gate());
   });
 });
@@ -423,25 +423,25 @@ describe("TC-PARITY-007 the census and the five-intersection adjudication record
     }>;
   };
 
-  test("the delivered census is 27 cells, 13 gaps, 14 supported, 9 reference, 5 intersections", () => {
+  test("the delivered census is 30 cells, 15 gaps, 15 supported, 10 reference, 5 intersections", () => {
     const total = PARITY_MATRIX.columns.reduce((count, column) => count + column.cells.length, 0);
     const gaps = PARITY_MATRIX.columns.flatMap((column) =>
       column.cells.filter((entry) => entry.cell.kind === "gap"),
     );
-    expect(total).toBe(27);
-    expect(gaps).toHaveLength(13);
+    expect(total).toBe(30);
+    expect(gaps).toHaveLength(15);
     expect(
       PARITY_MATRIX.columns
         .find((column) => column.provider === "gitlab")
         ?.cells.filter((entry) => entry.cell.kind === "gap").length,
-    ).toBe(7);
+    ).toBe(8);
     expect(
       PARITY_MATRIX.columns
         .find((column) => column.provider === "jira")
         ?.cells.filter((entry) => entry.cell.kind === "gap").length,
-    ).toBe(6);
-    expect(supportedPairs()).toHaveLength(14);
-    expect(supportedPairs().filter((pair) => pair.startsWith("github/"))).toHaveLength(9);
+    ).toBe(7);
+    expect(supportedPairs()).toHaveLength(15);
+    expect(supportedPairs().filter((pair) => pair.startsWith("github/"))).toHaveLength(10);
     expect(intersectionPairs()).toHaveLength(5);
     expect(new Set(intersectionPairs())).toEqual(
       new Set([
@@ -585,7 +585,7 @@ describe("TC-PMUT-001..013 structural mutations", () => {
     clean(gate());
   });
 
-  test("PMUT-003 an extra row key names the row and 28 against 27", () => {
+  test("PMUT-003 an extra row key names the row and 31 against 30", () => {
     const violation = named(
       gate(
         addCell(PARITY_MATRIX, "github", {
@@ -595,7 +595,7 @@ describe("TC-PMUT-001..013 structural mutations", () => {
       ),
       { provider: "github", operation: "read-attachment", clause: "cell-set" },
     );
-    expect(violation.received).toBe(28);
+    expect(violation.received).toBe(31);
     clean(gate());
   });
 
@@ -1557,7 +1557,7 @@ describe("review F-1 remediation: the four static dimensions are replay-corrobor
 
   test("carrier-absent equals the declared carrier arrays plus the replayed participation", async () => {
     const pairs = observedPairs("carrier-absent");
-    expect(pairs).toHaveLength(14);
+    expect(pairs).toHaveLength(15);
     for (const pair of pairs) {
       const derived = await derivedFor(pair.provider, pair.operation, "carrier-absent");
       expect(derived, `${pair.provider}/${pair.operation}`).toEqual(

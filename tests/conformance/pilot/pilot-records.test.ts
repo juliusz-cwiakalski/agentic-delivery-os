@@ -10,7 +10,13 @@ import {
   readCommitTelemetry,
   readMergeTransactions,
 } from "../../../packages/core/src/state/index";
-import { createPilot, PILOT_REF, PILOT_REPOSITORY, type Pilot } from "../../fixtures/pilot/harness";
+import {
+  createPilot,
+  PILOT_LANDING_SHA,
+  PILOT_REF,
+  PILOT_REPOSITORY,
+  type Pilot,
+} from "../../fixtures/pilot/harness";
 
 let pilot: Pilot | undefined;
 
@@ -66,7 +72,10 @@ describe("TC-PILOT-006 durable records", () => {
     expect(transactions.ok).toBe(true);
     if (transactions.ok) {
       const merged = transactions.records.find((record) => record.result === "merged");
-      expect(merged?.landing.shaOnBase).toBe(true);
+      // GH-349: the landing identity is the provider's merge commit, and its
+      // containment is unknown because the commit is not in the checkout.
+      expect(merged?.landing.shaOnBase).toBe("unknown");
+      expect(merged?.squashSha).toBe(PILOT_LANDING_SHA);
     }
 
     const history = readCloseoutHistory(fixture().store, PILOT_REF);

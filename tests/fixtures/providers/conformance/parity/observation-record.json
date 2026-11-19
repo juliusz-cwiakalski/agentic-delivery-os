@@ -235,6 +235,32 @@
           "state": "not-observable",
           "why": "no error family fixture exercises this operation"
         }
+      },
+      "close-milestone": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
       }
     },
     "gitlab": {

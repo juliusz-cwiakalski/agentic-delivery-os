@@ -4,7 +4,6 @@
  * pre-fence identities, identical bytes, and no projected event.
  */
 import { describe, expect, test } from "bun:test";
-import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 import {
   MALFORMED_REASONS,
   REMOVAL_REF,
@@ -12,6 +11,7 @@ import {
   UNKNOWN_REF,
 } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
+import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const errorOf = (text: string): Record<string, unknown> =>
@@ -194,6 +194,31 @@ describe("TC-QLC-011 every removal refusal is append-free and byte-identical", (
       expect(harness.removalRecords().length, refusal.label).toBe(
         refusal.label === "already-removed" ? 1 : 0,
       );
+    }
+  });
+});
+
+describe("TC-F6-005 an independent append-sequence comparison names a refusal that appended", () => {
+  test("the refusal appends zero records and the injected record is named", async () => {
+    const harness = createRemovalHarness("remove-append-control");
+    try {
+      harness.seedEntry({ ref: REMOVAL_REF });
+      const before = harness.composition.store.readRecords();
+      if (!before.ok) throw new Error("read failed");
+      const run = await harness.run(["queue", "remove", REMOVAL_REF, "--json"]);
+      expect(run.exitCode).toBe(1);
+      const after = harness.composition.store.readRecords();
+      if (!after.ok) throw new Error("read failed");
+      const appended = after.value.records.length - before.value.records.length;
+      const controlDivergence = (count: number): string | undefined =>
+        count === 0 ? undefined : `refusal missing-reason appended ${count} records`;
+      expect(controlDivergence(appended)).toBeUndefined();
+      expect(() => {
+        const divergence = controlDivergence(1);
+        if (divergence !== undefined) throw new Error(divergence);
+      }).toThrow("appended 1 records");
+    } finally {
+      harness.dispose();
     }
   });
 });

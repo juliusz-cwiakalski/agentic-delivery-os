@@ -26,9 +26,15 @@ import {
 import {
   conditionTypeForCause,
   createParkRecord,
+  releasedParkRecord,
   resolveOwnerHoldFact,
 } from "../../packages/core/src/domain/index";
 import { createQueueEdgeHarness } from "../fixtures/queue/cli/harness";
+import {
+  brokenParkWriterDouble,
+  type ParkIntegrityObservation,
+  parkIntegrityDivergence,
+} from "../fixtures/queue/integrity-breaches";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = "2026-11-13T10:00:00.000Z";
@@ -283,5 +289,42 @@ describe("TC-PAUSE-072 the queue release park grammar and writers", () => {
     expect(record.cause).toBe("owner-hold");
     expect(record.until).toBeUndefined();
     expect(QUEUE_PARK_RECORD_KIND).toBe("queue.park");
+  });
+});
+
+describe("TC-F6-001 the operator park ledger never carries a battery-only cause", () => {
+  test("a park-writer double that accepts liveness-stall fails naming the cause", () => {
+    const ownerHold = createParkRecord({
+      ref: "GH-901",
+      cause: "owner-hold",
+      condition: { type: "preemption" },
+      recheckMs: 60_000,
+      evaluatedAt: NOW,
+      recordedAt: NOW,
+    });
+    const observation: ParkIntegrityObservation = {
+      ref: "GH-901",
+      operatorRefusals: [
+        { label: "out-of-vocabulary", code: "input.value.rejected", summary: "reason=park-cause" },
+        {
+          label: "battery-only",
+          code: "fallback.invocation",
+          summary: "reason=park-liveness-stall-battery-only",
+        },
+        { label: "missing-expiry", code: "fallback.invocation", summary: "reason=until-required" },
+        {
+          label: "forbidden-expiry",
+          code: "fallback.invocation",
+          summary: "reason=until-unsupported",
+        },
+      ],
+      operatorLedger: [ownerHold],
+      parksAfterRemoval: [releasedParkRecord(ownerHold, { nowIso: NOW })],
+    };
+    expect(parkIntegrityDivergence(observation)).toBeUndefined();
+    expect(() => {
+      const divergence = parkIntegrityDivergence(brokenParkWriterDouble(observation));
+      if (divergence !== undefined) throw new Error(divergence);
+    }).toThrow("battery-only cause liveness-stall");
   });
 });

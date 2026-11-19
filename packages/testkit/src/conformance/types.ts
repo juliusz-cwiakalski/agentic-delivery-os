@@ -17,6 +17,7 @@ import type {
   DeliveryRequest,
   DeliveryStateAlias,
   ExternalSystemInstance,
+  MilestoneRecord,
   PipelineJobState,
   PipelineRun,
   WorkItem,
@@ -70,7 +71,8 @@ export type ConformanceAssertionFamily =
   | "pipeline-run"
   | "comment-provenance"
   | "label-semantics"
-  | "delivery-thread";
+  | "delivery-thread"
+  | "milestone-state";
 
 /** One ordered flow step (DM-2). */
 export type ConformanceFlowStep = {
@@ -154,6 +156,8 @@ export type GithubMockAddressing = {
   readonly pullNumber: number;
   readonly commitSha: string;
   readonly threadId: string;
+  /** The milestone the bounded read and the close address; absent is unused. */
+  readonly milestoneNumber?: number;
 };
 
 /** GitLab addressing the flows consume. */
@@ -222,6 +226,10 @@ export type ConformanceAdapterClient = {
    * variant is proven by a direct client call, never a second step.
    */
   readonly createDeliveryRequest?: () => Promise<ConformanceAdapterWrite>;
+  /** The ONE bounded milestone read the closeout composition consumes. */
+  readonly readMilestone?: () => Promise<ConformanceAdapterRead<MilestoneRecord>>;
+  /** The single milestone close; its normalized outcome is projection-compared. */
+  readonly closeMilestone?: () => Promise<ConformanceAdapterWrite>;
 };
 
 /** Input passed to a test-only control write handler. */

@@ -110,13 +110,13 @@ describe("TC-CEREMONY-049 the two error identities are additive and exact", () =
     expect("ceremony.declaration.invalid".split(".")).toHaveLength(3);
   });
 
-  test("the documented table carries both rows and the 164 identity count", () => {
+  test("the documented table carries both rows and the 167 identity count", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     for (const entry of ceremonyRows) {
       const row = `| ${entry.code} | ceremony | ${entry.category} | ${String(entry.retryable)} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
       expect(doc.split(row).length - 1, entry.code).toBe(1);
     }
-    expect(doc).toContain("164 machine identities");
+    expect(doc).toContain("167 machine identities");
   });
 });
 

@@ -56,6 +56,15 @@ without any record being deleted, and a later re-declaration restores it.
 `queue release` is unchanged: it drops the lane's lease and never removes an
 entry.
 
+The surface's integrity is proven property by property — claim, park,
+reconcile, CRUD, reason-bearing removal, single-flight, and append-position
+presence — each by a named suite carrying a declared control (an independent
+derived comparison, or a deliberately broken double that must fail naming the
+property). The proofs add no verb, record kind, state key, flag, or vocabulary
+value; behaviour changes only where a control demonstrated a breach, and a
+repair restores the declared sentence rather than widening it. See the
+[scheduling engine specification](../../../../../spec/features/feature-scheduling-engine.md).
+
 ## OUTPUT
 
 Text: one bounded summary plus one line per entry or action; `queue

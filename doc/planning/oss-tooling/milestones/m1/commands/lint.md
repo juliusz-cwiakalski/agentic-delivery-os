@@ -1,6 +1,7 @@
 # lint(1)
 
-Status: M0 shipped (M0-S10); plan target shipped in GH-226 (M1-S13).
+Status: M0 shipped (M0-S10); plan target shipped in GH-226 (M1-S13);
+both-target divergence detection shipped in M4-S11 (GH-349).
 Delivered contract.
 
 ## NAME
@@ -10,7 +11,7 @@ Delivered contract.
 ## SYNOPSIS
 
 ```
-<binary> lint <ref>
+<binary> lint <ref> [--pm-notes] [--registry]
 <binary> lint plan <ref>
 ```
 
@@ -19,6 +20,14 @@ Delivered contract.
 Schema and format conformance at write time for pm-notes and the
 delivery registry (M0) and the machine-readable delivery plan (M1-S13).
 Verify is evidence against reality; lint is schema and format.
+
+With both targets selected (`lint <ref> --pm-notes --registry`), the run also
+compares the two surfaces once both conformance checks pass: for every phase the
+ledger holds a transition for, the document's `completed` must equal the
+registry fold's. The first disagreement is `lint.phases.divergent`, naming the
+phase and both values; the rule reports and never repairs, writes nothing,
+takes no fence, and reads no clock. A phase with no ledger history and a
+document-only completion are out of scope, so `verify change` is unaffected.
 
 ## OUTPUT
 
@@ -29,8 +38,8 @@ The pm-notes and registry targets keep their existing payloads.
 
 ## EXIT STATUS
 
-0 conformant; 1 non-conformant (classified errors); 2 unreadable
-(classified).
+0 conformant; 1 non-conformant (a classified finding, including
+`lint.phases.divergent`); 2 unreadable (classified).
 
 ## EXAMPLES
 
@@ -53,7 +62,7 @@ $ <binary> lint GH-301 --json
 ## ERRORS
 
 `lint.notes.malformed`, `lint.keys.missing`, `lint.variant.unknown`,
-`lint.phases.incomplete`, `lint.target.missing`,
+`lint.phases.incomplete`, `lint.target.missing`, `lint.phases.divergent`,
 `lint.document.unreadable`, and the shared plan identities
 `plan.schema.invalid`, `plan.tier.unknown`, `plan.format.legacy-markdown`,
 `plan.artifact.missing`.

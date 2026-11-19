@@ -31,7 +31,7 @@ export const PILOT_MATRIX: readonly PilotMatrixEntry[] = [
     surface: "Git working tree, commit objects, local bare remote",
     kind: "real",
     evidence:
-      "baseline, delivery, and squash commits exist; the delivery branch is deleted; the bare mirror holds the base branch",
+      "baseline and delivery commits exist; the delivery branch is deleted after the provider landing; the bare mirror holds the base branch",
   },
   {
     id: "change-files",

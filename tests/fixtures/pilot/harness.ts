@@ -104,6 +104,8 @@ export const PILOT_NOW_MS = Date.parse(PILOT_NOW_ISO);
 export const PILOT_WORKSPACE_ID = "pilot-workspace";
 export const PILOT_FENCE_NAMESPACE = "pilot-fence";
 export const PILOT_QUESTION_ID = "Q-0001";
+/** The stub provider's merge commit for the pilot's one landing. */
+export const PILOT_LANDING_SHA = "5040000000000000000000000000000000000001";
 export const PILOT_BUDGET = { maxSteps: 24, maxRetries: 0 } as const;
 
 const nowIsoOf = (iso: string): string => iso;
@@ -466,6 +468,29 @@ export const createPilot = async (options: PilotOptions = {}): Promise<Pilot> =>
   const mergeRuntime = createMergeCommandRuntime({
     store,
     git: createGitMergeSeam({ cwd: repo.root, timeoutMs: 20_000, childRunner: runner }),
+    // The pilot's provider surface is stubbed in process, so the one composed
+    // landing mechanism is served here and the call is recorded. The provider's
+    // merge commit is synthetic and therefore outside the checkout: the recorded
+    // containment is the honest third state, never a locally derived `true`
+    // (GH-349 DM-3).
+    land: async (input) => {
+      stubs.providerCalls.push({
+        surface: "provider",
+        operation: "merge-delivery-request",
+        target: `${input.deliveryRequest.systemName}#${input.deliveryRequest.entityId}`,
+        outbound: false,
+      });
+      return { ok: true, requestState: "merged", mergeCommitSha: PILOT_LANDING_SHA };
+    },
+    landingGap: () => undefined,
+    restoreCheckout: async (baseRef) => {
+      const restored = await createGitBranchSeam({
+        cwd: repo.root,
+        timeoutMs: 20_000,
+        childRunner: runner,
+      }).restoreCheckout({ baseRef });
+      return restored.ok ? "ok" : "failed";
+    },
     values: () => ({}),
     readWorkItem: async () => ({
       ok: true,

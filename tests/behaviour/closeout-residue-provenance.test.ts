@@ -14,6 +14,7 @@ const PRODUCERS: Readonly<Record<string, string>> = {
   "worktree-retained": "closeout worktree predicate",
   "session-attribution-gap": "closeout session compaction",
   "capsule-cap-reached": "closeout residue cap",
+  "milestone-sync-withheld": "closeout milestone sync",
 };
 
 describe("TC-CAP-035 residue provenance", () => {

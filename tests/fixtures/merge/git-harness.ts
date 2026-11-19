@@ -3,7 +3,11 @@
  * (test plan §6.1). One `mkdtemp` repository per case, deterministic identity
  * and dates via the testkit builder, no remotes.
  */
-import { createGitMergeSeam, type GitMergeSeam } from "../../../packages/adapters/src/git/index";
+import {
+  createGitBranchSeam,
+  createGitMergeSeam,
+  type GitMergeSeam,
+} from "../../../packages/adapters/src/git/index";
 import {
   createTempGitRepository,
   type TempGitRepository,
@@ -31,12 +35,18 @@ const commit = (repo: TempGitRepository, message: string): void => {
   if (committed.status !== 0) throw new Error(`git commit failed: ${committed.stderr}`);
 };
 
-const wrapper = (seam: GitMergeSeam): MergeGitFacts => ({
+const wrapper = (seam: GitMergeSeam, cwd: string): MergeGitFacts => ({
   head: () => seam.head(),
   isContained: (sha, ref) => seam.isContained(sha, ref),
   refresh: (input) => seam.refresh(input),
   land: (input) => seam.squashLand(input),
   deleteBranch: (input) => seam.deleteBranch(input),
+  restoreCheckout: async (baseRef) => {
+    const restored = await createGitBranchSeam({ cwd, timeoutMs: 20_000 }).restoreCheckout({
+      baseRef,
+    });
+    return restored.ok ? "ok" : "failed";
+  },
 });
 
 /** A request branch behind its base with two conflicting paths. */
@@ -64,7 +74,7 @@ export const createConflictingRepo = (): RealMergeRepo => {
   return {
     repo,
     seam,
-    git: wrapper(seam),
+    git: wrapper(seam, repo.root),
     branch: FIXTURE_BRANCH,
     baseRef: FIXTURE_BASE,
     oldHead,
@@ -93,7 +103,7 @@ export const createBehindRepo = (): RealMergeRepo => {
   return {
     repo,
     seam,
-    git: wrapper(seam),
+    git: wrapper(seam, repo.root),
     branch: FIXTURE_BRANCH,
     baseRef: FIXTURE_BASE,
     oldHead,
@@ -120,7 +130,7 @@ export const createLandingRepo = (): RealMergeRepo => {
   return {
     repo,
     seam,
-    git: wrapper(seam),
+    git: wrapper(seam, repo.root),
     branch: FIXTURE_BRANCH,
     baseRef: FIXTURE_BASE,
     oldHead,

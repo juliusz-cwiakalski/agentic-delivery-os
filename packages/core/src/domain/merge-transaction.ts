@@ -1,20 +1,23 @@
 /**
- * The pure merge transaction composition (GH-225 F-2..F-8, DEC-1..DEC-12).
+ * The pure merge transaction composition (GH-225 F-2..F-8, GH-349 F-1/F-2).
  *
  * No I/O is performed here: every provider read, state read/append, git
  * mutation, clock, and identity arrives through injected ports. The transaction
  * consumes the recorded verification, enforces the freshness envelope,
  * re-probes the transition-sensitive facts, verifies and records waivers,
- * attempts exactly one rebase-refresh, lands one squash commit, verifies the
- * landing, and records the outcome. It never waits, never retries unboundedly,
- * and cannot express a force operation.
+ * classifies the request's mergeability into exactly one declared identity, and
+ * composes exactly one landing mechanism — the closed `merge-delivery-request`
+ * provider-side operation at the verified head, carrying deterministic crafted
+ * metadata. It never waits, never retries, never mutates the head it verified,
+ * and cannot express a force operation; no local landing and no local refresh is
+ * composed.
  */
 import {
+  type CapabilityGapReason,
   type DeliveryRequest,
   ERROR_TABLE,
   ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
-  FALLBACK_INTERNAL_CODE,
   MERGE_GATE_FRESHNESS_DEFAULT_SECONDS,
   MERGE_GATE_VERIFICATION_SCHEMA,
   MERGE_MAX_CONFLICT_PATHS,
@@ -26,6 +29,7 @@ import {
   MERGE_MAX_WAIVER_REFS,
   MERGE_POST_LANDING_STEP_IDS,
   MERGE_TRANSACTION_SCHEMA,
+  type MergeDeliveryRequestInput,
   type MergeDryRunAuthorization,
   type MergeDryRunReport,
   type MergeGateEntry,
@@ -35,6 +39,7 @@ import {
   type MergePostLandingStatus,
   type MergePostLandingStep,
   type MergeRefreshEvidence,
+  type MergeRefusalAttribution,
   type MergeReport,
   type MergeStateRead,
   type MergeStateReadReason,
@@ -84,19 +89,27 @@ export type MergeRequestDetailRead =
   | { readonly ok: true; readonly request: DeliveryRequest }
   | { readonly ok: false; readonly code: string };
 
-/** The single refresh attempt's outcome. */
+/** The single refresh attempt's outcome (the retained git-seam capability). */
 export type MergeRefreshResult =
   | { readonly outcome: "conflicted"; readonly paths: readonly string[] }
   | { readonly outcome: "succeeded"; readonly oldSha: string; readonly newSha: string }
   | { readonly outcome: "failed"; readonly code: string };
 
-/** The landing mutation's outcome. */
+/**
+ * The closed provider-side landing outcome (`merge-delivery-request`, API-1).
+ *
+ * `ok: true` means the provider performed the landing and its read-back was
+ * observed; `requestState` is that observed request state, and `"merged"` is
+ * the only value that asserts merged truth. The landing commit identity is
+ * present only when the provider supplied it: absence is unknown, never derived
+ * from a local commit or a branch head. `ok: false` is the provider's refusal,
+ * classified by the caller and never re-issued.
+ */
 export type MergeLandResult =
   | {
       readonly ok: true;
-      readonly squashSha: string;
       readonly requestState: string;
-      readonly containedOnBase: boolean | "failed";
+      readonly mergeCommitSha?: string;
     }
   | { readonly ok: false; readonly code: string };
 
@@ -121,11 +134,20 @@ export type MergeTransactionPorts = {
   readonly readRequestDetail: () => Promise<MergeRequestDetailRead>;
   readonly readHead: () => Promise<string | undefined>;
   readonly readBaseContainment: (sha: string) => Promise<boolean | "failed">;
-  readonly refresh: () => Promise<MergeRefreshResult>;
-  readonly land: (input: {
-    readonly baseRef: string;
-    readonly branch?: string;
-  }) => Promise<MergeLandResult>;
+  /**
+   * The adapter's declared capability for the closed `merge-delivery-request`
+   * operation: `undefined` when it is supported, or the declared gap reason.
+   * A gap refuses the lifecycle landing before any attempt (AC-F1-7).
+   */
+  readonly readLandingGap: () => CapabilityGapReason | undefined;
+  /**
+   * The one composed landing mechanism: the closed `merge-delivery-request`
+   * operation, called at most once per invocation and never after a failure.
+   * The local squash landing and the local refresh stay declared git-seam
+   * capabilities with zero composed callers, so they are absent from this port
+   * set rather than rejected at runtime.
+   */
+  readonly land: (input: MergeDeliveryRequestInput) => Promise<MergeLandResult>;
   readonly deleteBranch: (input: { readonly branch?: string }) => Promise<"ok" | "failed">;
 };
 
@@ -158,6 +180,15 @@ export type MergeFailureEvidence = {
   readonly attempts?: number;
   readonly stateReason?: string;
   readonly gateId?: string;
+  /**
+   * The evidence source of a not-green declared required job (F-3, DM-2,
+   * API-2): `recorded` when the persisted gate verdict already reported that
+   * job not green, `probe` when the recorded verdict was green and the probe
+   * observed it. Exactly one optional field on the bounded evidence; the
+   * verification timestamp is never carried here (it stays on the persisted
+   * `merge.gate-verification` record that gate id plus job resolves to).
+   */
+  readonly attribution?: MergeRefusalAttribution;
   readonly gateClass?: string;
   readonly authorizer?: string;
   readonly overridePath?: string;
@@ -261,6 +292,61 @@ const recordedVerdict = (
 const recordedFailed = (record: MergeGateVerificationRecord | undefined): readonly string[] =>
   recordedFailedJobs(record?.gates.find((gate) => gate.id === "ci-green")?.citation.names);
 
+/**
+ * The job names a recorded `ci-green` verdict reports not green, in citation
+ * order (F-3, TC-F3-003).
+ *
+ * The delivered citation carries one name list per not-green state it names
+ * (`failed-jobs`, `pending-jobs`, `missing-jobs`). These three facts — the
+ * effective gate id, the job and the verdict — are what identifies the
+ * persisted verification record a `recorded` attribution points at.
+ */
+const recordedNotGreenJobs = (names: readonly VerifyGateNameList[] | undefined): string[] => {
+  const values: string[] = [];
+  for (const list of names ?? []) {
+    if (
+      list.kind !== "failed-jobs" &&
+      list.kind !== "pending-jobs" &&
+      list.kind !== "missing-jobs"
+    ) {
+      continue;
+    }
+    for (const value of list.values) if (!values.includes(value)) values.push(value);
+  }
+  return values;
+};
+
+/** The delivered reasons that name the observed job in the page. */
+const namedJobReasons: readonly VerifyGateReason[] = [
+  "ci-pending",
+  "ci-canceled",
+  "ci-all-skipped",
+  "ci-failed",
+];
+
+/**
+ * One declared required job's not-green finding (F-3, AC-F3-2).
+ *
+ * The row is the existing `merge.gate.<gate-id>.failed` family; the evidence
+ * names the effective gate id, the delivered reason (or the recorded verdict's
+ * own reason) and exactly one attribution. No row, kind, or exit is added.
+ */
+const requiredJobFailure = (input: {
+  readonly entry: MergeGateEntry;
+  readonly detail: string;
+  readonly attribution: MergeRefusalAttribution;
+  readonly jobs: readonly string[];
+}): GateFailure => ({
+  entry: input.entry,
+  code: failureCode(input.entry.id),
+  evidence: {
+    gateId: input.entry.id,
+    detail: input.detail,
+    ...(input.jobs.length === 0 ? {} : { jobs: input.jobs }),
+    attribution: input.attribution,
+  },
+});
+
 const gateFailureFor = (
   entry: MergeGateEntry,
   verdict: MergeGateVerdictRecord | undefined,
@@ -339,6 +425,85 @@ export const mergeBaseRef = (request: DeliveryRequest | undefined): string =>
     : "main-tools";
 
 /**
+ * The one fixed landing message (AC-F1-6, API-1, Appendix G-10).
+ *
+ * Byte-identical for every landing: one bounded line, no leading or trailing
+ * whitespace, and no interpolated ref, request identity, or provider prose.
+ */
+const MERGE_LANDING_COMMIT_MESSAGE = "Landed by the delivery lifecycle merge primitive.";
+
+/**
+ * The crafted landing subject (AC-F1-6, DM-1).
+ *
+ * The provider-asserted request title is transmitted verbatim. Only when that
+ * signal is absent — or empty, which the provider did not assert as a subject —
+ * does the declared deterministic fallback apply: the change ref, then the
+ * request's source ref. Nothing is ever derived from the other signal.
+ */
+const landingTitleFor = (changeRef: string, request: DeliveryRequest): string =>
+  request.title !== undefined && request.title.length > 0
+    ? request.title
+    : `merge(${changeRef}): squash ${request.sourceRef}`;
+
+/**
+ * The base-containment answer for one identity (DM-3, Appendix G-9).
+ *
+ * A read that cannot answer is `"unknown"`, never a locally derived `true`.
+ */
+const containmentAnswer = async (
+  ports: MergeTransactionPorts,
+  sha: string,
+): Promise<boolean | "unknown"> => {
+  const answer = await ports.readBaseContainment(sha);
+  return answer === "failed" ? "unknown" : answer;
+};
+
+/**
+ * The effective gate set's declared required jobs (GH-349 AC-F3-3).
+ *
+ * Every `required-ci-job` entry is declared, whether the merge projection
+ * re-probes it or the change-level battery already evaluated it; the raw page
+ * is never the candidate set.
+ */
+const declaredCiJobsOf = (gateSet: MergeEffectiveGateSet): readonly string[] =>
+  gateSet.entries
+    .filter((entry) => entry.recipe === "required-ci-job")
+    .map((entry) => entry.job ?? entry.id);
+
+/**
+ * The checks posture of the verified head over the declared required set
+ * (AC-F2-2, AC-F3-3).
+ *
+ * A provider refuses a landing because a required check is not green, and the
+ * only structural reading of that posture is the page the invocation already
+ * read. The candidate set is the effective gate set's declared required jobs —
+ * every `required-ci-job` entry, `job ?? id` — and never the raw page: a job the
+ * gate set does not declare is not gate evidence and produces no refusal. Each
+ * declared job is evaluated through the delivered per-job evaluator (the single
+ * required-check mapping) and the first non-green result names the posture. A
+ * page for another head carries no posture, and no refusal message is ever
+ * matched.
+ */
+const checksPostureOf = (input: {
+  readonly runs: readonly PipelineRun[];
+  readonly pageSha: string | undefined;
+  readonly headSha: string;
+  readonly requiredJobs: readonly string[];
+}): { readonly reason: VerifyGateReason; readonly jobs: readonly string[] } | undefined => {
+  if (input.pageSha !== undefined && input.pageSha !== input.headSha) return undefined;
+  for (const name of input.requiredJobs) {
+    const evaluation = evaluateRequiredJobGate({
+      jobName: name,
+      runs: input.runs,
+      pageSha: input.pageSha,
+      headSha: input.headSha,
+    });
+    if (evaluation.verdict !== "pass") return { reason: evaluation.reason, jobs: [name] };
+  }
+  return undefined;
+};
+
+/**
  * Run the merge transaction (or its dry-run form).
  *
  * Every returned refusal is classified; the caller maps `domainKind` and `exit`
@@ -371,44 +536,34 @@ export const runMergeTransaction = async (input: {
     });
   }
 
-  // 1. Idempotent replay: a recorded contained landing replays without a second
-  // landing and without requiring a fresh verification (DEC-12, NFR-9).
+  // 1. Idempotent replay decides from provider truth: a recorded landing
+  // replays only while the provider still asserts the request merged, and a
+  // provider that does not assert it re-verifies rather than re-landing. Local
+  // containment stops being merged truth, because no fetch puts the provider's
+  // merge commit in the checkout (AC-F1-3, AC-F1-9; test plan §7.6(v)).
   const transactions = ports.readTransactions();
   if (!transactions.ok) {
     return refused(stateFailure(transactions.reason, transactions.code));
   }
   const latestTransaction = transactions.records.at(-1);
   if (latestTransaction !== undefined) {
-    if (latestTransaction.result === "merged" && latestTransaction.squashSha !== undefined) {
-      const contained = await ports.readBaseContainment(latestTransaction.squashSha);
-      if (contained === true) {
-        return { kind: "merged", report: replayReport(latestTransaction) };
-      }
-      return refused({
-        code: "merge.landing-unverified",
-        domainKind: "merge",
-        exit: 2,
-        evidence: {
-          recordedSha: latestTransaction.squashSha,
-          detail: contained === "failed" ? "containment-read-failed" : "not-contained",
-        },
-      });
+    const recorded = await ports.readRequestDetail();
+    if (!recorded.ok) return refused(readFailure(recorded.code));
+    if (recorded.request.reviewState === "merged") {
+      return { kind: "merged", report: replayReport(latestTransaction) };
     }
-    if (
-      latestTransaction.result === "landing-unverified" &&
-      latestTransaction.squashSha !== undefined
-    ) {
-      const contained = await ports.readBaseContainment(latestTransaction.squashSha);
-      if (contained === true) {
-        return { kind: "merged", report: replayReport(latestTransaction) };
-      }
-      return refused({
-        code: "merge.landing-unverified",
-        domainKind: "merge",
-        exit: 2,
-        evidence: { recordedSha: latestTransaction.squashSha, detail: "still-unverified" },
-      });
-    }
+    return refused({
+      code: "merge.landing-unverified",
+      domainKind: "merge",
+      exit: 2,
+      evidence: {
+        ...(latestTransaction.squashSha === undefined
+          ? {}
+          : { recordedSha: latestTransaction.squashSha }),
+        requestState: recorded.request.reviewState,
+        detail: "provider-not-merged",
+      },
+    });
   }
 
   // 2. The freshness envelope over the newest verification record.
@@ -444,43 +599,44 @@ export const runMergeTransaction = async (input: {
   if (!requestDetail.ok) return refused(readFailure(requestDetail.code));
 
   // An already-merged request with no recorded transaction is the record-less
-  // convergence case: append the outcome and replay, never re-land.
+  // convergence case: the provider asserts merged truth, so the outcome is
+  // recorded and replayed with zero landing calls. The recorded containment is
+  // the local read's honest answer, never the verdict (AC-F1-2, AC-F1-9).
   if (requestDetail.request.reviewState === "merged") {
     const mergedHead = requestDetail.request.headSha;
-    if (mergedHead !== undefined) {
-      const contained = await ports.readBaseContainment(mergedHead);
-      if (contained === true) {
-        const replay: MergeTransactionRecord = {
-          schema: MERGE_TRANSACTION_SCHEMA,
-          changeRef,
-          result: "merged",
-          squashSha: mergedHead,
-          replayed: true,
-          landing: { shaOnBase: true, requestState: "merged" },
-          refresh: { attempts: 0, outcome: "not-attempted" },
-          waiverRefs: [],
-          postLanding: [],
-          recordedAt: nowIso,
-        };
-        const appended = ports.appendTransaction(replay);
-        if (!appended.ok) {
-          // The convergence verdict is already merged; the record append is a
-          // declared cleanup failure, never silence (NFR-7).
-          return {
-            kind: "merged",
-            report: reportFor(
-              replay,
-              [
-                { id: "branch-deletion", status: "not-attempted" },
-                { id: "closeout-ready", status: "failed" },
-              ],
-              [],
-            ),
-          };
-        }
-        return { kind: "merged", report: replayReport(replay) };
-      }
+    const replay: MergeTransactionRecord = {
+      schema: MERGE_TRANSACTION_SCHEMA,
+      changeRef,
+      result: "merged",
+      ...(mergedHead === undefined ? {} : { squashSha: mergedHead }),
+      replayed: true,
+      landing: {
+        shaOnBase:
+          mergedHead === undefined ? "unknown" : await containmentAnswer(ports, mergedHead),
+        requestState: "merged",
+      },
+      refresh: { attempts: 0, outcome: "not-attempted" },
+      waiverRefs: [],
+      postLanding: [],
+      recordedAt: nowIso,
+    };
+    const appended = ports.appendTransaction(replay);
+    if (!appended.ok) {
+      // The convergence verdict is already merged; the record append is a
+      // declared cleanup failure, never silence (NFR-7).
+      return {
+        kind: "merged",
+        report: reportFor(
+          replay,
+          [
+            { id: "branch-deletion", status: "not-attempted" },
+            { id: "closeout-ready", status: "failed" },
+          ],
+          [],
+        ),
+      };
     }
+    return { kind: "merged", report: replayReport(replay) };
   }
 
   if (!envelope.ok) {
@@ -529,17 +685,6 @@ export const runMergeTransaction = async (input: {
           current: posture,
           verifiedAt: record.verifiedAt,
         });
-  const declaredJobNames = new Set(
-    config.gateSet.entries
-      .filter((entry) => entry.recipe === "required-ci-job")
-      .map((entry) => entry.job ?? entry.id),
-  );
-  const jobs = newRedJobs({
-    recordedFailed: recordedFailed(record),
-    currentRuns: checkRuns.value.items,
-    pageSha: checkRuns.value.sha ?? head,
-    headSha: head,
-  }).filter((name) => !declaredJobNames.has(name));
   const failures: GateFailure[] = [];
   const ownerPresent = posture.ownerLabels.length > 0;
   const recordedCi = recordedVerdict(record, "ci-green");
@@ -547,7 +692,19 @@ export const runMergeTransaction = async (input: {
     const entry = config.gateSet.enforcedMergeEntries.find(
       (candidate) => candidate.id === "ci-green",
     );
-    if (entry !== undefined) failures.push(gateFailureFor(entry, recordedCi));
+    if (entry !== undefined) {
+      // The persisted verdict already reported the job not green, so the
+      // finding is `recorded` and names the gate id, the job and the verdict.
+      // The verification timestamp stays on that persisted record.
+      failures.push(
+        requiredJobFailure({
+          entry,
+          detail: recordedCi.reason,
+          attribution: "recorded",
+          jobs: recordedNotGreenJobs(recordedCi.citation.names),
+        }),
+      );
+    }
   }
   const recordedOwner = recordedVerdict(record, "owner-gate");
   if (recordedOwner !== undefined && recordedOwner.verdict !== "pass" && !transition.changed) {
@@ -575,18 +732,9 @@ export const runMergeTransaction = async (input: {
       });
     }
   }
-  if (jobs.length > 0 && !failures.some((failure) => failure.entry.id === "ci-green")) {
-    const entry = config.gateSet.enforcedMergeEntries.find(
-      (candidate) => candidate.id === "ci-green",
-    );
-    if (entry !== undefined) {
-      failures.push({
-        entry,
-        code: failureCode("ci-green"),
-        evidence: { gateId: "ci-green", jobs },
-      });
-    }
-  }
+  // A page for another head is never head evidence: the probe reads the
+  // verified head only, so no declared job can be a finding from it.
+  const pageIsHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
   const ownerFailure = ownerPresent && !transition.changed;
   if (ownerFailure && !failures.some((failure) => failure.entry.id === "owner-gate")) {
     const entry = config.gateSet.enforcedMergeEntries.find(
@@ -610,27 +758,41 @@ export const runMergeTransaction = async (input: {
     }
     const verdict = recordedVerdict(record, entry.id);
     if (entry.recipe === "required-ci-job") {
+      const job = entry.job ?? entry.id;
+      if (verdict !== undefined && verdict.verdict !== "pass") {
+        // The recorded verdict already reported this job not green: the
+        // finding is `recorded`, and its evidence identifies the persisted
+        // record by gate id, job and verdict.
+        failures.push(
+          requiredJobFailure({
+            entry,
+            detail: verdict.reason,
+            attribution: "recorded",
+            jobs: [job],
+          }),
+        );
+        continue;
+      }
+      if (!pageIsHead) continue;
       const evaluationValue = evaluateRequiredJobGate({
-        jobName: entry.job ?? entry.id,
+        jobName: job,
         runs: checkRuns.value.items,
         pageSha: checkRuns.value.sha ?? head,
         headSha: head,
       });
-      if (evaluationValue.verdict !== "pass") {
-        failures.push({
-          entry,
-          code: failureCode(entry.id),
-          evidence: {
-            gateId: entry.id,
+      // A declared required job that is not green on the verified head is gate
+      // evidence in every delivered state — queued, running, canceled, skipped
+      // and failed — classified through the delivered reasons on the existing
+      // family row. A job the gate set does not declare is never a finding.
+      if (evaluationValue.verdict === "fail") {
+        failures.push(
+          requiredJobFailure({
+            entry,
             detail: evaluationValue.reason,
-            ...(() => {
-              const failedJobs = evaluationValue.names.find(
-                (list) => list.kind === "failed-jobs",
-              )?.values;
-              return failedJobs === undefined ? {} : { jobs: failedJobs };
-            })(),
-          },
-        });
+            attribution: "probe",
+            jobs: namedJobReasons.includes(evaluationValue.reason) ? [job] : [],
+          }),
+        );
       }
       continue;
     }
@@ -696,122 +858,226 @@ export const runMergeTransaction = async (input: {
     return refused(failureFor(failures[0] as GateFailure));
   }
 
-  // 7. Exactly one rebase-refresh attempt when the request is behind its base.
-  let refresh: MergeRefreshEvidence = { attempts: 0, outcome: "not-attempted" };
-  const behindBase = requestDetail.request.mergeableState === "conflicting";
-  if (behindBase) {
-    const refreshed = await ports.refresh();
-    refresh = {
-      attempts: 1,
-      outcome: refreshed.outcome === "failed" ? "conflicted" : refreshed.outcome,
-    };
-    if (refreshed.outcome === "conflicted") {
-      return refused({
-        code: "merge.rebase-conflict",
-        domainKind: "merge",
-        exit: 1,
-        evidence: { paths: refreshed.paths, attempts: 1 },
-      });
-    }
-    if (refreshed.outcome === "failed") {
-      return refused({
-        code: "merge.transaction-aborted",
-        domainKind: "merge",
-        exit: 1,
-        evidence: { detail: refreshed.code, attempts: 1 },
-      });
-    }
-    return refused({
-      code: "merge.gates-stale",
-      domainKind: "merge",
-      exit: 1,
-      evidence: {
-        oldSha: refreshed.oldSha,
-        newSha: refreshed.newSha,
-        attempts: 1,
-        detail: "refresh-changed-head",
-      },
-    });
-  }
+  // 7. The mergeability decision rule (F-2, API-2): total over the four
+  // normalized states plus absence, at most one post-refusal re-read and at
+  // most one unknown-recovery re-read, and no branch mutates the head it
+  // verified. The retained refresh capability is not composed here.
+  const refresh: MergeRefreshEvidence = { attempts: 0, outcome: "not-attempted" };
 
-  // 8. Land one squash commit and verify the landing.
-  const landed = await ports.land({
-    baseRef: config.baseRef,
-    ...(config.branch === undefined ? {} : { branch: config.branch }),
+  const landingInputOf = (request: DeliveryRequest): MergeDeliveryRequestInput => ({
+    deliveryRequest: request.identity,
+    strategy: "squash",
+    expectedHeadSha: head,
+    commitTitle: landingTitleFor(changeRef, request),
+    commitMessage: MERGE_LANDING_COMMIT_MESSAGE,
   });
-  if (!landed.ok) {
-    return refused({
-      code: "merge.transaction-aborted",
-      domainKind: "merge",
-      exit: 1,
-      evidence: { detail: landed.code },
+
+  const mergedFrom = async (landed: {
+    readonly requestState: string;
+    readonly mergeCommitSha?: string;
+  }): Promise<MergeTransactionOutcome> => {
+    const shaOnBase =
+      landed.mergeCommitSha === undefined
+        ? "unknown"
+        : await containmentAnswer(ports, landed.mergeCommitSha);
+    const postLanding: MergePostLandingStep[] = [];
+    const deleted = await ports.deleteBranch({
+      ...(config.branch === undefined ? {} : { branch: config.branch }),
     });
-  }
-  const verifiedLanding = landed.containedOnBase === true && landed.requestState === "merged";
-  if (!verifiedLanding) {
+    postLanding.push({ id: "branch-deletion", status: deleted === "ok" ? "ok" : "failed" });
+    postLanding.push({ id: "closeout-ready", status: "ok" });
+    const transactionRecord: MergeTransactionRecord = {
+      schema: MERGE_TRANSACTION_SCHEMA,
+      changeRef,
+      result: "merged",
+      ...(landed.mergeCommitSha === undefined ? {} : { squashSha: landed.mergeCommitSha }),
+      replayed: false,
+      landing: { shaOnBase, requestState: landed.requestState },
+      refresh,
+      waiverRefs: [...byGate.keys()].slice(0, MERGE_MAX_WAIVER_REFS),
+      postLanding,
+      recordedAt: nowIso,
+    };
+    const persisted = ports.appendTransaction(transactionRecord);
+    if (!persisted.ok) {
+      // The landing is verified; the record append is a declared cleanup
+      // failure, never a landing flip and never silence.
+      const declaredStatuses = postLanding.map((step) =>
+        step.id === "closeout-ready"
+          ? { ...step, status: "failed" as MergePostLandingStatus }
+          : step,
+      );
+      return {
+        kind: "merged",
+        report: reportFor(transactionRecord, declaredStatuses, record?.gates ?? []),
+      };
+    }
+    return {
+      kind: "merged",
+      report: reportFor(transactionRecord, postLanding, record?.gates ?? []),
+    };
+  };
+
+  // The landing fired but the provider did not assert merged truth: the
+  // outcome is recorded as unverified and the verdict is unknown, never merged
+  // and never inferred from local containment (AC-F1-3, AC-F1-4).
+  const unverifiedFrom = async (landed: {
+    readonly requestState: string;
+    readonly mergeCommitSha?: string;
+  }): Promise<MergeTransactionOutcome> => {
+    const shaOnBase =
+      landed.mergeCommitSha === undefined
+        ? "unknown"
+        : await containmentAnswer(ports, landed.mergeCommitSha);
     const recordValue: MergeTransactionRecord = {
       schema: MERGE_TRANSACTION_SCHEMA,
       changeRef,
       result: "landing-unverified",
-      squashSha: landed.squashSha,
+      ...(landed.mergeCommitSha === undefined ? {} : { squashSha: landed.mergeCommitSha }),
       replayed: false,
-      landing: { shaOnBase: landed.containedOnBase === true, requestState: landed.requestState },
+      landing: { shaOnBase, requestState: landed.requestState },
       refresh,
       waiverRefs: [...byGate.keys()].slice(0, MERGE_MAX_WAIVER_REFS),
       postLanding: [],
       recordedAt: nowIso,
     };
     const persisted = ports.appendTransaction(recordValue);
-    const landingDetail =
-      landed.containedOnBase === "failed" ? "containment-read-failed" : "landing-unverified";
     return refused({
       code: "merge.landing-unverified",
       domainKind: "merge",
       exit: 2,
       evidence: {
-        recordedSha: landed.squashSha,
+        ...(landed.mergeCommitSha === undefined ? {} : { recordedSha: landed.mergeCommitSha }),
         requestState: landed.requestState,
         // A failed outcome-record append is declared, not swallowed: the
         // landing state stays unverified and the append code is surfaced so a
         // re-run can still re-verify rather than re-land (NFR-7, GAP-10).
         detail: persisted.ok
-          ? landingDetail
-          : `${landingDetail};record-append-failed:${persisted.code}`,
+          ? "landing-unverified"
+          : `landing-unverified;record-append-failed:${persisted.code}`,
       },
+    });
+  };
+
+  // One guarded landing at the verified head, then the provider's own truth.
+  const landAtVerifiedHead = async (request: DeliveryRequest): Promise<MergeTransactionOutcome> => {
+    const landed = await ports.land(landingInputOf(request));
+    if (!landed.ok) {
+      // A refused landing is returned as a refusal: it is never converted into
+      // a local commit, a fallback landing, or a success by inference.
+      return refused({
+        code: "merge.transaction-aborted",
+        domainKind: "merge",
+        exit: 1,
+        evidence: { detail: landed.code },
+      });
+    }
+    return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
+  };
+
+  // `not-mergeable`: the provider is the authority, so the guarded landing is
+  // offered once; a refusal is classified by exactly one bounded post-refusal
+  // re-read rather than retried (AC-F2-2, AC-F2-3, AC-F2-4).
+  const classifyNotMergeable = async (
+    request: DeliveryRequest,
+  ): Promise<MergeTransactionOutcome> => {
+    const landed = await ports.land(landingInputOf(request));
+    if (landed.ok) {
+      return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
+    }
+    const reRead = await ports.readRequestDetail();
+    if (!reRead.ok) return refused(readFailure(reRead.code));
+    const posture = checksPostureOf({
+      runs: checkRuns.value.items,
+      pageSha: checkRuns.value.sha ?? head,
+      headSha: head,
+      requiredJobs: declaredCiJobsOf(config.gateSet),
+    });
+    if (posture !== undefined) {
+      return refused({
+        code: failureCode("ci-green"),
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          gateId: "ci-green",
+          detail: posture.reason,
+          ...(posture.jobs.length === 0 ? {} : { jobs: posture.jobs }),
+        },
+      });
+    }
+    return refused({
+      code: "merge.sync-required",
+      domainKind: "merge",
+      exit: 1,
+      evidence: {
+        detail: "behind-unconfirmed",
+        requestState: reRead.request.mergeableState ?? "unknown",
+      },
+    });
+  };
+
+  const decide = async (request: DeliveryRequest): Promise<MergeTransactionOutcome> => {
+    switch (request.mergeableState) {
+      case "conflicting":
+        // The sync cause is certain, so no landing call is made. There is no
+        // internal rebase and no head mutation (AC-F2-1, F8).
+        return refused({
+          code: "merge.sync-required",
+          domainKind: "merge",
+          exit: 1,
+          evidence: {
+            detail: "dirty",
+            requestState: request.mergeableState,
+            recordedSha: head,
+            currentSha: head,
+          },
+        });
+      case "mergeable":
+        return landAtVerifiedHead(request);
+      case "not-mergeable":
+        return classifyNotMergeable(request);
+      default: {
+        // `unknown` or absent: exactly one bounded re-read of the same request,
+        // compared on the exact head. The command never waits or polls.
+        const reRead = await ports.readRequestDetail();
+        if (!reRead.ok) return refused(readFailure(reRead.code));
+        const observed = reRead.request;
+        if (observed.headSha !== undefined && observed.headSha !== head) {
+          return refused({
+            code: "merge.gates-stale",
+            domainKind: "merge",
+            exit: 1,
+            evidence: { recordedSha: head, currentSha: observed.headSha, detail: "head-changed" },
+          });
+        }
+        if (observed.mergeableState === undefined || observed.mergeableState === "unknown") {
+          return refused({
+            code: "merge.mergeability-unknown",
+            domainKind: "merge",
+            exit: 2,
+            evidence: { requestState: observed.mergeableState ?? "unknown" },
+          });
+        }
+        return decide(observed);
+      }
+    }
+  };
+
+  // 8. A declared landing gap refuses the delivered clean pre-mutation abort:
+  // the capability declaration is never contradicted by a silent local fallback,
+  // and no landing attempt is made (AC-F1-7, DM-6).
+  const landingGap = ports.readLandingGap();
+  if (landingGap !== undefined) {
+    return refused({
+      code: "merge.transaction-aborted",
+      domainKind: "merge",
+      exit: 1,
+      evidence: { detail: `merge-delivery-request:${landingGap}` },
     });
   }
 
-  const postLanding: MergePostLandingStep[] = [];
-  const deleted = await ports.deleteBranch({
-    ...(config.branch === undefined ? {} : { branch: config.branch }),
-  });
-  postLanding.push({ id: "branch-deletion", status: deleted === "ok" ? "ok" : "failed" });
-  postLanding.push({ id: "closeout-ready", status: "ok" });
-  const transactionRecord: MergeTransactionRecord = {
-    schema: MERGE_TRANSACTION_SCHEMA,
-    changeRef,
-    result: "merged",
-    squashSha: landed.squashSha,
-    replayed: false,
-    landing: { shaOnBase: true, requestState: "merged" },
-    refresh,
-    waiverRefs: [...byGate.keys()].slice(0, MERGE_MAX_WAIVER_REFS),
-    postLanding,
-    recordedAt: nowIso,
-  };
-  const persisted = ports.appendTransaction(transactionRecord);
-  if (!persisted.ok) {
-    // The landing is verified; the record append is a declared cleanup failure,
-    // never a landing flip and never silence.
-    const declaredStatuses = postLanding.map((step) =>
-      step.id === "closeout-ready" ? { ...step, status: "failed" as MergePostLandingStatus } : step,
-    );
-    return {
-      kind: "merged",
-      report: reportFor(transactionRecord, declaredStatuses, record?.gates ?? []),
-    };
-  }
-  return { kind: "merged", report: reportFor(transactionRecord, postLanding, record?.gates ?? []) };
+  // 9. One landing mechanism, and its provider-asserted verdict.
+  return decide(requestDetail.request);
 };
 
 const reportFor = (
@@ -898,6 +1164,7 @@ export const renderMergeFailure = (failure: MergeFailure): string => {
   if (evidence.overridePath !== undefined) lines.push(`override=${evidence.overridePath}`);
   if (evidence.requestState !== undefined) lines.push(`request-state=${evidence.requestState}`);
   if (evidence.detail !== undefined) lines.push(`evidence=${evidence.detail}`);
+  if (evidence.attribution !== undefined) lines.push(`attribution=${evidence.attribution}`);
   const hint = remediationFor(failure.code);
   if (hint !== undefined) lines.push(`remediation=${hint}`);
   const bounded = lines.slice(0, MERGE_MAX_HUMAN_LINES);
@@ -1068,14 +1335,6 @@ export const gateSetFromValues = (values: Readonly<Record<string, unknown>>) => 
 
 /** The declared default freshness bound. */
 export const defaultFreshnessSeconds = (): number => MERGE_GATE_FRESHNESS_DEFAULT_SECONDS;
-
-/** The failure shape for an internal/unclassified transaction fault. */
-export const internalMergeFailure = (): MergeFailure => ({
-  code: FALLBACK_INTERNAL_CODE,
-  domainKind: "merge",
-  exit: 2,
-  evidence: {},
-});
 
 /** The post-landing step ids the record carries (declared once). */
 export const mergePostLandingStepIds = (): readonly string[] => MERGE_POST_LANDING_STEP_IDS;
