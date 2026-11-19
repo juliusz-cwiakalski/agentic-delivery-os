@@ -1,13 +1,37 @@
 {
-  "providerName": "x",
-  "chainName": "x",
-  "conditionKinds": "x",
-  "waitSeconds": "x",
-  "resetEpochMs": "x",
-  "httpStatus": "x",
-  "failureClass": "x",
-  "credentialRefName": "x",
-  "parkName": "x",
-  "parkExpiresAt": "x",
-  "announcementCode": "x"
+  "park": {
+    "providerName": "zai-coding-plan",
+    "chainName": "default",
+    "conditionKinds": ["peak-window"],
+    "waitSeconds": 3599,
+    "resetEpochMs": 1767276000000,
+    "httpStatus": 429,
+    "failureClass": "quota_exhausted",
+    "credentialRefName": "zai",
+    "timezone": "Europe/Berlin",
+    "budgetName": "daily-spend",
+    "budgetScope": "window",
+    "budgetBasis": "cost",
+    "budgetMeasured": 40.5,
+    "budgetCeiling": 40.5
+  },
+  "announcement": {
+    "providerName": "zai-coding-plan",
+    "chainName": "default",
+    "conditionKinds": ["budget-exhausted"],
+    "waitSeconds": 3599,
+    "resetEpochMs": 1767276000000,
+    "httpStatus": 429,
+    "failureClass": "quota_exhausted",
+    "credentialRefName": "zai",
+    "timezone": "Europe/Berlin",
+    "budgetName": "daily-spend",
+    "budgetScope": "window",
+    "budgetBasis": "cost",
+    "budgetMeasured": 40.5,
+    "budgetCeiling": 40.5,
+    "parkName": "provider:zai-coding-plan",
+    "parkExpiresAt": "2026-01-02T12:00:00.000Z",
+    "announcementCode": "provider.budget.parked"
+  }
 }

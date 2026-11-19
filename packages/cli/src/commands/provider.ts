@@ -177,7 +177,13 @@ const providerError = (
   summary: string,
 ): { readonly error: Record<string, unknown> } => ({
   error: {
-    kind: code.startsWith("config.") ? "config" : code.startsWith("input.") ? "input" : "provider",
+    kind: code.startsWith("config.")
+      ? "config"
+      : code.startsWith("input.")
+        ? "input"
+        : code.startsWith("state.")
+          ? "state"
+          : "provider",
     code,
     summary,
   },

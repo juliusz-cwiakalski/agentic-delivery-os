@@ -219,6 +219,7 @@
     "src/domain/watchdog.ts",
     "src/index.ts",
     "src/provider/announcements.ts",
+    "src/provider/budgets.ts",
     "src/provider/chain.ts",
     "src/provider/conditions.ts",
     "src/provider/engine.ts",

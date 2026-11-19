@@ -172,3 +172,32 @@ describe("GH-350 the zone edge is hermetic", () => {
     expect(providerTestFiles()).toContain("tests/behaviour/provider-peak-zone.test.ts");
   });
 });
+
+/**
+ * GH-350 TC-CONFORM-005 — the budget gate's new pure modules are hermetic: no
+ * network, timer, environment, filesystem, credential, or runtime-API import,
+ * and their suites join the provider-tier scan.
+ */
+describe("GH-350 the budget tier is hermetic", () => {
+  test("the budget module (evaluation and ref seam) imports no ambient capability", () => {
+    for (const relative of ["packages/core/src/provider/budgets.ts"]) {
+      const text = readFileSync(join(ROOT, relative), "utf8");
+      for (const forbidden of [
+        "fetch(",
+        "node:",
+        "child_process",
+        "setTimeout",
+        "process.env",
+        "Intl",
+        "Date.now",
+      ]) {
+        expect(text, `${relative}: ${forbidden}`).not.toContain(forbidden);
+      }
+    }
+  });
+
+  test("the budget suites are covered by the provider-tier hermetic scan", () => {
+    expect(providerTestFiles()).toContain("tests/behaviour/provider-budgets.test.ts");
+    expect(providerTestFiles()).toContain("tests/behaviour/provider-budget-ref.test.ts");
+  });
+});

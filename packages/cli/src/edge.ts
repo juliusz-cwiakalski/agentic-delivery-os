@@ -364,6 +364,9 @@ import {
   type StateFenceHandle,
   type StateResult,
   type StateStorePort,
+  type ProviderSpendTotalsPort,
+  type ProviderSpendTotalsRead,
+  type ProviderWorkItemRefResolver,
   type StatusBlockersRead,
   type StatusLanePark,
   type StatusLocalContextRead,
@@ -1654,7 +1657,7 @@ export function createProductionDependencies(options: EdgeOptions): CliDependenc
   };
 }
 
-/** Injected I/O and seams for the provider command family (GH-182 PD-G). */
+/** Injected I/O and seams for the provider command family (GH-182 PD-G; GH-350 F-2). */
 export type ProviderComposition = {
   readonly clock: ProviderClock;
   readonly credentialPort: CredentialPort;
@@ -1662,6 +1665,16 @@ export type ProviderComposition = {
   readonly sleep: ProviderSleep;
   readonly stateStore: StateStorePort;
   readonly newFenceToken: () => string;
+  /**
+   * The one read-only spend-totals port (GH-350, DM-3). Absent means the edge
+   * projects it from this composition's store; an injected port (the tests'
+   * counting fake) wins.
+   */
+  readonly spendTotals?: ProviderSpendTotalsPort;
+  /** The local delivery-context tier of the budget ref seam (TDR-0054). */
+  readonly resolveWorkItemRef?: ProviderWorkItemRefResolver;
+  /** The context path the unresolvable-ref refusal names. */
+  readonly workItemContextPath?: string;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
@@ -2685,6 +2698,56 @@ const providerZoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
     ? bindZoneFacts(normalised, providerZonePort)
     : undefined;
 };
+
+const stepInstantMs = (step: {
+  readonly finishedAt: string | null;
+  readonly capturedAt: string;
+}): number => Date.parse(step.finishedAt ?? step.capturedAt);
+
+/**
+ * The one read-only spend-totals projection (GH-350 F-2, DM-3, TDR-0049 D2).
+ *
+ * One verified `readSpendLedger` per evaluation, then one projection per
+ * declared budget scope over the delivered fold (`computeSpendReport`): both
+ * bases are returned for every scope so budgets on different bases share the
+ * read, and no per-record data crosses the port. A failed read returns the
+ * delivered `state.*` identity; verified-empty telemetry measures zero.
+ */
+export const createProviderSpendTotalsPort = (store: StateStorePort): ProviderSpendTotalsPort => ({
+  read: async (input) => {
+    const read = readSpendLedger(store, input.workItemRef);
+    if (!read.ok)
+      return { status: "failed", code: read.error.code } satisfies ProviderSpendTotalsRead;
+    const ledger = read.value;
+    if (ledger.verifiedEmpty) return { status: "empty" };
+    const { scopes } = input;
+    const totals = scopes.map((scope) => {
+      const steps = (ledger.steps ?? []).filter((step) => stepInstantMs(step) >= scope.fromMs);
+      const records = ledger.records.filter(
+        (record) => Date.parse(record.capturedAt) >= scope.fromMs,
+      );
+      const folded = computeSpendReport(
+        { ...ledger, steps, records },
+        { workItemRef: ledger.workItemRef },
+      );
+      const newestCandidates = [
+        ...steps.map(stepInstantMs),
+        ...records.map((record) => Date.parse(record.capturedAt)),
+      ].filter((instant) => Number.isFinite(instant));
+      const tokens = folded.ok
+        ? Object.values(folded.data.tokensByClass).reduce((sum, value) => sum + value, 0)
+        : 0;
+      return {
+        scopeKey: scope.scopeKey,
+        cost: folded.ok ? (folded.data.costTotals.total ?? 0) : 0,
+        tokens,
+        newestAtMs: newestCandidates.length === 0 ? null : Math.max(...newestCandidates),
+        ...(folded.ok ? { sparse: folded.data.costTotals.sparse } : {}),
+      };
+    });
+    return { status: "measured", totals };
+  },
+});
 
 export const createResolvedProviderProbe = (
   entries: ProviderConfiguration["entries"],
@@ -4783,7 +4846,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.provider !== undefined) {
     const provider = options.provider;
-    const engine = createProviderEngine(provider);
+    const engine = createProviderEngine({
+      ...provider,
+      ...(provider.spendTotals === undefined
+        ? { spendTotals: createProviderSpendTotalsPort(provider.stateStore) }
+        : {}),
+    });
     const providerRuntime: ProviderCommandRuntime = {
       resolve: async (input) => {
         const snapshot = resolve({});

@@ -245,6 +245,10 @@ import {
   type ProjectGroupsConfig,
   type ProjectGroupValidated,
   type ProjectScopedMemberWork,
+  type ProviderClock,
+  type ProviderSleep,
+  type ProviderWorkItemRefResolution,
+  type QuotaTransport,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_REF_PATTERN,
   type QueueDegradationReason,
@@ -304,6 +308,7 @@ import {
   createPhaseCommitExtension,
   createPlanCommandRuntime,
   createProductionCommitRuntimeOptions,
+  createProviderSpendTotalsPort,
   createQueueCommandRuntime,
   createResolvedProviderProbe,
   createStatusCommandRuntime,
@@ -314,6 +319,7 @@ import {
   type DispatchCommandRuntime,
   type DispatchComposition,
   type DispatchLaneFacts,
+  type ProviderComposition,
   type QueueComposition,
   resolveAgentIdentity,
 } from "./edge.js";
@@ -422,6 +428,47 @@ const supervisorConfigDirectoryFor = (input: {
 const daemonConfigurationRefusal = (): {
   readonly error: { readonly kind: string; readonly code: string };
 } => ({ error: { kind: "config", code: "config.value.invalid" } });
+
+/**
+ * The production provider composition (GH-350 F-2, TDR-0054 D1).
+ *
+ * The seam supply the budget gate needs, built from delivered parts only: the
+ * six declared `ProviderComposition` members, the one-read spend-totals
+ * projection over the invoking store, and the ref seam read from the local
+ * delivery context (`<cwd>/.ai/local/pm-context.yaml`) with no state read, no
+ * fence, no write, and no environment read. It performs no registration: the
+ * family's mount is its own phase; this factory is the composition it wires.
+ */
+export type ProductionProviderFacts = {
+  readonly clock: ProviderClock;
+  readonly credentialPort: CredentialPort;
+  readonly transport: QuotaTransport;
+  readonly sleep: ProviderSleep;
+  readonly stateStore: StateStorePort;
+  readonly newFenceToken: () => string;
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+};
+
+export const createProductionProviderComposition = (
+  facts: ProductionProviderFacts,
+): ProviderComposition => ({
+  clock: facts.clock,
+  credentialPort: facts.credentialPort,
+  transport: facts.transport,
+  sleep: facts.sleep,
+  stateStore: facts.stateStore,
+  newFenceToken: facts.newFenceToken,
+  spendTotals: createProviderSpendTotalsPort(facts.stateStore),
+  resolveWorkItemRef: (): ProviderWorkItemRefResolution => {
+    const context = readLocalPmContext({
+      path: facts.localContext.path,
+      fs: facts.localContext.fs,
+    });
+    const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+    return ref === undefined ? { status: "unresolved" } : { status: "resolved", workItemRef: ref };
+  },
+  workItemContextPath: facts.localContext.path,
+});
 
 /**
  * The durable DM-4 reachability predicate (AC-F5-1..AC-F5-8): reachable iff an

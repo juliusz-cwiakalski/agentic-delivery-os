@@ -521,3 +521,60 @@ describe("TC-PROV-063/AC-F2-6 failed entry skip-then-continue", () => {
     expect(resolved.parks.map((entry) => entry.name)).toContain("provider:quota-failed");
   });
 });
+
+describe("GH-350 TC-BUD-012 the chain park unions budget-exhausted with the earliest expiry", () => {
+  const parkedAt = (
+    kind: ProviderConditionKind,
+    expiryMs: number,
+    evidence: Record<string, unknown>,
+  ): CombinedProviderCondition => ({
+    status: "parked",
+    cause: kind,
+    conditions: [kind],
+    waitSeconds: Math.floor((expiryMs - NOW) / 1000),
+    expiresAtMs: expiryMs,
+    announcementCode: announcementFor(kind),
+    evidence: { conditionKinds: [kind], ...evidence },
+  });
+
+  test("cause chain-exhausted, the union in tie order, the earliest contributing expiry", () => {
+    const outcome = resolveProviderChain({
+      chain: { name: "default", entries: ["peak", "budget", "quota"], allowPaidFallback: true },
+      nowMs: NOW,
+      states: {
+        peak: {
+          descriptor: descriptor("peak"),
+          condition: parkedAt("peak-window", NOW + 3 * 3600 * 1000, { timezone: "UTC" }),
+        },
+        budget: {
+          descriptor: descriptor("budget"),
+          condition: parkedAt("budget-exhausted", NOW + 3600 * 1000, {
+            budgetName: "daily",
+            budgetScope: "window",
+            budgetBasis: "cost",
+            budgetMeasured: 40,
+            budgetCeiling: 40,
+          }),
+        },
+        quota: {
+          descriptor: descriptor("quota"),
+          condition: parkedAt("quota-exhausted", NOW + 2 * 3600 * 1000, { httpStatus: 200 }),
+        },
+      },
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.decision.kind).toBe("parked");
+    if (outcome.decision.kind !== "parked") return;
+    const park = outcome.decision.park;
+    expect(park.cause).toBe("chain-exhausted");
+    expect(park.conditions).toEqual(["peak-window", "quota-exhausted", "budget-exhausted"]);
+    expect(park.conditions.length).toBe(new Set(park.conditions).size);
+    expect(park.expiresAtMs).toBe(NOW + 3600 * 1000);
+    expect(park.expiresAtMs).toBeGreaterThan(park.createdAtMs);
+    // The only emitted object that can carry both a timezone and a budget field.
+    expect(park.evidence.timezone).toBe("UTC");
+    expect(park.evidence.budgetName).toBe("daily");
+    expect(park.evidence.budgetMeasured).toBe(40);
+  });
+});

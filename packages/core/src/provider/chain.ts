@@ -1,20 +1,26 @@
 /**
- * Deterministic subscription-first chain resolution (GH-182 F-2, DM-7).
+ * Deterministic subscription-first chain resolution (GH-182 F-2, DM-7; GH-350
+ * adds the budget skip reason and the no-paid-escalation rule).
  *
  * Declared order only; validation has already rejected cost-order, duplicate,
  * and unknown-reference violations. Every non-selected entry carries exactly
- * one reason from the closed eight-value set according to the pinned precedence.
+ * one reason from the closed nine-value set according to the pinned precedence.
+ * A paid entry is selectable only under the delivered eligibility rule AND when
+ * no subscription entry is PARKED for `budget-exhausted`; a ticket-scope budget
+ * crossing is a failed entry, so it never blocks a later eligible paid entry.
  */
 import {
   type AnnouncementCode,
   type CombinedProviderCondition,
   type ParkCause,
   PROVIDER_CONDITION_KINDS,
+  PROVIDER_CONDITION_TIE_ORDER,
   type ProviderChain,
   type ProviderConditionKind,
   type ProviderDecision,
   type ProviderDescriptor,
   type ProviderErrorCode,
+  type ProviderParkEvidence,
   type ProviderSkippedEntry,
   type ProviderSkipReason,
 } from "#contracts";
@@ -49,6 +55,42 @@ const asConditionKind = (cause: ParkCause): ProviderConditionKind | undefined =>
     ? (cause as ProviderConditionKind)
     : undefined;
 
+/**
+ * The chain park's evidence unions the contributing entries' own evidence (the
+ * only emitted object that can carry both a `timezone` and a budget field),
+ * first contributor winning a shared key so the result is deterministic for a
+ * declared chain order.
+ */
+const mergedContributingEvidence = (
+  contributing: readonly ChainEntryState[],
+): ProviderParkEvidence => {
+  const merged: Record<string, unknown> = {};
+  for (const state of contributing) {
+    if (state.condition.status !== "parked") continue;
+    for (const [key, value] of Object.entries(state.condition.evidence)) {
+      if (value !== undefined && merged[key] === undefined) merged[key] = value;
+    }
+  }
+  return merged as ProviderParkEvidence;
+};
+
+/** The terminal detail for a failed entry; a budget crossing names its own facts. */
+const failureDetail = (failed: ChainEntryState): string => {
+  if (failed.condition.status !== "failed") {
+    return `provider ${failed.descriptor.name} cannot produce an honest resume time`;
+  }
+  const evidence = failed.condition.evidence;
+  if (failed.condition.cause === "budget-exhausted") {
+    return (
+      `provider ${failed.descriptor.name} crossed budget ${evidence.budgetName ?? "?"} ` +
+      `(${evidence.budgetScope ?? "?"}, ${evidence.budgetBasis ?? "?"} ` +
+      `${String(evidence.budgetMeasured ?? 0)} of ${String(evidence.budgetCeiling ?? 0)}); ` +
+      `the ceiling cannot reopen`
+    );
+  }
+  return `provider ${failed.descriptor.name} cannot produce an honest resume time`;
+};
+
 const skipReason = (entry: ChainEntryState, chain: ProviderChain): ProviderSkipReason => {
   if (!entry.descriptor.enabled) return "disabled";
   // A parked entry's cause and a failed entry's condition kind both map to the
@@ -74,13 +116,24 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
       state.condition.cause === "peak-window"
     );
   });
+  // A parked budget is the operator's own ceiling: nothing relieves it, so no
+  // paid capacity is selectable while a subscription entry is parked for it.
+  const budgetBlocked = chain.entries.some((name) => {
+    const state = states[name];
+    return (
+      state?.descriptor.enabled &&
+      state.descriptor.class === "subscription" &&
+      state.condition.status === "parked" &&
+      state.condition.cause === "budget-exhausted"
+    );
+  });
 
   const eligible = (name: string): boolean => {
     const state = states[name];
     if (state === undefined) return false;
     if (!state.descriptor.enabled || state.condition.status !== "clear") return false;
     if (state.descriptor.class === "subscription") return true;
-    return chain.allowPaidFallback && !peakBlocked;
+    return chain.allowPaidFallback && !peakBlocked && !budgetBlocked;
   };
 
   // A failed entry (quota exhausted with no honest reset) does not abort the
@@ -126,7 +179,7 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
         ok: false,
         errorCode: failed.condition.errorCode,
         announcementCode: failed.condition.announcementCode,
-        detail: `provider ${failed.descriptor.name} cannot produce an honest resume time`,
+        detail: failureDetail(failed),
       };
     }
     return {
@@ -155,7 +208,10 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
         state.condition.status === "parked" ? state.condition.conditions : [],
       ),
     ),
-  ];
+  ].sort(
+    (left, right) =>
+      PROVIDER_CONDITION_TIE_ORDER.indexOf(left) - PROVIDER_CONDITION_TIE_ORDER.indexOf(right),
+  );
   const park = createParkRecord({
     subjectKind: "chain",
     subjectName: chain.name,
@@ -164,6 +220,7 @@ export const resolveProviderChain = (input: ChainResolutionInput): ChainResoluti
     createdAtMs: nowMs,
     expiresAtMs: determining.condition.expiresAtMs,
     evidence: {
+      ...mergedContributingEvidence(contributing),
       chainName: chain.name,
       conditionKinds: conditions,
       waitSeconds: Math.max(0, Math.floor((determining.condition.expiresAtMs - nowMs) / 1_000)),

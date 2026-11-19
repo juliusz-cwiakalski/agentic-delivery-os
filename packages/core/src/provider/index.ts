@@ -19,6 +19,22 @@ export {
 } from "./chain.js";
 export { combineProviderConditions } from "./conditions.js";
 export {
+  type BudgetEvaluation,
+  type BudgetEvaluationInput,
+  budgetCondition,
+  budgetConditionsForEntry,
+  budgetScopes,
+  budgetsGoverning,
+  DEFAULT_WORK_ITEM_REF_CONTEXT_PATH,
+  type EnabledBudget,
+  enabledBudgets,
+  evaluateBudgets,
+  isWorkItemRef,
+  type ProviderWorkItemRefInput,
+  type ProviderWorkItemRefOutcome,
+  resolveProviderWorkItemRef,
+} from "./budgets.js";
+export {
   createProfileProbePort,
   createProviderEngine,
   createProviderFactsProbe,
@@ -146,6 +162,7 @@ export {
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
   parseProfileConfiguration,
+  parseProviderBudgets,
   parseProviderConfiguration,
   selectProviderChain,
   validateProfileConfiguration,

@@ -410,3 +410,14 @@ notes:
       documentation suites 325 pass."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 plan phase 2 (delivery) complete: the three-member zone port,
+      ProviderZoneFacts/UTC_ZONE_FACTS/bindZoneFacts, the exact
+      transition-segment peakWindowEndInstantMs derivation, zone-aware engine and
+      watcher, the adapters time-zone subpath, the four manifest workspaceImports,
+      the re-purposed Mars/Olympus fixture, and the phase-1 minor changeset
+      finalised for five publishables. Commit 9d6aa2f0.
+      Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (11149 pass / 4 skip / 0 fail;
+      typecheck, boundaries incl. the ambient-provider-intl fixture, memory,
+      prompt-conformance, help-guide-coverage and exports-parity all green)."
+    type: evidence
+    date: "2026-11-19"

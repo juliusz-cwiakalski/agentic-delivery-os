@@ -1,0 +1,44 @@
+{
+  "parks": [
+    {
+      "name": "chain:default",
+      "subjectKind": "chain",
+      "subjectName": "default",
+      "cause": "chain-exhausted",
+      "conditions": ["budget-exhausted"],
+      "state": "active",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "expiresAt": "2026-01-01T12:59:00.000Z",
+      "evidence": {
+        "chainName": "default",
+        "conditionKinds": ["budget-exhausted"],
+        "waitSeconds": 3540,
+        "budgetBasis": "cost",
+        "budgetCeiling": 40,
+        "budgetMeasured": 40,
+        "budgetName": "daily",
+        "budgetScope": "window"
+      }
+    },
+    {
+      "name": "provider:sub",
+      "subjectKind": "provider",
+      "subjectName": "sub",
+      "cause": "budget-exhausted",
+      "conditions": ["budget-exhausted"],
+      "state": "active",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "expiresAt": "2026-01-01T12:59:00.000Z",
+      "evidence": {
+        "providerName": "sub",
+        "conditionKinds": ["budget-exhausted"],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40
+      }
+    }
+  ]
+}

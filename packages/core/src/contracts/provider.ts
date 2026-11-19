@@ -329,6 +329,12 @@ export type ProviderSpendTotals = {
   readonly cost: number;
   readonly tokens: number;
   readonly newestAtMs: number | null;
+  /**
+   * The delivered fold's cost-sparsity disclosure (GH-350, DEC-10): true when
+   * at least one contributing observation carried no harness-reported cost.
+   * It rides the announcement message, never the evidence allowlist.
+   */
+  readonly sparse?: boolean;
 };
 
 /** The injected read-only spend-totals input (GH-350, DM-3). */
@@ -340,7 +346,15 @@ export type ProviderSpendTotalsInput = {
 /** The injected read-only spend-totals result (GH-350, DM-3). */
 export type ProviderSpendTotalsRead =
   | { readonly status: "measured"; readonly totals: readonly ProviderSpendTotals[] }
-  | { readonly status: "empty" };
+  | { readonly status: "empty" }
+  | {
+      /**
+       * The delivered `state.*` identity of a failed read (GH-350, DM-3, C-5).
+       * A failed read is never a clear: the decision refuses with this code.
+       */
+      readonly status: "failed";
+      readonly code: ProviderStateFailureIdentity;
+    };
 
 /** The one read-only spend-totals port (GH-350, DM-3): O(budgets), no records. */
 export type ProviderSpendTotalsPort = {
@@ -368,6 +382,8 @@ export type ProviderBudgetOutcome =
       readonly announcementCode: "provider.budget.parked";
       readonly evidence: ProviderParkEvidence;
       readonly facts: ProviderBudgetFacts;
+      /** The delivered fold's cost-sparsity disclosure (DEC-10); never evidence. */
+      readonly sparse?: boolean;
     }
   | {
       readonly status: "failed";
@@ -376,6 +392,8 @@ export type ProviderBudgetOutcome =
       readonly announcementCode: "provider.budget.crossed";
       readonly evidence: ProviderParkEvidence;
       readonly facts: ProviderBudgetFacts;
+      /** The delivered fold's cost-sparsity disclosure (DEC-10); never evidence. */
+      readonly sparse?: boolean;
     };
 
 /** A resolved work-item ref, or the refusal state (GH-350, TDR-0054). */
@@ -479,15 +497,32 @@ export type ProviderParkView = {
   readonly evidence: ProviderParkEvidence;
 };
 
-/** Provider classification identities produced by the engine (F-9). */
+/** Provider classification identities produced by the engine (F-9; GH-350 adds the budget row). */
 export type ProviderErrorCode =
   | "provider.peak.zone-unknown"
   | "provider.quota.exceeded"
+  | "provider.budget.exceeded"
   | "provider.outage"
   | "provider.auth.rejected"
   | "provider.chain.empty"
   | "provider.chain.invalid"
   | "config.credential.missing";
+
+/**
+ * The delivered state read identity a failed spend-totals read refuses with
+ * (GH-350, DM-3/C-5). It is never rounded to a provider or a clear identity.
+ */
+type ProviderStateFailureIdentity = `state.${string}`;
+
+/**
+ * Every identity a `resolve` decision may refuse with (GH-350): the provider
+ * conditions, the delivered `state.*` read failure, and the one pre-resolution
+ * input refusal for an unresolvable budget work-item ref (TDR-0054 D4).
+ */
+type ProviderFailureIdentity =
+  | ProviderErrorCode
+  | ProviderStateFailureIdentity
+  | "input.value.rejected";
 
 /** One quota transport request; the credential material is handed over exactly once. */
 export type QuotaTransportRequest = {
@@ -564,7 +599,7 @@ export type ProviderQuotaView = {
   readonly evidence: ProviderParkEvidence;
 };
 
-/** The `resolve` engine result: a decision or a classified provider failure. */
+/** The `resolve` engine result: a decision or a classified refusal. */
 export type ProviderResolveResult =
   | {
       readonly ok: true;
@@ -576,7 +611,7 @@ export type ProviderResolveResult =
     }
   | {
       readonly ok: false;
-      readonly errorCode: ProviderErrorCode;
+      readonly errorCode: ProviderFailureIdentity;
       readonly announcementCode?: AnnouncementCode;
       readonly summary: string;
     };

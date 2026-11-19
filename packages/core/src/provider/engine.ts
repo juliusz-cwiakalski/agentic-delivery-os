@@ -29,13 +29,28 @@ import type {
   ProviderQuotaView,
   ProviderResolveResult,
   ProviderSleep,
+  ProviderSpendTotalsPort,
+  ProviderWorkItemRefResolver,
   QuotaTransport,
   QuotaTransportResult,
   StateResult,
   StateStorePort,
 } from "#contracts";
 import { PROVIDER_DEFAULT_ZONE, type ProviderZoneFacts } from "#contracts";
-import { createParkAnnouncement, severityForAnnouncementCode } from "./announcements.js";
+import {
+  budgetCrossedMessage,
+  createParkAnnouncement,
+  severityForAnnouncementCode,
+} from "./announcements.js";
+import {
+  type BudgetEvaluation,
+  budgetConditionsForEntry,
+  budgetScopes,
+  DEFAULT_WORK_ITEM_REF_CONTEXT_PATH,
+  enabledBudgets,
+  evaluateBudgets,
+  resolveProviderWorkItemRef,
+} from "./budgets.js";
 import { type ChainEntryState, resolveProviderChain } from "./chain.js";
 import { combineProviderConditions } from "./conditions.js";
 import {
@@ -62,6 +77,20 @@ export type ProviderEngineDependencies = {
    * `provider.peak.zone-unknown` before any evaluation.
    */
   readonly zoneFactsFor?: (zone: string) => ProviderZoneFacts | undefined;
+  /**
+   * The one read-only spend-totals port the budget gate consumes (GH-350,
+   * DM-3). A composition that declares an enabled budget and supplies no port
+   * refuses rather than measuring nothing.
+   */
+  readonly spendTotals?: ProviderSpendTotalsPort;
+  /**
+   * The local delivery-context tier of the ref seam (GH-350, TDR-0054). The
+   * composition supplies it from the delivered `readLocalPmContext`; it is
+   * called only when an enabled budget is evaluated and no explicit fact wins.
+   */
+  readonly resolveWorkItemRef?: ProviderWorkItemRefResolver;
+  /** The path the unresolvable-ref refusal names (the delivered context path). */
+  readonly workItemContextPath?: string;
 };
 
 /**
@@ -197,6 +226,12 @@ export type ProviderResolveInput = {
   /** Named-profile context; restricts chain candidates to its providers. */
   readonly profile?: ProviderResolveProfileScope;
   readonly persist?: boolean;
+  /**
+   * Tier 1 of the ref seam (GH-350, TDR-0054): an explicitly supplied
+   * ref-bearing fact. Today only the simulate fixture supplies one; its value
+   * wins over the local delivery context.
+   */
+  readonly workItemRef?: string;
 };
 
 export type ProviderQuotaInput = {
@@ -377,16 +412,34 @@ const zoneRefusal = (
   return undefined;
 };
 
+type AnnouncementContext = {
+  readonly workItemRef?: string;
+  readonly sparseBudgets?: readonly string[];
+};
+
+const announcementContextFor = (
+  park: ProviderParkRecord,
+  context: AnnouncementContext,
+): { workItemRef?: string; sparse?: boolean } => ({
+  ...(context.workItemRef === undefined ? {} : { workItemRef: context.workItemRef }),
+  ...(park.evidence.budgetName !== undefined &&
+  (context.sparseBudgets ?? []).includes(park.evidence.budgetName)
+    ? { sparse: true }
+    : {}),
+});
+
 const evaluateEntry = async (
   deps: ProviderEngineDependencies,
   config: ProviderConfiguration,
   descriptor: ProviderDescriptor,
   nowMs: number,
+  budgetConditions: readonly ProviderConditionResult[] = [],
+  context: AnnouncementContext = {},
 ): Promise<EntryEvaluation> => {
   if (!descriptor.enabled) {
     return { descriptor, condition: { status: "clear" } };
   }
-  const results: ProviderConditionResult[] = [];
+  const results: ProviderConditionResult[] = [...budgetConditions];
   if (descriptor.peak !== undefined) {
     const facts = zoneFactsForPeak(deps, descriptor.peak.timezone) ?? UTC_ZONE_FACTS;
     results.push(evaluatePeakWindow(descriptor.peak, nowMs, facts));
@@ -408,7 +461,7 @@ const evaluateEntry = async (
     descriptor,
     condition,
     park,
-    announcement: createParkAnnouncement(park, nowMs),
+    announcement: createParkAnnouncement(park, nowMs, announcementContextFor(park, context)),
   };
 };
 
@@ -428,10 +481,22 @@ const failure = (
   ...(announcementCode === undefined ? {} : { announcementCode }),
 });
 
+const REFUSAL_FAILURE = (
+  code: Extract<ProviderResolveResult, { ok: false }>["errorCode"],
+  summary: string,
+  announcementCode?: AnnouncementCode,
+): Extract<ProviderResolveResult, { ok: false }> => ({
+  ok: false,
+  errorCode: code,
+  summary,
+  ...(announcementCode === undefined ? {} : { announcementCode }),
+});
+
 const createFailureAnnouncement = (
   descriptor: ProviderDescriptor,
   condition: Extract<CombinedProviderCondition, { status: "failed" }>,
   nowMs: number,
+  context: AnnouncementContext = {},
 ): ProviderAnnouncementRecord =>
   createAnnouncementRecord({
     subjectKind: "provider",
@@ -439,7 +504,16 @@ const createFailureAnnouncement = (
     code: condition.announcementCode,
     severity: severityForAnnouncementCode(condition.announcementCode),
     createdAtMs: nowMs,
-    message: `provider ${descriptor.name} cannot determine a resume time`,
+    message:
+      condition.cause === "budget-exhausted"
+        ? budgetCrossedMessage(descriptor.name, condition.evidence, {
+            ...(context.workItemRef === undefined ? {} : { workItemRef: context.workItemRef }),
+            ...(condition.evidence.budgetName !== undefined &&
+            (context.sparseBudgets ?? []).includes(condition.evidence.budgetName)
+              ? { sparse: true }
+              : {}),
+          })
+        : `provider ${descriptor.name} cannot determine a resume time`,
     cause: condition.cause,
     conditions: condition.conditions,
     evidence: condition.evidence,
@@ -453,18 +527,91 @@ const dedupeAnnouncements = (
       all.findIndex((candidate) => candidate.identity === entry.identity) === index,
   );
 
+/** The enabled budget names, in declared-name order (the ref requirement set). */
+const enabledBudgetNames = (config: ProviderConfiguration): readonly string[] =>
+  enabledBudgets(config.budgets).map(({ name }) => name);
+
+/**
+ * The budget gate (GH-350 F-2, DM-3/DM-4, TDR-0049/TDR-0054): resolve the ref
+ * once, perform exactly one verified read, and evaluate every enabled budget.
+ * No budget means no seam call, no read, and no condition.
+ */
+const evaluateBudgetGate = async (
+  deps: ProviderEngineDependencies,
+  config: ProviderConfiguration,
+  explicitRef: string | undefined,
+  nowMs: number,
+): Promise<
+  | { readonly ok: true; readonly ref?: string; readonly evaluation?: BudgetEvaluation }
+  | { readonly ok: false; readonly refusal: Extract<ProviderResolveResult, { ok: false }> }
+> => {
+  const requiredBy = enabledBudgetNames(config);
+  if (requiredBy.length === 0) return { ok: true };
+  if (deps.spendTotals === undefined) {
+    return {
+      ok: false,
+      refusal: REFUSAL_FAILURE(
+        "provider.outage",
+        `budget ${requiredBy.join(", ")} cannot be measured: this composition supplies no spend-totals seam`,
+      ),
+    };
+  }
+  const context = explicitRef === undefined ? deps.resolveWorkItemRef?.() : undefined;
+  const resolution = resolveProviderWorkItemRef({
+    ...(explicitRef === undefined ? {} : { explicit: explicitRef }),
+    ...(context?.status === "resolved" ? { contextRef: context.workItemRef } : {}),
+    contextPath: deps.workItemContextPath ?? DEFAULT_WORK_ITEM_REF_CONTEXT_PATH,
+    requiredBy,
+  });
+  if (resolution.status === "unresolved") {
+    return {
+      ok: false,
+      refusal: REFUSAL_FAILURE("input.value.rejected", resolution.summary),
+    };
+  }
+  const read = await deps.spendTotals.read({
+    workItemRef: resolution.workItemRef,
+    scopes: budgetScopes(enabledBudgets(config.budgets), nowMs),
+  });
+  if (read.status === "failed") {
+    return {
+      ok: false,
+      refusal: REFUSAL_FAILURE(
+        read.code,
+        `the spend ledger for ${resolution.workItemRef} could not be read (${read.code}); the budget cannot be measured and the decision is not clear`,
+      ),
+    };
+  }
+  return {
+    ok: true,
+    ref: resolution.workItemRef,
+    evaluation: evaluateBudgets({ budgets: config.budgets, read, nowMs }),
+  };
+};
+
 /** Build the pure engine over injected seams. */
 export const createProviderEngine = (deps: ProviderEngineDependencies): ProviderEngine => {
   const evaluateAll = async (
     config: ProviderConfiguration,
     names: readonly string[],
     nowMs: number,
+    evaluation: BudgetEvaluation | undefined,
+    context: AnnouncementContext,
   ): Promise<EntryEvaluation[]> => {
     const evaluations: EntryEvaluation[] = [];
     for (const name of names) {
       const descriptor = config.entries[name];
       if (descriptor === undefined) continue;
-      evaluations.push(await evaluateEntry(deps, config, descriptor, nowMs));
+      evaluations.push(
+        await evaluateEntry(
+          deps,
+          config,
+          descriptor,
+          nowMs,
+          budgetConditionsForEntry(config.budgets, evaluation, name),
+          context,
+        ),
+      );
     }
     return evaluations;
   };
@@ -489,10 +636,30 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         }
         chain = { ...chain, entries };
       }
+      const nowMs = deps.clock.nowMs();
+      // The budget gate runs before any probe, credential read, transport call,
+      // or state write: an unresolvable ref refuses once here (TDR-0054 D4).
+      const gate = await evaluateBudgetGate(deps, input.config, input.workItemRef, nowMs);
+      if (!gate.ok) return gate.refusal;
+      const sparseBudgets =
+        gate.evaluation === undefined
+          ? []
+          : Object.values(gate.evaluation.outcomes)
+              .filter((outcome) => outcome.status !== "clear" && outcome.sparse === true)
+              .map((outcome) => outcome.budgetName);
+      const context: AnnouncementContext = {
+        ...(gate.ref === undefined ? {} : { workItemRef: gate.ref }),
+        ...(sparseBudgets.length === 0 ? {} : { sparseBudgets }),
+      };
       const zoneFailure = zoneRefusal(deps, input.config, chain.entries);
       if (zoneFailure !== undefined) return zoneFailure;
-      const nowMs = deps.clock.nowMs();
-      const evaluations = await evaluateAll(input.config, chain.entries, nowMs);
+      const evaluations = await evaluateAll(
+        input.config,
+        chain.entries,
+        nowMs,
+        gate.evaluation,
+        context,
+      );
       const states: Record<string, ChainEntryState> = {};
       const parks: ProviderParkRecord[] = [];
       const parkAnnouncements: ProviderAnnouncementRecord[] = [];
@@ -507,7 +674,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
           // its announcement in the command-result list while the walk continues
           // (F-2/AC-F2-6, DM-7).
           failedAnnouncements.push(
-            createFailureAnnouncement(evaluation.descriptor, evaluation.condition, nowMs),
+            createFailureAnnouncement(evaluation.descriptor, evaluation.condition, nowMs, context),
           );
           continue;
         }
@@ -515,11 +682,20 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         if (evaluation.announcement !== undefined) parkAnnouncements.push(evaluation.announcement);
       }
       const outcome = resolveProviderChain({ chain, states, nowMs });
-      if (!outcome.ok) return failure(outcome.errorCode, outcome.detail, outcome.announcementCode);
+      if (!outcome.ok) {
+        const ref = gate.ref === undefined ? "" : ` (work item ${gate.ref})`;
+        return failure(outcome.errorCode, `${outcome.detail}${ref}`, outcome.announcementCode);
+      }
       const decision: ProviderDecision = outcome.decision;
       if (decision.kind === "parked") {
         parks.push(decision.park);
-        parkAnnouncements.push(createParkAnnouncement(decision.park, nowMs));
+        parkAnnouncements.push(
+          createParkAnnouncement(
+            decision.park,
+            nowMs,
+            announcementContextFor(decision.park, context),
+          ),
+        );
       }
       if (input.persist !== false && deps.stateStore !== undefined) {
         const persisted = persistProviderResolution({
@@ -574,7 +750,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
       const zoneFailure = zoneRefusal(deps, input.config, names);
       if (zoneFailure !== undefined) return zoneFailure;
       const nowMs = deps.clock.nowMs();
-      const evaluations = await evaluateAll(input.config, names, nowMs);
+      const evaluations = await evaluateAll(input.config, names, nowMs, undefined, {});
       const views: ProviderQuotaView[] = [];
       const announcements: ProviderAnnouncementRecord[] = [];
       for (const evaluation of evaluations) {
