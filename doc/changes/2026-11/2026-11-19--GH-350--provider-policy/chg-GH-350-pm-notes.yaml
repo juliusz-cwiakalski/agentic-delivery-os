@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-19T13:33:23.784Z }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
   delivery: { started: null, completed: 2026-11-19T21:02:45.335Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-19T21:48:56.218Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -889,5 +889,48 @@ notes:
       carries a dated 2026-11-13 snapshot sentence naming UTC-only designations
       and was left as historical record. Commit
       5eaa83f5bb0d7273f458c480b986c109cc50f283."
+    type: evidence
+    date: "2026-11-19"
+  - text: "GH-350 doc-sync audit gap closed: the production provider composition
+      supplied no zoneFactsFor, so the provider engine in the installed product
+      refused provider.peak.zone-unknown for a declared non-UTC window even
+      though the profile probe and simulate already bound the zone edge, and
+      spec §16's edge.ts row plus the rollout note claimed the opposite.
+      Verified before the fix through runEntrypoint with the production
+      composer: a Europe/Berlin peak window answered provider.peak.zone-unknown
+      at exit 1. Fix: ProviderComposition gains an optional zoneFactsFor
+      (packages/cli/src/edge.ts), which the existing spread threads into
+      createProviderEngine; createProductionProviderComposition constructs
+      createIntlZonePort() at the composition edge and binds it through
+      normaliseZoneName, returning UTC_ZONE_FACTS for UTC, bindZoneFacts for a
+      known IANA zone, and undefined for a genuinely unknown zone. Core gains no
+      ambient Intl and the refusal identity is unchanged; a composition that
+      cannot supply the port still refuses non-UTC. New proof: TC-MOUNT-011 in
+      tests/checks/provider-entrypoint-reachability.test.ts drives provider
+      resolve through runEntrypoint with the production composer and a fixed
+      instant at 2026-01-01T12:00Z. The Europe/Berlin window 12:30-13:15 local
+      is OPEN at 13:00 Berlin (+01:00) while a UTC reading of the same seconds
+      is CLOSED, so the parked decision with skipped provider p reason
+      peak-window (exit 0, handler reached once, no provider.peak.zone-unknown)
+      proves the offset was applied rather than the refusal merely disappearing;
+      a Mars/Olympus declaration still answers provider.peak.zone-unknown at
+      exit 1 with the zone named. Narrow suites green: all provider suites 607
+      pass / 0 fail across 52 files; the phase-8 pinning, composition, help and
+      doc-conformance suites 244 pass / 0 fail across 23 files; pnpm typecheck
+      and biome green. GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11577 pass /
+      4 skip / 5 fail (1422 files). All five failures are
+      HOST-ENVIRONMENT/HOST-LOAD, not this fix's regressions: TC-BIN-071 and
+      TC-MEMNFR-004 spawn the doc-distribution guard, which sees a real
+      installed artifact under the operator's home written by a concurrent
+      session (both suites pass 19/19 with a clean HOME); TC-BIN-084 half (b)
+      reported status 1 after 190 s with empty tallies because the spawned
+      guarded run timed out under load (the suite passes 5/5 alone);
+      TC-TELEMETRY-013 timed out at its 30 s limit and TC-METRICS-106 at its 5 s
+      limit under a load average near 31 (both pass alone, 8/8). Recorded, never
+      edited. This commit also carries the 14 doc-sync files and the pending
+      test-plan v2.2 edit (its TC-DOC-005 changeset arm made unconditional; no
+      pre-existing changeset is modified or deleted). Commit
+      df5634f8dae5f700d3f2bb651b79b4a1844d57ed."
     type: evidence
     date: "2026-11-19"
