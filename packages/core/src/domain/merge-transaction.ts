@@ -29,16 +29,17 @@ import {
   MERGE_MAX_WAIVER_REFS,
   MERGE_POST_LANDING_STEP_IDS,
   MERGE_TRANSACTION_SCHEMA,
+  type MergeDeliveryRequestInput,
   type MergeDryRunAuthorization,
   type MergeDryRunReport,
   type MergeGateEntry,
   type MergeGateSetIdentity,
   type MergeGateVerdictRecord,
   type MergeGateVerificationRecord,
-  type MergeDeliveryRequestInput,
   type MergePostLandingStatus,
   type MergePostLandingStep,
   type MergeRefreshEvidence,
+  type MergeRefusalAttribution,
   type MergeReport,
   type MergeStateRead,
   type MergeStateReadReason,
@@ -179,6 +180,15 @@ export type MergeFailureEvidence = {
   readonly attempts?: number;
   readonly stateReason?: string;
   readonly gateId?: string;
+  /**
+   * The evidence source of a not-green declared required job (F-3, DM-2,
+   * API-2): `recorded` when the persisted gate verdict already reported that
+   * job not green, `probe` when the recorded verdict was green and the probe
+   * observed it. Exactly one optional field on the bounded evidence; the
+   * verification timestamp is never carried here (it stays on the persisted
+   * `merge.gate-verification` record that gate id plus job resolves to).
+   */
+  readonly attribution?: MergeRefusalAttribution;
   readonly gateClass?: string;
   readonly authorizer?: string;
   readonly overridePath?: string;
@@ -281,6 +291,61 @@ const recordedVerdict = (
 
 const recordedFailed = (record: MergeGateVerificationRecord | undefined): readonly string[] =>
   recordedFailedJobs(record?.gates.find((gate) => gate.id === "ci-green")?.citation.names);
+
+/**
+ * The job names a recorded `ci-green` verdict reports not green, in citation
+ * order (F-3, TC-F3-003).
+ *
+ * The delivered citation carries one name list per not-green state it names
+ * (`failed-jobs`, `pending-jobs`, `missing-jobs`). These three facts — the
+ * effective gate id, the job and the verdict — are what identifies the
+ * persisted verification record a `recorded` attribution points at.
+ */
+const recordedNotGreenJobs = (names: readonly VerifyGateNameList[] | undefined): string[] => {
+  const values: string[] = [];
+  for (const list of names ?? []) {
+    if (
+      list.kind !== "failed-jobs" &&
+      list.kind !== "pending-jobs" &&
+      list.kind !== "missing-jobs"
+    ) {
+      continue;
+    }
+    for (const value of list.values) if (!values.includes(value)) values.push(value);
+  }
+  return values;
+};
+
+/** The delivered reasons that name the observed job in the page. */
+const namedJobReasons: readonly VerifyGateReason[] = [
+  "ci-pending",
+  "ci-canceled",
+  "ci-all-skipped",
+  "ci-failed",
+];
+
+/**
+ * One declared required job's not-green finding (F-3, AC-F3-2).
+ *
+ * The row is the existing `merge.gate.<gate-id>.failed` family; the evidence
+ * names the effective gate id, the delivered reason (or the recorded verdict's
+ * own reason) and exactly one attribution. No row, kind, or exit is added.
+ */
+const requiredJobFailure = (input: {
+  readonly entry: MergeGateEntry;
+  readonly detail: string;
+  readonly attribution: MergeRefusalAttribution;
+  readonly jobs: readonly string[];
+}): GateFailure => ({
+  entry: input.entry,
+  code: failureCode(input.entry.id),
+  evidence: {
+    gateId: input.entry.id,
+    detail: input.detail,
+    ...(input.jobs.length === 0 ? {} : { jobs: input.jobs }),
+    attribution: input.attribution,
+  },
+});
 
 const gateFailureFor = (
   entry: MergeGateEntry,
@@ -607,17 +672,6 @@ export const runMergeTransaction = async (input: {
           current: posture,
           verifiedAt: record.verifiedAt,
         });
-  const declaredJobNames = new Set(
-    config.gateSet.entries
-      .filter((entry) => entry.recipe === "required-ci-job")
-      .map((entry) => entry.job ?? entry.id),
-  );
-  const jobs = newRedJobs({
-    recordedFailed: recordedFailed(record),
-    currentRuns: checkRuns.value.items,
-    pageSha: checkRuns.value.sha ?? head,
-    headSha: head,
-  }).filter((name) => !declaredJobNames.has(name));
   const failures: GateFailure[] = [];
   const ownerPresent = posture.ownerLabels.length > 0;
   const recordedCi = recordedVerdict(record, "ci-green");
@@ -625,7 +679,19 @@ export const runMergeTransaction = async (input: {
     const entry = config.gateSet.enforcedMergeEntries.find(
       (candidate) => candidate.id === "ci-green",
     );
-    if (entry !== undefined) failures.push(gateFailureFor(entry, recordedCi));
+    if (entry !== undefined) {
+      // The persisted verdict already reported the job not green, so the
+      // finding is `recorded` and names the gate id, the job and the verdict.
+      // The verification timestamp stays on that persisted record.
+      failures.push(
+        requiredJobFailure({
+          entry,
+          detail: recordedCi.reason,
+          attribution: "recorded",
+          jobs: recordedNotGreenJobs(recordedCi.citation.names),
+        }),
+      );
+    }
   }
   const recordedOwner = recordedVerdict(record, "owner-gate");
   if (recordedOwner !== undefined && recordedOwner.verdict !== "pass" && !transition.changed) {
@@ -653,18 +719,9 @@ export const runMergeTransaction = async (input: {
       });
     }
   }
-  if (jobs.length > 0 && !failures.some((failure) => failure.entry.id === "ci-green")) {
-    const entry = config.gateSet.enforcedMergeEntries.find(
-      (candidate) => candidate.id === "ci-green",
-    );
-    if (entry !== undefined) {
-      failures.push({
-        entry,
-        code: failureCode("ci-green"),
-        evidence: { gateId: "ci-green", jobs },
-      });
-    }
-  }
+  // A page for another head is never head evidence: the probe reads the
+  // verified head only, so no declared job can be a finding from it.
+  const pageIsHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
   const ownerFailure = ownerPresent && !transition.changed;
   if (ownerFailure && !failures.some((failure) => failure.entry.id === "owner-gate")) {
     const entry = config.gateSet.enforcedMergeEntries.find(
@@ -688,27 +745,41 @@ export const runMergeTransaction = async (input: {
     }
     const verdict = recordedVerdict(record, entry.id);
     if (entry.recipe === "required-ci-job") {
+      const job = entry.job ?? entry.id;
+      if (verdict !== undefined && verdict.verdict !== "pass") {
+        // The recorded verdict already reported this job not green: the
+        // finding is `recorded`, and its evidence identifies the persisted
+        // record by gate id, job and verdict.
+        failures.push(
+          requiredJobFailure({
+            entry,
+            detail: verdict.reason,
+            attribution: "recorded",
+            jobs: [job],
+          }),
+        );
+        continue;
+      }
+      if (!pageIsHead) continue;
       const evaluationValue = evaluateRequiredJobGate({
-        jobName: entry.job ?? entry.id,
+        jobName: job,
         runs: checkRuns.value.items,
         pageSha: checkRuns.value.sha ?? head,
         headSha: head,
       });
-      if (evaluationValue.verdict !== "pass") {
-        failures.push({
-          entry,
-          code: failureCode(entry.id),
-          evidence: {
-            gateId: entry.id,
+      // A declared required job that is not green on the verified head is gate
+      // evidence in every delivered state — queued, running, canceled, skipped
+      // and failed — classified through the delivered reasons on the existing
+      // family row. A job the gate set does not declare is never a finding.
+      if (evaluationValue.verdict === "fail") {
+        failures.push(
+          requiredJobFailure({
+            entry,
             detail: evaluationValue.reason,
-            ...(() => {
-              const failedJobs = evaluationValue.names.find(
-                (list) => list.kind === "failed-jobs",
-              )?.values;
-              return failedJobs === undefined ? {} : { jobs: failedJobs };
-            })(),
-          },
-        });
+            attribution: "probe",
+            jobs: namedJobReasons.includes(evaluationValue.reason) ? [job] : [],
+          }),
+        );
       }
       continue;
     }
@@ -1079,6 +1150,7 @@ export const renderMergeFailure = (failure: MergeFailure): string => {
   if (evidence.overridePath !== undefined) lines.push(`override=${evidence.overridePath}`);
   if (evidence.requestState !== undefined) lines.push(`request-state=${evidence.requestState}`);
   if (evidence.detail !== undefined) lines.push(`evidence=${evidence.detail}`);
+  if (evidence.attribution !== undefined) lines.push(`attribution=${evidence.attribution}`);
   const hint = remediationFor(failure.code);
   if (hint !== undefined) lines.push(`remediation=${hint}`);
   const bounded = lines.slice(0, MERGE_MAX_HUMAN_LINES);

@@ -122,30 +122,39 @@ describe("TC-MERGE-033 output bounds", () => {
     }
   });
 
-  test("many newly failing jobs are capped with an explicit +N mark", async () => {
-    const runs: PipelineRun[] = Array.from({ length: 12 }, (_, index) => ({
-      identity: { systemName: "github", entityId: `run-${index}` },
-      pipelineName: `CI / job-${String(index).padStart(2, "0")}`,
-      jobs: [
-        {
-          jobName: `CI / job-${String(index).padStart(2, "0")}`,
-          jobState: "failed" as const,
-        },
-      ],
-      traceEvidence: [],
-    }));
-    const harness = createMergeHarness({
-      checkRuns: { items: runs, pageItemCount: runs.length, sha: MERGE_HEAD },
+  test("many recorded not-green jobs are capped with an explicit +N mark", async () => {
+    const jobs = Array.from(
+      { length: 12 },
+      (_, index) => `CI / job-${String(index).padStart(2, "0")}`,
+    );
+    const record = verificationRecord({
+      verifiedAt: isoAt(-2 * MINUTE),
+      gates: verificationRecord().gates.map((gate) =>
+        gate.id === "ci-green"
+          ? {
+              ...gate,
+              verdict: "fail" as const,
+              reason: "ci-failed",
+              citation: {
+                ...gate.citation,
+                names: [{ kind: "failed-jobs" as const, values: jobs, omitted: 0 }],
+                reasons: ["ci-failed" as const],
+              },
+            }
+          : gate,
+      ),
     });
+    const harness = createMergeHarness();
     try {
-      harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+      harness.seedVerification(record);
       const result = await harness.run(undefined, { json: false });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain(`+${runs.length - MERGE_MAX_EVIDENCE_NAMES}`);
+      expect(result.stderr).toContain(`+${jobs.length - MERGE_MAX_EVIDENCE_NAMES}`);
       const summary = result.stderr.split("summary: ")[1] ?? "";
       expect(summary.split("\n").length).toBeLessThanOrEqual(MERGE_MAX_HUMAN_LINES);
       expect(Buffer.byteLength(summary, "utf8")).toBeLessThanOrEqual(MERGE_MAX_HUMAN_BYTES);
       expect(summary).toContain("new-red-jobs=");
+      expect(summary).toContain("attribution=recorded");
       // Nothing landed: the bounded refusal is the whole outcome.
       expect(harness.counts.landing).toBe(0);
     } finally {

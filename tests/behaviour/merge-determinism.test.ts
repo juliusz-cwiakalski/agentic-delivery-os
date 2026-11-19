@@ -3,6 +3,10 @@
  * including refusal evidence, and the equality is proven non-constant.
  */
 import { describe, expect, test } from "bun:test";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
+import { makeFacts } from "../fixtures/closeout/harness";
 import { goldenScenarios } from "../fixtures/merge/golden-scenarios";
 import {
   baseWorkItem,
@@ -42,7 +46,15 @@ const runFreshOnce = async (name: string, mode: "json" | "text") => {
 };
 
 describe("TC-MERGE-035 determinism under fixed facts", () => {
-  for (const name of ["success", "refusal-stale", "refusal-tracker", "refusal-waiver"] as const) {
+  for (const name of [
+    "success",
+    "refusal-stale",
+    "refusal-tracker",
+    "refusal-waiver",
+    "refusal-gate",
+    "refusal-required-job-probe",
+    "refusal-required-job-recorded",
+  ] as const) {
     test(`${name}: twenty runs are byte-identical`, async () => {
       const first = await runFreshOnce(name, "text");
       for (let index = 0; index < 19; index += 1) {
@@ -109,3 +121,46 @@ describe("TC-MERGE-035 determinism under fixed facts", () => {
 });
 
 export { runFresh };
+
+const GOLDEN_DIR = join(process.cwd(), "tests/fixtures/merge/golden");
+
+/** The two goldens this phase moves; the other eleven are byte-identical. */
+const MOVED = ["refusal-gate-human.txt", "refusal-gate-scripted.json"] as const;
+
+describe("TC-FLOOR-005 determinism and byte pins across the merge and closeout surfaces", () => {
+  const textOf = (run: { readonly stdout: string; readonly stderr: string }): string =>
+    run.stdout.length > 0 ? run.stdout : run.stderr;
+
+  test("the moved pair carries the attribution line and no third golden does", async () => {
+    const human = await runFreshOnce("refusal-gate", "text");
+    const scripted = await runFreshOnce("refusal-gate", "json");
+    expect(textOf(human)).toContain("attribution=probe");
+    expect(textOf(scripted)).toContain("attribution=probe");
+
+    const present = readdirSync(GOLDEN_DIR).sort();
+    for (const moved of MOVED) expect(present).toContain(moved);
+    expect(present).toHaveLength(13);
+
+    for (const file of present) {
+      if ((MOVED as readonly string[]).includes(file)) continue;
+      expect(readFileSync(join(GOLDEN_DIR, file), "utf8")).not.toContain("attribution=");
+    }
+  });
+
+  test("the recorded attribution scenario is deterministic across replays", async () => {
+    const first = await runFreshOnce("refusal-required-job-recorded", "text");
+    const second = await runFreshOnce("refusal-required-job-recorded", "text");
+    expect(textOf(second)).toBe(textOf(first));
+    expect(textOf(first)).toContain("attribution=recorded");
+  });
+
+  test("the closeout plan and its derived operation ids replay identically (value side)", () => {
+    const first = buildCloseoutPlan(makeFacts());
+    const second = buildCloseoutPlan(makeFacts());
+    expect(second).toEqual(first);
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    // The plan carries derived operation ids, so the equality is not vacuous.
+    const ids = JSON.stringify(first).match(/"operationId":"[0-9a-f]{64}"/gu) ?? [];
+    expect(ids.length).toBeGreaterThan(0);
+  });
+});

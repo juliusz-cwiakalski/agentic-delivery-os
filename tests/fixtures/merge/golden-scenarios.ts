@@ -55,6 +55,90 @@ const redCheckRuns = () => ({
   sha: MERGE_HEAD,
 });
 
+const WORKSPACE_JOB = "workspace-tests";
+
+const declaredWorkspaceGateSet = () => {
+  const raw = {
+    schemaVersion: "delivery.merge.gates.v1",
+    entries: [
+      ...MERGE_DEFAULT_GATE_ENTRIES,
+      {
+        id: WORKSPACE_JOB,
+        recipe: "required-ci-job",
+        surface: "both",
+        job: WORKSPACE_JOB,
+      },
+    ],
+  };
+  const set = resolveMergeGateSet(raw);
+  if (!set.ok) throw new Error(`fixture gate set invalid: ${set.failure.detail}`);
+  return { raw, set: set.value };
+};
+
+const workspaceCheckRuns = (
+  jobState: "queued" | "running" | "canceled" | "skipped" | "failed",
+) => ({
+  items: [
+    ...baseCheckRuns().items,
+    {
+      identity: { systemName: "github", entityId: "44899" },
+      pipelineName: WORKSPACE_JOB,
+      jobs: [{ jobName: WORKSPACE_JOB, jobState }],
+      traceEvidence: [],
+    },
+  ],
+  pageItemCount: 3,
+  sha: MERGE_HEAD,
+});
+
+/**
+ * A declared `required-ci-job` refusal over one recorded gate verdict.
+ *
+ * `recorded` is the gate entry's own recorded verdict: `pass` makes the finding
+ * the probe's (`recorded` green, the page observed it), and `fail` makes it the
+ * record's (`recorded` already reported the job not green).
+ */
+const requiredJobScenario = (recorded: "pass" | "fail") => {
+  const { raw, set } = declaredWorkspaceGateSet();
+  const recordedGates =
+    recorded === "pass"
+      ? [
+          ...verificationRecord().gates,
+          {
+            id: WORKSPACE_JOB,
+            verdict: "pass" as const,
+            reason: "ci-green",
+            citation: {
+              sources: [],
+              identity: { changeRef: MERGE_REF },
+              counts: [],
+              names: [],
+              reasons: ["ci-green" as const],
+            },
+          },
+        ]
+      : [
+          ...verificationRecord().gates,
+          {
+            id: WORKSPACE_JOB,
+            verdict: "fail" as const,
+            reason: "ci-failed",
+            citation: {
+              sources: [],
+              identity: { changeRef: MERGE_REF },
+              counts: [],
+              names: [{ kind: "failed-jobs" as const, values: [WORKSPACE_JOB], omitted: 0 }],
+              reasons: ["ci-failed" as const],
+            },
+          },
+        ];
+  const harness = createMergeHarness({ gateSet: raw, checkRuns: workspaceCheckRuns("failed") });
+  harness.seedVerification(
+    verificationFor(set, { verifiedAt: isoAt(-2 * MINUTE), gates: recordedGates }),
+  );
+  return { harness, args: [] };
+};
+
 export type GoldenHarness = {
   readonly harness: ReturnType<typeof createMergeHarness>;
   readonly args: readonly string[];
@@ -71,40 +155,9 @@ export const goldenScenarios = (): Record<string, () => GoldenHarness> => ({
     harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-31 * MINUTE) }));
     return { harness, args: [] };
   },
-  "refusal-gate": () => {
-    const raw = {
-      schemaVersion: "delivery.merge.gates.v1",
-      entries: [
-        ...MERGE_DEFAULT_GATE_ENTRIES,
-        {
-          id: "workspace-tests",
-          recipe: "required-ci-job",
-          surface: "both",
-          job: "workspace-tests",
-        },
-      ],
-    };
-    const set = resolveMergeGateSet(raw);
-    if (!set.ok) throw new Error(`fixture gate set invalid: ${set.failure.detail}`);
-    const harness = createMergeHarness({
-      gateSet: raw,
-      checkRuns: {
-        items: [
-          ...baseCheckRuns().items,
-          {
-            identity: { systemName: "github", entityId: "44899" },
-            pipelineName: "workspace-tests",
-            jobs: [{ jobName: "workspace-tests", jobState: "failed" as const }],
-            traceEvidence: [],
-          },
-        ],
-        pageItemCount: 3,
-        sha: MERGE_HEAD,
-      },
-    });
-    harness.seedVerification(verificationFor(set.value, { verifiedAt: isoAt(-2 * MINUTE) }));
-    return { harness, args: [] };
-  },
+  "refusal-gate": () => requiredJobScenario("pass"),
+  "refusal-required-job-probe": () => requiredJobScenario("pass"),
+  "refusal-required-job-recorded": () => requiredJobScenario("fail"),
   "refusal-tracker": () => {
     const harness = createMergeHarness({
       workItem: baseWorkItem({ labels: ["change", "hand-back"], updatedAt: isoAt(-1 * MINUTE) }),

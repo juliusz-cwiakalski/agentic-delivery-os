@@ -2,6 +2,8 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { goldenScenarios } from "../fixtures/merge/golden-scenarios";
 
@@ -136,6 +138,42 @@ describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly thirteen files"
       expect(goldenText(file)).not.toContain("refusal-rebase");
     }
     expect(goldenScenarios()["refusal-rebase" as string]).toBeUndefined();
+  });
+
+  test("exactly the two declared goldens carry the attribution line", async () => {
+    const human = await runScenario("refusal-gate", { json: false });
+    const scripted = await runScenario("refusal-gate", { json: true, scripted: true });
+    expect(goldenText("refusal-gate-human.txt")).toContain("attribution=probe");
+    expect(textOf(human)).toBe(goldenText("refusal-gate-human.txt"));
+    expect(goldenText("refusal-gate-scripted.json")).toContain("attribution=probe");
+    expect(scripted.stdout).toBe(goldenText("refusal-gate-scripted.json"));
+    // A blanket regeneration that moved a third file is visible here by name.
+    for (const file of presentGoldenFiles()) {
+      if (file === "refusal-gate-human.txt" || file === "refusal-gate-scripted.json") continue;
+      expect(goldenText(file)).not.toContain("attribution=");
+    }
+  });
+
+  test("the reserved merge.rebase-conflict identity is still declared and emittable", () => {
+    // Retirement is of the scenario, never of the identity: the row stays in
+    // the error table and in the composition's declared emittable set.
+    expect(ERROR_TABLE.some((row) => row.code === "merge.rebase-conflict")).toBe(true);
+    expect(MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).toContain(
+      "merge.rebase-conflict",
+    );
+  });
+
+  test("the recorded attribution scenario renders its own value without a byte-pinned file", async () => {
+    const scenario = goldenScenarios()["refusal-required-job-recorded"];
+    if (scenario === undefined) throw new Error("refusal-required-job-recorded missing");
+    const { harness, args } = scenario();
+    try {
+      const run = await harness.run(args, { json: false });
+      expect(textOf(run)).toContain("attribution=recorded");
+      expect(textOf(run)).not.toContain("attribution=probe");
+    } finally {
+      harness.cleanup();
+    }
   });
 });
 
