@@ -287,7 +287,7 @@
 #                 AC-F3-4 (ISDEL-005), AC-F3-5 (ISDEL-006).
 #   Phase 3 (4):  AC-F7-1 (PERSIST-001/002/003/004),
 #                 AC-F7-2 (PERSIST-010),
-#                 AC-F7-3 (PERSIST-002/005/006/008/011 — the WRITE clause; the
+#                 AC-F7-3 (PERSIST-002/005/006/008 — the WRITE clause; the
 #                 PERSIST-005/006 read-back halves execute in phase 4 as that
 #                 boundary's cross-control and do NOT move this owner),
 #                 AC-F7-4 (PERSIST-003/007).
@@ -304,13 +304,22 @@
 #                 phase-4 TC-LOG-003 `--tail` half), AC-F5-3 (GRAMMAR-004),
 #                 AC-F5-4 (GRAMMAR-005 + CONTRACT-001's invariance half, whose
 #                 case is owned by phase 7).
-#   Phase 7 (5):  AC-F6-1 (RO-001 + PERSIST-011), AC-F6-2 (RO-002 + SHELL-004),
+#   Phase 7 (5):  AC-F6-1 (RO-001 + the phase-4 TC-PERSIST-011 re-observed here),
+#                 AC-F6-2 (RO-002 + SHELL-004),
 #                 AC-F6-3 (SHELL-001/002), AC-F6-4 (RO-003 + SHELL-002),
 #                 AC-F6-5 (SHELL-003).
 #   Phase 8 (0):  release obligations; re-establishes evidence for the whole set
 #                 and moves no ownership. A reviewer who wants ownership to move
 #                 is asking for a plan revision, not a silent transfer.
 #   COUNT: 0 + 12 + 4 + 6 + 7 + 4 + 5 + 0 = 38.
+#   CASE-ALLOCATION NOTE ON TC-PERSIST-011 (moves no AC):
+#     - AC-F7-3 stays phase 3's through its WRITE clause (PERSIST-002/005/006/008).
+#       TC-PERSIST-011 is PHASE-4-OWNED because its expected outcome requires a
+#       `dispatch log` answer ("only the requested tail, never the whole file"),
+#       so its artifact-transformation and record-privacy assertions land at the
+#       earliest boundary where that answer exists. No AC changes owner.
+#     - AC-F6-1 stays phase 7's through TC-RO-001. Phase 7 re-observes the phase-4
+#       TC-PERSIST-011 as a read-only control and is never a second owner of it.
 #   Per-feature reconciliation against spec §17: F-1 7 (phase 2), F-2 6
 #   (phase 4), F-3 5 (phase 2), F-4 7 (phase 5), F-5 4 (phase 6), F-6 5
 #   (phase 7), F-7 4 (phase 3) = 38.
@@ -349,23 +358,25 @@
 #   makes it green):
 #   Phase 1 (0)   [satisfied at plan time; no committable work]
 #   Phase 2 (15):  TC-STATUS-001..008 (8), TC-ISDEL-001..007 (7)
-#   Phase 3 (10):  TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011
-#                  (009 is phase 4: its load-bearing half is the reader's tear
-#                  rule, so it is owned where it can be observable. 005 and 006
-#                  stay here: their WRITE half — segmentation, continuation, the
-#                  LF rule, 0 in-place modification — IS the observable this
-#                  boundary lands; their read-back halves are executed at phase 4
-#                  as that boundary's cross-control — see SPLIT CASES below)
-#   Phase 4 (12 + 2 read-back halves): TC-LOG-001..011 (11),
-#                  TC-PERSIST-009 (1), plus the READ-BACK halves of
-#                  TC-PERSIST-005/006 (executed here, ids stay phase 3's)
+#   Phase 3 (9):   TC-PERSIST-001..008, TC-PERSIST-010
+#                  (009 and 011 are phase 4: 009's load-bearing half is the
+#                  reader's tear rule and 011's expected outcome needs a
+#                  `dispatch log` answer, so each is owned where it can be
+#                  observable. 005 and 006 stay here: their WRITE half —
+#                  segmentation, continuation, the LF rule, 0 in-place
+#                  modification — IS the observable this boundary lands; their
+#                  read-back halves are executed at phase 4 as that boundary's
+#                  cross-control — see SPLIT CASES below)
+#   Phase 4 (13 + 2 read-back halves): TC-LOG-001..011 (11),
+#                  TC-PERSIST-009, TC-PERSIST-011 (2), plus the READ-BACK halves
+#                  of TC-PERSIST-005/006 (executed here, ids stay phase 3's)
 #   Phase 5 (10):  TC-MSG-001..010
 #   Phase 6 (6):   TC-GRAMMAR-001..005 (5), TC-CONTRACT-002 (1)
 #   Phase 7 (19):  TC-RO-001..004 (4), TC-SHELL-001..004 (4),
 #                  TC-CONTRACT-001, TC-CONTRACT-003 (2), TC-NFR-001..004 (4),
 #                  TC-MATRIX-001, TC-MATRIX-002 (2), TC-FIXTURE-001..003 (3)
 #   Phase 8 (0)
-#   COUNT: 0 + 15 + 10 + 12 + 10 + 6 + 19 + 0 = 72. 0 orphans, 0 double-owned.
+#   COUNT: 0 + 15 + 9 + 13 + 10 + 6 + 19 + 0 = 72. 0 orphans, 0 double-owned.
 #   The COUNT counts OWNED case ids only. Phase 4 additionally executes the
 #   READ-BACK HALVES of TC-PERSIST-005/006; those are assertion allocations at
 #   phase 4, never a second owner, so no id is counted twice and the total stays
@@ -382,9 +393,10 @@
 #   (`dispatch log --tail 500`/`--tail 2` byte-identical reconstruction and the
 #   retention `tail`-scope truncation fact) needs a reader that does not exist
 #   until phase 4, so NO `dispatch log` step appears in the phase-3 gate. The ids
-#   stay PHASE 3's, exactly as the test plan's v0.2 phase labels record; phase 4
-#   runs the read-back halves as CROSS-CONTROLS and neither half substitutes for
-#   the other's evidence.
+#   are PHASE-3-OWNED: the write half is asserted at the phase-3 boundary and the
+#   read-back half is EXECUTED at the phase-4 boundary as that boundary's
+#   cross-control. Neither half substitutes for the other's evidence and no case
+#   id changes owner.
 #   Group totals reconciled: MATRIX 2 + STATUS 8 + LOG 11 + ISDEL 7 + MSG 10 +
 #   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 72.
 #   TC-CONTRACT-002's two halves: the help-entry count 5 -> 9 (phase 6) and the
@@ -406,12 +418,13 @@
 #     status fold and probe (M1–M10)               -> 10 to phase 2
 #     artifact read (M11–M23, 13 rows): M11–M22   -> 12 to phase 4
 #                                      M23 (names TC-RO-001, phase 7) -> phase 7
-#     delivering fold (M24–M28): M24, M26, M27, M28 ->  4 to phase 2
-#                                      M25 (test plan v0.2 widened it to name
-#                                      TC-STATUS-008 and TC-ISDEL-006 — phase 2 —
-#                                      AND TC-MSG-006 — phase 5 — so the LAST
-#                                      boundary among them is phase 5)
-#                                                 ->  1 to phase 5
+#     delivering fold (M24–M28): M24, M25, M26, M27, M28 -> 5 to phase 2
+#                                      (M25's register row names ONLY
+#                                      TC-STATUS-008 and TC-ISDEL-006, both
+#                                      phase 2, so it is exercised at the phase-2
+#                                      boundary beside them. TC-MSG-006 carries
+#                                      the same lane-read property on
+#                                      `last-message` and needs no row here.)
 #     message read (M29–M36)                       ->  8 to phase 5
 #     grammar and projection (M37–M41): M37, M38, M40, M41 -> 4 to phase 6
 #                                      M39 (names TC-CONTRACT-001, phase 7)
@@ -427,9 +440,9 @@
 #     contract/bounds/machinery (M60–M68): M64 and M65 (both name
 #       TC-CONTRACT-002, phase 6)                  ->  2 to phase 6
 #       M60, M61, M62, M63, M66, M67, M68          ->  7 to phase 7
-#   PHASE TOTALS (sum = 68): phase 1 = 0; phase 2 = 14; phase 3 = 11;
-#   phase 4 = 13; phase 5 = 9; phase 6 = 6; phase 7 = 15; phase 8 = 0.
-#   Check: 0+14+11+13+9+6+15+0 = 68, and every row M1–M68 appears exactly once.
+#   PHASE TOTALS (sum = 68): phase 1 = 0; phase 2 = 15; phase 3 = 11;
+#   phase 4 = 13; phase 5 = 8; phase 6 = 6; phase 7 = 15; phase 8 = 0.
+#   Check: 0+15+11+13+8+6+15+0 = 68, and every row M1–M68 appears exactly once.
 #   ROW-SPLIT NOTE: M46 follows its NAMED FAILURE, not the case's commit — its
 #   signal can only be observed through the reader, so it is exercised at the
 #   phase-4 boundary. Its write-side sibling M47 (`segment concatenation differs
@@ -492,6 +505,11 @@
 #      and tests/fixtures/ports/v1-contract-inventory.json — declared by every
 #      phase that creates a package module or adds an exported contract name
 #      (phases 2, 3, 4, 5; phase 6 adds no module, phase 7 adds none).
+#  11. tests/conformance/dispatch/dispatch-operator-persist.test.ts — CREATED in
+#      phase 3 (TC-PERSIST-001..008, 010, whose observables exist at the write
+#      boundary) and EXTENDED in phase 4 with its own two cases (TC-PERSIST-009's
+#      reader tear rule and TC-PERSIST-011's `dispatch log` clause). Phase 4 edits
+#      only those two cases and runs the rest of the file as a read-only control.
 #
 # DELIVERED EXPECTATIONS THIS CHANGE MOVES (a DoR concern; every file below is
 #   declared by the phase that owns the change, and every edit cites its clause —
@@ -955,8 +973,10 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M1–M10, M24, M26, M27 and M28 are exercised at this boundary.
-  #   M25 is phase 5's: its v0.2 widening names TC-MSG-006.)
+  #   (Mutation rows M1–M10 and M24–M28 are exercised at this boundary. M25's
+  #   register row names TC-STATUS-008 and TC-ISDEL-006, both owned here, so this
+  #   boundary is where it is exercised; TC-MSG-006's lane-read failure is re-run
+  #   in phase 5 as a read-only control over the same property.)
   # ---------------------------------------------------------------------------
   - id: 2
     title: "Lane-view fold, advisory owner probe, `dispatch status`, and `dispatch is-delivering`"
@@ -1094,7 +1114,11 @@ phases:
   #     member).
   #
   # Acceptance (4): AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4.
-  # Cases (10): TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011.
+  # Cases (9): TC-PERSIST-001..008, TC-PERSIST-010.
+  #   TC-PERSIST-009 and TC-PERSIST-011 are NOT here: 009's assertion is the
+  #   reader's tear rule, and 011's expected outcome requires a `dispatch log`
+  #   answer, so each lands in phase 4, the earliest boundary where it can be
+  #   green.
   #   TC-PERSIST-005/006 are split by boundary: THIS phase owns them and lands
   #   their WRITE half — every file <= 1 048 576 bytes including its LF, the byte
   #   totals, the concatenation equals the declared transformation, no byte
@@ -1242,27 +1266,41 @@ phases:
   #                                                  entry)
   #   tests/conformance/dispatch/dispatch-operator-log.test.ts (NEW)
   #   tests/behaviour/dispatch-operator-log-bounds.test.ts     (NEW)
+  #   tests/conformance/dispatch/dispatch-operator-persist.test.ts (EXTEND at this
+  #     boundary: TC-PERSIST-009's reader tear-rule assertions and
+  #     TC-PERSIST-011's artifact-transformation and record-privacy assertions.
+  #     The phase-3 cases in the SAME file — TC-PERSIST-001..008 and 010 — run as
+  #     read-only controls; this phase edits only its own two cases.)
   #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
   #     (the new `dispatch-log-tail.ts` module in the glob list)
   #   PINNED SURFACES in this commit: inventory.json, content-inventory
   #     allowances, the ports contract inventory.
   #
   # Acceptance (6): AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6.
-  # Cases (12 + 2 read-back halves): TC-LOG-001..011, TC-PERSIST-009, plus the
-  #   READ-BACK halves of TC-PERSIST-005/006 (their ids stay phase 3's).
+  # Cases (13 + 2 read-back halves): TC-LOG-001..011, TC-PERSIST-009,
+  #   TC-PERSIST-011, plus the READ-BACK halves of TC-PERSIST-005/006 (their ids
+  #   stay phase 3's).
   #   TC-LOG-003 proves the `--tail` clause of AC-F5-2, which PHASE 6 closes
   #   across all four forms; TC-LOG-003 is re-run there as a read-only control.
   #   TC-PERSIST-009 is owned here: the writer is phase 3's, but the assertion is
   #   the reader's tear rule ("a killed writer leaves at most one torn tail and
   #   the reader drops only that tail"), which only exists at this boundary.
+  #   TC-PERSIST-011 is owned here for the same reason: its expected outcome
+  #   includes a `dispatch log` answer ("only the requested tail, never the whole
+  #   file, and the family's file set is unchanged by the read"), which cannot
+  #   exist at the phase-3 boundary.
   #   The PERSIST-005/006 READ-BACK halves are the earliest boundary at which
   #   `dispatch log --tail <n>` can run at all: byte-identical reconstruction,
   #   `--tail 500`/`--tail 2` whole values, the retention `tail`-scope truncation
   #   fact, 0 in-place modification. They are CROSS-CONTROLS over the family phase
   #   3 produced; the write halves remain phase 3's evidence.
   #
-  # Run as read-only controls (NOT declared): the phase-3 persist suites, the
-  #   delivered dispatch parity battery, tests/behaviour/dispatch-additive-stability.test.ts.
+  # Run as read-only controls (NOT declared): the phase-3 cases the gate re-runs
+  #   inside `dispatch-operator-persist.test.ts` (TC-PERSIST-001..008, 010) and
+  #   inside `dispatch-operator-artifact-writer.test.ts` (the TC-PERSIST-003/005/
+  #   006/007/008 write halves), the delivered dispatch parity battery,
+  #   tests/behaviour/dispatch-additive-stability.test.ts. None of them is an
+  #   owned assertion at this boundary.
   #
   # Gate (expected signal: exit 0; 50 lines oldest-to-newest from a two-file
   #   stitch, a continued value reconstructed whole, 0 foreign lines, one
@@ -1277,10 +1315,13 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M11–M22 and M46 are exercised at this boundary. The phase-3
-  #   persist and artifact-writer suites run here as the write-half cross-controls
-  #   of TC-PERSIST-005/006, whose READ-BACK halves this boundary executes and
-  #   whose ids stay phase 3's.)
+  #   (Mutation rows M11–M22 and M46 are exercised at this boundary. The persist
+  #   suite is BOTH an owned suite here (TC-PERSIST-009 and TC-PERSIST-011) and a
+  #   re-run of the phase-3 cases in the same file (TC-PERSIST-001..008, 010),
+  #   which are read-only controls over cases this phase does not own; the
+  #   artifact-writer suite runs entirely as the write-half cross-control of
+  #   TC-PERSIST-005/006, whose READ-BACK halves this boundary executes and whose
+  #   ids stay phase 3's.)
   # ---------------------------------------------------------------------------
   - id: 4
     title: "`dispatch log`: addressed-directory read, name-order stitch, torn-tail drop, bounds and closed absences"
@@ -1306,6 +1347,7 @@ phases:
         - tests/fixtures/dispatch/parity/seams.ts
         - tests/conformance/dispatch/dispatch-operator-log.test.ts
         - tests/behaviour/dispatch-operator-log-bounds.test.ts
+        - tests/conformance/dispatch/dispatch-operator-persist.test.ts
         - scripts/checks/no-shell-dispatch.ts
         - tests/checks/no-shell-dispatch.test.ts
         - tests/structure/inventory.json
@@ -1316,7 +1358,7 @@ phases:
         target: packages/core/src/contracts/dispatch-operator.ts
         role: producer
     doneArtifacts:
-      pipelineId: "CI pipeline for the GH-354 phase-4 commit (the log conformance suite, the log-bounds behaviour suite, the phase-3 persist controls and the no-shell invariant green; the aggregate runs in phase 8)"
+      pipelineId: "CI pipeline for the GH-354 phase-4 commit (the log conformance suite, the log-bounds behaviour suite, the persist suite's PERSIST-009/011 cases with its phase-3 cases as read-only controls, and the no-shell invariant green; the aggregate runs in phase 8)"
 
   # ---------------------------------------------------------------------------
   # Phase 5 — `dispatch last-message` (F-4; API-4, API-9; DM-3, DM-5, DM-6;
@@ -1429,9 +1471,11 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
-  #   (Mutation rows M29–M36 and M25 are exercised at this boundary. M25's lane-read
-  #   failure is asserted here as TC-MSG-006 requires, beside the phase-2
-  #   TC-STATUS-008 / TC-ISDEL-006 controls.)
+  #   (Mutation rows M29–M36 are exercised at this boundary. M25 is PHASE 2's:
+  #   its register row names only TC-STATUS-008 and TC-ISDEL-006, both owned
+  #   there. The phase-2 lane-read failure cases that share this property
+  #   (TC-STATUS-008, TC-ISDEL-006) run here as read-only controls beside
+  #   TC-MSG-006; none of them becomes an owned assertion in this phase.)
   # ---------------------------------------------------------------------------
   - id: 5
     title: "`dispatch last-message`: capability-gated transcript read seam, ordered ladder, and message composition"
@@ -1695,6 +1739,10 @@ phases:
   # Run as read-only controls (NOT declared): the whole delivered dispatch
   #   parity battery, tests/conformance/dispatch/dispatch-e2e.test.ts, the
   #   phase-2..6 operator suites, tests/checks/help-guide-coverage.test.ts.
+  #   The gate's `bun test tests/conformance/dispatch` sweep re-runs the phase-2..5
+  #   case sets (STATUS, ISDEL, LOG, MSG, PERSIST) as READ-ONLY CONTROLS: they are
+  #   owned by their own phases, this phase asserts none of them as its own, and
+  #   its owned case set is exactly the one listed in the Cases line above.
   #
   # Gate (expected signal: exit 0; 12/12 rows identical across two runs with 0
   #   live network / 0 real child starts / 0 live process-table reads; 0 appends,
