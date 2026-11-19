@@ -6,8 +6,8 @@ delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T05:54:41.790Z }
   specification: { started: null, completed: 2026-11-19T10:11:13.277Z }
-  test_planning: { started: null, completed: 2026-11-19T10:11:22.529Z }
-  delivery_planning: { started: null, completed: 2026-11-19T11:02:17.420Z }
+  test_planning: { started: null, completed: 2026-11-19T13:33:12.941Z }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-19T08:42:37.821Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -176,7 +176,27 @@ notes:
       delivery_planning."
     type: blocker
     date: "2026-11-19"
-  - text: "Commit-message observation (not blocking): the commit primitive composes a template subject from the staged set, so most commits read `docs(GH-350): update doc/changes/...` even where source changed, and many are truncated with a literal ellipsis. `scripts/lint-commit-range.sh --base main-tools` reports PASS (28 commits, 0 offending, commitlint from node_modules/.bin), so the range gate is green; the semantic weakness is recorded for the PR description and for the commit-primitive repair story, not corrected by hand."
+  - text: "Phase 3 delivered: commit c91bfbb0, full battery green (11203 pass, 4
+      skip, 0 fail). Pure evaluateBudgets with the window-park/ticket-failure
+      split, one ref-scoped spend read regardless of budget count, the
+      three-tier ref precedence with the input.value.rejected refusal, the
+      no-paid-escalation class split, and the composition wiring. Deviation, in
+      scope: the pure ref seam lives in provider/budgets.ts rather than
+      domain/pm-context.ts because TC-PROV-006 confines the provider tier to
+      #contracts and #provider/*, and the CLI exposes no domain subpath; the
+      delivered readLocalPmContext is consumed at the composition edge. No new
+      contracts export was needed, so the contracts barrel and export inventory
+      were not edited."
+    type: evidence
+    date: "2026-11-19"
+  - text: "Commit-message observation (not blocking): the commit primitive composes
+      a template subject from the staged set, so most commits read
+      `docs(GH-350): update doc/changes/...` even where source changed, and many
+      are truncated with a literal ellipsis. `scripts/lint-commit-range.sh
+      --base main-tools` reports PASS (28 commits, 0 offending, commitlint from
+      node_modules/.bin), so the range gate is green; the semantic weakness is
+      recorded for the PR description and for the commit-primitive repair story,
+      not corrected by hand."
     type: risk
     date: "2026-11-19"
   - text: "Phase 2 escalation (0 commits; work preserved in
@@ -412,12 +432,38 @@ notes:
     date: "2026-11-19"
   - text: "GH-350 plan phase 2 (delivery) complete: the three-member zone port,
       ProviderZoneFacts/UTC_ZONE_FACTS/bindZoneFacts, the exact
-      transition-segment peakWindowEndInstantMs derivation, zone-aware engine and
-      watcher, the adapters time-zone subpath, the four manifest workspaceImports,
-      the re-purposed Mars/Olympus fixture, and the phase-1 minor changeset
-      finalised for five publishables. Commit 9d6aa2f0.
-      Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (11149 pass / 4 skip / 0 fail;
+      transition-segment peakWindowEndInstantMs derivation, zone-aware engine
+      and watcher, the adapters time-zone subpath, the four manifest
+      workspaceImports, the re-purposed Mars/Olympus fixture, and the phase-1
+      minor changeset finalised for five publishables. Commit 9d6aa2f0. Gate:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (11149 pass / 4 skip / 0 fail;
       typecheck, boundaries incl. the ambient-provider-intl fixture, memory,
       prompt-conformance, help-guide-coverage and exports-parity all green)."
+    type: evidence
+    date: "2026-11-19"
+  - text: "GH-350 plan phase 3 (delivery) complete: the pure evaluateBudgets (window
+      park at newestAtMs + windowSeconds*1000 with a strictly-future guard,
+      ticket crossing as a failed entry with no expiry, the five evidence
+      fields, MAX tie position after quota-exhausted), the fail-closed
+      provider.budgets parser, the one-read ProviderSpendTotalsPort projected at
+      the edge over the delivered spend fold, the three-tier work-item ref seam
+      with one pre-resolution input.value.rejected refusal, the
+      NO-PAID-ESCALATION rule for a budget-parked subscription, the chain-park
+      evidence union, the terminal provider.budget.exceeded refusal, the budget
+      park goldens, and the constructed maximal-evidence fixture. Commit
+      c91bfbb0. Gate: narrow suites 44+35 pass with the three delivered
+      spend/metrics controls green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
+      (11203 pass / 4 skip / 0 fail; lint, format, typecheck, boundaries,
+      memory, prompt-conformance, help-guide-coverage and exports-parity all
+      green). Deviation recorded: the pure ref seam lives in
+      packages/core/src/provider/budgets.ts rather than
+      packages/core/src/domain/pm-context.ts, because the delivered
+      tests/structure/provider-contract.test.ts TC-PROV-006 admits only
+      #contracts, #provider/* and intra-provider ./x.js imports in the provider
+      tier and the CLI has no domain subpath; the declared
+      packages/core/src/contracts/index.ts, tests/fixtures/ports/
+      v1-contract-inventory.json and
+      tests/structure/port-contract-inventory.test.ts needed no edit (no new
+      contracts export)."
     type: evidence
     date: "2026-11-19"

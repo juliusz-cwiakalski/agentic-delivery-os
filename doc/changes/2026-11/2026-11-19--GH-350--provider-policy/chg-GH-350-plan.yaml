@@ -503,12 +503,16 @@
 #   A path edited by TWO OR MORE phases keeps ONE owner per assertion and names
 #   both halves at both ends. That applies here to
 #   `packages/core/src/contracts/provider.ts` (P1 vocabulary / P2 zone domain /
-#   P3 budget-outcome and ref types / P5 simulate fixture and block types /
-#   P7 watch default bound), `packages/core/src/contracts/index.ts`
-#   (P1 new names / P2 retirement and zone names / P3, P5 and P7 the new names'
-#   barrel rows),
+#   P3 member-only additions to EXISTING exported types — `sparse` on the totals
+#   and the budget outcome, the `failed` read arm, `provider.budget.exceeded` in
+#   the error union — which add NO export name; P5 and P7 do NOT touch it, because
+#   their new types and constants live in the provider subpath),
+#   `packages/core/src/contracts/index.ts`
+#   (P1 new names / P2 retirement and zone names — and NO other phase: a phase
+#   that changes only a type's MEMBERS or adds a non-exported alias does not move
+#   it, which is what phase 3's delivery established),
 #   `tests/fixtures/ports/v1-contract-inventory.json` and
-#   `tests/structure/port-contract-inventory.test.ts` (P1, P2, P3, P5, P7 — the
+#   `tests/structure/port-contract-inventory.test.ts` (P1, P2 ONLY — the
 #   inventory pin is a TWO-WAY snapshot of the whole contracts surface (60
 #   `provider.ts` and ~2903 `index.ts` exports), so ANY phase that adds, renames
 #   or retires a contract export falsifies it; each of those phases declares both
@@ -1352,7 +1356,10 @@ phases:
         # ~2903 `index.ts` exports committed, and it fails in BOTH directions), so
         # the new names and the barrel rows falsify it and `pnpm check` is red at
         # this boundary unless both files move in the SAME commit. Declared again
-        # in phases 2, 3, 5 and 7, each time for the same reason.
+        # in PHASE 2 for the retirement, and in NO later phase: a phase that adds
+        # only members to existing exported types (phase 3's delivered case) or
+        # declares its new types in the provider subpath (phases 5 and 7) adds no
+        # export name, so the inventory is not falsified.
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/result/code-corpora/true-positives.json
@@ -1878,16 +1885,24 @@ phases:
   # THE WORK-ITEM REF SEAM (DoR B2, TDR-0054): the ref is a FACT, not policy, and
   # it is resolved by ONE seam with three-tier precedence — an explicitly
   # supplied ref-bearing fact wins, otherwise the local delivery context, otherwise
-  # the evaluation REFUSES. The pure precedence and the pattern test live in
-  # `packages/core/src/domain/pm-context.ts` (new pure module: the three-tier
-  # resolution, validation against the delivered `SPEND_WORK_ITEM_REF_PATTERN`,
-  # and the refusal shape — no I/O, no ambient read). The DELIVERED reader is
-  # `packages/adapters/src/file/pm-context.ts`'s `readLocalPmContext`, consumed
-  # unchanged at the delivered path `<cwd>/.ai/local/pm-context.yaml`
-  # (`packages/core/src/contracts/spend.ts` and
+  # the evaluation REFUSES.
+  # DELIVERED DEVIATION, RECORDED (phase 3 landed in `c91bfbb0`; the pm-notes
+  # evidence entry names it): the pure seam lives in the DECLARED
+  # `packages/core/src/provider/budgets.ts` as `resolveProviderWorkItemRef` +
+  # `isWorkItemRef` (reusing the delivered spend module's
+  # `SPEND_WORK_ITEM_REF_PATTERN`), NOT in a new
+  # `packages/core/src/domain/pm-context.ts`. The tier contract forbids the domain
+  # import: `tests/structure/provider-contract.test.ts`'s TC-PROV-006 admits only
+  # `#contracts`, `#provider/*` and intra-provider `./x.js` imports inside the
+  # provider tier, and the CLI exposes no domain subpath, so a domain module would
+  # be unreachable without editing `packages/core/src/index.ts` — which no phase
+  # declares and this change does not need. The DELIVERED reader
+  # `packages/adapters/src/file/pm-context.ts`'s `readLocalPmContext` is therefore
+  # consumed AT THE COMPOSITION EDGE ONLY (`packages/cli/src/production.ts`), never
+  # imported by core; the delivered path is `<cwd>/.ai/local/pm-context.yaml`, and
+  # `packages/core/src/contracts/spend.ts` and
   # `packages/cli/src/commands/spend.ts` are the delivered reference behaviour and
-  # are NOT edited). `packages/cli/src/production.ts` supplies the seam from
-  # `readLocalPmContext`; `packages/cli/src/edge.ts` wires it into the provider
+  # are NOT edited. `packages/cli/src/edge.ts` wires the seam into the provider
   # composition; the `provider resolve` handler passes it through. The ref is
   # required exactly when an enabled budget is evaluated (either scope); the four
   # read-only members never resolve it; an unresolvable ref is ONE
@@ -1895,7 +1910,26 @@ phases:
   # read, transport call or write, naming the enabled budget(s), the context path
   # and the remedy — never a zero measurement, never a clear skip, never a
   # window-only downgrade.
+  # SPEC PATH CHECK (recorded, nothing to fix here): spec §16's path map names NO
+  # domain module for this seam — its only `pm-context` path is the delivered
+  # adapters reader `packages/adapters/src/file/pm-context.ts`, consumed unchanged
+  # — so delivery matches the spec and no `@spec-writer` correction is required. If
+  # a future spec edit names a `domain/pm-context.ts`, that is a spec defect to
+  # correct there, never to satisfy by creating the module.
+  # NO CONTRACTS EXPORT, SO NO CONTRACTS INVENTORY MOVE (the second half of the
+  # deviation): `contracts/provider.ts` is edited only by ADDING MEMBERS to
+  # existing exported types — `sparse` on `ProviderSpendTotals` and on both budget
+  # outcomes, the `failed` arm of `ProviderSpendTotalsRead`, and
+  # `provider.budget.exceeded` in the `ProviderErrorCode` union — plus two
+  # NON-EXPORTED local type aliases. The export NAME set is unchanged, so
+  # `packages/core/src/contracts/index.ts`,
+  # `tests/fixtures/ports/v1-contract-inventory.json` and
+  # `tests/structure/port-contract-inventory.test.ts` are NOT edited here and are
+  # NOT declared. The provider BARREL (`packages/core/src/provider/index.ts`) does
+  # gain names, and that is pinned by `tests/structure/content-inventory.test.ts` +
+  # `inventory.json`, both declared below.
   # Split with phase 4 (declared): the fail-closed semantic rules —
+
   # `parseProviderBudgets` in packages/core/src/provider/validate.ts — land here
   # with the evaluator, so TC-BUD-002..017 are this phase's; the catalog branch
   # that makes the declaration reachable from configuration lands in phase 4
@@ -1945,17 +1979,13 @@ phases:
     summary: "feat(GH-350): budget ceilings, the one-read projection and the ref seam"
     scope:
       files:
-        # The budget outcome/ref types reach their final shape with the evaluator
-        # that produces them (the declaration vocabulary itself was phase 1's);
-        # the barrel and the contracts-export inventory move with them (N-1).
+        # MEMBER-ONLY additions to existing exported types (delivered in c91bfbb0):
+        # `sparse` on the totals and both budget outcomes, the `failed` read arm and
+        # `provider.budget.exceeded` in the error union. NO export NAME is added, so
+        # the contracts barrel and the contracts-export inventory are NOT declared
+        # here — the phase must not declare a file it does not edit, and the
+        # delivery evidence is that neither was touched.
         - packages/core/src/contracts/provider.ts
-        - packages/core/src/contracts/index.ts
-        # The contracts-export inventory moves as ONE EDIT-SET with the export
-        # change: the fixture pins the whole contracts surface two-way, so a new
-        # or renamed budget/ref export falsifies it and the aggregate gate is red
-        # at this boundary unless both files move in the same commit (N-1).
-        - tests/fixtures/ports/v1-contract-inventory.json
-        - tests/structure/port-contract-inventory.test.ts
         - packages/core/src/provider/budgets.ts
         - packages/core/src/provider/conditions.ts
         - packages/core/src/provider/chain.ts
@@ -1970,11 +2000,9 @@ phases:
         - packages/core/src/provider/engine.ts
         - packages/core/src/provider/validate.ts
         - packages/core/src/provider/index.ts
-        # The ref seam's pure home (three-tier precedence plus the delivered
-        # pattern) and its composition wiring; the delivered
-        # `readLocalPmContext` reader and the delivered spend reference behaviour
-        # are consumed unchanged and are declared by no phase.
-        - packages/core/src/domain/pm-context.ts
+        # The ref seam's pure home is `provider/budgets.ts` (declared above); the
+        # delivered `readLocalPmContext` reader is consumed at the composition edge
+        # (`production.ts`) and the delivered spend reference behaviour by no phase.
         - packages/cli/src/commands/provider.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/production.ts
@@ -2191,18 +2219,16 @@ phases:
       files:
         - packages/core/src/provider/simulate.ts
         - packages/core/src/provider/index.ts
-        # The fixture's `workItemRef` field and the `simulation.workItemRef`
-        # disclosure (TDR-0054); the vocabulary half of this file is phases 1-2,
-        # and the simulate fixture/block types are new contract exports, so the
-        # barrel and the contracts-export inventory move with them (N-1).
-        - packages/core/src/contracts/provider.ts
-        - packages/core/src/contracts/index.ts
-        # The contracts-export inventory moves as ONE EDIT-SET with the export
-        # change (N-1): the fixture pins the whole contracts surface two-way, so a
-        # new `simulate` fixture/block type falsifies it and the aggregate gate is
-        # red here unless both files move in the same commit.
-        - tests/fixtures/ports/v1-contract-inventory.json
-        - tests/structure/port-contract-inventory.test.ts
+        # NO CONTRACTS EDIT (same class as phase 3's deviation): spec §16's
+        # contracts row names no simulate type and its path map assigns the fixture
+        # schema and payload assembly to `provider/simulate.ts`, so the fixture and
+        # `simulation` block types are declared in the PROVIDER subpath and
+        # re-exported by `provider/index.ts`. The CLI consumes them through
+        # `@delivery-os/core/provider` (a declared subpath), the provider tier
+        # imports only `#contracts`/`#provider/*` (TC-PROV-006), and therefore
+        # `contracts/provider.ts`, `contracts/index.ts` and the contracts-export
+        # inventory pair are NOT declared here. What DOES move is the content
+        # inventory, which pins the provider barrel's export list.
         - packages/adapters/src/file/index.ts
         - packages/cli/src/commands/provider.ts
         - packages/cli/src/edge.ts
@@ -2412,15 +2438,28 @@ phases:
     summary: "feat(GH-350): watch observation freshness and stale condition"
     scope:
       files:
+        # The VIEW narrowing and the three additive view fields are edits to
+        # existing exported type MEMBERS: `condition` is narrowed through an INLINE
+        # indexed type over phase 1's `PROVIDER_WATCH_CONDITIONS` export, so no new
+        # export name is created and the contracts barrel / contracts-export
+        # inventory are NOT declared (the phase must not declare a file it does not
+        # edit — the class phase 3's delivery established).
         - packages/core/src/contracts/provider-profile.ts
-        # The watch bound's declared constant (`PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS
-        # = 900`, asserted by name in TC-WFRESH-001), the barrel row that re-exports
-        # it, and the contracts-export inventory in the same edit-set (N-1).
-        - packages/core/src/contracts/provider.ts
-        - packages/core/src/contracts/index.ts
-        - tests/fixtures/ports/v1-contract-inventory.json
-        - tests/structure/port-contract-inventory.test.ts
+        # The watch bound's declared constant
+        # (`PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS = 900`, asserted by name in
+        # TC-WFRESH-001) lives in the PROVIDER subpath with the predicate that uses
+        # it — not in contracts — and is re-exported by `provider/index.ts`. Spec
+        # §16's contracts row names only the closed watch condition set (phase 1's),
+        # so no contracts export and no contracts inventory move is needed here.
+        # The provider BARREL's export list IS pinned by the content inventory,
+        # which therefore moves in this commit.
         - packages/core/src/provider/quota.ts
+        # The per-file EXPORT ALLOWLIST for `provider/quota.ts` gains the watch
+        # bound constant and the freshness predicate, so the content-inventory suite
+        # moves here. `tests/structure/inventory.json` does NOT: it lists committed
+        # package FILES, and this phase creates none (phase 3's commit moved both
+        # only because it added `budgets.ts`).
+        - tests/structure/content-inventory.test.ts
         - packages/core/src/provider/index.ts
         # The watch target's `maxAgeSeconds` declaration and its positivity
         # refusal; phase 4 owns the `provider.budgets` branch in the same file.
