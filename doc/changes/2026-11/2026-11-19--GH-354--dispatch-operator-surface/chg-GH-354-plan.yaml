@@ -1,0 +1,1627 @@
+# GH-354 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for this
+# change (there is no chg-GH-354-plan.md). `plan validate`, `plan diff`,
+# `plan overlap`, and `lint plan` read it directly. Extra phase data (goal,
+# obligations, AC/TC ownership, code areas, gate commands, done-artifact
+# expectations) rides in YAML comments so the parsed document stays
+# schema-strict; the plan declares phases and scope only — no `tasks` key and no
+# progress log. Progress is a pm-notes `notes:` entry naming the plan phase id,
+# the commit hash, and the gate result.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-354-spec.md (v1.3; F-1..F-7; API-1..API-12;
+#               DM-1..DM-7; NFR-1..NFR-11; DEC-1..DEC-9; §6 flows; §7.1 in-scope
+#               list; §8.5 backward compatibility and the declared divergences;
+#               §17 the 38 ACs; §18 the eight DoD items; §19 the outcome order
+#               and the F6 gating note; §20 no migration; §25.1 Appendix A doc
+#               impacts; §25.3 Appendix C query answer matrix and proof
+#               boundary; §25.4 Appendix D plan-pinned details and the TDR-0056
+#               authority.)
+#   - Tests:    ./chg-GH-354-test-plan.md (71 cases in twelve stable-id groups —
+#               MATRIX 2, STATUS 7, LOG 11, ISDEL 7, MSG 10, GRAMMAR 5,
+#               PERSIST 11, RO 4, SHELL 4, CONTRACT 3, NFR 4, FIXTURE 3; 38/38
+#               AC traceability; §5.2 scenario details; §6.1 fixture inventory
+#               (exists vs must-be-authored vs extended; the nine new
+#               `tests/fixtures/dispatch/operator/*` modules); §6.2 the fixture
+#               mechanisms and the first-pull probe; §7.1 the six seams plus
+#               S-cmd and S-exec; §7.2 the read-only and no-shell proof design;
+#               §7.3 the file map; §7.4 the 68-row mutation register M1–M68
+#               contiguous; §7.5 the gate battery; §7.6 non-functional
+#               verification.)
+#   - Decision: doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-
+#               transcript-read-seam.md — the per-ref, per-stream append-only
+#               family (`dispatch-logs.<workspace>/<REF>/`), one writer rule
+#               (value + exactly one LF, final remnant included), one tear rule
+#               (an unterminated tail is dropped), the 1 048 576-byte per-file
+#               cap by segmentation with oversized-value continuation, the
+#               newest-two retention and 2 × cap family bound (decided policy),
+#               the stitched read, the capability-gated transcript read under the
+#               existing `session-introspection` declaration, the fixed
+#               redact -> flatten -> bound -> mark order, the closed ladder, and
+#               the six plan-pinned obligations each with its named test
+#               (artifact-naming, segment-switch, torn-line-reader,
+#               two-segment-tail, segment-ordering, sink-fault-observational).
+#   - PM record: ./chg-GH-354-pm-notes.yaml (delivery_mode autonomous; scope =
+#               the four per-ref queries + bounded per-ref log persistence + one
+#               family with `--json`; the three non-blocking interpretations
+#               (both `is-delivering` forms, `marker` from the lane state, no
+#               marker file); the AC-F5-2 `positionals.max` ruling; the
+#               `session-introspection` ruling; the per-stream-segments ruling;
+#               the declared stream divergence; the doc-impact risks; the
+#               operational prerequisite that every primitive call carries BOTH
+#               PATH=$PWD/node_modules/.bin:$PATH and TMPDIR=$PWD/tmp/tmpdir and
+#               that `pnpm build` precedes any `jaiship` invocation.)
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages, per-phase one-line summary, typed
+#               done-artifacts, leases, weightClass, interactions, tier; no
+#               tasks key, no progress log; `id` must be a POSITIVE integer).
+#   - Precedent: ../2026-11/2026-11-18--GH-347--dispatch-core-parity/
+#               chg-GH-347-plan.yaml (comment-carried phase data,
+#               one-commit-per-phase discipline, the COMMIT-BOUNDARY REALITY and
+#               SCOPE DECLARATION RULE sections, spec reconciliation declared for
+#               STAGING ONLY in the release phase).
+#
+# PLAN SHAPE: eight phases — one `kind: planning` phase (id 1) and seven
+#   `kind: delivery` phases (ids 2..8). This brief calls the pre-delivery phase
+#   "phase 0"; it is `id: 1` here because the schema requires a positive integer
+#   id. Every later reference in this document numbers the PLAN's ids.
+#   The planning phase declares no code scope: it lands the governing record
+#   (TDR-0056) and its index row, which the delivery phases then implement.
+#   `tier.phases` below lists the LIFECYCLE phase ids [1..11] (the ceremony tier
+#   engine's vocabulary), not this plan's eight phase ids; the two are different
+#   namespaces and the plan never renumbers the lifecycle.
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1):
+#   TDR-0056 is UNTRACKED in the worktree at plan time:
+#     doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
+#     read-seam.md
+#   (verified: `git ls-files --error-unmatch` exits non-zero for that path).
+#   Phase 1 declares that EXACT path so the PM can land it with the commit
+#   primitive; the primitive refuses to stage an untracked file that is not
+#   inside a declared scope, so the declaration is what gives staging authority.
+#   VERIFIED AT PLAN TIME: the `doc/decisions/00-index.md` TDR-0056 ROW IS
+#   ALREADY COMMITTED (line 88 plus the binding note on line 98) and
+#   `git status --porcelain` shows no entry for the index. The index is therefore
+#   declared for CONDITIONAL STAGING ONLY — see the declared exception in the
+#   SCOPE DECLARATION RULE — so that a typo or a status touch made while the
+#   record lands stages with it and Appendix A's decision-record citation stays
+#   provable at DoD. Until phase 1 commits, the branch carries an index row
+#   pointing at an uncommitted record; that is exactly the gap this phase closes.
+#   PHASE-1 DONE CRITERION (mechanical, re-run at DoD): after the phase-1
+#   commit, `git ls-files --error-unmatch` on the TDR path exits 0 and
+#   `git status --porcelain -- doc/decisions` is empty.
+#   TWO UNTRACKED CHANGE ARTIFACTS ARE DELIBERATELY NOT DECLARED:
+#     ./chg-GH-354-test-plan.md and ./chg-GH-354-plan.yaml are the test-planning
+#     and delivery-planning lifecycle artifacts. They are committed by the PM
+#     under their own lifecycle phases, never by a delivery phase. No phase may
+#     stage them.
+#
+# SCOPE DECLARATION RULE (binding on every phase, inherited from GH-338/GH-339/
+#   GH-347):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   regression control is NOT declared: declaring it would only produce an
+#   advisory `plan diff` `undeclared-missing` for a file that needs no edit.
+#   ONE DECLARED EXCEPTION: `doc/decisions/00-index.md` in phase 1 is a
+#   CONDITIONAL-STAGING declaration (clean at plan time; never a licence to edit
+#   an unrelated row).
+#   TWO FURTHER DECLARED KINDS, stated so the rule and the declaration cannot
+#   contradict:
+#     (i)  A PINNED-SURFACE declaration. `tests/structure/inventory.json` (the
+#          per-package file set), the `EXECUTABLE_ALLOWANCES` constant inside
+#          `tests/structure/content-inventory.test.ts` (per-file exports, no
+#          wildcard), and `tests/fixtures/ports/v1-contract-inventory.json` (the
+#          contract export list) are the repository's file-set / export / contract
+#          pins. Every phase that creates a module or adds an exported name moves
+#          them in the SAME commit, exactly and non-vacuously (no wildcard, no
+#          allowance naming a symbol the file does not export).
+#          `scripts/checks/no-shell-dispatch.ts` and its suite are a FOURTH pinned
+#          surface with a mechanical rule: `tests/checks/no-shell-dispatch.test.ts`
+#          asserts `DISPATCH_FLOW_SURFACE` equals the glob of
+#          `packages/core/src/{app,domain}/dispatch-*.ts` PLUS the suite's own
+#          `FIXED_SURFACE` list. Therefore EVERY phase that adds a
+#          `dispatch-*.ts` core module or a new fixed adapter/CLI entry moves both
+#          lists in the SAME commit, or the check is red at that boundary.
+#          New core modules are therefore ALWAYS named `dispatch-*.ts`; a
+#          differently named core module in the surface would break the glob
+#          equality, and a differently named module outside it would be silently
+#          unscanned.
+#     (ii) A CONDITIONAL DELIVERED-EXPECTATION declaration, used only where a
+#          DELIVERED assertion encodes pre-change behaviour that this change
+#          deliberately moves (§8.5, §25.1). Such a file is declared by the phase
+#          that owns the change, and the rule is absolute: an assertion is
+#          UPDATED by citing the authorising clause (§8.5, DEC-x, or a PM ruling),
+#          NEVER deleted, renamed, relaxed, reordered, or skipped to make a run
+#          green. The per-file authorising clause is named in the phase comment.
+#   A file edited by more than one phase is declared by every phase that touches
+#   it. No phase claims exclusive ownership of a shared file; ownership is of
+#   CASES and ACs, not of paths (see SHARED-FILE NOTE).
+#
+# SEAM PREREQUISITE (BINDING; test plan §7.1/§7.2, TC-FIXTURE-001): every case
+#   drives the SAME composed function production drives; a test-local
+#   reimplementation is rejected by name. Six read/write seams plus two
+#   identifiers, each with its owning phase:
+#     S-laneview  the lane-view fold over the delivered `readDispatchLanes` /
+#                 `latestDispatchLaneFor`, repository-filtered, joined with the
+#                 probe verdict. Home: NEW
+#                 `packages/core/src/app/dispatch-lane-view.ts`; mounted as the
+#                 `status` surface at the CLI edge. PHASE 2.
+#     S-probe     the injected advisory owner-liveness probe
+#                 ({processId, startedAt} -> live|dead|unknown, 5 000 ms
+#                 tolerance). Composition fact; PHASE 2 (the OS read is injected,
+#                 never performed by a case).
+#     S-fold      the delivering fold over the lane view, both forms.
+#                 PHASE 2.
+#     S-sink      the per-stream raw-stdout observer bound beside
+#                 `telemetrySinkFor` in `packages/adapters/src/harness/opencode.ts`,
+#                 writing `dispatch-logs.<workspace>/<REF>/` through
+#                 `packages/adapters/src/file/dispatch-logs.ts`. PHASE 3.
+#     S-tail      the artifact reader (addressed-directory listing, name-order
+#                 stitch, torn-tail drop, split, tail selection, byte/line
+#                 budget, truncation fact). Home: NEW
+#                 `packages/core/src/app/dispatch-log-tail.ts`. PHASE 4.
+#     S-transcript the injected adapter-owned transcript read; opencode's real
+#                 reader under its declared `session-introspection` support.
+#                 PHASE 5.
+#     S-cmd       the `dispatch` command definition, grammar, payloads and
+#                 `exitProjection` (`packages/cli/src/commands/dispatch.ts`).
+#                 PHASES 2..6 (each adds its form); the family contract is
+#                 completed in PHASE 6.
+#     S-exec      the guarded injected process runner (zero shell, zero real
+#                 start). PHASE 7.
+#   The four operator composition facts (owner-liveness probe, transcript read,
+#   artifact-family root plus its filesystem edge, and the clock) are ADDITIVE
+#   and non-operator, mounted at the same CLI edge that mounts
+#   `claimLease`/`existingLane`/`attempts` today. No configuration key (NFR-5).
+#
+# SEQUENCING (spec §19 "by outcome, so each fact is proven with the evidence that
+#   depends on it"), made concrete. Each phase is independently committable and
+#   gate-green at its own boundary:
+#     Phase 1  The governing record lands on the branch before the code it
+#              governs (and before any phase cites it in code comments).
+#     Phase 2  The lane view, the advisory probe, `status`, and `is-delivering`:
+#              the flip plan's ordering-safe half (F6 gates on these two), reading
+#              only state that already exists. Nothing here needs an artifact or a
+#              transcript read.
+#     Phase 3  The write path: a streaming adapter's per-stream stdout family.
+#              Must precede phase 4 because `log` reads what this phase writes.
+#     Phase 4  `dispatch log` over the family phase 3 writes.
+#     Phase 5  The transcript read seam and `last-message`; independent of 3/4
+#              (it reads the harness's own store, not the artifact) but placed
+#              after them so the payload/grammar layer is stable.
+#     Phase 6  The family contract: four forms, `--json` discriminators, the
+#              refusal grammar, the exit projections, the four help entries, the
+#              reference page, and the help-count assertion 5 -> 9. Must follow
+#              2..5 because AC-F5-1/AC-F5-3/AC-F5-4 range over all four forms.
+#     Phase 7  The cross-cutting posture and battery: read-only proof, no-shell
+#              invariant with its planted control, closed-contract invariance, the
+#              12-row answer matrix (both modes, two consecutive runs), latency,
+#              privacy, the proof boundary, and seam identity. Needs all four
+#              queries and all four composition facts present.
+#     Phase 8  Release obligations (the changeset, the plan validation, the
+#              aggregate gate) and the current-truth pages declared for STAGING
+#              ONLY. LAST, because the aggregate ranges over the assembled change.
+#   WHY THIS ORDER AND NOT ANOTHER: the write path precedes its reader; the five
+#   earlier phases each land their own tests so no phase depends on a suite
+#   committed later; the family/grammar phase is the earliest boundary at which
+#   the four-form ACs are observable; the posture phase is the earliest boundary
+#   at which the read-only claims range over the whole surface.
+#   EVERY PHASE LANDS ITS OWN TESTS. A phase boundary that is not gate-green is a
+#   BLOCKING finding, not a note.
+#
+# PM RULINGS THAT CONSTRAIN THIS PLAN (from ./chg-GH-354-pm-notes.yaml; none
+#   reopens a decision):
+#   (a) AC-F5-2 "unexpected extra positional": the `input.value.rejected` reading
+#       holds WITHIN the family's declared `positionals.max` (3 today in
+#       `packages/cli/src/commands/dispatch.ts`), which is the normal
+#       `dispatch <query> <ref> extra` case. A positional BEYOND the parser's
+#       declared maximum is refused by the shared parser as `fallback.invocation`
+#       — the delivered parser contract for every command, accepted as
+#       pre-existing behaviour, not a contract change. Phase 6 asserts BOTH
+#       identities with their real shapes (TC-GRAMMAR-002/003) and does not move
+#       `positionals.max`.
+#   (b) `session-introspection` is the declaration for `last-message`: the
+#       capability means the adapter can introspect a session it owns, including
+#       reading its own persisted session content. opencode declares it supported
+#       and implements the read; Claude Code declares it a gap
+#       (`headless-mode-limitation`), so a Claude lane answers `capability-gap`
+#       and this change adds NO Claude read and moves no declaration. Phase 5
+#       implements exactly that and phase 7 pins the unchanged declaration set.
+#   (c) The log artifact is PER-STREAM SEGMENTS, not a single trimmed file. No
+#       lock, no trim, no rewrite, no shared write target; retention is the newest
+#       two files per reference. This supersedes the spec's first draft and is
+#       recorded in TDR-0056 (DR-4). Phases 3 and 4 implement the segmented
+#       writer and the stitched reader; no phase reintroduces a trim.
+#
+# AC OWNERSHIP (38/38; exactly one owning phase each; 0 orphans, 0 double-owned).
+#   "Owning phase" = the phase whose commit lands the case(s) that make the AC
+#   observable and gate-green.
+#   Phase 1 (0):  the governing record; a declaration alone evidences no AC.
+#   Phase 2 (12): AC-F1-1 (STATUS-001), AC-F1-2 (STATUS-002),
+#                 AC-F1-3 (STATUS-003), AC-F1-4 (STATUS-004),
+#                 AC-F1-5 (STATUS-005), AC-F1-6 (STATUS-006),
+#                 AC-F1-7 (STATUS-007), AC-F3-1 (ISDEL-001),
+#                 AC-F3-2 (ISDEL-002), AC-F3-3 (ISDEL-003/004/007),
+#                 AC-F3-4 (ISDEL-005), AC-F3-5 (ISDEL-006).
+#   Phase 3 (4):  AC-F7-1 (PERSIST-001/002/003/004),
+#                 AC-F7-2 (PERSIST-010), AC-F7-3 (PERSIST-002/005/006/008/011),
+#                 AC-F7-4 (PERSIST-003/007).
+#   Phase 4 (6):  AC-F2-1 (LOG-001/002/009), AC-F2-2 (LOG-003),
+#                 AC-F2-3 (LOG-004/005), AC-F2-4 (LOG-006),
+#                 AC-F2-5 (LOG-007/008), AC-F2-6 (LOG-002/009 + the phase-3
+#                 PERSIST-005/006/007 writer cases as the same property's write
+#                 half).
+#   Phase 5 (7):  AC-F4-1 (MSG-001/010), AC-F4-2 (MSG-002), AC-F4-3 (MSG-003),
+#                 AC-F4-4 (MSG-004), AC-F4-5 (MSG-005/006/009),
+#                 AC-F4-6 (MSG-007/010), AC-F4-7 (MSG-008).
+#   Phase 6 (4):  AC-F5-1 (GRAMMAR-001), AC-F5-2 (GRAMMAR-002/003 + the
+#                 phase-4 TC-LOG-003 `--tail` half), AC-F5-3 (GRAMMAR-004),
+#                 AC-F5-4 (GRAMMAR-005 + CONTRACT-001's invariance half, whose
+#                 case is owned by phase 7).
+#   Phase 7 (5):  AC-F6-1 (RO-001 + PERSIST-011), AC-F6-2 (RO-002 + SHELL-004),
+#                 AC-F6-3 (SHELL-001/002), AC-F6-4 (RO-003 + SHELL-002),
+#                 AC-F6-5 (SHELL-003).
+#   Phase 8 (0):  release obligations; re-establishes evidence for the whole set
+#                 and moves no ownership. A reviewer who wants ownership to move
+#                 is asking for a plan revision, not a silent transfer.
+#   COUNT: 0 + 12 + 4 + 6 + 7 + 4 + 5 + 0 = 38.
+#   Per-feature reconciliation against spec §17: F-1 7 (phase 2), F-2 6
+#   (phase 4), F-3 5 (phase 2), F-4 7 (phase 5), F-5 4 (phase 6), F-6 5
+#   (phase 7), F-7 4 (phase 3) = 38.
+#   ACs DELIBERATELY CLOSED BY A LATER PHASE THAN THEIR FIRST CASE (declared, no
+#   second owner):
+#     - AC-F5-2 is owned by PHASE 6. Phase 4 lands TC-LOG-003, which proves the
+#       `--tail` clause (`0`, `501`, `1.5`, `-1`, `01`, `abc` refused before any
+#       artifact read) because the flag is declared there. Phase 6 closes the AC
+#       across all four forms with TC-GRAMMAR-002/003 (ref, positional, flag) and
+#       re-runs TC-LOG-003 as a read-only control.
+#     - AC-F2-3's pre-change clause is re-observed by TC-CONTRACT-003 in PHASE 7
+#       (the pre-change lane/attempt corpus answers `no-log` honestly). AC-F2-3
+#       stays owned by phase 4; the phase-7 case is a re-observation, not a
+#       second owner.
+#     - AC-F5-4's contract-invariance half is TC-CONTRACT-001 (phase 7). AC-F5-4
+#       stays owned by phase 6, which proves the no-token/no-append clause across
+#       the four queries (TC-GRAMMAR-005).
+#     - AC-F1-1..3, AC-F2-1/3/4, AC-F3-1/2/4, AC-F4-1/3/4 also carry TC-MATRIX-001
+#       rows. That case is phase 7's 12-row re-observation of the SAME payloads
+#       and exits; no AC changes owner.
+#
+# TC -> PHASE MAP (71 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the declaration that makes it green):
+#   Phase 1 (0)
+#   Phase 2 (14):  TC-STATUS-001..007 (7), TC-ISDEL-001..007 (7)
+#   Phase 3 (10):  TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011
+#                  (009 is phase 4: its load-bearing half is the reader's tear
+#                  rule, so it is owned where it can be observable)
+#   Phase 4 (12):  TC-LOG-001..011 (11), TC-PERSIST-009 (1)
+#   Phase 5 (10):  TC-MSG-001..010
+#   Phase 6 (6):   TC-GRAMMAR-001..005 (5), TC-CONTRACT-002 (1)
+#   Phase 7 (19):  TC-RO-001..004 (4), TC-SHELL-001..004 (4),
+#                  TC-CONTRACT-001, TC-CONTRACT-003 (2), TC-NFR-001..004 (4),
+#                  TC-MATRIX-001, TC-MATRIX-002 (2), TC-FIXTURE-001..003 (3)
+#   Phase 8 (0)
+#   COUNT: 0 + 14 + 10 + 12 + 10 + 6 + 19 + 0 = 71. 0 orphans, 0 double-owned.
+#   Group totals reconciled: MATRIX 2 + STATUS 7 + LOG 11 + ISDEL 7 + MSG 10 +
+#   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 71.
+#   TC-CONTRACT-002's two halves: the help-entry count 5 -> 9 (phase 6) and the
+#   delivery-path regression re-run over the delivered parity battery (phase 7 as
+#   a read-only control). The case id has ONE owner (phase 6).
+#   FIXTURE-FIRST RULE: the nine `tests/fixtures/dispatch/operator/*` modules are
+#   authored INCREMENTALLY at first need, never as one battery-phase drop, so a
+#   case never depends on a fixture committed after it. The six
+#   `SEAM_MANIFEST` entries are added by the phase that mounts its seam.
+#
+# MUTATION REGISTER ALLOCATION (test plan §7.4, 68 rows M1–M68 contiguous, derived
+#   row by row from the register's "Must fail" column). RULE FOR A ROW THAT NAMES
+#   CASES IN SEVERAL PHASES: it is allocated to the phase owning the LAST boundary
+#   among them (the boundary at which every named case exists, so the row can be
+#   exercised exactly as written); each earlier-phase case is that phase's
+#   cross-control. Per-group table with phase totals:
+#     group (rows)                 allocated phase
+#     ---------------------------------------------------------------------------
+#     status fold and probe (M1–M10)               -> 10 to phase 2
+#     artifact read (M11–M23, 13 rows): M11–M22   -> 12 to phase 4
+#                                      M23 (names TC-RO-001, phase 7) -> phase 7
+#     delivering fold (M24–M28)                    ->  5 to phase 2
+#     message read (M29–M36)                       ->  8 to phase 5
+#     grammar and projection (M37–M41): M37, M38, M40, M41 -> 4 to phase 6
+#                                      M39 (names TC-CONTRACT-001, phase 7)
+#                                                    ->  1 to phase 7
+#     write path (M42–M53)                         -> 12 to phase 3
+#     read-only and no-shell (M54–M59)             ->  6 to phase 7
+#     contract/bounds/machinery (M60–M68): M64 and M65 (both name
+#       TC-CONTRACT-002, phase 6)                  ->  2 to phase 6
+#       M60, M61, M62, M63, M66, M67, M68          ->  7 to phase 7
+#   PHASE TOTALS (sum = 68): phase 1 = 0; phase 2 = 15; phase 3 = 12;
+#   phase 4 = 12; phase 5 = 8; phase 6 = 6; phase 7 = 15; phase 8 = 0.
+#   Check: 0+15+12+12+8+6+15+0 = 68, and every row M1–M68 appears exactly once.
+#   The register is executed by the reviewer/fixer and is NOT committed as a
+#   permanent suite; the permanent non-vacuity proofs are the planted controls
+#   inside the owning cases. NON-VACUITY STATEMENT (binding on every owning
+#   phase): a mutation that stops producing its NAMED failure is a BLOCKING
+#   finding; it is never repaired by deleting the mutation or relaxing the
+#   expected failure family.
+#
+# SHARED-FILE NOTE (a file touched by more than one phase; ownership is per case,
+#   never per file):
+#   1. packages/core/src/contracts/dispatch-operator.ts — CREATED in phase 2
+#      (lane-view and query payload types, probe verdicts, closed reasons, the
+#      declared bounds) and EXTENDED by phase 4 (log payload, truncation fact,
+#      tail/machine/human bounds), phase 5 (message payload and the closed
+#      ladder), and phase 6 (the `query` discriminator union). Each phase adds
+#      only its own declarations.
+#   2. packages/core/src/contracts/harness.ts — phase 3 adds the OPTIONAL
+#      per-stream stdout-sink member on the stream spawn options and phase 5 adds
+#      the OPTIONAL transcript-read seam type. Both are additive; an absent
+#      member keeps the delivered behaviour exactly, and NO session operation,
+#      lifecycle capability, or gap reason is added.
+#   3. packages/core/src/app/dispatch.ts — phase 3 passes the sink option at the
+#      spawn, resume, and deliver call sites. No classification, token, exit,
+#      record, or evidence path is edited.
+#   4. packages/cli/src/commands/dispatch.ts and
+#      packages/cli/src/output/dispatch-text.ts and packages/cli/src/edge.ts and
+#      packages/cli/src/production.ts — phases 2, 3, 4, 5 add one query each and
+#      phase 6 completes the grammar and the human key sets. A phase edits only
+#      its own form's branch.
+#   5. packages/core/src/domain/dispatch-log.ts — CREATED in phase 3 (naming,
+#      segmentation, retention arithmetic) and EXTENDED in phase 4 (window,
+#      stitch, and truncation arithmetic). The writer half is phase 3's; the
+#      reader half is phase 4's.
+#   6. packages/adapters/src/file/dispatch-logs.ts — CREATED in phase 3 (the
+#      filesystem edge: create, append, remove, stat) and EXTENDED in phase 4
+#      (the addressed-directory listing and the read). Phase 4 edits only the
+#      read surface.
+#   7. tests/fixtures/dispatch/operator/harness.ts — created in phase 2 and
+#      extended in phases 3, 4, 5, and 7 as each composition fact arrives; every
+#      existing option keeps its default behaviour.
+#   8. tests/fixtures/dispatch/operator/matrix.ts — created in phase 2 (row
+#      schema, `runMatrixCase`, and the status/is-delivering rows), appended by
+#      phase 4 (log rows) and phase 5 (the five message-ladder rows), completed
+#      in phase 7 (all 12 lifecycle rows and both output modes). Each phase
+#      appends only its own rows.
+#   9. scripts/checks/no-shell-dispatch.ts and
+#      tests/checks/no-shell-dispatch.test.ts — phases 2, 3, 4, and 5 each move
+#      both lists for the modules they create (glob equality and `FIXED_SURFACE`);
+#      phase 7 completes the surface and adds the planted/false-positive controls
+#      and owns AC-F6-3.
+#  10. tests/structure/inventory.json, tests/structure/content-inventory.test.ts,
+#      and tests/fixtures/ports/v1-contract-inventory.json — declared by every
+#      phase that creates a package module or adds an exported contract name
+#      (phases 2, 3, 4, 5; phase 6 adds no module, phase 7 adds none).
+#
+# DELIVERED EXPECTATIONS THIS CHANGE MOVES (a DoR concern; every file below is
+#   declared by the phase that owns the change, and every edit cites its clause —
+#   an assertion is UPDATED, never deleted, renamed, relaxed, or reordered):
+#   1. tests/structure/dispatch-help-inventory.test.ts — the family help-entry
+#      count moves 5 -> 9 in BOTH of its assertions (the `toBe(5)` in the
+#      declared-forms case and the `toHaveLength(5)` in the agent/title case), and
+#      the four new entries' usage/options/examples are asserted. Clause: §25.1
+#      "Help/reference coverage", DEC-1, TC-CONTRACT-002. Phase 6.
+#   2. tests/structure/dispatch-attempts-composition.test.ts — its
+#      `toHaveLength(5)` comment ("no sixth surface was introduced") becomes the
+#      nine-entry assertion. Clause: §25.1, TC-CONTRACT-002. Phase 6.
+#   3. tests/checks/reference-page-parity.test.ts — the case titled "doctor
+#      remains unshipped and dispatch keeps exactly five help entries" keeps its
+#      doctor half and moves the dispatch half to nine. Clause: §25.1,
+#      TC-CONTRACT-002. Phase 6.
+#   4. tests/behaviour/dispatch-additive-stability.test.ts — EXTENDED (never
+#      rewritten) with the pre-change lane/attempt corpus and the four-query
+#      honesty assertions of TC-CONTRACT-003. Clause: §8.5, §20, AC-F2-3.
+#      Phase 7.
+#   5. tests/behaviour/dispatch-privacy.test.ts — EXTENDED with the operator
+#      canary sweep (artifact canary in the file and in no record; credential
+#      canary `[redacted]` in the message answer; prompt-only canary absent).
+#      Clause: NFR-11, §21, TDR-0056 DC-6, TC-NFR-004. Phase 7.
+#   6. tests/fixtures/harness/opencode-store/{build,current-generation,
+#      legacy-generation}.ts — EXTENDED with assistant text parts (last =
+#      `FINAL-ASSISTANT-TEXT`), a user-only transcript, and the
+#      `no-assistant-message` / `unknown-session` / `corrupt-store` variants; the
+#      delivered `PRIVACY_CANARY` content document stays. Clause: DM-3,
+#      TC-MSG-010. Phase 5.
+#   7. tests/fixtures/dispatch/parity/{harness,lane,seams}.ts and
+#      tests/fixtures/dispatch/attempts-harness.ts — EXTENDED additively (four
+#      operator facts on `observe()`, a repository-scoped and a daemon-lane seed,
+#      six `SEAM_MANIFEST` entries, a `storeWithReadFailure(store, kind)`
+#      wrapper). No delivered default changes. Clause: test plan §6.1/§6.2.
+#      Phases 2..5, 7.
+#   NO OTHER DELIVERED ASSERTION MOVES. The delivery path's suites
+#   (`dispatch-e2e`, the parity battery, `dispatch-truth-derivation`,
+#   `dispatch-token-closure`, `dispatch-attempts-*`, `harness-*`) are re-run as
+#   READ-ONLY controls at every relevant boundary; a moved assertion there is a
+#   finding, not a licence.
+#
+# DOC-CONFORMANCE OBLIGATIONS (declared here so no phase improvises):
+#   - THE PHASE THAT CHANGES THE GRAMMAR OWNS THE DOC OBLIGATIONS `pnpm check`
+#     DEPENDS ON. Phase 6 adds the four help entries to `packages/cli/src/help.ts`
+#     (each with usage, options, examples, and the M1 dispatch page as its only
+#     see-also), adds the four forms to the family entry's usage/options, moves
+#     the three count assertions 5 -> 9 in the SAME commit, and adds the four
+#     forms, `--tail`, the payloads, the human output, the exits, the closed
+#     negative reasons, and the declared stream divergence to
+#     `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`.
+#     These are NOT deferred to the documentation phase: `check:help`, the
+#     help-inventory pins, and the reference-page parity check must be green at
+#     the phase-6 boundary.
+#   - THE REFERENCE PAGE'S PINNED PHRASES ARE PRESERVED.
+#     `tests/checks/dispatch-doc-conformance.test.ts` pins REQUIRED phrases on
+#     that page (`zero false-success incidents`, `20 counted dispatches`,
+#     `dispatch dual-run resolve`, `dispatch handover`, `--revert`, `claimLease`,
+#     `input.value.rejected`, `non-interactive`, `unshipped`, ...). Phase 6 ADDS
+#     text and edits no test to accommodate a rewrite.
+#   - THE COVERAGE INVENTORY IS UNCHANGED. `dispatch` stays one prompt-required
+#     command with one reference page, so
+#     `tests/fixtures/help-guide/coverage.json`, `doc/00-index.md`, and
+#     `PROMPT_REQUIRED_COMMANDS` do not move; no new page is created.
+#   - THIS CHANGE EDITS NO `.opencode/**` FILE AND NO `.ados-claude/**` FILE.
+#     If a phase finds it needs one, that is an ESCALATION: the prompt-conformance
+#     scan and the plugin regeneration then apply and the plan is revised first.
+#   - THE BROADER CURRENT-TRUTH RECONCILIATION IS LIFECYCLE PHASE 7
+#     (@doc-syncer), NOT A DELIVERY PHASE. Phase 8 declares the pages for STAGING
+#     ONLY (spec §25.1 Appendix A):
+#       doc/spec/features/feature-dispatch-engine.md (four forms in the grammar
+#         table; the lane-view fold, marker derivation, staleness rule and
+#         tolerance; the artifact family: one directory per ref, one append-only
+#         file per stream, one writer rule, one tear rule, the per-file cap with
+#         cross-boundary continuation, the 2 × cap family bound, the stitched
+#         read; the transcript seam and its ladder; the exit projections; the
+#         read-only posture; the declared stream divergence; `no-log` never means
+#         "printed nothing"; REPLACE any statement that the typed path has no
+#         status/log/is-delivering/last-message surface)
+#       doc/spec/features/feature-state-layer.md (the
+#         `dispatch-logs.<workspace>/<REF>/` family beside the ledger: outside the
+#         record set, the derived-document set, the salvage path, and the repair
+#         path; cap by segmentation, two-file retention, 0600, the declared
+#         transformation, the tear rule)
+#       doc/spec/features/feature-harness-adapters.md (the transcript seam is the
+#         content use of the existing `session-introspection` capability; opencode
+#         supported and implemented; Claude Code gapped with
+#         `headless-mode-limitation` and answering `capability-gap`; no operation,
+#         capability member, or gap reason added)
+#       doc/spec/features/feature-autonomous-delivery.md (the typed equivalents
+#         of the four shell queries read none of the shell's files; the typed
+#         `log` and the shell's `--log` read different streams; the shell keeps
+#         its fallback role)
+#       doc/guides/engine-first-operations.md (the four-query operator routine,
+#         the exit convention, the stale-lane honesty rule, the snapshot rule, the
+#         one-shot `no-log` rule, and what the tail does NOT contain)
+#       doc/overview/glossary.md (lane view, stale lane, log artifact, stream,
+#         segment file, family bound, declared transformation, torn write,
+#         transcript read seam, final message, closed negative reason)
+#     Each page cites TDR-0056 (and TDR-0049 for the lane facts). The
+#     documentation-phase gates (`tests/checks/doc-conformance.test.ts`,
+#     `tests/checks/dispatch-doc-conformance.test.ts`, the stale
+#     "no status/log surface" scan, and
+#     `bash scripts/.tests/test-doc-distribution.sh` where a redistributable page
+#     changes) belong to that phase (DOD-7).
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Every command runs from the repository root with
+#     TMPDIR=$PWD/tmp/tmpdir (repo-local, git-ignored; never /tmp or $HOME), after
+#     `mkdir -p tmp/tmpdir`.
+#   - PATH must carry $PWD/node_modules/.bin (pm-notes operational prerequisite):
+#     the commit primitive probes the bare `commitlint` name, so a PATH without
+#     it makes every lifecycle commit fail as commit.commitlint-failed.
+#   - The typed CLI does not run from an unbuilt workspace. Any `jaiship`
+#     invocation (plan validation, lint) is preceded by
+#     `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build`.
+#     `packages/*/dist` EXISTS on this branch at plan time, so `plan validate`
+#     can run now, but every phase re-builds before running tests.
+#   - THE PER-PHASE BATTERY (each phase names its own files in its comment):
+#       mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+#       export PATH=$PWD/node_modules/.bin:$PATH
+#       pnpm build
+#       bun test <the phase's exact new/edited suites>
+#       bun test <the delivered read-only controls named by the phase>
+#       bun run scripts/checks/no-shell-dispatch.ts
+#       bun run scripts/checks/exit-code-literals.ts
+#       git diff --check
+#   - THE AGGREGATE IS PHASE 8'S:
+#       TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
+#     It is never substituted by a narrow pass and never reported green while a
+#     check is skipped, disabled, or made vacuous (DOD-2). Phase 7 re-runs it only
+#     if its own final commit invalidates the HEAD phase 8 measures — otherwise
+#     phase 8 is the single aggregate boundary.
+#   - `bun run scripts/checks/no-shell-dispatch.ts` is a gate at EVERY phase from
+#     2 onward (the surface list moves with the modules) and is also discovered by
+#     `bun test` through `tests/checks/no-shell-dispatch.test.ts`, so
+#     `pnpm check` runs it without a package.json or CI-topology change.
+#   - The branch-range commit-message gate
+#     (`./scripts/lint-commit-range.sh --base origin/main-tools`) is LIFECYCLE
+#     PHASE 9's gate (test plan §7.5), not a delivery-phase gate; its verdict is
+#     recorded as a pm-notes `notes:` entry (DOD-3).
+#   - Every phase boundary records its gate result and its commit hash as a
+#     pm-notes `notes:` entry naming the plan phase id.
+#
+# COMMIT CONVENTION (one commit per plan phase through the commit primitive;
+#   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
+#   phase 1  chore(GH-354): land TDR-0056 and its decision index row
+#   phase 2  feat(GH-354): dispatch status and is-delivering over the lane view
+#   phase 3  feat(GH-354): per-stream dispatch stdout artifact write path
+#   phase 4  feat(GH-354): dispatch log stitched tail over the artifact family
+#   phase 5  feat(GH-354): dispatch last-message over the transcript read seam
+#   phase 6  feat(GH-354): query grammar, help entries and reference page
+#   phase 7  test(GH-354): operator conformance battery and read-only posture
+#   phase 8  chore(GH-354): release obligations and spec reconciliation
+#   The coder commits with the primitive (`commit`), never with raw git writes,
+#   and the plan carries no progress log: progress is the pm-notes `notes:` entry.
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
+#   1.  The eleven delivery tokens, the projection classes, the exit digits, the
+#       attempt-record schema, the lane-record field set and schema identity, the
+#       error-table rows, and the domain kinds are UNCHANGED; `state-unverified`
+#       stays exit 2 (NFR-5, DM-7).
+#   2.  No new configuration key and no default change; every bound is a declared
+#       policy constant with exactly one home (NFR-5, DM-6, TDR-0056 C-1). The
+#       attempts human bounds (DISPATCH_MAX_HUMAN_LINES 40,
+#       DISPATCH_MAX_HUMAN_BYTES 8192) are NOT reused for the log output: the log
+#       gets its own 200 lines / 32 768 bytes constants.
+#   3.  No delivery-result token, no envelope `error` object for a closed negative
+#       answer, and no second error system; `unreadable`/`no-lane`/`no-log`/
+#       `capability-gap`/`session-unknown`/`no-message` are DATA facts
+#       (DEC-5, DM-7).
+#   4.  Read-only posture: 0 appends, 0 fence acquisitions, 0 lane rewrites, 0
+#       identity-marker writes (identity resolves with persistence DISABLED), 0
+#       process starts, 0 network reads, 0 deletions inside the family (NFR-2).
+#   5.  The lane record is read for `(resolved repository, ref)` only; daemon
+#       lanes contribute nothing; no lane history is added (DEC-2, DEC-9, NG-1).
+#   6.  The artifact family holds ONLY harness stdout at rest: one file per
+#       stream of a STREAMING adapter, 0600, never modified after write, no lock
+#       or coordination file, no prompt/diff/credential/tool-argument/provider
+#       payload added by the engine, and nothing ever mirrored into a record,
+#       evidence list, envelope, or derived document (NFR-11, AC-F7-3).
+#   7.  A one-shot adapter (Claude Code) opens no stream: no directory, no sink,
+#       and `log` answers `no-log`, which never means "the session printed
+#       nothing" (AC-F2-3, AC-F7-1, RSK-17).
+#   8.  `last-message` is capability-gated: the transcript seam is called ONLY for
+#       a harness that declares `session-introspection` supported, performs no
+#       session operation, takes no handle, and writes nothing (AC-F4-6, DM-3).
+#   9.  No query reads, writes, or repairs a shell-owned path; no shell
+#       invocation, no script-path literal, and `shell: false` on every child
+#       process (NFR-6, AC-F6-2..AC-F6-5).
+#  10.  No provider adapter (github/gitlab/jira) is edited; no adapter is
+#       "completed" or converged; the two harness adapters are edited additively
+#       only (the streaming sink construction in opencode, the read-only
+#       transcript reader, and no declaration change at all).
+#  11.  Every case drives the production function; a test-local stitch/split/tail
+#       loop, a local 1_048_576, a local 512, a local verdict table, or a local
+#       credential scrub is rejected by TC-FIXTURE-001.
+#
+# INCONSISTENCIES / DISCOVERIES (reported, not silently resolved):
+#   (a) The change folder holds an UNTRACKED test plan at plan time
+#       (`git status --porcelain` shows `?? chg-GH-354-test-plan.md`). It is the
+#       test_planning lifecycle artifact and is not declared by any phase here.
+#   (b) The help-entry count 5 is pinned in THREE files
+#       (`tests/structure/dispatch-help-inventory.test.ts` twice,
+#       `tests/structure/dispatch-attempts-composition.test.ts`,
+#       `tests/checks/reference-page-parity.test.ts`), not one. All three move in
+#       the phase-6 commit; a partial move leaves the boundary red.
+#   (c) `packages/cli/src/output/dispatch-text.ts` is NOT currently in the
+#       no-shell surface. Test plan §7.2(b) requires it there, so phase 2 adds it
+#       to `DISPATCH_FLOW_SURFACE` AND to the suite's `FIXED_SURFACE`; it is
+#       reachable from `commands/dispatch.ts`, so the reachability guard holds.
+#       R1 must be verified clean on the renderers at that boundary (a human hint
+#       that spells a script path would be a real finding, not a scan defect).
+#   (d) `DISPATCH_MAX_MACHINE_BYTES` (65 536), `DISPATCH_MAX_HUMAN_LINES` (40),
+#       and `DISPATCH_MAX_HUMAN_BYTES` (8192) already exist for `dispatch
+#       attempts`. The log output bounds are 65 536 machine bytes but 200 lines /
+#       32 768 human bytes, so the log must declare its OWN constants; reusing the
+#       attempts human constants silently answers a different question (mutation
+#       M61 pins exactly this).
+#   (e) `packages/core/src/contracts/dispatch-operator.ts` is a NEW contracts
+#       module: it must be exported through `contracts/index.ts` and the core root
+#       and named in `tests/fixtures/ports/v1-contract-inventory.json` in the
+#       phase that creates it (phase 2).
+#   (f) The transcript reader's home is plan-decided (spec §25.4 leaves it open):
+#       `packages/adapters/src/harness/opencode-transcript.ts`, a read-only
+#       sibling of `telemetry-opencode.ts`, reusing the delivered store opener and
+#       statement recorder rather than growing a second sqlite path. If delivery
+#       instead places it inside `opencode.ts`, `opencode.ts` is already a
+#       `FIXED_SURFACE` entry and the new file needs no surface change — but the
+#       no-shell list and the pinned surfaces must match whichever home lands, and
+#       the plan's phase-5 scope names the new file so the coder does not need a
+#       plan revision to add it.
+#   (g) `doc/00-index.md` gains no entry (no new page) and is therefore NOT
+#       declared; only the `doc/decisions/00-index.md` ROW is touched, in phase 1.
+#   (h) There is no `doc/documentation-profile.md` (engineering-repo default), so
+#       no `doc/business/**` area is created or touched.
+#   (i) `version_impact: minor` and publishable-package edits mean exactly one
+#       changeset over the five publishable packages
+#       (`tests/checks/privacy-release.test.ts` enforces it). Phase 8 authors
+#       `.changeset/gh-354-dispatch-operator-surface-minor.md`.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-354
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "A delivery-result token, a projection class, an exit digit, an error-table row, a domain kind, an attempt-record field, a lane-record field, or a schema version moves (NFR-5, DM-7, AC-F5-4, TC-CONTRACT-001)"
+    - "A configuration key is added for any bound, or the attempts human-output constants are reused for the log output instead of declaring the log's own 200-line / 32 768-byte constants (NFR-5, DM-6, TC-NFR-002, mutation M61)"
+    - "The artifact family becomes a single file, a trimmed file, or a shared write target; a lock or coordination file appears; a written byte is modified to make room; or the retained count is anything but the newest two with the 2 x cap family bound (PM ruling (c), TDR-0056 DR-4, AC-F7-4, TC-PERSIST-007/008)"
+    - "An artifact is created, or a sink is bound, for a one-shot adapter lane, or `no-log` is answered as if the session printed nothing (AC-F2-3, AC-F7-1, RSK-17)"
+    - "A query appends, fences, rewrites a lane, writes or repairs the identity marker, deletes a file in the family, starts a process, or makes a network read (NFR-2, AC-F6-1, TC-RO-001)"
+    - "A query reads, writes, or repairs a shell-owned path, invokes a shell, or the no-shell invariant's surface list or allowlist is widened to silence a hit (NFR-6, AC-F6-2..AC-F6-5, TC-SHELL-001..004)"
+    - "`last-message` composes any sentence from a derivation, classifier, attempt record, or envelope field; is called for a harness that declares `session-introspection` a gap; or the seam performs a session operation, takes a handle, or writes anything (AC-F4-2, AC-F4-6, DM-3, TC-MSG-002/007)"
+    - "The message composition order is anything but redact -> flatten -> bound -> mark, or `truncated` is computed from the pre-redaction length (AC-F4-7, TC-MSG-008)"
+    - "A lane from another repository, a daemon lane, or a `daemon.lane` record answers `status` or `is-delivering`; or a stale lane is repaired, cleared, or rewritten (AC-F1-4, AC-F1-6, DEC-2, TC-STATUS-004/006)"
+    - "`marker` is derived from anything but the lane state, or a marker file is introduced or read (DEC-2, TC-STATUS-001/003)"
+    - "`--tail` is clamped instead of refused, a non-canonical decimal is accepted, or a positional beyond the parser's declared maximum is claimed as `input.value.rejected` (PM ruling (a), AC-F2-2, AC-F5-2, TC-LOG-003, TC-GRAMMAR-002/003)"
+    - "A help entry is added without moving all three pinned count assertions 5 -> 9 in the same commit, the reference page loses a pinned phrase, a fifth reference page appears, or the coverage inventory changes (spec §25.1, TC-CONTRACT-002)"
+    - "A seam is reimplemented in a test or fixture instead of imported from its production module (TC-FIXTURE-001, test plan §7.1)"
+    - "The offline battery performs a live network call, starts a real child process, reads the live process table, asserts wall-clock time, or two consecutive runs differ (NFR-7, TC-NFR-001, TC-MATRIX-001)"
+    - "A delivered assertion is deleted, renamed, relaxed, reordered, or skipped, or a delivered expectation moves without citing the authorising clause (§8.5, DEC-x, or a PM ruling)"
+    - "A pinned surface (inventory.json, content-inventory allowances, the ports contract inventory, the no-shell surface and FIXED_SURFACE lists) is relaxed instead of updated exactly, or a new suite is placed under an ignored path"
+    - "A `.opencode/**` or `.ados-claude/**` file is edited, or a provider adapter (github/gitlab/jira) is edited"
+    - "A phase boundary is not gate-green, or `pnpm check` is reported as green while a check was skipped, disabled, or made vacuous (DOD-2)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — The governing record (TDR-0056) and its decision index row.
+  #
+  # Goal: put the binding design record on the branch before any delivery phase
+  # cites it in code, tests, or documentation. This is the plan's pre-delivery
+  # phase (called "phase 0" in the brief; `id: 1` because the schema requires a
+  # positive integer).
+  #
+  # Why a planning phase exists at all: the record is UNTRACKED at plan time and
+  # the commit primitive refuses to stage an untracked file outside a declared
+  # scope. Declaring the exact path here is what gives the PM staging authority;
+  # a delivery phase would otherwise have to carry a decision record it does not
+  # govern.
+  #
+  # Obligations:
+  #   1.1 Commit `doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-
+  #       transcript-read-seam.md` on this branch (it is authored and reviewed;
+  #       status stays `Proposed` — the human owner accepts at PR review).
+  #   1.2 Stage `doc/decisions/00-index.md` CONDITIONALLY (its TDR-0056 row and
+  #       binding note are already committed; a touch made while landing the
+  #       record stages with it). Never edit an unrelated row.
+  #   1.3 Re-run the mechanical done criterion (see COMMIT-BOUNDARY REALITY):
+  #       `git ls-files --error-unmatch <TDR path>` exits 0 and
+  #       `git status --porcelain -- doc/decisions` is empty.
+  #
+  # Acceptance: NONE. A declaration alone evidences no AC and no TC. Phase 8's
+  #   DoD check is where the record's citation becomes provable.
+  #
+  # Gate (expected signal: exit 0, both paths tracked, the index clean):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (No test suite is required: the commit stages documents only. The
+  #   decision-record invariants — the index row, the header shape, the
+  #   `Proposed` status — are checked by `pnpm check` at the phase-8 aggregate.)
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Land TDR-0056 and its decision index row (the plan's pre-delivery phase)"
+    kind: planning
+    summary: "chore(GH-354): land TDR-0056 and its decision index row"
+    scope:
+      files:
+        # Untracked at plan time (COMMIT-BOUNDARY REALITY). Exact path.
+        - doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
+        # CONDITIONAL STAGING ONLY: the TDR-0056 row is already committed; the
+        # file is clean at plan time. Declared so a status/typo touch made while
+        # the record lands stages with it. Never a licence to edit an unrelated
+        # row.
+        - doc/decisions/00-index.md
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Lane view, advisory owner probe, `dispatch status`, and
+  # `dispatch is-delivering` (F-1, F-3; API-1, API-3, API-6, API-10, API-11;
+  # DM-1, DM-4, DM-5, DM-7; DEC-1, DEC-2, DEC-5, DEC-7).
+  #
+  # Goal: the two queries the flip plan gates F6 on. Both are pure folds over the
+  # DELIVERED `dispatch.lane` read joined with an injected advisory probe — no new
+  # record, no new field, no marker file, no repair, and no daemon-lane read.
+  #
+  # Contract:
+  #   - `marker` is the newest lane record's `state` (`active` | `terminal`) plus
+  #     `absent` for "no record". `delivering` = active and probe != dead;
+  #     `stale` = active and probe = dead. `unknown` never asserts staleness
+  #     (DEC-2, DM-1, DM-4).
+  #   - One bounded retained-window read of kind `dispatch.lane` over
+  #     `(resolved repository, ref)`; the DAEMON lane family contributes nothing;
+  #     identity resolves with persistence DISABLED so no checkout marker is
+  #     created, repaired, or re-persisted (API-6).
+  #   - `status` answers `marker=absent`, `delivering=false`, `stale=false`,
+  #     `probe=not-applicable`, null `pid`/`sessionId`, and a null lane, at exit 0,
+  #     in both output modes, with no fabricated lane.
+  #   - `is-delivering` keeps BOTH forms (PM interpretation): per-ref (exit 0 when
+  #     in progress, 1 otherwise, no `refs`) and ref-less (up to 20 refs with one
+  #     truncation fact; exit 0 when any, 1 when none, `ref=null`). The JSON answer
+  #     carries the boolean with NO `error` object (DEC-5).
+  #   - A failed lane-store read keeps the store's typed `state.*` identity and is
+  #     never a fabricated `delivering=false` (DM-7).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/dispatch-operator.ts   (NEW: query payload
+  #                                                       types, probe verdicts,
+  #                                                       closed reasons, bounds,
+  #                                                       the `query`
+  #                                                       discriminator union)
+  #   packages/core/src/domain/dispatch-operator-view.ts (NEW: pure marker /
+  #                                                       delivering / stale
+  #                                                       mapping; refs ordering
+  #                                                       + 20 bound + truncation)
+  #   packages/core/src/app/dispatch-lane-view.ts        (NEW: the repository-
+  #                                                       filtered newest-per-ref
+  #                                                       fold over the delivered
+  #                                                       lane read, with the
+  #                                                       probe injected)
+  #   packages/core/src/contracts/index.ts, packages/core/src/index.ts,
+  #   packages/core/src/app/index.ts, packages/core/src/domain/index.ts (exports)
+  #   packages/cli/src/commands/dispatch.ts   (two query branches + projection)
+  #   packages/cli/src/output/dispatch-text.ts (the two human key sets)
+  #   packages/cli/src/edge.ts                (runtime read surfaces + refusals)
+  #   packages/cli/src/production.ts           (lane view + probe supply)
+  #   tests/fixtures/dispatch/operator/harness.ts (NEW: driver D1's operator
+  #                                                harness; the four facts arrive
+  #                                                over phases 2..5)
+  #   tests/fixtures/dispatch/operator/matrix.ts  (NEW: row schema,
+  #                                                `runMatrixCase`, the status and
+  #                                                is-delivering rows)
+  #   tests/fixtures/dispatch/operator/probe.ts   (NEW: live/dead/unknown, an
+  #                                                unreadable table, start-instant
+  #                                                deltas 0/+-4 999/+-5 000/
+  #                                                +-5 001 ms, a reused-pid model,
+  #                                                and a call recorder)
+  #   tests/fixtures/dispatch/parity/harness.ts   (EXTEND: accept the operator
+  #                                                facts, expose them on
+  #                                                `observe()`, defaults intact)
+  #   tests/fixtures/dispatch/parity/lane.ts      (EXTEND: the same ref under
+  #                                                another repository; a daemon
+  #                                                lane for the same ref)
+  #   tests/fixtures/dispatch/parity/seams.ts     (EXTEND: `lane-view`,
+  #                                                `delivering-fold`, `owner-probe`
+  #                                                entries + forbidden signatures)
+  #   tests/fixtures/dispatch/attempts-harness.ts (EXTEND: `storeWithReadFailure
+  #                                                (store, kind)`, read side)
+  #   tests/conformance/dispatch/dispatch-operator-status.test.ts (NEW)
+  #   tests/conformance/dispatch/dispatch-operator-isdel.test.ts   (NEW)
+  #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
+  #     (declare the two new core modules AND `packages/cli/src/output/
+  #      dispatch-text.ts` in BOTH `DISPATCH_FLOW_SURFACE` and the suite's
+  #      `FIXED_SURFACE`; glob equality must hold at this boundary)
+  #   PINNED SURFACES in this commit: tests/structure/inventory.json (two core
+  #     modules), tests/structure/content-inventory.test.ts (the new exports),
+  #     tests/fixtures/ports/v1-contract-inventory.json (the new contracts
+  #     module's exports).
+  #
+  # Acceptance (12): AC-F1-1..AC-F1-7, AC-F3-1..AC-F3-5.
+  # Cases (14): TC-STATUS-001..007, TC-ISDEL-001..007.
+  #
+  # Run as read-only controls (NOT declared): tests/conformance/dispatch/
+  #   dispatch-e2e.test.ts, dispatch-parity-lane-resume.test.ts,
+  #   dispatch-parity-admission.test.ts, tests/behaviour/dispatch-attempts-*.test.ts,
+  #   tests/structure/dispatch-help-inventory.test.ts (still 5 entries at this
+  #   boundary: help entries arrive in phase 6), tests/checks/help-guide-coverage.test.ts.
+  #
+  # Gate (expected signal: exit 0; the live/terminal/absent triple answers per
+  #   Appendix C, `stale` only for active-and-dead, `probe=unknown` never stale,
+  #   the 5 000 ms boundary selects dead at 5 001, zero foreign and zero daemon
+  #   lanes, exactly 1 lane read and 0 appends, the store write wrapper failing
+  #   only the lane read keeps its `state.*` identity):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-isdel.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-e2e.test.ts tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M1–M10 and M24–M28 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Lane-view fold, advisory owner probe, `dispatch status`, and `dispatch is-delivering`"
+    kind: delivery
+    summary: "feat(GH-354): dispatch status and is-delivering over the lane view"
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch-operator.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/app/dispatch-lane-view.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/domain/dispatch-operator-view.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/fixtures/dispatch/operator/matrix.ts
+        - tests/fixtures/dispatch/operator/probe.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/dispatch/parity/lane.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/fixtures/dispatch/attempts-harness.ts
+        - tests/conformance/dispatch/dispatch-operator-status.test.ts
+        - tests/conformance/dispatch/dispatch-operator-isdel.test.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch-operator.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-2 commit (the status and is-delivering conformance suites green, the delivered dispatch controls green, the no-shell invariant green over the extended surface; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The per-stream stdout artifact write path (F-7; API-8; DM-2, DM-6;
+  # DEC-3; TDR-0056 DR-4, DC-1, DC-2; PM ruling (c)).
+  #
+  # Goal: a streaming adapter's per-stream stdout becomes a bounded, per-ref,
+  # segmented file family on disk — write path ONLY, no query. Nothing here
+  # reads the family.
+  #
+  # Contract (one writer rule, one tear rule, structural cap):
+  #   - `dispatch-logs.<workspace>/<REF>/` beside the ledger, OUTSIDE the store's
+  #     record set, derived-document set, salvage path, and repair path. One
+  #     directory per reference, one file per stream (spawn, resume, deliver).
+  #   - The sink is bound when a stream STARTS and BEFORE its first yielded value
+  #     (the executable form is the fixture's first-pull probe): the acquisition-
+  #     settling line and the values the decoder skips ARE captured. The binding
+  #     point is the stream construction beside `telemetrySinkFor`, not the
+  #     decoded-frame seam (the delivered telemetry sink receives only decoded
+  #     frames, so copying it would lose undecodable lines).
+  #   - Every yielded value is written followed by EXACTLY one LF, including the
+  #     stream's final remnant; nothing verbatim. File mode 0600, `O_APPEND`
+  #     single writes, existing bytes never modified, no lock or coordination
+  #     file.
+  #   - Per-file cap 1 048 576 bytes enforced by STARTING the stream's next
+  #     segment: a value that fits starts the next file whole; a value longer than
+  #     the cap is filled to exactly the cap and its remainder continued at the
+  #     start of the next file, repeating as needed — no value is dropped for
+  #     being large.
+  #   - Retention: the newest two files by NAME per reference (family bound
+  #     2 x 1 048 576 = 2 097 152 bytes); a third file's arrival removes the oldest
+  #     best-effort AFTER the new file exists; a failed removal leaves the extra
+  #     until the next append.
+  #   - File names derive from data the writer already holds (recorded time,
+  #     attempt identity, iteration ordinal, segment ordinal, zero-padded) so a
+  #     lexical sort equals creation order across a restart and across two
+  #     concurrent streams, with attempt identity breaking ties — no shared
+  #     counter, never mtime.
+  #   - ONE-SHOT SCOPE (PM ruling (b)/spec §8.5): a Claude Code lane opens no
+  #     stream, so no directory and no sink. An absent sink keeps the delivered
+  #     behaviour exactly.
+  #   - NON-GATING, not non-blocking: a sink fault never changes the token, exit,
+  #     outcome, attempt count, lane records, or evidence, and adds no evidence
+  #     identifier.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/harness.ts        (OPTIONAL per-stream sink
+  #                                                  member on the stream spawn
+  #                                                  options; no operation added)
+  #   packages/core/src/contracts/dispatch-operator.ts (the family constants:
+  #                                                  per-file cap, retained count,
+  #                                                  family bound, naming widths)
+  #   packages/core/src/domain/dispatch-log.ts      (NEW: naming + segmentation +
+  #                                                  retention arithmetic, pure)
+  #   packages/core/src/app/dispatch-log-sink.ts    (NEW: the sink orchestration
+  #                                                  over an injected filesystem
+  #                                                  edge)
+  #   packages/core/src/app/dispatch.ts             (pass the sink option at the
+  #                                                  spawn, resume, and deliver
+  #                                                  call sites only)
+  #   packages/core/src/app/index.ts, domain/index.ts, contracts/index.ts,
+  #   packages/core/src/index.ts (exports)
+  #   packages/adapters/src/file/dispatch-logs.ts   (NEW: the filesystem edge —
+  #                                                  create, append, remove, stat,
+  #                                                  mode; the read half is phase
+  #                                                  4's)
+  #   packages/adapters/src/harness/opencode.ts     (construct the sink per stream
+  #                                                  beside `telemetrySinkFor`)
+  #   packages/cli/src/production.ts                (supply the artifact root and
+  #                                                  the real filesystem edge)
+  #   packages/cli/src/edge.ts                      (carry the composition fact)
+  #   tests/fixtures/dispatch/operator/streams.ts   (NEW: the scripted streaming
+  #                                                  starter, the first-pull probe,
+  #                                                  undecodable/non-object lines,
+  #                                                  an oversized value, an
+  #                                                  exactly-filling value, a
+  #                                                  mid-write kill, two concurrent
+  #                                                  streams, a three-segment
+  #                                                  stream, a one-shot runner
+  #                                                  double)
+  #   tests/fixtures/dispatch/operator/harness.ts   (EXTEND: the artifact root and
+  #                                                  the recording filesystem edge)
+  #   tests/fixtures/dispatch/parity/seams.ts       (EXTEND: the `log-sink` entry)
+  #   tests/conformance/dispatch/dispatch-operator-persist.test.ts (NEW)
+  #   tests/behaviour/dispatch-operator-artifact-writer.test.ts    (NEW)
+  #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
+  #     (two new core modules in the glob list; `packages/adapters/src/file/
+  #      dispatch-logs.ts` added to BOTH `DISPATCH_FLOW_SURFACE` and
+  #      `FIXED_SURFACE`)
+  #   PINNED SURFACES in this commit: tests/structure/inventory.json (two core
+  #     modules + the adapter file module), content-inventory allowances,
+  #     tests/fixtures/ports/v1-contract-inventory.json (the new harness contract
+  #     member).
+  #
+  # Acceptance (4): AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4.
+  # Cases (10): TC-PERSIST-001..008, TC-PERSIST-010, TC-PERSIST-011.
+  #   TC-PERSIST-005/006/007 also carry AC-F2-6, which phase 4 closes: the write
+  #   half (cap by segmentation, continuation, retention set) is proven here, the
+  #   read half (reconstruction, truncation fact) in phase 4. No AC changes owner.
+  #
+  # Run as read-only controls (NOT declared): the delivered dispatch parity
+  #   battery and `dispatch-e2e.test.ts` (the delivery path must be unchanged),
+  #   `tests/behaviour/harness-opencode-resume-stream.test.ts`.
+  #
+  # Gate (expected signal: exit 0; every file <= 1 048 576 bytes including its
+  #   LF, the family <= 2 097 152 after a removal, a 1 200 000-byte value
+  #   reconstructed byte-identically, the file present at the stream's first
+  #   value, 0 files for a one-shot lane, 0600 on every file, a sink fault leaving
+  #   the token/exit/records/evidence identical):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-persist.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-artifact-writer.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-e2e.test.ts tests/conformance/dispatch/dispatch-parity-battery.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M42–M53 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Per-stream stdout artifact write path: binding, one-LF writer, segmentation, retention"
+    kind: delivery
+    summary: "feat(GH-354): per-stream dispatch stdout artifact write path"
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/contracts/dispatch-operator.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/dispatch-log-sink.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/domain/dispatch-log.ts
+        - packages/core/src/domain/index.ts
+        - packages/adapters/src/file/dispatch-logs.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/dispatch/operator/streams.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/conformance/dispatch/dispatch-operator-persist.test.ts
+        - tests/behaviour/dispatch-operator-artifact-writer.test.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch-operator.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-3 commit (the persist conformance suite, the artifact-writer behaviour suite, the delivered dispatch parity controls and the no-shell invariant green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — `dispatch log` (F-2; API-2, API-7, API-11; DM-5, DM-6, DM-7;
+  # DEC-3, DEC-5; TDR-0056 DC-3 and the two-segment-tail / torn-line-reader
+  # obligations).
+  #
+  # Goal: the bounded, reference-scoped tail over the family phase 3 writes.
+  #
+  # Contract:
+  #   - Lists ONLY the addressed ref's own directory (the only permitted listing)
+  #     and reads only files inside it; never lists, globs, or reads across refs.
+  #   - Stitches the retained files in NAME order into ONE byte stream, DROPS an
+  #     unterminated tail (a torn write, never returned), splits on LF only AFTER
+  #     the stitch, and returns the newest `--tail <n>` lines oldest-to-newest, so
+  #     a value continued across a segment boundary is reconstructed.
+  #   - `--tail` is a canonical decimal in 1..500, default 50, REFUSED not
+  #     clamped; an invalid value is `input.value.rejected` BEFORE any artifact
+  #     read (`0`, `501`, `1.5`, `-1`, `01`, `abc`); an undeclared flag is
+  #     `fallback.invocation`. THE `--tail` VALUE FLAG IS DECLARED HERE, with the
+  #     form that owns it (`requiresValue` + the declared `flags` entry on the
+  #     dispatch definition), because the flag cannot be honoured by a later
+  #     commit than the branch that parses it. Phase 6 completes the FAMILY
+  #     grammar (refusals across all four forms, discriminators, uncomposed
+  #     refusal, exit projections) and does not re-declare `--tail`.
+  #   - `available=false` + `reason=no-log` at exit 0 when no artifact directory
+  #     exists (every one-shot lane and every pre-change lane); `available=false`
+  #     + `reason=unreadable` at exit 1 with no content; an existing file with no
+  #     complete line is `available=true` with an empty line list (so "no capture"
+  #     and "no output" stay distinct). Nothing is fabricated from the lane or the
+  #     attempt record.
+  #   - Bounds: machine `data` <= 65 536 bytes; human <= 200 lines and <= 32 768
+  #     bytes; EXACTLY ONE truncation fact naming its `scope` (`bytes` | `tail`),
+  #     its `bound`, and `omittedLines` — including a short retained window, the
+  #     single-retained-file case, and a returned continuation whose beginning
+  #     retention removed. The log declares its OWN human constants; the attempts
+  #     constants (40 lines / 8192 bytes) are not reused (mutation M61).
+  #   - A read is a snapshot of what was durable; no lock, no flush, no deletion.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/dispatch-operator.ts (log payload, truncation
+  #                                                  fact, tail range, machine and
+  #                                                  human log bounds)
+  #   packages/core/src/domain/dispatch-log.ts      (EXTEND: window, stitch,
+  #                                                  tear, split and truncation
+  #                                                  arithmetic — the reader half)
+  #   packages/core/src/app/dispatch-log-tail.ts    (NEW: the addressed-directory
+  #                                                  read over the injected
+  #                                                  filesystem edge)
+  #   packages/core/src/app/index.ts, domain/index.ts, contracts/index.ts,
+  #   packages/core/src/index.ts (exports)
+  #   packages/adapters/src/file/dispatch-logs.ts   (EXTEND: the listing and the
+  #                                                  read on the same edge)
+  #   packages/cli/src/commands/dispatch.ts, output/dispatch-text.ts (the `log`
+  #     branch and its RAW tail human form plus at most one truncation line),
+  #     edge.ts, production.ts
+  #   tests/fixtures/dispatch/operator/logs.ts      (NEW: the family materializer
+  #                                                  — N segments of exact byte
+  #                                                  sizes, a boundary-spanning
+  #                                                  value, a torn tail, a
+  #                                                  single-retained-file window,
+  #                                                  a no-complete-line file, an
+  #                                                  oversized value, an
+  #                                                  over-retained third file, an
+  #                                                  unreadable 0o000 file, stale
+  #                                                  mtimes — plus the family
+  #                                                  snapshot reader)
+  #   tests/fixtures/dispatch/operator/harness.ts   (EXTEND: the artifact root)
+  #   tests/fixtures/dispatch/operator/matrix.ts    (EXTEND: the log rows)
+  #   tests/fixtures/dispatch/parity/seams.ts       (EXTEND: the `artifact-tail`
+  #                                                  entry)
+  #   tests/conformance/dispatch/dispatch-operator-log.test.ts (NEW)
+  #   tests/behaviour/dispatch-operator-log-bounds.test.ts     (NEW)
+  #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
+  #     (the new `dispatch-log-tail.ts` module in the glob list)
+  #   PINNED SURFACES in this commit: inventory.json, content-inventory
+  #     allowances, the ports contract inventory.
+  #
+  # Acceptance (6): AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6.
+  # Cases (12): TC-LOG-001..011, TC-PERSIST-009.
+  #   TC-LOG-003 proves the `--tail` clause of AC-F5-2, which PHASE 6 closes
+  #   across all four forms; TC-LOG-003 is re-run there as a read-only control.
+  #   TC-PERSIST-009 is owned here: the writer is phase 3's, but the assertion is
+  #   the reader's tear rule ("a killed writer leaves at most one torn tail and
+  #   the reader drops only that tail"), which only exists at this boundary.
+  #
+  # Run as read-only controls (NOT declared): the phase-3 persist suites, the
+  #   delivered dispatch parity battery, tests/behaviour/dispatch-additive-stability.test.ts.
+  #
+  # Gate (expected signal: exit 0; 50 lines oldest-to-newest from a two-file
+  #   stitch, a continued value reconstructed whole, 0 foreign lines, one
+  #   truncation fact per binding bound, `no-log` 0 vs `unreadable` 1, the empty
+  #   available answer, 0 deletions):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-log.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-log-bounds.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-persist.test.ts tests/behaviour/dispatch-operator-artifact-writer.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M11–M22 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "`dispatch log`: addressed-directory read, name-order stitch, torn-tail drop, bounds and closed absences"
+    kind: delivery
+    summary: "feat(GH-354): dispatch log stitched tail over the artifact family"
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch-operator.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/domain/dispatch-log.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/dispatch-log-tail.ts
+        - packages/core/src/app/index.ts
+        - packages/adapters/src/file/dispatch-logs.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/dispatch/operator/logs.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/fixtures/dispatch/operator/matrix.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/conformance/dispatch/dispatch-operator-log.test.ts
+        - tests/behaviour/dispatch-operator-log-bounds.test.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch-operator.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-4 commit (the log conformance suite, the log-bounds behaviour suite, the phase-3 persist controls and the no-shell invariant green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — `dispatch last-message` (F-4; API-4, API-9; DM-3, DM-5, DM-6;
+  # DEC-4; TDR-0056 DC-4, DC-5; PM ruling (b)).
+  #
+  # Goal: the PM's FINAL ASSISTANT MESSAGE, read from the harness's own persisted
+  # session store through one injected, adapter-owned, read-only seam.
+  #
+  # Contract:
+  #   - Resolve the newest lane for `(repository, ref)`, take its `sessionId` and
+  #     `harnessKind`, and call ONE injected read seam. Capability-gated by the
+  #     EXISTING `session-introspection` declaration: opencode declares it
+  #     supported and implements the read; Claude Code declares it a gap
+  #     (`headless-mode-limitation`) and answers `capability-gap` — NO Claude read
+  #     is added and no declaration moves (PM ruling (b)).
+  #   - The seam takes no handle, starts nothing, resumes nothing, collects
+  #     nothing, terminates nothing, lists nothing, and administers nothing; it
+  #     adds no operation, capability-union member, or gap reason (it is a READ,
+  #     not a session operation).
+  #   - NEVER a synthesized sentence: the query reads no attempt record, no
+  #     derivation payload, and no envelope field (the delivered `lastMessage` is
+  #     the classifier's bounded summary and must not appear).
+  #   - Composition order is FIXED: redact -> flatten -> bound -> mark. Registered
+  #     credential values are replaced FIRST (through the delivered chokepoint, so
+  #     a credential straddling the 512-character cut cannot survive as a prefix),
+  #     then flattened to one line, then bounded to 512 characters, then
+  #     `truncated` is set from the POST-redaction length. No general scrubbing is
+  #     claimed.
+  #   - `final` is true exactly for a TERMINAL lane; an active lane answers the
+  #     latest assistant text observed so far with `final=false` and may be
+  #     partial (a live transcript can be mid-write); it is never presented as a
+  #     conclusion.
+  #   - Closed and ORDERED ladder, each a data fact at exit 1 with a null message:
+  #     `no-lane` -> `capability-gap` -> `session-unknown` -> `no-message` ->
+  #     `unreadable`. An unreadable LANE STORE keeps the store's typed identity
+  #     instead of a closed reason.
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/harness.ts        (OPTIONAL transcript-read
+  #                                                  seam type; additive, not an
+  #                                                  operation)
+  #   packages/core/src/contracts/dispatch-operator.ts (message payload, closed
+  #                                                  ladder, the 512 bound)
+  #   packages/core/src/domain/dispatch-message.ts  (NEW: the composition order
+  #                                                  and the ladder ordering, pure)
+  #   packages/core/src/app/dispatch-last-message.ts (NEW: lane -> capability gate
+  #                                                  -> seam -> ladder over the
+  #                                                  injected facts)
+  #   packages/core/src/app/index.ts, domain/index.ts, contracts/index.ts,
+  #   packages/core/src/index.ts (exports)
+  #   packages/adapters/src/harness/opencode-transcript.ts (NEW: the read-only
+  #                                                  content reader over the
+  #                                                  persisted store, reusing the
+  #                                                  delivered opener and statement
+  #                                                  recorder, bounded)
+  #   packages/cli/src/commands/dispatch.ts, output/dispatch-text.ts (the
+  #     `available/final/reason/last_message` human key set), edge.ts,
+  #     production.ts
+  #   tests/fixtures/dispatch/operator/transcript.ts (NEW: the seam double —
+  #                                                  final, partial/active,
+  #                                                  session-unknown, no-message,
+  #                                                  unreadable — with call
+  #                                                  recording and a declared-gap
+  #                                                  stub; plus the wiring that
+  #                                                  exercises the REAL opencode
+  #                                                  reader over a built store)
+  #   tests/fixtures/dispatch/operator/harness.ts   (EXTEND: the transcript fact)
+  #   tests/fixtures/dispatch/operator/matrix.ts    (EXTEND: the five ladder rows)
+  #   tests/fixtures/harness/opencode-store/{build,current-generation,
+  #     legacy-generation}.ts (EXTEND: distinct assistant texts with the last =
+  #     `FINAL-ASSISTANT-TEXT`, a user-only transcript, and the no-assistant /
+  #     unknown-session / corrupt-store variants; `PRIVACY_CANARY` stays)
+  #   tests/fixtures/dispatch/parity/seams.ts       (EXTEND: the `transcript-read`
+  #                                                  entry)
+  #   tests/conformance/dispatch/dispatch-operator-message.test.ts (NEW)
+  #   tests/behaviour/dispatch-operator-message-composition.test.ts (NEW)
+  #   tests/behaviour/dispatch-operator-transcript-opencode.test.ts (NEW)
+  #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
+  #     (two new core modules in the glob list; the new adapter reader module in
+  #      BOTH `DISPATCH_FLOW_SURFACE` and `FIXED_SURFACE`)
+  #   PINNED SURFACES in this commit: inventory.json, content-inventory
+  #     allowances, the ports contract inventory.
+  #
+  # Acceptance (7): AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F4-5, AC-F4-6,
+  #   AC-F4-7.
+  # Cases (10): TC-MSG-001..010.
+  #
+  # Run as read-only controls (NOT declared): the phase-2/3/4 operator suites,
+  #   the delivered dispatch parity battery, tests/behaviour/harness-claude-session.test.ts
+  #   (the Claude declaration must be unchanged).
+  #
+  # Gate (expected signal: exit 0; the transcript's final assistant text on a
+  #   terminal lane with final=true, the active lane's latest text with
+  #   final=false, the five reasons in ladder order with 0 seam calls for the
+  #   Claude lane, 0 session operations and 0 process starts, a straddling
+  #   credential fully removed and `truncated` derived post-redaction):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-message.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-message-composition.test.ts tests/behaviour/dispatch-operator-transcript-opencode.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/harness-claude-session.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M29–M36 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "`dispatch last-message`: capability-gated transcript read seam, ordered ladder, and message composition"
+    kind: delivery
+    summary: "feat(GH-354): dispatch last-message over the transcript read seam"
+    scope:
+      files:
+        - packages/core/src/contracts/harness.ts
+        - packages/core/src/contracts/dispatch-operator.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/domain/dispatch-message.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/app/dispatch-last-message.ts
+        - packages/core/src/app/index.ts
+        - packages/adapters/src/harness/opencode-transcript.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/dispatch/operator/transcript.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/fixtures/dispatch/operator/matrix.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/fixtures/harness/opencode-store/build.ts
+        - tests/fixtures/harness/opencode-store/current-generation.ts
+        - tests/fixtures/harness/opencode-store/legacy-generation.ts
+        - tests/conformance/dispatch/dispatch-operator-message.test.ts
+        - tests/behaviour/dispatch-operator-message-composition.test.ts
+        - tests/behaviour/dispatch-operator-transcript-opencode.test.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/harness.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch-operator.ts
+        role: consumer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-5 commit (the message conformance suite, the composition and real-opencode-reader behaviour suites, the unchanged Claude declaration and the no-shell invariant green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — One family: grammar, `--json` discriminators, exit projections,
+  # help entries, and the reference page (F-5; API-5, API-11, API-12's help half;
+  # DM-5, DM-7; DEC-1, DEC-5, DEC-7; spec §25.1; PM ruling (a)).
+  #
+  # Goal: the four queries behave and are DOCUMENTED as one family. This is the
+  # earliest boundary at which the four-form ACs are observable and the boundary
+  # at which every `pnpm check` doc obligation caused by the grammar lands.
+  #
+  # Contract:
+  #   - Each answer carries exactly ONE `query` discriminator (`status` | `log` |
+  #     `is-delivering` | `last-message`) and its declared key set, in the standard
+  #     machine envelope; the human form emits its declared key set (or, for `log`,
+  #     the raw tail plus at most one `truncation=` line).
+  #   - Refusals, decided BEFORE any runtime call: non-canonical ref (`[A-Z]+-\d+`
+  #     only), missing ref, an unexpected extra positional WITHIN
+  #     `positionals.max` -> `input.value.rejected`; an undeclared flag ->
+  #     `fallback.invocation`; a positional BEYOND the parser's declared maximum is
+  #     the shared parser's `fallback.invocation` and is accepted as pre-existing
+  #     behaviour (PM ruling (a)) — `positionals.max` is NOT moved.
+  #   - An UNCOMPOSED query surface refuses `input.value.rejected`; it never
+  #     crashes and never answers an empty success (DEC-7).
+  #   - Exit projections through the delivered DATA projection only:
+  #     `status` -> success always; `is-delivering` -> success when delivering,
+  #     user-validation when not; `log` -> success for a produced tail or `no-log`,
+  #     user-validation for `unreadable`; `last-message` -> success when produced,
+  #     user-validation for every closed reason. NO numeric literal at the call
+  #     site (`scripts/checks/exit-code-literals.ts`), no error-table row, no
+  #     delivery token.
+  #   - No query emits a delivery `result` token, appends an attempt, appends a
+  #     lane, and each leaves the next dispatch's and attempt read's answers
+  #     unchanged.
+  #
+  # DOC OBLIGATIONS THAT `pnpm check` DEPENDS ON (this phase, not the
+  #   documentation phase):
+  #   - `packages/cli/src/help.ts`: four new entries (`dispatch status`,
+  #     `dispatch log`, `dispatch is-delivering`, `dispatch last-message`), each
+  #     with usage, options (`--tail <n>` on `log`), examples, and the M1
+  #     `commands/dispatch.md` page as its ONLY see-also; the family entry gains
+  #     the four usage lines and `--tail` in its options.
+  #   - Move ALL THREE pinned count assertions 5 -> 9 in THIS commit:
+  #     `tests/structure/dispatch-help-inventory.test.ts` (both assertions),
+  #     `tests/structure/dispatch-attempts-composition.test.ts`, and
+  #     `tests/checks/reference-page-parity.test.ts` (its doctor half preserved).
+  #     Clause: §25.1 "Help/reference coverage", DEC-1, TC-CONTRACT-002.
+  #   - `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`: the four
+  #     forms in SYNOPSIS; `--tail` in OPTIONS; the payloads, the human output,
+  #     that the tail is a streaming harness's own stdout rather than the shell's
+  #     child-stderr log, and that a one-shot lane answers `no-log` in OUTPUT; the
+  #     query exits and the declared 0/non-zero convention in EXIT STATUS; the
+  #     closed negative reasons in ERRORS with when `capability-gap` applies.
+  #     PRESERVE every phrase `tests/checks/dispatch-doc-conformance.test.ts` pins
+  #     (it is re-run, never edited). The page carries no licence-header change;
+  #     if front matter is added it declares `ados_distribution: redistributable`.
+  #   - `tests/fixtures/help-guide/coverage.json`, `doc/00-index.md` and
+  #     `PROMPT_REQUIRED_COMMANDS` stay UNCHANGED (dispatch stays one
+  #     prompt-required command with one page).
+  #
+  # Code areas (concrete):
+  #   packages/cli/src/commands/dispatch.ts   (the family grammar: the refusal
+  #                                            guard across all four forms, the
+  #                                            four branches, one
+  #                                            `exitProjection`; `--tail` was
+  #                                            declared by phase 4 and is not
+  #                                            re-declared here)
+  #   packages/cli/src/output/dispatch-text.ts (the four human key sets)
+  #   packages/cli/src/help.ts                 (four entries + the family entry)
+  #   packages/cli/src/edge.ts                 (the uncomposed-surface refusal)
+  #   packages/core/src/contracts/dispatch-operator.ts (the `query` union)
+  #   tests/conformance/dispatch/dispatch-operator-grammar.test.ts (NEW)
+  #   tests/structure/dispatch-operator-composition.test.ts        (NEW:
+  #                                            TC-GRAMMAR-004)
+  #   tests/structure/dispatch-help-inventory.test.ts,
+  #   tests/structure/dispatch-attempts-composition.test.ts,
+  #   tests/checks/reference-page-parity.test.ts (the 5 -> 9 moves, clauses named)
+  #   doc/planning/oss-tooling/milestones/m1/commands/dispatch.md (the four forms)
+  #
+  # Acceptance (4): AC-F5-1, AC-F5-2 (closed here; the `--tail` half is proven by
+  #   phase 4's TC-LOG-003), AC-F5-3, AC-F5-4.
+  # Cases (6): TC-GRAMMAR-001..005, TC-CONTRACT-002.
+  #
+  # Run as read-only controls (NOT declared): the phase-2..5 operator suites (a
+  #   payload edit must not move a phase boundary), `tests/checks/help-guide-coverage.test.ts`,
+  #   `tests/checks/dispatch-doc-conformance.test.ts`,
+  #   `tests/checks/exit-code-literals.ts`, `tests/structure/dispatch-help-inventory.test.ts`'s
+  #   unchanged `attempts` assertions.
+  #
+  # Gate (expected signal: exit 0; exactly one discriminator per payload, the
+  #   declared key sets, every refusal with its real identity and before any
+  #   runtime call, the uncomposed refusal at exit 1 with `input.value.rejected`,
+  #   0 tokens and 0 appends from any query, 9 dispatch help entries, the page's
+  #   pinned phrases present, the coverage inventory unchanged):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-grammar.test.ts tests/structure/dispatch-operator-composition.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-help-inventory.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/checks/reference-page-parity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/help-guide-coverage.test.ts tests/checks/dispatch-doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-operator-status.test.ts tests/conformance/dispatch/dispatch-operator-isdel.test.ts tests/conformance/dispatch/dispatch-operator-log.test.ts tests/conformance/dispatch/dispatch-operator-message.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M37, M38, M40, M41, M64, M65 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Family grammar, `--json` discriminators, exit projections, the four help entries, and the reference page"
+    kind: delivery
+    summary: "feat(GH-354): query grammar, help entries and reference page"
+    scope:
+      files:
+        - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/dispatch-operator.ts
+        - tests/conformance/dispatch/dispatch-operator-grammar.test.ts
+        - tests/structure/dispatch-operator-composition.test.ts
+        - tests/structure/dispatch-help-inventory.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/dispatch.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-6 commit (the grammar and composition suites, the help-inventory and reference-page parity checks, the help coverage and docs-conformance checks, the phase-2..5 operator suites as read-only controls; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Read-only posture, no-shell invariant, closed-contract invariance,
+  # and the offline conformance battery (F-6; API-6, API-10, API-11, API-12;
+  # NFR-1..NFR-11; DEC-2, DEC-5, DEC-6, DEC-8, DEC-9; TDR-0056 C-1..C-7).
+  #
+  # Goal: prove the posture rather than assert it, over the WHOLE surface, and
+  # close the cross-cutting evidence the per-query phases could not range over.
+  #
+  # Proof design (test plan §7.2):
+  #   - The counted store, the recording filesystem edge (every listing, stat,
+  #     open, read, create, append, and remove recorded with an absolute path; any
+  #     path outside the family root refused by name), and the transcript counter
+  #     make every declared read count a MEASUREMENT: 1 lane read per query,
+  #     <= 1 listing and <= 2 file reads for `log`, 1 transcript call for
+  #     `last-message`, 0 of everything else.
+  #   - Byte/mode/mtime snapshots make "unchanged" a measurement; the
+  #     deliberately over-retained third file makes "0 deletions" non-vacuous.
+  #   - The static invariant (extended): every new
+  #     `packages/core/src/{app,domain}/dispatch-*.ts` joins by glob; the fixed
+  #     adapter/host/CLI entries join explicitly in BOTH `DISPATCH_FLOW_SURFACE`
+  #     and `FIXED_SURFACE`; R1/R2/R3/R4 are unchanged and sufficient; new
+  #     non-vacuity controls (a planted script-path literal and a planted
+  #     substituted template path reported by rule and `file:line`; a payload
+  #     string mentioning `dispatch` without a path stays clean; the `.sha`,
+  #     `RegExp.exec` and port-`.spawn` controls stay clean).
+  #   - Behavioural complement: the whole matrix through the guarded runner (0
+  #     shell invocations, 0 script-path arguments, the observed invoking-row set
+  #     matching the declared one), a checkout with no `scripts/` or `tools/`, and
+  #     planted shell content engineered to look like typed answers.
+  #   - The 12-row answer matrix drives both `is-delivering` forms and both output
+  #     modes; two consecutive runs must be byte-identical after canonicalization
+  #     (only the temp root and generated ids normalize).
+  #   - The closed-contract baseline pins: operations, lifecycle capabilities, gap
+  #     inventory, both adapters' declarations, harness kinds, error-table rows
+  #     with kind/code/projection, tokens and projection classes, domain kinds,
+  #     lane/attempt key sets, the 16-reference budget, the attempts human bounds,
+  #     and the configuration key set (0 additions).
+  #   - The permanent `OPERATOR_PROOF_BOUNDARY` constant carries the proven and
+  #     not-proven ids in declared order (spec §25.3 Appendix C is the source it is
+  #     copied from at delivery time). The page that PUBLISHES the same list is
+  #     reconciled by the lifecycle documentation phase, not here; a change to the
+  #     constant without the page (or the reverse) is a finding.
+  #
+  # Code areas (concrete):
+  #   tests/fixtures/dispatch/operator/bounds.ts     (NEW: the declared-bound
+  #                                                   mirror with a per-value
+  #                                                   "one home" map, and the
+  #                                                   permanent
+  #                                                   `OPERATOR_PROOF_BOUNDARY`)
+  #   tests/fixtures/dispatch/operator/decoys.ts     (NEW: the five planted shell
+  #                                                   artifacts with canaries,
+  #                                                   byte/mode/mtimeMs
+  #                                                   fingerprinting, comparison)
+  #   tests/fixtures/dispatch/operator/contract-baseline.ts (NEW: the pinned
+  #                                                   closed-contract baseline)
+  #   tests/fixtures/dispatch/operator/matrix.ts     (COMPLETE: all 12 lifecycle
+  #                                                   rows and both modes)
+  #   tests/fixtures/dispatch/operator/harness.ts    (EXTEND: the decoy planter and
+  #                                                   the store counters)
+  #   tests/fixtures/dispatch/parity/seams.ts        (COMPLETE: all six seam
+  #                                                   entries and the forbidden
+  #                                                   signatures the scan rejects)
+  #   tests/conformance/dispatch/dispatch-operator-matrix.test.ts  (NEW)
+  #   tests/conformance/dispatch/dispatch-operator-posture.test.ts (NEW)
+  #   tests/behaviour/dispatch-operator-latency.test.ts            (NEW)
+  #   tests/behaviour/dispatch-additive-stability.test.ts          (EXTEND, clause
+  #                                                   §8.5/§20/AC-F2-3)
+  #   tests/behaviour/dispatch-privacy.test.ts                     (EXTEND, clause
+  #                                                   NFR-11/§21/TC-NFR-004)
+  #   tests/checks/operator-contract-invariance.test.ts            (NEW)
+  #   tests/checks/operator-seam-identity.test.ts                  (NEW)
+  #   tests/checks/operator-proof-boundary.test.ts                 (NEW)
+  #   tests/checks/dispatch-operator-test-isolation.test.ts        (NEW)
+  #   scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts
+  #     (complete the surface, add the planted and false-positive controls,
+  #      assert surface existence, glob coherence and reachability)
+  #
+  # Acceptance (5): AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5.
+  # Cases (19): TC-RO-001..004, TC-SHELL-001..004, TC-CONTRACT-001,
+  #   TC-CONTRACT-003, TC-NFR-001..004, TC-MATRIX-001, TC-MATRIX-002,
+  #   TC-FIXTURE-001..003.
+  #   Every query AC from phases 2..5 is RE-OBSERVED by TC-MATRIX-001 here; no AC
+  #   changes owner.
+  #
+  # Run as read-only controls (NOT declared): the whole delivered dispatch
+  #   parity battery, tests/conformance/dispatch/dispatch-e2e.test.ts, the
+  #   phase-2..6 operator suites, tests/checks/help-guide-coverage.test.ts.
+  #
+  # Gate (expected signal: exit 0; 12/12 rows identical across two runs with 0
+  #   live network / 0 real child starts / 0 live process-table reads; 0 appends,
+  #   0 fences, 0 lane rewrites, 0 identity-marker writes, 0 deletions; planted
+  #   decoys byte- and mtime-identical and 0 answers changed; the planted
+  #   script-path reference failing the invariant BY NAME and `file:line`; the
+  #   pinned baseline showing 0 contract additions; p95 <= 1 000 ms over the
+  #   5 000-record store; the proof boundary self-consistent):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-operator-log-bounds.test.ts tests/behaviour/dispatch-operator-artifact-writer.test.ts tests/behaviour/dispatch-operator-message-composition.test.ts tests/behaviour/dispatch-operator-transcript-opencode.test.ts tests/behaviour/dispatch-operator-latency.test.ts tests/behaviour/dispatch-additive-stability.test.ts tests/behaviour/dispatch-privacy.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/operator-contract-invariance.test.ts tests/checks/operator-seam-identity.test.ts tests/checks/operator-proof-boundary.test.ts tests/checks/dispatch-operator-test-isolation.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/exit-code-literals.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  #   (Mutation rows M23, M39, M54–M63, M66–M68 are exercised at this boundary.)
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Read-only posture, extended no-shell invariant, closed-contract invariance, and the offline conformance battery"
+    kind: delivery
+    summary: "test(GH-354): operator conformance battery and read-only posture"
+    scope:
+      files:
+        - tests/fixtures/dispatch/operator/bounds.ts
+        - tests/fixtures/dispatch/operator/decoys.ts
+        - tests/fixtures/dispatch/operator/contract-baseline.ts
+        - tests/fixtures/dispatch/operator/matrix.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/conformance/dispatch/dispatch-operator-matrix.test.ts
+        - tests/conformance/dispatch/dispatch-operator-posture.test.ts
+        - tests/behaviour/dispatch-operator-latency.test.ts
+        - tests/behaviour/dispatch-additive-stability.test.ts
+        - tests/behaviour/dispatch-privacy.test.ts
+        - tests/checks/operator-contract-invariance.test.ts
+        - tests/checks/operator-seam-identity.test.ts
+        - tests/checks/operator-proof-boundary.test.ts
+        - tests/checks/dispatch-operator-test-isolation.test.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/dispatch/operator/contract-baseline.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-7 commit (the whole operator conformance battery, the posture and matrix suites, the four checks suites, the extended no-shell invariant and the delivered dispatch parity controls green; the aggregate runs in phase 8)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Release obligations and the spec-reconciliation handoff
+  # (spec §18 DOD-2/DOD-3/DOD-7, §19, §25.1; version_impact: minor).
+  #
+  # Goal: close the authoring sequence with the release floor and declare the
+  # current-truth pages the lifecycle documentation phase reconciles.
+  #
+  # Obligations:
+  #   8.1 Author `.changeset/gh-354-dispatch-operator-surface-minor.md` — exactly
+  #       ONE five-package minor changeset (`tests/checks/privacy-release.test.ts`
+  #       and the changeset additivity check enforce it). `version_impact: minor`
+  #       and publishable-package edits make it mandatory.
+  #   8.2 Run the aggregate `pnpm check` and attach the captured log to the change
+  #       (DOD-2). Never report it green while a check was skipped, disabled, or
+  #       made vacuous.
+  #   8.3 Run `jaiship plan validate GH-354` (after `pnpm build`) and record the
+  #       verdict; a non-`valid` verdict is a blocking finding.
+  #   8.4 Re-run the DoD observation sweep: every one of the 38 ACs maps to its
+  #       owning case, and every owning case ran green in the final aggregate log
+  #       (DOD-1); the no-shell invariant is green with its non-vacuity control
+  #       and the shell-absent case passes (DOD-5); the read-only posture is
+  #       measured, not asserted (DOD-6); the closed contracts show 0 changes
+  #       (DOD-8); 12/12 lifecycle combinations answer deterministically offline
+  #       (DOD-4).
+  #   8.5 STAGE the six current-truth pages named in DOC-CONFORMANCE OBLIGATIONS
+  #       (spec §25.1 Appendix A) for the LIFECYCLE documentation phase
+  #       (@doc-syncer, lifecycle phase 7). This plan AUTHORS no current-truth
+  #       prose: the pages are declared so a reconciliation touch stages with the
+  #       release commit and Appendix A stays provable at DoD (DOD-7). The
+  #       documentation-phase gates (`tests/checks/doc-conformance.test.ts`,
+  #       `tests/checks/dispatch-doc-conformance.test.ts`, the stale
+  #       "no status/log surface" scan returning 0 hits, and
+  #       `bash scripts/.tests/test-doc-distribution.sh` where a redistributable
+  #       page changes) run THERE.
+  #   8.6 The branch-range commit-message gate
+  #       (`./scripts/lint-commit-range.sh --base origin/main-tools`) is LIFECYCLE
+  #       PHASE 9's gate (DOD-3) and is NOT run here; its verdict is a pm-notes
+  #       `notes:` entry.
+  #
+  # Acceptance: NONE. Ownership does not move; every AC keeps the owner named in
+  #   AC OWNERSHIP. Phase 8 re-establishes evidence over the assembled tree.
+  # Cases (0).
+  #
+  # Gate (expected signal: exit 0; the changeset lists exactly the five publishable
+  #   packages at minor; `plan validate` answers `valid`; `pnpm check` green with
+  #   every suite executed):
+  #   mkdir -p tmp/tmpdir && export TMPDIR=$PWD/tmp/tmpdir
+  #   export PATH=$PWD/node_modules/.bin:$PATH && pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH jaiship plan validate GH-354
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Release obligations: the single minor changeset, plan validation, the aggregate gate, and the current-truth pages declared for staging"
+    kind: delivery
+    summary: "chore(GH-354): release obligations and spec reconciliation"
+    scope:
+      files:
+        - .changeset/gh-354-dispatch-operator-surface-minor.md
+        # STAGING ONLY (lifecycle phase 7 reconciles them; this plan authors no
+        # current-truth prose). Declared so a reconciliation touch stages here.
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/guides/engine-first-operations.md
+        - doc/overview/glossary.md
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-8 commit (the aggregate pnpm check green with every check executed, plan validate valid, the no-shell invariant green; the captured log is attached to the change)"
