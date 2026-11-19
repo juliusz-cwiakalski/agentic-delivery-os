@@ -159,7 +159,9 @@ export {
 } from "./app/host-index.js";
 // The queue/scheduling use-case orchestration (GH-237): ledgers over the
 // injected state port, composed from the pure domain policy in the app tier.
+// GH-348: the loop supervision profile over the delivered engine primitives.
 export {
+  absentSessionFacts,
   addQueueDependency,
   type ControlHandlerResult,
   type ControlServer,
@@ -171,6 +173,7 @@ export {
   claimSingleFlightRefusal,
   createControlServer,
   createDaemonRuntime,
+  createLoopSupervisor,
   createResidentPolling,
   type DaemonRuntime,
   type DaemonRuntimeFailure,
@@ -182,7 +185,32 @@ export {
   type DispatchLeaseClaimOutcome,
   declareQueueEntry,
   dispatchAdmissionRefusal,
+  endedSessionRecord,
+  freshSessionTitle,
+  type LoopCoordinatorRead,
+  type LoopDelay,
+  type LoopDelayReason,
+  type LoopExit,
+  type LoopFailure,
+  type LoopLedgerPort,
+  type LoopLedgerRead,
+  type LoopLedgerSnapshot,
+  type LoopLogSink,
+  type LoopProcessPort,
+  type LoopProgressState,
+  type LoopRecordAppend,
+  type LoopResult,
+  type LoopSessionEffect,
+  type LoopSessionFacts,
+  type LoopSessionPort,
+  type LoopStartReceipt,
+  type LoopSupervisor,
+  type LoopSupervisorPorts,
   leaseRecordHeartbeatAgeMs,
+  loopBudgetEpoch,
+  loopLeaseOf,
+  loopSpawnInput,
+  loopSpawnPrompt,
   normalizedQueueEdges,
   prioritizeQueueEntry,
   type QueueActiveLeaseRead,
@@ -232,6 +260,7 @@ export {
   releaseQueueLease,
   removeQueueDependency,
   removeQueueEntry,
+  sessionRecordFrom,
 } from "./app/index.js";
 /**
  * The `projects list` projections (GH-288 F-3, F-4, F-5, DEC-6, DEC-7, DEC-8):

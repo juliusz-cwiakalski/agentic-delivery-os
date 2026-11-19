@@ -7,8 +7,17 @@
  * command's own classified degradation rather than an unclassified crash. No
  * command is claimed that is not composed.
  */
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname } from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join } from "node:path";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -125,7 +134,11 @@ import {
   type HostIndexRootProbe,
   harnessAgentIdentityViolation,
   type LaneSettings,
+  type LoopDelay,
+  type LoopLogSink,
+  type LoopSessionFacts,
   legacyStoreWarning,
+  logByteLength,
   maintainHostIndex,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
@@ -136,6 +149,7 @@ import {
   parseHostIndexDocument,
   parsePlanMembers,
   parseProjectIdentityMarker,
+  planLogAppend,
   projectGroupDeclared,
   projectGroupEntry,
   projectGroupMemberEntry,
@@ -153,6 +167,7 @@ import {
   readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
+  renderLogLine,
   reposHandoverGateOf,
   reposListDataOf,
   resolveBinding,
@@ -304,6 +319,7 @@ import {
   createConfigProgram,
   createDispatchCommandRuntime,
   createDispatchGateRuntime,
+  createLoopLedgerPort,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
   createPhaseCommitExtension,
@@ -318,6 +334,7 @@ import {
   createVerifyGatesCommandRuntime,
   type DispatchCommandRuntime,
   type DispatchComposition,
+  type LoopComposition,
   type QueueComposition,
   resolveAgentIdentity,
 } from "./edge.js";
@@ -707,6 +724,8 @@ export type ProductionCompositionFacts = {
   readonly coordinatorSessionFacts?: () => CoordinatorSessionFacts;
   /** The foreground loop wait override; production uses the resolved interval. */
   readonly coordinatorCollectionIntervalMs?: number;
+  /** The injected loop wait override (GH-348 NFR-1); production binds the timer. */
+  readonly loopDelay?: LoopDelay;
   /**
    * The observability-only host-index access counters. They accept no root, no
    * key, and no path, so a composition test reads the bound without injecting
@@ -3661,6 +3680,246 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    /** The active log's byte size, or `0` when the file does not exist yet. */
+    const readLogBytes = (path: string): number => {
+      try {
+        return statSync(path).size;
+      } catch {
+        return 0;
+      }
+    };
+
+    /**
+     * Compose the loop supervision profile (GH-348 F-1, F-2, F-6): the delivered
+     * store behind the loop ledger port, the injected clock and id/fence
+     * factories, the resolved coordinator settings consumed unchanged, the node
+     * process port with its capabilities, the delivered harness session port
+     * with the CEO per-spawn binding, the bounded file log, and the real
+     * foreground cycle driver. No configuration key is added (DM-8).
+     */
+    const createProductionLoopComposition = (): LoopComposition => {
+      const loopId = "loop-main";
+      const settings = resolveProductionCoordinatorSettings();
+      const loopIntervalMs = facts.coordinatorCollectionIntervalMs ?? settings.collectionIntervalMs;
+      const processPort = createNodeProcessPort();
+      const ownStartTimeMs = (): number | undefined => processPort.startTimeMs?.(ownProcessId);
+      const ledger = createLoopLedgerPort(store, loopId, newFenceToken);
+      const loopDelay: LoopDelay =
+        facts.loopDelay ??
+        ((ms) =>
+          new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, ms);
+            const unref = (timer as { readonly unref?: () => void }).unref;
+            if (typeof unref === "function") unref.call(timer);
+          }));
+
+      let handle: HarnessSessionHandle | null = null;
+      let recorded: LoopSessionFacts = {
+        sessionId: null,
+        liveness: "absent",
+        harnessKind: "opencode",
+        pid: null,
+        processStartTimeMs: null,
+        title: null,
+      };
+
+      const harnessForLoop = ():
+        | {
+            readonly ok: true;
+            readonly port: HarnessSessionPort;
+            readonly descriptor: HarnessExecutionEnvironmentDescriptor;
+            readonly kind: HarnessKind;
+          }
+        | { readonly ok: false; readonly code: string } => {
+        const resolution = resolveProductionHarnessSettings();
+        if (!resolution.ok) return { ok: false, code: resolution.code };
+        const kind = resolution.settings.kind;
+        return {
+          ok: true,
+          port: createHarnessProfilePort({
+            port: harnessFor(kind),
+            context: () => resolveProfileContext(),
+            resolve: resolveBinding,
+          }),
+          kind,
+          descriptor: {
+            kind: resolution.settings.executionKind,
+            workDirectory: cwd,
+            environment: harnessEnvironmentEntries(resolution.settings),
+          },
+        };
+      };
+
+      const effectFacts = (
+        input: HarnessSessionHandle,
+      ): {
+        readonly sessionId: string;
+        readonly harnessKind: string;
+        readonly pid: number | null;
+        readonly processStartTimeMs: number | null;
+        readonly title: string | null;
+      } => {
+        const pid = input.pid ?? null;
+        const start = pid === null ? undefined : processPort.startTimeMs?.(pid);
+        return {
+          sessionId: input.sessionId,
+          harnessKind: input.harnessKind,
+          pid,
+          processStartTimeMs: start ?? null,
+          title: null,
+        };
+      };
+
+      const logPath = join(stateDirectory, "loop", `${loopId}.log`);
+      const logSink: LoopLogSink = {
+        append: (event, pairs) => {
+          const line = renderLogLine({
+            recordedAt: nowIso(),
+            event,
+            ...(pairs === undefined ? {} : { pairs }),
+          });
+          if (line === null) return;
+          try {
+            const lineBytes = logByteLength(`${line}\n`);
+            const active = readLogBytes(logPath);
+            const plan = planLogAppend({ activeBytes: active, lineBytes });
+            if (plan.drop) return;
+            mkdirSync(join(stateDirectory, "loop"), { recursive: true });
+            if (plan.rotate) renameSync(logPath, `${logPath}.1`);
+            appendFileSync(logPath, `${line}\n`, "utf8");
+          } catch {
+            // Bounded observability: a log fault never changes an outcome (F-7).
+          }
+        },
+        available: () => true,
+      };
+
+      return {
+        ledger,
+        clock: { nowMs, nowIso },
+        newFenceToken,
+        newId: (prefix: string) => `${prefix}-${globalThis.crypto.randomUUID()}`,
+        loopId,
+        settings,
+        processPort: {
+          port: processPort,
+          capabilities: {
+            alive: true,
+            killWithGrace: true,
+            startTimeIdentity: typeof processPort.startTimeMs === "function",
+          },
+          probe: ({ pid, processStartTimeMs }) => {
+            if (!processPort.isAlive(pid)) return false;
+            const observed = processPort.startTimeMs?.(pid);
+            if (observed === undefined) return null;
+            return observed === processStartTimeMs;
+          },
+          ownIdentity: () => {
+            const start = ownStartTimeMs();
+            return start === undefined ? null : { pid: ownProcessId, processStartTimeMs: start };
+          },
+        },
+        session: {
+          read: () => {
+            if (handle === null) return recorded;
+            const pid = handle.pid ?? recorded.pid;
+            const alive = pid === null ? false : processPort.isAlive(pid);
+            return {
+              ...recorded,
+              sessionId: handle.sessionId,
+              harnessKind: handle.harnessKind,
+              pid,
+              liveness: alive ? "alive" : "unknown",
+            };
+          },
+          spawn: async ({ title, prompt }) => {
+            const resolved = harnessForLoop();
+            if (!resolved.ok) return { ok: false, code: resolved.code };
+            const spawned = await resolved.port.spawn({
+              workItemRef: loopId,
+              prompt,
+              descriptor: resolved.descriptor,
+              agent: "ceo",
+              title,
+            });
+            if (!spawned.ok) return { ok: false, code: spawned.error.code };
+            handle = spawned.value;
+            const facts = { ...effectFacts(spawned.value), title };
+            recorded = {
+              sessionId: facts.sessionId,
+              liveness: "alive",
+              harnessKind: facts.harnessKind,
+              pid: facts.pid,
+              processStartTimeMs: facts.processStartTimeMs,
+              title: facts.title,
+            };
+            return { ok: true, fresh: true, ...facts };
+          },
+          resume: async ({ sessionId, prompt }) => {
+            const resolved = harnessForLoop();
+            if (!resolved.ok) return { ok: false, code: resolved.code };
+            const resumable: HarnessSessionHandle = handle ?? {
+              harnessKind: recorded.harnessKind as HarnessKind,
+              sessionId,
+              treeRoot: sessionId,
+              workItemRef: loopId,
+            };
+            const resumed = await resolved.port.resume({
+              handle: resumable,
+              prompt,
+              descriptor: resolved.descriptor,
+              agent: "ceo",
+            });
+            if (!resumed.ok) return { ok: false, code: resumed.error.code };
+            handle = resumed.value;
+            const facts = { ...effectFacts(resumed.value), title: recorded.title };
+            recorded = {
+              sessionId: facts.sessionId,
+              liveness: "alive",
+              harnessKind: facts.harnessKind,
+              pid: facts.pid,
+              processStartTimeMs: facts.processStartTimeMs,
+              title: facts.title,
+            };
+            return { ok: true, fresh: false, ...facts };
+          },
+          join: async () => ({
+            ok: true,
+            fresh: false,
+            sessionId: recorded.sessionId ?? "",
+            harnessKind: recorded.harnessKind,
+            pid: recorded.pid,
+            processStartTimeMs: recorded.processStartTimeMs,
+            title: recorded.title,
+          }),
+        },
+        log: logSink,
+        delay: loopDelay,
+        loop: {
+          run: async (onCycle) => {
+            let signalled = false;
+            const onSignal = (): void => {
+              signalled = true;
+            };
+            signalHost?.once("SIGINT", onSignal);
+            signalHost?.once("SIGTERM", onSignal);
+            try {
+              for (;;) {
+                if (signalled) return "signal";
+                const outcome = await onCycle();
+                if (outcome === "stop") return "stopped";
+                if (signalled) return "signal";
+                await loopDelay(loopIntervalMs, "collection-interval");
+              }
+            } finally {
+              signalHost?.removeListener("SIGINT", onSignal);
+              signalHost?.removeListener("SIGTERM", onSignal);
+            }
+          },
+        },
+      };
+    };
+
     /**
      * The `projects list` host overview (GH-288 F-3, F-4, F-5, DEC-5, DEC-8).
      *
@@ -4651,6 +4910,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         },
       },
       coordinator: createProductionCoordinatorComposition(),
+      // GH-348 F-1/F-2/F-6: the loop profile over the delivered engine. Mounted
+      // from this phase so every composition seam exists; the family joins
+      // PROMPT_REQUIRED_COMMANDS only at phase 7, so the entrypoint drops it
+      // until then (a registered extra is never advertised).
+      loop: createProductionLoopComposition(),
       projects: {
         readProjects,
         readProjectGroups: readEveryProjectGroup,

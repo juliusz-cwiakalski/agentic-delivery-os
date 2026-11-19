@@ -656,13 +656,40 @@ notes:
     type: decision
     date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
-      folds, and the pure verdict/backoff/log/status/prompt tier). Commit: the
-      phase-1 delivery commit (see the branch log; recorded below once the
-      commit hash exists). Gates all exit 0: bun test
+      folds, and the pure verdict/backoff/log/status/prompt tier). Implemented
+      before its commit. Gates all exit 0: bun test
       tests/structure/loop-imports.test.ts tests/checks/loop-mutants.test.ts (7
       pass, 0 fail, including the M93 ambient-timer control failing by name);
       bun test tests/checks/decision-record.test.ts (11 pass); pnpm typecheck;
       git diff --check; both TDR paths tracked and `git status --porcelain --
-      doc/decisions` empty (verification only - neither record edited)."
+      doc/decisions` empty (verification only - neither record edited). The
+      phase commit hash is recorded in the note that follows it."
+    type: info
+    date: "2026-11-19"
+  - text: "Plan phase 1 commit hash: 5a7f63ff (subject derived by the commit
+      primitive's path-template fallback as chore(GH-348): update
+      doc/changes/... - see the delivery-note on message source)."
+    type: info
+    date: "2026-11-19"
+  - text: "PLAN PHASE 2 complete (CEO spawn identity, the additive harness pid,
+      the loop.session record, the bounded log sink, and the command skeleton
+      mounting start --foreground and the read-only status; D2 cases only, per
+      the recorded Option-B deviation). Implemented: the OPTIONAL pid on
+      HarnessSessionHandle and HarnessSpawnStream (no capability name), the host
+      starter exposing the started child's pid, the opencode adapter carrying it
+      on spawn and resume, app/loop-session.ts (title helper, prompt mount, the
+      per-spawn binding input, the record builder) and app/loop-supervisor.ts (the
+      cycle skeleton over the injected ledger port, the delivered claim decision,
+      the session acquisition/end writes, the projection, the release), the loop
+      command definition, the bounded text renderer, the edge composition and the
+      production composition, and the four fixtures (harness registering BOTH
+      families, session, log-fs, the ONE parity case registry). Gates all exit 0:
+      loop-spawn + loop-log 16 pass; loop-production-composition 3 pass;
+      harness-stream-contract + coordinator-foreground-loop 23 pass (read-only
+      controls, unchanged); pnpm typecheck; git diff --check; depcruise
+      boundaries clean. Discovery: the claim append must reuse the claim's held
+      write fence (a second fence acquisition is state.lock.busy), so the ledger
+      port's appendFence takes the held handle. The phase commit hash is recorded
+      in the note that follows it."
     type: info
     date: "2026-11-19"

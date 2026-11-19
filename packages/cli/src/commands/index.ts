@@ -3,6 +3,20 @@
  * Exposes the config command definition for edge composition.
  */
 
+export type {
+  LoopCoordinatorRead,
+  LoopDelay,
+  LoopDelayReason,
+  LoopLedgerPort,
+  LoopLedgerRead,
+  LoopLedgerSnapshot,
+  LoopLogSink,
+  LoopProcessPort,
+  LoopRecordAppend,
+  LoopSupervisor,
+  LoopSupervisorPorts,
+} from "@delivery-os/core";
+export { createLoopSupervisor } from "@delivery-os/core";
 export type { BlockerSessionPort, BlockersCommandRuntime } from "./blockers.js";
 export { createBlockersCommandDefinition } from "./blockers.js";
 export type {
@@ -68,6 +82,8 @@ export type {
   LintRegistryRead,
 } from "./lint.js";
 export { createLintCommandDefinition } from "./lint.js";
+export type { LoopCommandRuntime } from "./loop.js";
+export { createLoopCommandDefinition } from "./loop.js";
 export type { MergeCommandRuntime, MergeConfigRead } from "./merge.js";
 export { createMergeCommandDefinition, isDryRunReport, isMergeReport } from "./merge.js";
 export type {

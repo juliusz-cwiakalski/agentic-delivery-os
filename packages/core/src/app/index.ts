@@ -99,11 +99,6 @@ export {
   readDispatchAttemptHistory,
 } from "./dispatch-attempts.js";
 export {
-  DISPATCH_RESUMABLE_DAEMON_STATES,
-  type DispatchLaneResolutionInput,
-  resolveDispatchLane,
-} from "./dispatch-lane.js";
-export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
@@ -113,6 +108,11 @@ export {
   revertDispatchHandoverEvidence,
   summarizeDispatchEvidence,
 } from "./dispatch-gate.js";
+export {
+  DISPATCH_RESUMABLE_DAEMON_STATES,
+  type DispatchLaneResolutionInput,
+  resolveDispatchLane,
+} from "./dispatch-lane.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -160,6 +160,39 @@ export {
   parseHostIndexDocument,
   serializeHostIndexDocument,
 } from "./host-index.js";
+/* --------------------- loop supervision profile (GH-348) ----------------- */
+export {
+  endedSessionRecord,
+  freshSessionTitle,
+  type LoopSessionEffect,
+  type LoopSessionFacts,
+  type LoopSessionPort,
+  loopSpawnInput,
+  loopSpawnPrompt,
+  sessionRecordFrom,
+} from "./loop-session.js";
+export {
+  absentSessionFacts,
+  createLoopSupervisor,
+  type LoopCoordinatorRead,
+  type LoopDelay,
+  type LoopDelayReason,
+  type LoopExit,
+  type LoopFailure,
+  type LoopLedgerPort,
+  type LoopLedgerRead,
+  type LoopLedgerSnapshot,
+  type LoopLogSink,
+  type LoopProcessPort,
+  type LoopProgressState,
+  type LoopRecordAppend,
+  type LoopResult,
+  type LoopStartReceipt,
+  type LoopSupervisor,
+  type LoopSupervisorPorts,
+  loopBudgetEpoch,
+  loopLeaseOf,
+} from "./loop-supervisor.js";
 export {
   createResidentPolling,
   type ResidentPolling,
@@ -293,10 +326,10 @@ export {
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
   runSupervisionBattery,
-  type SupervisionBatteryInput,
-  type SupervisionBatteryResult,
   type SupervisionActingFact,
   type SupervisionAppendResult,
+  type SupervisionBatteryInput,
+  type SupervisionBatteryResult,
   type SupervisionClaimFact,
   type SupervisionClaimRefusal,
   type SupervisionEconomicsWritePort,
