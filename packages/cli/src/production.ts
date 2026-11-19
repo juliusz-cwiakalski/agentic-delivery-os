@@ -84,6 +84,7 @@ import {
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
+import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import type {
   HarnessAdapterRegistration,
   HarnessBindingResolution,
@@ -254,6 +255,7 @@ import {
   type ProviderClock,
   type ProviderSleep,
   type ProviderWorkItemRefResolution,
+  type ProviderZoneFacts,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_REF_PATTERN,
   type QueueDegradationReason,
@@ -273,10 +275,13 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
+  bindZoneFacts,
   nominateProviderProfile,
+  normaliseZoneName,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
   selectProfile,
+  UTC_ZONE_FACTS,
 } from "@delivery-os/core/provider";
 import {
   appendBlockerQuestion,
@@ -437,12 +442,14 @@ const daemonConfigurationRefusal = (): {
 /**
  * The production provider composition (GH-350 F-2, TDR-0062 D1).
  *
- * The seam supply the budget gate needs, built from delivered parts only: the
- * six declared `ProviderComposition` members, the one-read spend-totals
- * projection over the invoking store, and the ref seam read from the local
- * delivery context (`<cwd>/.ai/local/pm-context.yaml`) with no state read, no
- * fence, no write, and no environment read. It performs no registration: the
- * family's mount is its own phase; this factory is the composition it wires.
+ * The seam supply the budget gate and the zone-aware peak evaluation need, built
+ * from delivered parts only: the six declared `ProviderComposition` members, the
+ * Intl-backed zone binder (`createIntlZonePort` → `bindZoneFacts`, with `UTC` on
+ * the pure `UTC_ZONE_FACTS`), the one-read spend-totals projection over the
+ * invoking store, and the ref seam read from the local delivery context
+ * (`<cwd>/.ai/local/pm-context.yaml`) with no state read, no fence, no write, and
+ * no environment read. It performs no registration: the family's mount is its own
+ * phase; this factory is the composition it wires.
  */
 export type ProductionProviderFacts = {
   readonly clock: ProviderClock;
@@ -456,30 +463,43 @@ export type ProductionProviderFacts = {
 
 export const createProductionProviderComposition = (
   facts: ProductionProviderFacts,
-): ProviderComposition => ({
-  clock: facts.clock,
-  credentialPort: facts.credentialPort,
-  transport: facts.transport,
-  sleep: facts.sleep,
-  stateStore: facts.stateStore,
-  newFenceToken: facts.newFenceToken,
-  spendTotals: createProviderSpendTotalsPort(facts.stateStore),
-  // The fixture read is the one production filesystem edge the simulate member
-  // needs (GH-350 F-5); it is never consulted outside `provider simulate`.
-  fixtureFs: nodeFileSystemFacts(),
-  // The migration reads are the second production filesystem edge (GH-350 F-6):
-  // the node facts plus directory listing, consulted only by `provider migrate`.
-  migrateFs: { ...nodeFileSystemFacts(), readDirectory: (path) => readdirSync(path) },
-  resolveWorkItemRef: (): ProviderWorkItemRefResolution => {
-    const context = readLocalPmContext({
-      path: facts.localContext.path,
-      fs: facts.localContext.fs,
-    });
-    const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
-    return ref === undefined ? { status: "unresolved" } : { status: "resolved", workItemRef: ref };
-  },
-  workItemContextPath: facts.localContext.path,
-});
+): ProviderComposition => {
+  const zonePort = createIntlZonePort();
+  return {
+    clock: facts.clock,
+    credentialPort: facts.credentialPort,
+    transport: facts.transport,
+    sleep: facts.sleep,
+    stateStore: facts.stateStore,
+    newFenceToken: facts.newFenceToken,
+    // The one zone edge the peak evaluation binds through (GH-350 F-1): the pure
+    // core never reads `Intl`, and a genuinely unknown zone still answers
+    // `undefined` so the engine refuses `provider.peak.zone-unknown`.
+    zoneFactsFor: (zone: string): ProviderZoneFacts | undefined => {
+      const normalised = normaliseZoneName(zone);
+      if (normalised === "UTC") return UTC_ZONE_FACTS;
+      return zonePort.isKnownZone(normalised) ? bindZoneFacts(normalised, zonePort) : undefined;
+    },
+    spendTotals: createProviderSpendTotalsPort(facts.stateStore),
+    // The fixture read is the one production filesystem edge the simulate member
+    // needs (GH-350 F-5); it is never consulted outside `provider simulate`.
+    fixtureFs: nodeFileSystemFacts(),
+    // The migration reads are the second production filesystem edge (GH-350 F-6):
+    // the node facts plus directory listing, consulted only by `provider migrate`.
+    migrateFs: { ...nodeFileSystemFacts(), readDirectory: (path) => readdirSync(path) },
+    resolveWorkItemRef: (): ProviderWorkItemRefResolution => {
+      const context = readLocalPmContext({
+        path: facts.localContext.path,
+        fs: facts.localContext.fs,
+      });
+      const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+      return ref === undefined
+        ? { status: "unresolved" }
+        : { status: "resolved", workItemRef: ref };
+    },
+    workItemContextPath: facts.localContext.path,
+  };
+};
 
 /**
  * The durable DM-4 reachability predicate (AC-F5-1..AC-F5-8): reachable iff an
@@ -4568,11 +4588,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       commit: commitOptions,
       // The provider family is registered unconditionally through the delivered
       // config program (GH-350 F-8, TDR-0061): the six declared
-      // `ProviderComposition` seams are supplied here, so the composed program
-      // carries `provider` on every invocation and a configuration failure is a
-      // typed handler outcome rather than a missing family. The `installProgram`
-      // spread below preserves it, exactly as the config program's own commands
-      // are preserved.
+      // `ProviderComposition` seams and the Intl-backed zone binder are supplied
+      // here, so the composed program carries `provider` on every invocation, a
+      // declared non-UTC window evaluates, and a configuration failure is a typed
+      // handler outcome rather than a missing family. The `installProgram` spread
+      // below preserves it, exactly as the config program's own commands are
+      // preserved.
       provider: createProductionProviderComposition({
         clock: { nowMs },
         credentialPort: credentials,

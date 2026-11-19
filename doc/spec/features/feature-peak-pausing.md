@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, declared-zone grammar), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293"]
-  related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030"]
+  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293", "GH-350"]
+  related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
     - "packages/core/src/contracts/queue.ts"
@@ -106,7 +106,7 @@ no read of the input itself exists:
 | Input condition | Delivered engine-visible effect surfaces |
 |---|---|
 | Owner hold (host-wide, no expiry) | Dispatch admission refusal; queue blocking; `status.ownerHold`; board `ownerHold` |
-| Peak window (declared UTC window) | Lane parks with `reason: "peak-window"`, `until`, `preservation`; `status.laneParks`; brief park fields; `lanes` `peakEnforcement`; window-scoped spend evidence; `stop` and `parked` events |
+| Peak window (evaluated on its declared zone) | Lane parks with `reason: "peak-window"`, `until`, `preservation`; `status.laneParks`; brief park fields; `lanes` `peakEnforcement`; window-scoped spend evidence; `stop` and `parked` events |
 
 A declared or currently open peak window has **no read surface** of its own: it is
 not listed, polled, or projected as a window object, and this change adds no such

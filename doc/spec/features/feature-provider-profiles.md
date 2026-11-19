@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, optional per-profile peak-window rules, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
 links:
-  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335"]
-  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "TDR-0028", "TDR-0032"]
+  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335", "GH-350"]
+  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0012", "TDR-0028", "TDR-0032", "TDR-0060"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
     - "packages/core/src/contracts/provider.ts"
@@ -28,7 +28,7 @@ Profile-level lifecycle semantics run on every production `provider profile reso
 
 Provider watching extends the provider family with three normalized snapshot mappings behind the existing quota transport seam: coding-plan subscription windows (weekly and rolling), the DeepSeek balance (compared to a configured floor), and OpenAI usage windows. Watch reads are read-only and write no state; every malformed, non-auth-HTTP, transport, or credential failure is an outage or credential condition, never clear.
 
-Dispatch-daemon integration, the audit ledger, and spend reporting are out of scope. The `provider profile resolve --for-spawn` seam and the `data-v1` env-record contract are the machinery those later stories consume.
+Peak pausing in the daemon, the audit ledger, and spend reporting are outside this feature and specified in their own pages. The `provider profile resolve --for-spawn` seam and the `data-v1` env-record contract are the machinery the dispatch composition consumes before each spawn.
 
 ## Configuration Model
 
@@ -87,7 +87,7 @@ Profile resolution runs before any harness spawn. `provider profile resolve --fo
 
 The record contract enforces the legacy floor (exact header, only set/unset records, allowlist match, no duplicate names, final LF, CR/NUL rejection, byte/line/record limits) and the hardened ceiling (strict ASCII identifier, embedded equals rejected, homoglyph/non-ASCII rejected, metacharacters rejected, exact allowlist match). The configured header itself may not contain LF, CR, or NUL: such a value is a classified configuration error at parse time and is refused again when a record is serialized. The default header is `# model-env data-v1`, and the default allowlist pattern is `^OC_[A-Z][A-Z0-9]*_AGENT_[A-Z0-9_]+_MODEL$`: the concrete product prefix is a branding value, never hardcoded. The legacy surface selects its pre-freeze header and product-prefixed allowlist through the same injectable grammar options; production defaults stay brand-neutral. Values are data: no shell is invoked and no value is interpreted at any consumption point. A refusal is classified and never partially applied.
 
-The legacy bash hook remains the authoritative bash-surface executor: its versioned data-record contract governs that surface, and its file-metadata classes (safe regular file, ownership, permissions) govern the legacy path. Rewiring that legacy surface remains with the dispatch work (M1-S9).
+The legacy bash hook keeps its versioned data-record contract and its file-metadata classes (safe regular file, ownership, permissions) for the shell entry points that remain executable fallbacks. The typed dispatch composition resolves the profile before each spawn through the seam above, so no delivery depends on that legacy surface.
 
 ## CLI Surface
 

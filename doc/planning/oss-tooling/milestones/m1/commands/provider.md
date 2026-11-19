@@ -166,13 +166,14 @@ prevented the read.
 ## BUDGET REF
 
 A declared budget is evaluated only where a resolution is evaluated. The
-work-item ref resolves from an explicit fact, then the local delivery context
-(`.ai/local/pm-context.yaml`), then the declared project scope; an enabled
-budget with no resolvable ref refuses one `input.value.rejected` before any
-resolution, probe, credential read, transport call, or write. `provider
-simulate` takes its ref from the fixture; `quota`, `parks list`, `profile
-resolve`, `watch status`, and `migrate legacy` never read the local delivery
-context and never fail because one is absent.
+work-item ref resolves from an explicit fact, then from the local delivery
+context (`.ai/local/pm-context.yaml`) through the same seam an omitted
+`spend --ref` uses, and otherwise refuses. An enabled budget with no resolvable
+ref refuses one `input.value.rejected` before any resolution, probe, credential
+read, transport call, or write. `provider simulate` takes its ref from the
+fixture; `quota`, `parks list`, `profile resolve`, `watch status`, and
+`migrate legacy` never read the local delivery context and never fail because
+one is absent.
 
 ## OUTPUT
 
@@ -202,25 +203,14 @@ prevented the operation.
 
 ```
 $ <binary> provider resolve --json
-{
-  "schemaVersion": 1,
-  "runId": "r_01J8ZU2Z5E",
-  "exitCode": 0,
-  "timing": { "started": "2026-11-18T09:30:00Z", "durationMs": 210 },
-  "data": {
-    "provider": "provider-b",
-    "mode": "subscription",
-    "decision": "chain[0] provider-a skipped: peak-window; chain[1] provider-b quota ok",
-    "parksConsidered": ["P-31"]
-  }
-}
+{"data":{"summary":"selected provider-b (subscription)","decision":{"kind":"selected","providerName":"provider-b","costClass":"subscription"},"skipped":[{"providerName":"provider-a","reason":"peak-window"}]}}
 ```
 
-All providers skipped, announced:
+A parked chain, with the honest resume instant and the skipped reasons (trimmed output):
 
 ```
-$ <binary> provider resolve --json | cat
-{"error":{"code":"provider.chain-exhausted","category":"platform","retryable":true,"consequence":"not_landed","remediationHint":"all 3 providers skipped: peak-window (2), quota-exhausted (1); earliest clear 10:30Z"}}
+$ <binary> provider resolve --json
+{"data":{"summary":"parked chain:default (chain-exhausted) until 2026-11-20T10:30:00.000Z","decision":{"kind":"parked","park":{"name":"chain:default","cause":"chain-exhausted","expiresAt":"2026-11-20T10:30:00.000Z"}},"skipped":[{"providerName":"provider-a","reason":"peak-window"},{"providerName":"provider-b","reason":"peak-window"}]}}
 ```
 
 Profile selection for a spawn (scripted mode, trimmed output):
@@ -235,16 +225,16 @@ Watch status (with the observation instant and the effective bound):
 ```
 $ <binary> provider watch status --json
 {
-  "schemaVersion": 1,
+  "schemaVersion": "delivery.result.v1",
   "runId": "r_01J9A2C8K1P",
   "exitCode": 0,
-  "timing": { "started": "2026-11-20T06:55:00Z", "durationMs": 640 },
+  "timing": { "totalMs": 640 },
   "data": {
     "providers": [
-      { "name": "coding-plan subscription", "condition": "quota-ok",
+      { "name": "coding-plan subscription", "condition": "clear",
         "source": "quota endpoints: weekly 61%, 5h window 12%", "checkedAt": "2026-11-20T06:54:59Z",
         "observedAt": "2026-11-20T06:54:59Z", "ageSeconds": 0, "maxAgeSeconds": 900 },
-      { "name": "deepseek", "condition": "balance-ok",
+      { "name": "deepseek", "condition": "clear",
         "source": "balance API above floor", "checkedAt": "2026-11-20T06:54:58Z",
         "observedAt": "2026-11-20T06:54:58Z", "ageSeconds": 1, "maxAgeSeconds": 900 },
       { "name": "openai", "condition": "watch-stale",

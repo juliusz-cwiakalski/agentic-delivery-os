@@ -31,6 +31,8 @@ import { bufferSink } from "../golden/helpers";
 const ROOT = process.cwd();
 const TMP = join(ROOT, "tmp", "tmpdir");
 const M1_PAGE = "doc/planning/oss-tooling/milestones/m1/commands/provider.md";
+/** The one fixed instant every production-composer case evaluates at. */
+const FIXED_NOW = "2026-01-01T12:00:00Z";
 const CONFIG = `provider:
   defaultChain: ch
   credentials:
@@ -78,7 +80,7 @@ type Scratch = {
   dispose(): void;
 };
 
-const scratch = (label: string): Scratch => {
+const scratch = (label: string, config: string = CONFIG): Scratch => {
   mkdirSync(TMP, { recursive: true });
   const root = mkdtempSync(join(TMP, `gh350-reach-${label}-`));
   const home = join(root, "home");
@@ -86,7 +88,7 @@ const scratch = (label: string): Scratch => {
   mkdirSync(join(home), { recursive: true });
   mkdirSync(join(checkout, ".git"), { recursive: true });
   mkdirSync(join(checkout, ".jaiship"), { recursive: true });
-  writeFileSync(join(checkout, ".jaiship", "config.yaml"), CONFIG);
+  writeFileSync(join(checkout, ".jaiship", "config.yaml"), config);
   const fixturePath = join(checkout, "simulate.json");
   writeFileSync(
     fixturePath,
@@ -126,6 +128,7 @@ const productionHarness = (facts: Scratch): Harness => {
     cwd: facts.checkout,
     homeDirectory: facts.home,
     workingName: "jaiship",
+    clock: { nowMs: () => Date.parse(FIXED_NOW), nowIso: () => FIXED_NOW },
   });
   let compositions = 0;
   let handlerCalls = 0;
@@ -484,6 +487,71 @@ describe("TC-MOUNT-003 the mount is load-bearing: the removal arm fails closed",
       expect(envelope.error?.code).toBeUndefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * TC-MOUNT-011 — the production composition binds the declared IANA zone.
+ *
+ * The gap this closes: `createProductionProviderComposition` supplied no
+ * `zoneFactsFor`, so a non-UTC peak window refused `provider.peak.zone-unknown`
+ * in the installed product although the profile probe and `simulate` already
+ * bound the zone edge. The window below is discriminated: at 2026-01-01T12:00Z
+ * Berlin is 13:00 (+01:00), so the local 12:30–13:15 window is OPEN, while a
+ * UTC reading of the same seconds is CLOSED. A parked decision therefore proves
+ * the offset was applied, not merely that the refusal disappeared. The
+ * unknown-zone arm keeps the refusal identity intact.
+ */
+const BERLIN_WINDOW = `provider:
+  defaultChain: ch
+  entries:
+    p:
+      class: subscription
+      peak:
+        timezone: Europe/Berlin
+        startSecondsOfDay: 45000
+        endSecondsOfDay: 47700
+  chains:
+    ch:
+      entries:
+        - p
+`;
+
+describe("TC-MOUNT-011 the production composition evaluates a declared IANA zone", () => {
+  test("provider resolve evaluates a Europe/Berlin window through runEntrypoint", async () => {
+    const berlin = scratch("zone-berlin", BERLIN_WINDOW);
+    try {
+      const harness = productionHarness(berlin);
+      const run = await invoke(harness.options, ["provider", "resolve", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.error?.code).not.toBe("provider.peak.zone-unknown");
+      expect(run.error).toBeUndefined();
+      const decision = run.data?.decision as
+        | { readonly kind?: string; readonly park?: { readonly cause?: string } }
+        | undefined;
+      expect(decision?.kind).toBe("parked");
+      // The entry is skipped for peak-window (local 12:30–13:15 open at 13:00
+      // Berlin), which a UTC reading would not produce at 12:00Z.
+      expect(run.data?.skipped).toEqual([{ providerName: "p", reason: "peak-window" }]);
+      expect(harness.handlerCalls()).toBe(1);
+    } finally {
+      berlin.dispose();
+    }
+  });
+
+  test("an unknown declared zone still refuses provider.peak.zone-unknown at exit 1", async () => {
+    const unknown = scratch("zone-unknown", BERLIN_WINDOW.replace("Europe/Berlin", "Mars/Olympus"));
+    try {
+      const harness = productionHarness(unknown);
+      const run = await invoke(harness.options, ["provider", "resolve", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(run.error?.code).toBe("provider.peak.zone-unknown");
+      expect(run.error?.summary ?? "").toContain("Mars/Olympus");
+      expect(run.data).toBeUndefined();
+      expect(harness.handlerCalls()).toBe(1);
+    } finally {
+      unknown.dispose();
     }
   });
 });

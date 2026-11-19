@@ -6,14 +6,15 @@ created: 2026-10-31
 last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, the resolve/quota/parks-list CLI surface, the five provider-engine error identities, and the pure-core / provider-quota adapter boundaries."
+summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, the typed spend-ceiling budget gate over one ref-scoped totals read, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, offline simulation and legacy policy migration, the seven-member `provider` CLI family mounted as the twenty-seventh and last prompt-required one, the five provider-engine error identities, and the pure-core / provider-quota / time-zone adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231"]
-  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007"]
+  related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231", "GH-350"]
+  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0012", "PDR-0006", "TDR-0057", "TDR-0058", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
     - "packages/core/src/contracts/provider-profile.ts"
     - "packages/adapters/src/provider-quota/index.ts"
+    - "packages/adapters/src/time-zone/index.ts"
 ---
 
 # Feature: Provider Engine
@@ -61,7 +62,7 @@ Provider configuration is the typed `provider` branch of the layered catalog. Al
 | `provider.entries.<name>.peak` | Optional zone-aware peak window. | absent; no peak condition |
 | `provider.entries.<name>.quota` | Optional subscription quota policy. | absent; no quota condition |
 | `peak.timezone` | Declared zone. | `UTC` (default; alias of `Etc/UTC`) or an IANA zone name matching the declared grammar |
-| `peak.startSecondsOfDay` / `peak.endSecondsOfDay` | UTC seconds-of-day, end strictly greater than start. | required when peak is present |
+| `peak.startSecondsOfDay` / `peak.endSecondsOfDay` | Local seconds-of-day on the declared zone, end strictly greater than start. | required when peak is present |
 | `peak.bufferSeconds` | Non-negative buffer that advances the effective start. | `0` |
 | `quota.enabled` | Whether the quota endpoint is evaluated. | `true` |
 | `quota.endpoint` | HTTPS endpoint without userinfo. | required when the quota block is present |
@@ -253,13 +254,13 @@ The three identities this change adds are `user`, non-retryable, and projected a
 
 ### High-level design
 
-Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` subpath and imports only core contracts and its own modules. The quota HTTP transport is the one injected I/O edge, implemented in `@delivery-os/adapters/provider-quota`. The CLI composition edge accepts an injected provider composition — clock, sleep seam, credential port, quota transport, and state store — and wires it into the engine; the host/binary composition is where the production credential port and quota transport are injected, and tests inject fakes. Parks and announcements persist through the delivered state layer as additive record kinds. The CLI surface validates grammar, delegates to the engine, and lets the edge own envelopes, streams, redaction, and exit projection.
+Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` subpath and imports only core contracts and its own modules. Peak arithmetic receives zone facts through the injected `ProviderZonePort` implemented at `@delivery-os/adapters/time-zone`, and the quota HTTP transport is the other injected I/O edge, implemented at `@delivery-os/adapters/provider-quota`. The CLI composition edge accepts an injected provider composition (the six declared seams — clock, credential port, quota transport, sleep, state store, and fence factory — beside the spend-totals port and the work-item ref seam) and wires it into the engine; the production composition supplies the credential port, the quota transport, and the spend-totals projection, and the CLI edge binds the `Intl` zone port for the profile probe and the simulation replay. Tests inject fakes. Parks and announcements persist through the delivered state layer as additive record kinds. The CLI surface validates grammar, delegates to the engine, and lets the edge own envelopes, streams, redaction, and exit projection.
 
 ### Core components and directory structure
 
 | Path | Responsibility |
 |------|----------------|
-| `packages/core/src/contracts/provider.ts` | Provider descriptors, cost classes, peak, quota, conditions, parks, announcements, decisions, skip reasons, error codes, schema identifiers, and the `QuotaTransport` contract. |
+| `packages/core/src/contracts/provider.ts` | Provider descriptors, cost classes, the declared zone grammar and the zone-bound facts, the `ProviderZonePort` and `PeakWindowEndRule`, budget declarations and the spend-totals port, peak, quota, conditions, parks, announcements, decisions, skip reasons, error codes, schema identifiers, and the `QuotaTransport` contract. |
 | `packages/core/src/provider/validate.ts` | Parsing and semantic validation: references, duplicates, cost ordering, ranges, endpoints, and chain selection. |
 | `packages/core/src/provider/chain.ts` | Deterministic chain resolution, skip reasons, cost-policy eligibility, and chain parks. |
 | `packages/core/src/provider/peak.ts` | Zone-aware peak-window arithmetic, the local-seconds basis, and the one named transition-segment expiry derivation shared by the gate and the watcher. |
@@ -276,7 +277,7 @@ Pure provider policy lives in the runtime-neutral `@delivery-os/core/provider` s
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper: bounded GET, `redirect: manual`, in-memory bearer header, no storage. |
 | `packages/adapters/src/time-zone/index.ts` | The single `Intl`-backed `ProviderZonePort` implementation: the only workspace module that reads zone data for provider policy, with no I/O, network, or extra environment read. |
 | `packages/cli/src/commands/provider.ts` | Grammar and handlers for `resolve`, `quota`, `parks list`, `simulate`, and `migrate legacy`; the same command file hosts the provider-family profile and watch subcommands specified in [Provider Profiles and Watching](feature-provider-profiles.md). |
-| `packages/cli/src/edge.ts` | Wires an injected provider composition (clock, credential port, quota transport, sleep seam, and state store) into the engine for the provider command. |
+| `packages/cli/src/edge.ts` | Wires the injected provider composition into the engine for the provider command, binds the `Intl` zone port for the profile probe and the simulation replay, injects the spend-totals port, supplies the watch observation instant, and composes the fixture and migration reads. |
 | `packages/core/src/config/catalog.ts` / `defaults.ts` | Provider catalog branch and shipped overridable defaults. |
 | `packages/core/src/contracts/error-table.ts` | The five provider-engine rows and exact-code provider classification. |
 
@@ -292,8 +293,8 @@ Persistence occurs only in a mutating `resolve` with a state store. It acquires 
 ### Boundaries and runtime neutrality
 
 - The `provider` core subpath is part of the ambient neutral set: no runtime imports, ambient globals, clock, randomness, filesystem, network, or environment access. Policy receives facts through injected seams.
-- The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read boundary admits no entry from this subpath.
-- The host/binary composition injects the production credential port and quota transport; the CLI composition edge accepts the injected provider composition and wires its ports into the engine. Tests inject fakes. No production module imports the credential-port or quota-transport factories yet, and the CLI edge does not construct them.
+- The `provider-quota` adapters subpath is the single admitted runtime-API edge for the quota request. It is an exact, reason-bearing entry in the runtime-API confinement rule; it is not a secret-read allowlist entry, and the secret-read boundary admits no entry from this subpath. The `time-zone` adapters subpath is the only module that reads zone data for provider policy; `Intl` is confined there and no provider core module imports it.
+- The production composition registers the family unconditionally and supplies the six declared seams (clock, credential port, quota transport, sleep, state store, fence factory) beside the spend-totals projection, the work-item ref seam, and the fixture and migration reads; the CLI composition edge accepts that composition and wires its ports into the engine. The edge binds the `Intl` zone port for the profile probe and the `simulate` replay; the registered engine composition supplies no zone seam, so a non-UTC peak declaration refuses `provider.peak.zone-unknown` at `resolve` exactly as a composition that cannot resolve a zone does, while a `UTC` declaration needs no zone data. Tests inject fakes.
 - The state layer owns ledger framing, fences, verified reads, and atomic document replacement; the provider engine only supplies record payloads and the fold.
 - Model-profile selection (specified in [Provider Profiles and Watching](feature-provider-profiles.md)), harness spawn, background timers, spend reporting, and MCP/OpenCode provider surfaces are outside this feature.
 
@@ -325,19 +326,20 @@ The quota transport contract is one `send` call receiving the endpoint, method `
 
 | Level | Location | Scope |
 |-------|----------|-------|
-| Structure and contract inventory | `tests/structure/provider-contract.test.ts`, `tests/structure/error-table.test.ts`, `tests/structure/content-inventory.test.ts` | Contract inventory, schema identifiers, closed sets, evidence allowlists, deterministic naming, and error rows. |
-| Behaviour | `tests/behaviour/provider-chain-resolution.test.ts`, `provider-peak-window.test.ts`, `provider-quota-evaluation.test.ts`, `provider-parks.test.ts`, `provider-announcements.test.ts`, `provider-credentials.test.ts`, `provider-cli.test.ts` | Validation, ordering, selection, skip reasons, peak boundaries, quota math, park lifecycle, announcements, credential handling, and CLI paths. |
+| Structure and contract inventory | `tests/structure/provider-contract.test.ts`, `provider-budgets-contract.test.ts`, `provider-watch-contract.test.ts`, `provider-mounting.test.ts`, `error-table.test.ts`, `content-inventory.test.ts` | Contract inventory, schema identifiers, closed sets, evidence allowlists, the budget and watch contracts, the 27-family mount, deterministic naming, and error rows. |
+| Behaviour | `tests/behaviour/provider-chain-resolution.test.ts`, `provider-peak-window.test.ts`, `provider-peak-zone.test.ts`, `provider-quota-evaluation.test.ts`, `provider-budgets.test.ts`, `provider-budget-ref.test.ts`, `provider-parks.test.ts`, `provider-announcements.test.ts`, `provider-credentials.test.ts`, `provider-config-precedence.test.ts`, `provider-cli.test.ts` | Validation, ordering, selection, skip reasons, peak boundaries and the DST matrix, quota math, both budget scopes and the ref matrix, park lifecycle, announcements, credential handling, per-repository precedence, and CLI paths. |
+| Behaviour — additive members | `tests/behaviour/provider-simulate.test.ts`, `provider-migrate.test.ts`, `provider-watch-freshness.test.ts` | Fixture validation and zero-effect replay with resolve parity, the migration accept/refuse matrix and credential firewall, and the freshness bound with the park clamp. |
 | Legacy parity | `tests/behaviour/provider-legacy-parity.test.ts` | Ported resolver battery groups and the explicit fail-loud divergence classes. |
-| Golden output | `tests/golden/provider-*.test.ts` | Recorded machine and human output for selected, parked, outage, quota, and parks-list cases. |
-| Checks and security | `tests/checks/provider-hermetic.test.ts`, `provider-evidence-bounds.test.ts`, `secret-read-boundary.test.ts`, `error-table-sync.test.ts` | No live network or sleeps, evidence bounds, secret-read boundary, and table synchronization. |
-| Boundaries | `tests/boundaries/**` | Runtime-API confinement for the quota transport with a clean control and a provider-core negative fixture. |
+| Golden output | `tests/golden/provider-*.test.ts` | Recorded machine and human output for selected, parked, outage, quota, parks-list, simulation, and migration cases. |
+| Checks and security | `tests/checks/provider-hermetic.test.ts`, `provider-evidence-bounds.test.ts`, `provider-zone-refusal.test.ts`, `provider-entrypoint-reachability.test.ts`, `provider-coverage-mount.test.ts`, `secret-read-boundary.test.ts`, `error-table-sync.test.ts` | No live network, sleep, or ambient zone read, evidence bounds, the zone refusal, 7/7 member and 8/8 help reachability with its two negative arms, secret-read boundary, and table synchronization. |
+| Boundaries | `tests/boundaries/**` | Runtime-API confinement for the quota transport with a clean control and a provider-core negative fixture that fails if an `Intl` or zone read appears in the provider tier. |
 | Aggregate | `pnpm check` | Whole workspace. |
 
 ## Operational & Support
 
 ### Configuration
 
-Operators declare descriptors, credential references, and chains under the `provider` branch; `config debug` shows every effective value's winning origin. The shipped Z.AI descriptor and credential reference are overridable defaults. No chain is enabled by default, so `resolve` fails closed until a chain is declared. Endpoint, threshold, timeout, loop cap, and park TTLs are configuration, not code.
+Operators declare descriptors, credential references, chains, spend ceilings, profiles, and watch targets under the `provider` branch; `config debug` shows every effective value's winning origin. The shipped Z.AI descriptor and credential reference are overridable defaults. No chain is enabled by default, so `resolve` fails closed until a chain is declared. Endpoint, threshold, timeout, loop cap, park TTLs, budget ceilings, and watch bounds are configuration, not code.
 
 ### Observability
 
@@ -349,7 +351,7 @@ Subscription-first ordering and paid-fallback-off protect subscription quota bef
 
 ### Maintenance
 
-Adding a provider is a descriptor plus a credential reference, not a code branch. Adding a vendor quota shape is a new normalized snapshot mapping with fixtures. The cause, condition, skip-reason, announcement, error, and evidence vocabularies are guarded sets; growth requires a spec update and, where cross-cutting, a decision record. The bash hook remains the spawn path until the later spawn integration consumes `resolve` and the re-evaluation loop.
+Adding a provider is a descriptor plus a credential reference, not a code branch. Adding a vendor quota shape is a new normalized snapshot mapping with fixtures. The cause, condition, skip-reason, announcement, error, and evidence vocabularies are guarded sets; growth requires a spec update and, where cross-cutting, a decision record. Provider and model policy is resolved before each spawn by the typed dispatch composition through the profile seam and the `data-v1` env record, and the family is mounted in the production composition; the shipped hook example is inert as policy input because no composition reads it.
 
 ## Dependencies & Risks
 

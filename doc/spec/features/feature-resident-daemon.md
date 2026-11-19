@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v2 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove` and the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the supervision-supplied profile-window watch with bounded-grace in-flight peak parking, classification-routed window-end resume, and the composition-fact peak-enforcement read, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347"]
-  related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030", "TDR-0049"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347", "GH-350"]
+  related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030", "TDR-0049", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -372,7 +372,7 @@ action handling, when the composition supplies the peak-pause ports; a
 composition without them keeps the delivered cycle unchanged. The watch reads
 each in-flight lane's recorded provider profile nomination and only that
 profile's declared `peakWindows` rules ([Provider Peak Pausing](feature-peak-pausing.md)):
-when a profile's window is open on the UTC basis (buffer included), every
+when a profile's window is open on its declared zone's clock (buffer included), every
 in-flight lane nominated to it receives a bounded-grace stop — the deadline is
 recorded and can never outlast the window buffer — and the lane lands parked
 with cause `peak-window`, the profile named, and `until` at the effective

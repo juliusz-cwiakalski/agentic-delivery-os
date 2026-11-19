@@ -1708,6 +1708,13 @@ export type ProviderComposition = {
    * injects a retained instant to exercise staleness.
    */
   readonly watchObservedAtMs?: () => number;
+  /**
+   * The zone seam the peak evaluation binds through (GH-350 F-1/F-8, ADR-0012).
+   * Absent means the engine's zone-unaware default: a non-UTC window refuses
+   * `provider.peak.zone-unknown` at the edge. The production composition supplies
+   * the Intl-backed binder so a declared IANA zone evaluates.
+   */
+  readonly zoneFactsFor?: (zone: string) => ProviderZoneFacts | undefined;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */

@@ -112,6 +112,21 @@ strictly in the future no park is created and the observation reports
 it never reports `watch-stale`; staleness is demonstrated only by
 composition-supplied observations and by the clamp.
 
+## Offline verification and migration
+
+`provider simulate --fixture <path>` replays one bounded fixture through the
+delivered engine: zero state writes, zero credential reads, zero network calls,
+zero child spawns, and no local-context read. It takes its work-item ref from the
+fixture only, so a declared budget can be exercised offline, and its resolve keys
+match `provider resolve` for the same facts.
+
+`provider migrate legacy` reads the legacy profile directory and the
+pre-iteration hook as compatibility input under an assignment-only grammar,
+prints a reviewable proposal, and discloses every name it could not map. It
+refuses the whole run as `provider.migrate.refused` rather than emitting a
+partial artifact, and `--write` creates the project-committed document only when
+it does not already exist. It never executes, sources, or imports the hook.
+
 ## Resume and expiry semantics
 
 A park has an absolute expiry strictly in the future at creation. Expiry is

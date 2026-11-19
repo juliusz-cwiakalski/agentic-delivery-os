@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the nine-operation closed adapter set including the provider-side landing, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the additive optional DeliveryThread root-author facts (login, normalized author kind, author association), the additive optional PipelineJob start and completion timestamps, the four optional verify-gates facts, resolve-delivery-thread and merge-delivery-request operations, the additive optional harness environment-variable marker, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace, log-excerpt, and thread-discussion reads behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238", "GH-277", "GH-279", "GH-335", "GH-338", "GH-339"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008", "TDR-0019", "TDR-0021", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0036", "TDR-0040", "TDR-0043"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238", "GH-277", "GH-279", "GH-335", "GH-338", "GH-339", "GH-350"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008", "TDR-0019", "TDR-0021", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0036", "TDR-0040", "TDR-0043", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
@@ -266,9 +266,10 @@ An unresolvable credential carries the synchronized error-table row `config.cred
 | `packages/adapters/src/io/privacy-rules.ts` | Pure, dependency-free privacy rule definitions, suppression classes, normalization, matchers, caps, and identifier fingerprint. |
 | `packages/adapters/src/io/envelope-content-policy.ts` | Pure policy builder combining shared generic rules with injected hashed entries and hash. |
 | `packages/adapters/src/io/index.ts` | Internal `#io/*` alias target re-exporting the codec and the policy builder. |
-| `packages/core/src/contracts/provider.ts` | Provider descriptors, conditions, parks, announcements, decisions, skip reasons, error codes, and the quota transport contract. |
-| `packages/core/src/provider/**` | Pure provider validation, chain resolution, peak/quota evaluation, park/announcement projection, and re-evaluation loop. |
+| `packages/core/src/contracts/provider.ts` | Provider descriptors, the zone grammar and zone-bound facts, the three-member zone port, budget declarations and the spend-totals port, conditions, parks, announcements, decisions, skip reasons, error codes, and the quota transport contract. |
+| `packages/core/src/provider/**` | Pure provider validation, chain resolution, offset-aware peak arithmetic with the named expiry derivation, quota evaluation, budget evaluation, simulation payload assembly, legacy mapping, park/announcement projection, and the re-evaluation loop. |
 | `packages/adapters/src/provider-quota/index.ts` | Injectable quota transport and native-fetch production wrapper at the declared `./provider-quota` subpath. |
+| `packages/adapters/src/time-zone/index.ts` | The single `Intl`-backed `ProviderZonePort` implementation at the declared `./time-zone` subpath: the only workspace module that reads zone data for provider policy, with no I/O, network, or extra environment read. |
 | `packages/adapters/src/file/pm-notes-parser.ts` | pm-notes file edge: locates a change ref's committed notes under the change-artifact convention, parses YAML 1.2 core with bounded size/nodes/depth/aliases, and stages in-memory phase-entry edits; runtime file access stays at the adapter I/O edge. |
 | `scripts/checks/secret-read-boundary.ts` | The secret-read boundary invariant, allowlist registry, scoped-file scan, and fixture-coverage helpers. |
 | `tests/types/tsconfig.json` | The type-probe project chained into the root `typecheck`. |
