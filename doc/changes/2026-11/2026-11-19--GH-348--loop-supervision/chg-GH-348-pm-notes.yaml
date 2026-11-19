@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-19T10:03:10.768Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-19T11:25:46.895Z }
   test_planning: { started: null, completed: 2026-11-19T10:47:07.675Z }
   delivery_planning: { started: null, completed: 2026-11-19T10:55:43.887Z }
   dor_check: { started: null, completed: null }
@@ -381,4 +381,31 @@ notes:
       the exact delivered fields it consumes and give the full case table, not
       only the happy path."
     type: retro
+    date: "2026-11-19"
+  - text: "DoR-iteration-1 remediation so far: spec v1.2 (R-01/R-02 corroborator
+      rewritten to a pid-presence-and-liveness rule with no start-time
+      comparison and a 16-row decision table; R-06 status-key source table with
+      `loop_id=loop-main` always present; R-09 bound formula with 652 000 ms as
+      the shipped-default value; R-18 clean-end cause; R-19 iterationId and
+      killFailureReason; R-20 history reference; R-21 global flags; R-04/DOD-7,
+      R-05 and R-14 doc obligations; R-15 reason compromise; R-17 citation; N-01
+      wording). Test plan r0.3 (R-03: the deliver leg is PROVEN through the real
+      dispatch command runtime with the nested PM session doubled by the same
+      scripted harness port, so the boundary stays nine proven / six not-proven
+      and `phase complete` never appears as delivery; R-07 one resume call; R-10
+      69/5 inventory; R-11 17 suites; R-12 progress-unreadable; R-13
+      required-flag refusals; R-16 inline baseline). Counts after remediation:
+      41 ACs, 74 cases, 78 links, 115 mutation rows M1-M115, 15/9/9 fixtures."
+    type: info
+    date: "2026-11-19"
+  - text: "Commit-boundary update: the bare `jaiship commit GH-348` that landed the
+      DoR verdict (400a96ad) also swept in TDR-0055 and TDR-0056, so both
+      records are now TRACKED. Plan phase 1 no longer authors them; its done
+      criterion stays the mechanical `git ls-files --error-unmatch` on both
+      paths plus an empty `git status --porcelain -- doc/decisions`, and the
+      plan must treat the two paths as already-landed verification rather than
+      declared authorship (a declared-but-unchanged path would surface only as
+      an advisory `plan diff` `undeclared-missing`, never a validation
+      failure)."
+    type: info
     date: "2026-11-19"

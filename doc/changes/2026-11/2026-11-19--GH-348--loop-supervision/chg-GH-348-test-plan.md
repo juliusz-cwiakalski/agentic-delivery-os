@@ -87,7 +87,7 @@ Two observations this plan deliberately does **not** encode as permanent cases, 
 | `AC-F1-4` | F-1 | `TC-STOP-001`, `TC-STOP-004` | Planned |
 | `AC-F1-5` | F-1 | `TC-VERB-004`, `TC-CONTRACT-003` | Planned |
 | `AC-F2-1` | F-2 | `TC-SPAWN-001`, `TC-PARITY-008` | Planned |
-| `AC-F2-2` | F-2 | `TC-SPAWN-002`, `TC-SPAWN-005`, `TC-SPAWN-006`, `TC-PARITY-005` | Planned |
+| `AC-F2-2` | F-2 | `TC-SPAWN-002`, `TC-SPAWN-005`, `TC-SPAWN-006`, `TC-PARITY-005`, `TC-INSTANCE-006` | Planned |
 | `AC-F2-3` | F-2 | `TC-SPAWN-003` | Planned |
 | `AC-F2-4` | F-2 | `TC-SPAWN-004` | Planned |
 | `AC-F3-1` | F-3 | `TC-BACKOFF-001` | Planned |
@@ -125,9 +125,11 @@ Two observations this plan deliberately does **not** encode as permanent cases, 
 
 **Arithmetic.** 5 + 4 + 6 + 5 + 7 + 5 + 4 + 5 = 41 acceptance criteria, reconciled against spec §17 (`F-1` 5, `F-2` 4, `F-3` 6, `F-4` 5, `F-5` 7, `F-6` 5, `F-7` 4, `F-8` 5). 41 of 41 appear above with at least one named case; 0 are unmapped and 0 defer an assertion.
 
-The matrix carries **77** AC→case links (41 + 36 extras), because 24 criteria need more than one observation. The extras sum to 36 exactly: `AC-F1-1` (+6), `AC-F1-3` (+1), `AC-F1-4` (+1), `AC-F1-5` (+1), `AC-F2-1` (+1), `AC-F2-2` (+3), `AC-F3-2` (+2), `AC-F3-4` (+1), `AC-F4-2` (+2), `AC-F4-4` (+1), `AC-F4-5` (+2), `AC-F5-1` (+1), `AC-F5-3` (+1), `AC-F5-4` (+1), `AC-F5-6` (+1), `AC-F5-7` (+1), `AC-F6-1` (+2), `AC-F6-2` (+1), `AC-F7-1` (+2), `AC-F7-2` (+1), `AC-F7-3` (+1), `AC-F7-4` (+1), `AC-F8-1` (+1), `AC-F8-3` (+1).
+The matrix carries **78** AC→case links (41 + 37 extras), because 24 criteria need more than one observation. The extras sum to 37 exactly: `AC-F1-1` (+6), `AC-F1-3` (+1), `AC-F1-4` (+1), `AC-F1-5` (+1), `AC-F2-1` (+1), `AC-F2-2` (+4), `AC-F3-2` (+2), `AC-F3-4` (+1), `AC-F4-2` (+2), `AC-F4-4` (+1), `AC-F4-5` (+2), `AC-F5-1` (+1), `AC-F5-3` (+1), `AC-F5-4` (+1), `AC-F5-6` (+1), `AC-F5-7` (+1), `AC-F6-1` (+2), `AC-F6-2` (+1), `AC-F7-1` (+2), `AC-F7-2` (+1), `AC-F7-3` (+1), `AC-F7-4` (+1), `AC-F8-1` (+1), `AC-F8-3` (+1).
 
-**Case inventory.** **74** cases across 10 groups. 0 orphan cases: 68 link at least one `AC-*`, and 6 link the `NFR-*` contract they pin (`TC-CONTRACT-001`, `-002`, `-003`, `-004`, `-005`, `-006`; see §3.3).
+**Deliver-leg level (DoR R-03).** `AC-F8-4`'s deliver primitive is **`dispatch`** — the delivered jaiship replacement for `scripts/deliver-ticket.sh` — and never `phase complete`, which is a PM lifecycle transition and is not a delivery. `TC-BATTLE-006` drives the deliver leg through the real `dispatch` command runtime with its nested PM session doubled by the same scripted harness port, and asserts that envelope; the claim is proven at command-runtime level and no further. The nested PM session's *live* behaviour stays outside the boundary under the existing `live-opencode` not-proven id, so the boundary constant stays nine proven / six not-proven and no seventh id is added.
+
+**Case inventory.** **74** cases across 10 groups. 0 orphan cases: **69** link at least one `AC-*`, and **5** link only the `NFR-*` contract they pin (`TC-CONTRACT-001`, `-002`, `-004`, `-005`, `-006`; see §3.3). `TC-CONTRACT-003` is AC-linked (AC-F1-5) and is not counted as NFR-only; the matrix is the single source of truth for both numbers.
 
 | Group | Prefix | Cases | Capability | One-line purpose |
 |-------|--------|-------|-----------|------------------|
@@ -151,7 +153,7 @@ The matrix carries **77** AC→case links (41 + 36 extras), because 24 criteria 
 | `API-1` `loop start` | `TC-VERB-001`, `TC-SPAWN-003`, `TC-INSTANCE-001`, `TC-BACKOFF-004`, `TC-STOP-002`, `TC-STOP-003`, `TC-STUCK-008` | Exit 0 with `state=stopped` on a folded stop (not a refusal); exit 2 for `coordinator.already-running`, `coordinator.process.capability-gap`, `coordinator.session.kill-failed`, `state.*`; exit 1 for the provider/config/harness refusals and the exhaustion; an unconfirmed termination appends exactly one outcome record, releases the lease, and starts no further session; no session record without a session; the held lease always released |
 | `API-2` `loop stop` | `TC-STOP-001`, `TC-STOP-005`, `TC-STOP-006`, `TC-PARITY-007`, `TC-PARITY-010` | At most one `requested` per stop episode; `drain` default; never signals; never touches the lease; exit 0 with or without a running loop |
 | `API-3` `loop reset` | `TC-STOP-004`, `TC-PARITY-010` | At most one `cleared` when a request is folded; nothing otherwise; exit 0 either way |
-| `API-4` `loop status` | `TC-VERB-003`, `TC-VERB-004`, `TC-INSTANCE-006` | `delivery.loop.v1`; the six shell keys in order, then `stop_mode` immediately after `stop_signal`, then the seven remaining additive keys (eight in the additive tail); exactly three booleans; every absent value rendered as the empty string after `=` with no `none` token; the `restarts` bound is composition-supplied and never a handler configuration read; five-value closed degradation list; zero appended records; no verdict evaluated |
+| `API-4` `loop status` | `TC-VERB-003`, `TC-VERB-004`, `TC-INSTANCE-006` | `delivery.loop.v1`; the six shell keys in order, then `stop_mode` immediately after `stop_signal`, then the seven remaining additive keys (eight in the additive tail); exactly three booleans; `loop_id=loop-main` always present and never empty; `ceo_pid`/`ceo_session` live-only; every other absent value rendered as the empty string after `=` with no `none` placeholder; the `restarts` bound is composition-supplied and never a handler configuration read; five-value closed degradation list (each value with an owning assertion — `progress-unreadable` in `TC-STUCK-004`); zero appended records; no verdict evaluated |
 | `API-5` `loop log` | `TC-LOG-005`, `TC-LOG-006`, `TC-LOG-007`, `TC-VERB-002` | `delivery.loop.log.v1`; `n` 1–100 default 50; line and byte bounds; `truncation` flag; `unreadable` marker never borrows a failure identity; a read creates nothing |
 | `API-6` process execution | `TC-SPAWN-001`, `TC-BATTLE-004`, `TC-BATTLE-005`, `TC-STUCK-009`, `TC-PARITY-008` | Fixed argv, no shell, no script path; the supervision flow invokes no script and reads no shell probe; a runner asked for a shell fails by name |
 | `API-7` output contract | `TC-VERB-003`, `TC-LOG-005` | ≤ 32 human lines for `start`/`stop`/`status`/`reset`, ≤ 1 + `n` for `log`; machine `data` ≤ 65 536 bytes; 0 ANSI; the declared key order and value vocabulary of ruling R1/R2: exactly three booleans (`loop_running`, `ceo_alive`, `stop_signal`), `stop_mode` next, `<n>/<bound>` for `restarts`, and a bare `key=` for every absent value with no `none` token |
@@ -174,7 +176,7 @@ The matrix carries **77** AC→case links (41 + 36 extras), because 24 criteria 
 | `NFR-2` bounded output | `TC-VERB-003`, `TC-LOG-005` | ≤ 32 human lines; ≤ 1 + `n` for `log`; machine `data` ≤ 65 536 bytes; 0 ANSI; the declared key order with `stop_mode` immediately after `stop_signal`, exactly three `yes`/`no` booleans, and a bare `key=` (never `none`) for every absent value |
 | `NFR-3` log retention | `TC-LOG-001`…`TC-LOG-007` | Line ≤ 512 B; active ≤ 1 048 576 B; one retained generation; total ≤ 2 097 152 B; oldest dropped; a log fault never changes a verdict, exit, or record |
 | `NFR-4` durable stop | `TC-STOP-002`, `TC-STOP-003`, `TC-STOP-004`, `TC-STOP-005`, `TC-PARITY-010` | 100% of folded requests prevent a start (0 lease, 0 session, 0 session record); `drain` at the next boundary; `immediate` ≤ 50 000 virtual ms; ≤ 1 record per repeated verb |
-| `NFR-5` stuck-verdict safety | `TC-STUCK-001`…`TC-STUCK-009`, `TC-STUCK-011` | 100% of kills require all four conditions; 0 kills with a healthy delivery; 0 kills on either unreadable input; detection-to-restart ≤ 652 000 ms on the confirmed path; an unconfirmed termination starts no next session (terminal, exit 2) |
+| `NFR-5` stuck-verdict safety | `TC-STUCK-001`…`TC-STUCK-009`, `TC-STUCK-011` | 100% of kills require all four conditions; 0 kills with a healthy delivery; 0 kills on either unreadable input; **0 corroborator start-time or age comparisons**; detection-to-next-session ≤ the formula `stuck-window + collection-interval + kill-grace + first backoff` (652 000 ms at the shipped defaults) on the confirmed path; an unconfirmed termination starts no next session (terminal, exit 2) |
 | `NFR-6` single instance and session uniqueness | `TC-INSTANCE-001`…`TC-INSTANCE-005`, `TC-PARITY-001` | Exactly 1 admitted + 1 refused; 0 double claims; 0 second spawns beside a live recorded session; exactly 1 lease record per acquisition or takeover |
 | `NFR-7` contract invariance | `TC-CONTRACT-001`, `TC-CONTRACT-004`, `TC-CONTRACT-006`, `TC-SPAWN-003`, `TC-SPAWN-005` | 0 new error identities, 0 domain kinds, 0 config keys, 0 changed coordinator records/payloads/defaults/behaviour, 0 schema bumps; exactly 2 new record kinds; exactly 1 additive optional harness fact |
 | `NFR-8` restart accounting | `TC-BACKOFF-001`, `TC-BACKOFF-004`, `TC-BACKOFF-005`, `TC-BACKOFF-006`, `TC-BACKOFF-007` | Exactly 1 `coordinator.restart` per consumed ordinal; 0 for a clean end; the declared delay at every ordinal; 0 restarts above the bound; 1 verdict + 1 outcome per stuck episode |
@@ -201,7 +203,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Three drivers, all production code:**
 
 - **D1 — composed production program.** `createProductionComposer({...injected facts})(brand)` → `runEntrypoint([...])`, the pattern proven by `tests/structure/coordinator-production-session.test.ts`. Injected facts: `harnessSpawnStarter`, `harnessSpawnRunner`, `processId`, `environment`, `cwd`, `homeDirectory`, `workingName`, `clock`, `newRunId`, `signalHost`, plus the loop's own facts (session profile, progress reader, corroborator read, process port, log sink, injected `delay`).
-- **D2 — in-process edge.** A `createTestEdge`-composed edge registering the `loop` command → `runCli([...])`, the pattern proven by `tests/fixtures/coordinator/harness.ts`. Used for every cycle case; the store, the command definition, the supervisor cycle, the projections, and the lease/budget/stuck folds are the production ones.
+- **D2 — in-process edge.** A `createTestEdge`-composed edge registering the `loop` command **and the `coordinator` family** (the production composition mounts both, so the identity-isolation case can drive each surface on its declared harness) → `runCli([...])`, the pattern proven by `tests/fixtures/coordinator/harness.ts`. Used for every cycle case; the store, the command definitions, the supervisor cycle, the projections, and the lease/budget/stuck folds are the production ones.
 - **D3 — pure domain.** The exported pure verdict, backoff schedule, log-line renderer, and status projection, called directly, for the table cases.
 
 `TC-VERB-001`…`005`, `TC-STOP-*`, `TC-INSTANCE-*`, `TC-LOG-*` default to D2. `TC-SPAWN-001`/`-002` run on both D1 and D2 (the argv is composed at the edge, so both must agree). `TC-BACKOFF-002`, `TC-STUCK-010`, `TC-CONTRACT-005` are D3. `TC-BATTLE-*` run the registry on D2 with D1 for the spawn rows.
@@ -212,10 +214,10 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 | TC ID | Title | Type | Level | Priority | AC / NFR | New or Extended |
 |-------|-------|------|-------|----------|----------|-----------------|
-| `TC-VERB-001` | Every verb × declared flag combination performs its effect and returns its payload | Integration | Behaviour | Critical | `AC-F1-1` | New |
-| `TC-VERB-002` | Every malformed form is a grammar refusal at exit 1 with zero records | Integration | Behaviour | Critical | `AC-F1-1`, `AC-F1-3` | New |
-| `TC-VERB-003` | The status block is the six shell keys, then `stop_mode`, then the additive tail, with bare `key=` for every absent value and no `none` token | Integration | Behaviour | Critical | `AC-F1-2` | New |
-| `TC-VERB-004` | `status` and `log` append nothing, create nothing, read no configuration in the handler, fall back to shipped defaults, and effect no session | Integration | Behaviour | Critical | `AC-F1-5` | New |
+| `TC-VERB-001` | Every verb × declared flag combination performs its effect and returns its payload, and a clean end is the cycle driver's declared end rather than a failure | Integration | Behaviour | Critical | `AC-F1-1` | New |
+| `TC-VERB-002` | Every malformed form — including a missing required `--foreground` — is a grammar refusal at exit 1 with zero records, while the global flags are accepted | Integration | Behaviour | Critical | `AC-F1-1`, `AC-F1-3` | New |
+| `TC-VERB-003` | The status block follows the status-key source table: six shell keys, then `stop_mode`, then the additive tail, `loop_id=loop-main` always present, live-only `ceo_pid`/`ceo_session`, bare `key=` elsewhere, no `none` placeholder | Integration | Behaviour | Critical | `AC-F1-2` | New |
+| `TC-VERB-004` | `status` and `log` append nothing, create nothing, read no configuration in the handler, fall back to the shipped defaults, and effect no session | Integration | Behaviour | Critical | `AC-F1-5` | New |
 | `TC-VERB-005` | Every verb's exit is the delivered projection of the identity that produced it | Structure | Behaviour | High | `AC-F1-1` | New |
 | `TC-SPAWN-001` | A fresh spawn renders one `--agent ceo`, one resolved `--model`, and a fixed argv | Integration | Behaviour | Critical | `AC-F2-1` | New |
 | `TC-SPAWN-002` | Exactly one deterministic `ceo-loop-<stamp>` title on a fresh spawn, none on a resume, and it is the reap identity | Integration | Behaviour | Critical | `AC-F2-2` | New |
@@ -237,23 +239,23 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-STOP-005` | `drain` never terminates; `immediate` terminates within the bound; an unverifiable identity is never signalled | Integration | Behaviour | Critical | `AC-F4-4` | New |
 | `TC-STOP-006` | The stop payload carries the loop identity, action, mode, and timestamps only | Structure | Behaviour | Critical | `AC-F4-5` | New |
 | `TC-STOP-007` | A stop recorded by one process is honoured by a rebuilt composition | Integration | Behaviour | Critical | `AC-F4-5` | New |
-| `TC-STUCK-001` | All four stuck conditions produce one verdict record, one termination, one outcome, and a restart | Integration | Behaviour | Critical | `AC-F5-1` | New |
+| `TC-STUCK-001` | All four stuck conditions produce one verdict record with the loop-scoped identity, one termination, one outcome, and a restart | Integration | Behaviour | Critical | `AC-F5-1` | New |
 | `TC-STUCK-002` | Sourced positive progress within the bound is `progressing` with zero records and zero terminations | Unit | Behaviour | Critical | `AC-F5-2` | New |
 | `TC-STUCK-003` | Zero traffic for twenty virtual minutes with a live delivery in progress is never stuck | Integration | Behaviour | Critical | `AC-F5-3` | New |
 | `TC-STUCK-004` | An unreadable progress reading is `unevaluable`: one record, no kill, continued cycling | Integration | Behaviour | Critical | `AC-F5-4` | New |
 | `TC-STUCK-005` | An unreadable corroborator is `unevaluable` and never `stuck` | Integration | Behaviour | Critical | `AC-F5-4` | New |
-| `TC-STUCK-006` | Detection-to-next-session is within 652 000 ms of virtual time on the confirmed path, and an unconfirmed termination has no next session | Integration | Behaviour | Critical | `AC-F5-5` | New |
+| `TC-STUCK-006` | Detection-to-next-session holds the bound *formula* at two interval settings and the shipped-default 652 000 ms on the confirmed path; an unconfirmed termination has no next session | Integration | Behaviour | Critical | `AC-F5-5` | New |
 | `TC-STUCK-007` | TERM precedes KILL, KILL respects the grace and the live tree | Integration | Behaviour | Critical | `AC-F5-6` | New |
 | `TC-STUCK-008` | Only this session's tree or its exact identity is signalled, and an unconfirmed termination is terminal: one outcome, lease released, exit 2, zero restarts, zero spawns | Integration | Behaviour | Critical | `AC-F5-6` | New |
-| `TC-STUCK-009` | The corroborator reads delivered lane records from the single read and writes nothing | Structure | Behaviour | Critical | `AC-F5-7` | New |
-| `TC-STUCK-010` | The corroborator decision table: active+live, delivering+live, empty→none, unreadable→unknown, stale→none, newest-wins | Unit | Behaviour | Critical | `AC-F5-3`, `AC-F5-7` | New |
+| `TC-STUCK-009` | The corroborator reads delivered lane records from the single read, consumes no start-time fact, and writes nothing | Structure | Behaviour | Critical | `AC-F5-7` | New |
+| `TC-STUCK-010` | The corroborator is the total 16-row decision: evidence classes D1–D6 and M1–M6, the F0–F3 fold, plus the pid-reuse residual risk | Unit | Behaviour | Critical | `AC-F5-3`, `AC-F5-7` | New |
 | `TC-STUCK-011` | A just-started supervisor seeds the progress observation at acquisition, so a restart can only delay a verdict | Integration | Behaviour | Critical | `AC-F5-1` | New |
 | `TC-INSTANCE-001` | Two concurrent starts both directions: exactly one admitted, one `coordinator.already-running` | Integration | Behaviour | Critical | `AC-F6-1` | New |
 | `TC-INSTANCE-002` | A dead holder with a live recorded session is taken over and joined with zero spawns | Integration | Behaviour | Critical | `AC-F6-2` | New |
 | `TC-INSTANCE-003` | A recorded ended session is replaced by exactly one fresh session | Integration | Behaviour | Critical | `AC-F6-2` | New |
 | `TC-INSTANCE-004` | The `loop-main` identity and the `coordinator-main` identity do not exclude or read each other | Integration | Behaviour | Critical | `AC-F6-3` | New |
 | `TC-INSTANCE-005` | No more than one CEO session exists at any observation point across takeover, restart, stop, and unconfirmed termination | Integration | Behaviour | Critical | `AC-F6-4` | New |
-| `TC-INSTANCE-006` | A pid-less `active` session degrades conservatively: resumed, never killed, never duplicated | Integration | Behaviour | Critical | `AC-F6-5` | New |
+| `TC-INSTANCE-006` | A pid-less `active` session is resumed exactly once with no title and the same session id returned, never killed and never duplicated | Integration | Behaviour | Critical | `AC-F6-5` | New |
 | `TC-INSTANCE-007` | An undeclared alive capability is `coordinator.process.capability-gap` before any record | Integration | Behaviour | High | `AC-F6-1` | New |
 | `TC-LOG-001` | Every event renders one bounded, ANSI-free, identifier-only line | Unit | Behaviour | Critical | `AC-F7-1` | New |
 | `TC-LOG-002` | A full scenario log carries no prompt, transcript, credential, environment value, model, or seat | Integration | Conformance | Critical | `AC-F7-1` | New |
@@ -267,10 +269,10 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `TC-BATTLE-003` | Two consecutive runs are identical with zero live network, zero real children, and zero real waits | Integration | Conformance | Critical | `AC-F8-2` | New |
 | `TC-BATTLE-004` | The guarded runner records zero shell invocations and the loop prompt carries no script path | Integration | Conformance | Critical | `AC-F8-3` | New |
 | `TC-BATTLE-005` | The delivered no-shell surface is extended over the loop modules and fails by name on a planted reference | Invariant | Checks | Critical | `AC-F8-3` | Extended (`no-shell-dispatch.ts`, `no-shell-dispatch.test.ts`) |
-| `TC-BATTLE-006` | The pick-deliver-merge cycle runs over the real runtime with zero shells and zero kills | Integration | Conformance | Critical | `AC-F8-4` | New |
+| `TC-BATTLE-006` | The pick-deliver-merge cycle runs the real `dispatch` deliver leg over the real runtime with zero shells and zero kills | Integration | Conformance | Critical | `AC-F8-4` | New |
 | `TC-BATTLE-007` | The proof boundary is a permanent constant: nine proven, six not-proven, in order, no row off-boundary | Structure | Conformance | Critical | `AC-F8-5` | New |
 | `TC-BATTLE-008` | The prompt-required inventory is repinned to 27 with `loop` last across all three pinned suites, and the removal control fails by name | Invariant | Checks | Critical | `AC-F1-1` | Extended (`install-conformance-mutants`, `metrics-mounting` + stale-pin set, `reference-page-parity` + M4 mapping, `coverage.json`, `mounting.ts`) |
-| `TC-CONTRACT-001` | The closed contract surface is unchanged and exactly three additive facts exist | Invariant | Checks | Critical | `NFR-7` | New |
+| `TC-CONTRACT-001` | The closed contract surface is unchanged against an in-suite literal baseline, and exactly three additive facts exist | Invariant | Checks | Critical | `NFR-7` | New |
 | `TC-CONTRACT-002` | Record, log, and diagnostic hygiene holds across the whole battery | Integration | Conformance | Critical | `NFR-10` | New |
 | `TC-CONTRACT-003` | One evaluation read per cycle, and zero extra reads or writes for the read-only verbs | Integration | Behaviour | Critical | `NFR-11` | New |
 | `TC-CONTRACT-004` | Zero configuration keys are added and the six delivered keys are consumed with their shipped defaults | Structure | Checks | Critical | `NFR-7` | New |
@@ -289,7 +291,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 ### 5.2 Scenario Details
 
-#### TC-VERB-001 - Every verb × declared flag combination performs its effect and returns its payload
+#### TC-VERB-001 - Every verb × declared flag combination performs its effect and returns its payload, and a clean end is the cycle driver's declared end rather than a failure
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -300,25 +302,28 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-grammar.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-verb` — the real `loop` command definition through `runCli`
-**Fixture mechanism**: `createLoopHarness` (new, over `createTestEdge`) with a seeded stopped state and a seeded running state.
+**Fixture mechanism**: `createLoopHarness` (new, over `createTestEdge`) with a seeded stopped state and a seeded running state; the harness exposes its cycle driver so the declared end can be delivered as data.
 
 **Preconditions**:
 - Two harnesses over separate temp state roots: one with no records (stopped) and one with a seeded live lease plus an `active` session record (running).
 - The config resolution is the delivered one with the shipped defaults.
+- The cycle driver is armed to report its **declared end** (the fifth declared end cause of `F-1`/`API-1`), not a failure, not a signal, and not a budget exhaustion.
 
 **Steps**:
 1. Run each green row: `loop start --foreground`, `loop start --foreground --fresh-budget`, `loop stop`, `loop stop --mode drain`, `loop stop --mode immediate`, `loop status`, `loop log`, `loop log --lines 1`, `loop log --lines 100`, `loop reset`.
 2. Record the exit, the `error` pair when present, the machine `data`, and the record-count delta per verb.
 3. Assert each row's declared effect and payload shape.
+4. Assert the `start --foreground` row's end is the driver's declared end: `state=stopped`, exit 0, no error field, `fence.action=released`, and exactly one `event=release` log line.
 
 **Expected Outcome**:
-- `start --foreground` on the stopped harness acquires the lease, records one `acquired` record, establishes a session, and ends with `state=stopped` after its cycle budget; `start --foreground --fresh-budget` records an epoch-open; both exit 0.
+- `start --foreground` on the stopped harness acquires the lease, records one `acquired` record, establishes a session, and ends on the **declared clean-end cause** — the composition's cycle driver reporting its declared end (`F-1`, `API-1`) — with `state=stopped` and exit 0. There is no "cycle budget" concept: the end cause is contract, not a test artifact; `start --foreground --fresh-budget` records an epoch-open; both exit 0.
+- The clean end is never reported as a failure: no `error` field, no `fallback.*` identity, and no `event=error` log line.
 - `stop` (either mode) appends one `loop.stop` with `action=requested` and the mode; `reset` appends one `cleared` only when folded.
 - `status` returns `delivery.loop.v1`; `log` returns `delivery.loop.log.v1`; neither appends a record (asserted again by `TC-VERB-004`).
 - Every row's exit is the delivered projection of its identity (0 for success and the folded-stop success; see `TC-VERB-005`).
 - No `fallback.internal` appears in any envelope.
 
-#### TC-VERB-002 - Every malformed form is a grammar refusal at exit 1 with zero records
+#### TC-VERB-002 - Every malformed form — including a missing required `--foreground` — is a grammar refusal at exit 1 with zero records, while the global flags are accepted
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -332,19 +337,23 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Fixture mechanism**: `createLoopHarness` plus a counting store facade so a refused invocation's append count is observable.
 
 **Preconditions**:
-- A refused-invocation table: a missing subcommand; an unknown subcommand (`loop pause`, `loop resume`, `loop attach`, `loop install`, `loop logs --follow`); `--foreground` on `status`/`stop`/`log`/`reset`; `--fresh-budget` on a non-`start` verb; `--live` on any verb; `--lines` on a non-`log` verb; an unknown option; `--lines 0`, `--lines 101`, `--lines 1.5`, `--lines abc`, `--lines -1`; `--mode park`; `--max-iterations 3`.
-- `NG-8`'s operator-surface limit is the expected-refusal source: none of these names is a declared verb or flag.
+- A refused-invocation table: a missing subcommand; an unknown subcommand (`loop pause`, `loop resume`, `loop attach`, `loop install`, `loop logs --follow`); **`loop start` with no `--foreground`**; **`loop start --fresh-budget` with no `--foreground`**; `--foreground` on `status`/`stop`/`log`/`reset`; `--fresh-budget` on a non-`start` verb; `--live` on any verb; `--lines` on a non-`log` verb; an unknown option; `--lines 0`, `--lines 101`, `--lines 1.5`, `--lines abc`, `--lines -1`; `--mode park`; `--max-iterations 3`.
+- A global-flag acceptance table: `--json`, `--verbose`, `--pretty`, and each combination thereof on every verb.
+- `NG-8`'s operator-surface limit is the expected-refusal source: none of the refused names is a declared verb or flag, and `--foreground` is declared required on `start` (`F-1`).
 
 **Steps**:
-1. Run each row on both the stopped and the running harness.
+1. Run each refusal row on both the stopped and the running harness.
 2. Assert exit, the error pair, the summary text, and the record delta.
+3. Run each global-flag row on every verb; assert it is **not** a refusal.
 
 **Expected Outcome**:
-- Every row: exit 1 (`fallback.invocation`, `user-validation` computed through the table), summary contains `result=refused; reason=grammar`, and record delta 0 (`loop.session`, `loop.stop`, and `coordinator.fence` arrays unchanged byte-for-byte).
+- Every refusal row: exit 1 (`fallback.invocation`, `user-validation` computed through the table), summary contains `result=refused; reason=grammar`, and record delta 0 (`loop.session`, `loop.stop`, and `coordinator.fence` arrays unchanged byte-for-byte).
+- The two required-flag rows (`loop start`, `loop start --fresh-budget`) are refusals of exactly that shape: an implementation that **defaults** `--foreground` would make them succeed and fails here by name (register `M104`).
+- Global-flag rows: `--json`, `--verbose`, `--pretty` are accepted on every verb — exit is the verb's own success exit, the record delta is the verb's declared delta, and no row produces `fallback.invocation`. With `--json` the machine payload is selected; without it the human block is rendered.
 - No session is spawned and no terminate is invoked on any refusal row (session-port call counts unchanged).
 - No crash: the envelope is returned and the store remains readable for a subsequent successful invocation.
 
-#### TC-VERB-003 - The status block is the six shell keys, then `stop_mode`, then the additive tail, with bare `key=` for every absent value and no `none` token
+#### TC-VERB-003 - The status block follows the status-key source table: six shell keys, then `stop_mode`, then the additive tail, `loop_id=loop-main` always present, live-only `ceo_pid`/`ceo_session`, bare `key=` elsewhere, no `none` placeholder
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -358,28 +367,32 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Fixture mechanism**: three seeded worlds (running with no folded stop, stopped with a folded `requested` stop, and a world where every optional identifier is genuinely absent) plus three golden text/JSON pairs.
 
 **Preconditions**:
-- World A (running): live lease under `loop-main`, an `active` session record with a pid and title, one restart record, no folded stop.
-- World B (stopped, stop folded): no lease, an `ended` session record with a pid, one folded `requested` stop with `mode=immediate`, one persisted verdict.
-- World C (absent): no lease, no session record, no stop record, no restart record, no verdict — every optional identifier is absent, so every placeholder key must render bare.
+- World A (running): live lease under `loop-main` with a recorded holder pid, an `active` live session record with a pid and title, one restart record under `epoch-2`, no folded stop.
+- World B (stopped, stop folded): no live lease, an **`ended`** session record with a recorded pid and session id, one folded `requested` stop with `mode=immediate`, one persisted verdict.
+- World C (absent): no lease, no session record, no stop record, no restart record, no verdict, no persisted epoch — every genuinely optional value is absent, while `loop_id` (the constant) and `restarts` (with the composition-supplied bound) are still present.
 - Golden files: `status-running.txt`, `status-stopped.txt`, `status-absent.txt` and their `.json` counterparts (committed, reviewed, regenerated by an explicit command — never by blanket rewrite).
 
 **Steps**:
 1. Run `loop status` (human) and `loop status --json` for all three worlds.
 2. Assert each human block line-by-line against its golden; assert the key order and the value vocabulary of every key; scan the raw output for ANSI escape bytes (`0x1b`).
-3. Assert that no line contains the `none` token: scan with a word-boundary match (`/(?:^|[\s=])none(?:$|[\s])/u`) and assert zero matches in all three blocks, so a placeholder can never be reintroduced.
-4. Assert the machine payload against each golden JSON and inside the 65 536-byte bound.
-5. Assert the line count is ≤ 32 and the key sequence is exactly the six shell keys followed by `stop_mode` and the seven remaining additive keys.
-6. Assert the three booleans are exactly `loop_running`, `ceo_alive`, `stop_signal` (no other key renders `yes`/`no`), and that `stop_mode` is `immediate` in world B and empty in worlds A and C.
-7. Fold a fourth variation (`mode=drain`) on world A and assert `stop_mode=drain` inline (no golden), so both declared mode values are observed rather than inferred.
+3. Assert the **status-key source table** row by row (`API-4`/`API-7`): for each key, assert the value its declared source predicts, and assert that a key whose declared source says "never empty" is non-empty in every world.
+4. Assert that no line contains the `none` token: scan with a word-boundary match that does **not** match a value containing `none` inside a longer token (`/(?:^|[\s=])none(?:$|[\s])/u`) and assert zero matches in all three human blocks. The scan is scoped to the human block only: `none` remains a legal corroborator **enum value** in `F-5`/`DM-6` verdict evidence, so the machine payload and the records are scanned only for the *status placeholder* shape (`key=none`), never for the bare word.
+5. Assert the machine payload against each golden JSON and inside the 65 536-byte bound.
+6. Assert the line count is ≤ 32 and the key sequence is exactly the six shell keys followed by `stop_mode` and the seven remaining additive keys.
+7. Assert the three booleans are exactly `loop_running`, `ceo_alive`, `stop_signal` (no other key renders `yes`/`no`), and that `stop_mode` is `immediate` in world B and empty in worlds A and C.
+8. Fold a fourth variation (`mode=drain`) on world A and assert `stop_mode=drain` inline (no golden), so both declared mode values are observed rather than inferred.
 
 **Expected Outcome**:
 - Human key order, exactly: `loop_running`, `loop_pid`, `ceo_alive`, `ceo_pid`, `ceo_session`, `stop_signal`, `stop_mode`, `loop_id`, `ceo_title`, `restarts`, `budget_epoch`, `last_restart_reason`, `last_verdict`, `degraded` (14 keys; eight in the additive tail).
-- Exactly three keys are boolean and render `yes`/`no`: `loop_running`, `ceo_alive`, and `stop_signal` — with `stop_signal=yes` in world B (a stop is folded) and `no` in worlds A and C.
+- Exactly three keys are boolean and render `yes`/`no`: `loop_running`, `ceo_alive`, and `stop_signal` — with `stop_signal=yes` in world B (a stop is folded) and `no` in worlds A and C; `loop_running` is `yes` in A and `no` in B and C; `ceo_alive` is `yes` in A and `no` in B and C.
 - `stop_mode` renders `immediate` in world B (the folded mode) and is **empty** in worlds A and C; the fourth variation asserts `drain` for a folded `drain`; it never renders `yes`/`no`.
-- `restarts` renders `<n>/<bound>` (e.g. `1/10` in world A, `0/10` in world C).
-- Every absent value renders as the **empty string after `=`** — asserted line-by-line in world C as `loop_pid=`, `ceo_pid=`, `ceo_session=`, `loop_id=`, `ceo_title=`, `budget_epoch=`, `last_restart_reason=`, `last_verdict=`, `degraded=` — and **no `none` token appears anywhere** in any block (step 3).
+- **`loop_id=loop-main` in all three worlds** — it is the constant supervisor identity, never the lease instance id, always present, never empty. World C is therefore *not* a world where every identifier is bare: `loop_id` and `restarts` are present by source.
+- `restarts` renders `<n>/<bound>` from the current epoch's restart fold plus the composition-supplied bound: `1/10` in world A, `0/10` in world B and world C. It is never empty.
+- `ceo_pid` and `ceo_session` are **live-only** (shell parity): present in world A (`ceo_pid=<pid>`, `ceo_session=<sessionId>`), and **empty** in world B even though an `ended` session record with a pid exists, and empty in world C. A case that rendered the recorded-but-ended identity fails by name (register `M115`).
+- `loop_pid` follows the live lease holder: present in world A, empty in B and C.
+- The remaining optional values render as the **empty string after `=`**, asserted line-by-line in world C as `loop_pid=`, `ceo_pid=`, `ceo_session=`, `stop_mode=`, `ceo_title=`, `budget_epoch=`, `last_restart_reason=`, `last_verdict=`, `degraded=` — and **no `none` placeholder appears anywhere** in any block (step 4).
 - 0 ANSI escapes; ≤ 32 lines; machine `data` ≤ 65 536 bytes.
-- The `none` token remains valid only as the corroborator enum value in `F-5`/`DM-6` (where it appears inside verdict evidence, never as a status placeholder); this case asserts its absence from the human block and does not forbid it in a record.
+- The `none` token remains valid only as the corroborator enum value in `F-5`/`DM-6`; this case asserts its absence as a *status value* and does not forbid it in a record.
 
 #### TC-VERB-004 - `status` and `log` append nothing, create nothing, read no configuration in the handler, fall back to the shipped defaults, and effect no session
 
@@ -491,12 +504,12 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 2. Spawn fresh at a different fixed clock; assert the title changes only in the stamp.
 3. Assert the title matches `^ceo-loop-\d{8}-\d{6}$` and its length is ≤ 64.
 4. Drive a terminate for that session and read the target set the adapter computed.
-5. Drive a resume row and assert no title argument.
+5. Drive the **one resume path** — the pid-less re-find owned and asserted by `TC-INSTANCE-006` — and assert the resume invocation carries **no** title argument. This case asserts the no-title half of `AC-F2-2`; the call itself, its count, its target session id and its returned handle are asserted by `TC-INSTANCE-006`, which is the only case that drives a resume.
 
 **Expected Outcome**:
 - Exactly one `--title` on a fresh spawn; the value is `ceo-loop-<UTC yyyymmdd-hhmmss>`; length ≤ 64; deterministic for a fixed clock; the title contains no space.
 - The reap target set is exactly `{sessionId, title}` — no name pattern, no prefix match; the two unrelated pids receive no signal.
-- A resume carries no `--title` and the resume row is driven only by `TC-PARITY-005`'s non-resume assertion (the loop does not resume for context).
+- The resume invocation driven by `TC-INSTANCE-006` carries no `--title` (asserted on that call's recorded argv, not on a hypothetical one), and `TC-PARITY-005`'s "zero resumes" holds only for the restart path — the two are distinct paths and neither is vacuous.
 
 #### TC-SPAWN-003 - Each pre-session provider/config/harness refusal is its delivered identity with a released lease and no session record
 
@@ -717,7 +730,8 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - The lease is released (fold ends `released`).
 - The operational log contains exactly one `event=budget-exhausted` line.
 - Exit 1 with `coordinator.restart-budget-exhausted` (computed through the table, not as a literal).
-- The bounded summary names the durable history reference, `restarts=10/10`, and the loop's own remediation `loop start --foreground --fresh-budget`. The delivered error row's `coordinator`-shaped remediation stays unchanged (assert both, so neither is "fixed" by editing the row).
+- The bounded summary names the **history reference** in the declared shape `epoch-<n>;restarts=<count>;seq=<newest restart ledger sequence>` — asserted value for this run: `epoch-1;restarts=10;seq=<the ledger sequence of the tenth restart record>`. Each component is independently derivable from durable state (the epoch from the lease carrier, the count from the epoch's restart fold, the sequence from the newest restart record), so the assertion computes all three from the store rather than matching a fixed string; a history reference missing the `seq` component fails by name (register `M112`).
+- The same summary carries `restarts=10/10` and the loop's own remediation `loop start --foreground --fresh-budget`. The delivered error row's `coordinator`-shaped remediation stays unchanged (assert both, so neither is "fixed" by editing the row).
 
 #### TC-BACKOFF-005 - `--fresh-budget` opens the next epoch, and the epoch is durable
 
@@ -988,7 +1002,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - B exits 0 with `state=stopped`, appends 0 lease records, spawns 0 sessions, and appends 0 session records.
 - The stop record's `recordedAt` and `stopId` are the ones A wrote (byte-identical), proving the honouring did not depend on A's process, pid, or holder.
 
-#### TC-STUCK-001 - All four stuck conditions produce one verdict record, one termination, one outcome, and a restart
+#### TC-STUCK-001 - All four stuck conditions produce one verdict record with the loop-scoped identity, one termination, one outcome, and a restart
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -999,18 +1013,21 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-verdict` + `S-terminate` — the real predicate over injected facts, the delivered kill
-**Fixture mechanism**: `createLoopHarness` with a live session, a zero-progress source, no artifact advance, a readable corroborator reporting none, and the process-tree model.
+**Fixture mechanism**: `createLoopHarness` with a live session, a zero-progress source, no artifact advance, a corroborator whose F-3 fold reads `none`, and the process-tree model.
 
 **Preconditions**:
-- Live session with a recorded pid + matching start time; sourced progress `zero` observed at acquisition; the virtual clock advanced past 600 000 ms; no merge/answer artifact since that observation; a verified-empty lane store.
-- Epoch at count 0 of bound 10.
+- Live session with a recorded pid (and a matching platform start time on the **session record** — the re-find identity of `F-6`, not a lane-owner fact); sourced progress `zero` observed at acquisition; the virtual clock advanced past 600 000 ms; no merge/answer artifact since that observation; a readable store whose only lane candidates are dead or terminal so the corroborator folds to `none`.
+- Epoch at count 0 of bound 10; the cycle that reaches the verdict is **cycle ordinal 3**.
 
 **Steps**:
-1. Run one cycle.
+1. Run cycles until the verdict is reached (the third cycle).
 2. Read the verdict/outcome pair, the restart record, the signal log, and the record counts.
+3. Assert the delivered record's required fields.
 
 **Expected Outcome**:
 - Verdict `stuck`; exactly one `coordinator.stuck` record with `phase=verdict` and the bounded corpus, then exactly one with `phase=outcome` and `killOutcome=terminated`; same `stuckId`.
+- The delivered payload's required fields are populated as `DM-6` declares: `stuckId` **and** `iterationId` both equal `loop-main:3` (`<loopId>:<cycle ordinal>`, the ordinal of the cycle that reached the verdict), `coordinatorId` = the loop identity, `verdict` = `stuck`, `reason` = the delivered token, and `killFailureReason` = `null` (a confirmed kill is not a failure). A synthetic, empty, or foreign `iterationId` fails by name (register `M110`).
+- No `coordinator.iteration` record is written and no third record kind is created — the loop-scoped string satisfies the delivered required field without a loop-owned iteration record.
 - Exactly one terminate, TERM first, and the session's own tree only.
 - Because that termination is **confirmed** (`killOutcome=terminated`), and only then, exactly one `coordinator.restart` with ordinal 1 and the delivered reason lands, followed by exactly one new session.
 - No kill while a session is not live (assert the case fails if the live-session condition is removed).
@@ -1051,19 +1068,23 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts`
 **Tags**: @backend, @loop, @offline
 **Seam**: `S-verdict` + `S-corroborator` — the veto over the real lane records
-**Fixture mechanism**: `seedDispatchLane` / `seedDaemonLane` from the GH-347 fixtures, a zero-reading progress source, and a 1 200 000 ms virtual window.
+**Fixture mechanism**: `seedDispatchLane` / `seedDaemonLane` from the GH-347 fixtures seeded with a **composition-shaped `startedAt`**, a zero-reading progress source, and a 1 200 000 ms virtual window.
 
 **Preconditions**:
-- Live session; sourced progress `zero` for 1 200 000 ms (twenty minutes) of virtual time; no artifact advance; the newest `dispatch.lane` record for `GH-348` is `active` with a live owner whose start time matches; a process start-time source that is readable.
+- Live session; sourced progress `zero` for 1 200 000 ms (twenty minutes) of virtual time; no artifact advance.
+- The newest `dispatch.lane` record for `GH-348` is `active` with a **present** owner `processId` that the process-port probe answers `alive`; its recorded `startedAt` is the composition instant (`2026-11-19T12:00:00.000Z`), **deliberately unlike** any platform process start time the probe could return (the probe answers liveness only, never a start time, and the corroborator must not read `startedAt` at all).
 
 **Steps**:
 1. Run 40 cycles of 30 000 ms virtual each.
 2. Assert the verdicts, the record counts, and the terminate counts.
+3. Assert, with a start-time probe armed to **fail if called**, that no platform start-time read is made by the corroborator on any cycle (the probe call count is 0) — the pid-only rule of `AC-F5-7`.
 
 **Expected Outcome**:
 - Every cycle is `progressing`; 0 verdict records; 0 terminates; 0 restarts; the session is never signalled.
+- The reading is `in-progress` **because** the owner pid is alive, with no start-time or age comparison anywhere: a rule that compared `startedAt` with a platform start time would fold to `none` here and then kill the CEO, and this case fails by name if it does (registers `M45`, `M106`).
 - A second row with a `daemon.lane` in `delivering` and a live recorded process yields the same verdict.
-- The assertion fails by name if the corroborator is dropped from the predicate (register `M45`), which is the `RSK-2` control.
+- The start-time probe call count is 0; the `S-corroborator` consumes no `startedAt` (shared with `TC-STUCK-009`).
+- The assertion fails by name if the corroborator is dropped from the predicate (`M45`), which is the `RSK-2` control; this is the **live-shape** observation that keeps the rule from being fixture-shaped.
 
 #### TC-STUCK-004 - An unreadable progress reading is `unevaluable`: one record, no kill, continued cycling
 
@@ -1079,16 +1100,18 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Fixture mechanism**: a progress-source double returning no reading; the process-tree model.
 
 **Preconditions**:
-- Live session; no sourced progress source (the totals reader is absent for the harness kind); a readable corroborator reporting none; the window elapsed.
+- Live session; no sourced progress source (the totals reader is absent for the harness kind); a readable store whose lane candidates fold to `none`; the window elapsed.
 
 **Steps**:
 1. Run three cycles.
 2. Assert the verdicts, the record count, the terminate count, and the cycling.
+3. Run `loop status --json` and assert the bounded degradation list.
 
 **Expected Outcome**:
 - Verdict `unevaluable`; exactly one verdict record per expectation with reason `evidence-unevaluable` and `killOutcome=not-attempted`; 0 terminates; 0 restarts.
 - The loop continues to the next cycle (cycle count advances by 3).
 - `unknown` is never rendered as `zero` anywhere in the record or the status projection.
+- `degraded` contains **`progress-unreadable`** and does **not** contain `delivery-corroborator-unreadable` (the corroborator here is readable) — the fifth and last closed degradation value gets its owning assertion, so all five are observed (register `M105`).
 
 #### TC-STUCK-005 - An unreadable corroborator is `unevaluable` and never `stuck`
 
@@ -1115,7 +1138,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - The degradation list carries `delivery-corroborator-unreadable` on `loop status`; no `stuck` verdict is ever produced by an unreadable read (assert across all cycles).
 - The case fails by name if an unreadable read is coerced to `none` (register `M46`).
 
-#### TC-STUCK-006 - Detection-to-next-session is within 652 000 ms of virtual time on the confirmed path, and an unconfirmed termination has no next session
+#### TC-STUCK-006 - Detection-to-next-session holds the bound *formula* at two interval settings and the shipped-default 652 000 ms on the confirmed path; an unconfirmed termination has no next session
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -1123,22 +1146,27 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Related IDs**: F-5, AC-F5-5, DM-5, NFR-5
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts`
+**Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts` + `tests/structure/loop-imports.test.ts`
 **Tags**: @backend, @loop, @offline
-**Seam**: `S-verdict` + `S-backoff` + `S-terminate` — the composed bound and the unconfirmed branch
-**Fixture mechanism**: the recording clock plus the recording delay; a session whose last sourced progress is stamped at a known virtual instant; a process-tree model armed to fail or mismatch on the unconfirmed rows.
+**Seam**: `S-verdict` + `S-backoff` + `S-terminate` — the composed bound formula and the unconfirmed branch
+**Fixture mechanism**: the recording clock plus the recording delay; two resolved-settings sets (the shipped defaults and a raised interval); a session whose last sourced progress is stamped at a known virtual instant; a process-tree model armed to fail or mismatch on the unconfirmed rows.
 
 **Preconditions**:
-- The declared window 600 000 ms, the collection interval 30 000 ms, the kill grace 20 000 ms, and the first backoff step 2 000 ms.
-- Row A: a **confirmed** termination. Row B: an identity mismatch. Row C: a failed signal (TERM refuses).
+- The formula is `stuck-window + collection-interval + kill-grace + first backoff`.
+- Setting 1 (shipped defaults): 600 000 + 30 000 + 20 000 + 2 000 = **652 000 ms**. Setting 2 (raised interval): 600 000 + 60 000 + 20 000 + 2 000 = **682 000 ms**, i.e. exactly +30 000 ms.
+- Row A: a **confirmed** termination at setting 1. Row A′: a **confirmed** termination at setting 2. Row B: an identity mismatch. Row C: a failed signal (TERM refuses).
 
 **Steps**:
 1. Row A: run the cycle to the second session's acquisition; compute the virtual elapsed time from the last sourced-progress instant to that acquisition; assert the bound and its four components.
-2. Rows B and C: run the cycle; assert there is no next session to measure and that the loop ended at the terminal exit.
+2. Row A′: repeat at the raised interval; assert the bound is raised by exactly the interval delta and not by anything else.
+3. Rows B and C: run the cycle; assert there is no next session to measure and that the loop ended at the terminal exit.
+4. Source-level: scan the loop's supervision/bound module for a `652` (or `652000`) numeric literal and for a bound assembled from anything other than the four named settings; assert zero occurrences.
 
 **Expected Outcome**:
 - Row A: elapsed ≤ 652 000 ms and equal to `600 000 + 30 000 + 20 000 + 2 000` for the worst-case row (poll granularity at the last instant of the interval).
-- Row A: 0 real wall-clock time spent; every wait in the computation is a recorded entry; a coarser poll granularity does not exceed the bound (the interval is a composed setting, so the bound is recomputed from the delivered keys, not hardcoded).
+- Row A′: elapsed ≤ 682 000 ms and equal to `600 000 + 60 000 + 20 000 + 2 000`; the delta over row A is exactly the interval delta. A hardcoded 652 000 literal fails row A′ by name (register `M109`).
+- 0 real wall-clock time spent; every wait in the computation is a recorded entry.
+- The source scan finds no `652`/`652000` literal and no bound arithmetic over a constant; the implementation holds the **formula**, not the literal (`R-09`).
 - Rows B and C: **no next session** — 0 spawns and 0 new session records after the verdict; the elapsed-time bound therefore does not apply, and the case asserts the terminal exit instead (the full consequence is asserted by `TC-STUCK-008`).
 - The bound is stated as a bound on the confirmed path only; a case that measured a restart after an unconfirmed termination would contradict `R3` and `AC-F3-1`.
 
@@ -1198,10 +1226,11 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Expected Outcome**:
 - Row A: only the id-match and title-exact pids and this session's tree receive signals; the near-miss title and the unrelated pids receive **0** signals; no name or prefix matching exists.
 - Rows B and D are **terminal** (ruling `R3`, `F-5`, `AC-F5-6`, `API-1`): 0 signals on the mismatch (row B) and no further signal after the refused TERM (row D); the outcome is the failed/unconfirmed outcome; **exactly one** `coordinator.stuck` outcome record lands; the lease fold ends **`released`**; the invocation exits **2** with `coordinator.session.kill-failed` (computed through the table, never as a literal); **0** `coordinator.restart` records are appended; **0** spawns occur; **0** new `loop.session` records appear; and the session count never exceeds one.
+- The outcome record's required fields are populated as `DM-6` declares: `stuckId` = `iterationId` = the loop-scoped `<loopId>:<cycle ordinal>` (the same identity the verdict record carried), and `killFailureReason` is populated **only** here — `identity-mismatch` on row B and the delivered failed-signal reason on row D — while every confirmed-kill case asserts `null` (`TC-STUCK-001`). A loop that leaves `killFailureReason` null on a failed kill, or sets it on a confirmed one, fails by name (register `M110`).
 - Row C: the second call is a success with 0 additional signals.
 - The case asserts the restart-record delta explicitly as **zero**, so a future edit that resumes F-3 after an unconfirmed kill fails here by name (register `M96`).
 
-#### TC-STUCK-009 - The corroborator reads delivered lane records from the single read and writes nothing
+#### TC-STUCK-009 - The corroborator reads delivered lane records from the single read, consumes no start-time fact, and writes nothing
 
 **Scenario Type**: Structure
 **Impact Level**: Critical
@@ -1221,15 +1250,17 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Steps**:
 1. Assert no lane appender, no process runner, and no shell-probe symbol is imported by the corroborator or the supervisor.
 2. Assert no `.ai/local` path literal appears anywhere in the declared loop surface, and `delivering` appears only as a lane state value, never as a file name.
-3. Assert the `dispatch.lane` and `daemon.lane` record counts are unchanged (byte-equal) before and after the battery.
-4. Assert the corroborator consumed the same snapshot as the cycle (one evaluation read — shared with `TC-CONTRACT-003`).
+3. Assert the corroborator path reads **no** `startedAt`, no process start time, and no age fact: a source scan of the corroborator module finds zero `startedAt`, `startTimeMs`, `processStartTime`, `Date.parse(...startedAt)`, and age-difference reads, and an armed start-time probe records 0 calls (`R-01`, `AC-F5-7`).
+4. Assert the `dispatch.lane` and `daemon.lane` record counts are unchanged (byte-equal) before and after the battery.
+5. Assert the corroborator consumed the same snapshot as the cycle (one evaluation read — shared with `TC-CONTRACT-003`).
 
 **Expected Outcome**:
 - Zero writer imports (`appendDispatchLane`, `appendDaemonLane`, `recordDaemonDispatchResult`), zero `child_process`, zero script literal, zero `--is-delivering` reference.
+- Zero start-time or age reads on the corroborator path — the owner-liveness rule consumes the recorded `processId` and the process-port liveness answer only. A start-time comparison fails here by name (register `M106`).
 - Lane record counts identical before/after; no lane record created by the loop.
 - The corroborator's input comes from the one snapshot the cycle already read.
 
-#### TC-STUCK-010 - The corroborator decision table
+#### TC-STUCK-010 - The corroborator is the total 16-row decision: evidence classes D1–D6 and M1–M6, the F0–F3 fold, plus the pid-reuse residual risk
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -1237,22 +1268,53 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Related IDs**: F-5, AC-F5-3, AC-F5-7, DM-6
 **Test Type(s)**: Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts`
+**Target Layer / Location**: `tests/behaviour/loop-stuck.test.ts` + `tests/fixtures/loop/facts.ts`
 **Tags**: @backend, @loop, @offline
-**Seam**: `S-corroborator` — the pure decision over injected lane facts
-**Fixture mechanism**: the fact table from `tests/fixtures/loop/facts.ts`, composing `seedDispatchLane`/`seedDaemonLane` rows.
+**Seam**: `S-corroborator` — the pure decision over injected lane facts and an injected liveness answer
+**Fixture mechanism**: the fact table from `tests/fixtures/loop/facts.ts`, composing `seedDispatchLane`/`seedDaemonLane` rows and a scripted liveness answer (`alive` / `dead` / `unreadable`) per pid; **no** start-time source is offered to the corroborator at all.
 
 **Preconditions**:
-- Table rows: (a) newest `dispatch.lane` `active` + live owner with a matching start time → `in-progress`; (b) `active` + owner not alive → `none`; (c) `active` + owner alive but start time mismatched → `none` (an unverified owner is not a delivery); (d) newest `daemon.lane` `delivering` + live process → `in-progress`; (e) `delivering` + no live process → `none`; (f) verified-empty store → `none`; (g) unreadable store → `unknown`; (h) two refs, one active and one terminal, newest wins per ref → `in-progress`; (i) two `dispatch.lane` records for one ref, the newest terminal → `none`; (j) a start-time source that is unreadable → `unknown`.
+- The sixteen rows below are spec `F-5`'s tables verbatim: twelve evidence classes (D1–D6, M1–M6) and four fold rules (F0–F3), each evaluated as one case.
+- Evidence rows are evaluated with a readable store and the other candidate lane(s) absent; fold rows are evaluated on the aggregate of their evidence classes.
 
 **Steps**:
-1. Evaluate the corroborator for every row.
-2. Assert the reading and the recorded source.
+1. Evaluate the corroborator for each evidence row with only that candidate present; record its contribution.
+2. Evaluate the four fold rows over the specified aggregates.
+3. Assert the live-shape observation and the pid-reuse observation as separate labelled assertions (not table rows).
 
-**Expected Outcome**:
-- The ten rows yield exactly the declared readings, in order.
-- `unknown` appears only for an unreadable store or an unreadable start-time source, never for "no record".
-- The newest record per ref is the one that decides; a stale `active` never wins over a newer terminal record.
+**Expected Outcome** — **evidence classes (12)**:
+
+| # | Candidate | Reading |
+|---|---|---|
+| D1 | no `dispatch.lane` for the ref | ignored |
+| D2 | newest `dispatch.lane` `terminal` (any owner pid) | ignored |
+| D3 | `active` + **absent** owner `processId` | `unknown` |
+| D4 | `active` + **present** owner pid **alive** | `in-progress` |
+| D5 | `active` + **present** owner pid **dead** | ignored |
+| D6 | `active` + **present** owner pid **unreadable** (undeclared or failing probe) | `unknown` |
+| M1 | no `daemon.lane` | ignored |
+| M2 | newest `daemon.lane` state ≠ `delivering` | ignored |
+| M3 | `delivering` + **absent** `processId` | `unknown` |
+| M4 | `delivering` + **present** pid **alive** | `in-progress` |
+| M5 | `delivering` + **present** pid **dead** | ignored |
+| M6 | `delivering` + **present** pid **unreadable** | `unknown` |
+
+**Expected Outcome** — **fold (4)**:
+
+| # | Condition | Reading |
+|---|---|---|
+| F0 | the state read is unreadable | `unknown` |
+| F1 | any candidate contributes `in-progress` (even beside an `unknown`) | `in-progress` |
+| F2 | else any candidate contributes `unknown` | `unknown` |
+| F3 | else: readable store, every candidate ignored because absent, terminal, or provably dead | `none` |
+
+- All 16 rows yield exactly the declared readings. `none` is reachable **only** through F3; an implementation that returns `none` for an unreadable store (F0) or for an absent daemon pid (M3) fails by name (registers `M107`, `M108`).
+- **No row consumes `startedAt`, an age bound, or a start-time comparison.** The v1.0 rows that tested a "matching start time" are removed with the rule; a reintroduced start-time row fails `TC-STUCK-009`'s source scan and register `M106`.
+- `in-progress` dominates `unknown` (F1 before F2) — the deliberate asymmetry: a false `in-progress` delays a kill, a false `none` kills a healthy session.
+- **Newest-wins is folded into the rows rather than added as a seventeenth**: D2 and M2 are evaluated with a newer terminal/non-delivering record beside an older `active`/`delivering` one, so the newest record decides and a stale one never wins.
+- **Live-shape observation (beyond the table):** a `dispatch.lane` whose owner `startedAt` is a composition instant deliberately unlike any platform reading still folds to `in-progress` on D4, because only the pid and its liveness are consumed (this is the same fact `TC-STUCK-003` asserts across forty cycles).
+- **Pid-reuse residual-risk observation (beyond the table):** an `active` lane whose recorded pid has been reused by an unrelated live process folds to `in-progress` and the loop declines to kill. The case asserts that this is the observed, intended behaviour — a delayed kill, never a kill — and that no age or start-time test is added to "tighten" it.
+- The reading set is closed: no row yields a value outside `in-progress` / `none` / `unknown`.
 
 #### TC-STUCK-011 - A just-started supervisor seeds the progress observation at acquisition, so a restart can only delay a verdict
 
@@ -1380,7 +1442,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 **Steps**:
 1. Row A: run `loop start --foreground`; assert admission and the reads.
-2. Row B: run `coordinator start --foreground`; assert admission and the reads.
+2. Row B: run `coordinator start --foreground` on the same harness (D2 registers both families, so the case executes on its declared harness — DoR R-08); assert admission and the reads.
 3. For each, assert the record sets each surface reads.
 
 **Expected Outcome**:
@@ -1417,33 +1479,36 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - Across the unconfirmed-termination segment: the invariant is preserved because no restart is applied at all — 0 restart records, 0 spawns, the original (possibly live) session still the only one recorded, and the lease released.
 - The invariant is asserted at every step, not only at the end.
 
-#### TC-INSTANCE-006 - A pid-less `active` session degrades conservatively: resumed, never killed, never duplicated
+#### TC-INSTANCE-006 - A pid-less `active` session is resumed exactly once with no title and the same session id returned, never killed and never duplicated
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-5, DM-1, DM-3, API-4
+**Related IDs**: F-6, AC-F6-5, AC-F2-2, DM-1, DM-3, API-4
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/loop-instance.test.ts`
 **Tags**: @backend, @loop, @offline
-**Seam**: `S-refind` + `S-verdict` — the unknown-liveness branch
-**Fixture mechanism**: a harness kind whose adapter supplies no pid (the `claude-code` capability shape); a zero-progress source; a readable corroborator reporting none; the window elapsed.
+**Seam**: `S-refind` + `S-verdict` — the unknown-liveness branch and the one resume path
+**Fixture mechanism**: a harness kind whose adapter supplies no pid (the `claude-code` capability shape); the recording session port from `tests/fixtures/loop/session.ts`, which records every `resume` call with its argv and returns a handle; a zero-progress source; a readable corroborator folding to `none`; the window elapsed.
 
 **Preconditions**:
-- A recorded `active` session with `pid: null` and `processStartTimeMs: null`.
+- A recorded `active` session with `pid: null` and `processStartTimeMs: null`, session id `ses-resumable-1`.
+- The session port's `resume` returns a handle carrying `sessionId: "ses-resumable-1"` (the delivered resume contract: the resumed session keeps its identity).
 - The progress source is `zero` for more than the window.
 
 **Steps**:
 1. Run three cycles.
-2. Assert the verdicts, the spawn count, the kill count, the session records, and the degradation list.
-3. Run `loop status --json`.
+2. Assert the verdicts, the spawn count, the kill count, the resume count, the session records, and the degradation list.
+3. Read the recorded `resume` invocation: count it, read its target session id, its argv, and the handle it returned.
+4. Run `loop status --json`.
 
 **Expected Outcome**:
 - Verdict: never `stuck` (unknown liveness is not a stuck condition); the window is never counted as progress either.
-- 0 spawns and 0 kills; the recorded session is treated as resumed/observed rather than duplicated.
-- `loop status` reports `ceo_pid` absent and `degraded` contains `session-pid-unknown` (plus `live-facts-unknown` where the kind supplies no liveness).
-- Exactly one `loop.session` record exists (no second `active` record).
+- **Exactly one `resume` call** in the whole run, targeting `ses-resumable-1`, with **no** `--title` in its argv (the title is a fresh-spawn-only fact, `AC-F2-2`), and the returned handle carries `sessionId: "ses-resumable-1"` — the same session, not a new one.
+- 0 spawns and 0 kills. There is no reading of this case under which an implementation that merely *observes* the session passes: the resume count is asserted `toBe(1)`, and the observation-only variant fails by name (register `M103`).
+- `loop status` reports `ceo_pid` empty (no live identity), `ceo_session` empty (live-only, `R-06`), and `degraded` contains `session-pid-unknown` (plus `live-facts-unknown` where the kind supplies no liveness).
+- Exactly one `loop.session` record exists and remains `active` — the resume does not append a second acquisition (no `ended`, no second `active`).
 
 #### TC-INSTANCE-007 - An undeclared alive capability is `coordinator.process.capability-gap` before any record
 
@@ -1802,7 +1867,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - All false-positive controls report nothing; the allowlist stays empty and its mechanism is still exercised.
 - Zero new invariant modules: the property is proven by adding files to the one declared list.
 
-#### TC-BATTLE-006 - The pick-deliver-merge cycle runs over the real runtime with zero shells and zero kills
+#### TC-BATTLE-006 - The pick-deliver-merge cycle runs the real `dispatch` deliver leg over the real runtime with zero shells and zero kills
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1813,30 +1878,34 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/conformance/loop/loop-pick-deliver-merge.test.ts` + `tests/fixtures/loop/parity/e2e.ts`
 **Tags**: @backend, @loop, @parity, @offline
 **Seam**: `S-spawn` + `S-verdict` + `S-verb` — the spawn, the cycle's observation, and the real command runtime the doubled session drives
+**Fixture mechanism**: `tests/fixtures/loop/parity/e2e.ts` (the pick-deliver-merge scenario builder) over the D2 composed program, the recording session port with a two-agent script, the guarded runner, and the recording delay.
 
 **Preconditions**:
 - **Doubled** (four things, all at declared injection points):
-  1. **Harness session** — a scripted session port whose `spawn` returns a handle and, while the session is "running", invokes the real command runtime for the three primitives: `queue claim` (pick), `phase complete` (deliver), `merge` (merge), each through `runCli` against the same composed program and the same store.
-  2. **Tracker and PR effects** — a deterministic transport fixture plus seeded merge/PR artifact fixtures, so the primitives land real records without a live tracker.
+  1. **Harness session** — one scripted session port whose `spawn` returns a handle and, while the CEO session is "running", invokes the real command runtime for the three primitives: **`queue claim` (pick)**, **`dispatch` (deliver)**, **`merge` (merge)**, each through `runCli` against the same composed program and the same store. The **nested PM session that `dispatch` spawns is doubled by the same scripted port**: the port dispatches on the caller agent identity (`ceo` vs `pm`) and on the title prefix (`ceo-loop-` vs `ticket-<REF>`), so the two sessions never collide and the nested dispatch runs to completion.
+  2. **Tracker and PR effects** — a deterministic transport fixture plus seeded merge/PR artifact fixtures, so the three primitives land real records without a live tracker.
   3. **Process runner** — the guarded runner (records, refuses shell, counts real starts).
-  4. **Clock and delay** — the recording cycle driver and the injected delay, so all waits are virtual and recorded.
-- **Real** (five things): the command runtime (`runCli`/`runEntrypoint`), the `loop` command definition and grammar, the loop supervision cycle, the durable state store (ledger + `loop.session`/`loop.stop`/`coordinator.fence`/`coordinator.restart`/`coordinator.stuck`), and the status/log projections.
+  4. **Clock and delay** — the recording cycle driver and the injected delay, so all waits are virtual and recorded — including the nested `dispatch`'s own tracker ladder and terminate grace.
+- **Real** (five things): the command runtime (`runCli`/`runEntrypoint`), the `loop` **and** `dispatch` command definitions and grammars, the loop supervision cycle, the durable state store (ledger + `loop.session`/`loop.stop`/`coordinator.fence`/`coordinator.restart`/`coordinator.stuck` + the dispatch lane and attempt records), and the status/log projections.
 - The progress source double yields a monotonic per-session token total that increases after each primitive runs, so the cycle observes sourced progress rather than a fabricated zero.
+- **`phase complete` is not the deliver primitive and is not invoked for the deliver leg.** It is a PM lifecycle transition; naming it as delivery would prove pick → lifecycle transition → merge instead of the ticket's pick → deliver → merge. The deliver primitive is `dispatch`, the delivered jaiship replacement for `scripts/deliver-ticket.sh`.
 
 **Steps**:
 1. Run `loop start --foreground` for two iterations.
-2. Assert the spawn: one fresh session, `--agent ceo`, one resolved `--model`, exactly one `ceo-loop-<stamp>` title, and the declared prompt (no script path, primitives named).
-3. Assert the doubled session's three primitive invocations, each with a real success envelope, in order.
-4. Assert the artifacts landed (a merge record and a phase completion record exist in the store) and that the cycle's artifact-advance read saw them.
-5. Assert the cycle's verdicts: 0 `stuck`, 0 verdict records, 0 terminates, 0 `coordinator.restart` records.
-6. Assert the session ends and the next iteration starts: one new `active` session record, no ordinal consumed, and the wait before it is the collection interval.
-7. Assert the guards: `shellInvocations === 0`, `scriptPathInvocations === 0`, `realChildStarts === 0`, `liveNetworkRequests === 0`.
+2. Assert the spawn: one fresh CEO session, `--agent ceo`, one resolved `--model`, exactly one `ceo-loop-<stamp>` title, and the declared prompt (no script path, and it names `queue`, `dispatch`, and `merge` as the primitives).
+3. Assert the doubled session's three primitive invocations, in order, each with a real success envelope: `queue claim`, then **`dispatch`**, then `merge`.
+4. Assert the nested `dispatch` envelope specifically: its result token and exit from the delivered projection, its attempt record and its terminal `dispatch.lane` record, and that its nested PM spawn carried `--agent pm` with a `ticket-<REF>` title (so the nested leg is the real dispatch path, not a stub).
+5. Assert the artifacts landed (the dispatch attempt/lane records, a merge record) and that the cycle's artifact-advance read saw them.
+6. Assert the cycle's verdicts: 0 `stuck`, 0 verdict records, 0 terminates, 0 `coordinator.restart` records.
+7. Assert the session ends on the declared clean-end cause and the next iteration starts: one new `active` session record, no ordinal consumed, and the wait before it is the collection interval.
+8. Assert the guards: `shellInvocations === 0`, `scriptPathInvocations === 0`, `realChildStarts === 0`, `liveNetworkRequests === 0`.
 
 **Expected Outcome**:
-- One spawn, then exactly three primitive invocations (pick, deliver, merge) through the real command runtime, then a clean session end, then one new session — with the loop healthy throughout.
-- Zero kills, zero restarts, zero stuck verdicts, zero shell entry points on the path, zero shell invocations recorded.
-- The whole run's elapsed time equals the sum of the recorded virtual waits; no real wait occurred.
-- **Boundary honesty**: this proves the typed flow never invokes the shell entry points; it does not prove a live tracker/CI/merge outcome or the CEO agent's live behaviour (`OQ`-free by design; see §1.2 and `TC-BATTLE-007`'s `real-pick-deliver-merge` not-proven id).
+- One CEO spawn, then exactly three primitive invocations — `queue claim` (pick), **`dispatch`** (deliver), `merge` (merge) — through the real command runtime, then a clean session end, then one new session, with the loop healthy throughout.
+- The deliver leg's envelope is the real `dispatch` result: a token and an exit from the delivered projection, one attempt record, and a terminal lane record; the nested PM session is a `pm`/`ticket-<REF>` spawn from the same port. An implementation that runs `phase complete` in place of `dispatch` fails by name (register `M102`).
+- Zero kills, zero restarts, zero stuck verdicts, zero shell entry points on the path, zero shell invocations recorded, zero real waits.
+- **Proof level (R-03):** the deliver leg is proven **at command-runtime level with a doubled nested PM session, and no further**. The nested PM session's live behaviour — a real agent's real delivery — stays outside the boundary under the existing `live-opencode` not-proven id, so the boundary constant remains nine proven / six not-proven with no seventh id; and this case does not claim a live tracker, CI, or merge outcome (`real-pick-deliver-merge`).
+- **Boundary honesty**: this proves the typed flow never invokes the shell entry points and never substitutes a lifecycle transition for a delivery primitive; it does not prove the CEO agent's live behaviour (see §1.2 and `TC-BATTLE-007`).
 
 #### TC-BATTLE-007 - The proof boundary is a permanent constant: nine proven, six not-proven, in order, no row off-boundary
 
@@ -1905,7 +1974,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 - A `loop` mounted without the production composition is impossible by construction: `selectPromptRequiredProgram` throws for a prompt-required name the program lacks, and a registered extra is dropped — so "prompt-required without composition" cannot ship (asserted as a structural fact over the entrypoint).
 - The delivered `install` family's own entries and pages are unchanged.
 
-#### TC-CONTRACT-001 - The closed contract surface is unchanged and exactly three additive facts exist
+#### TC-CONTRACT-001 - The closed contract surface is unchanged against an in-suite literal baseline, and exactly three additive facts exist
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1916,16 +1985,17 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Target Layer / Location**: `tests/checks/loop-contract-invariance.test.ts`
 **Tags**: @backend, @checks, @offline
 **Seam**: none executed; the declared contracts are compared against a pinned baseline
-**Fixture mechanism**: a baseline fixture captured in this change: the error table, the domain-kind set, the configuration key set with its defaults, the coordinator payload schemas and their versions, the harness capability vocabulary, and the delivered coordinator suite results.
+**Fixture mechanism**: a **committed literal baseline inside the suite itself** — `BASELINE` in `tests/checks/loop-contract-invariance.test.ts`, holding the error table (code, kind, projection class), the domain-kind set, the configuration key set with its six `coordinator.*` defaults, the coordinator payload schema ids and their version fields, and the harness capability vocabulary. **No fixture file is authored or declared**: this is a pure in-process comparison of imported data against a literal, so it starts no child process and makes no I/O beyond the imports (`NFR-1`).
 
 **Preconditions**:
-- The delivered baselines as read on `feat/GH-348/loop-supervision`.
+- The delivered baselines as read on `feat/GH-348/loop-supervision`, transcribed into the literal once and reviewed as data.
+- The delivered coordinator suites' green result is **not** captured here: running them would start real child processes and violate `NFR-1`. Their unmodified pass is a **gate-battery read** (§7.5, "Untouched delivered surfaces"), recorded in §10, not a case.
 
 **Steps**:
-1. Compare the live error table (codes, kinds, projection classes) against the baseline: assert 0 added, 0 removed, 0 changed.
+1. Compare the live error table (codes, kinds, projection classes) against the literal: assert 0 added, 0 removed, 0 changed.
 2. Compare the domain-kind set: 0 added.
 3. Compare the configuration key set and the six `coordinator.*` defaults: 0 added, values unchanged.
-4. Compare the coordinator record payload schemas and their version fields: 0 changed, 0 bumped.
+4. Compare the coordinator record payload schema ids and their version fields: 0 changed, 0 bumped.
 5. Compare the harness capability vocabulary: 0 added.
 6. Assert exactly **two** new record kinds exist (`loop.session`, `loop.stop`) and exactly **one** additive optional harness fact (`pid`), each reachable from the loop modules and not from the coordinator ones.
 7. Assert the loop imports no agent-file or script writer (no `writeFile` of a `.opencode/agent` path, no `scripts/` path), so `DOD-7`'s prompt half cannot regress silently.
@@ -1933,7 +2003,8 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 **Expected Outcome**:
 - 0 new error identities; 0 new domain kinds; 0 new configuration keys; 0 changed coordinator records/payloads/defaults/behaviour; 0 delivered schema-version bumps.
 - Exactly 2 new record kinds and exactly 1 additive optional harness fact, both asserted as data (not by counting a growing list).
-- The delivered coordinator suites (`bun test tests/behaviour/coordinator-* tests/structure/coordinator-*`) pass unmodified as part of the gate battery.
+- The suite spawns nothing and reads nothing outside its imports and the repository's own source; `realChildStarts === 0` for it in `TC-BATTLE-003`'s guard sweep.
+- The "delivered coordinator suites pass unmodified" observation belongs to the gate battery (§7.5) and to `DOD-6`, never to this case.
 
 #### TC-CONTRACT-002 - Record, log, and diagnostic hygiene holds across the whole battery
 
@@ -2201,7 +2272,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 **Expected Outcome**:
 - Exactly one fresh spawn with `--agent ceo`, one resolved `--model`, and one new `ceo-loop-<stamp>` title.
-- Zero resumes; the new session id differs; the new session record is `active` with its own acquisition.
+- Zero resumes **on this restart path**; the new session id differs; the new session record is `active` with its own acquisition. The loop's only resume path is the pid-less re-find, and it is asserted exactly once by `TC-INSTANCE-006` — the two assertions are about different paths and neither is vacuous.
 - No resume-mode field is claimed anywhere; `coordinator.resume-context-limit` is not read (a counting config read observes none on this path).
 - The divergence is asserted as intended: the typed surface has no total-context source, so a fresh start is the honest behaviour, and the deferred item's trigger is recorded in the spec (§7.3).
 
@@ -2375,7 +2446,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 | `tests/fixtures/loop/parity/cases.ts` | **The one case registry.** `LOOP_PARITY_CASES` enumerates every battery row as `{id, group, declaredSeam, scenario, expected}`, where `group` is one of the nine proven ids. Exports `loopParityCasesOf(group)` and `runAllLoopParityCases()`. No suite re-expresses a scenario. |
 | `tests/fixtures/loop/parity/evidence.ts` | The **permanent `LOOP_PARITY_PROOF_BOUNDARY`** (nine proven ids, six not-proven ids, declared order), the per-seam boundary-violation helper (mirroring `boundaryViolations`), and the canonicalizer re-export used by the two-run comparison. The only source of the boundary. |
 | `tests/fixtures/loop/parity/seams.ts` | The import-identity manifest (seam → symbol → production module → mounting composition) and the reimplementation-signature registry consumed by `TC-BATTLE-002`, plus the planted-control helper. |
-| `tests/fixtures/loop/parity/e2e.ts` | The pick-deliver-merge scenario builder: wires the scripted session that invokes `queue claim` / `phase complete` / `merge` through the real runtime, advances the token total after each, and exposes the observation (spawns, primitive envelopes, artifacts, verdicts, restarts, waits, guard counters). |
+| `tests/fixtures/loop/parity/e2e.ts` | The pick-deliver-merge scenario builder: wires the scripted session that invokes `queue claim` (pick), **`dispatch` (deliver)**, and `merge` (merge) through the real runtime; doubles `dispatch`'s nested PM session from the same port (agent identity + title prefix); advances the token total after each; and exposes the observation (spawns, the three primitive envelopes including the nested dispatch's, dispatch attempt/lane records, artifacts, verdicts, restarts, waits, guard counters). |
 | `tests/fixtures/loop/golden/status.ts` | The golden status blocks for the three seeded worlds — **running**, **stopped with a folded stop**, and **absent-identifier** (the world that proves a bare `key=` for every placeholder, with all keys present) — each with its human and `delivery.loop.v1` JSON pair; the golden `delivery.loop.log.v1` JSON; and the golden log-line corpus. Committed, reviewed, regenerated by an explicit command, never by blanket rewrite. |
 
 **Extensions to existing files (9; not new files, and no relaxation).**
@@ -2394,7 +2465,7 @@ No live layer participates: `tests/conformance/live/**` and the scheduled live w
 
 **Deliberately unchanged (asserted, not edited).** `tests/structure/provider-surface.test.ts` (the `scripts/ceo-loop.sh` byte pin — `DOD-7`'s shell half), every delivered `tests/behaviour/coordinator-*.test.ts` and `tests/structure/coordinator-*.test.ts` (`DOD-6`'s "coordinator suites pass unmodified"), `tests/checks/coordinator-sequence.test.ts` (the `ceo.md` J1 sequence stays green because no prompt is edited), and `tests/fixtures/coordinator/harness.ts` (the optional `pid` keeps every existing double valid).
 
-New test hosts (16): `tests/behaviour/loop-{grammar,status,spawn,backoff,stop,stuck,instance,log,read-cost}.test.ts`, `tests/structure/loop-{imports,production-composition,production-session}.test.ts`, `tests/checks/loop-{contract-invariance,mutants,privacy}.test.ts`, `tests/conformance/loop/{loop-parity-battery,loop-pick-deliver-merge}.test.ts`.
+New test hosts (**17**): `tests/behaviour/loop-{grammar,status,spawn,backoff,stop,stuck,instance,log,read-cost}.test.ts` (9), `tests/structure/loop-{imports,production-composition,production-session}.test.ts` (3), `tests/checks/loop-{contract-invariance,mutants,privacy}.test.ts` (3), `tests/conformance/loop/{loop-parity-battery,loop-pick-deliver-merge}.test.ts` (2).
 
 ### 6.2 Seams and mechanisms the fixtures must provide
 
@@ -2422,12 +2493,14 @@ New test hosts (16): `tests/behaviour/loop-{grammar,status,spawn,backoff,stop,st
 | `S-backoff` | the exported pure schedule + the inject delay + the delivered `evaluateCoordinatorRestartAdmission` | `TC-BACKOFF-001`…`-007`, `TC-PARITY-003`, `TC-PARITY-004` | the schedule data, the admission fold, the ordinal source |
 | `S-stop` | the `loop.stop` append/read fold and the mode decision | `TC-STOP-001`…`-007`, `TC-PARITY-007`, `TC-PARITY-010` | the fold, the identity scoping, the mode |
 | `S-verdict` | the loop's pure two-signal predicate | `TC-STUCK-001`, `-002`, `-011` | the predicate itself |
-| `S-corroborator` | the real lane read over the real store | `TC-STUCK-003`, `-005`, `-009`, `-010` | the read path and the decision |
+| `S-corroborator` | the real lane read over the real store plus the delivered process-port liveness probe; **no** start-time or age fact | `TC-STUCK-003`, `-005`, `-009`, `-010` | the read path, the D1–D6/M1–M6 evidence classes, the F0–F3 fold, the pid-only owner rule |
 | `S-terminate` | the delivered adapter `terminate` / `killCoordinatorProcess` over the process-tree model | `TC-STUCK-007`, `-008`, `TC-STOP-005` | the ordering, the grace, the identity selection, idempotence |
 | `S-lease` | `decideCoordinatorClaim` mounted at the loop composition's claim | `TC-INSTANCE-001`, `-004`, `-007`, `TC-PARITY-001` | the fence, the liveness-first fold, the real store |
 | `S-refind` | the delivered per-identity read plus the loop's session resolution | `TC-INSTANCE-002`, `-003`, `-005`, `-006` | the resolution, the read, the single-session invariant |
 | `S-log` | the real log renderer, the `log` read projection, and the injected sink | `TC-LOG-001`…`-007`, `TC-PARITY-006` | the renderer, the retention rule, the read bounds |
-| `S-exec` | the guarded injected runner (GH-347, reused) | `TC-BATTLE-004`, `TC-BATTLE-005`, `TC-STUCK-009` | the guard's refusals and counters |
+| `S-exec` | the guarded injected runner (GH-347, reused), covering the nested `dispatch` leg's child seams | `TC-BATTLE-004`, `TC-BATTLE-005`, `TC-BATTLE-006`, `TC-STUCK-009` | the guard's refusals and counters, including the nested PM spawn |
+
+**The deliver leg runs the real `dispatch` command (R-03).** `TC-BATTLE-006` invokes `dispatch` through `runCli` on the same composed program and store as the loop, and doubles the PM session that `dispatch` spawns from the same scripted session port (keyed by agent identity `ceo`/`pm` and by the title prefix `ceo-loop-`/`ticket-<REF>`). Nested execution is feasible with the delivered composition because the command runtime is a pure function over `(program, argv, streams, clock, ids)`, re-entry is at the command layer rather than inside a global, the two supervisors hold different lease keys (`loop-main` vs dispatch's queue lease), and every wait the nested leg performs (its tracker ladder and terminate grace) receives the same injected `delay` recorder. No `phase complete` substitution exists anywhere in the battery.
 
 **One case registry, whose groups are the nine proven ids.** `LOOP_PARITY_CASES` (§6.1) enumerates every battery row with `{id, group, declaredSeam, scenario, expected}`. The dedicated suites import their group's builders instead of re-authoring the scenario. `TC-BATTLE-001` drives the whole registry; `TC-BATTLE-003` and `TC-BATTLE-004` drive `runAllLoopParityCases()`; `TC-BATTLE-007` reads the registry's `declaredSeam` values. The `no-shell` group's rows must **not** call `runAllLoopParityCases()` (that would recurse): they run the eight non-`no-shell` groups under the guard, call the static `scan(ROOT)`, and scan the production prompt — stated here so the implementation cannot introduce recursion.
 
@@ -2475,7 +2548,7 @@ Three complementary observations, one property. Their permanent contract is the 
 | `TC-CONTRACT-001`, `-004` | `tests/checks/loop-contract-invariance.test.ts` (+ the delivered unchanged coordinator suites as an execution gate) | To implement (new) |
 | `TC-CONTRACT-002` (source half) | `tests/checks/loop-privacy.test.ts` | To implement (new) |
 
-Split: **16 new test suites**, **9 new fixture modules** under `tests/fixtures/loop/**`, **9 extended files** (2 fixture/inventory data files, 3 check modules, 4 check/structure suites), and **0 edits to delivered coordinator suites, delivered dispatch suites, `scripts/ceo-loop.sh`, `.opencode/agent/**`, or the production `dispatch` surface**. Case-level split: **all 74 cases are new code**, of which 2 are extensions of a delivered invariant (`TC-BATTLE-005`) and the delivered pinned inventory (`TC-BATTLE-008`).
+Split: **17 new test suites** (9 behaviour + 3 structure + 3 checks + 2 conformance), **9 new fixture modules** under `tests/fixtures/loop/**`, **9 extended files** (2 fixture/inventory data files, 3 check modules, 4 check/structure suites), and **0 edits to delivered coordinator suites, delivered dispatch suites, `scripts/ceo-loop.sh`, `.opencode/agent/**`, or the production `dispatch` surface**. No fixture file is authored for `TC-CONTRACT-001`: its baseline is a committed literal inside `tests/checks/loop-contract-invariance.test.ts` (R-16), so the fixture count stays at nine. Case-level split: **all 74 cases are new code**, of which 2 are extensions of a delivered invariant (`TC-BATTLE-005`) and the delivered pinned inventory (`TC-BATTLE-008`).
 
 ### 7.4 Mutation register
 
@@ -2657,7 +2730,26 @@ Each row is a source mutation applied to the implementation; the named case must
 | M100 | Drop the shipped-default fallback so `status` fails when configuration acquisition fails | `TC-VERB-004` | `expected exit 0 with the shipped-default bound, received <error identity>` |
 | M101 | Leave `tests/checks/reference-page-parity.test.ts`'s duplicated mapping without the M4 root | `TC-BATTLE-008` | `missing reference page doc/planning/oss-tooling/milestones/m1/commands/loop.md` |
 
-Total: **101 mutations**, M1–M101 contiguous (4 pinned + 4 boundary + 6 verbs + 8 spawn + 5 session + 9 backoff + 8 stop + 9 stuck + 7 terminate + 7 instance + 8 log + 9 battery + 4 divergence + 5 economy/hygiene/purity + 8 spec-v1.1 ruling controls). Every load-bearing invariant named in §1 has at least one row, every row names the case that must fail, the two mandatory pin families are rows `M1`/`M2`/`M3`/`M4` and `M5`/`M6`/`M7`/`M8`, and the four v1.1 rulings have their own controls `M94`–`M100` with the cross-file pin at `M101`.
+**DoR-iteration-1 remediation controls (14). These are the non-vacuity proof for the R-03/R-07/R-10–R-16 corrections and the spec v1.2 alignments; each names the case that must fail.**
+
+| # | Mutation | Must fail | Expected failure family |
+|---|----------|-----------|-------------------------|
+| M102 | Run `phase complete` in place of `dispatch` as the deliver leg (or label it as delivery) | `TC-BATTLE-006` | `deliver primitive expected dispatch, received phase complete` / `no dispatch envelope recorded` |
+| M103 | Observe a pid-less `active` session without calling `resume` | `TC-INSTANCE-006` | `resume calls expected 1, received 0` |
+| M104 | Default `--foreground` on `start` so the flag is optional | `TC-VERB-002` | `loop start expected fallback.invocation at exit 1, received 0` |
+| M105 | Never emit `progress-unreadable` (or always emit `delivery-corroborator-unreadable`) | `TC-STUCK-004` | `degraded expected to contain progress-unreadable, received [...]` |
+| M106 | Consume `startedAt`, or compare a start time / age, in the corroborator | `TC-STUCK-009`, `TC-STUCK-010` | `startedAt read on the corroborator path (<file>:<line>)` / `corroborator reported none for a live owner pid` |
+| M107 | Fold a `delivering` daemon lane with an absent pid to `none` | `TC-STUCK-010` | `M3 expected unknown, received none` |
+| M108 | Fold an unreadable store to `none` instead of `unknown` | `TC-STUCK-010` | `F0 expected unknown, received none` |
+| M109 | Hardcode 652 000 ms instead of the bound formula | `TC-STUCK-006` | `row A' bound expected 682000, received 652000` / `bound literal 652000 in <file>` |
+| M110 | Omit `iterationId`, set `stuckId !== iterationId`, or populate `killFailureReason` on a confirmed kill | `TC-STUCK-001`, `TC-STUCK-008` | `iterationId expected loop-main:3, received <value>` / `killFailureReason expected identity-mismatch, received null` |
+| M111 | Report a clean end as a failure (error identity or non-zero exit) | `TC-VERB-001` | `clean end expected state=stopped at exit 0, received <error>` |
+| M112 | Omit the `seq` component from the at-bound history reference | `TC-BACKOFF-004` | `history reference expected epoch-1;restarts=10;seq=<n>, received epoch-1;restarts=10` |
+| M113 | Refuse `--json`/`--verbose`/`--pretty` as grammar errors | `TC-VERB-002` | `global flag --json expected acceptance on every verb, received fallback.invocation` |
+| M114 | Render `loop_id` empty, or from the lease instance id, in the absent world | `TC-VERB-003` | `loop_id expected loop-main in every world, received <empty\|instance-id>` |
+| M115 | Render `ceo_pid`/`ceo_session` from the recorded (ended) session instead of live-only | `TC-VERB-003` | `ceo_pid expected empty for a non-alive session, received <pid>` |
+
+Total: **115 mutations**, M1–M115 contiguous (4 pinned + 4 boundary + 6 verbs + 8 spawn + 5 session + 9 backoff + 8 stop + 9 stuck + 7 terminate + 7 instance + 8 log + 9 battery + 4 divergence + 5 economy/hygiene/purity + 8 spec-v1.1 ruling controls + 14 DoR-iteration-1 remediation controls). Every load-bearing invariant named in §1 has at least one row, every row names the case that must fail, the two mandatory pin families are rows `M1`/`M2`/`M3`/`M4` and `M5`/`M6`/`M7`/`M8`, the four v1.1 rulings have their own controls `M94`–`M100` with the cross-file pin at `M101`, and the DoR-iteration-1 findings are controlled at `M102` (R-03's substitution), `M103` (R-07's resume), `M104` (R-13's defaulted `--foreground`), `M105` (R-12's degradation), `M106` (R-01's start-time ban), `M107`/`M108` (R-02's fold), `M109` (R-09's formula), `M110` (R-19's identity), `M111` (R-18's clean end), `M112` (R-20's history reference), `M113` (R-21's globals), `M114`/`M115` (R-06's sources).
 
 ### 7.5 Gate battery
 
@@ -2684,7 +2776,7 @@ export PATH=$PWD/node_modules/.bin:$PATH
 | Contract | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/loop-contract-invariance.test.ts tests/checks/loop-privacy.test.ts tests/behaviour/loop-read-cost.test.ts` |
 | Parity | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-grammar.test.ts tests/behaviour/loop-spawn.test.ts tests/behaviour/loop-backoff.test.ts tests/behaviour/loop-stop.test.ts tests/behaviour/loop-instance.test.ts tests/behaviour/loop-log.test.ts` |
 | Pinned inventory + no-shell | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts` then `... bun run scripts/checks/help-guide-coverage.ts` then `... bun test tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts` |
-| Untouched delivered surfaces | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/provider-surface.test.ts tests/checks/coordinator-sequence.test.ts tests/behaviour/coordinator-*.test.ts tests/structure/coordinator-*.test.ts tests/conformance/dispatch` |
+| Untouched delivered surfaces | `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/provider-surface.test.ts tests/checks/coordinator-sequence.test.ts tests/behaviour/coordinator-*.test.ts tests/structure/coordinator-*.test.ts tests/conformance/dispatch` — **this gate is the sole owner of the "delivered coordinator suites pass unmodified" observation** (`DOD-6`, R-16). No case runs them: a case that spawned them would start real child processes and violate `NFR-1`. |
 | Hygiene | `git diff --check` |
 
 **Aggregate gates owned by the lifecycle quality phase (phase 9), not by this plan's per-group battery:**
@@ -2707,17 +2799,17 @@ The documentation-phase gates (`bun test tests/checks/doc-conformance.test.ts`, 
 
 **Offline determinism (`NFR-1`, `TC-BATTLE-003`, `TC-CONTRACT-005`, `DOD-4`).** Two runs of the whole registry in isolated roots with a fixed clock, a fixed id sequence, and root-only canonicalization. Assertions: canonical envelope JSON byte-identical; per-group and per-kind record counts identical; verdict coverage identical; the delay lists identical and ordered; `liveNetworkRequests === 0`; `realChildStarts === 0`; `realTimersArmed === 0`; `shellInvocations === 0`; the injected transport/session/process doubles saw every call, so a native fallback would have been counted. No wall-clock assertion is used anywhere; the only time source is the injected delay recorder, so the suite cannot become flaky under load.
 
-**Bounded output (`NFR-2`, `TC-VERB-003`, `TC-LOG-005`).** Assertions: ≤ 32 human lines for `start`/`stop`/`status`/`reset`; ≤ 1 + `n` for `log`; machine `data` ≤ 65 536 bytes per verb; 0 ANSI escapes; the status key order with **exactly three** `yes`/`no` keys (`loop_running`, `ceo_alive`, `stop_signal`), `stop_mode` immediately after `stop_signal` rendering `drain`/`immediate` or empty, `<n>/<bound>` for `restarts`, and a **bare `key=`** for every absent value with zero `none` tokens in any block (ruling `R1`/`R2`).
+**Bounded output (`NFR-2`, `TC-VERB-003`, `TC-LOG-005`).** Assertions: ≤ 32 human lines for `start`/`stop`/`status`/`reset`; ≤ 1 + `n` for `log`; machine `data` ≤ 65 536 bytes per verb; 0 ANSI escapes; the status key order with **exactly three** `yes`/`no` keys (`loop_running`, `ceo_alive`, `stop_signal`), `stop_mode` immediately after `stop_signal` rendering `drain`/`immediate` or empty, `<n>/<bound>` for `restarts`, and a **bare `key=`** for every absent value with no `none` *placeholder* in any human block — scoped so the corroborator's `none` enum value remains legal in records (rulings `R1`/`R2`, spec v1.2 status-key source table).
 
 **Log retention (`NFR-3`, `TC-LOG-001`…`-007`).** Assertions: every line ≤ 512 UTF-8 bytes with whole-pair dropping; active ≤ 1 048 576; exactly one retained generation; total ≤ 2 097 152; the oldest generation is the one dropped; the newest data is present; a read returns ≤ 100 lines and ≤ 65 536 bytes; a write or rotation failure changes no verdict, exit, or record and appears only as `log-unavailable`.
 
 **Durable stop (`NFR-4`, `TC-STOP-*`).** Assertions: 100% of folded requests prevent a start (0 lease records, 0 sessions, 0 session records) after a simulated restart and after a simulated crash; `drain` ends at the next boundary with 0 terminations; `immediate` ends within `collection-interval + kill-grace` = 50 000 virtual ms; an unverifiable identity is reported and not signalled; repeated `stop`/`reset` append ≤ 1 record each.
 
-**Stuck-verdict safety (`NFR-5`, `TC-STUCK-*`).** Assertions: 100% of kills require a live session + sourced `zero` for ≥ 600 000 ms + no artifact advance + a readable corroborator reporting none; 0 kills with a healthy delivery in progress; 0 kills on either unreadable input; 0 kills on unknown liveness; detection-to-restart ≤ 652 000 ms = `600 000 + 30 000 + 20 000 + 2 000` **on the confirmed path**; and an unconfirmed termination is terminal at exit 2 with one outcome record, a released lease, 0 restart records, and 0 spawns (ruling `R3`).
+**Stuck-verdict safety (`NFR-5`, `TC-STUCK-*`).** Assertions: 100% of kills require a live session + sourced `zero` for ≥ 600 000 ms + no artifact advance + a corroborator whose F1–F3 fold reports `none`; 0 kills with a healthy delivery in progress (the live-shape D4 row); 0 kills on either unreadable input; 0 kills on unknown liveness; **0 `startedAt`, start-time, or age comparisons on the corroborator path** (`TC-STUCK-009`); detection-to-next-session ≤ the **formula** `stuck-window + collection-interval + kill-grace + first backoff` — 652 000 ms at the shipped defaults and 682 000 ms at a raised 60 000 ms interval (`TC-STUCK-006` rows A/A′) — **on the confirmed path**; and an unconfirmed termination is terminal at exit 2 with one outcome record, a released lease, 0 restart records, and 0 spawns (ruling `R3`).
 
 **Single instance and session uniqueness (`NFR-6`, `TC-INSTANCE-*`).** Assertions: 2 concurrent starts → exactly 1 admitted + 1 `coordinator.already-running`; 0 double claims; 0 second spawns while a live recorded session exists; exactly 1 lease record per acquisition or takeover; ≤ 1 live `active` session at every snapshot.
 
-**Contract invariance (`NFR-7`, `TC-CONTRACT-001`, `-004`, `-006`).** Assertions: 0 new error identities, domain kinds, configuration keys, capability names, delivered schema bumps, or coordinator behaviour changes; exactly 2 new record kinds and 1 additive optional harness fact; the delivered coordinator suites pass unmodified; the loop imports the engine primitives and no coordinator cycle/predicate.
+**Contract invariance (`NFR-7`, `TC-CONTRACT-001`, `-004`, `-006`).** Assertions: 0 new error identities, domain kinds, configuration keys, capability names, delivered schema bumps, or coordinator behaviour changes; exactly 2 new record kinds and 1 additive optional harness fact; the loop imports the engine primitives and no coordinator cycle/predicate. All of it is compared against the **in-suite literal baseline** (no fixture file, no child process). The "delivered coordinator suites pass unmodified" observation is a **gate-battery read** (§7.5, Untouched delivered surfaces) and a `DOD-6` item, never a case.
 
 **Restart accounting (`NFR-8`, `TC-BACKOFF-*`).** Assertions: exactly 1 `coordinator.restart` per consumed ordinal; exactly 1 ordinal per stuck restart; 0 ordinals for a clean end; the declared delay at every ordinal; 0 restarts above the bound; 1 verdict + 1 outcome per stuck episode; 0 restart records for a clean session end.
 
@@ -2737,7 +2829,7 @@ The documentation-phase gates (`bun test tests/checks/doc-conformance.test.ts`, 
 | A test becomes the second implementation | H | `TC-BATTLE-002`'s three mechanisms; D3 is limited to the pure exported functions; the harness exposes no record writer besides the production one. |
 | Timing flakiness | M | No wall-clock assertion; the cycle driver and the injected delay are the only time source; the two-start interleaving is a latch, not a sleep; the process-tree grace is virtual. |
 | The interleaving is too weak (both starts effectively serialized) | H | The loser is parked *inside* its fence wait and released after the winner's lease is durable, so a pre-read-only implementation double-claims and fails `TC-INSTANCE-001`; both orders run. |
-| The stuck predicate kills a working CEO (`RSK-2`) | H | `TC-STUCK-003` runs twenty virtual minutes of zero traffic with a live delivery and asserts 0 kills; register `M45` proves the case fails if the corroborator is dropped. |
+| The stuck predicate kills a working CEO (`RSK-2`) | H | `TC-STUCK-003` runs twenty virtual minutes of zero traffic with a live delivery, seeded with a composition-shaped `startedAt` deliberately unlike any platform reading, and asserts 0 kills with an armed start-time probe at 0 calls; `TC-STUCK-010` covers the full D1–D6/M1–M6/F0–F3 table plus the pid-reuse observation; registers `M45` and `M106` prove the case fails if the corroborator is dropped or a start-time test is added. |
 | An unreadable signal becomes a verdict (`RSK-3`) | H | `TC-STUCK-004`/`-005` assert `unevaluable` for both inputs with 0 kills; registers `M46`/`M47`. |
 | A durable stop is forgotten or over-cleared (`RSK-6`) | H | `TC-STOP-002` (restart and crash), `-003` (fail closed), `-007` (cross-process); registers `M38`/`M39`/`M44`. |
 | A duplicated session after an unclean death (`RSK-5`) | H | `TC-INSTANCE-002`/`-005`/`-006`; registers `M62`/`M63`. |
@@ -2745,6 +2837,8 @@ The documentation-phase gates (`bun test tests/checks/doc-conformance.test.ts`, 
 | The proof boundary drifts or a row lands off-boundary | H | `TC-BATTLE-007` asserts count, order, and membership with five planted controls; registers `M5`–`M8`. |
 | A case states an exit literal the delivered matrix does not project | M | `TC-VERB-005` computes every observed exit through the table; `TC-CONTRACT-001` pins the matrix. |
 | The extended no-shell surface silently shrinks | M | The declared-equality and reachability assertions are extended, not replaced; a new loop module without a surface entry fails by name (`M82`). |
+| The deliver leg is overstated: a lifecycle transition passes for a delivery (DoR R-03) | H | `TC-BATTLE-006` names `dispatch` as the deliver primitive, doubles its nested PM session from the same port, asserts its real envelope and its attempt/lane records, and is controlled by `M102`; §3.1 states the proof level as command-runtime-and-no-further, and the boundary constant keeps `live-opencode` rather than claiming the nested leg live. |
+| The only resume path silently degrades to observation (DoR R-07) | H | `TC-INSTANCE-006` asserts exactly one `resume` call, its target session id, no title, and the same id on the returned handle; the observation-only variant is `M103` and fails by name. |
 | A case re-litigates a closed ruling | H | Every ruling is asserted as a named expectation with a planted control: `none` in the status block fails `TC-VERB-003` (`M94`), a restart after an unconfirmed termination fails `TC-STUCK-008` (`M96`), a handler configuration read fails `TC-VERB-004` (`M99`), and a stale pin or a missed M4 mapping fails `TC-BATTLE-008` (`M4`, `M101`). §8.3 records the rulings in force and the spec section that owns each, so a reviewer can check a case against the rule instead of against an open question. |
 
 ### 8.2 Assumptions
@@ -2767,7 +2861,7 @@ The documentation-phase gates (`bun test tests/checks/doc-conformance.test.ts`, 
 |---|---|---|---|
 | Closed `OQ-1` absent-value token (v1.0 contradiction between AC-F1-2's "empty value" and API-7's `none`) | **`R1`.** Every absent value in the status block renders as the **empty string after `=`** — `loop_pid=`, `ceo_pid=`, `ceo_session=`, `loop_id=`, `ceo_title=`, `budget_epoch=`, `last_restart_reason=`, `last_verdict=`, `degraded=`. No `none` token is emitted for an absent value. The rule is stated once with its reason: the six shell keys keep the shell's own `key=` rendering, and a fixed key order plus an empty value is unambiguous. `none` remains valid **only** as the corroborator enum value in `F-5`/`DM-6`, never as a status placeholder. | AC-F1-2, API-4, API-7, §4.1 (verb-parity metric), Appendix F (status keys), §24 (glossary) | `TC-VERB-003` (world C, bare-key assertions plus a `none`-token scan) |
 | Closed `OQ-2` "the three boolean keys" not enumerated; `stop_signal` vocabulary | **`R2`.** The three boolean keys are exactly `loop_running`, `ceo_alive`, and `stop_signal` (`yes`/`no`, with `stop_signal=yes` when a stop is folded). The stop **mode** is the separate additive key `stop_mode` (`drain`/`immediate`, empty when no stop is folded), placed **immediately after `stop_signal`** in the additive tail. | AC-F1-2, API-4, API-7, Appendix F | `TC-VERB-003` (key sequence, three-boolean count, `stop_mode` values) |
-| Closed `OQ-3` whether a restart follows an unconfirmed termination | **`R3`.** An unconfirmed termination is **terminal**: exactly one outcome record, the lease **released**, `coordinator.session.kill-failed` at **exit 2**, **no restart**, and **no second session** — F-6's at-most-one-session invariant outranks F-3's restart path, because a possibly-live orphan is never joined by another session. Only a **confirmed** termination proceeds to the restart path (and therefore only there does the 652 000 ms bound apply). | F-5, AC-F5-1, AC-F5-5, AC-F5-6, AC-F3-1, API-1, Appendix C item 5, RSK-4, RSK-5 | `TC-STUCK-008` (rows B and D: one outcome, lease released, exit 2, 0 restarts, 0 spawns), `TC-STUCK-006` (rows B/C: no next session), `TC-BACKOFF-001` (confirmed path only), `TC-INSTANCE-005` (invariant across the path) |
+| Closed `OQ-3` whether a restart follows an unconfirmed termination | **`R3`.** An unconfirmed termination is **terminal**: exactly one outcome record, the lease **released**, `coordinator.session.kill-failed` at **exit 2**, **no restart**, and **no second session** — F-6's at-most-one-session invariant outranks F-3's restart path, because a possibly-live orphan is never joined by another session. Only a **confirmed** termination proceeds to the restart path (and therefore only there does the bound formula apply — 652 000 ms at the shipped defaults, 682 000 ms at a raised 60 000 ms interval). | F-5, AC-F5-1, AC-F5-5, AC-F5-6, AC-F3-1, API-1, Appendix C item 5, RSK-4, RSK-5 | `TC-STUCK-008` (rows B and D: one outcome, lease released, exit 2, 0 restarts, 0 spawns), `TC-STUCK-006` (rows B/C: no next session), `TC-BACKOFF-001` (confirmed path only), `TC-INSTANCE-005` (invariant across the path) |
 | Closed `OQ-4` `status` and the `restarts` bound | **`R4`.** `status` performs **no configuration read inside the command handler**; the composition supplies the resolved settings, including the budget bound behind `restarts=<n>/<bound>`, and a configuration acquisition or resolution failure **falls back to the shipped defaults**, so the surface always composes. AC-F1-5's no-configuration clause is handler-scoped. | AC-F1-5, API-4 | `TC-VERB-004` (handler-scoped counting double, 0 handler reads, both failure rows falling back to the defaults) |
 | Cross-file pin 1: the duplicated page mapping | **`R5` (pin).** `tests/checks/reference-page-parity.test.ts` duplicates `pageFor` and **must learn the M4 root**, or `loop` resolves to a non-existent M1 page. | §2.1, §8.5, §16 (affected components), `DOD-8`, `RSK-8`, `DEC-7` | `TC-BATTLE-008` (both mappings asserted; the M1 fallback fails by name) |
 | Cross-file pin 2: the stale-pin scan set | **`R5` (pin).** `tests/structure/metrics-mounting.test.ts`'s stale-pin scan set **must gain 26**, or a leftover 26-family pin survives the repin undetected. | §2.1, §8.5, §16 (affected components), `DOD-8`, `RSK-8`, `DEC-7` | `TC-BATTLE-008` (planted 26-family pin fails by name) |
@@ -2780,6 +2874,7 @@ The three pinned help-inventory surfaces are therefore `tests/checks/install-con
 |---------|------|--------|---------|
 | 0.1 | 2026-11-19 | @test-plan-writer | Initial test plan for GH-348 against spec v1.0: 74 cases in 10 groups, 41/41 AC traceability (0 unmapped, 0 orphan, 77 links), the two-signal verdict battery with the delivered corroborator, the identity-verified terminate cases, the backoff/budget and durable-stop batteries, the pick-deliver-merge cycle with its doubled/real split, the permanent nine-proven / six-not-proven boundary with its five planted controls, the extended no-shell surface (files added to the declared list, no new invariant), the repinned help inventory with its removal control, the fixture inventory (15 reuse / 9 authored / 9 extended), the 93-row mutation register, the gate battery with the `TMPDIR`/`PATH` conventions, the non-functional verification for all 11 NFRs, and four recorded open questions (`OQ-1`…`OQ-4`). |
 | 0.2 | 2026-11-19 | @test-plan-writer | Closed the four open questions against spec **v1.1** (spec §26 history row; pm-notes `PM rulings on the four open questions`). **R1** (`TC-VERB-003`): a third absent-identifier world whose golden proves a bare `key=` for all nine placeholder keys, a `none`-token scan over every block, and the note that `none` remains valid only as the F-5/DM-6 corroborator enum. **R2** (`TC-VERB-003`): `stop_mode` immediately after `stop_signal`, exactly three booleans, `stop_mode` values asserted per world. **R3** (`TC-STUCK-008`, `TC-STUCK-006`, `TC-BACKOFF-001`, `TC-INSTANCE-005`): the unconfirmed-termination path is terminal — one outcome record, lease released, exit 2, **0 restart records, 0 spawns** — with a second unconfirmed row (failed signal), the confirmed-only 652 000 ms bound, a confirmed-termination precondition on the restart case, and the at-most-one-session invariant extended across the path. **R4** (`TC-VERB-004`): a handler-scoped counting configuration double, a 0-handler-read assertion with the composition-supplied bound still rendered, and two fallback rows (acquisition and resolution failure use the shipped defaults at exit 0). **R5** (`TC-BATTLE-008`): three pinned surfaces — the reference-page-parity duplicated mapping must learn the M4 root and the stale-pin scan set must detect a planted 26-family pin. §8.3 replaced the four question entries with a closed disposition table (rule, owning spec section, asserting case); every deferred assertion is now resolved; registers M94–M101 added (93 → 101 mutations). No case was added or removed and no AC link changed: **74 cases, 41/41 ACs, 77 links (36 extras), 0 unmapped, 0 orphan, 0 open questions, 0 deferred assertions**. |
+| 0.3 | 2026-11-19 | @test-plan-writer | DoR-iteration-1 remediation against spec **v1.2** (`readiness-review/readiness-iter-1.md`; pm-notes `PM rulings for the DoR-iteration-1 remediation`). **R-03 (deliver leg):** `dispatch` is named as the deliver primitive everywhere; `TC-BATTLE-006` drives it through the real command runtime with its nested PM session doubled by the same scripted port, asserts the dispatch envelope plus its attempt/lane records, and states the proof level as command-runtime-and-no-further; `phase complete` survives only as an explicit negation, and the boundary constant stays nine/six with `live-opencode` carrying the nested leg's live behaviour. §3.1 gains a "deliver-leg level" paragraph. **R-07:** `TC-INSTANCE-006` now asserts exactly one `resume` with the recorded session id, no `--title`, and the same id on the returned handle; the "resumed/observed" hedge is gone; `TC-SPAWN-002`'s resume row is bound to that case and AC-F2-2 gains the link. **R-10:** case inventory corrected to **69 AC-linked / 5 NFR-only** with one source of truth (the matrix). **R-11:** both new-suite counts corrected 16 → **17**. **R-12:** `TC-STUCK-004` asserts `progress-unreadable` present and `delivery-corroborator-unreadable` absent, so all five closed degradation values have an owner. **R-13:** `TC-VERB-002` gains the two required-flag refusal rows and the global-flag acceptance rows. **R-16:** `TC-CONTRACT-001`'s baseline is now a **committed literal inside `tests/checks/loop-contract-invariance.test.ts`** (no fixture file) and the coordinator-suite observation moves to the gate battery. **Spec-v1.2 alignment:** `TC-STUCK-010` rewritten as the exact 16-row table (D1–D6, M1–M6, F0–F3) plus the pid-reuse and live-shape observations and the start-time ban; `TC-STUCK-003` seeds a composition-shaped `startedAt` and arms a start-time probe; `TC-STUCK-009` asserts no `startedAt`/start-time/age read; `TC-STUCK-001`/`-008` assert `iterationId = <loopId>:<cycle ordinal>` and `killFailureReason` only on a failed kill; `TC-STUCK-006` asserts the bound **formula** at 30 000 and 60 000 ms plus the shipped 652 000 ms and a source-level literal ban; `TC-VERB-003` follows the status-key source table (`loop_id=loop-main` always, live-only `ceo_pid`/`ceo_session`, `restarts=0/<bound>`, a `none` scan scoped away from the enum); `TC-VERB-001` and `TC-BATTLE-006` use the declared clean-end cause; `TC-BACKOFF-004` asserts `epoch-<n>;restarts=<count>;seq=<sequence>`; `TC-INSTANCE-004`'s harness registers both families. Registers `M102`–`M115` added (101 → **115** mutations, contiguous). Counts: **74 cases (unchanged, none added), 41/41 ACs, 78 links (37 extras), 0 unmapped, 0 orphan, 0 open questions, 0 deferred assertions**; fixtures **15 existing / 9 authored / 9 extended** (no new fixture). |
 
 ## 10. Test Execution Log
 
@@ -2791,3 +2886,5 @@ Populated during delivery. One row per case group; the battery is run whole befo
 | `DOD-7` prompt half | — | Not run | PR-time change-surface review: the change diff contains no modification under `.opencode/agent/**`; the shell half is the delivered `provider-surface.test.ts` byte pin, run in the Untouched-delivered-surfaces gate. |
 | `DOD-3` | — | Not run | Phase-9 `./scripts/lint-commit-range.sh --base origin/main-tools` verdict, recorded in pm-notes. |
 | `R1`–`R5` (closed rulings) | — | Closed | Reproduced in §8.3 with the owning spec section and the asserting case. `R1`/`R2` → `TC-VERB-003`; `R3` → `TC-STUCK-008`, `TC-STUCK-006`, `TC-BACKOFF-001`, `TC-INSTANCE-005`; `R4` → `TC-VERB-004`; `R5` → `TC-BATTLE-008`. Their planted controls are registers `M94`–`M101`. |
+| `DOD-6` coordinator suites | — | Not run | Run by the **Untouched delivered surfaces** gate (§7.5), not by a case: `bun test tests/behaviour/coordinator-*.test.ts tests/structure/coordinator-*.test.ts`. Kept out of `TC-CONTRACT-001` so the case spawns no child process (R-16, `NFR-1`). |
+| DoR-iteration-1 findings (R-03, R-07, R-10…R-13, R-16) | — | Closed | Remediated in revision 0.3: R-03 → `TC-BATTLE-006` + `M102`; R-07 → `TC-INSTANCE-006` + `M103`; R-10 → the corrected inventory sentence; R-11 → the 17-suite counts; R-12 → `TC-STUCK-004` + `M105`; R-13 → `TC-VERB-002` + `M104`; R-16 → the in-suite literal baseline plus this gate read. |
