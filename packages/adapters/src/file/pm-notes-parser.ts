@@ -7,7 +7,7 @@
  * bytes, parser messages, and stacks never cross the boundary.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import type { PmNotesParseFailure } from "@delivery-os/core/contracts";
+import type { PmNotesCompleteness, PmNotesParseFailure } from "@delivery-os/core/contracts";
 import {
   isAlias,
   isMap,
@@ -277,3 +277,25 @@ export const nodePmNotesFileSystemFacts = (): PmNotesFileSystemFacts => ({
     }
   },
 });
+
+/**
+ * The artifact-completeness projection (GH-347 DM-3, TDR-0053).
+ *
+ * `complete` requires a present document whose `delivery` phase carries a
+ * non-null completion. A missing file is `absent`; a malformed, unparseable, or
+ * otherwise incomplete document is `incomplete`. The fallible direction is
+ * never `complete`, so a false `finished` cannot come from this projection.
+ */
+export const projectPmNotesCompleteness = (read: PmNotesTextRead): PmNotesCompleteness => {
+  if (!read.ok) return read.reason === "missing" ? "absent" : "incomplete";
+  const value: unknown = read.value;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return "incomplete";
+  const phases = (value as { readonly phases?: unknown }).phases;
+  if (typeof phases !== "object" || phases === null || Array.isArray(phases)) return "incomplete";
+  const delivery = (phases as Record<string, unknown>).delivery;
+  if (typeof delivery !== "object" || delivery === null || Array.isArray(delivery)) {
+    return "incomplete";
+  }
+  const completed = (delivery as { readonly completed?: unknown }).completed;
+  return typeof completed === "string" && completed.length > 0 ? "complete" : "incomplete";
+};

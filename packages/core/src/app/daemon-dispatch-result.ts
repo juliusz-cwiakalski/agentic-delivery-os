@@ -159,13 +159,21 @@ export const recordDaemonDispatchResult = (
         : ("unsatisfied" as const)
       : ("unreadable" as const),
   };
-  const corroboration = buildCorroborationRecord({ token: derived, facts: corroborationFacts });
+  // The arm comes from the ONE shared derivation (GH-347 DEC-6): the daemon
+  // path never re-derives it and inherits the same arm-aware corroboration.
+  const corroborationArm = derivation.corroborationArm;
+  const corroboration = buildCorroborationRecord({
+    token: derived,
+    facts: corroborationFacts,
+    ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
+  });
   const unreadable = unreadableCorroborationSources(corroborationFacts);
   const falseSuccess = classifyFalseSuccess({
     token: derived,
     comparison,
     corroboration,
     ...(unreadable.length === 0 ? {} : { unreadable }),
+    ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
   });
 
   let divergenceRef: string | undefined;

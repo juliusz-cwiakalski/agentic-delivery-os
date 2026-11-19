@@ -682,7 +682,12 @@ describe("TC-ADMIT-004 the positive control reaches a real verdict", () => {
 describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", () => {
   test("a direct engine caller without the port still spawns and classifies state-unverified", async () => {
     const scenario = createCommandScenario({
-      reads: readsFrom({ tracker: readFail("tracker", "config.credential.missing") }),
+      // GH-347 AC-F4-3: a decisive artifact survives an unreadable tracker, so
+      // undecidable truth needs BOTH the tracker and the artifact read to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "config.credential.missing"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
@@ -694,14 +699,97 @@ describe("TC-ADMIT-008 the no-preflight control preserves the delivered order", 
   });
 });
 
+describe("GH-347 the lane resolver and the delay fact are mounted", () => {
+  test("production mounts resolveDispatchLane at existingLane and binds the one delay fact", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
+    // The resolver is the seam, mounted by name; the delivered CLI-local
+    // closure is gone (no second implementation).
+    expect(production).toContain("existingLane: (ref) =>");
+    expect(production).toContain("resolveDispatchLane(store, {");
+    expect(production).not.toContain("laneFactsFor");
+    // One injected delay fact with the closed reasons; production binds a timer.
+    expect(production).toContain("delay: dispatchDelay");
+    expect(production).toContain("setTimeout(resolve, ms)");
+    // The advisory owner facts ride the composition.
+    expect(production).toContain(
+      "laneOwner: { processId: ownProcessId, startedAt: compositionStartedAt }",
+    );
+    // The engine consumes the injected facts and never reads an ambient timer.
+    expect(engine).toContain("readonly delay?: DispatchDelay");
+    expect(engine).not.toContain("setTimeout");
+  });
+});
+
+describe("GH-347 the terminate grace, the restart append and the caller scope", () => {
+  test("production wires the borrowed grace and the restart append; the caller scopes are distinct", () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
+    const peak = readFileSync(join(ROOT, "packages/core/src/domain/daemon-peak-pause.ts"), "utf8");
+    // The grace is borrowed from coordinator.kill-grace and waits through the one
+    // delay fact with reason terminate-grace.
+    expect(production).toContain("coordinatorSettings.value.killGraceMs");
+    expect(production).toContain('terminateWait: (ms) => dispatchDelay(ms, "terminate-grace")');
+    expect(production).toContain("killGraceMs,");
+    // One economics.restart append with the delivered reason.
+    expect(production).toContain("appendEconomicsRestartEvent");
+    expect(production).toContain(
+      "appendRestart: ({ ref, runId, sessionId, ordinal, reason, recordedAt })",
+    );
+    expect(engine).toContain('reason: "watchdog.liveness-stalled"');
+    // The operator-resume admission passes the admitting caller scope; the loop
+    // keeps the default (budget-consulting) scope, and peak-pause states it.
+    expect(edge).toContain('scope: "operator-resume"');
+    expect(engine).toContain("admitDispatchRestart({ count: restarts, bound: budget })");
+    expect(peak).toContain('scope: "budget-consulting"');
+    // The engine's loop consumes the injected facts and never reads a timer.
+    expect(engine).toContain("readonly killGraceMs?: number");
+    expect(engine).toContain("readonly appendRestart?: (input: {");
+    expect(engine).not.toContain("setTimeout");
+  });
+});
+
+describe("GH-347 the production composition mounts a declared session port per harness", () => {
+  test("both mounts pass through the declaration guarantee; claude declares the terminate gap", async () => {
+    const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    // R13 (review N1, plan D2): both configured kinds are built by
+    // `harnessFor` and returned through the declaration guarantee, so no
+    // production session port reaches the engine undeclared.
+    expect(production).toContain("harnessWithDeclaration(adapter, harnessDeclaration(kind))");
+    expect(production).toContain("const harnessDeclaration = (kind: HarnessKind)");
+    expect(production).toContain(
+      'kind === "opencode" ? OPENCODE_CAPABILITIES : CLAUDE_CAPABILITIES',
+    );
+    // The wrapper still wraps the opencode port (per-spawn resolution) and the
+    // claude mount is the adapter port itself; both flow through `harnessFor`.
+    expect(production).toContain("opencode: createHarnessProfilePort({");
+    expect(production).toContain('"claude-code": harnessFor("claude-code")');
+    // The fill direction: an absent declaration is filled, a present one wins.
+    expect(production).toContain("capabilities === undefined");
+    expect(production).toContain("capabilities: declaration");
+    // R16: the unused non-tree signalling seam is gone.
+    expect(production).not.toContain("signalProcess");
+    // The declarations the composition references. The behavioural half — the
+    // real ports reporting these values — is asserted in the adapter suites.
+    const { CLAUDE_CAPABILITIES, OPENCODE_CAPABILITIES } = await import(
+      "../../packages/adapters/src/harness/index"
+    );
+    expect(CLAUDE_CAPABILITIES.supportedOperations).not.toContain("terminate");
+    expect(OPENCODE_CAPABILITIES.supportedOperations).toContain("terminate");
+  });
+});
+
 describe("the production composition supplies and orders the preflight", () => {
   test("production wires the preflight and the engine invokes it before claimLease", () => {
     const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
     const engine = readFileSync(join(ROOT, "packages/core/src/app/dispatch.ts"), "utf8");
     expect(production).toContain("preflight: dispatchPreflight");
     expect(engine.indexOf("ports.preflight()")).toBeGreaterThan(0);
+    // GH-347 AC-F2-3: the claim is awaited because the injected delay makes the
+    // bounded fence wait asynchronous; the ordering property is unchanged.
     expect(engine.indexOf("ports.preflight()")).toBeLessThan(
-      engine.indexOf("const claimed = ports.claimLease()"),
+      engine.indexOf("await ports.claimLease()"),
     );
   });
 });
@@ -983,7 +1071,7 @@ describe("the production composer resumes the existing lane", () => {
     }
   });
 
-  test("a restart-budget refusal appends the terminal exhaustion record", async () => {
+  test("an operator resume at the persisted bound is admitted and appends no exhaustion record", async () => {
     const harness = createProductionHarness({ label: "gh239-budget-", originUrl: GITHUB_ORIGIN });
     try {
       const queued = declareQueueEntry(harness.store, {
@@ -1017,6 +1105,11 @@ describe("the production composer resumes the existing lane", () => {
         expect(appended.ok).toBe(true);
       }
 
+      // DELIVERED EXPECTATION UPDATE (GH-347 §8.5 "Operator resume at the
+      // persisted bound is admitted"; AC-F3-2, AC-F6-6, DEC-5): an operator
+      // resume at a persisted count at or above the bound is ADMITTED, resumes
+      // the recorded lane, consumes no ordinal, and appends no exhaustion
+      // record. The former refusal assertion is superseded, not deleted.
       const run = await invokeProduction(harness, [
         "dispatch",
         CHANGE_REF,
@@ -1024,17 +1117,32 @@ describe("the production composer resumes the existing lane", () => {
         "retry",
         "--json",
       ]);
-      expect(run.exit).toBe(1);
-      expect(run.data?.result).toBe("max-restarts");
-      expect((run.data?.error as { code?: string } | undefined)?.code).toBe(
+      // The refusal is gone: the resume ran and the outcome is the classification
+      // the injected reads support, never a restart-budget identity.
+      expect((run.data?.error as { code?: string } | undefined)?.code).not.toBe(
         "dispatch.restart-budget-exceeded",
       );
-      // No spawn and no resume occurred; the refusal is decided before one.
-      expect(harness.spawns).toHaveLength(0);
+      expect(run.data?.result).not.toBe("max-restarts");
+      // RESTORED (GH-347 review M6; test plan §7.4 non-vacuity): the delivered
+      // positive exit/result assertion was deleted when the refusal was
+      // superseded, and the case asserted only negatives. The positive half is
+      // restored: the resume ran and resolved a classified verdict at its mapped
+      // exit (state-unverified -> platform-provider -> 2). Authorising clause:
+      // AC-F3-2 / §8.5 operator-resume supersession; the exit is the taxonomy's
+      // projection, never a re-declared literal.
+      expect(run.exit).toBe(2);
+      expect(run.data?.result).toBe("state-unverified");
+      expect(run.data?.outcome).toBe("failed");
+      expect(run.data?.restarts).toBe(3);
+      // One session invocation, and it is a RESUME of the recorded session.
+      expect(harness.spawns).toHaveLength(1);
+      expect(harness.spawns[0]?.args).toContain("--session");
+      expect(harness.spawns[0]?.args).toContain("ses-existing");
       const economics = readEconomicsRecords(harness.store, CHANGE_REF);
-      expect(economics.ok && economics.terminal !== undefined).toBe(true);
+      expect(economics.ok && economics.terminal === undefined).toBe(true);
       const attempts = readDispatchAttempts(harness.store);
       expect(attempts.ok && attempts.records).toHaveLength(1);
+      if (attempts.ok) expect(attempts.records[0]?.resumeMode).toBeDefined();
     } finally {
       harness.dispose();
     }

@@ -95,6 +95,11 @@ export {
   readDispatchAttemptHistory,
 } from "./app/dispatch-attempts.js";
 export {
+  DISPATCH_RESUMABLE_DAEMON_STATES,
+  type DispatchLaneResolutionInput,
+  resolveDispatchLane,
+} from "./app/dispatch-lane.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverData,
   type DispatchHandoverResult,
@@ -109,13 +114,17 @@ export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,
+  appendDispatchLane,
   type DispatchAppendResult,
   type DispatchLedgerRead,
   foldDispatchDivergences,
+  isDispatchLaneRecord,
   isEvidenceClass,
+  latestDispatchLaneFor,
   readDispatchAttempts,
   readDispatchDivergences,
   readDispatchHandover,
+  readDispatchLanes,
   resolveDispatchDivergence,
   writeDispatchAuthority,
 } from "./app/dispatch-ledger.js";
@@ -158,6 +167,7 @@ export {
   type ControlServerOptions,
   type ControlSubscribeAccept,
   claimQueueLease,
+  claimDispatchLease,
   claimSingleFlightRefusal,
   createControlServer,
   createDaemonRuntime,
@@ -169,6 +179,7 @@ export {
   type DaemonStatusInput,
   type DaemonStatusRead,
   type DispatchAdmissionRefusal,
+  type DispatchLeaseClaimOutcome,
   declareQueueEntry,
   dispatchAdmissionRefusal,
   leaseRecordHeartbeatAgeMs,
@@ -632,11 +643,13 @@ export {
   type DispatchIdentityResolution,
   type DispatchIdentitySource,
   isRepositoryIdentity,
+  isSpawnTitle,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryRemote,
   parseIdentityMarker,
   resolveDispatchIdentity,
   serializeIdentityMarker,
+  spawnTitleFor,
 } from "./domain/dispatch-identity.js";
 export {
   DISPATCH_LIVENESS_ABSENCE_REASONS,
@@ -652,6 +665,23 @@ export {
   type DispatchLivenessVerdict,
   evaluateDispatchLiveness,
 } from "./domain/dispatch-liveness.js";
+export {
+  buildLifecyclePrompt,
+  DISPATCH_LIFECYCLE_SECTION_TITLES,
+  DISPATCH_LIFECYCLE_SECTIONS,
+  type DispatchLifecyclePromptInput,
+  type DispatchLifecycleSection,
+  lifecyclePromptSectionsPresent,
+} from "./domain/dispatch-prompt.js";
+export {
+  DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
+  DISPATCH_TRACKER_LADDER_ATTEMPTS,
+  DISPATCH_TRACKER_LADDER_BASE_MS,
+  DISPATCH_TRACKER_LADDER_CAP_MS,
+  type DispatchTrackerLadderOutcome,
+  dispatchTrackerLadderWait,
+  runDispatchTrackerLadder,
+} from "./domain/dispatch-tracker.js";
 export {
   classifyDispatchFailure,
   classifySpawnRefusal,

@@ -36,6 +36,7 @@ export const HARNESS_OPERATIONS = [
   "steer",
   "collect",
   "session-list",
+  "terminate",
 ] as const;
 
 export type HarnessOperation = (typeof HARNESS_OPERATIONS)[number];
@@ -290,6 +291,12 @@ export type HarnessSpawnInput = {
   readonly descriptor: HarnessExecutionEnvironmentDescriptor;
   readonly agent?: string;
   readonly binding?: HarnessSeatBinding;
+  /**
+   * The additive optional fresh-spawn title (GH-347 DM-6, TDR-0054): one
+   * deterministic `ticket-<REF>` token the adapter renders as a single
+   * `--title` argument. A resume carries none.
+   */
+  readonly title?: string;
 };
 
 /** A resume/steer input: the existing handle plus the steering payload as data. */
@@ -464,7 +471,9 @@ export type HarnessLivenessAssembler = (input: {
  *
  * One shape for every adapter. `classify` is bound to the shared classifier by
  * composition; adapters normalize facts and never classify with their own
- * logic.
+ * logic. `terminate` is the additive OPTIONAL member (GH-347 API-5, TDR-0051):
+ * a port double without it stays valid, and an adapter that declares no
+ * capability is never asked.
  */
 export type HarnessSessionPort = {
   readonly spawn: (input: HarnessSpawnInput) => Promise<HarnessResult<HarnessSessionHandle>>;
@@ -478,6 +487,45 @@ export type HarnessSessionPort = {
     readonly handle: HarnessSessionHandle;
   }) => Promise<HarnessResult<HarnessLivenessReport>>;
   readonly listSessions: (input: HarnessListInput) => Promise<HarnessResult<HarnessSessionList>>;
+  /**
+   * The adapter's own capability declaration (GH-347 F-5, DM-5, AC-F5-4).
+   *
+   * The dispatch engine's terminate gate reads this member: an absent
+   * `terminate` operation in the declaration means the operation is
+   * unsupported, so a stalled session is never restarted on that adapter. The
+   * member is OPTIONAL for source compatibility with declared doubles, and an
+   * absent declaration keeps the delivered fail-open default (an undeclared
+   * port is treated as capable). Every production adapter declares, and the
+   * production composition never mounts a port without a declaration; the
+   * dispatch-composition and adapter-port suites hold that obligation.
+   */
+  readonly capabilities?: HarnessCapabilityDeclaration;
+  /** The additive optional capability-gated termination (GH-347 API-5, TDR-0051). */
+  readonly terminate?: (
+    input: HarnessTerminateInput,
+  ) => Promise<HarnessResult<HarnessTerminateResult>>;
+};
+
+/**
+ * The terminate input (GH-347 API-5, DM-5): the session handle plus the
+ * declared grace in milliseconds (`coordinator.kill-grace`, reused not added).
+ */
+export type HarnessTerminateInput = {
+  readonly handle: HarnessSessionHandle;
+  readonly graceMs: number;
+};
+
+/**
+ * The terminate report (GH-347 API-5, DM-5): whether the tree was signalled,
+ * whether the escalation ran, and whether this lane's escaped runtime's exact
+ * identity was matched. `reaped` reports the exact-identity match, not an OS
+ * reap act.
+ */
+export type HarnessTerminateResult = {
+  readonly terminated: boolean;
+  readonly escalated: boolean;
+  /** An exact-identity target was MATCHED in this lane's runtime table. */
+  readonly reaped: boolean;
 };
 
 /* ------------------------------------------------------------------------- */

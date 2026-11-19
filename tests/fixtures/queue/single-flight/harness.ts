@@ -9,12 +9,13 @@
 
 import type { DispatchLeaseClaim } from "../../../../packages/core/src/app/dispatch";
 import {
+  claimDispatchLease,
   claimQueueLease,
   claimSingleFlightRefusal,
   declareQueueEntry,
-  dispatchAdmissionRefusal,
   readActiveLeases,
   readQueueFold,
+  releaseQueueLease,
 } from "../../../../packages/core/src/app/index";
 import type { StateStorePort } from "../../../../packages/core/src/contracts/index";
 import { type AuditStoreFixture, makeAuditStore, removeRoot } from "../../state/harness";
@@ -69,30 +70,36 @@ export const seedLease = (
   if (!claimed.ok) throw new Error(`lease seed failed: ${JSON.stringify(claimed)}`);
 };
 
-/** The dispatch family's claim port, wired exactly as production wires it. */
-export const dispatchClaim = (single: SingleFlightStore, ref: string): DispatchLeaseClaim => {
-  const refused = dispatchAdmissionRefusal(single.store, { ref, nowMs: single.nowMs() });
-  if (refused !== undefined) {
-    return {
-      ok: false,
-      code: refused.code,
-      ...(refused.summary === undefined ? {} : { summary: refused.summary }),
-      ...(refused.holder === undefined ? {} : { holder: refused.holder }),
-    };
-  }
-  const claimed = claimQueueLease(single.store, {
+/**
+ * The dispatch family's claim port, wired exactly as production wires it: the
+ * atomic seam decides the verdict inside the claim (same-ref under any holder →
+ * `queue.single-flight`, other ref → `queue.lease-conflict`, never a renewal).
+ */
+export const dispatchClaim = (
+  single: SingleFlightStore,
+  ref: string,
+): Promise<DispatchLeaseClaim> =>
+  claimDispatchLease(single.store, {
     ref,
-    holder: "dispatch",
-    runner: "dispatch",
-    weightClass: "standard",
+    nowIso: () => new Date(single.nowMs()).toISOString(),
+    nowMs: single.nowMs,
+    fenceToken: `dispatch-claim-${ref}`,
     ttlMs: TTL,
+  });
+
+/** Release a seeded lease through the delivered primitive (the holder's own). */
+export const releaseSeededLease = (
+  single: SingleFlightStore,
+  input: { readonly ref: string; readonly holder: string },
+): void => {
+  const released = releaseQueueLease(single.store, {
+    ref: input.ref,
+    holder: input.holder,
     nowIso: NOW_ISO,
     nowMs: single.nowMs(),
-    fenceToken: `dispatch-claim-${ref}`,
+    fenceToken: `release-${input.holder}-${input.ref}`,
   });
-  return claimed.ok
-    ? { ok: true, leaseId: claimed.value.lease.leaseId }
-    : { ok: false, code: claimed.code };
+  if (!released.ok) throw new Error(`lease release failed: ${JSON.stringify(released)}`);
 };
 
 /** The claim path's admission, wired exactly as the queue command wires it. */

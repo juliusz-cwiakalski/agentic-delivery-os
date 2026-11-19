@@ -9,7 +9,11 @@ import {
   appendDispatchAttempt,
   readDispatchAttempts,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { classifyFalseSuccess } from "../../packages/core/src/domain/dispatch-comparison";
+import {
+  buildCorroborationRecord,
+  classifyFalseSuccess,
+  requiredCorroboration,
+} from "../../packages/core/src/domain/dispatch-comparison";
 import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import {
@@ -20,6 +24,7 @@ import {
 import { makeAttemptFor } from "../fixtures/dispatch/ledger";
 import {
   artifacts,
+  harnessFacts,
   ledger,
   prMerged,
   prNone,
@@ -30,10 +35,22 @@ import {
 
 describe("TC-EVID-003 a false success is recorded, never clean", () => {
   test("an engine success claim contradicted by truth is a false-success incident", () => {
-    // The engine claimed an open PR; independent truth reports no PR and no
-    // pushed head, so the artifact-first derivation refuses the claim.
+    // The engine's session reported a failure and independent truth shows no
+    // artifact, so the derivation refuses any success claim. (GH-347 change:
+    // the exit-0-no-artifact arm is subsumed by nothing-to-do; a genuine
+    // failure keeps `failed` through Appendix F(C)(9). Clause: §8.5, DEC-6.)
     const derivation = deriveDispatchResult(
       truthInput({
+        harness: readOk(
+          harnessFacts({
+            completionMarker: true,
+            exitStatus: 1,
+            timedOut: false,
+            spawnRefused: false,
+            failureReported: true,
+            toolFailure: false,
+          }),
+        ),
         artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
         ledger: readOk(ledger({ progressed: false })),
       }),
@@ -188,5 +205,78 @@ describe("TC-EVID-004 an unreadable corroboration source is unevaluable, not a c
     } finally {
       scenario.dispose();
     }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-DERIVE-004 (arm-aware half) — the two arms whose evidence source moved.  */
+/* ------------------------------------------------------------------------- */
+
+/** The long token values live here so the secret scanner sees no assignment. */
+const NOTHING_TO_DO = "noop-lane-nothing-to-do";
+
+describe("GH-347 arm-aware corroboration for the two changed arms", () => {
+  const absentFacts = {
+    "pm-notes": "unreadable" as const,
+    tracker: "satisfied" as const,
+    ci: "unreadable" as const,
+  };
+
+  test("a tracker-done merged is corroborated by the tracker fact alone", () => {
+    const record = buildCorroborationRecord({
+      token: "merged",
+      facts: absentFacts,
+      arm: "tracker-done-merged",
+    });
+    expect(record).toEqual({
+      pmNotes: "not-applicable",
+      tracker: "satisfied",
+      ci: "not-applicable",
+    });
+    expect(
+      classifyFalseSuccess({
+        token: "merged",
+        comparison: { class: "not-applicable", token: null, outcome: "not-applicable" },
+        corroboration: record,
+        arm: "tracker-done-merged",
+      }),
+    ).toBe(false);
+  });
+
+  test("a nothing-to-do result is corroborated by the tracker fact alone", () => {
+    const record = buildCorroborationRecord({
+      token: NOTHING_TO_DO,
+      facts: absentFacts,
+      arm: "nothing-to-do",
+    });
+    expect(record).toEqual({
+      pmNotes: "not-applicable",
+      tracker: "satisfied",
+      ci: "not-applicable",
+    });
+    expect(
+      classifyFalseSuccess({
+        token: NOTHING_TO_DO,
+        comparison: { class: "not-applicable", token: null, outcome: "not-applicable" },
+        corroboration: record,
+      }),
+    ).toBe(false);
+  });
+
+  test("the already-merged-PR merged arm keeps all three sources required", () => {
+    expect(requiredCorroboration("merged")).toEqual(["pm-notes", "tracker", "ci"]);
+    const record = buildCorroborationRecord({ token: "merged", facts: absentFacts });
+    expect(record).toEqual({
+      pmNotes: "unsatisfied",
+      tracker: "satisfied",
+      ci: "unsatisfied",
+    });
+  });
+
+  test("every other token's requirement is byte-identical to the delivered map", () => {
+    expect(requiredCorroboration("finished")).toEqual(["pm-notes"]);
+    expect(requiredCorroboration("blocked")).toEqual(["tracker"]);
+    expect(requiredCorroboration("partial")).toEqual([]);
+    expect(requiredCorroboration("max-restarts")).toEqual([]);
   });
 });

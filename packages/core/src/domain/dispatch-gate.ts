@@ -26,7 +26,7 @@ import {
   type DispatchUnmetCondition,
   type DispatchWindowStartReason,
 } from "#contracts";
-import { corroborationSatisfied, requiredCorroboration } from "./dispatch-comparison.js";
+import { corroborationSatisfied, windowCorroborationRequirement } from "./dispatch-comparison.js";
 
 /** The two repository scopes the counting rule distinguishes. */
 export type DispatchRepositoryScope = "production" | "controlled";
@@ -232,7 +232,7 @@ export const foldEvidenceWindow = (input: {
   const missing = DELIVERY_RESULT_TOKENS.filter((token) => !presentSet.has(token));
 
   const successClaims = countedInWindow.filter(
-    (attempt) => requiredCorroboration(attempt.token).length > 0,
+    (attempt) => windowCorroborationRequirement(attempt.token).length > 0,
   );
   const satisfied = successClaims.filter((attempt) =>
     corroborationSatisfied(attempt.corroboration),
@@ -242,7 +242,7 @@ export const foldEvidenceWindow = (input: {
   );
 
   const isClean = (attempt: DispatchAttemptRecord): boolean =>
-    requiredCorroboration(attempt.token).length > 0 &&
+    windowCorroborationRequirement(attempt.token).length > 0 &&
     corroborationSatisfied(attempt.corroboration);
 
   // The trailing run, not the longest: a trailing non-clean counted attempt (or

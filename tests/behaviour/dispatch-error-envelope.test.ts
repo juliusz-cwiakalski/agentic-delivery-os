@@ -83,7 +83,12 @@ describe("TC-ERR-002 dispatch state failure classifies as dispatch.state-unverif
   test("exit 2, platform-provider identity, state-unverified, one record", async () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
-      reads: readsFrom({ tracker: readFail("tracker", "tracker.read-unreadable") }),
+      // GH-347 AC-F4-3: a decisive artifact survives an unreadable tracker, so
+      // undecidable truth needs both the tracker and the artifact read to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "tracker.read-unreadable"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);

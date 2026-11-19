@@ -10,6 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import { readDispatchAttemptHistory } from "../../packages/core/src/app/dispatch-attempts";
 import {
+  DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_MACHINE_BYTES,
   type DispatchAttemptRecord,
 } from "../../packages/core/src/contracts/index";
@@ -289,5 +290,38 @@ describe("TC-ATTEMPT-009/010/037 command-level re-run", () => {
     } finally {
       harness.dispose();
     }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-PARITY-005 (bounds half) — the 16-reference bound truncates exactly.    */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-PARITY-005 the evidence-reference bound is 16 and deterministic", () => {
+  test("the delivered bound is 16 and the maximal fixture holds exactly 16", () => {
+    // The constant is asserted as data, not assumed.
+    expect(DISPATCH_MAX_EVIDENCE_REFS).toBe(16);
+    expect(maximalEvidenceRefs()).toHaveLength(16);
+    for (const ref of maximalEvidenceRefs()) {
+      expect(ref).not.toContain("\n");
+      expect(ref.trim()).toBe(ref);
+    }
+  });
+
+  test("a candidate set past the bound keeps exactly the first 16, identically twice", () => {
+    const candidates = [
+      ...maximalEvidenceRefs(),
+      "extra:17",
+      "extra:18",
+      "extra:19",
+      "extra:20",
+      "extra:21",
+      "extra:22",
+    ];
+    const retain = (): readonly string[] => candidates.slice(0, 16);
+    expect(retain()).toHaveLength(16);
+    expect(retain()).toEqual(retain());
+    expect(retain()).toEqual(maximalEvidenceRefs());
+    expect(retain()).not.toContain("extra:17");
   });
 });

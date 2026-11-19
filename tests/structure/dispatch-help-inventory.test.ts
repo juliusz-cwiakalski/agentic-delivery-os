@@ -103,3 +103,19 @@ describe("TC-HELP-001 dispatch is registered and documented", () => {
     }
   });
 });
+
+describe("TC-SPAWN-004 the agent and the title are composition facts, not operator flags", () => {
+  test("the dispatch help/grammar lists no --agent, --model, or --title option", () => {
+    const entries = allHelpEntries().filter((entry) => entry.path[0] === "dispatch");
+    // The help inventory count is unchanged by this change.
+    expect(entries).toHaveLength(5);
+    const rendered = entries.map((entry) => JSON.stringify(entry)).join("\n");
+    for (const forbidden of ["--agent", "--title", "--model"]) {
+      expect(rendered, forbidden).not.toContain(forbidden);
+    }
+    // The command definition's declared flags are unchanged too.
+    const definition = readFileSync(join(ROOT, "packages/cli/src/commands/dispatch.ts"), "utf8");
+    expect(definition).not.toContain('"--agent"');
+    expect(definition).not.toContain('"--title"');
+  });
+});

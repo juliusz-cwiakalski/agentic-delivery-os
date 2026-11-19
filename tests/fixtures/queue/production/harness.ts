@@ -76,7 +76,7 @@ export const PROVIDER_PROFILES_CONFIG = `provider:
           - provider-a
         seats:
           pm:
-            model: provider-a-model
+            model: provider-a/model-large
             pacingClass: judgment
             capability: text-only
     preferenceChain:
