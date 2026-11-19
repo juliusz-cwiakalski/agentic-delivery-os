@@ -1,0 +1,136 @@
+change_id: GH-350
+title: "M4-S4: Declarative provider policy — quota, peak, cost routing"
+milestone: "M4: Jaiship-native delivery"
+story_code: M4-S4
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: "2026-11-19T06:45:00Z", completed: 2026-11-19T05:54:41.790Z }
+
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "ADR-0012 — Peak windows admit `UTC` (default, alias of Etc/UTC) plus IANA
+      zone names resolved only at a composition edge through one injected
+      `ProviderZonePort`; the pure core receives offset facts and never reads
+      Intl/TZ. Windows stay non-crossing local seconds-of-day; DST resolves to
+      the earliest instant at or after the declared local end, with expiry
+      fixed-point iteration capped at 3 passes. New error
+      `provider.peak.zone-unknown` (user, exit 1); new evidence field
+      `timezone`; `PROVIDER_PEAK_TIMEZONES` retired;
+      `packages/adapters/src/time-zone/` hosts `createIntlZonePort`. Causes,
+      codes and skip reasons unchanged."
+    date: "2026-11-19"
+  - text: "TDR-0049 — Budgets gate before spend through a pure `evaluateBudgets`
+      over one injected read-only `ProviderSpendTotalsPort` implemented at the
+      edge from the delivered spend fold; no persisted counter and no new state
+      kind. `window` scope parks with an honest expiry (`newestAtMs +
+      windowSeconds*1000`); `ticket` scope is a terminal classified refusal
+      because no honest future expiry exists. Config branch
+      `provider.budgets.<name>.{enabled,scope,basis,ceiling,windowSeconds,entri\
+      es}`. New condition kind, park cause and skip reason `budget-exhausted`;
+      announcements `provider.budget.parked` (info) and
+      `provider.budget.crossed` (warning); error `provider.budget.exceeded`
+      (user, exit 1). No new alarm kind: metrics burn-rate stays the post-hoc
+      alarm."
+    date: "2026-11-19"
+  - text: "PDR-0006 — 'Per-project overrides' is satisfied by the delivered
+      project-committed and project-local configuration layers; the project
+      identity for M4-S4 is the repository checkout. No `provider.projects.*`
+      branch, key, state kind or error identity. The spec must state the
+      precedence matrix for a descriptor, chain, profile, watch target and
+      budget, project-local-beats-committed, origin strings, invalid repo-layer
+      refusal, and the CI=true case. Multi-checkout shared policy remains
+      M4-S5."
+    date: "2026-11-19"
+  - text: "TDR-0050 — `provider simulate --fixture <path> [--json]` composes the
+      delivered `createProviderEngine` with fixture seams and calls `resolve`
+      with `persist: false`. Fixture schema `delivery.provider.simulate.v1`
+      (now, chain?, profile?, credentials resolved|missing, quota
+      httpStatus/body or transport outage, spend telemetryState+points, zones
+      step table); unknown keys refuse. `data` is the delivered resolve payload
+      plus one additive `simulation` block with `stateWrites: 0`. No
+      `--chain`/`--profile` flags and no `provider.simulate.*` error row;
+      fixture defects reuse `input.value.rejected`. Parity with `resolve` is a
+      test."
+    date: "2026-11-19"
+  - text: "TDR-0051 — Legacy migration is `provider migrate legacy [--profiles-dir
+      <dir>] [--hook <path>] [--write] [--json]`. Legacy
+      `~/.<priorWorkingName>/config/profiles/*.sh` and the hook are parsed as
+      data under an assignment-only subset and never executed, sourced,
+      word-split or shelled out. Default output is a validated proposal on
+      stdout; `--write` creates the project-committed document only when absent.
+      Typed whole-run refusal `provider.migrate.refused` with closed reasons
+      `no-source`, `unreadable-source`, `oversized-source`, `shell-construct`,
+      `dynamic-value`, `target-exists`, `proposal-invalid`. Credential-shaped
+      names classify name-first and the value is discarded at the parse
+      boundary; unmapped recognised names are disclosed by name and omitted."
+    date: "2026-11-19"
+  - text: "TDR-0052 — Watch freshness is per-target
+      `provider.profiles.watch.<name>.maxAgeSeconds` (positive integer, default
+      900) with predicate `ageSeconds >= maxAgeSeconds` and a closed watch-only
+      condition `watch-stale`, distinct from `provider-outage`. Watch-derived
+      parks clamp to `observedAt + maxAgeSeconds`; an already-stale observation
+      creates no park. Additive view fields `observedAt`, `ageSeconds`,
+      `maxAgeSeconds`; no new park cause, skip reason, announcement, error,
+      command, cache or quota freshness key."
+    date: "2026-11-19"
+  - text: "Advisor-scoped deliverables for this change: zone-aware peaks, budget
+      gate + alarms, per-project override clause, `provider simulate`, `provider
+      migrate legacy`, watch staleness, and the no-shell-hook delivery evidence.
+      Already delivered and not re-built: chain resolution, peak/quota
+      conditions and parks, profiles/pacing/env record, spend attribution with
+      amplification, metrics burn-rate alarm."
+    date: "2026-11-19"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: ticket GH-350 is open with label change and milestone M4:
+      Jaiship-native delivery. No comments on the ticket."
+    type: info
+    date: "2026-11-19"
+  - text: "Existing delivered surfaces relevant to scope: provider engine
+      (chain/peak/quota/parks/announcements, GH-182), provider
+      profiles+watch+pacing+env record (GH-234), peak pausing (GH-294), spend
+      read side with per-ticket/phase/role/model breakdowns and amplification
+      (GH-236/GH-299), metrics burn-rate alarms (GH-299), seven-layer config
+      with project-committed and project-local layers."
+    type: info
+    date: "2026-11-19"
+  - text: "Lifecycle CLI prerequisite: node_modules/.bin/jaiship executes
+      packages/cli/bin/jaiship.ts from source and every @delivery-os/* subpath
+      resolves to packages/*/dist, so phase/commit/plan/lint all fail with
+      'Cannot find module @delivery-os/adapters/credentials' until `pnpm build`
+      runs. Build delegated to @runner before any phase transition."
+    type: info
+    date: "2026-11-19"
+  - text: "Lifecycle CLI verified after `pnpm build`: `jaiship phase|commit|plan`
+      all exit 0, `phase list GH-350` reads the verified registry (empty
+      phases), `lint GH-350` reports conforms. Lifecycle commands must be
+      invoked with PATH=\"$PWD/node_modules/.bin:$PATH\" to satisfy the
+      commitlint probe."
+    type: info
+    date: "2026-11-19"
+  - text: "Commit-scope note: with no plan artifact yet, the clarify_scope phase
+      commit stages the change folder only, so decision records under
+      doc/decisions/ stay untracked until a plan phase declares doc/decisions/**
+      in its authored scope. No hand-commits: the delivery_planning phase commit
+      is expected to carry them."
+    type: info
+    date: "2026-11-19"
+  - text: "Scope gaps versus the ticket: provider simulate is absent; budget/alarm
+      config branch and budget park condition are absent; peak windows admit
+      only UTC while the ticket asks for time zones; watch staleness handling is
+      absent; legacy profiles/*.sh plus pre-iteration-hook migration is absent;
+      explicit no-shell-hook delivery evidence is absent. Per-project overrides
+      most plausibly map onto the existing project-committed/project-local
+      config layers rather than a new project registry (M4-S5 undelivered)."
+    type: info
+    date: "2026-11-19"

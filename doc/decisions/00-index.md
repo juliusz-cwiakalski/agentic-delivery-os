@@ -21,6 +21,7 @@ All decision records for this repository, ordered by type and number.
 | [ADR-0009](ADR-0009-release-model-v1.md) | ADR | Release Model v1 | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0010](ADR-0010-session-admin-port-mutating-contract.md) | ADR | Separate Mutating `SessionAdminPort` from the Read-Only `SessionStore` (ADR-0003 Reconciliation) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0011](ADR-0011-canonical-memory-record-schema.md) | ADR | One Canonical Agent-Memory Record Schema — Required Spine, Closed Optional Set, Dispositions, and a One-Way Reconciliation Direction | Proposed | 2026-11-15 | Juliusz Ćwiąkalski |
+| [ADR-0012](ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md) | ADR | Zone-Aware Peak Windows — IANA Zone Names Resolved at the Composition Edge | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
@@ -28,6 +29,7 @@ All decision records for this repository, ordered by type and number.
 | [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
 | [PDR-0004](PDR-0004-memory-practices-concept-repo-internal.md) | PDR | Meta-Learning Reference Stays Repo-Internal — Not Part of the Bootstrap Install Surface | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | [PDR-0005](PDR-0005-milestone-first-planning-and-delivery.md) | PDR | Milestone-First Planning and Delivery — Tracker-Attached Scope Before Work Starts | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
+| [PDR-0006](PDR-0006-per-project-provider-policy-repository-config-layers.md) | PDR | Per-Project Provider Overrides — The Repository-Owned Configuration Layers Are the Mechanism | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |
 | TDR-0002 | TDR | Pre-Iteration Hook Contract — Lifecycle, Failure Semantics, Distribution, and Testability | Accepted | 2026-07-16 | Juliusz Ćwiąkalski |
 | [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md) | TDR | Config Parser, Schema, and Acquisition | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |
@@ -76,6 +78,10 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0049](TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0050](TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0051](TDR-0051-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0052](TDR-0052-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
