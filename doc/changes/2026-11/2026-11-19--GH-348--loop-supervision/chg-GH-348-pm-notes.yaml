@@ -1271,3 +1271,55 @@ notes:
       GH-349's references were not touched."
     type: info
     date: "2026-11-19"
+  - text: "CEO-AUTHORIZED FIX-FORWARD at the reopened `quality_gates` gate —
+      commit 0ce67a2e. Test-invariant correction in
+      `tests/structure/changeset-additivity.test.ts` only; no source, plan, spec,
+      AC, case or mutation-row change (41 ACs / 74 cases / 120 rows unchanged).
+      WHAT CHANGED: the file pinned a CLOSED SET of three expected additions
+      (`ADDED_CHANGESETS`, `ChangesetBaseline.expectedAdded`, the
+      unexpected/missing diff and `declaredControlBaseline`) plus a
+      `changeset.added.multiple` failure code. That list is a point-in-time fact,
+      not an invariant: every later delivery that adds its own changeset failed it,
+      including this change's own `.changeset/gh-348-loop-supervision-minor.md`.
+      `releaseViolations` now enforces the real additive rule: the pinned baseline
+      digests are unchanged (`changeset.baseline.digest`), at least one addition is
+      required (`changeset.added.zero`), each addition is validated by the existing
+      per-file rule (`changeset.package.missing`/`unexpected`/`bump.not-minor`/
+      `body.empty`, five fixed-group packages at minor, testkit absent, no sixth
+      package, non-empty body), and package versions still equal the baseline
+      (`changeset.version.hand-edited`). `PINNED_CHANGESET_COUNT` (64) and the
+      64-file digest pin are kept; `changeset.added.multiple` is deleted because
+      multiple additions are legitimate and the code could only fail vacuously.
+      M118 was repurposed so the slot still fails by name and cannot pass
+      vacuously: M118a is the positive control (two VALID additions => zero
+      violations) and M118b is the per-file negative control (one addition
+      declaring a sixth package plus one declaring `@delivery-os/testkit` => two
+      independent `changeset.package.unexpected` violations, each naming its file).
+      M117 (zero added) no longer interpolates a deleted list; it still fails by
+      name with `changeset.added.zero` and a detail naming the file count and that
+      no addition was found. Test titles: 'the delivered changeset directory is the
+      baseline plus exactly the three declared additions' -> 'the delivered
+      changeset directory is the pinned baseline plus valid additions' (asserts the
+      pinned set unchanged, its 64-file length, `added.length >= 1`, and zero
+      violations); the header doc comment now states the rule (pinned baseline plus
+      N valid additions) instead of a delivery-specific file list, and provenance
+      no longer enumerates expected additions. No other control was touched and no
+      other assertion was deleted. GATES at this HEAD: `bun test
+      tests/structure/changeset-additivity.test.ts` 12 pass / 0 fail;
+      `bun test tests/structure tests/checks` 3292 pass / 2 fail on the first run
+      and green except machine-timeout flakes on re-runs — the two failures are the
+      doc-distribution installer cases tripped by the foreign
+      `~/.jaiship/bin/jaiship` artifact, which the guard passes with an isolated
+      HOME; `pnpm check` with an isolated HOME and GIT_CONFIG signature override:
+      11776 pass / 6 fail (first run) and 11780 pass / 2 fail (second run), where
+      EVERY failure is a 5-second test timeout in a subprocess-spawning suite under
+      the concurrent sibling workspace's full-suite run (GH-346 TC-INST-091 x3,
+      GH-238 daemon watch, TC-METRICS-106, TC-WIRE-002; then TC-BIN-042 and
+      TC-PILOT-005) and every one passes in isolation (install-launcher-installer 18
+      pass; daemon-watch/metrics-read-cost/control-session 12 pass;
+      prior-identity-notice/pilot-determinism 16 pass). No changeset, loop, doc,
+      pinned or invariant suite failed. `git diff --check` clean. Not a plan-phase
+      change: all eleven plan phases stay complete and the file is a test-invariant
+      correction under the reopened gate, disclosed so a reviewer can see it."
+    type: info
+    date: "2026-11-19"
