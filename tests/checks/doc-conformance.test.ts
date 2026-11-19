@@ -2110,3 +2110,124 @@ describe("GH-350 phase 9 the remaining pages and the closed page set state the d
     expect(GH350_PHASE9_PAGES).not.toContain("doc/spec/features/feature-supervise.md");
   });
 });
+
+/**
+ * GH-350 review remediation (B3/B4) — the engine page states the delivered zone
+ * composition (the production composition supplies the `Intl` binder to the
+ * engine as well as the probe and `simulate`, and an unresolvable zone refuses
+ * by name), and the result-contract page never restates the provider kind as
+ * thirteen rows. A declared count move is history, not a current value, so the
+ * carve-out keeps `thirteen rows → sixteen rows` from tripping the stale arm.
+ */
+const GH350_REVIEW_PAGES = [
+  "doc/spec/features/feature-provider-engine.md",
+  "doc/spec/features/feature-result-contract.md",
+] as const;
+
+const GH350_REVIEW_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-provider-engine.md",
+    stale: [
+      "supplies no zone seam",
+      "a non-UTC peak declaration refuses `provider.peak.zone-unknown` at `resolve`",
+    ],
+    required: [
+      "the `Intl` zone binder",
+      "evaluates on its own zone in `resolve`",
+      "`profile resolve` refuses the same identity before probing",
+      "explicit `unknownZone`",
+      "no production composition mounts a `peakPause` port",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-result-contract.md",
+    stale: ["thirteen rows"],
+    required: [
+      "The provider kind carries sixteen rows",
+      "`supervise`, `metrics`, and `install` kinds require an exact code",
+    ],
+  },
+];
+
+/** Declared count moves are history, not a current value: they never trip the scan. */
+const GH350_REVIEW_DELTA_MOVES = ["thirteen rows → sixteen rows", "13 rows → 16 rows"] as const;
+
+const carveReviewMoves = (text: string): string =>
+  GH350_REVIEW_DELTA_MOVES.reduce((carved, move) => carved.split(move).join(""), text);
+
+export const gh350ReviewViolations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH350_REVIEW_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push("GH-350 review-remediation page set is not the declared two");
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    const residue = carveReviewMoves(text);
+    for (const phrase of row.stale) {
+      if (residue.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) {
+        failures.push(`${row.page}: missing required phrase: ${phrase}`);
+      }
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 review remediation the zone composition and the provider row count", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the two declared pages state the delivered truth in both directions", () => {
+    expect(gh350ReviewViolations(GH350_REVIEW_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced no-zone-seam sentence and a thirteen-row count each fail by name", () => {
+    const staleEngine = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-engine.md"
+        ? `${pageText(page) ?? ""}\nthe registered engine composition supplies no zone seam\n`
+        : pageText(page);
+    expect(gh350ReviewViolations(GH350_REVIEW_ROWS, staleEngine).join("\n")).toContain(
+      "stale phrase present: supplies no zone seam",
+    );
+    const staleCount = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-result-contract.md"
+        ? `${pageText(page) ?? ""}\nThe provider kind carries thirteen rows\n`
+        : pageText(page);
+    expect(gh350ReviewViolations(GH350_REVIEW_ROWS, staleCount).join("\n")).toContain(
+      "stale phrase present: thirteen rows",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-engine.md"
+        ? (pageText(page) ?? "").replace("explicit `unknownZone`", "closed window")
+        : pageText(page);
+    expect(gh350ReviewViolations(GH350_REVIEW_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: explicit `unknownZone`",
+    );
+  });
+
+  test("a declared count move is history and does not trip the stale arm", () => {
+    const withMoves = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-result-contract.md"
+        ? `${pageText(page) ?? ""}\nthirteen rows → sixteen rows\n13 rows → 16 rows\n`
+        : pageText(page);
+    expect(gh350ReviewViolations(GH350_REVIEW_ROWS, withMoves)).toEqual([]);
+  });
+});

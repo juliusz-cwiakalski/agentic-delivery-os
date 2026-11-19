@@ -934,3 +934,56 @@ notes:
       df5634f8dae5f700d3f2bb651b79b4a1844d57ed."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 code-review remediation complete. B1 (blocking): provider migrate legacy --write no
+      longer builds its target from the process cwd; the handler resolves the effective checkout
+      root via findGitRoot with the composition's repository IO, honours --project-root (now a
+      migrate-legacy flag, rejected on every other member), writes and target-exists-checks
+      <root>/<configDirectoryName>/config.yaml, and refuses provider.migrate.refused (no-checkout)
+      when no checkout resolves. Regression guards: tests/checks/provider-migrate-cli.test.ts B1
+      cases (subdirectory writes the checkout-root document, --project-root names the root,
+      no-checkout refuses and writes nothing). B2 (blocking): an unresolvable declared zone is no
+      longer read as UTC outside resolve/quota. createResolvedProviderProbe returns unavailable
+      with condition provider.peak.zone-unknown naming the zone instead of falling back to
+      UTC_ZONE_FACTS; profile resolve validates every zone its selection can probe and refuses
+      provider.peak.zone-unknown by name before probing; resolveProfileContextFrom (status and
+      dispatch context) returns undefined for an unknown zone; peakWindowOpenAt returns an
+      explicit unknownZone instead of silently skipping (and the watcher's unmounted status is
+      documented, since no production composition supplies the peakPause port). Regression guards:
+      tests/checks/provider-zone-refusal.test.ts B2 and n7 describes,
+      tests/checks/provider-entrypoint-reachability.test.ts profile-resolve refusal, and
+      TC-MOUNT-011's Europe/Berlin resolve arm stays green. M2: evaluateBudgets now accepts only a
+      measured-or-empty read (ProviderSpendTotalsMeasuredRead excludes the failed read), so the
+      forbidden zero-on-failure state is unrepresentable; the engine keeps the delivered state.*
+      refusal (its failed-read test is retained) and a re-widening fails pnpm typecheck. m1:
+      peakWindowEndInstantMs clamps the result at nowMs, so a closed window returns now (the
+      earliest instant at or after now whose reading is at or after the end) rather than a past
+      instant; guarded by the m1 case in provider-peak-zone.test.ts. m2: TC-ZONE-009's waitSeconds
+      arithmetic and gap-crossing inequality and TC-ZONE-007's 3+3 and fourth-probe-trap fixtures
+      are added (provider-parks and provider-peak-zone). m3: the dead
+      providerMigrateSourceCapRefusal is removed with its barrel export and content-inventory pin;
+      provider-composition-absence now asserts the two caps the pure module consumes (the adapter
+      owns the source-count cap). m4: FileSystemFacts gains an optional size seam (node stat), and
+      both readProviderSimulateFixture and readSource size-check before reading; an oversized path
+      is refused without a read, with the post-read check retained as defence in depth
+      (provider-evidence-bounds.test.ts m4 cases). m5: clampWatchParkExpiry is recorded as a pure
+      rule with no production consumer — the watch reader is read-only and never derives a park —
+      and why the rule still holds. m6: the stale comments in peak-rules.ts and parks.ts (x2) are
+      corrected. n1: the budget outcome lookup is guarded instead of cast. n3: the simulate ref
+      rule is enforced inside simulateProviderResolution and the CLI-edge call is removed
+      (function-level test in provider-simulate.test.ts). n5: the budget accumulator is
+      Object.create(null), with a __proto__ child test in provider-budgets.test.ts. n6:
+      spend.points with telemetryState absent is refused at the parse boundary
+      (provider-simulate.test.ts). n7: the zone refusal now runs before the budget gate in
+      resolve, so a zone-unknown declaration with an enabled budget performs no ref resolution and
+      no spend read (engine case in provider-zone-refusal.test.ts); this matches spec v1.7's
+      stated order. Gates: pnpm typecheck green; all provider suites 666 pass / 0 fail across 64
+      files; the affected suites 132 pass / 0 fail across 10 files; GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check
+      -> 11594 pass / 4 skip / 2 fail (1422 files). Both failures are the known HOST-ENVIRONMENT
+      doc-distribution guard (TC-BIN-071 and TC-MEMNFR-004) seeing a concurrent session's
+      installed artifact under the operator's home; both pass 19/19 with a clean HOME, and
+      TC-BIN-084 passed this run. Recorded, never edited. The spec v1.7 and plan corrections
+      authored separately in the tree rode this commit. Commit
+      164061c9ff4daef541974dde349ae41a6fb02723."
+    type: evidence
+    date: "2026-11-20"
