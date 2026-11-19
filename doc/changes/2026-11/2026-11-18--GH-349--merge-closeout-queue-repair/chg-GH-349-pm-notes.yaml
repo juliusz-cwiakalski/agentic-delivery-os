@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-19T13:32:40.618Z }
   review_fix: { started: null, completed: 2026-11-19T16:44:54.841Z }
   quality_gates: { started: null, completed: 2026-11-19T19:32:25.870Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-19T19:37:44.892Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope source: the GH-349 ticket body (M4-S11) plus the committed M4
