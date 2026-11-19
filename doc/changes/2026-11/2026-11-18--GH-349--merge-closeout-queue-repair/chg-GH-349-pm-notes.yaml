@@ -702,3 +702,73 @@ notes:
       their declared obligations; no pin moved without its replacement.
     type: info
     date: "2026-11-19"
+  - text: "Plan phase 4 delivered 20dc8d96: the phase mirror takes its value from
+      the post-transition fold on every document-writing branch, the no-op
+      evidence reports that same fold value, and the both-target lint gains one
+      read-only divergence finding. FOLD DERIVATION: one named unit,
+      deriveMirrorCompletion(changeRef, transitions, phaseId) = the fold's
+      completed for the history including the just-appended record, is called by
+      the both, record-atomic-without-commit, record-record-only, landing and
+      no-op branches; started is never rewritten for an existing entry; reopen
+      keeps its delivered behaviour (fold clears completed, document writes
+      null). The retired earliest-completion lookup survives only as the
+      fixture-substituted pre-fix control (tests/fixtures/phase/history.ts
+      preFixCompletionLookup), never as executed pre-fix code. DIVERGENCE RULE
+      (GH-349 F-5, API-5, DM-8, TDR-0044 §4/§5): one comparison run only after
+      both conformance checks pass, over canonical phase ids IN ORDER, scoped to
+      phases with at least one ledger transition and compared on completed only
+      (null and a timestamp are different facts); exclusions are explicit and
+      stated in the spec and the code: a ledger-less phase produces no finding
+      and a document-only completion is out of scope (that is verify change's
+      registry-over-declaration question, and flagging it would fail the legacy
+      corpus); no exclusion list or corpus manifest is consulted, no
+      suppression mechanism exists, and the rule performs no write, acquires no
+      fence, appends nothing, reads no tracker and reads no clock (the suite's
+      trap runtime asserts all six counters are zero over two identical runs).
+      The first divergence is lint.phases.divergent at exit 1 naming the phase
+      and both values bounded at DIVERGENT_VALUE_BOUND=40. CORPUS MEASUREMENT
+      (declared window 2026-10 onward): 81 change folders, 7 ledger-backed, 71
+      phase comparisons, 0 findings — the scope exclusion holds on the real
+      corpus and no investigation was triggered (RSK-10). BOUNDARY FIX, made
+      after the first gate run failed TC-BOUND-002 (cli-edge-seam.test.ts:576)
+      because the command module had grown three exports: firstPhaseDivergence,
+      comparedPhaseCount and the PhaseDivergence type now live in
+      packages/core/src/domain/pm-notes-lint.ts beside the delivered pm-notes
+      rules; DIVERGENT_VALUE_BOUND lives in packages/core/src/contracts/pm-notes.ts
+      beside the lint/registry contract data; both are re-exported through
+      packages/core/src/domain/index.ts, packages/core/src/contracts/index.ts and
+      packages/core/src/index.ts; packages/cli/src/commands/lint.ts imports them
+      and now exports type-only LintPmNotesRead, LintRegistryRead,
+      LintCommandRuntime plus exactly one value, createLintCommandDefinition.
+      The same pass made deriveMirrorCompletion module-private (nothing outside
+      phase.ts imports it; every consumer is inside that module), restored the
+      phase-4 content-inventory allowances to
+      [createPhaseCommandDefinition, runPhaseCompleteForCommit] and
+      [createLintCommandDefinition], and added the three names to the
+      core domain/contracts allowances. Behaviour is byte-identical: the
+      zero-effect proof, the ordering proof and the bounded-summary assertions
+      were moved, not weakened. GATES, all TMPDIR=$PWD/tmp/tmpdir, all on the
+      committed tree: four targeted suites (pm-notes-lint-divergence,
+      phase-completion-convergence, lint-registry-read, lint-surface) 28 pass, 0
+      fail; bun test tests/structure 1777 pass, 0 fail across 191 files; bun
+      test tests/checks 1264 pass, 0 fail across 135 files; pnpm typecheck clean
+      (six package builds plus recursive tsc plus tests/types); pnpm check
+      exit 0 — lint 0 errors, format check clean, 11148 pass / 4 skip / 0 fail
+      across 1379 files in 1562s, check:boundaries 466 modules / 1469
+      dependencies no violations (ambient-globals, workspace-entrypoints,
+      secret-read-boundary clean), check:memory records=3 areas=8 errors=0
+      advisories=0, prompt-conformance 5 prompts clean, help-guide-coverage all
+      covered, exports-parity 5 publishables. One gate-discovered drift was
+      repaired additively, not excused: tests/fixtures/ports/v1-contract-inventory.json
+      gained DIVERGENT_VALUE_BOUND in the pm-notes.ts and index.ts surfaces
+      (phase-1-declared fixture; no entry removed). SCOPE NOTE, reported not
+      silent: the relocation touched six paths outside phase 4's declared file
+      list — core contracts/pm-notes.ts + contracts/index.ts, core
+      domain/pm-notes-lint.ts + domain/index.ts, core src/index.ts and the port
+      inventory fixture. Four of those are covered by other phases' declared
+      scopes (plan-union commit, so no drift), the fixture sits in the
+      phase-1-declared tests/fixtures/ports folder, and the commit's scopeDrift
+      names exactly the two relocation targets and no unrelated file
+      (20dc8d96, 17 staged paths)."
+    type: info
+    date: "2026-11-19"
