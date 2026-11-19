@@ -322,6 +322,13 @@
       "path": "packages/core/src/branding/probe.ts"
     }
   ],
+  "provider-fixture-read-only-simulate": [
+    {
+      "id": "provider-fixture-reader-reachable",
+      "tc": "TC-SIM-009",
+      "path": "packages/cli/src/production.ts"
+    }
+  ],
   "ambient-globals-neutral-tiers": [
     {
       "id": "ambient-contracts-process-env",

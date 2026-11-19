@@ -253,12 +253,12 @@ import {
   type ProviderClock,
   type ProviderSleep,
   type ProviderWorkItemRefResolution,
-  type QuotaTransport,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_REF_PATTERN,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
+  type QuotaTransport,
   REPOS_COMMAND_FAMILY,
   type ReposHandoverGate,
   renderPriorIdentityNotice,
@@ -463,6 +463,9 @@ export const createProductionProviderComposition = (
   stateStore: facts.stateStore,
   newFenceToken: facts.newFenceToken,
   spendTotals: createProviderSpendTotalsPort(facts.stateStore),
+  // The fixture read is the one production filesystem edge the simulate member
+  // needs (GH-350 F-5); it is never consulted outside `provider simulate`.
+  fixtureFs: nodeFileSystemFacts(),
   resolveWorkItemRef: (): ProviderWorkItemRefResolution => {
     const context = readLocalPmContext({
       path: facts.localContext.path,

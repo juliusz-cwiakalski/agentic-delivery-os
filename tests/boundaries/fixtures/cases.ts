@@ -920,6 +920,22 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/app/daemon-clean.ts",
     'import "../contracts/index";\n',
   ),
+  // GH-350 TC-SIM-009: the simulation fixture reader is reachable only from the
+  // simulate composition. A composition that reads a fixture path fails by name.
+  dep(
+    "provider-fixture-reader-reachable",
+    "TC-SIM-009",
+    "provider-fixture-read-only-simulate",
+    ["adapters", "cli"],
+    "packages/cli/src/production.ts",
+    'import { readProviderSimulateFixture } from "../../adapters/src/file/provider-simulate-fixture.js";\nexport const read = readProviderSimulateFixture;\n',
+    {
+      extraFiles: {
+        "packages/adapters/src/file/provider-simulate-fixture.ts":
+          "export const readProviderSimulateFixture = (): number => 1;\n",
+      },
+    },
+  ),
 ];
 
 export type AmbientCase = {

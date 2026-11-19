@@ -275,6 +275,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readDispatchAuthorityFact",
   ],
   "adapters/src/file/state-root-inventory.ts": ["isStoreArtifactName", "readStateRootArtifacts"],
+  "adapters/src/file/provider-simulate-fixture.ts": ["readProviderSimulateFixture"],
   "adapters/src/file/dispatch-identity.ts": [
     "dispatchIdentityMarkerPath",
     "ensureDispatchIdentityMarkerText",
@@ -2604,6 +2605,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readProfileTarget",
   ],
   "core/src/provider/loop.ts": ["runProviderLoop"],
+  "core/src/provider/simulate.ts": [
+    "PROVIDER_SIMULATE_CREDENTIAL_OUTCOMES",
+    "PROVIDER_SIMULATE_KEYS",
+    "PROVIDER_SIMULATE_SCHEMA_VERSION",
+    "createProviderSimulateZonePort",
+    "parseProviderSimulateFixture",
+    "providerSimulateRefRefusal",
+    "simulateProviderResolution",
+  ],
   "core/src/provider/quota.ts": [
     "classifyQuotaTransport",
     "createProviderWatchStatus",

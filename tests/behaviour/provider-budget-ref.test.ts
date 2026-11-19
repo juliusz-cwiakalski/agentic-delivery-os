@@ -4,26 +4,34 @@
  * The seam is one fact with three tiers (an explicit ref-bearing fact, the local
  * delivery context, a refusal), validated against the delivered
  * `SPEND_WORK_ITEM_REF_PATTERN`. No case reads the ambient environment, clock,
- * network, or live tree. TC-REF-004 (simulate) belongs to the simulation phase,
- * which owns the fixture field it exercises.
+ * network, or live tree. TC-REF-004 (the simulate fixture's field) is appended
+ * here for the pure arm; its command arm lives in
+ * `tests/checks/provider-simulate-cli.test.ts`.
  */
 import { describe, expect, test } from "bun:test";
+import { resolveAppErrorCode } from "../../packages/cli/src/classify";
+import { createProviderSpendTotalsPort } from "../../packages/cli/src/edge";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import {
+  PARK_EVIDENCE_FIELDS,
+  PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
   type ProviderBudgetDeclaration,
   type ProviderConfiguration,
   type ProviderSpendTotalsInput,
   type ProviderSpendTotalsRead,
 } from "../../packages/core/src/contracts/index";
-import { resolveAppErrorCode } from "../../packages/cli/src/classify";
-import { createProviderSpendTotalsPort } from "../../packages/cli/src/edge";
-import { projectExitCode } from "../../packages/cli/src/projection";
+import { computeSpendReport } from "../../packages/core/src/domain/spend";
 import { resolveProviderWorkItemRef } from "../../packages/core/src/provider/budgets";
 import { createProviderEngine } from "../../packages/core/src/provider/engine";
+import {
+  parseProviderSimulateFixture,
+  providerSimulateRefRefusal,
+  simulateProviderResolution,
+} from "../../packages/core/src/provider/simulate";
 import { parseProviderConfiguration } from "../../packages/core/src/provider/validate";
-import { computeSpendReport } from "../../packages/core/src/domain/spend";
 import { appendHarnessTelemetry, readSpendLedger } from "../../packages/core/src/state/index";
-import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 import { makeSessionRecord } from "../fixtures/spend/harness";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
 const CONTEXT_PATH = "/repo/.ai/local/pm-context.yaml";
@@ -60,7 +68,7 @@ const recorder = (
   ref: { status: "resolved"; workItemRef: string } | { status: "unresolved" },
 ): Recorder => {
   const calls: ProviderSpendTotalsInput[] = [];
-  let seamCalls = 0;
+  const seamCalls = 0;
   return {
     calls,
     seamCalls: () => seamCalls,
@@ -327,5 +335,90 @@ describe("TC-REF-005 the three-tier precedence measures the same ledger spend re
     } finally {
       removeRoot(root);
     }
+  });
+});
+
+describe("TC-REF-004 simulate takes its ref only from the fixture", () => {
+  const fixtureWith = (extra: Record<string, unknown>) =>
+    JSON.stringify({
+      schemaVersion: "delivery.provider.simulate.v1",
+      now: "2026-01-01T12:00:00Z",
+      ...extra,
+    });
+
+  const parse = (text: string) =>
+    parseProviderSimulateFixture(
+      { text, byteLength: Buffer.byteLength(text, "utf8") },
+      PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+    );
+
+  const simulate = async (budgets: Record<string, ProviderBudgetDeclaration>, text: string) => {
+    const parsed = parse(text);
+    if (!parsed.ok) return parsed;
+    const config = configWith(budgets);
+    const refusal = providerSimulateRefRefusal(config, parsed.fixture);
+    if (refusal !== undefined) return refusal;
+    return simulateProviderResolution({
+      fixturePath: "/repo/simulate.json",
+      fixture: parsed.fixture,
+      config,
+    });
+  };
+
+  test("a budget-free configuration accepts the field absent and present, disclosing it", async () => {
+    const withoutRef = await simulate({}, fixtureWith({}));
+    expect(withoutRef.ok).toBe(true);
+    if (!withoutRef.ok) return;
+    expect(Object.keys(withoutRef.data)).not.toContain("workItemRef");
+    expect(Object.keys(withoutRef.data.simulation)).not.toContain("workItemRef");
+
+    const withRef = await simulate({}, fixtureWith({ workItemRef: "GH-350" }));
+    expect(withRef.ok).toBe(true);
+    if (!withRef.ok) return;
+    expect(withRef.data.simulation.workItemRef).toBe("GH-350");
+    expect(Object.keys(withRef.data)).not.toContain("workItemRef");
+    expect(JSON.stringify(withRef.data.simulation)).toContain("GH-350");
+  });
+
+  test("an enabled budget requires the field and refuses absent or malformed naming it", async () => {
+    const absent = await simulate(ticketBudget, fixtureWith({}));
+    expect(absent.ok).toBe(false);
+    if (!absent.ok) {
+      expect(absent.code).toBe("input.value.rejected");
+      expect(absent.summary).toContain("workItemRef");
+      expect(absent.summary).toContain("ticketCap");
+      expect(absent.summary).toContain("simulate never reads the local delivery context");
+    }
+
+    const malformed = parse(fixtureWith({ workItemRef: "gh-350" }));
+    expect(malformed.ok).toBe(false);
+    if (!malformed.ok) {
+      expect(malformed.code).toBe("input.value.rejected");
+      expect(malformed.field).toBe("workItemRef");
+    }
+
+    const valid = await simulate(ticketBudget, fixtureWith({ workItemRef: "GH-350" }));
+    expect(valid.ok).toBe(true);
+    if (valid.ok) expect(valid.data.simulation.workItemRef).toBe("GH-350");
+  });
+
+  test("two runs of one fixture are byte-identical and no sixth evidence field appears", async () => {
+    const text = fixtureWith({ workItemRef: "GH-350" });
+    const first = await simulate(windowBudget, text);
+    const second = await simulate(windowBudget, text);
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
+    if (!first.ok) return;
+    expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
+    expect(Object.keys(first.data)).toEqual([
+      "summary",
+      "chain",
+      "decision",
+      "skipped",
+      "parks",
+      "announcements",
+      "simulation",
+    ]);
   });
 });

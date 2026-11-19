@@ -551,3 +551,52 @@ notes:
       GH-350 -> valid, readyForDevelopment=true. Commit 20e5dff5."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 merge sync with origin/main-tools (f802f71a): merge commit
+      50a1482b (parents 5c189f46 and f802f71a), no conflict aborted and no
+      --abort used. Three conflicts resolved as union. (1)
+      doc/decisions/00-index.md: upstream's six GH-347 dispatch rows
+      TDR-0049..TDR-0054 and this branch's six provider rows
+      TDR-0057..TDR-0062 both kept, and the three narrative blocks (GH-346
+      0044..0048, GH-347 0049..0054, GH-350 0057..0062) kept in id order;
+      nothing renumbered further and no row dropped. (2)
+      doc/spec/features/feature-config-layer.md: upstream's GH-347
+      dispatch-lane policy paragraph kept beside this branch's
+      provider.budgets table, declared-zone peak value domain, record-map list
+      and per-repository section (precedence matrix, origins, CI=true,
+      selected-file, multi-checkout boundary); the front-matter links union
+      GH-347 and TDR-0050/TDR-0051 with GH-350 and PDR-0006/TDR-0057. (3)
+      packages/cli/src/production.ts: this branch's
+      createProductionProviderComposition (readLocalPmContext ref seam plus
+      createProviderSpendTotalsPort) landed as a pure 47-line addition over
+      upstream's dispatch composition; the DispatchLaneFacts type import was
+      dropped because upstream deleted its only consumer (laneFactsFor,
+      replaced by resolveDispatchLane), which the build named as TS6133.
+      Renumber interplay: the six provider records stay TDR-0057..TDR-0062
+      (0057 budgets, 0058 simulate, 0059 migration, 0060 watch, 0061 mount,
+      0062 ref); upstream's 0049..0054 are its own dispatch records and are
+      untouched. Counts: UNCHANGED, established after the merge rather than
+      assumed. bun run scripts/checks/error-table-sync.ts reports entries=167
+      documented=167 corpus=84 and OK; the merged table holds 167 source
+      entries = 34 baseline + 133, 167 documented rows, 166 delivered rows on
+      the separate metric, the 66-entry two-segment allowlist, and the 84-row
+      corpus (59 true-positive / 25 false-positive); the provider kind holds
+      16 rows and the vocabulary stays 6 condition kinds, 8 park causes, 9
+      skip reasons, 13 announcement codes, 14 park evidence fields, 17
+      announcement evidence fields. So no page or spec total moved: 167 / 167
+      / 166 / +133 / 66 / 84 (59/25) were correct before and after. The
+      count-bearing suites (tests/checks/error-table-sync.test.ts,
+      tests/structure/error-table.test.ts,
+      tests/structure/content-inventory.test.ts,
+      tests/structure/port-contract-inventory.test.ts,
+      tests/checks/doc-conformance.test.ts) pass 289/289, the provider suites
+      pass 98/98, and the auto-merged inventories (v1-contract-inventory.json,
+      inventory.json, content-inventory.test.ts) are pure additions over HEAD.
+      Gate: GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11422 pass
+      / 4 skip / 2 fail (11428 tests); both failures are 5 s timeouts under
+      host load with zero assertion failures, TC-METRICS-106 (passes 4/4
+      alone) and TC-SHELL-001's two registry rows (pass 4/4 alone at a 60 s
+      budget, ~11 s total on this host). pnpm build green after a clean dist
+      rebuild."
+    type: evidence
+    date: "2026-11-19"

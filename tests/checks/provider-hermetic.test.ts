@@ -201,3 +201,34 @@ describe("GH-350 the budget tier is hermetic", () => {
     expect(providerTestFiles()).toContain("tests/behaviour/provider-budget-ref.test.ts");
   });
 });
+
+/**
+ * GH-350 TC-SIM-011 (hermetic half) — the simulation tier reads no ambient
+ * clock, environment, zone data, network, credential, or filesystem capability,
+ * and its suites join the provider-tier scan.
+ */
+describe("GH-350 the simulate tier is hermetic", () => {
+  test("the simulate module and its fixture reader import no ambient capability", () => {
+    for (const relative of [
+      "packages/core/src/provider/simulate.ts",
+      "packages/adapters/src/file/provider-simulate-fixture.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, relative), "utf8");
+      for (const forbidden of [
+        "node:",
+        "child_process",
+        "setTimeout",
+        "process.env",
+        "Intl",
+        "Date.now",
+        "fetch(",
+      ]) {
+        expect(text, `${relative}: ${forbidden}`).not.toContain(forbidden);
+      }
+    }
+  });
+
+  test("the simulate suites are covered by the provider-tier hermetic scan", () => {
+    expect(providerTestFiles()).toContain("tests/behaviour/provider-simulate.test.ts");
+  });
+});

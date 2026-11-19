@@ -246,6 +246,26 @@ module.exports = {
     // (repo|file|host|session|legacy) plus the credential implementation;
     // ADR-0005 refines that reading for provider client subpaths that perform
     // network I/O. Each provider entry is exact-path and reason-bearing.
+    // --- GH-350 F-5/DEC-4 (TC-SIM-009): the simulation fixture is a
+    // verification input, never a production policy source. The adapter module is
+    // the only reader; the CLI edge is the only composer; every other package,
+    // command, and composition is forbidden to reach it (the boundary harness
+    // materialises this rule and its failing fixture by name).
+    {
+      name: "provider-fixture-read-only-simulate",
+      severity: "error",
+      comment:
+        "GH-350 F-5, DEC-4 (TC-SIM-009): the simulation fixture reader is reachable only from the simulate composition. No other composition may read a fixture path.",
+      from: {
+        path: "^packages/",
+        pathNot:
+          "^(packages/adapters/src/file/(index|provider-simulate-fixture)\\.ts|packages/cli/src/edge\\.ts)$",
+      },
+      to: {
+        path: "^packages/adapters/src/file/provider-simulate-fixture\\.ts$",
+        reachable: true,
+      },
+    },
     {
       name: "runtime-apis-confinement",
       severity: "error",

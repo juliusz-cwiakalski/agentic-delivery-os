@@ -12,13 +12,6 @@ export {
   severityForAnnouncementCode,
 } from "./announcements.js";
 export {
-  type ChainEntryState,
-  type ChainResolutionInput,
-  type ChainResolutionOutcome,
-  resolveProviderChain,
-} from "./chain.js";
-export { combineProviderConditions } from "./conditions.js";
-export {
   type BudgetEvaluation,
   type BudgetEvaluationInput,
   budgetCondition,
@@ -34,6 +27,13 @@ export {
   type ProviderWorkItemRefOutcome,
   resolveProviderWorkItemRef,
 } from "./budgets.js";
+export {
+  type ChainEntryState,
+  type ChainResolutionInput,
+  type ChainResolutionOutcome,
+  resolveProviderChain,
+} from "./chain.js";
+export { combineProviderConditions } from "./conditions.js";
 export {
   createProfileProbePort,
   createProviderEngine,
@@ -151,6 +151,30 @@ export {
   type ProviderWatchStatusRuntime,
   type QuotaNormalizationFailure,
 } from "./quota.js";
+export {
+  createProviderSimulateZonePort,
+  PROVIDER_SIMULATE_CREDENTIAL_OUTCOMES,
+  PROVIDER_SIMULATE_KEYS,
+  PROVIDER_SIMULATE_SCHEMA_VERSION,
+  type ProviderSimulateBlock,
+  type ProviderSimulateCredentialOutcome,
+  type ProviderSimulateData,
+  type ProviderSimulateDocument,
+  type ProviderSimulateFailure,
+  type ProviderSimulateFixture,
+  type ProviderSimulateInputs,
+  type ProviderSimulateOutcome,
+  type ProviderSimulateParse,
+  type ProviderSimulateQuotaBlock,
+  type ProviderSimulateRequest,
+  type ProviderSimulateSpend,
+  type ProviderSimulateSpendPoint,
+  type ProviderSimulateStep,
+  type ProviderSimulateSummary,
+  parseProviderSimulateFixture,
+  providerSimulateRefRefusal,
+  simulateProviderResolution,
+} from "./simulate.js";
 export {
   emptyProfileConfiguration,
   type ProfileConfigResult,

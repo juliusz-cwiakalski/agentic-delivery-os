@@ -53,6 +53,7 @@ import {
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
+  readProviderSimulateFixture,
   runtimePlatform,
   scanMetricsCorpus,
   stagePmNotesPhaseEntry,
@@ -96,6 +97,7 @@ import {
   createSessionStore,
   type OpencodeSessionIo,
 } from "@delivery-os/adapters/session";
+import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   type ActionArtifactVerdict,
@@ -254,6 +256,7 @@ import {
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
+import type { ProviderZoneFacts } from "@delivery-os/core/contracts";
 import {
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
@@ -346,11 +349,15 @@ import {
   type PhaseTransitionRecord,
   type PlanDiffPort,
   type PlanMemberDeclaration,
+  PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
   type ProviderAnnouncementRecord,
   type ProviderClock,
   type ProviderConfiguration,
   type ProviderParkRecord,
   type ProviderSleep,
+  type ProviderSpendTotalsPort,
+  type ProviderSpendTotalsRead,
+  type ProviderWorkItemRefResolver,
   QUEUE_BATTERY_ONLY_PARK_CAUSES,
   type QueueDegradationReason,
   type QueueTrackerRead,
@@ -364,9 +371,6 @@ import {
   type StateFenceHandle,
   type StateResult,
   type StateStorePort,
-  type ProviderSpendTotalsPort,
-  type ProviderSpendTotalsRead,
-  type ProviderWorkItemRefResolver,
   type StatusBlockersRead,
   type StatusLanePark,
   type StatusLocalContextRead,
@@ -388,8 +392,6 @@ import {
   type WatchdogSignalSource,
   type WorkItem,
 } from "@delivery-os/core/contracts";
-import type { ProviderZoneFacts } from "@delivery-os/core/contracts";
-import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import {
   bindZoneFacts,
   createProfileProbePort,
@@ -400,13 +402,16 @@ import {
   normaliseZoneName,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  parseProviderSimulateFixture,
   persistProfileTarget,
+  providerSimulateRefRefusal,
   readProfileTarget,
   readProviderLedger,
   readProviderParkViews,
   resolveProfileForSpawn,
-  UTC_ZONE_FACTS,
   selectProfile,
+  simulateProviderResolution,
+  UTC_ZONE_FACTS,
 } from "@delivery-os/core/provider";
 import {
   appendAuditInvocation,
@@ -1675,6 +1680,12 @@ export type ProviderComposition = {
   readonly resolveWorkItemRef?: ProviderWorkItemRefResolver;
   /** The context path the unresolvable-ref refusal names. */
   readonly workItemContextPath?: string;
+  /**
+   * The filesystem seam the simulate fixture read uses (GH-350 F-5). Absent
+   * means the composition's configuration filesystem, then the node facts; a
+   * test injects its recording stub here so a fixture open is observable.
+   */
+  readonly fixtureFs?: FileSystemFacts;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
@@ -5022,6 +5033,71 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           return outcome.selection;
         }
         return lifecycle.selection;
+      },
+      simulate: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!parsed.ok) {
+          return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
+        }
+        // One bounded read, then the pure parser: a fixture defect refuses
+        // before any evaluation and never echoes the document.
+        const read = readProviderSimulateFixture({
+          path: input.fixturePath,
+          fs: provider.fixtureFs ?? options.fs ?? nodeFileSystemFacts(),
+          maxBytes: PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+        });
+        if (!read.ok) return { ok: false, code: read.code, summary: read.summary };
+        const fixtureParsed = parseProviderSimulateFixture(
+          read.document,
+          PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+        );
+        if (!fixtureParsed.ok) {
+          return { ok: false, code: fixtureParsed.code, summary: fixtureParsed.summary };
+        }
+        const refRefusal = providerSimulateRefRefusal(parsed.config, fixtureParsed.fixture);
+        if (refRefusal !== undefined) {
+          return { ok: false, code: refRefusal.code, summary: refRefusal.summary };
+        }
+        let profileScope:
+          | { readonly name: string; readonly providers: readonly string[] }
+          | undefined;
+        if (fixtureParsed.fixture.profile !== undefined) {
+          const profileParsed = parseAndValidateProfileConfiguration(
+            snapshot.value.config.values,
+            parsed.config,
+          );
+          if (!profileParsed.ok) {
+            return {
+              ok: false,
+              code: profileParsed.error.code,
+              summary: profileParsed.error.detail,
+            };
+          }
+          const profile = profileParsed.config.profiles[fixtureParsed.fixture.profile];
+          if (profile === undefined) {
+            return {
+              ok: false,
+              code: "provider.profile.invalid",
+              summary: `profile ${fixtureParsed.fixture.profile} is not declared`,
+            };
+          }
+          profileScope = { name: profile.name, providers: profile.providers };
+        }
+        return simulateProviderResolution({
+          fixturePath: input.fixturePath,
+          fixture: fixtureParsed.fixture,
+          config: parsed.config,
+          ...(profileScope === undefined ? {} : { profile: profileScope }),
+          zoneFactsFor: (zone) => providerZoneFactsFor(zone),
+        });
       },
       watchStatus: async (input) => {
         const snapshot = resolve({});
