@@ -1361,7 +1361,7 @@ notes:
     type: info
     date: "2026-11-19"
   - text: "CEO-AUTHORIZED FIX-FORWARD #2 at the `TS tests` CI gate — commit
-      recorded below. HERMETICITY CLASS: the scratch root is created by a test
+      5395fb7e. HERMETICITY CLASS: the scratch root is created by a test
       PRELOAD, so no suite depends on another suite's side effect. WHAT CHANGED
       (two files, plus this plan-scope declaration): `tests/preload.ts` (new)
       resolves the repository root the way the suites do (`process.cwd()`) and
