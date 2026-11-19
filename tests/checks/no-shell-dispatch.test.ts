@@ -324,6 +324,45 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
     }
   });
 
+  test("TC-SHELL-001 a planted reference in a declared operator surface fails by name and file:line", () => {
+    const base = join(ROOT, "tmp", "tmpdir");
+    mkdirSync(base, { recursive: true });
+    const root = mkdtempSync(join(base, "no-shell-operator-"));
+    try {
+      const relative = "packages/core/src/domain/dispatch-operator-view.ts";
+      mkdirSync(join(root, "packages", "core", "src", "domain"), { recursive: true });
+      writeFileSync(
+        join(root, relative),
+        [
+          "export const marker = 'active';",
+          "export const hint = 'see scripts/deliver-ticket.sh for the shell lane';",
+          "export const template = (root: string) => `${root}/tools/deliver-ticket`;",
+          "",
+        ].join("\n"),
+      );
+      const violations = scan(root, [relative]);
+      const rules = violations.map((violation) => violation.rule);
+      expect(rules).toContain("script-path literal");
+      expect(violations.every((violation) => violation.file === relative)).toBe(true);
+      // Both the plain literal (line 2) and the substituted template (line 3)
+      // are reported, by rule and by line.
+      expect(new Set(violations.map((violation) => violation.line)).size).toBeGreaterThanOrEqual(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a payload string that mentions dispatch without a path stays clean", () => {
+    const controls = [
+      "export const summary = 'dispatch status answers the newest lane';\n",
+      "export const hint = 'run dispatch log GH-354 for the tail';\n",
+      "export const label = 'dispatch.is-delivering';\n",
+    ];
+    for (const source of controls) {
+      expect(scanSource("control.ts", source), source).toEqual([]);
+    }
+  });
+
   test("a planted reference is reported through the temp-workspace scan", () => {
     // The tmp parent is created first: `tmp/` is git-ignored, so a clean clone
     // running this file alone would otherwise fail with ENOENT (review m6).

@@ -15,6 +15,8 @@ import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
 import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
+import { createOperatorHarness, OPERATOR_REF } from "../fixtures/dispatch/operator/harness";
+import { createTranscriptDouble } from "../fixtures/dispatch/operator/transcript";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
 
@@ -549,5 +551,69 @@ describe("GH-347 the dispatch record-kind surface gains exactly the lane kind", 
     // The daemon lane is a DISTINCT kind and is unchanged.
     expect(contracts.DAEMON_LANE_RECORD_KIND).toBe("daemon.lane");
     expect(contracts.DAEMON_LANE_PAYLOAD_SCHEMA).toBe("delivery.daemon.lane.v1");
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-354 TC-CONTRACT-003 — pre-change records read unchanged, and a pre-change */
+/* ref answers honestly (clause §8.5, §20, AC-F2-3).                           */
+/* ------------------------------------------------------------------------- */
+
+describe("TC-CONTRACT-003 the operator surface is additive over pre-change records", () => {
+  test("a pre-change lane decodes with its delivered key set and answers honestly", async () => {
+    const h = createOperatorHarness({
+      label: "contract-003",
+      transcriptRead: createTranscriptDouble({
+        messages: { "ses-pre": "the pre-change final message" },
+      }).read,
+    });
+    try {
+      // The delivered key set exactly: no field this change adds.
+      const seeded = h.seedLane({
+        ref: OPERATOR_REF,
+        state: "terminal",
+        sessionId: "ses-pre",
+        attemptId: "attempt-pre",
+        lastToken: "pr-open",
+        lastOutcome: "completed",
+      });
+      expect(Object.keys(seeded).sort()).toEqual(
+        [
+          "attemptId",
+          "harnessKind",
+          "iterationOrdinal",
+          "lastOutcome",
+          "lastToken",
+          "owner",
+          "recordedAt",
+          "ref",
+          "repository",
+          "restartsConsumed",
+          "schema",
+          "sessionId",
+          "state",
+        ].sort(),
+      );
+      const before = h.ledgerBytes();
+      const status = await h.run(["dispatch", "status", OPERATOR_REF, "--json"]);
+      expect(status.exit).toBe(0);
+      expect((status.data as { readonly marker?: string }).marker).toBe("terminal");
+      const delivering = await h.run(["dispatch", "is-delivering", OPERATOR_REF, "--json"]);
+      expect(delivering.exit).toBe(1);
+      const log = await h.run(["dispatch", "log", OPERATOR_REF, "--json"]);
+      // A pre-change lane has no artifact directory: the classified absence.
+      expect((log.data as { readonly reason?: string }).reason).toBe("no-log");
+      expect(log.exit).toBe(0);
+      const message = await h.run(["dispatch", "last-message", OPERATOR_REF, "--json"]);
+      expect(message.exit).toBe(0);
+      expect((message.data as { readonly message?: string }).message).toBe(
+        "the pre-change final message",
+      );
+      // Nothing was migrated, backfilled, or rewritten.
+      expect(h.ledgerBytes()).toBe(before);
+      expect(h.counters.append).toBe(0);
+    } finally {
+      h.dispose();
+    }
   });
 });

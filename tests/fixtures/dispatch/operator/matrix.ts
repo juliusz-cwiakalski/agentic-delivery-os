@@ -8,9 +8,13 @@
  * these rows, so a lifecycle state or a mode can never silently disappear.
  */
 
+import { rmSync } from "node:fs";
+import { join } from "node:path";
 import { projectExitCode } from "../../../../packages/cli/src/projection";
 import type { ProjectionClass } from "../../../../packages/core/src/contracts/index";
-import type { OperatorHarness } from "./harness";
+import { createOperatorHarness, type OperatorHarness } from "./harness";
+import { materializeFamily, segmentName } from "./logs";
+import { createTranscriptDouble } from "./transcript";
 
 export type OperatorMatrixState = "live" | "terminal" | "absent";
 export type OperatorMatrixMode = "human" | "json";
@@ -25,6 +29,10 @@ export type OperatorMatrixEntry = {
   readonly precondition: string;
   /** The delivered projection class the answer projects through (API-11). */
   readonly projection: ProjectionClass;
+  /** The closed reason the row expects, when the row is a negative answer. */
+  readonly reason?: string;
+  /** The lane's declared harness kind, when the row needs a specific one. */
+  readonly harnessKind?: "opencode" | "claude-code";
   /** The payload facts the row asserts; each entry is a failure message. */
   readonly expected: (data: unknown) => readonly string[];
 };
@@ -104,6 +112,8 @@ const message = (
       ? "a terminal opencode lane with a readable transcript"
       : `a lane whose answer is ${reason}`,
   projection,
+  ...(reason === undefined ? {} : { reason }),
+  ...(reason === "capability-gap" ? { harnessKind: "claude-code" as const } : {}),
   expected: (data) => [
     ...mismatch("query", at(data, "query"), "last-message"),
     ...mismatch("reason", at(data, "reason"), reason),
@@ -236,4 +246,89 @@ export const runMatrixCase = async (
   }
   if (entry.mode === "json") failures.push(...entry.expected(result.data));
   return { id: entry.id, exit: result.exit, failures };
+};
+
+/* ------------------------------------------------------------------------- */
+/* The row driver: one prepared harness per row, so every row is independent. */
+/* ------------------------------------------------------------------------- */
+
+const ROW_FAMILY_ROOT = "gh354-matrix-family";
+
+/** Build the fresh harness one registry row needs from its declared state. */
+export const createRowHarness = (entry: OperatorMatrixEntry): OperatorHarness => {
+  const familyRoot = join(process.cwd(), "tmp", "tmpdir", `${ROW_FAMILY_ROOT}-${entry.id}`);
+  rmSync(familyRoot, { recursive: true, force: true });
+  const transcript = createTranscriptDouble({
+    messages: { "ses-matrix": "the final message of the session" },
+    ...(entry.reason === "no-message" || entry.reason === "unreadable"
+      ? { absence: entry.reason }
+      : {}),
+    ...(entry.reason === "session-unknown" ? { absence: "session-unknown" as const } : {}),
+  });
+  const harness = createOperatorHarness({
+    label: entry.id.toLowerCase(),
+    artifactRoot: familyRoot,
+    transcriptRead: transcript.read,
+  });
+  if (entry.query.startsWith("last-message") && entry.reason === "capability-gap") {
+    harness.seedLane({
+      ref: harness.ref,
+      state: "terminal",
+      sessionId: "ses-matrix",
+      harnessKind: "claude-code",
+    });
+    return harness;
+  }
+  if (entry.query.startsWith("last-message") && entry.reason === "no-lane") return harness;
+  if (entry.state === "absent") {
+    if (entry.query.startsWith("log")) {
+      // No family directory at all: the absent-ref answer.
+      return harness;
+    }
+    return harness;
+  }
+  if (entry.query.startsWith("log")) {
+    materializeFamily({
+      familyRoot,
+      ref: harness.ref,
+      files: [
+        {
+          name: segmentName({
+            recordedAt: "2026-11-19T00:00:00.000Z",
+            attemptId: "matrix",
+            iterationOrdinal: 1,
+            streamKind: "spawn",
+            segmentOrdinal: 1,
+          }),
+          text: "M-1\nM-2\n",
+        },
+      ],
+    });
+    return harness;
+  }
+  harness.seedLane({
+    ref: harness.ref,
+    state: entry.state === "live" ? "active" : entry.state,
+    sessionId: "ses-matrix",
+    ...(entry.state === "terminal"
+      ? { lastToken: "pr-open" as const, lastOutcome: "completed" as const }
+      : {}),
+  });
+  return harness;
+};
+
+/** Run one row through its prepared harness and compare. */
+export const runPreparedMatrixCase = async (
+  entry: OperatorMatrixEntry,
+): Promise<OperatorMatrixOutcome> => {
+  const harness = createRowHarness(entry);
+  try {
+    return await runMatrixCase(harness, entry);
+  } finally {
+    harness.dispose();
+    rmSync(join(process.cwd(), "tmp", "tmpdir", `${ROW_FAMILY_ROOT}-${entry.id}`), {
+      recursive: true,
+      force: true,
+    });
+  }
 };
