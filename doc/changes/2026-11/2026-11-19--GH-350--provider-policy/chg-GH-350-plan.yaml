@@ -35,7 +35,7 @@
 #                including `workItemRef`), E (migration subset, mapping table,
 #                refusals), F (watch freshness), G (the three declared provider
 #                rows)).
-#   - Test plan: ./chg-GH-350-test-plan.md (v1.3: **108** cases in eleven blocks
+#   - Test plan: ./chg-GH-350-test-plan.md (v1.4: **108** cases in eleven blocks
 #                — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
 #                class-T paid-entry case), TC-CFG-001..011 (11),
 #                TC-INDEP-001..004 (4), TC-SIM-001..011 (11),
@@ -61,12 +61,14 @@
 #                delivery", story M4-S4; the eight binding decisions, all
 #                `Proposed` with owner acceptance at pull-request review).
 #   - DoR:       ./readiness-review/readiness-iter-1.md (iteration 1,
-#                `NOT_READY`: blocking B1..B7, six non-blocking findings) and
+#                `NOT_READY`: blocking B1..B7, six non-blocking findings),
 #                ./readiness-review/readiness-iter-2.md (iteration 2,
-#                `NOT_READY`: blocking D2-1..D2-4, major D2-5..D2-12). Both
-#                verdicts are TRACKED in the tree at plan time; the two
-#                remediation maps below state where every finding is answered in
-#                THIS plan or is dispositioned as an artifact-level matter.
+#                `NOT_READY`: blocking D2-1..D2-4, major D2-5..D2-12) and the
+#                iteration-3 findings (blocking N-1; N-3, N-6, N-8 and the
+#                harness note). All verdicts are TRACKED in the tree at plan time;
+#                the THREE remediation maps below (iterations 1, 2 and 3) state
+#                where every finding is answered in THIS plan or is dispositioned
+#                as an artifact-level matter.
 
 #   - Decisions: doc/decisions/ADR-0012 (zone domain, one `ProviderZonePort`,
 #                DST rule, three-pass cap, `provider.peak.zone-unknown`,
@@ -239,7 +241,10 @@
 #        `doc/spec/features/feature-cli-entrypoint.md`'s count and its
 #        "`install` is the twenty-sixth **and last**" sentence move in PHASE 8.
 #        Each phase's comment names the sentences and the doc-conformance phrase
-#        row that pins them.
+#        row that pins them. N-3 EXTENDED this from the five count sentences to
+#        the whole page edit-set (the enumerated reason table, the park-cause and
+#        announcement-code lists, the tie order, and the two allowlist
+#        enumerations); see the iteration-3 map below.
 #   D2-5 — the boundary rule path. DECIDED HERE: `.dependency-cruiser.cjs` IS
 #        declared, in the phases that add the two IMPORT-GRAPH rules — PHASE 5
 #        (a fixture read reachable only from the simulate composition) and PHASE 6
@@ -272,7 +277,7 @@
 #        read-only members (`quota`, `parks list`, `watch status`, `simulate`)
 #        write nothing", not "a provider invocation writes nothing".
 #   D2-9 — TC-MOUNT-008's owner and setup. DECLARED: the owner is
-#        `tests/checks/provider-alias-baseline.test.ts` (test plan v1.3 §7.1/§7.3
+#        `tests/checks/provider-alias-baseline.test.ts` (test plan v1.4 §7.1/§7.3
 #        agree), and the comparison is cell by cell against the committed baseline
 #        INCLUDING `git show <capturedFrom>:tests/fixtures/entrypoint/
 #        alias-baseline.json` for the provenance cell. Phase 8 states it.
@@ -283,12 +288,16 @@
 #        labels, TDR-0053 §5-B19's mutant description). TEST-PLAN/RECORD
 #        ARTIFACTS; no phase changes. The plan's own control list is corrected at
 #        D2-12.
-#   D2-12 — scope noise. CORRECTED below: `tests/checks/exports-parity.test.ts` is
-#        declared by NO phase (it packs each publishable package's declarations
-#        generically, so a new subpath needs no entry there) and
-#        `tests/structure/provider-surface.test.ts` is declared ONLY in phase 3,
-#        for TC-BUD-016's one-measurement-path scan arm — never for the new
-#        adapter subpath, which it does not police. Phase 8 also declares
+#   D2-12 — scope noise. CORRECTED below: `tests/checks/exports-parity.test.ts` and
+#        `tests/structure/provider-surface.test.ts` are declared by NO phase. The
+#        former packs each publishable package's declarations generically, so a new
+#        subpath needs no entry there; the latter enumerates the jira/gitlab/github
+#        TRACKER clients, asserts nothing about the new adapters subpath or the
+#        measurement path, and is consumed as an UNEDITED CONTROL (test plan v1.4
+#        §3.2, §7.2, §7.3) — its existing enumeration is what proves the new
+#        time-zone subpath was not smuggled into a tracker client's surface. The
+#        measurement-path arm's structural home is
+#        `tests/structure/provider-budgets-contract.test.ts`. Phase 8 also declares
 #        `tests/behaviour/entrypoint-composition.test.ts` for the removal of
 #        `provider` from `withExtras()`, which must stop listing a mounted family
 #        as an extra.
@@ -315,9 +324,17 @@
 #        row, the park-cause enumeration gains `budget-exhausted` (seven -> eight),
 #        the announcement-code list gains the two budget codes (eleven ->
 #        thirteen), the MAX sentence's tie order gains `budget-exhausted` after
-#        `quota-exhausted` (five -> six), and the two allowlists' field lists name
-#        the added fields. One commit, one phrase row: the page is never
-#        internally inconsistent at a boundary.
+#        `quota-exhausted` (five -> six), and TWO previously unowned restatements
+#        move with them: the ANNOUNCEMENT-EVIDENCE inline enumeration ("projected
+#        at runtime through the closed eleven-field allowlist: …") becomes
+#        seventeen AND gains `timezone`, `budgetName`, `budgetScope`, `budgetBasis`,
+#        `budgetMeasured` and `budgetCeiling` in place; and the Quality Assurance
+#        "Bounded evidence" row becomes "14 park fields; 14 base plus 3
+#        announcement fields" with "the 17-field allowlist" (the announcement list
+#        SPREADS the park list and adds three, so fourteen base plus three is the
+#        correct form). One commit, one phrase row: the page is never
+#        internally inconsistent at a boundary, and phase 9 does not re-move any
+#        of it.
 #   N-6 — STALE HEADER FACTS. CORRECTED: the "only page that states the FAMILY
 #        COUNT" claim is gone (six pages plus the changeset state it, and phase 8's
 #        scope is the list), and the "TDR-0053 carries an uncommitted modification"
@@ -400,12 +417,15 @@
 #   "Reference only — never executed, sourced, imported, or modified"), and
 #   `packages/cli/src/entrypoint.ts` (TDR-0053 C-2: the filter is untouched; the
 #   TC-MOUNT-003 removal arm copies it into a temp module and is never committed).
-#   `tests/structure/provider-surface.test.ts` is declared ONLY in phase 3, for
-#   TC-BUD-016's one-measurement-path scan arm: it enumerates the jira/gitlab/
-#   github tracker clients and asserts nothing about the new adapter subpath (DoR
-#   D2-12), so no phase claims otherwise. The new subpath's export set is pinned by
-#   `tests/structure/content-inventory.test.ts` + `inventory.json` and by
-#   `tests/structure/subpaths.test.ts`'s declared-subpath list.
+#   `tests/structure/provider-surface.test.ts` is declared by NO phase and is
+#   consumed as an UNEDITED CONTROL: it enumerates the jira/gitlab/github tracker
+#   clients and asserts nothing about the new adapter subpath, so no phase claims
+#   otherwise; its unchanged enumeration is itself the evidence that the new
+#   time-zone subpath was not smuggled into a tracker client's surface. The new
+#   subpath's export set is pinned by
+#   `tests/structure/content-inventory.test.ts` + `inventory.json`,
+#   `tests/structure/subpaths.test.ts`'s declared-subpath list, and
+#   `tests/structure/provider-budgets-contract.test.ts`'s measurement-path scan.
 #   DECLARED EXCEPTIONS (no phase declares them, and each is a decision rather
 #   than an omission): `scripts/checks/help-guide-coverage.ts` gains NO provider
 #   branch (TDR-0053 A4: the default M1 root already resolves the existing page),
@@ -443,8 +463,8 @@
 #   P5 fixture read / P6 migration reader / P8 unconditional registration),
 #   `packages/cli/src/commands/provider.ts`,
 #   `tests/structure/provider-contract.test.ts`,
-#   `tests/structure/provider-surface.test.ts` (P3 ONLY, and only for TC-BUD-016's
-#   measurement-path scan arm — never for the new adapters subpath),
+#   `tests/structure/provider-budgets-contract.test.ts` (P3: TC-CONFORM-003 and
+#   TC-BUD-016's measurement-path scan — the arm's structural home),
 #   `tests/checks/provider-evidence-bounds.test.ts`,
 #   `tests/checks/provider-hermetic.test.ts`,
 #   `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json`
@@ -508,8 +528,11 @@
 #   `feature-supervise.md` is deliberately NOT in this set: its only restatement
 #   is the 66-member allowlist, which does not move, so editing it would make a
 #   false claim and TC-DOC-001 asserts its `66` stays `66`), the nine delivered
-#   count/membership suites, the arithmetic base in
-#   `scripts/checks/error-table-sync.ts`, the repo-wide no-leftover scan in
+#   count/membership suites, the `BASELINE_ROWS.length + 130` arithmetic — which
+#   lives in `tests/checks/error-table-sync.test.ts`, NOT in
+#   `scripts/checks/error-table-sync.ts` (that script supplies the counts the
+#   assertion compares; the arithmetic base and every `+ 130` site are the
+#   test's) — the repo-wide no-leftover scan in
 #   `tests/structure/error-table.test.ts` (its `APPENDIX_D_FILES` list gains
 #   `feature-install-lifecycle.md` and its token pattern gains this change's
 #   outgoing forms `164`, `163` and `BASELINE_ROWS.length + 130`, so a page or
@@ -692,7 +715,7 @@
 #                 TC-CONFORM-009
 #   Phase 7 (10): TC-WFRESH-001..TC-WFRESH-010
 #   Phase 8 (10): TC-MOUNT-001..TC-MOUNT-009 (9), TC-CONFORM-006 (owner
-#                 `tests/checks/provider-coverage-mount.test.ts` in test plan v1.3)
+#                 `tests/checks/provider-coverage-mount.test.ts` in test plan v1.4)
 #   Phase 9 (6): TC-CONFORM-007, TC-DOC-001..TC-DOC-005
 #   Count: 3 + 11 + 22 + 16 + 12 + 18 + 10 + 10 + 6 = 108.
 #   MOUNT-TP-1 / OQ-TP-10 is the reachability seam: TC-MOUNT-001..003 are phase 8's
@@ -835,8 +858,9 @@ phases:
   # Register edit-set (see the header): source rows, documented rows and the
   # prose facts spec §16 binds to feature-result-contract.md, one true-positive
   # corpus row per new code, the three other count-bearing pages, the nine
-  # delivered count/membership suites (the sync script's arithmetic base and the
-  # structural mirror's `APPENDIX_D_FILES` / no-leftover pattern among them), and
+  # delivered count/membership suites (the `BASELINE_ROWS` arithmetic in
+  # `tests/checks/error-table-sync.test.ts` and the structural mirror's
+  # `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
   # THE CONTRACTS-EXPORT INVENTORY MOVES WITH THE EXPORTS (N-1):
   # `tests/structure/port-contract-inventory.test.ts` compares the ENTIRE
@@ -871,6 +895,19 @@ phases:
   #   - the announcements sentence "the closed eleven-field allowlist" ->
   #     seventeen fields, AND the enumerated announcement-code list gains
   #     `provider.budget.parked` and `provider.budget.crossed` (eleven -> thirteen);
+  #   - **the ANNOUNCEMENT-EVIDENCE inline enumeration (the "Announcement safety"
+  #     sentence, "projected at runtime through the closed eleven-field allowlist:")
+  #     becomes SEVENTEEN and gains the six added names in place** —
+  #     `timezone`, `budgetName`, `budgetScope`, `budgetBasis`, `budgetMeasured`,
+  #     `budgetCeiling` — so the sentence never reads "seventeen-field allowlist"
+  #     above eleven names at any boundary through phase 9;
+  #   - **the Quality Assurance "Bounded evidence" row moves to
+  #     "14 park fields; 14 base plus 3 announcement fields" and
+  #     "the 17-field allowlist"**. The arithmetic is the point: the announcement
+  #     allowlist SPREADS the park allowlist and adds three, so "8 base plus 3"
+  #     was right while the park list held eight and "14 base plus 3" is right at
+  #     fourteen — writing 17-plus-3, or leaving 8-plus-3 beside a fourteen-field
+  #     park list, is the self-contradiction this edit-set exists to prevent;
   #   - the closed park-cause enumeration gains `budget-exhausted` (seven -> eight);
   #   - the MAX sentence's fixed tie order becomes
   #     `peak-window`, `quota-exhausted`, `budget-exhausted`, `provider-outage`,
@@ -884,7 +921,10 @@ phases:
   #     stay accurate and are NOT rewritten — the engine family is still five.
   #   Every one of those moves is pinned by this phase's doc-conformance row, so
   #   the pair (page + phrase) lands together and the page is never internally
-  #   inconsistent at a boundary.
+  #   inconsistent at a boundary. PHASE 9 DOES NOT RE-MOVE ANY OF THEM — not the
+  #   counts, not the enumerated reason/cause/code lists, not the tie order, and
+  #   not the two allowlist enumerations above; phase 9 writes the budget/ref/
+  #   announcement-meaning/CLI prose around text this phase already made true.
   #   The page's zone half is phase 2's and its budget/ref/announcement-meaning/CLI
   #   prose is phase 9's — but the ENUMERATED LISTS and the tie order are this
   #   phase's, because they are the things the counts count (N-3).
@@ -956,10 +996,13 @@ phases:
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/result/code-corpora/true-positives.json
-        # The count and arithmetic surface: the sync script's own arithmetic base
-        # and the structural mirror's no-leftover scan gain the outgoing forms
-        # (164 identities, 163 delivered, `BASELINE_ROWS.length + 130`) so a page
-        # or suite left behind fails by name.
+        # The count surface: the `BASELINE_ROWS.length + 130` arithmetic lives in
+        # `tests/checks/error-table-sync.test.ts` (every `+ 130` site and the
+        # baseline-length comparison), while `scripts/checks/error-table-sync.ts`
+        # supplies the counts it compares; the structural mirror's no-leftover
+        # scan gains the outgoing forms (164 identities, 163 delivered,
+        # `BASELINE_ROWS.length + 130`) so a page or suite left behind fails by
+        # name.
         - scripts/checks/error-table-sync.ts
         - tests/checks/error-table-sync.test.ts
         - tests/structure/error-table.test.ts
@@ -979,10 +1022,10 @@ phases:
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-install-lifecycle.md
-        # The engine page's five vocabulary sentences (skip reasons 8 -> 9, the
-        # closed eight-value set -> nine, park allowlist 8 -> 14, announcement
-        # allowlist 11 -> 17, the error-taxonomy sentence); its zone half is
-        # phase 2's and its budget prose is phase 9's (DoR D2-4).
+#        # The engine page's whole vocabulary edit-set (the counts, the enumerated
+#        # reason/cause/code lists, the tie order, and the two allowlist
+#        # enumerations — see the obligation below); its zone half is
+#        # phase 2's and its budget prose is phase 9's (DoR D2-4, N-3).
         - doc/spec/features/feature-provider-engine.md
         # The eight TRACKED decision records land on this phase's delivery
         # commit, with the index that already carries their rows.
@@ -1304,10 +1347,17 @@ phases:
   # `budget-exhausted` with `peak-window`) — never by asserting fourteen fields on
   # a budget-only park. TC-BUD-015 stays the five-budget-field oracle; the declared
   # allowlist size was phase 1's.
-  # `tests/structure/provider-surface.test.ts` is declared HERE for TC-BUD-016's
-  # one-measurement-path scan arm only: its TC-SURFACE-001 assertions enumerate the
-  # jira/gitlab/github tracker clients and stay byte-identical, and it asserts
-  # nothing about the new adapters subpath (DoR D2-12). `tests/checks/
+  # TC-BUD-016's one-measurement-path scan arm is STRUCTURALLY HOMED in
+  # `tests/structure/provider-budgets-contract.test.ts` (declared above with
+  # TC-CONFORM-003), because that is the phase's own budget suite and the honest
+  # place for a scan of the new budget surface. `tests/structure/
+  # provider-surface.test.ts` is NOT declared and NOT edited: it enumerates the
+  # jira/gitlab/github TRACKER clients, it asserts nothing about the new adapters
+  # subpath or the measurement path, and test plan v1.4 (§3.2, §7.2, §7.3) calls it
+  # an unedited control — its existing enumeration is exactly what proves the new
+  # time-zone subpath was not smuggled into a tracker client's surface, and a
+  # control that is edited stops proving anything (DoR D2-12, review caveat).
+  # `tests/checks/
   # exports-parity.test.ts` is declared by no phase — it packs each publishable
   # package's declarations generically.
   #
@@ -1372,8 +1422,16 @@ phases:
         # here (DoR B5).
         - tests/checks/provider-evidence-bounds.test.ts
         - tests/fixtures/provider/evidence/max-evidence.json
-        # TC-BUD-016's "exactly one measurement path" structural scan.
-        - tests/structure/provider-surface.test.ts
+        # TC-BUD-016's "exactly one measurement path" structural scan lives in
+        # `provider-budgets-contract.test.ts` (declared above with TC-CONFORM-003):
+        # it is the phase's own budget suite and the honest home for a scan of the
+        # new budget surface. `tests/structure/provider-surface.test.ts` is NOT
+        # declared and NOT edited — it enumerates the jira/gitlab/github tracker
+        # clients and is consumed as an UNEDITED CONTROL (test plan v1.4 §3.2,
+        # §7.2 and §7.3), running inside `pnpm check` like any other control: its
+        # existing enumeration is what proves the new
+        # time-zone subpath was not smuggled into a tracker client's surface, and a
+        # control that is edited stops proving anything.
         - tests/checks/provider-hermetic.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
@@ -1840,7 +1898,7 @@ phases:
   # after `install` AND one `referencePages` row for the M1 page (the pre-mount
   # inventory had neither, which is why the both-directions assertion was
   # vacuous — DoR B6). The both-directions proof is now `tests/checks/
-  # provider-coverage-mount.test.ts` (TC-CONFORM-006's owner in test plan v1.3),
+  # provider-coverage-mount.test.ts` (TC-CONFORM-006's owner in test plan v1.4),
   # which drives the fixture and the static help inventory in both directions and
   # carries the two non-vacuous mutant arms (a dropped `commands` row and a
   # dropped `referencePages` row); `tests/checks/help-guide-coverage-mutants.test.ts`
