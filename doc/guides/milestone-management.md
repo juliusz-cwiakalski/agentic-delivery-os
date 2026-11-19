@@ -10,7 +10,6 @@ owners: ["engineering"]
 summary: "The milestone-first operating rule: naming, creation, attachment, entry and exit review, planned scope, closure, extension and reopening, and enforcement."
 links:
   decisions: ["PDR-0005", "ODR-0005"]
-  related_changes: ["GH-349"]
 ---
 
 # Milestone Management
