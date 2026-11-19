@@ -90,3 +90,67 @@ describe("TC-SIM-011 the simulate path holds no side-effecting capability", () =
     );
   });
 });
+
+/**
+ * GH-350 TC-MIG-004 (static half) — the migration module reads data only: no
+ * child-process, shell, VM, worker, filesystem, network, or environment
+ * capability, and no ambient-code constructor.
+ */
+const MIGRATE = "packages/core/src/provider/migrate.ts";
+const MIGRATE_READER = "packages/adapters/src/file/provider-migrate-source.ts";
+
+const MIGRATE_FORBIDDEN = [
+  "child_process",
+  "Bun.$",
+  "Bun.spawn",
+  "spawn(",
+  "execFile",
+  "new Function",
+  "eval(",
+  "node:vm",
+  "node:fs",
+  "node:http",
+  "process.env",
+  "pre-opencode-iteration",
+] as const;
+
+describe("TC-MIG-004 the migration module holds no execution capability", () => {
+  test("the migration module reads data only and imports contracts alone", () => {
+    const source = sourceOf(MIGRATE);
+    expect(capabilityHits(source, MIGRATE_FORBIDDEN)).toEqual([]);
+    expect(capabilityHits(source, SECOND_EVALUATOR)).toEqual([]);
+    expect(source).toContain('from "#contracts"');
+    expect(source).toContain("PROVIDER_MIGRATE_SOURCE_MAX_BYTES");
+    expect(source).toContain("PROVIDER_MIGRATE_SOURCE_MAX_LINES");
+    expect(source).toContain("PROVIDER_MIGRATE_MAX_SOURCES");
+  });
+
+  test("the bounded source reader imports contracts and the file-facts type only", () => {
+    const source = sourceOf(MIGRATE_READER);
+    expect(
+      capabilityHits(
+        source,
+        MIGRATE_FORBIDDEN.filter((needle) => needle !== "pre-opencode-iteration"),
+      ),
+    ).toEqual([]);
+    expect(source).toContain("readProviderMigrateSources");
+    expect(source).toContain("PROVIDER_MIGRATE_MAX_SOURCES");
+  });
+
+  test("the scan is non-vacuous: every planted execution form is detected", () => {
+    const planted = [
+      'import { spawn } from "node:child_process";',
+      "const out = Bun.$`rm -rf /`;",
+      "eval(payload);",
+      "const fn = new Function(payload);",
+      'import vm from "node:vm";',
+    ].join("\n");
+    expect(capabilityHits(planted, MIGRATE_FORBIDDEN)).toEqual([
+      "child_process",
+      "Bun.$",
+      "new Function",
+      "eval(",
+      "node:vm",
+    ]);
+  });
+});

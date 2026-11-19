@@ -1,0 +1,19 @@
+# provider migrate legacy — proposal; review and complete before committing
+# sources read: <home>/.delivery-os/config/profiles
+# sources absent: <home>/.delivery-os/hooks/pre-opencode-iteration
+# unmapped names: ADOS_HOOK_AGENT
+$schema: "delivery.config.v1"
+provider:
+  credentials:
+    zai:
+      sourceKey:
+        name: "ZAI_API_KEY"
+        style: "literal"
+  entries:
+    zai-coding-plan:
+      peak:
+        endSecondsOfDay: 36000
+        startSecondsOfDay: 21600
+  profiles:
+    preferenceChain:
+      base: "balanced"

@@ -2360,6 +2360,19 @@ phases:
         - tests/boundaries/fixture-registry.json
         - doc/guides/zai-peak-hours-hook.md
         - tests/checks/doc-conformance.test.ts
+        # OWNER-AUTHORISED scope addition (phase-6 delivery). The delivered
+        # closed forbidden-literals registry admits pre-freeze tokens only under
+        # `packages/adapters/src/legacy/`, so the legacy mapping table lives
+        # there rather than in the `file` subpath; the phase-4 legacy-absence
+        # suite's two assertions are corrected to the phase-6 world (zero
+        # legacy-path constructions outside the migration reader, and every
+        # reader is the migration module); and the adapter's reviewed literal
+        # inventory gains the new relative re-export. No behaviour is added
+        # beyond F-6, and no guard is relaxed.
+        - packages/adapters/src/legacy/provider-migrate-table.ts
+        - packages/adapters/src/legacy/index.ts
+        - tests/structure/provider-legacy-absence.test.ts
+        - tests/fixtures/legacy/literal-inventory.json
       folders:
         - packages/adapters/src/file
         - tests/boundaries/fixtures

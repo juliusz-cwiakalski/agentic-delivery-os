@@ -466,6 +466,9 @@ export const createProductionProviderComposition = (
   // The fixture read is the one production filesystem edge the simulate member
   // needs (GH-350 F-5); it is never consulted outside `provider simulate`.
   fixtureFs: nodeFileSystemFacts(),
+  // The migration reads are the second production filesystem edge (GH-350 F-6):
+  // the node facts plus directory listing, consulted only by `provider migrate`.
+  migrateFs: { ...nodeFileSystemFacts(), readDirectory: (path) => readdirSync(path) },
   resolveWorkItemRef: (): ProviderWorkItemRefResolution => {
     const context = readLocalPmContext({
       path: facts.localContext.path,

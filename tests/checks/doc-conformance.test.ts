@@ -1295,3 +1295,87 @@ describe("GH-350 phase 4 the configuration page states the budgets branch and th
     );
   });
 });
+
+/**
+ * GH-350 phase 6 — the hook guide states the delivered posture: the hook is off
+ * the delivery path, the window/quota/budget are declared in configuration, and
+ * `provider migrate legacy` is the guided bridge with its refusal posture. The
+ * guide names the command as a provider-policy import and keeps it distinct from
+ * the M4-S2 namespace migration and the install lifecycle's `--migrate` flag.
+ */
+const GH350_PHASE6_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/guides/zai-peak-hours-hook.md",
+    stale: ["It is an opt-in, user-owned executable"],
+    required: [
+      "off the delivery path",
+      "may remain on disk; it is inert",
+      "provider migrate legacy",
+      "provider.migrate.refused",
+      "shell-construct",
+      "parameters file only",
+      "target-exists",
+      "unmapped",
+      "PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536",
+      "PROVIDER_MIGRATE_MAX_SOURCES = 64",
+      "provider-policy",
+      "M4-S2 namespace migration",
+      "install lifecycle's `--migrate` flag",
+      "no hook import is implied",
+    ],
+  },
+];
+
+export const gh350Phase6Violations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 phase 6 the hook guide states the delivered posture", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the guide carries the migration posture and the three-migration distinction", () => {
+    expect(gh350Phase6Violations(GH350_PHASE6_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced hook-required claim and a dropped distinction each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/guides/zai-peak-hours-hook.md"
+        ? `${pageText(page) ?? ""}\nIt is an opt-in, user-owned executable that delivers the pause.\n`
+        : pageText(page);
+    expect(gh350Phase6Violations(GH350_PHASE6_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: It is an opt-in, user-owned executable",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/guides/zai-peak-hours-hook.md"
+        ? (pageText(page) ?? "").replace("M4-S2 namespace migration", "older migration")
+        : pageText(page);
+    expect(gh350Phase6Violations(GH350_PHASE6_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: M4-S2 namespace migration",
+    );
+  });
+});

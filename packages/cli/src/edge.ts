@@ -12,6 +12,7 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -37,6 +38,7 @@ import {
   nodeDecisionRecordFileSystem,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  type ProviderMigrateFileSystem,
   parseCeremonyNoteText,
   parseConfigYaml,
   type RuntimePlatform,
@@ -53,6 +55,7 @@ import {
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
+  readProviderMigrateSources,
   readProviderSimulateFixture,
   runtimePlatform,
   scanMetricsCorpus,
@@ -81,7 +84,7 @@ import {
   createOpencodeTelemetryExtractor,
 } from "@delivery-os/adapters/harness";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
-import { createLegacyCompat } from "@delivery-os/adapters/legacy";
+import { createLegacyCompat, PROVIDER_LEGACY_MIGRATION_TABLE } from "@delivery-os/adapters/legacy";
 import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   findGitRoot,
@@ -135,6 +138,7 @@ import {
   classifyPruneCandidate,
   closeRetroAction,
   collectRetro,
+  compileTrustedSchema,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   computeMetricsReport,
@@ -172,6 +176,7 @@ import {
   memberRefFor,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
+  PRODUCTION_DEFAULTS,
   parkConditionForCause,
   parseCapsuleEvents,
   parseMemberRef,
@@ -311,6 +316,7 @@ import {
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
   type ConfigFailure,
+  type ConfigValue,
   type ControlTransport,
   type CredentialPort,
   type CrossRepositoryCloseoutObservation,
@@ -394,16 +400,21 @@ import {
 } from "@delivery-os/core/contracts";
 import {
   bindZoneFacts,
+  buildProviderMigrationProposal,
   createProfileProbePort,
   createProviderEngine,
   createProviderWatchStatus,
   evaluatePeakWindow,
   evaluateProfileLifecycle,
   normaliseZoneName,
+  PROVIDER_MIGRATE_TARGET_NAME,
+  type ProviderMigrateAssignment,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  parseProviderMigrateSource,
   parseProviderSimulateFixture,
   persistProfileTarget,
+  providerMigrateRefusalSummary,
   providerSimulateRefRefusal,
   readProfileTarget,
   readProviderLedger,
@@ -1686,6 +1697,11 @@ export type ProviderComposition = {
    * test injects its recording stub here so a fixture open is observable.
    */
   readonly fixtureFs?: FileSystemFacts;
+  /**
+   * The filesystem seam the migration reads use (GH-350 F-6). Absent means the
+   * composition's configuration filesystem extended with directory listing.
+   */
+  readonly migrateFs?: ProviderMigrateFileSystem;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
@@ -4718,6 +4734,56 @@ export const createCeremonyCommandRuntime = (
   };
 };
 
+/** Deep-merge plain objects; the proposal is validated over the shipped defaults. */
+const isConfigRecord = (value: unknown): value is Record<string, ConfigValue> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const mergePlain = (
+  base: Readonly<Record<string, ConfigValue>>,
+  overlay: Readonly<Record<string, ConfigValue>>,
+): Record<string, ConfigValue> => {
+  const merged: Record<string, ConfigValue> = { ...base };
+  for (const [key, value] of Object.entries(overlay)) {
+    const current = merged[key];
+    merged[key] =
+      isConfigRecord(value) && isConfigRecord(current) ? mergePlain(current, value) : value;
+  }
+  return merged;
+};
+
+/**
+ * Validate a migration proposal before it is printed or written (GH-350 F-6,
+ * DM-7). The document is validated as one configuration **layer** — the exact
+ * partial view the delivered resolver applies to every supplied source before
+ * merging (F-3) — and its provider branch is then checked by the delivered
+ * provider validator over the shipped defaults it overrides, so an entry's
+ * `class` and a quota's endpoint/credential reference come from the defaults
+ * rather than from an invented value.
+ */
+const validateProviderMigrateProposal = (
+  yaml: string,
+  catalog: ConfigCatalog,
+): { readonly ok: true } | { readonly ok: false; readonly detail: string } => {
+  const parsed = parseConfigYaml(yaml, "project-committed", "migration proposal");
+  if (!parsed.ok) return { ok: false, detail: "the proposal is not a parseable document" };
+  const values: Record<string, unknown> = { ...parsed.facts.values };
+  const schemaReference = values.$schema;
+  if (schemaReference !== undefined && typeof schemaReference !== "string") {
+    return { ok: false, detail: "the schema pointer is not a string" };
+  }
+  delete values.$schema;
+  if (!compileTrustedSchema(catalog, true)(values)) {
+    return { ok: false, detail: "the proposal does not satisfy the configuration schema" };
+  }
+  const overlay = isConfigRecord(values.provider) ? values.provider : {};
+  const defaults = isConfigRecord(PRODUCTION_DEFAULTS.provider) ? PRODUCTION_DEFAULTS.provider : {};
+  const validated = parseAndValidateProviderConfiguration({
+    provider: mergePlain(defaults, overlay),
+  });
+  if (!validated.ok) return { ok: false, detail: validated.error.detail };
+  return { ok: true };
+};
+
 /** Compose a frozen brand, acquired sources, legacy facts and the packed defaults
  * manifest into one config command program. Brand resolution happens before any
  * filesystem or root discovery.
@@ -5033,6 +5099,79 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           return outcome.selection;
         }
         return lifecycle.selection;
+      },
+      migrate: async (input) => {
+        const fs: ProviderMigrateFileSystem = provider.migrateFs ?? {
+          ...(options.fs ?? nodeFileSystemFacts()),
+          readDirectory: (path) => readdirSync(path),
+        };
+        const read = readProviderMigrateSources({
+          homeDirectory: options.homeDirectory,
+          ...(options.priorConfigurationDirectoryName === undefined
+            ? {}
+            : { priorDirectoryName: options.priorConfigurationDirectoryName }),
+          ...(input.profilesDir === undefined ? {} : { profilesDir: input.profilesDir }),
+          ...(input.hookPath === undefined ? {} : { hookPath: input.hookPath }),
+          fs,
+        });
+        if (!read.ok) {
+          const location = read.source === undefined ? "" : ` at ${read.source}`;
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: `provider migrate legacy refused (${read.reason})${location}: ${read.summary}`,
+          };
+        }
+        const parsedAssignments: ProviderMigrateAssignment[] = [];
+        for (const source of read.sources) {
+          const parsedSource = parseProviderMigrateSource(source);
+          if (!parsedSource.ok) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: providerMigrateRefusalSummary(parsedSource.refusal),
+            };
+          }
+          parsedAssignments.push(...parsedSource.assignments);
+        }
+        const built = buildProviderMigrationProposal({
+          sources: read.states,
+          assignments: parsedAssignments,
+          table: PROVIDER_LEGACY_MIGRATION_TABLE,
+        });
+        if (!built.ok) {
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: providerMigrateRefusalSummary(built.refusal),
+          };
+        }
+        const validation = validateProviderMigrateProposal(
+          built.proposal.yaml,
+          options.catalog ?? PRODUCTION_CATALOG,
+        );
+        if (!validation.ok) {
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: `provider migrate legacy refused (proposal-invalid): ${validation.detail}`,
+          };
+        }
+        let report = built.proposal.report;
+        if (input.write) {
+          const target = `${options.cwd}/${brand.configDirectoryName}/${PROVIDER_MIGRATE_TARGET_NAME}`;
+          if (fs.exists(target)) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: `provider migrate legacy refused (target-exists) at ${target}: the project-committed document already exists and is never modified; merge the proposal by hand`,
+            };
+          }
+          mkdirSync(`${options.cwd}/${brand.configDirectoryName}`, { recursive: true });
+          writeFileSync(target, built.proposal.yaml);
+          report = { ...report, writtenPath: target };
+        }
+        return { ok: true, data: { proposal: built.proposal.yaml, report } };
       },
       simulate: async (input) => {
         const snapshot = resolve({});

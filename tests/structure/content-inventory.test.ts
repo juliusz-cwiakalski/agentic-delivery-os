@@ -276,6 +276,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "adapters/src/file/state-root-inventory.ts": ["isStoreArtifactName", "readStateRootArtifacts"],
   "adapters/src/file/provider-simulate-fixture.ts": ["readProviderSimulateFixture"],
+  "adapters/src/file/provider-migrate-source.ts": ["readProviderMigrateSources"],
   "adapters/src/file/dispatch-identity.ts": [
     "dispatchIdentityMarkerPath",
     "ensureDispatchIdentityMarkerText",
@@ -2605,6 +2606,19 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readProfileTarget",
   ],
   "core/src/provider/loop.ts": ["runProviderLoop"],
+  "core/src/provider/migrate.ts": [
+    "PROVIDER_MIGRATE_CREDENTIAL_SUFFIXES",
+    "PROVIDER_MIGRATE_PROPOSAL_SCHEMA",
+    "PROVIDER_MIGRATE_REFUSAL_REASONS",
+    "PROVIDER_MIGRATE_TARGET_NAME",
+    "buildProviderMigrationProposal",
+    "credentialReferenceName",
+    "isCredentialShapedName",
+    "parseProviderMigrateSource",
+    "providerMigrateRefusalSummary",
+    "providerMigrateSourceCapRefusal",
+    "renderProviderMigrateProposal",
+  ],
   "core/src/provider/simulate.ts": [
     "PROVIDER_SIMULATE_CREDENTIAL_OUTCOMES",
     "PROVIDER_SIMULATE_KEYS",
@@ -3148,6 +3162,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveProcessLegacy",
     "resolveProcessLegacyFromEnvironment",
   ],
+  "adapters/src/legacy/provider-migrate-table.ts": ["PROVIDER_LEGACY_MIGRATION_TABLE"],
   "core/src/contracts/ceremony.ts": [
     "CEREMONY_ASSESS_VERDICTS",
     "CEREMONY_AT_PATTERN",

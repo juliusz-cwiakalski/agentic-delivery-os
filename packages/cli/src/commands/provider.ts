@@ -17,7 +17,7 @@ import type {
   ProviderWatchConditionView,
   StateResult,
 } from "@delivery-os/core/contracts";
-import type { ProviderSimulateData } from "@delivery-os/core/provider";
+import type { ProviderMigrateReport, ProviderSimulateData } from "@delivery-os/core/provider";
 import type { CommandDefinition } from "../index.js";
 
 export type ProviderRuntimeFailure = {
@@ -47,6 +47,19 @@ export type ProviderSimulateOutcome =
   | { readonly ok: true; readonly data: ProviderSimulateData }
   | ProviderRuntimeFailure;
 
+export type ProviderMigrateInput = {
+  readonly profilesDir?: string;
+  readonly hookPath?: string;
+  readonly write: boolean;
+};
+
+export type ProviderMigrateOutcome =
+  | {
+      readonly ok: true;
+      readonly data: { readonly proposal: string; readonly report: ProviderMigrateReport };
+    }
+  | ProviderRuntimeFailure;
+
 export type ProviderCommandRuntime = {
   readonly resolve: (input: {
     readonly chainName?: string;
@@ -66,6 +79,7 @@ export type ProviderCommandRuntime = {
     readonly providerName?: string;
   }) => Promise<ProviderWatchStatusOutcome>;
   readonly simulate?: (input: ProviderSimulateInput) => Promise<ProviderSimulateOutcome>;
+  readonly migrate?: (input: ProviderMigrateInput) => Promise<ProviderMigrateOutcome>;
 };
 
 type Grammar =
@@ -82,7 +96,13 @@ type Grammar =
       readonly forSpawn: boolean;
     }
   | { readonly kind: "watch-status"; readonly providerName?: string }
-  | { readonly kind: "simulate"; readonly fixturePath: string };
+  | { readonly kind: "simulate"; readonly fixturePath: string }
+  | {
+      readonly kind: "migrate";
+      readonly profilesDir?: string;
+      readonly hookPath?: string;
+      readonly write: boolean;
+    };
 
 const invocationError = (summary: string): { readonly error: Record<string, unknown> } => ({
   error: { kind: "input", code: "input.value.rejected", summary },
@@ -184,6 +204,30 @@ const grammarOf = (
     if (fixturePath === undefined) return invocationError("simulate requires --fixture <path>");
     return { kind: "simulate", fixturePath };
   }
+  if (subcommand === "migrate") {
+    if (second !== "legacy") {
+      return invocationError('provider migrate requires the "legacy" subcommand');
+    }
+    if (rest.length > 0) return invocationError("migrate legacy takes no positional");
+    if (
+      flags["--chain"] !== undefined ||
+      flags["--profile"] !== undefined ||
+      flags["--all"] !== undefined ||
+      flags["--provider"] !== undefined ||
+      flags["--agent"] !== undefined ||
+      flags["--for-spawn"] !== undefined
+    ) {
+      return invocationError("migrate legacy accepts only --profiles-dir, --hook and --write");
+    }
+    const profilesDir = stringFlag(flags, "--profiles-dir");
+    const hookPath = stringFlag(flags, "--hook");
+    return {
+      kind: "migrate",
+      write: flags["--write"] === true,
+      ...(profilesDir === undefined ? {} : { profilesDir }),
+      ...(hookPath === undefined ? {} : { hookPath }),
+    };
+  }
   if (subcommand === "watch") {
     if (second !== "status") {
       return invocationError('provider watch requires the "status" subcommand');
@@ -259,6 +303,35 @@ const isWatchConditionView = (value: unknown): value is ProviderWatchConditionVi
   );
 };
 
+const isMigrateData = (
+  value: unknown,
+): value is { readonly proposal: string; readonly report: ProviderMigrateReport } => {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as { readonly proposal?: unknown; readonly report?: unknown };
+  return typeof candidate.proposal === "string" && typeof candidate.report === "object";
+};
+
+const migrateReportLines = (report: ProviderMigrateReport): string[] => {
+  const sources = report.sources
+    .map((source) =>
+      source.state === "absent"
+        ? `${source.kind} ${source.path}: absent`
+        : `${source.kind} ${source.path}: read ${source.bytes ?? 0} bytes`,
+    )
+    .join("; ");
+  const lines = [`migrate sources: ${sources}`];
+  if (report.mapped.length > 0) {
+    lines.push(
+      `migrate mapped: ${report.mapped.map((entry) => `${entry.name} -> ${entry.target}`).join("; ")}`,
+    );
+  }
+  if (report.unmapped.length > 0) {
+    lines.push(`migrate unmapped: ${report.unmapped.join(", ")}`);
+  }
+  if (report.writtenPath !== undefined) lines.push(`migrate wrote: ${report.writtenPath}`);
+  return lines;
+};
+
 const isSimulateData = (value: unknown): value is ProviderSimulateData => {
   if (typeof value !== "object" || value === null) return false;
   const simulation = (value as { readonly simulation?: unknown }).simulation;
@@ -276,13 +349,22 @@ const isWatchStatusData = (
 export const createProviderCommandDefinition = (
   runtime: ProviderCommandRuntime,
 ): CommandDefinition => ({
-  flags: ["--all", "--for-spawn"],
-  requiresValue: ["--chain", "--fixture", "--provider", "--profile", "--agent"],
+  flags: ["--all", "--for-spawn", "--write"],
+  requiresValue: [
+    "--chain",
+    "--fixture",
+    "--hook",
+    "--profiles-dir",
+    "--provider",
+    "--profile",
+    "--agent",
+  ],
   positionals: { max: 3 },
   humanSuccess: true,
   exitProjection: (data) =>
     isProfileResolveData(data) && data.outcome === "refused" ? "platform-provider" : "success",
   humanText: (data) => {
+    if (isMigrateData(data)) return data.proposal;
     if (isSimulateData(data)) {
       const inputs = data.simulation.inputs;
       const codes =
@@ -416,6 +498,22 @@ export const createProviderCommandDefinition = (
         summary: `resolved ${result.decision.profile} (${result.outcome})`,
       };
       return { data };
+    }
+
+    if (grammar.kind === "migrate") {
+      if (runtime.migrate === undefined) {
+        return providerError(
+          "input.value.rejected",
+          "provider migrate legacy is not wired on this surface",
+        );
+      }
+      const migrated = await runtime.migrate({
+        write: grammar.write,
+        ...(grammar.profilesDir === undefined ? {} : { profilesDir: grammar.profilesDir }),
+        ...(grammar.hookPath === undefined ? {} : { hookPath: grammar.hookPath }),
+      });
+      if (!migrated.ok) return providerError(migrated.code, migrated.summary);
+      return { data: migrated.data, warnings: migrateReportLines(migrated.data.report) };
     }
 
     if (grammar.kind === "simulate") {

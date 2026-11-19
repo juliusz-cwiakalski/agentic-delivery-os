@@ -10,6 +10,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+export {
+  PROVIDER_LEGACY_MIGRATION_TABLE,
+  type ProviderLegacyMigrationAgentModelRule,
+  type ProviderLegacyMigrationFlagRule,
+  type ProviderLegacyMigrationTable,
+} from "./provider-migrate-table.js";
+
 /** Current names supplied by the runtime-aware edge (never derived here). */
 export type LegacyCurrentNames = {
   readonly environmentPrefix: string;

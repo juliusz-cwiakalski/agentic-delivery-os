@@ -920,6 +920,16 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/app/daemon-clean.ts",
     'import "../contracts/index";\n',
   ),
+  // GH-350 TC-MIG-004: the migration module may not import a child-process,
+  // shell, VM, or worker capability. The import fails by name.
+  dep(
+    "provider-migrate-shell-import",
+    "TC-MIG-004",
+    "provider-migrate-no-shell",
+    ["core"],
+    "packages/core/src/provider/migrate.ts",
+    'import { spawn } from "node:child_process";\nexport const run = spawn;\n',
+  ),
   // GH-350 TC-SIM-009: the simulation fixture reader is reachable only from the
   // simulate composition. A composition that reads a fixture path fails by name.
   dep(

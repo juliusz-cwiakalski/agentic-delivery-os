@@ -46,6 +46,33 @@ export {
 } from "./engine.js";
 export { type ProviderLoopInput, type ProviderLoopResult, runProviderLoop } from "./loop.js";
 export {
+  buildProviderMigrationProposal,
+  credentialReferenceName,
+  isCredentialShapedName,
+  PROVIDER_MIGRATE_CREDENTIAL_SUFFIXES,
+  PROVIDER_MIGRATE_PROPOSAL_SCHEMA,
+  PROVIDER_MIGRATE_REFUSAL_REASONS,
+  PROVIDER_MIGRATE_TARGET_NAME,
+  type ProviderMigrateAgentModelRule,
+  type ProviderMigrateAssignment,
+  type ProviderMigrateBuild,
+  type ProviderMigrateFlagRule,
+  type ProviderMigrateMappedName,
+  type ProviderMigrateParse,
+  type ProviderMigrateProposal,
+  type ProviderMigrateRefusal,
+  type ProviderMigrateRefusalReason,
+  type ProviderMigrateReport,
+  type ProviderMigrateSourceFile,
+  type ProviderMigrateSourceKind,
+  type ProviderMigrateSourceState,
+  type ProviderMigrateTable,
+  parseProviderMigrateSource,
+  providerMigrateRefusalSummary,
+  providerMigrateSourceCapRefusal,
+  renderProviderMigrateProposal,
+} from "./migrate.js";
+export {
   type AnnouncementInput,
   announcementEvidence,
   announcementIdentity,

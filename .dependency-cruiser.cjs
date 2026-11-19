@@ -266,6 +266,19 @@ module.exports = {
         reachable: true,
       },
     },
+    // --- GH-350 F-6 (TC-MIG-004): the legacy migration reads data only. No
+    // child-process, shell, VM, or worker capability may be reachable from the
+    // migration module; the boundary harness materialises this rule and its
+    // failing fixture by name, and the module's own closure scan asserts the
+    // ambient forms (Bun.$, eval, new Function).
+    {
+      name: "provider-migrate-no-shell",
+      severity: "error",
+      comment:
+        "GH-350 F-6 (TC-MIG-004): provider migrate legacy never executes, sources, or shells out. No child-process, shell, VM, or worker import is reachable from the migration module.",
+      from: { path: "^packages/core/src/provider/migrate\\.ts$" },
+      to: { path: "^(node:)?(child_process|vm|worker_threads)(/|$)" },
+    },
     {
       name: "runtime-apis-confinement",
       severity: "error",

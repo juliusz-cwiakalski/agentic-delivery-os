@@ -232,3 +232,34 @@ describe("GH-350 the simulate tier is hermetic", () => {
     expect(providerTestFiles()).toContain("tests/behaviour/provider-simulate.test.ts");
   });
 });
+
+/**
+ * GH-350 TC-CONFORM-005 (hermetic half) — the migration tier reads no ambient
+ * clock, environment, zone data, network, or child process, and its suite joins
+ * the provider-tier scan.
+ */
+describe("GH-350 the migration tier is hermetic", () => {
+  test("the migration module and its source reader import no ambient capability", () => {
+    for (const relative of [
+      "packages/core/src/provider/migrate.ts",
+      "packages/adapters/src/file/provider-migrate-source.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, relative), "utf8");
+      for (const forbidden of [
+        "node:child_process",
+        "child_process",
+        "setTimeout",
+        "process.env",
+        "Intl",
+        "Date.now",
+        "fetch(",
+      ]) {
+        expect(text, `${relative}: ${forbidden}`).not.toContain(forbidden);
+      }
+    }
+  });
+
+  test("the migration suite is covered by the provider-tier scan", () => {
+    expect(providerTestFiles()).toContain("tests/behaviour/provider-migrate.test.ts");
+  });
+});

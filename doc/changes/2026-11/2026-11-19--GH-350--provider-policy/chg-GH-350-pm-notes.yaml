@@ -600,3 +600,60 @@ notes:
       rebuild."
     type: evidence
     date: "2026-11-19"
+  - text: "GH-350 plan phase 5 (delivery) complete: `provider simulate --fixture
+      <path> [--json]` composes the delivered createProviderEngine with
+      fixture seams and calls resolve with persist:false, and none of its own
+      routing, condition, park or announcement logic exists.
+      packages/core/src/provider/simulate.ts declares the strict
+      delivery.provider.simulate.v1 parser (unknown key, missing key, wrong
+      type, unsupported version, and the PROVIDER_SIMULATE_FIXTURE_MAX_BYTES =
+      65536 byte bound each refuse input.value.rejected naming the field with
+      no content echoed; the credential outcome is a closed
+      resolved/missing/rejected enum, so a credential value is not
+      representable), a step-table zone port, the spend-points projection, the
+      credential and quota seams, the delivered six resolve keys followed by
+      exactly one simulation block (fixturePath, fixtureSchemaVersion, now,
+      workItemRef when supplied, stateWrites: 0, inputs, bounded summary), and
+      providerSimulateRefRefusal (the ref is required iff an enabled budget
+      exists and comes only from the fixture; the local delivery context is
+      never read). packages/adapters/src/file/provider-simulate-fixture.ts is
+      the one bounded read, exported through the subpath barrel. The CLI gains
+      the simulate grammar (no --chain/--profile/--all/positional, one
+      --fixture), the runtime member, and the human rendering; edge.ts
+      composes it over the fixture filesystem seam
+      (ProviderComposition.fixtureFs) and production.ts supplies the node
+      reader. The production .dependency-cruiser.cjs gains
+      provider-fixture-read-only-simulate (reachable only from the simulate
+      composition) with its named failing fixture, its fixture-registry entry
+      and the verify-imports rule-name entry; the content inventory and
+      executable allowances move for both new modules; the hermetic and
+      one-evaluator scans cover them. Tests: provider-simulate (16),
+      provider-budget-ref TC-REF-004 (+3), provider-simulate-cli (5), the
+      simulate goldens (2), provider-composition-absence (4), boundaries +1,
+      hermetic +2. No help entry and no provider.simulate.* error row (both
+      declared for phase 8 / never). Commit 54d602f4. Gate: narrow
+      provider-simulate + provider-budget-ref + provider-simulate-cli +
+      goldens 35 pass; provider-composition-absence + content-inventory +
+      verify-imports 29 pass; tests/boundaries 155 pass; typecheck green;
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11455 pass
+      / 4 skip / 2 fail (11461 tests). Both failures are host-load timeouts
+      with zero assertion failures and pass alone: TC-BIN-010 in
+      tests/behaviour/identity-override.test.ts (9/9 alone) and its
+      consequence in tests/checks/prior-identity-hermetic.test.ts TC-BIN-084
+      half (b), whose spawned guarded-suite run exits 1 when a child suite
+      times out (the file passes 5/5 alone, 109.5 s). Escalation (spec versus
+      delivered): AC-F5-3 and TC-SIM-007 say a parked decision exits 2
+      mirroring resolve, but the delivered resolve projects parked to 0 and
+      tests/behaviour/provider-cli.test.ts:169 pins that; simulate mirrors the
+      delivered resolve exactly (the case asserts the pairing) and no
+      delivered assertion was changed or weakened. Two delivery notes: a
+      rejected credential outcome is realised as an auth-rejected transport
+      answer (HTTP 401) because the delivered credential port has exactly two
+      outcomes (material or config.credential.missing), and an entry whose
+      credential resolves with no fixture quota block is simulated as an entry
+      without that observation rather than inheriting an invented fact. The
+      machine golden is a .txt capture so the byte-for-byte assertion survives
+      the repository JSON formatter."
+    type: evidence
+    date: "2026-11-19"

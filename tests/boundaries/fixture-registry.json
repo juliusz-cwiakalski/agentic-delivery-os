@@ -322,6 +322,13 @@
       "path": "packages/core/src/branding/probe.ts"
     }
   ],
+  "provider-migrate-no-shell": [
+    {
+      "id": "provider-migrate-shell-import",
+      "tc": "TC-MIG-004",
+      "path": "packages/core/src/provider/migrate.ts"
+    }
+  ],
   "provider-fixture-read-only-simulate": [
     {
       "id": "provider-fixture-reader-reachable",

@@ -137,10 +137,16 @@ const isMigrationModule = (path: string): boolean =>
   /(^|\/)migrat[^/]*\.ts$/u.test(path) || /(^|\/)provider[^/]*migrat[^/]*\.ts$/u.test(path);
 
 describe("TC-INDEP-003 no production module reads a legacy policy path", () => {
-  test("the real tree holds zero legacy-path constructions and zero observed-name reads", () => {
+  test("the real tree holds zero legacy-path constructions outside the migration reader, and zero observed-name reads", () => {
     const sources = productionSources();
     expect(sources.length).toBeGreaterThan(100);
-    expect(legacyPathHits(sources)).toEqual([]);
+    // Since phase 6 the migration reader is the one module that names either
+    // legacy path; every other production module constructs neither.
+    const outsideReader = legacyPathHits(sources).filter(
+      (hit) => !isMigrationModule(hit.split(":")[0] ?? ""),
+    );
+    expect(outsideReader).toEqual([]);
+    expect(legacyPathHits(sources).length).toBeGreaterThan(0);
     expect(observedEnvironmentHits(sources)).toEqual([]);
   });
 
@@ -181,7 +187,9 @@ describe("TC-INDEP-003 no production module reads a legacy policy path", () => {
   test("the migration module is the only admitted reader of either path", () => {
     const sources = productionSources();
     const readers = legacyPathHits(sources).map((hit) => hit.split(":")[0] ?? "");
-    expect(readers.filter((path) => !isMigrationModule(path))).toEqual(readers);
+    expect(readers.length).toBeGreaterThan(0);
+    // Every reader is the migration module: no non-migration reader exists.
+    expect(readers.filter((path) => !isMigrationModule(path))).toEqual([]);
     // The filter admits the declared reader, so "no readers" is not a broken filter.
     const planted: readonly Source[] = [
       {
