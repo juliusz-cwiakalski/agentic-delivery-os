@@ -457,6 +457,10 @@
 #   files and moves them as one edit-set with its export change, which is the only
 #   way the aggregate gate stays green at the boundary — N-1),
 #   `packages/core/src/provider/{validate,engine,index}.ts`,
+#   `packages/core/src/provider/announcements.ts` (P1 the pure park-cause ->
+#   announcement-code mapping and the `info` classification of the widened code
+#   set — the exhaustive switch over `PARK_CAUSES`; P3 the evaluator-driven
+#   `provider.budget.crossed` and the DEC-10 sparsity annotation),
 #   `packages/core/src/config/catalog.ts` (P2 stale comment / P4 budgets /
 #   P7 watch bound), `packages/cli/src/edge.ts`,
 #   `packages/cli/src/production.ts` (P2 zone port / P3 ref seam and totals port /
@@ -481,11 +485,16 @@
 #   vocabulary sentences, P2 zone pages, P4 config-layer, P6 hook guide, P7 watch
 #   bound, P8 mount pages, mount ordinals and the metrics/entrypoint sentences,
 #   P9 the remaining rows),
-#   `doc/spec/features/feature-provider-engine.md` (P1 the five vocabulary
-#   sentences, P2 the zone basis, P9 the budget/ref/announcement/CLI prose),
+#   `doc/spec/features/feature-provider-engine.md` (P1 the whole vocabulary
+#   edit-set — counts, enumerated lists, tie order and the two allowlist
+#   enumerations — P2 the zone basis, P9 the budget/ref/announcement/CLI prose),
 #   `doc/spec/features/feature-metrics.md` (P1 counts, P8 family
 #   count, P9 gate-versus-alarm),
-#   `doc/spec/features/feature-install-lifecycle.md` (P1 counts, P8 family count),
+#   `doc/spec/features/feature-install-lifecycle.md` (P1 the ERROR-TABLE numbers
+#   — table total and delivered-rows metric, 164/163 -> 167/166 — and P8 the
+#   FAMILY COUNT 26 -> 27 while its `install` "twenty-sixth" ordinals stay; the
+#   page carries both numbers, so each phase moves one and neither leaves it
+#   half-moved),
 #   `doc/spec/features/feature-config-layer.md` (P4 branch and per-repository
 #   clause, P7 the `maxAgeSeconds` row),
 #   `doc/00-index.md` (P8 family count and inventory rows, P9 descriptions),
@@ -534,10 +543,13 @@
 #   assertion compares; the arithmetic base and every `+ 130` site are the
 #   test's) — the repo-wide no-leftover scan in
 #   `tests/structure/error-table.test.ts` (its `APPENDIX_D_FILES` list gains
-#   `feature-install-lifecycle.md` and its token pattern gains this change's
-#   outgoing forms `164`, `163` and `BASELINE_ROWS.length + 130`, so a page or
-#   suite left behind fails by name while the declared delta shapes
-#   `164 -> 167` must not trip it), and the count phrases of the delivered
+#   `feature-install-lifecycle.md`, and its token pattern gains this change's
+#   outgoing forms as WORDING-BOUND forms in the existing style — the outgoing
+#   count only in its `entries` / `identities` / `machine identities` /
+#   `documented` / `entries).toHaveLength(` wordings, plus the
+#   `BASELINE_ROWS.length + 130` arithmetic form — so a page or suite that still
+#   states the number as CURRENT fails by name while the declared delta shapes
+#   `164 -> 167` cannot trip the scan), and the count phrases of the delivered
 #   doc-conformance block.
 #   DECLARED IDENTITY WINDOW, stated rather than implied: ALL THREE rows are
 #   documented from phase 1 with NO emitter — the zone refusal's emitter lands in
@@ -795,6 +807,7 @@ tier:
     - "The change adds a surface the spec forbids: a command family, a state record kind, a store write path, an environment variable, a provider flag outside the declared members, a CI job, an alarm kind, an event topic, a notification channel, a vendored zone table, a tz-database dependency, or a new secret-read allowlist entry (NG-3, NG-7, NG-10, NG-11, NG-12, NFR-16)"
     - "A source or fixture still states or implies `PROVIDER_PEAK_TIMEZONES = [\"UTC\"]`-only validation, a non-UTC window refused for being non-UTC, or a UTC basis for a declared local window, at a phase boundary after phase 2 (AC-F1-1, AC-F8-3, TC-ZONE-011)"
     - "A guard ships without its failing negative control (including the mount's two-arm proof and the coverage twin mutant), a case is skipped, environment-gated or made green by weakening an oracle, or a new boundary rule has no failing fixture (test plan §4.3, MOUNT-TP-1, TC-CONFORM-008)"
+    - "A phase widens or retires a closed set (`PARK_CAUSES`, `PROVIDER_CONDITION_KINDS`, `PROVIDER_SKIP_REASONS`, `ANNOUNCEMENT_CODES`, `PARK_EVIDENCE_FIELDS`, `ANNOUNCEMENT_EVIDENCE_FIELDS`, `PROVIDER_CONDITION_TIE_ORDER`) WITHOUT declaring, in the same commit, every module that maps over it exhaustively — a `switch`/`satisfies`/mapped-type consumer is a BUILD break (TS2366), not a test failure, and discovering it at a phase boundary means the phase cannot be green inside its declared scope (Fix 1, Fix 2)"
     - "`TMPDIR=$PWD/tmp/tmpdir pnpm check` is not green at a phase boundary, a gate is recorded as PASS with an unresolved ERROR, or a phase commits a case it cannot make green (test plan §6.3)"
     - "A phase declares a path it does not edit, or edits a path it does not declare, so the commit primitive loses staging authority for authored content (the SCOPE DECLARATION RULE)"
 defaultLeases:
@@ -830,7 +843,15 @@ phases:
   # `watch-stale`; the five budget evidence fields (`budgetName`, `budgetScope`,
   # `budgetBasis`, `budgetMeasured`, `budgetCeiling`) AND the `timezone` evidence
   # field, so the closed allowlists move 8 -> 14 and 11 -> 17 in ONE edit-set
-  # (spec §16's contract-surface table); and the five declared bound constants
+  # (spec §16's contract-surface table). ALL SIX NEW EVIDENCE MEMBERS ARE DECLARED
+  # **OPTIONAL** in the evidence types, which is what keeps this phase a pure
+  # vocabulary change: `projectParkEvidence`/`projectAnnouncementEvidence` iterate
+  # the allowlist and project only PRESENT fields, and the three constructors
+  # (`quota.ts`, `conditions.ts`'s merge, `engine.ts`'s evidence parameter) keep
+  # compiling until the writer that makes a field meaningful lands — `timezone` in
+  # phase 2, the five budget fields in phase 3. A required member here would turn
+  # the closed-set widening into a build break across the pure tier (Fix 2's
+  # class); and the five declared bound constants
   # `PROVIDER_ZONE_NAME_MAX_LENGTH = 64`,
   # `PROVIDER_SIMULATE_FIXTURE_MAX_BYTES = 65536`,
   # `PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536`,
@@ -862,6 +883,68 @@ phases:
   # `tests/checks/error-table-sync.test.ts` and the structural mirror's
   # `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
+  # `feature-install-lifecycle.md` IS A TWO-NUMBER PAGE AND MOVES HERE FOR ONE OF
+  # THEM (Fix 3): THIS phase moves its ERROR-TABLE numbers (the table total and
+  # its delivered-rows metric, 164/163 -> 167/166 — the page restates the same
+  # figure set as the register), while its FAMILY COUNT (26 -> 27) is phase 8's
+  # and its three "`install` is the twenty-sixth" ORDINALS stay untouched in both.
+  # The page is therefore declared in phases 1 and 8 with one number each, so no
+  # boundary leaves it half-moved.
+  # THE NO-LEFTOVER SCAN'S NEW FORMS ARE WORDING-BOUND (Fix 4b):
+  # `tests/structure/error-table.test.ts` gains the outgoing `164`/`163` forms ONLY
+  # in the wordings it already uses — `… entries`, `… identities`, `… machine
+  # identities`, `… documented`, `entries).toHaveLength(…` — plus the
+  # `BASELINE_ROWS.length + 130` arithmetic form, and it gains
+  # `feature-install-lifecycle.md` in `APPENDIX_D_FILES`. A wording-bound form is
+  # what makes the scan discriminate: a page that still states the number as
+  # CURRENT fails by name, while the declared delta line `164 -> 167` (and a
+  # `26 -> 27`) cannot trip it.
+  # THE SUPERVISION FAMILY SUITE STOPS BEING A POSITIONAL PREFIX (Fix 4a):
+  # `tests/structure/supervision-error-family.test.ts` compares the live table to
+  # a **150-row baseline** with a raw `entries.slice(0, 150)`, and this change
+  # inserts THREE `provider` rows INSIDE the provider block (13 -> 16), so every
+  # later index shifts and a bare prefix comparison is falsified. The comparison is
+  # re-expressed as **"the baseline plus the three declared new `provider` codes"**
+  # (filter those three codes out of the live set, then compare row for row), and
+  # the tail-kind assertion stops being a slice offset for the same reason. Tail
+  # POSITIONS of the other kinds are unchanged; the POSITIONAL EXPRESSION is not,
+  # and the comment says so rather than claiming "tail positions unchanged".
+  #
+  # EXHAUSTIVE-CONSUMER SWEEP — A CLOSED SET IS NOT FREE (delivery finding at the
+  # phase-1 boundary; Fix 1 and Fix 2). Widening a closed set breaks every module
+  # that maps over it EXHAUSTIVELY, and strict TS with `noImplicitReturns` reports
+  # that as a BUILD failure, not a test failure. `packages/core/src/provider/
+  # announcements.ts` is the one such consumer in the tree:
+  # `announcementCodeForCondition(cause: ParkCause)` switches over the park causes
+  # and returns `AnnouncementCode`, so adding `budget-exhausted` fails with
+  # `TS2366: Function lacks ending return statement`. IT IS DECLARED IN THIS PHASE,
+  # and this phase owns the PURE vocabulary mapping only:
+  #   - the `case "budget-exhausted": return "provider.budget.parked"` arm, and
+  #   - `provider.budget.parked` in `INFO_CODES` (the severity classification —
+  #     `provider.budget.parked` is the declared `info` code, `provider.budget.
+  #     crossed` is `warning` and is produced by the evaluator, not by this
+  #     mapping).
+  # Phase 3 keeps its own `announcements.ts` entry for the EVALUATOR-DRIVEN arm
+  # (the `provider.budget.crossed` announcement and the cost-sparsity annotation of
+  # DEC-10) — the file is a declared multi-phase file, not a phase-3-only one.
+  # THE REST OF THE SWEEP NEEDS NO EDIT, and the reason is recorded rather than
+  # assumed: `provider/conditions.ts` and `provider/chain.ts` index or `.includes()`
+  # `PROVIDER_CONDITION_TIE_ORDER` / `PROVIDER_CONDITION_KINDS` (no exhaustive
+  # match; the tie insertion is phase 3's behaviour); `provider/parks.ts`,
+  # `provider/quota.ts` and `conditions.ts` ITERATE `PARK_EVIDENCE_FIELDS` /
+  # `ANNOUNCEMENT_EVIDENCE_FIELDS` or construct the evidence object, and the new
+  # fields are declared as OPTIONAL additive members here, so every constructor
+  # still compiles until its writer lands (phase 2 `timezone`, phase 3 the five
+  # budget fields); `provider/engine.ts`, `provider/validate.ts`, `provider/
+  # index.ts` and `packages/cli/src/commands/provider.ts` carry the types and
+  # renderings without an exhaustive map over a widened set; `packages/core/src/
+  # contracts/doctor.ts`'s `DOCTOR_WIRING_NEUTRAL_CONDITIONS` is a plain readonly
+  # list (not typed over `ParkCause`, so no exhaustiveness break) and
+  # `budget-exhausted` is deliberately NOT wiring-neutral — it is a spend
+  # condition, not a wiring defect; and the adapters' only `switch` is over the
+  # watch `mapping`, a different union. Any consumer this sweep missed joins the
+  # phase that widens the set, in the same commit — never a later phase.
+
   # THE CONTRACTS-EXPORT INVENTORY MOVES WITH THE EXPORTS (N-1):
   # `tests/structure/port-contract-inventory.test.ts` compares the ENTIRE
   # contracts surface two-way against
@@ -970,6 +1053,15 @@ phases:
         - packages/core/src/contracts/provider.ts
         - packages/core/src/contracts/index.ts
         - packages/core/src/contracts/error-table.ts
+        # THE EXHAUSTIVE CONSUMER OF THE WIDENED PARK-CAUSE SET (Fix 1, Fix 2):
+        # `announcementCodeForCondition` switches over `ParkCause` and returns
+        # `AnnouncementCode`, so adding `budget-exhausted` is a BUILD failure
+        # (TS2366) until this file gains the case. THIS phase owns the pure
+        # vocabulary mapping (the `budget-exhausted` -> `provider.budget.parked`
+        # arm and `provider.budget.parked` in `INFO_CODES`); PHASE 3 keeps its own
+        # entry for the evaluator-driven arm (`provider.budget.crossed` and DEC-10's
+        # sparsity annotation). See the sweep note in the phase comment above.
+        - packages/core/src/provider/announcements.ts
         # The delivered structural mirrors of the closed sets, the evidence
         # allowlists and the export inventory. THIS phase owns the moved sizes
         # (6/8/9/13, 14/17, the five bound constants, the tie order, the ref
@@ -1300,7 +1392,12 @@ phases:
   # with the delivered `state.*` identity and is never reported clear. The five
   # evidence fields are exactly `budgetName`, `budgetScope`, `budgetBasis`,
   # `budgetMeasured`, `budgetCeiling`; DEC-10's cost-sparsity annotation rides the
-  # message and adds no sixth field. `conditions.ts` inserts `budget-exhausted`
+  # message and adds no sixth field. `announcements.ts` gains the
+  # EVALUATOR-DRIVEN half of the budget announcements only — `provider.budget.crossed`
+  # at `warning` and the DEC-10 sparsity annotation; the
+  # `budget-exhausted` -> `provider.budget.parked` mapping and its `info`
+  # classification were phase 1's, because the widened park-cause set is a BUILD
+  # break in that switch (Fix 1). `conditions.ts` inserts `budget-exhausted`
   # in exactly its declared tie position; `chain.ts` adds the skip reason, keeps
   # the `chain-exhausted` union with the earliest contributing expiry, and refuses
   # any paid substitution ONLY for a budget-PARKED subscription entry — a
@@ -1398,6 +1495,13 @@ phases:
         - packages/core/src/provider/budgets.ts
         - packages/core/src/provider/conditions.ts
         - packages/core/src/provider/chain.ts
+        # The EVALUATOR-DRIVEN arm only: `provider.budget.crossed` at `warning`
+        # and DEC-10's cost-sparsity annotation on the message. Phase 1 already
+        # declared this file for the pure vocabulary mapping (the
+        # `budget-exhausted` -> `provider.budget.parked` case and
+        # `provider.budget.parked` in `INFO_CODES`), because the widened park-cause
+        # set makes the switch exhaustive-incomplete there at the phase-1 boundary
+        # (TS2366). This phase must not re-move the mapping.
         - packages/core/src/provider/announcements.ts
         - packages/core/src/provider/engine.ts
         - packages/core/src/provider/validate.ts
@@ -1984,8 +2088,13 @@ phases:
   # paragraph states that `provider` is the twenty-seventh and last; the
   # non-prompt-required list drops `provider`; the composition table gains a
   # `provider` row and the quality-evidence table a provider mount row),
-  # `feature-install-lifecycle.md` (its two mounted-count sites 26 -> 27 while its
-  # three "`install` is the twenty-sixth" ordinal statements STAY),
+  # `feature-install-lifecycle.md` — A TWO-NUMBER PAGE, and THIS phase moves ONE of
+  # them: its ERROR-TABLE numbers (the table total and its delivered-rows metric)
+  # moved in PHASE 1 with the register, and they are NOT re-moved here. THIS phase
+  # moves its family count: its two mounted-count sites 26 -> 27, while its
+  # three "`install` is the twenty-sixth" ordinal statements STAY. A boundary that
+  # moved one number without the other would leave the page half-moved, which is
+  # why it is declared in both phases with the number each owns.
   # `feature-metrics.md` — ITS NAMED SENTENCES (DoR D2-4): the quality-evidence
   # line "the 24-family mount with the family-count pins and the stale-count scan"
   # becomes the **27-family** mount with the same pins and the widened stale-count
