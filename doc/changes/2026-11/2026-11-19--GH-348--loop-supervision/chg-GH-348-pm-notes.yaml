@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-19T12:39:42.198Z }
   delivery_planning: { started: null, completed: 2026-11-19T12:40:00.372Z }
   dor_check: { started: null, completed: 2026-11-19T12:40:11.509Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-19T16:17:21.129Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -671,26 +671,27 @@ notes:
       doc/changes/... - see the delivery-note on message source)."
     type: info
     date: "2026-11-19"
-  - text: "PLAN PHASE 2 complete (CEO spawn identity, the additive harness pid,
-      the loop.session record, the bounded log sink, and the command skeleton
+  - text: "PLAN PHASE 2 complete (CEO spawn identity, the additive harness pid, the
+      loop.session record, the bounded log sink, and the command skeleton
       mounting start --foreground and the read-only status; D2 cases only, per
       the recorded Option-B deviation). Implemented: the OPTIONAL pid on
       HarnessSessionHandle and HarnessSpawnStream (no capability name), the host
       starter exposing the started child's pid, the opencode adapter carrying it
       on spawn and resume, app/loop-session.ts (title helper, prompt mount, the
-      per-spawn binding input, the record builder) and app/loop-supervisor.ts (the
-      cycle skeleton over the injected ledger port, the delivered claim decision,
-      the session acquisition/end writes, the projection, the release), the loop
-      command definition, the bounded text renderer, the edge composition and the
-      production composition, and the four fixtures (harness registering BOTH
-      families, session, log-fs, the ONE parity case registry). Gates all exit 0:
-      loop-spawn + loop-log 16 pass; loop-production-composition 3 pass;
-      harness-stream-contract + coordinator-foreground-loop 23 pass (read-only
-      controls, unchanged); pnpm typecheck; git diff --check; depcruise
-      boundaries clean. Discovery: the claim append must reuse the claim's held
-      write fence (a second fence acquisition is state.lock.busy), so the ledger
-      port's appendFence takes the held handle. The phase commit hash is recorded
-      in the note that follows it."
+      per-spawn binding input, the record builder) and app/loop-supervisor.ts
+      (the cycle skeleton over the injected ledger port, the delivered claim
+      decision, the session acquisition/end writes, the projection, the
+      release), the loop command definition, the bounded text renderer, the edge
+      composition and the production composition, and the four fixtures (harness
+      registering BOTH families, session, log-fs, the ONE parity case registry).
+      Gates all exit 0: loop-spawn + loop-log 16 pass;
+      loop-production-composition 3 pass; harness-stream-contract +
+      coordinator-foreground-loop 23 pass (read-only controls, unchanged); pnpm
+      typecheck; git diff --check; depcruise boundaries clean. Discovery: the
+      claim append must reuse the claim's held write fence (a second fence
+      acquisition is state.lock.busy), so the ledger port's appendFence takes
+      the held handle. The phase commit hash is recorded in the note that
+      follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 2 commit hash: a8b93029."
@@ -705,13 +706,13 @@ notes:
       `active` with no process identity; otherwise one fresh spawn), so no path
       spawns beside a recorded live session. The registry appended the
       `single-instance` group. Gates all exit 0: loop-instance 9 pass (both
-      two-start orderings, takeover+join with zero spawns, ended replacement with
-      zero resumes for the previous id, distinct identities with no foreign read,
-      one pid-less resume with zero spawns/kills and the degradation entry, the
-      alive capability gap before any record, and the admitted start-time-gap
-      row); coordinator-foreground-loop green unmodified; pnpm typecheck; git
-      diff --check. The phase commit hash is recorded in the note that follows
-      it."
+      two-start orderings, takeover+join with zero spawns, ended replacement
+      with zero resumes for the previous id, distinct identities with no foreign
+      read, one pid-less resume with zero spawns/kills and the degradation
+      entry, the alive capability gap before any record, and the admitted
+      start-time-gap row); coordinator-foreground-loop green unmodified; pnpm
+      typecheck; git diff --check. The phase commit hash is recorded in the note
+      that follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 3 commit hash: 38526bf3."
@@ -726,16 +727,16 @@ notes:
       age, no start-time comparison), the supervisor's cycle step over the
       phase-1 predicate (one verdict record per expectation, the loop-scoped
       `<loopId>:<ordinal>` stuckId/iterationId, the terminate call through the
-      injected delivered kill path, one outcome record, the terminal
-      kill-failed exit with no restart and no second session, and the recorded
-      admission decision only), the delivered lease fold reused instead of a
-      second one (TC-CONTRACT-006), the production mounts (per-session totals
-      reader, lane corroborator, artifact advance, terminate, admission), and
-      the fixtures (facts tables, verdict counters, the stuck/kill registry
-      groups). Gates all exit 0: loop-stuck + loop-instance + loop-log 32 pass;
-      loop-imports 6 pass (including the engine-reuse identity); the delivered
-      coordinator control 7 pass unmodified; pnpm typecheck; git diff --check.
-      The phase commit hash is recorded in the note that follows it."
+      injected delivered kill path, one outcome record, the terminal kill-failed
+      exit with no restart and no second session, and the recorded admission
+      decision only), the delivered lease fold reused instead of a second one
+      (TC-CONTRACT-006), the production mounts (per-session totals reader, lane
+      corroborator, artifact advance, terminate, admission), and the fixtures
+      (facts tables, verdict counters, the stuck/kill registry groups). Gates
+      all exit 0: loop-stuck + loop-instance + loop-log 32 pass; loop-imports 6
+      pass (including the engine-reuse identity); the delivered coordinator
+      control 7 pass unmodified; pnpm typecheck; git diff --check. The phase
+      commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 4 commit hash: 674f2aa6."
@@ -744,21 +745,22 @@ notes:
   - text: "PLAN PHASE 5 complete (the declared backoff schedule, one ordinal per
       stuck restart, zero for a clean end, the at-bound exhaustion exit, the
       durable fresh-budget epoch, the detection bound, and the delivered restart
-      record with its second session). Implemented in app/loop-supervisor.ts: one
-      `coordinator.restart` at the next contiguous ordinal with the delivered
-      reason and the replaced session id, the injected cancellable wait with
-      reason `restart-backoff`, exactly one replacement session, the terminated
-      session's `ended` record written BEFORE the replacement (so at most one
-      live session), the at-bound refusal appending no record and exiting 1 with
-      the loop's own summary (epoch, restarts=<n>/<bound>, the three-part history
-      reference, and `loop start --foreground --fresh-budget`), and the
-      `--fresh-budget` epoch open. loop-text.ts renders the loop's own exhaustion
-      summary. Gates all exit 0: loop-backoff + loop-stuck 23 pass; loop-imports +
-      loop-mutants 9 pass; pnpm typecheck; git diff --check. TC-STUCK-001's phase-4
-      segment was corrected to assert exactly its declared four observations (the
-      verdict, the termination, the outcome, and the admission decision), with the
-      restart record and second session left to BACKOFF-001 row A as the test plan
-      splits them. The phase commit hash is recorded in the note that follows it."
+      record with its second session). Implemented in app/loop-supervisor.ts:
+      one `coordinator.restart` at the next contiguous ordinal with the
+      delivered reason and the replaced session id, the injected cancellable
+      wait with reason `restart-backoff`, exactly one replacement session, the
+      terminated session's `ended` record written BEFORE the replacement (so at
+      most one live session), the at-bound refusal appending no record and
+      exiting 1 with the loop's own summary (epoch, restarts=<n>/<bound>, the
+      three-part history reference, and `loop start --foreground
+      --fresh-budget`), and the `--fresh-budget` epoch open. loop-text.ts
+      renders the loop's own exhaustion summary. Gates all exit 0: loop-backoff
+      + loop-stuck 23 pass; loop-imports + loop-mutants 9 pass; pnpm typecheck;
+      git diff --check. TC-STUCK-001's phase-4 segment was corrected to assert
+      exactly its declared four observations (the verdict, the termination, the
+      outcome, and the admission decision), with the restart record and second
+      session left to BACKOFF-001 row A as the test plan splits them. The phase
+      commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 5 commit hash: recorded after the commit."
@@ -776,13 +778,13 @@ notes:
       session), the fail-closed branch (a torn loop record is `state.store.torn`
       at exit 2, never `not stopped`), the iteration-boundary re-read with drain
       (no terminate) and immediate (terminate; an unverifiable identity is never
-      signalled), the CLI verbs and receipts, and the ledger append. The stop fold
-      moved to the domain tier (domain/loop-status.ts) so the app tier keeps its
-      no-state-import boundary; that file is declared by phase 1 and is a shared
-      file, reported here as a declaration note rather than a silent change.
-      Gates all exit 0: loop-stop 10 pass; the five earlier suites 51 pass;
-      pnpm typecheck; git diff --check. The phase commit hash is recorded in the
-      note that follows it."
+      signalled), the CLI verbs and receipts, and the ledger append. The stop
+      fold moved to the domain tier (domain/loop-status.ts) so the app tier
+      keeps its no-state-import boundary; that file is declared by phase 1 and
+      is a shared file, reported here as a declaration note rather than a silent
+      change. Gates all exit 0: loop-stop 10 pass; the five earlier suites 51
+      pass; pnpm typecheck; git diff --check. The phase commit hash is recorded
+      in the note that follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 6 commit hash: recorded after the commit."
@@ -799,19 +801,19 @@ notes:
       malformed --lines, and the global flags accepted everywhere), the status
       block unchanged in its declared order, the static loop family and
       subcommand help entries rooted at the M4 reference root, the new M4 page
-      doc/planning/oss-tooling/milestones/m4/commands/loop.md, the inventory
-      26 -> 27 with `loop` last and `install` immediately before it, the
+      doc/planning/oss-tooling/milestones/m4/commands/loop.md, the inventory 26
+      -> 27 with `loop` last and `install` immediately before it, the
       install-family comparator at 27 with the loop-removal control, the
       metrics-mounting fixture/test at 27 with the stale-pin set gaining 26, and
       the reference-page-parity mapping plus help-guide-coverage learning the M4
       root. Gates all exit 0: grammar/status/log/read-cost 38 pass; the D1
       re-observation suite 5 pass; help-guide-coverage clean; the three repinned
-      suites 18 pass; coordinator-sequence + provider-surface 12 pass unmodified;
-      pnpm typecheck; git diff --check. DISCOVERY: the D1 argv rows are observed
-      at the entrypoint reachability and pre-session refusal surface; the exact
-      `--agent ceo`/`--model` argv is proven at the D2/adapter surface because a
-      bare fixture checkout configures no CEO seat. The phase commit hash is
-      recorded in the note that follows it."
+      suites 18 pass; coordinator-sequence + provider-surface 12 pass
+      unmodified; pnpm typecheck; git diff --check. DISCOVERY: the D1 argv rows
+      are observed at the entrypoint reachability and pre-session refusal
+      surface; the exact `--agent ceo`/`--model` argv is proven at the
+      D2/adapter surface because a bare fixture checkout configures no CEO seat.
+      The phase commit hash is recorded in the note that follows it."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 7 commit hash: recorded after the commit."
@@ -823,17 +825,17 @@ notes:
   - text: "PLAN PHASE 8 complete (the offline deterministic conformance battery, the
       permanent nine-proven/six-not-proven boundary with its mutation controls,
       the extended no-shell declared surface, and the closed-surface invariance
-      and hygiene pins). Implemented: tests/fixtures/loop/parity/evidence.ts (the
-      ONLY source of LOOP_PARITY_PROOF_BOUNDARY, 9 proven and 6 not-proven in
-      order, plus the canonicalizer), parity/seams.ts (the import-identity
+      and hygiene pins). Implemented: tests/fixtures/loop/parity/evidence.ts
+      (the ONLY source of LOOP_PARITY_PROOF_BOUNDARY, 9 proven and 6 not-proven
+      in order, plus the canonicalizer), parity/seams.ts (the import-identity
       manifest, the forbidden-signature scan, and the planted control),
       parity/e2e.ts (the pick-deliver-merge builder whose deliver leg is
       `dispatch`, never `phase complete`), the two conformance suites, the
       extended DISPATCH_FLOW_SURFACE (ten loop files) with the test's
       declared-equality and reachability assertions extended, and the
-      invariance/hygiene pins with the INLINE baseline literal. Gates all exit 0:
-      the battery + pick-deliver-merge 11 pass; the extended no-shell suite 11
-      pass (clean over 32 surface files); the invariance and privacy checks 7
+      invariance/hygiene pins with the INLINE baseline literal. Gates all exit
+      0: the battery + pick-deliver-merge 11 pass; the extended no-shell suite
+      11 pass (clean over 32 surface files); the invariance and privacy checks 7
       pass; the delivered dispatch conformance controls 103 pass unmodified;
       pnpm typecheck; git diff --check. The phase commit hash is recorded in the
       note that follows it."
@@ -851,86 +853,89 @@ notes:
       hand-edited (lockstep). Recorded gates: `pnpm build` green; `jaiship plan
       validate GH-348` -> verdict=valid, artifact=yaml:chg-GH-348-plan.yaml,
       tier=full, readyForDevelopment=true; `jaiship lint plan GH-348` -> verdict
-      valid, 0 errors; `bash scripts/.tests/test-doc-distribution.sh` -> no drift,
-      96 in-scope docs; both TDR paths tracked and `git status --porcelain --
-      doc/decisions` empty. Supporting pins updated by this phase, each a pin
-      UPDATE: the forbidden-literals registry (the new M4 page registered), the
-      module inventory and the per-file executable allowances, the alias help
-      baseline (one new family line), and the 26 -> 27 family counts in the
-      remaining pinned suites. The aggregate `pnpm check` runs at the phase-9
-      HEAD: the HEAD-cloning `ci-baseline-parity` case can only pass once the
-      registry change is committed, so its authoritative run is the post-commit
-      one reported to the caller. No current-truth page is reconciled here
-      (lifecycle phase 7 owns that); the Appendix A set stays declared for
-      staging only. The phase commit hash and the final aggregate result are
-      reported with this phase."
+      valid, 0 errors; `bash scripts/.tests/test-doc-distribution.sh` -> no
+      drift, 96 in-scope docs; both TDR paths tracked and `git status
+      --porcelain -- doc/decisions` empty. Supporting pins updated by this
+      phase, each a pin UPDATE: the forbidden-literals registry (the new M4 page
+      registered), the module inventory and the per-file executable allowances,
+      the alias help baseline (one new family line), and the 26 -> 27 family
+      counts in the remaining pinned suites. The aggregate `pnpm check` runs at
+      the phase-9 HEAD: the HEAD-cloning `ci-baseline-parity` case can only pass
+      once the registry change is committed, so its authoritative run is the
+      post-commit one reported to the caller. No current-truth page is
+      reconciled here (lifecycle phase 7 owns that); the Appendix A set stays
+      declared for staging only. The phase commit hash and the final aggregate
+      result are reported with this phase."
     type: info
     date: "2026-11-19"
   - text: "PLAN PHASE 9 commit hash: c9b4824b (release obligations). This second
       phase-9 commit is the GATE REMEDIATION the aggregate run named, and each
-      item is a PIN UPDATE, never a relaxation: the loop stop fold's harness-kind
-      default carries no harness literal (TC-HARN-028); the state-additivity
-      baseline and the event additivity inventory gain exactly the two loop
-      record kinds and the one loop state module (TC-EVT-073/074, TC-SUP-046,
-      TC-XCTR-003); the port-contract inventory gains the loop contract module and
-      its exports (TC-PORT-001); the event-taxonomy allowance names the loop log
-      events as non-kinds (TC-EVT-006); the command-composition seam lists the
-      loop command module (TC-BOUND-002); the install/supervise/entrypoint family
-      pins move 26 -> 27 with `loop` last and `install` immediately before it
-      (TC-INST-100, TC-SUP-096, TC-ENTRY-009/004, install-family-surface); and the
-      phase-2 composition case now states the post-repin truth. DISCOVERY
-      (reported, not silently widened): the plan's pinned-surface list named FOUR
-      surfaces, but adding a family and two record kinds also forces these SEVEN
-      additional closed-surface pins, which the plan did not enumerate. Also
-      environmental: this machine sets `commit.gpgsign=true`, so the synthetic
-      fixture repositories used by `ci-baseline-parity`, `forbidden-literals`
+      item is a PIN UPDATE, never a relaxation: the loop stop fold's
+      harness-kind default carries no harness literal (TC-HARN-028); the
+      state-additivity baseline and the event additivity inventory gain exactly
+      the two loop record kinds and the one loop state module (TC-EVT-073/074,
+      TC-SUP-046, TC-XCTR-003); the port-contract inventory gains the loop
+      contract module and its exports (TC-PORT-001); the event-taxonomy
+      allowance names the loop log events as non-kinds (TC-EVT-006); the
+      command-composition seam lists the loop command module (TC-BOUND-002); the
+      install/supervise/entrypoint family pins move 26 -> 27 with `loop` last
+      and `install` immediately before it (TC-INST-100, TC-SUP-096,
+      TC-ENTRY-009/004, install-family-surface); and the phase-2 composition
+      case now states the post-repin truth. DISCOVERY (reported, not silently
+      widened): the plan's pinned-surface list named FOUR surfaces, but adding a
+      family and two record kinds also forces these SEVEN additional
+      closed-surface pins, which the plan did not enumerate. Also environmental:
+      this machine sets `commit.gpgsign=true`, so the synthetic fixture
+      repositories used by `ci-baseline-parity`, `forbidden-literals`
       (docs-scope lifetime), `TC-BIN-072` and `TC-BIN-084` cannot commit; the
       aggregate run that follows uses GIT_CONFIG_* to disable signing for the
       fixture commits only (no repository config is changed)."
     type: info
     date: "2026-11-19"
-  - text: "PLAN PHASE 9 remediation commit: 94485b85 (the closed-surface pin
-      updates listed above). One further gate fix follows it: the loop
-      composition resolved the coordinator settings a second time, which made the
-      invalid-override configuration touch count 3 instead of 2 (TC-BIN-012); the
-      resolution is now cached once per composition and shared by the coordinator
-      and the loop profile, so the touch count is unchanged. TC-BIN-084 and the
-      docs-scope lifetime case then pass with the fixture commit signing
-      override, proving the earlier failures were the machine's global
-      commit.gpgsign=true and not the change."
+  - text: "PLAN PHASE 9 remediation commit: 94485b85 (the closed-surface pin updates
+      listed above). One further gate fix follows it: the loop composition
+      resolved the coordinator settings a second time, which made the
+      invalid-override configuration touch count 3 instead of 2 (TC-BIN-012);
+      the resolution is now cached once per composition and shared by the
+      coordinator and the loop profile, so the touch count is unchanged.
+      TC-BIN-084 and the docs-scope lifetime case then pass with the fixture
+      commit signing override, proving the earlier failures were the machine's
+      global commit.gpgsign=true and not the change."
     type: info
     date: "2026-11-19"
   - text: "PLAN REVISION (post-delivery, declarations only) — commit 1d38e25d.
-      Aligned the plan's scope declarations with what the delivery commits touched,
-      with NO partition change: still 41 ACs, 74 TCs and 120 mutation rows, no
-      phase added or removed, no AC/TC/mutation ownership moved, and no source
-      behaviour change. Method: `git show --name-only` on every phase commit,
-      reconciled against that phase's declared `scope.files`. Phases whose scope
-      grew, and by how many paths: phase 4 +2 (the edge ledger wiring and the
-      command-index type re-exports), phase 5 +2 (the restart append and the
-      BACKOFF-001 per-session fold correction), phase 6 +6 (the stop-append edge
-      mount and the five index barriers for the fold move), phase 7 +40 (the family
-      counters and their fixtures, the bounded-log-read supervisor, the export
-      barriers, the loop-prompt export-shape fix, and nineteen formatter-only test
-      touches), phase 8 +5 (formatter-only conformance touches), phase 9 +24 (the
-      forbidden-literals registry, the module inventory and its executable
-      allowances, the additivity/port-contract/taxonomy/seam pins, the alias help
-      baseline, the remaining family counters, and the two gate fixes). Phases 1, 2
-      and 3 needed no addition. No declaration was deleted. Declared entries now
-      total 196 (130 unique paths) across the nine phases, and the phased
-      reconciliation reports ZERO untouched-by-its-phase paths. Also recorded: the
-      header's DELIVERED DEVIATIONS block (D-1 commit subjects are the primitive's
-      path template because the plan-phase summary is unreachable without
-      `--phase delivery`; D-2 the pinned-surface set; D-3 formatter-only touches;
-      D-4 the D1 re-observation surface; D-5 the stop-fold home; D-6 the fixture
-      commit-signing environment fact; D-7 the two phase-9 gate fixes), phase 2's
-      obligation 2.9 and phase 7's 7.10 declaring the `loop-production-composition`
-      expectation update with its authorising clause (spec §8.5 / DOD-8, the repin
-      landing in phase 7), and phase 7's 7.9 plus phase 9's 9.7 stating each pin
-      update and that every assertion and mutation control is preserved. Gate
-      verdicts immediately before the commit: `jaiship plan validate GH-348` ->
-      verdict=valid, artifact=yaml:chg-GH-348-plan.yaml, tier=full,
-      readyForDevelopment=true; `jaiship lint plan GH-348` -> verdict valid,
-      errors=[]. This note lands in the follow-up commit that records the hash."
+      Aligned the plan's scope declarations with what the delivery commits
+      touched, with NO partition change: still 41 ACs, 74 TCs and 120 mutation
+      rows, no phase added or removed, no AC/TC/mutation ownership moved, and no
+      source behaviour change. Method: `git show --name-only` on every phase
+      commit, reconciled against that phase's declared `scope.files`. Phases
+      whose scope grew, and by how many paths: phase 4 +2 (the edge ledger
+      wiring and the command-index type re-exports), phase 5 +2 (the restart
+      append and the BACKOFF-001 per-session fold correction), phase 6 +6 (the
+      stop-append edge mount and the five index barriers for the fold move),
+      phase 7 +40 (the family counters and their fixtures, the bounded-log-read
+      supervisor, the export barriers, the loop-prompt export-shape fix, and
+      nineteen formatter-only test touches), phase 8 +5 (formatter-only
+      conformance touches), phase 9 +24 (the forbidden-literals registry, the
+      module inventory and its executable allowances, the
+      additivity/port-contract/taxonomy/seam pins, the alias help baseline, the
+      remaining family counters, and the two gate fixes). Phases 1, 2 and 3
+      needed no addition. No declaration was deleted. Declared entries now total
+      196 (130 unique paths) across the nine phases, and the phased
+      reconciliation reports ZERO untouched-by-its-phase paths. Also recorded:
+      the header's DELIVERED DEVIATIONS block (D-1 commit subjects are the
+      primitive's path template because the plan-phase summary is unreachable
+      without `--phase delivery`; D-2 the pinned-surface set; D-3 formatter-only
+      touches; D-4 the D1 re-observation surface; D-5 the stop-fold home; D-6
+      the fixture commit-signing environment fact; D-7 the two phase-9 gate
+      fixes), phase 2's obligation 2.9 and phase 7's 7.10 declaring the
+      `loop-production-composition` expectation update with its authorising
+      clause (spec §8.5 / DOD-8, the repin landing in phase 7), and phase 7's
+      7.9 plus phase 9's 9.7 stating each pin update and that every assertion
+      and mutation control is preserved. Gate verdicts immediately before the
+      commit: `jaiship plan validate GH-348` -> verdict=valid,
+      artifact=yaml:chg-GH-348-plan.yaml, tier=full, readyForDevelopment=true;
+      `jaiship lint plan GH-348` -> verdict valid, errors=[]. This note lands in
+      the follow-up commit that records the hash."
     type: info
     date: "2026-11-19"
