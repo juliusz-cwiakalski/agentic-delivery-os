@@ -125,10 +125,10 @@ const withoutOperation = (operation: string): unknown => ({
 });
 
 describe("TC-CONF-001 flow registry shape", () => {
-  test("exactly three flows and fourteen ordered steps with unique ids", () => {
+  test("exactly three flows and fifteen ordered steps with unique ids", () => {
     expect(flowRegistryViolations(CONFORMANCE_FLOWS)).toEqual([]);
     expect(CONFORMANCE_FLOWS.map((flow) => flow.flowId)).toEqual([...EXPECTED_FLOW_IDS]);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(15);
   });
 
   test("every closed operation is represented exactly by the registry data", () => {
@@ -768,7 +768,7 @@ describe("TC-HARN-004 / TC-HARNESS-031/032 harness conformance registry coverage
 });
 
 describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => {
-  test("three flows and fourteen steps carry their exact delivered values", () => {
+  test("three flows and fifteen steps carry their exact delivered values", () => {
     const steps = CONFORMANCE_FLOWS.flatMap((flow) =>
       flow.steps.map((step) => ({
         stepId: step.stepId,
@@ -782,7 +782,7 @@ describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => 
       "comment-provenance",
       "label-semantics",
     ]);
-    expect(steps).toHaveLength(14);
+    expect(steps).toHaveLength(15);
     expect(steps.map((step) => step.stepId)).toEqual([
       "change-lifecycle.read-work-item",
       "change-lifecycle.read-delivery-request",
@@ -793,6 +793,7 @@ describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => 
       "change-lifecycle.comment",
       "change-lifecycle.resolve-delivery-thread",
       "change-lifecycle.merge-delivery-request",
+      "change-lifecycle.close-milestone",
       "comment-provenance.read-comments",
       "comment-provenance.carrier-roundtrip",
       "label-semantics.read-labels",

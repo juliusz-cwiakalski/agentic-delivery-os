@@ -11,6 +11,9 @@ import type {
   AdapterCapabilityDeclaration,
   CapabilityGapReason,
   CloseoutMemberPlan,
+  CloseoutMilestoneArguments,
+  CloseoutMilestoneFacts,
+  CloseoutMilestoneWithheldReason,
   CrossRepositoryCloseoutObservation,
   DeliveryRequest,
   ProviderQualifiedIdentity,
@@ -65,7 +68,6 @@ import {
   type CloseoutRetroFacts,
   type CloseoutReverseDependentObservation,
   type CloseoutSessionFacts,
-  type HarnessAbsenceReason,
   type CloseoutStateRuntime,
   type CloseoutStep,
   type CloseoutStepId,
@@ -79,6 +81,7 @@ import {
   type CloseoutWorktreeFacts,
   type CloseoutWriteOutcome,
   DELIVERED_LABEL,
+  type HarnessAbsenceReason,
   LIFECYCLE_LABEL_DISPOSITIONS,
   OWNER_ATTENTION_LABEL,
   PROTECTED_REF_NAMES,
@@ -109,7 +112,7 @@ import {
 import { evaluateThreadPolicy } from "./closeout-thread-policy.js";
 import { sha256Hex } from "./sha256.js";
 
-/** The seven step definitions in binding order (PIN-2). */
+/** The thirteen step definitions in binding order (PIN-2; GH-349 adds step 12). */
 export const closeoutStepDefinitions = [
   { stepId: "ticket-to-done", label: "ticket to done" },
   { stepId: "lifecycle-label-sweep", label: "lifecycle label sweep" },
@@ -122,6 +125,7 @@ export const closeoutStepDefinitions = [
   { stepId: "merged-diff-sweep", label: "merged-diff owed-flip sweep" },
   { stepId: "retro-coverage-move", label: "retro coverage move" },
   { stepId: "session-compaction", label: "session compaction checkpoint" },
+  { stepId: "milestone-sync", label: "milestone synchronization" },
   { stepId: "capsule", label: "close the change capsule" },
 ] as const;
 
@@ -161,6 +165,14 @@ export type CloseoutPlanFacts = {
   readonly retro?: CloseoutRetroFacts;
   /** The session-attribution facts (GH-240 F-9). */
   readonly sessions?: CloseoutSessionFacts;
+  /**
+   * The declared milestone facts (GH-349 F-4, DM-9): the change's pm-notes
+   * declaration plus the ONE bounded adapter-local read. Absent means the
+   * composition declares no milestone construct and renders a declared gap; a
+   * present fact set with no declaration is the withheld
+   * `declared-milestone-missing` case.
+   */
+  readonly milestone?: CloseoutMilestoneFacts;
   /** The merged-diff facts for the plan step (GH-240 F-5). */
   readonly diff?: {
     readonly available: boolean;
@@ -399,6 +411,13 @@ const capabilityContextFor = (
     operation === "remove-worktree"
   ) {
     return "supported";
+  }
+  if (operation === "close-milestone") {
+    if (capabilities.supportedOperations.includes("close-milestone")) return "supported";
+    return (
+      capabilities.declaredGaps.find((gap) => gap.operation === "close-milestone")?.reason ??
+      "adapter-not-implemented"
+    );
   }
   const adapterOperation =
     operation === "resolve-delivery-thread"
@@ -1044,6 +1063,224 @@ const compactionStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   });
 };
 
+/**
+ * The milestone-synchronization plan step and its withheld residue (GH-349 F-4,
+ * API-3/API-4, DM-4/DM-5/DM-9).
+ *
+ * The exit review is the gate: closure holds only when the record is open, the
+ * one bounded page carries no truncation marker, and every attached item in
+ * that page is `done` or `canceled`. Each withheld fact produces ONE residue
+ * item carrying the closed reason as its bounded text and the work-item ref as
+ * its location. The step never guesses a target: the declared milestone is the
+ * change's pm-notes declaration and the observed attachment is the work item's
+ * provider-asserted milestone title.
+ *
+ * A composition that supplies no milestone facts at all declares no milestone
+ * construct, so it renders the same declared gap as an explicit `none`
+ * declaration. A supplied fact set whose declaration is absent is the withheld
+ * `declared-milestone-missing` case.
+ */
+type MilestoneStepPlan = {
+  readonly step: CloseoutStep;
+  readonly residue: readonly CloseoutResidueItem[];
+};
+
+const MILESTONE_DECLARATION = /^M(\d+):\s*(\S.*)$/u;
+
+const milestoneEvidence = (fields: readonly CloseoutEvidenceField[]): CloseoutEvidence =>
+  evidence(...fields);
+
+const milestoneStep = (facts: CloseoutPlanFacts): MilestoneStepPlan => {
+  const factsForMilestone = facts.milestone;
+  if (factsForMilestone === undefined) {
+    return {
+      step: planStep("milestone-sync", "skipped-gap", {
+        reason: "milestone-construct-absent",
+        evidence: milestoneEvidence([field("attachment", "absent")]),
+        detail: { state: "none" },
+      }),
+      residue: [],
+    };
+  }
+  const declaration = factsForMilestone.declaration?.trim();
+  const observedTitle =
+    facts.observedWorkItem.observation === "observed"
+      ? facts.observedWorkItem.value.milestone
+      : undefined;
+  const attachment = observedTitle === undefined ? "absent" : "observed";
+  const withheld = (
+    reason: CloseoutMilestoneWithheldReason,
+    extra: readonly CloseoutEvidenceField[],
+    detail: Readonly<Record<string, unknown>>,
+  ): MilestoneStepPlan => ({
+    step: planStep("milestone-sync", "skipped-noop", {
+      reason,
+      evidence: milestoneEvidence([
+        ...(declaration === undefined ? [] : [field("declared", declaration)]),
+        field("attachment", attachment),
+        field("exitReview", "withheld"),
+        ...extra,
+      ]),
+      detail,
+    }),
+    residue: [
+      {
+        item: reason,
+        kind: "milestone-sync-withheld",
+        location: facts.workItemRef,
+      },
+    ],
+  });
+
+  // 1. A declaration of `none` is a declared gap: the project has no milestone
+  //    construct. It is never a withheld closure.
+  if (declaration === "none") {
+    return {
+      step: planStep("milestone-sync", "skipped-gap", {
+        reason: "milestone-construct-absent",
+        evidence: milestoneEvidence([field("attachment", attachment)]),
+        detail: { state: "none" },
+      }),
+      residue: [],
+    };
+  }
+
+  // 2. An absent, empty, or non-`M<n>:`-shaped declaration never becomes a target.
+  const parsed = declaration === undefined ? null : MILESTONE_DECLARATION.exec(declaration);
+  if (parsed === null) {
+    return withheld("declared-milestone-missing", [field("declared", "absent")], {
+      state: "declared-milestone-missing",
+    });
+  }
+  const declaredTitle = (parsed[2] ?? "").trim();
+  if (declaredTitle.length === 0) {
+    return withheld("declared-milestone-missing", [], { state: "declared-milestone-missing" });
+  }
+
+  // 3. The observed attachment must be the declared milestone, matched by the
+  //    provider-asserted title and never by similarity.
+  if (observedTitle === undefined || observedTitle !== declaredTitle) {
+    return withheld(
+      "attachment-mismatch",
+      [field("observed", observedTitle ?? "absent"), field("declaredTitle", declaredTitle)],
+      { state: "attachment-mismatch" },
+    );
+  }
+
+  // 4. An adapter that cannot close declares its position; the step is a gap.
+  if (!facts.provider.capabilities.supportedOperations.includes("close-milestone")) {
+    const gapReason =
+      facts.provider.capabilities.declaredGaps.find((gap) => gap.operation === "close-milestone")
+        ?.reason ?? "adapter-not-implemented";
+    return {
+      step: planStep("milestone-sync", "skipped-gap", {
+        reason: gapReason,
+        evidence: milestoneEvidence([
+          field("declared", declaration ?? ""),
+          field("attachment", attachment),
+          field("operation", "close-milestone"),
+        ]),
+        detail: { state: "capability-gap", gap: gapReason },
+      }),
+      residue: [],
+    };
+  }
+
+  // 5. The read is the gate. Absence of the composed read, and every read fault,
+  //    withholds as unavailable: never an empty attached set.
+  const observation = factsForMilestone?.observation;
+  if (observation === undefined || observation.observation === "unavailable") {
+    return withheld("milestone-signal-unavailable", [field("read", "unavailable")], {
+      state: "milestone-signal-unavailable",
+    });
+  }
+  if (observation.observation === "invalid") {
+    return withheld("milestone-signal-unavailable", [field("read", "invalid")], {
+      state: "milestone-signal-unavailable",
+      detail: observation.detail,
+    });
+  }
+
+  const record = observation.value;
+  const milestone = record.identity.entityId;
+  const attached = record.attachedItems.length;
+  const baseEvidence = [
+    field("milestone", milestone),
+    field("state", record.state),
+    field("attached", attached),
+    field("attachment", "matched"),
+  ] as const;
+  const baseDetail = {
+    milestone,
+    state: record.state,
+    attached,
+    attachment: "matched",
+  } as const;
+
+  // 6. An already-closed record is satisfied in both modes.
+  if (record.state === "closed") {
+    return {
+      step: planStep("milestone-sync", "satisfied", {
+        evidence: milestoneEvidence([...baseEvidence, field("exitReview", "passing")]),
+        detail: { ...baseDetail, exitReview: "passing" },
+      }),
+      residue: [],
+    };
+  }
+
+  // 7. An unknown record state withholds with the state kept in bounded
+  //    evidence, sharing `closure-withheld` with the open-item fact.
+  if (record.state === "unknown") {
+    return withheld(
+      "closure-withheld",
+      [field("milestone", milestone), field("state", "unknown"), field("attached", attached)],
+      { ...baseDetail, exitReview: "withheld" },
+    );
+  }
+
+  // 8. A truncated page never closes a scope commitment.
+  if (record.truncation?.truncated === true) {
+    return withheld(
+      "attached-set-truncated",
+      [
+        field("milestone", milestone),
+        field("state", record.state),
+        field("attached", attached),
+        field("omitted", record.truncation.omitted),
+        field("cap", record.truncation.cap),
+      ],
+      {
+        ...baseDetail,
+        omitted: record.truncation.omitted,
+        cap: record.truncation.cap,
+      },
+    );
+  }
+
+  // 9. The exit review: every attached item in the page must be done or canceled.
+  const open = record.attachedItems.filter(
+    (item) => item.deliveryState !== "done" && item.deliveryState !== "canceled",
+  );
+  if (open.length > 0) {
+    return withheld(
+      "closure-withheld",
+      [field("milestone", milestone), field("state", record.state), field("open", open.length)],
+      { ...baseDetail, exitReview: "withheld", open: open.length },
+    );
+  }
+
+  const args: CloseoutMilestoneArguments = { milestone };
+  const operation = operationFor(facts, "close-milestone", record.identity, args);
+  return {
+    step: planStep("milestone-sync", outcomeFor(facts.persisted, [operation], "would-apply"), {
+      operations: [operation],
+      evidence: milestoneEvidence([...baseEvidence, field("exitReview", "passing")]),
+      detail: { ...baseDetail, exitReview: "passing" },
+    }),
+    residue: [],
+  };
+};
+
 /** The merged-diff sweep plan step (GH-240 F-5). */
 const diffSweepStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   const diff = facts.diff;
@@ -1259,6 +1496,7 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
   const baseRef = resolveCloseoutBaseRef(facts.mergedRequest);
   const members = declaredMembers(facts);
   const steps: CloseoutStep[] = [];
+  const milestone = milestoneStep(facts);
   let memberPlans: readonly CloseoutMemberPlan[] | undefined;
   let changeTicketOutcome: CloseoutPlanOutcome | undefined;
   if (members.length === 0) {
@@ -1274,6 +1512,7 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
     steps.push(diffSweepStep(facts));
     steps.push(retroStep(facts));
     steps.push(compactionStep(facts));
+    steps.push(milestone.step);
     steps.push(capsuleStep(facts));
   } else {
     const ticket = memberTicketStep(facts, members);
@@ -1291,6 +1530,7 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
     steps.push(diffSweepStep(facts));
     steps.push(retroStep(facts));
     steps.push(compactionStep(facts));
+    steps.push(milestone.step);
     steps.push(capsuleStep(facts));
     memberPlans = members.map((observation, index) => {
       const cleanup = branch.projections[index] ?? { cleanup: "skipped-gap" as const };
@@ -1383,7 +1623,8 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
     retainedWorktree.length === 0 &&
     retroResidue.length === 0 &&
     sessionResidue.length === 0 &&
-    diffResidue.length === 0
+    diffResidue.length === 0 &&
+    milestone.residue.length === 0
       ? {}
       : {
           residue: [
@@ -1392,6 +1633,7 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
             ...sessionResidue,
             ...diffResidue,
             ...policy.residue,
+            ...milestone.residue,
             ...(policy.omitted === 0
               ? []
               : [
@@ -1561,6 +1803,16 @@ const executeOperation = async (
       branch: args.branch,
       ...(expectedHead === undefined ? {} : { expectedHead }),
     });
+  }
+  if (operation.name === "close-milestone" && "milestone" in args) {
+    if (provider.closeMilestone === undefined) {
+      return {
+        ok: false,
+        code: "provider.payload.invalid",
+        detail: "the provider composes no milestone close surface",
+      };
+    }
+    return provider.closeMilestone({ milestone: args.milestone });
   }
   return {
     ok: false,

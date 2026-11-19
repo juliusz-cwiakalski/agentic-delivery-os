@@ -107,7 +107,7 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     // refusal that returns a literal, or an outcome that carries a literal
     // `code`, is a refusal site wherever it sits.
     const start = source.indexOf("const mergeReadCodeOf");
-    const end = source.indexOf("const closeout = createCloseoutComposition");
+    const end = source.indexOf("const closeoutBase = createCloseoutComposition");
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const block = source.slice(start, end);

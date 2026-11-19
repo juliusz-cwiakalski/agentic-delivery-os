@@ -92,6 +92,18 @@ A milestone closes only after exit review. Once closed, the milestone record is
 an immutable record of what was planned and delivered; closure is not a licence
 to keep attaching work silently.
 
+The `closeout` transaction performs this closure as its `milestone-sync` step:
+it checks the declared `M<n>:` milestone against the provider-asserted
+attachment on the change's own ticket, evaluates the exit review over one
+bounded page of attached tickets, and closes an open record through one
+read-back-verified `close-milestone` operation. It withholds rather than
+guesses: an absent or mismatched declaration, an open attached ticket, an
+unavailable or unknown record state, or a page whose truncation marker says the
+full set was not observed all leave the record open with one recorded reason,
+and a project that declares `none` reports a declared gap. The vocabulary
+cannot express create, attach, detach, rename, or reopen, so those remain owner
+acts performed in the tracker, never agent decisions.
+
 ## Extension and reopening
 
 Scope discovered mid-milestone follows one of two paths:

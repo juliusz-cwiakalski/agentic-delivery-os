@@ -120,9 +120,9 @@ describe("TC-REG-002 the injected control adapter passes with a complete column 
     expect(CONFORMANCE_ADAPTERS.some((entry) => entry.provider === CONTROL_PROVIDER)).toBe(false);
   });
 
-  test("the control column has nine cells and agrees with its declaration through the same gate", () => {
+  test("the control column has ten cells and agrees with its declaration through the same gate", () => {
     const matrix = controlMatrix();
-    expect(matrix.columns[1]?.cells).toHaveLength(9);
+    expect(matrix.columns[1]?.cells).toHaveLength(10);
     expect(
       parityViolations({
         matrix,

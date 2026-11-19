@@ -486,7 +486,7 @@ const mappingClaimFailures = (text: string): string[] => {
 };
 
 describe("TC-REF-001 the surface documents every closed operation and evidence read", () => {
-  test("the document exists, is linked from the index, and covers nine operations", () => {
+  test("the document exists, is linked from the index, and covers ten operations", () => {
     const text = documentText();
     expect(text.length).toBeGreaterThan(1000);
     expect(read(REFERENCE_BEHAVIOR_INDEX)).toContain(`](${REFERENCE_BEHAVIOR_INDEX_TARGET})`);
@@ -504,7 +504,7 @@ describe("TC-REF-001 the surface documents every closed operation and evidence r
     const text = documentText();
     const mutated = text.replace("| `write-comment` | `gh` | `api` |\n", "");
     expect(mutated).not.toBe(text);
-    expect(transportFailures(mutated).some((failure) => failure.includes("8 rows"))).toBe(true);
+    expect(transportFailures(mutated).some((failure) => failure.includes("9 rows"))).toBe(true);
   });
 });
 

@@ -54,6 +54,7 @@ const decodeAddressing = (
     const pullNumber = numberField(value, "pullNumber");
     const commitSha = stringField(value, "commitSha");
     const threadId = stringField(value, "threadId");
+    const milestoneNumber = numberField(value, "milestoneNumber");
     if (
       owner === undefined ||
       repo === undefined ||
@@ -66,7 +67,16 @@ const decodeAddressing = (
     }
     return {
       ok: true,
-      value: { provider: "github", owner, repo, issueNumber, pullNumber, commitSha, threadId },
+      value: {
+        provider: "github",
+        owner,
+        repo,
+        issueNumber,
+        pullNumber,
+        commitSha,
+        threadId,
+        ...(milestoneNumber === undefined ? {} : { milestoneNumber }),
+      },
     };
   }
   if (provider === "gitlab") {

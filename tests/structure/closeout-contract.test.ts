@@ -53,6 +53,7 @@ const EXPECTED_STEPS = [
   "merged-diff-sweep",
   "retro-coverage-move",
   "session-compaction",
+  "milestone-sync",
   "capsule",
 ];
 
@@ -139,9 +140,9 @@ const partitionViolations = (
 };
 
 describe("TC-CLOSE-001 closeout contract vocabulary", () => {
-  test("the seven step ids are exact and ordered", () => {
+  test("the thirteen step ids are exact and ordered", () => {
     expect([...CLOSEOUT_STEP_IDS]).toEqual(EXPECTED_STEPS);
-    expect(CLOSEOUT_STEP_IDS).toHaveLength(12);
+    expect(CLOSEOUT_STEP_IDS).toHaveLength(13);
   });
 
   test("the label disposition table is exact and ordered", () => {
@@ -187,6 +188,7 @@ describe("TC-CLOSE-001 closeout contract vocabulary", () => {
       "restore-checkout",
       "delete-branch",
       "remove-worktree",
+      "close-milestone",
     ]);
     expect([...CLOSEOUT_READ_OBSERVATIONS]).toEqual([
       "observed",
@@ -212,10 +214,11 @@ describe("TC-CLOSE-001 closeout contract vocabulary", () => {
 });
 
 describe("TC-CLOSE-002 additive adapter extensions and conformance registry", () => {
-  test("the closed set appends the landing operation ninth and never reorders", () => {
-    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
+  test("the closed set appends the milestone close tenth and never reorders", () => {
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(10);
     expect(ADAPTER_OPERATIONS[7]).toBe("resolve-delivery-thread");
     expect(ADAPTER_OPERATIONS[8]).toBe("merge-delivery-request");
+    expect(ADAPTER_OPERATIONS[9]).toBe("close-milestone");
   });
 
   test("the flow registry covers the closed operation set exactly", () => {
@@ -234,13 +237,17 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
       "change-lifecycle.comment",
       "change-lifecycle.resolve-delivery-thread",
       "change-lifecycle.merge-delivery-request",
+      "change-lifecycle.close-milestone",
     ]);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(15);
     expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)[7]?.stepId).toBe(
       "change-lifecycle.resolve-delivery-thread",
     );
     expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)[8]?.stepId).toBe(
       "change-lifecycle.merge-delivery-request",
+    );
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)[9]?.stepId).toBe(
+      "change-lifecycle.close-milestone",
     );
   });
 
@@ -259,8 +266,8 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
   });
 
   test("the thread-discussion evidence leaves the closed set, capabilities, and projections unchanged", () => {
-    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
-    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toHaveLength(9);
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(10);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toHaveLength(10);
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([]);
     const tenant = JSON.parse(
       readFileSync(join(ROOT, "tests/fixtures/providers/conformance/github/tenant.json"), "utf8"),

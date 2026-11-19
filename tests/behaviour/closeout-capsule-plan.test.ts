@@ -7,10 +7,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import { eventsText, makeChangeTree, makeEvent, payloadFor } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 const tree = () =>
   makeChangeTree({
@@ -58,7 +58,7 @@ describe("TC-CAP-014 plan-mode capsule", () => {
       });
       const data = closeoutData(run.envelope);
       expect(data.steps[data.steps.length - 1]?.stepId).toBe("capsule");
-      expect(data.steps.length).toBe(12);
+      expect(data.steps.length).toBe(13);
     } finally {
       change.cleanup();
     }

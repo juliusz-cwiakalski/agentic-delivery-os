@@ -53,11 +53,11 @@ import {
   createGithubCliTransport,
   createGithubNativeTransport,
   GITHUB_ADAPTER_CONTRACT,
-  githubCliHostname,
   type GithubChildRunner,
   type GithubClientOptions,
   type GithubTransportPolicy,
   type GithubTransportSelection,
+  githubCliHostname,
   probeGithubCli,
   resolveTransportSelection,
 } from "@delivery-os/adapters/github";
@@ -80,10 +80,18 @@ import {
   readRepositoryFacts,
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
+import type {
+  HarnessAdapterRegistration,
+  HarnessBindingResolution,
+  HarnessProfileView,
+  HarnessSelectionView,
+} from "@delivery-os/core";
 import {
   type AuthorityEvidence,
   aggregateProjectMemberOutcomes,
   assembleHarnessLiveness,
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
   claimQueueLease,
@@ -104,11 +112,14 @@ import {
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   emptyHandoverGate,
+  evaluateHarnessModeAvailability,
+  evaluateModelExpressibility,
   evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
+  harnessAgentIdentityViolation,
   type LaneSettings,
   legacyStoreWarning,
   maintainHostIndex,
@@ -140,9 +151,11 @@ import {
   releaseQueueLease,
   reposHandoverGateOf,
   reposListDataOf,
+  resolveBinding,
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
+  resolveHarnessInstance,
   resolveHarnessSettings,
   resolveLaneSettings,
   resolveOwnerHoldFact,
@@ -165,26 +178,14 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
-import {
-  bindingEnvironmentRecords,
-  bindingInvocationArgs,
-  evaluateHarnessModeAvailability,
-  evaluateModelExpressibility,
-  harnessAgentIdentityViolation,
-  resolveBinding,
-  resolveHarnessInstance,
-} from "@delivery-os/core";
-import type {
-  HarnessAdapterRegistration,
-  HarnessBindingResolution,
-  HarnessProfileView,
-  HarnessSelectionView,
-} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  CLOSEOUT_MILESTONE_PAGE_SIZE,
+  type CloseoutMilestoneFacts,
+  type CommandFailureHarnessDetail,
   type ConfigErrorCode,
   type ConfigNodeOrigins,
   type ConfigPriorOutcome,
@@ -203,19 +204,18 @@ import {
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
-  type CommandFailureHarnessDetail,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
-  type HarnessFailure,
   type HarnessExecutionEnvironmentDescriptor,
+  type HarnessFailure,
   type HarnessKind,
   type HarnessMode,
   type HarnessModeOrigin,
-  type HarnessSeatBinding,
   type HarnessResult,
+  type HarnessSeatBinding,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
@@ -229,6 +229,7 @@ import {
   type MERGE_GATE_ERROR_PREFIX,
   type MERGE_GATE_ERROR_SUFFIX,
   type MergeDeliveryRequestInput,
+  type MilestoneReadObservation,
   type OwnerHoldFact,
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
@@ -2315,7 +2316,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       createPorts: mergeRuntimeBase.createPorts,
     };
 
-    const closeout = createCloseoutComposition({
+    const closeoutBase = createCloseoutComposition({
       workspaceId,
       provider: { kind: "github", client },
       git: gitBranches,
@@ -2324,6 +2325,82 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowMs,
       newFenceToken,
     });
+
+    /**
+     * The declared milestone (GH-349 F-4): the change's pm-notes `milestone`,
+     * read once per invocation from the same committed document the lint and
+     * phase surfaces read. An absent or unreadable document declares nothing.
+     */
+    const milestoneDeclarationFor = (changeRef: string): string | undefined => {
+      const read = readPmNotesText({ changeRef, changesDirectory, fs: notesFs });
+      if (!read.ok || !isRecord(read.value)) return undefined;
+      const declaration = read.value.milestone;
+      return typeof declaration === "string" ? declaration : undefined;
+    };
+
+    /** The work item's numeric identity for a GitHub closeout read. */
+    const milestoneEntityIdFor = (workItemRef: string): string | undefined => {
+      const match = /^[A-Z][A-Z0-9]*-(\d+)$/.exec(workItemRef);
+      return match?.[1];
+    };
+
+    /**
+     * The milestone-aware closeout composition: the declared milestone plus ONE
+     * bounded adapter-local read per run, and the single read-back-verified
+     * close over the same injected transport and credential port. Everything
+     * else is the delivered composition.
+     */
+    const closeout = {
+      ...closeoutBase,
+      planFacts: async (workItemRef: string) => {
+        const facts = await closeoutBase.planFacts(workItemRef);
+        const declaration = milestoneDeclarationFor(workItemRef);
+        const milestone: CloseoutMilestoneFacts = {
+          ...(declaration === undefined ? {} : { declaration }),
+        };
+        const needsRead =
+          declaration !== undefined &&
+          declaration.trim() !== "" &&
+          declaration.trim() !== "none" &&
+          /^M\d+:/u.test(declaration.trim());
+        if (!needsRead) return { ...facts, milestone };
+        const entityId =
+          facts.observedWorkItem.observation === "observed"
+            ? facts.observedWorkItem.value.identity.entityId
+            : milestoneEntityIdFor(workItemRef);
+        if (entityId === undefined) {
+          const unavailable: MilestoneReadObservation = { observation: "unavailable" };
+          return { ...facts, milestone: { ...milestone, observation: unavailable } };
+        }
+        const read = await client.readMilestone({
+          entityId,
+          pageSize: CLOSEOUT_MILESTONE_PAGE_SIZE,
+        });
+        const observation: MilestoneReadObservation = read.ok
+          ? { observation: "observed", value: read.value }
+          : { observation: "unavailable" };
+        return {
+          ...facts,
+          milestone: {
+            ...milestone,
+            observation,
+          },
+        };
+      },
+      provider: {
+        ...closeoutBase.provider,
+        closeMilestone: async (input: { readonly milestone: string }) => {
+          const written = await client.closeMilestone(input);
+          return written.ok
+            ? { ok: true as const }
+            : {
+                ok: false as const,
+                code: written.code,
+                detail: "detail" in written ? written.detail : written.code,
+              };
+        },
+      },
+    };
 
     /** Map the resolved allowlist onto descriptor entries (names and references only). */
     const harnessEnvironmentEntries = (

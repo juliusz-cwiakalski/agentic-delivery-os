@@ -93,6 +93,7 @@ const WRITE_METHODS: Readonly<Partial<Record<AdapterOperation, string>>> = {
   "write-comment": "writeComment",
   "resolve-delivery-thread": "resolveDeliveryThread",
   "merge-delivery-request": "mergeDeliveryRequest",
+  "close-milestone": "closeMilestone",
 };
 
 /** Validate a declaration read from untrusted data (also used for mutations). */

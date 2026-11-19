@@ -353,7 +353,7 @@ describe("TC-DOCTOR-031 GH-PAYLOAD-HTTP-STATUS trap coverage", () => {
     }
     const { ADAPTER_OPERATIONS } = await import("../../../packages/core/src/contracts/index");
     const { GITHUB_ADAPTER_CONTRACT } = await import("../../../packages/adapters/src/github/index");
-    expect(ADAPTER_OPERATIONS).toHaveLength(9);
+    expect(ADAPTER_OPERATIONS).toHaveLength(10);
     expect(ADAPTER_OPERATIONS).not.toContain("doctor-read");
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).not.toContain(
       "doctor-read" as never,

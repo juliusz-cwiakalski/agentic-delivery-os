@@ -101,6 +101,14 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
             title: "Conformance content write",
             body: "Conformance delivery request body",
           }),
+        readMilestone: () =>
+          client.readMilestone({
+            entityId: String(addressing.issueNumber),
+          }),
+        closeMilestone: () =>
+          client.closeMilestone({
+            milestone: String(addressing.milestoneNumber ?? 0),
+          }),
       };
     },
   },

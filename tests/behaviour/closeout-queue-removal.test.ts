@@ -71,7 +71,7 @@ describe("TC-QLC-020 closeout --apply removes the landed ref", () => {
       expect(result.data.steps.map((step) => step.outcome)).toEqual(
         seeded.ok ? seeded.data.steps.map((step) => step.outcome) : [],
       );
-      expect(seeded.ok ? seeded.data.steps.length : 0).toBe(12);
+      expect(seeded.ok ? seeded.data.steps.length : 0).toBe(13);
       expect(result.data.queueRemoval).toBeUndefined();
     } finally {
       withoutHook.dispose();

@@ -44,6 +44,7 @@ Every closed operation declares a preferred transport and an API fallback. The C
 | `write-comment` | `gh` | `api` |
 | `resolve-delivery-thread` | `gh` | `api` |
 | `merge-delivery-request` | `gh` | `api` |
+| `close-milestone` | `gh` | `api` |
 
 ## Capability posture
 
@@ -51,9 +52,9 @@ A declaration is honest: an operation is either supported or carries exactly one
 
 | Adapter | Supported | Gaps | Gap reasons |
 |---|---|---|---|
-| github | 9 | 0 | none |
-| gitlab | 2 | 7 | adapter-not-implemented |
-| jira | 3 | 6 | adapter-not-implemented; provider-unsupported |
+| github | 10 | 0 | none |
+| gitlab | 2 | 8 | adapter-not-implemented |
+| jira | 3 | 7 | adapter-not-implemented; provider-unsupported |
 
 ## Failure identities
 
@@ -70,6 +71,7 @@ A failure is classifiable from structured data, never from prose. A read disting
 | `write-comment` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; carrier-free text only |
 | `resolve-delivery-thread` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; a mutation that leaves the thread unresolved is a failure |
 | `merge-delivery-request` | a guard rejection and any non-2xx are classified -> `provider.payload.invalid` with `httpStatus`; a transport failure -> `provider.payload.invalid` without status; already-merged is success only after a read-back that observes provider-asserted merged truth; no retry |
+| `close-milestone` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; success requires a read-back that observes the closed state; at most one write per run, never retried |
 
 ## Absence semantics
 

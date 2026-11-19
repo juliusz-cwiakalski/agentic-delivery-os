@@ -36,8 +36,8 @@ describe("TC-CEREMONY-057 delivered surfaces are unchanged", () => {
     expect(retroCommand).toContain("RETRO_IMPLEMENTED_LEVELS");
   });
 
-  test("the closeout transaction keeps its twelve declared steps", () => {
-    expect([...CLOSEOUT_STEP_IDS]).toHaveLength(12);
+  test("the closeout transaction keeps its thirteen declared steps", () => {
+    expect([...CLOSEOUT_STEP_IDS]).toHaveLength(13);
     expect(read("packages/core/src/domain/closeout.ts")).not.toContain("ceremony");
   });
 

@@ -290,3 +290,56 @@ export type MergeDeliveryRequestOutcome = {
   readonly merged: true;
   readonly mergeCommitSha?: string;
 };
+
+/**
+ * The observed milestone record state (GH-349 DM-9, API-4).
+ *
+ * `unknown` is the provider asserting no state: it is never coerced to `open`
+ * and never to `closed` (NFR-5).
+ */
+export type MilestoneState = "open" | "closed" | "unknown";
+
+/** One item attached to a milestone, with its normalized delivery state. */
+export type MilestoneAttachedItem = {
+  readonly identity: ProviderQualifiedIdentity;
+  readonly deliveryState: DeliveryStateAlias;
+};
+
+/**
+ * The bounded provider-neutral milestone observation (GH-349 API-4, DM-9).
+ *
+ * The attached set is ONE provider page at the declared page size; the
+ * truncation marker is the decisive fact that the full set was not observed.
+ * Its absence means the page was complete. `cap` is the page size the page was
+ * read at, and `omitted` counts the attached items the provider reported beyond
+ * that page.
+ */
+export type MilestoneObservationTruncation = {
+  readonly truncated: boolean;
+  readonly omitted: number;
+  readonly cap: number;
+};
+
+/** The provider-neutral milestone record the bounded read returns (DM-9). */
+export type MilestoneRecord = {
+  readonly identity: ProviderQualifiedIdentity;
+  /** The provider-asserted title, verbatim; absent means unknown. */
+  readonly title?: string;
+  readonly state: MilestoneState;
+  /** The attached items observed in the one bounded page. */
+  readonly attachedItems: readonly MilestoneAttachedItem[];
+  /** Present only when the one page could not observe the whole set. */
+  readonly truncation?: MilestoneObservationTruncation;
+};
+
+/**
+ * The bounded milestone read outcome (GH-349 API-4).
+ *
+ * Absent surface is not this type: an adapter that has no milestone read simply
+ * does not compose one. `unavailable` means the surface exists but the read did
+ * not answer; it is never an empty observed set (NFR-5).
+ */
+export type MilestoneReadObservation =
+  | { readonly observation: "observed"; readonly value: MilestoneRecord }
+  | { readonly observation: "unavailable" }
+  | { readonly observation: "invalid"; readonly detail: string };

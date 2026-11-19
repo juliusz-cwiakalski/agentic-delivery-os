@@ -182,6 +182,7 @@ const AUTHORED_COLUMNS: readonly {
       { operation: "write-comment", cell: gap("adapter-not-implemented") },
       { operation: "resolve-delivery-thread", cell: gap("adapter-not-implemented") },
       { operation: "merge-delivery-request", cell: gap("adapter-not-implemented") },
+      { operation: "close-milestone", cell: gap("adapter-not-implemented") },
     ],
   },
   {
@@ -196,6 +197,7 @@ const AUTHORED_COLUMNS: readonly {
       { operation: "write-comment", cell: gap("adapter-not-implemented") },
       { operation: "resolve-delivery-thread", cell: gap("provider-unsupported") },
       { operation: "merge-delivery-request", cell: gap("provider-unsupported") },
+      { operation: "close-milestone", cell: gap("provider-unsupported") },
     ],
   },
 ];
