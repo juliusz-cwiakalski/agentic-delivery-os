@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-19T00:20:05.234Z }
   dor_check: { started: null, completed: 2026-11-19T00:30:02.662Z }
   delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: 2026-11-19T06:20:20.389Z }
+  system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -984,25 +984,25 @@ notes:
       undeclared double."
     type: info
     date: "2026-11-19"
-  - text: "R15 (N3) and R16 (N4) closed. The test plan advances 0.5 -> 0.6: TC-DERIVE-006
-      step 2 states the canonical 16-id closed arm set (matching
+  - text: "R15 (N3) and R16 (N4) closed. The test plan advances 0.5 -> 0.6:
+      TC-DERIVE-006 step 2 states the canonical 16-id closed arm set (matching
       DISPATCH_RESULT_ARM_IDS) and names restart-budget as the loop/bound arm
       (TC-LOOP-002/TC-LOOP-006) and undecidable as the read-failure arm
       (TC-LOOP-007); the delivered test mirrors the 16 ids locally, names the
-      module constant as the source, asserts the mirror has 16 entries, and keeps
-      the 25 rows, the 10-token assertion and every delivered expectation
+      module constant as the source, asserts the mirror has 16 entries, and
+      keeps the 25 rows, the 10-token assertion and every delivered expectation
       unchanged. The mutation register stays 90 rows (M1-M90); plan phase 10
-      re-arms M42 for the production composition and adds or removes no row.
-      R16 removes the unused non-tree `signalProcess` seam from the production
+      re-arms M42 for the production composition and adds or removes no row. R16
+      removes the unused non-tree `signalProcess` seam from the production
       terminate seam and the adapter seam type, documents `reaped` as 'the
       exact-identity target was MATCHED' (not an OS reap act) in the adapter and
       the result type, and replaces the process-runner header's 'counts zero by
       construction' with the live permitted-start semantics."
     type: info
     date: "2026-11-19"
-  - text: "Plan-phase-10 DECLINED and ROUTED items. D6: wiring `check:no-shell`
-      into the aggregate `check` chain is NOT done - package.json's `check`
-      string is pinned verbatim by tests/checks/ci-checks.test.ts,
+  - text: "Plan-phase-10 DECLINED and ROUTED items. D6: wiring `check:no-shell` into
+      the aggregate `check` chain is NOT done - package.json's `check` string is
+      pinned verbatim by tests/checks/ci-checks.test.ts,
       privacy-ci-wiring.test.ts and license-ci-binding.test.ts, so the wiring is
       a pinned-surface move and a plan revision; package.json is untouched and
       the m3 low residual (the CLI main() is not in `pnpm check`) persists,
@@ -1016,29 +1016,46 @@ notes:
   - text: "PLAN PHASE 10 EVIDENCE (review-iteration-2 remediation). Plan phase id 10
       (`fix(GH-347): review-iteration-2 remediation`) is implemented and landed
       in commit 6ae1ae2d89ab7a8c372f902eafdd186362096983 (16 files; the commit
-      primitive's template subject is the delivered
-      `feat(GH-347): update doc/changes/...` line because this commit was made
-      without `--phase`). Gate at that HEAD, exit 0 on every plan line: harness
-      adapter suites 23 pass; stall/loop 32 pass; derivation + token-closure 42
-      pass; parity battery/no-shell/spawn 26 pass; composition + harness
-      contract 71 pass; contract-invariance + no-shell 21 pass;
-      content/port/dispatch structure 37 pass; `scripts/checks/no-shell-dispatch.ts`
-      clean (22 surface files); `pnpm typecheck` clean; `git diff --check` clean.
-      The BINDING aggregate `pnpm check` is green: lint/format/typecheck PASS,
-      11,147 pass / 4 skip / 0 fail across 1,376 files, boundaries, memory
-      (records=3 areas=8 errors=0), prompt-conformance (5 clean),
-      help-guide-coverage and exports-parity (5 publishables) all PASS. R13:
-      production session ports declare (createClaudeSession ->
-      CLAUDE_CAPABILITIES with the terminate gap; createOpencodeSession -> its
-      resolved declaration) and `harnessFor` fills only an ABSENT declaration;
-      the TC-TERM-007 production-composed case drives createClaudeSession's own
-      port through a below-bound stall to one spawn, zero economics.restart and
-      terminal state-unverified at exit 2; the adapter suites and the
-      composition source assertion hold the wiring. R14: the TC-TERM-005
-      unconfirmed case proves the terminate:failed half. R15: the 16-id mirror
-      with its size assertion and test plan v0.6. R16: signalProcess removed,
-      `reaped` documented as the exact-identity match, process-runner header
-      live-counter semantics. No pinned surface moved; the mutation register
-      stays 90 rows and M42 is re-armed."
+      primitive's template subject is the delivered `feat(GH-347): update
+      doc/changes/...` line because this commit was made without `--phase`).
+      Gate at that HEAD, exit 0 on every plan line: harness adapter suites 23
+      pass; stall/loop 32 pass; derivation + token-closure 42 pass; parity
+      battery/no-shell/spawn 26 pass; composition + harness contract 71 pass;
+      contract-invariance + no-shell 21 pass; content/port/dispatch structure 37
+      pass; `scripts/checks/no-shell-dispatch.ts` clean (22 surface files);
+      `pnpm typecheck` clean; `git diff --check` clean. The BINDING aggregate
+      `pnpm check` is green: lint/format/typecheck PASS, 11,147 pass / 4 skip /
+      0 fail across 1,376 files, boundaries, memory (records=3 areas=8
+      errors=0), prompt-conformance (5 clean), help-guide-coverage and
+      exports-parity (5 publishables) all PASS. R13: production session ports
+      declare (createClaudeSession -> CLAUDE_CAPABILITIES with the terminate
+      gap; createOpencodeSession -> its resolved declaration) and `harnessFor`
+      fills only an ABSENT declaration; the TC-TERM-007 production-composed case
+      drives createClaudeSession's own port through a below-bound stall to one
+      spawn, zero economics.restart and terminal state-unverified at exit 2; the
+      adapter suites and the composition source assertion hold the wiring. R14:
+      the TC-TERM-005 unconfirmed case proves the terminate:failed half. R15:
+      the 16-id mirror with its size assertion and test plan v0.6. R16:
+      signalProcess removed, `reaped` documented as the exact-identity match,
+      process-runner header live-counter semantics. No pinned surface moved; the
+      mutation register stays 90 rows and M42 is re-armed."
+    type: info
+    date: "2026-11-19"
+  - text: "Post-phase-10 documentation re-verification: five pages reconciled - the
+      three current-truth feature pages (the capability declaration carried on
+      the port with the production obligation and the fail-open default, the
+      incapable/unconfirmed termination as a terminal state-unverified arm with
+      no ordinal, reaped as an exact-identity match, the resume-clears fact, the
+      composition fill), plus the m1 dispatch reference page (its termination
+      paragraph corrected from 'below the bound always consumes an ordinal' to
+      the confirmed-only rule, with the unconfirmed and incapable arms and the
+      matched-not-reaped wording) and the dispatch test spec (the optional
+      capabilities member, the unconfirmed-termination scenario and the
+      claude-shaped below-bound case in the existing structure). Gates: doc
+      suites 39 pass, doc-distribution no drift (96 docs), stale-phrase scan
+      clean on all five pages, git diff --check clean. No false claim remains on
+      the m1 page. One optional tightening stays open and is not a false claim:
+      the glossary Terminate entry lists terminated/escalated/reaped without the
+      match semantics or the port-carried declaration."
     type: info
     date: "2026-11-19"

@@ -47,12 +47,12 @@ whole-session process cap bounds the lifecycle. The Claude Code headless spawn
 keeps its bounded one-shot invocation.
 
 The adapter also owns the only way a session ends. The port's optional
-`terminate` operation is capability-gated: the opencode adapter supports it and
-the Claude Code adapter declares it as a gap. A supported terminate signals the
-session's own process tree, escalates to kill only after the declared grace,
-reaps an escaped runtime only by exact identity, and is idempotent. The engine
-that drives it records the stall and the termination evidence and adds no failure
-identity for the capability.
+`terminate` operation is capability-gated by the declaration carried on the port
+itself: the opencode adapter supports it and the Claude Code adapter declares it as
+a gap. A supported terminate signals the session's own process tree, escalates to
+kill only after the declared grace, reaches an escaped runtime only by exact
+identity, and is idempotent. The engine that drives it records the stall and the
+termination evidence and adds no failure identity for the capability.
 
 The spawn path carries an execution-environment descriptor whose environment is
 a deny-by-default allowlist. The child environment is built from the declared
@@ -105,9 +105,9 @@ the dispatch composition; the adapters add no dispatch branch of their own.
 | `HARNESS_LIVENESS_KINDS` | Session traffic, worktree activity, process. |
 | `HARNESS_GAP_REASONS` | Closed gap reasons; an unlisted capability is a declared gap, never implied parity. |
 | `HarnessInstance` | Kind, observed version (explicit unknown plus warning), capability declaration, and the additive `versionVerdict`, `mode`, and `modeOrigin` members. |
-| `HarnessSessionPort` | Spawn, deliver, resume, collect, classify, liveness, and read-only session listing as the seven required members, plus the additive optional capability-gated `terminate`. |
+| `HarnessSessionPort` | Spawn, deliver, resume, collect, classify, liveness, and read-only session listing as the seven required members, plus the optional declared `capabilities` and the additive optional capability-gated `terminate`. |
 | `HarnessSpawnInput`, `HarnessResumeInput` | The spawn, resume, and deliver inputs; each carries the additive optional caller-supplied `agent` identity and the additive optional single-seat `binding`, and its `agent` absence is the role-less `no-agent` state. The spawn input additionally carries the additive optional fresh-spawn `title`. |
-| `HarnessTerminateInput`, `HarnessTerminateResult` | The terminate input (the session handle plus the declared grace in milliseconds) and its result (`terminated`, `escalated`, and `reaped` booleans). |
+| `HarnessTerminateInput`, `HarnessTerminateResult` | The terminate input (the session handle plus the declared grace in milliseconds) and its result (`terminated`, `escalated`, and `reaped` booleans); `reaped` reports that an exact-identity target was matched, not that an OS reap occurred. |
 | `HarnessSeatBinding` | One resolved seat: the agent identity it was resolved for, the seat name, the resolved model, and the declared variable name for a variable-consuming harness. |
 | `HarnessVersionProbe` | The pinned version-probe seam: one bounded invocation with the declared deadline and injected clock, answering a stdout line or `timed-out`; the resolver treats a rejection as indeterminate and never retries. |
 | `HarnessSpawnRunner` | The one-shot child-process seam: resolves at process close and carries the bounded stdout, stderr, exit status, and timeout flag; used for read-only session listing and by the Claude Code adapter. |
@@ -123,9 +123,22 @@ streaming seam is adapter-internal and the session port does not carry it.
 ### Terminate operation
 
 `terminate` is the one additive id in the closed operation set, and the port
-member is optional so a port double without it stays valid: an adapter that
-declares no capability is simply never asked, and a declaration that lacks the
-operation is a declared gap.
+member is optional so a port double without it stays valid. A port whose
+declaration lacks `terminate` is never asked to perform it, and the absence is a
+declared gap rather than an implied capability.
+
+The capability declaration is carried by the session port itself as the optional
+`capabilities` member, and the engine's terminate gate reads that member. Every
+production adapter declares on its port — the Claude Code port returns
+`CLAUDE_CAPABILITIES`, whose supported operations exclude `terminate`, and the
+opencode port returns its resolved declaration — so the gate never has to infer
+the capability from the composition. The member is optional for source
+compatibility with declared doubles: an absent declaration is undeclared, and the
+engine keeps its delivered fail-open default that treats an undeclared port as
+capable. That default is reachable only by an explicitly undeclared double, because
+every production port declares and the production composition never mounts a port
+without a declaration; the Claude adapter behaviour suite and the
+dispatch-composition wiring suite hold that obligation.
 
 The operation ends one session, and it is bounded and exact:
 
@@ -134,9 +147,10 @@ The operation ends one session, and it is bounded and exact:
   is the declared `coordinator.kill-grace` (default 20 000 ms), reused rather than
   duplicated; the grace wait is the composition's injected delay with reason
   `terminate-grace`.
-- **Exact-identity reap.** An escaped runtime is reaped only when it matches this
-  lane's session id or its deterministic `ticket-<REF>` title. The operation never
-  signals by a broad pattern and never signals an unrelated process.
+- **Exact-identity match.** An escaped runtime is signalled only when it matches
+  this lane's session id or its deterministic `ticket-<REF>` title, and the
+  result's `reaped` reports that match rather than an OS reap act. The operation
+  never signals by a broad pattern and never signals an unrelated process.
 - **Idempotent.** Terminating an unknown session is success with
   `terminated: true` and no signal, and a repeated terminate appends no signal and
   replays the facts the first call observed. A terminate result adds no error
@@ -147,21 +161,29 @@ The operation ends one session, and it is bounded and exact:
 
 The shipped opencode adapter supports `terminate` over an injected process-tree
 seam. The composition supplies that seam — a host process listing plus a tree
-signal and a single-process signal — so the adapter carries no ambient process
-access: it matches the listing by exact identity (this lane's session id or its
-`ticket-<REF>` title), sends TERM to each matched runtime's own tree, waits the
-configured grace through the injected wait, and sends KILL only to a target that
-is still listed. Every reported boolean is an observed act — `terminated` when a
-terminal signal was issued, `escalated` when the kill ran, `reaped` when the
-exact-identity predicate matched — so an adapter composed without the seam reports
-`terminated: false`, `escalated: false`, and `reaped: false` rather than claiming
-an act it did not perform. A resume creates a new live process tree and clears the
-recorded termination fact, so a restarted iteration is signalable. The shipped
-composition binds the seam at the composition edge over the host process table
-(`/proc` on Linux), and OS-level termination of a real child stays outside the
-parity battery's proof boundary; the reap contract is proven over the injected
-process-tree double. The shipped Claude Code adapter declares the `terminate` gap
-(`headless-mode-limitation`) and is never asked.
+signal — so the adapter carries no ambient process access: it matches the listing
+by exact identity (this lane's session id or its `ticket-<REF>` title), sends TERM
+to each matched runtime's own tree, waits the configured grace through the injected
+wait, and sends KILL only to a target that is still listed. Every reported boolean
+is an observed fact — `terminated` when a terminal signal was issued, `escalated`
+when the kill ran, and `reaped` when this lane's exact identity matched a runtime
+in the table — so `reaped` reports the match, not an OS reap act, and an adapter
+composed without the seam reports `terminated: false`, `escalated: false`, and
+`reaped: false` rather than claiming an act it did not perform. A resume creates a
+new live process tree and clears the recorded termination fact, so a restarted
+iteration is signalable. The shipped composition binds the seam at the composition
+edge over the host process table (`/proc` on Linux), and OS-level termination of a
+real child stays outside the parity battery's proof boundary; the terminate
+contract is proven over the injected process-tree double. The shipped Claude Code
+adapter declares the `terminate` gap (`headless-mode-limitation`) and is never
+asked.
+
+A terminate-incapable adapter never starts a second session. After the stall's
+pre-restart terminal verdicts have had their chance, a below-bound stall on such an
+adapter resolves terminal `state-unverified` at exit `2` with the stall evidence
+and consumes no ordinal. An unconfirmed termination — a result of
+`terminated: false`, or a rejected call — resolves the same way and adds
+`terminate:failed` evidence.
 
 `HarnessCapabilityDeclaration` carries the additive `sourcedSignalSources` and
 `sourcedSignalGaps` members; `HarnessLivenessFacts` and `HarnessLivenessReport`
@@ -298,8 +320,10 @@ with the prompt as data, collects and classifies through the shared classifier,
 and supports spawn and collect only. Deliver, resume, steer, session listing,
 terminate, resume/steer injection, session introspection, all three liveness
 kinds, and both sourced-signal kinds are explicit gaps
-(`headless-mode-limitation` / `provider-unsupported`). A declared gap is returned
-before any invocation and carries no executable fallback instruction.
+(`headless-mode-limitation` / `provider-unsupported`). The adapter's port carries
+`CLAUDE_CAPABILITIES`, so the declaration the engine's terminate gate reads is the
+same one the adapter instance carries. A declared gap is returned before any
+invocation and carries no executable fallback instruction.
 
 ## 4. Configuration
 

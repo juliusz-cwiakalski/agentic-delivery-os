@@ -47,12 +47,19 @@ current-state verdict, not a latch: a later `progressing` observation clears it.
 A stall that is still current when evidence collection resolves, or a
 harness-reported timeout, is restart-eligible; a clean session exit is always
 terminal and is never re-keyed to `max-restarts` by an already-reached bound.
-Before any restart decision the stalled session is terminated through the
-capability-gated harness `terminate` operation: TERM reaches the session's own
-process tree, KILL follows only after the declared grace
-(`coordinator.kill-grace`), an escaped runtime is reaped only by exact identity,
-and an adapter that declares no terminate capability is never asked. Below
-`lane.restart-budget` the command consumes one restart ordinal, appends one
+Before any restart decision the termination capability is evaluated from the
+declaration carried on the port itself, and the stalled session is terminated
+through the capability-gated harness `terminate` operation when it is supported:
+TERM reaches the session's own process tree, KILL follows only after the declared
+grace (`coordinator.kill-grace`), `reaped` reports that an escaped runtime's exact
+identity was matched (a match, not an OS reap), and a resume clears the recorded
+termination fact because it re-enters as a new live process tree. An adapter that
+declares no terminate capability is never asked. With the terminal pre-restart
+verdicts excluded, a stall on such an adapter, or a stall whose termination is not
+confirmed (`terminated: false` or a rejected call), starts no second session and
+resolves terminal `state-unverified` at exit `2` with the stall evidence and no
+ordinal. Only a confirmed termination reaches the restart decision: below
+`lane.restart-budget` it consumes one restart ordinal, appends one
 `economics.restart` with reason `watchdog.liveness-stalled`, and resumes the
 recorded session in-process for the next iteration; at or above the bound it
 records the restart-budget refusal (`max-restarts`) with the terminal exhaustion
