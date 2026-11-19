@@ -20,6 +20,7 @@ import {
   TOOL_FAILURE_EVIDENCE,
 } from "../fixtures/dispatch/harness";
 import {
+  artifacts,
   blockedInput,
   exhaustedLaneInput,
   harnessFacts,
@@ -60,32 +61,65 @@ describe("TC-DISP-008 every derivation branch stays inside the eleven", () => {
     expect(emitted.length).toBeGreaterThan(0);
   });
 
-  test("the restart-budget branch refuses a non-completed session at the bound", () => {
-    for (const evidence of [TIMED_OUT_EVIDENCE, PREMATURE_END_EVIDENCE]) {
-      const result = deriveDispatchResult(
-        truthInput({
-          harness: readOk(harnessFacts(evidence)),
-          restarts: { count: 3, bound: 3 },
-        }),
-      );
-      expect(result.token).toBe("max-restarts");
-      expect(result.outcome).toBe("failed");
-      expect(result.lastMessage).toContain("restart budget exhausted");
-    }
-    // The completed-session exemption is the F-16 contract: a completed harness
-    // at an already-reached bound is never re-keyed to the restart refusal.
+  test("the persisted-bound re-key is NARROWED to the restart-eligible timeout", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 §8.5 "Persisted-bound re-key
+    // narrowed", AC-F6-4, AC-F6-6, Appendix F(D), DEC-5): a harness-reported
+    // timeout at the bound keeps `max-restarts` with its delivered identity, and
+    // every CLEAN session exit at the bound keeps its own classification.
+    const timedOut = deriveDispatchResult(
+      truthInput({
+        harness: readOk(harnessFacts(TIMED_OUT_EVIDENCE)),
+        restarts: { count: 3, bound: 3 },
+      }),
+    );
+    expect(timedOut.token).toBe("max-restarts");
+    expect(timedOut.outcome).toBe("failed");
+    expect(timedOut.lastMessage).toContain("restart budget exhausted");
+
+    // A premature end at the bound keeps `partial` (Appendix F(C)(9)).
+    const premature = deriveDispatchResult(
+      truthInput({
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+        artifacts: readOk(artifacts({ branchCommits: 2, pmNotes: "incomplete" })),
+        restarts: { count: 3, bound: 3 },
+      }),
+    );
+    expect(premature.token).toBe("partial");
+
+    // The completed-session exemption is unchanged: never re-keyed.
     const completed = deriveDispatchResult(truthInput({ restarts: { count: 3, bound: 3 } }));
     expect(completed.token).toBe("pr-open");
   });
 });
 
 describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () => {
-  test("completed-with-tool-failure and premature end both derive partial with an outcome", () => {
+  test("a tool failure or premature end WITH a decisive artifact resolves the artifact", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 6-7
+    // precede arm 9; §8.5 "After a completed session, derivation is
+    // artifact-first"; DEC-6): a non-clean END with commits and complete
+    // pm-notes takes the artifact arm and resolves `finished`, not the
+    // classifier token. The assertion is updated with its clause, not deleted.
     for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
       const result = deriveDispatchResult(
         truthInput({
           harness: readOk(harnessFacts(evidence)),
-          artifacts: readOk({ branchCommits: 2, pr: prNone }),
+          artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
+        }),
+      );
+      expect(result.token).toBe("finished");
+      expect(result.outcome.length).toBeGreaterThan(0);
+      expect(result.projectionClass).toBe("success");
+    }
+  });
+
+  test("a tool failure or premature end WITHOUT a decisive artifact keeps partial", () => {
+    // Appendix F(C)(9): the classifier's token is still reachable, so `partial`
+    // is proven by its own arm (no commits, no pull request, readable tracker).
+    for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
+      const result = deriveDispatchResult(
+        truthInput({
+          harness: readOk(harnessFacts(evidence)),
+          artifacts: readOk({ branchCommits: 0, pr: prNone, pmNotes: "complete" }),
         }),
       );
       expect(result.token).toBe("partial");
@@ -111,7 +145,7 @@ describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () =>
     const result = deriveDispatchResult(
       truthInput({
         harness: readOk(harnessFacts(TIMED_OUT_EVIDENCE)),
-        artifacts: readOk({ branchCommits: 2, pr: prNone }),
+        artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
       }),
     );
     expect(result.token).toBe("max-restarts");
@@ -119,26 +153,57 @@ describe("TC-DISP-011 partial carries outcome; spawn refusal is recorded", () =>
   });
 });
 
-describe("TC-DISP-012 noop-lane-nothing-to-do only with no remaining work", () => {
-  test("the exhausted lane derives noop-lane-nothing-to-do", () => {
+describe("TC-DISP-012 noop-lane-nothing-to-do only under the shell arm", () => {
+  test("a complete ledger with commits resolves the artifact arm (ledger arm retired)", () => {
+    // DELIVERED EXPECTATION UPDATE: the phase-ledger no-work arm is RETIRED
+    // (spec §8.5 "Phase-ledger no-work arm retired"; AC-F8-4; DEC-6). A complete
+    // ledger with commits resolves `finished`/`partial`, never nothing-to-do.
     const result = deriveDispatchResult(exhaustedLaneInput());
-    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.token).toBe("finished");
     expect(result.projectionClass).toBe("success");
-    expect(result.lastMessage).toContain("no remaining work");
+    expect(result.token).not.toBe("noop-lane-nothing-to-do");
   });
 
-  test("an open-phase lane never derives the no-work token", () => {
-    const inputs = [
+  test("the shell arm is no commits, no PR, and a readable non-done non-blocked tracker", () => {
+    const result = deriveDispatchResult(noArtifactInput());
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.projectionClass).toBe("success");
+  });
+
+  test("a non-completed session never derives the no-work token", () => {
+    // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 6-7;
+    // §8.5 artifact-first): a premature end WITH commits and a complete pm-notes
+    // resolves `finished`. The no-work claim is still refused, which is this
+    // case's subject.
+    const artifactBacked = deriveDispatchResult(
       truthInput({
-        artifacts: readOk({ branchCommits: 2, pr: prNone }),
+        artifacts: readOk({ branchCommits: 2, pr: prNone, pmNotes: "complete" }),
         ledger: readOk(ledger({ completed: 5, total: 7, workRemaining: true, progressed: false })),
         harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
       }),
-      noArtifactInput(),
-    ];
-    for (const input of inputs) {
-      expect(deriveDispatchResult(input).token).not.toBe("noop-lane-nothing-to-do");
-    }
+    );
+    expect(artifactBacked.token).not.toBe("noop-lane-nothing-to-do");
+    expect(artifactBacked.token).toBe("finished");
+
+    // With NO decisive artifact the classifier arm (F(C)(9)) still decides, and
+    // it is never the no-work token either.
+    const classifierBacked = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk({ branchCommits: 0, pr: prNone, pmNotes: "complete" }),
+        harness: readOk(harnessFacts(PREMATURE_END_EVIDENCE)),
+      }),
+    );
+    expect(classifierBacked.token).not.toBe("noop-lane-nothing-to-do");
+    expect(classifierBacked.token).toBe("partial");
+  });
+
+  test("the shell arm asserts that no work remains", () => {
+    // RESTORED (GH-347 AC-F8-4; test plan §7.4 non-vacuity): the delivered
+    // assertion naming the production message was dropped with the
+    // TC-DISP-012 rename and is restored here in its own case.
+    const result = deriveDispatchResult(noArtifactInput());
+    expect(result.token).toBe("noop-lane-nothing-to-do");
+    expect(result.lastMessage).toContain("no remaining work");
   });
 
   test("the happy-path open-PR lane is not a no-work claim", () => {

@@ -36,6 +36,9 @@ export const CLAUDE_CAPABILITIES: HarnessCapabilityDeclaration = {
     { capability: "token-delta", reason: "provider-unsupported" },
   ],
   declaredGaps: [
+    // GH-347 DM-5: the Claude Code adapter declares the terminate gap and is
+    // never asked; the engine starts no second session on that path.
+    { capability: "terminate", reason: "headless-mode-limitation" },
     { capability: "deliver", reason: "headless-mode-limitation" },
     { capability: "resume", reason: "headless-mode-limitation" },
     { capability: "steer", reason: "headless-mode-limitation" },
@@ -152,6 +155,10 @@ export const createClaudeSession = (options: ClaudeHarnessOptions): HarnessSessi
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return {
+    // GH-347 AC-F5-4: the adapter's own declaration rides its port, so the
+    // engine's terminate gate reads the real gap (no `terminate` operation)
+    // instead of falling back to "capable" on an undeclared port.
+    capabilities: CLAUDE_CAPABILITIES,
     spawn: async (input) => {
       const environment = options.buildEnvironment(input.descriptor);
       if (!environment.ok) return environment;

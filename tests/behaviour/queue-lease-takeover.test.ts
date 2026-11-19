@@ -18,22 +18,22 @@ import {
 } from "../fixtures/queue/single-flight/harness";
 
 describe("TC-QLC-043 stale takeover stays delivered", () => {
-  test("at the TTL boundary the dispatch family takes over with incident evidence", () => {
+  test("at the TTL boundary the dispatch family takes over with incident evidence", async () => {
     const single = singleFlightStore("takeover-dispatch");
     try {
       seedLease(single, { holder: "lane-1", ref: "GH-241", ageMs: TTL });
-      const claimed = dispatchClaim(single, "GH-241");
+      const claimed = await dispatchClaim(single, "GH-241");
       expect(claimed.ok).toBe(true);
     } finally {
       single.dispose();
     }
   });
 
-  test("one millisecond below the TTL both paths refuse: the boundary is shared", () => {
+  test("one millisecond below the TTL both paths refuse: the boundary is shared", async () => {
     const single = singleFlightStore("takeover-boundary");
     try {
       seedLease(single, { holder: "lane-1", ref: "GH-241", ageMs: TTL - 1 });
-      const dispatchRefused = dispatchClaim(single, "GH-241");
+      const dispatchRefused = await dispatchClaim(single, "GH-241");
       expect(dispatchRefused.ok).toBe(false);
       if (!dispatchRefused.ok) expect(dispatchRefused.code).toBe("queue.single-flight");
       expect(claimAdmission(single, { ref: "GH-241", holder: "lane-2" })).toMatchObject({

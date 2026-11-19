@@ -11,7 +11,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  CLAUDE_CAPABILITIES,
+  OPENCODE_CAPABILITIES,
+} from "../../packages/adapters/src/harness/index";
+import {
   HARNESS_FAILURE_CODES,
+  HARNESS_OPERATIONS,
   type HarnessSessionPort,
 } from "../../packages/core/src/contracts/index";
 import { assembleLiveness, classifier } from "../fixtures/harness/harness-io";
@@ -116,6 +121,52 @@ describe("TC-OCS-002 the session port and one-shot runner are unchanged", () => 
     ]);
     expect("kill" in port).toBe(false);
     expect("abort" in port).toBe(false);
+  });
+
+  test("GH-347 the terminate operation is optional and capability-gated", () => {
+    // The closed set gains exactly one id; no operation is removed or renamed.
+    expect([...HARNESS_OPERATIONS]).toEqual([
+      "spawn",
+      "deliver",
+      "resume",
+      "steer",
+      "collect",
+      "session-list",
+      "terminate",
+    ]);
+    // A port double WITHOUT terminate stays valid (asserted above); a capable
+    // port implements it with the declared input and result shape.
+    const capable: HarnessSessionPort = {
+      spawn: async () => ({ ok: false, error: { kind: "harness", code: "harness.spawn.refused" } }),
+      deliver: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
+      resume: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
+      collect: async () => ({
+        ok: false,
+        error: { kind: "harness", code: "harness.spawn.refused" },
+      }),
+      classify: classifier,
+      liveness: async () => ({ ok: true, value: assembleLiveness({ sourced: [] }) }),
+      listSessions: async () => ({ ok: true, value: { handles: [] } }),
+      terminate: async (input) => ({
+        ok: true,
+        value: { terminated: true, escalated: input.graceMs > 0, reaped: false },
+      }),
+    };
+    expect(typeof capable.terminate).toBe("function");
+    // The declaring adapters: opencode supports terminate, Claude Code declares
+    // the gap and is never asked.
+    expect(OPENCODE_CAPABILITIES.supportedOperations).toContain("terminate");
+    expect(CLAUDE_CAPABILITIES.supportedOperations).not.toContain("terminate");
+    expect(CLAUDE_CAPABILITIES.declaredGaps).toContainEqual({
+      capability: "terminate",
+      reason: "headless-mode-limitation",
+    });
   });
 
   test("the failure vocabulary is the delivered nine plus the four GH-335 refusals", () => {

@@ -333,9 +333,14 @@ export const recoverInterruptedLane = (input: {
     adapterSupportsResumeInjection: false,
     completedPhases: [],
   });
+  // GH-347 DEC-5: peak-pause recovery is a coordinator-family re-entry that
+  // consumes an ordinal, not an operator resume, so it KEEPS the
+  // budget-consulting scope and today's refusal at the bound (stated here
+  // explicitly rather than inherited from the default).
   const restart = admitDispatchRestart({
     count: input.restartCount,
     bound: input.restartBound,
+    scope: "budget-consulting",
   });
   if (!restart.admitted) {
     return {

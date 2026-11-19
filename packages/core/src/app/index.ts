@@ -99,6 +99,11 @@ export {
   readDispatchAttemptHistory,
 } from "./dispatch-attempts.js";
 export {
+  DISPATCH_RESUMABLE_DAEMON_STATES,
+  type DispatchLaneResolutionInput,
+  resolveDispatchLane,
+} from "./dispatch-lane.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
@@ -112,13 +117,17 @@ export {
   appendDispatchAttempt,
   appendDispatchDivergence,
   appendDispatchHandover,
+  appendDispatchLane,
   type DispatchAppendResult,
   type DispatchLedgerRead,
   foldDispatchDivergences,
+  isDispatchLaneRecord,
   isEvidenceClass,
+  latestDispatchLaneFor,
   readDispatchAttempts,
   readDispatchDivergences,
   readDispatchHandover,
+  readDispatchLanes,
   resolveDispatchDivergence,
   writeDispatchAuthority,
 } from "./dispatch-ledger.js";
@@ -190,9 +199,11 @@ export {
  */
 export {
   addQueueDependency,
+  claimDispatchLease,
   claimQueueLease,
   claimSingleFlightRefusal,
   type DispatchAdmissionRefusal,
+  type DispatchLeaseClaimOutcome,
   declareQueueEntry,
   dispatchAdmissionRefusal,
   leaseRecordHeartbeatAgeMs,

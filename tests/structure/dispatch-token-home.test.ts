@@ -122,3 +122,17 @@ describe("TC-TOKEN-001 the eleven-token home is total and ordered", () => {
     }
   });
 });
+
+/* ------------------------------------------------------------------------- */
+/* GH-347 — the lane record declares no token list of its own.                */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-347 the lane record shares the one token vocabulary", () => {
+  test("the lane record's terminal token is typed from the one taxonomy", () => {
+    const source = readFileSync(join(ROOT, "packages/core/src/contracts/dispatch.ts"), "utf8");
+    // The lane record references the shared `DispatchToken` alias; it declares
+    // no second token union and no token literal list.
+    expect(source).toContain("readonly lastToken?: DispatchToken;");
+    expect(source).not.toContain('["merged",');
+  });
+});

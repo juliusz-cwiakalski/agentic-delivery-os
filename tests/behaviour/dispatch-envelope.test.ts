@@ -11,7 +11,7 @@ import {
   PREMATURE_END_EVIDENCE,
   TOOL_FAILURE_EVIDENCE,
 } from "../fixtures/dispatch/harness";
-import { artifacts, ledger, prNone, readOk, readFail } from "../fixtures/dispatch/truth";
+import { artifacts, ledger, prNone, readFail, readOk } from "../fixtures/dispatch/truth";
 
 const attemptsOf = (scenario: ReturnType<typeof createCommandScenario>) => {
   const read = readDispatchAttempts(scenario.state.store);
@@ -52,10 +52,15 @@ describe("TC-DISP-006 machine envelope shape and mandatory outcome", () => {
 
   test("a partial result always carries its outcome", async () => {
     for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
+      // DELIVERED EXPECTATION UPDATE (GH-347 AC-F4-3; Appendix F(C) arms 6-7
+      // precede arm 9; §8.5 artifact-first): the classifier token is the result
+      // only when NO decisive artifact exists. With commits present the artifact
+      // arm decides, so the case carries the partial through its own arm:
+      // commits with INCOMPLETE pm-notes (Appendix F(C)(7)).
       const scenario = createCommandScenario({
         evidence,
         reads: readsFrom({
-          artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone })),
+          artifacts: readOk(artifacts({ branchCommits: 2, pr: prNone, pmNotes: "incomplete" })),
           ledger: readOk(ledger()),
         }),
       });
@@ -63,6 +68,25 @@ describe("TC-DISP-006 machine envelope shape and mandatory outcome", () => {
         const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
         expect(run.envelope?.data?.result).toBe("partial");
         expect(run.envelope?.data?.outcome.length).toBeGreaterThan(0);
+        expect(run.exit).toBe(1);
+      } finally {
+        scenario.dispose();
+      }
+    }
+
+    // With NO decisive artifact the CLASSIFIER arm still produces `partial`
+    // (Appendix F(C)(9)), so the classifier's half stays proven.
+    for (const evidence of [TOOL_FAILURE_EVIDENCE, PREMATURE_END_EVIDENCE]) {
+      const scenario = createCommandScenario({
+        evidence,
+        reads: readsFrom({
+          artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
+          ledger: readOk(ledger()),
+        }),
+      });
+      try {
+        const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);
+        expect(run.envelope?.data?.result).toBe("partial");
         expect(run.exit).toBe(1);
       } finally {
         scenario.dispose();
@@ -103,7 +127,11 @@ describe("TC-DISP-010 a failing run still emits a complete classified envelope",
   test("an unreadable truth read emits state-unverified at exit 2 with one record", async () => {
     const scenario = createCommandScenario({
       evidence: COMPLETED_EVIDENCE,
-      reads: readsFrom({ tracker: readFail("tracker", "tracker.read-unreadable") }),
+      // GH-347 AC-F4-3: undecidable truth needs both reads to fail.
+      reads: readsFrom({
+        tracker: readFail("tracker", "tracker.read-unreadable"),
+        artifacts: readFail("artifact", "artifact.read-unreadable"),
+      }),
     });
     try {
       const run = await scenario.invoke(["dispatch", "GH-301", "--json"]);

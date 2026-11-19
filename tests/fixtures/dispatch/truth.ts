@@ -16,7 +16,10 @@ import type {
   DispatchTrackerFacts,
   DispatchTruthInput,
 } from "../../../packages/core/src/domain/dispatch-result";
-import type { HarnessEvidence } from "../../../packages/core/src/contracts/index";
+import type {
+  HarnessEvidence,
+  PmNotesCompleteness,
+} from "../../../packages/core/src/contracts/index";
 import { COMPLETED_EVIDENCE, DISPATCH_NOW } from "./harness";
 
 export const readOk = <T>(value: T): DispatchRead<T> => ({ ok: true, value });
@@ -59,12 +62,19 @@ export const prMerged = (
   mergeReady: false,
 });
 
+/**
+ * The artifact facts. `pmNotes` defaults to `complete` so every delivered
+ * expectation that relied on `finished` is preserved; a case that needs
+ * `partial` passes `incomplete` or `absent` explicitly.
+ */
 export const artifacts = (input: {
   readonly branchCommits: number;
   readonly pr?: DispatchPrFact;
+  readonly pmNotes?: PmNotesCompleteness;
 }): DispatchArtifactFacts => ({
   branchCommits: input.branchCommits,
   pr: input.pr ?? prNone,
+  pmNotes: input.pmNotes ?? "complete",
 });
 
 export const ledger = (input: Partial<DispatchLedgerFacts> = {}): DispatchLedgerFacts => ({

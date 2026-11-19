@@ -17,14 +17,14 @@ import {
 } from "../fixtures/queue/single-flight/harness";
 
 describe("TC-QLC-045 refusal purity and precedence", () => {
-  test("a dispatch-family refusal changes zero records and zero leases", () => {
+  test("a dispatch-family refusal changes zero records and zero leases", async () => {
     const single = singleFlightStore("purity-dispatch");
     try {
       seedLease(single, { holder: "lane-1", ref: "GH-241" });
       const recordsBefore = recordCount(single);
       const leasesBefore = activeLease(single);
       const refsBefore = foldedRefs(single);
-      const claimed = dispatchClaim(single, "GH-241");
+      const claimed = await dispatchClaim(single, "GH-241");
       expect(claimed.ok).toBe(false);
       expect(recordCount(single)).toBe(recordsBefore);
       expect(activeLease(single)).toEqual(leasesBefore);

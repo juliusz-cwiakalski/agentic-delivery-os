@@ -59,7 +59,8 @@ describe("TC-REG-004 the preflight port is optional and distinct from admission"
   test("the preflight runs before the lease claim and the spawn/resume block", () => {
     const text = source(ENGINE);
     const preflight = text.indexOf("ports.preflight()");
-    const claim = text.indexOf("const claimed = ports.claimLease()");
+    // GH-347 AC-F2-3: the claim is awaited (the bounded fence wait is async).
+    const claim = text.indexOf("await ports.claimLease()");
     const spawn = text.indexOf("ports.harness.spawn");
     const resume = text.indexOf("ports.harness.resume");
     expect(preflight).toBeGreaterThan(0);

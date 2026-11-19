@@ -1,0 +1,697 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-347
+branch: feat/GH-347/dispatch-core-parity
+base: origin/main-tools (three-dot merge-base)
+status: FAIL
+summary: >
+  Iteration 1, first review. The change delivers the ten declared parity gaps:
+  a durable dispatch-owned `dispatch.lane` record, atomic in-claim admission
+  with declared verdicts and a bounded fence wait, recorded-attempt resume
+  (including `pr-open`), a five-attempt tracker ladder with artifact honesty,
+  a capability-gated `terminate` contract, an in-process bounded restart loop,
+  the `pm`/`--title ticket-<REF>`/lifecycle-prompt spawn identity, the total
+  derivation order with tracker-done `merged` and artifact `partial`, and an
+  offline parity battery with a static no-shell invariant. The closed
+  vocabulary, projections, exits, error-table rows, domain kinds, attempt
+  schema version, and configuration defaults are unchanged (verified by test
+  and by the contract-invariance pin). The lane resolver, admission interleave
+  (both orderings), resume, spawn identity, and daemon-shared derivation are
+  exercised through real composed seams and are genuinely non-vacuous. Two
+  blockers prevent acceptance: (B1) the derivation gates the artifact ladder on
+  the classifier token being `finished`, so a `failed`/`premature-end`/
+  completed-with-tool-failure session with a decisive artifact returns the
+  classifier token instead of the artifact verdict required by Appendix F(C)
+  (arms 4-8 precede arm 9), violating AC-F4-3 and diverging from the shell;
+  (B2) the loop restarts a below-bound stall on an adapter that declares no
+  terminate capability, starting a second session, violating AC-F5-4. Six
+  majors follow: the production `terminate` is materially narrower than the
+  published contract (fixed 100 ms KILL escalation, direct child only, no
+  exact-identity reap, literal `reaped:false`/`escalated:true`, and a
+  `terminated` flag inherited across resume so later iterations are never
+  signalled); the stall-undecidable predicate is too narrow; the AC-F9-3
+  determinism oracle compares only token+exit, not envelopes/attempt counts;
+  three non-vacuity controls are vacuous; and three delivered assertions were
+  deleted/relaxed without an authorising clause for the deletion. Verdict FAIL.
+severity_breakdown:
+  blocker: 2
+  major: 6
+  minor: 6
+  info: 4
+spec_compliance: FAIL
+plan_compliance: PASS_WITH_NOTES
+verification:
+  commits: 23
+  diff_stat:
+    files: 114
+    insertions: 17474
+    deletions: 861
+    doc_insertions: 9149
+    non_doc_insertions: 8325
+  tests_run:
+    - "bun test tests/behaviour/dispatch-truth-derivation.test.ts tests/checks/dispatch-contract-invariance.test.ts tests/checks/no-shell-dispatch.test.ts tests/structure/dispatch-contract.test.ts tests/behaviour/dispatch-token-closure.test.ts -> 70 pass / 0 fail"
+    - "bun test tests/checks/no-shell-dispatch.test.ts tests/conformance/dispatch/dispatch-parity-no-shell.test.ts -> 10 pass / 0 fail"
+    - "bun run scripts/checks/no-shell-dispatch.ts -> clean (22 surface files), exit 0"
+    - "npx depcruise packages/core/src --config .dependency-cruiser.cjs -> no dependency violations (260 modules, 794 dependencies)"
+  environment_notes: >
+    Working tree was clean at review start (git status --porcelain empty). This
+    review only reads tracked files and writes this record under code-review/.
+    No source file was modified. The full `pnpm check` was not re-run (it is
+    phase 8's gate and the PM records it green at 11127 tests); targeted suites
+    relevant to the findings were run and are reported above.
+acceptance_criteria:
+  - { id: "AC-F1-1", verdict: satisfied, evidence: "Active dispatch.lane appended at session acquisition (dispatch.ts:1005-1023); pre-session refusals return before the append. Real lane read/append helpers (dispatch-ledger.ts:437-507)." }
+  - { id: "AC-F1-2", verdict: satisfied, evidence: "Terminal lane appended only when a session was held (dispatch.ts:786-806); restarted iterations append active only (loop continue). TC-LANE-003 owned by phase 5." }
+  - { id: "AC-F1-3", verdict: satisfied_with_note, evidence: "lane:append-failed ref appended (dispatch.ts:807-810); see m4: the ref can be truncated by the 16-ref slice when evidenceRefs is full." }
+  - { id: "AC-F1-4", verdict: satisfied, evidence: "No-lane resolves undefined (dispatch-lane.ts:70-124); daemon family untouched; TC-LANE-005." }
+  - { id: "AC-F2-1", verdict: satisfied, evidence: "TC-ADMIT-001 both parked orderings: exactly one admitted, one queue.single-flight naming holder, no fallback.internal, leaseAcquisitions=1, attempts=1, spawns=1." }
+  - { id: "AC-F2-2", verdict: satisfied, evidence: "TC-ADMIT-002 queue.lease-conflict pre-session, no attempt/lane/lease." }
+  - { id: "AC-F2-3", verdict: satisfied, evidence: "claimDispatchLease waits via injected delay capped at TTL; state.lock.busy re-decides; persistent contention keeps state.* at exit 2 (TC-ADMIT-003/004)." }
+  - { id: "AC-F2-4", verdict: satisfied, evidence: "TC-ADMIT-005 refusal exits mapped code, empty attempt read, zero records." }
+  - { id: "AC-F2-5", verdict: satisfied, evidence: "TC-ADMIT-006 sibling renewal unchanged; dispatch noRenewal refuses under any holder (queue.ts:2173-2211)." }
+  - { id: "AC-F3-1", verdict: satisfied, evidence: "TC-LANE/RESUME-101: terminal pr-open lane resumes (resume over recorded lane), no fresh spawn; cold-resume registration added." }
+  - { id: "AC-F3-2", verdict: satisfied, evidence: "Operator resume passes scope operator-resume (edge.ts:7197-7201); admitDispatchRestart admits, no ordinal; resume-prompt-reentry row asserts unchanged restarts." }
+  - { id: "AC-F3-3", verdict: satisfied, evidence: "No lane + --resume-prompt is an explicit fresh spawn with the operator text (dispatch.ts:955-963); TC-RESUME-103." }
+  - { id: "AC-F3-4", verdict: satisfied, evidence: "Unknown session is a classified failure, one attempt, no spawn (registry resume-unknown-session token failed/exit 1)." }
+  - { id: "AC-F4-1", verdict: satisfied, evidence: "Ladder 5 attempts, waits 2/4/8/16 s, cap 30 s (dispatch-tracker.ts:12-59); injected delay." }
+  - { id: "AC-F4-2", verdict: satisfied, evidence: "Exhaustion -> tracker:exhausted identity, state-unverified when no decisive artifact (tracker-outage-without-artifact token state-unverified/exit 2)." }
+  - { id: "AC-F4-3", verdict: fail, evidence: "For a completed session whose classifier token is not `finished` (failed / premature-end / completed-with-tool-failure), the artifact ladder is skipped (dispatch-result.ts:270-277) and the classifier token is returned, so a decisive open-PR/commits artifact does not become the result. Contradicts Appendix F(C) arm order, AC-F4-3, and §8.5 'After a completed session, derivation is artifact-first'. See B1." }
+  - { id: "AC-F4-4", verdict: satisfied, evidence: "No config key; injected delay; tracker-ladder module has no ambient timer (pinned by dispatch-contract-invariance.test.ts:63-68)." }
+  - { id: "AC-F5-1", verdict: partial, evidence: "Terminate invoked before restart on a capable adapter and TERM recorded; but the termination result is not recorded as attempt evidence for a restarted iteration (only the economics.restart reason survives) and the production adapter does not TERM the tree/KILL after the grace (M1, m1)." }
+  - { id: "AC-F5-2", verdict: satisfied, evidence: "Clean exit / cleared stall invokes no terminate and no restart (dispatch-watch clears-transient case; loop only enters stall branch on stalled||timedOut)." }
+  - { id: "AC-F5-3", verdict: satisfied, evidence: "dispatchStallShortCircuit is exactly {tracker-done merged, blocking blocked, open-pr pr-open} (dispatch-liveness.ts:144-177); outside-set artifacts do not short-circuit." }
+  - { id: "AC-F5-4", verdict: fail, evidence: "A terminate-incapable adapter never calls terminate, but the below-bound restart path is not capability-gated, so a stall with a non-terminal decisive artifact starts a second session (dispatch.ts:1129-1275). AC-F5-4 requires no second session; terminal verdict if one exists, else state-unverified. See B2." }
+  - { id: "AC-F5-5", verdict: fail, evidence: "Production opencode terminate kills only the direct child through the starter (fixed 100 ms KILL escalation), performs no exact-identity reap, and returns literal reaped:false/escalated:true (opencode.ts:670-688; host/index.ts:23,192-207). The exact-identity reap exists only in the injected double. See M1." }
+  - { id: "AC-F6-1", verdict: satisfied, evidence: "Below-bound corroborated stall consumes one ordinal, one economics.restart with watchdog.liveness-stalled, resumes, runs a second iteration (dispatch-watch rewritten case; loop rows)." }
+  - { id: "AC-F6-2", verdict: satisfied, evidence: "At/above bound -> max-restarts with exhaustion record and one terminal attempt (TC-LOOP-006 stall arm, loop-at-bound-max-restarts)." }
+  - { id: "AC-F6-3", verdict: partial, evidence: "Undecidable stall -> state-unverified with no slot only when BOTH tracker and artifact reads fail (dispatch-liveness.ts:180-183); a readable non-terminal tracker with an unreadable artifact restarts instead. See M3." }
+  - { id: "AC-F6-4", verdict: satisfied, evidence: "Clean exit always terminal regardless of outcome/bound; persisted-bound re-key narrowed to the timeout (dispatch-result.ts:206-223; TC-DISP-008)." }
+  - { id: "AC-F6-5", verdict: satisfied, evidence: "Envelope restarts is the persisted total; one attempt per classified dispatch; pre-session none; bound unchanged (loop tests)." }
+  - { id: "AC-F6-6", verdict: satisfied, evidence: "Persisted count >= bound admits one iteration; clean exit keeps classification; stall -> max-restarts (dispatch-restart-budget rewritten TC-LOOP-006, counts 3 and 4)." }
+  - { id: "AC-F7-1", verdict: satisfied, evidence: "TC-SPAWN-001 exactly one --agent pm and one --model from the binding; fixed argv; guard clean." }
+  - { id: "AC-F7-2", verdict: satisfied, evidence: "TC-SPAWN-002 one --title ticket-GH-347 fresh; resume no title; deterministic across refs." }
+  - { id: "AC-F7-3", verdict: partial, evidence: "Prompt carries five section markers and interpolates the ref; the base branch is the constant CLOSEOUT_INTEGRATION_BASE ('main-tools'), not 'the resolved base branch' (production.ts:3060). See m2." }
+  - { id: "AC-F7-4", verdict: satisfied, evidence: "TC-SPAWN-004 role-less records no binding/agent/title; CLI rejects --agent/--title." }
+  - { id: "AC-F8-1", verdict: satisfied, evidence: "Tracker-done -> merged with tracker-done-merged arm; unreadable artifact/ledger do not degrade it (TC-DERIVE-001)." }
+  - { id: "AC-F8-2", verdict: satisfied, evidence: "done+blocking -> merged; blocking without done -> blocked (TC-DERIVE-002)." }
+  - { id: "AC-F8-3", verdict: satisfied, evidence: "commits+complete -> finished; commits+incomplete/absent -> partial (TC-DERIVE-003); R7 divergent-ledger finished keeps ledger-sourced corroboration and falseSuccess (TC-DERIVE-004)." }
+  - { id: "AC-F8-4", verdict: satisfied, evidence: "No commits + readable non-done non-blocked tracker -> nothing-to-do, tracker-corroborated, falseSuccess false (TC-DERIVE-005); ledger arm retired." }
+  - { id: "AC-F8-5", verdict: partial, evidence: "Eleven tokens/projections/exits unchanged and the order is pinned; but the classifier arm is never actually exercised (TC-DERIVE-006 C10 'classifier' matches arm 7) and the arm order is broken for non-finished sessions (B1), so 'each token produced by exactly its declared arm in the pinned order' is not fully proven." }
+  - { id: "AC-F9-1", verdict: satisfied, evidence: "TC-PARITY-001 replays 11 classes through the real command path; 11 distinct tokens; one attempt each." }
+  - { id: "AC-F9-2", verdict: satisfied_with_note, evidence: "claimDispatchLease/resolveDispatchLane/buildLifecyclePrompt/runDispatchTrackerLadder are exported and mounted; but the terminate seam has no import-identity manifest entry (see M5/M1), so its 'real production seam' membership is unproven." }
+  - { id: "AC-F9-3", verdict: fail, evidence: "Two-run determinism compares only {id, token, exit}; envelopes and attempt counts are not compared (dispatch-parity-battery.test.ts:154-172). AC-F9-3 requires envelopes, attempt counts, and class coverage identical. See M4." }
+  - { id: "AC-F9-4", verdict: partial, evidence: "The injected runner refuses shell/script paths and is armed (proven by a refusal control); but only 8 of 29 registry rows produce any invocation, so the per-invocation argv sweep is empty for 21 rows (see M5/M4)." }
+  - { id: "AC-F9-5", verdict: partial, evidence: "The static invariant is non-vacuous for the four named shapes and the planted control fails by name; detection gaps (require/default import/alias/dynamic import/substituted template), a static surface list with no glob/reachability guard, and vacuous negative controls remain (m3/M5)." }
+findings:
+  - id: B1
+    severity: blocker
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/dispatch-result.ts:266-277
+    message: >
+      The artifact ladder (open PR, already-merged PR, commits+pm-notes,
+      nothing-to-do) is reachable only when `harness.token === "finished"`
+      (`const completedSession = harness.token === fin; if (!completedSession)
+      return base({ token: harness.token ... })`). A session whose harness
+      outcome is `completed` with a tool failure classifies to token `partial`,
+      a `premature-end` session classifies to `partial`, and a non-zero exit
+      classifies to `failed`; for all of those the derivation returns the
+      classifier token BEFORE consulting artifacts. Appendix F(C) is a
+      first-match ladder in which arms 4-8 (artifact) precede arm 9 (the
+      classifier token), and arm 9 explicitly exists to catch "a reported
+      failure or non-zero exit -> failed; a tool failure or premature end ->
+      partial", which proves the ladder is evaluated for non-clean sessions.
+      §8.5 says "After a completed session, derivation is artifact-first", and
+      the shell's decide_after_iteration refines a `failed`/`state-unverified`
+      classification with the artifact verdict on a finished monitor. So a
+      failed session that opened a PR, or committed with complete pm-notes,
+      resolves `failed`/`partial` here instead of `pr-open`/`finished`. This is
+      a parity regression relative to the delivered pre-change derivation (which
+      applied the artifact arms unconditionally) and to AC-F4-3. It is untested:
+      every C-row in TC-DERIVE-006 uses a `finished`-token harness, and the
+      "classifier" row C10 actually matches arm 7 (commits-incomplete).
+    suggestion: >
+      Gate the artifact ladder on the session having ENDED (this function is
+      only reached after collection and only for non-stall sessions), not on the
+      classifier token being `finished`. Evaluate arms 2-8 for every ended
+      session, then fall to the classifier token (arm 9) and only then to
+      state-unverified (arm 10). Add rows to TC-DERIVE-006 for failed+open-PR,
+      failed+commits-complete, premature-end+open-PR, and
+      completed-with-tool-failure+commits-complete, asserting the artifact
+      token; and implement the per-input disjointness/arm assertion the test
+      plan requires (so C10 cannot be mislabelled).
+  - id: B2
+    severity: blocker
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:1129-1276
+    message: >
+      In the stall branch, when the adapter exposes no `terminate` member
+      (`ports.harness.terminate === undefined`), the engine skips termination and
+      then falls through to `admitDispatchRestart`; below the bound it consumes
+      an ordinal, appends an economics.restart, sets `handle = session.value`,
+      and `continue`s to a second iteration that resumes the still-live session.
+      F-5 states "On an adapter that declares no terminate capability, the engine
+      starts no second session and applies the same short-circuit rule", and
+      AC-F5-4 states "the engine starts no second session; it returns a terminal
+      verdict if one exists, otherwise state-unverified at exit 2". The restart
+      decision is not capability-gated. The only incapable-adapter test
+      (`terminateIncapable`) uses a tracker-done truth that short-circuits to
+      `merged`, so the restart path is never exercised.
+    suggestion: >
+      Thread a `terminateCapable` fact into the stall decision. When the adapter
+      is not terminate-capable: return the terminal pre-restart verdict if one
+      exists, otherwise record terminal `state-unverified` at exit 2 with the
+      stall evidence; never consume an ordinal or start a second iteration. Add
+      a TC-TERM-005 row: incapable adapter, below-bound stall, decisive artifact
+      OUTSIDE the terminal set (e.g. commits+complete pm-notes) -> one iteration,
+      zero economics.restart, terminal state-unverified, no second session.
+  - id: M1
+    severity: major
+    confidence: high
+    category: security
+    location: packages/adapters/src/harness/opencode.ts:670-688 + packages/adapters/src/host/index.ts:23,155-207
+    message: >
+      The production `terminate` does `record.kill()` (the host starter's kill),
+      then awaits `terminateWait(graceMs)`, and returns literal
+      `{terminated:true, escalated:true, reaped:false}`. The starter's kill
+      escalates to SIGKILL after a fixed `KILL_GRACE_MS = 100` (not the declared
+      20 000 ms grace) and signals only the direct child (the child is not spawned
+      `detached`, so no process group is signalled); there is no escaped-runtime
+      reap anywhere in production. TDR-0051 explicitly forbids reusing the 100 ms
+      probe escalation for terminate and requires the reported booleans to match
+      the observed acts. API-5/AC-F5-5/NFR-6 require TERM to the process tree,
+      KILL only after the declared grace, and an exact-identity reap. Appendix
+      C(3) bounds what the battery can PROVE about kernel delivery; it does not
+      license omitting the implementation. The disclosure in pm-notes is honest
+      but does not satisfy the AC.
+    suggestion: >
+      Implement the declared contract in the opener terminate: escalate on the
+      configured `graceMs` (not the 100 ms probe constant), signal the process
+      tree (spawn detached / negative-pid group signal or equivalent), perform
+      the exact-identity reap (session id or `ticket-<REF>` title, never a broad
+      pattern), and report `terminated`/`escalated`/`reaped` from the observed
+      acts. If a weaker capability is intended, declare it as a gap (then the
+      engine must not start a second session per AC-F5-4) and narrow AC-F5-5 in
+      a spec revision rather than shipping a stronger claim than the code.
+  - id: M2
+    severity: major
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/harness/opencode.ts:645-652,678-680
+    message: >
+      On resume, the session record copies the previous record's `terminated`
+      flag (`...(record?.terminated === undefined ? {} : { terminated:
+      record.terminated })`). The stall loop restarts by resuming the SAME
+      session id, so iteration 2's terminate sees `record.terminated === true`
+      and early-returns success without signalling, while the resumed process is
+      live. The injected stall double mirrors this (the `terminated` Set is keyed
+      by session id and never cleared on resume), so no test can catch it. This
+      defeats "no second session until the first is confirmed terminated" across
+      restarts on the shipped adapter.
+    suggestion: >
+      Clear `terminated` when a new resume stream is registered (a resumed
+      session is a new live process tree), or key idempotence by a per-acquisition
+      token rather than by session id. Add a two-stall test against the production
+      adapter (or a faithful double) asserting the second stall is signalled.
+  - id: M3
+    severity: major
+    confidence: medium
+    category: spec-compliance
+    location: packages/core/src/domain/dispatch-liveness.ts:179-183
+    message: >
+      `dispatchStallUndecidable` returns `!tracker.ok && !artifacts.ok` — it
+      requires BOTH reads to fail. Appendix F(C)(10)/F(D) define undecidable as
+      "any required read unreadable and no decisive artifact". At a stall with a
+      readable, non-done, non-blocked tracker and an UNREADABLE artifact read,
+      the pr-open short-circuit cannot be evaluated, so the truth is undecidable
+      and the result must be terminal `state-unverified` with no slot; the
+      delivered code treats it as decidable and restarts (burning the budget and
+      starting a second session on a capable adapter). The only unverified-stall
+      fixture fails both reads, so this branch is untested.
+    suggestion: >
+      Treat the artifact read as required for the stall decision: if
+      `!artifacts.ok` (and no tracker-terminal short-circuit), return terminal
+      `state-unverified` with the stall evidence and consume no ordinal. Add a
+      TC-TERM/LOOP row with tracker readable non-terminal + artifact unreadable.
+  - id: M4
+    severity: major
+    confidence: high
+    category: test-coverage
+    location: tests/conformance/dispatch/dispatch-parity-battery.test.ts:154-172
+    message: >
+      TC-PARITY-003 builds `summary` as `{id, token, exit}` and deep-equals the
+      two runs on that projection only. AC-F9-3 requires "envelopes, attempt
+      counts, and class coverage are identical"; envelopes and attempt counts are
+      not compared. The same test asserts `run.observation.spawns` is
+      `>= 0`, which is unconditionally true. Separately, only 8 of the 29
+      registry rows actually produce an invocation through the guarded process
+      runner, so the per-invocation argv sweep in TC-SHELL-001 is empty for 21
+      rows.
+    suggestion: >
+      Canonicalize and compare full envelopes and attempt counts across the two
+      runs; drop the `>= 0` assertion (assert the concrete expected count or
+      remove it). Either drive the class/loop/terminate rows through the guarded
+      runner or state explicitly which rows invoke a process and assert that set.
+  - id: M5
+    severity: major
+    confidence: high
+    category: test-coverage
+    location: tests/fixtures/dispatch/parity/process-runner.ts:178 + tests/fixtures/dispatch/parity/terminate.ts:71-92,119-142,267-268 + tests/conformance/dispatch/dispatch-parity-no-shell.test.ts:45-48
+    message: >
+      Three non-vacuity controls cannot fail. (a) `realChildStarts` is the
+      literal `0`, and the test creates a fresh unused guarded runner and asserts
+      it is 0 — it proves nothing about the battery. (b) The terminate double
+      declares a `violations` array and returns it, but nothing ever pushes to it
+      (the "stays empty by construction" comment), and the model's `signalTree`
+      can only signal a pid's recorded descendants, so the "no unrelated process
+      signalled" assertions (stall-loop test on pids 9103/9104/9105; battery row
+      on 9103) are guaranteed regardless of a buggy adapter. (c)
+      `NO_SHELL_ALLOWLIST` is exported but never consulted by `scan`; asserting
+      it is empty is true by construction. The terminate seam also has no entry
+      in the import-identity `SEAM_MANIFEST` while `terminate` is in the PROVEN
+      list.
+    suggestion: >
+      Delete or implement `realChildStarts` (record actual child starts). Make
+      the terminate double record a call in `violations` when an incapable port is
+      asked (or assert `terminateCalls` length directly for the incapable row).
+      Add a broad-pattern control (a process matched by a substring/name) that a
+      correct exact-identity matcher does NOT reap, so the negative assertion can
+      fail. Wire the allowlist or remove it. Add a `terminate` entry to the seam
+      manifest proving the production module/entry it imports.
+  - id: M6
+    severity: major
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/dispatch-token-closure.test.ts (old :127) + tests/behaviour/dispatch-restart-budget.test.ts (old :37,:47) + tests/structure/dispatch-composition.test.ts (old operator-resume :exit)
+    message: >
+      Three delivered assertions about behaviour that still exists were deleted
+      with no replacement and no clause authorising the DELETION (the clause
+      authorises only the expectation change): (1) `expect(result.lastMessage)
+      .toContain("no remaining work")` was dropped with the TC-DISP-012 rename,
+      yet the production message still exists (dispatch-result.ts:331) and no
+      test asserts it; (2) `expect(run.envelope?.data?.error?.category).toBe("user")`
+      for `dispatch.restart-budget-exceeded` is now asserted nowhere in tests
+      (only the error-table baseline JSON still carries it); (3)
+      `expect(run.exit).toBe(1)` in the composition operator-resume case was
+      removed (the case now asserts only negative `result`/`code`, compensated in
+      part by the new TC-RESUME-102). The plan's absolute rule (and the PM note
+      "No assertion was deleted, renamed, or relaxed") says an assertion is
+      UPDATED by citing a clause, never deleted/renamed/relaxed.
+    suggestion: >
+      Restore the `nothing-to-do` `lastMessage` assertion and an assertion of
+      `error.category === "user"` for the restart-budget envelope (both
+      behaviours are unchanged). Restore a positive `run.exit`/`result`
+      assertion in the composition operator-resume case or record an explicit
+      ruling that TC-RESUME-102 supersedes it. Correct the PM note to list the
+      renames and deletions. (Severity is major for the verification-integrity
+      breach; behavioural impact is small.)
+  - id: m1
+    severity: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/dispatch.ts:1152-1182,1240-1275
+    message: >
+      For a restarted iteration, the stall verdict and the termination result are
+      not recorded as attempt evidence: the restarted iteration appends no
+      attempt, and the terminal attempt's evidence is rebuilt from the LAST
+      iteration's `livenessRefs`, so the stalled iteration's `liveness:stalled`
+      and `terminate:*` refs are lost (only the economics.restart reason
+      survives). F-5/AC-F5-1 and §10 require the stall verdict and termination
+      result as bounded attempt/lane evidence. The delivered dispatch-watch test
+      removed its `liveness:stalled` assertion and comments that the stall is
+      recorded on the restart, not the attempt.
+    suggestion: >
+      Carry the stalled iteration's stall/termination refs forward onto the
+      terminal attempt (or onto the next active lane record / economics.restart
+      evidence) so the termination result is durable. Restore the removed
+      assertion in the appropriate form.
+  - id: m2
+    severity: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:3058-3060
+    message: >
+      The lifecycle prompt is parameterized by the hardcoded constant
+      `CLOSEOUT_INTEGRATION_BASE` ("main-tools"), not "the resolved base branch".
+      AC-F7-3/F-7 require the resolved base branch; in a repository whose base is
+      not `main-tools` the prompt would instruct the agent to sync against the
+      wrong branch. The spawn test asserts the literal "main-tools", proving the
+      constant rather than a resolution.
+    suggestion: >
+      Resolve the base branch (the existing closeout/base-ref resolver or the
+      configured integration base) and pass it to `buildLifecyclePrompt`; add a
+      case with a non-default base asserting the prompt carries it.
+  - id: m3
+    severity: minor
+    confidence: high
+    category: test-coverage
+    location: scripts/checks/no-shell-dispatch.ts:97-162 + tests/checks/no-shell-dispatch.test.ts:54-100
+    message: >
+      The static no-shell invariant detects the four named shapes (script-path
+      literal, `shell: true`, named/namespace `node:child_process` import/call,
+      spawn without `shell:false`) and a planted control fails by name, but it
+      does not detect `require("node:child_process")`, a default import, an
+      alias (`const s = spawn`), `await import(...)`, or a substituted template
+      path. The 22-file surface is a static list with no glob/reachability guard
+      (a new `dispatch-*.ts` is silently unscanned). The module's CLI `main()`
+      exit path is never executed by any gate (the script is not in `pnpm check`
+      or CI; only the bun-test-discovered suite runs the library functions).
+    suggestion: >
+      Extend the rules to `require`/default import/alias/dynamic import and a
+      non-literal script path; derive the surface from the declared
+      `dispatch-*.ts` patterns or add a test asserting the list equals the glob
+      and is reachable from the dispatch entry; either wire `check:no-shell` into
+      the aggregate check/CI or assert the suite is the sole gate.
+  - id: m4
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:807-810,1397-1403
+    message: >
+      `lane:append-failed` and `tracker:exhausted` are appended to the END of
+      the evidence-ref array before `.slice(0, 16)`. When the prior refs already
+      fill the 16-bound the disclosure is truncated away, so resumability or
+      tracker exhaustion could be silently undisclosed — contrary to AC-F1-3
+      ("resumability is never silently claimed") and the exhaustion-naming
+      requirement. In practice the refs are few, so this is a latent risk.
+    suggestion: >
+      Prepend (or reserve slots for) the disclosure refs, or drop a lower-value
+      ref, so the bounded-evidence channel always carries
+      `lane:append-failed`/`tracker:exhausted`.
+  - id: m5
+    severity: minor
+    confidence: high
+    category: test-coverage
+    location: tests/behaviour/dispatch-truth-derivation.test.ts:378-392,454-463
+    message: >
+      TC-DERIVE-006 step 2 requires per-input disjointness ("exactly one arm
+      matches each input"), instrumented by a declared arm identifier; the
+      delivered test only asserts the token per row and never asserts which arm
+      matched. The row C10 is labelled `arm: "classifier"` but its input
+      (completed harness, commits=2, pm-notes incomplete) actually matches arm 7
+      (commits-incomplete), so the classifier arm (arm 9) is never exercised.
+      This both violates the test plan's step 2 and hides B1.
+    suggestion: >
+      Return a declared arm id from the derivation (or instrument it in-test) and
+      assert exactly one match per input; rebuild C10 to actually exercise the
+      classifier arm (a non-completed outcome with no decisive artifact).
+  - id: m6
+    severity: minor
+    confidence: high
+    category: correctness
+    location: tests/checks/no-shell-dispatch.test.ts:82-100
+    message: >
+      The planted-control test calls `mkdtempSync(join(ROOT, "tmp", "tmpdir",
+      ...))` without a recursive parent guard; `tmp/` is git-ignored and has no
+      tracked files, so on a clean clone running that file alone the test throws
+      ENOENT. It passes here only because earlier suites create `tmp/tmpdir`.
+    suggestion: >
+      `mkdirSync(join(ROOT, "tmp", "tmpdir"), { recursive: true })` before
+      `mkdtempSync`, or use `os.tmpdir()`.
+  - id: i1
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:789,1008
+    message: >
+      Both the active and terminal lane appends are conditional on
+      `ports.laneOwner !== undefined`. A composition that omits the owner facts
+      writes no lane at all, silently losing resumability. Production supplies an
+      owner when `ownProcessId > 0`; the parity lane cases seed an owner. DM-1
+      requires an owner object, so this is a defensible design, but the
+      silent-no-lane failure mode is worth an explicit guard/warning.
+    suggestion: "No change required for this change; consider a diagnostic when the owner is absent on a session-bearing dispatch."
+  - id: i2
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/dispatch.ts:1244-1273
+    message: >
+      `appendRestart === undefined` is treated as "recorded" (`restartRecorded =
+      ports.appendRestart === undefined || ports.appendRestart(...)`), so a
+      composition without the restart append restarts without an
+      `economics.restart` record, diverging from NFR-4's one-record-per-ordinal.
+      Production composes it; the engine silently permits the gap.
+    suggestion: "No change required for this change; a composition that omits the append could be rejected at wiring time."
+  - id: i3
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/dispatch-result.ts:243-356
+    message: >
+      The derivation no longer reads `input.ledger` at all; an unreadable ledger
+      no longer yields state-unverified. This is deliberate (the ledger's role
+      narrowed to resume position/progressed; §8.5 "Phase-ledger no-work arm
+      retired") and is asserted positively (unreadable ledger -> pr-open in
+      dispatch-state-unverified.test.ts:38-45). Recorded so it is not mistaken
+      for drift; the human-readable AC-F4-3 citation is a little loose for the
+      *ledger* half, but §8.5 supplies it.
+    suggestion: "No action; keep the §8.5 citation."
+  - id: i4
+    severity: info
+    confidence: high
+    category: correctness
+    location: tests/fixtures/dispatch/parity/terminate.ts:160,247 vs packages/adapters/src/harness/opencode.ts:549-553
+    message: >
+      The terminate double reads `handle.treeRoot` as a numeric pid; the
+      production handle stores the session id in `treeRoot`. Production
+      `terminate` never reads `treeRoot`, so this is cosmetic for now, but the
+      double's process-tree model does not mirror the production handle shape.
+    suggestion: "No action for this change; keep the double's pid model documented as a fixture-only shape."
+dimensions:
+  spec_plan_compliance:
+    verdict: FAIL
+    notes: >
+      All 8 plan phases are present and each AC has a named owning case; the
+      total ladder is pinned and the deliberate behavior changes are implemented
+      and disclosed. But the ladder's artifact gating (B1) contradicts Appendix
+      F(C), the incapable-adapter restart (B2) contradicts AC-F5-4, AC-F9-3's
+      determinism oracle is weaker than stated, and the plan's absolute
+      "never deleted/renamed/relaxed" rule is breached (M6). Plan scopes were
+      revised to declare the 12 touched files, TDR-0049..0049 are committed, and
+      the disclosed deviations (cold-resume registration, resume argv adjacency,
+      provider-profile `pm` model, state-additivity lane pin, package.json
+      no-shell script) are legitimate and consistent with the code.
+  code_quality:
+    verdict: PASS_WITH_NOTES
+    notes: >
+      Admission is genuinely atomic and the two-invocation interleave is
+      deterministic and strong (the latch is the injected delay and the release
+      is wired to the winner's lease append; both orderings). The lane resolver,
+      lane record guard, tracker ladder, and arm-aware corroboration are clean and
+      well-bounded. Concerns: the production terminate safety gap (M1/M2), the
+      narrow stall-undecidable predicate (M3), the evidence-slice truncation
+      (m4), and vacuous negative controls (M5).
+  closed_contract_surface:
+    verdict: PASS
+    notes: >
+      dispatch-contract-invariance.test.ts pins the 11 tokens/order, exits
+      (state-unverified 2, partial 1, max-restarts 1, blocked 0), the four
+      dispatch and seven queue error rows and their projections, the attempt
+      schema version (delivery.dispatch.attempt.v1), the nine config branches,
+      and the four unchanged defaults (30000/3/20000/90000). The v1 contract
+      inventory and state-additivity baseline gain exactly the additive lane /
+      delay / title / arm exports; no row, projection, exit, domain kind, or
+      config key moves.
+  documentation:
+    verdict: PASS
+    notes: >
+      The stale "no kill operation" sentences are gone from the two current
+      truth pages (the only remaining "no ... kill" sentence is about the
+      economics surface itself, which is correct). feature-dispatch-engine.md
+      publishes the 8-proven/6-not-proven boundary matching PARITY_PROOF_BOUNDARY
+      exactly (claim, lane, spawn, ladder, terminate, loop, class-coverage,
+      no-shell / live-opencode, live-provider, os-termination,
+      real-lifecycle-outcome, cross-process-race, long-run-outage) and states the
+      `reaped:false` disclosure. The pages otherwise match the code; the only
+      over-claim is the terminate behaviour in feature-harness-adapters.md, which
+      M1/M2 make inaccurate until the production path is fixed.
+  no_shell_invariant:
+    verdict: PASS_WITH_NOTES
+    notes: >
+      The static invariant is real (four value/property/import/call rules), the
+      planted control fails by name, the real `RegExp.exec` and port `.spawn`
+      false-positive controls are genuine, and the injected runner refuses a
+      requested shell/script path. Detection gaps (m3) and vacuous controls (M5)
+      narrow the proof.
+delivered_assertion_disposition:
+  rule: "Every modified delivered assertion must cite a clause (plan §8.5/DEC/ruling) and be UPDATED, never deleted, renamed, relaxed, or reordered."
+  rows:
+    - { file: "tests/behaviour/dispatch-truth-derivation.test.ts", change: "TC-TRUTH-001 expects noop-lane-nothing-to-do; subsumed failed arm", clause: "§8.5 subsumed failed arm + retired ledger arm; AC-F8-4; DEC-6", verdict: "OK (rename; expectation strengthened)" }
+    - { file: "tests/behaviour/dispatch-truth-derivation.test.ts", change: "missing tracker fact now resolves pr-open; undecidable re-homed to two failing reads", clause: "AC-F4-3; §8.5 decisive artifact survives unreadable tracker", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-token-closure.test.ts", change: "persisted-bound re-key narrowed to the timeout; premature end keeps partial", clause: "§8.5 Persisted-bound re-key narrowed; AC-F6-4/6; Appendix F(D); DEC-5", verdict: "OK (timeout expectations kept; premature-end strengthened to partial)" }
+    - { file: "tests/behaviour/dispatch-token-closure.test.ts", change: "described/test renamed to 'shell arm'; noop->finished in the complete-ledger-with-commits case", clause: "§8.5 Phase-ledger no-work arm retired; AC-F8-4; DEC-6", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-token-closure.test.ts", change: "DELETED expect(result.lastMessage).toContain('no remaining work')", clause: "none authorises the deletion (production message still exists at dispatch-result.ts:331)", verdict: "VIOLATION (M6)" }
+    - { file: "tests/behaviour/dispatch-watch.test.ts", change: "below-bound stall now terminates+resumes in-process; spawns 1, resumes 1, restarts [{ordinal:1}]", clause: "§8.5; AC-F6-1; DEC-4/5", verdict: "OK (but DELETED expect(evidenceRefs).toContain('liveness:stalled') -> M6/m1)" }
+    - { file: "tests/behaviour/dispatch-watch.test.ts", change: "artifact-facts literal gains pmNotes; at-bound stall gains outside-set decisive artifact", clause: "plan item 3; DM-4", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-restart-budget.test.ts", change: "TC-RESUME-002 -> TC-LOOP-006; clean exit at/above bound keeps classification; stall -> max-restarts", clause: "§8.5 operator-resume supersession; AC-F3-2/AC-F6-6; DEC-5; R5; plan item 1", verdict: "OK (rename declared) but DELETED error.category==='user' and record.outcome and not.toContain('resume') -> M6" }
+    - { file: "tests/behaviour/dispatch-state-unverified.test.ts", change: "unreadable ledger/tracker -> pr-open; undecidable = artifact/state only", clause: "AC-F4-3; §8.5", verdict: "OK (test names still say 'unreadable truth derives state-unverified'; minor)" }
+    - { file: "tests/behaviour/dispatch-false-success.test.ts", change: "TC-EVID-003 input gains reported-failure harness; token stays failed", clause: "§8.5; DEC-6; Appendix F(C)(9)", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-delivered-evidence-divergence.test.ts", change: "delivered reads gain a failing artifact read so state-unverified stays reachable", clause: "AC-F4-3; §8.5", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-envelope.test.ts / dispatch-error-envelope.test.ts / golden/dispatch-errors.test.ts / dispatch-admission-preflight.test.ts / structure/dispatch-composition.test.ts (state-unverified)", change: "state-unverified case now fails tracker AND artifact", clause: "AC-F4-3", verdict: "OK" }
+    - { file: "tests/golden/dispatch-text.test.ts + fixtures/dispatch/golden/text/failed.txt", change: "failed case input switched to a reported failure; golden last_message updated", clause: "§8.5; Appendix F(C)(9)", verdict: "OK (byte-identical assertion preserved)" }
+    - { file: "tests/structure/dispatch-composition.test.ts", change: "operator-resume refusal case inverted to admission", clause: "§8.5 operator-resume admitted; AC-F3-2/AC-F6-6; DEC-5", verdict: "OK (but DELETED expect(run.exit).toBe(1) and result asserted only negatively -> M6; test name still says 'refusal')" }
+    - { file: "tests/structure/dispatch-composition.test.ts + dispatch-preflight-contract.test.ts", change: "claim literal 'const claimed = ports.claimLease()' -> 'await ...'", clause: "AC-F2-3", verdict: "OK (ordering property intact)" }
+    - { file: "tests/structure/owner-hold-composition.test.ts", change: "ownerHold: hold -> ownerHold: readOwnerHold()", clause: "DEC-1", verdict: "OK" }
+    - { file: "tests/behaviour/dispatch-single-flight.test.ts / queue-lease-takeover.test.ts / queue-single-flight-purity.test.ts", change: "sync -> async await dispatchClaim; assertions unchanged", clause: "AC-F2-3 (mechanical)", verdict: "OK" }
+    - { file: "tests/conformance/dispatch/dispatch-e2e.test.ts", change: "failed/state-unverified/nothing-to-do drive rows re-expressed", clause: "§8.5; AC-F4-3", verdict: "OK" }
+    - { file: "tests/fixtures/dispatch/truth.ts", change: "artifacts() defaults pmNotes 'complete'", clause: "plan item 3 / DM-3", verdict: "OK (preserves delivered finished expectations)" }
+    - { file: "tests/fixtures/queue/production/harness.ts", change: "model 'provider-a-model' -> 'provider-a/model-large'", clause: "needed by TC-SPAWN-001; no delivered test asserted the old value", verdict: "OK (fixture drift in a chore commit)" }
+remediation:
+  note: "Ordered for @coder; each task names the file, the change, and the authorising clause. B1 and B2 are the gate; M1/M2/M3/M4/M5/M6 should be addressed in the same pass because they are coupled to the same proofs."
+  tasks:
+    - id: R1
+      addresses: B1
+      file: "packages/core/src/domain/dispatch-result.ts (artifact ladder gate, ~266-334)"
+      change: >
+        Remove the `completedSession = harness.token === fin` early return. Apply
+        arms 2-8 to every ended (non-stall) session in the pinned order (tracker
+        arms already precede; then PR open/already-merged; commits+pm-notes;
+        nothing-to-do requiring a readable tracker), then fall to the classifier
+        token (arm 9) and finally to state-unverified (arm 10). Keep the
+        persisted-bound timeout re-key before the harness-read arm.
+      clause: "Spec Appendix F(C) arms 4-8 precede arm 9; AC-F4-3 'completed session ... the artifact verdict is the result'; §8.5 'After a completed session, derivation is artifact-first'; DEC-6."
+    - id: R2
+      addresses: B1, m5
+      file: "tests/behaviour/dispatch-truth-derivation.test.ts (TC-DERIVE-006)"
+      change: >
+        Add rows: failed+open-PR -> pr-open, failed+commits-complete -> finished,
+        premature-end+open-PR -> pr-open,
+        completed-with-tool-failure+commits-complete -> finished. Rebuild C10 so it
+        exercises the classifier arm; return/assert a declared arm id and assert
+        exactly one arm matches each input (test plan TC-DERIVE-006 step 2).
+      clause: "AC-F8-5; AC-F4-3; test plan TC-DERIVE-006 step 2."
+    - id: R3
+      addresses: B2
+      file: "packages/core/src/app/dispatch.ts (stall branch ~1129-1276)"
+      change: >
+        Thread a terminate-capability fact through DispatchPorts. In the stall
+        branch, if the adapter is not terminate-capable: return the terminal
+        pre-restart verdict if dispatchStallShortCircuit matches; otherwise record
+        terminal state-unverified at exit 2 with the stall evidence; never consume
+        an ordinal or start a second iteration.
+      clause: "Spec F-5 'On an adapter that declares no terminate capability, the engine starts no second session'; AC-F5-4; DM-5."
+    - id: R4
+      addresses: B2
+      file: "tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts (+ parity/terminate.ts)"
+      change: >
+        Add an incapable-adapter below-bound stall whose decisive artifact is
+        OUTSIDE the terminal set (commits+complete pm-notes): assert one
+        iteration, zero economics.restart, terminal state-unverified, spawns 1,
+        resumes 0. Add a second-stall capable case asserting the second stall is
+        signalled (guards M2).
+      clause: "AC-F5-4; AC-F5-1; AC-F6-3."
+    - id: R5
+      addresses: M1, M2
+      file: "packages/adapters/src/harness/opencode.ts (terminate ~670-688; resume record ~638-652) + packages/adapters/src/host/index.ts (kill)"
+      change: >
+        Implement the declared terminate: escalate on the configured graceMs (not
+        KILL_GRACE_MS=100), signal the session's process tree, perform the
+        exact-identity reap (session id or ticket-<REF> title, no broad pattern),
+        and report terminated/escalated/reaped from the observed acts. Clear
+        `terminated` when a resume registers a new live stream (or key idempotence
+        per acquisition). Add a test invoking the real adapter terminate (and a
+        faithful tree double) and a non-vacuous broad-pattern negative control.
+      clause: "TDR-0051 C-2/C-4 (do not reuse the 100 ms probe escalation; booleans match observed acts); API-5; AC-F5-1; AC-F5-5; NFR-6."
+    - id: R6
+      addresses: M3
+      file: "packages/core/src/domain/dispatch-liveness.ts (dispatchStallUndecidable ~179-183)"
+      change: >
+        Treat an unreadable artifact read with no tracker-terminal short-circuit
+        as undecidable; add a LOOP/TERM row with tracker readable non-terminal +
+        artifact unreadable asserting terminal state-unverified and no ordinal.
+      clause: "Appendix F(C)(10)/F(D) 'any required read unreadable and no decisive artifact'; AC-F6-3."
+    - id: R7
+      addresses: M4
+      file: "tests/conformance/dispatch/dispatch-parity-battery.test.ts (TC-PARITY-003) + dispatch-parity-no-shell.test.ts"
+      change: >
+        Compare full canonicalized envelopes and attempt counts across the two
+        runs; delete the `spawns >= 0` assertion. State and assert which registry
+        rows invoke a process (or drive the rest through the guarded runner).
+      clause: "AC-F9-3; NFR-1; AC-F9-4."
+    - id: R8
+      addresses: M5
+      file: "tests/fixtures/dispatch/parity/process-runner.ts + terminate.ts + tests/checks/no-shell-dispatch.test.ts"
+      change: >
+        Implement realChildStarts (record actual starts) or remove the field and
+        its assertion. Make the terminate double record a violation when an
+        incapable port is asked; add a broad-pattern control a correct
+        exact-identity matcher does not reap. Wire or remove NO_SHELL_ALLOWLIST.
+        Add a `terminate` entry to SEAM_MANIFEST.
+      clause: "AC-F9-5; AC-F9-2; NFR-5; NFR-10."
+    - id: R9
+      addresses: M6
+      file: "tests/behaviour/dispatch-token-closure.test.ts + dispatch-restart-budget.test.ts + tests/structure/dispatch-composition.test.ts"
+      change: >
+        Restore the nothing-to-do `lastMessage` assertion and an
+        `error.category === 'user'` assertion for dispatch.restart-budget-exceeded;
+        restore a positive `run.exit`/`result` in the composition operator-resume
+        case (or record an explicit ruling that TC-RESUME-102 supersedes it);
+        rename the stale 'refusal' test name. Correct the PM note's 'no assertion
+        was deleted, renamed, or relaxed' claim.
+      clause: "The plan's absolute delivered-expectation rule; test plan §7.4 non-vacuity."
+    - id: R10
+      addresses: m1
+      file: "packages/core/src/app/dispatch.ts (stall/restart path)"
+      change: >
+        Carry the stalled iteration's `liveness:*` and `terminate:*` refs onto the
+        terminal attempt (or the next active lane record / economics.restart
+        evidence) so the termination result is durable; restore an assertion that
+        the terminal attempt/lane records the stall/termination.
+      clause: "F-5; AC-F5-1; §10 telemetry."
+    - id: R11
+      addresses: m2
+      file: "packages/cli/src/production.ts (dispatchComposition prompt)"
+      change: "Resolve the base branch (not the CLOSEOUT_INTEGRATION_BASE constant) and pass it to buildLifecyclePrompt; add a non-default-base case."
+      clause: "AC-F7-3; F-7; DM-6."
+    - id: R12
+      addresses: m3, m4, m6
+      file: "scripts/checks/no-shell-dispatch.ts + tests/checks/no-shell-dispatch.test.ts + packages/core/src/app/dispatch.ts (evidence-ref slice)"
+      change: >
+        Extend no-shell detection (require/default import/alias/dynamic import,
+        non-literal path); derive/guard the surface list. Prepend or reserve the
+        lane:append-failed and tracker:exhausted disclosure refs before the
+        16-slice. Add the recursive tmp parent guard.
+      clause: "NFR-5; AC-F9-5; AC-F1-3; NFR-7."
+reviewed_at: 2026-11-19T00:00:00Z
+next_step: CALL_CODER
+reviewer_notes: |
+  Verdict rationale: 2 blockers, so FAIL (not PASS_WITH_NOTES). Both blockers are
+  spec-compliance/correctness failures against normative text, not stylistic
+  concerns, and both are untested by the delivered battery (a test that cannot
+  fail is why they survived).
+
+  What is strong and should not be reworked: the admission claim is genuinely
+  atomic and the two-invocation interleave is deterministic and strong (the latch
+  is the injected delay and the release is wired to the winner's lease append;
+  both parked orderings are tested, and the assertions on leaseAcquisitions,
+  attempt count, spawn count, holder, and no-fallback.internal are concrete). The
+  lane resolver, lane-record guard, tracker ladder, arm-aware corroboration
+  (exactly the two changed arms with a token-level window gate preserved), the
+  daemon-path regression (TC-PARITY-006), the spawn-identity tests, and the
+  closed-contract pin are real and non-vacuous. The disclosed deviations are
+  legitimate except the terminate one: cold-resume registration and resume argv
+  adjacency are required for AC-F3-1/AC-F7-1; the provider-profile `pm` model, the
+  state-additivity lane pin, and the named check:no-shell script (not in the
+  aggregate chain, discovered by bun test) are consistent with the code and the CI
+  topology invariant.
+
+  Top three to fix first: B1 (artifact ladder gated on the classifier's finished
+  token), B2 (an incapable adapter restarts a below-bound stall), M1 (production
+  terminate is not the declared process-tree + grace + exact-identity reap).
+
+  Fairness notes: the `completedSession` gate is explicitly described in the PM
+  notes as "gated on the classifier's finished token", so it was a deliberate
+  implementation choice; it is still contrary to Appendix F(C) arm ordering, the
+  shell reference, and AC-F4-3, so it is recorded as a blocker rather than an
+  accepted deviation. Appendix C(3) bounds what the battery can prove about kernel
+  signal delivery; it does not authorise the production adapter to omit the tree
+  reap and the declared grace, hence M1 is a production gap, not merely a proof
+  boundary. The ledger-unreadability removal (i3) is deliberate and cited; it is
+  recorded as info, not a finding.
+
+  Diff reviewed: 23 commits, 114 files, +17474 / -861 (9149 doc insertions, 8325
+  non-doc). Record path:
+  doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/code-review/review-iter-1.yaml.

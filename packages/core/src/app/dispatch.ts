@@ -8,16 +8,18 @@
  * no exit literal, and no token literal lives here.
  */
 import {
+  type CommandFailureHarnessDetail,
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
-  type CommandFailureHarnessDetail,
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+  DISPATCH_LANE_PAYLOAD_SCHEMA,
   DISPATCH_MAX_ERROR_DETAIL_CHARS,
   DISPATCH_MAX_EVIDENCE_REFS,
   DISPATCH_MAX_LAST_MESSAGE_CHARS,
   type DispatchAttemptRecord,
+  type DispatchDelay,
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
   type DispatchEvidenceClass,
@@ -51,6 +53,8 @@ import {
 import {
   type DispatchLivenessReading,
   type DispatchLivenessVerdict,
+  dispatchStallShortCircuit,
+  dispatchStallUndecidable,
   evaluateDispatchLiveness,
 } from "../domain/dispatch-liveness.js";
 import {
@@ -64,13 +68,14 @@ import { admissionRefusalPair, admitDispatchRestart } from "../domain/dispatch-r
 import {
   appendDispatchAttempt,
   appendDispatchDivergence,
+  appendDispatchLane,
   foldDispatchDivergences,
   readDispatchDivergences,
 } from "./dispatch-ledger.js";
 
 /** `f` failed, `su` state-unverified, `mr` max-restarts, `po` pr-open,
  * `pou` pr-open-unverified — the few tokens this module names. */
-const [, , po, pou, f, , mr, su] = DELIVERY_RESULT_TOKENS;
+const [m, , po, pou, f, , mr, su] = DELIVERY_RESULT_TOKENS;
 const O_FAILED = HARNESS_OUTCOMES[2];
 
 /** A local short alias: keeps the payload field type recognizable. */
@@ -85,6 +90,11 @@ export type DispatchLeaseClaim =
       readonly summary?: string;
       /** The live lease's holder on a `queue.single-flight` refusal (TDR-0027). */
       readonly holder?: string;
+      /**
+       * The declared error-table kind the refusal must preserve (GH-347 AC-F2-3,
+       * DM-7): a `state.*` refusal keeps kind `state` and never becomes `queue`.
+       */
+      readonly kind?: "queue" | "state" | "input";
     };
 
 /** One cancellable cadence wait; the composition owns the timer. */
@@ -261,7 +271,7 @@ export type DispatchPorts = {
   readonly newAttemptId: () => string;
   readonly newDivergenceId: () => string;
   readonly readTruth: () => Promise<DispatchTruthReads>;
-  readonly claimLease: () => DispatchLeaseClaim;
+  readonly claimLease: () => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: DispatchPhaseLedger;
   /**
@@ -295,13 +305,52 @@ export type DispatchPorts = {
   /** The composition-resolved single-seat binding for this run (TDR-0040 A-4). */
   readonly harnessBinding?: HarnessSeatBinding;
   /**
+   * The fresh-spawn title, supplied as a COMPOSITION fact (GH-347 DM-6,
+   * TDR-0054). A role-less composition supplies none, so it stays role-less; a
+   * resume never carries one.
+   */
+  readonly freshTitle?: string;
+  /**
+   * The advisory lane owner facts (GH-347 DM-1, TDR-0049): the composition's
+   * process id and the declared start instant. Absent keeps the lane write off
+   * (a direct composition that never gained a lane), never a fabricated owner.
+   */
+  readonly laneOwner?: {
+    readonly processId: number;
+    readonly startedAt: string;
+  };
+  /**
    * The resolved harness facts, read lazily: the admission writes them for the
    * run in flight, so a pre-session refusal discloses them and a success records
    * them on the attempt (GH-335 F-1/F-2, TDR-0041).
    */
   readonly harnessFacts?: () => DispatchHarnessFacts | undefined;
+  /**
+   * The one injected delay fact (GH-347 AC-F9-2, NFR-11). The admission fence
+   * wait, the tracker ladder, and the terminate grace all go through it, so the
+   * offline battery supplies a recorder and never waits on a wall clock.
+   */
+  readonly delay?: DispatchDelay;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
   readonly harnessAdmission?: DispatchHarnessAdmissionPort;
+  /**
+   * The borrowed terminate grace (GH-347 DEC-4): `coordinator.kill-grace`
+   * (20 000 ms default), reused rather than duplicated.
+   */
+  readonly killGraceMs?: number;
+  /**
+   * The delivered `economics.restart` append (GH-347 F-6): one record per
+   * consumed ordinal with reason `watchdog.liveness-stalled`. Absent leaves the
+   * ordinal consumed with no record; the composition owns the state write.
+   */
+  readonly appendRestart?: (input: {
+    readonly ref: string;
+    readonly runId: string;
+    readonly sessionId: string;
+    readonly ordinal: number;
+    readonly reason: "watchdog.liveness-stalled";
+    readonly recordedAt: string;
+  }) => boolean;
 };
 
 /** The run result: classified data, or a pre-session/state refusal. */
@@ -596,6 +645,24 @@ const corroborationFactsOf = (reads: DispatchTruthReads): CorroborationFacts => 
     : "unreadable",
 });
 
+/**
+ * The adapter's own terminate-capability declaration (GH-347 F-5, DM-5,
+ * AC-F5-4).
+ *
+ * A session port that carries a capability declaration is authoritative: an
+ * absent `terminate` operation means the engine starts no second session. A
+ * port that declares nothing keeps the delivered restart behaviour — the
+ * default direction is never "incapable", which would silently stop restarting
+ * on a capable adapter. That fail-open default is reachable only by an
+ * explicitly undeclared double: every production adapter declares on its port
+ * and the production composition never mounts an undeclared port, held by the
+ * adapter-port declaration suite and the dispatch-composition wiring suite.
+ */
+const declaresTerminate = (port: HarnessSessionPort): boolean => {
+  const operations = port.capabilities?.supportedOperations;
+  return operations === undefined ? true : operations.includes("terminate");
+};
+
 /** Map the harness liveness report into the dispatch liveness readings. */
 const livenessReadings = (
   readings: readonly {
@@ -683,12 +750,14 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     }
   }
 
-  const claimed = ports.claimLease();
+  const claimed = await ports.claimLease();
   if (!claimed.ok) {
     return {
       ok: false,
       error: {
-        kind: "queue",
+        // The claim's declared kind is preserved (GH-347 AC-F2-3): a state
+        // failure stays `state` at exit 2 and is never relabelled `queue`.
+        kind: claimed.kind ?? "queue",
         code: claimed.code,
         ...(claimed.summary === undefined ? {} : { summary: claimed.summary }),
         ...(claimed.holder === undefined ? {} : { holder: claimed.holder }),
@@ -701,6 +770,20 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     const now = ports.nowIso();
     const attemptId = ports.newAttemptId();
     let restarts = ports.initialRestarts ?? 0;
+    // The persisted total after this dispatch (the recorded count plus the
+    // ordinals this invocation consumes); the envelope reports it.
+    const persistedRestarts = restarts;
+    let laneAppendFailed = false;
+    // The 1-based iteration ordinal within this dispatch; phase 5 increments it
+    // per consumed restart.
+    let iterationOrdinal = 1;
+    /**
+     * The stalled iterations' liveness/termination evidence, carried forward so
+     * a restarted stall stays durable on the terminal attempt (GH-347 F-5,
+     * AC-F5-1, §10).
+     */
+    const carriedStallRefs: string[] = [];
+    let heldSession: HarnessSessionHandle | undefined;
     const budget = ports.restartBudget ?? 0;
     let resumeMode = ports.resumeMode;
     let prefillCostAcknowledged = ports.prefillCostAcknowledged;
@@ -724,6 +807,33 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly divergenceRef?: string;
       readonly detail?: NonNullable<DispatchEnvelopeError["detail"]>;
     }): DispatchRunResult => {
+      // The terminal lane record (GH-347 AC-F1-2): appended only when this
+      // dispatch held a session, and never rewritten. A failed append leaves
+      // the token unchanged and is disclosed as bounded evidence (AC-F1-3).
+      if (heldSession !== undefined && ports.laneOwner !== undefined) {
+        const terminal = appendDispatchLane(ports.store, ports.fenceToken, {
+          schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+          ref: ports.ref,
+          repository: ports.repository,
+          attemptId,
+          sessionId: heldSession.sessionId,
+          harnessKind: ports.harnessKind,
+          owner: ports.laneOwner,
+          iterationOrdinal,
+          restartsConsumed: restarts - persistedRestarts,
+          state: "terminal",
+          lastToken: input.token,
+          lastOutcome: input.outcome,
+          recordedAt: now,
+        });
+        if (!terminal.ok) laneAppendFailed = true;
+      }
+      // Disclosure refs are RESERVED ahead of the 16-slice (GH-347 AC-F1-3,
+      // NFR-7): a resumability disclosure is never silently truncated away.
+      const attemptEvidenceRefs = [
+        ...(laneAppendFailed ? ["lane:append-failed"] : []),
+        ...input.evidenceRefs,
+      ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const attempt: DispatchAttemptRecord = {
         schema: DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
         attemptId,
@@ -758,7 +868,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                 ...(facts.modeOrigin === undefined ? {} : { modeOrigin: facts.modeOrigin }),
               };
             })()),
-        evidenceRefs: input.evidenceRefs,
+        evidenceRefs: attemptEvidenceRefs,
         recordedAt: now,
       };
       const appended = appendDispatchAttempt(ports.store, ports.fenceToken, attempt);
@@ -843,326 +953,542 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       if (admission.restarts !== undefined) restarts = admission.restarts;
     }
 
-    const session = await (async () => {
-      const propagation = {
-        ...(ports.harnessAgent === undefined ? {} : { agent: ports.harnessAgent }),
-        ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
-      };
-      if (ports.resumePrompt !== undefined && ports.existingHandle !== undefined) {
-        return ports.harness.resume({
-          handle: ports.existingHandle,
-          prompt: ports.resumePrompt,
+    // GH-347 F-6, DEC-5, TDR-0052 — the in-process bounded loop. One dispatch
+    // owns one or more iterations; a clean session exit is ALWAYS terminal, and
+    // only a corroborated liveness stall or a harness-reported timeout is
+    // restart-eligible. Each restarted iteration appends its active lane record
+    // and one `economics.restart`, never an attempt record.
+    let handle: HarnessSessionHandle | undefined = ports.existingHandle;
+    let spawnPrompt: string | undefined = ports.resumePrompt;
+    for (let iteration = 1; ; iteration += 1) {
+      iterationOrdinal = iteration;
+      const session = await (async () => {
+        const propagation = {
+          ...(ports.harnessAgent === undefined ? {} : { agent: ports.harnessAgent }),
+          ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
+        };
+        if (handle !== undefined) {
+          // A restart resumes the recorded session (a fresh spawn only when no
+          // session was ever recorded). An operator resume keeps its text; an
+          // automatic restart re-enters with the lifecycle prompt.
+          return ports.harness.resume({
+            handle,
+            prompt: ports.resumePrompt ?? ports.prompt,
+            descriptor: ports.descriptor,
+            ...propagation,
+          });
+        }
+        // A supplied resume prompt over "no lane" is an EXPLICIT fresh spawn
+        // with the operator's text (GH-347 AC-F3-3), never a fabricated resume.
+        return ports.harness.spawn({
+          workItemRef: ports.ref,
+          prompt: spawnPrompt ?? ports.prompt,
           descriptor: ports.descriptor,
+          ...(ports.freshTitle === undefined ? {} : { title: ports.freshTitle }),
           ...propagation,
         });
-      }
-      return ports.harness.spawn({
-        workItemRef: ports.ref,
-        prompt: ports.prompt,
-        descriptor: ports.descriptor,
-        ...propagation,
-      });
-    })();
-
-    if (!session.ok) {
-      // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
-      // the envelope carries the typed identity and its disclosed facts.
-      if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
-        const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts?.());
-        return {
-          ok: false,
-          error: {
-            kind: session.error.kind,
-            code: session.error.code,
-            ...(session.error.summary === undefined ? {} : { summary: session.error.summary }),
-            ...(session.error.field === undefined ? {} : { field: session.error.field }),
-            ...(detail === undefined ? {} : { harness: detail }),
-          },
-        };
-      }
-      const reads = staleReads();
-      return record({
-        token: f,
-        outcome: O_FAILED,
-        errorCode: "dispatch.session.spawn-failed",
-        detail: detailOf(session.error),
-        comparison: comparisonFor({
-          token: f,
-          errorCode: "dispatch.session.spawn-failed",
-          reads,
-          urlResolved: false,
-        }),
-        corroboration: buildCorroborationRecord({ token: f }),
-        falseSuccess: false,
-        prUrl: "",
-        urlResolved: false,
-        lastMessage: "spawn failed before a session existed",
-        evidenceRefs: ["harness:spawn-failed"],
-      });
-    }
-
-    heldSessionId = session.value.sessionId;
-    const collectPromise = ports.harness.collect({ handle: session.value });
-
-    // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`
-    // cadence while `collect` is pending, carrying the previous observation so a
-    // stall needs two consecutive sourced no-advance readings. The verdict trail
-    // is recorded as attempt liveness evidence; a stall that is still current
-    // when collection resolves is routed through restart admission below, while
-    // any later progress clears it.
-    const verdicts: DispatchLivenessVerdict[] = [];
-    let stalled = false;
-    let previousReadings: readonly DispatchLivenessReading[] | undefined;
-    const observeLiveness = (readings: readonly DispatchLivenessReading[]): void => {
-      const evaluation = evaluateDispatchLiveness({
-        readings,
-        ...(previousReadings === undefined ? {} : { previous: previousReadings }),
-        cadenceMs: ports.livenessIntervalMs ?? 30_000,
-      });
-      if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
-      // A stall is a current-state verdict, not a latch: any later advancing
-      // observation clears it, so a transient mid-run stall is recorded as
-      // liveness evidence and the collected evidence still classifies normally.
-      if (evaluation.verdict === "progressing") stalled = false;
-      else if (evaluation.verdict === "stalled") stalled = true;
-      previousReadings = readings;
-    };
-
-    let watching = false;
-    let stopWatching = (): void => {};
-    let watcherDone: Promise<void> = Promise.resolve();
-    if (ports.waitForCadence !== undefined && ports.livenessIntervalMs !== undefined) {
-      watching = true;
-      let stopped = false;
-      let cancelWait: (() => void) | undefined;
-      watcherDone = (async () => {
-        while (!stopped) {
-          let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
-          try {
-            report = await ports.harness.liveness({ handle: session.value });
-          } catch {
-            return;
-          }
-          if (stopped) return;
-          if (report.ok) observeLiveness(livenessReadings(report.value.readings));
-          const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
-          if (wait === undefined) return;
-          cancelWait = wait.cancel;
-          await wait.promise;
-        }
       })();
-      stopWatching = () => {
-        stopped = true;
-        cancelWait?.();
-      };
-    }
 
-    const evidenceResult = await collectPromise;
-    if (watching) {
-      stopWatching();
-      await watcherDone;
-    }
-    if (evidenceResult.ok) {
-      // With no composed cadence the session cannot be watched while it runs;
-      // one post-collect observation is still taken and never fabricated.
-      if (!watching) {
-        try {
-          const liveness = await ports.harness.liveness({ handle: session.value });
-          if (liveness.ok) observeLiveness(livenessReadings(liveness.value.readings));
-        } catch {
-          // A liveness read failure never fabricates progress or a stall.
+      if (!session.ok) {
+        // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
+        // the envelope carries the typed identity and its disclosed facts.
+        if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
+          const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts?.());
+          return {
+            ok: false,
+            error: {
+              kind: session.error.kind,
+              code: session.error.code,
+              ...(session.error.summary === undefined ? {} : { summary: session.error.summary }),
+              ...(session.error.field === undefined ? {} : { field: session.error.field }),
+              ...(detail === undefined ? {} : { harness: detail }),
+            },
+          };
         }
-      }
-    }
-    const livenessRefs = verdicts.map((verdict) => `liveness:${verdict}`);
-    if (!evidenceResult.ok) {
-      // A session existed but its evidence could not be read (Appendix G): the
-      // attempt is recorded as unevaluable at exit 2, never returned unrecorded.
-      const reads = staleReads();
-      return record({
-        token: su,
-        outcome: O_FAILED,
-        errorCode: "dispatch.state-unverified",
-        comparison: comparisonFor({
-          token: su,
-          errorCode: "dispatch.state-unverified",
-          reads,
-          urlResolved: false,
-        }),
-        corroboration: buildCorroborationRecord({ token: su }),
-        falseSuccess: false,
-        prUrl: "",
-        urlResolved: false,
-        lastMessage: `harness evidence unreadable (${evidenceResult.error.code})`,
-        evidenceRefs: ["harness:collect-failed", ...livenessRefs],
-      });
-    }
-    if (stalled) {
-      // A corroborated terminal stall consults the one restart-admission gate. At
-      // or above the bound the attempt is the Appendix G restart-budget refusal;
-      // below the bound the delivered port cannot kill a live session, so the
-      // stall is recorded and left to lane supervision instead of leaking a
-      // silent second spawn.
-      const decision = admitDispatchRestart({ count: restarts, bound: budget });
-      if (!decision.admitted) {
         const reads = staleReads();
-        const exhaustionRef = ensureExhaustion(
-          ports,
-          ports.existingHandle?.sessionId ?? attemptId,
-          restarts,
-          now,
-        );
         return record({
-          token: mr,
+          token: f,
           outcome: O_FAILED,
-          errorCode: "dispatch.restart-budget-exceeded",
+          errorCode: "dispatch.session.spawn-failed",
+          detail: detailOf(session.error),
           comparison: comparisonFor({
-            token: mr,
-            errorCode: "dispatch.restart-budget-exceeded",
+            token: f,
+            errorCode: "dispatch.session.spawn-failed",
             reads,
             urlResolved: false,
           }),
-          corroboration: buildCorroborationRecord({ token: mr }),
+          corroboration: buildCorroborationRecord({ token: f }),
           falseSuccess: false,
           prUrl: "",
           urlResolved: false,
-          lastMessage: `liveness stalled; restart budget exhausted at ${restarts} of ${budget}`,
-          evidenceRefs: [exhaustionRef ?? "economics:exhaustion", ...livenessRefs],
+          lastMessage: "spawn failed before a session existed",
+          evidenceRefs: ["harness:spawn-failed"],
         });
       }
-    }
-    const evidence: HarnessEvidence = evidenceResult.value;
-    const classification = ports.harness.classify(evidence);
-    const harnessToken = classification.token;
 
-    const reads = await ports.readTruth();
-    const derivation = deriveDispatchResult({
-      harness: {
-        ok: true,
-        value: {
-          outcome: classification.outcome,
-          token: harnessToken,
-          exitStatus: evidence.exitStatus,
-          spawnRefused: evidence.spawnRefused,
-        },
-      },
-      artifacts: reads.artifacts,
-      ledger: reads.ledger,
-      tracker: reads.tracker,
-      restarts: { count: restarts, bound: budget },
-      handoverState: ports.handoverState,
-    });
+      heldSessionId = session.value.sessionId;
+      heldSession = session.value;
+      // The active lane record at acquisition (GH-347 AC-F1-1, DM-1): written
+      // as the handle is acquired, before any outcome is known. A pre-session
+      // refusal never reaches this point, so it appends none.
+      if (ports.laneOwner !== undefined) {
+        const active = appendDispatchLane(ports.store, ports.fenceToken, {
+          schema: DISPATCH_LANE_PAYLOAD_SCHEMA,
+          ref: ports.ref,
+          repository: ports.repository,
+          attemptId,
+          sessionId: session.value.sessionId,
+          harnessKind: ports.harnessKind,
+          owner: ports.laneOwner,
+          iterationOrdinal,
+          restartsConsumed: restarts - persistedRestarts,
+          state: "active",
+          recordedAt: now,
+        });
+        if (!active.ok) laneAppendFailed = true;
+      }
+      const collectPromise = ports.harness.collect({ handle: session.value });
 
-    const derivedToken = derivation.token;
-    const comparison = comparisonFor({
-      token: derivedToken,
-      ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
-      reads,
-      urlResolved: derivation.urlResolved,
-    });
+      // Progress-based liveness (NFR-2, DEC-9): poll at the
+      // `lane.liveness-interval` cadence while `collect` is pending, carrying
+      // the previous observation so a stall needs two consecutive sourced
+      // no-advance readings. The verdict trail is recorded as attempt evidence;
+      // a stall still current when collection resolves is the restart-eligible
+      // one, while any later progress clears it.
+      const verdicts: DispatchLivenessVerdict[] = [];
+      let stalled = false;
+      let previousReadings: readonly DispatchLivenessReading[] | undefined;
+      const observeLiveness = (readings: readonly DispatchLivenessReading[]): void => {
+        const evaluation = evaluateDispatchLiveness({
+          readings,
+          ...(previousReadings === undefined ? {} : { previous: previousReadings }),
+          cadenceMs: ports.livenessIntervalMs ?? 30_000,
+        });
+        if (!verdicts.includes(evaluation.verdict)) verdicts.push(evaluation.verdict);
+        // A stall is a current-state verdict, not a latch: any later advancing
+        // observation clears it, so a transient mid-run stall is recorded as
+        // liveness evidence and the collected evidence still classifies
+        // normally.
+        if (evaluation.verdict === "progressing") stalled = false;
+        else if (evaluation.verdict === "stalled") stalled = true;
+        previousReadings = readings;
+      };
 
-    let divergenceRef: string | undefined;
-    let truthRef: string | undefined;
-    let appendFailureCode: string | undefined;
-    const delivered =
-      derivation.token === su &&
-      isDeliveredEvidence({
-        outcome: classification.outcome,
-        ledger: reads.ledger,
-      });
-    const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
-    if (delivered && truthReason !== undefined) {
-      truthRef = `truth:unreadable:${truthReason}`;
-      const ledger = readDispatchDivergences(ports.store);
-      const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
-      // A replayed attempt is already represented by its own divergence,
-      // resolved or not; never open a second record for it.
-      const recordedAttempt = folded.some(
-        (entry) =>
-          entry.attemptId === attemptId &&
-          entry.repository === ports.repository &&
-          entry.ref === ports.ref &&
-          entry.comparisonClass === "not-applicable" &&
-          entry.engineToken === su &&
-          entry.comparisonToken === null,
-      );
-      if (!recordedAttempt) {
-        const existing = folded.find((entry) =>
-          isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
-        );
-        if (existing !== undefined) {
-          divergenceRef = existing.divergenceId;
-        } else {
-          const candidate = ports.newDivergenceId();
-          const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
-            schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-            divergenceId: candidate,
-            repository: ports.repository,
-            ref: ports.ref,
-            attemptId,
-            state: "open",
-            comparisonClass: "not-applicable",
-            engineToken: su,
-            comparisonToken: null,
-            evidenceRefs: [`attempt:${attemptId}`, truthRef],
-            recordedAt: now,
-          });
-          if (appended.ok) divergenceRef = candidate;
-          else appendFailureCode = appended.code;
+      let watching = false;
+      let stopWatching = (): void => {};
+      let watcherDone: Promise<void> = Promise.resolve();
+      if (ports.waitForCadence !== undefined && ports.livenessIntervalMs !== undefined) {
+        watching = true;
+        let stopped = false;
+        let cancelWait: (() => void) | undefined;
+        watcherDone = (async () => {
+          while (!stopped) {
+            let report: Awaited<ReturnType<HarnessSessionPort["liveness"]>>;
+            try {
+              report = await ports.harness.liveness({ handle: session.value });
+            } catch {
+              return;
+            }
+            if (stopped) return;
+            if (report.ok) observeLiveness(livenessReadings(report.value.readings));
+            const wait = ports.waitForCadence?.(ports.livenessIntervalMs ?? 0);
+            if (wait === undefined) return;
+            cancelWait = wait.cancel;
+            await wait.promise;
+          }
+        })();
+        stopWatching = () => {
+          stopped = true;
+          cancelWait?.();
+        };
+      }
+
+      let evidenceResult: Awaited<ReturnType<HarnessSessionPort["collect"]>>;
+      try {
+        evidenceResult = await collectPromise;
+      } finally {
+        if (watching) {
+          stopWatching();
+          await watcherDone;
         }
       }
-    } else if (comparison.outcome === "mismatch") {
-      divergenceRef = ports.newDivergenceId();
-      appendDispatchDivergence(ports.store, ports.fenceToken, {
-        schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
-        divergenceId: divergenceRef,
-        repository: ports.repository,
-        ref: ports.ref,
-        attemptId,
-        state: "open",
-        comparisonClass: comparison.class,
-        engineToken: derivedToken,
-        comparisonToken: comparison.token,
-        evidenceRefs: [`attempt:${attemptId}`],
-        recordedAt: now,
+      if (evidenceResult.ok) {
+        // With no composed cadence the session cannot be watched while it runs;
+        // one post-collect observation is still taken and never fabricated.
+        if (!watching) {
+          try {
+            const liveness = await ports.harness.liveness({ handle: session.value });
+            if (liveness.ok) observeLiveness(livenessReadings(liveness.value.readings));
+          } catch {
+            // A liveness read failure never fabricates progress or a stall.
+          }
+        }
+      }
+      const livenessRefs = verdicts.map((verdict) => `liveness:${verdict}`);
+      if (!evidenceResult.ok) {
+        // A session existed but its evidence could not be read (Appendix G): the
+        // attempt is recorded as unevaluable at exit 2, never returned unrecorded.
+        const reads = staleReads();
+        return record({
+          token: su,
+          outcome: O_FAILED,
+          errorCode: "dispatch.state-unverified",
+          comparison: comparisonFor({
+            token: su,
+            errorCode: "dispatch.state-unverified",
+            reads,
+            urlResolved: false,
+          }),
+          corroboration: buildCorroborationRecord({ token: su }),
+          falseSuccess: false,
+          prUrl: "",
+          urlResolved: false,
+          lastMessage: `harness evidence unreadable (${evidenceResult.error.code})`,
+          evidenceRefs: ["harness:collect-failed", ...livenessRefs],
+        });
+      }
+
+      // GH-347 F-5/F-6, Appendix F(D): a stall is a current-state liveness
+      // verdict or a harness-reported timeout. A clean exit is never a stall.
+      const timedOut = evidenceResult.value.timedOut;
+      const stall = stalled || timedOut;
+      if (stall) {
+        const reads = await ports.readTruth();
+        // Terminate BEFORE any restart decision on a capable adapter; an
+        // incapable adapter is never asked and (per AC-F5-4) never causes a
+        // second session.
+        const terminate = ports.harness.terminate;
+        const terminateCapable = declaresTerminate(ports.harness);
+        const terminationRefs: string[] = [];
+        // A composed terminate operation must CONFIRM the termination before a
+        // restart (F-5). A capable composition that composes no operation keeps
+        // the delivered restart, which is a composition gap and not capability
+        // dishonesty.
+        const confirmationRequired = terminate !== undefined && terminateCapable;
+        let terminationConfirmed = !confirmationRequired;
+        if (terminate !== undefined && terminateCapable) {
+          try {
+            const terminated = await terminate({
+              handle: session.value,
+              graceMs: ports.killGraceMs ?? 20_000,
+            });
+            if (!terminated.ok || !terminated.value.terminated) {
+              // An unconfirmed termination never claims success (F-5: no second
+              // session starts until the first is confirmed terminated).
+              terminationRefs.push("terminate:failed");
+            } else {
+              terminationConfirmed = true;
+              terminationRefs.push("terminate:terminated");
+              if (terminated.value.escalated) terminationRefs.push("terminate:escalated");
+              if (terminated.value.reaped) terminationRefs.push("terminate:reaped");
+            }
+          } catch {
+            terminationRefs.push("terminate:failed");
+          }
+        }
+        const stallRefs = [...carriedStallRefs, ...livenessRefs, ...terminationRefs];
+        const shortCircuit = dispatchStallShortCircuit({
+          tracker: reads.tracker,
+          artifacts: reads.artifacts,
+        });
+        if (shortCircuit !== undefined) {
+          const arm =
+            shortCircuit === m && reads.tracker.ok && reads.tracker.value.state === "done"
+              ? ("tracker-done-merged" as const)
+              : undefined;
+          const facts = corroborationFactsOf(reads);
+          const comparison = comparisonFor({ token: shortCircuit, reads, urlResolved: false });
+          const prUrl =
+            shortCircuit === po && reads.artifacts.ok ? (reads.artifacts.value.pr.url ?? "") : "";
+          return record({
+            token: shortCircuit,
+            outcome: evidenceResult.value.completionMarker
+              ? ports.harness.classify(evidenceResult.value).outcome
+              : O_FAILED,
+            comparison,
+            corroboration: buildCorroborationRecord({
+              token: shortCircuit,
+              facts,
+              ...(arm === undefined ? {} : { arm }),
+            }),
+            falseSuccess: false,
+            prUrl,
+            urlResolved: prUrl.length > 0,
+            lastMessage: `liveness stalled; the terminal pre-restart verdict is ${shortCircuit}`,
+            evidenceRefs: stallRefs,
+          });
+        }
+        if (dispatchStallUndecidable({ tracker: reads.tracker, artifacts: reads.artifacts })) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "liveness stalled; truth is undecidable",
+            evidenceRefs: stallRefs,
+          });
+        }
+        // GH-347 AC-F5-4, F-5: on an adapter that declares no terminate
+        // capability the engine starts NO second session. The terminal
+        // pre-restart verdict already had its chance above; the only remaining
+        // honest verdict is a terminal `state-unverified` at exit 2 with the
+        // stall evidence. No ordinal is consumed and no iteration follows.
+        if (!terminateCapable || !terminationConfirmed) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: terminateCapable
+              ? "liveness stalled; termination was not confirmed"
+              : "liveness stalled; the adapter declares no terminate capability",
+            evidenceRefs: stallRefs,
+          });
+        }
+        // The LOOP keeps the budget-consulting scope (AC-F6-2/AC-F6-6): at or
+        // above the bound it records `max-restarts` with the exhaustion record.
+        // A composition with NO positive bound composes no restart policy, so
+        // the loop never restarts automatically (it would otherwise spin on a
+        // permanently stalled session); the delivery stays the delivered
+        // `max-restarts` classification for the timeout.
+        const decision =
+          budget > 0
+            ? admitDispatchRestart({ count: restarts, bound: budget })
+            : {
+                admitted: false as const,
+                reason: "dispatch.restart-budget-exceeded" as const,
+                count: restarts,
+                bound: budget,
+                terminal: true as const,
+                escalation: "restart-budget-exhausted" as const,
+              };
+        if (!decision.admitted) {
+          const exhaustionRef = ensureExhaustion(ports, session.value.sessionId, restarts, now);
+          return record({
+            token: mr,
+            outcome: O_FAILED,
+            errorCode: "dispatch.restart-budget-exceeded",
+            comparison: comparisonFor({
+              token: mr,
+              errorCode: "dispatch.restart-budget-exceeded",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: mr }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: `liveness stalled; restart budget exhausted at ${restarts} of ${budget}`,
+            evidenceRefs: [exhaustionRef ?? "economics:exhaustion", ...stallRefs],
+          });
+        }
+        // Below the bound: exactly one ordinal, exactly one delivered
+        // `economics.restart` with reason `watchdog.liveness-stalled`, then the
+        // recorded session is resumed for the next iteration.
+        restarts += 1;
+        const restartRecorded =
+          ports.appendRestart === undefined ||
+          ports.appendRestart({
+            ref: ports.ref,
+            runId: attemptId,
+            sessionId: session.value.sessionId,
+            ordinal: restarts,
+            reason: "watchdog.liveness-stalled",
+            recordedAt: now,
+          });
+        if (!restartRecorded) {
+          return record({
+            token: su,
+            outcome: O_FAILED,
+            errorCode: "dispatch.state-unverified",
+            comparison: comparisonFor({
+              token: su,
+              errorCode: "dispatch.state-unverified",
+              reads,
+              urlResolved: false,
+            }),
+            corroboration: buildCorroborationRecord({ token: su }),
+            falseSuccess: false,
+            prUrl: "",
+            urlResolved: false,
+            lastMessage: "liveness stalled; the restart record could not be appended",
+            evidenceRefs: ["economics:restart-failed", ...stallRefs],
+          });
+        }
+        handle = session.value;
+        spawnPrompt = undefined;
+        // The stalled iteration appends no attempt of its own (Appendix F(E)),
+        // so its verdict and termination result are carried onto the terminal
+        // attempt (GH-347 F-5, AC-F5-1, §10).
+        carriedStallRefs.push(...livenessRefs, ...terminationRefs);
+        continue;
+      }
+
+      const evidence: HarnessEvidence = evidenceResult.value;
+      const classification = ports.harness.classify(evidence);
+      const harnessToken = classification.token;
+
+      const reads = await ports.readTruth();
+      const derivation = deriveDispatchResult({
+        harness: {
+          ok: true,
+          value: {
+            outcome: classification.outcome,
+            token: harnessToken,
+            exitStatus: evidence.exitStatus,
+            spawnRefused: evidence.spawnRefused,
+          },
+        },
+        artifacts: reads.artifacts,
+        ledger: reads.ledger,
+        tracker: reads.tracker,
+        restarts: { count: restarts, bound: budget },
+        handoverState: ports.handoverState,
+      });
+
+      const derivedToken = derivation.token;
+      const comparison = comparisonFor({
+        token: derivedToken,
+        ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+        reads,
+        urlResolved: derivation.urlResolved,
+      });
+
+      let divergenceRef: string | undefined;
+      let truthRef: string | undefined;
+      let appendFailureCode: string | undefined;
+      const delivered =
+        derivation.token === su &&
+        isDeliveredEvidence({
+          outcome: classification.outcome,
+          ledger: reads.ledger,
+        });
+      const truthReason = delivered ? unreadableTruthReason(reads) : undefined;
+      if (delivered && truthReason !== undefined) {
+        truthRef = `truth:unreadable:${truthReason}`;
+        const ledger = readDispatchDivergences(ports.store);
+        const folded = ledger.ok ? foldDispatchDivergences(ledger.records) : [];
+        // A replayed attempt is already represented by its own divergence,
+        // resolved or not; never open a second record for it.
+        const recordedAttempt = folded.some(
+          (entry) =>
+            entry.attemptId === attemptId &&
+            entry.repository === ports.repository &&
+            entry.ref === ports.ref &&
+            entry.comparisonClass === "not-applicable" &&
+            entry.engineToken === su &&
+            entry.comparisonToken === null,
+        );
+        if (!recordedAttempt) {
+          const existing = folded.find((entry) =>
+            isDeliveredEvidenceDivergence(entry, ports.repository, ports.ref),
+          );
+          if (existing !== undefined) {
+            divergenceRef = existing.divergenceId;
+          } else {
+            const candidate = ports.newDivergenceId();
+            const appended = appendDispatchDivergence(ports.store, ports.fenceToken, {
+              schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+              divergenceId: candidate,
+              repository: ports.repository,
+              ref: ports.ref,
+              attemptId,
+              state: "open",
+              comparisonClass: "not-applicable",
+              engineToken: su,
+              comparisonToken: null,
+              evidenceRefs: [`attempt:${attemptId}`, truthRef],
+              recordedAt: now,
+            });
+            if (appended.ok) divergenceRef = candidate;
+            else appendFailureCode = appended.code;
+          }
+        }
+      } else if (comparison.outcome === "mismatch") {
+        divergenceRef = ports.newDivergenceId();
+        appendDispatchDivergence(ports.store, ports.fenceToken, {
+          schema: DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
+          divergenceId: divergenceRef,
+          repository: ports.repository,
+          ref: ports.ref,
+          attemptId,
+          state: "open",
+          comparisonClass: comparison.class,
+          engineToken: derivedToken,
+          comparisonToken: comparison.token,
+          evidenceRefs: [`attempt:${attemptId}`],
+          recordedAt: now,
+        });
+      }
+
+      const facts = corroborationFactsOf(reads);
+      // The arm is the derivation's own decision (GH-347 DEC-6): the one
+      // derivation decides it; both evaluation sites pass it unchanged.
+      const corroborationArm = derivation.corroborationArm;
+      const corroboration = buildCorroborationRecord({
+        token: derivedToken,
+        facts,
+        ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
+      });
+      const unreadable = unreadableCorroborationSources(facts);
+      const falseSuccess = classifyFalseSuccess({
+        token: derivedToken,
+        comparison,
+        corroboration,
+        ...(unreadable.length === 0 ? {} : { unreadable }),
+        ...(corroborationArm === undefined ? {} : { arm: corroborationArm }),
+      });
+
+      const trackerExhausted =
+        !reads.tracker.ok && reads.tracker.identity === "tracker:exhausted"
+          ? ["tracker:exhausted"]
+          : [];
+      const evidenceRefs = [
+        ...trackerExhausted,
+        `attempt:${attemptId}`,
+        ...(truthRef === undefined ? [] : [truthRef]),
+        ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
+        ...livenessRefs,
+        ...carriedStallRefs,
+      ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
+      const lastMessage =
+        appendFailureCode === undefined
+          ? derivation.lastMessage
+          : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
+
+      return record({
+        token: derivedToken,
+        outcome: derivation.outcome,
+        ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+        ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
+        comparison,
+        corroboration,
+        falseSuccess,
+        prUrl: derivation.prUrl,
+        urlResolved: derivation.urlResolved,
+        lastMessage,
+        evidenceRefs,
+        ...(divergenceRef === undefined ? {} : { divergenceRef }),
       });
     }
-
-    const facts = corroborationFactsOf(reads);
-    const corroboration = buildCorroborationRecord({ token: derivedToken, facts });
-    const unreadable = unreadableCorroborationSources(facts);
-    const falseSuccess = classifyFalseSuccess({
-      token: derivedToken,
-      comparison,
-      corroboration,
-      ...(unreadable.length === 0 ? {} : { unreadable }),
-    });
-
-    const evidenceRefs = [
-      `attempt:${attemptId}`,
-      ...(truthRef === undefined ? [] : [truthRef]),
-      ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
-      ...livenessRefs,
-    ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
-    const lastMessage =
-      appendFailureCode === undefined
-        ? derivation.lastMessage
-        : `delivered-evidence divergence append failed (${appendFailureCode}); the attempt was recorded without a divergence reference`;
-
-    return record({
-      token: derivedToken,
-      outcome: derivation.outcome,
-      ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
-      ...(appendFailureCode === undefined ? {} : { envelopeErrorCode: appendFailureCode }),
-      comparison,
-      corroboration,
-      falseSuccess,
-      prUrl: derivation.prUrl,
-      urlResolved: derivation.urlResolved,
-      lastMessage,
-      evidenceRefs,
-      ...(divergenceRef === undefined ? {} : { divergenceRef }),
-    });
   } finally {
     ports.releaseLease(releaseCause);
   }

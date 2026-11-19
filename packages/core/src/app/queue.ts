@@ -12,6 +12,7 @@
 
 import {
   type CloseoutQueueRemovalData,
+  type DispatchDelay,
   LOCAL_CALLER_PRINCIPAL,
   type OwnerHoldFact,
   QUEUE_DEFAULT_LEASE_TTL_MS,
@@ -1894,6 +1895,14 @@ export type QueueLeaseFailure =
       readonly detail: string;
     }
   | {
+      /** The dispatch caller's same-ref refusal: a live lease under ANY holder. */
+      readonly ok: false;
+      readonly kind: "queue";
+      readonly code: "queue.single-flight";
+      readonly holder: string;
+      readonly detail: string;
+    }
+  | {
       readonly ok: false;
       readonly kind: "queue";
       readonly code: "queue.precondition.unmet";
@@ -2066,6 +2075,13 @@ export const claimQueueLease = (
     /** The injected owner hold; active refuses before the fence is acquired. */
     readonly ownerHold?: OwnerHoldFact;
     readonly precheck?: () => QueueClaimPrecondition;
+    /**
+     * The dispatch caller's no-renewal flag (GH-347 TDR-0050): a live same-ref
+     * lease under ANY holder — including this caller's own holder — refuses
+     * `queue.single-flight` inside the fence. The sibling `queue claim` omits
+     * it and keeps its delivered own-holder renewal.
+     */
+    readonly noRenewal?: boolean;
   },
 ): QueueClaimResult => {
   if (request.holder.length === 0) {
@@ -2154,6 +2170,22 @@ export const claimQueueLease = (
       if (!appended.ok) return appended;
       return { ok: true, value: { result: "claimed", lease: record } };
     }
+    // GH-347 TDR-0050 DC-2/DC-3: the dispatch caller refuses a live same-ref
+    // lease under ANY holder inside the fence, so the verdict is decided from
+    // the live lease atomically with the claim. No renewal, no takeover.
+    if (
+      request.noRenewal === true &&
+      existing.ref === ref &&
+      !isLeaseStale(existing.heartbeatAgeMs, existing.ttlMs)
+    ) {
+      return {
+        ok: false,
+        kind: "queue",
+        code: "queue.single-flight",
+        holder: existing.holder,
+        detail: `holder:${existing.holder}; ref:${existing.ref}`,
+      };
+    }
     if (existing.holder === request.holder && existing.ref === ref) {
       const record = newLeaseRecord({
         operation: "renewed",
@@ -2237,6 +2269,115 @@ export const claimQueueLease = (
     if (!appended.ok) return appended;
     return { ok: true, value: { result: "taken-over", lease: record, incident } };
   });
+};
+
+/** The dispatch caller's bounded fence-wait step (GH-347 AC-F2-3, TDR-0050). */
+const DISPATCH_FENCE_WAIT_STEP_MS = 1_000;
+
+/**
+ * One dispatch admission outcome (GH-347 API-2, DM-7).
+ *
+ * The failure always carries its declared error-table kind, so the dispatch
+ * wrapper can preserve `state.*` as `state` and the queue identities as
+ * `queue`. `holder` is present on `queue.single-flight`.
+ */
+export type DispatchLeaseClaimOutcome =
+  | { readonly ok: true; readonly leaseId: string }
+  | {
+      readonly ok: false;
+      readonly kind: "queue" | "state" | "input";
+      readonly code: string;
+      readonly summary?: string;
+      readonly holder?: string;
+    };
+
+const claimRefusalOf = (failure: QueueLeaseFailure): DispatchLeaseClaimOutcome => {
+  if (failure.kind === "state") {
+    return {
+      ok: false,
+      kind: "state",
+      code: failure.code,
+      summary: `state failure (${failure.code})`,
+    };
+  }
+  if (failure.code === "queue.single-flight") {
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      holder: failure.holder,
+      summary: failure.detail,
+    };
+  }
+  if (failure.code === "queue.lease-conflict") {
+    return { ok: false, kind: "queue", code: failure.code, summary: failure.detail };
+  }
+  if (failure.code === "queue.precondition.unmet") {
+    return {
+      ok: false,
+      kind: "queue",
+      code: failure.code,
+      summary: `reason=${failure.reason}${failure.detail === undefined ? "" : `; ${failure.detail}`}`,
+    };
+  }
+  return {
+    ok: false,
+    kind: failure.kind,
+    code: failure.code,
+    summary: "detail" in failure ? failure.detail : failure.code,
+  };
+};
+
+/**
+ * The dispatch caller's atomic claim (GH-347 API-2, DM-7; TDR-0050 DC-1..DC-5).
+ *
+ * The verdict is decided INSIDE the claim from the live lease: a live same-ref
+ * lease under any holder refuses `queue.single-flight` naming the holder, a
+ * live other-ref lease refuses `queue.lease-conflict`, and the caller never
+ * renews. Store-fence contention is a transient signal: the claim waits through
+ * the injected delay with reason `claim-fence`, for a cumulative period no
+ * greater than the queue lease TTL, and re-decides from the observed lease. A
+ * fence that never frees returns the typed `state.*` row, never a queue
+ * relabelling. No admission outcome is an internal containment identity.
+ */
+export const claimDispatchLease = async (
+  store: StateStorePort,
+  request: {
+    readonly ref: string;
+    readonly nowIso: () => string;
+    readonly nowMs: () => number;
+    readonly fenceToken: string;
+    readonly ttlMs?: number;
+    readonly ownerHold?: OwnerHoldFact;
+    readonly delay?: DispatchDelay;
+  },
+): Promise<DispatchLeaseClaimOutcome> => {
+  const ttlMs = request.ttlMs ?? QUEUE_DEFAULT_LEASE_TTL_MS;
+  let waitedMs = 0;
+  for (;;) {
+    const attempt = claimQueueLease(store, {
+      ref: request.ref,
+      holder: "dispatch",
+      runner: "dispatch",
+      weightClass: "standard",
+      ttlMs,
+      nowIso: request.nowIso(),
+      nowMs: request.nowMs(),
+      fenceToken: request.fenceToken,
+      ...(request.ownerHold === undefined ? {} : { ownerHold: request.ownerHold }),
+      noRenewal: true,
+    });
+    if (attempt.ok) return { ok: true, leaseId: attempt.value.lease.leaseId };
+    const contention = attempt.kind === "state" && attempt.code === "state.lock.busy";
+    if (!contention) return claimRefusalOf(attempt);
+    const remaining = ttlMs - waitedMs;
+    if (remaining <= 0) return claimRefusalOf(attempt);
+    const step = Math.min(DISPATCH_FENCE_WAIT_STEP_MS, remaining);
+    // The injected delay is the only time source; absent a composed fact the
+    // wait is a deterministic tick that still consumes the declared budget.
+    await (request.delay === undefined ? Promise.resolve() : request.delay(step, "claim-fence"));
+    waitedMs += step;
+  }
 };
 
 /**

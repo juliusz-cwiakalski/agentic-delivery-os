@@ -42,8 +42,17 @@ describe("TC-DISP-007 exactly four ordered keys", () => {
   });
 
   test("failed is byte-identical to its golden", async () => {
+    // GH-347 §8.5: the exit-0-no-artifact `failed` arm is subsumed; `failed`
+    // is reachable from a reported failure (Appendix F(C)(9)).
     const scenario = createCommandScenario({
-      evidence: COMPLETED_EVIDENCE,
+      evidence: {
+        completionMarker: true,
+        exitStatus: 1,
+        timedOut: false,
+        spawnRefused: false,
+        failureReported: true,
+        toolFailure: false,
+      },
       reads: readsFrom({
         artifacts: readOk(artifacts({ branchCommits: 0, pr: prNone })),
         ledger: readOk(ledger({ progressed: false })),

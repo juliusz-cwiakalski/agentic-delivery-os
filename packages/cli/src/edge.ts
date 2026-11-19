@@ -158,7 +158,6 @@ import {
   evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
   fileRetroAction,
-  readDispatchAttempts,
   foldLanes,
   type HarnessSettings,
   handoverDispatchEvidence,
@@ -200,6 +199,7 @@ import {
   readCommandReceipts,
   readDaemonLanes,
   readDispatchAttemptHistory,
+  readDispatchAttempts,
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
@@ -257,13 +257,10 @@ import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
-  CAPSULE_MAX_SESSIONS,
   AUDIT_IDENTITY_VARIABLE_SUFFIX,
   type AuditAgentIdentity,
   type AuditInvocationFacts,
   BLOCKER_DELEGATION_POLICY,
-  type HarnessSeatBinding,
-  type HarnessTruncation,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
   BOARD_MAX_LANES,
@@ -275,6 +272,7 @@ import {
   type BoardParkedFact,
   type BrandIdentity,
   CANONICAL_PHASE_IDS,
+  CAPSULE_MAX_SESSIONS,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
@@ -318,6 +316,7 @@ import {
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
+  type DispatchLaneFacts,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
   type DoctorCheckoutFacts,
@@ -333,8 +332,9 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessLivenessFacts,
-  type HarnessSessionHandle,
+  type HarnessSeatBinding,
   type HarnessSessionPort,
+  type HarnessTruncation,
   type MetricsReadSeams,
   type MetricsStateRead,
   type CapabilityGapReason,
@@ -7008,9 +7008,25 @@ export type DispatchComposition = {
   readonly harnessAgent?: (ref: string) => string | undefined;
   /** The composition-resolved single-seat binding for this run (TDR-0040). */
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
-  readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
+  /** The advisory lane owner facts (GH-347 DM-1); absent keeps the lane write off. */
+  readonly laneOwner?: DispatchPorts["laneOwner"];
+  /** The deterministic title fact (GH-347 DM-6); absent keeps the run role-less. */
+  readonly freshTitle?: (ref: string) => string | undefined;
+  /** The borrowed terminate grace (GH-347 DEC-4). */
+  readonly killGraceMs?: number;
+  /** The delivered `economics.restart` append (GH-347 F-6). */
+  readonly appendRestart?: DispatchPorts["appendRestart"];
+  readonly claimLease: (
+    ref: string,
+    repository: string,
+  ) => DispatchLeaseClaim | Promise<DispatchLeaseClaim>;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
+  /**
+   * The one injected delay fact (GH-347 AC-F9-2): the composition owns the
+   * timer. Production binds a real one; the offline battery injects a recorder.
+   */
+  readonly delay?: DispatchPorts["delay"];
   readonly restartBudget?: number;
   /** The delivery's persisted restart count, read at run time (AC-F3-2). */
   readonly restartCount?: (ref: string) => number;
@@ -7043,15 +7059,13 @@ export type DispatchComposition = {
   };
 };
 
-/** The delivered lane facts a resume admits against. */
-export type DispatchLaneFacts = {
-  readonly handle: HarnessSessionHandle;
-  readonly completedPhases: readonly string[];
-  readonly adapterSupportsResumeInjection: boolean;
-  readonly restartCount: number;
-  readonly prefillCost?: number | null;
-  readonly uniqueProgress?: number | null;
-};
+/**
+ * The delivered lane facts a resume admits against (GH-347 DM-1): one
+ * definition, relocated to `packages/core/src/contracts/dispatch.ts` because the
+ * resolver lives in core and core cannot import CLI. This is an alias, never a
+ * second shape.
+ */
+export type { DispatchLaneFacts };
 
 const isHarnessKind = (value: string): value is HarnessKind =>
   (HARNESS_KINDS as readonly string[]).includes(value);
@@ -7200,9 +7214,12 @@ export const createDispatchCommandRuntime = (
         });
         resumeMode = plan.mode;
         prefillCostAcknowledged = plan.prefillCostAcknowledged;
+        // GH-347 AC-F3-2/DEC-5: the operator resume is admitted regardless of
+        // the persisted bound; only an automatic restart consults it.
         const restart = admitDispatchRestart({
           count: lane.restartCount,
           bound: composition.restartBudget ?? 0,
+          scope: "operator-resume",
         });
         if (!restart.admitted) {
           admission = {
@@ -7273,9 +7290,21 @@ export const createDispatchCommandRuntime = (
           : { harnessFacts: composition.harnessFacts }),
         ...(harnessAgent === undefined ? {} : { harnessAgent }),
         ...(harnessBinding === undefined ? {} : { harnessBinding }),
+        ...(composition.laneOwner === undefined ? {} : { laneOwner: composition.laneOwner }),
+        ...(composition.killGraceMs === undefined ? {} : { killGraceMs: composition.killGraceMs }),
+        ...(composition.freshTitle === undefined
+          ? {}
+          : (() => {
+              const title = composition.freshTitle?.(input.ref);
+              return title === undefined ? {} : { freshTitle: title };
+            })()),
+        ...(composition.appendRestart === undefined
+          ? {}
+          : { appendRestart: composition.appendRestart }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),
+        ...(composition.delay === undefined ? {} : { delay: composition.delay }),
         ...(composition.restartBudget === undefined
           ? {}
           : { restartBudget: composition.restartBudget }),
