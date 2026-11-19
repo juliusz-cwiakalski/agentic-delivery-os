@@ -555,3 +555,57 @@ describe("TC-MOUNT-011 the production composition evaluates a declared IANA zone
     }
   });
 });
+
+/**
+ * GH-350 B2 (review remediation) — `provider profile resolve` refuses an
+ * unresolvable declared zone by name instead of probing it as UTC.
+ *
+ * The profile selection path fed `createResolvedProviderProbe` a UTC fallback;
+ * the handler now validates every zone the selection can probe and answers
+ * `provider.peak.zone-unknown` before the probe runs.
+ */
+const PROFILE_UNKNOWN_ZONE = `provider:
+  defaultChain: ch
+  entries:
+    p:
+      class: subscription
+      peak:
+        timezone: Mars/Olympus
+        startSecondsOfDay: 0
+        endSecondsOfDay: 86399
+  chains:
+    ch:
+      entries:
+        - p
+  profiles:
+    tiers:
+      t:
+        description: reach tier
+    profiles:
+      prof:
+        tier: t
+        providers: [p]
+        seats:
+          seat:
+            model: reach-model
+            pacingClass: judgment
+            capability: text-only
+    preferenceChain:
+      base: prof
+`;
+
+describe("GH-350 B2 profile resolve refuses an unknown declared zone", () => {
+  test("provider profile resolve answers provider.peak.zone-unknown through runEntrypoint", async () => {
+    const unknown = scratch("profile-zone-unknown", PROFILE_UNKNOWN_ZONE);
+    try {
+      const harness = productionHarness(unknown);
+      const run = await invoke(harness.options, ["provider", "profile", "resolve", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(run.error?.code).toBe("provider.peak.zone-unknown");
+      expect(run.error?.summary ?? "").toContain("Mars/Olympus");
+      expect(harness.handlerCalls()).toBe(1);
+    } finally {
+      unknown.dispose();
+    }
+  });
+});

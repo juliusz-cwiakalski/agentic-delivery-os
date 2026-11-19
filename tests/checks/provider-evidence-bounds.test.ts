@@ -13,12 +13,12 @@ import {
   type ProviderAnnouncementEvidence,
   type ProviderParkEvidence,
 } from "../../packages/core/src/contracts/index";
+import { evaluateBudgets } from "../../packages/core/src/provider/budgets";
 import {
   announcementEvidence,
   createParkRecord,
   projectParkEvidence,
 } from "../../packages/core/src/provider/parks";
-import { evaluateBudgets } from "../../packages/core/src/provider/budgets";
 
 const ROOT = process.cwd();
 const fixture = (name: string): unknown =>
@@ -285,5 +285,78 @@ describe("GH-350 TC-CONFORM-004 the maximal object is constructed, never inferre
     );
     expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
     expect(PARK_EVIDENCE_FIELDS).not.toHaveLength(15);
+  });
+});
+
+/**
+ * GH-350 m4 (review remediation) — the bounded readers stat the path before
+ * reading it. An oversized file is refused from its size and its text is never
+ * allocated; the post-read check remains as defence in depth for facts that
+ * cannot supply a size.
+ */
+describe("GH-350 m4 the bounded readers size-check before reading", () => {
+  test("an oversized simulate fixture is refused without a read", async () => {
+    const { readProviderSimulateFixture } = await import(
+      "../../packages/adapters/src/file/provider-simulate-fixture"
+    );
+    const { PROVIDER_SIMULATE_FIXTURE_MAX_BYTES } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    let reads = 0;
+    const result = readProviderSimulateFixture({
+      path: "/bounded/fixture.json",
+      fs: {
+        exists: () => true,
+        size: () => PROVIDER_SIMULATE_FIXTURE_MAX_BYTES + 1,
+        readText: () => {
+          reads += 1;
+          throw new Error("an oversized fixture must not be read");
+        },
+      },
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.field).toBe("size");
+      expect(result.summary).toContain(String(PROVIDER_SIMULATE_FIXTURE_MAX_BYTES));
+    }
+    expect(reads).toBe(0);
+  });
+
+  test("an oversized migration source is refused without a read, and the post-read check still guards", async () => {
+    const { readProviderMigrateSources } = await import(
+      "../../packages/adapters/src/file/provider-migrate-source"
+    );
+    const { PROVIDER_MIGRATE_SOURCE_MAX_BYTES } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    let reads = 0;
+    const sized = readProviderMigrateSources({
+      homeDirectory: "/bounded/home",
+      profilesDir: "/bounded/profiles",
+      fs: {
+        exists: () => true,
+        readDirectory: () => ["zai.sh"],
+        size: () => PROVIDER_MIGRATE_SOURCE_MAX_BYTES + 1,
+        readText: () => {
+          reads += 1;
+          throw new Error("an oversized source must not be read");
+        },
+      },
+    });
+    expect(sized.ok).toBe(false);
+    if (!sized.ok) expect(sized.reason).toBe("oversized-source");
+    expect(reads).toBe(0);
+
+    const unsized = readProviderMigrateSources({
+      homeDirectory: "/bounded/home",
+      profilesDir: "/bounded/profiles",
+      fs: {
+        exists: () => true,
+        readDirectory: () => ["zai.sh"],
+        readText: () => "A".repeat(PROVIDER_MIGRATE_SOURCE_MAX_BYTES + 1),
+      },
+    });
+    expect(unsized.ok).toBe(false);
+    if (!unsized.ok) expect(unsized.reason).toBe("oversized-source");
   });
 });

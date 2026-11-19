@@ -61,7 +61,7 @@ const budgetEvidence = (facts: ProviderBudgetFacts): ProviderParkEvidence => ({
 });
 
 const totalsFor = (
-  read: ProviderSpendTotalsRead,
+  read: ProviderSpendTotalsMeasuredRead,
   scopeKey: string,
 ): ProviderSpendTotals | undefined =>
   read.status === "measured" ? read.totals.find((entry) => entry.scopeKey === scopeKey) : undefined;
@@ -74,9 +74,20 @@ const measuredFigure = (
   return declaration.basis === "cost" ? totals.cost : totals.tokens;
 };
 
+/**
+ * The reads an evaluation may consume: a measured read or the verified-empty
+ * read. A failed read is deliberately absent from this type — it cannot be
+ * evaluated as a zero (a failed read is never a clear), so the only way to
+ * reach this function with one is a type error at the composition edge.
+ */
+export type ProviderSpendTotalsMeasuredRead = Exclude<
+  ProviderSpendTotalsRead,
+  { readonly status: "failed" }
+>;
+
 export type BudgetEvaluationInput = {
   readonly budgets: Readonly<Record<string, ProviderBudgetDeclaration>> | undefined;
-  readonly read: ProviderSpendTotalsRead;
+  readonly read: ProviderSpendTotalsMeasuredRead;
   readonly nowMs: number;
 };
 
@@ -207,9 +218,14 @@ export const budgetConditionsForEntry = (
   entryName: string,
 ): readonly ProviderConditionResult[] => {
   if (evaluation === undefined) return [];
-  return budgetsGoverning(budgets, entryName).map((name) =>
-    budgetCondition(evaluation.outcomes[name] as ProviderBudgetOutcome),
-  );
+  const conditions: ProviderConditionResult[] = [];
+  for (const name of budgetsGoverning(budgets, entryName)) {
+    // Every enabled budget has exactly one outcome; an absent outcome is a
+    // caller error at the boundary, so it is skipped rather than asserted.
+    const outcome = evaluation.outcomes[name];
+    if (outcome !== undefined) conditions.push(budgetCondition(outcome));
+  }
+  return conditions;
 };
 
 /* ------------------------------------------------------------------------- *

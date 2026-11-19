@@ -2267,6 +2267,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createConfigProgram",
     "createProviderSpendTotalsPort",
     "createResolvedProviderProbe",
+    "unknownProviderPeakZone",
     "createBoardCommandRuntime",
     "createCloseoutCommandRuntime",
     "createCloseoutComposition",
@@ -2616,7 +2617,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "isCredentialShapedName",
     "parseProviderMigrateSource",
     "providerMigrateRefusalSummary",
-    "providerMigrateSourceCapRefusal",
     "renderProviderMigrateProposal",
   ],
   "core/src/provider/simulate.ts": [

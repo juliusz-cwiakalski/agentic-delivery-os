@@ -122,7 +122,9 @@ describe("TC-MIG-004 the migration module holds no execution capability", () => 
     expect(source).toContain('from "#contracts"');
     expect(source).toContain("PROVIDER_MIGRATE_SOURCE_MAX_BYTES");
     expect(source).toContain("PROVIDER_MIGRATE_SOURCE_MAX_LINES");
-    expect(source).toContain("PROVIDER_MIGRATE_MAX_SOURCES");
+    // The source-count cap is enforced by the adapter's discovery
+    // (`readProviderMigrateSources`); the pure module never needed it, and the
+    // dead cap-refusal helper was removed (GH-350 m3).
   });
 
   test("the bounded source reader imports contracts and the file-facts type only", () => {

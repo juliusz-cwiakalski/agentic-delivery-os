@@ -18,11 +18,7 @@
  * credential-shaped variable name with its suffix removed and lowercased). Everything else is copied verbatim, and every
  * name that cannot be mapped is disclosed by name and omitted.
  */
-import {
-  PROVIDER_MIGRATE_MAX_SOURCES,
-  PROVIDER_MIGRATE_SOURCE_MAX_BYTES,
-  PROVIDER_MIGRATE_SOURCE_MAX_LINES,
-} from "#contracts";
+import { PROVIDER_MIGRATE_SOURCE_MAX_BYTES, PROVIDER_MIGRATE_SOURCE_MAX_LINES } from "#contracts";
 
 /** The closed refusal reasons (DM-7, Appendix E). */
 export const PROVIDER_MIGRATE_REFUSAL_REASONS = [
@@ -470,14 +466,3 @@ export const providerMigrateRefusalSummary = (refusal: ProviderMigrateRefusal): 
       : ` at ${refusal.source}${refusal.line === undefined ? "" : `:${refusal.line}`}`;
   return `provider migrate legacy refused (${refusal.reason})${location}: ${refusal.summary}`;
 };
-
-/** A bounded source count check, applied before reading the next source. */
-export const providerMigrateSourceCapRefusal = (
-  count: number,
-): ProviderMigrateRefusal | undefined =>
-  count > PROVIDER_MIGRATE_MAX_SOURCES
-    ? refusal(
-        "oversized-source",
-        `the legacy tree declares ${count} sources; PROVIDER_MIGRATE_MAX_SOURCES = ${PROVIDER_MIGRATE_MAX_SOURCES}`,
-      )
-    : undefined;

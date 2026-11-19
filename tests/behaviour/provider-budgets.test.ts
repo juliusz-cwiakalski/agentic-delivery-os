@@ -1130,3 +1130,23 @@ describe("TC-BUD-001 the budget declaration matrix fails closed naming the field
     expect(parsed.error.detail).toBe("provider.budgets.b.windowSeconds");
   });
 });
+
+/**
+ * GH-350 n5 (review remediation) — the budget accumulator has a null prototype,
+ * so a child named like a prototype member is an ordinary declared budget
+ * instead of silently replacing the record's prototype.
+ */
+describe("GH-350 n5 the budget accumulator has a null prototype", () => {
+  test("a __proto__ child is an own key and the record carries no prototype", () => {
+    const raw = JSON.parse(
+      '{"__proto__":{"enabled":true,"scope":"ticket","basis":"cost","ceiling":5}}',
+    ) as Record<string, unknown>;
+    const parsed = parseProviderBudgets(raw, {
+      sub: { name: "sub", class: "subscription", enabled: true },
+    });
+    expect(typeof parsed).not.toBe("string");
+    if (typeof parsed === "string") throw new Error(parsed);
+    expect(Object.getPrototypeOf(parsed)).toBeNull();
+    expect(Object.hasOwn(parsed, "__proto__")).toBe(true);
+  });
+});

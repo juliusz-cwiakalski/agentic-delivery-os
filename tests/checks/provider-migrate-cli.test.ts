@@ -69,7 +69,7 @@ type Run = {
 const run = async (
   scratch: Tree,
   argv: readonly string[],
-  options: { readonly readText?: (path: string) => string } = {},
+  options: { readonly readText?: (path: string) => string; readonly cwd?: string } = {},
 ): Promise<Run> => {
   const reads: string[] = [];
   const storeRoot = makeTempRoot("gh350-migrate-cli-state");
@@ -94,7 +94,7 @@ const run = async (
     const program = createConfigProgram({
       workingName: "jaiship",
       environment: { HOME: scratch.home },
-      cwd: scratch.repo,
+      cwd: options.cwd ?? scratch.repo,
       homeDirectory: scratch.home,
       platform: "linux",
       priorConfigurationDirectoryName: PRIOR_DIR,
@@ -240,6 +240,83 @@ describe("the migration invocation grammar refuses before any read", () => {
       const unknown = await run(scratch, ["migrate", "legacy", "--bogus", "--json"]);
       expect(unknown.exitCode).toBe(1);
       expect(unknown.error?.code).toBe("fallback.invocation");
+    } finally {
+      scratch.dispose();
+    }
+  });
+});
+
+/**
+ * GH-350 B1 (review remediation) — the migration target is the effective
+ * checkout root, never the process cwd.
+ *
+ * A write from a subdirectory used to create `<cwd>/.jaiship/config.yaml`, a
+ * document no configuration layer reads, while reporting success; the
+ * `target-exists` check looked at the same wrong path. The target now resolves
+ * from `findGitRoot(cwd)` (or `--project-root`), and an unresolvable checkout
+ * refuses explicitly.
+ */
+describe("GH-350 B1 provider migrate legacy writes the effective checkout root", () => {
+  const written = (run: Run): string => {
+    const report = run.data?.report as { writtenPath?: string } | undefined;
+    if (report?.writtenPath === undefined) throw new Error("no writtenPath in the report");
+    return report.writtenPath;
+  };
+
+  test("from a subdirectory the document lands at the checkout root, not the cwd", async () => {
+    const scratch = tree("b1-subdir");
+    try {
+      scratch.write(join(scratch.profilesDir, "zai.sh"), SOURCE());
+      const nested = join(scratch.repo, "nested", "deep");
+      mkdirSync(nested, { recursive: true });
+      const result = await run(scratch, ["migrate", "legacy", "--write", "--json"], {
+        cwd: nested,
+      });
+      expect(result.exitCode).toBe(0);
+      expect(written(result)).toBe(scratch.target);
+      expect(existsSync(scratch.target)).toBe(true);
+      expect(existsSync(join(nested, CONFIG_DIR, "config.yaml"))).toBe(false);
+    } finally {
+      scratch.dispose();
+    }
+  });
+
+  test("--project-root names the root explicitly", async () => {
+    const scratch = tree("b1-project-root");
+    try {
+      scratch.write(join(scratch.profilesDir, "zai.sh"), SOURCE());
+      const explicitRoot = join(scratch.root, "explicit-root");
+      mkdirSync(explicitRoot, { recursive: true });
+      const result = await run(
+        scratch,
+        ["migrate", "legacy", "--project-root", explicitRoot, "--write", "--json"],
+        { cwd: scratch.repo },
+      );
+      expect(result.exitCode).toBe(0);
+      const target = join(explicitRoot, CONFIG_DIR, "config.yaml");
+      expect(written(result)).toBe(target);
+      expect(existsSync(target)).toBe(true);
+      expect(existsSync(scratch.target)).toBe(false);
+    } finally {
+      scratch.dispose();
+    }
+  });
+
+  test("no resolvable checkout refuses explicitly and writes nothing", async () => {
+    const scratch = tree("b1-no-checkout");
+    try {
+      scratch.write(join(scratch.profilesDir, "zai.sh"), SOURCE());
+      const outside = join(scratch.root, "outside");
+      mkdirSync(outside, { recursive: true });
+      const result = await run(scratch, ["migrate", "legacy", "--write", "--json"], {
+        cwd: outside,
+      });
+      expect(result.exitCode).toBe(1);
+      expect(result.error?.code).toBe("provider.migrate.refused");
+      expect(result.error?.summary).toContain("no-checkout");
+      expect(result.error?.summary).toContain("--project-root");
+      expect(existsSync(join(outside, CONFIG_DIR, "config.yaml"))).toBe(false);
+      expect(existsSync(scratch.target)).toBe(false);
     } finally {
       scratch.dispose();
     }

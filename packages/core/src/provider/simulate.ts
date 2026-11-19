@@ -264,6 +264,12 @@ const parseSpend = (value: unknown): Parsed<ProviderSimulateSpend> | undefined =
     return reject("spend.telemetryState", "must be present or absent");
   }
   const rawPoints = value.points;
+  if (state === "absent" && rawPoints !== undefined) {
+    return reject(
+      "spend.points",
+      "must be absent when telemetryState is absent (an absent telemetry reading has no observations)",
+    );
+  }
   if (rawPoints === undefined) {
     return { ok: true, value: { telemetryState: state, points: [] } };
   }
@@ -531,6 +537,11 @@ export const simulateProviderResolution = async (
   input: ProviderSimulateRequest,
 ): Promise<ProviderSimulateOutcome> => {
   const { fixture, config } = input;
+  // The ref rule belongs to the replay itself, so every caller (the CLI edge
+  // included) gets the same pre-engine refusal: a ref is required exactly when
+  // an enabled budget is declared, and the fixture is its only source.
+  const refRefusal = providerSimulateRefRefusal(config, fixture);
+  if (refRefusal !== undefined) return refRefusal;
   const zonePort =
     Object.keys(fixture.zones).length === 0
       ? undefined

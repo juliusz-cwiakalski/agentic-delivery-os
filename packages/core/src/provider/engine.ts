@@ -637,8 +637,13 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         chain = { ...chain, entries };
       }
       const nowMs = deps.clock.nowMs();
-      // The budget gate runs before any probe, credential read, transport call,
-      // or state write: an unresolvable ref refuses once here (TDR-0062 D4).
+      // The declared zone is validated before any spend read: an unresolvable
+      // zone refuses `provider.peak.zone-unknown` without touching the spend
+      // seam (GH-350 F-1/F-2). The budget gate then runs before any probe,
+      // credential read, transport call, or state write: an unresolvable ref
+      // refuses once here (TDR-0062 D4).
+      const zoneFailure = zoneRefusal(deps, input.config, chain.entries);
+      if (zoneFailure !== undefined) return zoneFailure;
       const gate = await evaluateBudgetGate(deps, input.config, input.workItemRef, nowMs);
       if (!gate.ok) return gate.refusal;
       const sparseBudgets =
@@ -651,8 +656,6 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
         ...(gate.ref === undefined ? {} : { workItemRef: gate.ref }),
         ...(sparseBudgets.length === 0 ? {} : { sparseBudgets }),
       };
-      const zoneFailure = zoneRefusal(deps, input.config, chain.entries);
-      if (zoneFailure !== undefined) return zoneFailure;
       const evaluations = await evaluateAll(
         input.config,
         chain.entries,

@@ -25,7 +25,6 @@ import {
   createCountingZonePort,
   SYDNEY_STEPS,
   TOKYO_STEPS,
-  UTC_FACTS,
 } from "../fixtures/provider/zone-port";
 
 const ROOT = process.cwd();
@@ -295,5 +294,57 @@ describe("GH-350 TC-ZONE-008 one boundary truth across the gate and the watcher"
     expect(source).toContain("peakWindowEndInstantMs");
     expect(source).not.toContain("endMsToday");
     expect(source).not.toContain("utcSecondsOfDay");
+  });
+});
+
+/**
+ * GH-350 m1 (review remediation) — the expiry derivation never returns a past
+ * instant. When the local reading at `nowMs` is already past the declared end,
+ * `nowMs` itself is the earliest instant at or after now whose reading is at or
+ * after the end, so the result is clamped rather than fabricated backwards.
+ */
+describe("GH-350 m1 peakWindowEndInstantMs is clamped at nowMs", () => {
+  test("a closed window returns nowMs; an open window returns a future instant", () => {
+    const port = berlinPort();
+    const facts = bindZoneFacts("Europe/Berlin", port);
+    const now = Date.parse("2026-07-13T10:00:00.000Z"); // 12:00 local (+02:00)
+    const closed = peakWindowEndInstantMs(now, facts, {
+      endSecondsOfDay: 3_600,
+      bufferAfterSeconds: 0,
+    });
+    expect(closed).toBe(now);
+    expect(closed).toBeGreaterThanOrEqual(now);
+    const open = peakWindowEndInstantMs(now, facts, {
+      endSecondsOfDay: 50_400,
+      bufferAfterSeconds: 0,
+    });
+    expect(open).toBeGreaterThan(now);
+    expect(open).toBe(Date.parse("2026-07-13T12:00:00.000Z"));
+  });
+});
+
+/**
+ * GH-350 m2 (review remediation) — the declared TC-ZONE-007 probe-budget arms:
+ * a multi-transition walk spends exactly three offset probes and three
+ * transition lookups, and the segment-3 guard prevents a fourth offset probe.
+ */
+describe("GH-350 m2 TC-ZONE-007 the 3+3 fixture and the fourth-probe trap", () => {
+  const steps = [
+    { fromMs: Date.parse("2026-01-01T00:00:00.000Z"), offsetSeconds: 0 },
+    { fromMs: Date.parse("2026-01-01T01:00:00.000Z"), offsetSeconds: 60 },
+    { fromMs: Date.parse("2026-01-01T02:00:00.000Z"), offsetSeconds: 120 },
+    { fromMs: Date.parse("2026-01-01T03:00:00.000Z"), offsetSeconds: 180 },
+  ] as const;
+
+  test("two crossed transitions spend 3 + 3 and never a fourth offset probe", () => {
+    const port = createCountingZonePort({ "Test/Stepped": steps });
+    const facts = bindZoneFacts("Test/Stepped", port);
+    const end = peakWindowEndInstantMs(Date.parse("2026-01-01T00:00:00.000Z"), facts, {
+      endSecondsOfDay: 86_399,
+      bufferAfterSeconds: 86_400,
+    });
+    expect(end).toBe(Date.parse("2026-01-01T23:58:00.000Z"));
+    expect(port.counts.offsetSecondsAt).toBe(3);
+    expect(port.counts.nextTransitionAtOrAfter).toBe(3);
   });
 });

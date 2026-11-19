@@ -250,7 +250,7 @@ export const parseProviderBudgets = (
   entries: Readonly<Record<string, ProviderDescriptor>>,
 ): Record<string, ProviderBudgetDeclaration> | string => {
   if (!isRecord(value)) return "provider.budgets";
-  const budgets: Record<string, ProviderBudgetDeclaration> = {};
+  const budgets: Record<string, ProviderBudgetDeclaration> = Object.create(null);
   for (const [name, raw] of Object.entries(value)) {
     const path = `provider.budgets.${name}`;
     if (name.length === 0) return "provider.budgets";

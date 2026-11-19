@@ -10,9 +10,11 @@
  *
  * Fail-closed and classified, matching the provider-profiles validation
  * discipline (GH-294 OQ-TP-1/OQ-TP-2 pins):
- *   - only a UTC designation validates; any non-UTC literal is a refusal
- *     naming the field — a zone that parses but can never be honored would be
- *     a silent-degradation channel (DEC-1);
+ *   - the designation must match the declared zone grammar or be `UTC`; a
+ *     syntactically invalid literal is a refusal naming the field, while a
+ *     grammar-valid but runtime-unknown zone is refused later by the
+ *     composition (`provider.peak.zone-unknown`) — never evaluated as UTC
+ *     (GH-350, DEC-1);
  *   - an exact-duplicate window (same start AND end) on one profile refuses
  *     as ambiguous; distinct overlapping windows validate without
  *     arbitration — enforcement unions the intervals and multipliers are

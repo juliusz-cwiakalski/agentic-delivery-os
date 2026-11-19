@@ -7,8 +7,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PHASE_TRANSITION_KIND,
-  type ProviderParkEvidence,
   PROVIDER_RECORD_KINDS,
+  type ProviderParkEvidence,
 } from "../../packages/core/src/contracts/index";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
 import {
@@ -523,5 +523,58 @@ describe("GH-350 TC-ZONE-009 window parks carry the effective declared zone", ()
     expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
     expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(17);
     expect(allowlist.fields).toHaveLength(14);
+  });
+});
+
+/**
+ * GH-350 m2 (review remediation) — the declared TC-ZONE-009 arithmetic arms:
+ * a park's `waitSeconds` is exactly `floor((expiresAtMs - nowMs) / 1000)`, and
+ * a gap-crossing end is not the naive `end - localSeconds`.
+ */
+describe("GH-350 m2 TC-ZONE-009 the waitSeconds arithmetic and the gap-crossing inequality", () => {
+  test("a park's waitSeconds is the floored remaining duration", async () => {
+    const { bindZoneFacts, evaluatePeakWindow } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const facts = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const now = Date.parse("2026-07-13T10:00:00.000Z"); // 12:00 local (+02:00)
+    const condition = evaluatePeakWindow(
+      {
+        timezone: "Europe/Berlin",
+        startSecondsOfDay: 0,
+        endSecondsOfDay: 50_400,
+        bufferSeconds: 0,
+      },
+      now,
+      facts,
+    );
+    if (condition.status !== "parked") throw new Error(condition.status);
+    expect(condition.waitSeconds).toBe(Math.floor((condition.expiresAtMs - now) / 1_000));
+    expect(condition.waitSeconds).toBe(7_200);
+  });
+
+  test("a gap-crossing end resolves to the transition and is not end - localSeconds", async () => {
+    const { bindZoneFacts, evaluatePeakWindow } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const facts = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const now = Date.parse("2026-03-29T00:30:00.000Z"); // 01:30 local (+01:00), before the gap
+    const condition = evaluatePeakWindow(
+      { timezone: "Europe/Berlin", startSecondsOfDay: 0, endSecondsOfDay: 9_000, bufferSeconds: 0 },
+      now,
+      facts,
+    );
+    if (condition.status !== "parked") throw new Error(condition.status);
+    expect(condition.expiresAtMs).toBe(Date.parse("2026-03-29T01:00:00.000Z"));
+    expect(condition.waitSeconds).toBe(1_800);
+    expect(condition.waitSeconds).not.toBe(9_000 - 5_400);
   });
 });

@@ -49,6 +49,16 @@ export const readProviderSimulateFixture = (input: {
   if (!input.fs.exists(input.path)) {
     return refuse("fixture", `simulate fixture ${label} does not exist`);
   }
+  // Size first: an oversized path is refused from its stat entry and its text is
+  // never allocated. The post-read check below stays as defence in depth for
+  // injected facts that cannot supply a size.
+  const declaredSize = input.fs.size?.(input.path);
+  if (declaredSize !== undefined && declaredSize > maxBytes) {
+    return refuse(
+      "size",
+      `simulate fixture ${label} is ${declaredSize} bytes; the declared maximum is ${maxBytes}`,
+    );
+  }
   let text: string;
   try {
     text = input.fs.readText(input.path);

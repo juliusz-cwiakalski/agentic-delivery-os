@@ -332,6 +332,7 @@ import {
   type ProviderComposition,
   type QueueComposition,
   resolveAgentIdentity,
+  unknownProviderPeakZone,
 } from "./edge.js";
 import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
 import { workingNameEnvironmentVariable } from "./entrypoint.js";
@@ -1407,6 +1408,14 @@ export const resolveProfileContextFrom = (
   if (!providerParsed.ok) return undefined;
   const profileParsed = parseAndValidateProfileConfiguration(values, providerParsed.config);
   if (!profileParsed.ok) return undefined;
+  // An unresolvable declared zone is a fail-closed absence, never a UTC read:
+  // the status and dispatch-context surfaces carry no profile context rather
+  // than a selection computed against the wrong clock.
+  const unknownZone = unknownProviderPeakZone(
+    providerParsed.config.entries,
+    Object.keys(providerParsed.config.entries),
+  );
+  if (unknownZone !== undefined) return undefined;
   const selection = selectProfile({
     profiles: profileParsed.config,
     probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs),

@@ -253,6 +253,14 @@ export const isWatchObservationStale = (input: {
  * The evidence-bounded park rule (GH-350 F-7, AC-F7-3): a park derived from an
  * observation expires no later than `observedAt + maxAgeSeconds * 1000`, and
  * when that instant is not strictly in the future no park is created at all.
+ *
+ * This rule has no production consumer today, and that is deliberate: the
+ * watch reader is read-only (`provider watch status` writes nothing), so no
+ * surface currently derives a park from a watch observation. It is retained as
+ * the declared rule a future watch-park path must satisfy — the freshness
+ * predicate (`isWatchObservationStale`) is the gate that makes the bound
+ * meaningful, and the phase-7 suite exercises the clamp directly — rather than
+ * deleting the only statement of the property.
  */
 export const clampWatchParkExpiry = (input: {
   readonly naturalExpiryMs: number;

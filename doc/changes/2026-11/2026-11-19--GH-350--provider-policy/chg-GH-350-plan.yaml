@@ -2968,6 +2968,46 @@ phases:
         - doc/00-index.md
         - doc/planning/oss-tooling/milestones/m4/backlog.md
         - doc/planning/oss-tooling/milestones/m4/flip-plan.md
+        # OWNER-AUTHORISED during delivery: SEVEN pages the system-spec
+        # reconciliation had to move because the delivered change falsified them.
+        # They were found by code review as declared by NO phase; each is declared
+        # here, once, with the sentence that moved.
+        #   1. `architecture-overview.md` — the layer table's provider row now names
+        #      the zone arithmetic and its shared expiry derivation, budget and
+        #      spend-ceiling evaluation, simulation and legacy mapping, and the
+        #      `time-zone/` adapters subpath; the "quota transport available; host
+        #      wiring pending" diagram note is replaced by THE PRODUCTION
+        #      COMPOSITION'S REAL WIRING (credential port and quota transport
+        #      supplied, the CLI edge binding the zone port), and the executable row
+        #      names both the `install` and `provider` families.
+        #   2. `feature-adapter-ports.md` — the adapters table gains the
+        #      `packages/adapters/src/time-zone/index.ts` row (THE `./time-zone`
+        #      SUBPATH entry: the single `Intl`-backed zone port, no I/O or network),
+        #      and the contracts/provider rows name the zone grammar, zone-bound
+        #      facts, three-member port, budget declarations and spend-totals port.
+        #   3. `feature-agents-and-commands.md` — THE PAGE-ROOT INVENTORY now
+        #      carries `provider`: the M1 commands root "also serve[s] the `provider`
+        #      family", with the M4 page for `install` named separately.
+        #   4. `feature-board.md` — THE BOARD'S FAMILY COUNT moves 24 -> 27 in its
+        #      quality-evidence row.
+        #   5. `feature-monorepo-scaffold-toolchain.md` — the `@delivery-os/adapters`
+        #      subpath list gains `./time-zone`, its module row is added, and the
+        #      provider row names the offset-aware arithmetic, budget evaluation,
+        #      simulation and legacy mapping.
+        #   6. `feature-resident-daemon.md` — THE WATCHER'S WINDOW BASIS: "open on
+        #      the UTC basis" becomes "open on its declared zone's clock", and
+        #      ADR-0012 joins the related decisions (the watcher shares the exact
+        #      expiry derivation).
+        #   7. `feature-status-digest.md` — THE STATUS DIGEST'S WINDOW BASIS: the
+        #      `peakDeclared` flag's "declares … a UTC peak window" becomes "a peak
+        #      window on its declared zone".
+        - doc/overview/architecture-overview.md
+        - doc/spec/features/feature-adapter-ports.md
+        - doc/spec/features/feature-agents-and-commands.md
+        - doc/spec/features/feature-board.md
+        - doc/spec/features/feature-monorepo-scaffold-toolchain.md
+        - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-status-digest.md
         # The remaining GH-350 phrase rows, the closed page set and the
         # retired-claim list (the mount rows landed in phase 8).
         - tests/checks/doc-conformance.test.ts

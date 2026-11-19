@@ -415,7 +415,6 @@ import {
   parseProviderSimulateFixture,
   persistProfileTarget,
   providerMigrateRefusalSummary,
-  providerSimulateRefRefusal,
   readProfileTarget,
   readProviderLedger,
   readProviderParkViews,
@@ -2739,6 +2738,38 @@ const providerZoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
     : undefined;
 };
 
+/**
+ * The first declared peak zone in `names` that this composition cannot resolve
+ * (GH-350 F-1/F-8, NFR-5). A surface that would probe these providers uses this
+ * to refuse `provider.peak.zone-unknown` before any probe, so an unresolvable
+ * zone is never silently evaluated as UTC. `names` may be every declared entry
+ * or the entries a profile selection can probe.
+ */
+export const unknownProviderPeakZone = (
+  entries: ProviderConfiguration["entries"],
+  names: readonly string[],
+  zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined = providerZoneFactsFor,
+): { readonly providerName: string; readonly zone: string } | undefined => {
+  for (const name of names) {
+    const peak = entries[name]?.peak;
+    if (peak === undefined) continue;
+    if (zoneFactsFor(peak.timezone) === undefined) {
+      return { providerName: name, zone: peak.timezone };
+    }
+  }
+  return undefined;
+};
+
+/** The classification a zone refusal carries at the command surface. */
+const zoneUnknownRefusal = (unknown: { readonly providerName: string; readonly zone: string }) => ({
+  ok: false as const,
+  code: "provider.peak.zone-unknown" as const,
+  summary:
+    `provider ${unknown.providerName} declares peak zone ${unknown.zone}, which this composition ` +
+    `cannot resolve; correct the zone name, or run where zone data is available (a UTC declaration ` +
+    `needs none)`,
+});
+
 const stepInstantMs = (step: {
   readonly finishedAt: string | null;
   readonly capturedAt: string;
@@ -2825,11 +2856,27 @@ export const createResolvedProviderProbe = (
       };
     }
     if (descriptor.peak !== undefined) {
-      const peak = evaluatePeakWindow(
-        descriptor.peak,
-        nowMs,
-        zoneFactsFor(descriptor.peak.timezone) ?? UTC_ZONE_FACTS,
-      );
+      const facts = zoneFactsFor(descriptor.peak.timezone);
+      if (facts === undefined) {
+        // Never read an unresolvable zone as UTC: the provider is unavailable
+        // for a reason that names the zone, and the command surfaces refuse
+        // `provider.peak.zone-unknown` before they call this probe.
+        return {
+          available: false,
+          condition: "provider.peak.zone-unknown",
+          blockers: [
+            {
+              kind: "condition",
+              value: "provider.peak.zone-unknown",
+              detail:
+                `provider ${providerName}: peak zone ${descriptor.peak.timezone} cannot be ` +
+                `resolved by this composition`,
+            },
+          ],
+          source: `provider ${providerName}: peak zone ${descriptor.peak.timezone} unresolved`,
+        };
+      }
+      const peak = evaluatePeakWindow(descriptor.peak, nowMs, facts);
       if (peak.status === "parked") {
         return {
           available: false,
@@ -5035,8 +5082,25 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
             summary: profileParsed.error.detail,
           };
         }
+        // Validate every zone the selection can probe before probing: an
+        // unresolvable declared zone refuses by name instead of reading as UTC.
+        const probeNames = [
+          ...new Set(
+            Object.values(profileParsed.config.profiles).flatMap((profile) => profile.providers),
+          ),
+        ];
+        const unknownZone = unknownProviderPeakZone(
+          providerParsed.config.entries,
+          probeNames,
+          provider.zoneFactsFor ?? providerZoneFactsFor,
+        );
+        if (unknownZone !== undefined) return zoneUnknownRefusal(unknownZone);
         const nowMs = provider.clock.nowMs();
-        const probe = createResolvedProviderProbe(providerParsed.config.entries, nowMs);
+        const probe = createResolvedProviderProbe(
+          providerParsed.config.entries,
+          nowMs,
+          provider.zoneFactsFor ?? providerZoneFactsFor,
+        );
         const selection = selectProfile({
           profiles: profileParsed.config,
           probe,
@@ -5118,6 +5182,21 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           ...(options.fs ?? nodeFileSystemFacts()),
           readDirectory: (path) => readdirSync(path),
         };
+        // The project-committed document lives at the effective checkout root,
+        // the same root the configuration resolver reads (`--project-root` when
+        // supplied, otherwise the git root discovered from the invoking cwd). A
+        // write from a subdirectory must not create a document no layer reads.
+        const checkoutRoot = input.projectRoot ?? findGitRoot(options.cwd, repositoryIo);
+        if (checkoutRoot === undefined) {
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary:
+              "provider migrate legacy refused (no-checkout): no git checkout resolves from " +
+              `${options.cwd}; run inside a checkout, or pass --project-root <dir> to name the ` +
+              "project-committed root explicitly",
+          };
+        }
         const read = readProviderMigrateSources({
           homeDirectory: options.homeDirectory,
           ...(options.priorConfigurationDirectoryName === undefined
@@ -5172,7 +5251,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         }
         let report = built.proposal.report;
         if (input.write) {
-          const target = `${options.cwd}/${brand.configDirectoryName}/${PROVIDER_MIGRATE_TARGET_NAME}`;
+          const target = `${checkoutRoot}/${brand.configDirectoryName}/${PROVIDER_MIGRATE_TARGET_NAME}`;
           if (fs.exists(target)) {
             return {
               ok: false,
@@ -5180,7 +5259,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
               summary: `provider migrate legacy refused (target-exists) at ${target}: the project-committed document already exists and is never modified; merge the proposal by hand`,
             };
           }
-          mkdirSync(`${options.cwd}/${brand.configDirectoryName}`, { recursive: true });
+          mkdirSync(`${checkoutRoot}/${brand.configDirectoryName}`, { recursive: true });
           writeFileSync(target, built.proposal.yaml);
           report = { ...report, writtenPath: target };
         }
@@ -5213,10 +5292,6 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         );
         if (!fixtureParsed.ok) {
           return { ok: false, code: fixtureParsed.code, summary: fixtureParsed.summary };
-        }
-        const refRefusal = providerSimulateRefRefusal(parsed.config, fixtureParsed.fixture);
-        if (refRefusal !== undefined) {
-          return { ok: false, code: refRefusal.code, summary: refRefusal.summary };
         }
         let profileScope:
           | { readonly name: string; readonly providers: readonly string[] }

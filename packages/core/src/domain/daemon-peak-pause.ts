@@ -91,19 +91,27 @@ const isoOf = (nowMs: number, secondsLater: number): string =>
 /**
  * The buffer-inclusive window decision for one profile at `nowMs` (F-3): the
  * window is open at or after `start - bufferBefore` and before the effective
- * end (`end + bufferAfter`), evaluated on the injected clock's UTC
- * second-of-day only (DEC-1, NFR-3).
+ * end (`end + bufferAfter`), evaluated on the declared zone's clock through the
+ * injected facts (GH-350, DEC-1, NFR-3).
+ *
+ * A composition that cannot resolve a declared zone must not evaluate it as
+ * UTC. Such a window is not evaluated; the result carries the first
+ * unresolvable `unknownZone` so the caller can see the declaration was not
+ * honored rather than reading a silently closed window.
  */
 export const peakWindowOpenAt = (
   rules: ProviderProfilePeakRules,
   nowMs: number,
   zoneFactsFor: PeakZoneFactsFor = defaultZoneFactsFor,
-): { readonly open: boolean; readonly windowEnd: string } => {
+): { readonly open: boolean; readonly windowEnd: string; readonly unknownZone?: string } => {
+  let unknownZone: string | undefined;
   for (const window of rules.windows) {
     const facts = zoneFactsFor(window.timezone);
-    // A composition that cannot supply the zone facts must not evaluate the
-    // window as UTC; the admission gate refuses the declaration by name.
-    if (facts === undefined) continue;
+    if (facts === undefined) {
+      // Never interpret as UTC and never report the window as merely closed.
+      unknownZone ??= window.timezone;
+      continue;
+    }
     const second = localSecondsOfDay(
       nowMs,
       facts.offsetSecondsAt(Math.floor(nowMs / 1_000) * 1_000),
@@ -126,7 +134,9 @@ export const peakWindowOpenAt = (
       return { open: true, windowEnd: new Date(windowEndMs).toISOString() };
     }
   }
-  return { open: false, windowEnd: "" };
+  return unknownZone === undefined
+    ? { open: false, windowEnd: "" }
+    : { open: false, windowEnd: "", unknownZone };
 };
 
 /**
@@ -158,6 +168,7 @@ export const decidePeakStops = (input: {
       readonly rules: ProviderProfilePeakRules | undefined;
       readonly open: boolean;
       readonly windowEnd: string;
+      readonly unknownZone?: string;
     }
   >();
   for (const lane of input.lanes) {
@@ -175,9 +186,15 @@ export const decidePeakStops = (input: {
         rules,
         open: window?.open ?? false,
         windowEnd: window?.windowEnd ?? "",
+        ...(window?.unknownZone === undefined ? {} : { unknownZone: window.unknownZone }),
       };
       seen.set(profile, state);
     }
+    // An unresolvable zone is never read as an open or a closed UTC window: the
+    // profile is skipped and its `unknownZone` stays recorded in the state. No
+    // production composition mounts this watcher today (the supervision
+    // composition supplies no `peakPause` port), so the explicit state is the
+    // contract a future mount consumes rather than a silent UTC evaluation.
     if (state.rules === undefined || !state.open) continue;
     decisions.push({
       ref: lane.ref,

@@ -931,3 +931,70 @@ describe("the simulate composition is the delivered engine over fixture seams", 
     expect(outcome.data.simulation.inputs.spend).toBe("none");
   });
 });
+
+/**
+ * GH-350 n6 and n3 (review remediation) — the fixture's spend facts are strict,
+ * and the ref rule lives in the replay rather than only in the CLI edge.
+ */
+describe("GH-350 n6 an absent telemetry reading cannot carry points", () => {
+  test("spend.points with telemetryState absent is refused at the parse boundary", () => {
+    const text = fixtureOf({
+      ...minimalFixture,
+      spend: {
+        telemetryState: "absent",
+        points: [{ atMs: NOW - 1_000, cost: 1, tokens: 1 }],
+      },
+    });
+    const parsed = parseProviderSimulateFixture(
+      { text, byteLength: Buffer.byteLength(text) },
+      PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+    );
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) {
+      expect(parsed.code).toBe("input.value.rejected");
+      expect(parsed.field).toBe("spend.points");
+      expect(parsed.summary).toContain("absent");
+    }
+
+    const bare = fixtureOf({ ...minimalFixture, spend: { telemetryState: "absent" } });
+    const accepted = parseProviderSimulateFixture(
+      { text: bare, byteLength: Buffer.byteLength(bare) },
+      PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+    );
+    expect(accepted.ok).toBe(true);
+  });
+});
+
+describe("GH-350 n3 the simulate ref rule is enforced by the replay", () => {
+  test("simulateProviderResolution refuses an enabled budget with no fixture ref", async () => {
+    const config = (() => {
+      const resolved = parseAndValidateProviderConfiguration({
+        provider: {
+          defaultChain: "ch",
+          entries: { sub: { class: "subscription" } },
+          chains: { ch: { entries: ["sub"], allowPaidFallback: false } },
+          budgets: {
+            cap: { enabled: true, scope: "ticket", basis: "cost", ceiling: 10 },
+          },
+        },
+      });
+      if (!resolved.ok) throw new Error(resolved.error.detail);
+      return resolved.config;
+    })();
+    const parsed = parseProviderSimulateFixture(
+      { text: fixtureOf(minimalFixture), byteLength: Buffer.byteLength(fixtureOf(minimalFixture)) },
+      PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+    );
+    if (!parsed.ok) throw new Error(parsed.summary);
+    const outcome = await simulateProviderResolution({
+      fixturePath: FIXTURE_PATH,
+      fixture: parsed.fixture,
+      config,
+    });
+    expect(outcome.ok).toBe(false);
+    if (!outcome.ok) {
+      expect(outcome.code).toBe("input.value.rejected");
+      expect(outcome.summary).toContain("workItemRef");
+    }
+  });
+});

@@ -61,7 +61,7 @@ const uniqueKinds = (kinds: readonly ProviderConditionKind[]): readonly Provider
   ...new Set(kinds),
 ];
 
-/** Project evidence through the closed eight-field allowlist only. */
+/** Project evidence through the closed fourteen-field allowlist only. */
 export const projectParkEvidence = (evidence: ProviderParkEvidence): ProviderParkEvidence => {
   const projected: Record<string, unknown> = {};
   for (const field of PARK_EVIDENCE_FIELDS) {
@@ -160,7 +160,7 @@ export const announcementIdentity = (
   generation: string,
 ): string => `${subjectKind}:${subjectName}:${code}:${generation}`;
 
-/** Project announcement evidence through the closed eleven-field allowlist only. */
+/** Project announcement evidence through the closed seventeen-field allowlist only. */
 export const announcementEvidence = (
   evidence: ProviderAnnouncementEvidence,
 ): ProviderAnnouncementEvidence => {

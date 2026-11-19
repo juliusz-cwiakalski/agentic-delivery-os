@@ -107,6 +107,13 @@ export type PeakWindowEndRule = {
  *   repeated reading falls out of the strict `t* < T` test.
  * - A skipped local second resolves to the transition instant exactly: the
  *   boundary test uses the post-transition offset at `T`.
+ * - The result is clamped at `nowMs`: when the local reading at `nowMs` is
+ *   already past the declared end, `nowMs` itself is the earliest instant at or
+ *   after `nowMs` whose reading is at or after the end, so the derivation never
+ *   reports a past instant. Callers that need an open window check the reading
+ *   first (`evaluatePeakWindow`, `peakWindowOpenAt`); a closed window has no
+ *   meaningful future end, and the clamp is the honest answer to the stated
+ *   property rather than a fabricated one.
  *
  * Probe budget per call: at most three `offsetSecondsAt` probes and at most
  * three `nextTransitionAtOrAfter` lookups; the segment-3 guard returns before a
@@ -123,19 +130,20 @@ export const peakWindowEndInstantMs = (
   const localNow =
     (((nowS / 1_000 + initialOffset) % SECONDS_PER_DAY) + SECONDS_PER_DAY) % SECONDS_PER_DAY;
   const target = nowS / 1_000 + initialOffset - localNow + endSecondsOfDay;
+  const atOrAfterNow = (instantMs: number): number => Math.max(nowMs, instantMs);
   let offset = initialOffset;
   let segmentStart = nowS;
   for (let segment = 1; segment <= 3; segment += 1) {
     const transition = zoneFacts.nextTransitionAtOrAfter(segmentStart + 1_000);
     const candidate = (target - offset) * 1_000;
-    if (transition === undefined || candidate < transition) return candidate;
-    if (segment === 3) return candidate;
+    if (transition === undefined || candidate < transition) return atOrAfterNow(candidate);
+    if (segment === 3) return atOrAfterNow(candidate);
     const nextOffset = zoneFacts.offsetSecondsAt(transition);
-    if (transition / 1_000 + nextOffset >= target) return transition;
+    if (transition / 1_000 + nextOffset >= target) return atOrAfterNow(transition);
     offset = nextOffset;
     segmentStart = transition;
   }
-  return (target - offset) * 1_000;
+  return atOrAfterNow((target - offset) * 1_000);
 };
 
 /**

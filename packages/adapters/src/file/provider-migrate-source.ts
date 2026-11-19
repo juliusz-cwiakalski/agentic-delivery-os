@@ -105,6 +105,16 @@ const readSource = (
 ):
   | { readonly ok: true; readonly source: ProviderMigrateSourceFile }
   | ProviderMigrateSourcesFailure => {
+  // Size first: an oversized path is refused from its stat entry and its text is
+  // never allocated. The post-read byte/line checks below stay as defence in
+  // depth for injected facts that cannot supply a size.
+  const declaredSize = input.fs.size?.(path);
+  if (declaredSize !== undefined && declaredSize > PROVIDER_MIGRATE_SOURCE_MAX_BYTES) {
+    return oversized(
+      path,
+      `is ${declaredSize} bytes; PROVIDER_MIGRATE_SOURCE_MAX_BYTES = ${PROVIDER_MIGRATE_SOURCE_MAX_BYTES}`,
+    );
+  }
   let text: string;
   try {
     text = input.fs.readText(path);
