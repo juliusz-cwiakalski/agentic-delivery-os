@@ -256,3 +256,39 @@ describe("F-3 a cross-process re-find is JOINED AND OBSERVED (review-iter-1)", (
     expect(harness.counters.joins).toBe(1);
   });
 });
+
+describe("N-3 an unverifiable joined identity is UNKNOWN-liveness (review-iter-2)", () => {
+  test("zero traffic past the window produces no verdict and no kill", async () => {
+    const harness = createLoopHarness({
+      label: "n3-unknown-liveness",
+      own: OWN,
+      session: {
+        facts: { sessionId: null, liveness: "absent", pid: null, processStartTimeMs: null },
+      },
+      progressReading: { state: "zero", observedAtMs: 0 },
+      cycles: 1,
+      cycleStepMs: 700_000,
+    });
+    harness.seedFence({ action: "acquired", pid: 4000, processStartTimeMs: 4_000 });
+    harness.seedSession({
+      sessionId: "session-unverifiable",
+      pid: 4242,
+      processStartTimeMs: null,
+    });
+    harness.setAlive(4000, false);
+    harness.setAlive(4242, true);
+
+    const result = await harness.run(["loop", "start", "--foreground", "--json"]);
+    expect(result.code).toBe(0);
+    // Unknown liveness means the two-signal verdict is not evaluated at all.
+    expect(harness.verdicts.kills).toHaveLength(0);
+    const records = harness.coordinatorRecords();
+    if (records.ok) {
+      expect(records.stuck).toHaveLength(0);
+      expect(records.restarts).toHaveLength(0);
+    }
+    const status = await harness.run(["loop", "status", "--json"]);
+    expect(harness.dataOf(status).degraded).toContain("live-facts-unknown");
+    expect(harness.counters.spawns).toBe(0);
+  });
+});

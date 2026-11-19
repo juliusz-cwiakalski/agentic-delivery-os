@@ -9,6 +9,7 @@
  * binding mount, and the record shape. It reaches no store and no clock.
  */
 import {
+  type CoordinatorProgressState,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessSeatBinding,
   type HarnessSpawnInput,
@@ -98,6 +99,8 @@ export const sessionRecordFrom = (input: {
   readonly processStartTimeMs: number | null;
   readonly title: string | null;
   readonly state: LoopSessionState;
+  /** The observed progress state; absent means "no reading yet". */
+  readonly progressState?: CoordinatorProgressState;
   readonly acquiredAt: string;
   readonly recordedAt: string;
 }): LoopSessionRecord => ({
@@ -110,6 +113,7 @@ export const sessionRecordFrom = (input: {
   processStartTimeMs: input.processStartTimeMs,
   title: input.title,
   state: input.state,
+  ...(input.progressState === undefined ? {} : { progressState: input.progressState }),
   acquiredAt: input.acquiredAt,
   recordedAt: input.recordedAt,
 });
@@ -122,9 +126,12 @@ export const endedSessionRecord = (input: {
   readonly record: LoopSessionRecord;
   readonly sessionRecordId: string;
   readonly recordedAt: string;
+  /** The last observed progress state; absent keeps the record's own value. */
+  readonly progressState?: CoordinatorProgressState;
 }): LoopSessionRecord => ({
   ...input.record,
   sessionRecordId: input.sessionRecordId,
   state: "ended",
+  ...(input.progressState === undefined ? {} : { progressState: input.progressState }),
   recordedAt: input.recordedAt,
 });

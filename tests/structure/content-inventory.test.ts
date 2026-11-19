@@ -396,6 +396,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/loop-verdict.ts": [
     "LOOP_MAX_EVIDENCE_BYTES",
+    "MERGE_TRANSACTION_RECORD_KIND",
+    "artifactAdvancedSince",
+    "artifactInstantOf",
     "evaluateLoopVerdict",
     "evidenceCorpus",
     "observeProgress",

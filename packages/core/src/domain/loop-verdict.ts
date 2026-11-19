@@ -15,11 +15,13 @@
  * never kills.
  */
 import {
+  BLOCKER_ANSWER_RECORD_KIND,
   type CoordinatorProgressState,
   type CoordinatorVerdict,
   LOOP_RESTART_REASON,
   LOOP_UNEVALUABLE_REASON,
   type LoopDeliveryReading,
+  type StateRecord,
 } from "#contracts";
 
 /** The evidence-corpus byte bound (NFR-10, DM-6). */
@@ -150,4 +152,47 @@ export const observeProgress = (input: {
   const at = input.observedAtMs ?? input.nowMs;
   if (input.nowMs - at > input.progressBoundMs) return input.lastProgressAtMs;
   return Math.max(at, input.lastProgressAtMs ?? at);
+};
+
+/** The delivered merge-transaction record kind whose instant is `recordedAt`. */
+export const MERGE_TRANSACTION_RECORD_KIND = "merge.transaction" as const;
+
+/**
+ * The instant one artifact record carries, resolved PER KIND (F-5/DM-6):
+ * `recordedAt` for a `merge.transaction`, `answeredAt` for a `blocker.answer`
+ * (the delivered answer payload has no `recordedAt`). `null` means the record
+ * genuinely carries no usable instant.
+ */
+export const artifactInstantOf = (record: StateRecord): string | null => {
+  const payload = record.payload;
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return null;
+  const field = record.kind === BLOCKER_ANSWER_RECORD_KIND ? "answeredAt" : "recordedAt";
+  const value = (payload as Record<string, unknown>)[field];
+  return typeof value === "string" && value.length > 0 ? value : null;
+};
+
+/**
+ * The baseline-relative artifact-advance signal (F-5 "no artifact advance since
+ * that observation"): true when a `merge.transaction` or `blocker.answer` record
+ * was recorded AFTER `sinceMs`. A `null` baseline can have no "since", and a
+ * record whose OWN instant is unusable counts as an advance (kill-safe: it can
+ * only delay a verdict, never license one).
+ */
+export const artifactAdvancedSince = (
+  records: readonly StateRecord[],
+  sinceMs: number | null,
+): boolean => {
+  if (sinceMs === null) return false;
+  return records.some((record) => {
+    if (
+      record.kind !== MERGE_TRANSACTION_RECORD_KIND &&
+      record.kind !== BLOCKER_ANSWER_RECORD_KIND
+    ) {
+      return false;
+    }
+    const instant = artifactInstantOf(record);
+    if (instant === null) return true;
+    const at = Date.parse(instant);
+    return Number.isFinite(at) && at > sinceMs;
+  });
 };

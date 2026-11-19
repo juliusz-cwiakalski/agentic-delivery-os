@@ -129,6 +129,9 @@ describe("TC-SPAWN-006 the session record carries the declared facts once per ac
         "harnessKind",
         "loopId",
         "pid",
+        // The additive OPTIONAL observed-progress fact (phase 11, API-4/DM-1):
+        // present from the first reading and absent before it.
+        "progressState",
         "processStartTimeMs",
         "recordedAt",
         "schemaId",

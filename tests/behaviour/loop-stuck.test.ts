@@ -9,7 +9,9 @@
  * TC-STUCK-006 (the detection bound) is phase 5's: it observes the NEXT session.
  */
 import { describe, expect, test } from "bun:test";
+import { mkdtempSync } from "node:fs";
 import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   corroborateDelivery,
@@ -19,10 +21,13 @@ import {
   newestLanePerRef,
 } from "../../packages/core/src/app/index";
 import {
+  artifactAdvancedSince,
+  artifactInstantOf,
   evaluateLoopVerdict,
   evidenceCorpus,
   LOOP_MAX_EVIDENCE_BYTES,
 } from "../../packages/core/src/domain/index";
+import { appendBlockerAnswer } from "../../packages/core/src/state/index";
 import {
   LOOP_DECISION_ROWS,
   LOOP_VERDICT_ROWS,
@@ -30,6 +35,7 @@ import {
   SUPERSEDED_LANE_RECORDS,
 } from "../fixtures/loop/facts";
 import { createLoopHarness } from "../fixtures/loop/harness";
+import { makeIdentity, openStore } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
 const VERDICT_BASE = {
@@ -114,6 +120,82 @@ describe("F-1 the artifact-advance signal is BASELINE-relative (review-iter-1)",
     expect(harness.verdicts.kills).toHaveLength(0);
     const records = harness.coordinatorRecords();
     if (records.ok) expect(records.stuck).toHaveLength(0);
+  });
+});
+
+describe("N-1 the artifact instants are PER KIND (review-iter-2 blocker)", () => {
+  const baselineMs = Date.parse("2026-11-19T10:00:00.000Z");
+
+  /** One real store with delivered records appended by the delivered constructors. */
+  const storeWith = (input: {
+    readonly answeredAt?: string;
+  }): ReturnType<typeof openStore>["store"] => {
+    const root = mkdtempSync(join(tmpdir(), "gh348-artifact-"));
+    const opened = openStore(makeIdentity(root));
+    if (input.answeredAt !== undefined) {
+      const appended = appendBlockerAnswer(opened.store, {
+        record: {
+          schemaId: "delivery.blocker.answer.v1",
+          questionId: "question-GH-348-1",
+          answeringAudience: "owner",
+          text: "approved",
+          answeredAt: input.answeredAt,
+          applied: false,
+          laneResume: {
+            mode: "boundary-note",
+            sessionReentry: false,
+            capabilitySource: "adapter-declared",
+          },
+        },
+        fenceToken: "seed-answer",
+      });
+      if (!appended.ok) throw new Error(appended.error.code);
+    }
+    return opened.store;
+  };
+
+  const recordsOf = (store: ReturnType<typeof storeWith>) => {
+    const read = store.readRecords();
+    if (!read.ok) throw new Error(read.error.code);
+    return read.value.records;
+  };
+
+  test("a blocker answer stores answeredAt, not recordedAt", () => {
+    const records = recordsOf(storeWith({ answeredAt: "2026-11-19T09:00:00.000Z" }));
+    const answer = records.find((record) => record.kind === "blocker.answer");
+    if (answer === undefined) throw new Error("no blocker.answer record");
+    expect((answer.payload as { answeredAt?: unknown }).answeredAt).toBe(
+      "2026-11-19T09:00:00.000Z",
+    );
+    expect((answer.payload as { recordedAt?: unknown }).recordedAt).toBeUndefined();
+    // The per-kind resolver reads the answer's OWN instant.
+    expect(artifactInstantOf(answer)).toBe("2026-11-19T09:00:00.000Z");
+  });
+
+  test("a PRIOR blocker answer does not suppress a later stuck verdict", () => {
+    const store = storeWith({ answeredAt: "2026-11-19T09:00:00.000Z" });
+    expect(artifactAdvancedSince(recordsOf(store), baselineMs)).toBe(false);
+  });
+
+  test("a blocker answer AFTER the baseline IS an advance (within-window control)", () => {
+    const store = storeWith({ answeredAt: "2026-11-19T11:00:00.000Z" });
+    expect(artifactAdvancedSince(recordsOf(store), baselineMs)).toBe(true);
+  });
+
+  test("a null baseline reports no advance, and an undatable record stays kill-safe", () => {
+    const store = storeWith({ answeredAt: "2026-11-19T11:00:00.000Z" });
+    expect(artifactAdvancedSince(recordsOf(store), null)).toBe(false);
+    const undatable = [
+      {
+        schemaVersion: "delivery.state.v1",
+        kind: "blocker.answer",
+        key: "blocker.answers:x",
+        sequence: 1,
+        checksum: "0",
+        payload: { schemaId: "delivery.blocker.answer.v1" },
+      },
+    ] as const;
+    expect(artifactAdvancedSince(undatable as never, baselineMs)).toBe(true);
   });
 });
 

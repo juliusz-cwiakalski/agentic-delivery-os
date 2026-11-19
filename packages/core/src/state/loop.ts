@@ -77,15 +77,27 @@ const parseSession = (payload: StateJsonValue): LoopSessionRecord | undefined =>
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return undefined;
   const value = payload as Record<string, unknown>;
   if (value["schemaId"] !== LOOP_SESSION_PAYLOAD_SCHEMA) return undefined;
-  for (const field of ["sessionRecordId", "loopId", "sessionId", "harnessKind", "acquiredAt"]) {
+  for (const field of ["sessionRecordId", "loopId", "sessionId", "acquiredAt"]) {
     if (typeof value[field] !== "string" || (value[field] as string).length === 0) return undefined;
   }
+  // `harnessKind` is a declared field, but an adapter fact this process cannot
+  // resolve stays ABSENT as "" (never fabricated); it is not a torn record.
+  if (typeof value["harnessKind"] !== "string") return undefined;
   if (typeof value["recordedAt"] !== "string") return undefined;
   if (!(LOOP_SESSION_STATES as readonly string[]).includes(String(value["state"])))
     return undefined;
   if (!isNullablePositiveInteger(value["pid"])) return undefined;
   if (!isNullablePositiveInteger(value["processStartTimeMs"])) return undefined;
   if (value["title"] !== null && typeof value["title"] !== "string") return undefined;
+  // The additive optional progress fact: absent is a classified state (no
+  // reading yet); a present value must be one of the closed states.
+  const progressState = value["progressState"];
+  if (
+    progressState !== undefined &&
+    !(["positive", "zero", "unknown"] as readonly string[]).includes(String(progressState))
+  ) {
+    return undefined;
+  }
   return payload as unknown as LoopSessionRecord;
 };
 

@@ -140,6 +140,7 @@ import {
   type LoopLogSink,
   type LoopSessionFacts,
   legacyStoreWarning,
+  artifactAdvancedSince,
   newestLanePerRef,
   logByteLength,
   maintainHostIndex,
@@ -3924,23 +3925,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           },
         },
         artifactAdvanced: (sinceMs) => {
-          // F-5: "no artifact advance SINCE that observation". A record can only
-          // advance the signal when its own recordedAt is after the baseline the
-          // supervisor holds; without a baseline no record is "since" it.
-          if (sinceMs === null) return false;
+          // F-5: "no artifact advance SINCE that observation". The per-kind
+          // instant (merge `recordedAt`, blocker `answeredAt`) and the undatable
+          // fallback live in ONE pure helper, so the composition cannot mis-read
+          // a record shape (N-1).
           const read = store.readRecords();
           if (!read.ok) return false;
-          return read.value.records.some((entry) => {
-            if (entry.kind !== "merge.transaction" && entry.kind !== "blocker.answer") return false;
-            const recordedAt = (entry.payload as { readonly recordedAt?: unknown }).recordedAt;
-            if (typeof recordedAt !== "string") {
-              // An undatable artifact record cannot be proven to be after the
-              // baseline; treating it as an advance keeps the verdict kill-safe.
-              return true;
-            }
-            const at = Date.parse(recordedAt);
-            return Number.isFinite(at) && at > sinceMs;
-          });
+          return artifactAdvancedSince(read.value.records, sinceMs);
         },
         terminate: async (graceMs) => {
           if (handle === null || handle.pid === undefined) {

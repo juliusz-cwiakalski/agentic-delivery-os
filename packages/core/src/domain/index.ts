@@ -1153,9 +1153,12 @@ export {
   renderStatusBlock,
 } from "./loop-status.js";
 export {
+  artifactAdvancedSince,
+  artifactInstantOf,
   evaluateLoopVerdict,
   evidenceCorpus,
   LOOP_MAX_EVIDENCE_BYTES,
+  MERGE_TRANSACTION_RECORD_KIND,
   type LoopVerdictInput,
   type LoopVerdictResult,
   observeProgress,

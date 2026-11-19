@@ -91,3 +91,29 @@ describe("F-7 the projection carries the OBSERVED progress state (review-iter-1)
     );
   });
 });
+
+describe("F-7 the observed progress is DURABLE (review-iter-2; API-4, DM-1)", () => {
+  test("a fresh-process status carries the persisted progress of the running loop's session", async () => {
+    const first = createLoopHarness({
+      label: "f7-durable",
+      progressReading: { state: "positive", observedAtMs: 1_000_000 },
+      cycles: 1,
+    });
+    await first.run(["loop", "start", "--foreground", "--json"]);
+    // The ledger record itself carries the observed state.
+    const records = first.loopRecords().sessions;
+    expect(records.some((entry) => entry.progressState === "positive")).toBe(true);
+
+    // A SEPARATE process over the same state root: nothing in memory to project.
+    const second = createLoopHarness({ label: "f7-durable-fresh", root: first.root });
+    const data = second.dataOf(await second.run(["loop", "status", "--json"]));
+    expect((data.session as { progress?: unknown }).progress).toBe("positive");
+  });
+
+  test("a session with no reading yet projects null, never a fabricated value", async () => {
+    const harness = createLoopHarness({ label: "f7-durable-absent" });
+    harness.seedSession({ sessionId: "session-seeded", state: "active" });
+    const data = harness.dataOf(await harness.run(["loop", "status", "--json"]));
+    expect((data.session as { progress?: unknown }).progress).toBeNull();
+  });
+});

@@ -395,10 +395,10 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         pid: live.liveness === "alive" ? live.pid : null,
       },
       recordedTitle: newestSession?.title ?? null,
-      // API-4: the projection carries the recorded title AND the progress state.
-      // The supervisor projects the last state it OBSERVED (null before its
-      // first reading), never a fabricated token.
-      recordedProgress: progress,
+      // API-4: the projection carries the recorded title AND the recorded
+      // progress state — the DURABLE fact from the newest session record, so a
+      // separate-process `status` carries it too (null before the first reading).
+      recordedProgress: newestSession?.progressState ?? progress,
       restarts: {
         count: epochRestarts.length,
         bound: settings.restartBudget,
@@ -520,13 +520,16 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   };
 
   /** Record one acquisition; one append per acquisition, never one per cycle. */
-  const recordAcquisition = (session: {
-    readonly sessionId: string;
-    readonly harnessKind: string;
-    readonly pid: number | null;
-    readonly processStartTimeMs: number | null;
-    readonly title: string | null;
-  }): { readonly facts: LoopSessionFacts; readonly record: LoopSessionRecord } => {
+  const recordAcquisition = (
+    session: {
+      readonly sessionId: string;
+      readonly harnessKind: string;
+      readonly pid: number | null;
+      readonly processStartTimeMs: number | null;
+      readonly title: string | null;
+    },
+    progressState?: CoordinatorProgressState,
+  ): { readonly facts: LoopSessionFacts; readonly record: LoopSessionRecord } => {
     const acquiredAt = clock.nowIso();
     const record = sessionRecordFrom({
       sessionRecordId: ports.newId("session-record"),
@@ -537,6 +540,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       processStartTimeMs: session.processStartTimeMs,
       title: session.title,
       state: "active",
+      ...(progressState === undefined ? {} : { progressState }),
       acquiredAt,
       recordedAt: acquiredAt,
     });
@@ -567,6 +571,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
       record,
       sessionRecordId: ports.newId("session-record"),
       recordedAt: clock.nowIso(),
+      ...(lastProgressState === null ? {} : { progressState: lastProgressState }),
     });
     const appended = ledger.appendSession(ended);
     if (!appended.ok) log("error", { reason: appended.code });
@@ -601,9 +606,10 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     /** The facts an effect established, so a join is OBSERVED, not pre-read. */
     const factsOfEffect = (
       effect: Extract<LoopSessionEffect, { readonly ok: true }>,
+      liveness: "alive" | "unknown" = "alive",
     ): LoopSessionFacts => ({
       sessionId: effect.sessionId,
-      liveness: "alive",
+      liveness,
       harnessKind: effect.harnessKind,
       pid: effect.pid,
       processStartTimeMs: effect.processStartTimeMs,
@@ -626,11 +632,12 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         return { ok: true, facts: factsOfEffect(resumed), record: null };
       } else if (recorded.processStartTimeMs === null) {
         // A recorded pid WITHOUT a platform start time cannot be identity-verified:
-        // that is unknown-liveness, never a `0` probe and never a second spawn
-        // beside a recorded live session (F-6, AC-F6-4).
+        // that is UNKNOWN-liveness — never a `0` probe, never a second spawn beside
+        // a recorded live session, and never a stuck verdict or a kill (F-6,
+        // AC-F6-4, AC-F6-5).
         const joined = await ports.session.join();
         if (!joined.ok) return { ok: false, failure: refusalFor(joined.code) };
-        return { ok: true, facts: factsOfEffect(joined), record: null };
+        return { ok: true, facts: factsOfEffect(joined, "unknown"), record: null };
       } else {
         const answer = ports.processPort.capabilities.alive
           ? ports.processPort.probe({
@@ -649,7 +656,14 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     const title = freshSessionTitle(clock.nowMs());
     const spawned = await ports.session.spawn({ title, prompt });
     if (!spawned.ok) return { ok: false, failure: refusalFor(spawned.code) };
-    const acquisition = recordAcquisition(spawned);
+    // The FIRST reading seeds the observation (F-5) and is the progress fact the
+    // durable record carries (API-4, DM-1 + Appendix D).
+    const first = ports.progress.read(spawned.sessionId);
+    if (first !== null) {
+      lastProgressState = first.state;
+      persistedProgress = first.state;
+    }
+    const acquisition = recordAcquisition(spawned, first?.state);
     return { ok: true, facts: acquisition.facts, record: acquisition.record };
   };
 
@@ -657,6 +671,14 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
   let lastProgressAtMs: number | null = null;
   /** The last progress state this supervisor OBSERVED; null before the first read. */
   let lastProgressState: CoordinatorProgressState | null = null;
+  /** The progress state already written to the ledger (avoids a per-cycle append). */
+  let persistedProgress: CoordinatorProgressState | null = null;
+  /**
+   * The facts the ESTABLISHMENT produced. The cycle observes THESE, not a fresh
+   * port read: a join cannot prove an identity it merely adopts, so the
+   * unknown-liveness fact an unverifiable identity carries must stay sticky.
+   */
+  let currentFacts: LoopSessionFacts | null = null;
   let cycleOrdinal = 0;
   let degradations: LoopDegradation[] = [];
   let exhaustion: string | null = null;
@@ -673,7 +695,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
    */
   const cycle = async (): Promise<CycleStep> => {
     const nowMs = clock.nowMs();
-    const session = ports.session.read();
+    const session = currentFacts ?? ports.session.read();
     // ONE verified state read per supervision cycle: the stop fold, the
     // already-recorded expectation, and the epoch all fold from this snapshot.
     const snapshot = ledger.read();
@@ -724,6 +746,25 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     if (delivery === "unknown") observed.push("delivery-corroborator-unreadable");
     if (session.liveness !== "alive") observed.push("live-facts-unknown");
     degradations = [...orderDegradations(observed)];
+    // Persist the observed progress ONLY when the state changes: a steady state
+    // appends nothing, so the "never one per cycle" rule holds (DM-1).
+    if (session.sessionId !== null && progressState !== persistedProgress) {
+      const progressRecord = sessionRecordFrom({
+        sessionRecordId: ports.newId("session-record"),
+        loopId,
+        sessionId: session.sessionId,
+        harnessKind: session.harnessKind,
+        pid: session.pid,
+        processStartTimeMs: session.processStartTimeMs,
+        title: session.title,
+        state: "active",
+        progressState,
+        acquiredAt: clock.nowIso(),
+        recordedAt: clock.nowIso(),
+      });
+      const persisted = ledger.appendSession(progressRecord);
+      if (persisted.ok) persistedProgress = progressState;
+    }
     log("cycle", { verdict: verdict.verdict, delivery });
 
     if (verdict.verdict === "progressing") return "continue";
@@ -825,7 +866,9 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
     const title = freshSessionTitle(clock.nowMs());
     const spawned = await ports.session.spawn({ title, prompt: loopSpawnPrompt(loopId) });
     if (!spawned.ok) return "stop";
-    acquiredSession = recordAcquisition(spawned).record;
+    const replacement = recordAcquisition(spawned);
+    acquiredSession = replacement.record;
+    currentFacts = replacement.facts;
     return "continue";
   };
 
@@ -868,6 +911,7 @@ export const createLoopSupervisor = (ports: LoopSupervisorPorts): LoopSupervisor
         return established.failure;
       }
       facts = established.facts;
+      currentFacts = established.facts;
       acquisition = established.record;
       acquiredSession = established.record;
       lastProgressAtMs = clock.nowMs();

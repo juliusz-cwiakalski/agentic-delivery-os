@@ -140,20 +140,21 @@
 #               and spec reconciliation declared for STAGING ONLY in the release
 #               phase).
 #
-# PLAN SHAPE: ten phases, all `kind: delivery` (each edits the repository and
+# PLAN SHAPE: eleven phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. The spec
 #   is complete at v1.4 and the test plan at revision 0.6, so no design work
 #   remains; a planning phase would declare no scope to compute. The ten phases
 #   are the change's own ids; `tier.phases` below lists the LIFECYCLE phase ids
 #   [1..11] (the ceremony tier engine's vocabulary) and the two namespaces are
 #   never conflated.
-#   Phase 10 is the REVIEW-ITERATION-1 REMEDIATION phase, appended by the
-#   reopened delivery boundary: it restores evidence the reviewer already owns
-#   (review-iter-1 F-1, F-2, F-3, F-4, F-5, F-6, F-7, F-8). It owns NO acceptance
-#   criterion, NO case id, and NO mutation row: the AC ownership (41), the TC map
+#   Phase 10 is the REVIEW-ITERATION-1 REMEDIATION phase and phase 11 the
+#   REVIEW-ITERATION-2 REMEDIATION phase, each appended by the reopened delivery
+#   boundary: they restore evidence the reviewer already owns (review-iter-1
+#   F-1..F-8; review-iter-2 N-1, N-3, F-7, N-2, N-4). Neither owns an acceptance
+#   criterion, a case id, or a mutation row: the AC ownership (41), the TC map
 #   (74) and the mutation register (120 rows, M1-M120) are unchanged, and every
-#   assertion it adds carries its planted in-case control rather than a new
-#   register row. Its scope is the fix surface the review named, nothing else.
+#   assertion they add carries its planted in-case control rather than a new
+#   register row. Their scope is the fix surface the reviews named, nothing else.
 #
 # RECORDED AUTHORIZED DEVIATION (Option B) — binding, and NOT to be re-derived:
 #   "six phase-2 cases are proven at a narrower surface (D2 spawn/status/log-sink)
@@ -2968,3 +2969,144 @@ phases:
         role: producer
     doneArtifacts:
       pipelineId: "CI pipeline for the GH-348 phase-10 remediation commit (every loop suite, the pinned/invariant suites, and the aggregate gate green at the phase HEAD)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 11 — REVIEW-ITERATION-2 REMEDIATION (review-iter-2.yaml; findings N-1,
+  # N-3, F-7, N-2, N-4). Appended by the reopened delivery boundary. Not a design
+  # phase and not a scope extension: every task restores evidence under a clause
+  # that already authorises it.
+  #
+  # Owns: 0 AC, 0 TC, 0 mutation rows. The three partitions are UNCHANGED — AC
+  #   ownership stays 41 (8 + 5 + 12 + ... = 41; this phase adds 0), the TC map
+  #   stays 74, and the mutation register stays 120 rows (M1-M120). Each new
+  #   assertion carries its planted in-case control, so no register row is needed.
+  #
+  # Verb surface at this boundary: NO change. The five-verb grammar, the flags,
+  #   the exits, the status block and the log bounds are phase 7's; this phase
+  #   changes one production time-source read, one liveness fact, and one additive
+  #   OPTIONAL record field.
+  #
+  # Goal: close the review's FAIL. A prior `blocker.answer` must not suppress a
+  #   stuck verdict (the kind-specific instant is `answeredAt`, not `recordedAt`);
+  #   an unverifiable joined identity must read as unknown-liveness (no verdict, no
+  #   kill); the observed progress must be DURABLE on the loop's own session record
+  #   so a separate-process `status` carries it; and the test plan's verifier claim
+  #   must name the mechanism that actually exists.
+  #
+  # Obligations:
+  #   11.1 N-1 BLOCKER — kind-specific artifact instants (F-5 "no artifact advance
+  #        since that observation", AC-F5-1, DM-6). A new pure helper
+  #        `artifactAdvancedSince(records, sinceMs)` in `domain/loop-verdict.ts`
+  #        resolves the instant PER KIND: `recordedAt` for `merge.transaction`,
+  #        `answeredAt` for `blocker.answer`. Only a record that genuinely carries
+  #        no parseable instant falls back to "advance" (kill-safe). Production
+  #        calls the helper; new cases drive it over REAL records built by the
+  #        delivered constructors (`appendBlockerAnswer` / the merge append) so a
+  #        prior blocker answer no longer suppresses `stuck`, with a within-window
+  #        control.
+  #   11.2 N-3 MINOR — unknown-liveness on an unverifiable join (F-6 "joined and
+  #        observed", AC-F6-4, AC-F6-5). `factsOfEffect` carries `liveness:
+  #        "unknown"` when the recorded start time is null, so the cycle cannot
+  #        reach a stuck verdict or attempt a terminate for an unverifiable
+  #        identity; the null-start join case asserts zero traffic past the window
+  #        produces no verdict and no kill, and `live-facts-unknown` appears.
+  #   11.3 F-7 (carried) — DURABLE observed progress (API-4, DM-1). `loop.session`
+  #        gains the additive OPTIONAL field `progressState`
+  #        (`positive`|`zero`|`unknown`), ABSENT before the first reading and never
+  #        fabricated. The acquisition record carries the first reading; a later
+  #        record is appended only when the state CHANGES (never per cycle), and
+  #        the `ended` record carries the last observed state. The projection reads
+  #        the newest recorded `progressState`, so a separate-process `status`
+  #        carries it. DM-1's declared field list stays accurate: the spec lists
+  #        the record's required fields and §25.4 Appendix D leaves identifiers
+  #        "beyond the declared fields" implementation-decided, so this additive
+  #        optional member is inside that latitude and the spec is NOT edited.
+  #   11.4 N-2 MINOR — test-plan verifier correction (AC-F8-5 scoping). The
+  #        one-line claim that `tests/checks/doc-conformance.test.ts` enforces the
+  #        page/constant boundary is FALSE; the sentence is corrected to name the
+  #        actual mechanism (the lifecycle-phase-7 one-off reconciliation recorded
+  #        in pm-notes), keeping AC-F8-5's "documentation-phase check" scope. This
+  #        is the only test-plan edit this phase makes.
+  #   11.6 DELIVERED PIN UPDATE (declared at plan revision, reported): the three
+  #        new verdict-tier exports (`artifactAdvancedSince`, `artifactInstantOf`,
+  #        `MERGE_TRANSACTION_RECORD_KIND`) need their allowance rows in
+  #        `tests/structure/content-inventory.test.ts`. A pin update, never a
+  #        relaxation: no entry is removed and an unlisted export still fails.
+  #
+  #   11.5 N-4 INFO — declaration accuracy (plan-audit SCOPE_DEVIATION).
+  #        `packages/core/src/app/index.ts` received phase 10's `newestLanePerRef`
+  #        re-export but was not in phase 10's list; it is declared HERE as a
+  #        declared pre-existing contribution (no code change in this phase).
+  #
+  # Code areas (concrete):
+  #   packages/core/src/contracts/loop.ts            (optional progressState)
+  #   packages/core/src/state/loop.ts                (parse the optional field)
+  #   packages/core/src/app/loop-session.ts          (record builder field)
+  #   packages/core/src/app/loop-supervisor.ts       (liveness, persisted progress,
+  #                                                   projection)
+  #   packages/core/src/domain/loop-verdict.ts       (artifactAdvancedSince)
+  #   packages/core/src/index.ts                     (re-export, if needed)
+  #   packages/core/src/app/index.ts                 (N-4 declared only)
+  #   packages/cli/src/production.ts                 (call the helper)
+  #   tests/fixtures/loop/harness.ts                 (durable progress hooks)
+  #   tests/fixtures/loop/golden/status.ts           (durable-progress golden)
+  #   tests/behaviour/loop-stuck.test.ts             (prior blocker/merge cases)
+  #   tests/behaviour/loop-instance.test.ts          (unknown-liveness case)
+  #   tests/behaviour/loop-status.test.ts            (fresh-process progress case)
+  #   tests/behaviour/loop-spawn.test.ts             (record field set)
+  #   tests/structure/content-inventory.test.ts      (executable allowance)
+  #   doc/changes/.../chg-GH-348-test-plan.md        (N-2 one-line correction)
+  #
+  # Acceptance: none claimed (0 AC, 0 TC, 0 mutation rows). The review record
+  #   (code-review/review-iter-2.yaml) is the task list, and lifecycle phase 8
+  #   (review_fix) re-reviews against it.
+  #
+  # Gate (expected signal: exit 0; the loop behaviour/conformance/structure/checks
+  #   suites green including the new prior-blocker, unknown-liveness and
+  #   durable-progress cases; the pinned and invariant suites unchanged and green;
+  #   the aggregate `pnpm check` exit 0 at the phase HEAD):
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-*.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop tests/structure/loop-*.test.ts tests/checks/loop-*.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/install-conformance.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/event-mount-guards.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/event-taxonomy-single-source.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/supervision-mounting.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 11
+    title: "Review-iteration-2 remediation: kind-specific artifact instants for merge and blocker records, unknown-liveness on an unverifiable join, durable observed progress on loop.session, and the test-plan verifier correction (0 AC / 0 TC / 0 mutation rows)"
+    kind: delivery
+    summary: "fix(GH-348): review-iteration-2 remediation for the artifact instants, the join liveness and the durable progress fact"
+    scope:
+      files:
+        - packages/core/src/contracts/loop.ts
+        - packages/core/src/state/loop.ts
+        - packages/core/src/app/loop-session.ts
+        - packages/core/src/app/loop-supervisor.ts
+        - packages/core/src/domain/loop-verdict.ts
+        - packages/core/src/index.ts
+        # N-4: declared as a PRE-EXISTING contribution (phase 10's re-export);
+        # no code change in this phase.
+        - packages/core/src/app/index.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/loop/harness.ts
+        - tests/fixtures/loop/golden/status.ts
+        - tests/behaviour/loop-stuck.test.ts
+        - tests/behaviour/loop-instance.test.ts
+        - tests/behaviour/loop-status.test.ts
+        - tests/behaviour/loop-spawn.test.ts
+        # DELIVERED PIN UPDATE (obligation 11.6): the three new verdict-tier
+        # exports need their executable-allowance rows.
+        - tests/structure/content-inventory.test.ts
+        - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-test-plan.md
+      folders:
+        - doc/changes/2026-11/2026-11-19--GH-348--loop-supervision
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/loop.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/domain/loop-verdict.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-348 phase-11 remediation commit (every loop suite, the pinned/invariant suites, and the aggregate gate green at the phase HEAD)"

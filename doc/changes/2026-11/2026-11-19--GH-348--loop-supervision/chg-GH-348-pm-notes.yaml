@@ -688,6 +688,34 @@ notes:
       the clause that already authorises it."
     type: decision
     date: "2026-11-19"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml). Iteration-1
+      dispositions: 6 CLOSED (F-2, F-4, F-5, F-6, F-8, F-9), F-1 NOT CLOSED,
+      F-3 CLOSED with residual N-3, F-7 PARTIALLY CLOSED. New blocker N-1 is the
+      same defect class as F-1 in the sibling arm: artifactAdvanced reads
+      `recordedAt` for both kinds, but `blocker.answer` stores its instant as
+      `answeredAt`, so the undatable-record fallback fires for every blocker
+      answer and a stuck CEO is never detected in a repository that has answered a
+      blocker; the F-1 harness injects instants and cannot catch it. Other new
+      findings: N-2 (the test plan claims doc-conformance enforces the
+      page/constant boundary; it does not - the phase-7 reconciliation does), N-3
+      (factsOfEffect forces `alive` on the null-start-time join, so the documented
+      unknown-liveness rule is not enforced), N-4 (core app index.ts outside phase
+      10 scope). Verified green by the review: loop behaviour 93, conformance
+      structure/checks 36, pinned/no-shell/inventory 59, doc suites 30,
+      doc-distribution 96 docs, range gate PASS over 41 commits, boundary 9/6,
+      no-shell extended to 10 loop files, ten divergences unchanged."
+    type: info
+    date: "2026-11-19"
+  - text: "Review-iteration-2 remediation routing: a NEW plan phase 11 owns N-1
+      (read the per-kind instant, including `answeredAt`, plus a case proving a
+      prior blocker answer does not suppress a later verdict), N-3 (the null
+      start-time join must stay unknown-liveness), F-7 (persist the last observed
+      progress so a separate-process status projects it), N-2 (correct the test
+      plan sentence to name the phase-7 reconciliation) and N-4 (declare the
+      file in scope). No decision is reopened. Review iteration 3 is the last
+      permitted; if it fails, the PM stops and reports instead of looping."
+    type: decision
+    date: "2026-11-19"
   - text: "PLAN PHASE 1 complete (loop contracts, the two record kinds with their
       folds, and the pure verdict/backoff/log/status/prompt tier). Implemented
       before its commit. Gates all exit 0: bun test

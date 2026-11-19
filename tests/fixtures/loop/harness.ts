@@ -80,6 +80,8 @@ export const LOOP_DEFAULT_SETTINGS = {
 
 export type LoopHarnessOptions = {
   readonly label?: string;
+  /** Reuse an existing state root (a FRESH process over the same ledger). */
+  readonly root?: string;
   readonly settings?: Partial<Record<CoordinatorConfigKey, number>>;
   readonly session?: Parameters<typeof createScriptedSession>[0];
   /** How many cycle iterations the injected driver runs before its declared end. */
@@ -196,7 +198,8 @@ export type LoopHarness = {
 const HOLDER_FOR = (pid: number, start: number): string => `pid:${pid}:start:${start}`;
 
 export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness => {
-  const root = mkdtempSync(join(tmpdir(), `gh348-loop-${options.label ?? "case"}-`));
+  const root =
+    options.root ?? mkdtempSync(join(tmpdir(), `gh348-loop-${options.label ?? "case"}-`));
   const identity = makeIdentity(root);
   const clock = {
     value: 1_000_000,
@@ -253,7 +256,13 @@ export const createLoopHarness = (options: LoopHarnessOptions = {}): LoopHarness
   const sessionPort = createScriptedSession({
     ...options.session,
     ...(options.session?.facts === undefined
-      ? { facts: { ...absentSessionFacts(), ...(options.session?.facts ?? {}) } }
+      ? {
+          facts: {
+            ...absentSessionFacts(),
+            harnessKind: "opencode",
+            ...(options.session?.facts ?? {}),
+          },
+        }
       : {}),
   });
 

@@ -131,6 +131,14 @@ export type LoopSessionRecord = {
   /** The fresh-spawn title, or `null` on a resume or an absent fact. */
   readonly title: string | null;
   readonly state: LoopSessionState;
+  /**
+   * The progress state the supervisor last OBSERVED for this session (DM-1's
+   * declared fields are unchanged; this additive OPTIONAL member is the
+   * implementation-decided identifier §25.4 Appendix D leaves open). ABSENT
+   * before the first reading and never fabricated; a later record is appended
+   * only when the state changes, never per cycle.
+   */
+  readonly progressState?: CoordinatorProgressState;
   readonly acquiredAt: string;
   readonly recordedAt: string;
 };
