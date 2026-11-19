@@ -95,7 +95,7 @@ describe("TC-INST-060 install --dry-run prints the declared plan and writes noth
       });
       expect(outcome.error).toBeUndefined();
       expect(snapshotTree(target.base)).toEqual(before);
-      expect(daemon.log()).toEqual(["status:absent"]);
+      expect(daemon.log()).toEqual([]);
       const plan = dataOf(outcome).plan as readonly string[];
       const joined = plan.join("\n");
       expect(joined).toContain(target.destinationPath);
@@ -103,7 +103,7 @@ describe("TC-INST-060 install --dry-run prints the declared plan and writes noth
       expect(joined).toContain(target.slotPath);
       expect(joined).toContain(join(target.home, ".zshrc"));
       expect(joined).toContain("export PATH=");
-      expect(joined).toContain("daemon: absent");
+      expect(joined).toContain("daemon: unchecked");
       expect(joined).toContain(running.path);
     } finally {
       target.dispose();

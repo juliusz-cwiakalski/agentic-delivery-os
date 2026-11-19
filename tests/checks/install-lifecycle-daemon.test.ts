@@ -185,4 +185,48 @@ describe("TC-INST-081 --stop-daemon stops before the swap or removal", () => {
       target.dispose();
     }
   });
+
+  test("a dry-run with --stop-daemon takes no daemon action on any guarded path", async () => {
+    for (const positionals of [
+      [] as readonly string[],
+      ["uninstall"] as readonly string[],
+      ["purge"] as readonly string[],
+    ]) {
+      const target = fresh();
+      try {
+        await seeded(target);
+        const daemon = live();
+        const before = snapshotTree(target.base);
+        const runtime = createInstallRuntime({
+          scratch: target,
+          runningArtifactPath: positionals.length === 0 ? running.path : target.destinationPath,
+          identity: fixtureIdentity({ commit: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }),
+          environment: { HOME: target.home },
+          daemon: daemon.port,
+        });
+        const outcome = await invoke(runtime, positionals, {
+          "--dry-run": true,
+          "--stop-daemon": true,
+        });
+        // No read and no stop: the ordered log is empty, so the live daemon is
+        // still running and nothing was written.
+        expect({ positionals, error: outcome.error }).toEqual({
+          positionals,
+          error: undefined,
+        });
+        expect(daemon.log()).toEqual([]);
+        expect(daemon.state()).toEqual({ running: true, instanceId: "live-1", pid: 4242 });
+        expect(snapshotTree(target.base)).toEqual(before);
+        // The plan still reports the daemon disposition, as "not acted upon".
+        expect(dataOf(outcome).daemon).toBe("unchecked");
+        if (positionals.length === 0) {
+          const plan = (dataOf(outcome).plan as readonly string[]).join("\n");
+          expect(plan).toContain("daemon: unchecked");
+          expect(plan).not.toContain("daemon: stopped");
+        }
+      } finally {
+        target.dispose();
+      }
+    }
+  });
 });

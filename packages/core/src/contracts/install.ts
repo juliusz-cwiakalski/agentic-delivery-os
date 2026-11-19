@@ -193,7 +193,12 @@ export type InstallOutcome = {
   readonly recordPath: string;
   readonly recordState: InstallRecordState;
   readonly reconciliation?: InstallReconciliationReport;
-  readonly daemon: "absent" | "running" | "stopped";
+  /**
+   * The daemon disposition: `absent` or `stopped` on a real run, and
+   * `unchecked` on a dry-run, whose branch is entered before the guard and so
+   * never reads or stops the daemon (F-11, NFR-5).
+   */
+  readonly daemon: "absent" | "running" | "stopped" | "unchecked";
   readonly advisories: readonly string[];
   readonly pathBlock?: InstallPathBlockRecord;
   readonly plan?: readonly string[];

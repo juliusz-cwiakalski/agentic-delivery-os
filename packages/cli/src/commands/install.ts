@@ -161,6 +161,18 @@ const daemonGate = async (
   return { ok: true, state: "stopped" };
 };
 
+/**
+ * The daemon disposition every dry-run reports: the dry-run branch is entered
+ * before the guard, so a dry-run neither reads the live instance nor stops it
+ * (F-11, NFR-5). The claim is "not acted upon", never a guess at the state.
+ */
+const DRY_RUN_DAEMON = "unchecked" as const;
+
+/** The plan line that states the dry-run daemon disposition without a read. */
+const DRY_RUN_DAEMON_LINE =
+  `${DRY_RUN_DAEMON} — a dry-run neither reads nor stops the daemon; a real run refuses a live ` +
+  "holder unless `--stop-daemon` and otherwise stops it before the swap or removal";
+
 /** The running artifact's directory, or the empty string when unresolved. */
 const artifactDirectoryOf = (runtime: InstallRuntime): string =>
   runtime.runningArtifactPath.replace(/\/[^/]+$/u, "");
@@ -363,9 +375,10 @@ const runInstall = async (
     git: runtime.git.readCheckout(artifactDirectory),
   });
   if (!admission.ok) return admissionRefusal(admission);
-  const gate = await daemonGate(runtime, options.stopDaemon);
-  if (!gate.ok) return gate.refusal;
 
+  // Everything up to the dry-run branch is read-only, so the plan can be
+  // produced without any daemon action. The guard is evaluated after the branch
+  // (below), before the first write of a real run.
   const verdict = stateFormatVerdict(runtime);
   const priorAdvisory =
     runtime.priorNamespaceArtifacts.length === 0
@@ -429,9 +442,8 @@ const runInstall = async (
       block,
     };
   })();
-  if (!profilePlan.ok) return profilePlan.refusal;
-
   if (options.dryRun) {
+    if (!profilePlan.ok) return profilePlan.refusal;
     return {
       data: {
         outcome: "plan",
@@ -441,14 +453,14 @@ const runInstall = async (
         slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
         recordState,
-        daemon: gate.state,
+        daemon: DRY_RUN_DAEMON,
         advisories,
         plan: [
           ...installPlanLines({
             runtime,
             plan: plannedPlan,
             advisories,
-            daemon: gate.state,
+            daemon: DRY_RUN_DAEMON_LINE,
             addToPath: options.addToPath,
             ...(options.shellProfile === undefined ? {} : { shellProfile: options.shellProfile }),
           }),
@@ -463,6 +475,12 @@ const runInstall = async (
       } satisfies InstallOutcome,
     };
   }
+
+  // A real run: the guard stays before every write, and before the shell-profile
+  // refusal it precedes, so the delivered refusal order is unchanged.
+  const gate = await daemonGate(runtime, options.stopDaemon);
+  if (!gate.ok) return gate.refusal;
+  if (!profilePlan.ok) return profilePlan.refusal;
 
   if (runtime.fault?.failAt("identity-compare") === true) {
     return internalFailure("the artifact-agreement step was injected to fail; nothing is staged");
@@ -730,7 +748,7 @@ const runRollback = async (
         slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
         recordState: recordStateOf(record, running),
-        daemon: "absent",
+        daemon: DRY_RUN_DAEMON,
         advisories: [],
         plan,
       } satisfies InstallOutcome,
@@ -819,8 +837,6 @@ const runUninstall = async (
   options: { readonly dryRun: boolean; readonly stopDaemon: boolean },
 ): Promise<unknown> => {
   const { runtime } = command;
-  const gate = await daemonGate(runtime, options.stopDaemon);
-  if (!gate.ok) return gate.refusal;
   const record = readRecord(runtime);
   const facts = removalFactsOf(
     runtime,
@@ -839,7 +855,7 @@ const runUninstall = async (
         slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
         recordState: recordStateOf(record, runtime.runningIdentity),
-        daemon: gate.state,
+        daemon: DRY_RUN_DAEMON,
         advisories: [],
         removed: members.map((member) =>
           member.member === "path-block" ? `${member.path} (managed block only)` : member.path,
@@ -848,6 +864,10 @@ const runUninstall = async (
       } satisfies InstallOutcome,
     };
   }
+  // A real run: the guard is evaluated after the read-only plan and before the
+  // first removal.
+  const gate = await daemonGate(runtime, options.stopDaemon);
+  if (!gate.ok) return gate.refusal;
   const removed: string[] = [];
   for (const member of members) {
     if (member.member === "path-block") {
@@ -886,8 +906,6 @@ const runPurge = async (
         "`--yes` to confirm; nothing was removed",
     );
   }
-  const gate = await daemonGate(runtime, options.stopDaemon);
-  if (!gate.ok) return gate.refusal;
   const record = readRecord(runtime);
   const facts = removalFactsOf(
     runtime,
@@ -907,13 +925,17 @@ const runPurge = async (
         slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
         recordState: recordStateOf(record, runtime.runningIdentity),
-        daemon: gate.state,
+        daemon: DRY_RUN_DAEMON,
         advisories: [],
         plan: removal,
         residual,
       } satisfies InstallOutcome,
     };
   }
+  // A real run: the guard is evaluated after the read-only plan and before the
+  // first removal.
+  const gate = await daemonGate(runtime, options.stopDaemon);
+  if (!gate.ok) return gate.refusal;
   if (removal.length === 0) {
     return {
       data: {
