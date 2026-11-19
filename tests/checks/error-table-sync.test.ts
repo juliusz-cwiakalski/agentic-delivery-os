@@ -9,13 +9,17 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { classifyThrown } from "../../packages/cli/src/classify";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import {
+  ADAPTER_OPERATIONS,
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_COLLECTOR_IDS,
+  CLOSEOUT_STEP_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
+  PM_NOTES_LINT_CODES,
 } from "../../packages/core/src/contracts/index";
 import {
   collectorIdOfFamilyCode,
@@ -1830,5 +1834,180 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     const declared = scanReferences("coordinator.already-running", [...DOMAIN_KINDS]);
     expect(declared.map((reference) => reference.code)).toEqual(["coordinator.already-running"]);
     expect(declared.every((reference) => reference.recognized)).toBe(true);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* TC-SYNC-001 — the row-reachability half and the residual pin floor          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The row-REACHABILITY half of TC-SYNC-001 (authored in the final delivery
+ * phase, the first phase in which all three additive rows have an emitting
+ * branch) plus the residual pin floor re-asserted as a whole.
+ *
+ * Reachability is a property of the production sources, not of the table: a
+ * declared row is reachable when a named refusal branch emits its exact code.
+ * The retained reserved row is the discriminator — it is declared, carried by
+ * the declaration, and emitted by no branch, so a scan that reported every
+ * declared row as reachable could not pass this block.
+ */
+const REACHABILITY_BRANCHES = [
+  {
+    code: "merge.sync-required",
+    source: "packages/core/src/domain/merge-transaction.ts",
+    branch: "the `conflicting` arm and the `behind-unconfirmed` classification",
+  },
+  {
+    code: "merge.mergeability-unknown",
+    source: "packages/core/src/domain/merge-transaction.ts",
+    branch: "the `unknown`-after-one-re-read arm",
+  },
+  {
+    code: "lint.phases.divergent",
+    source: "packages/cli/src/commands/lint.ts",
+    branch: "the both-target divergence comparison",
+  },
+] as const;
+
+const RESERVED_UNREACHABLE = "merge.rebase-conflict";
+
+const sourceOf = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
+
+/** The exact `code:` emission sites a source carries for one code. */
+const emissionCount = (relative: string, code: string): number =>
+  sourceOf(relative).split(`code: "${code}"`).length - 1;
+
+describe("TC-SYNC-001 every additive row is emitted by a named branch", () => {
+  test("the two merge rows and the lint row each have an emitting branch", () => {
+    for (const entry of REACHABILITY_BRANCHES) {
+      expect(
+        emissionCount(entry.source, entry.code),
+        `${entry.code} (${entry.branch})`,
+      ).toBeGreaterThan(0);
+      const rows = ERROR_TABLE.filter((row) => row.code === entry.code);
+      expect(rows, entry.code).toHaveLength(1);
+      const row = rows[0] as ErrorTableEntry;
+      expect(row.domainKind).toBe(entry.code.startsWith("lint.") ? "lint" : "merge");
+      expect([0, 1, 2]).toContain(projectExitCode(row.projectionClass));
+    }
+  });
+
+  test("the retained reserved row is declared and emitted by no branch", () => {
+    // The discriminator: reserved is not unreachable-by-accident. It keeps its
+    // row, its projection and its remediation, and no delivered path emits it.
+    const rows = ERROR_TABLE.filter((row) => row.code === RESERVED_UNREACHABLE);
+    expect(rows).toHaveLength(1);
+    for (const source of [
+      "packages/core/src/domain/merge-transaction.ts",
+      "packages/cli/src/production.ts",
+    ]) {
+      expect(emissionCount(source, RESERVED_UNREACHABLE), source).toBe(0);
+    }
+  });
+
+  test("the reachability scan is non-vacuous: an undeclared code has no branch", () => {
+    expect(
+      emissionCount("packages/core/src/domain/merge-transaction.ts", "merge.declared-nowhere"),
+    ).toBe(0);
+    // The scan reads real sources, so a wrongly-named branch fails here.
+    expect(emissionCount("packages/cli/src/commands/lint.ts", "lint.phases.divergent")).toBe(1);
+  });
+});
+
+/**
+ * The residual floor: the identity total on all seven pin sites and both pages,
+ * the two-segment allowlist, the delivered-row count, the lint-row
+ * decomposition, the legacy-token scan's planted controls, and the two closeout
+ * goldens at thirteen step lines. Each value is asserted exactly in every place
+ * it exists; none is loosened to a range.
+ *
+ * The operation set's eighteen enforcing pins, the ten moved sets and the merge
+ * golden split are owned by `TC-SYNC-009`, `TC-SYNC-002`, `TC-SYNC-003` and
+ * `TC-FLOOR-001..005`; this block re-asserts the identity-and-count floor those
+ * cases share, not their oracles.
+ */
+const FLOOR_IDENTITY_TOTAL = 167;
+const FLOOR_DELIVERED_TOTAL = 166;
+const FLOOR_ALLOWLIST_TOTAL = 68;
+
+const FLOOR_IDENTITY_SITES = [
+  "tests/checks/error-table-sync.test.ts",
+  "tests/checks/supervision-error-socialization.test.ts",
+  "tests/structure/error-table.test.ts",
+  "tests/structure/dispatch-attempts-taxonomy.test.ts",
+  "tests/structure/verify-gates-suite-map-contract.test.ts",
+  "tests/structure/ceremony-contract.test.ts",
+  "tests/behaviour/ceremony-nonregression.test.ts",
+] as const;
+
+describe("TC-SYNC-001 the residual pin floor is exact and non-vacuous", () => {
+  test("all seven identity sites carry the live total and the delivered-row pin", () => {
+    for (const site of FLOOR_IDENTITY_SITES) {
+      const text = sourceOf(site);
+      expect(text, site).toContain(String(FLOOR_IDENTITY_TOTAL));
+    }
+    expect(sourceOf("tests/structure/error-table.test.ts")).toContain(
+      String(FLOOR_DELIVERED_TOTAL),
+    );
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).filter((row) => row.domainKind !== "spend"),
+    ).toHaveLength(FLOOR_DELIVERED_TOTAL);
+  });
+
+  test("the two identity pages carry the live numbers, not a superseded one", () => {
+    const metrics = sourceOf("doc/spec/features/feature-metrics.md");
+    expect(metrics).toContain(
+      `${FLOOR_IDENTITY_TOTAL} entries, ${FLOOR_DELIVERED_TOTAL} delivered rows, and ${FLOOR_ALLOWLIST_TOTAL} allowlisted two-segment codes`,
+    );
+    const ceremony = sourceOf("doc/spec/features/feature-ceremony-runner.md");
+    expect(ceremony.split(`${FLOOR_IDENTITY_TOTAL} identities`).length - 1).toBe(3);
+  });
+
+  test("the lint decomposition stays five / six / seven", () => {
+    // The pm-notes-only constant declares what that invocation can emit; the
+    // documented pm-notes set and the machine lint rows are different counts.
+    expect([...PM_NOTES_LINT_CODES]).toHaveLength(5);
+    expect([...PM_NOTES_LINT_CODES]).not.toContain("lint.phases.divergent");
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).filter((row) => row.domainKind === "lint"),
+    ).toHaveLength(7);
+    const documented = sourceOf("doc/spec/features/feature-result-contract.md");
+    expect(documented).toContain("carries the six pm-notes lint identities");
+  });
+
+  test("the legacy-token scan keeps its planted stale controls", () => {
+    const scan = sourceOf("tests/structure/error-table.test.ts");
+    // The scan exists, the two planted-stale controls exist, and the live
+    // total is not a legacy token.
+    expect(scan).toContain("leftoverPins(");
+    expect(scan).toContain("STALE_TOTAL");
+    expect(scan).toContain("STALE_DELIVERED");
+    expect(scan).toContain("LEGACY_ARITHMETIC_DELIVERED");
+    // The live total is asserted above at every site; a stale token anywhere in
+    // the scanned set fails that suite, which is why this block does not repeat
+    // the legacy literals.
+  });
+
+  test("the two closeout goldens carry thirteen step lines in the declared order", () => {
+    const human = sourceOf("tests/fixtures/closeout/golden/human.txt");
+    const numbered = human.split("\n").filter((line) => /^\d+\. /u.test(line));
+    expect(numbered).toHaveLength(CLOSEOUT_STEP_IDS.length);
+    expect(CLOSEOUT_STEP_IDS).toHaveLength(13);
+    const envelope = JSON.parse(sourceOf("tests/fixtures/closeout/golden/envelope-data.json")) as {
+      readonly steps: readonly { readonly stepId: string }[];
+    };
+    expect(envelope.steps.map((step) => step.stepId)).toEqual([...CLOSEOUT_STEP_IDS]);
+    expect(human).toContain("12. milestone-sync:");
+    expect(human).toContain("13. capsule:");
+  });
+
+  test("the closed operation set is ten and the reference behavior page names all ten", () => {
+    expect(ADAPTER_OPERATIONS).toHaveLength(10);
+    expect(ADAPTER_OPERATIONS.at(-1)).toBe("close-milestone");
+    const reference = sourceOf("doc/spec/features/feature-adapter-reference-behavior.md");
+    for (const operation of ADAPTER_OPERATIONS) {
+      expect(reference, operation).toContain(`| \`${operation}\` |`);
+    }
   });
 });

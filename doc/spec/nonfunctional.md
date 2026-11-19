@@ -351,7 +351,7 @@ while nothing but the delivered launcher is at that path. See
   live child processes, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
-- Cross-adapter parity is a declared matrix over the nine closed operations and the
+- Cross-adapter parity is a declared matrix over the ten closed operations and the
   registered adapters with a six-dimension basis, an adjudicated class-set
   difference register, and a pure gate over a gate-local observation record whose
   violations name provider, operation, and one of nine closed clause ids. The gate
