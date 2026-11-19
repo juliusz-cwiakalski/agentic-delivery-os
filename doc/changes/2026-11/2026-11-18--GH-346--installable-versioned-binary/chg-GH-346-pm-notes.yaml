@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-19T00:46:53.799Z }
   review_fix: { started: null, completed: 2026-11-19T03:38:45.897Z }
   quality_gates: { started: null, completed: 2026-11-19T03:59:34.655Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-19T04:00:20.097Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "TDR-0036 — Install lifecycle is one composed `install` command family in
