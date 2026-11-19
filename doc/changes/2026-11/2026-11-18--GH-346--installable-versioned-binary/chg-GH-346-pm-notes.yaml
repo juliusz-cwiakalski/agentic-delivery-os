@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-18T18:48:25.093Z }
   delivery: { started: null, completed: 2026-11-19T00:43:51.695Z }
   system_spec_update: { started: null, completed: 2026-11-19T00:46:53.799Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-19T03:38:45.897Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -343,5 +343,32 @@ notes:
       not producible because no model transport is configured. Six delivery
       commits therefore carry path-derived subjects. Recorded rather than worked
       around; the branch-range gate still passes."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration 1: FAIL (2 high, 3 medium, 6 low, 1 info). The high
+      findings were real: the compatibility enumeration's truncated flag was
+      dropped by the production composition (AC-F7-3/NFR-7 false), and
+      TC-BIN-068 used Bun's 5 s default timeout. Remediation commit d6afde09
+      fixed all twelve (stateRootsTruncated carried into the verdict with a real
+      production-path test; explicit 120 s timeouts; one PATH-block write with
+      an honoured result and mkdirp; the compiled-artifact slot predicate; a
+      destination-artifact rollback precondition; the three-rename plan text; a
+      bounded NUL-stripped installer probe; the four-outcome comment; the
+      rollback dry-run daemon arm; real conformance mutants; distinct
+      installed/unreadable rendering). pnpm check 10,739 pass / 4 skip / 0
+      fail."
+    type: info
+    date: "2026-11-19"
+  - text: "Review iteration 2: FAIL with two blocking findings the remediation had
+      introduced: F-13 — the new destination-shape rollback refusal is a fifth
+      cause the spec still called four; F-15 — install-profile's parent
+      derivation used slice(0, lastIndexOf('/')) and created a stray '.zshr'
+      directory for a bare '--shell-profile .zshrc'. Remediation commit 485e675d
+      fixed F-15 (dirname + skip of '.'/'/'), F-16 (bounded readPrefix with a
+      2-byte probe, no whole-slot read), F-17 (status invalid matches rollback),
+      F-18 (ordering kept, message corrected), and guarded F-13. Spec v1.9
+      declares the five causes as an existing-row trigger extension; test plan
+      v1.7 has 88 cases, 34/34 AC coverage, OQ-TP-10 resolved. pnpm check 10,746
+      pass / 4 skip / 0 fail."
     type: info
     date: "2026-11-19"
