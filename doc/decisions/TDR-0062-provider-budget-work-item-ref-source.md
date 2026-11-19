@@ -1,5 +1,5 @@
 ---
-id: TDR-0054
+id: TDR-0062
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -51,7 +51,7 @@ ai_assistance:
   human_decider: null
   reviewers: []
 revisit_triggers:
-  - "`provider simulate`'s v1 fixture has shipped by the time this lands: the `workItemRef` field then belongs to `delivery.provider.simulate.v2`, never to a widened v1. Today v1 cannot have shipped because the family is unreachable in production (TDR-0053)."
+  - "`provider simulate`'s v1 fixture has shipped by the time this lands: the `workItemRef` field then belongs to `delivery.provider.simulate.v2`, never to a widened v1. Today v1 cannot have shipped because the family is unreachable in production (TDR-0061)."
   - "A consumer needs a ref source that is not the local delivery context (a CI run with no checkout context, for example): that is a new composition fact with its own producer, decided then — not an environment variable and not a silently guessed ref."
   - "Operators report that `provider resolve` outside a delivery context refuses too often: the remedy is to disable or narrow the budget, or to introduce a deliberate calling surface. Do not soften the refusal into a window-only evaluation, which measures a different population than `spend --ref`."
   - "The spend read becomes all-refs (a project-scoped fold): then a window budget could honestly be ref-free, and this record's ref requirement must be re-derived rather than relaxed ad hoc."
@@ -76,24 +76,24 @@ links:
     - "packages/cli/src/production.ts"
     - "packages/adapters/src/file/pm-context.ts"
   diagrams: []
-  decisions: ["TDR-0049", "TDR-0050", "TDR-0053", "ADR-0007"]
+  decisions: ["TDR-0057", "TDR-0058", "TDR-0061", "ADR-0007"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0054: Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear
+# TDR-0062: Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear
 
 ## Context
 
 - **FACT:** `DM-3` declares one read-only port, `ProviderSpendTotalsPort`, whose input is `{ workItemRef, scopes: [{ scopeKey, fromMs }] }`; `scopes` are per declared budget, and a `ticket` scope is bounded by "the ref's beginning" (change spec §8.3 DM-3, Appendix C).
-- **FACT:** The measurement behind the port is `readSpendLedger(store, workItemRef)` — a **ref-scoped** verified fold. There is no all-refs fold: `spend`, `metrics`, and the gate all read one work item's ledger (TDR-0049 D2; `doc/spec/features/feature-spend.md`).
+- **FACT:** The measurement behind the port is `readSpendLedger(store, workItemRef)` — a **ref-scoped** verified fold. There is no all-refs fold: `spend`, `metrics`, and the gate all read one work item's ledger (TDR-0057 D2; `doc/spec/features/feature-spend.md`).
 - **FACT:** `provider resolve` accepts only `--chain` and `--profile`; `quota` accepts `--provider`; `parks list` accepts `--all`/`--provider`; `profile resolve` accepts `--agent`/`--for-spawn`; `watch status` accepts `--provider`. No member takes a ref, and the delivered grammar refuses any other flag (`packages/cli/src/commands/provider.ts:91-171`).
 - **FACT:** `spend` already answers exactly this question for an omitted `--ref`: `runtime.resolveActiveRef()` reads the local delivery context — `<cwd>/.ai/local/pm-context.yaml` via `readLocalPmContext({ path, fs })` — **without touching the state store**, and refuses `input.value.rejected` with "no active change context; pass `--ref <ref>`" when it cannot (`packages/cli/src/commands/spend.ts:209-216`; `packages/core/src/contracts/spend.ts:325-335`; `packages/cli/src/edge.ts:5615`).
 - **FACT:** `dispatch attempts` and `metrics` use the same seam with the same semantics (`packages/cli/src/production.ts:3211-3216`, `:4437`; `packages/cli/src/commands/metrics.ts:86`). The production composition already builds the path as `${cwd}/.ai/local/pm-context.yaml` (`packages/cli/src/production.ts:1880`).
 - **FACT:** The change's configuration rule is "policy expressed only in Jaiship config": provider policy resolves from typed configuration, and F-3 / `AC-F3-4` state that this change "introduces no environment variable and no flag". `NG-11` adds "no new command family, no new state record kind, no new store write path".
-- **FACT:** The simulate fixture (`delivery.provider.simulate.v1`, TDR-0050 D2 / Appendix D) declares the instant, chain/profile, credential outcomes, quota transport results, spend telemetry state and points, and zone offsets. It has **no** ref field, so a ticket-scope budget cannot be replayed offline.
-- **FACT:** TDR-0050 C-3 requires identical fixture bytes to produce byte-identical output on any host, and C-2 forbids an ambient read in simulate. A simulate path that read the local delivery context would decide differently on two machines for the same fixture.
+- **FACT:** The simulate fixture (`delivery.provider.simulate.v1`, TDR-0058 D2 / Appendix D) declares the instant, chain/profile, credential outcomes, quota transport results, spend telemetry state and points, and zone offsets. It has **no** ref field, so a ticket-scope budget cannot be replayed offline.
+- **FACT:** TDR-0058 C-3 requires identical fixture bytes to produce byte-identical output on any host, and C-2 forbids an ambient read in simulate. A simulate path that read the local delivery context would decide differently on two machines for the same fixture.
 - **FACT:** Tests inject the totals port, so a green suite coexists with a gate that has no subject. This is B2: the port takes a ref no artifact supplies, and no test can notice.
 - **Why now:** GH-350 is the change that introduces the ceiling. If the ref source is left to the implementer, one of two silent failures ships: a `ticket` budget that measures zero (a silent clear of the owner's cost directive) or a gate whose measured figure differs from `spend --ref` (three cost surfaces disagreeing about one delivery).
 
@@ -120,35 +120,35 @@ Two further constraints shape the answer. First, the ref is a **fact about which
 ### C-2: The measured figure equals `spend --ref` for the same selection and instant
 
 - **Statement:** The ref the gate measures is the ref `spend` would resolve for the same invocation facts, so the budget's measured cost/tokens equal the delivered spend fold's figure for that ref.
-- **Source:** Change spec `AC-F2-2` ("the measured figure equals `spend --ref` for the same selection and instant"); TDR-0049 driver 1 (one truth).
+- **Source:** Change spec `AC-F2-2` ("the measured figure equals `spend --ref` for the same selection and instant"); TDR-0057 driver 1 (one truth).
 - **Verification:** Test — same fixture/report facts drive both surfaces for one ref; 0 differences.
 - **Negotiable:** no.
 
 ### C-3: No state-store read to obtain the ref
 
 - **Statement:** Ref resolution reads only the local delivery context (an injected path plus file facts); it performs no state-store read, no fence, and no write.
-- **Source:** Delivered `spend` contract ("without touching the state store", `packages/core/src/contracts/spend.ts:330`); TDR-0049 C-1 (no second truth / no write on the evaluation path).
+- **Source:** Delivered `spend` contract ("without touching the state store", `packages/core/src/contracts/spend.ts:330`); TDR-0057 C-1 (no second truth / no write on the evaluation path).
 - **Verification:** Test — a poisoned/throwing store port observes zero calls during ref resolution; byte snapshot of the state root unchanged.
 - **Negotiable:** no.
 
 ### C-4: Fail loud, never silent-clear
 
 - **Statement:** When a budget must be evaluated and the ref cannot be resolved, the decision refuses with a typed identity; an enabled `ticket` budget is never measured as zero, never skipped, and never converted into a window-only evaluation.
-- **Source:** Prior decision (ADR-0007 C-5 no silent clear; TDR-0049 C-5); config-validation discipline (`AC-F2-1` "no partial evaluation occurs").
+- **Source:** Prior decision (ADR-0007 C-5 no silent clear; TDR-0057 C-5); config-validation discipline (`AC-F2-1` "no partial evaluation occurs").
 - **Verification:** Test — the unresolvable matrix (no context file, unreadable context, malformed ref) produces one refusal per case and zero measurements; a `ticket` budget never evaluates clear without a ref.
 - **Negotiable:** no.
 
 ### C-5: Simulate stays hermetic
 
 - **Statement:** `provider simulate` reads no local context, no environment, no clock, and no store; its ref comes only from the fixture document, so identical fixture bytes decide identically on any host.
-- **Source:** TDR-0050 C-2 and C-3; change spec `AC-F5-1` (zero ambient effects).
+- **Source:** TDR-0058 C-2 and C-3; change spec `AC-F5-1` (zero ambient effects).
 - **Verification:** Test — a recording file-facts seam observes zero local-context reads during simulate; paired-run byte equality across two fixture paths and two working directories.
 - **Negotiable:** no.
 
 ### C-6: Read-only members keep working outside a delivery context
 
 - **Statement:** `provider quota`, `provider profile resolve`, and `provider watch status` resolve no ref and never fail because no delivery context exists; a declared budget does not change their behaviour.
-- **Source:** Delivered behaviour of those members (they evaluate no budget); TDR-0049 (budget joins **chain resolution**, not profile eligibility or watch reads); operator ergonomics.
+- **Source:** Delivered behaviour of those members (they evaluate no budget); TDR-0057 (budget joins **chain resolution**, not profile eligibility or watch reads); operator ergonomics.
 - **Verification:** Test — the same invocations with no context file at all answer their normal outcome at exit 0 (or their delivered classified failure for a configuration problem), and a recording ref seam observes zero calls.
 - **Negotiable:** no.
 
@@ -188,13 +188,13 @@ Two further constraints shape the answer. First, the ref is a **fact about which
 | `spend` resolves an omitted `--ref` from the local context without a store read | FACT | `packages/cli/src/commands/spend.ts:209-216`; `packages/core/src/contracts/spend.ts:325-335`; `packages/cli/src/edge.ts:5615`, read 2026-11-19 | The chosen seam would be new invention and ALT-2/ALT-3 would compete | High |
 | The local context is `<cwd>/.ai/local/pm-context.yaml`, read via `readLocalPmContext({path, fs})` | FACT | `packages/cli/src/production.ts:1880`, `:3212`, `:4437`, read 2026-11-19 | The refusal's remedy text and the test seam would be wrong | High |
 | `dispatch attempts` and `metrics` use the same seam | FACT | `packages/cli/src/production.ts:3211-3216`; `packages/cli/src/commands/metrics.ts:86`, read 2026-11-19 | Driver 6 (precedent unity) weakens | High |
-| The spend read is ref-scoped; no all-refs fold exists | FACT | TDR-0049 D2; `doc/spec/features/feature-spend.md`; `readSpendLedger(store, workItemRef)`, read 2026-11-19 | "Window budgets are ref-free" would be true and D6 would change | High |
+| The spend read is ref-scoped; no all-refs fold exists | FACT | TDR-0057 D2; `doc/spec/features/feature-spend.md`; `readSpendLedger(store, workItemRef)`, read 2026-11-19 | "Window budgets are ref-free" would be true and D6 would change | High |
 | `provider resolve` accepts only `--chain`/`--profile`; no member takes a ref | FACT | `packages/cli/src/commands/provider.ts:91-171`, read 2026-11-19 | ALT-2 would be cheaper | High |
-| The fixture schema has no ref field | FACT | TDR-0050 D2; change spec Appendix D, read 2026-11-19 | D7 would be unnecessary | High |
+| The fixture schema has no ref field | FACT | TDR-0058 D2; change spec Appendix D, read 2026-11-19 | D7 would be unnecessary | High |
 | The change forbids new env vars and provider flags | FACT | change spec F-3, `AC-F3-4`, `NG-11`, read 2026-11-19 | ALT-5 (environment) would be eligible | High |
 | The entrypoint's invocation fact carries no work-item ref | FACT | `packages/cli/src/entrypoint.ts` (`EntrypointInvocationFact`), read 2026-11-19 | ALT-4 (composition injection) would have a producer | High |
-| Simulate must be host-independent byte-for-byte | FACT | TDR-0050 C-2, C-3, read 2026-11-19 | Simulate could read the local context and D7 would be optional | High |
-| A read-only member never evaluates a budget | FACT | TDR-0049 D3 (budget joins chain resolution); change spec F-2, read 2026-11-19 | C-6 would be wrong and every member would need a ref | High |
+| Simulate must be host-independent byte-for-byte | FACT | TDR-0058 C-2, C-3, read 2026-11-19 | Simulate could read the local context and D7 would be optional | High |
+| A read-only member never evaluates a budget | FACT | TDR-0057 D3 (budget joins chain resolution); change spec F-2, read 2026-11-19 | C-6 would be wrong and every member would need a ref | High |
 | `readLocalPmContext` is the PM-context reader, not a state read, and its active-change ref is the delivery identity | FACT | `packages/cli/src/production.ts` call sites; `steer`'s origin derivation uses the same file | The distinction between "fact" and "policy input" would need rewording | High |
 | A malformed ref in the context should be treated as unresolvable rather than passed to the fold | ASSUMPTION (fail-closed judgement, accepted by the owner at PR review) | The delivered `spend` refusal validates `--ref` against `SPEND_WORK_ITEM_REF_PATTERN`; this record applies the same shape test to the context value | A malformed value would reach the ledger read and fail there with a different identity | Medium-High |
 | Operators accept one refusal naming the context path and the enabled budget as adequate remedy | ASSUMPTION (product judgement) | This record §4 | The remedy would need a command (a read surface for "which ref am I on") — additive, not structural | Medium |
@@ -302,7 +302,7 @@ The requirement is attached to **budget evaluation**, not to the family:
 | `provider watch status` | never | no |
 | `provider migrate legacy` | never | no |
 
-This **tightens** the option space rather than departing from it: the seam exists once for the family, but only the two members that evaluate a budget depend on it. A read-only member that refused because a `window` budget exists in configuration would be an over-refusal with no measurement behind it (C-6). Budget evaluation also happens **before** resolution, in the composition edge (TDR-0049 D2), so the ref is resolved once, not once per entry.
+This **tightens** the option space rather than departing from it: the seam exists once for the family, but only the two members that evaluate a budget depend on it. A read-only member that refused because a `window` budget exists in configuration would be an over-refusal with no measurement behind it (C-6). Budget evaluation also happens **before** resolution, in the composition edge (TDR-0057 D2), so the ref is resolved once, not once per entry.
 
 A value that fails `SPEND_WORK_ITEM_REF_PATTERN` is treated as **unresolvable**, not passed to the fold: the delivered `spend` path validates `--ref` against the same pattern, and a malformed context value that reached the ledger read would fail with a store identity that misdescribes the cause.
 
@@ -324,7 +324,7 @@ Two corollaries, both deliberate:
 The ref is required **exactly when the evaluation performs a budget read**, which is decided by configuration, not by the resolution outcome:
 
 - **No enabled budget declared** → no read, no seam call, no refusal. The delivered behaviour is unchanged, and `provider resolve` outside a delivery context keeps working exactly as today.
-- **At least one enabled budget declared** (either scope) → one read is required, therefore one ref is required. A disabled budget is inert (no read, no condition, no requirement — TDR-0049 D1).
+- **At least one enabled budget declared** (either scope) → one read is required, therefore one ref is required. A disabled budget is inert (no read, no condition, no requirement — TDR-0057 D1).
 - The need is determined before resolution and does not depend on which entry the resolver would have reached: a `budget-scope` refusal must not be a function of chain order, or the same configuration would refuse or pass depending on a provider's current state.
 
 ### D4 — Unresolvable ref: one typed refusal reusing `input.value.rejected`
@@ -339,7 +339,7 @@ When a budget read is required and no ref resolves, the decision answers **one**
 
 ### D5 — An enabled `ticket` budget when the ref is unresolvable
 
-- It is **never** measured as zero. Verified-empty telemetry means "this ref has no spend yet" (TDR-0049 C-5); a missing ref means "there is no ref", which is a different fact and must not borrow that identity.
+- It is **never** measured as zero. Verified-empty telemetry means "this ref has no spend yet" (TDR-0057 C-5); a missing ref means "there is no ref", which is a different fact and must not borrow that identity.
 - It is **never** skipped as clear or as an inert budget. Disabled is a declared operator choice; unresolvable is a missing fact.
 - It is **never** converted into a window-only evaluation (ALT-5). A `ticket` ceiling's lower bound *is* the ref's beginning (Appendix C), so without a ref the ceiling has no definition.
 - It **refuses** once, per D4, before resolution.
@@ -348,7 +348,7 @@ The same rule applies to a `window` budget (D6), so there is no scope-dependent 
 
 ### D6 — May a window-only evaluation proceed without a ref? No.
 
-A window budget is bounded by `now − windowSeconds`, so its *lower bound* is ref-free — but its *measurement* is not: the port's one read is `readSpendLedger(store, workItemRef)`, and `AC-F2-2` requires the measured figure to equal `spend --ref` for the same selection and instant. Measuring all refs instead would (a) be a different population, (b) be a second measurement path (TDR-0049 C-1 forbids it), and (c) break the parity clause the test plan asserts. Therefore the ref is required whenever **any** enabled budget is evaluated; the scope kind changes only the lower bound and the outcome at a crossing. A future all-refs fold would reopen this (see the revisit trigger), not a local exception.
+A window budget is bounded by `now − windowSeconds`, so its *lower bound* is ref-free — but its *measurement* is not: the port's one read is `readSpendLedger(store, workItemRef)`, and `AC-F2-2` requires the measured figure to equal `spend --ref` for the same selection and instant. Measuring all refs instead would (a) be a different population, (b) be a second measurement path (TDR-0057 C-1 forbids it), and (c) break the parity clause the test plan asserts. Therefore the ref is required whenever **any** enabled budget is evaluated; the scope kind changes only the lower bound and the outcome at a crossing. A future all-refs fold would reopen this (see the revisit trigger), not a local exception.
 
 ### D7 — The simulate fixture gains `workItemRef`
 
@@ -359,9 +359,9 @@ A window budget is bounded by `now − windowSeconds`, so its *lower bound* is r
 | `workItemRef` | canonical uppercase work-item ref (`SPEND_WORK_ITEM_REF_PATTERN`, the same shape `spend --ref` validates) | required **iff** the resolved configuration declares an enabled budget (either scope); accepted otherwise | The work item whose spend ledger the fixture's `spend` block stands for. It is a declared fact, not a read: the fixture never touches a ledger, a store, or the local context. |
 
 - **It is not a policy input.** The `spend` block still supplies the points; the ref only names whose ledger those points stand for, so a `ticket`-scope replay is possible and the parity test can compare `resolve` and `simulate` on identical facts.
-- **It is disclosed**, not inferred: the payload's `simulation` block gains one optional `workItemRef`. This is an additive amendment to TDR-0050 D4's enumeration of that block; the **resolve** keys (`summary`, `chain`, `decision`, `skipped`, `parks`, `announcements`) are untouched, so TDR-0050 C-5 still holds.
-- **It joins v1, not v2.** v1 has never shipped: the family is unreachable in production (TDR-0053) and TDR-0050 is `Proposed`. A version bump for an unshipped schema would be ceremony that pins a field to a version no reader ever saw. If v1 has shipped by delivery time, the field goes into `v2` — that is a revisit trigger, not a judgement call at implementation time.
-- **Absent when required** refuses `input.value.rejected` naming the field, before evaluation, with no fixture content echoed (TDR-0050 C-4).
+- **It is disclosed**, not inferred: the payload's `simulation` block gains one optional `workItemRef`. This is an additive amendment to TDR-0058 D4's enumeration of that block; the **resolve** keys (`summary`, `chain`, `decision`, `skipped`, `parks`, `announcements`) are untouched, so TDR-0058 C-5 still holds.
+- **It joins v1, not v2.** v1 has never shipped: the family is unreachable in production (TDR-0061) and TDR-0058 is `Proposed`. A version bump for an unshipped schema would be ceremony that pins a field to a version no reader ever saw. If v1 has shipped by delivery time, the field goes into `v2` — that is a revisit trigger, not a judgement call at implementation time.
+- **Absent when required** refuses `input.value.rejected` naming the field, before evaluation, with no fixture content echoed (TDR-0058 C-4).
 - **Invalid shape** refuses the same way, with the same bounded summary, because the pattern is the declared shape test.
 
 ### D8 — Nothing else moves
@@ -372,9 +372,9 @@ No new environment variable; no new provider flag; no new error row (D4); no new
 
 The ref the gate measured must be visible where the operator needs it, without changing a pinned shape:
 
-- A **budget park or crossing announcement message** states the measured ref (message text is not the evidence allowlist; TDR-0049 D5 fixes exactly five evidence fields, and this record does not add a sixth).
+- A **budget park or crossing announcement message** states the measured ref (message text is not the evidence allowlist; TDR-0057 D5 fixes exactly five evidence fields, and this record does not add a sixth).
 - A **refusal** (D4) names the budget(s) and the missing context; for simulate it names the fixture field.
-- The **`provider resolve` `data` shape is unchanged**: no key is added, because TDR-0050 C-5 and the delivered resolve payload pin it, and a ref belongs to the evaluation's identity rather than to its decision. If an operator needs a machine-readable "which ref did the gate use", that is a read-side surface of its own (an additive decision), not a silent widening of the resolve payload.
+- The **`provider resolve` `data` shape is unchanged**: no key is added, because TDR-0058 C-5 and the delivered resolve payload pin it, and a ref belongs to the evaluation's identity rather than to its decision. If an operator needs a machine-readable "which ref did the gate use", that is a read-side surface of its own (an additive decision), not a silent widening of the resolve payload.
 
 ### Constraint Compliance Attestation
 
@@ -431,9 +431,9 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 
 ## References
 
-- [TDR-0049](TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md) — the budget gate, the port, and the park/refusal split this record supplies the subject for.
-- [TDR-0050](TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md) — the fixture this record adds one field to.
-- [TDR-0053](TDR-0053-provider-family-mounting-27th-prompt-required.md) — the mount that makes the family reachable.
+- [TDR-0057](TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md) — the budget gate, the port, and the park/refusal split this record supplies the subject for.
+- [TDR-0058](TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md) — the fixture this record adds one field to.
+- [TDR-0061](TDR-0061-provider-family-mounting-27th-prompt-required.md) — the mount that makes the family reachable.
 - [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) — no silent clear.
 - Feature specs: [Provider Engine](../spec/features/feature-provider-engine.md), [Spend](../spec/features/feature-spend.md).
 - Delivered seams: `packages/cli/src/commands/spend.ts` (`resolveActiveRef`), `packages/cli/src/production.ts` (`readLocalPmContext` call sites), `packages/core/src/contracts/spend.ts`.

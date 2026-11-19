@@ -27,7 +27,7 @@ decisions:
       `packages/adapters/src/time-zone/` hosts `createIntlZonePort`. Causes,
       codes and skip reasons unchanged."
     date: "2026-11-19"
-  - text: "TDR-0049 — Budgets gate before spend through a pure `evaluateBudgets`
+  - text: "TDR-0057 — Budgets gate before spend through a pure `evaluateBudgets`
       over one injected read-only `ProviderSpendTotalsPort` implemented at the
       edge from the delivered spend fold; no persisted counter and no new state
       kind. `window` scope parks with an honest expiry (`newestAtMs +
@@ -49,7 +49,7 @@ decisions:
       refusal, and the CI=true case. Multi-checkout shared policy remains
       M4-S5."
     date: "2026-11-19"
-  - text: "TDR-0050 — `provider simulate --fixture <path> [--json]` composes the
+  - text: "TDR-0058 — `provider simulate --fixture <path> [--json]` composes the
       delivered `createProviderEngine` with fixture seams and calls `resolve`
       with `persist: false`. Fixture schema `delivery.provider.simulate.v1`
       (now, chain?, profile?, credentials resolved|missing, quota
@@ -60,7 +60,7 @@ decisions:
       fixture defects reuse `input.value.rejected`. Parity with `resolve` is a
       test."
     date: "2026-11-19"
-  - text: "TDR-0051 — Legacy migration is `provider migrate legacy [--profiles-dir
+  - text: "TDR-0059 — Legacy migration is `provider migrate legacy [--profiles-dir
       <dir>] [--hook <path>] [--write] [--json]`. Legacy
       `~/.<priorWorkingName>/config/profiles/*.sh` and the hook are parsed as
       data under an assignment-only subset and never executed, sourced,
@@ -72,7 +72,7 @@ decisions:
       names classify name-first and the value is discarded at the parse
       boundary; unmapped recognised names are disclosed by name and omitted."
     date: "2026-11-19"
-  - text: "TDR-0052 — Watch freshness is per-target
+  - text: "TDR-0060 — Watch freshness is per-target
       `provider.profiles.watch.<name>.maxAgeSeconds` (positive integer, default
       900) with predicate `ageSeconds >= maxAgeSeconds` and a closed watch-only
       condition `watch-stale`, distinct from `provider-outage`. Watch-derived
@@ -94,7 +94,7 @@ decisions:
       Bisection was rejected because the predicate is not monotone across a
       fall-back, and 'last candidate' as pass-parity, not calendar."
     date: "2026-11-19"
-  - text: "TDR-0053 — `provider` is mounted as the twenty-seventh and last
+  - text: "TDR-0061 — `provider` is mounted as the twenty-seventh and last
       prompt-required family (appended after `install`): membership, one family
       help entry plus seven member entries, a coverage row in both directions,
       the M1 reference page completed with `--help`/`--version`, and every
@@ -104,7 +104,7 @@ decisions:
       composer plus a negative control, because the delivered suite drove
       `createConfigProgram`/`runCli` and never `runEntrypoint`."
     date: "2026-11-19"
-  - text: "TDR-0054 — The budget work-item ref resolves in one three-tier
+  - text: "TDR-0062 — The budget work-item ref resolves in one three-tier
       precedence: an explicit ref-bearing fact (today only the simulate
       fixture's `workItemRef`), otherwise the delivered `readLocalPmContext`
       seam at `<cwd>/.ai/local/pm-context.yaml` with no store read and no
@@ -189,7 +189,21 @@ notes:
       were not edited."
     type: evidence
     date: "2026-11-19"
-  - text: "Resume sync finding: origin/main-tools advanced by f802f71a (GH-347 dispatch core parity), which added TDR-0049..TDR-0054 — the same ids this branch created for ADR-0012's companions (TDR-0049 budgets, 0050 simulate, 0051 migrate, 0052 watch, 0053 mount, 0054 ref). The merge therefore needs a renumber of this branch's six TDRs to the next free ids (0055..0060) across filenames, front matter, the decision index and every reference in the spec, test plan, plan, pm-notes and readiness reviews, plus code unions in production.ts, edge.ts, contracts/index.ts, the contracts/content inventories and the count-bearing pages. Resolvable mechanically; tracked here so the renumber is not mistaken for scope drift."
+  - text: "Resume sync finding (resolved before the merge): origin/main-tools
+      advanced by f802f71a (GH-347 dispatch core parity) and already carries
+      the decision records 0049..0054; GH-348 holds 0055 and 0056 in flight. The
+      six ADR-0012 companion records this branch created therefore moved to
+      the next free ids TDR-0057..TDR-0062: 0049 -> 0057 (budget ceilings),
+      0050 -> 0058 (provider simulate), 0051 -> 0059 (legacy migration), 0052
+      -> 0060 (watch freshness), 0053 -> 0061 (family mounting), 0054 -> 0062
+      (budget work-item ref). The renumber is applied across the six
+      filenames, their front matter and headings, the decision index rows and
+      narrative block, ADR-0012, the spec, test plan, plan, pm-notes and the
+      three readiness reviews, and the source comments in edge.ts,
+      production.ts, config/catalog.ts, contracts/provider.ts,
+      provider/engine.ts and provider/budgets.ts. TDR-0044..TDR-0048 (GH-346)
+      and every ADR, PDR and ODR are untouched; tracked here so the renumber
+      is not mistaken for scope drift."
     type: blocker
     date: "2026-11-19"
   - text: "Commit-message observation (not blocking): the commit primitive composes
@@ -351,7 +365,7 @@ notes:
       B1..B7 adjudicated REMEDIATED; four new blocking findings: D2-1 test plan
       §7.2 says three mount suites need no edit and the count stays 26; D2-2
       spec §18 orders the mount before simulation/migration/watch while the plan
-      mounts last; D2-3 TDR-0053 and spec §2.1 claimed the family was already
+      mounts last; D2-3 TDR-0061 and spec §2.1 claimed the family was already
       registered/composed when the production composer composes no provider
       command; D2-4 the engine and metrics page count sites are unowned and
       unpinned. Plus majors D2-5..D2-12. Reopened specification, test_planning,
@@ -380,7 +394,7 @@ notes:
       mounted-family filter, not only through the command handler."
     type: retro
     date: "2026-11-19"
-  - text: "Naming caution for review: `provider migrate legacy` (TDR-0051) is
+  - text: "Naming caution for review: `provider migrate legacy` (TDR-0059) is
       provider-policy migration, distinct from M4-S2's namespace migration and
       from the `install --migrate` delegation refusal (TDR-0048). The spec and
       docs must not conflate them."
@@ -468,5 +482,48 @@ notes:
       v1-contract-inventory.json and
       tests/structure/port-contract-inventory.test.ts needed no edit (no new
       contracts export)."
+    type: evidence
+    date: "2026-11-19"
+  - text: "GH-350 plan phase 4 (delivery) complete: the typed provider.budgets
+      record-map catalog branch (enabled default true, scope/basis/ceiling
+      required, windowSeconds required iff the scope is window, entries list,
+      shipped empty, exact unknown-key discipline) reached from configuration
+      so the phase-3 fail-closed rules refuse as provider.chain.invalid naming
+      the offending field with no partial evaluation; the per-repository
+      precedence evidence (the defaults, system, user-global,
+      project-committed and project-local winners with real file and line
+      origins, project-local over project-committed 5/5, child-name record
+      merges, whole-list replacement, reset, a complete leaf-origin table with
+      zero non-winning leaves, an invalid repository-layer refusal with no
+      machine-global fallback, CI=true read of the committed policy with
+      project-local ci-disabled and zero reads, --enable-project-local-config,
+      the selected-file selected-config posture, and no provider.projects
+      surface); the runtime-independence evidence (resolve, quota and watch
+      status resolve with both legacy paths absent and present-but-inert, zero
+      reads, unchanged legacy digests and mtimes, and no production module
+      reading either path or an observed environment name); the rule-4
+      boundary fixture (a provider-shaped environment read refused in the
+      provider tier) and the completed feature-config-layer page with its
+      doc-conformance phrase row. Commit 85dfe914. Gate: GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11235 pass / 4 skip / 2 fail (11241
+      tests); both failures are 5 s timeouts under parallel load with zero
+      assertion failures and pass alone (tests/checks/privacy-literals.test.ts
+      39/39, tests/behaviour/metrics-read-cost.test.ts 4/4). The earlier run
+      without the override logged 9 timeout/SIGTERM failures in git-fixture
+      suites (TC-ATTEMPT-003, TC-CLOSE-045/046/048/049, TC-SUP-011,
+      TC-SUP-072, TC-WATCHDOG-025/026/060): host-level global commit.gpgsign
+      plus concurrent batteries in this checkout, not phase-4 regressions;
+      each passes alone, and watchdog-checks-not-runner is 5/5 in 1.0 s with
+      the signing override. Narrow gate: provider-config-precedence plus
+      provider-legacy-reads plus provider-legacy-absence 28 pass,
+      provider-budgets 25 pass, tests/boundaries 154 pass, doc-conformance 33
+      pass, typecheck green. Scope note (declared, not a weakening):
+      TC-INDEP-001's fourth member provider simulate does not exist until
+      phase 5, so this phase proves resolve, quota and watch status plus the
+      structural absence, and the simulate arm lands with the member.
+      Concurrent-session note: a PM resume-sync blocker entry (TDR id
+      collision with main-tools f802f71a) was already present in the working
+      tree and rode this commit as reported scope drift."
     type: evidence
     date: "2026-11-19"

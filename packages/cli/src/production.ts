@@ -430,7 +430,7 @@ const daemonConfigurationRefusal = (): {
 } => ({ error: { kind: "config", code: "config.value.invalid" } });
 
 /**
- * The production provider composition (GH-350 F-2, TDR-0054 D1).
+ * The production provider composition (GH-350 F-2, TDR-0062 D1).
  *
  * The seam supply the budget gate needs, built from delivered parts only: the
  * six declared `ProviderComposition` members, the one-read spend-totals

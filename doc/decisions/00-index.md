@@ -78,20 +78,20 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0046](TDR-0046-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0047](TDR-0047-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0048](TDR-0048-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
-| [TDR-0049](TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0050](TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0051](TDR-0051-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0052](TDR-0052-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0053](TDR-0053-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Seventh and Last Prompt-Required Family, Appended After `install` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0054](TDR-0054-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0057](TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0058](TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0059](TDR-0059-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0060](TDR-0060-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0061](TDR-0061-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Seventh and Last Prompt-Required Family, Appended After `install` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0062](TDR-0062-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 
-Decisions TDR-0049 … TDR-0054 are the binding design of change GH-350; their owner
+Decisions TDR-0057 … TDR-0062 are the binding design of change GH-350; their owner
 acceptance is that change's pull-request review, and their status moves from
-`Proposed` there rather than in the delivery commits. TDR-0053 mounts the provider
-family as the twenty-seventh prompt-required member and TDR-0054 fixes the
+`Proposed` there rather than in the delivery commits. TDR-0061 mounts the provider
+family as the twenty-seventh prompt-required member and TDR-0062 fixes the
 work-item ref the budget gate measures, so the GH-350 specification must carry both
 before readiness re-review.

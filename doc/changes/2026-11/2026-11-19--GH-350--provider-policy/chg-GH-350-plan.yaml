@@ -17,9 +17,9 @@
 #                `UTC_ZONE_FACTS`, `PeakWindowEndRule`, the transition-segment
 #                expiry and its probe budget); NFR-1..NFR-16; RSK-1..RSK-19;
 #                DEC-1..DEC-17 — DEC-1 cites ADR-0012 **as amended**, DEC-16
-#                adopts TDR-0053's mount (as corrected at
+#                adopts TDR-0061's mount (as corrected at
 #                DoR iteration 2: membership PLUS the six-seam `ProviderComposition`
-#                wiring) and DEC-17 adopts TDR-0054's work-item ref; no open
+#                wiring) and DEC-17 adopts TDR-0062's work-item ref; no open
 #                question reaches delivery; §5.1 capability details; §6 flows
 #                1-8; §7.1 in-scope; §8.1's invocation table with the ref
 #                precedence and the read-only-member exemption; §8.5 backward
@@ -77,22 +77,22 @@
 #   - Decisions: doc/decisions/ADR-0012 (zone domain, one `ProviderZonePort`,
 #                DST rule, three-pass cap, `provider.peak.zone-unknown`,
 #                `timezone` evidence), PDR-0006 (per-project = the delivered
-#                repository layers; no project key), TDR-0049 (one pure
+#                repository layers; no project key), TDR-0057 (one pure
 #                `evaluateBudgets` over one injected read-only
 #                `ProviderSpendTotalsPort`; window park vs ticket refusal; no
-#                counter; no paid escalation), TDR-0050 (`provider simulate`,
+#                counter; no paid escalation), TDR-0058 (`provider simulate`,
 #                strict `delivery.provider.simulate.v1`, `persist: false`,
 #                delivered payload plus one `simulation` block, parity not a
-#                second evaluator), TDR-0051 (assignment-only data reader,
+#                second evaluator), TDR-0059 (assignment-only data reader,
 #                whole-run refusal, name-first credential firewall, validated
 #                proposal, create-only `--write`, declared hook posture),
-#                TDR-0052 (`maxAgeSeconds`, watch-only `watch-stale`, the `>=`
+#                TDR-0060 (`maxAgeSeconds`, watch-only `watch-stale`, the `>=`
 #                predicate, the park clamp, no park from a stale reading),
-#                TDR-0053 (the family is mounted as the twenty-seventh and last
+#                TDR-0061 (the family is mounted as the twenty-seventh and last
 #                prompt-required member, appended after `install`; ordinals
 #                stay, counts move, tails shift one place; the conformance
 #                surface is enumerated; reachability is proven through
-#                `runEntrypoint` with two negative controls), TDR-0054 (the
+#                `runEntrypoint` with two negative controls), TDR-0062 (the
 #                budget's work-item ref is a fact from the delivered local
 #                delivery context via `readLocalPmContext`, with three-tier
 #                precedence, the delivered ref pattern, one pre-resolution
@@ -171,7 +171,7 @@
 #
 # DOR ITERATION-1 REMEDIATION MAP (where each blocking finding is answered here):
 #   B1 — the family is unreachable in the production composition.
-#        Phase 8 is the TDR-0053 mount: membership in
+#        Phase 8 is the TDR-0061 mount: membership in
 #        `PROMPT_REQUIRED_COMMANDS` (27, `provider` last), eight help entries,
 #        the coverage rows plus a twin mutant, the unconditional production
 #        registration, the count/tail/alias-baseline propagation, the reference
@@ -274,7 +274,7 @@
 #        mount. SPEC ARTIFACT; v1.3 adopts the plan's order (simulation,
 #        migration, watch freshness, **then the mount**) and states why. No phase
 #        moves.
-#   D2-3 — TDR-0053 and spec §2.1 claimed the family was already composed.
+#   D2-3 — TDR-0061 and spec §2.1 claimed the family was already composed.
 #        RECORD/SPEC ARTIFACT (both corrected); the plan was already right and is
 #        now explicit: phase 8 declares BOTH membership and the six-seam
 #        `ProviderComposition` wiring (`clock`, `credentialPort`, `transport`,
@@ -329,7 +329,7 @@
 #        maximal case CONSTRUCTS the fourteen-field object directly (or uses a
 #        chain park that unions `budget-exhausted` with `peak-window`) instead of
 #        asserting fourteen fields on a budget-only park. Phase 3 states this.
-#   D2-8 — TDR-0053 C-5's write-set overstatement. RECORD ARTIFACT (restated in
+#   D2-8 — TDR-0061 C-5's write-set overstatement. RECORD ARTIFACT (restated in
 #        v1.3 §8.5); no phase changes: the identity-neutrality obligation the plan
 #        carries is "no new bin declaration, no ownership refusal, and the
 #        read-only members (`quota`, `parks list`, `watch status`, `simulate`)
@@ -343,7 +343,7 @@
 #        restated truthfully, phase 1 carries `readiness-iter-2.md`, and the
 #        documentation obligation table is 22 rows.
 #   D2-11 — test-plan wording items (30 vs 31 ACs, the OQ-TP-10 list, two control
-#        labels, TDR-0053 §5-B19's mutant description). TEST-PLAN/RECORD
+#        labels, TDR-0061 §5-B19's mutant description). TEST-PLAN/RECORD
 #        ARTIFACTS; no phase changes. The plan's own control list is corrected at
 #        D2-12.
 #   D2-12 — scope noise. CORRECTED below: `tests/checks/exports-parity.test.ts` and
@@ -395,7 +395,7 @@
 #        of it.
 #   N-6 — STALE HEADER FACTS. CORRECTED: the "only page that states the FAMILY
 #        COUNT" claim is gone (six pages plus the changeset state it, and phase 8's
-#        scope is the list), and the "TDR-0053 carries an uncommitted modification"
+#        scope is the list), and the "TDR-0061 carries an uncommitted modification"
 #        claim is gone (the worktree is clean; all eight records and both DoR
 #        verdicts are committed).
 #   N-8 — ONE DECLARED-BUT-UNNEEDED FILE. RESOLVED BY DROPPING IT:
@@ -418,13 +418,13 @@
 #   ALL EIGHT decision records are TRACKED:
 #     doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
 #     doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
-#     doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
-#     doc/decisions/TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md
-#     doc/decisions/TDR-0051-legacy-provider-profile-and-hook-migration.md
-#     doc/decisions/TDR-0052-watch-observation-freshness-and-stale-condition.md
-#     doc/decisions/TDR-0053-provider-family-mounting-27th-prompt-required.md
-#     doc/decisions/TDR-0054-provider-budget-work-item-ref-source.md
-#   TDR-0053 and TDR-0054 were the only untracked records when the first version
+#     doc/decisions/TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md
+#     doc/decisions/TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md
+#     doc/decisions/TDR-0059-legacy-provider-profile-and-hook-migration.md
+#     doc/decisions/TDR-0060-watch-observation-freshness-and-stale-condition.md
+#     doc/decisions/TDR-0061-provider-family-mounting-27th-prompt-required.md
+#     doc/decisions/TDR-0062-provider-budget-work-item-ref-source.md
+#   TDR-0061 and TDR-0062 were the only untracked records when the first version
 #   of this plan was authored; both are COMMITTED now and the worktree is clean
 #   for `doc/decisions/**` (no uncommitted amendment). `doc/decisions/00-index.md`
 #   carries the eight rows. BOTH DoR verdict records are TRACKED:
@@ -473,7 +473,7 @@
 #   which run whole while only the registry and the fixtures it lists are
 #   declared), `scripts/hooks/pre-opencode-iteration-zai.sh` (spec §16 marks it
 #   "Reference only — never executed, sourced, imported, or modified"), and
-#   `packages/cli/src/entrypoint.ts` (TDR-0053 C-2: the filter is untouched; the
+#   `packages/cli/src/entrypoint.ts` (TDR-0061 C-2: the filter is untouched; the
 #   TC-MOUNT-003 removal arm copies it into a temp module and is never committed).
 #   `tests/structure/provider-surface.test.ts` is declared by NO phase and is
 #   consumed as an UNEDITED CONTROL: it enumerates the jira/gitlab/github tracker
@@ -486,7 +486,7 @@
 #   `tests/structure/provider-budgets-contract.test.ts`'s measurement-path scan.
 #   DECLARED EXCEPTIONS (no phase declares them, and each is a decision rather
 #   than an omission): `scripts/checks/help-guide-coverage.ts` gains NO provider
-#   branch (TDR-0053 A4: the default M1 root already resolves the existing page),
+#   branch (TDR-0061 A4: the default M1 root already resolves the existing page),
 #   `tests/checks/help-guide-coverage.test.ts` iterates the prompt-required set
 #   and needs no row edit, `tests/checks/reference-page-parity.test.ts` needs no
 #   edit, and `packages/cli/src/help/prompt-required-commands.ts` is edited only
@@ -807,7 +807,7 @@
 #   TC-MIG-003/TC-MIG-013 in phase 6).
 #
 # THE FAMILY COUNT MOVES ONCE, IN PHASE 8, AND THE MOUNT LANDS AFTER BOTH NEW
-# MEMBERS (the TDR-0053 decision, taken here rather than implied):
+# MEMBERS (the TDR-0061 decision, taken here rather than implied):
 #   Phase 8 mounts the family as the twenty-seventh and last prompt-required
 #   member, appended after `install`. `install` stays the twenty-sixth and stops
 #   being last; `supervise` stays the twenty-fifth; `metrics` the twenty-fourth
@@ -924,7 +924,7 @@
 #   This change adds NO command family (the provider family is mounted, not
 #   created), NO state record kind, NO store write path, NO environment variable,
 #   NO provider flag outside the declared members (the ref is a fact from the
-#   local delivery context, never a flag — TDR-0054), NO CI job, NO alarm kind,
+#   local delivery context, never a flag — TDR-0062), NO CI job, NO alarm kind,
 #   NO event topic, NO notification channel, NO state migration, NO vendored zone
 #   table, NO tz-database dependency, NO watch cache/timer/refresher/scheduler,
 #   and NO new secret-read allowlist entry. The provider catalog node declares no
@@ -1025,21 +1025,21 @@ tier:
   escalationTriggers:
     - "A phase boundary leaves the error-table counts, the result-code corpus or the two-segment allowlist between the old and the new value (provider rows 13 -> 16; the machine table entries AND `documentedRows` 164 -> 167, which are equal and must stay equal; the delivered-row metric 163 -> 166; the sync arithmetic `BASELINE_ROWS.length + 130` -> `+133`; the corpus 81 -> 84 at 59 true-positive / 25 false-positive; the allowlist unchanged at 66), or a count moves in more than one phase (AC-F8-1, DEC-14, NFR-15, test plan TR-10)"
     - "A count-bearing page (feature-result-contract.md, feature-ceremony-runner.md, feature-metrics.md, feature-install-lifecycle.md, or feature-supervise.md if it ever names a total) states an outgoing total, delivered-row count, allowlist size or `BASELINE_ROWS` arithmetic as current at any phase boundary, or a page's sentence moves without its number (spec §16's count-bearing class rule; AC-F8-3; TC-DOC-001)"
-    - "A pinning suite or fixture still reads 26 after the mount phase, `PINNING_FILES` is hand-maintained instead of read from `tests/fixtures/metrics/mounting.ts`, the stale-detector class is not `2[3456]`, or any count/tail/pin site moves in a phase other than the mount phase (AC-F8-4, TDR-0053, TC-MOUNT-006/007)"
+    - "A pinning suite or fixture still reads 26 after the mount phase, `PINNING_FILES` is hand-maintained instead of read from `tests/fixtures/metrics/mounting.ts`, the stale-detector class is not `2[3456]`, or any count/tail/pin site moves in a phase other than the mount phase (AC-F8-4, TDR-0061, TC-MOUNT-006/007)"
     - "A mounted family is still listed as a non-prompt-required extra — `provider` left in `withExtras()` in `tests/behaviour/entrypoint-composition.test.ts` — so the extra-drop assertion certifies the pre-mount state (DoR D2-12, TC-MOUNT-005)"
     - "A count sentence the register or the mount moves is left at its outgoing value on `feature-provider-engine.md` (skip reasons 8, the closed eight-value set, allowlist 8/11, five provider-engine rows for a sixteen-row kind), on `feature-metrics.md` (the 24-family mount, family-count pins read 24) or on `feature-cli-entrypoint.md` (26 families, `install` \"and last\"), or the engine page's sixteen-row sentence is over-corrected so the engine FAMILY stops reading five (AC-F8-3, DoR D2-4, TC-DOC-001/002)"
     - "A boundary rule promised by TC-CONFORM-008 has no home in the production `.dependency-cruiser.cjs` the harness materialises, or a rule is re-homed into a suite the boundary meta-check cannot exercise (DoR D2-5, TC-CONFORM-008)"
     - "A declared adapters subpath is missing from an enumeration that compares the live manifest against a list (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`), or a subpath claim is attributed to a suite that does not police it (DoR D2-12)"
     - "A phase changes a contracts export — adds, renames or retires one — without moving `tests/fixtures/ports/v1-contract-inventory.json` and `tests/structure/port-contract-inventory.test.ts` in the SAME commit, so the two-way contracts inventory is falsified and `pnpm check` is red with the fix outside declared scope (N-1)"
-    - "A delivered ordinal moves — `supervise` renumbered from 25, `install` from 26, `steer` from 23 or `metrics` from 24 — or a page is over-corrected so its ordinal becomes the count (AC-F8-3, TDR-0053 C-4, TC-MOUNT-009)"
-    - "The family is mounted at fewer than seven members, a help entry is added before the family is mounted (its `seeAlso` target would be unregistered and reference-page parity would fail), or the mount splits across phases (TDR-0053 C-3, AC-F8-5)"
+    - "A delivered ordinal moves — `supervise` renumbered from 25, `install` from 26, `steer` from 23 or `metrics` from 24 — or a page is over-corrected so its ordinal becomes the count (AC-F8-3, TDR-0061 C-4, TC-MOUNT-009)"
+    - "The family is mounted at fewer than seven members, a help entry is added before the family is mounted (its `seeAlso` target would be unregistered and reference-page parity would fail), or the mount splits across phases (TDR-0061 C-3, AC-F8-5)"
     - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
     - "A page and the doc-conformance phrase that pins it move in different commits, a phrase row is added for prose a later phase contradicts, a page outside the closed page set states a claim this change falsifies, or `feature-supervise.md` is edited at all (the one-edit-set rule; spec §16's closed page set and family-count class)"
     - "`Intl`, `TZ`, an ambient clock, an environment read, a filesystem read or a network read appears anywhere in packages/core/src/provider or in the provider tier the ambient-globals check scans, `scripts/checks/ambient-globals.ts` still bans neither `Intl` nor a `TZ` access after phase 2, or a second workspace module reads zone data for provider policy (AC-F1-3, NFR-1, TC-ZONE-010)"
     - "The engine's `expiresAtMs` and the daemon watcher's window end stop deriving from the one named `peakWindowEndInstantMs(nowMs, zoneFacts, rule)`, or a second expiry computation reappears (AC-F1-2, NFR-4, TC-ZONE-008, DoR B7)"
     - "A zone derivation spends a FOURTH probe of either port method (`offsetSecondsAt` or `nextTransitionAtOrAfter`), or returns a gap-adjacent instant instead of the transition instant itself — the segment-3 guard returns before a fourth offset probe, the per-method budget is ≤3 + ≤3 with a ceiling of 6, and a spring-forward cell must equal the transition instant to the millisecond (spec v1.4, ADR-0012 `## Revision`, AC-F1-2, TC-ZONE-005/-007/-008)"
     - "A budget evaluation writes state, performs more than one spend-totals read per evaluation at any budget count, opens a second measurement path, or lets a paid entry become selectable while a subscription entry is budget-PARKED (AC-F2-2, AC-F2-4, AC-F2-5, NFR-6, NFR-7, NFR-9, TC-BUD-007/010/016)"
-    - "A budget-evaluating invocation measures zero, skips as clear, or downgrades to a window-only evaluation when no work-item ref resolves; the ref seam gains a flag, an environment variable or a state-store read; a read-only member (`quota`, `parks list`, `profile resolve`, `watch status`) resolves a ref; or `simulate` reads the local context (AC-F2-5, TDR-0054, TC-REF-001..005)"
+    - "A budget-evaluating invocation measures zero, skips as clear, or downgrades to a window-only evaluation when no work-item ref resolves; the ref seam gains a flag, an environment variable or a state-store read; a read-only member (`quota`, `parks list`, `profile resolve`, `watch status`) resolves a ref; or `simulate` reads the local context (AC-F2-5, TDR-0062, TC-REF-001..005)"
     - "A budget park carries a non-future, absent or guessed expiry, a ticket-scope crossing is presented as a park, or the class-T paid-entry behaviour is implemented as class P (AC-F2-3, NFR-6, DEC-7, TC-BUD-010/017)"
     - "A record-child configuration value (for example `provider.profiles.watch.<name>.maxAgeSeconds`) is asserted to carry a `layer=defaults` origin, or `config/resolver.ts`/`config/defaults.ts` is changed to materialise record-value field defaults — the resolver does not do this today and changing it would move every record child's semantics (non-blocking DoR finding 1)"
     - "A `provider simulate` run writes state, resolves a credential, performs a network call, spawns a child, echoes fixture content in a refusal, or carries a fixture value/secret/token/key field; the payload's delivered resolve keys are renamed, removed, re-ordered or re-typed; or a `workItemRef` key appears in the resolve payload or as a sixth evidence field (AC-F5-1, AC-F5-2, AC-F5-3, NFR-10, TC-REF-004)"
@@ -1080,7 +1080,7 @@ phases:
   # `ProviderSpendTotalsPort` (per-scope `{ cost, tokens, newestAtMs }`, both
   # bases returned for every scope so budgets on different bases share one read);
   # the declaration-only `resolveWorkItemRef` seam on the provider runtime
-  # (TDR-0054: resolved once at the composition, never a flag and never a read in
+  # (TDR-0062: resolved once at the composition, never a flag and never a read in
   # the pure tier); `budget-exhausted` as condition kind (six), park cause
   # (eight) and skip reason (nine); `provider.budget.parked` and
   # `provider.budget.crossed` as announcement codes (thirteen); the tie order with
@@ -1448,12 +1448,12 @@ phases:
         # with the index that already carries their rows.
         - doc/decisions/ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md
         - doc/decisions/PDR-0006-per-project-provider-policy-repository-config-layers.md
-        - doc/decisions/TDR-0049-budget-ceilings-park-before-spend-injected-spend-totals.md
-        - doc/decisions/TDR-0050-provider-simulate-fixture-and-zero-write-simulation.md
-        - doc/decisions/TDR-0051-legacy-provider-profile-and-hook-migration.md
-        - doc/decisions/TDR-0052-watch-observation-freshness-and-stale-condition.md
-        - doc/decisions/TDR-0053-provider-family-mounting-27th-prompt-required.md
-        - doc/decisions/TDR-0054-provider-budget-work-item-ref-source.md
+        - doc/decisions/TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md
+        - doc/decisions/TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md
+        - doc/decisions/TDR-0059-legacy-provider-profile-and-hook-migration.md
+        - doc/decisions/TDR-0060-watch-observation-freshness-and-stale-condition.md
+        - doc/decisions/TDR-0061-provider-family-mounting-27th-prompt-required.md
+        - doc/decisions/TDR-0062-provider-budget-work-item-ref-source.md
         - doc/decisions/00-index.md
         # BOTH DoR verdicts are tracked; they are declared so a status touch or a
         # re-issued verdict stages with phase 1 instead of landing on the
@@ -1882,7 +1882,7 @@ phases:
   # both bases for every scope so budgets on different bases share one read, and
   # performs NO read at all when nothing is declared or nothing is enabled. No
   # adapters I/O subpath and no state read is added to core.
-  # THE WORK-ITEM REF SEAM (DoR B2, TDR-0054): the ref is a FACT, not policy, and
+  # THE WORK-ITEM REF SEAM (DoR B2, TDR-0062): the ref is a FACT, not policy, and
   # it is resolved by ONE seam with three-tier precedence — an explicitly
   # supplied ref-bearing fact wins, otherwise the local delivery context, otherwise
   # the evaluation REFUSES.
@@ -2149,7 +2149,7 @@ phases:
   # explicit zone), an optional chain and profile selection, per-reference
   # credential outcomes (`resolved` | `missing` | `rejected`, never a value), per
   # entry quota transport results, spend telemetry state and points, an optional
-  # per-zone step table, and — THIS PHASE (DoR B2, TDR-0054) — an optional
+  # per-zone step table, and — THIS PHASE (DoR B2, TDR-0062) — an optional
   # `workItemRef`. Policy comes from the resolved configuration, never from the
   # fixture. Unknown keys, a missing required key, a wrong type, an unsupported
   # version, or a body over
@@ -2482,7 +2482,7 @@ phases:
         role: producer
 
   # ---------------------------------------------------------------------------
-  # Phase 8 — THE FAMILY MOUNT (TDR-0053): membership, eight help entries, the
+  # Phase 8 — THE FAMILY MOUNT (TDR-0061): membership, eight help entries, the
   # coverage rows and their mutant, the unconditional production registration,
   # the mounted-count and tail movement, the alias baseline, the reference page,
   # the mount pages, and the two-arm reachability proof (F-8; DM-10; AC-F8-5;
@@ -2496,7 +2496,7 @@ phases:
   #
   # Contract: `provider` joins `PROMPT_REQUIRED_COMMANDS` AFTER `install` (26 ->
   # 27 names; `install` stays the twenty-sixth and stops being last).
-  # THE MOUNT IS MEMBERSHIP **PLUS** THE COMPOSITION WIRING (DoR D2-3, TDR-0053 as
+  # THE MOUNT IS MEMBERSHIP **PLUS** THE COMPOSITION WIRING (DoR D2-3, TDR-0061 as
   # corrected, spec §2.1/§5-A3/§18): `createConfigProgram` assigns
   # `commands.provider` only inside `if (options.provider !== undefined)` and the
   # production `configured` object carries no `provider` key, so the composed
@@ -2664,7 +2664,7 @@ phases:
         # Membership, the eight help entries, and the unconditional production
         # registration. `packages/cli/src/entrypoint.ts` is deliberately NOT
         # declared: the filter is untouched and the removal arm is case-local
-        # (TDR-0053 C-2).
+        # (TDR-0061 C-2).
         - packages/cli/src/help/prompt-required-commands.ts
         - packages/cli/src/help.ts
         - packages/cli/src/production.ts
