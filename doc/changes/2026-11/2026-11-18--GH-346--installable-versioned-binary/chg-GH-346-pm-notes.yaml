@@ -391,3 +391,44 @@ notes:
       phrase-guarded; F-23 OQ-TP-11/12 test-plan id-drift notes remain open)."
     type: info
     date: "2026-11-19"
+  - text: "Post-PR integration: the branch conflicted with `main-tools` because GH-335
+      (harness telemetry) had moved the error table 149 -> 153 and the sync arithmetic
+      +115 -> +119. The sync merge (e61f5b1f, parents 16bc9aaa + d8d762be) resolved 16
+      count-carrier conflicts and re-derived the integrated numbers: table total 164
+      (153 + 11 install), delivered pin 163, BASELINE_ROWS.length + 130, corpus 81
+      (GH-335 added no corpus rows), allowlist 66, harness kind thirteen rows, live set
+      161, supervision baseline slice 150. Spec v1.10 and the plan header record the
+      integration."
+    type: resolved
+    date: "2026-11-19"
+  - text: "TDR renumbering at integration: `main-tools` already owns TDR-0036..0043
+      (GH-339 and GH-335), so this change's five Proposed install records were
+      renumbered TDR-0036..TDR-0040 -> TDR-0044..TDR-0048 (TDR-0044 install family,
+      TDR-0045 artifact/identity, TDR-0046 stability/dev exclusion, TDR-0047
+      compatibility, TDR-0048 replace/rollback/uninstall/purge boundaries), with every
+      current-truth reference updated in the same merge. Historical notes and
+      readiness/review iterations keep the old ids as the record of what was decided
+      at the time; the PR description is updated to the new ids."
+    type: resolved
+    date: "2026-11-19"
+  - text: "Gate note after the merge: `bun test` reported 11,115 pass / 4 skip / 1 fail
+      under parallel load; the single failure was TC-DAEMON-121's latency bound
+      (250.27 ms vs a 250 ms threshold), which passes in isolation (max 237 ms) and is
+      unrelated to this change (no daemon code touched). A clean aggregate run is being
+      taken for the merge-gate evidence."
+    type: info
+    date: "2026-11-19"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/363
+      — base main-tools, head feat/GH-346/installable-versioned-binary, 43 commits,
+      non-draft, MERGEABLE (mergeStateStatus BLOCKED = required checks/review pending).
+      The merge commit e61f5b1f is pushed and the PR head. The merge resolution was
+      required because main-tools had landed GH-335 (error table 149->153); the
+      integrated target is 164 identities, +130 sync arithmetic, corpus 81, allowlist
+      66. The branch-range gate is PASS at 43 commits with the repository-local
+      commitlint. Two consecutive local aggregate runs each reported exactly one
+      pre-existing load-induced 5 s timeout that passes in isolation (TC-DAEMON-121 at
+      250.27 ms for a 250 ms bound; TC-BIN-030 at 5003.55 ms for a 5000 ms bound, 11/11
+      in isolation): host contention from concurrent agent sessions, not a change
+      regression. CI on the pushed head is the authoritative check."
+    type: info
+    date: "2026-11-19"
