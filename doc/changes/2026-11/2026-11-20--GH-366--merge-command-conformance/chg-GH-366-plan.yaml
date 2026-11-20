@@ -63,11 +63,12 @@
 # and exposing the match count/ambiguity (`0 | 1 | 2+`) — and nothing else: no
 # pagination, no retry, no fetch, no second closed read and no second open read.
 # The closed read is performed only after the open read leaves no open request
-# able to be the delivery request (zero convention-matching open entries);
-# therefore a converged re-run and a `no-open-request` refusal each spend exactly
-# two provider reads, while every other resolution-path refusal — every
-# `merge.branch-unresolved` cause, `ambiguous-open-request`, `head-unresolved` —
-# spends exactly the one open read and no closed read. Record reads stay at most
+# able to be the delivery request (an empty, unsaturated candidate set); therefore
+# a converged re-run, an `ambiguous-merged-request` refusal and a `no-open-request`
+# refusal each spend exactly two provider reads, while every other
+# resolution-path refusal — every `merge.branch-unresolved` cause,
+# `ambiguous-open-request`, `head-unresolved` — spends exactly the one open read
+# and no closed read. Record reads stay at most
 # three bounded local reads (<= 2 fixed-argv git invocations and <= 262 144 bytes
 # each), with no shell, no retry and no fetch.
 #
@@ -640,27 +641,32 @@ phases:
   #      ruling; discharges readiness iteration 3 finding 1 on the plan side).
   #      FIRST the one bounded open-request list read (the delivered read, with
   #      gate facts, which is also the request-detail read); it yields the open
-  #      entries, the observed open count and whether the page saturated. THEN,
-  #      only when that read leaves no open request able to be the delivery
-  #      request (zero convention-matching open entries), AT MOST ONE bounded
-  #      closed-request list read: the delivered merged-request read
-  #      (`GET …/pulls?state=closed`), now filterable by the declared branch
-  #      convention and exposing the match count/ambiguity (`0 | 1 | 2+`). No
+  #      entries, the observed open count and whether the page saturated. The
+  #      candidate set (point 2) is built from that page, and a NON-EMPTY candidate
+  #      set is resolved without any convergence read. THEN, only when that
+  #      candidate set is EMPTY ON AN UNSATURATED page — i.e. only where the open
+  #      page offers nothing to resolve — AT MOST ONE bounded closed-request list
+  #      read: the delivered merged-request read (`GET …/pulls?state=closed`), now
+  #      filterable by the declared branch convention (supplied by the merge call
+  #      in place of the delivered work-item-ref predicate, which stays closeout's
+  #      filter) and exposing the match count/ambiguity (`0 | 1 | 2+`). No
   #      pagination, no retry, no fetch, no second closed read, never a closed read
   #      while a convention-matching open entry is the delivery request, and never
   #      a closed read before the open read.
-  #      Convergence is decided from that closed read, BEFORE any change-record
-  #      read: exactly one merged match whose source ref follows the declared
-  #      convention replays from provider truth at exit 0 and reports
-  #      `replayed=true` with the matched request's identity, performs zero
+  #      Convergence is decided on that attempt, BEFORE any change-record read: on
+  #      an unsaturated closed page exactly one merged match whose source ref
+  #      follows the declared convention replays from provider truth at exit 0 and
+  #      reports `replayed=true` with the matched request's identity, performs zero
   #      change-record reads and zero record-read git invocations, reports neither
-  #      `declared-at-head` nor `merge.branch-unresolved`, and lands nothing. TWO
-  #      OR MORE merged matches refuse `merge.request-unresolved` with
-  #      `ambiguous-merged-request` — the merge path NEVER ranks, selects or scores
-  #      among merged matches — and zero merged matches continue to the candidate
-  #      set below (AC-F1-6, TC-MRG-043, TC-MRG-049). This phase SUPERSEDES phase
-  #      2's placeholder routing of the two request-resolution returns; it does not
-  #      re-add an abort cause.
+  #      `declared-at-head` nor `merge.branch-unresolved`, and lands nothing. A
+  #      SATURATED closed page refuses `ambiguous-merged-request` on the same
+  #      saturation rule as the open page (a truncated page cannot establish that
+  #      the merged set is unique); on an unsaturated page two or more merged
+  #      matches refuse `merge.request-unresolved` with `ambiguous-merged-request`
+  #      — the merge path NEVER ranks, selects or scores among merged matches —
+  #      and zero merged matches refuse `no-open-request` (AC-F1-6, TC-MRG-043,
+  #      TC-MRG-049). This phase SUPERSEDES phase 2's placeholder routing of the
+  #      two request-resolution returns; it does not re-add an abort cause.
   #      DECLARED SHARED-CONTRACT EDIT, NOT A CLOSEOUT CHANGE. The merged-request
   #      read is shared with closeout, so this phase edits the adapter
   #      (`packages/adapters/src/github/client.ts`) to add the convention filter
@@ -688,7 +694,10 @@ phases:
   #      not a full hex SHA refuses `head-unresolved` and is never read
   #      (AC-F1-4). `merge.request-unresolved` carries four closed reasons after
   #      this phase: `no-open-request`, `ambiguous-open-request`, `head-unresolved`
-  #      and `ambiguous-merged-request` (its emitter is point 1).
+  #      and `ambiguous-merged-request`. They partition by the page they are read
+  #      from: `ambiguous-open-request` and `head-unresolved` from the open page,
+  #      `no-open-request` and `ambiguous-merged-request` from the convergence
+  #      attempt (point 1).
   #   3. Each candidate's change record is read AT THAT CANDIDATE'S OWN ASSERTED
   #      HEAD through the merge git seam: the bounded, fixed-argv local read
   #      (`ls-tree -r --name-only <sha> -- <pathspec>` to locate, then one
@@ -791,9 +800,10 @@ phases:
   #   as an exact multiset, not an upper bound: every `merge.branch-unresolved`
   #   cause and every `ambiguous-open-request` / `head-unresolved` refusal shows
   #   EXACTLY ONE provider read (the open list) and no closed read, while a
-  #   converged re-run and a `no-open-request` refusal show EXACTLY TWO (the open
-  #   list and one closed list) and no third read; no cell shows a fetch, a retry,
-  #   a pagination or a second closed read. That exactness is the difference
+  #   converged re-run, an `ambiguous-merged-request` refusal (including the
+  #   saturated closed page) and a `no-open-request` refusal show EXACTLY TWO (the
+  #   open list and one closed list) and no third read; no cell shows a fetch, a
+  #   retry, a pagination or a second closed read. That exactness is the difference
   #   between a fail-closed refusal and a late one.
   #
   # Code areas: the composition's two-read sequence, candidate-set resolution,
