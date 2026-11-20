@@ -1365,15 +1365,15 @@ notes:
       PRELOAD, so no suite depends on another suite's side effect. WHAT CHANGED
       (two files, plus this plan-scope declaration): `tests/preload.ts` (new)
       resolves the repository root the way the suites do (`process.cwd()`) and
-      runs `mkdirSync(join(root, "tmp", "tmpdir"), { recursive: true })` once per
+      runs `mkdirSync(join(root, 'tmp', 'tmpdir'), { recursive: true })` once per
       test process before any suite loads; `bunfig.toml` registers it under
-      `[test]` as `preload = ["./tests/preload.ts"]` while `root = "."` and
+      `[test]` as `preload = ['./tests/preload.ts']` while `root = '.'` and
       `pathIgnorePatterns` stay exactly as they were. No per-file guard was added
       to the ~24 modules that `mkdtemp` beneath the root, and no test assertion,
       fixture, or scratch prefix was touched. WHY: `tmp/` is git-ignored, so a
       fresh CI checkout has none, while `tests/fixtures/install/artifact.ts` and
       `tests/checks/install-lifecycle-e2e.test.ts` (among others) call
-      `mkdtempSync(join(ROOT, "tmp/tmpdir/<prefix>"))` with no guard of their own;
+      `mkdtempSync(join(ROOT, 'tmp/tmpdir/<prefix>'))` with no guard of their own;
       they passed locally only when another suite created the root first. That is
       a scheduling race, and it produced the deterministic CI failure
       `ENOENT: mkdtemp '.../tmp/tmpdir/gh346-e2e-XXXX'` plus the downstream
@@ -1396,9 +1396,10 @@ notes:
       `TMPDIR=$PWD/tmp/tmpdir pnpm check` cannot start from a `tmp/`-absent tree,
       because pnpm's own bootstrap resolves TMPDIR and aborts with
       `ENOENT ... lstat '<repo>/tmp'` before any test or preload runs; the proof
-      runs therefore used an existing TMPDIR outside the repository
-      (`/home/juliusz/git/.tmp-gh348`), which is the only deviation from the
-      literal command and does not affect the scratch-root result. (d) no ordering
+      runs therefore used an existing TMPDIR outside the repository (a sibling
+      scratch directory, not a path inside the work tree), which is the only
+      deviation from the literal command and does not affect the scratch-root
+      result. (d) no ordering
       dependency surfaced: the preload removed the one class that existed, and no
       second guard was needed. Plan scope: `tests/preload.ts` and `bunfig.toml`
       are declared in phase 11 (obligation 11.7) so the commit primitive keeps
