@@ -10,13 +10,13 @@ phases:
     completed: 2026-11-20T11:17:45.514Z
   specification:
     started: "2026-11-20T11:18:00Z"
-    completed: 2026-11-20T11:37:59.214Z
+    completed: 2026-11-20T12:41:48.496Z
   test_planning:
     started: "2026-11-20T11:38:00Z"
-    completed: 2026-11-20T11:51:14.190Z
+    completed: null
   delivery_planning:
     started: "2026-11-20T11:52:00Z"
-    completed: 2026-11-20T11:57:38.419Z
+    completed: null
   dor_check:
     started: "2026-11-20T11:58:00Z"
     completed: null
@@ -125,12 +125,13 @@ decisions:
   - text: "PM decision D9 (DoR iteration 1, blocking B1): the ticket's task 'No
       model literal lives in an agent prompt' is true of 23 of the 24 prompts
       but false of `.opencode/agent/toolsmith.md`, which carries provider/model
-      ids (`anthropic/claude-opus-4-5`, `openai/gpt-5.2`, `deepseek/deepseek-3.2`,
-      `deepseek-3.2`, `gemini-3.0-pro`) in its prompt-authoring guidance. Scope
-      is widened: replace those literals with neutral placeholders plus a pointer
-      to the typed provider policy, regenerate `.ados-claude/agents/toolsmith.md`
-      with `scripts/build-claude-plugin.sh`, and prove the prompt scan over the
-      full roster. The edit is delegated to `@toolsmith` during delivery (AGENTS.md
+      ids (`anthropic/claude-opus-4-5`, `openai/gpt-5.2`,
+      `deepseek/deepseek-3.2`, `deepseek-3.2`, `gemini-3.0-pro`) in its
+      prompt-authoring guidance. Scope is widened: replace those literals with
+      neutral placeholders plus a pointer to the typed provider policy,
+      regenerate `.ados-claude/agents/toolsmith.md` with
+      `scripts/build-claude-plugin.sh`, and prove the prompt scan over the full
+      roster. The edit is delegated to `@toolsmith` during delivery (AGENTS.md
       requires it). The documented Claude Code `claude.model` frontmatter is a
       tool-specific assignment contract, not Jaiship provider policy, and the
       scan's 'model literal' definition is scoped to provider/model identifiers
@@ -139,20 +140,20 @@ decisions:
   - text: "PM decision D10 (DoR iteration 1, blocking B2): the initial ceilings are
       re-ordered to `window-cost` ceiling 20 and `ticket-cost` ceiling 30. With
       the window ceiling below the ticket ceiling, spend 20-30 parks on the
-      trailing window and spend >=30 fails the ticket scope; the original
-      30/20 pair made the window park unreachable because the ticket-scope
-      failure always won the MAX combination."
+      trailing window and spend >=30 fails the ticket scope; the original 30/20
+      pair made the window park unreachable because the ticket-scope failure
+      always won the MAX combination."
     date: "2026-11-20"
-  - text: "PM decision D11 (DoR iteration 1, blocking B1/M12): the legacy-source
-      AC is scoped to the delivery surface (scripts/**, tools/**, .opencode/**,
+  - text: "PM decision D11 (DoR iteration 1, blocking B1/M12): the legacy-source AC
+      is scoped to the delivery surface (scripts/**, tools/**, .opencode/**,
       packages/**, tests/**), because the adopter blueprint
-      `doc/templates/blueprints/zai-peak-hours-hook--install.sh` is documentation
-      scaffolding for adopters, not this repository's delivery path. The scan
-      proves both halves: no delivery-surface script or prompt sources the legacy
-      profile directory or installs the hook, and the blueprint is the only
-      installer in the tree and is referenced by no delivery surface. The
-      ticket traceability states the scoped reading rather than claiming the
-      literal repository-wide clause."
+      `doc/templates/blueprints/zai-peak-hours-hook--install.sh` is
+      documentation scaffolding for adopters, not this repository's delivery
+      path. The scan proves both halves: no delivery-surface script or prompt
+      sources the legacy profile directory or installs the hook, and the
+      blueprint is the only installer in the tree and is referenced by no
+      delivery surface. The ticket traceability states the scoped reading rather
+      than claiming the literal repository-wide clause."
     date: "2026-11-20"
   - text: "PM decision D12 (DoR iteration 1, major M7): the current-truth page
       `doc/spec/features/feature-provider-profiles.md` line 38 claims profile
@@ -160,6 +161,21 @@ decisions:
       not do (only entry peaks gate admission). Phase 7 (`@doc-syncer`) must
       reconcile that sentence with the delivered behaviour; the spec's
       documentation-obligation table now names it."
+    date: "2026-11-20"
+  - text: "PM decision D13 (DoR iteration 1, minor m1): the legacy profile set's
+      disposition is recorded so 'nothing is dropped' is auditable — `mixed`
+      maps to the `delivery` profile, `deepseek` to the `paid` profile,
+      `zai-only` to the `subscription-only` chain, `openai` is intentionally not
+      declared (no OpenAI credential or policy target in this adoption; the
+      persisted target is DeepSeek), `zai-top`/`zai.sh` are historical
+      alternates not adopted, and the two shared tier files map to the seat
+      matrix."
+    date: "2026-11-20"
+  - text: "PM decision D14 (DoR iteration 1, minor m5): the PR/owner-review list
+      must name three deliberate deviations for confirmation — the initial
+      ceilings (20/day, 30/ticket), the derived `envName` instead of a committed
+      product-prefixed literal, and the paid-entry union window with its
+      04:00-06:00 cost."
     date: "2026-11-20"
 
 open_questions: []
@@ -211,38 +227,40 @@ notes:
       resolve the workspace binary rather than depend on PATH."
     type: retro
     date: "2026-11-20"
-  - text: "DoR iteration 1 verdict: NOT_READY (readiness-review/readiness-iter-1.md).
-      Blocking: B1 model literals in `.opencode/agent/toolsmith.md` make AC-F2-2
-      false; B2 the 30/20 budget pair makes the window park unreachable (ticket
-      failure wins the MAX combination); B3 the P1 gate passes
-      `doc.provider.profiles` to `parseAndValidateProfileConfiguration`, which
-      expects the whole document; B4 the spec/plan prose gives the credential
-      shape as `{style,name}` instead of `{sourceKey:{style,name}}`. Majors:
-      resolved-config pins ignore shipped defaults; AC-F4-1's skip is
-      unobservable; CFG-004's field-path oracle is false; NOM-002 asserts
-      blockers the nomination result does not expose; SEC-002/SEC-003 identities
-      and false positives; `feature-provider-profiles.md:38` contradicts the
-      delivered entry-peak-only admission; the test-plan battery omits
-      `pnpm build`; the dispatch typed-attempt clause is substituted, not
-      literally satisfied; the 'quota-driven all-paid switch' is daemon-path
-      only; SEAT-004's vision arm names `bootstrapper`; the legacy-source AC
-      overclaims the blueprint/install clause. All four blocking findings were
-      re-verified in code by PM before accepting the verdict."
+  - text: "DoR iteration 1 verdict: NOT_READY
+      (readiness-review/readiness-iter-1.md). Blocking: B1 model literals in
+      `.opencode/agent/toolsmith.md` make AC-F2-2 false; B2 the 30/20 budget
+      pair makes the window park unreachable (ticket failure wins the MAX
+      combination); B3 the P1 gate passes `doc.provider.profiles` to
+      `parseAndValidateProfileConfiguration`, which expects the whole document;
+      B4 the spec/plan prose gives the credential shape as `{style,name}`
+      instead of `{sourceKey:{style,name}}`. Majors: resolved-config pins ignore
+      shipped defaults; AC-F4-1's skip is unobservable; CFG-004's field-path
+      oracle is false; NOM-002 asserts blockers the nomination result does not
+      expose; SEC-002/SEC-003 identities and false positives;
+      `feature-provider-profiles.md:38` contradicts the delivered
+      entry-peak-only admission; the test-plan battery omits `pnpm build`; the
+      dispatch typed-attempt clause is substituted, not literally satisfied; the
+      'quota-driven all-paid switch' is daemon-path only; SEAT-004's vision arm
+      names `bootstrapper`; the legacy-source AC overclaims the
+      blueprint/install clause. All four blocking findings were re-verified in
+      code by PM before accepting the verdict."
     type: blocker
     date: "2026-11-20"
   - text: "Phases reopened on the DoR verdict: specification, test_planning, and
-      delivery_planning. Decisions D9-D12 (recorded above) widen the scope for the
-      toolsmith prompt literals, fix the ceiling ordering, scope the legacy-source
-      AC honestly, and add the provider-profiles admission sentence to phase-7
-      reconciliation. Spec, test plan, and plan must be revised and re-gated."
+      delivery_planning. Decisions D9-D12 (recorded above) widen the scope for
+      the toolsmith prompt literals, fix the ceiling ordering, scope the
+      legacy-source AC honestly, and add the provider-profiles admission
+      sentence to phase-7 reconciliation. Spec, test plan, and plan must be
+      revised and re-gated."
     type: info
     date: "2026-11-20"
   - text: "RETRO (process): the first spec draft passed PM review on structure but
       carried three facts that were only caught by the adversarial gate — the
       toolsmith prompt literals, the budget ordering, and the validator call in
-      the plan gate. The spec explicitly claimed `.opencode/**` was clean without
-      scanning it. Lesson: run the declared scan patterns over the real tree at
-      spec time, and sanity-check every declared budget pair against the
+      the plan gate. The spec explicitly claimed `.opencode/**` was clean
+      without scanning it. Lesson: run the declared scan patterns over the real
+      tree at spec time, and sanity-check every declared budget pair against the
       delivered MAX-combination precedence before pinning fixtures to it."
     type: retro
     date: "2026-11-20"
