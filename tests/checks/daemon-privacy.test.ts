@@ -7,12 +7,12 @@
  * them. The lock token is asserted absent from every rendered surface.
  */
 import { describe, expect, test } from "bun:test";
+import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
+import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import { daemonScopeDigest } from "../../packages/core/src/domain/daemon-lock";
 import { renderSystemdUnit } from "../../packages/core/src/domain/daemon-supervisor";
-import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
-import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import {
   createMemorySupervisor,
   createMountHarness,

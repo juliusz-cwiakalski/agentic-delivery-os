@@ -35,4 +35,10 @@ export const BASE_FAMILIES = [
  * (GH-299), supervise as the twenty-fifth (GH-295), and GH-346's `install` as
  * the twenty-sixth and last.
  */
-export const MOUNTED_FAMILIES = [...BASE_FAMILIES, "metrics", "supervise", "install"] as const;
+export const MOUNTED_FAMILIES = [
+  ...BASE_FAMILIES,
+  "metrics",
+  "supervise",
+  "install",
+  "loop",
+] as const;

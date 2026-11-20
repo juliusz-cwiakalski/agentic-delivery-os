@@ -44,18 +44,19 @@ const DELIVERED = [
 
 describe("TC-EVT-060 events production composition", () => {
   test("events is prompt-required exactly once and the delivered families survive", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(26);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(27);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "events")).toHaveLength(1);
     for (const name of DELIVERED) expect(PROMPT_REQUIRED_COMMANDS).toContain(name);
     // GH-299 appends metrics after steer, GH-295 appends supervise, and GH-346
     // appends install, so the delivered tail keeps its order one position earlier.
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 7]).toBe("events");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 6]).toBe("board");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 5]).toBe("ceremony");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 4]).toBe("steer");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 3]).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 2]).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 8]).toBe("events");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 7]).toBe("board");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 6]).toBe("ceremony");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 5]).toBe("steer");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 4]).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 3]).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 2]).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("loop");
   });
 
   test("the production composer supplies the runtime with every optional input absent", () => {
@@ -76,7 +77,7 @@ describe("TC-EVT-060 events production composition", () => {
       expect(events?.positionals).toEqual({ max: 2 });
       expect(events?.flags).toBeUndefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(26);
+      expect(Object.keys(selected.commands)).toHaveLength(27);
       expect(selected.commands.events).toBeDefined();
     } finally {
       rmSync(root, { recursive: true, force: true });

@@ -5,3 +5,7 @@
 # because Bun test discovery does not consult .gitignore.
 root = "."
 pathIgnorePatterns = ["tmp/**", "node_modules/**", "**/dist/**"]
+# `tmp/` is git-ignored, so a fresh checkout has no scratch root; the preload
+# creates `tmp/tmpdir` once per test process so no suite depends on another's side
+# effect (tests/preload.ts).
+preload = ["./tests/preload.ts"]

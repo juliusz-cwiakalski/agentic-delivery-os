@@ -3,11 +3,11 @@
  * across 100 runs.
  */
 import { describe, expect, test } from "bun:test";
+import type { DaemonSupervisorDescriptor } from "../../packages/core/src/contracts/index";
 import {
   foldDaemonStatus,
   renderDaemonStatusHuman,
 } from "../../packages/core/src/domain/daemon-status";
-import type { DaemonSupervisorDescriptor } from "../../packages/core/src/contracts/index";
 
 const supervisor: DaemonSupervisorDescriptor = {
   kind: "systemd-user",

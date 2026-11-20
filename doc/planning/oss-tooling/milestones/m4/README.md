@@ -78,6 +78,17 @@ hood.
 - Wave 3: M4-S5 + M4-S6 (projects, then the history contract).
 - Wave 4: M4-S7 + M4-S8 (agent prompts, then dogfood + wrapper rewrite).
 
+## Delivered stories
+
+| Story | Ticket | Delivered surface |
+|---|---|---|
+| M4-S1 Installable, versioned binary | GH-346 | The `build:binary` artifact, the `install` lifecycle family, the state-format compatibility check, and the removal matrix. |
+| M4-S10 CEO loop supervision inside jaiship (flip stage F3) | GH-348 | The `loop start\|stop\|status\|log\|reset` family as a composition profile over the delivered supervision engine under `loop-main`, with the two-signal stuck verdict, the durable stop, the declared backoff, the bounded log, and the offline parity battery. Current truth: [feature-loop-supervision.md](../../../../spec/features/feature-loop-supervision.md); reference page: [commands/loop.md](commands/loop.md). `scripts/ceo-loop.sh` stays present and executable as the documented fallback. |
+
+Prompt re-pointing (M4-S7 / flip stage F5, GH-351) and the dogfood window with
+thin wrappers (M4-S8 / flip stage F6, GH-352) remain owned by those stories in
+`backlog.md` and `flip-plan.md`.
+
 ## Non-goals
 
 - Presentation-layer, hosted-service, billing, or multi-tenant work.

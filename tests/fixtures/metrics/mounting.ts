@@ -41,9 +41,12 @@ export const METRICS_MOUNTED_FAMILIES = [...DELIVERED_FAMILIES, "metrics"] as co
 export const SUPERVISE_MOUNTED_FAMILIES = [...METRICS_MOUNTED_FAMILIES, "supervise"] as const;
 
 /** The mounted set after GH-346: install appended as the twenty-sixth family. */
-export const MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install"] as const;
+export const INSTALL_MOUNTED_FAMILIES = [...SUPERVISE_MOUNTED_FAMILIES, "install"] as const;
 
-/** The suites that pin the family count and must all read 26. */
+/** The mounted set after GH-348: loop appended as the twenty-seventh family. */
+export const MOUNTED_FAMILIES = [...INSTALL_MOUNTED_FAMILIES, "loop"] as const;
+
+/** The suites that pin the family count and must all read 27. */
 export const PINNING_FILES = [
   "tests/structure/entrypoint-bin.test.ts",
   "tests/structure/steer-mounting.test.ts",

@@ -1,0 +1,370 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-348
+branch: feat/GH-348/loop-supervision
+status: FAIL
+
+summary: |
+  Re-reviewed the review-iteration-1 remediation over 2c7b6252..400461dc (and the
+  whole range origin/main-tools..HEAD, base f802f71a) against chg-GH-348-spec.md
+  v1.4 (41 ACs), test plan r0.6, the ten-phase plan (phase 10 = remediation) and
+  the pm-notes. Six of the nine iteration-1 findings are genuinely closed:
+  F-2 (newest-lane-per-ref before classification, superseded active reads none),
+  F-4 (TC-BATTLE-006 now drives the real composed command runtime over the GH-347
+  dispatch-parity fixture and asserts real envelopes), F-5 (nine proven surfaces,
+  each with its own observation, planted off-boundary row fails by name), F-6
+  (unconditional --agent ceo/--model assertions, tautology removed), F-8
+  (progressBoundMs participates: fresh positive progressing, stale positive
+  kill-safe unevaluable), F-9 (info, no action). F-3's join/observe and
+  null-start-time no-probe/no-spawn are delivered and tested, with one residual
+  (N-3). F-7's projection now carries a value but only in-process (carried open,
+  minor). The head-line block, however, is NOT closed: production's
+  artifactAdvanced() reads payload.recordedAt for BOTH artifact kinds, but a
+  blocker.answer payload stores its instant as answeredAt (contracts/blockers.ts,
+  state/blockers.ts answerPayload), so every blocker-answer record is
+  "undatable" and counts as an advance; any repository that has ever answered a
+  blocker still never reaches a stuck verdict (N-1, blocker). The F-1 harness case
+  injects instants and therefore cannot catch this. I also confirm (open question)
+  that the change test plan claims doc-conformance enforces the page/constant
+  boundary equality, which it does not; AC-F8-5 scopes that comparison to a
+  documentation-phase check, so the missing permanent suite is acceptable but the
+  test-plan claim is false (N-2, minor). Battery, pinned/invariant suites, the doc
+  guards and the branch-range commit gate are green; the no-shell invariant is
+  extended (not duplicated); the boundary constant is nine/six and matches the
+  published page; the ten §8.5 divergences are unchanged and honoured.
+
+spec_compliance: FAIL
+plan_compliance: PASS
+plan_gaps:
+  - "SCOPE_DEVIATION (info): packages/core/src/app/index.ts received the newestLanePerRef re-export but is not in plan phase 10's declared scope.files (packages/core/src/index.ts is). Necessary for the core root re-export; amend the phase-10 file list for accuracy."
+
+diff_scope:
+  range: origin/main-tools..HEAD
+  base: f802f71a
+  head: 400461dc
+  files_changed: 144
+  insertions: 20088
+  deletions: 360
+  by_area:
+    packages: { files: 26, insertions: 3442, deletions: 70 }
+    tests: { files: 82, insertions: 5132, deletions: 182 }
+    scripts: { files: 3, insertions: 18, deletions: 0 }
+    doc: { files: 32, insertions: 11476, deletions: 108 }
+    other: { files: 1, insertions: 20, deletions: 0 }
+  delta_since_iteration_1:
+    range: 2c7b6252..400461dc
+    commits: 4
+    files_changed: 23
+    insertions: 1457
+    deletions: 200
+    by_area:
+      packages: { files: 6, insertions: 159, deletions: 37 }
+      tests: { files: 11, insertions: 582, deletions: 118 }
+      doc: { files: 6, insertions: 716, deletions: 45 }
+    note: "The 6 doc files include code-review/review-iter-1.yaml (366 lines) plus the plan, pm-notes, glossary, current-truth page and test-spec. No file outside the review's declared remediation surface changed except packages/core/src/app/index.ts (see plan_gaps)."
+
+severity_breakdown:
+  blocker: 1
+  major: 0
+  minor: 3
+  info: 1
+
+iteration1_disposition:
+  - id: F-1
+    prior_severity: blocker
+    disposition: NOT_CLOSED
+    evidence: >-
+      The port signature is now baseline-aware (loop-supervisor.ts:218), the
+      supervisor passes the window's baseline (loop-supervisor.ts:703,712) and
+      production compares merge.transaction payload.recordedAt against sinceMs
+      (production.ts:3926-3946); the harness models instants and the prior-merge
+      control is green. But blocker.answer records carry answeredAt, not
+      recordedAt (contracts/blockers.ts:228-234; state/blockers.ts:194-204), so
+      the predicate's `typeof recordedAt !== 'string'` branch returns true for
+      every blocker-answer record. The headline failure therefore persists for any
+      repo that has ever answered a blocker. Carried as NEW N-1.
+  - id: F-2
+    prior_severity: major
+    disposition: CLOSED
+    evidence: >-
+      newestLanePerRef() (loop-corroborator.ts:129-141) reduces to the newest
+      record per ref in ledger order; production runs the reduction before
+      classification (production.ts:3897-3909); the superseded-active row
+      (loop-stuck.test.ts) proves the reading is none/D2, not in-progress/D4.
+  - id: F-3
+    prior_severity: major
+    disposition: CLOSED_WITH_RESIDUAL
+    evidence: >-
+      establishSession returns the joined effect's facts via factsOfEffect
+      (loop-supervisor.ts:601-617); production's join seeds from the durable
+      newest loop.session and marks the session alive only when the pid is alive
+      (production.ts:4040-4071); the null-start-time active record takes a join
+      arm and is never probed with 0 (loop-supervisor.ts:627-633); the two named
+      cases leave session.read() absent, assert 1 join/0 spawn, assert the
+      recorded pid 4242 is never probed, and assert no probe uses
+      processStartTimeMs 0 (loop-instance.test.ts). Residual (N-3): factsOfEffect
+      forces liveness alive, so the documented unknown-liveness "no stuck
+      verdict" clause is not enforced on that arm.
+  - id: F-4
+    prior_severity: major
+    disposition: CLOSED
+    evidence: >-
+      runPickDeliverMerge now drives the caller's real runtime; the case uses
+      createParityHarness (the pre-existing GH-347 D1 composed production program)
+      and asserts real envelopes (queue.precondition.unmet exit 1,
+      noop-lane-nothing-to-do exit 0, merge.state-unverified exit 2), the argv
+      order, the real dispatch lane evidence, zero shell invocations, and
+      deliverLeg=dispatch / phaseCompleteUsed=false derived from argv. The
+      boundary stays nine/six (real-pick-deliver-merge not proven). No assertion
+      now reads the old PICK_DELIVER_MERGE_STEPS constant.
+  - id: F-5
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      The meta-case iterates LOOP_PROVEN_SURFACES (nine, including kill and
+      no-shell) and runs a surface-specific observation per surface, failing by
+      name with a detail; a planted off-boundary/empty row is rejected by
+      surfaceGaps(); the case title now matches what it proves.
+  - id: F-6
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      The D1 re-observations assert the composed argv unconditionally: on exit 0,
+      exactly one --agent followed by ceo and exactly one non-empty --model; on
+      refusal, a DELIVERED provider.profile.invalid/config.value.invalid identity
+      with zero invocations; the tautological `expect(code).toBeDefined()` is
+      gone. Both branches carry a binding property (loop-production-session.test.ts).
+  - id: F-7
+    prior_severity: minor
+    disposition: PARTIALLY_CLOSED
+    evidence: >-
+      recordedProgress is no longer hardcoded null; it projects lastProgressState
+      (loop-supervisor.ts:401) with a golden (loop-status.test.ts). But
+      lastProgressState is per-supervisor in-memory state initialised null, so a
+      real operator `loop status` (a separate process) always projects null; the
+      value is only non-null when status runs in the same process that cycled.
+      API-4 still says "recorded" while the current-truth page was reworded to
+      "last observed". Carried open as minor.
+  - id: F-8
+    prior_severity: minor
+    disposition: CLOSED
+    evidence: >-
+      evaluateLoopVerdict now consults progressBoundMs for the positive-progress
+      cause: positive within the bound is progressing, a positive without a
+      timestamp is treated as fresh, and a stale positive is kill-safe unevaluable
+      (loop-verdict.ts:100-120); two decision-table rows (fresh within / stale
+      beyond) are asserted in loop-stuck.test.ts. Production's progress.read
+      always stamps observedAtMs=nowMs(), so no production positive is stale; the
+      change-spec F-5 prose still enumerates only unknown/unreadable for
+      unevaluable (doc drift, no code action).
+  - id: F-9
+    prior_severity: info
+    disposition: CLOSED
+    evidence: "No action required; the branch-range gate is PASS and the commit subjects still satisfy the stated convention."
+
+findings:
+  - id: N-1
+    severity: blocker
+    confidence: high
+    category: spec-compliance
+    location: "packages/cli/src/production.ts:3926-3946 (contract packages/core/src/contracts/blockers.ts:228-234; state packages/core/src/state/blockers.ts:194-204)"
+    issue: >-
+      The remediation made artifactAdvanced(sinceMs) baseline-relative, but the
+      production predicate reads only payload.recordedAt for both artifact kinds.
+      A blocker.answer payload records its instant as answeredAt and has no
+      recordedAt, so every blocker-answer record is treated as "undatable"
+      and returns true (an advance) regardless of the baseline. The F-5/AC-F5-1
+      stuck condition ("no artifact advance since the last observation") is
+      therefore never satisfiable in any repository that has ever answered a
+      blocker, exactly as it was for merges before the fix. The F-1 behaviour case
+      cannot detect this because the loop harness injects advance instants instead
+      of driving the production predicate over a real blocker.answer record.
+    authorising_clause: "chg-GH-348-spec.md F-5 ('no artifact advance since that observation' over a merge.transaction OR a blocker answer), AC-F5-1, DM-6"
+    suggestion: >-
+      Read the kind-specific instant: merge.transaction.recordedAt and
+      blocker.answer.answeredAt (a small normalizer in the composition). Keep the
+      undatable->advance kill-safe fallback only for genuinely malformed records.
+      Add a production-composition case that appends a prior blocker.answer (and a
+      prior merge.transaction) before the baseline and still reaches a stuck
+      verdict after the window, plus a within-window control, by driving the real
+      artifactAdvanced predicate rather than the harness constant.
+    remediation:
+      file: "packages/cli/src/production.ts:3926-3946; add a production-composition case (tests/structure/loop-production-composition.test.ts or loop-stuck.test.ts against the real predicate)"
+      change: "Compare the kind-specific timestamp (recordedAt for merge.transaction, answeredAt for blocker.answer) against sinceMs; only true-undatable records fall back to advance; add the prior-blocker-answer stuck case."
+    suppressed: false
+    published_url: null
+
+  - id: N-2
+    severity: minor
+    confidence: high
+    category: documentation
+    location: "doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-test-plan.md:49 (verifier tests/checks/doc-conformance.test.ts)"
+    issue: >-
+      The change test plan states that a page/constant boundary mismatch is
+      "verified by the current-truth doc guard in the aggregate (pnpm check ->
+      bun test tests/checks/doc-conformance.test.ts)". doc-conformance.test.ts
+      only scans the GH-242 §16.1.1 phrase table and a fixed guide/man-page list;
+      it does not read doc/spec/features/feature-loop-supervision.md's boundary or
+      compare it with LOOP_PARITY_PROOF_BOUNDARY. The equality was in fact checked
+      by a one-off manual comparison recorded in the pm-notes. The claim is false
+      even though the page and constant currently agree (nine/six, same order).
+    authorising_clause: "chg-GH-348-test-plan.md line 49 (DoR R-03 proof-boundary discipline); chg-GH-348-spec.md AC-F8-5 (the page comparison is a documentation-phase check)"
+    suggestion: >-
+      AC-F8-5 scopes the page comparison to a documentation-phase check, so a
+      permanent delivery suite is not required. Correct the test-plan wording to
+      state that phase 7 performs the comparison once (recorded in the pm-notes)
+      and that no permanent delivery case reads doc/changes/**; or, if a standing
+      guard is wanted, add a documentation-phase check that reads the page's
+      boundary table and compares it to LOOP_PARITY_PROOF_BOUNDARY, and say so.
+    remediation:
+      file: "chg-GH-348-test-plan.md:49 (owner: doc-syncer, with the phase-7 reconciliation note in chg-GH-348-pm-notes.yaml)"
+      change: "Rewrite the verifier clause to name the actual phase-7 one-off reconciliation (or add the permanent documentation guard), removing the false doc-conformance claim."
+    suppressed: false
+    published_url: null
+
+  - id: N-3
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: "packages/core/src/app/loop-supervisor.ts:601-611,627-633"
+    issue: >-
+      factsOfEffect() unconditionally sets liveness: "alive" for every join or
+      resume effect, including the new null-start-time active-record arm. The
+      current-truth page states that a recorded active session "without a
+      verifiable process identity (no pid, or a pid with no platform start time)
+      is unknown-liveness (no stuck verdict)". On this arm the supervisor instead
+      reports the session live, so cycle() can reach a stuck verdict (and attempt
+      a terminate that, for a cross-process join with no in-memory handle,
+      becomes a capability-gap kill-failed terminal). The delivered F-3 test only
+      exercises the progressing path, so this residual is unobserved.
+    authorising_clause: "chg-GH-348-spec.md F-6 ('joined and observed'), AC-F6-4, AC-F6-5; doc/spec/features/feature-loop-supervision.md §3 (unknown-liveness = no stuck verdict)"
+    suggestion: >-
+      Carry the unverifiable-identity case as an explicit unknown-liveness fact
+      (do not force liveness alive when the join cannot prove identity), or make
+      the page wording match the code's actual conservative-join semantics. Add a
+      case that drives the null-start-time arm with sourced zero progress past the
+      window and asserts it does not produce a stuck/kill.
+    remediation:
+      file: "packages/core/src/app/loop-supervisor.ts:601-611,627-633 and doc/spec/features/feature-loop-supervision.md §3"
+      change: "Model the null-start-time join as unknown-liveness (no stuck verdict), or re-scope the page; add the zero-progress surface case."
+    suppressed: false
+    published_url: null
+
+  - id: F-7
+    severity: minor
+    confidence: medium
+    category: spec-compliance
+    location: "packages/core/src/app/loop-supervisor.ts:401 (projection) and doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-spec.md:303 (API-4)"
+    issue: >-
+      Carried from iteration 1 (partially closed). recordedProgress projects the
+      in-memory lastProgressState, which is null in every fresh process; a real
+      `loop status` invocation therefore still projects session.progress = null
+      even when a verdict or an observation exists. The projection is not sourced
+      from any durable record, and API-4 still says "the recorded ... progress
+      state" while the current-truth page was reworded to "last observed".
+    authorising_clause: "chg-GH-348-spec.md API-4"
+    suggestion: >-
+      Either source the progress from a durable fact (the newest persisted
+      verdict/observation) so a separate-process status can carry it, or re-scope
+      API-4 to "last observed by the running supervisor, null in a fresh process"
+      and state that the human block has no progress key. Add a status case that
+      runs status in a fresh supervisor after a start in another, or record why
+      that is out of scope.
+    remediation:
+      file: "packages/core/src/app/loop-supervisor.ts:401 and chg-GH-348-spec.md:303 (or the current-truth page)"
+      change: "Bind session.progress to a durable source, or reconcile API-4 to the in-process last-observed semantics with a fresh-process note."
+    suppressed: false
+    published_url: null
+
+  - id: N-4
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: "packages/core/src/app/index.ts (plan phase 10 scope.files)"
+    issue: >-
+      Plan phase 10 declares packages/core/src/index.ts in scope but not
+      packages/core/src/app/index.ts, yet the remediation added the
+      newestLanePerRef re-export to the app barrel (required for the core root
+      re-export). The change is correct and necessary; only the declared scope is
+      incomplete.
+    authorising_clause: "chg-GH-348-plan.yaml phase 10 scope; plan-audit SCOPE_DEVIATION"
+    suggestion: "Amend plan phase 10's file list to include packages/core/src/app/index.ts."
+    remediation:
+      file: "doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-plan.yaml (phase 10 scope.files)"
+      change: "Add packages/core/src/app/index.ts to the declared scope; no code change."
+    suppressed: false
+    published_url: null
+
+positive_observations:
+  - "F-1 topology is complete: LoopSupervisorPorts.artifactAdvanced takes `sinceMs: number | null`, the supervisor passes the same instant the window is measured from (baselineAtMs = lastProgressAtMs, seeded at acquisition), and only one call site exists; merge.transaction records are compared by recordedAt and a null baseline reports no advance. Only the blocker.answer instant field is mis-read (N-1)."
+  - "F-2: newestLanePerRef is a single delivered selector (not a second rule), used in production before classification; the superseded-active pair reads none; the helper is exported through both barrels and the content-inventory allowance was updated."
+  - "F-3: the join result is no longer discarded (factsOfEffect), production joins the durable newest loop.session, a null start time is joined without a 0 probe and without a spawn, and the new cases do not pre-set session.read() alive."
+  - "F-4: TC-BATTLE-006 drives the pre-existing GH-347 D1 composed production program; the three invocations return real delivery identities (queue.precondition.unmet, noop-lane-nothing-to-do, merge.state-unverified), the lane evidence is real, and guarded.violations is empty (zero shells)."
+  - "F-5: the meta-case executes all nine proven surfaces with surface-specific observations (including kill and no-shell) and a planted off-boundary/empty row fails by name; TC-BATTLE-007 still asserts nine/six in order."
+  - "F-6: both D1 re-observation branches assert a concrete binding property; the tautological toBeDefined() is removed."
+  - "F-8: progressBoundMs now participates in the positive-progress cause with a kill-safe stale arm; the decision table gained both boundary rows."
+  - "No delivered assertion was deleted, inverted, skipped or relaxed. The only removed assertions are (a) the 26-family pins, updated to 27 (metrics stale-pin set gains 26, reference-page-parity learns the M4 root, install comparator tail becomes install-then-loop), and (b) the two defective cases F-4/F-5 explicitly asked to be rewritten. The replaced pick-deliver-merge case drops the stub 'closeout' invocation because AC-F8-4 names only pick/deliver/merge through the real runtime; merge/closeout remain consumed-as-delivered (NG-7)."
+  - "The no-shell invariant was EXTENDED, not duplicated: ten loop files joined DISPATCH_FLOW_SURFACE and the planted-reimplementation control and prompt scan remain."
+  - "The proof-boundary constant is nine proven / six not-proven in the declared order and matches the published page; the ten §8.5 divergences are unchanged and unaffected by the remediation (grammar, exit projection, durable budget, backoff, resume limitation, bounded log, stop modes, retired hook, config mapping, bounded --lines)."
+  - "No real timers, sleeps, network, or child processes in the new suites; the new cases are deterministic and the targeted/pinned/invariant suites are green."
+
+checks_run:
+  - name: "behaviour loop suites (incl. F-1 baseline cases, F-3 re-find cases, F-7 progress golden)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-*.test.ts"
+    result: "93 pass / 0 fail (488 expect calls, 9 files)"
+  - name: "conformance + structure + checks loop suites (incl. real-runtime pick-deliver-merge, nine-surface meta-case)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop/ tests/structure/loop-*.test.ts tests/checks/loop-*.test.ts"
+    result: "36 pass / 0 fail (175 expect calls, 8 files)"
+  - name: "modified pinned suites + no-shell invariant + content inventory"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/install-conformance.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/event-taxonomy-single-source.test.ts tests/structure/content-inventory.test.ts"
+    result: "59 pass / 0 fail (390 expect calls, 8 files)"
+  - name: "current-truth doc guards + doc distribution"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts tests/checks/reference-page-parity.test.ts; bash scripts/.tests/test-doc-distribution.sh"
+    result: "30 pass / 0 fail; doc-distribution OK (96 in-scope docs, no drift)"
+  - name: "branch-range commit-message gate"
+    command: "bash scripts/lint-commit-range.sh --base origin/main-tools"
+    result: "VERDICT: PASS — 41 commits, 0 offending"
+  - name: "static contract audit of the F-1 production predicate and the doc-conformance claim"
+    result: "CONFIRMED — blocker.answer payload carries answeredAt only (no recordedAt), so the production predicate returns true unconditionally for blocker answers (N-1); doc-conformance does not read the loop boundary (N-2); LOOP_PROVEN_SURFACES length 9 and LOOP_NOT_PROVEN_SURFACES length 6 match the page; no coordinator source, error identity, domain kind or config key changed."
+  - name: "full aggregate gate pnpm check"
+    result: "NOT RE-RUN by this review; the pm-notes records it green (11 432 pass / 0 fail) at the phase-10 commit d622e5d5 and the post-HEAD commits are docs-only. Reviewed via the targeted and pinned suites above."
+
+remediation:
+  verdict: FAIL
+  ordered_tasks:
+    - order: 1
+      owner: coder
+      task: "Fix N-1 (blocker): make the production artifactAdvanced predicate read the kind-specific instant — merge.transaction.recordedAt and blocker.answer.answeredAt — so a prior blocker answer does not suppress a stuck verdict; keep undatable->advance only for genuinely malformed records, and add a production-composition case that seeds a prior blocker.answer (and merge) before the baseline and still reaches stuck after the window, plus a within-window control, by driving the real predicate."
+      files:
+        - "packages/cli/src/production.ts:3926-3946"
+        - "a production-composition/loop-stuck case over the real predicate"
+    - order: 2
+      owner: doc-syncer
+      task: "Fix N-2 (minor): correct chg-GH-348-test-plan.md:49 so it no longer claims doc-conformance.test.ts enforces the page/constant boundary equality; state that phase 7 performs the one-off comparison (already recorded in the pm-notes), or add a documentation-phase guard and name it. AC-F8-5 does not require a permanent delivery suite."
+      files:
+        - "doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-test-plan.md:49"
+    - order: 3
+      owner: coder
+      task: "Fix N-3 (minor): model the null-start-time/unverifiable-identity join as unknown-liveness (no forced alive) so it cannot reach a stuck verdict, or re-scope the current-truth page wording; add a zero-progress surface case that asserts no stuck/kill on that arm."
+      files:
+        - "packages/core/src/app/loop-supervisor.ts:601-611,627-633"
+        - "doc/spec/features/feature-loop-supervision.md §3"
+    - order: 4
+      owner: coder
+      task: "Resolve F-7 (minor, carried): bind session.progress to a durable source so a separate-process `loop status` can carry it, or reconcile API-4 and the page to the in-process last-observed semantics and record that the operator status process shows null."
+      files:
+        - "packages/core/src/app/loop-supervisor.ts:401"
+        - "chg-GH-348-spec.md:303 or doc/spec/features/feature-loop-supervision.md"
+    - order: 5
+      owner: plan-writer
+      task: "Record N-4 (info): add packages/core/src/app/index.ts to plan phase 10's scope.files."
+      files:
+        - "doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-plan.yaml (phase 10 scope)"
+    - order: 6
+      owner: reviewer
+      task: "Re-review (iteration 3) after remediation: confirm N-1 is closed by a case that drives the real production artifactAdvanced over a prior blocker.answer and a prior merge, keep the battery and the branch-range gate green, and verify no delivered assertion was relaxed."
+  next_step: CALL_CODER
+
+reviewed_at: 2026-11-19T19:40:00Z
+next_step: CALL_CODER

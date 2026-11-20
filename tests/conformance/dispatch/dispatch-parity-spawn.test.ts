@@ -7,8 +7,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
-import { DISPATCH_LIFECYCLE_SECTION_TITLES } from "../../../packages/core/src/domain/dispatch-prompt";
 import { CLOSEOUT_INTEGRATION_BASE } from "../../../packages/core/src/contracts/index";
+import { DISPATCH_LIFECYCLE_SECTION_TITLES } from "../../../packages/core/src/domain/dispatch-prompt";
 import { createCommandScenario } from "../../fixtures/dispatch/golden/harness";
 import { parityCasesOf } from "../../fixtures/dispatch/parity/cases";
 import {

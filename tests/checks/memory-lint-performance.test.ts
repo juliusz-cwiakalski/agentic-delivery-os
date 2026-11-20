@@ -5,13 +5,13 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
-  scanMemoryTree,
   type MemoryScanFileSystem,
+  scanMemoryTree,
 } from "../../packages/adapters/src/file/memory-scan";
-import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
 import type { MemoryPrivacyVocabulary } from "../../packages/core/src/contracts/index";
+import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 
 const ROOT = process.cwd();
 const EMPTY_VOCABULARY: MemoryPrivacyVocabulary = { rules: [], suppressionClasses: [] };

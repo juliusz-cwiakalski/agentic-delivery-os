@@ -46,6 +46,9 @@ const pageFor = (command: string): string => {
   // GH-346: a new family documents itself in its own milestone root; the M1
   // snapshot root must never serve it.
   if (command === "install") return `${M4_PAGE_ROOT}/install.md`;
+  // GH-348: the loop family documents itself in the same M4 root; the M1
+  // snapshot root must never serve it.
+  if (command === "loop") return `${M4_PAGE_ROOT}/loop.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 

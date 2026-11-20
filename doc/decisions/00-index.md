@@ -85,11 +85,17 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0053](TDR-0053-total-derivation-ladder-and-corroboration.md) | TDR | Total Derivation Ladder and Arm-Aware Corroboration — Tracker-Done `merged` First, Artifact `partial`, and the Subsumed Exit-0-No-Artifact `failed` Arm | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0054](TDR-0054-dispatch-spawn-identity-title-and-prompt.md) | TDR | Dispatch Spawn Identity — the `pm` Agent Through the Binding Seam, a Deterministic `ticket-<REF>` Title, and the Lifecycle Prompt as Data | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0055](TDR-0055-phase-truth-registry-fold-mirror.md) | TDR | One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 
 Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.
+
+Decisions TDR-0056 and TDR-0057 are the binding design of change GH-348; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.

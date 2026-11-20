@@ -94,7 +94,7 @@ describe("TC-ATTEMPT-030 the attempts help page is reachable and pure", () => {
     expect(ROOT_HELP.usage).toHaveLength(1);
     const text = renderRootHelp(resolved.value);
     const commands = text.split("Commands:\n")[1]?.trimEnd().split("\n") ?? [];
-    expect(commands).toHaveLength(26);
+    expect(commands).toHaveLength(27);
     expect(commands.some((line) => line.trimStart().startsWith("attempts"))).toBe(false);
   });
 });
