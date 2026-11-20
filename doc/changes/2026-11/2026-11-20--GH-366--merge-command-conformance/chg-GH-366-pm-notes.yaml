@@ -8,9 +8,9 @@ milestone: "M4: Jaiship-native delivery"
 branch: fix/GH-366/merge-command-conformance
 phases:
   clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
-  specification: { started: null, completed: 2026-11-20T11:58:54.486Z }
-  test_planning: { started: null, completed: 2026-11-20T11:59:03.800Z }
-  delivery_planning: { started: null, completed: 2026-11-20T12:06:01.719Z }
+  specification: { started: null, completed: 2026-11-20T12:34:02.847Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,6 +56,32 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR iteration 2: NOT_READY — 6 major, 5 minor, 3 nit; 6 facets FAIL
+      (spec_completeness, ac_quality, plan_coverage, test_traceability,
+      cross_artifact_consistency, plan_code_area_coverage) and 4 PASS
+      (decision_capture, system_spec_consistency, plan_doc_update_coverage,
+      dod_defined). 20 of iteration 1's 22 findings are closed, 1 partial
+      (TC-MRG-009's target), 1 recurring in a new place. Record:
+      `readiness-review/readiness-iter-2.md`. Remediating: the abort row's
+      landing-fault honesty (a refused landing reports the provider identity, so
+      the row keeps only act-requiring pre-mutation causes), a convergence AC,
+      the `operation` rendering field, saturation precedence, the golden-suite
+      gate split by phase, `verify-gates.ts` in phase 4, and the two records'
+      stale open points. Iteration 3 is the last before escalation."
+    type: info
+    date: "2026-11-20"
+  - text: "PM rebuttal to DoR iteration 2's minor finding 9 (artifact phases
+      completed before the revised artifacts were written). Verified with
+      `date`, `stat` and `git log --date=iso-strict`: the workspace clock is CET
+      (+01:00) while the ledger records UTC. The spec file's mtime is
+      12:46:35+01:00 = 11:46:35Z against `specification.completed` 11:58:54Z;
+      the test plan 12:58:21+01:00 = 11:58:21Z against 11:59:03Z; the plan
+      13:05:53+01:00 = 12:05:53Z against 12:06:01Z. Each artifact was written
+      before its completion, so the ledger describes the remediation correctly.
+      No reopen is performed for this finding; the timestamps were never
+      hand-edited and the phase family remains the only write path."
+    type: info
+    date: "2026-11-20"
   - text: "DoR remediation complete (iteration 1 findings): specification reopened
       and re-landed as v2.0 (`9ee3560e`), test plan reopened and re-landed as
       v1.1 (`f80638d5`), delivery_planning reopened and revised to v1.1 (48
