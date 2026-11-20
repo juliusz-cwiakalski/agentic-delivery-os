@@ -39,8 +39,11 @@ const FIXED_SURFACE = [
   "packages/cli/src/commands/dispatch.ts",
   "packages/cli/src/edge.ts",
   "packages/cli/src/production.ts",
+  "packages/cli/src/output/dispatch-text.ts",
   "packages/adapters/src/harness/opencode.ts",
   "packages/adapters/src/host/index.ts",
+  "packages/adapters/src/file/dispatch-logs.ts",
+  "packages/adapters/src/harness/opencode-transcript.ts",
   "packages/adapters/src/daemon/lane-executor.ts",
   // GH-348: the non-glob loop modules and the loop command module join the
   // declared surface; the globbed loop modules are covered by the equality rule.
@@ -326,6 +329,45 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
     ];
     for (const source of controls) {
       expect(scanSource("control.ts", source), source.slice(0, 40)).toEqual([]);
+    }
+  });
+
+  test("TC-SHELL-001 a planted reference in a declared operator surface fails by name and file:line", () => {
+    const base = join(ROOT, "tmp", "tmpdir");
+    mkdirSync(base, { recursive: true });
+    const root = mkdtempSync(join(base, "no-shell-operator-"));
+    try {
+      const relative = "packages/core/src/domain/dispatch-operator-view.ts";
+      mkdirSync(join(root, "packages", "core", "src", "domain"), { recursive: true });
+      writeFileSync(
+        join(root, relative),
+        [
+          "export const marker = 'active';",
+          "export const hint = 'see scripts/deliver-ticket.sh for the shell lane';",
+          "export const template = (root: string) => `${root}/tools/deliver-ticket`;",
+          "",
+        ].join("\n"),
+      );
+      const violations = scan(root, [relative]);
+      const rules = violations.map((violation) => violation.rule);
+      expect(rules).toContain("script-path literal");
+      expect(violations.every((violation) => violation.file === relative)).toBe(true);
+      // Both the plain literal (line 2) and the substituted template (line 3)
+      // are reported, by rule and by line.
+      expect(new Set(violations.map((violation) => violation.line)).size).toBeGreaterThanOrEqual(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a payload string that mentions dispatch without a path stays clean", () => {
+    const controls = [
+      "export const summary = 'dispatch status answers the newest lane';\n",
+      "export const hint = 'run dispatch log GH-354 for the tail';\n",
+      "export const label = 'dispatch.is-delivering';\n",
+    ];
+    for (const source of controls) {
+      expect(scanSource("control.ts", source), source).toEqual([]);
     }
   });
 

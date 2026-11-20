@@ -266,7 +266,7 @@ derive_expected_install_set() {
 # Prints REPO-RELATIVE paths (sandbox-relative == repo-relative for these docs).
 # ----------------------------------------------------------------------------
 derive_actual_install_set() {
-  local sandbox log f rc
+  local sandbox log f rc home
 
   # TEST SEAM (Fix: committed negative-mode self-tests). When the harness sets
   # ADOS_GUARD_ACTUAL_SET_FILE, emit that file (sorted) instead of running
@@ -280,12 +280,18 @@ derive_actual_install_set() {
 
   sandbox="$(mktemp -d)"; _guard_register_tmp "${sandbox}"
   mkdir -p "${sandbox}/.git"
+  # HOME-HERMETIC: the installer resolves its launcher under $HOME. An inherited
+  # HOME that already carries a lifecycle-installed product refuses to overwrite
+  # content it does not own, so the oracle would measure the machine instead of
+  # the tree. The sandbox gets its own scratch home; TMPDIR is unchanged.
+  home="${sandbox}/home"; mkdir -p "${home}"
   log="$(mktemp)"; _guard_register_tmp "${log}"
 
   set +e
   (
     cd "${sandbox}"
-    ADOS_SOURCE_DIR="${_GUARD_ROOT}" NO_FETCH=true \
+    HOME="${home}" \
+      ADOS_SOURCE_DIR="${_GUARD_ROOT}" NO_FETCH=true \
       bash "${REPO_ROOT}/scripts/install.sh" --local --no-fetch >"${log}" 2>&1
   )
   rc=$?

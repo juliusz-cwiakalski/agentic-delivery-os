@@ -27,6 +27,7 @@ import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapter
 import {
   acquireFileConfig,
   createHostIndexAccess,
+  createNodeDispatchLogFileSystem,
   createNodeInstallFilePort,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
@@ -81,6 +82,7 @@ import {
   createOpencodeInstance,
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
+  createOpencodeTranscriptReader,
   mapCoordinatorNewTurn,
   OPENCODE_CAPABILITIES,
 } from "@delivery-os/adapters/harness";
@@ -96,6 +98,7 @@ import {
 } from "@delivery-os/adapters/repo";
 import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import type {
+  DispatchTranscriptRead,
   HarnessAdapterRegistration,
   HarnessBindingResolution,
   HarnessProfileView,
@@ -115,6 +118,7 @@ import {
   classifyProjectStateLocation,
   classifyVerifyDocument,
   corroborateDelivery,
+  createDispatchLogSink,
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
   type DaemonComposition,
@@ -127,6 +131,7 @@ import {
   type DispatchTrackerFacts,
   type DispatchTruthReads,
   detectPriorNamespace,
+  dispatchLogsFamilyRoot,
   EvaluateVerifyChange,
   emptyHandoverGate,
   evaluateCoordinatorRestartAdmission,
@@ -229,8 +234,11 @@ import {
   type DeliveryRequest,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  DISPATCH_PROBE_TOLERANCE_MS,
   type DispatchDelay,
   type DispatchLedgerVariant,
+  type DispatchLogFileSystem,
+  type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
@@ -343,6 +351,7 @@ import {
   createConfigProgram,
   createDispatchCommandRuntime,
   createDispatchGateRuntime,
+  createDispatchOperatorRuntime,
   createLoopLedgerPort,
   createMergeCommandRuntime,
   createPhaseCommandRuntime,
@@ -871,11 +880,102 @@ export type ProductionCompositionFacts = {
    * can instrument reads without changing the state location.
    */
   readonly stateStoreWrap?: (store: StateStorePort) => StateStorePort;
+  /**
+   * The injected advisory owner-liveness probe (GH-354 API-10, DM-4).
+   *
+   * Production reads the host process table; the offline battery injects a
+   * faithful model so the tri-state mapping, the 5 000 ms start-instant
+   * tolerance, and the reused-pid rejection are observable without a kernel.
+   */
+  readonly ownerProbe?: DispatchOwnerProbe;
+  /**
+   * The artifact-family root and its filesystem edge (GH-354 DM-2).
+   *
+   * Production places the family beside the ledger and binds the node edge; a
+   * composition proof injects a recording or faulty edge so the one-writer rule,
+   * the retention order, and the non-gating fault are observable.
+   */
+  readonly dispatchLogFamilyRoot?: string;
+  readonly dispatchLogFileSystem?: DispatchLogFileSystem;
+  /**
+   * The injected transcript read and the adapter capability declaration it is
+   * gated by (GH-354 API-9). Production mounts the real opencode reader; the
+   * offline battery injects a recording double so the ladder is observable
+   * without a live store.
+   */
+  /**
+   * The registered credential set the operator runtime redacts the final
+   * message with (GH-354 AC-F4-7). The entrypoint resolves the declared
+   * credential references against the injected environment once and passes the
+   * same values in the composition invocation fact; an embedder that composes
+   * without an entrypoint may inject the same runtime fact here.
+   */
+  readonly registeredSecrets?: readonly string[];
+  readonly operatorTranscript?: DispatchTranscriptRead;
+  readonly operatorSupportsIntrospection?: (kind: HarnessKind) => boolean;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
 const UNBOUND_SCOPE_WARNING =
   "outside any git work tree: delivery state is not repository-scoped (unbound scope)";
+
+/**
+ * One host process-table row: its state and its start instant in epoch
+ * milliseconds, read from `/proc` through the filesystem only (no process
+ * handle is touched).
+ */
+type ProcStat = { readonly state: string; readonly startedMs: number };
+
+const readProcStat = (processId: number): ProcStat | "missing" | "unreadable" => {
+  if (!Number.isFinite(processId) || processId <= 0) return "missing";
+  let text: string;
+  try {
+    text = readFileSync(`/proc/${processId}/stat`, "utf8");
+  } catch (error) {
+    const code = (error as { readonly code?: unknown }).code;
+    return code === "ENOENT" ? "missing" : "unreadable";
+  }
+  // Field 2 (`comm`) may contain spaces and is parenthesised; fields follow.
+  const closing = text.lastIndexOf(")");
+  if (closing < 0) return "unreadable";
+  const fields = text
+    .slice(closing + 2)
+    .trim()
+    .split(/\s+/u);
+  const state = fields[0];
+  const startTicks = Number(fields[19]);
+  if (state === undefined || !Number.isFinite(startTicks)) return "unreadable";
+  try {
+    const bootLine = readFileSync("/proc/stat", "utf8")
+      .split("\n")
+      .find((line) => line.startsWith("btime "));
+    const bootSeconds = Number(bootLine?.slice("btime ".length));
+    if (!Number.isFinite(bootSeconds)) return "unreadable";
+    // `starttime` is in USER_HZ (100 on Linux): ticks / 100 s, then ms.
+    return { state, startedMs: bootSeconds * 1000 + startTicks * 10 };
+  } catch {
+    return "unreadable";
+  }
+};
+
+/**
+ * The production owner probe (GH-354 API-10): the recorded process must exist,
+ * must not be a zombie, and its observed start instant must be within the
+ * declared tolerance of the recorded instant, so a reused process id is never
+ * reported live. An unreadable table is `unknown`, which never asserts staleness.
+ *
+ * The read goes through the process TABLE (a filesystem read), never through a
+ * process handle: the inspection surface must not signal or probe a live process.
+ */
+const productionOwnerProbe: DispatchOwnerProbe = (owner) => {
+  const observed = readProcStat(owner.processId);
+  if (observed === "missing") return "dead";
+  if (observed === "unreadable") return "unknown";
+  if (observed.state === "Z") return "dead";
+  const recorded = Date.parse(owner.startedAt);
+  if (!Number.isFinite(recorded)) return "unknown";
+  return Math.abs(observed.startedMs - recorded) <= DISPATCH_PROBE_TOLERANCE_MS ? "live" : "dead";
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1670,6 +1770,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
+    // The one registered credential set (GH-354 AC-F4-7). The entrypoint
+    // resolved the declared references against the injected environment once
+    // and hands the same values to the serializer; an embedder may inject the
+    // fact instead. The operator runtime redacts with this set BEFORE bounding,
+    // so a credential straddling the 512-character cut cannot survive.
+    const registeredSecrets = invocation?.registeredSecrets ?? facts.registeredSecrets;
     // The configuration filesystem facts: production uses the node facts; a
     // test may inject counting facts so per-layer reads are observable.
     const localFs = facts.configurationFs ?? nodeFileSystemFacts();
@@ -1941,6 +2047,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
     const store = facts.stateStoreWrap?.(openedStore) ?? openedStore;
+
+    // The artifact-family filesystem edge (GH-354 DM-2): the runtime filesystem
+    // lives in the adapter tier, and the family root sits beside the ledger.
+    const dispatchLogFs = facts.dispatchLogFileSystem ?? createNodeDispatchLogFileSystem();
+    const dispatchLogRoot =
+      facts.dispatchLogFamilyRoot ?? dispatchLogsFamilyRoot(stateDirectory, workspaceId);
 
     /**
      * Resolve the daemon settings and the lane restart bound over one
@@ -2781,6 +2893,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                   }),
                 });
               },
+              // GH-354 API-8: the per-stream stdout artifact sink, bound per
+              // stream before its first yielded value. The family root lives
+              // beside the ledger, outside the store's record set.
+              streamSinkFor: (context) =>
+                createDispatchLogSink({
+                  context: {
+                    ref: context.workItemRef,
+                    familyRoot: dispatchLogRoot,
+                    recordedAt: context.recordedAt,
+                    streamKind: context.streamKind,
+                    ...(context.attemptId === undefined ? {} : { attemptId: context.attemptId }),
+                    ...(context.iterationOrdinal === undefined
+                      ? {}
+                      : { iterationOrdinal: context.iterationOrdinal }),
+                  },
+                  fs: dispatchLogFs,
+                }),
             })
           : createClaudeSession({
               ...common,
@@ -3679,6 +3808,34 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ).run.run(input);
         },
       },
+      // The operator read surfaces (GH-354 DEC-7): the same single store, a
+      // persistence-disabled repository resolution, and the advisory probe.
+      // No configuration key is added.
+      ...(registeredSecrets === undefined ? {} : { secrets: registeredSecrets }),
+      ...createDispatchOperatorRuntime({
+        store,
+        resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),
+        probe: facts.ownerProbe ?? productionOwnerProbe,
+        artifactRoot: dispatchLogRoot,
+        artifactFs: dispatchLogFs,
+        // The transcript read is the content use of the EXISTING
+        // `session-introspection` capability; it is mounted only for a harness
+        // that declares it supported.
+        transcript:
+          facts.operatorTranscript ??
+          ((input) => {
+            const resolution = resolveProductionHarnessSettings();
+            if (!resolution.ok) return { ok: false, reason: "unreadable" };
+            return createOpencodeTranscriptReader({
+              opener: createBunSqliteStoreOpener(),
+              storePath: resolution.settings.opencodeDatabasePath,
+            }).read(input);
+          }),
+        supportsIntrospection:
+          facts.operatorSupportsIntrospection ??
+          ((kind) =>
+            harnessDeclaration(kind).lifecycleCapabilities.includes("session-introspection")),
+      }),
     };
 
     /**

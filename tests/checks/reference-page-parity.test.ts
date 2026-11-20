@@ -72,10 +72,14 @@ describe("TC-HELP-003 reference-page parity", () => {
     expect([...coverage.commands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
   });
 
-  test("doctor remains unshipped and dispatch keeps exactly five help entries", () => {
+  test("doctor remains unshipped and dispatch keeps exactly nine help entries", () => {
     expect(PROMPT_REQUIRED_COMMANDS).not.toContain("doctor");
     expect(coverage.commands).not.toContain("doctor");
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(5);
+    // §25.1 / TC-CONTRACT-002: the four operator forms are declared entries, so
+    // the dispatch family count moves 5 -> 9 with an unchanged page set.
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch")).toHaveLength(9);
+    // The coverage inventory is unchanged: one prompt-required `dispatch` entry.
+    expect(coverage.commands.filter((command) => command === "dispatch")).toHaveLength(1);
   });
 });
 

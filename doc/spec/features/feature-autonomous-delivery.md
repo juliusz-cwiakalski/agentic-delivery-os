@@ -6,13 +6,13 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-11-19
+last_updated: 2026-11-20
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Mode A has two equivalent operator surfaces: the typed `jaiship loop start|stop|status|log|reset` family, a composition profile over the delivered supervision engine, and the retained `scripts/ceo-loop.sh` fallback. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery, while the typed loop reads the delivered dispatch/daemon lane records as its corroborator. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313", "GH-293", "GH-348"]
-  decisions: ["TDR-0002", "TDR-0056", "TDR-0057"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313", "GH-293", "GH-348", "GH-354"]
+  decisions: ["TDR-0002", "TDR-0056", "TDR-0057", "TDR-0058"]
   guides:
     - "doc/guides/delivery-modes.md"
     - "doc/guides/autonomous-batch-delivery.md"
@@ -36,6 +36,20 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 > authoritative-mode deprecation pointer. No repository is flipped by this change;
 > a flip is a separate owner act executed with `dispatch handover <repo>` once the
 > gate reads eligible, and its reversal is `dispatch handover <repo> --revert`.
+>
+> The four per-reference inspection queries the shell exposes — `--status`,
+> `--log`, `--is-delivering`, and `--last-message` — have typed equivalents:
+> `dispatch status <ref>`, `dispatch log <ref> [--tail <n>]`,
+> `dispatch is-delivering [<ref>]`, and `dispatch last-message <ref>`. The typed
+> forms read none of the shell's files and never write them, so the shell's marker,
+> PID, stdout, and last-message files cannot steer a typed answer. The typed `log`
+> and the shell's `--log` read different streams: the typed tail is the streaming
+> harness's own stdout (for opencode, its JSON event stream), the shell's `--log`
+> tails the opencode child's stderr held in `tmp/deliver-ticket/<REF>.log`, and each
+> wrapper's own progress lines go to the wrapper's terminal. The shell entry points
+> remain the documented, still-executable fallback, and an operator who needs the
+> child's stderr or the wrapper's progress lines uses the shell lane or its
+> terminal.
 
 > **Planned-scope precondition.** An unattended run assumes the milestone and every ticket attached to it already exist in the tracker, and that intake verified the attachment before delivery. The precondition is owned by the milestone-first operating rule in [milestone-management.md](../../guides/milestone-management.md); this spec does not enforce it and adds no milestone logic to the delivery scripts.
 
@@ -61,6 +75,7 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
   - **Mode B — Manual batch (`batch-deliver.sh`):** the human provides an explicit ticket list; the batch script delivers each sequentially. The **human** is the merge authority — they approve via the `approved` label; `batch-deliver.sh` then rebases, waits for green quality gates, and squash-merges.
   - (Manual and Autopilot are the interactive run modes of the same lifecycle and are out of scope for this spec; see [change-lifecycle.md](../../guides/change-lifecycle.md).)
 - **Per-ticket engine (F-2, `deliver-ticket.sh`):** the foreground, blocking, single-flight lifecycle runner. It spawns/resumes the PM opencode session, monitors liveness, kill-and-restarts on stall, classifies the result, and returns a delivery summary. It exposes scriptable subcommands so the AI does not burn tokens rediscovering scriptable facts: `--is-delivering [REF]`, `--last-message REF`, and `REF --resume-prompt "<text>"`.
+- **Typed per-ref inspection (F-2.1):** the four per-reference queries the shell exposes have typed equivalents on the dispatch family — `dispatch status <ref>`, `dispatch log <ref> [--tail <n>]`, `dispatch is-delivering [<ref>]`, and `dispatch last-message <ref>`, each with the global `--json`. They read the durable `dispatch.lane` record, the per-ref harness-stdout artifact family, and the harness's persisted session transcript, and none reads or writes a shell-owned path (`tmp/deliver-ticket/**`, `.ai/local/delivery/**`, the delivering marker, a PID file, `<REF>.pm.out`, `<REF>.log`, `<REF>.last-message`). The typed tail is the streaming harness's own stdout — for opencode its JSON event stream — while the shell's `--log` tails the opencode child's stderr, and each wrapper's own progress lines go to the wrapper's terminal; the two surfaces answer related but different questions, and neither is a truth source for the other. A one-shot adapter lane (Claude Code) streams nothing, so its `dispatch log` answers `no-log`, meaning no artifact exists for that reference. Contract detail: [Dispatch Engine](feature-dispatch-engine.md); operation routine: [Engine-first Delivery Operations](../../guides/engine-first-operations.md).
 - **No-merge contract (F-3):** `deliver-ticket.sh` **does not merge**. It returns `pr-open` (+ PR URL + PM last-message). The legacy auto-merge-on-`approved`-label path inside the PM is retired. Merge authority is the `@ceo` (Mode A, after PM-finalization verification, through the `merge` primitive) or `batch-deliver.sh` (Mode B, after human approval + rebase + green-gate).
 - **Session-traffic liveness (F-4, `pm-liveness.sh`):** "liveness" is measured by **opencode session-message traffic** (new assistant/tool messages), not by process-alive — and it is **multi-signal**. The primary signal queries the **current message store** across the **recursive session tree** (traversing `session.parent_id`), so traffic from child sessions (when the PM delegates to `@coder`/`@spec-writer`/…) is counted — a quiet parent with active children is NOT a false stall. On the reference opencode 1.19.3 schema messages live in `message` and parts in `part`; `session_message` is a legacy table that is empty on the reference store and is not the current source. The delivered `scripts/pm-liveness.sh` currently queries `session_message`, so on the reference store its session-tree signal observes no traffic and liveness is carried by the git/worktree signal until the script is reconciled; that script change is an owner follow-up outside this feature change. A session with no tree traffic for ≥ `DELIVER_STUCK_MINUTES` (default **10**) AND no git/worktree activity is declared stalled and killed-and-resumed. Git commits and worktree file mtimes are an always-on **secondary signal**: if EITHER signal shows recent activity, the session is healthy. The earlier 30-minute, file-mtime heuristic is retired.
 - **Mode B merge gate — rebase-before-merge + green-gate wait (F-5):** for a human-approved PR, `batch-deliver.sh` rebases onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges using the **PR title and description as the commit message**. Rebase conflicts are resolved by an AI agent, after which the gates re-run.

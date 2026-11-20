@@ -9,12 +9,18 @@ import {
   ATTEMPTS_HUMAN_ROW_BUDGET,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
+  DISPATCH_LOG_MAX_HUMAN_BYTES,
+  DISPATCH_LOG_MAX_HUMAN_LINES,
   DISPATCH_MAX_HUMAN_BYTES,
   DISPATCH_MAX_HUMAN_LINES,
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
+  type DispatchDeliveringData,
   type DispatchEnvelopeData,
+  type DispatchLastMessageData,
+  type DispatchLogData,
   type DispatchResolveData,
+  type DispatchStatusData,
   type DispatchSummaryData,
 } from "@delivery-os/core/contracts";
 import { projectExitCode } from "../projection.js";
@@ -168,3 +174,98 @@ export const renderDispatchHandoverText = (data: {
     `recorded=${data.recorded ? "true" : "false"}`,
     `noop=${data.noop ? "true" : "false"}`,
   ].join("\n")}\n`;
+
+/** `status` as the declared key=value set plus its lane facts (DM-5). */
+export const renderDispatchStatusText = (data: DispatchStatusData): string => {
+  const lane = data.lane;
+  const lines = [
+    `query=${data.query}`,
+    `ref=${data.ref}`,
+    `repository=${data.repository}`,
+    `delivering=${data.delivering ? "true" : "false"}`,
+    `stale=${data.stale ? "true" : "false"}`,
+    `marker=${data.marker}`,
+    `probe=${data.probe}`,
+    `pid=${data.pid === null ? "none" : String(data.pid)}`,
+    `sessionId=${data.sessionId ?? "none"}`,
+    ...(lane === null
+      ? []
+      : [
+          `attemptId=${lane.attemptId}`,
+          `harness=${lane.harness}`,
+          `iterationOrdinal=${lane.iterationOrdinal}`,
+          `restartsConsumed=${lane.restartsConsumed}`,
+          `ownerStartedAt=${lane.ownerStartedAt}`,
+          `lastToken=${lane.lastToken ?? "none"}`,
+          `lastOutcome=${lane.lastOutcome ?? "none"}`,
+          `recordedAt=${lane.recordedAt}`,
+        ]),
+  ];
+  return `${lines.join("\n")}\n`;
+};
+
+/** `is-delivering` as the declared key=value set. */
+export const renderDispatchDeliveringText = (data: DispatchDeliveringData): string => {
+  const lines = [
+    `query=${data.query}`,
+    `delivering=${data.delivering ? "true" : "false"}`,
+    `repository=${data.repository}`,
+    `ref=${data.ref ?? "none"}`,
+    ...(data.refs === undefined ? [] : [`refs=${data.refs.join(",") || "none"}`]),
+    ...(data.truncation === undefined
+      ? []
+      : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omitted}`]),
+  ];
+  return `${lines.join("\n")}\n`;
+};
+
+/**
+ * `last-message` as the declared key set: `available`, `final`, `reason` when
+ * present, and `last_message` (§8.5, DEC-8).
+ */
+export const renderDispatchLastMessageText = (data: DispatchLastMessageData): string =>
+  `${[
+    `available=${data.available ? "true" : "false"}`,
+    `final=${data.final ? "true" : "false"}`,
+    ...(data.reason === undefined ? [] : [`reason=${data.reason}`]),
+    `last_message=${data.message ?? ""}`,
+  ].join("\n")}\n`;
+
+/**
+ * `log` as the RAW tail plus at most one `truncation=` line (DEC-8, §8.5).
+ *
+ * The machine payload is byte-bounded only, so the declared HUMAN bounds are
+ * applied here: the 200-line bound first, then the 32 768-byte bound, so the
+ * scope names the bound that actually bound. A binding line bound is a
+ * `tail`-scope fact naming the human 200-line bound; a binding byte bound is a
+ * `bytes`-scope fact. `omitted` is the total dropped: the runtime's own
+ * omission plus the human-bound drops.
+ */
+export const renderDispatchLogText = (data: DispatchLogData): string => {
+  if (!data.available) return `reason=${data.reason ?? "no-log"}\n`;
+  const machineLines = [...data.lines];
+  const kept =
+    machineLines.length > DISPATCH_LOG_MAX_HUMAN_LINES
+      ? machineLines.slice(machineLines.length - DISPATCH_LOG_MAX_HUMAN_LINES)
+      : machineLines;
+  const droppedByLineBound = machineLines.length - kept.length;
+  const lines = [...kept];
+  let omitted = data.truncation?.omittedLines ?? 0;
+  const humanBytes = (candidate: readonly string[]): number =>
+    candidate.reduce((total, line) => total + utf8Bytes(line) + 1, 0);
+  let droppedByHuman = 0;
+  while (lines.length > 0 && humanBytes(lines) > DISPATCH_LOG_MAX_HUMAN_BYTES) {
+    lines.shift();
+    droppedByHuman += 1;
+  }
+  omitted += droppedByLineBound + droppedByHuman;
+  const fact =
+    droppedByHuman > 0
+      ? `truncation=scope:bytes,bound:${DISPATCH_LOG_MAX_HUMAN_BYTES},omitted:${omitted}`
+      : droppedByLineBound > 0
+        ? `truncation=scope:tail,bound:${DISPATCH_LOG_MAX_HUMAN_LINES},omitted:${omitted}`
+        : data.truncation === undefined
+          ? undefined
+          : `truncation=scope:${data.truncation.scope},bound:${data.truncation.bound},omitted:${data.truncation.omittedLines}`;
+  return `${[...lines, ...(fact === undefined ? [] : [fact])].join("\n")}${lines.length === 0 && fact === undefined ? "" : "\n"}`;
+};

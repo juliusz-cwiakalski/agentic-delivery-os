@@ -89,6 +89,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0055](TDR-0055-phase-truth-registry-fold-mirror.md) | TDR | One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0058](TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md) | TDR | Dispatch Session-Output Artifacts and the Transcript Read Seam — A Bounded Per-Ref Sidecar Family and an Adapter-Owned Read Kept Outside the Closed Operation Set | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0058](TDR-0058-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0059](TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0060](TDR-0060-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
@@ -107,6 +108,10 @@ acceptance is that change's pull-request review, and their status moves from
 Decisions ADR-0012, TDR-0055, and ODR-0005 are the binding design of change GH-349;
 their owner acceptance is that change's pull-request review, and their status moves
 from `Proposed` there rather than in the delivery commits.
+
+Decision TDR-0058 (the dispatch session-output record) is the binding design of
+change GH-354; its owner acceptance is that change's pull-request review, and its
+status moves from `Proposed` there rather than in the delivery commits.
 
 Decisions TDR-0056 and TDR-0057 are the binding design of change GH-348; their owner
 acceptance is that change's pull-request review, and their status moves from

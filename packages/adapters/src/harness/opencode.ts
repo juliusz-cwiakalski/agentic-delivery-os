@@ -40,6 +40,10 @@ import {
   type HarnessSpawnStarter,
   type HarnessSpawnStream,
   type HarnessSpawnStreamOptions,
+  type HarnessStreamContext,
+  type HarnessStreamKind,
+  type HarnessStreamSink,
+  type HarnessStreamSinkFactory,
   type HarnessTerminateInput,
   type HarnessTerminateResult,
   type HarnessVersionVerdict,
@@ -101,6 +105,17 @@ export type OpencodeHarnessOptions = {
   readonly telemetrySinkFor?: (input: {
     readonly workItemRef: string;
   }) => TelemetryIngestSink | undefined;
+  /**
+   * The per-stream stdout artifact sink factory (GH-354 API-8, TDR-0058 DR-3).
+   *
+   * Built once per stream — spawn, resume, or deliver — and BEFORE that stream's
+   * first yielded value, so the acquisition-settling line and every line the
+   * event decoder skips are captured. It receives every raw value, unlike
+   * `telemetrySinkFor`, which sees decoded frames only. An absent factory keeps
+   * the delivered stream behaviour exactly, and a one-shot adapter has no stream
+   * so it never builds one.
+   */
+  readonly streamSinkFor?: HarnessStreamSinkFactory;
   /**
    * The injected terminate-grace wait (GH-347 API-5, DEC-4): the composition
    * binds the one dispatch delay with reason `terminate-grace`, so production
@@ -344,6 +359,7 @@ const acquireFromStream = async (
   stream: HarnessSpawnStream,
   accept: (sessionId: string) => boolean,
   ingest?: TelemetryIngestSink,
+  stdoutSink?: HarnessStreamSink,
 ): Promise<AcquisitionOutcome> => {
   const facts = emptyFacts();
   let observedId: string | undefined;
@@ -370,6 +386,16 @@ const acquireFromStream = async (
   const pump = (async (): Promise<void> => {
     try {
       for await (const line of stream.lines) {
+        // GH-354 API-8: the artifact sink observes every RAW value, before the
+        // decoder runs, so undecodable and non-object lines are captured. A sink
+        // fault is non-gating and never disturbs the drain.
+        if (stdoutSink !== undefined) {
+          try {
+            stdoutSink.write(line);
+          } catch {
+            // Non-gating: the artifact is an observation, not a delivery input.
+          }
+        }
         const parsed = decodeLine(line);
         if (parsed === undefined) continue;
         accumulate(facts, parsed);
@@ -384,6 +410,13 @@ const acquireFromStream = async (
       }
     } finally {
       settleAcquisition();
+      if (stdoutSink !== undefined) {
+        try {
+          stdoutSink.close();
+        } catch {
+          // Non-gating.
+        }
+      }
       if (ingest !== undefined && observedId !== undefined) {
         try {
           ingest.onSessionClose(observedId);
@@ -537,6 +570,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     cwd: string,
     env: Readonly<Record<string, string>>,
     stdin?: string,
+    stdoutSink?: HarnessStreamSink,
   ): HarnessSpawnStreamOptions => ({
     cwd,
     env,
@@ -545,7 +579,34 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     ...(options.sessionTimeoutMs === undefined
       ? {}
       : { sessionTimeoutMs: options.sessionTimeoutMs }),
+    ...(stdoutSink === undefined ? {} : { stdoutSink }),
   });
+
+  /**
+   * Build one stream's artifact sink BEFORE the stream starts (GH-354 API-8).
+   * An absent factory, or a factory fault, keeps the delivered behaviour.
+   */
+  const streamSinkOf = (input: {
+    readonly workItemRef: string;
+    readonly streamKind: HarnessStreamKind;
+    readonly streamContext?: HarnessStreamContext;
+  }): HarnessStreamSink | undefined => {
+    const factory = options.streamSinkFor;
+    if (factory === undefined) return undefined;
+    const attemptId = input.streamContext?.attemptId;
+    const iterationOrdinal = input.streamContext?.iterationOrdinal;
+    try {
+      return factory({
+        workItemRef: input.workItemRef,
+        streamKind: input.streamKind,
+        recordedAt: options.now(),
+        ...(attemptId === undefined ? {} : { attemptId }),
+        ...(iterationOrdinal === undefined ? {} : { iterationOrdinal }),
+      });
+    } catch {
+      return undefined;
+    }
+  };
 
   const run = async (
     input: HarnessSpawnInput,
@@ -559,13 +620,18 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     const binding = resolved.value;
     const environment = environmentFor(input.descriptor, binding);
     if (!environment.ok) return environment;
+    const sink = streamSinkOf({
+      workItemRef: input.workItemRef,
+      streamKind: "spawn",
+      ...(input.streamContext === undefined ? {} : { streamContext: input.streamContext }),
+    });
     const stream = options.starter(
       options.command,
       [...args, ...bindingArgsFor(binding)],
-      streamOptions(input.descriptor.workDirectory, environment.value, stdin),
+      streamOptions(input.descriptor.workDirectory, environment.value, stdin, sink),
     );
-    const sink = options.telemetrySinkFor?.({ workItemRef: input.workItemRef });
-    const outcome = await acquireFromStream(stream, () => true, sink);
+    const telemetry = options.telemetrySinkFor?.({ workItemRef: input.workItemRef });
+    const outcome = await acquireFromStream(stream, () => true, telemetry, sink);
     if (outcome.kind !== "acquired") {
       stream.kill();
       const result = outcome.kind === "absent" ? outcome.result : undefined;
@@ -612,6 +678,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
 
   const resume = async (
     input: HarnessResumeInput,
+    streamKind: HarnessStreamKind,
   ): Promise<HarnessResult<HarnessSessionHandle>> => {
     if (!capabilities.supportedOperations.includes("resume")) {
       return gap("resume");
@@ -647,15 +714,21 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
           ...bindingArgsFor(binding),
         ]
       : [...resumeBase, ...bindingArgsFor(binding), input.handle.sessionId];
+    const sink = streamSinkOf({
+      workItemRef: input.handle.workItemRef,
+      streamKind,
+      ...(input.streamContext === undefined ? {} : { streamContext: input.streamContext }),
+    });
     const stream = options.starter(
       options.command,
       resumeArgv,
-      streamOptions(descriptor.workDirectory, environment.value, input.prompt),
+      streamOptions(descriptor.workDirectory, environment.value, input.prompt, sink),
     );
     const outcome = await acquireFromStream(
       stream,
       (sessionId) => sessionId === input.handle.sessionId,
       options.telemetrySinkFor?.({ workItemRef: input.handle.workItemRef }),
+      sink,
     );
     if (outcome.kind === "mismatch") {
       stream.kill();
@@ -713,8 +786,8 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
         ],
         input.prompt,
       ),
-    deliver: resume,
-    resume,
+    deliver: (input) => resume(input, "deliver"),
+    resume: (input) => resume(input, "resume"),
     terminate: async (
       input: HarnessTerminateInput,
     ): Promise<HarnessResult<HarnessTerminateResult>> => {

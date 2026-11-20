@@ -1054,7 +1054,7 @@ LAUNCHER
   # and is refused here. A symlink and a directory are refused for the same
   # reason; a record-free state is still a refusal.
   if [[ -L "${install_path}" ]] || [[ -d "${install_path}" ]]; then
-    log_err "refusing: ${install_path} is not the delivered launcher; update the product with the lifecycle command `install` (it owns the artifact, the slot, and the record); no launcher was written"
+    log_err "refusing: ${install_path} is not the delivered launcher; update the product with the lifecycle command \`install\` (it owns the artifact, the slot, and the record); no launcher was written"
     return "${EXIT_CONFIG}"
   fi
   local existing=""
@@ -1067,7 +1067,7 @@ LAUNCHER
       head -c "${LAUNCHER_PROBE_BYTES}" "${install_path}" 2>/dev/null | LC_ALL=C tr -d '\000' || true
     )"
     if [[ "${existing}" != *"${LAUNCHER_CONTENT_MARKER}"* || "${existing}" != *"${LAUNCHER_TARGET_MARKER}"* ]]; then
-      log_err "refusing: ${install_path} holds content this installer does not own; update the product with the lifecycle command `install` (it owns the artifact, the slot, and the record); no launcher was written"
+      log_err "refusing: ${install_path} holds content this installer does not own; update the product with the lifecycle command \`install\` (it owns the artifact, the slot, and the record); no launcher was written"
       return "${EXIT_CONFIG}"
     fi
   fi

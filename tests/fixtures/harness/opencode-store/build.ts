@@ -11,7 +11,7 @@
  */
 
 import { Database } from "bun:sqlite";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { HARNESS_MAX_SESSIONS } from "../../../../packages/core/src/contracts/index";
@@ -27,6 +27,9 @@ export type StoreGenerationName = "current" | "legacy";
 
 export type StoreVariant =
   | "full"
+  | "assistant-text"
+  | "user-only"
+  | "no-assistant-message"
   | "multi-group"
   | "reported-zero-cost"
   | "no-cost-column"
@@ -187,6 +190,31 @@ const OTHER_MESSAGES: readonly MessageSeed[] = [
   }),
 ];
 
+/** The distinct assistant texts the transcript reader is proven against. */
+export const FINAL_ASSISTANT_TEXT = "FINAL-ASSISTANT-TEXT";
+export const ASSISTANT_TEXT_PREFIX = "ASSISTANT-TEXT-";
+export const USER_ONLY_TEXT = "USER-ONLY-TEXT";
+export const RAW_SEAM_LINE_1 = "RAW-SEAM-LINE-1";
+export const RAW_SEAM_LINE_2 = "RAW-SEAM-LINE-2";
+export const LONG_ASSISTANT_TEXT = "L".repeat(600);
+
+/** The stored content for one seed under the transcript variants. */
+const transcriptTextOf = (seed: MessageSeed, variant: StoreVariant): string => {
+  if (variant === "no-assistant-message") return "";
+  if (variant === "user-only") return USER_ONLY_TEXT;
+  if (variant === "assistant-text") {
+    // The LAST root message is the final assistant text; a child or other
+    // session's text must never answer for the root's session.
+    if (seed.sessionId === ROOT_SESSION) {
+      return seed.seq === ROOT_MESSAGES.length
+        ? FINAL_ASSISTANT_TEXT
+        : `${ASSISTANT_TEXT_PREFIX}${seed.seq}`;
+    }
+    return `${ASSISTANT_TEXT_PREFIX}${seed.sessionId}-${seed.seq}`;
+  }
+  return PRIVACY_CANARY;
+};
+
 const dataOf = (seed: MessageSeed, variant: StoreVariant): string => {
   const tokens: Record<string, unknown> = {
     input: seed.input,
@@ -207,8 +235,9 @@ const dataOf = (seed: MessageSeed, variant: StoreVariant): string => {
     cost: variant === "missing-cost" ? null : variant === "reported-zero-cost" ? 0 : seed.cost,
     tokens,
     time: { created: seed.createdAt, completed: seed.completedAt },
-    // Content is present in the real document and is NEVER projected.
-    content: [{ type: "text", text: PRIVACY_CANARY }],
+    // Content is present in the real document and is NEVER projected by a
+    // telemetry read; the transcript variants give it distinct stored texts.
+    content: [{ type: "text", text: transcriptTextOf(seed, variant) }],
   });
 };
 
@@ -318,7 +347,7 @@ const seed = (
       insertMessage.run(
         item.id,
         id,
-        "assistant",
+        variant === "user-only" ? "user" : "assistant",
         item.seq,
         item.createdAt,
         item.completedAt,
@@ -474,6 +503,13 @@ export const buildOpencodeStore = (
   } finally {
     database.close();
   }
+};
+
+/** A store whose file is not valid SQLite (the corrupt-store variant). */
+export const buildCorruptStore = (): BuiltStore => {
+  const built = buildOpencodeStore();
+  writeFileSync(built.path, "not-a-sqlite-database", { flag: "w" });
+  return built;
 };
 
 /** A store with more held roots than the declared session cap. */

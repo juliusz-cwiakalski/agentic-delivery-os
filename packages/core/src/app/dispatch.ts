@@ -975,6 +975,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
             handle,
             prompt: ports.resumePrompt ?? ports.prompt,
             descriptor: ports.descriptor,
+            streamContext: { attemptId, iterationOrdinal },
             ...propagation,
           });
         }
@@ -984,6 +985,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
           workItemRef: ports.ref,
           prompt: spawnPrompt ?? ports.prompt,
           descriptor: ports.descriptor,
+          streamContext: { attemptId, iterationOrdinal },
           ...(ports.freshTitle === undefined ? {} : { title: ports.freshTitle }),
           ...propagation,
         });

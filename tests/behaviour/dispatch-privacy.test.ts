@@ -11,6 +11,11 @@ import { createDispatchState, createScriptedHarness } from "../fixtures/dispatch
 import { readsFrom } from "../fixtures/dispatch/golden/harness";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { readdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { createOperatorHarness, OPERATOR_REF } from "../fixtures/dispatch/operator/harness";
+import { createGuardedRunner } from "../fixtures/dispatch/parity/process-runner";
+import { createTranscriptDouble } from "../fixtures/dispatch/operator/transcript";
 
 const CANARIES = [
   "CANARY-PROMPT-7f3a",
@@ -140,5 +145,70 @@ describe("TC-NFR-007 the spawn environment is deny-by-default", () => {
     expect(built.ok).toBe(true);
     if (!built.ok) return;
     expect(built.value).toEqual({});
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-354 TC-NFR-004 — the operator surface's privacy boundary (NFR-11, §21). */
+/* ------------------------------------------------------------------------- */
+
+const ARTIFACT_CANARY = "STDOUT-ARTIFACT-CANARY-gh354";
+const OPERATOR_CREDENTIAL_CANARY = `ghp_${"z".repeat(36)}`;
+const PROMPT_ONLY_CANARY = "PROMPT-ONLY-CANARY-gh354";
+
+describe("TC-NFR-004 the operator payload boundary", () => {
+  test("the artifact holds only harness stdout, and no record carries it", async () => {
+    const familyRoot = join(process.cwd(), "tmp", "tmpdir", "gh354-privacy-004-family");
+    rmSync(familyRoot, { recursive: true, force: true });
+    const output = [
+      '{"sessionID":"ses-priv"}',
+      ARTIFACT_CANARY,
+      OPERATOR_CREDENTIAL_CANARY,
+      '{"type":"step_finish","part":{"reason":"stop"}}',
+    ].join("\n");
+    const guarded = createGuardedRunner({
+      session: () => ({ sessionId: "ses-priv", stdout: output, status: 0, timedOut: false }),
+    });
+    const h = createOperatorHarness({
+      label: "privacy-004",
+      guarded,
+      artifactRoot: familyRoot,
+      secrets: [OPERATOR_CREDENTIAL_CANARY],
+      transcriptRead: createTranscriptDouble({
+        messages: { "ses-priv": `the final message with ${OPERATOR_CREDENTIAL_CANARY}` },
+      }).read,
+    });
+    try {
+      const run = await h.run(["dispatch", OPERATOR_REF, "--json"]);
+      expect(run.envelope?.error).toBeUndefined();
+      const directory = join(familyRoot, OPERATOR_REF);
+      const names = readdirSync(directory);
+      expect(names.length).toBeGreaterThan(0);
+      const artifact = names.map((name) => readFileSync(join(directory, name), "utf8")).join("");
+      // The artifact holds the harness stdout verbatim (unscrubbed by design).
+      expect(artifact).toContain(ARTIFACT_CANARY);
+      expect(artifact).toContain(OPERATOR_CREDENTIAL_CANARY);
+      // The declared transformation exactly: the engine adds nothing, so no
+      // prompt, diff, tool argument, or provider payload can be in the file.
+      expect(artifact).toBe(`${output}\n`);
+      expect(artifact).not.toContain(PROMPT_ONLY_CANARY);
+      // No record, evidence ref, or envelope carries the artifact canary.
+      for (const record of h.records()) {
+        expect(JSON.stringify(record)).not.toContain(ARTIFACT_CANARY);
+      }
+      expect(run.stdout).not.toContain(ARTIFACT_CANARY);
+
+      // The message answer replaces the registered credential value.
+      h.seedLane({ ref: OPERATOR_REF, state: "terminal", sessionId: "ses-priv" });
+      const message = await h.run(["dispatch", "last-message", OPERATOR_REF, "--json"]);
+      const answer = (message.data as { readonly message?: string }).message ?? "";
+      expect(answer).toContain("[redacted]");
+      expect(answer).not.toContain(OPERATOR_CREDENTIAL_CANARY);
+      expect(answer.length).toBeLessThanOrEqual(512);
+      expect(answer).not.toContain("\n");
+    } finally {
+      h.dispose();
+      rmSync(familyRoot, { recursive: true, force: true });
+    }
   });
 });

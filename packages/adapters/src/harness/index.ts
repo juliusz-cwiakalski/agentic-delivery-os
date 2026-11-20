@@ -40,6 +40,14 @@ export {
   openHarnessStoreReadOnly,
 } from "./sqlite-loader.js";
 export {
+  createOpencodeTranscriptReader,
+  type OpencodeTranscriptAbsence,
+  type OpencodeTranscriptOptions,
+  type OpencodeTranscriptReader,
+  type OpencodeTranscriptResult,
+  TRANSCRIPT_STATEMENT_LIMIT,
+} from "./opencode-transcript.js";
+export {
   type ClaudeTelemetryExtractor,
   type ClaudeTelemetryOptions,
   createClaudeTelemetryExtractor,

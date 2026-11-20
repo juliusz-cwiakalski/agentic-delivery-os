@@ -45,7 +45,24 @@ describe("TC-HELP-001 dispatch is registered and documented", () => {
     }
     const help = renderRootHelp(brand);
     expect(help.length).toBeGreaterThan(0);
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(5);
+    // GH-354 §25.1 "Help/reference coverage", DEC-1, TC-CONTRACT-002: the four
+    // operator forms are declared entries, so the family's count moves 5 -> 9.
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "dispatch").length).toBe(9);
+    for (const form of [
+      ["dispatch", "status"],
+      ["dispatch", "log"],
+      ["dispatch", "is-delivering"],
+      ["dispatch", "last-message"],
+    ] as const) {
+      const operatorEntry = helpEntryFor(form);
+      expect(operatorEntry, form.join(" ")).toBeDefined();
+      expect(operatorEntry?.seeAlso).toContain(PAGE);
+      expect(operatorEntry?.usage.length).toBeGreaterThan(0);
+      expect(operatorEntry?.examples.length).toBeGreaterThan(0);
+    }
+    expect(helpEntryFor(["dispatch", "log"])?.options.some(([flag]) => flag === "--tail <n>")).toBe(
+      true,
+    );
   });
 
   test("the attempts entry carries its own usage, options, example and M2 page", () => {
@@ -107,8 +124,8 @@ describe("TC-HELP-001 dispatch is registered and documented", () => {
 describe("TC-SPAWN-004 the agent and the title are composition facts, not operator flags", () => {
   test("the dispatch help/grammar lists no --agent, --model, or --title option", () => {
     const entries = allHelpEntries().filter((entry) => entry.path[0] === "dispatch");
-    // The help inventory count is unchanged by this change.
-    expect(entries).toHaveLength(5);
+    // §25.1: the four operator forms raise the family count 5 -> 9.
+    expect(entries).toHaveLength(9);
     const rendered = entries.map((entry) => JSON.stringify(entry)).join("\n");
     for (const forbidden of ["--agent", "--title", "--model"]) {
       expect(rendered, forbidden).not.toContain(forbidden);

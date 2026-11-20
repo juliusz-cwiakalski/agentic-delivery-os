@@ -152,11 +152,13 @@ import {
   type DispatchPorts,
   type DispatchPreflightResult,
   type DispatchRepositoryScope,
+  type DispatchTranscriptRead,
   type DispatchTruthReads,
   declareQueueEntry,
   decodeTelemetryStepFrame,
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
+  dispatchLogByteLength,
   emptyIngestTally,
   evaluateCeremonyTier,
   evaluateClaimPreconditions,
@@ -207,6 +209,10 @@ import {
   readDaemonLanes,
   readDispatchAttemptHistory,
   readDispatchAttempts,
+  readDispatchLastMessage,
+  readDispatchLog,
+  readOperatorDelivering,
+  readOperatorStatus,
   readOutboxEffects,
   readQueueFold,
   readQueueParkPass,
@@ -324,9 +330,12 @@ import {
   type DaemonClockPort,
   type DeliveryRequest,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
+  DISPATCH_MAX_MACHINE_BYTES,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchLaneFacts,
+  type DispatchLogFileSystem,
+  type DispatchOwnerProbe,
   type DispatchPhaseLedger,
   type DispatchResumeMode,
   type DoctorCheckoutFacts,
@@ -524,6 +533,10 @@ import {
   createDispatchCommandDefinition,
   type DispatchAttemptsRuntime,
   type DispatchCommandRuntime,
+  type DispatchDeliveringRuntime,
+  type DispatchLogRuntime,
+  type DispatchMessageRuntime,
+  type DispatchStatusRuntime,
 } from "./commands/dispatch.js";
 import { createDoctorCommandDefinition, type DoctorCommandRuntime } from "./commands/doctor.js";
 import { createEventsCommandDefinition, type EventsCommandRuntime } from "./commands/events.js";
@@ -589,7 +602,14 @@ import {
 } from "./commands/supervise.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 
-export type { DispatchAttemptsRuntime, DispatchCommandRuntime } from "./commands/dispatch.js";
+export type {
+  DispatchAttemptsRuntime,
+  DispatchCommandRuntime,
+  DispatchDeliveringRuntime,
+  DispatchLogRuntime,
+  DispatchMessageRuntime,
+  DispatchStatusRuntime,
+} from "./commands/dispatch.js";
 
 import type { VerifyDeployRuntime } from "./commands/verify-deploy.js";
 import type { VerifyGatesCommandRuntime } from "./commands/verify-gates.js";
@@ -5573,7 +5593,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.verify = createVerifyCommandDefinition(options.verify);
   }
   if (options.dispatch !== undefined) {
-    commands.dispatch = createDispatchCommandDefinition(options.dispatch);
+    // The registered credential set the composition root already holds is the
+    // set the message composition redacts with BEFORE bounding (AC-F4-7). A
+    // runtime that already carries an injected set is never shadowed.
+    commands.dispatch = createDispatchCommandDefinition(
+      options.dispatch.secrets === undefined ? { ...options.dispatch, secrets } : options.dispatch,
+    );
   }
   if (options.doctor !== undefined) {
     commands.doctor = createDoctorCommandDefinition(
@@ -7561,6 +7586,12 @@ export type DispatchComposition = {
     readonly max?: number;
     readonly resolveRepository: (repo: string) => string | undefined;
   };
+  /**
+   * The operator read surfaces' composition facts (GH-354 DEC-7). Additive and
+   * optional: a composition that supplies none keeps exactly the delivered
+   * dispatch family, and each query refuses `input.value.rejected`.
+   */
+  readonly operator?: DispatchOperatorComposition;
 };
 
 /**
@@ -7676,6 +7707,172 @@ export const createDispatchGateRuntime = (
                 },
                 input,
               ),
+          },
+        }),
+  };
+};
+
+/**
+ * The operator read surfaces' composition facts (GH-354 DEC-7, API-6..API-10).
+ *
+ * Every fact is injected at the same edge that mounts `claimLease`,
+ * `existingLane`, and `attempts`. The store is the delivered state port; the
+ * repository resolver must resolve with persistence DISABLED, and the probe is
+ * the advisory owner-liveness observation.
+ */
+export type DispatchOperatorComposition = {
+  readonly store: DispatchPorts["store"];
+  readonly resolveRepository: () => string | undefined;
+  readonly probe: DispatchOwnerProbe;
+  /** The artifact family's root and edge (GH-354 API-7); absent = uncomposed. */
+  readonly artifactRoot?: string;
+  readonly artifactFs?: DispatchLogFileSystem;
+  /** The injected transcript read (GH-354 API-9); absent = uncomposed. */
+  readonly transcript?: DispatchTranscriptRead;
+  /** The adapter's declared `session-introspection` support (GH-354 DM-3). */
+  readonly supportsIntrospection?: (kind: HarnessKind) => boolean;
+};
+
+/**
+ * Build the operator read surfaces over the injected store and probe.
+ *
+ * A store failure keeps the store's own typed `state.*` code so the envelope's
+ * error-table row supplies the exit projection (`state.store.torn` → 2,
+ * `state.permission.denied` → 1). No surface answers around it.
+ */
+export const createDispatchOperatorRuntime = (
+  composition: DispatchOperatorComposition,
+): {
+  readonly status: DispatchStatusRuntime;
+  readonly delivering: DispatchDeliveringRuntime;
+  readonly log?: DispatchLogRuntime;
+  readonly message?: DispatchMessageRuntime;
+} => {
+  const failureOf = (read: { readonly code: string }, summary: string) => ({
+    ok: false as const,
+    error: { kind: "state", code: read.code, summary },
+  });
+  return {
+    status: {
+      read: async (input) => {
+        const repository = composition.resolveRepository();
+        if (repository === undefined) {
+          return {
+            ok: false as const,
+            error: {
+              kind: "input",
+              code: "input.value.rejected",
+              summary: "repository identity is unresolvable",
+            },
+          };
+        }
+        const read = readOperatorStatus({
+          store: composition.store,
+          repository,
+          ref: input.ref,
+          probe: composition.probe,
+        });
+        if (!read.ok) return failureOf(read, `dispatch lane read failed (${read.code})`);
+        return { ok: true as const, data: read.data };
+      },
+    },
+    delivering: {
+      read: async (input) => {
+        const repository = composition.resolveRepository();
+        if (repository === undefined) {
+          return {
+            ok: false as const,
+            error: {
+              kind: "input",
+              code: "input.value.rejected",
+              summary: "repository identity is unresolvable",
+            },
+          };
+        }
+        const read = readOperatorDelivering({
+          store: composition.store,
+          repository,
+          ...(input.ref === undefined ? {} : { ref: input.ref }),
+          probe: composition.probe,
+        });
+        if (!read.ok) return failureOf(read, `dispatch lane read failed (${read.code})`);
+        return { ok: true as const, data: read.data };
+      },
+    },
+    ...(composition.artifactRoot === undefined || composition.artifactFs === undefined
+      ? {}
+      : {
+          log: {
+            // The machine `data` is bounded by BYTES only (GH-354 AC-F2-5,
+            // NFR-3, DM-6): the requested tail selects the lines and the
+            // declared machine bound trims them. The human 200-line and
+            // 32 768-byte bounds are the human renderer's, so a machine answer
+            // never reports a line bound it did not apply.
+            read: async (input: { readonly ref: string; readonly tail: number }) => ({
+              ok: true as const,
+              data: readDispatchLog({
+                familyRoot: composition.artifactRoot as string,
+                ref: input.ref,
+                tail: input.tail,
+                fs: composition.artifactFs as DispatchLogFileSystem,
+                maxBytes: DISPATCH_MAX_MACHINE_BYTES,
+                measureBytes: (candidate: readonly string[]) =>
+                  dispatchLogByteLength(
+                    JSON.stringify({
+                      query: "log",
+                      ref: input.ref,
+                      available: true,
+                      tail: input.tail,
+                      lines: candidate,
+                      truncation: {
+                        scope: "bytes",
+                        bound: DISPATCH_MAX_MACHINE_BYTES,
+                        omittedLines: 99999,
+                      },
+                    }),
+                  ),
+              }),
+            }),
+          },
+        }),
+    ...(composition.transcript === undefined || composition.supportsIntrospection === undefined
+      ? {}
+      : {
+          message: {
+            read: async (input: { readonly ref: string; readonly secrets: readonly string[] }) => {
+              const repository = composition.resolveRepository();
+              if (repository === undefined) {
+                return {
+                  ok: false as const,
+                  error: {
+                    kind: "input",
+                    code: "input.value.rejected",
+                    summary: "repository identity is unresolvable",
+                  },
+                };
+              }
+              const read = await readDispatchLastMessage({
+                store: composition.store,
+                repository,
+                ref: input.ref,
+                transcript: composition.transcript as DispatchTranscriptRead,
+                supportsIntrospection: composition.supportsIntrospection as (
+                  kind: HarnessKind,
+                ) => boolean,
+                secrets: input.secrets,
+              });
+              if (!read.ok) {
+                return {
+                  ok: false as const,
+                  error: {
+                    kind: "state",
+                    code: read.code,
+                    summary: `dispatch lane read failed (${read.code})`,
+                  },
+                };
+              }
+              return { ok: true as const, data: read.data };
+            },
           },
         }),
   };
@@ -7844,4 +8041,7 @@ export const createDispatchCommandRuntime = (
         nowIso: composition.nowIso,
         gate: composition.gate,
       })),
+  ...(composition.operator === undefined
+    ? {}
+    : createDispatchOperatorRuntime(composition.operator)),
 });

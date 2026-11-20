@@ -305,6 +305,8 @@ export type HarnessSpawnInput = {
    * `--title` argument. A resume carries none.
    */
   readonly title?: string;
+  /** The additive per-stream artifact context (GH-354 API-8). */
+  readonly streamContext?: HarnessStreamContext;
 };
 
 /** A resume/steer input: the existing handle plus the steering payload as data. */
@@ -312,6 +314,8 @@ export type HarnessResumeInput = {
   readonly handle: HarnessSessionHandle;
   readonly prompt: string;
   readonly descriptor?: HarnessExecutionEnvironmentDescriptor;
+  /** The additive per-stream artifact context (GH-354 API-8). */
+  readonly streamContext?: HarnessStreamContext;
   /** The caller-supplied agent identity (DEC-16); absence is `no-agent`. */
   readonly agent?: string;
   /** The resolved single-seat binding for this invocation (TDR-0040 A-4). */
@@ -412,6 +416,17 @@ export type HarnessSpawnStreamOptions = {
   readonly stdin?: string;
   readonly handleTimeoutMs: number;
   readonly sessionTimeoutMs?: number;
+  /**
+   * The additive per-stream raw-stdout observer (GH-354 API-8). It is built by
+   * the adapter before the stream starts and before its first yielded value; an
+   * absent member keeps the delivered stream behaviour exactly.
+   *
+   * The ADAPTER's stream drain consumes it, once per raw value, before its own
+   * decoder runs. The host starter must not consume it: the sink is driven
+   * solely inside the adapter's acquisition drain, so a host that also wrote to
+   * it would double-write the artifact family for one value.
+   */
+  readonly stdoutSink?: HarnessStreamSink;
 };
 
 /**
@@ -433,6 +448,74 @@ export type HarnessSpawnStream = {
    * delivered behaviour and the loop records `null`.
    */
   readonly pid?: number;
+};
+
+/**
+ * The additive per-stream raw-stdout observer (GH-354 API-8, TDR-0058 DC-2).
+ *
+ * It receives every yielded value — decoded or not — because the artifact is
+ * the operator's evidence of what the harness printed. An absent sink keeps the
+ * delivered stream behaviour exactly, and a sink fault is non-gating: it never
+ * changes the token, exit, record, or evidence.
+ */
+export type HarnessStreamSink = {
+  readonly write: (value: string) => void;
+  readonly close: () => void;
+};
+
+/** The declared stream kinds a streaming adapter opens (GH-354 API-8). */
+export type HarnessStreamKind = "spawn" | "resume" | "deliver";
+
+/**
+ * The per-stream context a sink is built from: the work item, the stream kind,
+ * and the recorded instant the adapter already holds, plus the attempt identity
+ * and iteration ordinal the engine supplies at its own call sites.
+ */
+export type HarnessStreamSinkContext = {
+  readonly workItemRef: string;
+  readonly streamKind: HarnessStreamKind;
+  readonly recordedAt: string;
+  readonly attemptId?: string;
+  readonly iterationOrdinal?: number;
+};
+
+/**
+ * The injected adapter-owned transcript read (GH-354 API-9).
+ *
+ * A READ, not a member of the closed session operation set: it takes no handle,
+ * performs no session operation, and returns the stored final assistant text
+ * under the adapter's own read cap or one closed absence. It does not flatten,
+ * bound, redact, or mark — that composition belongs to the query.
+ */
+export type DispatchTranscriptResult =
+  | {
+      readonly ok: true;
+      readonly message: string;
+      readonly recordedAt: string | null;
+    }
+  | { readonly ok: false; readonly reason: "session-unknown" | "no-message" | "unreadable" };
+
+export type DispatchTranscriptRead = (input: {
+  readonly harnessKind: HarnessKind;
+  readonly sessionId: string;
+  readonly ref: string;
+}) => DispatchTranscriptResult | Promise<DispatchTranscriptResult>;
+
+/** The additive per-stream sink factory (GH-354 API-8). */
+export type HarnessStreamSinkFactory = (
+  context: HarnessStreamSinkContext,
+) => HarnessStreamSink | undefined;
+
+/**
+ * The additive engine-supplied stream context (GH-354 API-8).
+ *
+ * The engine knows which attempt and iteration a spawn/resume belongs to; the
+ * adapter knows the recorded instant and the stream kind. The two together are
+ * the declared naming inputs, so the adapter never invents an identity.
+ */
+export type HarnessStreamContext = {
+  readonly attemptId?: string;
+  readonly iterationOrdinal?: number;
 };
 
 /**

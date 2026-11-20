@@ -99,6 +99,30 @@ export {
   readDispatchAttemptHistory,
 } from "./dispatch-attempts.js";
 export {
+  type OperatorDeliveringRead,
+  type OperatorLaneReadFailure,
+  type OperatorStatusRead,
+  readOperatorDelivering,
+  readOperatorStatus,
+} from "./dispatch-lane-view.js";
+export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./dispatch-log-tail.js";
+export {
+  type DispatchLastMessageRead,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
+  readDispatchLastMessage,
+} from "./dispatch-last-message.js";
+export {
+  createDispatchLogSink,
+  type DispatchLogSinkInput,
+  dispatchLogsDirectoryName,
+  dispatchLogsFamilyRoot,
+  dispatchLogsRefDirectory,
+} from "./dispatch-log-sink.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverResult,
   type DispatchSummaryResult,

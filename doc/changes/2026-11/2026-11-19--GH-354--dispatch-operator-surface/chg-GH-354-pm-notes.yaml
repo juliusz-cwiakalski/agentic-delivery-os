@@ -1,0 +1,314 @@
+change_id: GH-354
+title: "M4-S12: Dispatch operator surface — status, log, is-delivering,
+  last-message (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-19T20:04:37.444Z }
+  specification: { started: null, completed: 2026-11-19T21:34:09.897Z }
+  test_planning: { started: null, completed: 2026-11-19T21:34:36.953Z }
+  delivery_planning: { started: null, completed: 2026-11-19T21:35:03.038Z }
+  dor_check: { started: null, completed: 2026-11-19T21:41:28.668Z }
+  delivery: { started: null, completed: 2026-11-20T00:58:09.436Z }
+  system_spec_update: { started: null, completed: 2026-11-20T01:09:56.570Z }
+  review_fix: { started: null, completed: 2026-11-20T02:03:54.884Z }
+  quality_gates: { started: null, completed: 2026-11-20T03:00:48.577Z }
+  dod_check: { started: null, completed: 2026-11-20T03:00:57.865Z }
+  pr_creation: { started: null, completed: 2026-11-20T03:03:01.893Z }
+decisions:
+  - text: "PM-decided (sync 2026-11-20): the branch is merged with `main-tools` at
+      ccc83383 (GH-348, loop supervision), merge commit 00d1d72a. Upstream
+      claimed TDR-0056 and TDR-0057, so this change's governing record is
+      renumbered TDR-0056 -> TDR-0058 (file name, id, index row, and every
+      reference); the precedent is GH-347's renumber on the same ground. The
+      merged tree adopts upstream's changeset-additivity validator (pinned
+      baseline plus content-validated additions) in place of the earlier fixed
+      list, so five additions are accepted, this change's among them."
+    date: "2026-11-20"
+  - text: "PM-decided (phase-8 scope, disclosed at PR review): three non-product
+      fixes land with the release phase because the aggregate gate cannot be
+      green otherwise. (a) The changeset additivity pin hardcodes the changesets
+      added since its capture; this change's own changeset is appended to that
+      declared list — a delivered expectation that every later delivery updates,
+      never the baseline. (b) The doc-distribution guard derives its 'actual'
+      install set by running the real installer with the inherited HOME, so on a
+      machine with a lifecycle-installed product it refuses to overwrite that
+      binary and the aggregate fails; the sandbox install is made HOME-hermetic
+      with its own scratch home. (c) The install refusal message's unescaped
+      backticks were escaped so it stops executing `/usr/bin/install`. None
+      changes product behaviour, a marker, or an assertion's meaning; all three
+      are named in the PR body."
+    date: "2026-11-20"
+  - text: "Scope is the ticket body plus the committed M4 backlog row M4-S12 and the
+      flip-plan F1 split rationale: the four per-ref operator queries (`status`,
+      `log`, `is-delivering`, `last-message`), bounded per-ref log persistence,
+      and one command family with `--json`. GH-347's F1a core parity (durable
+      lane, resume, admission, derivation) is the data source and is out of
+      scope, as is the shell entry point's retirement."
+    date: "2026-11-19"
+  - text: "PM-decided (non-blocking interpretation): the ticket's
+      `is-delivering`/is-delivering phrasing is read as one query with two
+      admissible forms inherited from the shell surface — a per-ref form and a
+      repo-wide form with no ref. Both must answer; the AC's three lifecycle
+      states (live, finished, absent) apply to the per-ref form. Rationale: the
+      shell `--is-delivering [REF]` is the parity reference and `ceo-loop`
+      consumes the ref-less form."
+    date: "2026-11-19"
+  - text: "PM-decided (non-blocking interpretation): `status` reports `marker` from
+      the durable `dispatch.lane` record's state (active/terminal) — the typed
+      path has no delivering-marker file and this change does not add one.
+      Rationale: TDR-0049 makes the lane record the single resumable-state
+      artifact; a second marker file would be a second truth source."
+    date: "2026-11-19"
+  - text: "Branch/PR conventions: branch `feat/GH-354/dispatch-operator-surface`
+      from `main-tools`; PR targets `main-tools`; the PR stays open (merge
+      authority is the CEO / human)."
+    date: "2026-11-19"
+open_questions: []
+blockers: []
+notes:
+  - text: "PR: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/373 —
+      base `main-tools`, head `af7d354c`, 28 commits, open, not draft, linked to
+      #354 and the M4 milestone. TDR-0058 remains `Proposed`: owner acceptance
+      is requested as part of this review; AI does not accept it. Merge
+      authority is the CEO (Mode A) or the human (Mode B) — the PM does not
+      merge."
+    type: info
+    date: "2026-11-20"
+  - text: "Quality gates: PASS. `pnpm check` exit 0 on 95f96462 — 11,876 pass, 4
+      skip, 0 fail (11,880 tests across 1,459 files; tests 1,157 s), with
+      boundaries, memory, prompt-conformance, help-guide-coverage and
+      exports-parity all clean. Branch-range commit-message gate: PASS — base
+      origin/main-tools, merge-base ccc8338, head 95f9646, 26 commits in range,
+      0 offending, real local commitlint. The prior aggregate run was blocked by
+      a merge-artifact duplicate `install.ts` key in the contract inventory
+      (fixed in 95f96462) and, separately, by two load-sensitive delivered
+      timing suites (daemon foreground stop 262 ms vs <=250 ms; telemetry growth
+      30 s timeout) that passed standalone and passed in the clean re-run;
+      neither is change-caused."
+    type: info
+    date: "2026-11-20"
+  - text: "Review iteration 2: PASS. F1 and F2 verified closed in the production
+      path (one `entrypointSecrets` resolver feeds the serializer and the
+      dispatch runtime; `TC-MSG-011` seeds only the environment and fails if the
+      wiring is reverted; the sole `readDispatchLog` call omits `maxLines`, and
+      `TC-LOG-012` proves the 220-line machine answer). No assertion weakened;
+      no collateral effect outside `last-message`. Advisories F-1/F-2 (two doc
+      wording slips), F-3 (test plan reconciled to v0.4: 74 cases, 86 links),
+      F-4 (this note and the phase-9 evidence), F-5 (comment scoped) are closed.
+      Post-sync renumber commit c3d50eba: TDR-0056 -> TDR-0058 across the
+      record, its index row and every reference, plus the advisory edits."
+    type: info
+    date: "2026-11-20"
+  - text: "Plan phase 9 (review remediation) = 95f7d609: F1 wires one credential
+      resolver (`entrypointSecrets`) into both the serializer and the dispatch
+      operator runtime (invocation fact → runtime `secrets`), with TC-MSG-011
+      seeding the credential only through the environment and asserting a
+      straddling prefix is absent from both outputs (forcing the old wiring
+      makes it leak, verified then reverted); F2 bounds machine `log` data by 65
+      536 bytes only and moves the 200-line/32 768-byte bound into the human
+      renderer, with TC-LOG-012 proving a 220-line window answers 220 lines at
+      `--tail 500` (before: 200 and an invented bound); A2/A3 closed. Gates:
+      message and log conformance 9+9, operator battery 161, behaviour set 27,
+      pinned trio 41, no-shell 0, exit-literals 0, doc conformance 29, build 0.
+      Sync merge 00d1d72a; the record renumber lands with this phase's
+      follow-up."
+    type: info
+    date: "2026-11-20"
+  - text: "Review iteration 1: FAIL — two blocking findings, both real and both
+      invisible to the offline battery because the fixtures inject what
+      production does not. F1: the shipped bins never pass `registeredSecrets`
+      to the dispatch operator runtime, so `last-message` redacted an empty set
+      before the 512-character bound and a straddling credential could survive
+      as a prefix; remediation wires the same declared-credential set the
+      serializer uses and adds an environment-seeded straddling case. F2: the
+      machine `log` payload was capped by the human 200-line bound, so `--json
+      --tail 300..500` dropped lines the retained window held; remediation
+      bounds machine data by bytes only, enforces the line bound in the human
+      renderer, adds the 220-line case, and aligns two current-truth lines.
+      Remediation is plan phase 9."
+    type: info
+    date: "2026-11-20"
+  - text: "Documentation reconciliation (phase 7): 10 pages updated (dispatch
+      engine, state layer, harness adapters, autonomous delivery,
+      engine-first-operations, glossary, the dispatch reference page,
+      doc/00-index descriptors, cli entrypoint composition, the dispatch test
+      spec). Stale 'the typed path has no status/log surface' scan: 0 hits.
+      doc-conformance 25 pass, dispatch-doc-conformance 4 pass, doc distribution
+      no drift (96 docs). Deferred, not a gap: `.opencode/agent/ceo.md` still
+      names the shell query forms; the typed queries are a superset and the
+      shell remains the documented fallback, and prompt migration belongs to the
+      prompts flip item (GH-351), not this ticket."
+    type: info
+    date: "2026-11-20"
+  - text: "Plan-phase delivery evidence (one entry per plan phase; commit, gates,
+      result): phase 1 satisfied at plan time, no commit, TDR tracked at
+      86aa74e8; phase 2 = 87994ebe (status+isdel conformance 15 pass, e2e+resume
+      parity 17, pinned trio 39, no-shell 0, exit-literals 0, diff-check 0);
+      phase 3 = ca4a596e (persist 9, artifact-writer 3, e2e+battery 13, trio 39,
+      no-shell 0); phase 4 = b3fa6a47 (log 8, log-bounds 3, persist+writer 10,
+      trio 39, no-shell 0); phase 5 = ae038556 (message 8,
+      composition+transcript 4, claude session 9, full dispatch conformance 143,
+      trio 39); phase 6 = 5ba12d4c (grammar+composition 7, help pins+reference
+      parity 22, help coverage+doc conformance 29, no-shell 0); phase 7 =
+      795bda2d (dispatch conformance 159, behaviour 33, checks 5+5+4+4, trio 39,
+      no-shell 0); phase 8 = 6d19bd86 (lint/format/typecheck/plan
+      validate/no-shell/exit-literals/
+      diff-check/doc-distribution/privacy/changeset-additivity/install all 0;
+      aggregate pnpm check 11,736 pass, 4 skip, 1 fail — TC-BIN-084 half (b)
+      timed out under load at 162 s and passes 5/5 standalone in 99.6 s, a
+      load-sensitivity class, not a behaviour change)."
+    type: info
+    date: "2026-11-20"
+  - text: "Branch-range commit-message gate (phase 9): PASS — base
+      origin/main-tools, merge-base bd95665b, head 7c471f02, 20 commits in
+      range, 0 offending commits, 0 rules hit, real local commitlint binary (not
+      SKIP, not ERROR)."
+    type: info
+    date: "2026-11-20"
+  - text: "DoR gate: iteration 1 NOT_READY (F1-F5 text-level findings), iteration 2
+      NOT_READY (N1-N3 allocation/ownership), iteration 3 READY
+      (`readiness-review/readiness-iter-3.md`). Residuals R1-R8 recorded there;
+      R1 (test-plan §8.3 still placing the adapter read cap below the 512 bound)
+      was fixed before the phase completed; R2 (four mutation rows allocated to
+      the earlier of two phases that name them) is accepted as a
+      reviewer-instrument note — the totals sum and every named property still
+      has a failing case. TDR-0058 stays Proposed; the human accepts at PR
+      review."
+    type: info
+    date: "2026-11-19"
+  - text: "Operational trap (hit 2026-11-19, twice): the commit primitive's template
+      subject carries the plan phase title and summary, and
+      `validateCommitMessage` rejects any tracker-like token other than the
+      resolved ref. A phase-1 summary — and, on the second hit, the phase-1
+      title — naming `TDR-0056` aborted `phase complete delivery_planning` with
+      `commit.commitlint-failed: invented tracker references are not allowed:
+      TDR-0056` (the same trap recorded in GH-275 and GH-322). Remediation: no
+      plan phase title, summary, or message body may contain a decision-record
+      id."
+    type: retro
+    date: "2026-11-19"
+  - text: "Intake state (verified 2026-11-19): issue GH-354 open, label `change`,
+      milestone `M4: Jaiship-native delivery`, zero comments; no open or closed
+      PR for the branch; branch existed at the `origin/main-tools` tip
+      (bd95665b) with 0 commits ahead and a clean worktree; no GH-354 change
+      folder."
+    type: info
+    date: "2026-11-19"
+  - text: "Clarify-scope current state: the durable lane record is delivered — kind
+      `dispatch.lane`, schema `delivery.dispatch.lane.v1`, key prefix
+      `dispatch.lanes:` (packages/core/src/contracts/dispatch.ts:572-574), with
+      active/terminal states and latest-wins reads. Attempt records carry
+      `sessionIds`. The dispatch command family today exposes `run`, `attempts`,
+      `dual-run summary|resolve`, and `handover` only; none of the four operator
+      queries exists. No raw harness stdout is persisted per ref, and the typed
+      path has no transcript read, so `log` persistence and `last-message`
+      sourcing are genuine design decisions for the spec, not wiring."
+    type: info
+    date: "2026-11-19"
+  - text: "Parity reference for the authors (shell lane on main-tools):
+      `scripts/deliver-ticket.sh --is-delivering [REF]` exits 0 when a delivery
+      is in progress and prints nothing; `--last-message REF` prints the stored
+      PM final message without running; per-ref PM stdout accumulates in
+      `tmp/deliver-ticket/<ref>.pm.out` and the final message is persisted to
+      `.ai/local/delivery/<ref>.last-message`; the delivering marker lives at
+      `.ai/local/delivery/delivering`. The typed equivalents must not read or
+      execute any shell script (ticket AC)."
+    type: info
+    date: "2026-11-19"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-dispatch-engine.md (command table, one-shot
+      flow, lane record, attempt record),
+      doc/spec/features/feature-autonomous-delivery.md (shell surface that the
+      typed queries replace for operators),
+      doc/guides/engine-first-operations.md (operator routine), the command
+      reference page required by check:help/help-guide-coverage, and
+      doc/00-index.md if a new page appears. The change must not leave a stale
+      'the typed path has no status/log surface' statement behind."
+    type: risk
+    date: "2026-11-19"
+  - text: "PM-decided (AC-F5-2 scope ruling, for the readiness gate): 'an unexpected
+      extra positional is `input.value.rejected`' holds inside the family's
+      declared `positionals.max` (3) — which is the normal `dispatch <query>
+      <ref> extra` case. A positional beyond the parser's declared maximum is
+      refused by the shared parser as `fallback.invocation`, the delivered
+      parser contract for every command; the plan and tests assert both
+      identities and this is not a contract change."
+    date: "2026-11-19"
+  - text: "PM-decided (supports TDR-0058): `session-introspection` is read as the
+      adapter's capability to introspect a session it owns, including reading
+      its own persisted session content — not metadata only. The delivered
+      declarations govern availability: opencode declares it supported; Claude
+      Code declares it as a gap, so a Claude-lane `last-message` answers
+      `capability-gap` and this change adds no Claude transcript read. Giving
+      Claude a read would change its capability declaration and is a separate
+      decision. Rationale: the vocabulary is not narrowed anywhere, the
+      capability's existing consumers (session listing, telemetry) already read
+      adapter-owned session state, and reusing the declaration costs no contract
+      motion."
+    date: "2026-11-19"
+  - text: "PM-decided (supersedes the spec's first draft of the log artifact):
+      per-ref session output is append-only **segment files** under
+      `dispatch-logs.<workspace>/<REF>/`, one file per stream (spawn, resume,
+      deliver), capped per file by segmentation and bounded in total by
+      retaining the newest two segments. No locks, no trims, no rewrites, no
+      shared write target. Rationale: three review rounds on a lock+trim design
+      kept finding cap, crash-window, stranding-lock, and torn-tail defects;
+      segmentation removes the read-modify-write class entirely and preserves
+      iteration attribution for free. The ticket's per-ref scoping and bounded
+      tail are unchanged."
+    date: "2026-11-19"
+  - text: "PM-decided (declared divergence, not a parity claim): the typed `log`
+      holds the harness's own stdout (for opencode, its JSON event stream). The
+      shell's `--log` tails `<REF>.log`, which holds only the opencode child's
+      stderr; the wrapper's progress lines go to the wrapper's terminal. The
+      typed tail therefore captures neither. The reference page and the
+      operations guide must state this."
+    date: "2026-11-19"
+  - text: "Decision-record process: `@decision-advisor` authored TDR-0058 and
+      `@decision-critic` challenged it four times (REWORK on every pass; no PASS
+      claimed). Each round corrected real defects (shell parity fact,
+      unsatisfiable privacy gate, tautological gates, existing
+      `session-introspection` capability, sink binding point, stream coverage on
+      resume, then the lock/trim protocol replaced by append-only per-stream
+      segments, then transformation/tear/overflow/redaction-order precision).
+      The final design is recorded in TDR-0058; remaining protocol details are
+      plan-pinned with named tests. Status stays `Proposed` — the human owner
+      accepts at PR review."
+    type: info
+    date: "2026-11-19"
+  - text: "DoR gate iteration 1 returned NOT_READY with five text-level findings (no
+      redesign): (F1) API-9/DM-3 bounded the message in the seam, which would
+      admit a straddling-credential prefix — the bound belongs to the query
+      composition after redaction; (F2) AC-F7-3 was stated per file but a split
+      value ends mid-value — restated over the concatenation of a stream's
+      files; (F3) two PERSIST cases asserting `dispatch log` were allocated to
+      the write phase before `log` exists; (F4) per-phase gates did not run the
+      suites that verify the pinned inventories and the no-shell glob equality;
+      (F5) the lane view described fold-then-filter, which would let a newer
+      foreign record for the same ref win — filter must precede the fold.
+      Advisories A1–A9 also folded (no-log meaning, append wording, truncation
+      precedence, named state code, status store-failure case, secrets
+      composition fact, phase-1 already satisfied, naming inputs, decision-pass
+      count)."
+    type: info
+    date: "2026-11-19"
+  - text: "Design tension to resolve in the spec, not to paper over:
+      `feature-dispatch-engine.md` states that the `dispatch.lane` record
+      carries no prompt, transcript, diff, or provider payload, so neither `log`
+      nor `last-message` may ride the lane record. Both need their own bounded,
+      reference-scoped artifact with a declared location, a size/line bound, and
+      the privacy boundary restated (what is persisted is harness stdout and the
+      PM's final assistant message only). The spec must also say what `log` and
+      `last-message` answer when no artifact exists yet (a pre-existing lane
+      written before this change persists nothing)."
+    type: risk
+    date: "2026-11-19"
+  - text: "Operational prerequisite carried from GH-347: the workspace is unbuilt
+      (`packages/*/dist` absent) and `jaiship` imports built workspace packages,
+      so every primitive invocation runs `TMPDIR=$PWD/tmp/tmpdir pnpm build`
+      first. Primitive calls carry BOTH `PATH=$PWD/node_modules/.bin:$PATH` (the
+      commit primitive execs the bare `commitlint` name) and
+      `TMPDIR=$PWD/tmp/tmpdir`."
+    type: info
+    date: "2026-11-19"
