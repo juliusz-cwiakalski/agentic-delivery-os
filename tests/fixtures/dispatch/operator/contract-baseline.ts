@@ -96,7 +96,7 @@ export const CONTRACT_BASELINE: ContractBaseline = {
     "headless-mode-limitation",
   ],
   harnessKinds: ["opencode", "claude-code"],
-  errorRowCount: 167,
+  errorRowCount: 170,
   tokens: [
     ["merged", "success"],
     ["blocked", "success"],
@@ -148,7 +148,7 @@ export const CONTRACT_BASELINE: ContractBaseline = {
   evidenceRefs: 16,
   attemptsHumanLines: 40,
   attemptsHumanBytes: 8192,
-  configurationKeyCount: 79,
+  configurationKeyCount: 80,
   opencode: {
     supportedOperations: [
       "spawn",

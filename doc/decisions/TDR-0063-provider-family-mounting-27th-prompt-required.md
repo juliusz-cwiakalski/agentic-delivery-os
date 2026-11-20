@@ -465,10 +465,12 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
   twenty-seventh prompt-required family, so this decision's mount moved one place
   to **twenty-eighth and last, appended after `loop`**; `install` stays the
   twenty-sixth and `supervise` the twenty-fifth, and the principle (the provider
-  family is appended last) is unchanged. The record was also renumbered
-  `TDR-0062` → `TDR-0063` (and its companion records `TDR-0057..0062` →
-  `TDR-0059..0063`) because GH-348 owns `TDR-0056`/`TDR-0057`; the historical
-  matrix below records the pre-merge 26→27 movement and is retained as history.
+  family is appended last) is unchanged. The record was also renumbered twice:
+  `TDR-0061` → `TDR-0062` for the GH-348 sync (companions `TDR-0057..0062` →
+  `TDR-0058..0063`) and then `TDR-0062` → `TDR-0063` for the GH-354 sync
+  (companions `TDR-0058..0063` → `TDR-0059..0064`), because GH-348 owns
+  `TDR-0056`/`TDR-0057` and GH-354 owns `TDR-0058`; the historical matrix below
+  records the pre-merge 26→27 movement and is retained as history.
 
 ## References
 

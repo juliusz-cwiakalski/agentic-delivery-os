@@ -13,9 +13,9 @@
  * hope. A materialisation failure fails the case by name rather than skipping
  * the comparison.
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { helpEntryFor } from "../../packages/cli/src/help";
 
@@ -32,7 +32,19 @@ const PRE_CHANGE_BASELINE = "d1fff222279eb4926a92c3b612b98aa34c18d4f3";
 /** The GH-348 tip: the baseline that already carries `loop` and not `provider`. */
 const GH348_BASELINE = "ccc83383395fb298396d48afd47b2ab866a9520b";
 const GH350_CLAUSE =
-  " Regenerated deliberately on 2026-11-19 for GH-350's provider family, and again after the GH-348 merge: the help cell's Commands list carries GH-348's `loop` line followed by GH-350's `provider` line, and every other cell is byte-unchanged.";
+  " Regenerated deliberately on 2026-11-19 for GH-350's provider family, and again after the GH-348 merge: the help cell's Commands list carries GH-348's `loop` line followed by GH-350's `provider` line, and every other cell is byte-unchanged. Recaptured on 2026-11-20 with a gh-free PATH and the absolute Bun executable, so the transport-degradation notice is pinned to provider.cli.unavailable instead of the build host's gh version.";
+
+/**
+ * The capture environment: a PATH that cannot resolve `gh` (so the transport
+ * posture is the declared `provider.cli.unavailable` degradation, always
+ * present) and the absolute Bun executable, so the child starts without the
+ * ambient PATH at all.
+ */
+const GH_FREE_PATH = mkdtempSync(`${ROOT}/tmp/tmpdir/gh-free-`);
+/** The one deterministic transport-degradation line a gh-free capture pins. */
+const TRANSPORT_NOTICE =
+  "GitHub CLI transport unavailable (provider.cli.unavailable); using the API transport.\n";
+afterAll(() => rmSync(GH_FREE_PATH, { recursive: true, force: true }));
 
 type Cell = {
   readonly exitCode: number;
@@ -84,13 +96,13 @@ const gh348 = ((): (() => Baseline) => {
 })();
 
 const environment = (): Record<string, string> => ({
-  PATH: process.env.PATH ?? "",
+  PATH: GH_FREE_PATH,
   HOME: process.env.HOME ?? "",
   TMPDIR: process.env.TMPDIR ?? "",
 });
 
 const runAlias = (argv: readonly string[], extra: Record<string, string> = {}): Cell => {
-  const result = spawnSync("bun", [ALIAS_ENTRY, ...argv], {
+  const result = spawnSync(process.execPath, [ALIAS_ENTRY, ...argv], {
     cwd: ROOT,
     encoding: "utf8",
     env: { ...environment(), ...extra },
@@ -143,8 +155,14 @@ describe("TC-MOUNT-008 the alias baseline delta is exactly one provider line", (
     expect(working.capturedFromOriginal).toBe(captured().capturedFromOriginal);
     expect(working.capturedCommand).toBe(captured().capturedCommand);
     expect(JSON.stringify(working.cells.version)).toBe(JSON.stringify(captured().cells.version));
-    expect(JSON.stringify(working.cells.invalidOverrideStatusJson)).toBe(
-      JSON.stringify(captured().cells.invalidOverrideStatusJson),
+    // The containment cell carries a per-run envelope identity, so its stable
+    // projection is compared; its stderr is byte-exact against the pre-change
+    // bytes plus the one deterministic capture notice this branch adds.
+    expect(stableEnvelope(working.cells.invalidOverrideStatusJson.stdout)).toEqual(
+      stableEnvelope(captured().cells.invalidOverrideStatusJson.stdout),
+    );
+    expect(working.cells.invalidOverrideStatusJson.stderr).toBe(
+      `${captured().cells.invalidOverrideStatusJson.stderr}${TRANSPORT_NOTICE}`,
     );
     expect(working.cells.help.exitCode).toBe(captured().cells.help.exitCode);
     expect(working.cells.help.stderr).toBe(captured().cells.help.stderr);
