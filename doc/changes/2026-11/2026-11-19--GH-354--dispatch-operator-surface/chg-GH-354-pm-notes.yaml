@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-20T01:09:56.570Z }
   review_fix: { started: null, completed: 2026-11-20T02:03:54.884Z }
   quality_gates: { started: null, completed: 2026-11-20T03:00:48.577Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-20T03:00:57.865Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "PM-decided (sync 2026-11-20): the branch is merged with `main-tools` at
