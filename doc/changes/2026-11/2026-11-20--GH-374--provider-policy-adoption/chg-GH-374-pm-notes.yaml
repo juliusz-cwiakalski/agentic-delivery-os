@@ -12,8 +12,8 @@ phases:
     started: "2026-11-20T11:18:00Z"
     completed: 2026-11-20T11:37:59.214Z
   test_planning:
-    started: null
-    completed: null
+    started: "2026-11-20T11:38:00Z"
+    completed: 2026-11-20T11:51:14.190Z
   delivery_planning:
     started: null
     completed: null
