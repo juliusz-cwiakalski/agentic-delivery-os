@@ -1,0 +1,118 @@
+change_id: GH-366
+title: "M4-S3 Delivery command conformance (residual) — merge slice (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: 2026-11-20T11:45:00.000Z, completed: 2026-11-20T10:47:14.870Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "PM-decided (scope, authoritative source): the owner's issue comment of
+      2026-11-20T10:42:14Z defines the delivery scope as the merge slice — three
+      named deterministic defects D1 (change branch read from the ambient
+      checkout), D2 (required checks never consulted; the merge surface
+      evaluates one gate), D3 (refusals do not name the breached contract or the
+      credential reference) — with four acceptance criteria and three named
+      regressions, plus the diagnostics requirements recorded in the three
+      earlier owner comments (a credential condition is never reported as
+      `merge.transaction-aborted`; required checks are read on the resolved head
+      and failing/pending checks each fail closed and are named; the waiver path
+      stays explicit). That comment post-dates the ticket body and scopes itself
+      'for this story's merge slice', and the change branch
+      `fix/GH-366/merge-command-conformance` names the same slice."
+    date: "2026-11-20"
+  - text: "PM-decided (residual explicitly not claimed): the ticket body's wider ask
+      — one battery over the whole command family (`dispatch`, `loop`, `merge`,
+      `closeout`, `queue`, `phase`, `verify`, `blockers`, `board`, `brief`,
+      `metrics`, `spend`, `provider`) on the installed binary — is not claimed
+      green by this change. This change ships the merge-family slice of that
+      battery plus the diagnostics contract it proves. Declared here and in the
+      PR body so the owner can rule on the remainder at review; no follow-up
+      ticket is created (PM never creates tickets autonomously)."
+    date: "2026-11-20"
+  - text: "PM-decided (decision-id reservation, owner-specified): this change
+      reserves TDR-0071..TDR-0073. Re-verify the max on `origin/main-tools`
+      before authoring and never renumber downward. At intake the observed max
+      is TDR-0058 (GH-354); GH-350 (open PR #372) reserves 0059..0064, GH-351
+      0065..0067, GH-336 0068..0070."
+    date: "2026-11-20"
+  - text: "Branch/PR conventions: branch `fix/GH-366/merge-command-conformance` from
+      `main-tools`; PR targets `main-tools` (never the default `main`); the PR
+      stays open — merge authority is the CEO (Mode A) or the human (Mode B).
+      This change type is `fix`."
+    date: "2026-11-20"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake state (verified 2026-11-20): issue GH-366 open, label `change`,
+      milestone `M4: Jaiship-native delivery`, four owner comments, no
+      `human-input-needed` label. No open and no merged PR for the branch.
+      Branch `fix/GH-366/merge-command-conformance` existed at the
+      `origin/main-tools` tip (31e56a15) with 0 commits ahead and a clean
+      worktree, so this is a fresh start rather than a resume (no sync merge
+      required). No GH-366 change folder existed."
+    type: info
+    date: "2026-11-20"
+  - text: "D1 confirmed against the tree at 31e56a15:
+      `packages/cli/src/production.ts:2395` is `const mergeBranch =
+      resolvedRepositoryFacts.head.branch;` with the doc comment 'The checkout's
+      own current branch, read from its git facts.' The merge composition
+      therefore has no change-record branch source at all; resolving one is new
+      design, not a wiring fix."
+    type: info
+    date: "2026-11-20"
+  - text: "D2 confirmed against the tree: `MERGE_DEFAULT_GATE_ENTRIES`
+      (packages/core/src/contracts/merge.ts:72-92) ships five built-in gates on
+      the `battery` surface plus `tracker-freshness` on the `merge` surface —
+      exactly the observed `gates=1/1 passed`. A `required-ci-job` recipe and a
+      single exported `evaluateRequiredJobGate` evaluator already exist
+      (packages/core/src/domain/merge-probe.ts), so the fix is a gate-set and
+      evaluation-path change, not new capability. The capability question the
+      spec must answer: what the merge surface reads on the resolved head SHA,
+      and what it does when the provider cannot supply check state."
+    type: info
+    date: "2026-11-20"
+  - text: "D3 confirmed as a diagnostics defect with two shapes: the credential
+      refusal (`config.credential.missing`) names neither the credential
+      reference nor the environment variable, and a read fault reached the
+      operator as `merge.transaction-aborted` whose remediation names no
+      condition. The merge composition is the only tracker composition demanding
+      a configured credential while `board`/`brief`/`status` read the same
+      tracker with the ambient token."
+    type: info
+    date: "2026-11-20"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-merge-verify-deploy.md (gate set, gate surfaces,
+      verification record consumption, branch resolution),
+      doc/spec/features/feature-commit-primitive.md is unrelated, the merge
+      command reference page under
+      doc/planning/oss-tooling/milestones/m4/commands/ or the shipped reference
+      page that check:help resolves, the error table (documented + machine rows
+      must move together), and doc/spec/nonfunctional.md if a gate-surface count
+      is pinned. Any new identity or gate id moves its pinned counts in the same
+      change."
+    type: risk
+    date: "2026-11-20"
+  - text: "Operational prerequisite carried from GH-347/GH-354: the workspace is
+      unbuilt (`packages/*/dist` absent) and `jaiship` imports built workspace
+      packages, so every primitive invocation runs `TMPDIR=$PWD/tmp/tmpdir pnpm
+      build` first. Primitive calls carry BOTH
+      `PATH=$PWD/node_modules/.bin:$PATH` (the commit primitive execs the bare
+      `commitlint` name) and `TMPDIR=$PWD/tmp/tmpdir`."
+    type: info
+    date: "2026-11-20"
+  - text: "Clarify-scope verdict: no blocking gap remains. The defect set, the
+      acceptance criteria, and the regression list are owner-specified and
+      internally consistent; the two capability questions (change-record branch
+      source, required-check read on the resolved head) are design decisions for
+      the specification and its decision record, not questions for the owner."
+    type: info
+    date: "2026-11-20"
