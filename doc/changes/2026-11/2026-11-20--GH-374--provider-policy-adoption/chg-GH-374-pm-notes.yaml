@@ -9,8 +9,8 @@ phases:
     started: "2026-11-20T11:14:31Z"
     completed: 2026-11-20T11:17:45.514Z
   specification:
-    started: null
-    completed: null
+    started: "2026-11-20T11:18:00Z"
+    completed: 2026-11-20T11:37:59.214Z
   test_planning:
     started: null
     completed: null
@@ -87,6 +87,41 @@ decisions:
       resolve --agent <role> --for-spawn`, `provider resolve`, `provider
       simulate --fixture`, and the legacy-source grep."
     date: "2026-11-20"
+  - text: "Spec revision R1 (PM-decided after reviewing the first draft): the
+      profiles are a mixed base `delivery` over `[zai-coding-plan, deepseek]`
+      plus a `paid` fallback over `[deepseek]`, not two disjoint rails. Two
+      reasons verified in the delivered code: the base rail must keep
+      vision-capable seats on the image-capable paid model (legacy `mixed.sh`
+      keeps `designer`/`image-reviewer` on deepseek because the z.ai vision
+      route is unverified), and the paid profile is the real target of the
+      quota-driven all-paid switch. A disjoint subscription base would make
+      every vision task refuse on the rail selected almost all the time."
+    date: "2026-11-20"
+  - text: "Spec revision R2 (PM-decided): the paid entry declares ONE union peak
+      window 01:00-10:00 UTC with buffer 0, because `provider.entries.*.peak`
+      carries one window per entry and only entry peaks gate admission
+      (`createResolvedProviderProbe` reads `descriptor.peak`; profile
+      `peakWindows` do not gate admission). The union keeps paid capacity out of
+      both DeepSeek 2x windows and out of the subscription's buffered pause; the
+      measured cost is the 04:00-06:00 UTC gap the legacy hook left open."
+    date: "2026-11-20"
+  - text: "Spec revision R3 (PM-decided): profile `peakWindows` must satisfy
+      `parseProfilePeakWindows` — a positive `graceSeconds` at or below the
+      smallest buffer across ALL windows. The first draft's zero
+      `bufferAfterSeconds` made that bound 0 and the branch unloadable; the
+      declaration now uses buffers 1800/300 and 7200/600 with `graceSeconds:
+      300`."
+    date: "2026-11-20"
+  - text: "Legacy-behaviour correction (verified in
+      `~/.ados/hooks/pre-opencode-iteration`): the hook's z.ai buffer default is
+      900 s, z.ai parking is active only when the target uses z.ai, DeepSeek
+      parking (01:00-04:00 and 06:00-10:00, buffer 0, Chinese-holiday exempt)
+      applies whenever DeepSeek is in the target, and today's persisted target
+      is DeepSeek. Therefore the legacy all-rails pause already covered
+      01:00-04:00; the union window's only incremental cost is 04:00-06:00. The
+      spec's first cost statement claimed a three-hour extension and was
+      corrected."
+    date: "2026-11-20"
 
 open_questions: []
 
@@ -124,4 +159,16 @@ notes:
       policy', and the current-truth provider specs if any statement moves.
       `@doc-syncer` resolves them in phase 7."
     type: info
+    date: "2026-11-20"
+  - text: "RETRO (environment): the first `phase complete GH-374 clarify_scope`
+      failed with `commit.commitlint-failed`. Root cause: the commit primitive's
+      commitlint probe spawns bare `commitlint` from PATH, which is absent on
+      this workstation, so even the deterministic template was reported invalid.
+      A PATH prepend of `node_modules/.bin` then shadowed the installed
+      `jaiship` with the unbuilt dev shim (`Cannot find module
+      '@delivery-os/adapters/credentials'`). Working invocation: append
+      `node_modules/.bin` to PATH (installed binary wins, commitlint resolves).
+      Product follow-up candidate, outside this change's scope: the probe should
+      resolve the workspace binary rather than depend on PATH."
+    type: retro
     date: "2026-11-20"

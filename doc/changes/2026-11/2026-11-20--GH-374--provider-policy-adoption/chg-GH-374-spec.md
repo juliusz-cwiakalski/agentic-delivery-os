@@ -1,0 +1,775 @@
+---
+change:
+  ref: GH-374
+  type: feat
+  status: Proposed
+  slug: provider-policy-adoption
+  title: "M4-S16: Provider policy adoption in this repository (M4)"
+  owners: ["Juliusz Ćwiąkalski"]
+  service: "this repository's committed provider and model policy, offline adoption proof, and legacy-path retirement"
+  milestone: "M4: Jaiship-native delivery"
+  labels:
+    - provider
+    - policy
+    - configuration
+    - adoption
+    - cost-control
+    - peak-windows
+    - budgets
+    - simulation
+    - migration
+    - watch
+    - m4
+  version_impact: none
+  audience: internal
+  security_impact: low
+  risk_level: medium
+  dependencies:
+    internal:
+      - "delivered provider engine: typed `provider` branch, chain resolution, peak and quota conditions, MAX and tie order, parks, announcements, `provider resolve|quota|parks` (GH-182, GH-350)"
+      - "delivered provider profiles: tiers/profiles/seats, preference chain, watch targets, optional per-profile `peakWindows`, `data-v1` env record, `provider profile resolve`, `provider watch status` (GH-234, GH-294)"
+      - "delivered dispatch nomination gate: `nominateProviderProfile` over the resolved provider configuration and the delivered probe, with the four closed refusal identities (GH-294, TDR-0028)"
+      - "delivered seven-layer configuration with the repository-owned project-committed and project-local layers and the prior-identity read fallback (GH-223, PDR-0006)"
+      - "delivered offline replay `provider simulate --fixture` and the legacy one-shot reader `provider migrate legacy` (GH-350, TDR-0060, TDR-0061)"
+      - "delivered harness per-spawn seat binding and `data-v1` env-record contract (GH-233, GH-335, TDR-0040)"
+    external:
+      - "the operator's existing z.ai Coding Plan subscription and DeepSeek pay-per-token balance (policy targets only; no spend is moved by this change)"
+---
+
+# CHANGE SPECIFICATION
+
+> **PURPOSE**: Make this repository's delivery stop depending on shell profiles and the pre-iteration hook by committing its provider policy — one mixed base profile over both providers with a paid fallback profile, one ordered chain with paid fallback only per policy, one declared daily peak pause carried by the entry peaks, two spend ceilings that stop a spawn before it overspends, and two watch targets that surface quota and balance — and prove that policy offline through the delivered resolver, the delivered seat binding, and committed replay fixtures, so every native delivery entry point stops failing closed with `provider.profile.absent` while no engine behaviour, credential value, or agent prompt is changed.
+
+## 1. SUMMARY
+
+The engine is delivered and the policy is not declared. `provider.profiles` ships empty, so `dispatch` refuses at admission with `provider.profile.absent` before it claims a lease, and every native entry point in this repository is unusable — not because a capability is missing, but because nobody has written the policy down. Meanwhile the working policy still lives in shell: `~/.ados/config/profiles/*.sh` supplies per-agent model values, and the pre-iteration hook decides when delivery waits for the z.ai peak window, when it switches to DeepSeek, and when it parks on an exhausted quota or a low balance. This story is the switch, not a follow-up.
+
+This change delivers an **adoption**, and says exactly what it declares:
+
+1. **One committed policy document.** The tracked project-committed layer (`.delivery-os/config.yaml`, the document the delivered composition already reads) gains a `provider` branch: two credential *references*, two entries (the sunk-cost subscription first, the pay-per-token rail second), a default chain `[zai-coding-plan, deepseek]` with `allowPaidFallback: true` plus a declared never-pay chain `[zai-coding-plan]`, two spend ceilings, and a mixed base profile with a paid fallback profile. Nothing is hidden in a shell file, an environment convention, or a second configuration authority.
+2. **A seat for every agent role, on the base and on the paid profile.** Both profiles declare one seat per agent in `.opencode/agent/` (twenty-four), named identically to the agent, each with `model`, `pacingClass`, `capability`, and a resolved env-record name. The mixed base reproduces the legacy default per-seat routing — `glm-5.3` for the eight reasoning seats, `glm-5.3-flash` for `pm` and `editor`, `deepseek/deepseek-flash` for the other fourteen — and keeps the two visual seats on the image-capable paid model, so the base never declares a text-only vision seat; the paid fallback profile carries every seat on `deepseek/deepseek-flash`. No model literal is added to an agent prompt; harness model assignment stays where it is.
+3. **The legacy intent encoded, with its limits stated.** The subscription entry declares the z.ai peak 06:00–10:00 with the `7200`-second declared buffer (effective `[04:00, 10:00)`; the retired hook used a 900-second buffer, which is context, not this declaration); the paid entry declares the **single union window** 01:00–10:00 with no buffer, because the engine allows one window per entry and only the entry window gates admission — so paid capacity is kept out of both DeepSeek 2x windows and out of the subscription's buffered pause. The delivered window model is **daily** (no weekday dimension), so the declaration is a documented superset that also pauses at weekends and on the Chinese public holidays the legacy DeepSeek rule exempted.
+4. **Ceilings that stop before spend.** A trailing-day cost ceiling parks with a computed resume instant; a per-ticket cost ceiling is a terminal classified refusal, because a ceiling that never decreases has no honest future instant — the divergence from "park rather than overspend" is stated rather than papered over.
+5. **Watch targets, honestly scoped.** Quota windows and the DeepSeek balance floor are declared as watch targets, and the specification states plainly that the synchronous nomination probe reads no live quota or balance: live pre-selection verification belongs to the daemon path, and this change declares the targets that surface it.
+6. **The runtime dependency removed, not migrated.** `provider migrate legacy` cannot consume the real inputs — it refuses deterministically (`oversized-source` for the hook over the 65,536-byte cap, `dynamic-value` for the profile set that uses `source` and parameter-expansion guards) — and this change does not teach it to parse shell. The two refusals are recorded as change evidence, the policy is authored declaratively from the legacy files' intent, and the hook is retired rather than imported. Migrator gaps stay with M4-S17.
+7. **Proof without a second delivery.** `provider profile resolve --agent <role> --for-spawn`, `provider resolve`, six committed `provider simulate` fixtures, a permanent reference test over the real document, and a legacy-source scan prove the policy; no real `dispatch` is run, because it would claim the repository lease and start a second delivery.
+
+The declared costs are stated as plainly as the gains: the union window closes **exactly 04:00–06:00 UTC daily** — the gap today's effective legacy policy leaves open, because the persisted DeepSeek target is off-peak at 1x from 04:00 and the retired hook paused z.ai, when the target used it, only from 05:45 (its 900-second buffer). The choice is deliberate: without the union the mixed base is ineligible 04:00–06:00 inside its own declared subscription buffer, and the paid profile would take over — paid capacity spent because the subscription is early, not because it is unavailable — so the union prefers "no paid fallback for a buffered subscription". The adopted windows are daily, so they also pause weekend mornings and the Chinese public holidays the legacy rules exempted; the per-ticket ceiling stops work instead of parking it; and the paid fallback is rarely selected by the delivered synchronous probe, because quota availability reaches that probe only through the daemon path.
+
+## 2. CONTEXT
+
+### 2.1 Current State Snapshot
+
+- **The engine is delivered; the policy branch is empty.** `provider.profiles` ships as `{}` and resolution refuses `provider.profile.absent` until a preference chain is declared. Dispatch admission runs the nomination gate immediately after input validation and before the credential preflight, the owner-hold gate, and the lease/single-flight predicates, so an undeclared branch refuses every delivery pre-session with no lease, attempt, lane, queue record, or event.
+- **The shipped provider defaults declare no chain.** `provider.entries.zai-coding-plan` ships as an overridable subscription descriptor with a 06:00–10:00 `UTC` peak, a `7200`-second buffer and an enabled quota policy against the z.ai quota endpoint; `provider.credentials.zai` is a reference to `ZAI_API_KEY` by name; `provider.chains` is empty and `provider.defaultChain` is absent, so a fresh installation fails closed with `provider.chain.empty`.
+- **The committed configuration document exists and carries one unrelated branch.** `.delivery-os/config.yaml` is the project-committed layer the composition reads on this checkout (the current brand's directory is absent, so the prior-identity fallback reads the prior file and emits one `prior-identity-fallback: config-read` notice on stderr in every mode). The document today declares only `verify.suite-map`.
+- **The legacy policy is still the working policy, and its pauses are target-gated.** `~/.ados/config/profiles/*.sh` is read by the shell entry points and sets per-agent model variables; the canonical default profile routes full `glm-5.3` to the reasoning seats, `glm-5.3-flash` to orchestration, and `deepseek/deepseek-flash` to mechanical and visual seats. The pre-iteration hook is a 75,215-byte program whose conditions are active only for the providers the selected target uses: the z.ai peak is 06:00–10:00 UTC with a **900-second** pre-peak buffer (`ADOS_ZAI_BUFFER_SECONDS`) and a weekend exemption (`ADOS_ZAI_WEEKEND_OFF_PEAK=1`), and the DeepSeek windows are **01:00–04:00 and 06:00–10:00 UTC with a zero buffer**, exempting Chinese public holidays. The chain default is `mixed,zai-only,openai,deepseek` and the persisted target is the DeepSeek profile, so the effective legacy pause today is the two DeepSeek windows with **04:00–06:00 left open**; a `mixed` target would additionally pause the z.ai window from 05:45. The hook also switches the target provider when the z.ai quota is exhausted and parks on a DeepSeek balance below a 2 USD floor.
+- **The current effective routing is the paid rail on every tier.** The persisted target is the DeepSeek profile, so today every agent runs `deepseek/deepseek-flash` and compaction runs on DeepSeek too.
+- **The migrator refuses both real inputs, deterministically.** `provider migrate legacy` accepts only an assignment-only subset; the hook exceeds `PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536`, and the profile set contains `source` and `: "${VAR:?}"` guards outside the subset. `--profiles-dir` is all-or-nothing. Both refusals are recorded in `migration-output.md` in this change folder, with source paths, byte counts, the exact reason for each, and the owner's disposition.
+- **Admission gating is the *entry* peak, not the profile window.** The nomination predicate probes each provider the candidate profile uses: a provider is available when it is declared, enabled, and outside its declared-zone **entry** peak window. Profile-level `peakWindows` are versioned rule data that drive the daemon's in-flight lane watch (no production composition mounts that watch today) and do not participate in profile eligibility; the profile page states that admission gating is unchanged by that enforcement layer.
+- **Availability has two layers, and only one gates admission.** At chain level, a peak-parked subscription entry blocks paid substitution and so does a `window`-scope budget park, while a quota-parked subscription entry does not. At profile level a profile is eligible iff **every** provider it lists is available, and the production probe reports only declaration, enablement, and the **entry** peak. A profile that lists both providers is therefore ineligible whenever either entry is parked, while its per-seat models may still name either provider — which is what makes a mixed base able to keep the visual seats on the image-capable paid model.
+- **Seat resolution is exact-name first.** The per-spawn binding resolves `agentOverrides[agent]`, else the seat whose name equals the agent, else the profile's single seat. A named agent with no seat in the *selected* profile refuses `provider.profile.invalid` naming the agent and the declared seats.
+- **The env record is derived from the brand.** A seat without `envName` serializes as `OC_<ENV_PREFIX>_AGENT_<SEAT>_MODEL`; the production `--for-spawn` supplies the brand's environment prefix, so this build emits `OC_JAISHIP_AGENT_<SEAT>_MODEL`. The record names every seat of the selected profile and is validated against the `data-v1` allowlist and bounds (256 records, 65,536 bytes).
+- **The seat model must be expressible.** The harness binding requires `provider/model[#variant]`; a bare model name is valid configuration but unrepresentable at the honoured surface (`harness.profile.model-unrepresentable`).
+- **Configuration is repository-scoped and CI-visible.** The project-committed layer travels with the code and is the CI-visible policy layer; project-local is skipped under `CI=true` unless enabled. Every effective value reports its winning origin. `.jaiship` is not created here: the namespace migration is M4-S2, and the directory must not be committed.
+- **Offline replay exists and reads the real policy.** `provider simulate --fixture` validates a strict `delivery.provider.simulate.v1` document, composes the delivered engine over fixture-supplied facts, evaluates the **resolved configuration** (never the fixture) and writes nothing; decisions exit the same way `resolve` does.
+- **The shell entry points remain executable fallbacks.** `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh` still invoke an opt-in external pre-iteration hook when one is installed and still honour legacy profile variables; `scripts/hooks/pre-opencode-iteration-*.sh` are inactive adopter examples, and `doc/templates/blueprints/zai-peak-hours-hook--install.sh` is adopter scaffolding.
+
+### 2.2 Pain Points / Gaps
+
+- **Every native delivery entry point fails closed.** The engine is delivered but the policy is not declared, so `dispatch` refuses `provider.profile.absent` pre-session. The milestone's "jaiship-native delivery" claim is unproven in the only repository that must prove it.
+- **Model routing is a shell convention.** Per-agent model selection lives in sourced shell files that are invisible to review, unvalidated, and unverifiable offline; a typo is a silently wrong model, and nothing in CI can see the policy.
+- **Provider selection is a hook program.** Peak waiting, quota switching, and balance parking are shell logic that cannot be replayed, cannot be inspected by `config debug`, and contradicts the milestone's "policy expressed only in Jaiship config".
+- **Cost control has no committed ceiling.** Spend is visible after the fact; nothing stops a delivery before it overspends, and nothing records which ceiling was intended.
+- **The migration bridge cannot carry this host's policy.** The two deterministic refusals mean a "migrate first" adoption order is impossible here; without a declared declarative route the story would have no way to stop failing closed.
+- **The legacy "weekday" qualifier has no expression.** The engine's entry peak is one window evaluated every day; a weekday-only declaration cannot be written, and pretending otherwise would be a false claim about the deployed policy.
+- **Nothing proves the adopted policy.** A written policy without a replayable proof is a claim; the flip's evidence bar needs a command an operator or reviewer can run.
+
+## 3. PROBLEM STATEMENT
+
+Because provider selection and model routing in this repository still depend on shell profiles and a pre-iteration hook that cannot be migrated and are not represented in the committed configuration, the delivered provider engine has no policy to resolve: `dispatch` refuses every delivery with `provider.profile.absent`, no agent role has a declared seat, peak and quota behaviour is an unvalidated shell program, and no committed ceiling or watch target exists — while the legacy intent that must survive (subscription-first routing with a buffered peak pause, paid fallback only per policy, a balance floor, and a per-agent model map) is documented only in shell files that the milestone is retiring.
+
+**Who is affected.** The operator cannot run a native delivery in their own repository and cannot see or review their own routing policy. The agent team cannot attribute a model or a cost decision to configuration. The reviewer cannot reproduce the routing decision offline. Support cannot tell a peak pause, an exhausted quota, a ceiling, and an empty policy branch apart from the payload alone.
+
+## 4. GOALS
+
+- **G-1** Declare this repository's provider policy in the tracked project-committed configuration document so that `provider resolve` and every delivery entry point stop failing closed (ticket task: declare `provider.entries`; AC: `dispatch` gets past `provider.profile.absent`).
+- **G-2** Give every agent role a declared seat on the base profile and on the paid fallback profile, with a resolvable env-record name, so "every declared agent role" is unambiguous and a spawn can never be refused for a missing seat (ticket task: declare `provider.profiles` with one seat per agent role).
+- **G-3** Preserve the legacy routing intent per seat inside the mixed base: scarce reasoning seats on the subscription plan's full model, orchestration on its cheap model, mechanical work on the paid rail, and the visual seats on the image-capable paid model — no vision task is refused on the rail that is selected outside the pause (owner disposition: nothing may be dropped).
+- **G-4** Encode both providers' price peaks in the entry windows — the subscription's buffered 06:00–10:00 pause and the paid rail's single union window — so neither paid capacity nor a text-only model is admitted inside a declared pause, while stating the delivered window model's honest limit (daily, one window per entry) and the single 04:00–06:00 admission cost the union window carries (ticket task: carry the weekday 06:00–10:00Z peak window with the declared buffer).
+- **G-5** Declare one ordered chain that prefers sunk-cost quota and falls back to paid capacity only when the chain says so (ticket task: chains that prefer sunk-cost quota and fall back only per policy).
+- **G-6** Declare spend ceilings that stop a spawn before it overspends, with their real consequence stated (park for a trailing window, classified stop for a ticket) (ticket task: per-window and per-ticket budgets that park rather than overspend).
+- **G-7** Declare watch targets for subscription quota and the DeepSeek balance floor as references, and state honestly what the synchronous path does and does not verify (ticket task: quota/balance watch; AC: no credential value anywhere).
+- **G-8** Remove the runtime dependency by declaring policy and proving that no committed script or prompt sources the legacy profile directory or installs the hook, without rewriting the migrator and without deleting the operator's files (ticket task: remove the runtime dependency; AC: a grep proves it).
+- **G-9** Prove the policy offline: a seat and env record for every agent role, the chain in declared order, and replay fixtures for peak parking, exhausted-quota parking with a next-eligible instant, a budget park, subscription-first routing, and the declared paid fallback (ticket AC: `provider simulate` reproduces peak/quota/budget parking with typed reasons and a next-eligible timestamp).
+- **G-10** Record the migration refusals as evidence and keep `provider migrate` behaviour unchanged, so the adoption route is auditable and the migrator gaps stay with their owner (owner disposition: do not teach the migrator to parse shell).
+- **G-11** Make the declaration drift-proof: a permanent test reads the real committed document (never a fixture) and fails when the policy, the chain, a seat, or the agent roster moves (AC: the policy is the repository's, not a test's).
+- **G-12** Reconcile the operator-facing documentation so no page still presents the shell-profile or hook dependency as this repository's delivery path (ticket task: update the operator guide and the repository-facing config reference).
+- **G-13** Change no engine behaviour, add no credential value, add no model literal to an agent prompt, and touch no other configuration layer (constraint: adoption, not capability).
+
+### 4.1 Success Metrics / KPIs
+
+| Metric | Target |
+|--------|--------|
+| Agent roles in `.opencode/agent/` with a declared seat in both profiles | 24/24 |
+| Roles whose `--for-spawn` resolution succeeds and whose env record is valid | 24/24 |
+| Roles whose per-spawn seat binding returns a binding rather than `unassigned` | 24/24 |
+| Base-rail seats declaring `vision-capable` on a text-only model | 0 (both visual seats ride the image-capable paid model inside the base) |
+| Nomination refusals of the shape `provider.profile.absent` produced by this checkout's configuration | 0 |
+| Committed simulate fixtures reproducing their declared outcome | 6/6 |
+| State writes, network calls, credential resolutions, and child spawns during `provider simulate` | 0 each |
+| Sourced legacy profile directories, and hook installations, in the scanned committed surface | 0 |
+| Credential values appearing in the config document, fixtures, tests, evidence, or command output | 0 |
+| Model literals inside `.opencode/agent/**` | 0 |
+| Packages, prompts, and other configuration layers changed | 0 |
+| Documentation pages still presenting the shell profile or hook as this repository's delivery path | 0 |
+
+### 4.2 Non-Goals
+
+- **NG-1**: No engine change. No new provider key, condition kind, park cause, skip reason, announcement code, error row, command, flag, or state kind is added; the delivered closed sets are untouched.
+- **NG-2**: No migrator change. `provider migrate legacy` keeps its grammar, caps, reasons, and behaviour; teaching it shell is out of scope (M4-S17).
+- **NG-3**: No hook or profile deletion, move, or modification on the operator's machine. The hook is removed from the *path*, not from disk.
+- **NG-4**: No weekday, holiday, or calendar dimension. The declared window is daily; a weekday rule is a future engine decision (OQ-2).
+- **NG-5**: No second policy authority. No model assignment is added to an agent prompt or command definition; harness assignment stays in the OpenCode configuration.
+- **NG-6**: No namespace migration. `.jaiship` is not created, symlinked into the repository, or committed (M4-S2), and no path, name, or state root moves.
+- **NG-7**: No daemon work. The resident daemon's in-flight peak parking, live quota probing, and window resume are not mounted, changed, or claimed by this change.
+- **NG-8**: No CI, release, install, packaging, or binary change; no changeset is required because no package behaviour moves.
+- **NG-9**: No project-local policy. The declaration is committed; a workstation override is the delivered project-local layer's business and is not authored here.
+- **NG-10**: No re-pricing, cost conversion, or spend report change. Budget figures are declared in the same harness-reported units `spend --ref` reports.
+- **NG-11**: No new documentation page and no new system-spec feature page; this is an adoption, and the existing operator guides and the repository-facing config reference are reconciled.
+
+## 5. FUNCTIONAL CAPABILITIES
+
+| ID | Capability | Rationale |
+|----|------------|-----------|
+| F-1 | Committed provider selection policy: two credential references (names only), the subscription entry with its quota policy, the paid entry with its union window, the default chain with declared paid fallback, and a declared never-pay chain | The engine cannot select anything until a chain exists, and the sunk-cost-first rule must be reviewable in the document the repository reviews |
+| F-2 | A declared seat for every agent role on the mixed base and on the paid fallback, with an env-record name derived from the brand, the legacy per-seat model map preserved, and no model literal in any agent prompt | Every spawn resolves a seat; an undeclared role is a refused spawn, a prompt literal would be a second policy authority, and the base must not refuse vision work |
+| F-3 | Declared peak windows: the buffered subscription pause at entry level, the paid entry's single union window covering both DeepSeek price peaks, and per-profile rule data with valid grace/buffer arithmetic expressing both pauses | The legacy pause must survive without letting paid capacity fill the subscription's peak, and the deployed window must not be described as weekday-only when it is not |
+| F-4 | Declared spend ceilings: a trailing-window cost ceiling that parks with a computed resume, and a per-ticket cost ceiling whose crossing is a classified stop | Cost control must stop a spawn before the spend, and the two outcomes the engine can honour must be declared as they are |
+| F-5 | Declared watch targets for subscription quota windows and the DeepSeek balance floor, with references only and the synchronous-path limit stated | The operator's watch intent must be configuration, and the specification must not imply a live pre-selection verification the synchronous probe does not perform |
+| F-6 | Runtime independence and the recorded legacy bridge: no sourced profile directory, no installed hook, the two migration refusals recorded, and the migrator unchanged | The story's claim is that delivery runs without the shell policy; it must be evidenced by a scan and an evidence artifact, not asserted |
+| F-7 | Adoption proof and documentation truth: committed replay fixtures, a permanent reference test over the real document, a non-vacuous scan, and reconciled operator documentation | A declared policy without a replayable proof and without truthful documentation is a claim, not an adoption |
+
+**Composition with delivered surfaces (the delta boundary).** Nothing below is re-specified; each row states only how this adoption composes with what is delivered.
+
+| Delivered surface | How the adoption composes |
+|---|---|
+| Provider engine: validation, chain resolution, peak and quota conditions, MAX and tie order, parks, announcements, `resolve\|quota\|parks` (feature-provider-engine.md) | Consumed as delivered with a declared chain and declared entries; every reason, cause, code, expiry rule, and exit is the delivered one; no vocabulary member is added or renamed |
+| Provider profiles: tiers, profiles, seats, preference chain, watch targets, per-profile `peakWindows`, env record, lifecycle (feature-provider-profiles.md) | The branch stops being empty: a mixed base and a paid fallback are declared with the same seat names, seat resolution stays exact-name, the lifecycle's switch/revert runs on the selected profile, and the env record carries every seat |
+| Dispatch nomination (feature-peak-pausing.md §2) | The gate runs over the declared branch: nomination returns `subscription` outside the declared pause and refuses `provider.profile.unavailable` with the named peak blockers inside it; no dispatch identity is added and no dispatch-default nomination exists |
+| Budgets: one ref-scoped read, window park, ticket stop (feature-provider-engine.md §Budget ceilings, TDR-0059) | Two ceilings are declared; the gate measures this delivery's ledger; an unresolvable work-item ref refuses `input.value.rejected` exactly as delivered |
+| Simulation: strict fixture, resolved policy, zero effect (TDR-0060) | Six committed fixtures replay the adopted policy; policy comes from the committed document and never from a fixture |
+| Migration: assignment-only reader, whole-run refusal (TDR-0061) | Invoked once against the real inputs and refused; the refusals are recorded; no behaviour changes |
+| Seven-layer configuration (feature-config-layer.md) | The project-committed layer is the policy home; the prior-identity read continues to emit its `config-read` notice until M4-S2 lands the current directory name |
+| Harness per-spawn binding and `data-v1` env record (TDR-0040) | Every declared seat resolves a binding and appears in the record; harness model assignment is unchanged |
+
+### 5.1 Capability Details
+
+- **F-1 — Committed provider selection policy.** The document declares `provider.defaultChain: subscription-first`, two chains (the default whose `entries` are, in order, the subscription entry and the paid entry with `allowPaidFallback: true`, and the never-pay chain whose only entry is the subscription entry with `allowPaidFallback: false`); two credential references, each `{ style: literal, name: <ENV_NAME> }` and never a value; the subscription entry with `class: subscription`, `enabled: true`, its declared peak, and an enabled quota policy against the z.ai quota endpoint with `credentialRef: zai`; and the paid entry with `class: pay-per-token`, `enabled: true`, and its single union peak. Validation is the delivered validator's: every subscription entry precedes every paid entry, `defaultChain` names a declared chain, no chain entry list is empty, every reference resolves, and a defect fails `provider.chain.invalid` naming the field. Resolution walks the declared order and reports every non-selected entry with one delivered skip reason.
+- **F-2 — A seat for every agent role.** Both profiles declare `tier`, `providers`, and one seat per agent named identically to the agent (no `agentOverrides` table, because an override map would be a second name authority). The base profile `delivery` lists both providers and reproduces the legacy default per-seat map: full `zai-coding-plan/glm-5.3` for the eight reasoning seats, `zai-coding-plan/glm-5.3-flash` for `pm` and `editor`, and `deepseek/deepseek-flash` for the other fourteen, with `designer` and `image-reviewer` carrying `vision-capable` on their image-capable paid seats. The fallback profile `paid` lists only the paid provider and carries the same twenty-four seat names, all on `deepseek/deepseek-flash` with the same capability and pacing declarations. Each seat declares `model` in the `provider/model[#variant]` form, `pacingClass`, and `capability`, and no explicit `envName`, so the record name is derived from the brand's environment prefix. Because a profile is eligible only when every provider it lists is available, the mixed base is the profile that parks when either provider pauses, and the paid profile is the target of the quota-driven all-paid switch. A named agent resolves `agentOverrides` → exact seat name in the *selected* profile → single-seat fallback, which is why both profiles carry the same seat names: a profile switch must never cost a role its seat, and no base seat declares vision on a text-only model.
+- **F-3 — Declared peak windows.** The subscription entry declares 06:00–10:00 `UTC` with `bufferSeconds: 7200`, so its effective admission pause is `[04:00, 10:00)` daily. The paid entry declares the **single union window** `{ startSecondsOfDay: 3600, endSecondsOfDay: 36000, bufferSeconds: 0 }` — 01:00–10:00 `UTC` — because one entry carries one window and only the entry window gates admission; the union covers both DeepSeek 2x windows (01:00–04:00 and 06:00–10:00) and the subscription's buffered pause, and its cost is stated: it closes **exactly 04:00–06:00 UTC daily**, the gap today's effective legacy policy leaves open (DeepSeek off-peak at 1x; the retired hook paused z.ai only from 05:45, its 900-second buffer, and only when the target used z.ai). The mixed base, which needs both providers, is therefore parked 01:00–10:00 — the same 01:00–04:00 and 06:00–10:00 windows the legacy DeepSeek target paused, plus that single 04:00–06:00 gap. Both profiles declare the same two rule-data windows, each with **both** buffers non-zero and a grace default inside the derived bound: 01:00–04:00 with `multiplier: 2`, `bufferBeforeSeconds: 1800`, `bufferAfterSeconds: 300`; and 06:00–10:00 with `multiplier: 3` (base) or `2` (paid), `bufferBeforeSeconds: 7200`, `bufferAfterSeconds: 600`; `graceSeconds: 300` on both, at or below the smallest buffer (300). The watcher's effective pauses are therefore the buffer-inclusive intervals `[00:30, 04:05)` and `[04:00, 10:10)`. Profile windows are declared rule data for the daemon's lane watch and do not gate admission; the specification states that limit here and in OQ-1.
+- **F-4 — Declared spend ceilings.** Two ceilings are declared and enabled: a trailing-window cost ceiling with `windowSeconds: 86400` and a per-ticket cost ceiling with no window. Neither declares an `entries` list, so both govern every declared entry in the resolved chain, and both are measured from one verified ref-scoped read of this delivery's ledger. A window crossing parks every governed entry with cause and kind `budget-exhausted` and the expiry `newestAtMs + 86400 × 1000`, and a subscription entry parked for a budget blocks paid substitution by the delivered rule; the ticket crossing fails the entries, skips them as `budget-exhausted`, and ends in `provider.budget.exceeded` at exit `1` when nothing else can supply an honest resume. The figures are initial policy, changed by editing the document and by nothing else.
+- **F-5 — Declared watch targets.** `provider.profiles.watch` declares one target per declared provider: the subscription target maps coding-plan windows to the z.ai quota endpoint with `credentialRef: zai` and an exhaustion threshold; the paid target maps the DeepSeek balance to the balance endpoint with `credentialRef: deepseek` and a declared floor. Watch reads are read-only and write no state; a below-floor balance is the engine's exhaustion class with an operator top-up recovery condition and no invented reset. The synchronous nomination probe reads neither quota nor balance, and this change claims no live pre-selection verification.
+- **F-6 — Runtime independence and the recorded legacy bridge.** The committed policy is the only provider-policy input on the delivery path: no committed script or prompt sources the legacy profile directory, and none installs the pre-iteration hook. The delivered shell entry points remain executable fallbacks and still *invoke* an opt-in external hook when an operator installs one; invoking an installed hook is not sourcing a profile directory and is not installing anything, so the scan distinguishes the verbs. `provider migrate legacy` was invoked once against the real inputs and refused both times; the evidence artifact records the outcome, the sources, and the disposition, and the migrator is unchanged.
+- **F-7 — Adoption proof and documentation truth.** Six committed simulate fixtures replay the adopted policy's five declared outcomes plus the declared paid fallback; a permanent reference test parses the real committed document, compares the declared seat set against the agent roster read from the prompt directory, and fails on any drift; a scan proves the absent sourcing/installation with planted controls in both directions; and the operator guides and the repository-facing config reference state the adopted policy and the retired dependency.
+
+## 6. USER & SYSTEM FLOWS
+
+```
+Flow 1: A delivery admits on the mixed base
+  Operator runs a delivery entry point at 12:00 UTC on a weekday.
+  → configuration resolves the committed document (one prior-identity config-read
+    notice on stderr); the provider branch validates.
+  → the nomination gate probes the two providers the base profile lists: both are
+    declared, enabled, and outside their entry peaks → profile "delivery" is eligible
+    and is nominated; the paid fallback profile is shadowed without a probe.
+  → the per-spawn binding resolves the caller's agent to the seat of that name in the
+    selected profile: the reasoning seats get glm-5.3, pm/editor get glm-5.3-flash,
+    the mechanical seats get deepseek-flash, and the two visual seats get the
+    image-capable deepseek-flash seat — vision is served on the rail that runs.
+  → the attempt record carries the nomination; no provider.profile.absent refusal exists.
+
+Flow 2: Inside the declared pause
+  The same entry point runs at 05:00 UTC.
+  → the subscription entry is inside its buffered peak window [04:00, 10:00) and the
+    paid entry is inside its union window [01:00, 10:00), so neither provider is
+    available and the mixed base lists both.
+  → the preference chain has no eligible profile: the nomination refuses
+    provider.profile.unavailable at exit 2 with the peak blockers named; no lease,
+    attempt, or lane is created.
+  → provider resolve --chain subscription-first over the same facts returns a chain
+    park (chain-exhausted) whose contributing kind is peak-window and whose resume
+    instant is 10:00 UTC, beside the provider park that carries cause peak-window.
+
+Flow 3: An exhausted subscription quota
+  At 12:00 UTC the subscription quota reports an exhausted token limit with a reset.
+  → provider resolve --chain subscription-only parks with contributing kind
+    quota-exhausted and the reset instant as the next-eligible time.
+  → with the default chain and allowPaidFallback true, the paid entry is selectable
+    and is selected instead: sunk-cost first, paid only per policy.
+  → the decision, the skip reasons, and the announcements are the delivered ones.
+
+Flow 4: A declared ceiling
+  The delivery's trailing-day cost reaches the window ceiling.
+  → every governed entry in the resolved chain parks with cause budget-exhausted and
+    the expiry of the trailing window; the announcement carries the budget name, scope,
+    basis, measured figure, and ceiling; paid substitution is blocked, and with both
+    entries parked the decision is a chain park whose contributing kind is
+    budget-exhausted.
+  → the delivery's ticket cost reaches the ticket ceiling.
+  → the entries fail with no park; when nothing else supplies a resume, the run refuses
+    provider.budget.exceeded at exit 1 and names the ceiling, the figure, and the
+    remedy. Nothing fabricates a resume time.
+
+Flow 5: Retiring the shell policy
+  The operator's legacy profile directory and hook are still on disk.
+  → a scan over the declared surface finds no sourced profile directory and no hook
+    installation in any committed script or prompt; the planted controls prove the scan
+    fires.
+  → the shell entry points still invoke an installed hook if one exists, as documented
+    fallbacks; the typed delivery path reads configuration only.
+  → the migration refusals are recorded; nothing on disk was written, moved, or deleted.
+
+Flow 6: A replay for review
+  Reviewer runs the committed fixtures.
+  → each fixture declares its instant, its chain or profile scope, credential
+    outcomes, quota answers, and spend points; the policy comes from the committed
+    document.
+  → peak park, quota park with a next-eligible time, budget park, subscription-first
+    selection, paid fallback, and the ticket-ceiling refusal each reproduce their
+    declared outcome with zero state writes, zero network calls, and zero spawns.
+  → the parking fixtures use the declared never-pay chain, because the mixed base
+    profile lists both providers and no longer isolates the subscription entry.
+```
+
+## 7. SCOPE & BOUNDARIES
+
+### 7.1 In Scope
+
+- The `provider` branch of the tracked project-committed configuration document: `defaultChain`, `credentials` (two literal references), `entries` (the subscription entry with quota and peak; the paid entry with its union peak), `chains` (the default chain with declared paid fallback plus the declared never-pay chain), and `budgets` (two ceilings).
+- The `provider.profiles` branch: one tier, a mixed base profile and a paid fallback profile, twenty-four seats per profile with `model`, `pacingClass`, `capability`, and derived env-record names, per-profile `peakWindows` rule data with valid grace/buffer arithmetic, the preference chain, and two watch targets.
+- The seat/model mapping for every agent in `.opencode/agent/`, preserving the legacy intent (full model for reasoning seats, cheap model for orchestration, paid flash for mechanical work, image-capable paid seats for visual work) and the declared capability consequences.
+- The peak encoding with its buffer, the paid entry's single union window that keeps paid capacity out of both DeepSeek price peaks and out of the subscription pause, the profile rule data whose window buffers and grace default satisfy the delivered validation bound, and the declared daily-versus-weekday limit.
+- The two spend ceilings with their declared outcomes and the divergence statement.
+- The two watch targets with their references and the synchronous-path limit.
+- The recorded migration evidence, the retirement of the hook from the path, and the unchanged migrator.
+- The proof surface: the seat/env-record and binding proofs, the chain proof, six committed replay fixtures, the permanent reference test, the legacy-source scan with planted controls, and the credential-canary proof.
+- The reconciliation of the operator guides and the repository-facing config reference, with the documentation distribution marker and guard.
+
+### 7.2 Out of Scope
+
+- [OUT] Any engine, adapter, CLI, prompt, or contract change; any new provider key, vocabulary member, error row, command, flag, or state kind.
+- [OUT] Any change to `provider migrate legacy` (grammar, caps, reasons, mapping table, or output) and any attempt to make it parse this host's profile set or hook.
+- [OUT] Deleting, moving, rewriting, or archiving the operator's legacy profiles or hook.
+- [OUT] Weekday, holiday, or calendar-dimensioned windows; a second peak window per entry; per-seat provider selection inside one profile.
+- [OUT] Mounting or changing the resident daemon's lane watch, live quota probing, or window resume.
+- [OUT] Creating, symlinking, or committing `.jaiship`; the M4-S2 namespace migration; any name, path, or state-root move.
+- [OUT] Harness model assignment changes, compaction settings, or agent-prompt edits.
+- [OUT] Project-local policy, per-developer overrides, or multi-checkout policy sharing.
+- [OUT] CI, release, install, packaging, binary, or changeset changes.
+- [OUT] A new documentation page, a new system-spec feature page, or a decision record.
+
+### 7.3 Deferred / Maybe-Later
+
+- The pacing ladder the legacy hook carried (three rungs moving cheap execution seats between the rails): it needs a live utilisation source and rung assignment, and a rung model would override a declared seat model — a separate policy decision (DEC-14).
+- A weekday-only window (or a per-window weekday mask) as an engine extension with its own decision (OQ-2).
+- A second paid entry, or a multi-window entry, so the paid rail could be admission-gated on DeepSeek's two price windows separately and the 04:00–06:00 gap reopened without exposing the 01:00–04:00 2x window (OQ-3).
+- Profile-window participation in admission gating, if operators want one pause declared in one place (OQ-1).
+- A vision-capable subscription (z.ai) seat, once the plan's vision route is re-verified — today the two visual seats ride the image-capable paid model inside the base, so vision is served without a subscription vision claim.
+- The migrator gaps for this host's inputs (shell constructs, oversize hook): M4-S17.
+
+## 8. INTERFACES & INTEGRATION CONTRACTS
+
+### 8.1 REST / HTTP Endpoints
+
+N/A. No HTTP surface is added, changed, or called by this change. The policy *targets* two existing provider endpoints (the z.ai quota endpoint and the DeepSeek balance endpoint) but only through the delivered quota transport on the delivered watch and quota paths. The affected surface is the configuration document and the delivered provider CLI grammar, used as-is:
+
+| Invocation | Outcome | Exit | Writes |
+|---|---|---|---|
+| `config debug` / `config get <key> --show-origin` | Every declared provider key reports the winning origin as the project-committed document and its line | `0` | None |
+| `provider profile resolve [--agent <role>] [--for-spawn]` | A seat and (with `--for-spawn`) a valid `data-v1` env record for the selected profile; `provider.profile.unavailable` with the peak blockers inside the declared pause | `0` resolved; `2` no eligible profile | The delivered profile-target record only when it changed |
+| `provider resolve [--chain <name>] [--profile <name>] [--json]` | The declared chain in declared order with typed skip reasons; a park with its cause and resume instant; the delivered announcements | `0` selected or parked; `1` a classified refusal (for example `provider.budget.exceeded`, `provider.chain.invalid`, or `input.value.rejected` when no work-item ref resolves); `2` a platform/provider failure | The delivered park and announcement records when a store is injected |
+| `provider simulate --fixture <path> [--json]` | The delivered resolve payload plus the `simulation` block (`stateWrites: 0`) | Same exit as `resolve` for the same facts | **None** |
+| `provider watch status [--provider <name>] [--json]` | One condition per declared target from the closed watch domain, with the observation instant, age, and bound | `0` read; delivered classification otherwise | None |
+| `provider migrate legacy --profiles-dir <dir> --hook <path> [--json]` | `provider.migrate.refused` at exit `1` naming the reason, source, and line (recorded evidence, not re-run as a gate) | `1` | None |
+
+The declared policy adds no flag, no environment variable, no root selector, and no new invocation form. Every row above is the delivered grammar; this change only supplies the configuration the rows read. Two declared values are load-bearing for the proof: `--chain subscription-only` is the declared never-pay chain that isolates the subscription entry (the mixed base profile lists both providers, so no profile isolates one), and a decision whose every chain entry is parked is a **chain park** — `chain:<name>` with cause `chain-exhausted`, the contributing condition kinds, and the earliest contributing expiry — beside the provider parks that carry the provider cause. The work-item ref rule is unchanged: a budget-evaluating `resolve` resolves it from the local delivery context at `.ai/local/pm-context.yaml`, and a fixture supplies its own.
+
+### 8.2 Events / Messages
+
+No event, topic, subscription, taxonomy version, announcement code, or payload shape is added. The declared policy produces only delivered vocabulary: `provider.peak.parked`, `provider.quota.parked`, `provider.budget.parked`, `provider.budget.crossed`, `provider.quota.reset_missing`, `provider.resumed`, and the rest of the closed closure, all with the delivered severities, identities, dedupe, and evidence allowlists. Parks and announcements persist through the delivered `provider.park` and `provider.announcement` record kinds; a rail switch persists through the delivered `provider.profile-target` record kind. Simulation produces no record. The migration produced no event and wrote no record.
+
+### 8.3 Data Model Impact
+
+| ID | Element | Description |
+|----|---------|-------------|
+| DM-1 | Credential references (`provider.credentials.<name>`) | Two children: `zai` → `{ style: literal, name: ZAI_API_KEY }` and `deepseek` → `{ style: literal, name: DEEPSEEK_API_KEY }`. A reference only: the configuration stores an environment-variable **name** and no value, and no other key exists under a credential child |
+| DM-2 | Provider entries (`provider.entries.<name>`) | `zai-coding-plan`: `class: subscription`, `enabled: true`, `peak` `{ timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000, bufferSeconds: 7200 }`, `quota` `{ enabled: true, endpoint: https://api.z.ai/api/monitor/usage/quota/limit, credentialRef: zai, thresholdPercent: 100, maxSleepLoops: 24 }`. `deepseek`: `class: pay-per-token`, `enabled: true`, `peak` `{ timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 36000, bufferSeconds: 0 }` — the single union window 01:00–10:00 UTC — and no quota block |
+| DM-3 | Chains (`provider.chains.<name>`) | `subscription-first`: `entries: [zai-coding-plan, deepseek]` in that order, `allowPaidFallback: true`, named by `provider.defaultChain: subscription-first`. The order is the sunk-cost encoding: the subscription entry is walked first, and the paid entry is selectable only through the delivered eligibility rule (clear, fallback allowed, and no subscription entry parked for a peak or window-scope budget). `subscription-only`: `entries: [zai-coding-plan]`, `allowPaidFallback: false` — the declared never-pay chain and the scope that isolates the subscription entry for the parking proofs |
+| DM-4 | Profiles (`provider.profiles.profiles.<name>`) | `delivery` (base): `tier: delivery`, `providers: [zai-coding-plan, deepseek]`, twenty-four seats, `peakWindows` `{ graceSeconds: 300, windows: [{ timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 14400, multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }, { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000, multiplier: 3, bufferBeforeSeconds: 7200, bufferAfterSeconds: 600 }] }`. `paid` (fallback): `tier: delivery`, `providers: [deepseek]`, the same twenty-four seat names, `peakWindows` with the same two windows and buffers and `multiplier: 2` on both, `graceSeconds: 300`. No `agentOverrides`, no `pacing`, no `envRecord` override. Every window declares **both** buffers non-zero, so the required positive `graceSeconds` (300) is at or below the derived bound — the smallest buffer, 300 |
+| DM-5 | Seat matrix (DM-4's seats) | Twenty-four seats named exactly as the agents in `.opencode/agent/`. **Base models:** `zai-coding-plan/glm-5.3` for `bootstrapper`, `ceo`, `decision-advisor`, `decision-critic`, `plan-writer`, `readiness-reviewer`, `reviewer`, `toolsmith`; `zai-coding-plan/glm-5.3-flash` for `pm` and `editor`; `deepseek/deepseek-flash` for `coder`, `committer`, `designer`, `doc-syncer`, `external-researcher`, `fixer`, `image-generator`, `image-reviewer`, `meeting-organizer`, `pr-manager`, `review-feedback-applier`, `runner`, `spec-writer`, `test-plan-writer`. **Paid models:** `deepseek/deepseek-flash` for every seat. `pacingClass: judgment` for `bootstrapper`, `ceo`, `coder`, `decision-advisor`, `decision-critic`, `fixer`, `plan-writer`, `pm`, `readiness-reviewer`, `review-feedback-applier`, `reviewer`, `spec-writer`, `test-plan-writer`, `toolsmith`; `execution` for the other ten. `capability: vision-capable` for `designer` and `image-reviewer` on their base (paid-model) seats and on the paid profile — `image-generator` stays `text-only` because it produces images and delegates review; every z.ai seat is `text-only`. `envName` is omitted on every seat, so each record name is derived `OC_<ENV_PREFIX>_AGENT_<SEAT>_MODEL` |
+| DM-6 | Preference chain and tiers (`provider.profiles.preferenceChain`, `.tiers`) | `preferenceChain: { base: delivery, fallbacks: [paid] }`; one tier `delivery` with a description. The mixed base is preferred and, because it lists both providers, it is eligible only while both are available; the paid profile is the declared default fallback, and therefore the target of the delivered quota-driven all-paid switch |
+| DM-7 | Watch targets (`provider.profiles.watch.<name>`) | `zai-coding-plan`: `{ mapping: coding-plan-windows, endpoint: https://api.z.ai/api/monitor/usage/quota/limit, credentialRef: zai, thresholdPercent: 100 }`. `deepseek`: `{ mapping: deepseek-balance, endpoint: https://api.deepseek.com/user/balance, credentialRef: deepseek, floor: 2, maxAgeSeconds: 900 }`. Keys name declared providers and references name declared credentials; reads are read-only |
+| DM-8 | Budgets (`provider.budgets.<name>`) | `window-cost`: `{ enabled: true, scope: window, basis: cost, ceiling: 30, windowSeconds: 86400 }` → parks with `budget-exhausted` and expiry `newestAtMs + 86400000`, blocking paid substitution. `ticket-cost`: `{ enabled: true, scope: ticket, basis: cost, ceiling: 20 }` → fails the entry, skips it as `budget-exhausted`, and ends in `provider.budget.exceeded` at exit `1` when nothing else supplies a resume. Figures are initial, owner-reviewable policy |
+| DM-9 | Replay fixtures (`delivery.provider.simulate.v1`) | Six committed fixtures under `tests/fixtures/provider/policy-adoption/simulate/`: `peak-park.json` (05:00 UTC, chain `subscription-only`, spend absent), `quota-park.json` (12:00 UTC, chain `subscription-only`, exhausted token limit with a reset), `budget-park.json` (12:00 UTC, chain `subscription-only`, spend at the window ceiling), `subscription-first.json` (12:00 UTC, default chain, quota clear, paid `shadowed`), `paid-fallback.json` (12:00 UTC, default chain, exhausted subscription quota with a reset → paid selected), `ticket-ceiling.json` (12:00 UTC, chain `subscription-only`, spend at the ticket ceiling → the classified refusal). The parking fixtures use the declared never-pay chain because the mixed base profile lists both providers. Each declares `workItemRef` because an enabled budget is declared; none carries a credential value |
+| DM-10 | Migration evidence (change artifact) | `doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/migration-output.md`: the two `provider.migrate.refused` outcomes (`oversized-source`, `dynamic-value`), the source inventory with byte and line counts, the read-only guarantee, and the owner disposition. It is evidence, not a test oracle and not a policy input |
+| DM-11 | No state or ledger change | No new record kind, payload schema, projection document, counter, or store write path. The policy is configuration; the only writes are the delivered park, announcement, and profile-target records the delivered commands already make |
+
+### 8.4 External Integrations
+
+Two provider endpoints are *named* by the declaration and are reached only through the delivered quota transport on the delivered quota and watch paths: the z.ai usage-quota endpoint (`https://api.z.ai/api/monitor/usage/quota/limit`) and the DeepSeek balance endpoint (`https://api.deepseek.com/user/balance`). Two environment variable names are referenced (`ZAI_API_KEY`, `DEEPSEEK_API_KEY`) and never read, echoed, or validated by configuration. No tracker, vendor, analytics, or credential flow is added; no new dependency, socket, daemon, or schedule exists.
+
+### 8.5 Backward Compatibility
+
+- **The configuration document stays one document.** `.delivery-os/config.yaml` keeps `verify.suite-map` exactly as it is and gains a sibling `provider` branch; merge, reset, origin grammar, strictness, and the CI controls are the delivered ones.
+- **The policy is additive for the engine.** An absent chain, entry, budget, or profile behaves exactly as delivered; this change supplies values to branches that already exist. No delivered reason, cause, code, expiry, exit, or evidence field moves.
+- **The base preserves the legacy per-seat routing inside one profile.** The mixed base declares both providers and keeps the two visual seats on the image-capable paid model, so no vision task is refused on the profile that is selected outside the pause; the paid fallback repeats the same seats on the paid model. A profile's per-seat models may name any declared provider — the delivered validation checks provider references, not seat-to-provider correlation — so the mixed base is expressible without an engine change.
+- **Two chains are declared, and one is the proof scope.** `subscription-first` is the default; `subscription-only` is the declared never-pay chain. Because the base profile lists both providers, the never-pay chain — not a profile — is what isolates the subscription entry in the parking replays.
+- **The prior-identity read continues.** The current brand directory is absent, so the composition keeps reading the prior file as the project-committed layer and keeps emitting one `prior-identity-fallback: config-read` notice on stderr in every mode, including `--json`. Tests and fixtures must tolerate that notice; nothing in this change removes or renames the fallback (M4-S2).
+- **The shell entry points stay executable fallbacks.** `scripts/deliver-ticket.sh` and `scripts/ceo-loop.sh` keep their behaviour, including invoking an opt-in external hook and honouring legacy profile variables. This change removes the *dependency of the typed delivery path* on those inputs; it does not remove the fallback surface or the adopter examples.
+- **No agent prompt or harness assignment changes.** `.opencode/agent/**` keeps no model literal and gains none; `.opencode/opencode*.jsonc` remains the harness model-assignment authority.
+- **The legacy files are untouched.** No legacy profile, hook, or `.bak` sibling is written, moved, renamed, or deleted; the migration ran read-only.
+
+## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
+
+| ID | Requirement | Threshold |
+|----|-------------|-----------|
+| NFR-1 | Configuration-only policy | 0 provider-policy inputs from a shell profile, the hook, an environment-variable convention, or a hidden file on the typed delivery path; 0 sourced legacy profile directories and 0 hook installations in the scanned committed surface; policy resolves with both legacy paths absent and again with them present but inert |
+| NFR-2 | Determinism | Identical configuration, clock, credential outcome, and quota answer produce byte-identical decisions, skip lists, parks, expiries, env records, and replay payloads; 2 runs of one fixture are byte-identical; 0 ambient inputs |
+| NFR-3 | Complete seat coverage | 24/24 declared agent roles resolve a seat and a `--for-spawn` env record on the base profile and 24/24 on the paid profile; 0 roles `unassigned`; 0 base seats declaring `vision-capable` on a text-only model; 0 env records failing the `data-v1` grammar or its 256-record / 65,536-byte bounds |
+| NFR-4 | Credential safety | 0 credential values in the configuration document, the fixtures, the tests, the evidence artifact, any command payload, or any log; a canary credential value injected at the composition never appears on any surface; every credential node is a `{ style, name }` reference and nothing else |
+| NFR-5 | Budget honesty | 0 budget parks with a non-future, absent, or guessed expiry; 0 ticket-scope crossings presented as parks; 1 verified spend-totals read per budget evaluation; 0 state writes on the evaluation path; at most one spawn increment may land above a ceiling before the next read sees it |
+| NFR-6 | Simulation purity | 0 state writes, credential resolutions, network calls, and child spawns during any replay; 6/6 committed fixtures reproduce their declared outcome; 0 accepted unknown-key or credential-shaped fixture documents |
+| NFR-7 | Change locality | 0 changed files outside the declared set (the configuration document, the six fixtures, the three test suites, the two operator guides plus the repository-facing config reference, the migration evidence artifact, and this change folder); 0 changes to `packages/**`, `.opencode/**`, `.jaiship/**`, or any other configuration layer |
+| NFR-8 | Documentation truth | 0 pages presenting the shell profile directory or the pre-iteration hook as this repository's delivery path; the adopted policy stated where operators meet it; both edited guides keep a valid `ados_distribution` marker and the doc-distribution guard passes |
+| NFR-9 | Scan honesty | The legacy-source scan reports 0 findings over the declared surface and detects every planted control (a sourced profile directory, a hook installation, a hooks-directory creation, a model literal in a prompt); the allowed invocation idiom is not reported; the scan fails when its include set is empty |
+
+## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
+
+- **A pause names its cause and its clock.** Every park produced by this policy carries the delivered cause, the active condition kinds, and an absolute resume instant with the declared zone evidence, so "why did nothing start, and when does it?" is answered by the payload alone.
+- **A ceiling names itself and its subject.** A budget park, a budget crossing, and a refusal carry the budget name, scope, basis, measured figure, and ceiling, and the message names the work-item ref the gate measured, so the operator can compare the gate with `spend --ref`.
+- **A rail switch is recorded, not inferred.** The selected profile persists as the delivered profile-target record on change; the resolve payload reports the selection and per-profile eligibility with blockers, so a nomination is attributable to configuration.
+- **A replay discloses what it simulated.** Every payload states the fixture, the instant, the supplied inputs, `stateWrites: 0`, and the bounded decision summary, so a replay cannot be mistaken for a live decision.
+- **A watch reading states its age.** The view carries the observed instant, the computed age, and the declared bound beside the condition, so an aged reading is never reported as clear.
+- **The adopted policy is inspectable.** `config debug` and `config get --show-origin` report the winning layer, file, and line for every declared provider key, so "why this model?" is answerable without reading a shell file.
+- No exporter, span, event bus, notification channel, dashboard, or store write is added by this change.
+
+## 11. RISKS & MITIGATIONS
+
+| ID | Risk | Impact | Probability | Mitigation | Residual Risk |
+|----|------|--------|-------------|------------|---------------|
+| RSK-1 | A role is left without a seat in one profile, so a spawn on that profile refuses `provider.profile.invalid` | H | L | Both profiles declare the same twenty-four seat names; the reference test compares the declared seat set against the agent roster read from `.opencode/agent/` and fails on any asymmetry; the binding proof covers every role on both profiles | L |
+| RSK-2 | Paid capacity fills the sunk-cost window because the paid rail is nominated inside the subscription peak | H | M | The paid entry declares the union window 01:00–10:00, so the paid provider is unavailable through the entire subscription pause and its profile cannot be nominated; the admission proof asserts `provider.profile.unavailable` at 05:00 with both blockers | L |
+| RSK-3 | The union window closes 04:00–06:00 UTC daily — paid off-peak capacity the legacy policy left open — so about two hours of daily delivery capacity are lost | M | M | The cost is stated rather than hidden (DEC-17, OQ-3, the declared-costs paragraph); the union is deliberate, because without it the paid profile would take over at 04:00 merely because the subscription is in its declared buffer; the remedy if the loss proves material is narrowing the paid entry peak to 06:00–10:00, which restores 04:00–06:00 and makes the paid profile eligible while the subscription is buffered | M |
+| RSK-4 | The policy is described as weekday-only while it evaluates daily, so a weekend pause is a surprise | M | H | The declaration is explicitly a documented superset; the daily limit, the lost weekend mornings and Chinese public holidays, and the OQ-2 pointer are stated in the specification, the guide obligation, and DEC-9 | M |
+| RSK-5 | The ceiling figures stop real delivery work on the first adopted ticket | H | M | The figures are declared initial and owner-reviewable in the pull request; the ticket consequence is a classified stop with a named remedy; changing a ceiling is a one-line document edit with no code change; the first post-merge delivery is the calibration | M |
+| RSK-6 | A per-ticket ceiling is described as a park, so an operator waits for a resume that will never come | M | M | The divergence is declared once (DEC-10) and carried in F-4, DM-8, AC-F4-1, and the guide obligation; the refusal names the ceiling and states it cannot reopen | L |
+| RSK-7 | A credential value leaks while authoring the declaration | H | L | Every credential node is a name-bearing reference; a canary test injects a value and scans the config, fixtures, env record, resolve payload, and evidence for it; NFR-4 makes any occurrence a defect | L |
+| RSK-8 | A committed script or prompt still sources the profile directory or installs the hook, and the scan is vacuous | H | L | The scan declares its include set, excludes adopter examples and documentation with a stated boundary, distinguishes sourcing/installing from the allowed invocation idiom, and ships planted controls plus an empty-set guard | L |
+| RSK-9 | The synchronous probe is mistaken for a live quota/balance check, so an exhausted subscription looks healthy | M | H | F-5, AC-F5-1, DEC-11, and the guide obligation state that the probe reads no live quota or balance and that live verification belongs to the daemon path | M |
+| RSK-10 | A model literal or a second policy authority appears in a prompt while wiring the seats | M | M | The scan asserts zero model literals in `.opencode/agent/**` with a planted control; harness assignment stays in the OpenCode configuration; NG-5 declares the boundary | L |
+| RSK-11 | The declaration drifts from the agent roster (a new agent has no seat) | M | M | The permanent reference test reads the real document and the real prompt directory and fails on any diff; adding an agent therefore forces a seat decision in the same change | L |
+| RSK-12 | Editing the guides breaks the documentation distribution guard or leaves a superseded claim | M | L | Both edited files already carry `ados_distribution`; the guard runs in the gate battery; the obligation list names the statements that move and forbids the retired claims | L |
+| RSK-13 | The legacy migration is re-run or treated as a gate and fails the change | M | L | The refusals are recorded once as evidence; no gate or test re-runs the migration against the operator's home; AC-F6-2 asserts the migrator and its fixtures are unchanged | L |
+| RSK-14 | A budget is declared but no work-item ref resolves, so every local `provider resolve` refuses | M | M | The delivered rule is stated (a ref is required exactly when an enabled budget exists); tests seed a temp delivery context; the guide documents the context path and the remedy | L |
+| RSK-15 | A profile window declares a zero buffer, so the derived grace bound is 0 and the required positive `graceSeconds` makes the whole profile branch invalid — the configuration cannot load | H | L | Every declared window carries both buffers non-zero and `graceSeconds: 300` at or below the smallest buffer (300); the reference test parses and validates the real document through the delivered validator, so an arithmetic slip fails the suite rather than the delivery (DEC-18) | L |
+| RSK-16 | The visual seats become text-only on the rail that runs, so every vision task is refused almost all day | H | L | The base is mixed and keeps `designer` and `image-reviewer` on the image-capable paid model with `vision-capable`; AC-F2-3 asserts the base's visual seats and that no base seat declares vision on a text-only model; the paid profile repeats the capability (DEC-16) | L |
+
+## 12. ASSUMPTIONS
+
+- **A-1** The tracked project-committed layer for this checkout is `.delivery-os/config.yaml`, read through the delivered prior-identity fallback, and it is the right home because the current brand directory is absent and M4-S2 owns the namespace move. The delivery must not create or commit `.jaiship`.
+- **A-2** The agent roster that matters is the twenty-four prompt definitions in `.opencode/agent/`; a role the lifecycle spawns is addressed by its agent name, so exact-name seats remove the need for an override table.
+- **A-3** The legacy host paths named in the ticket (`~/.ados/...`) are the same two paths under the prior working name the delivered migrator and the delivered wrappers use; the evidence artifact records the concrete paths observed in the adoption run.
+- **A-4** Harness model assignment for this repository is the OpenCode configuration, and the typed profile is the canonical routing path; committing seats therefore does not require changing the harness configuration in this change.
+- **A-5** The budget ceilings are expressed in the same harness-reported cost units `spend --ref` reports, and the figures `30` (trailing day) and `20` (ticket) are the PM's initial proposal, subject to owner review at the pull request.
+- **A-6** The 2 USD DeepSeek balance floor is carried from the legacy hook's default and is a reviewable policy value, not a derived fact.
+- **A-7** `provider migrate legacy` behaviour is fixed by TDR-0061 and is not a defect for this story; the two refusals are the expected outcome for a program-shaped hook and a sourcing profile set.
+- **A-8** The documentation distribution guard and the aggregate gate run in the delivered battery; no new gate is introduced by this change.
+- **A-9** The five declared outcomes are sufficient replay evidence; a full delivery is not run, because the proof surface is the nomination, the resolution, and the replay, and a dispatch would claim the repository lease and start a second delivery.
+- **A-10** The delivered profile-window validation requires a **positive** `graceSeconds` and rejects a value above the derived maximum, which is the smallest buffer across *both* buffer fields of every declared window; every declared window therefore carries both buffers non-zero and `graceSeconds: 300`, inside the bound. A declaration that violated this would fail to load, so the reference test parses the real document through the delivered validator.
+- **A-11** A profile's `providers` list is the set of entries whose availability gates the profile, and a seat's `model` may name any declared provider. The mixed base therefore relies on the delivered validation checking provider *references* only, not on a seat-to-provider correlation the engine does not enforce.
+
+## 13. DEPENDENCIES
+
+| Direction | Item | Notes |
+|-----------|------|-------|
+| Depends on | Provider engine and budgets (delivered, GH-182, GH-350) | Chain validation and resolution, peak and quota conditions, MAX and tie order, parks, announcements, the budget gate and its ref rule |
+| Depends on | Provider profiles and watching (delivered, GH-234, GH-294, GH-350) | Tiers, profiles, seats, preference chain, per-profile `peakWindows`, watch targets and freshness, the env record, and the profile lifecycle |
+| Depends on | Dispatch nomination (delivered, GH-294, TDR-0028) | The gate this change unblocks, with its four closed refusal identities and its pre-session ordering |
+| Depends on | Seven-layer configuration and the prior-identity fallback (delivered, GH-223, PDR-0006) | The repository-owned layer, provenance, and the `config-read` notice this checkout emits |
+| Depends on | Offline replay and the legacy reader (delivered, GH-350, TDR-0060, TDR-0061) | The six-fixture proof surface and the recorded refusals |
+| Depends on | Harness per-spawn binding and `data-v1` env record (delivered, GH-233, GH-335, TDR-0040) | The seat binding and record the seat proof reads |
+| Constrained by | No engine change | The delivered closed sets, reasons, causes, codes, exits, and evidence allowlists are the whole vocabulary available |
+| Constrained by | Brand and identity neutrality | No product prefix is committed as a seat env name; names derive from the branding seam; `.jaiship` stays out of the repository |
+| Constrained by | Documentation distribution marker | Both edited guides are `redistributable` and must keep a valid marker and pass the guard |
+| Blocks | Native delivery in this repository (the M4 flip's F2 line) | Until the branch is declared, dispatch fails closed with `provider.profile.absent` |
+| Blocks | M4 follow-ups (weekday windows, multi-window entries, a mid-flight watch in this composition) | Each is an engine decision named in OQ-1…OQ-3, not a silent adoption change |
+
+## 14. OPEN QUESTIONS
+
+Three questions are recorded and each is **explicitly non-blocking**: the adoption is decidable and the declaration is complete without an answer, and none of them requires an engine change in this change.
+
+| ID | Question | Why it does not block | Owner / next step |
+|----|----------|----------------------|-------------------|
+| OQ-1 | Profile-level `peakWindows` are declared rule data but do **not** gate admission: the delivered selection (`selectProfile` in `packages/core/src/provider/profile.ts`) walks the preference chain over per-provider availability, and the production probe (`createResolvedProviderProbe` in `packages/cli/src/edge.ts`) reports a provider unavailable only when it is undeclared, disabled, or inside its **entry** peak. Should profile windows join admission gating? | Non-blocking **by design**: admission is carried entirely by the entry peaks, and the declaration says so and proves it; the profile windows are the daemon watcher's rule data. The specification claims no admission behaviour the engine does not have, and the adopted policy is complete with the delivered behaviour | Owner / `@decision-advisor`; trigger: an operator wants one pause declared in one place, or the daemon watch is mounted and the two must agree |
+| OQ-2 | The delivered entry peak is one window per entry evaluated every day, so the legacy "weekdays only" qualifier cannot be expressed; the adopted pauses also apply at weekends. Is a weekday dimension wanted? | The declared policy is the conservative superset: it can only pause more, never spend inside a declared peak. AC-F3-1 asserts the daily semantics and the guide states the consequence | Owner / `@decision-advisor`; trigger: weekend capacity loss is felt, or a provider publishes a weekday-only peak |
+| OQ-3 | The paid entry's union window (01:00–10:00) closes **04:00–06:00 UTC daily**, the gap today's DeepSeek target leaves open at 1x. Narrowing the paid entry peak to 06:00–10:00 would restore those two hours of paid off-peak work, but the mixed base is ineligible inside its own declared subscription buffer, so the paid profile would take over at 04:00 for no reason other than the buffer — paid capacity spent because the subscription is early, not because it is unavailable. Which does the operator prefer? | Non-blocking: the declaration implements the decided union window (DEC-17) and states the exact cost; the question is a policy trade-off, not a contradiction, and either answer is a one-line document edit with no engine change | Owner / `@decision-advisor`; trigger: lost 04:00–06:00 capacity is felt, or paid spend appears in that window after a future edit |
+
+The former open question about DeepSeek's 01:00–04:00 window being admission-eligible is **resolved by DEC-17**: the union window covers it, so a paid fallback is never admitted at 2x. That window was already paused by the legacy DeepSeek target, so closing it costs nothing relative to today; the only newly closed window is 04:00–06:00, recorded in DEC-17 and OQ-3.
+
+No other question is open: the policy home, the adoption route, the seat set, the chains, the peaks, the ceilings, the watch targets, and the proof surface are decided in §15.
+
+## 15. DECISION LOG
+
+**No new decision record is authored.** The layering question is already decided by PDR-0006 (the repository-owned configuration layers are the per-project mechanism), and the engine behaviour this adoption consumes is fixed by TDR-0059 (budgets), TDR-0060 (simulation), TDR-0061 (migration), TDR-0064 (budget ref), ADR-0007 (placement, fail-loud parks, cost policy), and ADR-0013 (zone-aware windows). This change adds configuration, tests, and documentation; it does not decide a new architectural or product question, so authoring a record would duplicate PDR-0006. The `TDR-0074..0075` reservation stays unused unless a genuine decision emerges during delivery (for example a policy-home change or an engine change); the ledger maximum is re-verified on `origin/main-tools` before any authoring. DEC-16…DEC-19 record the PM-decided corrections applied in revision 1.1; they are specification decisions, not decision records.
+
+| ID | Decision | Rationale | Source / Date |
+|----|----------|-----------|---------------|
+| DEC-1 | The policy home is the tracked project-committed document `.delivery-os/config.yaml`; the `.jaiship` directory is not created, symlinked, or committed | The delivered composition reads that document today (through the prior-identity fallback), it travels with the code, and the namespace move belongs to M4-S2 | pm-notes D2, PDR-0006; 2026-11-20 |
+| DEC-2 | The policy is authored declaratively from the legacy files' **intent**; the hook is retired rather than migrated; the two deterministic refusals are recorded as evidence; `provider migrate` is not extended to parse shell | The contract is "policy expressed only in Jaiship config" and "delivery runs with the shell profiles and hook disabled", not "the migrator parses every shell construct"; the real inputs are a program and a sourcing profile set, so a migrator change would be a parser project, not an adoption step. Migrator gaps stay with M4-S17 | Owner disposition 2026-11-20, TDR-0061; 2026-11-20 |
+| DEC-3 | Two chains: `subscription-first` with `entries: [zai-coding-plan, deepseek]` and `allowPaidFallback: true`, named by `defaultChain`; and `subscription-only` with `entries: [zai-coding-plan]` and `allowPaidFallback: false` | Declared order is the sunk-cost encoding: the subscription entry is walked first, and the delivered eligibility rule keeps the paid entry unselectable while the subscription is peak- or window-budget-parked, so paid capacity is reached only when the chain permits it. The never-pay chain exists because the mixed base lists both providers (DEC-16), so no profile isolates the subscription entry; it is also the operator's explicit "never pay" scope and the parking replays' scope | Ticket task (chains that prefer sunk-cost quota and fall back only per policy); 2026-11-20 |
+| DEC-4 | Two profiles over three provider-to-seat mappings: a **mixed base** `delivery` (`providers: [zai-coding-plan, deepseek]`) and a **paid fallback** `paid` (`providers: [deepseek]`), one tier `delivery`, base `delivery`, fallback `paid`, **the same twenty-four seat names in both**, no `agentOverrides`, no `pacing`, no `envRecord` override | The mixed base reproduces the legacy default per-seat routing and keeps the visual seats on the image-capable paid model, so the rail that runs outside the pause never declares a text-only vision seat. A profile is eligible only if **every** provider it lists is available, so the base parks when either provider pauses, and the paid profile is the real target of the hook's quota-driven all-paid switch. The seat names are duplicated because the per-spawn binding resolves the agent against the **selected** profile: a profile switch must never cost a role its seat | PM correction R1; legacy `mixed.sh`; delivered binding contract; 2026-11-20 |
+| DEC-5 | Base models: full `zai-coding-plan/glm-5.3` for the eight reasoning seats (`bootstrapper`, `ceo`, `decision-advisor`, `decision-critic`, `plan-writer`, `readiness-reviewer`, `reviewer`, `toolsmith`), `zai-coding-plan/glm-5.3-flash` for `pm` and `editor`, and `deepseek/deepseek-flash` for the other fourteen (`coder`, `committer`, `designer`, `doc-syncer`, `external-researcher`, `fixer`, `image-generator`, `image-reviewer`, `meeting-organizer`, `pr-manager`, `review-feedback-applier`, `runner`, `spec-writer`, `test-plan-writer`); paid models: `deepseek/deepseek-flash` for all twenty-four; `pacingClass` follows role consequence (fourteen judgment, ten execution) on both profiles | This is the legacy canonical `mixed.sh` mapping preserved per agent: scarce quota on the seats whose errors multiply (review, decisions, planning, tooling contracts), the cheap subscription model for `pm` and prose, and the paid rail for mechanical and visual work inside the same base. The paid profile is the legacy `deepseek.sh` fallback's deliberate "100% flash" routing | PM correction R4; legacy `mixed.sh`/`deepseek.sh`; 2026-11-20 |
+| DEC-6 | `capability: vision-capable` for `designer` and `image-reviewer` on their **base** seats (both `deepseek/deepseek-flash`) and on the paid profile; every z.ai seat and every other seat is `text-only`, including `image-generator`, which produces images and delegates review | The legacy profiles keep visual agents on the image-capable paid model because full `glm-5.3` is text-only and the plan's vision route was not trusted. With a mixed base that intent is expressible inside the base, so the base has **no** text-only vision seat and a vision task is served on the rail that runs almost all day; the capability is never claimed on a z.ai model. A future subscription vision seat needs the route re-verified first | PM correction R1/R4; legacy vision note; 2026-11-20 |
+| DEC-7 | Seat `envName` is **not** committed; each seat's record name is derived from the brand's environment prefix (`OC_<ENV_PREFIX>_AGENT_<SEAT>_MODEL`) | The ticket lists `envName` among the seat fields, and the record satisfies that at the record level: every seat appears in the `--for-spawn` record under a branded name. A committed literal would hardcode the product name in a redistributable configuration document, which this repository forbids; the harness conveys the model per spawn by `--agent`/`--model` regardless | pm-notes D4, brand-neutrality rule; 2026-11-20 |
+| DEC-8 | The subscription entry's peak is 06:00–10:00 `UTC` with `bufferSeconds: 7200`, so its effective admission pause is `[04:00, 10:00)` daily | The 7200-second buffer is the provider engine's shipped descriptor default and the buffer the ticket requires the policy to carry; the retired hook's own buffer was **900 seconds**, which is legacy context and not this declaration. Admission is entry-gated (OQ-1), so the subscription pause must be declared on the entry, and the wider declared buffer protects a delivery from running into the 3x window | Delivered shipped default; ticket task; 2026-11-20 |
+| DEC-9 | The declared pauses are **daily**, a documented superset of the legacy weekday/weekend rule; the specification, the guide obligation, and OQ-2 state the lost weekend mornings and Chinese public holidays | The engine has one daily window per entry and no weekday or holiday dimension; declaring the superset pauses more but never spends inside a peak, and describing it as weekday-only would be false | Delivered window model; legacy `ADOS_ZAI_WEEKEND_OFF_PEAK` / `ADOS_DS_PEAK_HOLIDAYS`; 2026-11-20 |
+| DEC-10 | Budgets `window-cost` (window, cost, 30, 86400) and `ticket-cost` (ticket, cost, 20), both enabled, both initial and owner-reviewable; the ticket crossing is stated as a terminal refusal, not a park | The ticket requires per-window and per-ticket ceilings that "park rather than overspend". The delivered engine parks a trailing window and **stops** a ticket-scope crossing, because a ceiling that never decreases has no honest resume instant; presenting it as a park would fabricate an expiry. The figures are conservative starting policy, changed by editing the document | Ticket task; TDR-0059; pm-notes D5; 2026-11-20 |
+| DEC-11 | Watch targets: `zai-coding-plan` → coding-plan windows at the z.ai quota endpoint with `credentialRef: zai`; `deepseek` → balance at the DeepSeek balance endpoint with `credentialRef: deepseek`, `floor: 2`, `maxAgeSeconds: 900`. The synchronous nomination probe reads neither | The legacy hook's watch intent becomes configuration, and the 2 USD floor is the legacy default. The delivered synchronous probe checks declaration, enablement, and the entry peak only; claiming a live pre-selection check would be false, and live verification is the daemon path's business | Owner disposition, feature-provider-profiles §Selection; 2026-11-20 |
+| DEC-12 | Legacy-source scan surface: `scripts/**` (excluding `scripts/hooks/**` and `scripts/.tests/**`), `tools/**`, `.opencode/**`, `packages/**`, and `tests/**` (excluding the scan module itself); `doc/**` is excluded as description, and the adopter examples and the blueprint install script are excluded as scaffolding, not this repository's delivery. Forbidden: sourcing or dot-sourcing a `profiles` path, writing/`cp`/`install`ing a `pre-opencode-iteration` hook, and creating a hooks directory. Allowed: invoking an installed hook | The AC forbids *sourcing the legacy profile directory* and *installing the hook*, not the documented fallback's opt-in invocation. Excluding adopter examples and documentation is a stated boundary: they describe or ship a capability for other repositories; scanning them would either fail on legitimate scaffolding or force a documentation rewrite that hides the fallback | Ticket AC; AGENTS.md fallback rule; 2026-11-20 |
+| DEC-13 | No real `dispatch` is run. Admission evidence is the nomination result over the real configuration, the seat/binding proof for every role, and the replay fixtures; the `provider.profile.absent` gate is shown passed, not exercised by a second delivery | `dispatch GH-374` would claim the repository lease and start a second delivery of this same change; the seat/binding proof is the same predicate the admission gate runs, and the ticket's acceptable evidence is a typed refusal for an unrelated named reason | pm-notes D7, owner comment; 2026-11-20 |
+| DEC-14 | No pacing rungs are declared | The legacy ladder moved cheap execution seats between the rails on a live utilisation input; the synchronous path has no utilisation fact, and a rung's `executionModel` would override a declared seat model — a second model authority. Deferred with its reason | Legacy pacing block; 2026-11-20 |
+| DEC-15 | Session compaction stays a harness setting, not provider policy | The `provider.profiles` branch has no compaction key; compaction is a plugin/harness concern. The legacy "compaction on DeepSeek too" intent is therefore preserved by leaving the harness setting alone, not by inventing a provider key | Legacy compaction variables; 2026-11-20 |
+| DEC-16 | **PM correction R1 — mixed base instead of disjoint rails.** The base profile is `delivery` over `providers: [zai-coding-plan, deepseek]`, reproducing the legacy per-seat map; the fallback is `paid` over `[deepseek]` with the same seats; `preferenceChain: { base: delivery, fallbacks: [paid] }` | A subscription-only base makes `designer` and `image-reviewer` text-only on the rail selected almost all day, so the capability gate would refuse every vision task — a regression the legacy deliberately avoided by keeping visual agents on the image-capable paid model. The mixed base preserves that routing, keeps the base's seats on the providers the legacy chose per role, and leaves `paid` as the true target of the quota-driven all-paid switch. Because eligibility requires every listed provider available, the base parks whenever either provider pauses — the admission consequence is stated in DEC-17 and OQ-3 | PM decision 2026-11-20 (R1); legacy `mixed.sh`; 2026-11-20 |
+| DEC-17 | **PM correction R2 — the paid entry carries one union window.** `provider.entries.deepseek.peak = { timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 36000, bufferSeconds: 0 }` (01:00–10:00 daily). DeepSeek's earlier price window remains declared as profile rule data (`01:00–04:00`, `multiplier: 2`). **Cost:** the union closes **exactly 04:00–06:00 UTC daily**. Today's effective legacy target is the DeepSeek profile, whose windows are 01:00–04:00 and 06:00–10:00 with a zero buffer, so 01:00–04:00 was already paused and the only newly closed window is 04:00–06:00 — paid off-peak at 1x, which the retired hook left open (a `mixed` target paused z.ai only from 05:45, its 900-second buffer) | One entry carries one window and only the entry window gates admission, so the union is the only declaration that keeps paid capacity out of **both** DeepSeek 2x windows and out of the subscription's buffered pause. Without it the mixed base is ineligible 04:00–06:00 inside its declared subscription buffer and the paid profile would take over — paid capacity spent because the subscription is early, not unavailable — so the union prefers "no paid fallback for a buffered subscription". That single two-hour gap is stated, not hidden, and is the residual recorded as OQ-3 | PM decision 2026-11-20 (R2); verified legacy hook behaviour; 2026-11-20 |
+| DEC-18 | **PM correction R3 — the profile rule data must load.** Both profiles declare the same two windows with **both** buffers non-zero and `graceSeconds: 300`: `01:00–04:00` (`multiplier: 2`, `bufferBeforeSeconds: 1800`, `bufferAfterSeconds: 300`) and `06:00–10:00` (base `multiplier: 3`, paid `multiplier: 2`, `bufferBeforeSeconds: 7200`, `bufferAfterSeconds: 600`). Effective watcher pauses are `[00:30, 04:05)` and `[04:00, 10:10)` | The delivered validation requires a positive `graceSeconds` and rejects one above the derived maximum, which is the smallest of **all** buffers across a profile's windows; a declared `bufferAfterSeconds: 0` makes that maximum 0 and the branch unloadable. 300 is positive and at or below the smallest declared buffer, so the arithmetic validates. The windows and their multipliers still express both pauses as rule data (they do not gate admission — OQ-1) | PM decision 2026-11-20 (R3); `parseProfilePeakWindows`/`deriveGraceSecondsMax`; 2026-11-20 |
+| DEC-19 | A decision whose every chain entry is parked is reported as a **chain park**: `chain:<name>`, cause `chain-exhausted`, the union of contributing condition kinds in tie order, and the earliest contributing expiry, beside the per-entry `provider:<name>` parks that carry the provider cause; the parking replays therefore assert the chain park's contributing kind (`peak-window`, `quota-exhausted`, `budget-exhausted`) and the provider park's own cause | This is the delivered resolution shape (`resolveProviderChain`), not a new behaviour: the acceptance criteria must describe the payload an operator actually receives. The v1.0 wording ("parked with cause `peak-window`") described the provider park and would have failed against the real payload. The never-pay chain (DEC-3) is the proof scope because the mixed base lists both providers | Delivered `resolveProviderChain`; 2026-11-20 |
+
+## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
+
+| Component | Impact |
+|-----------|--------|
+| `.delivery-os/config.yaml` | **Changed** — the only tracked configuration change: a `provider` branch beside the existing `verify.suite-map`, carrying DM-1…DM-8 |
+| `doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/` | **Added** — this specification, the delivery plan, the test plan, the migration evidence artifact (`migration-output.md`), and the pm notes |
+| `tests/fixtures/provider/policy-adoption/simulate/*.json` | **Added** — six `delivery.provider.simulate.v1` fixtures (DM-9) |
+| `tests/structure/provider-policy-adoption-reference.test.ts` | **Added** — the permanent reference test over the real committed document (parsed and validated, including each profile window's grace/buffer bound) plus the agent roster (F-7, NFR-3, NFR-7) |
+| `tests/behaviour/provider-policy-adoption.test.ts` | **Added** — the seat/env-record and binding proof per role on both profiles, the chain proof, and the six-fixture replay matrix (F-2, F-7, AC-F1-1…AC-F4-1) |
+| `tests/checks/provider-legacy-source-scan.test.ts` | **Added** — the declared-surface scan with planted controls and an empty-set guard (F-6, NFR-9) |
+| `tests/checks/provider-policy-credential-canary.test.ts` (or the canary arm inside the behaviour suite) | **Added** — the credential canary across the config, fixtures, env record, and payloads (NFR-4) |
+| `doc/guides/provider-conditions-and-parks.md` | **Changed** — a "this repository's adopted policy" section: the mixed base and its paid fallback, the two chains, the daily admission pause, the ceilings, the watch targets, and the retirement of the shell-profile/hook dependency; `ados_distribution` preserved |
+| `doc/guides/opencode-model-configuration.md` §6 "Provider and model policy" | **Changed** — the repository's routing is declared in the committed configuration, the typed profile is the canonical path, the per-agent table remains harness assignment, and no model literal belongs in an agent prompt |
+| `doc/guides/zai-peak-hours-hook.md` | **Changed** — this repository has retired the hook: none is installed, the window/quota/budget policy is committed configuration, and the hook remains an inert opt-in for other adopters |
+| `doc/spec/features/feature-provider-engine.md`, `feature-provider-profiles.md`, `feature-peak-pausing.md`, `feature-config-layer.md` | **Verified, not restated** — these pages describe generic branch behaviour; they gain no repository-specific policy. Phase 7 verifies no statement is contradicted and records the verification; a contradicted sentence is corrected, not supplemented |
+| `doc/00-index.md` and the documentation inventory | **Verified** — a row whose description states the retired dependency moves with its page; no new row is added |
+| `packages/**`, `.opencode/**`, `.agents`-style prompt definitions, `.jaiship/**`, other configuration layers | **Unchanged** — NFR-7; a change here is a scope defect, not a delivery detail |
+
+**Documentation obligations of this change.** Phase 7 (`system_spec_update`) reconciles these pages; the list is closed.
+
+| Document | Statement that must become true | Statement that must stop being current |
+|---|---|---|
+| `doc/guides/provider-conditions-and-parks.md` | This repository declares its policy in the committed configuration document: a mixed base profile with a paid fallback, two chains (the default with declared paid fallback and a never-pay chain), a buffered daily admission pause 01:00–10:00 UTC (the subscription's buffered peak plus the paid rail's union window), a trailing-day ceiling that parks and a ticket ceiling that stops, and two watch targets | Any implication that this repository's provider policy is "not declared yet", that the pause is 04:00–10:00 only, or that a shell profile or hook decides its routing |
+| `doc/guides/opencode-model-configuration.md` §6 | The typed profile branch is the canonical routing path; this repository's seats and models are committed; the per-agent model table is harness assignment and the harness configuration stays the assignment authority | Any implication that model choice is only an OpenCode-config concern, or that a model belongs in an agent prompt |
+| `doc/guides/zai-peak-hours-hook.md` | The hook is off this repository's delivery path and none is installed; the window, quota, and ceiling policy is configuration; the hook example remains for other adopters | Any instruction presented as this repository's operating procedure for installing the hook |
+| Provider and configuration specification pages | Unchanged in content; phase 7 records that no current-truth statement is contradicted by the adopted policy | — |
+| Documentation distribution | Both edited guides keep a valid `ados_distribution` marker and the doc-distribution guard passes | — |
+
+## 17. ACCEPTANCE CRITERIA
+
+| ID | Criterion | Linked |
+|----|-----------|--------|
+| AC-F1-1 | **Given** the committed document, **when** the provider branch is parsed and validated and `provider resolve` runs in a checkout seeded with that document and a delivery context, **then** the branch validates with no refusal, both declared chains validate, and `defaultChain` names `subscription-first`; the payload names the chain `subscription-first`, the selected entry is `zai-coding-plan`, the non-selected entry is reported **after** it with reason `shadowed`, and the declared order `[zai-coding-plan, deepseek]` is the order the payload reports; **when** `provider resolve --chain subscription-only` runs, **then** the chain resolves to the subscription entry alone; **and when** the document declares a subscription entry after a paid entry, an unknown entry reference, an unknown credential reference, an unknown default chain, or a chain whose entry list is empty, **then** the delivered `provider.chain.invalid` / `provider.chain.empty` refuses naming the field (ticket AC: `provider resolve` returns the chain in declared order; the committed config validates) | F-1, DM-1, DM-2, DM-3, NFR-2 |
+| AC-F1-2 | **Given** the committed policy and a replay at 12:00 UTC whose subscription quota reports an exhausted token limit with a future reset, **when** the chain is `subscription-only`, **then** the decision is parked, `data.decision.park` is the chain park `chain:subscription-only` with cause `chain-exhausted` and contributing condition kind `quota-exhausted`, `data.parks` also carries `provider:zai-coding-plan` with cause `quota-exhausted`, `provider.quota.parked` and `provider.chain.exhausted` are announced, and the resume instant equals the reported reset; **when** the same facts reach the default chain, **then** the paid entry is selected because the chain allows paid fallback (ticket AC: `provider simulate` reproduces exhausted-quota parking with a typed reason and a next-eligible timestamp) | F-1, DM-3, DM-9, NFR-6 |
+| AC-F1-3 | **Given** a replay with a clear subscription quota and no spend observations, **when** the default chain resolves, **then** the subscription entry is selected and the paid entry is reported with the delivered reason `shadowed`; **when** the subscription quota is exhausted with a future reset, **then** the paid entry is selected — the declared fallback, never a silent substitution for a peak; **when** the subscription entry is parked for a peak window, **then** no chain configuration selects the paid entry (ticket AC: subscription-first routing; task: fall back only per policy) | F-1, DM-3, DM-9, NFR-6 |
+| AC-F2-1 | **Given** the committed document and the agent roster read from `.opencode/agent/`, **when** each agent name is resolved with `provider profile resolve --agent <role> --for-spawn` at a fixed in-window instant, **then** every one of the twenty-four roles returns exit `0`, a selected profile, and a `data-v1` env record that validates and contains one entry per declared seat; **and when** each role is bound through the per-spawn binding over the same resolved configuration on the base profile and on the paid profile, **then** every role returns a binding naming its seat and its declared model, with zero `unassigned` outcomes (ticket AC: `provider profile resolve` returns a seat for every declared agent role) | F-2, DM-4, DM-5, NFR-3 |
+| AC-F2-2 | **Given** the change branch, **when** `.opencode/agent/**` is scanned for model literals (`zai-coding-plan/`, `deepseek/`, `glm-`, `deepseek-`), **then** the scan reports zero findings and a planted control line is reported by the same scanner; **when** the prompt and command surfaces are inspected, **then** no prompt declares a provider, a model, a peak, a budget, or a credential reference as policy (ticket task: no model literal lives in an agent prompt) | F-2, NFR-7, NFR-9 |
+| AC-F2-3 | **Given** the mixed base profile, **when** its seats are inspected, **then** `designer` and `image-reviewer` declare `deepseek/deepseek-flash` with `capability: vision-capable`, every z.ai seat and every other seat is `text-only`, and no base seat declares `vision-capable` on a text-only model; **when** a vision-requiring resolution runs on the base at an in-window instant, **then** the visual seat is eligible and is not refused by the capability gate; **when** the paid profile is inspected, **then** the same two seats are `vision-capable` and every other seat is `text-only`; **and when** the declared capability set is compared across the two profiles, **then** it is identical per seat (PM correction R1/R4: the base has no text-only vision seat) | F-2, DM-4, DM-5, NFR-3 |
+| AC-F3-1 | **Given** the committed policy and a replay at 05:00 UTC on chain `subscription-only`, **when** it resolves, **then** the decision is parked, `data.decision.park` is the chain park with cause `chain-exhausted` and contributing condition kind `peak-window`, `data.parks` carries `provider:zai-coding-plan` with cause `peak-window` and the declared zone in its evidence, and the resume instant is 10:00 UTC; **when** the default chain resolves at 05:00 and at 04:30 UTC, **then** both entries are unavailable and the chain park's contributing kinds include `peak-window`; **when** `provider profile resolve` runs at 05:00 UTC, **then** no profile is eligible and the refusal is `provider.profile.unavailable` with both peak blockers named; **when** it runs at 02:00 UTC, **then** the mixed base is still ineligible because the paid entry's union window parks the paid provider, and the refusal names that blocker; **when** the same policy is evaluated at 12:00 UTC, **then** nothing is parked and the base is nominated; **and when** the weekend is evaluated, **then** the same pauses apply, and the specification and the guide state the daily semantics and the deferred weekday question (OQ-2) (ticket task: carry the weekday 06:00–10:00Z peak window with the declared buffer) | F-3, DM-2, DM-4, DM-9, NFR-2 |
+| AC-F4-1 | **Given** the committed policy and a replay at 12:00 UTC whose spend reaches the trailing-day ceiling, **when** the chain is `subscription-only`, **then** the decision is parked, the chain park's contributing kind is `budget-exhausted`, `data.parks` carries `provider:zai-coding-plan` with cause `budget-exhausted`, the expiry equals the newest observation plus 86,400 seconds and is strictly future, and the announcement carries the budget name, scope, basis, measured figure, and ceiling; **when** the same facts reach the default chain, **then** both governed entries are parked and neither the paid entry nor any substitution is selected; **when** a replay on `subscription-only` reaches the ticket ceiling, **then** the entry is skipped as `budget-exhausted`, no park or expiry is created, and the run answers `provider.budget.exceeded` at exit `1`; **and when** any of these replays run, **then** the payload discloses `stateWrites: 0` and no credential, network, or spawn effect occurs (ticket AC: `provider simulate` reproduces budget parking; task: budgets that park rather than overspend) | F-4, DM-8, DM-9, NFR-5, NFR-6 |
+| AC-F5-1 | **Given** the committed watch declarations, **when** the profile branch validates, **then** both targets name declared providers and declared credential references, the paid target declares its floor and freshness bound; **when** `provider watch status` runs with an injected transport and a fixture body, **then** each target reports exactly one condition from the closed six-value set with its observation instant, age, and bound, performs zero state writes, and no live network call is made by the test harness; **when** the synchronous nomination path is inspected, **then** it reads no quota and no balance, and the specification states that live verification belongs to the daemon path (ticket task: quota/balance watch; AC: no credential value anywhere) | F-5, DM-7, NFR-4, NFR-6 |
+| AC-F6-1 | **Given** the declared scan surface, **when** the legacy-source scan runs, **then** it reports zero sourced profile directories, zero hook installations, zero hooks-directory creations, and it does not report the allowed opt-in invocation idiom; **when** the planted controls are scanned, **then** each of a sourced profile path, a copied/installed hook, a created hooks directory, and a prompt model literal is reported; **when** the include set is empty, **then** the scan fails rather than passing (ticket AC: `grep` proves no committed script or prompt sources the legacy profile directory or installs the pre-iteration hook) | F-6, NFR-1, NFR-9 |
+| AC-F6-2 | **Given** the migration evidence artifact, **when** it is read, **then** it records the two `provider.migrate.refused` outcomes (`oversized-source` for the hook above the declared byte cap, `dynamic-value` for the profile set outside the assignment-only subset), the source paths and sizes, the read-only guarantee, and the disposition; **when** the change's diff is inspected, **then** the migrator module, its source reader, its CLI grammar, its fixtures, and its golden outputs are unchanged, and no test re-runs the migration against an operator home (owner disposition: do not extend the migrator in this story) | F-6, DM-10, NFR-7 |
+| AC-F6-3 | **Given** a canary credential value supplied at the composition, **when** the configuration document, the six fixtures, the seat/env-record resolution, the resolve payload, the replay payload, and the evidence artifact are scanned, **then** the canary appears on no surface; **when** the configuration is parsed, **then** every credential child is exactly a `{ style, name }` reference and no value-bearing key exists; **when** the repository diff is inspected, **then** no committed file contains a credential-shaped value (ticket AC: no credential value appears in config, diff, logs, or state) | F-1, F-5, NFR-4 |
+| AC-F7-1 | **Given** the real committed document (never a fixture), **when** the permanent reference test parses and validates it through the delivered validator, **then** the whole provider branch loads with no refusal — including each profile's `peakWindows`, whose `graceSeconds` must be positive and within the derived buffer bound — and the test asserts the exact declared policy: both credential references, both entries with their classes, peaks and quota policy, both chains with their entry lists and `allowPaidFallback`, the default chain, both ceilings, both profiles with their providers, per-seat model, pacing class and capability, and both watch targets; **when** the declared seat sets are compared against the agent roster read from `.opencode/agent/`, **then** each profile's set equals the roster in both directions; **when** any of those values drifts (a removed seat, a changed model, a new agent, a reordered chain, a narrowed peak window, a changed ceiling, a zero buffer), **then** the test fails by name; **and when** `config get provider.defaultChain --show-origin` runs, **then** the reported origin is the committed document with a line (ticket: the policy is the repository's; AC: the committed config validates) | F-7, DM-1…DM-9, NFR-2, NFR-3 |
+| AC-F7-2 | **Given** the change branch, **when** the documentation is inspected, **then** the operator guide states the adopted policy and its limits (daily pause, ticket stop, synchronous-probe limit), the repository-facing config reference states the canonical routing path and that no model literal belongs in a prompt, and the hook guide states that this repository has retired the hook; **when** the guides are checked, **then** each keeps a valid `ados_distribution` marker and the doc-distribution guard passes; **and when** any page is searched for the retired claims, **then** none presents the shell profile directory or the hook as this repository's delivery path (ticket task: update the operator guide and the repository-facing config reference) | F-7, NFR-8 |
+| AC-F7-3 | **Given** the committed document, **when** the nomination predicate runs over the resolved configuration at a fixed in-window instant, **then** it returns a successful nomination naming `delivery`, so `provider.profile.absent` is not producible from this checkout; **when** the seat/binding and env-record proofs for every role pass, **then** the admission gate's own predicate is evidenced end to end; **when** the change is delivered, **then** no real `dispatch` is run, and the plan and the pull request state the reason (a dispatch would claim the repository lease and start a second delivery) (ticket AC: `dispatch` gets past `provider.profile.absent`; owner comment: do not self-dispatch) | F-2, F-7, NFR-3 |
+
+**Ticket-AC traceability.** The ticket states five acceptance criteria; every one is bound.
+
+| Ticket AC fragment | Specification ACs |
+|---|---|
+| "`provider profile resolve` returns a seat for every declared agent role, and `provider resolve` returns the chain in declared order" | `AC-F2-1`, `AC-F2-3`, `AC-F1-1` |
+| "`provider simulate` reproduces peak, quota, and budget parking with typed reasons and a next-eligible timestamp" | `AC-F3-1`, `AC-F1-2`, `AC-F4-1` |
+| "`jaiship dispatch <ref> --json` gets past `provider.profile.absent` and records a typed attempt" | `AC-F7-3` (nomination and binding evidence, with the no-self-dispatch reason stated) |
+| "`grep` proves no committed script or prompt sources the legacy profile directory or installs the pre-iteration hook" | `AC-F6-1`, `AC-F6-2` |
+| "No credential value appears in config, diff, logs, or state" | `AC-F6-3`, `AC-F5-1` |
+
+**Ticket-task traceability.** "Convert the legacy inputs with `provider migrate` and record the migration output" → `AC-F6-2` (the refusals are the recorded outcome, per the owner's binding disposition); "declare `provider.profiles` with one seat per agent role, each with `model`, `pacingClass`, `capability`, and `envName`, no model literal in a prompt" → `AC-F2-1`, `AC-F2-2`, `AC-F2-3` (with the `envName` derivation decided in DEC-7 and the vision preservation in DEC-16); "declare `provider.entries` for the eligible providers, subscription first, carry the weekday peak with the buffer, declare chains" → `AC-F1-1`, `AC-F1-3`, `AC-F3-1`; "declare `provider.credentials` as environment names only" → `AC-F6-3`; "declare per-window and per-ticket budgets" → `AC-F4-1`; "prove the policy offline with `provider simulate`" → `AC-F1-2`, `AC-F1-3`, `AC-F3-1`, `AC-F4-1`; "remove the runtime dependency" → `AC-F6-1`; "update the operator guide and the repository-facing config reference" → `AC-F7-2`.
+
+**Verification intent.** `AC-F1-1`…`AC-F4-1` are behaviour cases over the real committed document seeded into a temporary checkout with a delivery context and an injected clock, credential port, transport, and spend read — no live network, credential, or sleep. `AC-F2-1` and `AC-F2-3` additionally drive the per-spawn binding through the composition that the dispatch path uses, so the seat and capability proofs are the same code the delivery runs. `AC-F5-1` uses an injected transport and fixture bodies and asserts zero writes. `AC-F6-1` is a source scan with planted controls in both directions and an empty-set guard. `AC-F6-2` is an artifact assertion plus a diff assertion. `AC-F6-3` is a canary scan. `AC-F7-1` reads the real document and the real roster and validates them through the delivered validator, so the test cannot pass against a copy and a zero-buffer window fails it. `AC-F7-2` is the documentation review plus the distribution guard. `AC-F7-3` asserts the nomination predicate's result and records, in the plan and the pull request, why a real dispatch is not run.
+
+## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
+
+- Full lifecycle on the change branch `feat/GH-374/provider-policy-adoption`; commits through the commit primitive; the pull request targets `main-tools` and **stops open** with merge authority outside this change.
+- Delivery order is constrained by dependency: the declaration first (nothing can be proven before the document exists), then the reference test and the agent-roster assertion, then the seat/env-record and binding proofs, then the replay fixtures and their matrix, then the legacy-source scan and the canary, then the documentation reconciliation. The plan owns the phase boundaries; this specification owns the contract.
+- Adoption takes effect for the whole repository at merge: after it, a delivery admits on the mixed base outside 01:00–10:00 UTC daily, pays only through declared fallback, and answers the two ceilings. Before it, every delivery fails closed with `provider.profile.absent`. There is no dark-launch form, because the document *is* the switch — and that is the story.
+- The ceilings and the balance floor are surfaced to the owner in the pull request as initial policy with the measured context; the first post-merge delivery is the calibration, and changing a figure is a one-line document edit with no code change.
+- Rollback is reverting the change: the `provider` branch disappears, the engine falls back to `provider.chain.empty` / `provider.profile.absent`, and the legacy shell surface is untouched and still installed. Nothing on the operator's machine is moved, so rollback loses no evidence.
+- The retired dependency is stated where operators meet it: the guides say the hook is off this repository's path and that invoking an opt-in hook remains a fallback of the shell entry points, not of the typed path.
+- No decision record is authored (DEC log preamble); the reservation `TDR-0074..0075` stays unused unless a genuine decision emerges, and the ledger maximum is re-verified on `origin/main-tools` before any authoring would begin.
+
+## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
+
+- **No delivery state, ledger record, projection, or derived document is migrated, seeded, or backfilled.** The policy is configuration; the only writes the delivered commands make are their own park, announcement, and profile-target records.
+- **The one "migration" here is the recorded refusal.** `provider migrate legacy` ran read-only against the legacy profile directory and hook and refused both times (`oversized-source`, `dynamic-value`). The outcome is recorded as evidence; no proposal was written, no document was created, and no legacy file was written, moved, renamed, or deleted.
+- **The policy is authored, not imported.** The declaration was derived from the legacy files' intent by hand and is reviewed as part of this change; the operator's shell files stay on disk and become inert on the typed path.
+- **Three different things are called migration in this repository, and this change is the third.** `provider migrate legacy` is a provider-policy import; the M4-S2 namespace migration moves configuration, state, artifact, or environment names; the install lifecycle's `--migrate` flag is a typed delegation refusal naming M4-S2. No surface in this change moves a name, a path, a state root, or an artifact, and no document may present them as the same thing.
+- **Rollback needs no data work**: removing the declaration returns the engine to its shipped fail-closed state, and no persisted value has to be converted because none was derived from the legacy policy.
+
+## 20. PRIVACY / COMPLIANCE REVIEW
+
+No personal data is collected, stored, or transmitted, and nothing leaves the machine.
+
+- The committed document contains environment-variable **names** and endpoint URLs only; the fixtures contain facts (instants, credential *outcomes*, HTTP bodies, spend points) and no value field exists for a credential.
+- The evidence artifact contains source paths, byte and line counts, reason words, and the disposition; it contains no file content and no credential-shaped value.
+- Budget evidence and refusal summaries contain budget names, scopes, bases, measured figures, and ceilings — cost quantities, not user content.
+- Watch views contain a target name, a condition, a mapping summary, an instant, an age, and a bound; no response body and no credential.
+- The adopted policy names two processors (the subscription plan and the pay-per-token provider) that the operator already uses for inference; committing the *routing* of work to them changes no data flow, because every spawn already goes to one of them.
+- No tracker, vendor, analytics, or telemetry flow is added; the only network calls on any path are the delivered quota transport on its delivered paths.
+
+## 21. SECURITY REVIEW HIGHLIGHTS
+
+- **No credential value enters the repository.** Every credential node is a name-bearing reference; a canary test proves a value supplied at the composition appears on no surface; the configuration has no key capable of holding a value.
+- **The committed policy cannot execute anything.** The declaration is data; no shell, `eval`, substitution, or child process reads it, and the migration path was invoked read-only.
+- **The legacy files are not read at runtime.** The scan proves no sourcing and no installation in the committed surface, so a compromised or stale shell file cannot change a routing decision on the typed path.
+- **The hook's removal is from the path, not from disk.** The operator's file stays; no code deletes it; the shell fallback still invokes it only when the operator installed one.
+- **The policy is reviewed like code.** It travels with the repository, is visible in the pull request diff, and its provenance is reported by `config debug`, so a routing change is a reviewed change rather than a workstation edit.
+- **A spend ceiling is a pre-spawn decision, not an enforcement guarantee.** At most one spawn increment may land above a ceiling before the next read sees it; the limit is stated rather than implied, and no surface claims a real-time stop.
+- **A watch reading cannot license spending.** An aged observation is never reported clear, and a park derived from a reading cannot outlive its bound.
+- **No new secret path.** No secret-read allowlist entry is added; the two referenced variable names are read only by the delivered credential port on the delivered quota and watch paths.
+
+## 22. MAINTENANCE & OPERATIONS IMPACT
+
+- **The document is the policy.** Every future routing, model, window, ceiling, or watch change is a reviewed edit to `.delivery-os/config.yaml`; the reference test fails by name when an edit drifts from the declared contract, so the test is the change's guard rail and must be updated deliberately, not incidentally.
+- **Adding an agent is a policy event.** A new prompt definition without a seat fails the roster assertion; the remedy is to declare the seat on both profiles in the same change. Removing an agent likewise requires removing both seats.
+- **The pauses are daily and shared.** The subscription's buffered window (`[04:00, 10:00)`) and the paid entry's union window (`[01:00, 10:00)`) together make 01:00–10:00 UTC the declared admission pause for both profiles; changing either means changing the entry window and the profile rule data together, or the entry gate and the watcher rule will disagree — the reference test pins the current agreement.
+- **The grace bound must stay satisfiable.** Every profile window carries both buffers non-zero, and `graceSeconds` must remain at or below the smallest of them; a zero buffer silently makes the whole profile branch invalid, so any window edit must re-check the arithmetic (DEC-18).
+- **The ceilings are initial policy.** Expect the first calibration after merge; a document edit is the only mechanism, and no code change, counter, or state repair is involved because nothing is persisted.
+- **The paid fallback's reachability is a known boundary.** The synchronous probe cannot see quota, so the paid profile is nominated only when the base's providers are unavailable or when the daemon path marks the subscription exhausted; the boundary is documented, and OQ-1 records the admission-gating engine question while OQ-3 records the union window's policy residual.
+- **The retired claims must not return.** A guide that tells an operator to install the hook for this repository, or that provider policy lives in shell, is a defect; the documentation obligation list is the checklist.
+- **The legacy surface still exists for other adopters.** `scripts/hooks/**` and the blueprint install script remain shipped examples; excluding them from the scan is a declared boundary, not an oversight, and a future change that starts activating them in this repository's delivery is the event that reopens it.
+
+## 23. GLOSSARY
+
+| Term | Definition |
+|------|------------|
+| Rail | A provider-to-seat grouping inside one profile: the mixed base uses both rails (z.ai for reasoning and orchestration seats, DeepSeek for mechanical and visual seats), the paid fallback uses the DeepSeek rail only |
+| Mixed base | The base profile `delivery` over both providers, reproducing the legacy per-seat map and keeping the visual seats on the image-capable paid model |
+| Seat | A named row of a profile declaring `model`, `pacingClass`, `capability`, and an optional `envName`; resolution is override → exact seat name → single-seat fallback |
+| Seat binding | The per-spawn resolution of an agent identity to one seat and one `provider/model[#variant]` value, supplied as the `--agent`/`--model` pair |
+| Env record | The `data-v1` block listing one `set` line per declared seat; the name is derived from the brand's environment prefix when `envName` is omitted |
+| Entry peak window | The one declared pause window on a provider entry, evaluated every day on the declared zone's clock; it is what the admission probe reads |
+| Union window | The paid entry's single declared window 01:00–10:00 UTC, covering both DeepSeek price peaks and the subscription's buffered pause |
+| Profile peak window | Versioned per-profile rule data (window, multiplier, buffers, grace) that drives the daemon's in-flight lane watch; it does not gate admission in the delivered behaviour |
+| Buffered pause | The effective pause `[start − buffer, end)`; the subscription entry's declared 06:00 peak with a 7200-second buffer pauses it from 04:00 UTC |
+| Never-pay chain | The declared `subscription-only` chain: the subscription entry alone with `allowPaidFallback: false`, used as the operator's no-spend scope and as the parking replays' scope |
+| Chain park | The decision a fully parked chain produces: `chain:<name>` with cause `chain-exhausted`, the contributing condition kinds, and the earliest contributing expiry |
+| Sunk-cost first | The declared chain order: the subscription entry is walked first, and paid capacity is reached only through the declared fallback rule |
+| Paid fallback | `allowPaidFallback: true` on the declared chain: a paid entry is selectable when it is clear and no subscription entry is parked for a peak or a window-scope budget |
+| Window ceiling | A trailing-window budget; a crossing parks with a computed resume instant |
+| Ticket ceiling | A per-work-item budget; a crossing fails the entry and ends in a classified refusal, because the ceiling cannot reopen |
+| Work-item ref | The delivery identifier the budget gate measures (`GH-374` here), resolved from the local delivery context or, in a replay, from the fixture |
+| Watch target | A declared provider-name-keyed mapping (coding-plan windows, DeepSeek balance) read through the delivered quota transport, read-only |
+| Replay fixture | A strict `delivery.provider.simulate.v1` document of facts replayed through the delivered engine with zero effect |
+| Legacy profile directory | The shell directory (under the prior working name) whose `*.sh` files set per-agent model variables; not read by the typed path |
+| Pre-iteration hook | The opt-in shell program the shell entry points may invoke before a spawn; retired from this repository's typed path and left on disk |
+| Adoption evidence | This change's proof set: the nomination and seat proofs, the chain proof, six replays, the reference test, the scan, and the canary |
+
+## 24. APPENDICES
+
+### Appendix A — The declaration set (sketch, not the document)
+
+The full YAML belongs to the plan; this sketch fixes the shape and every normative value.
+
+```yaml
+provider:
+  defaultChain: subscription-first
+  credentials:
+    zai:      { sourceKey: { style: literal, name: ZAI_API_KEY } }
+    deepseek: { sourceKey: { style: literal, name: DEEPSEEK_API_KEY } }
+  entries:
+    zai-coding-plan:
+      class: subscription
+      enabled: true
+      peak:  { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000, bufferSeconds: 7200 }
+      quota: { enabled: true, endpoint: "https://api.z.ai/api/monitor/usage/quota/limit",
+               credentialRef: zai, thresholdPercent: 100, maxSleepLoops: 24 }
+    deepseek:
+      class: pay-per-token
+      enabled: true
+      peak:  { timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 36000, bufferSeconds: 0 }
+  chains:
+    subscription-first:
+      entries: [zai-coding-plan, deepseek]
+      allowPaidFallback: true
+    subscription-only:
+      entries: [zai-coding-plan]
+      allowPaidFallback: false
+  budgets:
+    window-cost: { enabled: true, scope: window, basis: cost, ceiling: 30, windowSeconds: 86400 }
+    ticket-cost: { enabled: true, scope: ticket, basis: cost, ceiling: 20 }
+  profiles:
+    tiers:
+      delivery: { description: "this repository's delivery roles" }
+    profiles:
+      delivery:
+        tier: delivery
+        providers: [zai-coding-plan, deepseek]
+        seats: {}   # 24 seats named as the agents, DM-5
+        peakWindows:
+          graceSeconds: 300
+          windows:
+            - { timezone: UTC, startSecondsOfDay: 3600,  endSecondsOfDay: 14400,
+                multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }
+            - { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000,
+                multiplier: 3, bufferBeforeSeconds: 7200, bufferAfterSeconds: 600 }
+      paid:
+        tier: delivery
+        providers: [deepseek]
+        seats: {}   # the same 24 seat names, DM-5
+        peakWindows:
+          graceSeconds: 300
+          windows:
+            - { timezone: UTC, startSecondsOfDay: 3600,  endSecondsOfDay: 14400,
+                multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }
+            - { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000,
+                multiplier: 2, bufferBeforeSeconds: 7200, bufferAfterSeconds: 600 }
+    preferenceChain:
+      base: delivery
+      fallbacks: [paid]
+    watch:
+      zai-coding-plan:
+        mapping: coding-plan-windows
+        endpoint: "https://api.z.ai/api/monitor/usage/quota/limit"
+        credentialRef: zai
+        thresholdPercent: 100
+      deepseek:
+        mapping: deepseek-balance
+        endpoint: "https://api.deepseek.com/user/balance"
+        credentialRef: deepseek
+        floor: 2
+        maxAgeSeconds: 900
+```
+
+### Appendix B — Seat matrix
+
+| Seat (== agent) | pacingClass | Base model | Paid model | Vision (base and paid) |
+|---|---|---|---|---|
+| bootstrapper | judgment | glm-5.3 | deepseek-flash | — |
+| ceo | judgment | glm-5.3 | deepseek-flash | — |
+| coder | judgment | deepseek-flash | deepseek-flash | — |
+| committer | execution | deepseek-flash | deepseek-flash | — |
+| decision-advisor | judgment | glm-5.3 | deepseek-flash | — |
+| decision-critic | judgment | glm-5.3 | deepseek-flash | — |
+| designer | execution | deepseek-flash | deepseek-flash | vision-capable |
+| doc-syncer | execution | deepseek-flash | deepseek-flash | — |
+| editor | execution | glm-5.3-flash | deepseek-flash | — |
+| external-researcher | execution | deepseek-flash | deepseek-flash | — |
+| fixer | judgment | deepseek-flash | deepseek-flash | — |
+| image-generator | execution | deepseek-flash | deepseek-flash | — |
+| image-reviewer | execution | deepseek-flash | deepseek-flash | vision-capable |
+| meeting-organizer | execution | deepseek-flash | deepseek-flash | — |
+| plan-writer | judgment | glm-5.3 | deepseek-flash | — |
+| pm | judgment | glm-5.3-flash | deepseek-flash | — |
+| pr-manager | execution | deepseek-flash | deepseek-flash | — |
+| readiness-reviewer | judgment | glm-5.3 | deepseek-flash | — |
+| review-feedback-applier | judgment | deepseek-flash | deepseek-flash | — |
+| reviewer | judgment | glm-5.3 | deepseek-flash | — |
+| runner | execution | deepseek-flash | deepseek-flash | — |
+| spec-writer | judgment | deepseek-flash | deepseek-flash | — |
+| test-plan-writer | judgment | deepseek-flash | deepseek-flash | — |
+| toolsmith | judgment | glm-5.3 | deepseek-flash | — |
+
+Base models are written `zai-coding-plan/<model>` or `deepseek/<model>`; paid models `deepseek/<model>`. Every z.ai seat's capability is `text-only`; `vision-capable` appears only where marked, and only on the image-capable paid model, on both profiles. `image-generator` stays `text-only` because it produces images and delegates review to `image-reviewer`. The table is the legacy canonical `mixed.sh` per-agent map: full `glm-5.3` for the seats whose errors multiply through rework, the cheap `glm-5.3-flash` for `pm` and prose, and the paid rail for mechanical and visual work — inside the base, so the base has no text-only vision seat.
+
+### Appendix C — Replay fixture matrix
+
+| Fixture | `now` | Selection | Facts | Declared outcome |
+|---|---|---|---|---|
+| `peak-park.json` | 05:00 UTC | chain `subscription-only` | spend absent, quota clear | Parked: chain park cause `chain-exhausted` with kind `peak-window`, provider park cause `peak-window`, resume 10:00 UTC |
+| `quota-park.json` | 12:00 UTC | chain `subscription-only` | exhausted token limit with a reset | Parked: chain park with kind `quota-exhausted`, provider park cause `quota-exhausted`, resume = reset |
+| `budget-park.json` | 12:00 UTC | chain `subscription-only` | spend at the trailing-day ceiling | Parked: chain park with kind `budget-exhausted`, provider park cause `budget-exhausted`, resume = newest + 86400 s |
+| `subscription-first.json` | 12:00 UTC | default chain | quota clear, spend absent | Selected `zai-coding-plan`; `deepseek` `shadowed` |
+| `paid-fallback.json` | 12:00 UTC | default chain | exhausted subscription quota with a reset | Selected `deepseek` (declared fallback) |
+| `ticket-ceiling.json` | 12:00 UTC | chain `subscription-only` | spend at the ticket ceiling | Exit `1`, `provider.budget.exceeded`, no park |
+
+Every fixture declares `workItemRef`, because the resolved configuration declares enabled budgets; peak-bearing instants are chosen so that only the intended condition is active (spend absent where the peak is the subject, so the budget measures zero and stays clear). Each replay asserts `simulation.stateWrites === 0`.
+
+### Appendix D — Legacy-source scan definition
+
+**Include:** `scripts/**`, `tools/**`, `.opencode/**`, `packages/**`, `tests/**`. **Exclude:** `scripts/hooks/**` (inactive adopter examples), `scripts/.tests/**` (tests of those examples), `tests/fixtures/**` (fixture text is data, not a delivery script), and the scan module itself.
+
+**Forbidden patterns:** (1) sourcing a profiles directory — a `source`/`.` of a path whose segments include `profiles`, in any script or prompt; (2) installing the hook — `cp`, `install`, `tee`, or a redirect writing to a path ending `pre-opencode-iteration`; (3) creating a hooks directory for that purpose; (4) any model literal (`zai-coding-plan/`, `deepseek/`, `glm-`, `deepseek-`) inside `.opencode/agent/**`.
+
+**Allowed by declaration:** invoking an installed hook (`"$HOOK"` / `$ADOS_PRE_ITERATION_HOOK` execution) in the delivered shell fallbacks, and prose references to the paths in documentation — `doc/**` is outside the scan surface because it describes the legacy surface without being on a delivery path.
+
+**Non-vacuity:** the scanner is exported and driven with in-memory planted samples: one per forbidden class must be reported, the allowed invocation line must not be, and an empty include set must fail the test rather than pass it.
+
+### Appendix E — Delivered behaviour this adoption relies on (verified anchors)
+
+- Chain validation and eligibility, the peak and budget no-paid-substitution rules, skip reasons, causes, codes, and exit mapping: `doc/spec/features/feature-provider-engine.md`.
+- Profiles, seats, the preference chain, `peakWindows`, watch targets, selection and eligibility, the env record, and the synchronous probe: `doc/spec/features/feature-provider-profiles.md`.
+- Admission nomination, the four refusal identities, and the pre-session ordering: `doc/spec/features/feature-peak-pausing.md`.
+- Layers, provenance, the prior-identity fallback and its notice, and the CI posture: `doc/spec/features/feature-config-layer.md`, PDR-0006.
+- The budget gate and its ref rule: `feature-provider-engine.md` §Budget ceilings, TDR-0059, TDR-0064.
+- Replay and migration contracts: `feature-provider-engine.md` §CLI surface, TDR-0060, TDR-0061.
+- Operator-facing vocabulary and remedies: `doc/guides/provider-conditions-and-parks.md`.
+- The retired hook's behaviour and knobs: `doc/guides/zai-peak-hours-hook.md` and the legacy files themselves.
+- The nomination and probe implementation read as current truth: `packages/core/src/provider/profile.ts` (selection walks providers), `packages/cli/src/edge.ts` (`createResolvedProviderProbe` reads declared/enabled/entry-peak), `packages/cli/src/production.ts` (`nominateProviderProfile` and the profile-context resolution), `packages/core/src/provider/profile-env-record.ts` (derived record names), `packages/core/src/domain/harness-profile-propagation.ts` (binding and model expressibility).
+
+### Appendix F — Migration evidence summary (pointer only)
+
+The evidence artifact `migration-output.md` in this change folder records: the attempt list, the two `provider.migrate.refused` envelopes, the source inventory (the hook as a symlink with its byte count, the profile files with byte and line counts), the observation that seven of eight profile files source shared tier files, the read-only guarantee, and the owner's disposition. This specification cites it and does not restate its content beyond the two reasons and the disposition.
+
+## 25. DOCUMENT HISTORY
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-11-20 | @spec-writer | Initial specification: the committed policy declaration (two credential references, two entries, one chain with declared paid fallback, two ceilings, two rail profiles with twenty-four seats each, two watch targets); the legacy intent encoded with its daily-window limit; the two recorded migration refusals and the unchanged migrator; the offline proof set (nomination, seats, chain, six replays, reference test, legacy-source scan, credential canary); the documentation obligations; the no-self-dispatch posture and the no-new-decision-record rationale |
+| 1.1 | 2026-11-20 | @spec-writer | PM-decided corrections applied (R1–R5). **R1:** the two disjoint rails become a **mixed base** `delivery` over `[zai-coding-plan, deepseek]` plus a paid fallback `paid` over `[deepseek]`, same twenty-four seats in both, `preferenceChain: { base: delivery, fallbacks: [paid] }` — vision-capable seats stay on the image-capable paid model inside the base (DEC-16). **R2:** the paid entry's peak becomes the single union window `01:00–10:00` with `bufferSeconds: 0`, covering both DeepSeek price windows and the subscription pause; the cost (the only newly closed window is 04:00–06:00) is stated, the former 2x-exposure open question is resolved, and the residual is recorded as OQ-3 (DEC-17). **R3:** both profiles declare the same two rule-data windows with both buffers non-zero (`1800`/`300` and `7200`/`600`) and `graceSeconds: 300`, so the branch satisfies the delivered positive-grace and derived-bound validation (DEC-18). **R4:** the base seat matrix is mapped from the legacy `mixed.sh` (`glm-5.3` × 8, `glm-5.3-flash` for `pm`/`editor`, `deepseek-flash` × 14), `vision-capable` only on the image-capable model for `designer`/`image-reviewer`, pacing split 14 judgment / 10 execution. **R5:** the summary, F-2/F-3/F-4, flows, DM-2…DM-6, DM-9, backward compatibility, NFR-3, risks RSK-1…4 plus RSK-15/16, assumptions A-10/A-11, the open questions, the ACs (new AC-F2-3; AC-F1-2/AC-F3-1/AC-F4-1 rewritten for the chain-park shape), the appendices, the glossary, and the maintenance notes are propagated. Also corrected in the same revision: a parked chain decision is a **chain park** (`chain-exhausted` with contributing kinds), not a provider-cause park (DEC-19), and a never-pay chain `subscription-only` is declared as the parking replays' scope (DEC-3). AC count 14 → 15 |
+| 1.2 | 2026-11-20 | @spec-writer | Legacy-hook facts corrected against the hook source. `ADOS_ZAI_BUFFER_SECONDS` is **900 s** (not 7200); the z.ai and DeepSeek peak conditions are **target-gated**; the DeepSeek windows are 01:00–04:00 and 06:00–10:00 with a **zero** buffer and Chinese-public-holiday exemptions; the z.ai peak is weekday-only via `ADOS_ZAI_WEEKEND_OFF_PEAK=1`; the chain default is `mixed,zai-only,openai,deepseek` and today's persisted target is DeepSeek, so the legacy pause already covers 01:00–04:00. The union window's real incremental cost is therefore **exactly 04:00–06:00 UTC daily**, and every claim that the legacy hook left 01:00–04:00 open to z.ai, or that the union extends the legacy pause by hours, is removed from §1, F-3, OQ-3, RSK-3, DEC-17, the authoring guideline, and this history. DEC-8 now separates the declared 7200-second buffer from the legacy 900; the weekend superset statement names the Chinese-public-holiday exemption. No declared value (DM-2/DM-3/DM-4/DM-5), AC assertion, or chain/profile structure changes |
+
+---
+
+## AUTHORING GUIDELINES
+
+- Authored from the GH-374 ticket body, the owner's binding comment of 2026-11-20, the planning-session notes (`chg-GH-374-pm-notes.yaml`), the implementation evidence already captured in `migration-output.md`, and the delivered contracts and guides named in Appendix E. No engine behaviour is invented: every claim about resolution, eligibility, admission, budgets, watch, replay, and migration is read from the delivered specification pages and the delivered code named in Appendix E.
+- The owner's disposition is binding: the migrator is not extended, the policy is authored declaratively, the hook is retired rather than migrated, and the two refusals are recorded as evidence. M4-S17 owns the migrator gaps and is named rather than absorbed.
+- Where the planning notes and the delivered code disagree, the code wins and the disagreement is recorded: the notes assumed profile peak windows gate admission; `selectProfile` and the resolved probe do not, so the declaration gates admission with the entry peaks, the profile windows are declared as watcher rule data, and OQ-1 names the files and the behaviour.
+- The PM's revision corrections (R1–R5) are applied as decided and recorded as DEC-16…DEC-19, not re-argued. Two of them answer defects the first draft would have shipped: a profile-window declaration whose zero `bufferAfterSeconds` made the derived grace bound 0 and the branch unloadable (DEC-18), and a disjoint-rail base that made both visual seats text-only on the rail selected almost all day (DEC-16).
+- Where a correction changes a payload the acceptance criteria describe, the criteria follow the delivered code rather than the earlier wording: a fully parked chain is a chain park with cause `chain-exhausted` and contributing kinds, not a provider-cause park (DEC-19).
+- The two decisions that will cost the operator something are stated as costs, not buried: the union window closes the 04:00–06:00 UTC gap the legacy DeepSeek target leaves open (the other paused windows were already paused), and the adopted daily windows also pause weekend mornings and Chinese public holidays the legacy rules exempted; and the per-ticket ceiling stops work rather than parking it. DEC-9, DEC-10, and DEC-17 carry them, and the acceptance criteria and guide obligations repeat them where an operator meets them.
+- `envName` is decided against a literal reading of the ticket task (DEC-7) because the ticket also forbids a second policy authority and the repository forbids a committed product name; the record-level requirement is met by derivation, and the reasoning is stated.
+- No decision record is authored (DEC log preamble) because PDR-0006 and the TDRs already fix every architectural point this adoption touches; the reservation is declared and left unused unless a genuine decision emerges.
+- Scope discipline: this specification states configuration contracts, behaviour, matrices, and acceptance only. The full YAML, the phase boundaries, and the exact test cases belong to the plan and the test plan.
+
+## VALIDATION CHECKLIST
+
+- [x] `change.ref` matches the provided `workItemRef` (GH-374)
+- [x] `owners` has at least one entry
+- [x] `status` is "Proposed"
+- [x] `change.milestone` equals the pm-notes milestone verbatim ("M4: Jaiship-native delivery")
+- [x] All sections present in order (1–25 plus authoring guidelines and this checklist)
+- [x] ID prefixes consistent and unique (`F-`, `DM-`, `NFR-`, `AC-`, `RSK-`, `OQ-`, `DEC-`, `A-`)
+- [x] Every acceptance criterion references at least one `F-`/`DM-`/`NFR-` and uses Given/When/Then
+- [x] Every `F-` capability is exercised by at least one acceptance criterion; every `NFR-` is bound to at least one
+- [x] NFRs are quantified
+- [x] Risks include impact, probability, mitigation, and residual risk
+- [x] Open questions are non-blocking, with reason, owner, and trigger
+- [x] No implementation task, file-content edit, commit instruction, or merge-request template appears
+- [x] No engine behaviour beyond the delivered contracts is claimed (entry-peak admission, chain-park shape, grace/buffer validation, profile eligibility); the one admission-gating disagreement found is recorded as OQ-1 with its files
+- [x] The declared costs and divergences are stated (the 01:00–10:00 admission pause whose only newly closed window is 04:00–06:00, the weekend and Chinese-holiday pause, the ticket stop, paid-fallback reachability, the synchronous-probe limit)
+- [x] The legacy hook is described as the source actually implements it: 900-second z.ai pre-peak buffer, target-gated z.ai and DeepSeek conditions, DeepSeek windows 01:00–04:00 and 06:00–10:00 at zero buffer with Chinese-public-holiday exemptions, weekend off-peak for z.ai, `mixed,zai-only,openai,deepseek` chain default, and today's DeepSeek target (no over-stated extension claim survives)
+- [x] Every declared profile window carries both buffers non-zero with `graceSeconds` at or below the derived bound, so the branch loads (DEC-18, RSK-15)
+- [x] No base-rail seat declares `vision-capable` on a text-only model; both visual seats ride the image-capable paid model on both profiles (DEC-16, AC-F2-3)
+- [x] A fully parked chain is described as a chain park (`chain-exhausted` with contributing kinds) beside the provider parks, not as a provider-cause park (DEC-19)
+- [x] AC count is 15, with every `F-`, `DM-`, and `NFR-` id linked from at least one criterion and every `F-` exercised
