@@ -7,9 +7,9 @@ milestone: "M4: Jaiship-native delivery"
 # when it is absent. Authored here so this change is mergeable by its own contract.
 branch: fix/GH-366/merge-command-conformance
 phases:
-  clarify_scope: { started: 2026-11-20T11:45:00.000Z, completed: 2026-11-20T10:47:14.870Z }
-  specification: { started: null, completed: 2026-11-20T11:03:58.721Z }
-  test_planning: { started: null, completed: 2026-11-20T11:04:06.265Z }
+  clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
+  specification: { started: null, completed: 2026-11-20T11:58:54.486Z }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-20T11:21:55.123Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -56,6 +56,33 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR gate iteration 1: NOT_READY — 22 findings (3 critical, 10 major, 7
+      minor, 2 nit), 9 facets FAIL / 1 PASS (`decision_capture`), pause not
+      required. Record: `readiness-review/readiness-iter-1.md`. The three
+      blockers: (1) the `branch` declaration is read from `${cwd}/doc/changes`,
+      so from the integration-base checkout the change folder does not exist and
+      the owner's AC 1 scenario can only refuse — the primary capability is
+      unreachable by the specified mechanism; (2) the identity arithmetic `167
+      -> 170` is stale because `origin/main-tools` already carries GH-350 and is
+      at 170/170/169/68/+136, so the move must be restated against the synced
+      base; (3) AC-F4-1 and its cases assert behaviour already green at HEAD, so
+      the runtime-declaration deliverable has no oracle. Reopening
+      `specification`, then `test_planning`, then `delivery_planning`; the
+      branch is synced with `origin/main-tools` first so the counts are authored
+      against the real base. TDR-0071 and TDR-0072 are amended while still
+      `Proposed`."
+    type: retro
+    date: "2026-11-20"
+  - text: "Housekeeping (PM, phase-neutral): the `clarify_scope.started` value in
+      this document was authored by hand at intake as a local-clock placeholder
+      (11:45:00Z) while the ledger's first transition, written by the `phase`
+      command, records 10:47:14.870Z — so the mirror showed a start later than
+      its own completion. The mirror is a projection of the fold, so `started`
+      is corrected to the fold's own value. No transition, commit, or evidence
+      value is affected; only a placeholder this document introduced is
+      removed."
+    type: info
+    date: "2026-11-20"
   - text: "Delivery planning (phase 4): chg-GH-366-plan.yaml authored and validated
       — `plan validate` verdict=valid, tier=full, readyForDevelopment=true;
       `lint plan` valid. Seven phases (1 planning: the three reserved decision
