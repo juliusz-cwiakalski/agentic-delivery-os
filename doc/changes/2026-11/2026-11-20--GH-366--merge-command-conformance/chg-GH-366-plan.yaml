@@ -228,7 +228,8 @@
 #     `phase complete` write in `tests/behaviour/phase-completion-convergence.test.ts`
 #     plus its support fixtures.
 #
-# IDENTITIES AND COUNTS (NFR-8, spec v2.1). The base is `origin/main-tools` at
+# IDENTITIES AND COUNTS (NFR-8, spec v2.2 — unchanged by the two-read ruling). The
+# base is `origin/main-tools` at
 # `e1ebc76c` (GH-350 merged): **170** machine entries / **170** documented rows /
 # **169** delivered rows / **68** two-segment allowlist members / arithmetic
 # `BASELINE_ROWS.length + 136`, with the `merge` kind at **9** concrete rows. This
