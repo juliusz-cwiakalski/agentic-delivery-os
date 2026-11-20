@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-20T02:03:54.884Z }
   quality_gates: { started: null, completed: 2026-11-20T03:00:48.577Z }
   dod_check: { started: null, completed: 2026-11-20T03:00:57.865Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-20T03:03:01.893Z }
 decisions:
   - text: "PM-decided (sync 2026-11-20): the branch is merged with `main-tools` at
       ccc83383 (GH-348, loop supervision), merge commit 00d1d72a. Upstream
@@ -67,6 +67,14 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/373 —
+      base `main-tools`, head `af7d354c`, 28 commits, open, not draft, linked to
+      #354 and the M4 milestone. TDR-0058 remains `Proposed`: owner acceptance
+      is requested as part of this review; AI does not accept it. Merge
+      authority is the CEO (Mode A) or the human (Mode B) — the PM does not
+      merge."
+    type: info
+    date: "2026-11-20"
   - text: "Quality gates: PASS. `pnpm check` exit 0 on 95f96462 — 11,876 pass, 4
       skip, 0 fail (11,880 tests across 1,459 files; tests 1,157 s), with
       boundaries, memory, prompt-conformance, help-guide-coverage and
