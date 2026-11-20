@@ -112,17 +112,28 @@ export const watchProviders = [
     condition: "clear",
     source: "weekly 61%, rolling 12%",
     checkedAt: "2023-11-14T22:13:20.000Z",
+    // Live-read semantics (GH-350 F-7): the observation instant is the read
+    // instant, so the age is zero and the effective bound is the default.
+    observedAt: "2023-11-14T22:13:20.000Z",
+    ageSeconds: 0,
+    maxAgeSeconds: 900,
   },
   {
     name: "deepseek",
     condition: "clear",
     source: "balance 12.50 vs floor 5.00",
     checkedAt: "2023-11-14T22:13:20.000Z",
+    observedAt: "2023-11-14T22:13:20.000Z",
+    ageSeconds: 0,
+    maxAgeSeconds: 900,
   },
   {
     name: "openai",
     condition: "quota-exhausted",
     source: "5h 100%, weekly 61%",
     checkedAt: "2023-11-14T22:13:20.000Z",
+    observedAt: "2023-11-14T22:13:20.000Z",
+    ageSeconds: 0,
+    maxAgeSeconds: 900,
   },
 ] as const;

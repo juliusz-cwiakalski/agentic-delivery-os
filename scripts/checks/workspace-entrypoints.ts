@@ -21,6 +21,7 @@ const ADAPTER_SUBPATHS = [
   "./legacy",
   "./credentials",
   "./provider-quota",
+  "./time-zone",
   "./git",
   "./daemon",
 ];

@@ -6,14 +6,17 @@
  * delivered provider-profiles loader, the grace maximum is derived data on the
  * parsed value (never a downstream clamp), validation is fail-closed and
  * classified naming the offending field, and the schema stays data-only.
- * The OQ-TP-1/OQ-TP-2 pins ride this suite: a non-UTC zone literal refuses,
- * an exact-duplicate window refuses, distinct overlaps validate without
+ * GH-350 widens the zone grammar: `UTC`/`Etc/UTC` and IANA names validate,
+ * a malformed literal refuses naming the field, and existence is an edge
+ * decision (the runtime-unknown refusal lives in the composed zone suite). An
+ * exact-duplicate window refuses, distinct overlaps validate without
  * arbitration.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
+import { parseProfilePeakWindows as parseProfilePeakWindowsForTest } from "../../packages/core/src/provider/peak-rules";
 import {
   type ProviderConfiguration,
   parseAndValidateProfileConfiguration,
@@ -315,19 +318,43 @@ describe("TC-PAUSE-011 fail-closed validation refuses malformed rule declaration
     );
   });
 
-  test("OQ-TP-1: a non-UTC zone literal refuses naming the timezone field", () => {
-    expectRefusal(
-      branchWithProfile({
+  test("GH-350: the zone grammar accepts UTC/Etc/UTC and IANA names and refuses malformed literals by field", () => {
+    for (const timezone of [
+      "UTC",
+      "Etc/UTC",
+      "Europe/Berlin",
+      "America/New_York",
+      "Australia/Sydney",
+    ]) {
+      const parsed = parseProfilePeakWindowsForTest({
         graceSeconds: 60,
-        windows: [window({ timezone: "America/New_York" })],
-      }),
-      "peakWindows.windows[0].timezone",
-    );
-    const error = refusalOf(
-      branchWithProfile({ graceSeconds: 60, windows: [window({ timezone: "Europe/Warsaw" })] }),
-    );
-    expect(error.detail).toContain("Europe/Warsaw");
-    expect(error.detail).toContain("UTC");
+        windows: [window({ timezone })],
+      });
+      expect(parsed.ok, timezone).toBe(true);
+      if (parsed.ok)
+        expect(parsed.rules.windows[0]?.timezone).toBe(timezone === "Etc/UTC" ? "UTC" : timezone);
+    }
+    for (const timezone of [
+      "",
+      "1UTC",
+      "-UTC",
+      "Europe/",
+      "Europe//Berlin",
+      "../Europe/Berlin",
+      "A".repeat(65),
+    ]) {
+      expectRefusal(
+        branchWithProfile({ graceSeconds: 60, windows: [window({ timezone })] }),
+        "peakWindows.windows[0].timezone",
+      );
+    }
+    // A grammar-valid but runtime-unknown name validates here: existence is
+    // decided only at the composition edge (TC-ZONE-003).
+    const unknown = parseProfilePeakWindowsForTest({
+      graceSeconds: 60,
+      windows: [window({ timezone: "Mars/Olympus" })],
+    });
+    expect(unknown.ok).toBe(true);
   });
 
   test("OQ-TP-2: an exact-duplicate window (same start AND end) refuses as ambiguous", () => {

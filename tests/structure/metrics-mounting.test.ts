@@ -34,33 +34,35 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-METRICS-080 metrics is the twenty-fourth prompt-required family", () => {
-  test("the captured base holds 23 entries with steer last, metrics mounts at 24 of 27", () => {
+  test("the captured base holds 23 entries with steer last, metrics mounts at 23 of 28", () => {
     expect([...DELIVERED_FAMILIES].length).toBe(23);
     expect(DELIVERED_FAMILIES.at(-1)).toBe("steer");
     expect(METRICS_MOUNTED_FAMILIES).toHaveLength(24);
-    expect(MOUNTED_FAMILIES).toHaveLength(27);
+    expect(MOUNTED_FAMILIES).toHaveLength(28);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "metrics")).toHaveLength(1);
     expect(PROMPT_REQUIRED_COMMANDS[23]).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
   });
 
-  test("root --help lists metrics at index 23 and loop last among 27 families", () => {
+  test("root --help lists metrics at index 23, install third-from-last, loop penultimate, and provider last among 28 families", () => {
     const families = familyLines(renderRootHelp(SYNTHETIC_BRAND));
-    expect(families).toHaveLength(27);
+    expect(families).toHaveLength(28);
     expect(families[23]?.trimStart().startsWith("metrics  ")).toBe(true);
-    expect(families.at(-3)?.trimStart().startsWith("supervise  ")).toBe(true);
-    expect(families.at(-2)?.trimStart().startsWith("install  ")).toBe(true);
-    expect(families.at(-1)?.trimStart().startsWith("loop  ")).toBe(true);
+    expect(families.at(-4)?.trimStart().startsWith("supervise  ")).toBe(true);
+    expect(families.at(-3)?.trimStart().startsWith("install  ")).toBe(true);
+    expect(families.at(-2)?.trimStart().startsWith("loop  ")).toBe(true);
+    expect(families.at(-1)?.trimStart().startsWith("provider  ")).toBe(true);
     for (const family of DELIVERED_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every pinning file reads 27 and no stale 23, 24, 25, or 26 survives outside the declared residual", () => {
+  test("every pinning file reads 28 and no stale 23, 24, 25, 26, or 27 survives outside the declared residual", () => {
     const failures: string[] = [];
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
@@ -68,11 +70,11 @@ describe("TC-METRICS-080 metrics is the twenty-fourth prompt-required family", (
         .split("\n")
         .filter((line) => !line.includes("BASE_FAMILIES") && !line.includes("MOUNTED_FAMILIES"))
         .join("\n");
-      if (/toHaveLength\(2[3456]\)/u.test(withoutMountingFixture)) {
-        failures.push(`${file}: stale family-count pin 23, 24, 25, or 26`);
+      if (/toHaveLength\(2[34567]\)/u.test(withoutMountingFixture)) {
+        failures.push(`${file}: stale family-count pin 23, 24, 25, 26, or 27`);
       }
-      if (!/toHaveLength\(27\)|\.toBe\(\s*27\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 27`);
+      if (!/toHaveLength\(28\)|\.toBe\(\s*28\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 28`);
       }
     }
     expect(failures).toEqual([]);
@@ -131,7 +133,8 @@ describe("TC-METRICS-083 mounting changes no other family", () => {
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
     expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
-    expect(families.at(-1)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
   });
 
   test("the delivered families' help text carries no metrics line", () => {

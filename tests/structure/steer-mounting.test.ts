@@ -43,43 +43,45 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-STEER-060 steer is the twenty-third prompt-required family", () => {
-  test("the mounted set is the one captured 23-entry base plus metrics, supervise, and install, exact equality", () => {
+  test("the mounted set is the one captured 23-entry base plus metrics, supervise, install, loop, and provider, exact equality", () => {
     // F-13: the steer case points at the same captured base the supervision
     // case uses, so one captured list backs every family pin and the strongest
     // assertion (exact set equality) is restored.
     expect(BASE_FAMILIES).toHaveLength(23);
     expect(STEER_MOUNTED_FAMILIES).toEqual([...BASE_FAMILIES.slice(0, 22), "steer"]);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(27);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "steer")).toHaveLength(1);
     expect(PROMPT_REQUIRED_COMMANDS[22]).toBe("steer");
     expect(PROMPT_REQUIRED_COMMANDS[23]).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("metrics");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
   });
 
-  test("root --help lists steer at index 22, metrics at 23, and loop last among 27 family lines", () => {
+  test("root --help lists steer at index 22, metrics at 23, install third-from-last, loop penultimate, and provider last among 28 family lines", () => {
     const help = renderRootHelp(SYNTHETIC_BRAND);
     const families = familyLines(help);
-    expect(families).toHaveLength(27);
+    expect(families).toHaveLength(28);
     expect(families[22]?.trimStart().startsWith("steer  ")).toBe(true);
     expect(families[23]?.trimStart().startsWith("metrics  ")).toBe(true);
-    expect(families.at(-3)?.trimStart().startsWith("supervise  ")).toBe(true);
-    expect(families.at(-2)?.trimStart().startsWith("install  ")).toBe(true);
-    expect(families.at(-1)?.trimStart().startsWith("loop  ")).toBe(true);
+    expect(families.at(-4)?.trimStart().startsWith("supervise  ")).toBe(true);
+    expect(families.at(-3)?.trimStart().startsWith("install  ")).toBe(true);
+    expect(families.at(-2)?.trimStart().startsWith("loop  ")).toBe(true);
+    expect(families.at(-1)?.trimStart().startsWith("provider  ")).toBe(true);
     for (const family of BASE_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every family-count pin reads 27 and no stale 22..26 remains outside the declared residual", () => {
+  test("every family-count pin reads 28 and no stale 22..27 remains outside the declared residual", () => {
     const failures: string[] = [];
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
       // The captured base constants are the one permitted statement of the
-      // pre-change counts; every other pin must read 27.
+      // pre-change counts; every other pin must read 28.
       const pins = text
         .split("\n")
         .filter(
@@ -89,13 +91,13 @@ describe("TC-STEER-060 steer is the twenty-third prompt-required family", () => 
             !line.includes("STEER_MOUNTED_FAMILIES"),
         )
         .join("\n");
-      for (const staleCount of [23, 24, 25, 26]) {
+      for (const staleCount of [23, 24, 25, 26, 27]) {
         if (pins.includes(`toHaveLength(${String(staleCount)})`)) {
           failures.push(`${file}: stale family-count pin ${String(staleCount)}`);
         }
       }
-      if (!/toHaveLength\(27\)|\.toBe\(\s*27\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 27`);
+      if (!/toHaveLength\(28\)|\.toBe\(\s*28\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 28`);
       }
     }
     expect(failures).toEqual([]);
@@ -142,7 +144,8 @@ describe("TC-STEER-063 the mount changes no other family", () => {
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
     expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
-    expect(families.at(-1)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
   });
 
   test("the delivered families' help text carries no steering line", () => {

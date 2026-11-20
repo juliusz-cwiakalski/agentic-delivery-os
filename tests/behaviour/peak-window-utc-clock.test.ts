@@ -1,20 +1,19 @@
 /**
- * TC-PAUSE-090 — UTC-only window evaluation on the injected clock, TZ-
- * independent (GH-294 F-2, F-3; NFR-3, DEC-1; OQ-TP-1 evaluation half).
+ * TC-PAUSE-090 — UTC window evaluation on the injected clock, TZ-independent
+ * (GH-294 F-2, F-3; NFR-3, DEC-1; GH-350 F-1 extends the basis).
  *
- * The boundary matrix flips exactly at the declared UTC instants — start
- * minus the buffer opens the window, the effective end closes it — and a
- * DST-observing zone crossing the window evaluates identically to the UTC
- * baseline: the zone declaration never moves an instant. No wall-clock read
- * participates (the injected clock's sleep counter stays zero), and a declared
- * non-UTC zone literal keeps the evaluation instants on the UTC basis (the
- * literal itself is refused at validation, TC-PAUSE-011).
+ * The boundary matrix flips exactly at the declared UTC instants — start minus
+ * the buffer opens the window, the effective end closes it. No wall-clock read
+ * participates (the injected clock's sleep counter stays zero). A non-UTC
+ * declaration now validates into the declared grammar and its evaluation arms
+ * live in the GH-350 zone suite; the UTC matrix here stays byte-identical.
  */
 import { describe, expect, test } from "bun:test";
 import { decidePeakStops } from "../../packages/core/src/domain/index";
 import {
   peakWindowEndSeconds,
   peakWindowOpenSeconds,
+  UTC_ZONE_FACTS,
   utcSecondsOfDay,
 } from "../../packages/core/src/provider/peak";
 import { parseProfilePeakWindows } from "../../packages/core/src/provider/peak-rules";
@@ -64,6 +63,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const before = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: day + (openSecond - 1) * 1_000,
       parkedRefs: [],
       newEpisodeId: () => "e0",
@@ -73,6 +74,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const atOpen = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: day + openSecond * 1_000,
       parkedRefs: [],
       newEpisodeId: () => "e1",
@@ -82,6 +85,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const atEnd = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: day + endSecond * 1_000,
       parkedRefs: [],
       newEpisodeId: () => "e2",
@@ -91,6 +96,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const beforeEnd = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: day + (endSecond - 1) * 1_000,
       parkedRefs: [],
       newEpisodeId: () => "e3",
@@ -109,6 +116,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const decemberDecision = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: december,
       parkedRefs: [],
       newEpisodeId: () => "e-dst-1",
@@ -116,6 +125,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const julyDecision = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: july,
       parkedRefs: [],
       newEpisodeId: () => "e-dst-2",
@@ -132,6 +143,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const decisions = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: injected.nowMs(),
       parkedRefs: [],
       newEpisodeId: () => "e-sleep",
@@ -145,6 +158,8 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     const again = decidePeakStops({
       lanes: [lane],
       rulesFor: () => rules,
+
+      zoneFactsFor: () => UTC_ZONE_FACTS,
       nowMs: injected.nowMs(),
       parkedRefs: [],
       newEpisodeId: () => "e-sleep-2",
@@ -152,27 +167,25 @@ describe("TC-PAUSE-090 the UTC boundary matrix flips exactly at the declared ins
     expect(again).toHaveLength(1);
   });
 
-  test("OQ-TP-1 evaluation half: a declared non-UTC zone literal keeps the evaluation instants UTC", () => {
-    // The literal itself refuses at validation (TC-PAUSE-011); the evaluation
-    // half asserts that even the attempt cannot move an instant off UTC: the
-    // schema's parsed windows carry only the UTC designation, and the second-
-    // of-day bounds are UTC arithmetic.
-    const refused = parseProfilePeakWindows({
+  test("a non-UTC zone literal now validates into the declared grammar (its evaluation arms live in the zone suite)", () => {
+    // GH-350 widens the basis: the old UTC-only refusal retires, and the
+    // non-UTC evaluation is asserted by TC-ZONE-001..011 in the zone suite.
+    const zone = parseProfilePeakWindows({
       graceSeconds: 60,
       windows: [{ ...WINDOW, timezone: "America/New_York" }],
     });
-    expect(refused.ok).toBe(false);
-    // The only designation that validates is UTC, so every evaluated window
-    // is a UTC window by construction.
-    const parsed = parseProfilePeakWindows({ graceSeconds: 60, windows: [{ ...WINDOW }] });
-    expect(parsed.ok).toBe(true);
-    if (!parsed.ok) return;
-    for (const window of parsed.rules.windows) expect(window.timezone).toBe("UTC");
-    // The bounds are pure UTC second-of-day arithmetic.
+    expect(zone.ok).toBe(true);
+    if (zone.ok) expect(zone.rules.windows[0]?.timezone).toBe("America/New_York");
+    // A UTC declaration still resolves to the definitional facts and the same
+    // seconds-of-day bounds.
+    const utc = parseProfilePeakWindows({ graceSeconds: 60, windows: [{ ...WINDOW }] });
+    expect(utc.ok).toBe(true);
+    if (!utc.ok) return;
+    expect(utc.rules.windows[0]?.timezone).toBe("UTC");
     expect(
       peakWindowOpenSeconds({
-        startSecondsOfDay: parsed.rules.windows[0]?.startSecondsOfDay ?? 0,
-        bufferBeforeSeconds: parsed.rules.windows[0]?.bufferBeforeSeconds ?? 0,
+        startSecondsOfDay: utc.rules.windows[0]?.startSecondsOfDay ?? 0,
+        bufferBeforeSeconds: utc.rules.windows[0]?.bufferBeforeSeconds ?? 0,
       }),
     ).toBe(60_900);
   });

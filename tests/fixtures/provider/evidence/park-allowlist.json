@@ -7,6 +7,12 @@
     "resetEpochMs",
     "httpStatus",
     "failureClass",
-    "credentialRefName"
+    "credentialRefName",
+    "timezone",
+    "budgetName",
+    "budgetScope",
+    "budgetBasis",
+    "budgetMeasured",
+    "budgetCeiling"
   ]
 }

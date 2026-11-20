@@ -335,6 +335,24 @@
       "text": "install.purge.unconfirmed",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "provider-peak-zone-unknown",
+      "text": "provider.peak.zone-unknown",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "provider-budget-exceeded",
+      "text": "provider.budget.exceeded",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "provider-migrate-refused",
+      "text": "provider.migrate.refused",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

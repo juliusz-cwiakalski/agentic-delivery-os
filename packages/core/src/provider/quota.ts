@@ -214,6 +214,11 @@ export type ProviderWatchStatusInput = {
   readonly targets: Readonly<Record<string, ProviderWatchTarget>>;
   readonly credentials: ProviderConfiguration["credentials"];
   readonly providerName?: string;
+  /**
+   * The observation instant the readings stand for (GH-350 F-7). Absent means
+   * the read instant, which is what the live composition supplies.
+   */
+  readonly observedAtMs?: number;
 };
 
 export type ProviderWatchStatusResult =
@@ -223,6 +228,53 @@ export type ProviderWatchStatusResult =
 export type ProviderWatchStatusReader = {
   readonly status: (input: ProviderWatchStatusInput) => Promise<ProviderWatchStatusResult>;
 };
+
+/** The declared default observation bound, applied policy-side (GH-350 F-7). */
+export const PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS = 900 as const;
+
+/**
+ * The one freshness predicate's age input (GH-350 F-7, DM-8): whole seconds
+ * between the injected clock and the supplied observation instant, floored and
+ * clamped at zero so an observation from the future is fresh rather than
+ * negative.
+ */
+export const watchObservationAgeSeconds = (input: {
+  readonly nowMs: number;
+  readonly observedAtMs: number;
+}): number => Math.max(0, Math.floor((input.nowMs - input.observedAtMs) / 1_000));
+
+/** Stale exactly at the bound: the first stale value is `maxAgeSeconds`. */
+export const isWatchObservationStale = (input: {
+  readonly ageSeconds: number;
+  readonly maxAgeSeconds: number;
+}): boolean => input.ageSeconds >= input.maxAgeSeconds;
+
+/**
+ * The evidence-bounded park rule (GH-350 F-7, AC-F7-3): a park derived from an
+ * observation expires no later than `observedAt + maxAgeSeconds * 1000`, and
+ * when that instant is not strictly in the future no park is created at all.
+ *
+ * This rule has no production consumer today, and that is deliberate: the
+ * watch reader is read-only (`provider watch status` writes nothing), so no
+ * surface currently derives a park from a watch observation. It is retained as
+ * the declared rule a future watch-park path must satisfy — the freshness
+ * predicate (`isWatchObservationStale`) is the gate that makes the bound
+ * meaningful, and the phase-7 suite exercises the clamp directly — rather than
+ * deleting the only statement of the property.
+ */
+export const clampWatchParkExpiry = (input: {
+  readonly naturalExpiryMs: number;
+  readonly observedAtMs: number;
+  readonly maxAgeSeconds: number;
+  readonly nowMs: number;
+}): number | undefined => {
+  const bound = input.observedAtMs + input.maxAgeSeconds * 1_000;
+  const expiresAtMs = Math.min(input.naturalExpiryMs, bound);
+  return expiresAtMs > input.nowMs ? expiresAtMs : undefined;
+};
+
+const watchStaleSource = (observedAt: string, maxAgeSeconds: number): string =>
+  `observed at ${observedAt}; max age ${maxAgeSeconds}s`;
 
 const conditionForFailure = (normalization: ProviderWatchNormalization): string => {
   if (normalization.status === "parked") return normalization.condition;
@@ -274,12 +326,39 @@ export const createProviderWatchStatus = (
       names.length = 0;
       names.push(input.providerName);
     }
+    for (const name of names) {
+      const declared = input.targets[name]?.maxAgeSeconds;
+      if (declared !== undefined && (!Number.isInteger(declared) || declared <= 0)) {
+        return {
+          ok: false,
+          code: "config.value.invalid",
+          summary: `provider.profiles.watch.${name}.maxAgeSeconds must be a positive integer`,
+        };
+      }
+    }
     const nowMs = runtime.clock.nowMs();
     const checkedAt = formatUtcIso(nowMs);
+    const observedAtMs = input.observedAtMs ?? nowMs;
+    const observedAt = formatUtcIso(observedAtMs);
+    const ageSeconds = watchObservationAgeSeconds({ nowMs, observedAtMs });
     const providers: ProviderWatchConditionView[] = [];
     for (const name of names) {
       const target = input.targets[name];
       if (target === undefined) continue;
+      const maxAgeSeconds = target.maxAgeSeconds ?? PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS;
+      const observation = { observedAt, ageSeconds, maxAgeSeconds };
+      if (isWatchObservationStale({ ageSeconds, maxAgeSeconds })) {
+        // A stale reading has evidence; it is never probed, never coerced to
+        // clear, and never reported as an outage.
+        providers.push({
+          name,
+          condition: "watch-stale",
+          source: watchStaleSource(observedAt, maxAgeSeconds),
+          checkedAt,
+          ...observation,
+        });
+        continue;
+      }
       const reference = credentialReference(input.credentials, target.credentialRef);
       if (reference === undefined) {
         providers.push({
@@ -287,6 +366,7 @@ export const createProviderWatchStatus = (
           condition: "credential-missing",
           source: `credential ${target.credentialRef} is not declared`,
           checkedAt,
+          ...observation,
         });
         continue;
       }
@@ -297,6 +377,7 @@ export const createProviderWatchStatus = (
           condition: "credential-missing",
           source: `credential ${target.credentialRef} did not resolve`,
           checkedAt,
+          ...observation,
         });
         continue;
       }
@@ -314,6 +395,7 @@ export const createProviderWatchStatus = (
           condition: "provider-outage",
           source: "transport failure",
           checkedAt,
+          ...observation,
         });
         continue;
       }
@@ -329,9 +411,10 @@ export const createProviderWatchStatus = (
       });
       providers.push({
         name,
-        condition: conditionForFailure(normalization),
+        condition: conditionForFailure(normalization) as ProviderWatchConditionView["condition"],
         source: summaryForFailure(normalization),
         checkedAt,
+        ...observation,
       });
     }
     return { ok: true, providers };

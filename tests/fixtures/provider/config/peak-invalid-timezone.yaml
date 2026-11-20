@@ -3,7 +3,7 @@ provider:
     bad:
       class: subscription
       peak:
-        timezone: Europe/Warsaw
+        timezone: Mars/Olympus
         startSecondsOfDay: 3600
         endSecondsOfDay: 7200
   chains:

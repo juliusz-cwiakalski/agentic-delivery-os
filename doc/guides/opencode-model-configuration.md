@@ -229,6 +229,10 @@ ADOS agents have different complexity levels. Match model capability to task:
 | **Light** | `external-researcher` | Grok Code Fast 1 |
 | **Trivial** | `runner` | Free models (GPT-5 mini, GPT-4o) |
 
+### Provider and model policy
+
+Model *assignment* stays in the OpenCode configuration described in this guide. Provider and model *policy* — which provider may serve a spawn, its cost class, declared-zone peak windows, subscription quota, spend ceilings, model profiles, and watch freshness — is declared in the tool's typed `provider` and `provider.profiles` branches. The typed profile branch is the canonical path for routing: `provider profile resolve` answers which model a seat receives, and the per-agent assignments above remain the harness-level override. See the [provider engine](../spec/features/feature-provider-engine.md) and [provider profiles](../spec/features/feature-provider-profiles.md) specifications, and the [provider conditions and parks guide](provider-conditions-and-parks.md).
+
 ### Agent-to-Agent Communication
 
 Changing one agent's output format may break another agent that consumes it. When changing models:

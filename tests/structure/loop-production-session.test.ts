@@ -95,10 +95,11 @@ const invokeLoop = async (input: {
 };
 
 describe("the inventory repin makes loop prompt-required", () => {
-  test("the prompt-required set is 27 with loop last and install immediately before it", () => {
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(27);
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("loop");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("install");
+  test("the prompt-required set is 28 with loop 27th, provider last, and install immediately before loop", () => {
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(28);
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
   });
 });
 

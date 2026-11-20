@@ -74,6 +74,10 @@
     "./daemon": {
       "types": "./dist/daemon/index.d.ts",
       "default": "./dist/daemon/index.js"
+    },
+    "./time-zone": {
+      "types": "./dist/time-zone/index.d.ts",
+      "default": "./dist/time-zone/index.js"
     }
   },
   "imports": {

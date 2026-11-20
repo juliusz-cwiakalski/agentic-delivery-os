@@ -12,10 +12,16 @@ import {
   type PacingClass,
   type PacingGoalPriority,
   PROFILE_CAPABILITIES,
+  PROVIDER_BUDGET_BASES,
+  PROVIDER_BUDGET_SCOPES,
   PROVIDER_COST_CLASSES,
+  PROVIDER_DEFAULT_ZONE,
   PROVIDER_QUOTA_DEFAULTS,
   PROVIDER_WATCH_MAPPING_KINDS,
   type ProfileCapability,
+  type ProviderBudgetBasis,
+  type ProviderBudgetDeclaration,
+  type ProviderBudgetScope,
   type ProviderChain,
   type ProviderConfiguration,
   type ProviderCredentialDeclaration,
@@ -34,6 +40,7 @@ import {
   type ProviderWatchMappingKind,
   type ProviderWatchTarget,
 } from "#contracts";
+import { isZoneNameGrammar, normaliseZoneName } from "./peak.js";
 import { parseProfilePeakWindows } from "./peak-rules.js";
 
 export type ProviderValidationError = {
@@ -87,8 +94,9 @@ const string = (value: unknown): string | undefined =>
 
 const parsePeak = (value: unknown): ProviderPeakWindow | string => {
   if (!isRecord(value)) return "peak";
-  const timezone = value.timezone === undefined ? "UTC" : value.timezone;
-  if (timezone !== "UTC") return "peak.timezone";
+  const rawTimezone = value.timezone === undefined ? PROVIDER_DEFAULT_ZONE : value.timezone;
+  if (!isZoneNameGrammar(rawTimezone)) return "peak.timezone";
+  const timezone = normaliseZoneName(rawTimezone);
   const start = integer(value.startSecondsOfDay);
   const end = integer(value.endSecondsOfDay);
   const buffer = integer(value.bufferSeconds, 0);
@@ -220,6 +228,91 @@ const parseChain = (name: string, value: unknown): ProviderChain | string => {
   return { name, entries: names, allowPaidFallback };
 };
 
+const PROVIDER_BUDGET_KEYS = [
+  "enabled",
+  "scope",
+  "basis",
+  "ceiling",
+  "windowSeconds",
+  "entries",
+] as const;
+
+/**
+ * Parse and semantically validate the declared `provider.budgets` record map
+ * (GH-350 F-2, DM-2, AC-F2-1). Fail-closed and field-naming: an unknown scope or
+ * basis, a non-positive ceiling or window, a `windowSeconds` on a ticket scope
+ * (or its absence on a window scope), an undeclared or empty `entries` list, or
+ * an unknown child key returns the offending field path. No partial evaluation
+ * escapes because the caller turns the path into `provider.chain.invalid`.
+ */
+export const parseProviderBudgets = (
+  value: unknown,
+  entries: Readonly<Record<string, ProviderDescriptor>>,
+): Record<string, ProviderBudgetDeclaration> | string => {
+  if (!isRecord(value)) return "provider.budgets";
+  const budgets: Record<string, ProviderBudgetDeclaration> = Object.create(null);
+  for (const [name, raw] of Object.entries(value)) {
+    const path = `provider.budgets.${name}`;
+    if (name.length === 0) return "provider.budgets";
+    if (!isRecord(raw)) return path;
+    for (const key of Object.keys(raw)) {
+      if (!(PROVIDER_BUDGET_KEYS as readonly string[]).includes(key)) return `${path}.${key}`;
+    }
+    const enabled = boolean(raw.enabled, true);
+    if (enabled === undefined) return `${path}.enabled`;
+    if (
+      typeof raw.scope !== "string" ||
+      !(PROVIDER_BUDGET_SCOPES as readonly string[]).includes(raw.scope)
+    ) {
+      return `${path}.scope`;
+    }
+    if (
+      typeof raw.basis !== "string" ||
+      !(PROVIDER_BUDGET_BASES as readonly string[]).includes(raw.basis)
+    ) {
+      return `${path}.basis`;
+    }
+    if (typeof raw.ceiling !== "number" || !Number.isFinite(raw.ceiling) || raw.ceiling <= 0) {
+      return `${path}.ceiling`;
+    }
+    const scope = raw.scope as ProviderBudgetScope;
+    let windowSeconds: number | undefined;
+    if (scope === "window") {
+      if (
+        typeof raw.windowSeconds !== "number" ||
+        !Number.isInteger(raw.windowSeconds) ||
+        raw.windowSeconds <= 0
+      ) {
+        return `${path}.windowSeconds`;
+      }
+      windowSeconds = raw.windowSeconds;
+    } else if (raw.windowSeconds !== undefined) {
+      return `${path}.windowSeconds`;
+    }
+    let governedEntries: readonly string[] | undefined;
+    if (raw.entries !== undefined) {
+      if (!Array.isArray(raw.entries) || raw.entries.length === 0) return `${path}.entries`;
+      const names: string[] = [];
+      for (const entry of raw.entries) {
+        if (typeof entry !== "string" || entry.length === 0 || entries[entry] === undefined) {
+          return `${path}.entries`;
+        }
+        names.push(entry);
+      }
+      governedEntries = names;
+    }
+    budgets[name] = {
+      enabled,
+      scope,
+      basis: raw.basis as ProviderBudgetBasis,
+      ceiling: raw.ceiling,
+      ...(windowSeconds === undefined ? {} : { windowSeconds }),
+      ...(governedEntries === undefined ? {} : { entries: governedEntries }),
+    };
+  }
+  return budgets;
+};
+
 /** Parse a resolved `provider` branch into typed configuration. */
 export const parseProviderConfiguration = (values: unknown): ProviderConfigResult => {
   if (values === undefined || values === null) {
@@ -262,6 +355,12 @@ export const parseProviderConfiguration = (values: unknown): ProviderConfigResul
     provider.defaultChain === undefined ? undefined : string(provider.defaultChain);
   if (provider.defaultChain !== undefined && defaultChain === undefined)
     return invalid("provider.defaultChain");
+  let budgets: Record<string, ProviderBudgetDeclaration> | undefined;
+  if (provider.budgets !== undefined) {
+    const parsedBudgets = parseProviderBudgets(provider.budgets, entries);
+    if (typeof parsedBudgets === "string") return invalid(parsedBudgets);
+    budgets = parsedBudgets;
+  }
   return {
     ok: true,
     config: {
@@ -269,6 +368,7 @@ export const parseProviderConfiguration = (values: unknown): ProviderConfigResul
       credentials,
       entries,
       chains,
+      ...(budgets === undefined ? {} : { budgets }),
     },
   };
 };
@@ -340,10 +440,51 @@ const checkDescriptorRelations = (
   return undefined;
 };
 
+const checkBudgetRelations = (
+  config: ProviderConfiguration,
+): ProviderValidationError | undefined => {
+  for (const [name, budget] of Object.entries(config.budgets ?? {})) {
+    const path = `provider.budgets.${name}`;
+    if (!(PROVIDER_BUDGET_SCOPES as readonly string[]).includes(budget.scope)) {
+      return invalid(`${path}.scope`).error;
+    }
+    if (!(PROVIDER_BUDGET_BASES as readonly string[]).includes(budget.basis)) {
+      return invalid(`${path}.basis`).error;
+    }
+    if (
+      typeof budget.ceiling !== "number" ||
+      !Number.isFinite(budget.ceiling) ||
+      budget.ceiling <= 0
+    ) {
+      return invalid(`${path}.ceiling`).error;
+    }
+    if (budget.scope === "window") {
+      if (
+        typeof budget.windowSeconds !== "number" ||
+        !Number.isInteger(budget.windowSeconds) ||
+        budget.windowSeconds <= 0
+      ) {
+        return invalid(`${path}.windowSeconds`).error;
+      }
+    } else if (budget.windowSeconds !== undefined) {
+      return invalid(`${path}.windowSeconds`).error;
+    }
+    if (budget.entries !== undefined) {
+      if (budget.entries.length === 0) return invalid(`${path}.entries`).error;
+      for (const entry of budget.entries) {
+        if (config.entries[entry] === undefined) return invalid(`${path}.entries`).error;
+      }
+    }
+  }
+  return undefined;
+};
+
 /** Validate every relational rule the schema cannot express (TC-PROV-002). */
 export const validateProviderConfiguration = (
   config: ProviderConfiguration,
 ): ProviderValidationError | undefined => {
+  const budgetFailure = checkBudgetRelations(config);
+  if (budgetFailure !== undefined) return budgetFailure;
   for (const descriptor of Object.values(config.entries)) {
     const failure = checkDescriptorRelations(descriptor, config.credentials);
     if (failure !== undefined) return failure;
@@ -697,7 +838,7 @@ const parseWatchTarget = (
   if (!isRecord(value)) return profileInvalid(`watch.${name} must be an object`, name);
   const extra = exactKeys(
     value,
-    ["mapping", "endpoint", "credentialRef", "floor", "thresholdPercent"],
+    ["mapping", "endpoint", "credentialRef", "floor", "thresholdPercent", "maxAgeSeconds"],
     `watch.${name}`,
   );
   if (extra !== undefined) return extra;
@@ -726,12 +867,19 @@ const parseWatchTarget = (
   if (value.thresholdPercent !== undefined && thresholdPercent === undefined) {
     return profileInvalid(`watch.${name}.thresholdPercent must be 0..100`, name);
   }
+  // The freshness bound is carried, never interpreted here (GH-350 F-7): the
+  // configuration schema owns its type and the watch producer owns its value
+  // rules, so this parser neither defaults nor refuses it. The structural
+  // narrowing keeps a non-number off the typed target; a string is already
+  // refused by the configuration schema before this parser runs.
+  const maxAgeSeconds = typeof value.maxAgeSeconds === "number" ? value.maxAgeSeconds : undefined;
   return {
     mapping: mapping as ProviderWatchMappingKind,
     endpoint,
     credentialRef,
     ...(floor === undefined ? {} : { floor }),
     ...(thresholdPercent === undefined ? {} : { thresholdPercent }),
+    ...(maxAgeSeconds === undefined ? {} : { maxAgeSeconds }),
   };
 };
 

@@ -11,7 +11,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { delimiter, join } from "node:path";
+import { join } from "node:path";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { allHelpEntries, renderHelp, renderRootHelp } from "../../packages/cli/src/help";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
@@ -31,22 +31,17 @@ type ProcResult = {
 
 /**
  * The producer of the composed GitHub transport probes `gh --version` and emits
- * a degradation line when the host binary is outside the declared window. The
- * containment baseline below pins stderr byte-for-byte, so the probe must take
- * the same branch on every host: every child sees a scratch `gh` first on PATH
- * that reports an in-window version, and the rest of the ambient PATH stays for
- * the tools the cases legitimately need. The stub answers `--version` only.
+ * a degradation line whose code depends on the host binary. The containment
+ * baseline below pins stderr byte-for-byte, so every child runs with a PATH
+ * that cannot resolve `gh`: the posture is the declared
+ * `provider.cli.unavailable` degradation, always present and host-independent.
+ * The absolute Bun executable starts each child without the ambient PATH.
  */
-const ghStubRoot = mkdtempSync(join(tmpdir(), "gh320-gh-stub-"));
-afterAll(() => rmSync(ghStubRoot, { recursive: true, force: true }));
-writeFileSync(
-  join(ghStubRoot, "gh"),
-  '#!/bin/sh\nif [ "$1" = "--version" ]; then\n  echo \'gh version 2.91.0 (2025-01-01)\'\n  exit 0\nfi\nexit 1\n',
-  { mode: 0o755 },
-);
+const ghFreeRoot = mkdtempSync(`${ROOT}/tmp/tmpdir/gh-free-two-bins-`);
+afterAll(() => rmSync(ghFreeRoot, { recursive: true, force: true }));
 
 const BASE_ENVIRONMENT: Record<string, string> = {
-  PATH: `${ghStubRoot}${delimiter}${process.env.PATH ?? ""}`,
+  PATH: ghFreeRoot,
   HOME: process.env.HOME ?? "",
   TMPDIR: process.env.TMPDIR ?? "",
 };
@@ -57,7 +52,7 @@ const spawnBin = (
   environment: Record<string, string> = {},
   cwd: string = ROOT,
 ): ProcResult => {
-  const result = spawnSync("bun", [entry, ...argv], {
+  const result = spawnSync(process.execPath, [entry, ...argv], {
     cwd,
     encoding: "utf8",
     env: { ...BASE_ENVIRONMENT, ...environment },
@@ -116,7 +111,9 @@ describe("TC-BIN-001 the second bin answers the jaiship identity at the process 
     const result = spawnSync("pnpm", ["exec", "jaiship", "--version"], {
       cwd: ROOT,
       encoding: "utf8",
-      env: BASE_ENVIRONMENT,
+      // The workspace-link case is a version-only read and never composes, so
+      // the host PATH (which resolves pnpm) cannot affect the transport posture.
+      env: { ...BASE_ENVIRONMENT, PATH: process.env.PATH ?? "" },
     });
     expect(result.status).toBe(0);
     expect(result.stdout).toMatch(/^jaiship \d+\.\d+\.\d+ \(build .+\)\n$/u);
@@ -212,14 +209,14 @@ describe("TC-BIN-003 help family parity is exact and non-vacuous", () => {
   const alias = identityOf("delivery-os");
   const next = identityOf("jaiship");
 
-  test("family-parity: both help renders carry exactly the declared twenty-seven families", () => {
+  test("family-parity: both help renders carry exactly the declared twenty-eight families", () => {
     const declared = [...PROMPT_REQUIRED_COMMANDS].sort();
     for (const brand of [alias, next]) {
       expect([...familyRows(renderRootHelp(brand))].sort()).toEqual(declared);
     }
     // The rendered order is identical across the two bins (PAR-TP-1).
     expect(familyRows(renderRootHelp(alias))).toEqual(familyRows(renderRootHelp(next)));
-    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(27);
+    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(28);
   });
 
   test("family-parity: the normalised texts are identical and only the binary name differs", () => {
@@ -375,7 +372,7 @@ describe("TC-BIN-006 the install-path read answers per identity without adding a
       expect((await readInstallPath(name)).stdout).toBe(`${brand.installPath}\n`);
     }
     expect(PROMPT_REQUIRED_COMMANDS as readonly string[]).not.toContain("--print-install-path");
-    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(27);
+    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(28);
     expect(renderRootHelp(identityOf("jaiship"))).not.toContain("--print-install-path");
   });
 });

@@ -202,6 +202,8 @@ The evaluation window is the declared trailing span ending at the injected clock
 
 The alarm set is a derived view with at most one entry per evaluation. No persisted alarm state exists, duplicate alarms are impossible by construction, and a repeat evaluation over unchanged facts is byte-identical. Alarms are evidence, not gates: no gate blocks on an alarm, and the family declares no notification channel, event topic, subscription, scheduler, daemon, timer, or push path.
 
+The gate-versus-alarm distinction is deliberate and is the reason a spend ceiling appears in two different vocabularies. A declared `provider.budgets` ceiling is a gate: it is evaluated before a spawn, and a crossing parks a `window`-scope entry or fails a `ticket`-scope entry ([Provider Engine](feature-provider-engine.md)). A burn-rate alarm is evidence: it is raised by this read-only report after the fact over the declared trailing window, it never blocks a spawn, parks a lane, or refuses a command, and clearing it changes no provider state. The two never substitute for each other, and the report never claims the gate's pre-spawn verdict.
+
 ### The comparison view
 
 `comparisons[]` is a live, read-only evaluation under the committed comparison protocol. Each row carries the committed `metricId` and `definitionRef`, the log's `before` value with its window, basis, measurement kind, and status, the freshly measured `after` value with its window, measurement kind, status, and sample size, `sampleMinimum: 5`, and a verdict.
@@ -257,11 +259,11 @@ One domain kind, `metrics`, carries exactly one row: `metrics.baseline-unreadabl
 | Telemetry, ceremony, transition, or audit store damage | the delivered `state.*` row | 1 or 2 per row |
 | Unclassifiable handler failure, or a kind-only `metrics` discriminant | `fallback.internal` | 2 |
 
-The identity resolves by exact code only and joins the closed two-segment allowlist by exact declaration: the table holds 167 entries, 166 delivered rows, and 68 allowlisted two-segment codes, with the sync-suite arithmetic at `BASELINE_ROWS.length + 133` and four-way agreement between the classifier, the sync check, its structural mirror, and the documented carrier. No `metrics.*` family or pattern widening exists.
+The identity resolves by exact code only and joins the closed two-segment allowlist by exact declaration: the table holds 170 entries, 169 delivered rows, and 68 allowlisted two-segment codes, with the sync-suite arithmetic at `BASELINE_ROWS.length + 136` and four-way agreement between the classifier, the sync check, its structural mirror, and the documented carrier. No `metrics.*` family or pattern widening exists.
 
 ### Mounting
 
-`metrics` is the twenty-fourth prompt-required command family, appended after `steer` and before GH-295's `supervise` in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 24 and no stale 23 remains, and mounting changes no other command's composition.
+`metrics` is the twenty-fourth prompt-required command family, appended after `steer` and before GH-295's `supervise` in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 28 and no stale 23, 24, 25, 26, or 27 remains, and mounting changes no other command's composition.
 
 ## Technical Architecture & Codebase Map
 
@@ -345,7 +347,7 @@ function createMetricsCommandDefinition(runtime: MetricsCommandRuntime): Command
 | Read cost | One verified state read pass covering the telemetry families, transitions, and ceremony records; at most one baseline-log read, one declaration-node read, and one bounded corpus scan per invocation; no read beyond the declared sources. The read-cost suite prints a fold-only latency reference at the declared 1 000- and 10 000-record points and asserts the read counts, never the wall clock. |
 | Clock discipline | Window bounds, the drawn default, censoring anchors, `crossedAt`, and the evaluation window all derive from the injected clock. |
 | Privacy | Aggregate figures and identity references only; redaction chokepoint unchanged. |
-| Contract sync | The machine and documented error tables agree on the `metrics` row bidirectionally at 167 entries / 166 delivered / 68 allowlist / +133; no exit literal outside the projection module. |
+| Contract sync | The machine and documented error tables agree on the `metrics` row bidirectionally at 170 entries / 169 delivered / 68 allowlist / +136; no exit literal outside the projection module. |
 | Offline evidence | Every reporting path is proven on fixture-seeded temp stores and temp documents; zero live stores, credentials, or network. |
 
 ## Quality Assurance Strategy
@@ -354,7 +356,7 @@ Behaviour suites live under `tests/behaviour/metrics-*.test.ts`, shared fixtures
 
 | Level | Suites | Scope |
 |---|---|---|
-| Structure and contract | `tests/structure/metrics-contract`, `metrics-imports`, `metrics-mounting`, `error-table` | Declaration-only contracts, exact key sets and closed vocabularies, tier and boundary confinement, the 24-family mount with the family-count pins and the stale-count scan, error-table registration. |
+| Structure and contract | `tests/structure/metrics-contract`, `metrics-imports`, `metrics-mounting`, `error-table` | Declaration-only contracts, exact key sets and closed vocabularies, tier and boundary confinement, the 28-family mount with the family-count pins and the widened stale-count scan, error-table registration. |
 | Behaviour — surface and grammar | `metrics-grammar`, `metrics-envelope`, `metrics-help`, `metrics-report` | Locked flag set, pre-read refusals (lone bound, malformed instant, reversed range, missing value, unexpected positional, declared verbs), the nine-key envelope, the drawn window, the human digest, and root/family help. |
 | Behaviour — baseline and damage | `metrics-baseline`, `metrics-baseline-damage` | Base consumption by ID and definition, committed `definitionRef`, status semantics, counted exclusions, row-absent classification, the byte-snapshot log immutability proof, and `metrics.baseline-unreadable` at exit 2 with no partial report. |
 | Behaviour — measurement kinds | `metrics-cycle-time`, `metrics-ceremony-share`, `metrics-ci-proxy` | The committed interval, right-censoring and `PARTIAL`, the empty and out-of-window cases, the runner-fold share with its run/step/phase sample, and the proxy recomputation with the session-proxy limitation and `no_ci_observation` handling. |
@@ -387,7 +389,7 @@ The family writes nothing and retains nothing. Its recurring cost is one verifie
 ### Maintenance
 
 - **Committed-data coupling.** The baseline-consumed entries depend on the log's metric IDs, definitions, and status semantics. A definition change allocates a new `MET-` ID and the vocabulary extends by exact declaration, never by pattern.
-- **Count pins.** The error-table counts (167 / 166 / 68 / +133) and the mounted family count (26) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
+- **Count pins.** The error-table counts (170 / 169 / 68 / +136) and the mounted family count (28) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
 - **Vocabulary closure.** Metric IDs, classes, verdicts, evaluation states, and bases are closed sets in the contract module; a new member is a contract change with its own consumers, not a data value.
 - **Threshold ownership.** Thresholds are project policy; the tooling ships none and operators maintain theirs in their project's committed document.
 

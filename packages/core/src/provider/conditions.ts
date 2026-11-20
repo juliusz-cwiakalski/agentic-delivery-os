@@ -1,10 +1,13 @@
 /**
- * Per-entry condition combination (GH-182 F-3/F-4, DM-8).
+ * Per-entry condition combination (GH-182 F-3/F-4, DM-8; GH-350 adds the budget
+ * condition).
  *
- * Peak and quota facts are independent; the combined wait is the MAX and the
- * single cause is the condition determining the later expiry, with the fixed
- * tie order `peak-window` > `quota-exhausted` > `provider-outage` >
- * `credential-missing` > `credential-rejected`.
+ * Peak, quota and budget facts are independent; the combined wait is the MAX and
+ * the single cause is the condition determining the later expiry, with the fixed
+ * tie order `peak-window` > `quota-exhausted` > `budget-exhausted` >
+ * `provider-outage` > `credential-missing` > `credential-rejected`. A failed
+ * condition (a ticket-scope budget crossing, a quota failure) never fabricates
+ * an expiry and is reported ahead of any park.
  */
 import {
   type CombinedProviderCondition,

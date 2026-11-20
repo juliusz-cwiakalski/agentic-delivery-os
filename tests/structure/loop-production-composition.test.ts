@@ -71,7 +71,9 @@ describe("TC-SPAWN-004 the binding is the delivered per-spawn resolution", () =>
       // After the phase-7 repin the family is prompt-required AND composed (a
       // registered extra would be dropped, so this is the composed set).
       expect([...PROMPT_REQUIRED_COMMANDS]).toContain("loop");
-      expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("loop");
+      expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
+      expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+      expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
     } finally {
       removeRoot(root);
     }

@@ -128,6 +128,7 @@ describe("TC-QLC-085 the additive boundary holds", () => {
       "registry",
       "repo",
       "session",
+      "time-zone",
     ]);
   });
 

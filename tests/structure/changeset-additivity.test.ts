@@ -29,6 +29,7 @@ import { join } from "node:path";
 const ROOT = process.cwd();
 const PIN_PATH = "tests/fixtures/pins/changeset-baseline.json";
 const CHANGESET_DIR = ".changeset";
+
 const PINNED_CHANGESET_COUNT = 64;
 
 /** The fixed group of `.changeset/config.json`: five packages, testkit excluded. */

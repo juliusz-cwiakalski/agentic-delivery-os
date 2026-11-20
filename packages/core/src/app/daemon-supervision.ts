@@ -17,6 +17,7 @@ import type {
   LaneObservation,
   QueueParkRecord,
   StateStorePort,
+  ProviderZoneFacts,
 } from "#contracts";
 import { classifyLaneProgress, nextSpawnOrdinal, shapeDaemonLane } from "../domain/daemon-lane.js";
 import { type PeakRulesLookup, runPeakResume, runPeakWatch } from "../domain/daemon-peak-pause.js";
@@ -49,6 +50,8 @@ export type SupervisionPorts = {
     /** Refs holding an active `peak-window` park (read-time expiry already applied by the caller). */
     readonly parkedRefs: () => readonly string[];
     readonly rulesFor: PeakRulesLookup;
+    /** Bind the zone port to one declared zone (GH-350); UTC needs no port. */
+    readonly zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined;
     readonly nowMs: () => number;
     readonly nowIso: () => string;
     readonly stop: (input: {
@@ -194,6 +197,7 @@ export const runSupervisionCycle = async (input: SupervisionInput): Promise<Supe
       await runPeakWatch({
         lanes: inFlight,
         rulesFor: input.ports.peakPause.rulesFor,
+        zoneFactsFor: input.ports.peakPause.zoneFactsFor,
         nowMs: input.ports.peakPause.nowMs(),
         parkedRefs: input.ports.peakPause.parkedRefs(),
         newEpisodeId: input.ports.peakPause.newEpisodeId,

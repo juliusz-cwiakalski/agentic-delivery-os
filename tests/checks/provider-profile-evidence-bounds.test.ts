@@ -189,3 +189,62 @@ describe("TC-PROFILE-042 evidence bounds", () => {
     }
   });
 });
+
+/**
+ * GH-350 TC-WFRESH-010 — a stale watch view is bounded and carries no body or
+ * credential: the seven-field set, <= 1024 bytes, <= 20 fields, and no vendor
+ * body, authorization header, or credential-shaped string.
+ */
+describe("TC-WFRESH-010 a stale watch view is bounded and secret-free", () => {
+  const CANARY = "CANARY-WATCH-BODY-SECRET";
+
+  test("the stale view stays inside the declared bounds and leaks no body or header", async () => {
+    const { createProviderWatchStatus } = await import("../../packages/core/src/provider/quota");
+    const { createProviderWatchMappings } = await import(
+      "../../packages/adapters/src/provider-quota/index"
+    );
+    const reader = createProviderWatchStatus({
+      clock: { nowMs: () => NOW },
+      credentialPort: { resolve: () => ({ ok: true, material: { value: CANARY } }) },
+      transport: {
+        send: async () => ({
+          status: 200,
+          bodyText: JSON.stringify({ secret: CANARY, authorization: `Bearer ${CANARY}` }),
+        }),
+      },
+      mappings: createProviderWatchMappings(),
+    });
+    const result = await reader.status({
+      targets: {
+        p: {
+          mapping: "coding-plan-windows",
+          endpoint: "https://watch.example/quota",
+          credentialRef: "c",
+          maxAgeSeconds: 900,
+        },
+      },
+      credentials: { c: { sourceKey: { style: "literal", name: "WATCH_KEY" } } },
+      observedAtMs: NOW - 1_200_000,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const view = result.providers[0];
+    if (view === undefined) throw new Error("no view");
+    const serialized = JSON.stringify(view);
+    expect(serialized.length).toBeLessThanOrEqual(1024);
+    expect(Object.keys(view).length).toBeLessThanOrEqual(20);
+    expect(Object.keys(view)).toEqual([
+      "name",
+      "condition",
+      "source",
+      "checkedAt",
+      "observedAt",
+      "ageSeconds",
+      "maxAgeSeconds",
+    ]);
+    expect(view.condition).toBe("watch-stale");
+    expect(serialized).not.toContain(CANARY);
+    expect(serialized).not.toMatch(/authorization|bearer/iu);
+    expect(view.source).toBe("observed at 2023-11-14T21:53:20.000Z; max age 900s");
+  });
+});

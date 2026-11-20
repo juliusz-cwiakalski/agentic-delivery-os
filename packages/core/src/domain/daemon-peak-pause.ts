@@ -22,6 +22,7 @@
 
 import {
   type ProviderProfilePeakRules,
+  type ProviderZoneFacts,
   QUEUE_PARK_RECHECK_DEFAULTS,
   type QueueParkPreservation,
   type QueueParkRecord,
@@ -30,7 +31,13 @@ import {
 // peak-window boundary helpers, enforced by name in the dependency matrix
 // (`tier-domain-not-provider`'s pathNot exception) with a firing negative
 // fixture (tests/boundaries).
-import { peakWindowEndSeconds, peakWindowOpenSeconds, utcSecondsOfDay } from "../provider/peak.js";
+import {
+  localSecondsOfDay,
+  peakWindowEndInstantMs,
+  peakWindowEndSeconds,
+  peakWindowOpenSeconds,
+  UTC_ZONE_FACTS,
+} from "../provider/peak.js";
 import {
   admitDispatchRestart,
   evaluateDispatchResumeEconomics,
@@ -62,6 +69,19 @@ export type PeakStopDecision = {
 /** The rule lookup the watch reads: one parsed rule set per declared profile. */
 export type PeakRulesLookup = (profile: string) => ProviderProfilePeakRules | undefined;
 
+/** Bind the injected zone port to one declared zone (GH-350); UTC needs no port. */
+export type PeakZoneFactsFor = (zone: string) => ProviderZoneFacts | undefined;
+
+/**
+ * The safe default for a caller that supplies no seam: UTC resolves to the
+ * definitional facts and a non-UTC window is not evaluated (never coerced to
+ * UTC). Production compositions inject the real binder.
+ */
+const defaultZoneFactsFor: PeakZoneFactsFor = (zone) => {
+  const declared = zone === undefined || zone === "" ? "UTC" : zone;
+  return declared === "UTC" || declared === "Etc/UTC" ? UTC_ZONE_FACTS : undefined;
+};
+
 /** The episode-id factory (injected; deterministic in tests). */
 export type PeakEpisodeIdFactory = () => string;
 
@@ -71,15 +91,31 @@ const isoOf = (nowMs: number, secondsLater: number): string =>
 /**
  * The buffer-inclusive window decision for one profile at `nowMs` (F-3): the
  * window is open at or after `start - bufferBefore` and before the effective
- * end (`end + bufferAfter`), evaluated on the injected clock's UTC
- * second-of-day only (DEC-1, NFR-3).
+ * end (`end + bufferAfter`), evaluated on the declared zone's clock through the
+ * injected facts (GH-350, DEC-1, NFR-3).
+ *
+ * A composition that cannot resolve a declared zone must not evaluate it as
+ * UTC. Such a window is not evaluated; the result carries the first
+ * unresolvable `unknownZone` so the caller can see the declaration was not
+ * honored rather than reading a silently closed window.
  */
 export const peakWindowOpenAt = (
   rules: ProviderProfilePeakRules,
   nowMs: number,
-): { readonly open: boolean; readonly windowEnd: string } => {
-  const second = utcSecondsOfDay(nowMs);
+  zoneFactsFor: PeakZoneFactsFor = defaultZoneFactsFor,
+): { readonly open: boolean; readonly windowEnd: string; readonly unknownZone?: string } => {
+  let unknownZone: string | undefined;
   for (const window of rules.windows) {
+    const facts = zoneFactsFor(window.timezone);
+    if (facts === undefined) {
+      // Never interpret as UTC and never report the window as merely closed.
+      unknownZone ??= window.timezone;
+      continue;
+    }
+    const second = localSecondsOfDay(
+      nowMs,
+      facts.offsetSecondsAt(Math.floor(nowMs / 1_000) * 1_000),
+    );
     const open = peakWindowOpenSeconds({
       startSecondsOfDay: window.startSecondsOfDay,
       bufferBeforeSeconds: window.bufferBeforeSeconds,
@@ -89,14 +125,18 @@ export const peakWindowOpenAt = (
       bufferAfterSeconds: window.bufferAfterSeconds,
     });
     if (second >= open && second < end) {
-      // The window end in absolute time: today's end when still ahead of the
-      // clock's second-of-day (declared windows never wrap midnight — the
-      // parser refuses end <= start).
-      const endMsToday = Math.floor(nowMs / 1_000) * 1_000 + (end - second) * 1_000;
-      return { open: true, windowEnd: new Date(endMsToday).toISOString() };
+      // The window end in absolute time: the one named derivation, on the
+      // declared zone's clock.
+      const windowEndMs = peakWindowEndInstantMs(nowMs, facts, {
+        endSecondsOfDay: window.endSecondsOfDay,
+        bufferAfterSeconds: window.bufferAfterSeconds,
+      });
+      return { open: true, windowEnd: new Date(windowEndMs).toISOString() };
     }
   }
-  return { open: false, windowEnd: "" };
+  return unknownZone === undefined
+    ? { open: false, windowEnd: "" }
+    : { open: false, windowEnd: "", unknownZone };
 };
 
 /**
@@ -111,6 +151,7 @@ export const peakWindowOpenAt = (
 export const decidePeakStops = (input: {
   readonly lanes: readonly PeakWatchLane[];
   readonly rulesFor: PeakRulesLookup;
+  readonly zoneFactsFor?: PeakZoneFactsFor;
   readonly nowMs: number;
   /** Refs holding an active `peak-window` park; already parked lanes are skipped (exactly once per episode). */
   readonly parkedRefs: readonly string[];
@@ -127,6 +168,7 @@ export const decidePeakStops = (input: {
       readonly rules: ProviderProfilePeakRules | undefined;
       readonly open: boolean;
       readonly windowEnd: string;
+      readonly unknownZone?: string;
     }
   >();
   for (const lane of input.lanes) {
@@ -136,14 +178,23 @@ export const decidePeakStops = (input: {
     let state = seen.get(profile);
     if (state === undefined) {
       const rules = input.rulesFor(profile);
-      const window = rules === undefined ? undefined : peakWindowOpenAt(rules, input.nowMs);
+      const window =
+        rules === undefined
+          ? undefined
+          : peakWindowOpenAt(rules, input.nowMs, input.zoneFactsFor ?? defaultZoneFactsFor);
       state = {
         rules,
         open: window?.open ?? false,
         windowEnd: window?.windowEnd ?? "",
+        ...(window?.unknownZone === undefined ? {} : { unknownZone: window.unknownZone }),
       };
       seen.set(profile, state);
     }
+    // An unresolvable zone is never read as an open or a closed UTC window: the
+    // profile is skipped and its `unknownZone` stays recorded in the state. No
+    // production composition mounts this watcher today (the supervision
+    // composition supplies no `peakPause` port), so the explicit state is the
+    // contract a future mount consumes rather than a silent UTC evaluation.
     if (state.rules === undefined || !state.open) continue;
     decisions.push({
       ref: lane.ref,
@@ -179,6 +230,7 @@ export type PeakParkAppendPort = (record: QueueParkRecord) => boolean;
 export const runPeakWatch = async (input: {
   readonly lanes: readonly PeakWatchLane[];
   readonly rulesFor: PeakRulesLookup;
+  readonly zoneFactsFor?: PeakZoneFactsFor;
   readonly nowMs: number;
   readonly parkedRefs: readonly string[];
   readonly newEpisodeId: PeakEpisodeIdFactory;
@@ -190,6 +242,7 @@ export const runPeakWatch = async (input: {
   const decisions = decidePeakStops({
     lanes: input.lanes,
     rulesFor: input.rulesFor,
+    zoneFactsFor: input.zoneFactsFor ?? defaultZoneFactsFor,
     nowMs: input.nowMs,
     parkedRefs: input.parkedRefs,
     newEpisodeId: input.newEpisodeId,

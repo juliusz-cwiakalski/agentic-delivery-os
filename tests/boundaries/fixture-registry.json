@@ -322,6 +322,20 @@
       "path": "packages/core/src/branding/probe.ts"
     }
   ],
+  "provider-migrate-no-shell": [
+    {
+      "id": "provider-migrate-shell-import",
+      "tc": "TC-MIG-004",
+      "path": "packages/core/src/provider/migrate.ts"
+    }
+  ],
+  "provider-fixture-read-only-simulate": [
+    {
+      "id": "provider-fixture-reader-reachable",
+      "tc": "TC-SIM-009",
+      "path": "packages/cli/src/production.ts"
+    }
+  ],
   "ambient-globals-neutral-tiers": [
     {
       "id": "ambient-contracts-process-env",
@@ -337,6 +351,16 @@
       "id": "ambient-index-fetch",
       "tc": "TC-SCAFFOLD-015",
       "path": "packages/core/src/index.ts"
+    },
+    {
+      "id": "ambient-provider-intl",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/provider/probe.ts"
+    },
+    {
+      "id": "ambient-provider-environment",
+      "tc": "TC-SCAFFOLD-015",
+      "path": "packages/core/src/provider/probe.ts"
     },
     {
       "id": "ambient-sweep-domain-process",
