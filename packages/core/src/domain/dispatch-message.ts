@@ -1,6 +1,6 @@
 /**
  * The `last-message` composition order and the closed absence ladder
- * (GH-354 F-4; API-4, API-9; DM-3, DM-5, DM-6; DEC-4; TDR-0056 DC-4, DC-5).
+ * (GH-354 F-4; API-4, API-9; DM-3, DM-5, DM-6; DEC-4; TDR-0058 DC-4, DC-5).
  *
  * The composition order is FIXED: redact -> flatten -> bound -> mark. The
  * redactor is the delivered serialization chokepoint injected by the composition

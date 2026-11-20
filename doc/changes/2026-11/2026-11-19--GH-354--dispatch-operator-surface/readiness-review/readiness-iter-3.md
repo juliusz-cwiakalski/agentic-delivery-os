@@ -11,7 +11,7 @@ artifacts_reviewed:
   test_plan: chg-GH-354-test-plan.md (v0.3, 72 cases, 83 AC links across 59 cases)
   plan: chg-GH-354-plan.yaml (8 phases: 1 planning + 7 delivery; 72 owned case ids; 68 mutation rows)
   pm_notes: chg-GH-354-pm-notes.yaml
-  decision_record: TDR-0056 (status `Proposed`; human owner accepts at PR review)
+  decision_record: TDR-0058 (status `Proposed`; human owner accepts at PR review)
   ticket: GitHub issue GH-354 (read via `gh issue view 354`; six tasks, four ACs)
   prior: readiness-review/readiness-iter-1.md, readiness-review/readiness-iter-2.md
 scope_note: >-
@@ -84,7 +84,7 @@ Other iteration-2 items: finding 5 (`TC-LOG-007` scope) CLOSED — both the
 (741-775). Finding 4 (M25) CLOSED — the register row names only
 `TC-ISDEL-006`/`TC-STATUS-008` (2453) and the plan allocates it to phase 2, the
 phase that owns both. Finding 8 (naming input) CLOSED at the record level —
-TDR-0056 DR-4 (204), DC-2 (369) and its change note (475) now name the stream
+TDR-0058 DR-4 (204), DC-2 (369) and its change note (475) now name the stream
 kind / explicit stream ordinal. Finding 11 partially fixed but not closed (R6).
 Findings 6, 7, 9, 10 are not closed (R1, R4, R5, R7).
 
@@ -200,7 +200,7 @@ Also noted, not findings: spec §19 (523) still calls Appendix C "the
 authoritative statement of what each query answers" while the `log` row carries
 neither the one-fact rule nor the precedence (iteration-2 A3 residual), and
 F-7/DM-2/Appendix D still offer "stream kind ... or an explicit stream ordinal",
-which TDR-0056 now also records, so the spec-vs-record divergence is gone even
+which TDR-0058 now also records, so the spec-vs-record divergence is gone even
 though the input set remains a sanctioned pair rather than one choice.
 
 ## Did any AC change meaning while keeping its id?
@@ -254,7 +254,7 @@ materiality, but they should not be carried into the review unremarked.
 
 ## Residual risks the human decider inherits
 
-- **TDR-0056 is `Proposed`** after four REWORK-challenged rounds (no PASS
+- **TDR-0058 is `Proposed`** after four REWORK-challenged rounds (no PASS
   claimed). It is the binding design of this change; acceptance is the owner's
   at PR review. DR-4/DC-2 now carry the stream-kind/stream-ordinal naming input
   (R8's underlying gap is closed at the record).

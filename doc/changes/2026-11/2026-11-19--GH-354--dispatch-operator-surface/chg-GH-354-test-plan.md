@@ -2,12 +2,12 @@
 id: chg-GH-354-test-plan
 status: Updated
 created: 2026-11-19
-last_updated: 2026-11-19
+last_updated: 2026-11-20
 owners: ["engineering"]
 service: "delivery-os dispatch engine"
 labels: ["dispatch", "operator-surface", "m4-s12", "status", "log", "is-delivering", "last-message"]
 version_impact: minor
-summary: "Offline, deterministic battery for the four typed operator queries: 12/12 lifecycle-state combinations through the real composed command path, the repository filter applied before the lane fold and its tri-state probe, the typed lane-store failure on every query that reads it, the bounded reference-scoped artifact tail with its stitched read, torn-tail drop and retention window, the delivering fold with both forms, the capability-gated transcript read with its redaction order and raw-text seam, the per-stream append-only write path, and the read-only and shell-free posture — every one of the 38 acceptance criteria mapped to a named case."
+summary: "Offline, deterministic battery for the four typed operator queries: 12/12 lifecycle-state combinations through the real composed command path, the repository filter applied before the lane fold and its tri-state probe, the typed lane-store failure on every query that reads it, the bounded reference-scoped artifact tail with its stitched read, torn-tail drop and retention window — including a machine window bounded by bytes only while the human form keeps its 200-line bound, the delivering fold with both forms, the capability-gated transcript read with its redaction order and raw-text seam, the entrypoint-resolved registered credential redacted before the message cut, the per-stream append-only write path, and the read-only and shell-free posture — every one of the 38 acceptance criteria mapped to a named case."
 links:
   change_spec: ./chg-GH-354-spec.md
   implementation_plan: ./chg-GH-354-plan.yaml
@@ -29,8 +29,8 @@ The plan is offline and deterministic: no live opencode, no live Claude Code, no
 - `AC-F1-1`…`AC-F7-4` (38 acceptance criteria) — every one mapped in §3.1 with zero unmapped and zero orphan cases.
 - `NFR-1`…`NFR-11`, and the interface/data-model contracts `API-1`…`API-12`, `DM-1`…`DM-7`.
 - The four query forms, their grammar and refusal identities, their human and `--json` payloads, and their exit projections in all three lifecycle states — including the repository filter that must precede the per-ref fold, and the store's typed `state.*` failure that each lane-reading query projects at its own row instead of answering `absent` or `false`.
-- The per-ref harness-stdout artifact family — its per-stream write points and binding point, the one writer rule, the one tear rule, the per-file cap by segmentation, the cross-boundary continuation, the two-file retention and the 2 × 1 048 576-byte family bound — and its read contract (listed scope, stitched order, torn-tail drop, one truncation fact).
-- The injected transcript read seam, its capability gating, its closed absence ladder, its finality rule, its raw-text return under the reader's own read cap, and its `redact → flatten → bound → mark` composition order, which lives in the query rather than in the seam.
+- The per-ref harness-stdout artifact family — its per-stream write points and binding point, the one writer rule, the one tear rule, the per-file cap by segmentation, the cross-boundary continuation, the two-file retention and the 2 × 1 048 576-byte family bound — and its read contract (listed scope, stitched order, torn-tail drop, one truncation fact, and the machine/human bound split: the machine `data` is bounded by bytes only, so a 220-line retained window is returned whole, while the human form keeps its own 200-line bound).
+- The injected transcript read seam, its capability gating, its closed absence ladder, its finality rule, its raw-text return under the reader's own read cap, and its `redact → flatten → bound → mark` composition order, which lives in the query rather than in the seam — observed end to end from the registered credential set the CLI entrypoint resolves out of the injected environment to the composed answer.
 - The read-only and shell-free posture across all four queries and both `is-delivering` forms, the extension of the no-shell invariant to the new surfaces, and the decoy-artifact and shell-absent observations (ticket ACs: "the log is bounded and reference-scoped", "`last-message` returns the PM's final message rather than a classifier sentence", "no shell script is read or executed").
 - The contract-invariance regression: seven operations, four lifecycle capabilities, the gap inventory and every adapter declaration, the error table, the domain kinds, the token/projection/exit matrices, the lane and attempt key sets, the 16-reference evidence budget, and the help-entry count moving five → nine with an unchanged coverage inventory and page set.
 
@@ -60,7 +60,7 @@ Also out of scope (spec §7.2, `NG-1`…`NG-9`): daemon-lane inspection, any cha
 |-----------|-----|
 | `./chg-GH-354-spec.md` (v1.4) | Source of the 38 ACs, `F-1`…`F-7`, `API-1`…`API-12`, `DM-1`…`DM-7`, `NFR-1`…`NFR-11`, `RSK-1`…`RSK-23`, Appendix C (answer matrix and proof boundary), Appendix D (fixture- and implementation-decided details) |
 | `./chg-GH-354-pm-notes.yaml` | Scope decisions, the two-form `is-delivering` ruling, the marker derivation, the segment-file design supersession, the declared stream divergence, and the `TMPDIR`/`PATH`/`pnpm build` operational prerequisite |
-| `doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md` | Authoritative for the artifact family (DC-1…DC-3), the transcript read seam (DC-4), the composition order and finality rule (DC-5), the privacy boundary (DC-6), and the six plan-pinned obligations and their named tests (`artifact-naming`, `segment-switch`, `torn-line-reader`, `two-segment-tail`, `segment-ordering`, `sink-fault-observational`) |
+| `doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md` | Authoritative for the artifact family (DC-1…DC-3), the transcript read seam (DC-4), the composition order and finality rule (DC-5), the privacy boundary (DC-6), and the six plan-pinned obligations and their named tests (`artifact-naming`, `segment-switch`, `torn-line-reader`, `two-segment-tail`, `segment-ordering`, `sink-fault-observational`) |
 | `doc/decisions/TDR-0049` | Dispatch-owned durable lane record (kind, field set, advisory owner facts, latest-wins read, no content) |
 | `doc/decisions/TDR-0024` | Dispatch attempt read side — the read-only posture and the data-projection precedent this surface follows |
 | `doc/decisions/TDR-0051` | The capability-gated, declared-seam pattern reused for a read |
@@ -71,13 +71,13 @@ Also out of scope (spec §7.2, `NG-1`…`NG-9`): daemon-lane inspection, any cha
 | `tests/fixtures/dispatch/parity/{harness,lane,process-runner,seams,cases,evidence}.ts`, `tests/fixtures/dispatch/{attempts-harness,attempts-production,attempt-records,harness}.ts`, `tests/fixtures/harness/opencode-store/**`, `tests/fixtures/projects/state-scope.ts`, `tests/fixtures/verify-gates/cases/network-guard.ts` | The fixture surface this plan extends rather than duplicates |
 | `tests/checks/no-shell-dispatch.test.ts`, `scripts/checks/no-shell-dispatch.ts`, `scripts/checks/exit-code-literals.ts`, `tests/fixtures/help-guide/coverage.json` | The invariant, the exit-literal guard, and the help/guide inventory the change extends |
 
-`./chg-GH-354-plan.yaml` is authored in `delivery_planning` (phase 4) after this plan; this plan is its input and fixes the plan-phase scope items it must carry — the fixture and suite inventory of §7.3, the declared read-side seams of §7.1, and the TDR-0056 plan-pinned obligations restated in §6.2.
+`./chg-GH-354-plan.yaml` is authored in `delivery_planning` (phase 4) after this plan; this plan is its input and fixes the plan-phase scope items it must carry — the fixture and suite inventory of §7.3, the declared read-side seams of §7.1, and the TDR-0058 plan-pinned obligations restated in §6.2.
 
 ## 3. Coverage Overview
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
-38 acceptance criteria, 38 mapped, 0 unmapped, 0 orphans. Every case named in this column exists in §5.1/§5.2, and every case in §5.1 either appears here or is linked in §3.2/§3.3 to an `API-`/`DM-`/`NFR-` id or a TDR-0056 rule.
+38 acceptance criteria, 38 mapped, 0 unmapped, 0 orphans. Every case named in this column exists in §5.1/§5.2, and every case in §5.1 either appears here or is linked in §3.2/§3.3 to an `API-`/`DM-`/`NFR-` id or a TDR-0058 rule.
 
 | AC | Capability | Case(s) | Status |
 |----|-----------|---------|--------|
@@ -92,20 +92,20 @@ Also out of scope (spec §7.2, `NG-1`…`NG-9`): daemon-lane inspection, any cha
 | `AC-F2-2` | F-2 | `TC-LOG-003`, `TC-GRAMMAR-003` | Planned |
 | `AC-F2-3` | F-2 | `TC-LOG-004`, `TC-LOG-005`, `TC-CONTRACT-003`, `TC-MATRIX-001` | Planned |
 | `AC-F2-4` | F-2 | `TC-LOG-006`, `TC-MATRIX-001` | Planned |
-| `AC-F2-5` | F-2 | `TC-LOG-007`, `TC-LOG-008` | Planned |
+| `AC-F2-5` | F-2 | `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-012` | Planned |
 | `AC-F2-6` | F-2 | `TC-LOG-002`, `TC-LOG-009`, `TC-PERSIST-005`, `TC-PERSIST-006`, `TC-PERSIST-007` | Planned |
 | `AC-F3-1` | F-3 | `TC-ISDEL-001`, `TC-MATRIX-001` | Planned |
 | `AC-F3-2` | F-3 | `TC-ISDEL-002`, `TC-MATRIX-001` | Planned |
 | `AC-F3-3` | F-3 | `TC-ISDEL-003`, `TC-ISDEL-004`, `TC-ISDEL-007` | Planned |
 | `AC-F3-4` | F-3 | `TC-ISDEL-005`, `TC-MATRIX-001` | Planned |
 | `AC-F3-5` | F-3 | `TC-ISDEL-006` | Planned |
-| `AC-F4-1` | F-4 | `TC-MSG-001`, `TC-MSG-010`, `TC-MATRIX-001` | Planned |
+| `AC-F4-1` | F-4 | `TC-MSG-001`, `TC-MSG-010`, `TC-MSG-011`, `TC-MATRIX-001` | Planned |
 | `AC-F4-2` | F-4 | `TC-MSG-002` | Planned |
 | `AC-F4-3` | F-4 | `TC-MSG-003`, `TC-MATRIX-001` | Planned |
 | `AC-F4-4` | F-4 | `TC-MSG-004`, `TC-MATRIX-001` | Planned |
 | `AC-F4-5` | F-4 | `TC-MSG-005`, `TC-MSG-006`, `TC-MSG-009` | Planned |
 | `AC-F4-6` | F-4 | `TC-MSG-007`, `TC-MSG-010` | Planned |
-| `AC-F4-7` | F-4 | `TC-MSG-008` | Planned |
+| `AC-F4-7` | F-4 | `TC-MSG-008`, `TC-MSG-011` | Planned |
 | `AC-F5-1` | F-5 | `TC-GRAMMAR-001`, `TC-MATRIX-001` | Planned |
 | `AC-F5-2` | F-5 | `TC-GRAMMAR-002`, `TC-GRAMMAR-003`, `TC-LOG-003` | Planned |
 | `AC-F5-3` | F-5 | `TC-GRAMMAR-004` | Planned |
@@ -122,7 +122,7 @@ Also out of scope (spec §7.2, `NG-1`…`NG-9`): daemon-lane inspection, any cha
 
 **Arithmetic.** 7 + 6 + 5 + 7 + 4 + 5 + 4 = 38 acceptance criteria, reconciled against spec §17 (`F-1` 7, `F-2` 6, `F-3` 5, `F-4` 7, `F-5` 4, `F-6` 5, `F-7` 4). 38 of 38 appear above with at least one named case; 0 are marked TODO; 0 carry a case id that has no §5.2 entry.
 
-The matrix carries **83** AC→case links across **59** cases (38 criteria plus 45 extra observations), because the lifecycle-state matrix, the shared refusals, and the write path each need more than one observation. Extras by criterion: `AC-F1-1` (+1), `AC-F1-2` (+1), `AC-F1-3` (+1), `AC-F2-1` (+3), `AC-F2-2` (+1), `AC-F2-3` (+3), `AC-F2-4` (+1), `AC-F2-6` (+4), `AC-F3-1` (+1), `AC-F3-2` (+1), `AC-F3-3` (+2), `AC-F3-4` (+1), `AC-F4-1` (+2), `AC-F4-3` (+1), `AC-F4-4` (+1), `AC-F4-5` (+2), `AC-F4-6` (+1), `AC-F5-1` (+1), `AC-F5-2` (+2), `AC-F5-4` (+1), `AC-F6-1` (+1), `AC-F6-2` (+1), `AC-F6-3` (+1), `AC-F6-4` (+1), `AC-F7-1` (+3), `AC-F7-3` (+5), `AC-F7-4` (+1). `TC-STATUS-008` and the phase labels on `TC-PERSIST-005`/`TC-PERSIST-006`/`TC-PERSIST-011` add no AC link and move no AC between cases: the AC→case arithmetic above is unchanged by this revision.
+The matrix carries **86** AC→case links across **61** cases (38 criteria plus 48 extra observations), because the lifecycle-state matrix, the shared refusals, the write path, the bound split, and the credential path each need more than one observation. Extras by criterion: `AC-F1-1` (+1), `AC-F1-2` (+1), `AC-F1-3` (+1), `AC-F2-1` (+3), `AC-F2-2` (+1), `AC-F2-3` (+3), `AC-F2-4` (+1), `AC-F2-5` (+2), `AC-F2-6` (+4), `AC-F3-1` (+1), `AC-F3-2` (+1), `AC-F3-3` (+2), `AC-F3-4` (+1), `AC-F4-1` (+3), `AC-F4-3` (+1), `AC-F4-4` (+1), `AC-F4-5` (+2), `AC-F4-6` (+1), `AC-F4-7` (+1), `AC-F5-1` (+1), `AC-F5-2` (+2), `AC-F5-4` (+1), `AC-F6-1` (+1), `AC-F6-2` (+1), `AC-F6-3` (+1), `AC-F6-4` (+1), `AC-F7-1` (+3), `AC-F7-3` (+5), `AC-F7-4` (+1). `TC-STATUS-008` and the phase labels on `TC-PERSIST-005`/`TC-PERSIST-006`/`TC-PERSIST-011` add no AC link and move no AC between cases. The two remediation cases add three of the links counted above and no criterion: `TC-LOG-012` is `AC-F2-5`'s third observation (the machine window bounded by bytes only) and `TC-MSG-011` is `AC-F4-7`'s second (the credential resolved by the entrypoint) and `AC-F4-1`'s third (the same answer read end to end).
 
 **Ticket-level acceptance criteria (spec Appendix B).** The ticket's own ACs are satisfied by the same cases, so this matrix is the evidence for both vocabularies:
 
@@ -131,25 +131,25 @@ The matrix carries **83** AC→case links across **59** cases (38 criteria plus 
 | The four queries answer for a **live** dispatch | `TC-MATRIX-001` (live row per query), `TC-STATUS-001`, `TC-LOG-001`, `TC-ISDEL-001`, `TC-MSG-003` | `status` active + live; `log` a produced tail; `is-delivering` exit 0; `last-message` available with `final=false` |
 | The four queries answer for a **finished** dispatch | `TC-MATRIX-001` (terminal row per query), `TC-STATUS-002`, `TC-LOG-001`, `TC-ISDEL-002`, `TC-MSG-001` | `status` terminal with token/outcome; `log` the retained tail; `is-delivering` exit 1; `last-message` available with `final=true` |
 | The four queries answer for an **absent** ref | `TC-MATRIX-001` (absent row per query), `TC-STATUS-003`, `TC-LOG-004`, `TC-ISDEL-002`, `TC-MSG-004` | `marker=absent` at exit 0; `no-log` at exit 0; exit 1 not-in-progress; `no-lane` at exit 1 |
-| The log is **bounded and reference-scoped** | `TC-LOG-001`, `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-010`, `TC-PERSIST-005`, `TC-PERSIST-006`, `TC-PERSIST-007` | Default 50 in 1..500, one truncation fact, 0 foreign lines, per-file cap by segmentation, 2 × cap family bound |
-| `last-message` returns the **PM's final message**, not a classifier sentence | `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-008`, `TC-NFR-004` | Transcript-sourced, envelope sentence never used, redact → flatten → bound → mark |
+| The log is **bounded and reference-scoped** | `TC-LOG-001`, `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-010`, `TC-LOG-012`, `TC-PERSIST-005`, `TC-PERSIST-006`, `TC-PERSIST-007` | Default 50 in 1..500, one truncation fact, 0 foreign lines, per-file cap by segmentation, 2 × cap family bound, and the machine/human split: 220 lines returned whole by `--json`, 200 by the human form |
+| `last-message` returns the **PM's final message**, not a classifier sentence | `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-008`, `TC-MSG-011`, `TC-NFR-004` | Transcript-sourced, envelope sentence never used, redact → flatten → bound → mark, and the registered credential resolved by the entrypoint never surviving the cut |
 | **No shell script is read or executed** | `TC-SHELL-001`, `TC-SHELL-002`, `TC-SHELL-003`, `TC-SHELL-004`, `TC-RO-002`, `TC-STATUS-007` | Extended invariant with planted control, 0 invocations, 4/4 with the shell absent, 0 shell-artifact reads, planted files unchanged |
 
-Case inventory: **72** cases across twelve groups — `STATUS` 8, `LOG` 11, `ISDEL` 7, `MSG` 10, `GRAMMAR` 5, `PERSIST` 11, `RO` 4, `SHELL` 4, `CONTRACT` 3, `NFR` 4, `MATRIX` 2, `FIXTURE` 3. Every case is linked to an `AC-*`, an `NFR-*`, an `API-`/`DM-` id, or a named TDR-0056 rule: **0 orphan cases** (the 13 cases with no `AC-*` link are `TC-STATUS-008`, `TC-LOG-010`, `TC-LOG-011`, `TC-RO-004`, `TC-CONTRACT-002`, `TC-NFR-001`…`004`, `TC-MATRIX-002`, `TC-FIXTURE-001`…`003`, each linked in §3.2/§3.3).
+Case inventory: **74** cases across twelve groups — `STATUS` 8, `LOG` 12, `ISDEL` 7, `MSG` 11, `GRAMMAR` 5, `PERSIST` 11, `RO` 4, `SHELL` 4, `CONTRACT` 3, `NFR` 4, `MATRIX` 2, `FIXTURE` 3. Every case is linked to an `AC-*`, an `NFR-*`, an `API-`/`DM-` id, or a named TDR-0058 rule: **0 orphan cases** (the 13 cases with no `AC-*` link are `TC-STATUS-008`, `TC-LOG-010`, `TC-LOG-011`, `TC-RO-004`, `TC-CONTRACT-002`, `TC-NFR-001`…`004`, `TC-MATRIX-002`, `TC-FIXTURE-001`…`003`, each linked in §3.2/§3.3).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
 | Contract | Case(s) | Note |
 |----------|---------|------|
 | `API-1` `dispatch status` | `TC-STATUS-001`…`TC-STATUS-008`, `TC-MATRIX-001` | Full payload per state, exit 0 on every successful read, zero appends, and a typed `state.*` refusal (never `marker=absent`) when the lane store cannot be read |
-| `API-2` `dispatch log` | `TC-LOG-001`…`TC-LOG-011`, `TC-MATRIX-001` | Stitched read, torn-tail drop, truncation fact, `no-log` 0 / `unreadable` 1, snapshot semantics |
+| `API-2` `dispatch log` | `TC-LOG-001`…`TC-LOG-012`, `TC-MATRIX-001` | Stitched read, torn-tail drop, truncation fact, `no-log` 0 / `unreadable` 1, snapshot semantics, machine-byte-only window |
 | `API-3` `dispatch is-delivering` | `TC-ISDEL-001`…`TC-ISDEL-007`, `TC-MATRIX-001` | Both forms, boolean in `data` with no error object, exit 0/1, typed store failure |
-| `API-4` `dispatch last-message` | `TC-MSG-001`…`TC-MSG-010`, `TC-MATRIX-001` | Transcript source, finality, closed ladder, composition order, exit 0/1 |
+| `API-4` `dispatch last-message` | `TC-MSG-001`…`TC-MSG-011`, `TC-MATRIX-001` | Transcript source, finality, closed ladder, composition order, exit 0/1, the entrypoint-resolved credential set |
 | `API-5` grammar and refusal contract | `TC-GRAMMAR-001`…`TC-GRAMMAR-005`, `TC-LOG-003`, `TC-MATRIX-002` | Canonical ref, one `query` discriminator, refusal identities decided before any runtime call, uncomposed refusal |
 | `API-6` lane-view read contract | `TC-STATUS-006`, `TC-STATUS-007`, `TC-STATUS-008`, `TC-ISDEL-006`, `TC-ISDEL-007`, `TC-CONTRACT-003` | One bounded `dispatch.lane` read; the repository filter is applied **before** the newest-per-ref fold (the key `dispatch.lanes:<ref>` carries no repository component); daemon lanes contribute nothing; persistence-disabled identity; unreadable fold is the store's typed failure, never `absent` or an empty answer |
 | `API-7` log artifact read contract | `TC-LOG-001`, `TC-LOG-002`, `TC-LOG-008`, `TC-LOG-009`, `TC-LOG-010`, `TC-LOG-011` | Only the ref's directory listed, name-order stitch, torn tail dropped, short-window truncation, no deletion |
 | `API-8` per-stream stdout observation seam | `TC-PERSIST-001`…`TC-PERSIST-010` | Binding point per stream, one append per value, segmentation, retention, non-gating fault, one-shot absence |
-| `API-9` transcript read seam | `TC-MSG-002`, `TC-MSG-005`, `TC-MSG-006`, `TC-MSG-007`, `TC-MSG-009`, `TC-MSG-010` | Capability gating, no session operation, closed absences, no operation/capability/gap addition |
+| `API-9` transcript read seam | `TC-MSG-002`, `TC-MSG-005`, `TC-MSG-006`, `TC-MSG-007`, `TC-MSG-009`, `TC-MSG-010`, `TC-MSG-011` | Capability gating, no session operation, closed absences, no operation/capability/gap addition, raw return composed only by the query |
 | `API-10` owner-liveness probe seam | `TC-STATUS-004`, `TC-STATUS-005` | Tri-state, 5 000 ms tolerance, reused-pid rejection, advisory only |
 | `API-11` query exit projection | `TC-MATRIX-001`, `TC-ISDEL-002`, `TC-ISDEL-006`, `TC-MSG-006`, `TC-STATUS-008`, `TC-LOG-006`, `TC-MSG-004`, `TC-CONTRACT-001` | `success`→0 / `user-validation`→1 / `platform-provider`→2 through the delivered projection: the closed negative answers and a permission failure are exit 1, while `state.store.torn` is exit 2; no error row is added and no case states a numeric literal |
 | `API-12` no-shell and no-script contract (extended) | `TC-SHELL-001`, `TC-SHELL-002`, `TC-SHELL-004` | Extended declared surface, planted reference fails by name, zero shell invocation |
@@ -158,9 +158,9 @@ Case inventory: **72** cases across twelve groups — `STATUS` 8, `LOG` 11, `ISD
 | `DM-3` transcript read seam | `TC-MSG-001`, `TC-MSG-005`, `TC-MSG-009`, `TC-MSG-010` | Under the existing capability; Claude Code declares the gap; no operation added |
 | `DM-4` owner-liveness probe facts | `TC-STATUS-004`, `TC-STATUS-005` | Closed verdicts, tolerance, advisory only, never persisted |
 | `DM-5` query payloads | `TC-GRAMMAR-001`, `TC-STATUS-001`…`003`, `TC-LOG-004`, `TC-ISDEL-003`, `TC-MSG-001` | Four declared key sets, one discriminator each, no `result` token |
-| `DM-6` declared bounds and constants | `TC-NFR-002`, `TC-LOG-007`, `TC-ISDEL-004`, `TC-MSG-008` | Each bound has one home; retained count and family bound are TDR-0056 policy |
+| `DM-6` declared bounds and constants | `TC-NFR-002`, `TC-LOG-007`, `TC-LOG-012`, `TC-ISDEL-004`, `TC-MSG-008`, `TC-MSG-011` | Each bound has one home; retained count and family bound are TDR-0058 policy; the machine window's `bound` is the retained line count, not a line bound |
 | `DM-7` exit and identity posture | `TC-ISDEL-006`, `TC-MSG-006`, `TC-STATUS-008`, `TC-CONTRACT-001`, `TC-NFR-002` | `unreadable` is a data fact at exit 1, never a new identity; a lane-store failure keeps `state.*` on every query that reads it, at that row's projection |
-| Structural obligations (TDR-0056 plan-pinned, spec §25.3) | `TC-FIXTURE-001`, `TC-FIXTURE-002`, `TC-FIXTURE-003` | The six plan-pinned obligations each carry their named test (`artifact-naming`, `segment-switch`, `torn-line-reader`, `two-segment-tail`, `segment-ordering`, `sink-fault-observational`); the proof boundary is a permanent constant; the new suites and fixtures are isolated |
+| Structural obligations (TDR-0058 plan-pinned, spec §25.3) | `TC-FIXTURE-001`, `TC-FIXTURE-002`, `TC-FIXTURE-003` | The six plan-pinned obligations each carry their named test (`artifact-naming`, `segment-switch`, `torn-line-reader`, `two-segment-tail`, `segment-ordering`, `sink-fault-observational`); the proof boundary is a permanent constant; the new suites and fixtures are isolated |
 | `EVT-*` | — | No event, message, or telemetry record is added (spec §8.2); nothing to test |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -169,12 +169,12 @@ Case inventory: **72** cases across twelve groups — `STATUS` 8, `LOG` 11, `ISD
 |-----|---------|-------------|
 | `NFR-1` bounded reads | `TC-STATUS-007`, `TC-RO-004`, `TC-MSG-007`, `TC-LOG-010`, `TC-RO-003` | Exactly 1 lane read (≤ 5 000 records), ≤ 1 two-file join or 1 transcript read, 0 network, 0 session operations, 0 process starts, 0 deletions |
 | `NFR-2` read-only posture | `TC-RO-001`, `TC-RO-002`, `TC-STATUS-004`, `TC-GRAMMAR-005` | 0 appends, 0 fences, 0 lane rewrites, 0 identity-marker writes, 0 shell-artifact reads or writes, 0 deletions |
-| `NFR-3` log bounds | `TC-LOG-007`, `TC-LOG-008`, `TC-PERSIST-005`, `TC-PERSIST-006`, `TC-PERSIST-007`, `TC-NFR-002` | Per-file 1 048 576 by segmentation, continuation rather than drop, newest 2 retained, family ≤ 2 097 152, default 50 in 1..500, 65 536 machine, 200 lines / 32 768 human, one truncation fact per binding bound |
+| `NFR-3` log bounds | `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-012`, `TC-PERSIST-005`, `TC-PERSIST-006`, `TC-PERSIST-007`, `TC-NFR-002` | Per-file 1 048 576 by segmentation, continuation rather than drop, newest 2 retained, family ≤ 2 097 152, default 50 in 1..500, 65 536 machine, 200 lines / 32 768 human, one truncation fact per binding bound, and no human line bound applied to the machine answer |
 | `NFR-4` reference scoping | `TC-LOG-001`, `TC-LOG-010`, `TC-STATUS-006`, `TC-ISDEL-007` | 0 listings outside the addressed directory, 0 foreign lines, 0 foreign or daemon lanes |
 | `NFR-5` contract invariance | `TC-CONTRACT-001`, `TC-CONTRACT-002`, `TC-GRAMMAR-005`, `TC-NFR-002`, `TC-STATUS-008` | 0 new tokens, projections, exits, error rows, domain kinds, attempt/lane fields, configuration keys; `state-unverified` stays 2; a lane-store failure reuses the existing `state.*` row and adds no `absent`-shaped identity |
 | `NFR-6` no shell dependency | `TC-SHELL-001`, `TC-SHELL-002`, `TC-SHELL-003`, `TC-SHELL-004` | 0 invocations, 0 script-path literals, 0 shell-owned path reads, 4/4 queries answer with the shell absent |
 | `NFR-7` determinism | `TC-NFR-001`, `TC-MATRIX-001`, `TC-FIXTURE-003` | Two consecutive runs identical for all 12 combinations; 0 live network, 0 child starts, 0 live process-table reads; every fixture root from the approved base |
-| `NFR-8` message fidelity and bounds | `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-008`, `TC-NFR-004` | Transcript-sourced, ≤ 512 characters single line, redact before bound, `truncated` from post-redaction length, no general scrubbing claim |
+| `NFR-8` message fidelity and bounds | `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-008`, `TC-MSG-011`, `TC-NFR-004` | Transcript-sourced, ≤ 512 characters single line, redact before bound, `truncated` from post-redaction length, the registered set resolved by the entrypoint rather than injected as a fixture constant, no general scrubbing claim |
 | `NFR-9` staleness honesty | `TC-STATUS-004`, `TC-STATUS-005`, `TC-ISDEL-005` | Stale only for active ∧ dead; unknown never stale; outside tolerance is dead; 0 unrelated pids reported live |
 | `NFR-10` query latency budget | `TC-NFR-003` | p95 ≤ 1 000 ms over the 5 000-record reference store with the declared read counts |
 | `NFR-11` privacy of persisted payloads | `TC-PERSIST-011`, `TC-NFR-004` | Only harness stdout at rest (bounded, `0600`, unscrubbed by design) and the never-written final message; 0 prompts, diffs, credentials, tool arguments, or provider payloads added |
@@ -201,12 +201,12 @@ No end-to-end live layer participates: `tests/conformance/live/**` and the sched
 
 Three drivers and one seam driver are used, and every one of them is production code:
 
-- **D1 — composed production program.** `createProductionComposer({...injected facts})(brand)` → `runCli([...])`. This is the shipped composition; the injected facts are the declared injection points (`harnessSpawnRunner`, `harnessSpawnStarter`, `gitChildRunner`, `githubTransport`, `credentials`, `repositoryFacts`, `processId`, `environment`, `cwd`, `homeDirectory`, `delay`) plus the four operator facts this change requires — the owner-liveness probe, the transcript read, the artifact-family root (with a recording filesystem edge for the listing/read assertions), and the clock — together with the composer's existing registered-credential set (its `secrets` field, consumed as `deps.secrets`), which the message composition must be fed before the bound (§6.2, fifth declared composition fact). Pattern: `tests/fixtures/dispatch/parity/harness.ts` extended by `tests/fixtures/dispatch/operator/harness.ts`.
+- **D1 — composed production program.** `createProductionComposer({...injected facts})(brand)` → `runCli([...])`, or — when the run must own a declared credential reference — the production `runEntrypoint(argv, { composeProgram, environment, credentialReferences, … })`. This is the shipped composition; the injected facts are the declared injection points (`harnessSpawnRunner`, `harnessSpawnStarter`, `gitChildRunner`, `githubTransport`, `credentials`, `repositoryFacts`, `processId`, `environment`, `cwd`, `homeDirectory`, `delay`) plus the four operator facts this change requires — the owner-liveness probe, the transcript read, the artifact-family root (with a recording filesystem edge for the listing/read assertions), and the clock — together with the invocation's registered-credential set, which the entrypoint resolves once from the declared references and the injected `environment` and passes into the composed program before the message bound (§6.2, fifth declared composition fact). Pattern: `tests/fixtures/dispatch/parity/harness.ts` extended by `tests/fixtures/dispatch/operator/harness.ts`.
 - **D2 — the command definition over an injected runtime.** `createDispatchCommandDefinition(runtime)` driven through `runCli`, used where the point is grammar, refusal identity, the uncomposed refusal, or the projection — never to re-express a read decision.
 - **D3 — the read-side production functions directly.** The lane-view fold, the artifact tail selection, the stitching/splitting reader, the delivering fold, and the message composition, reached as the real production exports over seeded files and records. D3 exists for byte and line arithmetic that needs exact inputs (a file of exactly the cap, a continuation, a torn tail); it never re-implements the read.
 - **S1 — the real opencode adapter over the scripted streaming starter.** `createOpencodeSession({ starter, ... })` with a scripted `HarnessSpawnStream`, used for the write path (per-stream files, one append per value, segmentation, retention, the binding order) and for the transcript reader over a built store.
 
-`TC-MATRIX-001`, `TC-STATUS-001`…`008`, `TC-LOG-001`…`011`, `TC-ISDEL-001`…`007`, `TC-MSG-001`…`009`, `TC-GRAMMAR-001`…`005`, `TC-RO-001`…`004`, `TC-SHELL-002`…`004`, `TC-CONTRACT-002`/`003`, and `TC-NFR-001` run on D1 unless the case says otherwise. Every `TC-PERSIST-*` case runs on S1 (the real adapter and the real sink) with D1 supplying the composed program for the dispatch it observes, and `TC-MSG-010` runs on S1 over the built store plus one D1 invocation with the real reader mounted.
+`TC-MATRIX-001`, `TC-STATUS-001`…`008`, `TC-LOG-001`…`012`, `TC-ISDEL-001`…`007`, `TC-MSG-001`…`009`, `TC-MSG-011`, `TC-GRAMMAR-001`…`005`, `TC-RO-001`…`004`, `TC-SHELL-002`…`004`, `TC-CONTRACT-002`/`003`, and `TC-NFR-001` run on D1 unless the case says otherwise (`TC-MSG-011` runs D1 through `runEntrypoint`, because the credential it proves must be resolved by the production entrypoint rather than injected). Every `TC-PERSIST-*` case runs on S1 (the real adapter and the real sink) with D1 supplying the composed program for the dispatch it observes, and `TC-MSG-010` runs on S1 over the built store plus one D1 invocation with the real reader mounted.
 
 ### 5.1 Scenario Index
 
@@ -223,16 +223,17 @@ Three drivers and one seam driver are used, and every one of them is production 
 | `TC-STATUS-007` | Every status answer performs one bounded lane read and no write | Integration | Conformance | Critical | `AC-F1-7`, `NFR-1`, `NFR-2`, `API-6` | New |
 | `TC-STATUS-008` | An unreadable lane store keeps its typed `state.*` identity on `status`, never a fabricated `absent` | Integration | Conformance | Critical | `API-6`, `API-11`, `DM-7`, `NFR-5` | New |
 | `TC-LOG-001` | Default tail 50 over the newest file then the preceding one, oldest-to-newest, reference-scoped | Integration | Conformance | Critical | `AC-F2-1`, `API-2`, `API-7`, `NFR-4` | New |
-| `TC-LOG-002` | A value continued across a segment boundary is reconstructed (stitch before split) | Integration | Conformance | Critical | `AC-F2-1`, `AC-F2-6`, `API-7`, `TDR-0056 two-segment-tail` | New |
+| `TC-LOG-002` | A value continued across a segment boundary is reconstructed (stitch before split) | Integration | Conformance | Critical | `AC-F2-1`, `AC-F2-6`, `API-7`, `TDR-0058 two-segment-tail` | New |
 | `TC-LOG-003` | Every invalid `--tail` and every undeclared flag is refused before any artifact read | Integration | Conformance | Critical | `AC-F2-2`, `AC-F5-2`, `API-5` | New |
 | `TC-LOG-004` | No artifact directory is `no-log` at exit 0, never a fabricated tail | Integration | Conformance | Critical | `AC-F2-3`, `API-2`, `API-7` | New |
 | `TC-LOG-005` | A retained file with no complete line is an available, empty answer | Integration | Conformance | High | `AC-F2-3`, `API-7` | New |
 | `TC-LOG-006` | An unreadable file is `unreadable` at exit 1 with no content | Integration | Conformance | Critical | `AC-F2-4`, `API-2`, `API-11` | New |
 | `TC-LOG-007` | Machine and human bounds bind with exactly one truncation fact naming its scope | Integration | Conformance | Critical | `AC-F2-5`, `NFR-3`, `DM-6` | New |
-| `TC-LOG-008` | A short retained window answers with exactly one tail-scope truncation fact | Integration | Conformance | Critical | `AC-F2-5`, `AC-F2-6`, `NFR-3`, `TDR-0056 two-segment-tail` | New |
-| `TC-LOG-009` | A torn tail is dropped, never returned as content | Integration | Conformance | Critical | `AC-F2-1`, `AC-F2-6`, `API-7`, `TDR-0056 torn-line-reader` | New |
+| `TC-LOG-008` | A short retained window answers with exactly one tail-scope truncation fact | Integration | Conformance | Critical | `AC-F2-5`, `AC-F2-6`, `NFR-3`, `TDR-0058 two-segment-tail` | New |
+| `TC-LOG-009` | A torn tail is dropped, never returned as content | Integration | Conformance | Critical | `AC-F2-1`, `AC-F2-6`, `API-7`, `TDR-0058 torn-line-reader` | New |
 | `TC-LOG-010` | Only the addressed ref's directory is listed and only its files are read | Integration | Conformance | Critical | `API-7`, `NFR-4`, `NFR-1` | New |
 | `TC-LOG-011` | A read is a snapshot of what was durable, with no lock or flush | Integration | Conformance | Important | `API-2`, `API-7`, `RSK-22` | New |
+| `TC-LOG-012` | The machine window is byte-bounded only: a 220-line retained window is returned whole with one `tail` fact naming it, while the human form keeps its 200-line bound | Integration | Conformance | Critical | `AC-F2-5`, `API-2`, `DM-6`, `NFR-3` | New |
 | `TC-ISDEL-001` | A live lane answers exit 0 with delivering=true and the ref, and no refs list | Integration | Conformance | Critical | `AC-F3-1`, `API-3`, `DM-5` | New |
 | `TC-ISDEL-002` | A terminal or absent lane answers exit 1 with the boolean in data and no error object | Integration | Conformance | Critical | `AC-F3-2`, `API-3`, `API-11` | New |
 | `TC-ISDEL-003` | The ref-less form answers over the repository, and an empty repository is exit 1 | Integration | Conformance | Critical | `AC-F3-3`, `API-3` | New |
@@ -250,6 +251,7 @@ Three drivers and one seam driver are used, and every one of them is production 
 | `TC-MSG-008` | Composition is redact → flatten → bound → mark, so a straddling credential never survives | Integration | Behaviour | Critical | `AC-F4-7`, `NFR-8`, `DM-6`, `RISK-18` | New |
 | `TC-MSG-009` | The ladder is ordered: an earlier rung wins when two conditions hold | Integration | Conformance | Critical | `AC-F4-5`, `DM-3`, `DEC-4` | New |
 | `TC-MSG-010` | The opencode reader returns the final assistant message from a built store, read-only | Integration | Behaviour | Critical | `AC-F4-1`, `AC-F4-6`, `API-9`, `DM-3` | New + Extended (`tests/fixtures/harness/opencode-store/**`) |
+| `TC-MSG-011` | The entrypoint-resolved credential is redacted before the message cut, in both output modes | Integration | Conformance | Critical | `AC-F4-7`, `AC-F4-1`, `API-4`, `API-9`, `NFR-8` | New |
 | `TC-GRAMMAR-001` | Each form carries exactly one `query` discriminator and its declared key set in the standard envelope | Integration | Conformance | Critical | `AC-F5-1`, `API-5`, `DM-5` | New |
 | `TC-GRAMMAR-002` | A non-canonical or missing ref and an extra positional are refused before any runtime call | Integration | Conformance | Critical | `AC-F5-2`, `API-5` | New |
 | `TC-GRAMMAR-003` | An invalid `--tail` value and an undeclared flag take their distinct refusal identities | Integration | Conformance | Critical | `AC-F5-2`, `AC-F2-2`, `API-5` | New |
@@ -257,14 +259,14 @@ Three drivers and one seam driver are used, and every one of them is production 
 | `TC-GRAMMAR-005` | No query emits a delivery result token or appends a record, and later reads are unchanged | Integration | Conformance | Critical | `AC-F5-4`, `NFR-2`, `NFR-5` | New |
 | `TC-PERSIST-001` | Each stream of a streaming adapter gets its own 0600 file, created before its first value | Integration | Conformance | Critical | `AC-F7-1`, `API-8`, `DM-2` | New |
 | `TC-PERSIST-002` | Every yielded value is written with exactly one LF, decoded or not, final remnant included | Integration | Conformance | Critical | `AC-F7-1`, `AC-F7-3`, `DM-2` | New |
-| `TC-PERSIST-003` | File names sort in creation order across a restart and two concurrent streams | Integration | Conformance | Critical | `AC-F7-1`, `AC-F7-4`, `TDR-0056 artifact-naming` | New |
+| `TC-PERSIST-003` | File names sort in creation order across a restart and two concurrent streams | Integration | Conformance | Critical | `AC-F7-1`, `AC-F7-4`, `TDR-0058 artifact-naming` | New |
 | `TC-PERSIST-004` | Two refs never share a directory or file, and a one-shot adapter creates none | Integration | Conformance | Critical | `AC-F7-1`, `API-8`, `DM-2` | New |
-| `TC-PERSIST-005` | The per-file cap is enforced by segmentation with nothing dropped at a boundary | Integration | Conformance | Critical | `AC-F2-6`, `AC-F7-3`, `NFR-3`, `TDR-0056 segment-switch` | New (phase-3-owned; write half asserted at the phase-3 boundary, read-back half executed at the phase-4 boundary) |
-| `TC-PERSIST-006` | A value longer than the cap is split and reconstructed byte-identically | Integration | Conformance | Critical | `AC-F2-6`, `AC-F7-3`, `TDR-0056 segment-switch` | New (phase-3-owned; write half asserted at the phase-3 boundary, read-back half executed at the phase-4 boundary) |
+| `TC-PERSIST-005` | The per-file cap is enforced by segmentation with nothing dropped at a boundary | Integration | Conformance | Critical | `AC-F2-6`, `AC-F7-3`, `NFR-3`, `TDR-0058 segment-switch` | New (phase-3-owned; write half asserted at the phase-3 boundary, read-back half executed at the phase-4 boundary) |
+| `TC-PERSIST-006` | A value longer than the cap is split and reconstructed byte-identically | Integration | Conformance | Critical | `AC-F2-6`, `AC-F7-3`, `TDR-0058 segment-switch` | New (phase-3-owned; write half asserted at the phase-3 boundary, read-back half executed at the phase-4 boundary) |
 | `TC-PERSIST-007` | Retention keeps the newest two files and removes the oldest only after the new file exists | Integration | Conformance | Critical | `AC-F7-4`, `AC-F2-6`, `NFR-3` | New |
 | `TC-PERSIST-008` | A written file is never modified: one append per value, mode and bytes intact | Integration | Conformance | Critical | `AC-F7-3`, `DM-2` | New |
-| `TC-PERSIST-009` | A killed writer leaves at most one torn tail and the reader drops only that tail | Integration | Conformance | Critical | `AC-F7-3`, `AC-F2-1`, `TDR-0056 torn-line-reader` | New |
-| `TC-PERSIST-010` | A sink fault is observational: token, exit, records and evidence are identical | Integration | Conformance | Critical | `AC-F7-2`, `API-8`, `TDR-0056 sink-fault-observational` | New |
+| `TC-PERSIST-009` | A killed writer leaves at most one torn tail and the reader drops only that tail | Integration | Conformance | Critical | `AC-F7-3`, `AC-F2-1`, `TDR-0058 torn-line-reader` | New |
+| `TC-PERSIST-010` | A sink fault is observational: token, exit, records and evidence are identical | Integration | Conformance | Critical | `AC-F7-2`, `API-8`, `TDR-0058 sink-fault-observational` | New |
 | `TC-PERSIST-011` | The artifact holds only the declared transformation, and no log content reaches any record | Integration | Conformance | Critical | `AC-F7-3`, `AC-F6-1`, `NFR-11` | New (phase-4-owned — the log phase; it needs a `dispatch log` answer, which does not exist at the phase-3 boundary, so phase 3 no longer runs it) |
 | `TC-RO-001` | Store bytes, lane records, the identity marker and the artifact file set are unchanged | Integration | Conformance | Critical | `AC-F6-1`, `NFR-2` | New |
 | `TC-RO-002` | Planted shell artifacts change no answer and stay byte- and mtime-identical | Integration | Conformance | Critical | `AC-F6-2`, `NFR-2`, `NFR-6` | New |
@@ -278,10 +280,10 @@ Three drivers and one seam driver are used, and every one of them is production 
 | `TC-CONTRACT-002` | The delivery path is unchanged and the family's help entries move from five to nine | Integration | Conformance | Critical | `NFR-5`, `RSK-9`, spec §25.1 | Extended (`dispatch-e2e`, parity battery, `dispatch-help-inventory.test.ts`, `dispatch-attempts-composition.test.ts`) |
 | `TC-CONTRACT-003` | Pre-change records read unchanged and a pre-change ref answers honestly | Integration | Behaviour | High | `AC-F2-3`, `NFR-5`, spec §8.5/§20 | Extended (`dispatch-additive-stability.test.ts`) |
 | `TC-NFR-001` | Two consecutive battery runs are identical with zero live network and zero live processes | Integration | Conformance | Critical | `NFR-7`, `NFR-1` | New |
-| `TC-NFR-002` | Every declared bound is a constant with exactly one home and no configuration key | Invariant | Checks | High | `NFR-3`, `NFR-5`, `DM-6`, TDR-0056 `C-1` | New |
+| `TC-NFR-002` | Every declared bound is a constant with exactly one home and no configuration key | Invariant | Checks | High | `NFR-3`, `NFR-5`, `DM-6`, TDR-0058 `C-1` | New |
 | `TC-NFR-003` | Each query answers within 1 000 ms over the 5 000-record reference store | Performance | Behaviour | Medium | `NFR-10`, `NFR-1` | New |
 | `TC-NFR-004` | The only persisted and emitted content is the harness stdout and the bounded final message | Integration | Behaviour | Critical | `NFR-11`, `NFR-8`, `AC-F4-7` | Extended (`dispatch-privacy.test.ts`) |
-| `TC-FIXTURE-001` | Every case drives a real production seam and a reimplementation is rejected by name | Structure | Checks | Critical | `AC-F5-4`, `NFR-5`, TDR-0056 `DC-3` | New (`tests/checks/operator-seam-identity.test.ts`) |
+| `TC-FIXTURE-001` | Every case drives a real production seam and a reimplementation is rejected by name | Structure | Checks | Critical | `AC-F5-4`, `NFR-5`, TDR-0058 `DC-3` | New (`tests/checks/operator-seam-identity.test.ts`) |
 | `TC-FIXTURE-002` | The proved / not-proved boundary is a permanent constant and is self-consistent | Structure | Checks | High | spec §25.3 Appendix C | New (`tests/checks/operator-proof-boundary.test.ts`) |
 | `TC-FIXTURE-003` | Every new suite and fixture is isolated to the approved temp base | Structure | Checks | High | repo convention (`TC-ATTEMPT-036`), `NFR-7` | New (`tests/checks/dispatch-operator-test-isolation.test.ts`) |
 
@@ -608,7 +610,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, F-7, AC-F2-1, AC-F2-6, API-7, TDR-0056 `two-segment-tail`
+**Related IDs**: F-2, F-7, AC-F2-1, AC-F2-6, API-7, TDR-0058 `two-segment-tail`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-log.test.ts`
@@ -630,7 +632,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 - No `truncation` object: the window satisfied the request and neither the value nor the line count bound.
 - Exit 0; 0 deletions.
 
-**Notes**: This is TDR-0056's named `two-segment-tail` obligation. A reader that splits each file before stitching returns two fragments and fails on the byte comparison (`M11`).
+**Notes**: This is TDR-0058's named `two-segment-tail` obligation. A reader that splits each file before stitching returns two fragments and fails on the byte comparison (`M11`).
 
 #### TC-LOG-003 - Every invalid `--tail` and every undeclared flag is refused before any artifact read
 
@@ -774,7 +776,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, AC-F2-5, AC-F2-6, NFR-3, TDR-0056 `two-segment-tail`, RSK-14, RSK-21
+**Related IDs**: F-2, AC-F2-5, AC-F2-6, NFR-3, TDR-0058 `two-segment-tail`, RSK-14, RSK-21
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-log-bounds.test.ts` (arithmetic, D3) + `tests/conformance/dispatch/dispatch-operator-log.test.ts` (command projection)
@@ -799,7 +801,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-2, F-7, AC-F2-1, AC-F2-6, API-7, NFR-3, TDR-0056 `torn-line-reader`
+**Related IDs**: F-2, F-7, AC-F2-1, AC-F2-6, API-7, NFR-3, TDR-0058 `torn-line-reader`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-log-bounds.test.ts` (reader arithmetic, D3) + `tests/conformance/dispatch/dispatch-operator-log.test.ts`
@@ -821,7 +823,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 - (c) the older file's lines plus the newer file's complete lines; only the newer file's unterminated tail is dropped.
 - The dropped tail is a declared tolerance, not a truncation fact (`truncation` is absent when the line count was satisfied).
 
-**Notes**: TDR-0056's named `torn-line-reader` obligation, asserted in both directions. `M17` makes the reader return the tail and must fail (a) and (c); `M18` makes it drop any last line and must fail (b).
+**Notes**: TDR-0058's named `torn-line-reader` obligation, asserted in both directions. `M17` makes the reader return the tail and must fail (a) and (c); `M18` makes it drop any last line and must fail (b).
 
 #### TC-LOG-010 - Only the addressed ref's directory is listed and only its files are read
 
@@ -873,6 +875,38 @@ Numbering note: every id above is new for this change, so no numbering collision
 - Both answers state what was durable when the read started: the in-flight append's bytes are simply absent, and the listing's newest file is the one read.
 - 0 lock files created, 0 flushes, 0 retries, 0 writes; a second invocation after the writer quiesces returns the complete content.
 - No `truncation` object when the durable content satisfied the request; the snapshot is the declared tolerance, not a truncation fact.
+
+#### TC-LOG-012 - The machine window is byte-bounded only: a 220-line retained window is returned whole with one `tail` fact naming it, while the human form keeps its 200-line bound
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-2, AC-F2-5, API-2, DM-6, NFR-3
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-log.test.ts`
+**Tags**: @backend, @dispatch, @operator, @offline
+**Seam**: `S-tail` — the real tail selection and the two bound families, driven through the real command path
+
+**Preconditions**:
+- One retained segment file for the ref holding 220 short numbered lines (`W-1`…`W-220`), so the whole window stays far below the 65 536-byte machine budget while sitting above the 200-line human bound.
+- The requested tail (`--tail 500`) exceeds both what the window holds and the human line bound, so each form's answer must state its own shortfall.
+- The declared constants are read from the contract module (`DISPATCH_MAX_MACHINE_BYTES`, `DISPATCH_LOG_MAX_HUMAN_LINES`), never re-typed in the case.
+
+**Steps**:
+1. Run `dispatch log GH-354 --tail 500 --json` and read `data.lines` and `data.truncation`.
+2. Assert the returned line list, its length, its first and last element, and the single truncation object.
+3. Run the human form with the same request and assert the rendered body's length, its first and last line, and the `truncation=` line.
+4. Assert that the machine fact's `bound` is not the human line bound.
+
+**Expected Outcome**:
+- Machine answer: 220 lines returned **whole** — oldest-to-newest, `W-1` first and `W-220` last — at exit 0; the machine `data` is bounded by bytes only, so nothing is dropped by a line count.
+- Machine answer carries exactly one `truncation` object: `{ scope: "tail", bound: 220, omittedLines: 280 }` — `tail` because a shorter line count than the request is a line-scope fact, and `220` because the bound that bound is the **retained window**, never a line bound; `bound` is explicitly not `DISPATCH_LOG_MAX_HUMAN_LINES`.
+- Human answer: exactly 200 body lines, the newest (`W-21`…`W-220`), plus one `truncation=scope:tail,bound:200,omitted:300` line — the human 200-line bound binds and declares its own shortfall.
+- Neither form applies the other's bound: a machine answer capped at 200 (or its fact naming 200) fails, and a human answer that returns 220 lines fails.
+- No `result` token, 0 deletions, the file's bytes unchanged by either invocation.
+
+**Notes**: `TC-LOG-007` asserts the machine **byte** bound and both human bounds under load; this case is the complement — a window short of the request in **lines** with bytes to spare, which is the only fixture that separates "the machine window is byte-bounded only" from "the machine window is also line-bounded". Applying the human 200-line bound to the machine answer fails on the returned length, the fact's `bound`, and the `omittedLines` arithmetic (300 vs 280). Owning phase: the log phase, which is where `dispatch log` exists.
 
 #### TC-ISDEL-001 - A live lane answers exit 0 with delivering=true and the ref, and no refs list
 
@@ -1246,28 +1280,28 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-message-composition.test.ts`
 **Tags**: @backend, @dispatch, @operator, @offline
-**Seam**: the delivered serialization chokepoint `redact(value, secrets)` in `packages/cli/src/output/serialize.ts`, driven by the real query
+**Seam**: the delivered composition `composeDispatchMessage` in `packages/core/src/domain/dispatch-message.ts` (redact → flatten → bound → mark), driven through the real query — the case computes its expectation with that same production function and asserts equivalence
 
 **Preconditions**:
-- A registered credential value of 40 characters (`ghp_` plus 36) supplied the way production supplies it: the credential's declared environment variable is set in the injected `environment`, and `packages/cli/src/edge.ts` registers it with `registerEdgeSecrets(environment, secretKeys)` so the composed `secrets` — the same set the `blockers` and `steer` runtimes already receive — reaches the operator runtime. The fixture asserts that this set is non-empty and contains the credential before the run; it registers no scrub of its own.
+- A registered credential value of 40 characters (`ghp_` plus 36) handed to the run as its registered `secrets` — the composition-level supply. The end-to-end resolution of that set from the declared reference and the injected environment is `TC-MSG-011`'s observation; this case does not re-prove the wiring and registers no scrub of its own.
 - A transcript whose final assistant message places that credential so it straddles the 512-character cut: 490 characters of prose, then the credential, then 200 more characters, plus embedded line breaks and a tab.
 - A second fixture: a message of 600 characters with no credential; a third: a message of 400 characters with a credential entirely inside the bound.
 
 **Steps**:
 1. Run `dispatch last-message GH-354` for each fixture, human and `--json`.
 2. Assert the message length, the flattening, the `truncated` flag, and the absence of the credential.
-3. Recompute the expected result by applying the four steps in order to the fixture input and compare.
-4. Assert that the composed `secrets` set is what the answer was redacted with, by running the same fixture with the credential registered and with the variable unset: only the registered run replaces it.
+3. Compute the expectation with the production `composeDispatchMessage` over the same text and registered set, and assert the answer is **equivalent** to it (`message` and `truncated`).
+4. Assert the set dependency by running the same fixture twice — once with the credential registered and once with none registered: only the registered run replaces it.
 
 **Expected Outcome**:
 - The straddling fixture: the credential appears nowhere — not as a prefix, not partially, not as `[redacted]` truncated at the boundary; the answer is ≤ 512 characters, single line (no `\n`, no `\t`), and `truncated=true` derived from the post-redaction length.
 - The 600-character fixture: `truncated=true`, exactly 512 characters.
 - The 400-character fixture: `truncated=false`, the credential replaced by `[redacted]`, prose returned within the bound (no general scrubbing claim is asserted).
-- Applying redact → flatten → bound → mark to the fixture reproduces the answer exactly; applying bound before redact does not (that ordering is the mutation `M33`).
-- With the credential variable unset, the same fixture text is composed but the credential is **not** replaced: the answer is the first 512 characters of the text with `truncated=true` and the credential's leading characters visible inside the bound, which proves the redaction used the delivered registered set rather than a fixture-local pattern.
+- The answer is byte-equal to the production composition's own output for the same input, and both `truncated` values agree: the expectation is the delivered function's, so a divergence is a wiring failure rather than a differing expectation. A bound-before-redact implementation fails on the disclosed prefix (that ordering is the mutation `M33`).
+- With no credential registered, the same fixture text is composed but the credential is **not** replaced: the answer is the first 512 characters of the text with `truncated=true` and the credential's leading characters visible inside the bound, which proves the redaction used the registered set rather than a fixture-local pattern.
 - Exit 0 in all three; 0 writes.
 
-**Notes**: This case is why the registered-credential set is the **fifth** declared composition fact (§6.2): `AC-F4-7` requires redaction before the bound, and redaction cannot happen before the bound unless the runtime that composes the message holds the delivered set. Owning plan phase: 5, the phase that lands the transcript read and `last-message`.
+**Notes**: This case owns the **composition order** (`AC-F4-7`'s order clause) under an explicitly registered set; `TC-MSG-011` owns the production **resolution** of that set (`entrypointSecrets` in the CLI entrypoint, `environment` + declared references), and `TC-MSG-010` owns the layer boundary (the reader returns raw text; the query composes). The expectation is computed by `composeDispatchMessage`, not by re-implementing the four steps in the test, so the case cannot drift into a second implementation (`TC-FIXTURE-001` would reject a local scrub by name). Owning plan phase: 5, the phase that lands the transcript read and `last-message`.
 
 #### TC-MSG-009 - The ladder is ordered: an earlier rung wins when two conditions hold
 
@@ -1329,6 +1363,38 @@ Numbering note: every id above is new for this change, so no numbering collision
 - The store file's bytes and mtime are unchanged after every read, including the query invocations; 0 files created beside it.
 
 **Notes**: This is the offline half of `RSK-15`: it proves the reader's contract against the two recorded generations, which is more than the seam alone. A *live* layout drift beyond those generations remains in §1.2's not-proven list. The composition clause is `AC-F4-7`'s and is owned by `TC-MSG-008`; this case re-observes it over the real reader (and over the real query) without moving ownership, so it adds no AC link. A reader that flattens, bounds, or redacts fails here even though `TC-MSG-008` would still pass — that is the point of asserting the seam's raw return.
+
+#### TC-MSG-011 - The entrypoint-resolved credential is redacted before the message cut, in both output modes
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-4, AC-F4-7, AC-F4-1, API-4, API-9, NFR-8
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-message.test.ts`
+**Tags**: @backend, @dispatch, @operator, @offline
+**Seam**: the production entrypoint `runEntrypoint` (whose `entrypointSecrets` resolves the registered set from the declared references and the injected `environment`), the real command definition and projection, and the real composition `composeDispatchMessage` — with the transcript read injected
+
+**Preconditions**:
+- A terminal lane (`harnessKind: "opencode"`, `sessionId: "ses-straddle"`) whose transcript ends with a message that straddles the 512-character cut: 490 characters of prose, then a 40-character registered credential (`ghp_` plus 36), then further prose carrying an embedded line break and a tab.
+- The credential is seeded **only** as `environment: { GITHUB_TOKEN: <credential> }` together with `credentialReferences: DECLARED_CREDENTIAL_REFERENCES`; no `secrets` and no fixture-local pattern is passed, so the only way the composition can know the value is the entrypoint resolving it.
+- Because a declared reference is present, the run goes through the production `runEntrypoint` path rather than a directly composed program, so the registered set travels as the invocation fact production uses (§6.2, fact 5).
+
+**Steps**:
+1. Run `dispatch last-message GH-354 --json` and read `data.message` and `data.truncated`.
+2. Assert the surrounding prose, the replacement marker, the absolute absence of the credential, the length, and the flag.
+3. Assert the control: a naive 512-character cut of the raw transcript text would have disclosed the credential's leading characters, so the absence cannot be an artifact of the cut.
+4. Run the human form and assert the same absences and the surviving prose.
+
+**Expected Outcome**:
+- The credential appears nowhere in either form — not whole, not partially, not as a prefix: `message` contains no `ghp_…` value and none of its leading characters, and `human.stdout` likewise.
+- The surrounding prose survives: the answer begins with the 490 prose characters, carries `[redacted]` where the credential stood, and keeps the words after it (`still`).
+- The bound is applied to the **post-redaction** text: `message.length` equals the declared 512-character bound and `truncated=true`, at exit 0 in both forms.
+- The control holds: the raw text's first 512 characters include the credential's leading characters, while the answer contains none of them — the difference is redaction before the bound, not a cut that happened to miss the value.
+- No record, evidence ref, envelope, or diagnostic gains the credential; 0 writes.
+
+**Notes**: This is the only case in the battery that proves the credential set is what **production** resolves: the value enters through `environment` and `credentialReferences` only, `entrypointSecrets` computes the registered set in the CLI entrypoint, and it reaches the message composition as the invocation's `secrets` fact. `TC-MSG-008` proves the composition order under an explicitly registered set and asserts equivalence with `composeDispatchMessage`; `TC-MSG-010` proves the reader returns raw text and that the query composes; `TC-FIXTURE-001` rejects a fixture-local scrub by name. Together they close the wiring (this case), the order (`TC-MSG-008`), and the layer (`TC-MSG-010`). Owning phase: the message phase — the phase that lands the transcript read and `last-message`.
 
 #### TC-GRAMMAR-001 - Each form carries exactly one `query` discriminator and its declared key set in the standard envelope
 
@@ -1495,7 +1561,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-1, AC-F7-3, DM-2, TDR-0056 `DC-2`
+**Related IDs**: F-7, AC-F7-1, AC-F7-3, DM-2, TDR-0058 `DC-2`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1522,7 +1588,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-1, AC-F7-4, DM-2, TDR-0056 `artifact-naming` / `segment-ordering`
+**Related IDs**: F-7, AC-F7-1, AC-F7-4, DM-2, TDR-0058 `artifact-naming` / `segment-ordering`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1545,7 +1611,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 - The stale-mtime file does not move: name order wins, so `dispatch log` reads the same files in the same order regardless of mtime.
 - 0 shared counters (no sequence number derived from process state): re-running the fixture in a fresh process produces the same names for the same inputs.
 
-**Notes**: TDR-0056's named `artifact-naming` and `segment-ordering` obligations. A counter-derived name fails the fresh-process re-run.
+**Notes**: TDR-0058's named `artifact-naming` and `segment-ordering` obligations. A counter-derived name fails the fresh-process re-run.
 
 #### TC-PERSIST-004 - Two refs never share a directory or file, and a one-shot adapter creates none
 
@@ -1581,7 +1647,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Impact Level**: Critical
 **Priority**: Critical
 **Plan Phase(s)**: owned by phase 3 — the phase whose commit lands the case's load-bearing half and makes it gate-green; the write half is asserted at the phase-3 boundary, and the read-back half is executed at the phase-4 boundary (the log phase) as that boundary's cross-control, which is an assertion allocation and never a second owner
-**Related IDs**: F-2, F-7, AC-F2-6, AC-F7-3, NFR-3, TDR-0056 `segment-switch`
+**Related IDs**: F-2, F-7, AC-F2-6, AC-F7-3, NFR-3, TDR-0058 `segment-switch`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-artifact-writer.test.ts` (boundary arithmetic) + `tests/conformance/dispatch/dispatch-operator-persist.test.ts` (real adapter)
@@ -1610,7 +1676,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 - (Read-back half, phase 4) the reconstructed values are byte-identical to the yielded values, and `dispatch log --tail 500` returns them whole.
 - 0 deletions during the run (only the retention rule removes, after a new file exists).
 
-**Notes**: TDR-0056's named `segment-switch` obligation. The "exactly filling" boundary is the case that catches an off-by-one in the LF accounting (`M47`). The id is **phase-3-owned**: the write half is what phase 3's commit makes observable and gate-green, and the read-back half is executed at the phase-4 boundary as that boundary's cross-control over the same files (plan `SPLIT CASES`, and its `SHARED-FILE NOTE` 5/6 split of `dispatch-log.ts` / `dispatch-logs.ts`). Phase 4 executes the read-back assertions against this id and does not re-own it. The AC linkage is unchanged — `AC-F2-6` is the same property's read clause and `AC-F7-3` its write clause — and neither half is evidence for the other.
+**Notes**: TDR-0058's named `segment-switch` obligation. The "exactly filling" boundary is the case that catches an off-by-one in the LF accounting (`M47`). The id is **phase-3-owned**: the write half is what phase 3's commit makes observable and gate-green, and the read-back half is executed at the phase-4 boundary as that boundary's cross-control over the same files (plan `SPLIT CASES`, and its `SHARED-FILE NOTE` 5/6 split of `dispatch-log.ts` / `dispatch-logs.ts`). Phase 4 executes the read-back assertions against this id and does not re-own it. The AC linkage is unchanged — `AC-F2-6` is the same property's read clause and `AC-F7-3` its write clause — and neither half is evidence for the other.
 
 #### TC-PERSIST-006 - A value longer than the cap is split and reconstructed byte-identically
 
@@ -1618,7 +1684,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Impact Level**: Critical
 **Priority**: Critical
 **Plan Phase(s)**: owned by phase 3 — the phase whose commit lands the case's load-bearing half and makes it gate-green; the write half is asserted at the phase-3 boundary, and the read-back half is executed at the phase-4 boundary (the log phase) as that boundary's cross-control, which is an assertion allocation and never a second owner
-**Related IDs**: F-2, F-7, AC-F2-6, AC-F7-3, TDR-0056 `segment-switch`, RSK-21
+**Related IDs**: F-2, F-7, AC-F2-6, AC-F7-3, TDR-0058 `segment-switch`, RSK-21
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-artifact-writer.test.ts` + `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1680,7 +1746,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-3, DM-2, TDR-0056 `DC-2`
+**Related IDs**: F-7, AC-F7-3, DM-2, TDR-0058 `DC-2`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-operator-artifact-writer.test.ts` + `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1705,7 +1771,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, F-2, AC-F7-3, AC-F2-1, DM-2, TDR-0056 `torn-line-reader`
+**Related IDs**: F-7, F-2, AC-F7-3, AC-F2-1, DM-2, TDR-0058 `torn-line-reader`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1734,7 +1800,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-2, API-8, NFR-5, TDR-0056 `sink-fault-observational`
+**Related IDs**: F-7, AC-F7-2, API-8, NFR-5, TDR-0058 `sink-fault-observational`
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-operator-persist.test.ts`
@@ -1755,7 +1821,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 - The fault is swallowed as observation: no error object, no diagnostic, no changed classification.
 - A partially written file may remain (the fault's own artifact); it is never repaired, and the read tolerates it per `TC-PERSIST-009`.
 
-**Notes**: TDR-0056's named `sink-fault-observational` obligation, asserted on all three stream kinds because `deliver` is a distinct construction point.
+**Notes**: TDR-0058's named `sink-fault-observational` obligation, asserted on all three stream kinds because `deliver` is a distinct construction point.
 
 #### TC-PERSIST-011 - The artifact holds only the declared transformation, and no log content reaches any record
 
@@ -2114,7 +2180,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: NFR-3, NFR-5, DM-6, TDR-0056 `C-1`/`DC-7`
+**Related IDs**: NFR-3, NFR-5, DM-6, TDR-0058 `C-1`/`DC-7`
 **Test Type(s)**: Invariant
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/operator-contract-invariance.test.ts`
@@ -2126,7 +2192,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 
 **Steps**:
 1. Assert each value is exported once from a contract module and referenced (not re-typed) by its consumer.
-2. Assert the retained-file count and family bound are declared as TDR-0056 policy constants and derived (2 × cap), not duplicated literals.
+2. Assert the retained-file count and family bound are declared as TDR-0058 policy constants and derived (2 × cap), not duplicated literals.
 3. Assert the configuration key set is unchanged and contains no log/probe/tail key.
 
 **Expected Outcome**:
@@ -2194,7 +2260,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 **Scenario Type**: Structure
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F5-4, NFR-5, TDR-0056 `DC-3`/`DC-4`, spec §12
+**Related IDs**: AC-F5-4, NFR-5, TDR-0058 `DC-3`/`DC-4`, spec §12
 **Test Type(s)**: Structure
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/operator-seam-identity.test.ts` (new) + the extended `tests/fixtures/dispatch/parity/seams.ts`
@@ -2303,9 +2369,9 @@ Numbering note: every id above is new for this change, so no numbering collision
 
 | New file | Contents |
 |----------|----------|
-| `tests/fixtures/dispatch/operator/harness.ts` | Driver D1's operator harness: one composed production program per run over a temp checkout/state, composing `createProductionComposer` with the guarded runner, the scripted starter, the scripted transport, the git runner, the credential port, `processId`, the clock, the id sequence, the injected `delay`, the four operator facts (probe, transcript read, artifact root with the recording filesystem edge, clock), and the credential-bearing `environment` whose composed `secrets` is the set the message runtime redacts with (§6.2, fact 5). Exposes `run`, `observe()` (payloads, store counters, fs records, session-operation counts, guarded invocations, envelopes, the composed `secrets`), `plant()`, and `dispose()`. |
+| `tests/fixtures/dispatch/operator/harness.ts` | Driver D1's operator harness: one composed production program per run over a temp checkout/state, composing `createProductionComposer` with the guarded runner, the scripted starter, the scripted transport, the git runner, the credential port, `processId`, the clock, the id sequence, the injected `delay`, the four operator facts (probe, transcript read, artifact root with the recording filesystem edge, clock), and the optional `environment` plus `credentialReferences`, whose presence routes each run through the production `runEntrypoint` so `entrypointSecrets` resolves the registered set the message runtime redacts with (§6.2, fact 5). Exposes `run`, `observe()` (payloads, store counters, fs records, session-operation counts, guarded invocations, envelopes, the resolved `secrets`), `plant()`, and `dispose()`. |
 | `tests/fixtures/dispatch/operator/matrix.ts` | **The one answer-matrix registry**: the 12 lifecycle rows, both `is-delivering` forms, the five message-ladder rows, and both output modes, each `{ id, group, query, state, mode, precondition, expectedData, expectedExit }`; exports `OPERATOR_MATRIX` and `runMatrixCase(entry)`. No suite re-declares an expectation. |
-| `tests/fixtures/dispatch/operator/logs.ts` | The artifact-family materializer: build a ref's directory with N segment files of exact byte sizes, a boundary-spanning value, a torn tail, a single-retained-file window, a no-complete-line file, an oversized value, an over-retained third file, an unreadable file (`0o000`), and stale-mtime files; plus the family snapshot reader (path → bytes/mode/mtimeMs) and the reconstruction helper. |
+| `tests/fixtures/dispatch/operator/logs.ts` | The artifact-family materializer: build a ref's directory with N segment files of exact byte sizes, a boundary-spanning value, a torn tail, a single-retained-file window, a 220-line short window whose bytes stay under the machine budget (the `TC-LOG-012` fixture), a no-complete-line file, an oversized value, an over-retained third file, an unreadable file (`0o000`), and stale-mtime files; plus the family snapshot reader (path → bytes/mode/mtimeMs) and the reconstruction helper. |
 | `tests/fixtures/dispatch/operator/streams.ts` | The scripted streaming starter: per-stream scripts (spawn, resume, deliver), a **first-pull probe** that asserts the stream's file exists at its first value, undecodable and non-object lines, an oversized value, an exactly-filling value, a mid-write kill, two concurrent streams for one ref, a three-segment stream, and a one-shot runner double for a Claude lane. |
 | `tests/fixtures/dispatch/operator/transcript.ts` | The transcript read seam double (final message, partial active message, `session-unknown`, `no-message`, `unreadable`) with call recording and a declared-harness stub for the Claude gap; plus the fixture that wires the **real** opencode reader over a built store. |
 | `tests/fixtures/dispatch/operator/probe.ts` | The owner-liveness probe double: verdicts `live`/`dead`/`unknown`, a "process table unreadable" mode, start-instant deltas of 0, ±4 999, ±5 000 and ±5 001 ms, and a reused-pid model; records every `{processId, startedAt}` it was asked about. |
@@ -2315,7 +2381,7 @@ Numbering note: every id above is new for this change, so no numbering collision
 
 **Extensions to existing files (not new files).**
 
-- `tests/fixtures/dispatch/parity/harness.ts`: accept the four operator facts and expose them on `observe()` together with the composed `secrets`; keep every existing option's default behaviour.
+- `tests/fixtures/dispatch/parity/harness.ts`: accept the four operator facts and expose them on `observe()` together with the resolved `secrets` (and route the run through `runEntrypoint` when `credentialReferences` is present); keep every existing option's default behaviour.
 - `tests/fixtures/dispatch/parity/lane.ts`: add a repository-scoped seed (the same ref under another repository) and a daemon-lane seed for the same ref; the repository-scoped seed must be appendable after a local record so the newer-foreign-record order of `TC-STATUS-006`/`TC-ISDEL-007` is expressible.
 - `tests/fixtures/dispatch/parity/seams.ts`: six new `SEAM_MANIFEST` entries (`lane-view`, `artifact-tail`, `delivering-fold`, `transcript-read`, `owner-probe`, `log-sink`) with the reimplementation signatures each forbids.
 - `tests/fixtures/dispatch/attempts-harness.ts`: a `storeWithReadFailure(store, kind, code)` wrapper so `TC-STATUS-008`, `TC-ISDEL-006`, and `TC-MSG-006` can fail only the lane read and name the injected code (`state.store.torn` by default, with `state.permission.denied` as the second variant).
@@ -2328,12 +2394,12 @@ Numbering note: every id above is new for this change, so no numbering collision
 ### 6.2 Seams and mechanisms the fixtures must provide
 
 - **The four operator composition facts (declared facts 1–4).** The composition accepts an owner-liveness probe, a transcript read, an artifact-family root (plus its filesystem edge), and the clock — all additive, non-operator, and mounted at the same edge that mounts `claimLease`/`existingLane`/`attempts` today (`packages/cli/src/production.ts` supplies them, `packages/cli/src/edge.ts` builds the runtime). No configuration key is added (`NFR-5`).
-- **The registered-credential set (declared composition fact 5).** `AC-F4-7` requires redaction **before** the 512-character bound, which is only observable if the runtime that composes the message holds the delivered registered set. That set is not a new injection and not a fixture constant: `packages/cli/src/edge.ts` derives the credential key names from the config catalog and computes the set with `registerEdgeSecrets(environment, secretKeys)`, the composer returns it as its `secrets` field (sibling of `program`, consumed as `deps.secrets`), and it is already handed to `createBlockersCommandRuntime` and `createSteerCommandRuntime`. The operator runtime must receive the **same** value, so `redact` sees the delivered set; the fixture seeds the credential's declared environment variable through the injected `environment` and asserts the composed set is non-empty, rather than supplying a scrub of its own (`TC-FIXTURE-001` rejects a local credential scrub by name). Owning plan phase: **5**, the phase that lands the transcript read and `last-message`; asserted by `TC-MSG-008` and by the privacy sweep `TC-NFR-004`. No configuration key is added (`NFR-5`).
+- **The registered-credential set (declared composition fact 5).** `AC-F4-7` requires redaction **before** the 512-character bound, which is only observable if the runtime that composes the message holds the set production actually registered. That set is resolved once, in the CLI entrypoint: `entrypointSecrets` (`packages/cli/src/entrypoint.ts`) unions the invocation's `secrets` with the value of every declared `credentialReferences` entry read from the injected `environment`, and `runEntrypoint` passes the result to the composed program as the invocation's `secrets` fact, which the production composition hands to the dispatch command runtime and so to the `last-message` read. `registerEdgeSecrets` in `packages/cli/src/edge.ts` stays where it is and keeps serving the `blockers` and `steer` runtimes; it is **not** the operator path, and the operator path must not be described in its terms. The fixture therefore seeds the credential's declared environment variable through the injected `environment` and supplies `DECLARED_CREDENTIAL_REFERENCES`, and passes no `secrets` of its own, rather than supplying a scrub (`TC-FIXTURE-001` rejects a local credential scrub by name). Owning plan phase: **5**, the phase that lands the transcript read and `last-message`; asserted end to end by `TC-MSG-011`, ordered by `TC-MSG-008`, and swept by the privacy case `TC-NFR-004`. No configuration key is added (`NFR-5`).
 - **The recording filesystem edge.** Every listing, stat, open, read, create, append, and remove is recorded with an absolute path; any path outside the family root is refused by name. This is what makes "only the addressed directory is listed" (`TC-LOG-010`), "0 shell-artifact reads" (`TC-SHELL-004`), "0 deletions" (`TC-RO-001`), and "0 in-place modification" (`TC-PERSIST-008`) observable rather than asserted.
 - **The first-pull probe.** The scripted starter's `lines` generator, at its first `next()`, records the family listing. Because the adapter binds the sink before it starts draining (`acquireFromStream` is called after the sink is constructed, and the generator is pull-based), the file must already exist at that instant — that is the executable form of "created before the stream's first yielded value" (`AC-F7-1`).
 - **Per-stream scripts with the exact boundary shapes.** The starter yields: a valid session line, a blank line, an undecodable line, a non-object JSON line, a value that exactly fills the remaining room, a value that leaves room for its bytes but not its LF, a value longer than the cap, and a final unterminated remnant. One script kills the writer mid-value; another opens two streams for one ref; another needs three segments.
 - **The probe model.** A function of `(processId, startedAt)` plus a mode flag for an unreadable table; it returns a verdict and records the query, so `TC-STATUS-005` can assert both the mapping and that the probe is advisory (never consulted by admission: 0 admission calls in every read case).
-- **The transcript doubles, two of them.** A seam double for the composition-level cases (counts calls, asserts no handle), and the **real** opencode reader over a built store for `TC-MSG-010` (with the delivered `onStatement` recorder and `createBunSqliteStoreOpener`), including the `RAW-SEAM-TEXT` store that proves the reader returns stored text verbatim. Neither reimplements the composition order: `TC-MSG-008` computes its expectation from the delivered `redact` chokepoint and `TC-MSG-010` observes the query applying it.
+- **The transcript doubles, two of them.** A seam double for the composition-level cases (counts calls, asserts no handle), and the **real** opencode reader over a built store for `TC-MSG-010` (with the delivered `onStatement` recorder and `createBunSqliteStoreOpener`), including the `RAW-SEAM-TEXT` store that proves the reader returns stored text verbatim. Neither reimplements the composition order: `TC-MSG-008` computes its expectation with the delivered `composeDispatchMessage` and asserts the answer is equivalent to it, while `TC-MSG-010` observes the query applying that composition to the reader's raw return and `TC-MSG-011` observes the registered set arriving from the entrypoint.
 - **The decoy planter.** Creates the five shell artifacts inside the temp checkout with canaries that mimic typed answers, fingerprints them, and re-compares after the run (bytes, mode, `mtimeMs`).
 - **A read-failure store wrapper.** Fails only the `dispatch.lane` read with a named injected `state.*` code (the delivered `failAppendFor` pattern, read-side), so `TC-STATUS-008`, `TC-ISDEL-006`, and `TC-MSG-006` can prove the typed identity survives a read failure on every query that reads the lane while every other read stays real.
 - **The answer-matrix registry.** `OPERATOR_MATRIX` is the single declaration of the twelve combinations and both forms; every operator suite imports its rows, so a suite cannot silently drop a lifecycle state or a mode (`TC-MATRIX-002`).
@@ -2347,13 +2413,15 @@ Numbering note: every id above is new for this change, so no numbering collision
 | Seam | Production identity | Exercised by | What is real |
 |------|--------------------|--------------|---------------|
 | `S-laneview` | the lane-view fold: the repository filter applied to `readDispatchLanes` **before** `latestDispatchLaneFor`, joined with the probe verdict (mounted as the `status` surface) | `TC-STATUS-001`…`008`, `TC-ISDEL-*`, `TC-CONTRACT-003` | the bounded retained-window read, the filter-then-fold order, the repository filter, the absent answer, the typed read failure |
-| `S-tail` | the artifact reader: addressed-directory listing, name-order stitching, torn-tail drop, split, tail selection, byte/line budget, truncation fact (mounted as the `log` surface) | `TC-LOG-001`…`011`, `TC-PERSIST-005`/`006` (read-back half executed at the phase-4 boundary; the ids stay phase 3's), `TC-PERSIST-009`, `TC-PERSIST-011` | the reading, the ordering, the tearing, the bounds |
+| `S-tail` | the artifact reader: addressed-directory listing, name-order stitching, torn-tail drop, split, tail selection, byte/line budget, truncation fact (mounted as the `log` surface) | `TC-LOG-001`…`012`, `TC-PERSIST-005`/`006` (read-back half executed at the phase-4 boundary; the ids stay phase 3's), `TC-PERSIST-009`, `TC-PERSIST-011` | the reading, the ordering, the tearing, the bounds, and the machine/human bound split |
 | `S-fold` | the delivering fold over the lane view (both forms, mounted as the `is-delivering` surface) | `TC-ISDEL-001`…`007` | the fold, the filter-then-fold order, the stale exclusion, the 20-ref bound, the truncation |
-| `S-transcript` | the injected adapter-owned transcript read; opencode's real reader in `packages/adapters/src/harness/**` under `session-introspection`, returning raw stored text under its own read cap | `TC-MSG-001`…`010` | the capability gate, the ladder, the raw return, the composition in the query, the reader's statements (via the built store) |
+| `S-transcript` | the injected adapter-owned transcript read; opencode's real reader in `packages/adapters/src/harness/**` under `session-introspection`, returning raw stored text under its own read cap | `TC-MSG-001`…`011` | the capability gate, the ladder, the raw return, the composition in the query, the registered set arriving from the entrypoint (`TC-MSG-011`), the reader's statements (via the built store) |
 | `S-probe` | the injected advisory owner-liveness probe (`{processId, startedAt}` → `live`/`dead`/`unknown`) mounted at the composition edge | `TC-STATUS-004`, `TC-STATUS-005`, `TC-ISDEL-005` | the probe contract and the delivered mapping; the OS read is injected |
 | `S-sink` | the per-stream raw-stdout observer bound beside `telemetrySinkFor` in `packages/adapters/src/harness/opencode.ts`, writing `dispatch-logs.<workspace>/<REF>/` | `TC-PERSIST-001`…`011` (`TC-PERSIST-005`/`006` write half at the phase-3 boundary; `TC-PERSIST-011` at the phase-4 boundary) | the adapter's line iteration, the writer, the segmentation, the retention |
 | `S-cmd` | the `dispatch` command definition, its grammar, its `query` payloads, and its `exitProjection` | `TC-GRAMMAR-001`…`005`, `TC-MATRIX-001` | the definition, the projection, the envelope writer |
 | `S-exec` | the guarded injected process runner | `TC-RO-003`, `TC-SHELL-002` | the counters and the refusals; 0 real starts |
+
+`TC-MSG-011` additionally enters through the production entrypoint (`runEntrypoint`) instead of a directly composed program, because the credential set it proves is resolved there by `entrypointSecrets`; it is the only case that leaves the composed-program entry form, and it changes no seam identity — the same command definition, projection, and composition run either way.
 
 **One registry, one battery.** `OPERATOR_MATRIX` (`tests/fixtures/dispatch/operator/matrix.ts`) declares the 12 lifecycle rows, both `is-delivering` forms, the five ladder rows, and both modes. `TC-MATRIX-001` drives the 12 lifecycle rows; `TC-NFR-001` and `TC-SHELL-002` drive the whole registry; the dedicated suites import their rows from it rather than re-expressing a scenario.
 
@@ -2379,10 +2447,10 @@ Numbering note: every id above is new for this change, so no numbering collision
 |----|-------------|--------|
 | `TC-MATRIX-001`, `TC-MATRIX-002`, `TC-NFR-001`, `TC-CONTRACT-002` (delivery-regression half) | `tests/conformance/dispatch/dispatch-operator-matrix.test.ts` | To implement (new) |
 | `TC-STATUS-001`, `TC-STATUS-002`, `TC-STATUS-003`, `TC-STATUS-004`, `TC-STATUS-005`, `TC-STATUS-006`, `TC-STATUS-007`, `TC-STATUS-008` | `tests/conformance/dispatch/dispatch-operator-status.test.ts` | To implement (new) |
-| `TC-LOG-001`, `TC-LOG-002`, `TC-LOG-003`, `TC-LOG-004`, `TC-LOG-005`, `TC-LOG-006`, `TC-LOG-010`, `TC-LOG-011` | `tests/conformance/dispatch/dispatch-operator-log.test.ts` | To implement (new) |
+| `TC-LOG-001`, `TC-LOG-002`, `TC-LOG-003`, `TC-LOG-004`, `TC-LOG-005`, `TC-LOG-006`, `TC-LOG-010`, `TC-LOG-011`, `TC-LOG-012` | `tests/conformance/dispatch/dispatch-operator-log.test.ts` | To implement (new) |
 | `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-009` | `tests/behaviour/dispatch-operator-log-bounds.test.ts` (arithmetic, D3) + `dispatch-operator-log.test.ts` (command projection) | To implement (new) |
 | `TC-ISDEL-001`, `TC-ISDEL-002`, `TC-ISDEL-003`, `TC-ISDEL-004`, `TC-ISDEL-005`, `TC-ISDEL-006`, `TC-ISDEL-007` | `tests/conformance/dispatch/dispatch-operator-isdel.test.ts` | To implement (new) |
-| `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-003`, `TC-MSG-004`, `TC-MSG-005`, `TC-MSG-006`, `TC-MSG-007`, `TC-MSG-009` | `tests/conformance/dispatch/dispatch-operator-message.test.ts` | To implement (new) |
+| `TC-MSG-001`, `TC-MSG-002`, `TC-MSG-003`, `TC-MSG-004`, `TC-MSG-005`, `TC-MSG-006`, `TC-MSG-007`, `TC-MSG-009`, `TC-MSG-011` | `tests/conformance/dispatch/dispatch-operator-message.test.ts` | To implement (new) |
 | `TC-MSG-008` | `tests/behaviour/dispatch-operator-message-composition.test.ts` | To implement (new) |
 | `TC-MSG-010` | `tests/behaviour/dispatch-operator-transcript-opencode.test.ts` | To implement (new) |
 | `TC-GRAMMAR-001`, `TC-GRAMMAR-002`, `TC-GRAMMAR-003`, `TC-GRAMMAR-005` | `tests/conformance/dispatch/dispatch-operator-grammar.test.ts` | To implement (new) |
@@ -2400,13 +2468,13 @@ Numbering note: every id above is new for this change, so no numbering collision
 | `TC-FIXTURE-002` | `tests/checks/operator-proof-boundary.test.ts` + `tests/fixtures/dispatch/operator/bounds.ts` | To implement (new) |
 | `TC-FIXTURE-003` | `tests/checks/dispatch-operator-test-isolation.test.ts` | To implement (new) |
 
-Split: **8 new conformance suites** (`dispatch-operator-{matrix,status,log,isdel,message,grammar,persist,posture}.test.ts`), **5 new behaviour suites** (`dispatch-operator-{log-bounds,artifact-writer,message-composition,transcript-opencode,latency}.test.ts`), **1 new structure suite** (`dispatch-operator-composition.test.ts`), **4 new checks suites** (`operator-contract-invariance`, `operator-seam-identity`, `operator-proof-boundary`, `dispatch-operator-test-isolation`), **9 new fixture modules** under `tests/fixtures/dispatch/operator/`, **5 extended suites** (`no-shell-dispatch`, `dispatch-help-inventory`, `dispatch-attempts-composition`, `dispatch-additive-stability`, `dispatch-privacy`) plus the delivered conformance battery re-run, **4 extended fixtures** (`parity/harness.ts`, `parity/lane.ts`, `parity/seams.ts`, `attempts-harness.ts`), and **3 extended harness-store files** (`opencode-store/build.ts`, `current-generation.ts`, `legacy-generation.ts`). Case-level split: **72 new cases, 0 superseded cases** — this change adds a surface and changes no delivered assertion except the two help-entry counts, which are updated deliberately and reviewed as part of the change.
+Split: **8 new conformance suites** (`dispatch-operator-{matrix,status,log,isdel,message,grammar,persist,posture}.test.ts`), **5 new behaviour suites** (`dispatch-operator-{log-bounds,artifact-writer,message-composition,transcript-opencode,latency}.test.ts`), **1 new structure suite** (`dispatch-operator-composition.test.ts`), **4 new checks suites** (`operator-contract-invariance`, `operator-seam-identity`, `operator-proof-boundary`, `dispatch-operator-test-isolation`), **9 new fixture modules** under `tests/fixtures/dispatch/operator/`, **5 extended suites** (`no-shell-dispatch`, `dispatch-help-inventory`, `dispatch-attempts-composition`, `dispatch-additive-stability`, `dispatch-privacy`) plus the delivered conformance battery re-run, **4 extended fixtures** (`parity/harness.ts`, `parity/lane.ts`, `parity/seams.ts`, `attempts-harness.ts`), and **3 extended harness-store files** (`opencode-store/build.ts`, `current-generation.ts`, `legacy-generation.ts`). Case-level split: **74 new cases, 0 superseded cases** — this change adds a surface and changes no delivered assertion except the two help-entry counts, which are updated deliberately and reviewed as part of the change.
 
 **Phase boundaries, the two split cases, and `TC-PERSIST-011`.** Two cases carry an explicit internal split, because a read-back step cannot be green before the surface it reads exists: `TC-PERSIST-005` and `TC-PERSIST-006` run their **write half** at the phase-3 boundary (file sizes, boundary accounting, continuation) and their **read-back half** at the phase-4 boundary, where `dispatch log` exists. Both ids are **phase-3-owned** — the write half is what the phase-3 commit makes observable and gate-green — and the phase-4 execution of the read-back half is that boundary's cross-control, never a second owner. Neither half substitutes for the other's evidence.
 
 `TC-PERSIST-011` is one case with one owner and no split: it is **phase-4-owned**, because its decisive observation is the answer `dispatch log` gives over the family, and that surface does not exist at the phase-3 boundary. **Phase 3 no longer runs it**; the write-path properties it also observes stay phase 3's, carried by `TC-PERSIST-002`/`005`/`006`/`007`/`008`.
 
-Per-phase case counts follow from that allocation and the total stays **72**: **phase 3 owns 9** (`TC-PERSIST-001`…`008`, `TC-PERSIST-010`) and **phase 4 owns 13** (`TC-LOG-001`…`011`, `TC-PERSIST-009`, `TC-PERSIST-011`), with phase 4 additionally executing the read-back halves of `TC-PERSIST-005`/`006` as cross-controls that own no id.
+Per-phase case counts follow from that allocation and the total is **74**: **phase 3 owns 9** (`TC-PERSIST-001`…`008`, `TC-PERSIST-010`), **phase 4 owns 14** (`TC-LOG-001`…`012`, `TC-PERSIST-009`, `TC-PERSIST-011`), with phase 4 additionally executing the read-back halves of `TC-PERSIST-005`/`006` as cross-controls that own no id, and the message surface is phase 5's (`TC-MSG-001`…`011`, including the credential-wiring case `TC-MSG-011`); the grammar, posture, and contract cases keep the phases their own rows declare. Both remediation cases are owned by the surface phase they exercise — the log phase for `TC-LOG-012`, the message phase for `TC-MSG-011` — and are landed, with their suites, by the review-remediation phase of the implementation plan, which re-runs the owning phase's suites.
 
 ### 7.4 Mutation register
 
@@ -2441,8 +2509,8 @@ Each row is a source mutation applied to the implementation; the named case must
 | M18 | Drop any file's last line, complete or not | `TC-LOG-009` | `complete file's last line expected present, received dropped` |
 | M19 | Answer `no-log` when a file exists but holds no complete line | `TC-LOG-005` | `expected available=true, received reason=no-log` |
 | M20 | Map an unreadable file to `no-log` at exit 0 | `TC-LOG-006` | `expected reason=unreadable at exit 1, received no-log at exit 0` |
-| M21 | Emit two truncation objects, or omit `omittedLines` | `TC-LOG-007`, `TC-LOG-008` | `expected exactly one truncation fact, received <n>` |
-| M22 | Present a short retained window as complete | `TC-LOG-008` | `short window expected one tail truncation fact, received none` |
+| M21 | Emit two truncation objects, or omit `omittedLines` | `TC-LOG-007`, `TC-LOG-008`, `TC-LOG-012` | `expected exactly one truncation fact, received <n>` |
+| M22 | Present a short retained window as complete, or bound the machine answer by the human line count | `TC-LOG-008`, `TC-LOG-012` | `short window expected one tail truncation fact, received none` / `machine window expected 220 lines, received 200` |
 | M23 | Delete a file (or tidy the family) to satisfy the request | `TC-RO-001` | `artifact family deletion observed: <path>` |
 
 **Delivering fold (M24–M28).**
@@ -2465,8 +2533,8 @@ M25 names only the two phase-2 cases (`TC-STATUS-008`, `TC-ISDEL-006`), so its a
 | M30 | Read an attempt record or the derivation payload for the message | `TC-MSG-002` | `unexpected read of dispatch.attempt` / `poisoned attempt read fired` |
 | M31 | Reorder the ladder (`session-unknown` before `capability-gap`) | `TC-MSG-009` | `expected capability-gap, received session-unknown` |
 | M32 | Call the transcript seam for a gapped harness | `TC-MSG-005`, `TC-MSG-009` | `transcript seam calls expected 0 for a Claude lane, received 1` |
-| M33 | Bound before redacting, or compose inside the reader (flatten or bound in the adapter read instead of in the query) | `TC-MSG-008`, `TC-MSG-010` | `credential prefix survived the cut: <fragment>` / `seam returned a composed value: expected RAW-SEAM-LINE-1\n…, received a single redacted line` |
-| M34 | Set `truncated` from the pre-redaction length | `TC-MSG-008` | `truncated expected false, received true` (post-redaction fits) |
+| M33 | Bound before redacting, or compose inside the reader (flatten or bound in the adapter read instead of in the query) | `TC-MSG-008`, `TC-MSG-010`, `TC-MSG-011` | `credential prefix survived the cut: <fragment>` / `seam returned a composed value: expected RAW-SEAM-LINE-1\n…, received a single redacted line` |
+| M34 | Set `truncated` from the pre-redaction length | `TC-MSG-008`, `TC-MSG-011` | `truncated expected false, received true` (post-redaction fits) |
 | M35 | Set `final=true` on an active lane | `TC-MSG-003` | `active lane expected final=false, received true` |
 | M36 | Perform a session operation (`collect`, `session-list`, `resume`) | `TC-MSG-007` | `session operations expected 0, received 1 (<op>)` |
 
@@ -2599,15 +2667,15 @@ Rationale for the split: `pnpm check` also builds, typechecks, and runs every un
 
 **Read budgets (`NFR-1`, `DOD-6`).** `TC-RO-004` asserts the declared counts per query: 1 lane read; ≤ 1 listing and ≤ 2 file reads for `log`; 1 transcript call for `last-message`; 0 of everything else. `TC-STATUS-007` asserts the retained-window bound actually applied over a 5 000-record store.
 
-**Log bounds (`NFR-3`).** Exact assertions: every file ≤ 1 048 576 bytes including its LF; the family ≤ 2 097 152 bytes after a successful removal; `--tail` default 50 and range 1..500 refused-not-clamped; machine `data` ≤ 65 536 bytes; human ≤ 200 lines and ≤ 32 768 bytes; exactly one truncation fact per binding bound, with `bound` and `omittedLines`, and a `scope` naming the bound that bound — `bytes` for a byte bound (machine `data`, or the human 32 768-byte bound) and `tail` for a shorter line count, including the human 200-line bound. `TC-NFR-002` asserts each constant has one home and the family bound is derived from the retained count.
+**Log bounds (`NFR-3`).** Exact assertions: every file ≤ 1 048 576 bytes including its LF; the family ≤ 2 097 152 bytes after a successful removal; `--tail` default 50 and range 1..500 refused-not-clamped; machine `data` ≤ 65 536 bytes **and bounded by bytes only** — a 220-line retained window under that budget is returned whole with one `tail` fact whose `bound` is 220, while the same request in the human form returns 200 lines with its own `tail` fact; human ≤ 200 lines and ≤ 32 768 bytes; exactly one truncation fact per binding bound, with `bound` and `omittedLines`, and a `scope` naming the bound that bound — `bytes` for a byte bound (machine `data`, or the human 32 768-byte bound) and `tail` for a shorter line count, including the human 200-line bound. `TC-NFR-002` asserts each constant has one home and the family bound is derived from the retained count.
 
-**Message fidelity and bounds (`NFR-8`, `DOD-5`-adjacent).** The answer equals the transcript's final assistant message; the adapter read returns the stored text verbatim under its own read cap and the **query** performs redact → flatten → bound → mark (composition order observable: a straddling credential fully removed, `truncated` from the post-redaction length); ≤ 512 characters single line; `capability-gap` exactly for a gapped harness and never for opencode; 0 session operations and 0 process starts. The credential set redacted with is the composer's `secrets`, not a fixture constant.
+**Message fidelity and bounds (`NFR-8`, `DOD-5`-adjacent).** The answer equals the transcript's final assistant message; the adapter read returns the stored text verbatim under its own read cap and the **query** performs redact → flatten → bound → mark (composition order observable: a straddling credential fully removed, `truncated` from the post-redaction length); ≤ 512 characters single line; `capability-gap` exactly for a gapped harness and never for opencode; 0 session operations and 0 process starts. The set redacted with is the invocation's registered credential set — resolved once by `entrypointSecrets` in the CLI entrypoint from the declared references and the injected environment, not injected by the fixture and not the `registerEdgeSecrets` path that serves `blockers`/`steer`.
 
 **Staleness honesty (`NFR-9`).** `stale` only for active ∧ dead; `unknown` never stale; 5 000 ms boundary selection; 0 unrelated pids reported live; 0 lane repairs.
 
 **Reference scoping (`NFR-4`).** 0 listings outside the addressed directory; 0 foreign lines; 0 foreign or daemon lanes in either `is-delivering` form; `absent` rather than a foreign record — and, because the lane key carries no repository component, the filter precedes the fold, so a **newer** foreign record for the same ref neither decides a local answer nor turns one into `absent`.
 
-**Privacy (`NFR-11`).** The two-privacy-assertion split TDR-0056 requires, with separate fixtures: (a) an artifact canary that appears verbatim in the file and nowhere in any record; (b) a credential canary that is `[redacted]` in the message answer; (c) a prompt-only canary that appears in the artifact nowhere. The engine writes no prompt, diff, credential, tool argument, or provider payload; the message is never written by the engine.
+**Privacy (`NFR-11`).** The two-privacy-assertion split TDR-0058 requires, with separate fixtures: (a) an artifact canary that appears verbatim in the file and nowhere in any record; (b) a credential canary that is `[redacted]` in the message answer; (c) a prompt-only canary that appears in the artifact nowhere. The engine writes no prompt, diff, credential, tool argument, or provider payload; the message is never written by the engine.
 
 **Contract and configuration invariance (`NFR-5`, `DOD-8`).** The pinned baseline comparison of `TC-CONTRACT-001`: 0 new or changed tokens, projections, exits, error rows, domain kinds, attempt/lane fields, schema versions, or configuration keys; 7 operations and 4 lifecycle capabilities unchanged; the attempts human bounds unchanged; the family help entries 5 → 9 with an unchanged coverage inventory.
 
@@ -2620,7 +2688,7 @@ Rationale for the split: `pnpm check` also builds, typechecks, and runs every un
 | Risk | Impact | Mitigation in this plan |
 |------|--------|--------------------------|
 | The battery proves fixtures, not behaviour (`RSK-11`) | H | Every case names the production seam it exercises; `S-sink` cases run the real opencode adapter over the scripted starter; `TC-MSG-010` runs the real reader over a built store; `TC-FIXTURE-001` rejects a reimplementation by name. |
-| A test becomes the second implementation | H | `TC-FIXTURE-001` import identity + forbidden-signature scan + planted control; D3 is limited to byte/line arithmetic over the real exports and never re-expresses a read decision; `TC-MSG-008`'s expectation is computed with the delivered `redact` chokepoint. |
+| A test becomes the second implementation | H | `TC-FIXTURE-001` import identity + forbidden-signature scan + planted control; D3 is limited to byte/line arithmetic over the real exports and never re-expresses a read decision; `TC-MSG-008`'s expectation is computed by the delivered `composeDispatchMessage` and asserted for equivalence, not re-derived in the test. |
 | The twelve-combination sweep silently shrinks | H | `OPERATOR_MATRIX` is the only declaration and `TC-MATRIX-002` asserts its completeness, uniqueness, and drift detection; the matrix case enumerates nothing itself. |
 | The "file exists before the first value" assertion is vacuous | H | The scripted starter asserts at its **first pull**, and `TC-PERSIST-001` additionally asserts the sink-binding order on all three stream kinds; a sink bound at the first append fails `M42`/`M43`. |
 | Timing flakiness | M | No wall-clock assertion except `TC-NFR-003`'s recorded p95; the probe, the clock, and the delay are injected; the concurrent-stream ordering is a fixed name-order property, not a scheduler race. |
@@ -2630,7 +2698,7 @@ Rationale for the split: `pnpm check` also builds, typechecks, and runs every un
 | The stale-lane answer is "fixed" by porting the shell's self-healing | H | `TC-STATUS-004` compares the ledger byte-for-byte and asserts resumability afterwards; `M4` is the row that must fail. |
 | The message test passes on a value comparison while reading the wrong source | H | `TC-MSG-002` poisons the attempt read and removes the derivation payload, so provenance — not only value — is asserted. |
 | The repository filter is applied after the fold, so a newer foreign record decides a local answer | H | `TC-STATUS-006` and `TC-ISDEL-007` seed a newer foreign record under the **same** `dispatch.lanes:<ref>` key and assert the local record answers in both directions (`terminal` local under a newer foreign `active`, and `active` local under a newer foreign `terminal`); `M3` is the row that must fail. |
-| The composition lives in the wrong layer — the reader flattens/bounds, or the query trusts a fixture-local scrub | H | `TC-MSG-010` asserts the seam's byte-identical raw return and the query's composed answer over the same real stores; `TC-MSG-008` asserts redaction uses the composed `secrets` and fails when the credential is not registered; `TC-FIXTURE-001` rejects a local credential scrub by name. |
+| The composition lives in the wrong layer — the reader flattens/bounds, or the query trusts a fixture-local scrub | H | `TC-MSG-010` asserts the seam's byte-identical raw return and the query's composed answer over the same real stores; `TC-MSG-011` proves the registered set arrives from the production entrypoint (seeded only through `environment` and the declared references) and is redacted before the cut; `TC-MSG-008` asserts the order under an explicitly registered set and fails when it is absent; `TC-FIXTURE-001` rejects a local credential scrub by name. |
 | A deliberate delivery-path change is "fixed" by editing a delivered expectation | H | `TC-CONTRACT-002` compares against the delivered baselines; the review checklist requires any changed delivered assertion to cite the spec clause (`§8.5`, `NG-2`, `NG-3`) that authorises it. The two help counts are the only permitted edit and are reviewed as part of the change. |
 | The no-shell surface list silently omits a new read module | H | The glob-coherence assertion plus the `FIXED_SURFACE` mirror plus the reachability guard (`TC-SHELL-001`); a new core `dispatch-*.ts` that is not declared fails by name. |
 | The decoy fixtures make the shell-independence claim circular | M | `TC-SHELL-004` asserts content provenance (typed canaries vs shell canaries), not only file identity, and the recording filesystem edge reports every attempted path. |
@@ -2647,7 +2715,7 @@ Rationale for the split: `pnpm check` also builds, typechecks, and runs every un
 8. `status`'s human key order, the `log` truncation line's exact rendering, and the closed reason summaries' wording are fixture-decided (spec Appendix D) and are asserted only for key **presence**, never for order or wording.
 9. The delivered `latestDispatchLaneFor` filters by ref only, so the repository filter is a new assertion in this change (`AC-F1-6`, `NFR-4`), not a delivered behaviour.
 10. The change folder's `tmp/` is git-ignored; no fixture writes outside `tmp/tmpdir`, and the operator's real state directory, `tmp/deliver-ticket/`, and `.ai/local/delivery/` are never touched.
-11. The registered-credential set is a **delivered** composition fact, not a new injection: `packages/cli/src/edge.ts` computes it with `registerEdgeSecrets(environment, secretKeys)`, the composer returns it as its `secrets` field, and the `blockers`/`steer` runtimes already receive it. The operator runtime consumes the same value, so `AC-F4-7`'s redaction-before-bound is observable without a fixture-local scrub and without a configuration key (§6.2, fact 5).
+11. The registered-credential set is a **delivered** resolution, not a new injection: `entrypointSecrets` in `packages/cli/src/entrypoint.ts` unions the invocation's `secrets` with the value of every declared `credentialReferences` entry read from the injected `environment`, and `runEntrypoint` passes it into the composed program, which hands it to the dispatch command runtime and so to the `last-message` read. `registerEdgeSecrets` stays the `blockers`/`steer` path and is not the operator path. The operator composition consumes the same invocation fact, so `AC-F4-7`'s redaction-before-bound is observable end to end (`TC-MSG-011`) without a fixture-local scrub and without a configuration key (§6.2, fact 5).
 
 ### 8.3 Open Questions
 
@@ -2663,9 +2731,10 @@ The one gap this plan cannot close alone: the five declared composition facts of
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 0.1 | 2026-11-19 | @test-plan-writer | Initial test plan for GH-354 against the change specification and TDR-0056: 71 cases in twelve groups (`MATRIX` 2, `STATUS` 7, `LOG` 11, `ISDEL` 7, `MSG` 10, `GRAMMAR` 5, `PERSIST` 11, `RO` 4, `SHELL` 4, `CONTRACT` 3, `NFR` 4, `FIXTURE` 3), 38/38 AC traceability (0 unmapped, 0 orphan, 83 links across 59 cases), the answer-matrix registry and its anti-drift case, the read-side driver discipline (D1 composed program, D2 definition over an injected runtime, D3 read-side production functions, S1 the real opencode adapter), the fixture inventory (9 authored modules, 4 extended fixtures, 3 extended store files, 5 extended suites), the extension of the no-shell invariant to the new surfaces with its planted and decoy controls, the 68-row mutation register (M1–M68), the gate battery with the `TMPDIR`/`PATH`/`pnpm build` conventions, the non-functional verification, the Appendix C proof boundary as a permanent fixture constant, and the three declared testability readings of §8.3. |
+| 0.1 | 2026-11-19 | @test-plan-writer | Initial test plan for GH-354 against the change specification and TDR-0058: 71 cases in twelve groups (`MATRIX` 2, `STATUS` 7, `LOG` 11, `ISDEL` 7, `MSG` 10, `GRAMMAR` 5, `PERSIST` 11, `RO` 4, `SHELL` 4, `CONTRACT` 3, `NFR` 4, `FIXTURE` 3), 38/38 AC traceability (0 unmapped, 0 orphan, 83 links across 59 cases), the answer-matrix registry and its anti-drift case, the read-side driver discipline (D1 composed program, D2 definition over an injected runtime, D3 read-side production functions, S1 the real opencode adapter), the fixture inventory (9 authored modules, 4 extended fixtures, 3 extended store files, 5 extended suites), the extension of the no-shell invariant to the new surfaces with its planted and decoy controls, the 68-row mutation register (M1–M68), the gate battery with the `TMPDIR`/`PATH`/`pnpm build` conventions, the non-functional verification, the Appendix C proof boundary as a permanent fixture constant, and the three declared testability readings of §8.3. |
 | 0.2 | 2026-11-19 | @test-plan-writer | DoR-remediation delta (F1/F3/F5, A4/A5/A6). Added `TC-STATUS-008` (a lane-store failure on `status` keeps its typed `state.*` identity instead of `marker=absent`) — case total 71 → 72, `STATUS` 7 → 8, 38/38 AC traceability unchanged at 83 links across 59 cases. Extended `TC-STATUS-006` and `TC-ISDEL-007` with the fold-order fixture: a newer record for the same ref under another repository shares `dispatch.lanes:<ref>` with an older local record, so both queries must answer from the local record in both directions (per-ref and ref-less forms), never `absent` and never the foreign facts. Named the injected state code in `TC-ISDEL-006`/`TC-MSG-006` (`state.store.torn` → exit 2) and recorded why the code must be named (`state.permission.denied` → exit 1); corrected the §3.3 exit-literal claim accordingly. Declared the registered-credential set as the fifth composition fact in §6.2 with its owning phase (5) and its supply point (`registerEdgeSecrets` in `packages/cli/src/edge.ts` → the composer's `secrets`), asserted by `TC-MSG-008` and assumption 11. Fixed `TC-MSG-010` so the seam returns stored text verbatim under its own read cap and the **query** performs redact → flatten → bound → mark. Split `TC-PERSIST-005`/`006` into an explicit phase-3 write half and a phase-4 read-back half, matching the plan's `SPLIT CASES` allocation, with the ids phase-3-owned and phase 4 executing the read-back assertions. Mutation register stays 68 rows: `M3`, `M25`, and `M33` were widened to name the new observations without moving a row's owning phase. |
 | 0.3 | 2026-11-19 | @test-plan-writer | DoR-remediation delta (iteration 2), against spec **v1.4**. **`TC-PERSIST-011` moved off the write phase**: it is now phase-4-owned (the log phase) because its decisive observation is what `dispatch log` answers over the family, and that answer does not exist at the phase-3 boundary; phase 3 no longer runs it. Updated its index row, its `Plan Phase(s)` label, its steps (a fourth step runs `dispatch log --tail 50` over the family), its Notes, the `S-tail`/`S-sink` rows of §7.1, the §7.3 file mapping and phase-boundary paragraph, and the new per-phase counts (phase 3 = 9, phase 4 = 13, plus the two read-back halves executed at phase 4; total unchanged at 72). **One owner for `TC-PERSIST-005`/`006`**: both are **phase-3-owned** everywhere — the write half asserted at the phase-3 boundary, the read-back half executed at the phase-4 boundary as a cross-control that owns no id. Every place that said "phase-4-owned" now says otherwise (§5.1 rows were already correct; the two `Plan Phase(s)` lines, both Notes, §7.1, §7.3, and this log). **`TC-LOG-007` scope declared explicitly**: the 32 768-byte human fixture binds the byte bound, so its truncation fact is `scope: "bytes"` with `bound: 32768`, while the 200-line human bound is a `tail`-scope fact and the fixture that binds it asserts `scope: "tail"` — both directions asserted, per the spec's precedence. **`M25` recorded as naming only the two phase-2 cases** (`TC-STATUS-008`, `TC-ISDEL-006`), leaving its allocation to the phase-2 boundary. **Version references** now cite spec v1.4 in §2. No case id added, renamed, or superseded: 72 cases, 38/38 ACs, 83 links across 59 cases, 0 unmapped, 0 orphan. |
+| 0.4 | 2026-11-20 | @test-plan-writer | Review-remediation delta: registers the two cases the shipped suites already carry and reconciles the credential prose. **`TC-LOG-012` added** — a 220-line retained window under `--json --tail 500` is returned whole (220 lines) with exactly one `tail`-scope fact whose `bound` is 220, the retained window, because the machine `data` is bounded by 65 536 bytes only, while the human form still caps at 200 lines with its own `tail` fact; linked to `AC-F2-5`, `API-2`, `DM-6`, `NFR-3` and owned by the log phase. **`TC-MSG-011` added** — the credential is seeded only through `environment: { GITHUB_TOKEN }` plus `credentialReferences: DECLARED_CREDENTIAL_REFERENCES` and routed through the real `runEntrypoint`, so a credential straddling the 512-character cut is absent from both the `--json` and the human answer while the surrounding prose survives with `truncated` at the post-redaction bound; linked to `AC-F4-7`, `AC-F4-1`, `API-4`, `API-9`, `NFR-8` and owned by the message phase. Counts re-derived: cases **72 → 74** (`LOG` 11 → 12, `MSG` 10 → 11), AC→case links **83 → 86** across **61** cases (38 criteria plus 48 extra observations; the two cases add three links, `AC-F2-5` +1, `AC-F4-1` +1, `AC-F4-7` +1), 38/38 ACs, 0 unmapped, 0 orphans, 0 cases without a link. **Stale credential prose reconciled**: §6.2 fact 5, §5's D1 driver, §6.1's harness row, §7.6 and assumption 11 now state that the registered set is resolved once by `entrypointSecrets` in the CLI entrypoint from the declared references and the injected `environment` and travels as an invocation fact into the dispatch runtime, while `registerEdgeSecrets` remains the `blockers`/`steer` path and is not the operator path; `TC-MSG-008`'s block, the §6.2 transcript-doubles bullet, and the §8.1 risk row now record that its expectation is computed with the delivered `composeDispatchMessage` and asserted for equivalence, not with the `redact` chokepoint. Named the two cases in the §3.2/§3.3 coverage rows, the ticket-AC table, §5.1/§5.2, §7.1, §7.3 (file mapping and phase allocation: phase 4 owns 14, the message surface is phase 5's, total 74) and the mutation rows `M21`/`M22`/`M33`/`M34` (register unchanged at 68). **Decision-record renumbering**: every reference to this change's record moves `TDR-0056` → `TDR-0058`, because GH-348's main-tools sync claimed `TDR-0056`/`TDR-0057`; all 36 references in this file meant our record, and no loop-supervision reference exists here. |
 
 ## 10. Test Execution Log
 

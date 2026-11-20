@@ -11,7 +11,7 @@ artifacts_reviewed:
   test_plan: chg-GH-354-test-plan.md (v0.2, 72 cases, 83 AC links across 59 cases)
   plan: chg-GH-354-plan.yaml (8 phases: 1 planning + 7 delivery; 72 owned case ids; 68 mutation rows)
   pm_notes: chg-GH-354-pm-notes.yaml
-  decision_record: TDR-0056 (status `Proposed`; human owner accepts at PR review)
+  decision_record: TDR-0058 (status `Proposed`; human owner accepts at PR review)
   ticket: GitHub issue GH-354 (read via `gh issue view 354`; body matches spec Appendix B)
 scope_note: >-
   Findings are stated against the versions above as read during this iteration.
@@ -184,7 +184,7 @@ and its row's projection; I verified the delivered error table
   or an explicit stream ordinal" and require lexical order = creation order, no
   shared counter. Not closed: the "or" still leaves two input sets in play, the
   plan says "the input set is not [implementation-decided]" while presenting the
-  alternative, and TDR-0056 DR-4 lists neither stream kind nor ordinal (N9).
+  alternative, and TDR-0058 DR-4 lists neither stream kind nor ordinal (N9).
 - A9 (decision-pass count) — CLOSED. `chg-GH-354-pm-notes.yaml:136-145` now says
   `@decision-critic` "challenged it four times (REWORK on every pass; no PASS
   claimed)"; spec changelog v1.2/v1.3 record the second, third and fourth passes
@@ -296,9 +296,9 @@ and its row's projection; I verified the delivered error table
    Suggested remediation target phase: test_planning / delivery_planning
 
 8. [minor] decision_capture — `chg-GH-354-spec.md` F-7 (140), DM-2 (266),
-   Appendix D (644) against `doc/decisions/TDR-0056` DR-4 (204)
+   Appendix D (644) against `doc/decisions/TDR-0058` DR-4 (204)
    Gap: the spec adds "the stream kind (spawn, resume, deliver) or an explicit
-   stream ordinal" to the naming inputs; TDR-0056 DR-4 lists "the stream's
+   stream ordinal" to the naming inputs; TDR-0058 DR-4 lists "the stream's
    recorded time, the attempt identity, the iteration ordinal, and the segment
    ordinal" and nothing else, and DR-5 (205) — the record's list of the spec
    statements it refines — does not mention naming. The spec calls the record
@@ -309,7 +309,7 @@ and its row's projection; I verified the delivered error table
    the record amendment)
    Suggested fix: pick one input set (an explicit stream ordinal is the
    collision-free choice), state it once, and record the DR-4 refinement in
-   TDR-0056 before acceptance.
+   TDR-0058 before acceptance.
 
 9. [minor] spec_completeness — `chg-GH-354-spec.md` Appendix D (644) and test
    plan §8.3 item 5 (2647)
@@ -371,7 +371,7 @@ F-1, DM-1 and `TC-STATUS-006`, which is sufficient to make it checkable).
 
 ## Residual risks the human decider inherits
 
-- TDR-0056 is `Proposed` after four REWORK-challenged rounds (no PASS claimed).
+- TDR-0058 is `Proposed` after four REWORK-challenged rounds (no PASS claimed).
   It is the binding design of this change; acceptance is the owner's at PR
   review, and the DR-4 naming-input refinement (finding 8) should be in the
   record before that acceptance.

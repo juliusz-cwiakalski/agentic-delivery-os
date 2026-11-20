@@ -1,5 +1,5 @@
 /**
- * The per-stream stdout artifact sink (GH-354 F-7; API-8; DM-2; TDR-0056 DR-4,
+ * The per-stream stdout artifact sink (GH-354 F-7; API-8; DM-2; TDR-0058 DR-4,
  * DR-5; PM ruling (c)).
  *
  * One sink per stream of a STREAMING adapter, bound when the stream starts and

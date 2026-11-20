@@ -106,7 +106,7 @@ export type OpencodeHarnessOptions = {
     readonly workItemRef: string;
   }) => TelemetryIngestSink | undefined;
   /**
-   * The per-stream stdout artifact sink factory (GH-354 API-8, TDR-0056 DR-3).
+   * The per-stream stdout artifact sink factory (GH-354 API-8, TDR-0058 DR-3).
    *
    * Built once per stream — spawn, resume, or deliver — and BEFORE that stream's
    * first yielded value, so the acquisition-settling line and every line the

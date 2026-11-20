@@ -11,7 +11,7 @@ artifacts_reviewed:
   test_plan: chg-GH-354-test-plan.md (71 cases)
   plan: chg-GH-354-plan.yaml (8 phases: 1 planning + 7 delivery)
   pm_notes: chg-GH-354-pm-notes.yaml
-decision_record: TDR-0056 (status `Proposed`; the human owner is the acceptor at PR review)
+decision_record: TDR-0058 (status `Proposed`; the human owner is the acceptor at PR review)
 scope_note: >-
   Findings are stated against the versions above as read during this iteration.
   Any later revision of those files is outside this record and belongs to the
@@ -82,7 +82,7 @@ A5. [minor] test_traceability — `chg-GH-354-test-plan.md` §4: `is-delivering`
 
 A6. [minor] spec_completeness — `chg-GH-354-spec.md` §21 / §22, AC-F4-7: the privacy guarantee rests on "**registered** credential values" being replaced, but no artifact in this change names the registry that supplies them, so the claim cannot be checked from the spec alone. Name the registry (or its owning document) that defines the registered set.
 
-A7. [nit] plan_coverage — `chg-GH-354-plan.yaml` phase 1: TDR-0056 and its `doc/decisions/00-index.md` row already exist on this branch (status `Proposed`), so phase 1's declared scope is already satisfied; say that the phase re-asserts and commits them rather than landing them new.
+A7. [nit] plan_coverage — `chg-GH-354-plan.yaml` phase 1: TDR-0058 and its `doc/decisions/00-index.md` row already exist on this branch (status `Proposed`), so phase 1's declared scope is already satisfied; say that the phase re-asserts and commits them rather than landing them new.
 
 A8. [nit] plan_coverage — `chg-GH-354-spec.md` F-7 / DM-2, `TC-PERSIST-003`: the naming inputs admit "the stream kind (spawn, resume, deliver) **or** an explicit stream ordinal", so the input set the lexical-order-equals-creation-order requirement is proved over is not decided; `TC-PERSIST-003` proves the order but not which input set. Pick one input set (or state the equivalence) so the naming rule is decidable.
 
@@ -90,7 +90,7 @@ A9. [nit] decision_capture — `chg-GH-354-spec.md` §657/§658 changelog vs `ch
 
 ## Residual Risks Carried (not findings)
 
-- TDR-0056 remains `Proposed`. It is the binding design of this change; the human owner is the acceptor at PR review. Delivery must not treat acceptance as implied by this gate.
+- TDR-0058 remains `Proposed`. It is the binding design of this change; the human owner is the acceptor at PR review. Delivery must not treat acceptance as implied by this gate.
 - `feature-dispatch-engine.md` states that `dispatch.lane` carries no prompt, transcript, diff, or provider payload, so `log` and `last-message` must ride their own bounded, reference-scoped artifacts with a declared location, bound, and privacy boundary. The spec states the pre-change answer, but the artifact-family section must stay the only place the location and bound are defined, so a later doc sync cannot move them.
 - Declared divergence, not parity: the typed `log` tails the harness's own stdout (opencode's JSON event stream), while the shell's `--log` tails only the opencode child's stderr. The reference page and operations guide must state this.
 - Claude Code lanes open no stream and answer `capability-gap` for `last-message`; the scope limit must stay stated so no page claims general harness support.

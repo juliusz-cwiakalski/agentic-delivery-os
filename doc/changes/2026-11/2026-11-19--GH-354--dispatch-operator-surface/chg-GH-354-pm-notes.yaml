@@ -16,6 +16,15 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
+  - text: "PM-decided (sync 2026-11-20): the branch is merged with `main-tools` at
+      ccc83383 (GH-348, loop supervision), merge commit 00d1d72a. Upstream claimed
+      TDR-0056 and TDR-0057, so this change's governing record is renumbered
+      TDR-0056 -> TDR-0058 (file name, id, index row, and every reference); the
+      precedent is GH-347's renumber on the same ground. The merged tree adopts
+      upstream's changeset-additivity validator (pinned baseline plus
+      content-validated additions) in place of the earlier fixed list, so five
+      additions are accepted, this change's among them."
+    date: "2026-11-20"
   - text: "PM-decided (phase-8 scope, disclosed at PR review): three non-product
       fixes land with the release phase because the aggregate gate cannot be green
       otherwise. (a) The changeset additivity pin hardcodes the changesets added
@@ -58,6 +67,20 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 9 (review remediation) = 95f7d609: F1 wires one credential
+      resolver (`entrypointSecrets`) into both the serializer and the dispatch
+      operator runtime (invocation fact → runtime `secrets`), with TC-MSG-011
+      seeding the credential only through the environment and asserting a
+      straddling prefix is absent from both outputs (forcing the old wiring makes
+      it leak, verified then reverted); F2 bounds machine `log` data by 65 536
+      bytes only and moves the 200-line/32 768-byte bound into the human renderer,
+      with TC-LOG-012 proving a 220-line window answers 220 lines at `--tail 500`
+      (before: 200 and an invented bound); A2/A3 closed. Gates: message and log
+      conformance 9+9, operator battery 161, behaviour set 27, pinned trio 41,
+      no-shell 0, exit-literals 0, doc conformance 29, build 0. Sync merge
+      00d1d72a; the record renumber lands with this phase's follow-up."
+    type: info
+    date: "2026-11-20"
   - text: "Review iteration 1: FAIL — two blocking findings, both real and both
       invisible to the offline battery because the fixtures inject what production
       does not. F1: the shipped bins never pass `registeredSecrets` to the dispatch
@@ -115,7 +138,7 @@ notes:
       was fixed before the phase completed; R2 (four mutation rows allocated to
       the earlier of two phases that name them) is accepted as a
       reviewer-instrument note — the totals sum and every named property still
-      has a failing case. TDR-0056 stays Proposed; the human accepts at PR
+      has a failing case. TDR-0058 stays Proposed; the human accepts at PR
       review."
     type: info
     date: "2026-11-19"
@@ -177,7 +200,7 @@ notes:
       parser contract for every command; the plan and tests assert both
       identities and this is not a contract change."
     date: "2026-11-19"
-  - text: "PM-decided (supports TDR-0056): `session-introspection` is read as the
+  - text: "PM-decided (supports TDR-0058): `session-introspection` is read as the
       adapter's capability to introspect a session it owns, including reading
       its own persisted session content — not metadata only. The delivered
       declarations govern availability: opencode declares it supported; Claude
@@ -207,14 +230,14 @@ notes:
       typed tail therefore captures neither. The reference page and the
       operations guide must state this."
     date: "2026-11-19"
-  - text: "Decision-record process: `@decision-advisor` authored TDR-0056 and
+  - text: "Decision-record process: `@decision-advisor` authored TDR-0058 and
       `@decision-critic` challenged it four times (REWORK on every pass; no PASS
       claimed). Each round corrected real defects (shell parity fact,
       unsatisfiable privacy gate, tautological gates, existing
       `session-introspection` capability, sink binding point, stream coverage on
       resume, then the lock/trim protocol replaced by append-only per-stream
       segments, then transformation/tear/overflow/redaction-order precision).
-      The final design is recorded in TDR-0056; remaining protocol details are
+      The final design is recorded in TDR-0058; remaining protocol details are
       plan-pinned with named tests. Status stays `Proposed` — the human owner
       accepts at PR review."
     type: info

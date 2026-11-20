@@ -1,6 +1,6 @@
 /**
  * The typed dispatch operator surface (GH-354 F-1..F-7, API-1..API-12,
- * DM-1..DM-7; TDR-0056).
+ * DM-1..DM-7; TDR-0058).
  *
  * Four read queries over the delivered durable lane record plus the two new
  * read sources: the per-ref, per-stream harness-stdout artifact family and the
@@ -50,7 +50,7 @@ export const DISPATCH_PROBE_TOLERANCE_MS = 5000 as const;
 export const DISPATCH_MAX_DELIVERING_REFS = 20 as const;
 
 /* ------------------------------------------------------------------------- */
-/* The declared bounds (DM-6, TDR-0056 C-1).                                 */
+/* The declared bounds (DM-6, TDR-0058 C-1).                                 */
 /* ------------------------------------------------------------------------- */
 
 /** The tail default and the accepted canonical-decimal range. */

@@ -1,6 +1,6 @@
 /**
  * `dispatch log` — the addressed-directory read over the artifact family
- * (GH-354 F-2; API-2, API-7; DM-2, DM-6; DEC-3; TDR-0056 DC-3).
+ * (GH-354 F-2; API-2, API-7; DM-2, DM-6; DEC-3; TDR-0058 DC-3).
  *
  * It lists ONLY the addressed reference's own directory (the only permitted
  * listing), reads only files inside it, stitches the retained files in NAME

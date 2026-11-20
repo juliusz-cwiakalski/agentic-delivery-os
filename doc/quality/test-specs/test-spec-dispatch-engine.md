@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 links:
   related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289", "GH-293", "GH-347", "GH-354"]
-  related_decisions: ["TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054", "TDR-0056"]
+  related_decisions: ["TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054", "TDR-0058"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 

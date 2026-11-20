@@ -69,7 +69,10 @@ export type EntrypointInvocationFact = {
    * injected environment exactly once and hands the SAME values to the
    * serializer and to the composition root, so a surface that redacts before
    * bounding (the operator `last-message` read) cannot see an empty set while
-   * the egress path sees the real one. No second discovery algorithm exists.
+   * the egress path sees the real one. No second discovery algorithm exists for
+   * this operator/credential set: `registerEdgeSecrets` in the edge is the
+   * separate lookup that still feeds `blockers` and `steer`, and it is not a
+   * second discovery path for the values handed here.
    */
   readonly registeredSecrets?: readonly string[];
   /**

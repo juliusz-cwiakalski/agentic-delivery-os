@@ -238,11 +238,14 @@ carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
 - `log` answers `available`, `tail`, the newest `lines` oldest-to-newest, and at
   most one `truncation` fact (`scope` `tail` | `bytes`, `bound`, `omittedLines`).
   The machine `data` is bounded by the requested line count and by 65 536 UTF-8
-  bytes only, so a request above 200 lines returns every line the window holds
-  (up to the requested tail) with a `tail`-scope fact naming that window. The
-  human form is additionally bounded to 200 lines and 32 768 bytes, each bound
-  adding its own fact when it binds. Human output is the raw tail followed by at
-  most one `truncation=` line, or `reason=<reason>` when nothing is available.
+  bytes only, so a request above 200 lines is not cut at 200: when the retained
+  window holds at least the requested tail there is no truncation and no fact, and
+  when the window holds fewer lines than requested the answer carries one
+  `tail`-scope fact naming that window. The human form is additionally bounded to
+  200 lines and 32 768 bytes, and a bound that binds yields that form's single
+  truncation fact, the binding byte bound taking precedence. Human output is the raw
+  tail followed by at most one `truncation=` line, or `reason=<reason>` when nothing
+  is available.
   The content
   is a **streaming harness's own stdout** (for opencode, its JSON event stream),
   not the shell's child-stderr log: the shell's `--log` tails

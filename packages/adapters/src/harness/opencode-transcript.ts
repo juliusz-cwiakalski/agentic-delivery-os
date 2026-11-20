@@ -1,5 +1,5 @@
 /**
- * The opencode transcript reader (GH-354 F-4; API-9; DM-3; TDR-0056 DC-4).
+ * The opencode transcript reader (GH-354 F-4; API-9; DM-3; TDR-0058 DC-4).
  *
  * The content use of the EXISTING `session-introspection` capability: a
  * read-only, bounded read of the adapter's own persisted session store that

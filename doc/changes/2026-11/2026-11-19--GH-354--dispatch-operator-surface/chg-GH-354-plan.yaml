@@ -15,12 +15,12 @@
 #               §17 the 38 ACs; §18 the eight DoD items; §19 the outcome order
 #               and the F6 gating note; §20 no migration; §25.1 Appendix A doc
 #               impacts; §25.3 Appendix C query answer matrix and proof
-#               boundary; §25.4 Appendix D plan-pinned details and the TDR-0056
+#               boundary; §25.4 Appendix D plan-pinned details and the TDR-0058
 #               authority.)
-#   - Tests:    ./chg-GH-354-test-plan.md (v0.2, 72 cases in twelve stable-id
-#               groups — MATRIX 2, STATUS 8, LOG 11, ISDEL 7, MSG 10, GRAMMAR 5,
+#   - Tests:    ./chg-GH-354-test-plan.md (v0.4, 74 cases in twelve stable-id
+#               groups — MATRIX 2, STATUS 8, LOG 12, ISDEL 7, MSG 11, GRAMMAR 5,
 #               PERSIST 11, RO 4, SHELL 4, CONTRACT 3, NFR 4, FIXTURE 3; 38/38
-#               AC traceability across 83 links in 59 cases; §5.2 scenario
+#               AC traceability across 86 links in 61 cases; §5.2 scenario
 #               details; §6.1 fixture inventory
 #               (exists vs must-be-authored vs extended; the nine new
 #               `tests/fixtures/dispatch/operator/*` modules); §6.2 the fixture
@@ -29,7 +29,7 @@
 #               §7.3 the file map; §7.4 the 68-row mutation register M1–M68
 #               contiguous; §7.5 the gate battery; §7.6 non-functional
 #               verification.)
-#   - Decision: doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-
+#   - Decision: doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-
 #               transcript-read-seam.md — the per-ref, per-stream append-only
 #               family (`dispatch-logs.<workspace>/<REF>/`), one writer rule
 #               (value + exactly one LF, final remnant included), one tear rule
@@ -62,11 +62,19 @@
 #               SCOPE DECLARATION RULE sections, spec reconciliation declared for
 #               STAGING ONLY in the release phase).
 #
-# PLAN SHAPE: eight phases — one `kind: planning` phase (id 1) and seven
-#   `kind: delivery` phases (ids 2..8). This brief calls the pre-delivery phase
+# SYNC (2026-11-20): the branch is merged with `main-tools` at ccc83383 (GH-348,
+#   loop supervision). Upstream claimed TDR-0056 and TDR-0057, so this change's
+#   governing record is renumbered TDR-0056 -> TDR-0058 (file name, id, index row,
+#   and every reference in the change artifacts and the reconciled pages); the
+#   precedent is GH-347's renumber on the same ground. The merged tree also adopts
+#   upstream's changeset-additivity validator (a pinned baseline plus
+#   content-validated additions) in place of the earlier fixed list.
+#
+# PLAN SHAPE: nine phases — one `kind: planning` phase (id 1) and eight
+#   `kind: delivery` phases (ids 2..9). This brief calls the pre-delivery phase
 #   "phase 0"; it is `id: 1` here because the schema requires a positive integer
 #   id. Every later reference in this document numbers the PLAN's ids.
-#   The planning phase declares no code scope: the governing record (TDR-0056)
+#   The planning phase declares no code scope: the governing record (TDR-0058)
 #   and its index row are already committed on this branch (see PHASE-1 STATUS
 #   below), so the phase is a declared, satisfied no-op and the delivery phases
 #   implement what the record governs.
@@ -78,9 +86,9 @@
 #   Plan phase 1 HAS ALREADY LANDED and carries NO committable work. Verified on
 #   this branch at plan time:
 #     - commit 86aa74e8 carries the governing record
-#       doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
+#       doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-
 #       read-seam.md;
-#     - commit 5dd4dad4 carries the `doc/decisions/00-index.md` TDR-0056 ROW
+#     - commit 5dd4dad4 carries the `doc/decisions/00-index.md` TDR-0058 ROW
 #       (line 88) and its binding note (line 98);
 #     - `git ls-files --error-unmatch <TDR path>` exits 0 (the path is tracked);
 #     - `git status --porcelain -- doc/decisions` is EMPTY (nothing staged,
@@ -272,7 +280,7 @@
 #   (c) The log artifact is PER-STREAM SEGMENTS, not a single trimmed file. No
 #       lock, no trim, no rewrite, no shared write target; retention is the newest
 #       two files per reference. This supersedes the spec's first draft and is
-#       recorded in TDR-0056 (DR-4). Phases 3 and 4 implement the segmented
+#       recorded in TDR-0058 (DR-4). Phases 3 and 4 implement the segmented
 #       writer and the stitched reader; no phase reintroduces a trim.
 #
 # AC OWNERSHIP (38/38; exactly one owning phase each; 0 orphans, 0 double-owned).
@@ -353,7 +361,7 @@
 #       rows. That case is phase 7's 12-row re-observation of the SAME payloads
 #       and exits; no AC changes owner.
 #
-# TC -> PHASE MAP (72 ids; every id owned by exactly one phase — the phase whose
+# TC -> PHASE MAP (74 ids; every id owned by exactly one phase — the phase whose
 #   commit lands the case's load-bearing half together with the declaration that
 #   makes it green):
 #   Phase 1 (0)   [satisfied at plan time; no committable work]
@@ -367,20 +375,20 @@
 #                  modification — IS the observable this boundary lands; their
 #                  read-back halves are executed at phase 4 as that boundary's
 #                  cross-control — see SPLIT CASES below)
-#   Phase 4 (13 + 2 read-back halves): TC-LOG-001..011 (11),
+#   Phase 4 (14 + 2 read-back halves): TC-LOG-001..012 (12),
 #                  TC-PERSIST-009, TC-PERSIST-011 (2), plus the READ-BACK halves
 #                  of TC-PERSIST-005/006 (executed here, ids stay phase 3's)
-#   Phase 5 (10):  TC-MSG-001..010
+#   Phase 5 (11):  TC-MSG-001..011
 #   Phase 6 (6):   TC-GRAMMAR-001..005 (5), TC-CONTRACT-002 (1)
 #   Phase 7 (19):  TC-RO-001..004 (4), TC-SHELL-001..004 (4),
 #                  TC-CONTRACT-001, TC-CONTRACT-003 (2), TC-NFR-001..004 (4),
 #                  TC-MATRIX-001, TC-MATRIX-002 (2), TC-FIXTURE-001..003 (3)
 #   Phase 8 (0)
-#   COUNT: 0 + 15 + 9 + 13 + 10 + 6 + 19 + 0 = 72. 0 orphans, 0 double-owned.
+#   COUNT: 0 + 15 + 9 + 14 + 11 + 6 + 19 + 0 + 0 = 74. 0 orphans, 0 double-owned.
 #   The COUNT counts OWNED case ids only. Phase 4 additionally executes the
 #   READ-BACK HALVES of TC-PERSIST-005/006; those are assertion allocations at
 #   phase 4, never a second owner, so no id is counted twice and the total stays
-#   the test plan's 72.
+#   the test plan's 74.
 #   SPLIT CASES (one case id, ONE owning phase, two boundaries of ASSERTION):
 #   TC-PERSIST-005 and TC-PERSIST-006 each have a WRITE half that runs at the
 #   PHASE-3 boundary and a READ-BACK half that runs at the PHASE-4 boundary.
@@ -398,7 +406,7 @@
 #   cross-control. Neither half substitutes for the other's evidence and no case
 #   id changes owner.
 #   Group totals reconciled: MATRIX 2 + STATUS 8 + LOG 11 + ISDEL 7 + MSG 10 +
-#   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 72.
+#   GRAMMAR 5 + PERSIST 11 + RO 4 + SHELL 4 + CONTRACT 3 + NFR 4 + FIXTURE 3 = 74.
 #   TC-CONTRACT-002's two halves: the help-entry count 5 -> 9 (phase 6) and the
 #   delivery-path regression re-run over the delivered parity battery (phase 7 as
 #   a read-only control). The case id has ONE owner (phase 6).
@@ -533,7 +541,7 @@
 #   5. tests/behaviour/dispatch-privacy.test.ts — EXTENDED with the operator
 #      canary sweep (artifact canary in the file and in no record; credential
 #      canary `[redacted]` in the message answer; prompt-only canary absent).
-#      Clause: NFR-11, §21, TDR-0056 DC-6, TC-NFR-004. Phase 7.
+#      Clause: NFR-11, §21, TDR-0058 DC-6, TC-NFR-004. Phase 7.
 #   6. tests/fixtures/harness/opencode-store/{build,current-generation,
 #      legacy-generation}.ts — EXTENDED with assistant text parts (last =
 #      `FINAL-ASSISTANT-TEXT`), a user-only transcript, and the
@@ -609,7 +617,7 @@
 #       doc/overview/glossary.md (lane view, stale lane, log artifact, stream,
 #         segment file, family bound, declared transformation, torn write,
 #         transcript read seam, final message, closed negative reason)
-#     Each page cites TDR-0056 (and TDR-0049 for the lane facts). The
+#     Each page cites TDR-0058 (and TDR-0049 for the lane facts). The
 #     documentation-phase gates (`tests/checks/doc-conformance.test.ts`,
 #     `tests/checks/dispatch-doc-conformance.test.ts`, the stale
 #     "no status/log surface" scan, and
@@ -692,7 +700,7 @@
 #       error-table rows, and the domain kinds are UNCHANGED; `state-unverified`
 #       stays exit 2 (NFR-5, DM-7).
 #   2.  No new configuration key and no default change; every bound is a declared
-#       policy constant with exactly one home (NFR-5, DM-6, TDR-0056 C-1). The
+#       policy constant with exactly one home (NFR-5, DM-6, TDR-0058 C-1). The
 #       attempts human bounds (DISPATCH_MAX_HUMAN_LINES 40,
 #       DISPATCH_MAX_HUMAN_BYTES 8192) are NOT reused for the log output: the log
 #       gets its own 200 lines / 32 768 bytes constants.
@@ -762,7 +770,7 @@
 #       the plan's phase-5 scope names the new file so the coder does not need a
 #       plan revision to add it.
 #   (g) `doc/00-index.md` gains no entry (no new page) and is therefore NOT
-#       declared. The `doc/decisions/00-index.md` TDR-0056 ROW is committed
+#       declared. The `doc/decisions/00-index.md` TDR-0058 ROW is committed
 #       (5dd4dad4) and clean; phase 1 declares it for conditional staging only
 #       and authors nothing.
 #   (h) There is no `doc/documentation-profile.md` (engineering-repo default), so
@@ -780,7 +788,7 @@ tier:
   escalationTriggers:
     - "A delivery-result token, a projection class, an exit digit, an error-table row, a domain kind, an attempt-record field, a lane-record field, or a schema version moves (NFR-5, DM-7, AC-F5-4, TC-CONTRACT-001)"
     - "A configuration key is added for any bound, or the attempts human-output constants are reused for the log output instead of declaring the log's own 200-line / 32 768-byte constants (NFR-5, DM-6, TC-NFR-002, mutation M61)"
-    - "The artifact family becomes a single file, a trimmed file, or a shared write target; a lock or coordination file appears; a written byte is modified to make room; or the retained count is anything but the newest two with the 2 x cap family bound (PM ruling (c), TDR-0056 DR-4, AC-F7-4, TC-PERSIST-007/008)"
+    - "The artifact family becomes a single file, a trimmed file, or a shared write target; a lock or coordination file appears; a written byte is modified to make room; or the retained count is anything but the newest two with the 2 x cap family bound (PM ruling (c), TDR-0058 DR-4, AC-F7-4, TC-PERSIST-007/008)"
     - "An artifact is created, or a sink is bound, for a one-shot adapter lane, or `no-log` is answered as if the session printed nothing (AC-F2-3, AC-F7-1, RSK-17)"
     - "A query appends, fences, rewrites a lane, writes or repairs the identity marker, deletes a file in the family, starts a process, or makes a network read (NFR-2, AC-F6-1, TC-RO-001)"
     - "A query reads, writes, or repairs a shell-owned path, invokes a shell, or the no-shell invariant's surface list or allowlist is widened to silence a hit (NFR-6, AC-F6-2..AC-F6-5, TC-SHELL-001..004)"
@@ -801,7 +809,7 @@ defaultLeases:
 defaultWeightClass: standard
 phases:
   # ---------------------------------------------------------------------------
-  # Phase 1 — The governing record (TDR-0056) and its decision index row.
+  # Phase 1 — The governing record (TDR-0058) and its decision index row.
   # STATUS: SATISFIED AT PLAN TIME — NO COMMITTABLE WORK. Both paths are already
   #   committed on this branch (the record at 86aa74e8, the index row at
   #   5dd4dad4) and `git status --porcelain -- doc/decisions` is empty. The coder
@@ -810,7 +818,7 @@ phases:
   #   record. The header's PHASE-1 STATUS section states why this is a satisfied
   #   no-op rather than a missing phase.
   #
-  # Why the phase stays in the plan at all: TDR-0056 BINDS every later phase (it
+  # Why the phase stays in the plan at all: TDR-0058 BINDS every later phase (it
   #   is cited by the one-writer rule, the one-tear rule, the file-naming inputs,
   #   the retention rule, and the message order), so its presence on the branch is
   #   a precondition this plan states explicitly instead of assuming. Declaring
@@ -819,7 +827,7 @@ phases:
   #
   # Obligations (verification only — none authors a change):
   #   1.1 `git ls-files --error-unmatch` on
-  #       `doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-
+  #       `doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-
   #       read-seam.md` exits 0 and its status stays `Proposed` (the human owner
   #       accepts at PR review).
   #   1.2 `git status --porcelain -- doc/decisions` is empty: the index row and the
@@ -833,7 +841,7 @@ phases:
   #
   # Gate (expected signal: exit 0, the record tracked, the index directory clean;
   #   NO commit is authored and NO test suite is required):
-  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   #   (No build and no suite: this phase edits nothing. The decision-record
@@ -849,8 +857,8 @@ phases:
         # TRACKED at plan time (86aa74e8) and clean. Declared as the phase's
         # STAGING AUTHORITY, not as pending work: at plan time nothing is
         # staged and nothing is authored.
-        - doc/decisions/TDR-0056-dispatch-session-output-artifacts-and-transcript-read-seam.md
-        # CONDITIONAL STAGING ONLY: the TDR-0056 row is committed (5dd4dad4) and
+        - doc/decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md
+        # CONDITIONAL STAGING ONLY: the TDR-0058 row is committed (5dd4dad4) and
         # the file is clean at plan time. Retained so a status/typo touch made
         # while re-landing a dropped record stages with it. Never a licence to
         # edit an unrelated row.
@@ -1018,7 +1026,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 3 — The per-stream stdout artifact write path (F-7; API-8; DM-2, DM-6;
-  # DEC-3; TDR-0056 DR-4, DC-1, DC-2; PM ruling (c)).
+  # DEC-3; TDR-0058 DR-4, DC-1, DC-2; PM ruling (c)).
   #
   # Goal: a streaming adapter's per-stream stdout becomes a bounded, per-ref,
   # segmented file family on disk — write path ONLY, no query. Nothing here
@@ -1197,7 +1205,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 4 — `dispatch log` (F-2; API-2, API-7, API-11; DM-5, DM-6, DM-7;
-  # DEC-3, DEC-5; TDR-0056 DC-3 and the two-segment-tail / torn-line-reader
+  # DEC-3, DEC-5; TDR-0058 DC-3 and the two-segment-tail / torn-line-reader
   # obligations).
   #
   # Goal: the bounded, reference-scoped tail over the family phase 3 writes.
@@ -1277,7 +1285,7 @@ phases:
   #     allowances, the ports contract inventory.
   #
   # Acceptance (6): AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6.
-  # Cases (13 + 2 read-back halves): TC-LOG-001..011, TC-PERSIST-009,
+  # Cases (14 + 2 read-back halves): TC-LOG-001..012, TC-PERSIST-009,
   #   TC-PERSIST-011, plus the READ-BACK halves of TC-PERSIST-005/006 (their ids
   #   stay phase 3's).
   #   TC-LOG-003 proves the `--tail` clause of AC-F5-2, which PHASE 6 closes
@@ -1362,7 +1370,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 5 — `dispatch last-message` (F-4; API-4, API-9; DM-3, DM-5, DM-6;
-  # DEC-4; TDR-0056 DC-4, DC-5; PM ruling (b)).
+  # DEC-4; TDR-0058 DC-4, DC-5; PM ruling (b)).
   #
   # Goal: the PM's FINAL ASSISTANT MESSAGE, read from the harness's own persisted
   # session store through one injected, adapter-owned, read-only seam.
@@ -1451,7 +1459,7 @@ phases:
   #
   # Acceptance (7): AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F4-5, AC-F4-6,
   #   AC-F4-7.
-  # Cases (10): TC-MSG-001..010.
+  # Cases (11): TC-MSG-001..011.
   #
   # Run as read-only controls (NOT declared): the phase-2/3/4 operator suites,
   #   the delivered dispatch parity battery, tests/behaviour/harness-claude-session.test.ts
@@ -1655,7 +1663,7 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 7 — Read-only posture, no-shell invariant, closed-contract invariance,
   # and the offline conformance battery (F-6; API-6, API-10, API-11, API-12;
-  # NFR-1..NFR-11; DEC-2, DEC-5, DEC-6, DEC-8, DEC-9; TDR-0056 C-1..C-7).
+  # NFR-1..NFR-11; DEC-2, DEC-5, DEC-6, DEC-8, DEC-9; TDR-0058 C-1..C-7).
   #
   # Goal: prove the posture rather than assert it, over the WHOLE surface, and
   # close the cross-cutting evidence the per-query phases could not range over.

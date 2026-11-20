@@ -1,10 +1,10 @@
 ---
-id: TDR-0056
+id: TDR-0058
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
 decision_date: null
-last_updated: 2026-11-19
+last_updated: 2026-11-20
 summary: "A typed dispatch persists a streaming harness's own stdout to a per-ref artifact directory beside the ledger — `dispatch-logs.<workspace>/<REF>/`, one append-only segment file per stream the reference opens (spawn, resume, or deliver; each bound before that stream's first yielded value), `0600`, each file at most 1 048 576 bytes with a yielded value too large for a file continued into the next one, every yielded value written followed by one LF and an unterminated tail read as a torn write and dropped, the newest two files retained per reference so the family is bounded at 2 × cap, older files removed best-effort, and nothing in the family ever a ledger record, an evidence reference, a derived document, a salvage or repair input, or an envelope payload beyond the tail an operator requested; a one-shot adapter such as Claude Code streams no lines and therefore produces no artifact, so `dispatch log` answers `no-log` for it — and `last-message` reads the harness's own persisted session storage through one injected adapter-owned read seam covered by the existing `session-introspection` capability, redacting before flattening and bounding so a registered credential straddling the cut cannot survive as a prefix, returning the session's final assistant message bounded to 512 characters single-line or one closed absence (`capability-gap`, `session-unknown`, `no-message`, `unreadable`), with `final` true exactly when the lane's newest record is terminal."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -97,7 +97,7 @@ links:
   roadmap_items: ["M4-S12", "M4-S10"]
 ---
 
-# TDR-0056: Dispatch Session-Output Artifacts and the Transcript Read Seam
+# TDR-0058: Dispatch Session-Output Artifacts and the Transcript Read Seam
 
 > **Traceability.** Spec §15 **DEC-3** (the bounded per-ref harness-stdout artifact) and **DEC-4** (the persisted-transcript read); §15.1 and §25.4 route both here; §5.1 F-2, F-4, F-7; §8.1 API-7, API-8, API-9; §8.3 DM-2, DM-3, DM-6; §8.4; §9 NFR-3, NFR-11; §17.2 AC-F2-x, §17.4 AC-F4-x, §17.7 AC-F7-x; §21 privacy; §22 security; §25.1 documentation impacts. The loop surface (M4-S10, GH-348) is the named next consumer.
 
@@ -469,6 +469,15 @@ These are implementation-level and deliberately not decided here. Each carries t
 **Medium-High.** The repository facts that carry the decision are direct and current: the lane record's contract forbidding content; the port's empty content surface, with a listing digest as its only no-handle read; the closed lifecycle-capability union that already contains `session-introspection`, declared by opencode and gapped by Claude Code, whose only persisted-session read is its statistics-only telemetry capture; `HarnessEvidence` carrying no assistant text; the two adapter shapes (opencode streams, Claude Code is one-shot); the line channel's `AsyncIterable<string>` with the final remnant pushed unmarked; the three distinct shell streams and `cmd_log`'s target; opencode's JSON stdout and its decode-then-skip drain; the telemetry sink's decoded-frame boundary and construction points; the state layer's artifact families beside an identifier-only ledger; opencode's read-only store access with declared caps; the narrow declared-credential set behind the chokepoint; and the non-renewing 90 s lease. The design's own risk is structural rather than behavioural: append-only per-stream files make corruption between writers impossible by construction, one writer rule and one tear rule leave no ambiguity about a file's contents, and the cap lives in the layout. The remaining uncertainty is external — whether a harness's persisted store always yields a transcript, and whether a two-file window is enough in practice. Both degrade to closed absences or a truncation fact, and neither moves a token.
 
 ## Revision
+
+### 2026-11-20 — renumbered 0056 → 0058 on the main-tools sync
+
+Upstream change GH-348 (loop supervision) claimed TDR-0056 and TDR-0057 for the loop
+profile and the durable loop stop. This branch was merged with `main-tools` at
+`ccc83383` (merge commit `00d1d72a`), so this record is renumbered 0056 → 0058 — file
+name, `id`, index row, and every reference in the change artifacts and the reconciled
+pages — on the same ground as GH-347's renumber. No design content, status,
+classification, governance, or decision changes; only the identifier does.
 
 ### 2026-11-19 — consistency sync with the change specification (not a design change)
 

@@ -451,7 +451,7 @@ export type HarnessSpawnStream = {
 };
 
 /**
- * The additive per-stream raw-stdout observer (GH-354 API-8, TDR-0056 DC-2).
+ * The additive per-stream raw-stdout observer (GH-354 API-8, TDR-0058 DC-2).
  *
  * It receives every yielded value — decoded or not — because the artifact is
  * the operator's evidence of what the harness printed. An absent sink keeps the

@@ -1,6 +1,6 @@
 /**
  * The artifact-family naming, segmentation, retention, and read arithmetic
- * (GH-354 F-7, F-2; DM-2, DM-6; TDR-0056 DR-4, DC-2, DC-3).
+ * (GH-354 F-7, F-2; DM-2, DM-6; TDR-0058 DR-4, DC-2, DC-3).
  *
  * Pure: no I/O, no clock, no counters. The writer holds no state beyond the
  * stream's own segment size, so nothing here can become a shared counter.
@@ -153,7 +153,7 @@ export const retainedDispatchLogNames = (
 
 /**
  * Stitch the retained files in NAME order, drop an unterminated tail, and split
- * on LF only after the stitch (TDR-0056 DC-3).
+ * on LF only after the stitch (TDR-0058 DC-3).
  *
  * A returned value continued across a segment boundary is therefore whole; a
  * torn write is never returned as content.
