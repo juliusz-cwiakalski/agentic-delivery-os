@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-19T21:02:45.335Z }
   system_spec_update: { started: null, completed: 2026-11-19T21:48:56.218Z }
   review_fix: { started: null, completed: 2026-11-20T02:14:33.023Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-20T10:46:25.824Z }
   dod_check: { started: null, completed: 2026-11-20T02:15:43.852Z }
   pr_creation: { started: null, completed: 2026-11-20T02:18:56.891Z }
 decisions:
@@ -95,14 +95,15 @@ decisions:
       fall-back, and 'last candidate' as pass-parity, not calendar."
     date: "2026-11-19"
   - text: "TDR-0063 — `provider` is mounted as the twenty-eighth and last
-      prompt-required family (appended after GH-348's `loop`, the twenty-seventh): membership, one family
-      help entry plus seven member entries, a coverage row in both directions,
-      the M1 reference page completed with `--help`/`--version`, and every
-      pinned count/tail assertion move in one change. `install` stays 26th and
-      `supervise` 25th; the count moves 26 → 27 and the tail shifts.
-      Reachability is proven through `runEntrypoint` with the production
-      composer plus a negative control, because the delivered suite drove
-      `createConfigProgram`/`runCli` and never `runEntrypoint`."
+      prompt-required family (appended after GH-348's `loop`, the
+      twenty-seventh): membership, one family help entry plus seven member
+      entries, a coverage row in both directions, the M1 reference page
+      completed with `--help`/`--version`, and every pinned count/tail assertion
+      move in one change. `install` stays 26th and `supervise` 25th; the count
+      moves 26 → 27 and the tail shifts. Reachability is proven through
+      `runEntrypoint` with the production composer plus a negative control,
+      because the delivered suite drove `createConfigProgram`/`runCli` and never
+      `runEntrypoint`."
     date: "2026-11-19"
   - text: "TDR-0064 — The budget work-item ref resolves in one three-tier
       precedence: an explicit ref-bearing fact (today only the simulate
@@ -793,11 +794,10 @@ notes:
       as the twenty-eighth and last prompt-required family (install
       twenty-sixth, loop twenty-seventh, supervise twenty-fifth, no delivered
       ordinal moved). PROMPT_REQUIRED_COMMANDS is exactly 28 with loop 27th and
-      provider last; the production
-      composition supplies the six ProviderComposition seams (clock,
-      credentialPort, transport, sleep, stateStore, newFenceToken) through
-      createProductionProviderComposition and registers the family
-      unconditionally, preserved by the install spread;
+      provider last; the production composition supplies the six
+      ProviderComposition seams (clock, credentialPort, transport, sleep,
+      stateStore, newFenceToken) through createProductionProviderComposition and
+      registers the family unconditionally, preserved by the install spread;
       selectPromptRequiredProgram is untouched. The help inventory gains one
       family entry plus seven member entries (resolve, quota, parks list,
       profile resolve, watch status, simulate, migrate legacy) with the five
@@ -847,10 +847,10 @@ notes:
       inventory before composition; (3) .changeset/install-lifecycle-minor.md is
       NOT modified: the delivered TC-RELEASE-001 guard requires exactly one
       added changeset and no modified pre-existing one, and this change's own
-      .changeset/gh350-provider-policy-minor.md already states the
-      twenty-eighth family; the plan, spec v1.6 and test plan v2.0 record that
-      correction. The uncommitted phase-7 note was sanitized to remove an
-      absolute operator path so privacy-literals stays green. Commit
+      .changeset/gh350-provider-policy-minor.md already states the twenty-eighth
+      family; the plan, spec v1.6 and test plan v2.0 record that correction. The
+      uncommitted phase-7 note was sanitized to remove an absolute operator path
+      so privacy-literals stays green. Commit
       3d07b1f50fb0756929bc3d8400f2ffec3b8df156."
     type: evidence
     date: "2026-11-19"
@@ -1249,5 +1249,68 @@ notes:
       bash scripts/.tests/test-doc-distribution.sh -> OK (96 in-scope docs;
       install set matches ados_distribution markers). Commit
       de886313f91c0ffdbb1fbdfc4a01b4f8b778063a."
+    type: evidence
+    date: "2026-11-20"
+  - text: "PR #372 fix-forward, three commits. STEP 1 — merge of GH-354 (MERGE_HEAD
+      31e56a15) as merge commit bdbd3eed: three conflicts resolved as unions —
+      doc/decisions/00-index.md keeps GH-354's TDR-0058 row and narrative plus
+      this branch's rows and the GH-346/347/348/349 rows ordered by id;
+      doc/overview/glossary.md unites GH-354's terms (dispatch-operator-surface)
+      with the provider terms and its 28-family row;
+      doc/spec/features/feature-cli-entrypoint.md keeps GH-354's four per-ref
+      dispatch operator queries and this branch's 28-family wording and provider
+      row. Counts recomputed from the merged source table (not by adding
+      deltas): GH-354 added no error rows, so every declared count is UNCHANGED
+      — source entries 170 -> 170, documented 170 -> 170, documentedRows 170 ->
+      170, delivered-rows metric 169 -> 169, arithmetic +136 -> +136, allowlist
+      68 -> 68, corpus 84 -> 84 (59 true-positive / 25 false-positive), provider
+      kind 16 -> 16, dispatch 4, harness 13, merge 9, lint 7, domain kinds 31;
+      error-table-sync reports entries=170 documented=170 S1=604 S3=32
+      corpus=84. One stale count pin surfaced by the battery and corrected to
+      the merged truth: tests/fixtures/dispatch/operator/contract-baseline.ts
+      errorRowCount 167 -> 170 and configurationKeyCount 79 -> 80 (GH-354's
+      baseline predates the GH-348/GH-350 rows and the provider config keys),
+      carried in the step-3 commit because the merge commit was already
+      recorded. STEP 2 — renumber to TDR-0059..0064 (commit e27d609e): GH-354
+      took TDR-0058, so the six provider records shifted one place by git mv
+      keeping slugs — 0058 -> 0059 budget ceilings, 0059 -> 0060 simulate, 0060
+      -> 0061 migration, 0061 -> 0062 watch freshness, 0062 -> 0063 mount, 0063
+      -> 0064 budget ref — with front-matter ids, headings, index rows,
+      glossary/frontmatter lists and every cross-reference updated across 31
+      files (GH-350 spec/plan/test plan/pm-notes/readiness reviews, ADR-0013,
+      the six records, provider pages, provider code, doc-conformance and
+      provider-mounting). Verified: TDR-0059..0064 each resolve to its renamed
+      record; no duplicate ids; the only TDR-0058 occurrences in changed files
+      are GH-354's own record references in the index, glossary terms and the
+      entrypoint frontmatter. Stale ordinal fixed: the mount record (now
+      TDR-0063) and the pm-notes bullets now say provider is the twenty-eighth
+      and last, after GH-348's loop at twenty-seventh (historical renumber/move
+      paragraphs kept as history; the record slug is unchanged). Also corrected
+      the readiness-review ranges to TDR-0058..0063 -> TDR-0059..0064. STEP 3 —
+      deterministic alias capture (commit 5a4e7950, amended to carry the
+      contract-count fix): the alias runner in
+      tests/checks/provider-alias-baseline.test.ts now spawns the absolute Bun
+      executable with a PATH that cannot resolve gh (a repo-local temp
+      directory), pinning the transport posture to provider.cli.unavailable and
+      making the degradation notice always present; alias-baseline.json was
+      recaptured from that environment and captureProvenanceNote gained one
+      clause stating the capture pins the transport. The rendering comparison
+      stays byte-exact, and the historical comparison uses the stable envelope
+      (runId/timing) for the containment stdout plus a byte-exact stderr equal
+      to the pre-change bytes plus the one pinned notice.
+      tests/behaviour/entrypoint-two-bins.test.ts uses the same gh-free PATH and
+      absolute Bun (with the host PATH only for the version-only pnpm
+      workspace-link read). Determinism proven: --version and --help bytes
+      identical and the containment stderr bytes identical under a gh-free outer
+      PATH and a gh-bearing (gh v2.91.0) outer PATH; the only varying bytes are
+      the per-invocation runId (stable envelope identical). Sweep: no other
+      provider fixture or suite reads ambient PATH, locale, terminal width or a
+      toolchain version. GATES: focused suites 390 pass / 0 fail;
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false TMPDIR=$PWD/tmp/tmpdir pnpm check -> 12173 pass /
+      4 skip / 0 fail across 1484 files, exit 0 (doc-distribution guard green on
+      this run). Commits: merge bdbd3eed187829edc9e1fd067c86df269d6201f6,
+      renumber e27d609e572fbaf078b1e567166790a8d8865a16, alias
+      459558fbf3d89c5c16beac79aee97fcfb5bda4b6"
     type: evidence
     date: "2026-11-20"
