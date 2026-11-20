@@ -53,11 +53,18 @@ created (after plan approval).
 - Depends on: M4-S9.
 - Ticket: GH-354 (milestone M4)
 
-### M4-S10 CEO loop supervision inside jaiship
+### M4-S10 CEO loop supervision inside jaiship — **delivered (GH-348)**
 - Goal: the outer loop is a jaiship command; the shell loop is not needed.
-- Tasks: loop start/stop/status/log/reset over the supervision engine; CEO
-  agent spawned through the harness port; restart backoff; durable stop;
-  liveness watchdog; single-instance lock.
+- Delivered: the `loop start|stop|status|log|reset` family as a composition
+  profile over the delivered supervision engine under the identity `loop-main`;
+  the CEO spawn through the harness port (`--agent ceo`, resolved seat model,
+  deterministic `ceo-loop-<stamp>` title); the bounded restart policy with the
+  declared backoff schedule and a durable readable reason; the identity-scoped
+  durable `loop.stop` and its `reset`; the two-signal stuck verdict with the
+  read-only delivery corroborator over the delivered lane records; the bounded
+  operational log; the single-instance rule with session re-find; and the
+  offline parity battery with its published proof boundary. Design:
+  TDR-0056 (the profile boundary) and TDR-0057 (the durable stop home).
 - AC: parity with the shell loop surface; durable stop across restarts; stuck
   session restarted; one full cycle with primitives only.
 - Depends on: M4-S9.
@@ -96,7 +103,7 @@ created (after plan approval).
   read and the parked-versus-failed split; watch freshness with
   `maxAgeSeconds` and `watch-stale`; the `provider simulate` offline replay and
   the `provider migrate legacy` compatibility import; and the mount of the
-  family as the twenty-seventh prompt-required family — provider policy now
+  family as the twenty-eighth prompt-required family — provider policy now
   lives only in the tool's configuration, with the pre-iteration hook off the
   delivery path.
 - AC: policy expressed only in Jaiship config; simulated quota states produce

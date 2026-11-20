@@ -29,10 +29,12 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime as realRuntime } from "../../packages/cli/src/daemon-compose";
 import { runEntrypoint, selectPromptRequiredProgram } from "../../packages/cli/src/entrypoint";
 import { createProductionComposer, daemonReachable } from "../../packages/cli/src/production";
+import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
 import {
   CONTROL_PROTOCOL_CURRENT,
   type DaemonLaneRecord,
@@ -55,30 +57,28 @@ import {
   reentryEnvironmentFrom,
   stateDirectoryName,
 } from "../fixtures/daemon/mount-harness";
-import * as bindingNotLast from "../fixtures/daemon/mount-mutants/binding-not-last";
-import * as literalSocket from "../fixtures/daemon/mount-mutants/literal-socket";
 import * as bareExecstart from "../fixtures/daemon/mount-mutants/bare-execstart";
-import * as unitUnderStateDir from "../fixtures/daemon/mount-mutants/unit-under-state-dir";
-import * as xdgRelativeJoined from "../fixtures/daemon/mount-mutants/xdg-relative-joined";
-import * as installEmptyExecutable from "../fixtures/daemon/mount-mutants/install-empty-executable";
-import * as uninstallBroadDelete from "../fixtures/daemon/mount-mutants/uninstall-broad-delete";
-import * as signalWithoutPidCheck from "../fixtures/daemon/mount-mutants/signal-without-pid-check";
-import * as signalNegativePid from "../fixtures/daemon/mount-mutants/signal-negative-pid";
-import * as duplicateTerminalRecord from "../fixtures/daemon/mount-mutants/duplicate-terminal-record";
-import * as releaseSkipCancellation from "../fixtures/daemon/mount-mutants/release-skip-cancellation";
-import * as holderNotRemoved from "../fixtures/daemon/mount-mutants/holder-not-removed";
-import * as fabricatedReachability from "../fixtures/daemon/mount-mutants/fabricated-reachability";
-import * as staleInclusive from "../fixtures/daemon/mount-mutants/stale-inclusive";
-import * as ownerIgnored from "../fixtures/daemon/mount-mutants/owner-ignored";
-import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
+import * as bindingNotLast from "../fixtures/daemon/mount-mutants/binding-not-last";
 import * as capturedDegradation from "../fixtures/daemon/mount-mutants/captured-degradation";
 import * as conditionalRegistration from "../fixtures/daemon/mount-mutants/conditional-registration";
+import * as duplicateTerminalRecord from "../fixtures/daemon/mount-mutants/duplicate-terminal-record";
+import * as fabricatedReachability from "../fixtures/daemon/mount-mutants/fabricated-reachability";
+import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
 import * as helpComposerInvoked from "../fixtures/daemon/mount-mutants/help-composer-invoked";
-import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
-import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
-import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
+import * as holderNotRemoved from "../fixtures/daemon/mount-mutants/holder-not-removed";
+import * as installEmptyExecutable from "../fixtures/daemon/mount-mutants/install-empty-executable";
+import * as literalSocket from "../fixtures/daemon/mount-mutants/literal-socket";
+import * as ownerIgnored from "../fixtures/daemon/mount-mutants/owner-ignored";
+import * as releaseSkipCancellation from "../fixtures/daemon/mount-mutants/release-skip-cancellation";
+import * as signalNegativePid from "../fixtures/daemon/mount-mutants/signal-negative-pid";
+import * as signalWithoutPidCheck from "../fixtures/daemon/mount-mutants/signal-without-pid-check";
 import * as spawnWithFullEnv from "../fixtures/daemon/mount-mutants/spawn-with-full-env";
 import * as spawnWithoutForwardedEnv from "../fixtures/daemon/mount-mutants/spawn-without-forwarded-env";
+import * as staleInclusive from "../fixtures/daemon/mount-mutants/stale-inclusive";
+import * as uninstallBroadDelete from "../fixtures/daemon/mount-mutants/uninstall-broad-delete";
+import * as unitUnderStateDir from "../fixtures/daemon/mount-mutants/unit-under-state-dir";
+import * as xdgRelativeJoined from "../fixtures/daemon/mount-mutants/xdg-relative-joined";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const NOW = Date.parse("2026-11-08T10:00:00Z");

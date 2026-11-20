@@ -2,8 +2,8 @@
  * GH-350 TC-MOUNT-004..007 — the mount's structural truth: the declarative set
  * is exactly 27 with `provider` last, the composition filter drops an extra
  * family and keeps the declared keys, the pin set is derived from the fixture,
- * every listed file carries a 27 pin, the tails shift one place, and the
- * stale-detector class is widened to `2[3456]` (AC-F8-4, AC-F8-5; TDR-0061).
+ * every listed file carries a 28 pin, the tails shift one place, and the
+ * stale-detector class is widened to `2[34567]` (AC-F8-4, AC-F8-5; TDR-0062).
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -33,29 +33,32 @@ const familyRows = (text: string): readonly string[] => {
   return rows;
 };
 
-describe("TC-MOUNT-005 the declarative set is exactly 27 with provider last", () => {
+describe("TC-MOUNT-005 the declarative set is exactly 28 with provider last", () => {
   test("the set equals the mounted fixture element for element", () => {
-    expect(MOUNTED_FAMILIES).toHaveLength(27);
+    expect(MOUNTED_FAMILIES).toHaveLength(28);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(27);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(28);
   });
 
-  test("provider is last, install 26th and supervise 25th by index", () => {
+  test("provider is last, loop 27th, install 26th and supervise 25th by index", () => {
     expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("install");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("supervise");
-    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-3)).toBe("install");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-4)).toBe("supervise");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-5)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.indexOf("loop")).toBe(26);
     expect(PROMPT_REQUIRED_COMMANDS.indexOf("install")).toBe(25);
     expect(PROMPT_REQUIRED_COMMANDS.indexOf("supervise")).toBe(24);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "provider")).toHaveLength(1);
   });
 
-  test("both bins render the same 27 family rows in the same order", () => {
+  test("both bins render the same 28 family rows in the same order", () => {
     const alias = familyRows(renderRootHelp(brandOf("delivery-os")));
     const primary = familyRows(renderRootHelp(brandOf("jaiship")));
-    expect(alias).toHaveLength(27);
+    expect(alias).toHaveLength(28);
     expect(primary).toEqual(alias);
-    expect(alias.at(-2)).toBe("install");
+    expect(alias.at(-3)).toBe("install");
+    expect(alias.at(-2)).toBe("loop");
     expect(alias.at(-1)).toBe("provider");
   });
 });
@@ -74,7 +77,7 @@ describe("TC-MOUNT-004 the composition guard only advertises the declared set", 
     expect(Object.keys(selected.commands)).toEqual([...PROMPT_REQUIRED_COMMANDS]);
     expect(Object.keys(selected.commands)).not.toContain("synthetic-extra");
     expect(Object.keys(selected.commands)).not.toContain("config");
-    expect(Object.keys(selected.commands)).toHaveLength(27);
+    expect(Object.keys(selected.commands)).toHaveLength(28);
   });
 
   test("a missing declared family throws by name instead of shipping a partial surface", () => {
@@ -88,7 +91,7 @@ describe("TC-MOUNT-004 the composition guard only advertises the declared set", 
   });
 });
 
-describe("TC-MOUNT-006 every PINNING_FILES entry reads 27 and the set is derived", () => {
+describe("TC-MOUNT-006 every PINNING_FILES entry reads 28 and the set is derived", () => {
   const countPins = (path: string): string[] => {
     const text = readFileSync(join(ROOT, path), "utf8");
     const findings: string[] = [];
@@ -97,25 +100,26 @@ describe("TC-MOUNT-006 every PINNING_FILES entry reads 27 and the set is derived
       .filter(
         (line) =>
           !line.includes("MOUNTED_FAMILIES") &&
+          !line.includes("DELIVERED_FAMILIES") &&
           !line.includes("BASE_FAMILIES") &&
           !line.includes("STEER_MOUNTED_FAMILIES") &&
-          !line.includes("-> 27") &&
-          !line.includes("→ 27") &&
-          !line.includes("2[3456]") &&
+          !line.includes("-> 28") &&
+          !line.includes("→ 28") &&
+          !line.includes("2[34567]") &&
           !line.includes("toHaveLength\\("),
       )
       .join("\n");
-    if (!/toHaveLength\(27\)|\.toBe\(\s*27\s*,?\s*\)/su.test(text)) {
-      findings.push(`${path}: no family-count pin 27`);
+    if (!/toHaveLength\(28\)|\.toBe\(\s*28\s*,?\s*\)/su.test(text)) {
+      findings.push(`${path}: no family-count pin 28`);
     }
-    if (/toHaveLength\(26\)|\.toBe\(\s*26\s*,?\s*\)/su.test(current)) {
-      findings.push(`${path}: current-value pin 26 survives`);
+    if (/toHaveLength\(2[3-7]\)|\.toBe\(\s*2[3-7]\s*,?\s*\)/su.test(current)) {
+      findings.push(`${path}: current-value pin 23-27 survives`);
     }
     return findings;
   };
 
-  test("the fixture's pin set is exactly the declared fifteen", () => {
-    expect(PINNING_FILES).toHaveLength(15);
+  test("the fixture's pin set is exactly the declared seventeen", () => {
+    expect(PINNING_FILES).toHaveLength(17);
     for (const expected of [
       "tests/structure/supervision-mounting.test.ts",
       "tests/structure/install-conformance.test.ts",
@@ -127,7 +131,7 @@ describe("TC-MOUNT-006 every PINNING_FILES entry reads 27 and the set is derived
     }
   });
 
-  test("every listed file exists and carries a 27 pin with no current 26", () => {
+  test("every listed file exists and carries a 28 pin with no current 23-27", () => {
     const findings: string[] = [];
     for (const path of PINNING_FILES) {
       if (!existsSync(join(ROOT, path))) findings.push(`${path}: listed file does not exist`);
@@ -140,7 +144,7 @@ describe("TC-MOUNT-006 every PINNING_FILES entry reads 27 and the set is derived
     const derived = PINNING_FILES.filter((path) => path !== "tests/behaviour/ceremony-cli.test.ts");
     expect(PINNING_FILES).toContain("tests/behaviour/ceremony-cli.test.ts");
     expect(derived).not.toContain("tests/behaviour/ceremony-cli.test.ts");
-    expect(derived).toHaveLength(14);
+    expect(derived).toHaveLength(16);
   });
 });
 
@@ -161,18 +165,24 @@ describe("TC-MOUNT-007 the tails shift one place and the stale class widens", ()
     expect(failures).toEqual([]);
   });
 
-  test("operators, metrics (23 of 27), install and provider hold the shifted tail", () => {
+  test("operators, metrics (23 of 28), loop, install and provider hold the shifted tail", () => {
     expect(read("tests/structure/supervision-mounting.test.ts")).toContain(
-      "install at the penultimate family line among 27 families",
+      "install third-from-last among 28 families",
     );
     expect(read("tests/structure/metrics-mounting.test.ts")).toContain(
-      "metrics mounts at 23 of 27",
+      "metrics mounts at 23 of 28",
     );
     expect(read("tests/structure/install-conformance.test.ts")).toContain(
       'expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("provider")',
     );
     expect(read("tests/behaviour/install-family-surface.test.ts")).toContain(
+      'expect(families.at(-2)).toBe("loop")',
+    );
+    expect(read("tests/behaviour/install-family-surface.test.ts")).toContain(
       'expect(families.at(-1)).toBe("provider")',
+    );
+    expect(read("tests/structure/install-conformance.test.ts")).toContain(
+      'expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("loop")',
     );
   });
 
@@ -182,12 +192,12 @@ describe("TC-MOUNT-007 the tails shift one place and the stale class widens", ()
       const text = read(path);
       if (text.includes("2[345]")) failures.push(`${path}: stale class is not widened`);
       if (text.includes("toHaveLength\\(2[")) {
-        if (!text.includes("2[3456]")) failures.push(`${path}: stale class is not 2[3456]`);
+        if (!text.includes("2[34567]")) failures.push(`${path}: stale class is not 2[34567]`);
       }
-      if (text.includes("stale family-count pin") && !text.includes("2[3456]")) {
+      if (text.includes("stale family-count pin") && !text.includes("2[34567]")) {
         // The steer suite scans an explicit digit list instead of a character
         // class; it must name 26 as a surviving count all the same.
-        if (!text.includes("[22, 23, 24, 25, 26]")) {
+        if (!text.includes("[23, 24, 25, 26, 27]")) {
           failures.push(`${path}: stale detector does not cover 26`);
         }
       }

@@ -17,4 +17,4 @@ engine with `stateWrites: 0` and parity with `resolve`; the assignment-only
 `provider migrate legacy` reader with a name-first credential firewall and a
 validated proposal; watch `maxAgeSeconds` and the watch-only `watch-stale`
 condition with an evidence-bounded park clamp; and the provider family mounted
-as the twenty-seventh and last prompt-required family.
+as the twenty-eighth and last prompt-required family.

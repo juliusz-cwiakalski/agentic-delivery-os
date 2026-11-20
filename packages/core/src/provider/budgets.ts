@@ -1,5 +1,5 @@
 /**
- * Pure budget evaluation (GH-350 F-2, DM-3/DM-4, TDR-0057).
+ * Pure budget evaluation (GH-350 F-2, DM-3/DM-4, TDR-0058).
  *
  * A declared ceiling is compared against one injected, verified spend read.
  * Nothing here reads a store, a clock, or an environment: the totals arrive as
@@ -98,7 +98,7 @@ export type BudgetEvaluation = {
 };
 
 /**
- * Evaluate every enabled budget against one read (TDR-0057 D3).
+ * Evaluate every enabled budget against one read (TDR-0058 D3).
  *
  * Clear below the ceiling; parked for a `window` scope at or above it, with the
  * exact expiry `newestAtMs + windowSeconds * 1000`; failed for a `ticket` scope
@@ -229,7 +229,7 @@ export const budgetConditionsForEntry = (
 };
 
 /* ------------------------------------------------------------------------- *
- * The budget work-item ref seam (GH-350 F-2, TDR-0062).
+ * The budget work-item ref seam (GH-350 F-2, TDR-0063).
  *
  * Pure: the three-tier precedence, the delivered ref-pattern test, and the
  * refusal shape. No I/O, no state read, no environment read, no clock. The
@@ -275,13 +275,13 @@ export type ProviderWorkItemRefOutcome =
 const budgetList = (names: readonly string[]): string => names.join(", ");
 
 /**
- * Resolve the ref the budget measures (TDR-0062 D2/D4).
+ * Resolve the ref the budget measures (TDR-0063 D2/D4).
  *
  * An explicitly supplied ref-bearing fact wins; otherwise the local delivery
  * context answers; otherwise the evaluation refuses. A value that fails the
  * delivered ref pattern is unresolvable — it is never passed to the fold and
  * never echoed in the refusal. The refusal names the enabled budget(s), the
- * context path, and the remedy (TDR-0062 D4).
+ * context path, and the remedy (TDR-0063 D4).
  */
 export const resolveProviderWorkItemRef = (
   input: ProviderWorkItemRefInput,

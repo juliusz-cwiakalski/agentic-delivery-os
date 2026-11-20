@@ -263,7 +263,7 @@ The identity resolves by exact code only and joins the closed two-segment allowl
 
 ### Mounting
 
-`metrics` is the twenty-fourth prompt-required command family, appended after `steer` and before GH-295's `supervise` in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 27 and no stale 23, 24, 25, or 26 remains, and mounting changes no other command's composition.
+`metrics` is the twenty-fourth prompt-required command family, appended after `steer` and before GH-295's `supervise` in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 28 and no stale 23, 24, 25, 26, or 27 remains, and mounting changes no other command's composition.
 
 ## Technical Architecture & Codebase Map
 
@@ -356,7 +356,7 @@ Behaviour suites live under `tests/behaviour/metrics-*.test.ts`, shared fixtures
 
 | Level | Suites | Scope |
 |---|---|---|
-| Structure and contract | `tests/structure/metrics-contract`, `metrics-imports`, `metrics-mounting`, `error-table` | Declaration-only contracts, exact key sets and closed vocabularies, tier and boundary confinement, the 27-family mount with the family-count pins and the widened stale-count scan, error-table registration. |
+| Structure and contract | `tests/structure/metrics-contract`, `metrics-imports`, `metrics-mounting`, `error-table` | Declaration-only contracts, exact key sets and closed vocabularies, tier and boundary confinement, the 28-family mount with the family-count pins and the widened stale-count scan, error-table registration. |
 | Behaviour — surface and grammar | `metrics-grammar`, `metrics-envelope`, `metrics-help`, `metrics-report` | Locked flag set, pre-read refusals (lone bound, malformed instant, reversed range, missing value, unexpected positional, declared verbs), the nine-key envelope, the drawn window, the human digest, and root/family help. |
 | Behaviour — baseline and damage | `metrics-baseline`, `metrics-baseline-damage` | Base consumption by ID and definition, committed `definitionRef`, status semantics, counted exclusions, row-absent classification, the byte-snapshot log immutability proof, and `metrics.baseline-unreadable` at exit 2 with no partial report. |
 | Behaviour — measurement kinds | `metrics-cycle-time`, `metrics-ceremony-share`, `metrics-ci-proxy` | The committed interval, right-censoring and `PARTIAL`, the empty and out-of-window cases, the runner-fold share with its run/step/phase sample, and the proxy recomputation with the session-proxy limitation and `no_ci_observation` handling. |
@@ -389,7 +389,7 @@ The family writes nothing and retains nothing. Its recurring cost is one verifie
 ### Maintenance
 
 - **Committed-data coupling.** The baseline-consumed entries depend on the log's metric IDs, definitions, and status semantics. A definition change allocates a new `MET-` ID and the vocabulary extends by exact declaration, never by pattern.
-- **Count pins.** The error-table counts (170 / 169 / 68 / +136) and the mounted family count (27) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
+- **Count pins.** The error-table counts (170 / 169 / 68 / +136) and the mounted family count (28) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
 - **Vocabulary closure.** Metric IDs, classes, verdicts, evaluation states, and bases are closed sets in the contract module; a new member is a contract change with its own consumers, not a data value.
 - **Threshold ownership.** Thresholds are project policy; the tooling ships none and operators maintain theirs in their project's committed document.
 

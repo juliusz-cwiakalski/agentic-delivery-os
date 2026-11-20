@@ -1,5 +1,5 @@
 ---
-id: TDR-0059
+id: TDR-0060
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -69,7 +69,7 @@ links:
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0059: Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals
+# TDR-0060: Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals
 
 ## Context
 

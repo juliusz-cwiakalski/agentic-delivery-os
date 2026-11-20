@@ -1,5 +1,5 @@
 ---
-id: TDR-0060
+id: TDR-0061
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -70,7 +70,7 @@ links:
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0060: Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks
+# TDR-0061: Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks
 
 ## Context
 

@@ -41,6 +41,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "metrics",
   "supervise",
   "install",
+  "loop",
   "provider",
 ];
 

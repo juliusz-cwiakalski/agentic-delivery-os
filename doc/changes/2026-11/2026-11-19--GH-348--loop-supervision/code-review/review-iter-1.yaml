@@ -1,0 +1,366 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-348
+branch: feat/GH-348/loop-supervision
+status: FAIL
+
+summary: |
+  Reviewed 143 files (+18 831 / −360) over origin/main-tools..HEAD (HEAD 2c7b6252)
+  against chg-GH-348-spec.md v1.4 (41 ACs), the test plan r0.6 (74 cases), the
+  nine-phase plan and the pm-notes. The additive contract is faithful: the two
+  record kinds match DM-1/DM-2, the handle pid matches DM-3, zero new error
+  identities / domain kinds / configuration keys, the verdict and the
+  evidence-class/fold tables match F-5 exactly (pid-only owner liveness, no
+  startedAt), the backoff schedule/history reference match F-3, the status block
+  and per-key sources match API-7, the log retention matches F-7/DM-7, the
+  single-instance/re-find rules match F-6 at the module level, the no-shell
+  invariant was EXTENDED (not duplicated), the three pinned help surfaces were
+  repinned to 27/loop-last with the stale-pin set gaining 26 and no delivered
+  assertion deleted or relaxed, the proof-boundary constant equals the published
+  page, and the branch-range commit gate is PASS (37/37). The battery and the new
+  behaviour suites are green (see checks_run). However the review FAILS: the
+  production composition defeats the two-signal stuck rule (artifact advance is
+  "any artifact ever", not "since the last observation") so a stuck CEO is never
+  detected in any repo that has merged once; the production corroborator feeds
+  every historical dispatch lane rather than the newest per ref; the cross-process
+  session re-find is joined but not observed and its named cases force the port
+  alive to bypass the re-find decision; and AC-F8-4's pick-deliver-merge case is
+  tautological (it reads back a fixture constant through a stub, never the real
+  command runtime). The Option-B deviation is honestly represented (D2-only
+  phase-2 cases, D1 halves as labelled phase-7 re-observations, TC-LOG-004
+  stuck-episode lines in phase 4) and the D-1 commit-subject convention is
+  acceptable under the stated requirement.
+
+spec_compliance: FAIL
+plan_compliance: PASS
+
+diff_scope:
+  files_changed: 143
+  insertions: 18831
+  deletions: 360
+  by_area:
+    packages: { files: 26, insertions: 3320, deletions: 70 }
+    scripts: { files: 3, insertions: 18, deletions: 0 }
+    tests: { files: 82, insertions: 4668, deletions: 182 }
+    doc: { files: 31, insertions: 10805, deletions: 108 }
+    other: { files: 1, insertions: 20, deletions: 0 }
+  range: origin/main-tools..HEAD
+  base: f802f71a
+  head: 2c7b6252
+
+severity_breakdown:
+  blocker: 1
+  major: 3
+  minor: 4
+  info: 1
+
+checks_run:
+  - name: "behaviour loop suites (backoff, grammar, instance, log, read-cost, spawn, status, stop, stuck)"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/loop-*.test.ts"
+    result: "87 pass / 0 fail"
+  - name: "conformance + structure + checks loop suites"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/loop/ tests/structure/loop-*.test.ts tests/checks/loop-*.test.ts"
+    result: "34 pass / 0 fail"
+  - name: "modified pinned suites + no-shell invariant"
+    command: "TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/install-conformance.test.ts tests/structure/metrics-mounting.test.ts tests/checks/reference-page-parity.test.ts tests/checks/no-shell-dispatch.test.ts tests/checks/install-conformance-mutants.test.ts tests/structure/event-additivity-inventory.test.ts tests/structure/event-taxonomy-single-source.test.ts"
+    result: "47 pass / 0 fail"
+  - name: "branch-range commit-message gate"
+    command: "bash scripts/lint-commit-range.sh --base origin/main-tools"
+    result: "VERDICT: PASS — 37 commits, 0 offending"
+  - name: "static contract audit (no new error identity / domain kind / config key; coordinator untouched)"
+    result: "CONFIRMED — COORDINATOR_ERROR_CODES unchanged; no coordinator/config source edited; only additive loop exports; TDR/grep matches"
+  - name: "full aggregate gate pnpm check"
+    result: "NOT RUN by this review (out of scope/time); per DOD-2 the phase-9 log must carry it. Reviewed via the targeted suites above."
+
+findings:
+  - id: F-1
+    severity: blocker
+    confidence: high
+    category: spec-compliance
+    location: "packages/cli/src/production.ts:3922 (port packages/core/src/app/loop-supervisor.ts:212,677)"
+    issue: >-
+      The production artifact-advance signal is "any merge.transaction or
+      blocker.answer record exists anywhere in the ledger", and the
+      LoopSupervisorPorts.artifactAdvanced signature is `() => boolean` — it has
+      no baseline argument, so no implementation can express the declared "no
+      artifact advance since the last progress observation". Because the loop's
+      verdict returns `progressing` whenever artifactAdvanced is true, a genuinely
+      stuck CEO is never detected in any repository that has ever merged or
+      answered a blocker, which disables the ticket's headline acceptance ("a
+      stuck CEO session is detected and restarted"). The battery cannot catch this
+      because the harness injects a constant `artifactAdvanced`.
+    authorising_clause: "chg-GH-348-spec.md F-5 ('no artifact advance since that observation'), AC-F5-1, DM-6"
+    suggestion: >-
+      Thread the observation instant through the signal: change the port to
+      `artifactAdvanced: (sinceMs: number | null) => boolean`, pass the
+      supervisor's `lastProgressAtMs`/observation time, and in production return
+      true only for merge.transaction/blocker.answer records whose recordedAt is
+      after `sinceMs`. Add a scenario case that seeds a prior merge record and
+      still reaches a stuck verdict after the window.
+    remediation:
+
+      file: "packages/core/src/app/loop-supervisor.ts:212,677 and packages/cli/src/production.ts:3922"
+      change: "Make artifactAdvanced baseline-aware (accept the last-observation instant and compare record recordedAt), and add the prior-merge scenario case to tests/behaviour/loop-stuck.test.ts."
+    suppressed: false
+    published_url: null
+
+  - id: F-2
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: "packages/cli/src/production.ts:3888"
+    issue: >-
+      The production corroborator builds `dispatchLanes` from
+      `readDispatchLanes(store).records.map(...)`, and `readDispatchLanes` returns
+      every append for every ref (dispatch-ledger.ts:182-202), not the newest per
+      ref. The normative evidence-class table is defined over "the newest
+      dispatch.lane record for every ref"; a superseded `active` lane whose owner
+      pid is (or becomes, via pid reuse) alive contributes D4 `in-progress` and
+      vetoes stuck detection indefinitely. The delivered `latestDispatchLaneFor`
+      helper exists but is not used.
+    authorising_clause: "chg-GH-348-spec.md F-5 evidence-class table D1–D6, DM-6, AC-F5-7"
+    suggestion: >-
+      Reduce the lane records to the newest per ref (group by `ref`, take the
+      last, or reuse `latestDispatchLaneFor`) before classifying, and add a
+      corroborator unit row where an older `active` record is superseded by a
+      `terminal` record and the reading is `none` (D2), not `in-progress` (D4).
+    remediation:
+
+      file: "packages/cli/src/production.ts:3888 and tests/fixtures/loop/facts.ts"
+      change: "Select the newest dispatch.lane per ref before mapping to DispatchLaneFact; add a superseded-active row to the corroborator decision table."
+    suppressed: false
+    published_url: null
+
+  - id: F-3
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: "packages/core/src/app/loop-supervisor.ts:591 (also production.ts:3961,4024; tests/behaviour/loop-instance.test.ts:56,176)"
+    issue: >-
+      `establishSession` discards the join result and returns the pre-read
+      `facts` in both join paths (loop-supervisor.ts:592-594 and 613-615), and the
+      production `session.join()` returns the in-memory `recorded` object, which
+      is the all-absent initial value on a fresh process and is never seeded from
+      the durable `loop.session`. Consequently, after a cross-process
+      takeover+join of a recorded live session, every later `cycle()` sees
+      `liveness` absent, `liveSession` false, and never observes or can terminate
+      the re-found session — contradicting F-6 "is joined and observed". The only
+      cases that assert "takeover and join, 0 spawns" pre-set
+      `harness.setSessionFacts({liveness:'alive'})` (loop-instance.test.ts:56,
+      176), so the recorded-session re-find branch (probe recorded pid + start
+      time) is never executed. Additionally, that branch probes with
+      `recorded.processStartTimeMs ?? 0` (line 609), so a recorded pid whose start
+      time is null probes with 0 and can fall through to a fresh spawn beside a
+      live recorded session.
+    authorising_clause: "chg-GH-348-spec.md F-6 ('joined and observed'), AC-F6-2, AC-F6-4"
+    suggestion: >-
+      Seed the established facts from the joined effect (and, in production, from
+      the durable newest loop.session record) instead of returning the pre-read
+      facts; treat a recorded active session with a pid but null start time as
+      unknown-liveness (resume/join, never spawn) rather than probing with 0. Add
+      a case that leaves `session.read()` absent and asserts the re-found session
+      is observed as live across a cycle and is never duplicated.
+    remediation:
+
+      file: "packages/core/src/app/loop-supervisor.ts:591-617 and packages/cli/src/production.ts:3961-4035"
+      change: "Return the joined/durable facts from establishSession; do not probe with 0 for a null start time; add a re-find observation case that does not pre-set session.read() alive."
+    suppressed: false
+    published_url: null
+
+  - id: F-4
+    severity: major
+    confidence: high
+    category: test-quality
+    location: "tests/conformance/loop/loop-pick-deliver-merge.test.ts:19 (fixture tests/fixtures/loop/parity/e2e.ts:46)"
+    issue: >-
+      TC-BATTLE-006 (AC-F8-4) is tautological. `runPickDeliverMerge` iterates the
+      constant PICK_DELIVER_MERGE_STEPS and calls an injected `runPrimitive` stub
+      that merely records the step; the test then asserts `issued` equals the same
+      four constants, `deliverLeg` is hardcoded to "dispatch", and
+      `phaseCompleteUsed` is derived from the same constant list. The assertion
+      cannot fail on any production change, and no real command runtime is
+      invoked, so AC-F8-4's requirement that the doubled session "issues the pick,
+      deliver, and merge primitives through the real command runtime over
+      fixtures" is not proven.
+    authorising_clause: "chg-GH-348-spec.md AC-F8-4, F-8, Appendix C item (b)"
+    suggestion: >-
+      Drive the scenario through the real composed command runtime (runCli /
+      createConfigProgram) over fixtures, with dispatch's nested PM session
+      scripted, and assert the resulting result envelopes / records rather than
+      reading back the fixture constant; keep the no-shell runner recording.
+    remediation:
+
+      file: "tests/conformance/loop/loop-pick-deliver-merge.test.ts and tests/fixtures/loop/parity/e2e.ts"
+      change: "Replace the stub runner with the real command runtime over fixtures and assert a production-derived observation; if the real-runtime wiring is deferred, retitle the case and add the real-runtime case so AC-F8-4 is genuinely closed."
+    suppressed: false
+    published_url: null
+
+  - id: F-5
+    severity: minor
+    confidence: high
+    category: test-quality
+    location: "tests/conformance/loop/loop-parity-battery.test.ts:46"
+    issue: >-
+      TC-BATTLE-001 "every registry row executes over the real command path"
+      iterates seven groups (not the registry rows, and omits `kill`/`no-shell`)
+      and asserts only `code <= 2`, which is true for any 0/1/2 exit and would
+      pass even if a group refused for the wrong reason. The case name overstates
+      what it proves against AC-F8-1.
+    authorising_clause: "chg-GH-348-spec.md AC-F8-1"
+    suggestion: >-
+      Iterate LOOP_PARITY_CASES (or assert per-surface coverage against the
+      registry) and assert each row's specific envelope/record; retitle to what is
+      actually proven if the per-row assertions live elsewhere.
+    remediation:
+
+      file: "tests/conformance/loop/loop-parity-battery.test.ts:46-72"
+      change: "Execute the registry rows (all nine proven surfaces) with per-row assertions, or align the case name/claim with the per-group smoke it performs."
+    suppressed: false
+    published_url: null
+
+  - id: F-6
+    severity: minor
+    confidence: high
+    category: test-quality
+    location: "tests/structure/loop-production-session.test.ts:137 (also :155)"
+    issue: >-
+      The D1 re-observation of TC-SPAWN-004 asserts the absence of a second
+      resolver only inside `if (code !== 0)`; on the success path it asserts
+      nothing about the binding, so it cannot fail if a loop-specific resolver
+      were mounted and the start still succeeded. TC-PARITY-008's
+      `expect(code).toBeDefined()` is tautological (only the absent-hook string
+      assertion carries weight).
+    authorising_clause: "chg-GH-348-spec.md AC-F2-4, AC-F8-1 (non-vacuity); plan D-4"
+    suggestion: >-
+      Make the binding assertion unconditional — assert a concrete property of
+      the composed argv/refusal in both branches (or seed a CEO seat fixture and
+      assert the exact `--agent ceo`/`--model`), and drop the trivial
+      `toBeDefined()`.
+    remediation:
+
+      file: "tests/structure/loop-production-session.test.ts:137-168"
+      change: "Assert a binding property on both the success and refusal branches; remove the tautological code-defined assertion."
+    suppressed: false
+    published_url: null
+
+  - id: F-7
+    severity: minor
+    confidence: medium
+    category: spec-compliance
+    location: "packages/core/src/app/loop-supervisor.ts:391"
+    issue: >-
+      The `delivery.loop.v1` projection hardcodes `recordedProgress: null`, so
+      `session.progress` in the machine payload is always null even when a verdict
+      or observation exists. API-4 declares the payload carries "the recorded
+      title and progress state".
+    authorising_clause: "chg-GH-348-spec.md API-4"
+    suggestion: >-
+      Populate `recordedProgress` from the newest recorded progress/verdict fact
+      (or leave it null only when genuinely unknown) and assert the value in
+      TC-VERB-003's golden JSON.
+    remediation:
+
+      file: "packages/core/src/app/loop-supervisor.ts:391 and tests/fixtures/loop/golden/status.ts"
+      change: "Bind recordedProgress to the recorded fact and add a golden assertion; otherwise record why progress is intentionally not projected."
+    suppressed: false
+    published_url: null
+
+  - id: F-8
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: "packages/core/src/domain/loop-verdict.ts:76"
+    issue: >-
+      `LoopVerdictInput.progressBoundMs` is declared and passed but never read by
+      `evaluateLoopVerdict`; the "positive within coordinator.progress-bound"
+      progressing cause is therefore indistinguishable from any positive reading.
+      `observeProgress` uses the bound only to gate advancing the last-observation
+      timestamp.
+    authorising_clause: "chg-GH-348-spec.md F-5 ('positive within coordinator.progress-bound'); AC-F5-2"
+    suggestion: >-
+      Either consult `progressBoundMs` in the verdict (treat a positive reading
+      older than the bound as not-fresh) or remove the input and record that the
+      bound applies only to observation freshness, so the declared contract and
+      the code agree.
+    remediation:
+
+      file: "packages/core/src/domain/loop-verdict.ts:76-115"
+      change: "Use or remove progressBoundMs so the declared 'positive within progress-bound' clause is honoured or explicitly re-scoped."
+    suppressed: false
+    published_url: null
+
+  - id: F-9
+    severity: info
+    confidence: high
+    category: process
+    location: "git log origin/main-tools..HEAD (37 commits)"
+    issue: >-
+      Every commit uses the primitive path template (chore|feat|docs(GH-348):
+      update <path…>), several identical and all ending in a literal Unicode
+      ellipsis; there are no bodies. This is non-descriptive but not a violation
+      of the stated convention: subjects are lowercase after the prefix (no
+      sentence case), ≤ 74 characters (bodies absent, so < 100), and the phase-9
+      branch-range gate reports PASS.
+    authorising_clause: "plan DELIVERED DEVIATIONS D-1; DOD-3; the human's requirement (no sentence case after the prefix, bodies under 100 chars)"
+    suggestion: "No action required for this change; note it for any future re-cut where descriptive subjects would help review archaeology."
+    remediation: null
+    suppressed: false
+    published_url: null
+
+positive_observations:
+  - "Additive contract is faithful: loop.session/loop.stop match DM-1/DM-2 verbatim; handle pid matches DM-3 (absent stays absent, never 0); zero new error identities (COORDINATOR_ERROR_CODES byte-identical), zero domain kinds, zero config keys, no coordinator source edited."
+  - "Verdict module and the 16-row D1–D6/M1–M6/F0–F3 corroborator table match F-5 exactly; no startedAt/age/start-time read on the corroborator path; in-progress dominates unknown; none reachable only via F3."
+  - "Backoff schedule (2..300 s), full-epoch total, detectionBoundMs formula (652 000 at defaults, never a literal), and the epoch-<n>;restarts=<count>;seq=<n> history reference match F-3/DM-5."
+  - "Status block order, three booleans, empty-after-= rendering, loop_id constant, ceo_pid/ceo_session live-only, restarts=<n>/<bound> match API-7 and its per-key source table."
+  - "Log renderer (512 B line, whole-pair dropping, ANSI/control strip) and retention arithmetic (1 MiB active, one generation, 2 MiB total, newest retained) match F-7/DM-7; a log fault never changes an outcome."
+  - "No-shell invariant was EXTENDED (ten loop files added to DISPATCH_FLOW_SURFACE), not duplicated; prompt carries zero script paths and names the primitives; a planted reimplementation is rejected by name."
+  - "Three pinned help surfaces repinned to 27 / loop-last / install-immediately-before with the metrics stale-pin set widened to include 26; reference-page-parity learns the M4 root for loop; no delivered assertion deleted, inverted, skipped or weakened; commit range gate PASS."
+  - "Proof-boundary constant (9 proven / 6 not-proven, in order) equals the published page and is machine-checked with mutation controls; the page/constant agreement is correctly a documentation-phase guard, not a delivery case."
+  - "Option-B deviation is honestly represented: six phase-2 cases are labelled D2-only, D1 halves are labelled phase-7 re-observations in loop-production-session.test.ts, and TC-LOG-004's stuck-episode lines are a phase-4 segment in loop-log.test.ts; the human authorization and plan r0.6 record it."
+  - "No real timers, sleeps, network, or child processes in the new suites (injected delay recorder, virtual clock, in-process runCli); tests are deterministic (87 + 34 + 47 green)."
+
+remediation:
+  verdict: FAIL
+  ordered_tasks:
+    - order: 1
+      owner: coder
+      task: "Fix F-1 (blocker): make the artifact-advance signal baseline-aware end to end (port signature, supervisor call site, production comparison against recordedAt) and add a prior-merge scenario case."
+      files:
+        - "packages/core/src/app/loop-supervisor.ts:212,677"
+        - "packages/cli/src/production.ts:3922"
+        - "tests/behaviour/loop-stuck.test.ts"
+    - order: 2
+      owner: coder
+      task: "Fix F-3 (major): seed establishSession facts from the joined/durable session (production joins the durable record, not the in-memory placeholder), treat a null start time as unknown-liveness instead of probing 0, and add a re-find observation case that does not pre-set session.read() alive."
+      files:
+        - "packages/core/src/app/loop-supervisor.ts:591-617"
+        - "packages/cli/src/production.ts:3961-4035"
+        - "tests/behaviour/loop-instance.test.ts"
+    - order: 3
+      owner: coder
+      task: "Fix F-2 (major): reduce dispatch lane records to the newest per ref before corroborator classification; add a superseded-active row to the decision table."
+      files:
+        - "packages/cli/src/production.ts:3888"
+        - "tests/fixtures/loop/facts.ts"
+    - order: 4
+      owner: coder
+      task: "Fix F-4 (major): make TC-BATTLE-006 drive the real command runtime over fixtures (or relabel and add the real-runtime case) so AC-F8-4 is genuinely closed."
+      files:
+        - "tests/conformance/loop/loop-pick-deliver-merge.test.ts"
+        - "tests/fixtures/loop/parity/e2e.ts"
+    - order: 5
+      owner: coder
+      task: "Fix minors F-5..F-8: strengthen/delabel the battery meta-case, make the D1 re-observation assertions unconditional, populate or justify session.progress, and use or remove progressBoundMs."
+      files:
+        - "tests/conformance/loop/loop-parity-battery.test.ts"
+        - "tests/structure/loop-production-session.test.ts"
+        - "packages/core/src/app/loop-supervisor.ts:391"
+        - "packages/core/src/domain/loop-verdict.ts:76"
+    - order: 6
+      owner: reviewer
+      task: "Re-review (iteration 2) after remediation; the coder must keep the battery green and the branch-range gate PASS, then this reviewer verifies F-1..F-8 are closed by named cases without new relaxations."
+  next_step: "CALL_CODER"
+
+reviewed_at: 2026-11-19T18:20:00Z
+next_step: CALL_CODER

@@ -5,7 +5,7 @@
 - **Date:** 2026-11-19
 - **Verdict:** `NOT_READY`
 - **Iteration:** 1 of 3
-- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.1, `chg-GH-350-test-plan.md` v1.1, `chg-GH-350-plan.yaml`, `chg-GH-350-pm-notes.yaml`, ticket #350, decision records ADR-0013 / PDR-0006 / TDR-0057..0052
+- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.1, `chg-GH-350-test-plan.md` v1.1, `chg-GH-350-plan.yaml`, `chg-GH-350-pm-notes.yaml`, ticket #350, decision records ADR-0013 / PDR-0006 / TDR-0058..0052
 
 ## Facet summary
 

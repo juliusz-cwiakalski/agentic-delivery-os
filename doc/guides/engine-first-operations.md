@@ -3,12 +3,12 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
-summary: "Operating guide for engine-first delivery: the daily routine, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, and the shell fallback with the declared residuals."
+summary: "Operating guide for engine-first delivery: the daily routine, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293"]
-  related_decisions: ["TDR-0031"]
+  related_changes: ["GH-293", "GH-348"]
+  related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057"]
 ---
 
 # Engine-first delivery operations
@@ -40,7 +40,10 @@ daemon, a scheduler tick, or a background watcher.
 The bash entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`,
 `pm-liveness.sh`) stay executable throughout. In `dual-run` they behave exactly as
 before; after an owner flip they keep their output and exits and print the bounded
-authoritative-mode pointer (section 4).
+authoritative-mode pointer (section 4). The Mode A outer loop is also a typed
+command — `jaiship loop start|stop|status|log|reset` over the delivered supervision
+engine — and `ceo-loop.sh` remains its documented fallback
+([Loop Supervision](../spec/features/feature-loop-supervision.md)).
 
 ## 2. Reading the gate
 

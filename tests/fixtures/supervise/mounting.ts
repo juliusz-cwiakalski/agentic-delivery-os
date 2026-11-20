@@ -34,12 +34,14 @@ export const BASE_FAMILIES = [
 /**
  * The mounted set: the delivered 23 plus metrics as the twenty-fourth family
  * (GH-299), supervise as the twenty-fifth (GH-295), GH-346's `install` as the
- * twenty-sixth, and GH-350's `provider` as the twenty-seventh and last.
+ * twenty-sixth, GH-348's `loop` as the twenty-seventh, and GH-350's `provider`
+ * as the twenty-eighth and last.
  */
 export const MOUNTED_FAMILIES = [
   ...BASE_FAMILIES,
   "metrics",
   "supervise",
   "install",
+  "loop",
   "provider",
 ] as const;

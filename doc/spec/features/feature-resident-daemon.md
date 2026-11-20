@@ -8,8 +8,8 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v2 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove` and the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the supervision-supplied profile-window watch with bounded-grace in-flight peak parking, classification-routed window-end resume, and the composition-fact peak-enforcement read, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347", "GH-350"]
-  related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030", "TDR-0049", "ADR-0013"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293", "GH-347", "GH-348", "GH-350"]
+  related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030", "TDR-0049", "ADR-0013", "TDR-0056", "TDR-0057"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
     - "packages/core/src/contracts/control.ts"
@@ -281,6 +281,14 @@ state vocabulary, and daemon reconciliation ownership are unchanged. A dispatch
 lane carries the dispatch's own session identity and resumability state, and the
 one-shot lane resolver reads it beside the daemon lanes in `delivering`,
 `detached`, and `preempted` ([Dispatch Engine](feature-dispatch-engine.md)).
+
+The `loop` supervision profile reads the newest `daemon.lane` record read-only as
+one input to its delivery corroborator: it consumes the state, the presence of a
+`processId`, and that process's liveness, and nothing else ([Loop
+Supervision](feature-loop-supervision.md)). It never writes a `daemon.lane`
+record, never reconciles one, and never claims or releases a daemon lease; the
+daemon family neither reads nor reconciles the loop's `loop.session` and
+`loop.stop` records.
 
 A supervision cycle that derives its next-action seam from a held scheduling
 pass receives no action, and a claim port that supplies the resolved owner-hold

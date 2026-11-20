@@ -11,12 +11,12 @@
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createDaemonCommandDefinition } from "../../../packages/cli/src/commands/daemon";
-import { createDaemonCommandRuntime } from "../../../packages/cli/src/daemon-compose";
 import {
   createNodeClock,
   createNodeProcessPort,
 } from "../../../packages/adapters/src/daemon/index";
+import { createDaemonCommandDefinition } from "../../../packages/cli/src/commands/daemon";
+import { createDaemonCommandRuntime } from "../../../packages/cli/src/daemon-compose";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../../packages/core/src/app/index";
 import {
   createMountHarness,

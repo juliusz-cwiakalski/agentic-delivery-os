@@ -38,7 +38,9 @@ const pageFor = (command: string): string =>
                       ? `${M2_PAGE_ROOT}/supervise.md`
                       : command === "install"
                         ? `${M4_PAGE_ROOT}/install.md`
-                        : `${PAGE_ROOT}/${command}.md`;
+                        : command === "loop"
+                          ? `${M4_PAGE_ROOT}/loop.md`
+                          : `${PAGE_ROOT}/${command}.md`;
 const coverage = JSON.parse(
   readFileSync(join(ROOT, "tests/fixtures/help-guide/coverage.json"), "utf8"),
 ) as { readonly commands: readonly string[]; readonly referencePages: readonly string[] };

@@ -29,8 +29,10 @@ const ALIAS_ENTRY = "packages/cli/bin/delivery-os.ts";
  * this case by name.
  */
 const PRE_CHANGE_BASELINE = "d1fff222279eb4926a92c3b612b98aa34c18d4f3";
+/** The GH-348 tip: the baseline that already carries `loop` and not `provider`. */
+const GH348_BASELINE = "ccc83383395fb298396d48afd47b2ab866a9520b";
 const GH350_CLAUSE =
-  " Regenerated deliberately on 2026-11-19 for GH-350's twenty-seventh family (`provider`); only the help cell's Commands list gained one line, and every other cell is byte-unchanged.";
+  " Regenerated deliberately on 2026-11-19 for GH-350's provider family, and again after the GH-348 merge: the help cell's Commands list carries GH-348's `loop` line followed by GH-350's `provider` line, and every other cell is byte-unchanged.";
 
 type Cell = {
   readonly exitCode: number;
@@ -69,6 +71,14 @@ const captured = ((): (() => Baseline) => {
   let cached: Baseline | undefined;
   return () => {
     cached ??= materialise(PRE_CHANGE_BASELINE);
+    return cached;
+  };
+})();
+
+const gh348 = ((): (() => Baseline) => {
+  let cached: Baseline | undefined;
+  return () => {
+    cached ??= materialise(GH348_BASELINE);
     return cached;
   };
 })();
@@ -140,18 +150,28 @@ describe("TC-MOUNT-008 the alias baseline delta is exactly one provider line", (
     expect(working.cells.help.stderr).toBe(captured().cells.help.stderr);
   });
 
-  test("the Commands list gained exactly one provider line at the tail", () => {
+  test("the Commands list gained loop then exactly one provider line after it", () => {
     const before = splitHelp(captured().cells.help.stdout);
+    const loopBaseline = splitHelp(gh348().cells.help.stdout);
     const after = splitHelp(working.cells.help.stdout);
+    // Relative to the recorded GH-346 baseline, the merged set appends GH-348's
+    // `loop` and this branch's `provider`, in that order.
     expect(after.prefix).toBe(before.prefix);
-    expect(after.rows).toHaveLength(before.rows.length + 1);
+    expect(after.rows).toHaveLength(before.rows.length + 2);
     expect(after.rows.slice(0, before.rows.length)).toEqual([...before.rows]);
-    const summary = helpEntryFor(["provider"])?.summary;
-    expect(summary).toBeDefined();
-    const added = after.rows.at(-1) ?? "";
-    expect(added).toBe(`  provider  ${summary ?? ""}`);
+    const loopSummary = helpEntryFor(["loop"])?.summary;
+    const providerSummary = helpEntryFor(["provider"])?.summary;
+    expect(loopSummary).toBeDefined();
+    expect(providerSummary).toBeDefined();
+    expect(after.rows.at(-2)).toBe(`  loop  ${loopSummary ?? ""}`);
+    expect(after.rows.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    // Relative to the GH-348 tip (which already carries `loop`), this branch
+    // appends exactly one provider line and changes nothing else.
+    expect(loopBaseline.rows).toHaveLength(27);
+    expect(after.rows).toHaveLength(28);
+    expect(after.rows.slice(0, loopBaseline.rows.length)).toEqual([...loopBaseline.rows]);
+    expect(after.rows.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
     expect(before.rows).toHaveLength(26);
-    expect(after.rows).toHaveLength(27);
   });
 
   test("the provenance note gained exactly the GH-350 clause", () => {

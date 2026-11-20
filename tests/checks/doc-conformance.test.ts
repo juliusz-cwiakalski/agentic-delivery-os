@@ -426,7 +426,7 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
     required: [
       "two executables",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
-      "twenty-seven families",
+      "twenty-eight families",
       "one shared launcher composition",
       "The invoking bin's declared default working name",
       "`--print-install-path`",
@@ -690,10 +690,11 @@ const GH346_ROWS: readonly PageClaimRow[] = [
     stale: [
       "twenty-five families",
       "twenty-six families",
+      "twenty-seven families",
       "exactly the declared five-site inventory",
     ],
     required: [
-      "twenty-seven families",
+      "twenty-eight families",
       "exactly the declared five-site product-surface inventory, plus the one declared build-side site under `scripts/` registered with its own scan root",
       "install.identity.not-owning",
       "compile-time constant",
@@ -765,13 +766,14 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "66 allowlisted two-segment codes",
       "family count (25)",
       "family count (26)",
+      "family count (27)",
     ],
     required: [
       "170 entries",
       "169 delivered rows",
       "68 allowlisted two-segment codes",
       "BASELINE_ROWS.length + 136",
-      "family count (27)",
+      "family count (28)",
     ],
   },
   {
@@ -1099,12 +1101,12 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
   const RECORDS = [
     "ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md",
     "PDR-0006-per-project-provider-policy-repository-config-layers.md",
-    "TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md",
-    "TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md",
-    "TDR-0059-legacy-provider-profile-and-hook-migration.md",
-    "TDR-0060-watch-observation-freshness-and-stale-condition.md",
-    "TDR-0061-provider-family-mounting-27th-prompt-required.md",
-    "TDR-0062-provider-budget-work-item-ref-source.md",
+    "TDR-0058-budget-ceilings-park-before-spend-injected-spend-totals.md",
+    "TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md",
+    "TDR-0060-legacy-provider-profile-and-hook-migration.md",
+    "TDR-0061-watch-observation-freshness-and-stale-condition.md",
+    "TDR-0062-provider-family-mounting-27th-prompt-required.md",
+    "TDR-0063-provider-budget-work-item-ref-source.md",
   ] as const;
 
   test("each record exists, is Proposed, and has exactly one index row", () => {
@@ -1121,12 +1123,12 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
     for (const id of [
       "ADR-0013",
       "PDR-0006",
-      "TDR-0057",
       "TDR-0058",
       "TDR-0059",
       "TDR-0060",
       "TDR-0061",
       "TDR-0062",
+      "TDR-0063",
     ]) {
       expect(spec, id).toContain(id);
     }
@@ -1495,7 +1497,7 @@ describe("GH-350 phase 7 the config page carries the watch freshness row", () =>
 
 /**
  * GH-350 phase 8 — the family mount: the count-bearing pages state
- * twenty-seven families with `provider` last and `install` the twenty-sixth,
+ * twenty-eight families: `loop` twenty-seventh, `provider` last, `install` the twenty-sixth,
  * the reference page carries its required self-description flags and all seven
  * members, and the delivered ordinals are unchanged (TC-MOUNT-009's ordinal
  * half of AC-F8-3).
@@ -1519,12 +1521,14 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
     page: "doc/spec/features/feature-cli-entrypoint.md",
     stale: [
       "twenty-six families",
+      "twenty-seven families",
       "the twenty-sixth and last prompt-required family",
       "(`config`, `provider`, `db`, `watchdog`)",
     ],
     required: [
-      "twenty-seven families",
-      "The `provider` family is the twenty-seventh and last prompt-required family",
+      "twenty-eight families",
+      "The `loop` family is the twenty-seventh prompt-required family, appended after `install`",
+      "The `provider` family is the twenty-eighth and last prompt-required family, appended after `loop`",
       "ProviderComposition",
       "`provider resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, and `migrate legacy`",
       "the twenty-sixth prompt-required family",
@@ -1532,38 +1536,43 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
-    stale: ["exactly 26", "at exactly 26 families"],
-    required: ["exactly 27", "at exactly 27 families", "the twenty-sixth prompt-required family"],
+    stale: ["exactly 26", "at exactly 26 families", "exactly 27", "at exactly 27 families"],
+    required: ["exactly 28", "at exactly 28 families", "the twenty-sixth prompt-required family"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
-    stale: ["family count (26)", "24-family mount", "family-count pins read 24"],
-    required: [
+    stale: [
+      "family count (26)",
       "family count (27)",
-      "27-family mount",
-      "family-count pins read 27",
+      "24-family mount",
+      "family-count pins read 24",
+    ],
+    required: [
+      "family count (28)",
+      "28-family mount",
+      "family-count pins read 28",
       "twenty-fourth prompt-required command family",
     ],
   },
   {
     page: "doc/00-index.md",
-    stale: ["twenty-six-family prompt-required set"],
+    stale: ["twenty-six-family prompt-required set", "twenty-seven-family prompt-required set"],
     required: [
-      "twenty-seven-family prompt-required set",
+      "twenty-eight-family prompt-required set",
       "the twenty-sixth prompt-required `install` family",
     ],
   },
   {
     page: "doc/overview/glossary.md",
-    stale: ["twenty-six families"],
-    required: ["twenty-seven families", "`supervise`, `install`, and `provider`"],
+    stale: ["twenty-six families", "twenty-seven families"],
+    required: ["twenty-eight families", "`supervise`, `install`, `loop`, and `provider`"],
   },
   {
     page: "doc/planning/oss-tooling/cli-command-registry.md",
     stale: ["Delivered subcommands: `resolve` (one chain decision", "with eight skip reasons"],
     required: [
-      "Mounted as the 27th and last prompt-required family",
-      "the prompt-required inventory is exactly 27 with `provider` last",
+      "Mounted as the 28th and last prompt-required family",
+      "the prompt-required inventory is exactly 28 with `loop` 27th and `provider` last",
       "`simulate --fixture <path>`",
       "`migrate legacy",
       "nine skip reasons",
@@ -1584,7 +1593,7 @@ const GH350_PHASE8_ROWS: readonly GH350Row[] = [
       "provider.budget.exceeded",
       "provider.migrate.refused",
       "input.value.rejected",
-      "the twenty-seventh and last prompt-required command family",
+      "the twenty-eighth and last prompt-required command family",
     ],
   },
 ];
@@ -1648,8 +1657,11 @@ const GH350_ORDINAL_SITES = [
 /** No page may assign `install` a twenty-seventh ordinal or renumber a family. */
 const GH350_RENUMBERED_INSTALL = [
   "`install` is the twenty-seventh",
+  "`install` is the twenty-eighth",
   "the twenty-seventh prompt-required `install` family",
+  "the twenty-eighth prompt-required `install` family",
   "twenty-seventh prompt-required family `install`",
+  "twenty-eighth prompt-required family `install`",
 ] as const;
 
 export const gh350Phase8OrdinalViolations = (
@@ -1697,12 +1709,12 @@ describe("GH-350 phase 8 the mount pages state the delivered truth", () => {
     const missing = (page: string): string | undefined =>
       page === "doc/spec/features/feature-cli-entrypoint.md"
         ? (pageText(page) ?? "").replace(
-            "The `provider` family is the twenty-seventh and last prompt-required family",
+            "The `provider` family is the twenty-eighth and last prompt-required family",
             "The provider family is registered",
           )
         : pageText(page);
     expect(gh350Phase8Violations(GH350_PHASE8_ROWS, missing).join("\n")).toContain(
-      "missing required phrase: The `provider` family is the twenty-seventh and last",
+      "missing required phrase: The `provider` family is the twenty-eighth and last",
     );
   });
 
@@ -1891,7 +1903,7 @@ const GH350_PHASE9_ROWS: readonly GH350Row[] = [
     stale: ["### M4-S4 Declarative provider policy\n- Goal"],
     required: [
       "### M4-S4 Declarative provider policy — **delivered (GH-350)**",
-      "the twenty-seventh prompt-required family",
+      "the twenty-eighth prompt-required family",
       "provider simulate",
       "provider migrate legacy",
     ],
@@ -1902,7 +1914,7 @@ const GH350_PHASE9_ROWS: readonly GH350Row[] = [
     required: [
       "**F2 evidence pointer (GH-350).**",
       "provider simulate --fixture <path>",
-      "twenty-seventh and last prompt-required one",
+      "twenty-eighth and last prompt-required one",
       "each evaluated on",
       "the mount/reachability/coverage suites, GH-350",
     ],

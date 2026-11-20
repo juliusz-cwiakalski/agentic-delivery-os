@@ -260,7 +260,7 @@ const PROVIDER_PROFILES = {
 } as const satisfies CatalogField;
 
 /**
- * One declared spend ceiling (GH-350 F-2, DM-2; TDR-0057).
+ * One declared spend ceiling (GH-350 F-2, DM-2; TDR-0058).
  *
  * The catalog pins the child *shape* only: `enabled` defaults to `true`, and
  * `scope`, `basis` and `ceiling` are required for every declared budget. The

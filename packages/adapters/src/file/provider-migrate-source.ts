@@ -1,6 +1,6 @@
 /**
  * Bounded discovery and one-shot reads of the legacy provider-policy sources
- * (GH-350 F-6, DM-7; TDR-0059 D1/D2).
+ * (GH-350 F-6, DM-7; TDR-0060 D1/D2).
  *
  * Sources are the legacy profile directory (`<home>/<priorDirectoryName>/config/
  * profiles/*.sh`) and the pre-iteration hook

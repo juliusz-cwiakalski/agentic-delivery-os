@@ -1,11 +1,11 @@
 ---
-id: TDR-0061
+id: TDR-0062
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
 decision_date: null
 last_updated: 2026-11-19
-summary: "GH-350: the provider family (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, `migrate legacy`) is mounted as the twenty-seventh and last prompt-required family, appended after `install`. `install` stays the twenty-sixth, `supervise` stays the twenty-fifth, and every delivered ordinal is unchanged; what moves is the family count 26 → 27 and the tail: `install` stops being last and `provider` becomes the last member. The command definition is delivered but the family is neither mounted nor composed in production, so the change adds both membership and the `ProviderComposition` seam the config program already consumes. The declared conformance surface moves in one change — prompt-required membership, the six-runtime production composition seam, one family help entry plus seven member entries, a coverage row in both directions, the M1 reference page completed to carry `--help`/`--version`, and every pinned count/tail assertion — and reachability is proven through the production composition with a negative control, because the delivered tests drove `createConfigProgram`/`runCli` and never `runEntrypoint`, which is how an unreachable family stayed green. Internal-only and partial-mount alternatives are rejected: they falsify the ticket's 'complete and document' and 'offline verification' operator claims and split one reference page across two truths."
+summary: "GH-350: the provider family (`resolve`, `quota`, `parks list`, `profile resolve`, `watch status`, `simulate`, `migrate legacy`) is mounted as the twenty-eighth and last prompt-required family, appended after GH-348's `loop` (the twenty-seventh). `install` stays the twenty-sixth, `loop` is the twenty-seventh, `supervise` stays the twenty-fifth, and every delivered ordinal is unchanged; what moves is the family count 27 → 28 and the tail: `loop` stops being last and `provider` becomes the last member. The command definition is delivered but the family is neither mounted nor composed in production, so the change adds both membership and the `ProviderComposition` seam the config program already consumes. The declared conformance surface moves in one change — prompt-required membership, the six-runtime production composition seam, one family help entry plus seven member entries, a coverage row in both directions, the M1 reference page completed to carry `--help`/`--version`, and every pinned count/tail assertion — and reachability is proven through the production composition with a negative control, because the delivered tests drove `createConfigProgram`/`runCli` and never `runEntrypoint`, which is how an unreachable family stayed green. Internal-only and partial-mount alternatives are rejected: they falsify the ticket's 'complete and document' and 'offline verification' operator claims and split one reference page across two truths."
 owners: ["Juliusz Ćwiąkalski"]
 service: "delivery-os provider policy: CLI composition, help inventory, and reference documentation"
 decision_scope: repo
@@ -81,13 +81,13 @@ links:
     - "tests/fixtures/supervise/mounting.ts"
     - "tests/fixtures/entrypoint/alias-baseline.json"
   diagrams: []
-  decisions: ["TDR-0044", "TDR-0058", "TDR-0059", "TDR-0060", "TDR-0062", "ADR-0007"]
+  decisions: ["TDR-0044", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0063", "ADR-0007"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0061: Provider Family Mounting — The Twenty-Seventh and Last Prompt-Required Family, Appended After `install`
+# TDR-0062: Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop`
 
 ## Context
 
@@ -138,7 +138,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 
 ### C-4: No delivered ordinal is falsified
 
-- **Statement:** After the change, `supervise` is still the twenty-fifth family, `install` is still the twenty-sixth, `steer` the twenty-third, `metrics` the twenty-fourth, and `provider` is the twenty-seventh. No delivered page, test, or phrase-table guard states a false ordinal.
+- **Statement:** After the change, `supervise` is still the twenty-fifth family, `install` is still the twenty-sixth, `steer` the twenty-third, `metrics` the twenty-fourth, and `provider` is the twenty-eighth (after GH-348's twenty-seventh `loop`). No delivered page, test, or phrase-table guard states a false ordinal.
 - **Source:** Delivered truth (`doc/spec/features/feature-cli-entrypoint.md`, `feature-supervise.md`, `feature-metrics.md`, `feature-ceremony-runner.md`); `tests/checks/doc-conformance.test.ts` (the `feature-supervise.md` row's stale phrase `"26th family"` is the delivered guard against over-correcting an ordinal).
 - **Verification:** Documentation conformance plus a review of every ordinal site; the `feature-supervise.md` row is left byte-unchanged.
 - **Negotiable:** no.
@@ -153,7 +153,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 ### C-6: The mount adds no new error identity and no new state kind
 
 - **Statement:** The mount introduces no error-table row, no state record kind, and no write path; a provider member's failures are the delivered provider/config/state identities or the containment identity.
-- **Source:** Change spec `NG-11`, `NG-12`; TDR-0058 C-6 (lean-process driver).
+- **Source:** Change spec `NG-11`, `NG-12`; TDR-0059 C-6 (lean-process driver).
 - **Verification:** `error-table-sync` green with unchanged counts; no record-kind registration.
 - **Negotiable:** no.
 
@@ -210,7 +210,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 - **5 Whys:** why is the family unreachable? It is absent from the declarative set, and production never supplies the `provider` seam, so the composed program has no family. Why? Because its only registration path is a conditional arm (`options.provider !== undefined`) that production does not satisfy. Why did nobody notice? Because the tests drove the command layer. Why did the tests drive the command layer? Because there was no case or oracle that required the entrypoint. Why? Because reachability was assumed from a registration arm that production never takes. The fifth answer is the defect class this record closes with a negative control.
 - **Second-order thinking:** appending after `install` keeps every delivered ordinal true forever; inserting earlier would make ordinals a function of mount history and invite the next author to renumber again.
 - **Systems thinking:** the count lives in one declaration and in ~20 derived assertions, two fixtures, one byte baseline, and six documentation pages. A mount is therefore a *propagation* task; the record's job is to enumerate the propagation so it is not discovered as breakage.
-- **Boundary thinking:** what this record does **not** decide: the ref source for budget evaluation (TDR-0062), the fixture schema (TDR-0058), the migration grammar (TDR-0059), the watch freshness rule (TDR-0060), and the budget semantics (TDR-0057). The mount carries them; it does not re-decide them.
+- **Boundary thinking:** what this record does **not** decide: the ref source for budget evaluation (TDR-0063), the fixture schema (TDR-0059), the migration grammar (TDR-0060), the watch freshness rule (TDR-0061), and the budget semantics (TDR-0058). The mount carries them; it does not re-decide them.
 - **KISS:** one array entry, one six-runtime composition seam, eight help entries, one coverage row, one page edit, and mechanical count propagation — no new abstraction, no generated inventory.
 
 ## Alternatives Considered
@@ -278,7 +278,7 @@ Legend: ✅ passes · ❌ fails · ⚠️ passes only for the mounted subset; no
 
 ## Decision
 
-- **Decision:** Adopt **ALT-1**. `provider` is mounted as the **twenty-seventh and last** prompt-required family, appended after `install`. `install` remains the twenty-sixth and **stops being last**; `provider` is the last member.
+- **Decision:** Adopt **ALT-1**. `provider` is mounted as the **twenty-eighth and last** prompt-required family, appended after GH-348's `loop`. `install` remains the twenty-sixth, `loop` is the twenty-seventh, and `provider` is the last member.
 
 ### 1. Family shape and the seven member paths
 
@@ -286,12 +286,12 @@ The family's declared invocation paths, each of which must reach its handler and
 
 | Member | Invocation | Evaluates a budget? | Needs a work-item ref? |
 |---|---|---|---|
-| resolve | `provider resolve [--chain <name>] [--profile <name>]` | yes (chain resolution) | yes, when an enabled budget is declared (TDR-0062) |
+| resolve | `provider resolve [--chain <name>] [--profile <name>]` | yes (chain resolution) | yes, when an enabled budget is declared (TDR-0063) |
 | quota | `provider quota [--provider <name>]` | no | no |
 | parks | `provider parks list [--all] [--provider <name>]` | no | no |
-| profile | `provider profile resolve [--agent <name>] [--for-spawn]` | no (budget joins chain resolution, not profile eligibility — TDR-0057) | no |
+| profile | `provider profile resolve [--agent <name>] [--for-spawn]` | no (budget joins chain resolution, not profile eligibility — TDR-0058) | no |
 | watch | `provider watch status [--provider <name>]` | no | no |
-| simulate | `provider simulate --fixture <path>` | yes (replays `resolve`) | yes, from the fixture (TDR-0062) |
+| simulate | `provider simulate --fixture <path>` | yes (replays `resolve`) | yes, from the fixture (TDR-0063) |
 | migrate | `provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]` | no | no |
 
 `provider parks`, `provider profile`, `provider watch`, and `provider migrate` are grammar groups, not help entries: an intermediate path has no static help row, exactly as `install`'s family has none between `install` and `install status`. The declared help inventory is therefore **one family entry plus seven member entries = eight entries**, and `provider <group> --help` falls through to the classified composition failure as every unknown help path does.
@@ -305,7 +305,7 @@ The family's declared invocation paths, each of which must reach its handler and
 
 - `packages/cli/src/help.ts` gains the family entry and the seven member entries, each with the five declared sections, using the existing M1 page helper so `seeAlso` is `doc/planning/oss-tooling/milestones/m1/commands/provider.md` on all eight.
 - **The M1 page is the served page; no `pageFor` branch and no M4 page are added.** The default `pageFor` root is the M1 commands directory and already contains `provider.md`; the family's own milestone is M1 (it shipped in M0-S13 and was extended in M1-S21). TDR-0044's rule — "the default M1 snapshot root must not serve a **new** family" — governs a family created in a later milestone, which provider is not. `retro`'s two-page fork exists because its M1 page is the shipped-in-M1 snapshot of a differently-scoped surface; forking provider now would create a second truth for one family with no milestone boundary to justify it.
-- The page must gain the two strings the gate requires (`--help`, `--version`), the `--chain` flag the grammar already accepts, the two new members, the budget gate's ref rule (TDR-0062), and the `watch-stale` condition (TDR-0060). Its `ERRORS` list must name the three new rows (`provider.peak.zone-unknown`, `provider.budget.exceeded`, `provider.migrate.refused`) rather than the delivered set alone.
+- The page must gain the two strings the gate requires (`--help`, `--version`), the `--chain` flag the grammar already accepts, the two new members, the budget gate's ref rule (TDR-0063), and the `watch-stale` condition (TDR-0061). Its `ERRORS` list must name the three new rows (`provider.peak.zone-unknown`, `provider.budget.exceeded`, `provider.migrate.refused`) rather than the delivered set alone.
 
 ### 4. Coverage inventory
 
@@ -434,7 +434,7 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 
 ## Implementation Plan
 
-1. **Membership.** Append `provider` to `PROMPT_REQUIRED_COMMANDS`; correct its comment to "install twenty-sixth, provider twenty-seventh and last".
+1. **Membership.** Append `provider` to `PROMPT_REQUIRED_COMMANDS`; correct its comment to "install twenty-sixth, loop twenty-seventh, provider twenty-eighth and last".
 2. **Composition.** Supply the six `ProviderComposition` seams (`clock`, `credentialPort`, `transport`, `sleep`, `stateStore`, `newFenceToken`) in production's `configured`, and add the family to the composed program unconditionally in the same shape as `install` (the command definition is delivered at `edge.ts:4978`); no conditional arm. Phases 3, 5, and 6 extend the composition as the budget ref, `simulate`, and `migrate` handlers land.
 3. **Help.** Add the family entry and the seven member entries with the five sections, `seeAlso` at the M1 page.
 4. **Coverage.** Add the `commands` and `referencePages` rows; extend the mutants suite with the provider twin.
@@ -458,13 +458,25 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
 
 **High.** The mount is a declarative membership plus the composition seam over a delivered command definition; the conformance surface is enumerated from the repository rather than assumed; and the defect class is proven (the artifact refuses today, and the composed program demonstrably lacks the family). The medium-confidence element is the reference-page home (M1 in place vs a new M4 page): the M1 default resolves today and no milestone boundary justifies a fork, but if the family's surface is later rewritten wholesale, the revisit trigger moves it.
 
+
+## Revision
+
+- **2026-11-20 — GH-348 sync.** The GH-348 merge appended `loop` as the
+  twenty-seventh prompt-required family, so this decision's mount moved one place
+  to **twenty-eighth and last, appended after `loop`**; `install` stays the
+  twenty-sixth and `supervise` the twenty-fifth, and the principle (the provider
+  family is appended last) is unchanged. The record was also renumbered
+  `TDR-0061` → `TDR-0062` (and its companion records `TDR-0057..0062` →
+  `TDR-0058..0063`) because GH-348 owns `TDR-0056`/`TDR-0057`; the historical
+  matrix below records the pre-merge 26→27 movement and is retained as history.
+
 ## References
 
 - [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) — the mount precedent: membership, help, page root, count movement, and the declared conformance surface.
-- [TDR-0058](TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md) — `provider simulate`.
-- [TDR-0059](TDR-0059-legacy-provider-profile-and-hook-migration.md) — `provider migrate`.
-- [TDR-0060](TDR-0060-watch-observation-freshness-and-stale-condition.md) — the `watch-stale` condition the page must document.
-- [TDR-0062](TDR-0062-provider-budget-work-item-ref-source.md) — the work-item ref source the mounted family consumes.
+- [TDR-0059](TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md) — `provider simulate`.
+- [TDR-0060](TDR-0060-legacy-provider-profile-and-hook-migration.md) — `provider migrate`.
+- [TDR-0061](TDR-0061-watch-observation-freshness-and-stale-condition.md) — the `watch-stale` condition the page must document.
+- [TDR-0063](TDR-0063-provider-budget-work-item-ref-source.md) — the work-item ref source the mounted family consumes.
 - [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) — the engine the family exposes.
 - Feature specs: [CLI Entrypoint and Self-Description](../spec/features/feature-cli-entrypoint.md), [Provider Engine](../spec/features/feature-provider-engine.md), [Provider Profiles](../spec/features/feature-provider-profiles.md).
 - Readiness evidence: `doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-1.md` (B1, B6).

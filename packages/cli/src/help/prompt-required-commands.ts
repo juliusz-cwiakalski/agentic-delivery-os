@@ -36,7 +36,9 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "supervise",
   // GH-346 appends the install lifecycle family as the twenty-sixth.
   "install",
-  // GH-350 appends the provider family as the twenty-seventh and last.
+  // GH-348 appends the loop supervision family as the twenty-seventh.
+  "loop",
+  // GH-350 appends the provider family as the twenty-eighth and last.
   "provider",
 ] as const;
 

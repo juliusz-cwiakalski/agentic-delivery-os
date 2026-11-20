@@ -5,7 +5,7 @@
 - **Date:** 2026-11-19
 - **Verdict:** `NOT_READY`
 - **Iteration:** 2 of 3
-- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.2 (31 ACs), `chg-GH-350-test-plan.md` v1.2 (108 cases), `chg-GH-350-plan.yaml` (9 phases, `plan validate` = valid), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md`, TDR-0061, TDR-0062, ADR-0013, PDR-0006, TDR-0057..0052
+- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.2 (31 ACs), `chg-GH-350-test-plan.md` v1.2 (108 cases), `chg-GH-350-plan.yaml` (9 phases, `plan validate` = valid), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md`, TDR-0062, TDR-0063, ADR-0013, PDR-0006, TDR-0058..0052
 
 ## Facet summary
 
@@ -52,11 +52,11 @@ Spec §18 orders "the family mount … then simulation, then migration, then wat
 
 **Remediation:** specification.
 
-### D2-3 — major — TDR-0061 and spec §2.1 claim the family is already registered/composed
+### D2-3 — major — TDR-0062 and spec §2.1 claim the family is already registered/composed
 
 Both assert the family is "registered in the command layer … and composed by the production composer", hence "membership plus a guard, not new wiring". Verified false by execution: `createProductionComposer(...)(brand)` registers 27 commands with `provider` absent (the 27th is `config`), and `production.ts`'s `configured` object has no `provider:` key — `createConfigProgram` registers provider only when `options.provider !== undefined`. Membership alone therefore yields `fallback.internal` for every invocation. Plan phase 8 declares `production.ts` and unconditional registration, so delivery is recoverable, but the binding record that lands in phase 1 understates the mount.
 
-**Remediation:** decision record correction (TDR-0061) + specification §2.1.
+**Remediation:** decision record correction (TDR-0062) + specification §2.1.
 
 ### D2-4 — major — engine and metrics page count sites unowned and unasserted
 
@@ -69,10 +69,10 @@ Phase 1 moves skip reasons 8 → 9 and the allowlists 8 → 14 / 11 → 17, but 
 - **D2-5** — `.dependency-cruiser.cjs` is declared by no phase although TC-CONFORM-008 promises four new boundary rules; either declare it or re-home the case.
 - **D2-6** — TC-MOUNT-003's mutation seam is unspecified: `selectPromptRequiredProgram` closes over a statically imported constant, so a copy of `prompt-required-commands.ts` alone cannot change selection; the working route is a temp copy of `entrypoint.ts` with rewritten imports and cache-busting, or an injected set.
 - **D2-7** — TC-CONFORM-004's "maximal" fixture is described as a budget park, but `timezone` is a peak-writer field, so a real budget park carries 13 fields, not 14; construct the maximal object directly or use a chain park unioning `budget-exhausted` and `peak-window`.
-- **D2-8** — TDR-0061 C-5 claims "a provider invocation under the alias writes nothing"; `provider resolve` persists parks and announcements under either bin. Restate as identity-neutrality plus read-only members writing nothing.
+- **D2-8** — TDR-0062 C-5 claims "a provider invocation under the alias writes nothing"; `provider resolve` persists parks and announcements under either bin. Restate as identity-neutrality plus read-only members writing nothing.
 - **D2-9** — TC-MOUNT-008 names `provider-mounting.test.ts` as owner while §7.1/§7.3 and the plan name `provider-alias-baseline.test.ts`; the baseline comparison against `git show <capturedFrom>:…` is not named in setup/action.
-- **D2-10** — plan header says eight decision records are untracked (only TDR-0061/0054 are) and says the obligation table has 21 rows (it has 22).
-- **D2-11** — test plan still says "all 30 acceptance criteria" in one place, omits `OQ-TP-10` from its open list, labels two control-only suites "(extended)", and TDR-0061 §5-B19 says the coverage mutant drops `install` when it drops `merge`.
+- **D2-10** — plan header says eight decision records are untracked (only TDR-0062/0054 are) and says the obligation table has 21 rows (it has 22).
+- **D2-11** — test plan still says "all 30 acceptance criteria" in one place, omits `OQ-TP-10` from its open list, labels two control-only suites "(extended)", and TDR-0062 §5-B19 says the coverage mutant drops `install` when it drops `merge`.
 - **D2-12** — plan scope noise: `exports-parity.test.ts` and `provider-surface.test.ts` do not police the new adapter subpath; `entrypoint-composition.test.ts`'s `withExtras()` still lists `provider` as an extra after the mount.
 
 ## Residual open items
