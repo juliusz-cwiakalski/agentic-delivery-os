@@ -10,13 +10,13 @@ phases:
     completed: 2026-11-20T11:17:45.514Z
   specification:
     started: "2026-11-20T11:18:00Z"
-    completed: 2026-11-20T12:41:48.496Z
+    completed: 2026-11-20T12:55:44.980Z
   test_planning:
     started: "2026-11-20T11:38:00Z"
-    completed: 2026-11-20T12:41:58.441Z
+    completed: null
   delivery_planning:
     started: "2026-11-20T11:52:00Z"
-    completed: 2026-11-20T12:42:08.362Z
+    completed: null
   dor_check:
     started: "2026-11-20T11:58:00Z"
     completed: null

@@ -8,53 +8,55 @@
 # pm-notes `notes:` entry naming the plan phase id, the commit hash and the test
 # result; nothing about progress is ever written here.
 #
-# REVISION 1.1 — Definition-of-Ready iteration 2, reconciled to
-# readiness-review/readiness-iter-1.md, spec v1.4 and test plan v1.1 (55 cases).
-#   WHAT MOVED. Six phases, not five: the AGENT-PROMPT POLICY CLEANUP is a phase
-#   of its own between the configuration declaration and the reference pins (B1,
-#   spec DEC-20 / F-8 / AC-F2-2), and the migration-bridge cases (MIG-001..-003)
-#   are folded into the reference suite instead of owning a sixth file (test plan
-#   v1.1 §5.2.8, §7.1). The case map and the AC ownership are re-derived from
-#   test plan v1.1: 55 cases (0/3/17/22/7/6) and 15/15 ACs (0/1/2/9/2/1).
-#   FINDINGS CLOSED ON THE PLAN SIDE, each at a named site in this file:
-#     B2  the ceilings are `window-cost` 20 / `ticket-cost` 30 with the ordering
-#         rule stated (a `failed` condition outranks every `parked` one), and the
-#         replay phase measures 25 (window band) and 30 (ticket stop) — phase 1
-#         contract, phase 4 contract, FIXTURE RULES.
-#     B3  the phase-1 profile validator is passed the WHOLE parsed document; the
-#         delivered function reads `values.provider.profiles`, so the branch
-#         alone parses as EMPTY and then refuses `provider.profile.absent`.
-#         Re-verified against the delivered parser at plan time (see below) and
-#         carried in the phase-1 gate verbatim.
-#     B4  every credential child is exactly `{ sourceKey: { style, name } }` —
-#         re-verified against the delivered parser at plan time — with
-#         `sourceKey` its only key and `style`/`name` (plus `suffix` in the
-#         environment-prefixed form) the only keys beneath it. Phase 1 contract.
-#     M1  the reference phase pins DECLARED values from the document text and
-#         asserts the four delivered quota defaults (`timeoutMs: 15000`,
-#         `outageParkTtlSeconds: 300`, `credentialParkTtlSeconds: 900`,
-#         `capParkTtlSeconds: 300`) SEPARATELY at `layer=defaults`, instead of
-#         deep-equalling a resolved node that contains them. Phase 3 contract.
-#     M5  SEC-002's hostile extra credential key is refused by the CONFIG LAYER as
-#         `config.key.unknown` (the failure carries no `key` member, so the case
-#         asserts the code plus a differential oracle) and is IGNORED by the raw
-#         provider parser — both facts asserted, neither fabricated. Phase 5.
-#     M8  `TMPDIR=$PWD/tmp/tmpdir pnpm build` is G0: the precondition of EVERY
-#         bun-test gate, run once per worktree (`dist/**` is git-ignored and never
-#         committed). ENVIRONMENT PRECONDITIONS + every phase gate.
-#     M11 the scan surface names EVERY exclusion with its reason, the
-#         `scripts/install.sh` example-copy as a declared allowed exception (not a
-#         naming accident), and the blueprint second half (exactly one installer
-#         in the tree, adopter scaffolding, referenced by no delivery-surface
-#         file). Phase 5 contract.
-#     m6  the commitlint PATH precondition: lifecycle commands run with
-#         `node_modules/.bin` APPENDED to `PATH` (appending lets the installed
-#         `jaiship` win; prepending shadows it with the unbuilt dev shim, which
-#         cannot resolve `@delivery-os/adapters/credentials`). ENVIRONMENT
-#         PRECONDITIONS.
-#   B1 is carried as the new phase 2 rather than as a plan-side wording fix: the
-#   specification MADE THE CLAIM TRUE OF THE TREE (DEC-20) instead of narrowing
-#   it, so this plan owes the edit, its regenerated counterpart and the scanner.
+# REVISION 1.2 — Definition-of-Ready iteration 3, reconciled to
+# readiness-review/readiness-iter-2.md (which reviewed this plan's revision 1.1
+# against spec v1.4 / test plan v1.1). It closes the TWO PLAN-SIDE items and
+# re-confirms the rest IN PLACE — no phase boundary, scope, case count or AC
+# ownership moves: 55 cases (0/3/17/22/7/6) and 15/15 ACs (0/1/2/9/2/1) stand.
+#   N4 [critical] — NO LITERAL SECRET-SHAPED VALUE REMAINS IN THIS PLAN. Revision
+#     1.1 printed a realistic `*_API_KEY` assignment inside the phase-5 SEC-003
+#     contract, and this plan is one of the files SEC-003 scans, so the case's own
+#     prose made it unsatisfiable. Phase 5 now states that the positive control is
+#     SYNTHESIZED INSIDE THE TEST AT RUNTIME (a key name joined from fragments, a
+#     value assembled from fragments plus a random suffix), that the scanner is a
+#     pure `(path, text)` function driven over in-memory samples, and that NO
+#     SCANNED DOCUMENT CONTAINS A REALISTIC VALUE. The negative control (declared
+#     documentation placeholders are not reported) is kept, and the carve-out is
+#     restated as a CLOSED list of documented FORMS compared as declared constants
+#     — never a generic "ends with an ellipsis" rule, which would silently nullify
+#     the positive control.
+#   N1 [major] — the generated-pair proof is safe. Phase 2 now (a) asserts the
+#     provenance header separately on all EIGHT lines the preamble really has (the
+#     revision-1.1 text said "first five header lines" and named four of them,
+#     omitting `# If behavior must change, edit the source file above and
+#     rebuild.`), (b) scopes the identifier
+#     CONTAINMENT to the PROMPT BODY AFTER that header, (c) uses the spec v1.5
+#     MODEL-ANCHORED family classes — `claude-(opus|sonnet|haiku|\d)`, `gemini-\d`,
+#     `gpt-\d`, `glm-\d`, `deepseek-[a-z0-9]` — instead of the bare `claude-`
+#     prefix that matched the generator path, and (d) adds an arm asserting the
+#     header line `# Regenerate with: scripts/build-claude-plugin.sh` is NOT
+#     reported. A correct pair can no longer turn its own gate red.
+#   N8-class citation — the `layer=… file=… line=…` form the reference phase
+#     asserts is produced by `originLabel` in
+#     `packages/core/src/config/provenance.ts`; phase 3 now cites that module (the
+#     plan carried no resolver citation to correct, and the delivered identity
+#     `config.key.unknown` in phase 5 is unchanged).
+#   RE-CONFIRMED UNCHANGED AND STILL BINDING (reviewed and left byte-identical):
+#     the phase-1 WHOLE-DOCUMENT validator gate (B3 — the review re-executed it in
+#     the plan's exact `bun -e` shape and it is the only green shape), the 20/30
+#     ceilings with the
+#     `failed`-outranks-`parked` ordering (B2/DEC-21), the 25/30 spend bands
+#     (window park / ticket stop), G0 `pnpm build` before EVERY bun-test gate (M8),
+#     and the commitlint PATH APPEND precondition (m6). The
+#     `provider-migration-evidence` suite stays absent from every scope, gate and
+#     `doneArtifacts` list: MIG-001..-003 are arms of the reference suite (phase 3).
+#   REVISION 1.1 (kept for traceability) closed the iteration-1 plan-side findings:
+#   B2 (ceilings re-ordered 20/30, fixtures re-measured at 25/30), B3 (whole
+#   document to the profile validator), B4 (`{ sourceKey: { style, name } }`),
+#   M1 (declared values pinned, four delivered defaults asserted separately), M5
+#   (hostile key refused by the config layer as `config.key.unknown`, ignored by
+#   the raw parser), M8 (G0), M11 (scan surface, `install.sh` exception, blueprint
+#   half) and m6 (commitlint PATH); B1 became phase 2 (DEC-20).
 #
 # WHAT THIS CHANGE IS (spec §1, §7.1). An ADOPTION plus one CONFORMANCE CLEANUP,
 # not a capability. The delivered provider engine, profile/seat branch, nomination
@@ -68,7 +70,9 @@
 # other prompt or command is touched (DEC-20, NFR-7).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:            ./chg-GH-374-spec.md v1.4 — G-1..G-14; F-1..F-8; DM-1..DM-11;
+#   - Spec:            ./chg-GH-374-spec.md v1.4, read with the v1.5 correction to
+#                      AC-F2-2's identifier table (the model-anchored family
+#                      classes, N1) — G-1..G-14; F-1..F-8; DM-1..DM-11;
 #                      NFR-1..NFR-9 (NFR-7 carries the CLOSED file set); DEC-1..DEC-24
 #                      (DEC-16 R1 mixed base, DEC-17 R2 union window, DEC-18 R3
 #                      grace/buffer arithmetic, DEC-19 chain-park shape, DEC-20 the
@@ -92,8 +96,14 @@
 #                      plus the extended `doc-conformance`); §7.2 the moved files
 #                      and the UNEDITED controls; §7.3 the case-to-suite map
 #                      (17 + 22 + 4 + 3 + 3 + 6 = 55); §8.3 no open question.
-#   - DoR review:      ./readiness-review/readiness-iter-1.md — the findings this
-#                      revision closes (see REVISION 1.1 above).
+#                      The plan applies the same N1/N4 corrections the test plan's
+#                      next revision carries (body-scoped containment,
+#                      model-anchored classes, in-memory SEC-003 controls); the
+#                      case ids, oracles' subjects and counts are unchanged.
+#   - DoR reviews:     ./readiness-review/readiness-iter-1.md (closed by revision
+#                      1.1) and ./readiness-review/readiness-iter-2.md (closed by
+#                      revision 1.2 — N1, N4 and the citation class; see the
+#                      revision block above).
 #   - PM record:       ./chg-GH-374-pm-notes.yaml — the adoption route, the policy
 #                      home, R1/R2/R3, the verified legacy-behaviour correction
 #                      (the only INCREMENTAL cost of the union window is the
@@ -444,7 +454,7 @@ tier:
     - "A gate is green only by weakening, skipping, renaming or deleting an oracle, or a guard ships without its failing negative control (test plan §4.3, §4.4): a case that cannot fail is not evidence."
     - "A suite-map edit is proposed, the top-level document gains a third key, or the delivered control suite `tests/structure/verify-gates-suite-map-reference.test.ts` is edited (TC-POL-DRIFT-007, test plan §7.2): the map is a byte-identical control and `tests/**` needs no registration."
     - "A page and the doc-conformance phrase that pins it move in different commits, a phrase row is added for prose a later phase contradicts, or a page outside the closed page set states a claim this change falsifies (spec §16, AC-F7-2, TC-POL-DOC-005/006): the one-edit-set rule is broken."
-    - "A real credential-shaped value appears in any committed file — the document, a fixture, a test, the evidence artifact, a guide or this change folder — or a fixture carries a credential value or omits `workItemRef: \"GH-374\"` while the enabled budgets are declared (NFR-4, AC-F6-3, DM-9): a credential leak is a defect, not a review note. Documentation PLACEHOLDERS (`...`, `<...>`, `$VAR`, `sk-ant-…`) are the declared carve-out and are proven by control, never by assumption (SEC-003)."
+    - "A real credential-shaped value appears in any committed file — the document, a fixture, a test, the evidence artifact, a guide or this change folder — or a fixture carries a credential value or omits `workItemRef: \"GH-374\"` while the enabled budgets are declared (NFR-4, AC-F6-3, DM-9): a credential leak is a defect, not a review note. Documentation PLACEHOLDERS are the declared CLOSED carve-out list (`...`, `<...>`, `$VAR`, `${VAR}`, the documented `sk-ant-…` form, a bare name with no value), compared as declared constants and proven by control; the realistic positive control is SYNTHESIZED IN THE TEST at runtime and is never written into a scanned file (SEC-003, N4)."
     - "The proof starts reaching for the real thing — a `dispatch`, a lease claim, a single-flight predicate, a child spawn, a live network call, a live credential resolution, a real `sleep`, or an installed-binary subprocess (DEC-13, NFR-6, TC-POL-NOM-003, SEAM-TP-1): every proof is in-process, and a dispatch would start a second delivery."
     - "`provider migrate legacy`, its caps (`65536`/`2000`/`64`), its eight closed reasons, its three flags, its fixtures, its goldens or its output would have to change, or a suite re-runs the migration against an operator home (NG-2, AC-F6-2, TC-POL-MIG-002/003): the refusals are recorded evidence; the migrator gaps stay with M4-S17."
     - "The union window or the declared-costs honesty is dropped or softened — the paid entry peak narrowed to 06:00-10:00, the 01:00-10:00 union weakened, the exact 04:00-06:00 time-of-day interval removed, the daily-versus-weekday superset restated as weekday-only, or the ticket ceiling described as a park (DEC-9, DEC-10, DEC-17, OQ-2, OQ-3, RSK-4, RSK-6): a false claim about the deployed policy is worse than the cost it hides."
@@ -656,28 +666,51 @@ phases:
   #   SCAN-004  THE FULL ROSTER, not one file: all 24 `.opencode/agent/*.md` files
   #             are scanned with the exported identifier table — provider-qualified
   #             `zai-coding-plan/`, `deepseek/`, `openai/`, `anthropic/`, `gemini/`;
-  #             family ids used as a value `glm-`, `deepseek-`, `gpt-`, `claude-`,
-  #             `gemini-`. Result: 24 files scanned, ZERO findings for all ten
-  #             patterns, per-file zero for `toolsmith.md`. TEN planted samples
-  #             (one per class) each produce a finding naming its class and line. The
-  #             TWO CARVE-OUTS are asserted as exported declarations: a bare family
-  #             name in prose is not a literal, and `claude.model` is the documented
-  #             Claude Code assignment contract. `.opencode/command/**` is outside
-  #             this scan by declaration. A 23-file scan (a stale roster) FAILS.
-  #   SCAN-006  the GENERATED PAIR: the first five header lines
-  #             (`# GENERATED FILE — DO NOT EDIT DIRECTLY.`,
-  #             `# Source of truth: .opencode/agent/toolsmith.md`,
-  #             `# Regenerate with: scripts/build-claude-plugin.sh`, the copyright
-  #             line); the generated file's identifier set is a SUBSET of its
-  #             source's and BOTH ARE EMPTY; every neutral placeholder occurrence in
-  #             the source appears in the generated body; the generated frontmatter
-  #             carries `model: opus` from the source's `claude.model` (the declared
-  #             carve-out, not an identifier). NO-OP: a `.ados-claude/**` digest map
-  #             is identical after running the build,
-  #             `git status --porcelain -- .ados-claude .opencode` is empty, and the
-  #             delivered control `tests/checks/milestone-prompts.test.ts` passes
-  #             UNEDITED. A hand-edited temp pair (an identifier the source lacks)
-  #             and a stale pair both fail by name.
+  #             MODEL-ANCHORED family ids as a value — `claude-(opus|sonnet|haiku|\d)`,
+  #             `gemini-\d`, `gpt-\d`, `glm-\d`, `deepseek-[a-z0-9]` (spec v1.5).
+  #             The anchoring is what keeps ordinary hyphenation out: the generator
+  #             path `scripts/build-claude-plugin.sh` contains `build-claude-` and
+  #             is NOT an identifier. Result: 24 files scanned, ZERO findings for
+  #             all ten patterns, per-file zero for `toolsmith.md`. TEN planted
+  #             samples (one per class) each produce a finding naming its class and
+  #             line. The TWO CARVE-OUTS are asserted as exported declarations: a
+  #             bare family name in prose is not a literal, and `claude.model` is
+  #             the documented Claude Code assignment contract.
+  #             `.opencode/command/**` is outside this scan by declaration. A
+  #             23-file scan (a stale roster) FAILS.
+  #   SCAN-006  the GENERATED PAIR, in FOUR parts, with the containment scoped to
+  #             the BODY so a correct pair cannot fail on its own provenance (N1):
+  #             (a) HEADER, asserted separately and never fed to the identifier
+  #                 comparison — the generator preamble is the eight lines
+  #                 `---`, `# GENERATED FILE — DO NOT EDIT DIRECTLY.`,
+  #                 `# Source of truth: .opencode/agent/toolsmith.md`,
+  #                 `# Regenerate with: scripts/build-claude-plugin.sh`,
+  #                 `# If behavior must change, edit the source file above and
+  #                 rebuild.`, the copyright line, the licence line and the
+  #                 `# source:` line (all eight named; the revision-1.1 text said
+  #                 "first five header lines" while naming four, and omitted the
+  #                 `If behavior must change` line);
+  #             (b) CONTAINMENT over the PROMPT BODY THAT FOLLOWS THE HEADER (from
+  #                 the first generated frontmatter field, `name:`, onward): the
+  #                 body's identifier set for the ten classes is a SUBSET of its
+  #                 source's set and BOTH ARE EMPTY; every neutral placeholder
+  #                 occurrence in the source (`<provider>/<model>`, `<model>`)
+  #                 appears in the generated body; the generated frontmatter carries
+  #                 `model: opus` from the source's `claude.model` (the declared
+  #                 carve-out, not an identifier);
+  #             (c) HEADER-IS-NOT-REPORTED ARM: the header line
+  #                 `# Regenerate with: scripts/build-claude-plugin.sh` is scanned
+  #                 by the same identifier table and produces NO finding — the
+  #                 model-anchored classes cannot match `build-claude-plugin`, and
+  #                 the header is outside the compared body. This arm is what makes
+  #                 the pair provable rather than accidental;
+  #             (d) NO-OP: a `.ados-claude/**` digest map is identical after running
+  #                 the build, `git status --porcelain -- .ados-claude .opencode` is
+  #                 empty, and the delivered control
+  #                 `tests/checks/milestone-prompts.test.ts` passes UNEDITED.
+  #             A hand-edited temp pair (an identifier the source body lacks), a
+  #             stale pair, and a header with a missing provenance line each fail by
+  #             name.
   #   SCAN-007  the REGRESSION ARM, so a green roster means the literals are gone
   #             rather than the scanner being blind: a temp tree carrying the
   #             RECORDED pre-change toolsmith text (the DoR line evidence:
@@ -695,17 +728,20 @@ phases:
   #   commit; a phase cannot own a case whose suite lands later.
   #
   # Acceptance: AC-F2-2 — the full twenty-four-prompt roster reports zero
-  #   provider/model identifiers, every planted class is reported by the same
-  #   scanner, the scan definition states the two carve-outs, and the generated
-  #   counterpart contains no identifier its source lacks and is proven build
-  #   output (a second build is a no-op). Evidence cases: TC-POL-SCAN-004,
-  #   TC-POL-SCAN-006, TC-POL-SCAN-007. This phase also supplies the fourth planted
-  #   class that AC-F6-1 names; AC-F6-1 itself remains phase 5's (see AC
-  #   OWNERSHIP), because its other three classes complete there.
+  #   provider/model identifiers under the model-anchored class table, every
+  #   planted class is reported by the same scanner, the scan definition states the
+  #   two carve-outs, and the generated counterpart's BODY (after its provenance
+  #   header) contains no identifier its source lacks, with the header's generator
+  #   path proven unreported and the pair proven build output (a second build is a
+  #   no-op). Evidence cases: TC-POL-SCAN-004, TC-POL-SCAN-006, TC-POL-SCAN-007.
+  #   This phase also supplies the fourth planted class that AC-F6-1 names; AC-F6-1
+  #   itself remains phase 5's (see AC OWNERSHIP), because its other three classes
+  #   complete there.
   #
   # Gate (expected: G0 green; the roster scan reports 24 files / 0 findings / 10 of
-  # 10 planted classes; the regression arm reports the pre-change literals; the
-  # delivered milestone-prompts control is green and the pair is a build no-op):
+  # 10 planted classes; the generated-pair arms report header ✓, body containment ✓,
+  # the generator path unreported ✓, and a build no-op; the regression arm reports
+  # the pre-change literals; the delivered milestone-prompts control is green):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/milestone-prompts.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-policy-adoption-prompt-scan.test.ts
@@ -852,7 +888,10 @@ phases:
   #             AND the DEFAULTS ARM: `provider.entries.zai-coding-plan.quota.timeoutMs`
   #             resolves 15000 with `layer=defaults file=core/src/config/defaults.ts
   #             line=\d+`, the four default-only leaves are enumerated as such, and
-  #             no DECLARED leaf reports `layer=defaults` (M1).
+  #             no DECLARED leaf reports `layer=defaults` (M1). The asserted
+  #             `layer=… file=… line=…` form is produced by `originLabel`
+  #             (`packages/core/src/config/provenance.ts`), which is the module the
+  #             contract cites — not the resolver (N8's citation class).
   #   DRIFT-007 top-level keys exactly {provider, verify};
   #             `verify.suite-map.schemaVersion` is `delivery.verify.suite-map.v1`;
   #             its single job "TS aggregate check" carries the same eight
@@ -1173,13 +1212,31 @@ phases:
   #             the six fixtures, the SIX test files, the three guides,
   #             `feature-provider-profiles.md`, the two toolsmith files,
   #             `migration-output.md`, this plan and the spec (set equality is
-  #             asserted, so nothing is excluded by accident). THE PLACEHOLDER
-  #             CARVE-OUT IS A DECLARED RULE PROVEN IN BOTH DIRECTIONS (M6): a
-  #             realistic secret (`DEEPSEEK_API_KEY=sk-live-4f9c…`, a 40-char hex
-  #             token) IS reported; `ANTHROPIC_API_KEY=sk-ant-...`,
-  #             `ZAI_API_KEY=<YOUR_KEY>`, `OPENAI_API_KEY=$OPENAI_API_KEY` and
-  #             `sk-ant-…` are NOT; a bare reference NAME with no value is NOT; the
-  #             carve-out list is exported and asserted by value.
+  #             asserted, so nothing is excluded by accident).
+  #             THE POSITIVE CONTROL IS SYNTHESIZED INSIDE THE TEST AT RUNTIME and
+  #             never written into any scanned artifact (N4, critical): the scanner
+  #             is a pure `(path, text)` function driven over in-memory samples, and
+  #             the realistic sample is BUILT by the case — a `*_API_KEY` name
+  #             joined from fragments plus `=`, and a value assembled from fragments
+  #             with a random suffix — so it matches the real-value rule, is
+  #             REPORTED, and exists only in the test's memory. NO SCANNED DOCUMENT
+  #             CONTAINS A REALISTIC VALUE: this plan, the spec and the test plan
+  #             carry none, which is what makes the case satisfiable over its own
+  #             declared set. (For exactly that reason this comment describes the
+  #             sample and does not print one.)
+  #             THE PLACEHOLDER CARVE-OUT IS A CLOSED LIST OF DOCUMENTED FORMS,
+  #             exported and asserted by value, and it is never a generic
+  #             "ends with an ellipsis" rule (which would nullify the positive
+  #             control): `ANTHROPIC_API_KEY=sk-ant-...`,
+  #             `ZAI_API_KEY=<YOUR_KEY>`, `OPENAI_API_KEY=$OPENAI_API_KEY`, the
+  #             documented `sk-ant-…` form, and a bare reference NAME with no value
+  #             are NOT reported — each compared as its declared constant — while
+  #             the synthesized realistic value IS. This plan is itself in the
+  #             scanned set and carries ONLY those carve-out forms, so filtering the
+  #             real set is the negative control applied to a real file rather than
+  #             an exemption granted to the case's own document. Both directions are
+  #             asserted, so a scanner that reports everything and one that hides
+  #             everything both fail (M6).
   #
   # Acceptance: AC-F6-1 — over the declared delivery surface zero sourced profile
   #   directories, zero hook installations and zero hooks-directory creations; the
