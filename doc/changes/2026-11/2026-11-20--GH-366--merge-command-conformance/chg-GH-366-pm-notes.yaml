@@ -10,7 +10,7 @@ phases:
   clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
   specification: { started: null, completed: 2026-11-20T11:58:54.486Z }
   test_planning: { started: null, completed: 2026-11-20T11:59:03.800Z }
-  delivery_planning: { started: null, completed: 2026-11-20T11:21:55.123Z }
+  delivery_planning: { started: null, completed: 2026-11-20T12:06:01.719Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,6 +56,31 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR remediation complete (iteration 1 findings): specification reopened
+      and re-landed as v2.0 (`9ee3560e`), test plan reopened and re-landed as
+      v1.1 (`f80638d5`), delivery_planning reopened and revised to v1.1 (48
+      cases allocated, golden table 13 -> 19 declared per file, read-at-head
+      seam scoped, missing suites and doc surfaces added). The three decision
+      records were amended while still `Proposed`. What changed materially: the
+      branch declaration is read at the delivery request's asserted head through
+      a bounded local tree/blob read (the working-tree read could not work from
+      the integration base), the required-check premise is corrected (the
+      recorded verdict is consulted; only the fresh page is not), the identity
+      arithmetic is on the 170 base (173/173/172/71/+139), the totality
+      deliverable has a runtime-declaration oracle with a removal control, and
+      the refusal rendering contract moves all ten refusal goldens plus six
+      added."
+    type: info
+    date: "2026-11-20"
+  - text: "Retro (commit subject hygiene): every plan phase summary already carried
+      a `type(GH-366):` prefix, and the phase-completion template prepends the
+      type and ref again, so the landed specification commit `48b8541e` reads
+      `docs(GH-366): docs(GH-366): reserved decision records …`. Corrected in
+      the plan before delivery: the summaries now carry the descriptive
+      remainder only. Suffix the lesson: a plan `summary` is message *context*,
+      not a full subject — never embed a conventional-commit prefix in it."
+    type: retro
+    date: "2026-11-20"
   - text: "DoR gate iteration 1: NOT_READY — 22 findings (3 critical, 10 major, 7
       minor, 2 nit), 9 facets FAIL / 1 PASS (`decision_capture`), pause not
       required. Record: `readiness-review/readiness-iter-1.md`. The three

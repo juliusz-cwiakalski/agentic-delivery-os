@@ -8,18 +8,30 @@
 # the plan phase id, the commit hash and the gate result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:   ./chg-GH-366-spec.md (v1.2; F-1..F-5, API-1..API-3, EVT-1..EVT-2,
-#             DM-1..DM-3, NFR-1..NFR-10, DEC-1..DEC-10, RSK-1..RSK-8, §4.2 the ten
-#             non-goals, §5.1 capability details, §6 the four flows, §7.1 in
-#             scope, §17 the 22 ACs, §18 the delivery order, §19 the no-migration
-#             statement, Appendix A the normative resolution order, Appendix B
-#             the refusal matrix, Appendix C the reserved decision records.)
-#   - Tests:  ./chg-GH-366-test-plan.md (v1.0; TC-MRG-001..041 in one stable
-#             family, 22/22 ACs covered, 10/10 NFRs, 8/8 interface elements;
-#             §5.2 scenario details; §6 the four fixture families; §7.1 the
-#             scenario-to-file map; §7.3 the meta-suite registration
-#             obligations; §7.4 the documentation surfaces; §8.3 the five author
-#             open questions, of which OQ-TP-2 is discharged by phase 6 below.)
+#   - Spec:   ./chg-GH-366-spec.md (v2.0; F-1..F-5, API-1..API-3, EVT-1..EVT-2,
+#             DM-1..DM-3, NFR-1..NFR-10, DEC-1..DEC-12, RSK-1..RSK-10, §4.2 the
+#             seven non-goals, §5.1 capability details, §6 the five flows, §7.1
+#             in scope, §17 the 24 ACs and §17.7 the change's Definition of Done,
+#             §18 the delivery order, §19 the no-migration statement, Appendix A
+#             the normative resolution order, Appendix B the refusal matrix and
+#             its act-required column, Appendix C the reserved decision records.)
+#   - Tests:  ./chg-GH-366-test-plan.md (v1.1; TC-MRG-001..048 in one stable
+#             family, 48/48 cases allocated, 24/24 ACs covered, 10/10 NFRs, 8/8
+#             interface elements; §5.1 states the plan-phase allocation this plan
+#             adopts verbatim and every §5.2 detail restates it on a `Plan
+#             Phase(s)` line; §6 the five fixture families and the "no fixture
+#             writes a change record into a base checkout" rule; §7.1 the
+#             scenario-to-file map; §7.3 the meta-suite registration obligations;
+#             §7.4 the documentation surfaces; §8.3 OQ-TP-3 closed by §5.1.)
+#   - Decisions: doc/decisions/TDR-0071 (branch resolution and resolved-head
+#             authority; the 2026-11-20 amendment selects ALT-6, the declaration
+#             read at the request head), TDR-0072 (required-check authority and
+#             gate membership; premise corrected to "the recorded battery verdict
+#             is consulted but the fresh page is never consulted", plus the
+#             identity arithmetic), TDR-0073 (refusal diagnostics and
+#             emitted-identity totality; arithmetic and the 24-AC count). All
+#             three are `Proposed`, authored AND amended on this branch; no
+#             challenge verdict and no acceptance is claimed.
 #   - PM:     ./chg-GH-366-pm-notes.yaml (delivery_mode autonomous; the scope
 #             ruling — the `merge` slice plus the diagnostics contract, the
 #             family-wide battery explicitly not claimed; the reserved decision
@@ -27,7 +39,7 @@
 #             already carries; the operational prerequisite that every primitive
 #             call carries BOTH PATH=$PWD/node_modules/.bin:$PATH and
 #             TMPDIR=$PWD/tmp/tmpdir, and that `pnpm build` precedes any
-#             `jaiship` invocation.)
+#             `jaiship` invocation).
 #   - Rules:  .ai/rules/typescript.md and .ai/rules/testing-strategy.md.
 #   - Schema: doc/spec/features/feature-plan-schema.md (scope keys
 #             files/folders/packages, per-phase one-line summary, typed
@@ -48,33 +60,68 @@
 # Per-phase test-case allocation is therefore declared in the comment block above
 # each phase, keyed by plan phase id.
 #
-# TC ALLOCATION INDEX (41 of 41 test-plan cases, one phase each; the per-phase
-# allocation is restated in each phase's comment block):
-#   phase 1 — none (planning)
-#   phase 2 — 6 cases: 020, 021, 022, 026, 027, 039
-#   phase 3 — 13 cases: 001..009, 030, 031, 036, 037
-#   phase 4 — 16 cases: 010..019, 023, 024, 025, 032, 034, 040
-#   phase 5 — 2 cases: 028, 029
-#   phase 6 — 3 cases: 033, 035, 041
-#   phase 7 — 1 case: 038
-# Every id above is a case in the change's single test-case family; the numeric
+# TC ALLOCATION INDEX — 48 of 48 cases, each with exactly one owning phase; the
+# per-phase allocation is restated in each phase's comment block and matches
+# test plan §5.1 verbatim:
+#   phase 1 — none (planning; satisfied once the records are authored)
+#   phase 2 — 8 cases:  020, 021, 022, 026, 027, 039, 047, 048
+#   phase 3 — 15 cases: 001, 002, 003, 004, 005, 006, 007, 008, 009, 030, 031,
+#                       036, 037, 042, 043
+#   phase 4 — 16 cases: 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 023,
+#                       024, 025, 032, 034, 040
+#   phase 5 — 3 cases:  028, 029, 045
+#   phase 6 — 5 cases:  033, 035, 041, 044, 046
+#   phase 7 — 1 case:   038
+# 8 + 15 + 16 + 3 + 5 + 1 = 48. Disjoint, no orphan, no case owned twice. Every
+# id above is a case in the change's single test-case family; the numeric
 # suffixes are the case numbers.
 #
-# IDENTITIES AND COUNTS (NFR-8): this change adds exactly three machine rows
-# (`merge.branch-unresolved`, `merge.request-unresolved`,
-# `merge.work-item-unresolved`), narrows `merge.transaction-aborted`, and moves
-# the documented and machine tables together 167 -> 170. The effective gate-set
-# identity is UNCHANGED:
+# DECLARED CROSS-PHASE READS (a case is owned by one phase; a fact it depends on
+# is authored by the phase that lands its last dependency, and the owning phase
+# re-runs rather than re-authors):
+#   - 047 is authored in phase 2 (the abort row's value and the convergence
+#     assertion move together there) and is re-run by every later phase's gate.
+#   - 046 is owned by phase 6, but the rendering contract it asserts (`command`
+#     and `ref` as dedicated fields) is authored in phase 2; phase 2 records the
+#     consequence that all ten refusal goldens move and phase 6 performs the
+#     regeneration. Neither phase pretends to own both halves.
+#   - 044 is owned by phase 6; the two-entry merge-applicable projection it
+#     renders is authored in phase 4.
+#   - 038 is owned by phase 7 and ONLY by phase 7. Its machine-table, pin-site
+#     and phrase-table values are authored in phase 2, so phase 2 is the
+#     authoring phase and phase 7 is the reconciling phase that re-runs 038 over
+#     the reconciled documentation surfaces. Phase 7 edits no machine table and
+#     phase 2 edits no contract prose; the split is declared, not hidden.
+#   - 048 is owned by phase 2 and executes unchanged in the delivered waiver
+#     suite (test plan §7.1 row 048: no change), so it is a gate entry, not a
+#     scope edit.
+#   - 009's value-faithful half is owned by phase 3 and proven after a real
+#     `phase complete` write in `tests/behaviour/phase-completion-convergence.test.ts`
+#     plus its support fixtures.
+#
+# IDENTITIES AND COUNTS (NFR-8, spec v2.0). The base is `origin/main-tools` at
+# `e1ebc76c` (GH-350 merged): **170** machine entries / **170** documented rows /
+# **169** delivered rows / **68** two-segment allowlist members / arithmetic
+# `BASELINE_ROWS.length + 136`, with the `merge` kind at **9** concrete rows. This
+# change's end state is **173 / 173 / 172 / 71 / `+ 139`**, with the `merge` kind
+# at **12**. `167` is a BANNED stale total (a legacy form), and the phrase table
+# rotates: the outgoing base `+ 136` joins the legacy forms and `+ 139` is
+# published as the live arithmetic. Every one of those numbers moves in one
+# commit at the phase boundary described below — a page that restates either
+# pre-change total (167 or 170) as a live one would assert a superseded value and
+# must fail the scan. The effective gate-set identity is UNCHANGED:
 #   delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,owner-gate,squash-preflight,tracker-freshness]
 # The `ci-green` entry's surface moves; the entry-id sequence does not.
 #
-# OUT OF SCOPE (spec §7.2, NG-1..NG-6): the family-wide command battery for the
-# other command families; any branch-protection required-status-contexts read or
-# any new provider operation; any change to the battery's five built-in gate
-# evaluations, to `verify gates` output, or to their goldens; a change-record
-# branch writer; waiver-policy, owner-gate-classification or `--waive` change;
-# any new landing, refresh, force, bypass, queue, retry or head-mutation
-# capability; any new configuration key, schema version, record kind or gate id.
+# OUT OF SCOPE (spec §7.2, NG-1..NG-7): the family-wide command battery for the
+# other command families, and any installed-binary end-to-end conformance claim;
+# any branch-protection required-status-contexts read or any new provider
+# operation; any change to the battery's five built-in gate evaluations, to
+# `verify gates` output, or to their goldens; a change-record branch writer; any
+# fetch, pull or remote read to make a missing head object readable;
+# waiver-policy, owner-gate-classification or `--waive` change; any new landing,
+# refresh, force, bypass, queue, retry or head-mutation capability; any new
+# configuration key, schema version, record kind or gate id.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-366
@@ -82,24 +129,29 @@ tier:
   name: full
   phases: [1, 2, 3, 4, 5, 6, 7]
   escalationTriggers:
-    - "An error identity, an exit digit, a row category/consequence/projection, or an identity total moves without the machine table, the documented table, every identity pin site and every pinned-count page moving in the same commit (NFR-8, TC-MRG-038)"
-    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection, or a row advertises `retryable: true` while any cause it reaches needs an operator act before a re-run can converge (AC-F3-5, AC-F3-6, TC-MRG-025, TC-MRG-026)"
-    - "The merge path reads the invocation checkout's branch, resolves a branch from a second source, or keeps a fallback for an absent declaration (G-1, NFR-6, AC-F1-3, TC-MRG-037)"
+    - "An error identity, an exit digit, a row category/consequence/projection, or an identity total moves without the machine table, the documented table, every identity pin site, every pinned-count page and the phrase-table rotation moving in the same commit (NFR-8, TC-MRG-038)"
+    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection, a row advertises `retryable: true` while any cause it reaches needs an operator act before a re-run can converge, or `merge.transaction-aborted` is left advertising `true` or a convergence hint (AC-F3-5, AC-F3-6, TC-MRG-025, TC-MRG-026, TC-MRG-047)"
+    - "The merge path reads the invocation checkout's branch, reads the invocation checkout's head, reads a change record from the working tree, resolves the branch from a second source, keeps a fallback for an absent declaration, or fetches/pulls to make a head object readable (G-1, NFR-6, NG-7, AC-F1-3, TC-MRG-037)"
+    - "The resolution path performs more than one provider read, or more than three bounded local record reads, or a record read issues more than two fixed-argv git invocations or reads more than 262 144 bytes (NFR-2, NFR-10, TC-MRG-034, TC-MRG-040)"
+    - "A branch refusal renders a reason outside the six-member closed set, or resolves precedence outside `declaration-disagrees` > `record-invalid` > `record-unreadable` > `record-missing` > `declaration-missing` > `declaration-unusable`, or a request refusal renders a reason outside its three (AC-F1-3, AC-F1-4, TC-MRG-042)"
+    - "Convergence is decided after any change-record read, or a converged re-run is made to require a readable record or a declared branch (AC-F1-3, TC-MRG-043)"
     - "The verified head, the freshness comparison, the landing's expected head or the reported head is anything but the matched delivery request's asserted head (DEC-2, AC-F1-1, AC-F5-1)"
     - "A second required-check evaluator appears, the required-check set is derived anywhere but once per invocation, or the gate-id slot pattern is widened (NFR-7, F-2, RSK-6, tests/checks/merge-check-path-scan.test.ts)"
-    - "The runtime family declaration duplicates the classifier's resolution, enumerates gate ids, or the containment identity becomes reachable by a declared code (F-4, AC-F4-1, TC-MRG-029)"
+    - "The runtime family declaration duplicates the classifier's resolution, enumerates gate ids, the containment identity becomes reachable by a declared code, or the removal mutation fails the totality proof by name instead of by a source-text or generic-coverage failure (F-4, AC-F4-1, AC-F4-2, TC-MRG-029, TC-MRG-045)"
+    - "The merged report echoes the verification record's battery gate list instead of the two-entry merge-applicable projection the run evaluated, or `gates=2/2` is satisfied by any `gates=` line rather than by the projection (AC-F2-8, DEC-12, TC-MRG-044)"
     - "A new network call, child process, provider operation, credential reference or secret-bearing field appears, or the existing no-live-call guards are relaxed (NFR-4, NFR-9, NG-1, TC-MRG-036)"
     - "The battery's gate evaluations, `verify gates` output or the battery goldens move (NG-2, TC-MRG-032)"
     - "A waiver class, a per-invocation override, a bypass or a force path is added for the check gate (NG-6, F-2, DEC-4)"
-    - "A golden file is regenerated without its per-file entry in phase 6's declared movement table, or the pinned `EXPECTED` set changes in a phase other than the rendering phase (test plan OQ-TP-2, TC-MRG-035)"
-    - "A pinned meta-suite (the closed merge-suite population, the new-suite list, an export inventory, the pinned default gate set) is relaxed, exempted or deleted instead of updated exactly in the phase that changes its input (test plan §7.3, the \"fix the check by deleting the check\" risk)"
+    - "A golden file is regenerated without its per-file entry in phase 6's declared movement table, a file outside that table's thirteen moved plus six added is touched, or the pinned `EXPECTED` set changes in a phase other than phase 6 (test plan §7.3, TC-MRG-046)"
+    - "A pinned meta-suite (the closed merge-suite population, the new-suite list, either export inventory, the pinned default gate set, the three resolution constants) is relaxed, exempted or deleted instead of updated exactly in the phase that changes its input (test plan §7.3, the \"fix the check by deleting the check\" risk)"
     - "A phase boundary is not gate-green, or a gate is reported green while a check was skipped, disabled, made vacuous, or narrowed to hide a failure"
 defaultLeases:
   - "repo:main-tools"
 defaultWeightClass: standard
 phases:
   # ---------------------------------------------------------------------------
-  # PHASE 1 — Planning: the three reserved decision records and their index rows.
+  # PHASE 1 — Planning: the three reserved decision records, their amendments and
+  # their index rows.
   #
   # Goal: the governed design decisions this change executes are recorded before
   #   delivery code lands (spec Appendix C reserves the ids; the PM's intake
@@ -107,54 +159,52 @@ phases:
   #   `@decision-advisor`, never by delivery code: this phase declares their
   #   paths so the staging authority is explicit instead of assumed.
   #
-  # Status semantics: SATISFIED ONCE AUTHORED. TDR-0071 and its index row are
-  #   already on this branch. When all three records and their index rows are
-  #   committed, this phase is a satisfied no-op — the coder verifies the paths
-  #   are tracked, records plan phase 1 as SATISFIED in a pm-notes `notes:` entry,
-  #   and proceeds to phase 2 without authoring, editing or recommitting a
-  #   record. Until then, `@decision-advisor` authors the remainder (through the
-  #   PM delegation) and this phase closes on their commit. Either way this phase
-  #   writes no production code and commits no test change.
-  #
-  # The id prefixes are the contract and are reserved; the slug suffix is set by
-  #   the record author. TDR-0071 is already authored on this branch as
-  #   `TDR-0071-merge-change-branch-and-resolved-head-authority.md` with its
-  #   index row; the two remaining records may take a different suffix, so the
-  #   phase declares the `doc/decisions` folder as well as the known paths. Once
-  #   each remaining record lands, its exact filename is added to `files` and the
-  #   folder entry is dropped — a record filed under a different suffix is still
-  #   this phase's work and is never silently skipped.
+  # Status semantics: SATISFIED ONCE AUTHORED AND AMENDED. All three records and
+  #   their three index rows are already on this branch AND already carry the
+  #   DoR-gate amendments: TDR-0071 selects ALT-6 (the declaration is read at the
+  #   delivery request's asserted head through one bounded local tree/blob read;
+  #   ALT-5, the working-tree read, is recorded as superseded and ineligible
+  #   against C-9) and restates its binding surface over the 24-AC inventory;
+  #   TDR-0072 corrects its premise (the recorded battery verdict is consulted,
+  #   the fresh check-run page is never consulted on the merge path) and its
+  #   arithmetic; TDR-0073 carries the arithmetic move and the 24-AC count. No
+  #   further record authoring, re-authoring or re-committing is owed by
+  #   delivery: the coder verifies the paths are tracked, records plan phase 1 as
+  #   SATISFIED in a pm-notes `notes:` entry, and proceeds to phase 2 without
+  #   editing a record. No production code and no test change is committed here.
+  #   The record ids stay `Proposed` — the human owner accepts or amends them at
+  #   the PR review, and no challenge verdict is claimed (spec §17.7 DOD-4).
   #
   # Record content binds later phases:
-  #   - the branch resolution and head binding record binds phase 3 (one declared
-  #     source, no ambient fallback, request head is the resolved head);
+  #   - the branch resolution and head binding record binds phase 3 (ALT-6: one
+  #     declared source read at the candidate head, no ambient fallback, no
+  #     working-tree record read, the request head is the resolved head, the six
+  #     closed reasons and their precedence, the three pinned constants);
   #   - the required-check authority record binds phase 4 (the reserved CI
   #     built-in becomes merge-applicable; the required set is the declared
   #     entries plus the repository-declared expected job set; one evaluator;
   #     fail-closed with the authored surface opt-out as the only remedy);
   #   - the refusal diagnostics record binds phase 2 and phase 5 (named causes,
-  #     row-level retryability honesty, the narrowed abort row, the runtime
-  #     family declaration and the totality proof).
+  #     the dedicated `command`/`ref` rendering fields, row-level retryability
+  #     honesty with the abort row at `false`, the runtime family declaration and
+  #     the totality proof over it).
   #
   # Gate (expected signal: exit 0, three records tracked, `doc/decisions` clean,
-  #   no commit authored when the phase is a satisfied no-op):
+  #   no commit authored because the phase is a satisfied no-op):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git ls-files --error-unmatch <each record path>
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git status --porcelain -- doc/decisions
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/memory-lint.ts
   # ---------------------------------------------------------------------------
   - id: 1
-    title: "Land the three reserved decision records and their index rows (planning; satisfied once authored, no production code)"
+    title: "Land the three reserved decision records, their amendments and their index rows (planning; satisfied once authored, no production code)"
     kind: planning
-    summary: "docs(GH-366): reserved decision records for branch resolution, required-check authority and refusal diagnostics"
+    summary: "reserved decision records for branch resolution, required-check authority and refusal diagnostics"
     scope:
       files:
-        # The three reserved records (spec Appendix C). Authored by the decision
-        # advisor on the PM's delegation; delivery code never re-authors them.
-        # TDR-0071 is authored on this branch; its exact filename is pinned here.
+        # The three reserved records (spec Appendix C). Authored and amended by
+        # the decision advisor on the PM's delegation; delivery code never
+        # re-authors them and this phase adds no further edit.
         - doc/decisions/TDR-0071-merge-change-branch-and-resolved-head-authority.md
-        # The two remaining records keep the reserved id prefix; their slugs are
-        # set by the record author, so this phase also declares the folder prefix
-        # until each filename exists (then the exact path replaces it).
         - doc/decisions/TDR-0072-required-check-authority-and-gate-membership.md
         - doc/decisions/TDR-0073-refusal-diagnostics-and-emitted-identity-totality.md
         # The one index row per record, in the same commit as the record.
@@ -163,90 +213,121 @@ phases:
         - doc/decisions
 
   # ---------------------------------------------------------------------------
-  # PHASE 2 — Refusal identities and the diagnostics contract.
+  # PHASE 2 — Refusal identities, the diagnostics contract and the identity move.
   #
-  # Goal (spec F-3, F-4's vocabulary half; §18 "diagnostics first — they are the
-  #   vocabulary the other capabilities report in"):
-  #   1. Three additive rows: `merge.branch-unresolved`,
-  #      `merge.request-unresolved` (closed reasons `no-open-request`,
-  #      `ambiguous-open-request`, `head-unresolved`), `merge.work-item-unresolved`
-  #      (AC-F3-4). Each row: category `user`, non-retryable, consequence
-  #      `not_landed`, projection `user-validation` at exit 1, a remediation that
-  #      names the object to repair.
-  #   2. `merge.transaction-aborted` narrowed in cause, `retryable` and
-  #      remediation: no credential condition, no unresolvable request, no
-  #      unresolvable work item reach it, and its declared `retryable` plus
-  #      remediation are true of every cause it still reaches
-  #      (AC-F3-6, §8.5). Whether the narrowed row keeps `true` with an all-act-free
-  #      cause set or moves to `false` is decided here and recorded in the row
-  #      text and the documented table in this phase, and stated by the reference
-  #      page in phase 7; the value and the remediation never disagree across the
-  #      two phases' end state.
-  #   3. Credential refusals name the credential reference AND the environment
-  #      variable AND the operation that required them
-  #      (`github-read`, `GITHUB_TOKEN`), exactly as the tracker family already
-  #      does; a credential condition is never `merge.transaction-aborted`
-  #      (AC-F3-2, AC-F3-3). A provider read fault names the failed operation
-  #      (AC-F2-5's vocabulary half).
-  #   4. `retryable` is always the emitted code's declared row value and never a
+  # Goal (spec F-3, F-4's vocabulary half, DEC-5/DEC-6/DEC-11; §18 "diagnostics
+  #   first — they are the vocabulary the other capabilities report in"):
+  #   1. Three additive rows: `merge.branch-unresolved` (six closed reasons,
+  #      §5.1 F-1 step 7), `merge.request-unresolved` (closed reasons
+  #      `no-open-request`, `ambiguous-open-request`, `head-unresolved`),
+  #      `merge.work-item-unresolved` (AC-F3-4). Each row: category `user`,
+  #      non-retryable, consequence `not_landed`, projection `user-validation` at
+  #      exit 1, a remediation naming the object to repair.
+  #   2. `merge.transaction-aborted` is narrowed in cause AND PINNED: its residual
+  #      causes are a waiver-append failure, a refused landing and a declared
+  #      landing gap, each of which needs an operator act, so the row declares
+  #      `retryable: false` with a remediation naming the aborted pre-mutation
+  #      condition and promising no convergence (AC-F3-6, §8.5, Appendix B). This
+  #      is not a decision to be taken during delivery — it is the v2.0
+  #      contract. The delivered convergence suite's
+  #      `expect(errorOf(result)?.retryable).toBe(true)` moves to `false` in this
+  #      phase, and the documented row moves with it (declared row change below).
+  #   3. The refusal rendering contract (DEC-11): every refusal renders a
+  #      dedicated `command=merge` field and a dedicated `ref=<ref>` field
+  #      (`ref=-` when no usable ref was supplied) beside its code, the breached
+  #      contract and the offending object. Both fields are authored here, in the
+  #      command's refusal cause data and the human/scripted rendering, because
+  #      they are the vocabulary every later refusal reports in. Consequence
+  #      recorded now, performed in phase 6: the uniform field moves ALL TEN
+  #      delivered refusal goldens (five human, five scripted). No refusal code,
+  #      category, consequence, exit digit or envelope property moves with them.
+  #   4. Credential refusals name the credential reference AND the environment
+  #      variable AND the operation that required them (`github-read`,
+  #      `GITHUB_TOKEN`), exactly as the tracker family already does; a credential
+  #      condition is never `merge.transaction-aborted` (AC-F3-2, AC-F3-3). A
+  #      provider read fault names the failed operation (AC-F2-5's vocabulary
+  #      half). A tracker object that does not resolve names its own ref and read
+  #      operation (AC-F3-4).
+  #   5. `retryable` is always the emitted code's declared row value and never a
   #      per-instance value; every remediation is actionable or absent and never
   #      instructs clearing an unnamed condition (AC-F3-1, AC-F3-5).
-  #   5. The composition's declared emittable set gains exactly the three new
+  #   6. The composition's declared emittable set gains exactly the three new
   #      codes (the exact-member list stays exact; the runtime family declaration
   #      is phase 5), so the containment proof does not regress at this boundary.
-  #   6. The identity arithmetic move 167 -> 170: machine table and documented
-  #      table together, the seven identity pin sites and the phrase-table
-  #      authority, and every pinned-count page. This is one atomic commit
-  #      because the two-table sync check and the phrase-table check cannot be
+  #   7. The identity arithmetic move, ONE atomic commit: machine table and
+  #      documented table together on the synced base — 170 -> 173 machine
+  #      entries, 170 -> 173 documented rows, 169 -> 172 delivered rows, 68 -> 71
+  #      two-segment allowlist members, `BASELINE_ROWS.length + 136` -> `+ 139`,
+  #      the `merge` kind 9 -> 12 — with the seven identity pin sites, the
+  #      pinned-count pages and the phrase-table rotation (`+ 136` joins the
+  #      legacy forms, `+ 139` is published as live; `167` stays a banned stale
+  #      total). The two-table sync check and the phrase-table check cannot be
   #      green with a split.
   #
-  # TC allocation (6): TC-MRG-020 (absent token names reference, variable and
-  #   operation), TC-MRG-021 (a credential condition is never the generic abort),
-  #   TC-MRG-022 (an unresolvable work item names its own identity, ref and read
-  #   operation), TC-MRG-026 (no row claims retryable over an act-requiring
-  #   cause; derived from the delivered enumeration with a substituted pre-change
-  #   row that must fail by name), TC-MRG-027 (a pending cause converges without
-  #   an act and its remediation says so), TC-MRG-039 (canary secrets never reach
-  #   output or records; the credential name is present, the value never).
+  # TC allocation (8 of 48): TC-MRG-020 (absent token names reference, variable
+  #   and operation), TC-MRG-021 (a credential condition is never the generic
+  #   abort), TC-MRG-022 (an unresolvable work item names its own identity, ref
+  #   and read operation), TC-MRG-026 (no row claims retryable over an
+  #   act-requiring cause; derived from the delivered enumeration with a
+  #   substituted pre-change row that must fail by name), TC-MRG-027 (a pending
+  #   cause converges without an act and its remediation says so),
+  #   TC-MRG-039 (canary secrets never reach output or records), TC-MRG-047 (the
+  #   abort row declares `false` and the delivered convergence assertion moves,
+  #   with the pre-change row as the mutation control), TC-MRG-048 (an explicit
+  #   `--waive` still authorizes where a class binding exists; executed
+  #   UNCHANGED in the delivered waiver suite — a gate entry, not a scope edit).
   #   ALLOCATED TO PHASE 4, NOT THIS PHASE (their last emitter lands there):
   #   TC-MRG-023 (the 22-cell matrix), TC-MRG-024 (its control), TC-MRG-025
   #   (`retryable` compared across all 22 cells). Every later phase re-runs the
   #   phase-2 suites and must not regress them.
+  #   TC-MRG-038 is OWNED BY PHASE 7 and stays there. This phase authors 038's
+  #   values (the tables, the seven pin sites, the count pages, the rotated
+  #   phrase forms); phase 7 re-runs 038 over the reconciled documentation
+  #   surfaces. Neither phase claims both halves.
   #
-  # Code areas: the machine error table (rows + the abort narrowing), the merge
-  #   transaction's refusal mapping and evidence members, the composition's
+  # Declared row change in this phase: the documented `merge.transaction-aborted`
+  #   row (value, narrowed cause list, no-convergence remediation) and the three
+  #   new rows in `doc/spec/features/feature-result-contract.md`, in the same
+  #   commit as the machine table.
+  #
+  # Code areas: the machine error table (three rows + the abort narrowing), the
+  #   merge transaction's refusal mapping and evidence members, the composition's
   #   credential/read-fault naming and its exact emittable member list, the
-  #   command's refusal-cause machine data, and the human refusal rendering.
+  #   command's refusal-cause machine data plus the two rendered fields, and the
+  #   human refusal rendering.
   #
   # Meta-suite obligations in this phase: `merge-production-composition` stays in
-  #   the closed population's GREEN set (it still carries its delivered
-  #   inventory ids and asserts none of the banned tokens); the population stays
-  #   at sixteen and no new suite is added here, so `merge-suite-obligations`
-  #   and `merge-suite-discovery` are untouched until phase 3.
+  #   the closed population's GREEN set (it still carries its delivered inventory
+  #   ids and asserts none of the banned tokens); the population stays at sixteen
+  #   and no new suite is added here, so `merge-suite-obligations` and
+  #   `merge-suite-discovery` are untouched until phase 3.
   #
   # No new identity, kind, exit or gate id is introduced in this phase: the three
   #   codes are values in an existing declared list. If the phase adds an exported
-  #   type (a closed reason vocabulary, a cause-evidence member), both export
-  #   inventories are registered in this phase — the rule every export-adding
-  #   phase follows.
+  #   type (a closed reason vocabulary, a cause-evidence member), it lands in the
+  #   contract file declared below and both export inventories are registered in
+  #   this phase — the rule every export-adding phase follows.
   #
   # Gate (targeted suites; expected exit 0):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
-  #   bun test tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-refusal-taxonomy.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-required-job-probe.test.ts tests/behaviour/merge-privacy.test.ts
+  #   bun test tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-refusal-taxonomy.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-required-job-probe.test.ts tests/behaviour/merge-privacy.test.ts tests/behaviour/merge-convergence.test.ts tests/behaviour/merge-waivers.test.ts
   #   bun test tests/structure/merge-refusal-rows.test.ts tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/checks/supervision-error-socialization.test.ts tests/checks/doc-conformance.test.ts tests/structure/ceremony-contract.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/behaviour/ceremony-nonregression.test.ts tests/structure/verify-gates-suite-map-contract.test.ts
   #   bun run scripts/checks/error-table-sync.ts
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Refusal identities and the diagnostics contract: three additive rows, the narrowed abort row, named causes and honest retryability"
+    title: "Refusal identities and the diagnostics contract: three additive rows, the narrowed non-retryable abort row, named causes, the two rendered fields and the 173-identity move"
     kind: delivery
-    summary: "fix(GH-366): refusal identities, named causes and the 170-identity move"
+    summary: "refusal identities, named causes and the 173-identity move"
     scope:
       files:
-        # --- contract: the error table and the documented counterpart ---------
+        # --- contract: the error table, its documented counterpart and the row
+        # vocabulary -----------------------------------------------------------
         - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/index.ts
         - doc/spec/features/feature-result-contract.md
-        # The pinned-count pages whose totals this move restates (167 -> 170,
-        # the merge row count 9 -> 12, the "+133" metrics arithmetic).
+        # The pinned-count pages whose totals this move restates (170 -> 173,
+        # the merge row count 9 -> 12, `+ 136` -> `+ 139`).
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-install-lifecycle.md
@@ -257,6 +338,9 @@ phases:
         # --- domain and CLI ---------------------------------------------------
         - packages/core/src/domain/merge-transaction.ts
         - packages/cli/src/production.ts
+        # The refusal rendering contract (DEC-11): dedicated `command` and `ref`
+        # fields, authored here, asserted by the matrix in phase 4 and by the
+        # goldens in phase 6.
         - packages/cli/src/commands/merge.ts
         - packages/cli/src/output/merge-text.ts
         # --- identity pin sites (the seven, plus the phrase-table authority) --
@@ -274,10 +358,13 @@ phases:
         - tests/behaviour/merge-production-composition.test.ts
         - tests/behaviour/merge-required-job-probe.test.ts
         - tests/behaviour/merge-privacy.test.ts
+        # The abort row's retryability assertion lives here today and moves with
+        # the row (TC-MRG-047).
+        - tests/behaviour/merge-convergence.test.ts
         - tests/structure/merge-refusal-rows.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
-        # Any further site an invariant check names for the 167 total is added
+        # Any further site an invariant check names for the moved total is added
         # to this phase and moved exactly; no site is exempted or widened.
     interactions:
       - kind: contract-file
@@ -285,122 +372,235 @@ phases:
         role: producer
 
   # ---------------------------------------------------------------------------
-  # PHASE 3 — Change-branch resolution and the resolved-head binding.
+  # PHASE 3 — Change-branch resolution read at the request head, and the
+  # resolved-head binding.
   #
-  # Goal (spec F-1, F-5's resolution half; Appendix A steps 1-6):
-  #   1. The composition reads the change record (the delivered pm-notes text
-  #      read the closeout composition already uses) and takes the `branch`
-  #      declaration as the single source of the change branch (DM-1). No
-  #      ambient read of the invocation checkout's branch; the branch-name
-  #      parsing recovery is deleted with its failure mode.
-  #   2. Absent, empty, whitespace/control-character or over-cap declaration ->
-  #      `merge.branch-unresolved` at exit 1 naming the change-record path, the
-  #      missing key and the command, with zero provider reads and zero landing
-  #      calls (AC-F1-3, flow 2).
-  #   3. The bounded open-request list resolves the request by EXACT
-  #      provider-asserted source ref; zero matches, more than one match, or a
-  #      match with no asserted head -> `merge.request-unresolved` with the
-  #      matching closed reason, naming the resolved branch, its resolution
-  #      source and the observed open-request count (AC-F1-4).
-  #   4. The matched request's asserted head is the resolved head: the
+  # Goal (spec F-1, F-5's resolution half, DEC-1/DEC-2; Appendix A steps 1-7;
+  #   TDR-0071 ALT-6):
+  #   1. ONE bounded open-request list read (the delivered read, with gate facts,
+  #      which is also the request-detail read). Convergence is decided FIRST,
+  #      from that same read: a uniquely matched merged request for the ref
+  #      replays from provider truth and performs zero change-record reads and
+  #      zero record-read git invocations (TC-MRG-043).
+  #   2. Candidate set = the open entries whose provider-asserted source ref
+  #      matches the repository's declared branch convention for the ref, capped
+  #      at `MERGE_BRANCH_CANDIDATE_MAX = 3`; zero refuses
+  #      `merge.request-unresolved` (`no-open-request`), more than three or a
+  #      saturated page refuses `ambiguous-open-request`, and a candidate whose
+  #      asserted head is absent or not a full hex SHA refuses
+  #      `head-unresolved` and is never read.
+  #   3. Each candidate's change record is read AT THAT CANDIDATE'S OWN ASSERTED
+  #      HEAD through the merge git seam: the bounded, fixed-argv local read
+  #      (`ls-tree -r --name-only <sha> -- <pathspec>` to locate, then one
+  #      bounded blob read), honouring `MERGE_CHANGE_RECORD_MAX_BYTES = 262_144`,
+  #      with no shell, no network, no credential, no retry and NO FETCH. The
+  #      seam's delivered `treeOf` is the precedent; the read runs through the
+  #      injectable child runner so every suite stays offline. A head object the
+  #      checkout does not hold is `record-unreadable`, not a fetch (NG-7,
+  #      RSK-9).
+  #   4. The delivered parse is REUSED UNCHANGED: `parsePmNotesText` from
+  #      `packages/adapters/src/file/pm-notes-parser.ts` is applied to the text
+  #      obtained from the head. No new parser, no second document acquisition,
+  #      no working-tree record read. That file is a declared NO-EDIT reuse
+  #      boundary: an edit that adds a parser or a second acquisition is
+  #      out-of-plan.
+  #   5. The branch-convention predicate is REUSED, NOT COPIED: the predicate the
+  #      closeout resolution uses is module-private today (`branchConvention` at
+  #      `packages/core/src/domain/closeout.ts:313-314`), so this phase EXPORTS it
+  #      as a named predicate and imports it in the merge composition. The second
+  #      delivered copy in `packages/adapters/src/git/index.ts` is not forked and
+  #      no third grammar is written; the convention narrows WHERE to look and
+  #      never supplies the value.
+  #   6. Acceptance is exact string equality between the record's `branch`
+  #      declaration and that candidate's own provider-asserted source ref.
+  #      Exactly one accepted candidate is the delivery request and the
+  #      resolution source is `declared-at-head`; two or more accepted candidates
+  #      refuse `ambiguous-open-request`. When no candidate is accepted the run
+  #      refuses `merge.branch-unresolved` at exit 1 with exactly one reason from
+  #      the closed six (`declaration-missing`, `declaration-unusable`,
+  #      `declaration-disagrees`, `record-missing`, `record-invalid`,
+  #      `record-unreadable`) chosen by the declared precedence, naming every
+  #      read candidate's own cause and attempted tree path (≤ 3 entries)
+  #      (AC-F1-3).
+  #   7. The declaration cap is the pinned contract constant
+  #      `MERGE_BRANCH_DECLARATION_MAX_CHARS = 256` characters (a longer value is
+  #      `declaration-unusable`, never truncated); a 256-character value is
+  #      accepted and a 257-character one is refused (TC-MRG-004).
+  #   8. The matched request's asserted full-SHA head IS the resolved head: the
   #      freshness envelope compares the record head against it, the landing's
   #      expected head is it, the check-run page is read on it, and the reported
   #      head is it. A record whose head is the integration base refuses
   #      `merge.gates-stale` at exit 1 with both SHAs and zero landing calls
-  #      (AC-F1-5).
-  #   5. The dry run shares exactly this resolution and appends exactly one
+  #      (AC-F1-1, AC-F1-2, AC-F1-5).
+  #   9. The dry run shares exactly this resolution and appends exactly one
   #      verification record whose head is the resolved head, with zero waiver,
-  #      transaction or git mutation (AC-F5-2, AC-F5-1's resolution half).
-  #   6. The already-merged convergence case is matched by the invocation's
-  #      change ref against merged requests, never by parsing a branch name.
+  #      transaction or git mutation (AC-F5-1, AC-F5-2). Both reports name the
+  #      resolved branch, the resolution source, the request identity and the
+  #      observed candidate count (DM-2).
+  #  10. The ambient reads are DELETED, not bypassed: no checkout branch read, no
+  #      checkout head read, no branch-name parsing recovery, no working-tree
+  #      change-record read, no fetch (NFR-6). The production-source scan carries
+  #      one mandatory failing control per absence claim.
+  #  11. The merge git seam's operation union and inventory are updated with the
+  #      read: `MERGE_SEAM_OPERATIONS` stays the declared seam vocabulary, and if
+  #      the bounded read is named in the closed `MERGE_GIT_OPERATIONS` union the
+  #      member and its structure pin move in this phase. Both export inventories
+  #      register any new export (seam member, constant, resolved-input type) in
+  #      THIS phase.
   #
-  # TC allocation (13): TC-MRG-001 (base-checkout invocation reports and verifies
-  #   the request head), TC-MRG-002 (control: the pre-fix branch source
+  # TC allocation (15 of 48): TC-MRG-001 (base-checkout invocation reports and
+  #   verifies the request head), TC-MRG-002 (control: the pre-fix branch source
   #   reproduces the base-tip verdict), TC-MRG-003 (change-branch checkout at the
-  #   request head lands once there), TC-MRG-004 (no usable declaration),
-  #   TC-MRG-005 (zero matching open requests), TC-MRG-006 (two matching),
-  #   TC-MRG-007 (matched request with no asserted head), TC-MRG-008 (record for
-  #   the base tip -> both SHAs), TC-MRG-009 (the declaration is lint-opaque and
-  #   value-faithfully preserved), TC-MRG-030 (dry run and real merge report the
-  #   same resolved branch, request identity and head), TC-MRG-031 (a
-  #   base-checkout dry run records the resolved head with zero mutation),
-  #   TC-MRG-036 (the new suites are offline: no network, no child process, the
-  #   existing no-live-call guards stay green), TC-MRG-037 (the merge path reads
-  #   no ambient branch, proven by a production-source scan with a mandatory
-  #   failing control).
+  #   request head lands once there), TC-MRG-004 (no usable declaration; the
+  #   256/257-character cap boundary and the absent/malformed record cells),
+  #   TC-MRG-005 (zero matching open requests), TC-MRG-006 (over-cap candidates,
+  #   a saturated page or two accepted), TC-MRG-007 (a head that is not a full
+  #   SHA refuses and is never read), TC-MRG-008 (record for the base tip ->
+  #   both SHAs), TC-MRG-009 (`branch` is lint-opaque AND preserved
+  #   value-faithfully after a real `phase complete` write through EVERY
+  #   document-writing branch), TC-MRG-030 (dry run and real merge report the
+  #   same resolved object), TC-MRG-031 (base-checkout dry run records the
+  #   resolved head with zero mutation), TC-MRG-036 (the new suites are offline),
+  #   TC-MRG-037 (no ambient branch, head, working-tree record or fetch read,
+  #   with a mandatory failing control per claim), TC-MRG-042 (the six closed
+  #   reasons, their declared precedence and the candidate/byte bounds),
+  #   TC-MRG-043 (a converged re-run replays from provider truth with zero record
+  #   reads).
+  #
+  # TC-MRG-009's second half is DM-1's load-bearing claim and gets a real oracle:
+  #   `tests/behaviour/phase-completion-convergence.test.ts` writes the pm-notes
+  #   document through every document-writing branch and re-reads the `branch`
+  #   value after the write, so a branch that drops the key fails by name. Its
+  #   support fixtures are `tests/behaviour/phase-support.ts` (the phase harness)
+  #   and `tests/fixtures/phase/history.ts` (the document text builder, which
+  #   gains the key). `tests/behaviour/phase-write-path-lint.test.ts` stays in
+  #   scope for the lint half only — it proves lint blocks malformed writes and
+  #   does not prove preservation.
   #
   # Mandatory controls in this phase: TC-MRG-002 proves the head assertion is
   #   sensitive (it fails against the pre-fix branch source); TC-MRG-037 plants
-  #   the pre-fix read and requires the matcher to find it by file and line; the
-  #   resolve-refusal fixtures must show zero provider reads for the
-  #   branch-unresolved cell, which is the difference between a fail-closed
-  #   refusal and a late one.
+  #   the pre-fix read and requires the matcher to find it by file and line, once
+  #   per absence claim; the resolve-refusal fixtures must show exactly ONE
+  #   provider read for every branch/request refusal cell, which is the difference
+  #   between a fail-closed refusal and a late one.
   #
-  # Code areas: the composition's change-record read, request resolution and the
-  #   deletion of the ambient read plus the branch-name parse; the transaction's
-  #   resolved-branch/resolved-head inputs and its freshness/landing bindings;
-  #   the command's resolved-object machine data; the human rendering of the
-  #   resolution facts; the change-record `branch` declaration itself (this
-  #   change's own record already carries it — DM-1, §19 seeding).
+  # Code areas: the composition's candidate-set resolution, record read and
+  #   resolution result, plus the deletion of the ambient reads and the
+  #   branch-name parse; the merge git seam's bounded tree/blob read and its
+  #   union/inventory; the delivered parse (reused, not edited); the exported
+  #   branch-convention predicate; the transaction's resolved-branch/resolved-head
+  #   inputs and its freshness/landing bindings; the command's resolved-object
+  #   machine data; the human rendering of the resolution facts; the three new
+  #   contract constants; the change record's own `branch` declaration (already
+  #   carried — DM-1, §19 seeding).
   #
   # Meta-suite obligations in this phase (test plan §7.3):
   #   - `tests/structure/merge-suite-obligations.test.ts`: `merge-production-
   #     composition` moves from GREEN to CHANGED with a declared obligation
-  #     marker set; CHANGED/GREEN lengths move 9/7 -> 10/6; the population stays
-  #     closed at sixteen; the bidirectional controls (a planted count, producer
-  #     claim or scenario name failing by name, and no green suite asserting the
-  #     new path) stay intact.
+  #     marker set; the split moves 9/7 -> 10/6; the population stays closed at
+  #     sixteen; the bidirectional controls (a planted count, producer claim or
+  #     scenario name failing by name, and no green suite asserting the new path)
+  #     stay intact.
+  #   - The six REMAINING GREEN suites are still EDITED here —
+  #     `merge-classification`, `merge-dry-run`, `merge-freshness`,
+  #     `merge-gate-set`, `merge-privacy`, `merge-verification-record`. They stay
+  #     GREEN because their obligation markers do not change, not because they
+  #     are untouched: each keeps its pinned inventory ids
+  #     (`merge-classification` -> TC-MERGE-017; `merge-dry-run` -> TC-MERGE-028;
+  #     `merge-freshness` -> TC-MERGE-007; `merge-gate-set` -> TC-MERGE-002,
+  #     TC-MERGE-003, TC-MERGE-004; `merge-privacy` -> TC-MERGE-034;
+  #     `merge-verification-record` -> TC-MERGE-005, TC-MERGE-006) while its
+  #     assertions move to the resolved object. A rewrite that drops one of those
+  #     ids fails the meta-check by name.
   #   - `tests/checks/merge-suite-discovery.test.ts`: the new suite
   #     `tests/checks/merge-branch-read-scan.test.ts` is registered and the
   #     pinned new-suite list moves 5 -> 6; the offline static scan and the CI
   #     topology pin are unchanged.
-  #   - both export inventories register any new exported type/member this phase
-  #     adds (resolved-branch/head inputs, any added port member), in this phase.
+  #   - Both export inventories register every new export this phase adds (seam
+  #     member, the three constants, any resolved-input type), in this phase.
   #
-  # Fixture obligation: the production-composition harness gains the
-  #   base-checkout option (HEAD left on the integration base) without adding a
-  #   provider read and without mutating the checkout (TC-MRG-031 asserts HEAD
-  #   and its SHA are unchanged).
+  # Fixture obligation (test plan §6 family 1): the production-composition
+  #   fixture gains the base-checkout option (`HEAD` on the integration base, the
+  #   worktree carrying NO change folder) and the recording child-runner seam for
+  #   the local read; the record is committed on the feature branch and is
+  #   obtained only through the read. The fixture does NOT write a change record
+  #   into the base checkout (that fabricates a state the real checkout cannot be
+  #   in). The phase declares the three fixture FILES explicitly instead of the
+  #   `tests/fixtures/merge` folder, so `tests/fixtures/merge/golden/**` stays
+  #   phase 6's exclusive scope and a golden edit here is out of plan.
   #
   # Gate (targeted; expected exit 0):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
-  #   bun test tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-verification-record.test.ts tests/behaviour/merge-freshness.test.ts tests/behaviour/pm-notes-lint.test.ts tests/behaviour/phase-write-path-lint.test.ts
-  #   bun test tests/checks/merge-branch-read-scan.test.ts tests/checks/merge-suite-discovery.test.ts tests/checks/merge-deploy-no-live-calls.test.ts tests/structure/merge-suite-obligations.test.ts tests/structure/content-inventory.test.ts
+  #   bun test tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-git-seam-capabilities.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-verification-record.test.ts tests/behaviour/merge-freshness.test.ts tests/behaviour/merge-classification.test.ts tests/behaviour/merge-gate-set.test.ts tests/behaviour/merge-privacy.test.ts tests/behaviour/merge-convergence.test.ts tests/behaviour/pm-notes-lint.test.ts tests/behaviour/phase-write-path-lint.test.ts tests/behaviour/phase-completion-convergence.test.ts tests/behaviour/merge-refusal-surface.test.ts
+  #   bun test tests/checks/merge-branch-read-scan.test.ts tests/checks/merge-suite-discovery.test.ts tests/checks/merge-deploy-no-live-calls.test.ts tests/structure/merge-suite-obligations.test.ts tests/structure/merge-contract.test.ts tests/structure/content-inventory.test.ts
   # ---------------------------------------------------------------------------
   - id: 3
-    title: "Change-branch resolution from the change record and the resolved-head binding across freshness, landing and reporting"
+    title: "Change-branch resolution from the change record read at the request head, the bounded local read seam, and the resolved-head binding across freshness, landing and reporting"
     kind: delivery
-    summary: "feat(GH-366): resolve the change branch and bind the verified head to the request"
+    summary: "resolve the change branch at the request head and bind the verified head to the request"
     scope:
       files:
         - packages/cli/src/production.ts
         - packages/core/src/domain/merge-transaction.ts
+        # The exported branch-convention predicate the merge composition reuses
+        # (module-private at :313-314 today) — exported here, never copied.
+        - packages/core/src/domain/closeout.ts
+        # The three resolution constants and, if the bounded read is named in the
+        # closed union, the operation member plus its pin.
+        - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/index.ts
         - packages/cli/src/commands/merge.ts
         - packages/cli/src/output/merge-text.ts
+        # --- the bounded local read seam -------------------------------------
+        - packages/adapters/src/git/merge.ts
+        - packages/adapters/src/git/index.ts
+        # DECLARED NO-EDIT REUSE BOUNDARY: the delivered pm-notes parse is
+        # applied to text obtained from the head. A new parser, a second document
+        # acquisition or a working-tree read is out-of-plan.
+        - packages/adapters/src/file/pm-notes-parser.ts
         # --- behaviour suites ------------------------------------------------
         # This change's own change record already carries the `branch`
         # declaration (DM-1, §19 seeding), so no phase edits it for the branch
         # key; pm-notes progress entries go through the lifecycle primitives and
         # are never plan scope.
         - tests/behaviour/merge-production-composition.test.ts
+        - tests/behaviour/merge-git-seam-capabilities.test.ts
         - tests/behaviour/merge-dry-run.test.ts
         - tests/behaviour/merge-landing.test.ts
         - tests/behaviour/merge-verification-record.test.ts
         - tests/behaviour/merge-freshness.test.ts
+        # The remaining GREEN suites are EDITED here too: they stay GREEN because
+        # their obligation markers do not change, and each keeps its pinned
+        # inventory ids.
+        - tests/behaviour/merge-classification.test.ts
+        - tests/behaviour/merge-gate-set.test.ts
+        - tests/behaviour/merge-privacy.test.ts
         - tests/behaviour/pm-notes-lint.test.ts
         - tests/behaviour/phase-write-path-lint.test.ts
+        # DM-1's preservation oracle: the pm-notes document is written through
+        # EVERY document-writing branch and the `branch` value is re-read after a
+        # real `phase complete` write.
+        - tests/behaviour/phase-completion-convergence.test.ts
+        - tests/behaviour/phase-support.ts
+        - tests/fixtures/phase/history.ts
         # --- checks and structure --------------------------------------------
         - tests/checks/merge-branch-read-scan.test.ts
         - tests/checks/merge-suite-discovery.test.ts
         - tests/checks/merge-deploy-no-live-calls.test.ts
         - tests/structure/merge-suite-obligations.test.ts
+        # The three pinned constants and the shipped-set pins live here (TC-004,
+        # TC-042); only the declared constants move.
+        - tests/structure/merge-contract.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
-      folders:
-        # The harness, the production-composition fixture and the golden
-        # scenarios; the base-checkout capability is a fixture change.
-        - tests/fixtures/merge
+        # --- fixture files (never the folder: `golden/` is phase 6's) --------
+        - tests/fixtures/merge/harness.ts
+        - tests/fixtures/merge/production-composition.ts
+        - tests/fixtures/merge/golden-scenarios.ts
     interactions:
+      - kind: contract-file
+        target: packages/adapters/src/git/merge.ts
+        role: producer
       - kind: contract-file
         target: packages/cli/src/commands/merge.ts
         role: producer
@@ -408,7 +608,7 @@ phases:
   # ---------------------------------------------------------------------------
   # PHASE 4 — Required-check enforcement on the resolved head.
   #
-  # Goal (spec F-2, DM-3; §5.1 tables):
+  # Goal (spec F-2, DM-3, DEC-3/DEC-4; §5.1 tables):
   #   1. `ci-green` becomes merge-applicable in the shipped default set, so the
   #      effective merge projection is two entries (`ci-green` and
   #      `tracker-freshness`). The entry-id sequence — and therefore the
@@ -418,8 +618,8 @@ phases:
   #      every merge-applicable `required-ci-job` entry contributes
   #      `job ?? id`, and the merge-applicable `ci-green` entry contributes the
   #      repository-declared expected job set read through the SAME delivered
-  #      expected-job read the battery uses. The page wins on state; the gate set
-  #      wins on membership.
+  #      read the battery uses. The page wins on state; the gate set wins on
+  #      membership. Exactly one derivation per invocation, never two.
   #   3. Each required name is evaluated against the resolved head's check-run
   #      page through the single delivered `evaluateRequiredJobGate`. Failing /
   #      canceled / skipped / pending / missing / page-not-head / invalid
@@ -435,12 +635,14 @@ phases:
   #   5. The dry run discloses the evaluated required-check count and set size so
   #      an authored check posture is visible rather than silent.
   #   6. The full Appendix B refusal matrix closes here (phase 2 authored the
-  #      vocabulary; this phase supplies the last emitters), and the per-invocation
-  #      read budget closes with the last added read.
+  #      vocabulary; this phase supplies the last emitters), the per-invocation
+  #      read budget closes with the last added read, and the dry-run record's CI
+  #      citation declares the sources it actually read (EVT-1) while the battery
+  #      record and its golden stay byte-identical (NG-2).
   #
-  # TC allocation (16): TC-MRG-010 (one failing required check names check, gate
-  #   and reason), TC-MRG-011 (all-green dry run verifies and the merge lands
-  #   once, distinct from red), TC-MRG-012 (queued/running refuses with the
+  # TC allocation (16 of 48): TC-MRG-010 (one failing required check names check,
+  #   gate and reason), TC-MRG-011 (all-green dry run verifies and the merge
+  #   lands once, distinct from red), TC-MRG-012 (queued/running refuses with the
   #   pending reason), TC-MRG-013 (a page for another SHA is never head
   #   evidence), TC-MRG-014 (a CI read fault names the failed operation),
   #   TC-MRG-015 (a declared required job is enforced; an undeclared job is not
@@ -449,18 +651,18 @@ phases:
   #   repository expected-job set refuses and never passes), TC-MRG-019 (the dry
   #   run discloses the evaluated required-check posture), TC-MRG-023 (all 22
   #   Appendix B cells name command, code and a cause), TC-MRG-024 (control: an
-  #   unnamed cause or unnamed-remediation hint is flagged by name), TC-MRG-025
-  #   (`retryable` is the emitted row's declared value across the matrix),
-  #   TC-MRG-032 (the merge-surface CI entry is cited by source; battery records
-  #   and their goldens unchanged), TC-MRG-034 (the per-invocation read budget
-  #   holds exactly), TC-MRG-040 (the two added reads are filesystem reads and
-  #   there is no added polling or waiting).
+  #   unnamed cause, an absent field or an unnamed-remediation hint is flagged by
+  #   name), TC-MRG-025 (`retryable` is the emitted row's declared value across
+  #   the matrix), TC-MRG-032 (the merge-surface CI entry is cited by source;
+  #   battery records and goldens unchanged), TC-MRG-034 (the per-invocation read
+  #   budget holds exactly), TC-MRG-040 (the added reads are filesystem/git-local
+  #   reads with no added polling or waiting).
   #
   # Mandatory controls in this phase: TC-MRG-013 runs the same bytes under two
-  #   SHAs so "other head" is genuinely tested; TC-MRG-024's three-dimension
-  #   control makes TC-MRG-023 non-vacuous; TC-MRG-025's source read for a
-  #   per-instance `retryable` assignment carries a planted control; TC-MRG-034's
-  #   read assertion is an exact multiset, not an upper bound.
+  #   SHAs so "other head" is genuinely tested; TC-MRG-024's control makes
+  #   TC-MRG-023 non-vacuous; TC-MRG-025's source read for a per-instance
+  #   `retryable` assignment carries a planted control; TC-MRG-034's read
+  #   assertion is an exact multiset, not an upper bound (one provider read).
   #
   # `evaluateRequiredJobGate` in `packages/core/src/domain/merge-probe.ts` is
   #   declared in scope as a NO-EDIT boundary: this change feeds it a wider
@@ -472,27 +674,32 @@ phases:
   # Code areas: the shipped default gate entries and the admitted-surface sets,
   #   the declaration validation, the required-set derivation and the
   #   merge-surface CI evaluation with its evidence/citation, the composition's
-  #   CI-workflow expected-job read wiring, and the posture disclosure.
+  #   CI-workflow expected-job read wiring, and the posture disclosure. The
+  #   admitted-surface contract data lands in the declared contract file, with
+  #   contracts/index.ts and both export inventories registering it in this
+  #   phase.
   #
   # Meta-suite obligations in this phase: the pinned default-set assertions in
   #   `tests/structure/merge-contract.test.ts` move exactly (the `ci-green`
   #   surface movement is the declared one; every other field stays pinned); the
-  #   two export inventories register the added admitted-surface contract data;
-  #   the battery goldens and `verify gates` output stay untouched (NG-2).
+  #   battery goldens and `verify gates` output stay untouched (NG-2); the
+  #   fixture files are declared explicitly, never the folder, so
+  #   `tests/fixtures/merge/golden/**` stays phase 6's.
   #
   # Gate (targeted; expected exit 0):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
-  #   bun test tests/behaviour/merge-gate-set.test.ts tests/behaviour/merge-required-job-probe.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-refusal-taxonomy.test.ts tests/behaviour/merge-probe.test.ts tests/behaviour/merge-verification-record.test.ts
+  #   bun test tests/behaviour/merge-gate-set.test.ts tests/behaviour/merge-required-job-probe.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-refusal-taxonomy.test.ts tests/behaviour/merge-probe.test.ts tests/behaviour/merge-verification-record.test.ts tests/behaviour/merge-convergence.test.ts
   #   bun test tests/structure/merge-contract.test.ts tests/structure/content-inventory.test.ts tests/checks/merge-check-path-scan.test.ts
   #   bun test tests/golden/verify-gates.test.ts
   # ---------------------------------------------------------------------------
   - id: 4
-    title: "Required-check enforcement on the resolved head under the shipped default gate set, and the admitted-surface contract"
+    title: "Required-check enforcement on the resolved head under the shipped default gate set, the admitted-surface contract and the Appendix B matrix closure"
     kind: delivery
-    summary: "feat(GH-366): enforce the merge-applicable required-check set per job"
+    summary: "enforce the merge-applicable required-check set per job"
     scope:
       files:
         - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/index.ts
         - packages/core/src/domain/merge-gate-set.ts
         - packages/core/src/domain/merge-transaction.ts
         # NO-EDIT BOUNDARY: the single required-check evaluator, reused. Declared
@@ -510,13 +717,16 @@ phases:
         - tests/behaviour/merge-refusal-taxonomy.test.ts
         - tests/behaviour/merge-probe.test.ts
         - tests/behaviour/merge-verification-record.test.ts
+        - tests/behaviour/merge-convergence.test.ts
         # --- structure and checks --------------------------------------------
         - tests/structure/merge-contract.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
         - tests/checks/merge-check-path-scan.test.ts
-      folders:
-        - tests/fixtures/merge
+        # --- fixture files (never the folder: `golden/` is phase 6's) --------
+        - tests/fixtures/merge/harness.ts
+        - tests/fixtures/merge/production-composition.ts
+        - tests/fixtures/merge/golden-scenarios.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/merge.ts
@@ -525,45 +735,57 @@ phases:
   # ---------------------------------------------------------------------------
   # PHASE 5 — Runtime declaration of the gate family and the totality proof.
   #
-  # Goal (spec F-4, G-5, AC-F4-1, NFR-7): give the composition a RUNTIME family
-  #   declaration beside its exact-member list — the contract's own declared
-  #   prefix, suffix and template plus the slot rule — so the composition's
-  #   vocabulary states that a family emission is admissible. The totality proof
-  #   then ranges over the runtime declaration (it fails when a family emission
-  #   loses its declaration) instead of matching a type name in source text.
+  # Goal (spec F-4, G-5, AC-F4-1, AC-F4-2, NFR-7, DEC-7): give the composition a
+  #   RUNTIME family declaration beside its exact-member list — the contract's own
+  #   declared prefix, suffix and template plus the slot rule — so the
+  #   composition's vocabulary states that a family emission is admissible. The
+  #   totality proof then ranges over the runtime declaration (it fails by name
+  #   when the declaration is removed) instead of matching source text.
   #   Constraints that bind this phase:
   #   - the classifier's delivered family resolution is untouched (no second
   #     resolver, no second vocabulary);
   #   - the gate-id slot stays validated against the EFFECTIVE declared gate set
   #     at emission; the pattern is never widened (RSK-6);
-  #   - `merge.gate.ci-green.failed` becomes the live proof case, since
-  #     `ci-green` is merge-applicable from phase 4;
+  #   - `merge.gate.ci-green.failed` — already in the derived population — stays
+  #     the live proof case now that `ci-green` is merge-applicable from
+  #     phase 4;
+  #   - the proof performs no `readFileSync` of the composition and no
+  #     prefix/suffix/type-name match; a behaviour-preserving refactor control
+  #     still passes, so the proof follows the value and not a file;
+  #   - the REMOVAL CONTROL is mandatory and is a VALUE substitution, never an
+  #     in-place edit of committed source: (i) declaration deleted, (ii) replaced
+  #     by the bare exact-member list. Both must fail BY NAME, naming the missing
+  #     family declaration (and, for (ii), the missing slot rule);
   #   - a mismatch control still drives an undeclared code to the containment
-  #     identity, so the assertion cannot pass vacuously (AC-F4-1).
+  #     identity, so the assertion cannot pass vacuously (AC-F4-1, AC-F4-2).
   #
-  # TC allocation (2): TC-MRG-028 (a gate refusal resolves to the declared family
-  #   row with the gate id preserved), TC-MRG-029 (a live mismatch control still
-  #   reaches containment; no slot widening).
+  # TC allocation (3 of 48): TC-MRG-028 (a gate refusal resolves to the declared
+  #   family row with the gate id preserved), TC-MRG-029 (a live mismatch control
+  #   still reaches containment; no slot widening), TC-MRG-045 (deleting or
+  #   flattening the runtime declaration fails the totality proof by name, with no
+  #   source-text assertion left to pass).
   #
   # This phase adds no row, no kind, no exit and no gate id (spec DEC-9): a
-  #   declaration is not an identity. If the phase cannot express the family at
-  #   runtime without a new export, the export is registered in both export
-  #   inventories here.
+  #   declaration is not an identity. The declaration is a registered export, so
+  #   both export inventories move in this phase. If the phase cannot express the
+  #   family at runtime without touching the contract's family expression, that
+  #   file is added here before editing; it is never edited out of scope.
   #
   # Gate (targeted; expected exit 0):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
-  #   bun test tests/structure/defect-f1-merge-refusal-containment.test.ts tests/structure/merge-classification-conformance.test.ts tests/behaviour/merge-classification.test.ts tests/structure/content-inventory.test.ts
+  #   bun test tests/structure/defect-f1-merge-refusal-containment.test.ts tests/structure/merge-classification-conformance.test.ts tests/behaviour/merge-classification.test.ts tests/behaviour/merge-production-composition.test.ts tests/structure/content-inventory.test.ts
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Runtime declaration of the gate family beside the exact-member list, and the totality proof over that declaration"
+    title: "Runtime declaration of the gate family beside the exact-member list, the removal control, and the totality proof over that declaration"
     kind: delivery
-    summary: "refactor(GH-366): declare the gate family at runtime and prove emitted-identity totality"
+    summary: "declare the gate family at runtime and prove emitted-identity totality"
     scope:
       files:
         - packages/cli/src/production.ts
         - tests/structure/defect-f1-merge-refusal-containment.test.ts
         - tests/structure/merge-classification-conformance.test.ts
         - tests/behaviour/merge-classification.test.ts
+        - tests/behaviour/merge-production-composition.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
     interactions:
@@ -572,136 +794,191 @@ phases:
         role: producer
 
   # ---------------------------------------------------------------------------
-  # PHASE 6 — Resolution facts in the machine and human reports, and the declared
-  # golden regeneration.
+  # PHASE 6 — Resolution facts in the machine and human reports, the evaluated
+  # gate projection, the output bounds, and the declared golden regeneration.
   #
-  # Goal (spec §10 telemetry, API-1..API-3, AC-F5-1): the merged report and the
-  #   dry-run report expose the resolved object — resolved branch, resolution
-  #   source, matched request identity, resolved head, evaluated required-check
-  #   count and set size — and the human rendering prints it, so an operator can
-  #   see whether a verdict is about the request or about the checkout. Bounds
-  #   hold (machine data <= 65 536 bytes, human <= 24 lines / <= 4 096 bytes,
-  #   every dropped item marked `+N`), the six-scenario determinism sweep is
-  #   byte-identical across twenty runs with a changed-fact control that differs,
-  #   and no record kind, key or event schema is added (EVT-2).
+  # Goal (spec §10 telemetry, API-1..API-3, DM-2, AC-F2-8, AC-F5-1,
+  #   DEC-11, DEC-12): the merged report and the dry-run report expose the
+  #   resolved object — resolved branch, resolution source (`declared-at-head`),
+  #   matched request identity, observed candidate count, resolved head, evaluated
+  #   required-check count and set size — and the human rendering prints it. The
+  #   merged report renders the merge-applicable projection the run evaluated
+  #   (`gates=2/2` over `ci-green` and `tracker-freshness`, one line per entry
+  #   with its verdict and reason) and does NOT echo the verification record's
+  #   battery list; the record keeps its own five-entry list. Bounds hold (machine
+  #   data <= 65 536 bytes, human <= 24 lines / <= 4 096 bytes, every dropped item
+  #   marked `+N`), the determinism sweep is byte-identical across twenty runs for
+  #   one success and six refusals with a changed-fact control that differs, and
+  #   no record kind, key or event schema is added (EVT-2).
   #
-  # TC allocation (3): TC-MRG-033 (twenty runs byte-identical across six
-  #   scenarios, changed-fact control differs), TC-MRG-035 (machine and human
-  #   output stay inside the declared bounds, omission marks asserted),
-  #   TC-MRG-041 (no new record kind, key or event schema; shapes unchanged).
+  # The REPORT SHAPES live in `packages/core/src/contracts/merge.ts`
+  #   (`MergeReport`, `MergeDryRunReport`), which this phase scopes: adding the
+  #   resolved object to the reports is a contract edit, and it belongs in the
+  #   phase that renders it, not in phase 4's gate-set phase. Any new exported
+  #   member is registered in BOTH export inventories here
+  #   (`tests/structure/content-inventory.test.ts` and
+  #   `tests/fixtures/ports/v1-contract-inventory.json`), and
+  #   `packages/core/src/contracts/index.ts` is scoped for the barrel re-export.
   #
-  # GOLDEN SET DECLARATION — discharges test-plan OQ-TP-2. The directory holds
-  #   thirteen committed files today. Per file, in THIS phase:
+  # TC allocation (5 of 48): TC-MRG-033 (twenty runs byte-identical across one
+  #   success and six refusals, changed-fact control differs), TC-MRG-035
+  #   (machine and human output stay inside the declared bounds, omission marks
+  #   asserted), TC-MRG-041 (no new record kind, key or event schema; shapes
+  #   unchanged), TC-MRG-044 (the merged report renders the evaluated
+  #   merge-applicable projection and never `gates=5/5`, with the substituted
+  #   record list as the failing control), TC-MRG-046 (the five refusal renderings
+  #   carry the `command`/`ref` fields authored in phase 2 and all ten refusal
+  #   goldens move, with the mutation control).
   #
-  #   MOVED (byte-changed), 7 files:
+  # Declared cross-phase read: TC-MRG-046's rendering CONTRACT is authored in
+  #   phase 2 (the dedicated fields); phase 6 asserts it against the goldens and
+  #   performs the regeneration. TC-MRG-044's two-entry projection is authored in
+  #   phase 4; this phase renders it.
+  #
+  # GOLDEN SET DECLARATION — discharges test plan OQ-TP-2 under DEC-11 and
+  #   DEC-12. The directory holds THIRTEEN committed files today. Per file, in
+  #   THIS phase:
+  #
+  #   MOVED (byte-changed) — 13 of 13, ZERO byte-identical:
+  #     Success files (3), moved because each gains the resolved object and the
+  #     evaluated projection (`gates=2/2`, two gate lines, not the record's five):
   #     - success-data.json            gains the resolved object and the evaluated
-  #                                   required-check count/set size. Remains the
-  #                                   one STRUCTURAL comparison.
-  #     - success-scripted.json        the same data; content moves, stays pinned
-  #                                   by the directory listing as today.
-  #     - success-human.txt            gains the resolution lines; its gate line and
-  #                                   per-gate lines are regenerated deliberately
-  #                                   from the merge-applicable projection this
-  #                                   change makes the evaluated one, never by a
-  #                                   blanket rewrite.
-  #     - refusal-gate-human.txt       the refusal is produced on the resolved head,
-  #                                   so its cause and evidence identity carry that
-  #                                   head plus the gate id, the offending job(s),
-  #                                   the delivered reason and the attribution.
-  #     - refusal-gate-scripted.json   the same summary.
-  #     - refusal-stale-human.txt      recorded-sha is the base-tip record head and
-  #                                   current-sha is the resolved request head —
-  #                                   the two SHAs are now genuinely different
-  #                                   objects, which is what AC-F1-5 asserts.
-  #     - refusal-stale-scripted.json  the same summary.
+  #                                    required-check count/set size; remains the
+  #                                    one STRUCTURAL comparison.
+  #     - success-scripted.json        the same data; stays pinned by the
+  #                                    directory listing as today.
+  #     - success-human.txt            gains the resolution lines and renders
+  #                                    `gates=2/2 passed` with two gate lines;
+  #                                    never `gates=5/5`.
+  #     Refusal human/scripted pairs (10), moved because EVERY refusal now
+  #     renders the dedicated `command=merge` and `ref=<ref>` fields (DEC-11), and
+  #     two of them additionally carry resolution facts:
+  #     - refusal-gate-human.txt / refusal-gate-scripted.json — command/ref fields,
+  #       plus the cause and evidence identity carrying the resolved head, the gate
+  #       id, the offending job(s), the delivered reason and the attribution.
+  #     - refusal-stale-human.txt / refusal-stale-scripted.json — command/ref
+  #       fields, plus recorded-sha = the base-tip record head and current-sha =
+  #       the resolved request head: now genuinely different objects (AC-F1-5).
+  #     - refusal-tracker-human.txt / refusal-tracker-scripted.json — command/ref
+  #       fields; the tracker cause text is unchanged.
+  #     - refusal-override-human.txt / refusal-override-scripted.json —
+  #       command/ref fields; class and authorizer unchanged.
+  #     - refusal-waiver-human.txt / refusal-waiver-scripted.json — command/ref
+  #       fields; class and authorizer unchanged.
   #
-  #   IDENTICAL (byte-identical, untouched), 6 files:
-  #     - refusal-override-human.txt, refusal-override-scripted.json,
-  #       refusal-tracker-human.txt, refusal-tracker-scripted.json,
-  #       refusal-waiver-human.txt, refusal-waiver-scripted.json
-  #       Rationale: these refusals carry no resolution fact and no repaired
-  #       cause; their remediation text, gate id, class and authorizer are
-  #       unchanged by this change.
-  #
-  #   ADDED, 6 files (three new rows x human + scripted):
+  #   ADDED — 6 files (three new rows x human + scripted):
   #     - refusal-branch-human.txt, refusal-branch-scripted.json
   #     - refusal-request-human.txt, refusal-request-scripted.json
   #     - refusal-work-item-human.txt, refusal-work-item-scripted.json
   #
   #   The pinned `EXPECTED` set and its count move 13 -> 19 IN THIS PHASE, in the
-  #   same commit as the rendering change; the byte-identical comparisons move
-  #   11 -> 17 (eight refusal human files and eight refusal scripted files — five
-  #   existing pairs and three added pairs — plus the success human rendering),
+  #   same commit as the rendering change. The byte-for-byte text comparisons move
+  #   11 -> 17: eight refusal human files and eight refusal scripted files (five
+  #   existing pairs plus the three added pairs) plus the success human rendering.
   #   `success-data.json` remains the single structural comparison,
-  #   `success-scripted.json` stays pinned by the directory listing as today, and
-  #   the mutation control that makes a mutated golden fail stays. A blanket
-  #   regeneration that moves a file outside this table must fail the suite by
-  #   name.
+  #   `success-scripted.json` stays pinned by the directory listing, and the
+  #   mutation control that makes a mutated golden fail stays. A blanket
+  #   regeneration that touches a file outside this table — or leaves one of the
+  #   thirteen byte-identical while claiming it moved — must fail the suite BY
+  #   NAME.
   #
   # Gate (targeted; expected exit 0):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
-  #   bun test tests/golden/merge.test.ts tests/behaviour/merge-determinism.test.ts tests/behaviour/merge-bounds.test.ts tests/structure/merge-contract.test.ts tests/structure/content-inventory.test.ts
+  #   bun test tests/golden/merge.test.ts tests/behaviour/merge-determinism.test.ts tests/behaviour/merge-bounds.test.ts tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/structure/merge-contract.test.ts tests/structure/content-inventory.test.ts
   #   bun test tests/golden/verify-gates.test.ts
   # ---------------------------------------------------------------------------
   - id: 6
-    title: "Resolution facts in the machine and human reports, the output bounds, and the declared golden regeneration"
+    title: "Resolution facts in the machine and human reports, the evaluated gate projection, the output bounds, and the declared golden regeneration"
     kind: delivery
-    summary: "feat(GH-366): report the resolved object and regenerate the declared goldens"
+    summary: "report the resolved object and regenerate the declared goldens"
     scope:
       files:
         - packages/cli/src/commands/merge.ts
         - packages/cli/src/output/merge-text.ts
+        # The report shapes (MergeReport, MergeDryRunReport) and the barrel that
+        # re-exports any new member.
+        - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/index.ts
         - tests/golden/merge.test.ts
         - tests/fixtures/merge/golden-scenarios.ts
         - tests/behaviour/merge-determinism.test.ts
         - tests/behaviour/merge-bounds.test.ts
+        - tests/behaviour/merge-production-composition.test.ts
+        - tests/behaviour/merge-dry-run.test.ts
+        - tests/behaviour/merge-refusal-surface.test.ts
         - tests/structure/merge-contract.test.ts
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
       folders:
+        # The thirteen committed goldens and the six added files; phase 6 is the
+        # only phase that declares this folder.
         - tests/fixtures/merge/golden
     interactions:
       - kind: contract-file
-        target: packages/cli/src/commands/merge.ts
-        role: consumer
+        target: packages/core/src/contracts/merge.ts
+        role: producer
 
   # ---------------------------------------------------------------------------
   # PHASE 7 — Documentation reconciliation and release (the final phase).
   #
-  # Goal (spec §16, §18, §22; test plan §7.4): reconcile the current-truth pages
-  #   with the delivered behaviour and land the release obligations. Every page
-  #   here states the current contract; it does not narrate the change
-  #   (`tests/checks/doc-conformance.test.ts` enforces the current-truth phrase
-  #   table, so a page that narrates history fails).
+  # Goal (spec §16, §18, §19, §22, §17.7 DOD-5..DOD-8; test plan §7.4):
+  #   reconcile the current-truth pages with the delivered behaviour and land the
+  #   release obligations. Every page here states the current contract; it does
+  #   not narrate the change (`tests/checks/doc-conformance.test.ts` enforces the
+  #   current-truth phrase table, so a page that narrates history fails).
   #
   # Doc obligations:
   #   - feature spec: the Overview resolution paragraph (the branch comes from the
-  #     change record, the verified head is the request head), the gate-registry
-  #     defaults and the admitted surfaces, the verification-record head meaning,
-  #     the error identities, and the invariants.
+  #     change record read at the request head; the verified head is the request
+  #     head), the gate-registry defaults and admitted surfaces, the
+  #     verification-record head meaning, the MERGED-REPORT gate semantics (the
+  #     evaluated two-entry projection, not the record's battery list), the error
+  #     identities, and the invariants.
   #   - test specification: the five named rows — Composition reachability,
   #     Required-check awareness, Classification fidelity, Emittable-code
   #     totality, Error-identity stability.
-  #   - the merge reference page `check:help` resolves: branch and head
-  #     resolution, the gate set, the refresh and exit-status causes, the new
-  #     refusal examples, and the one new authoring obligation.
-  #   - `doc/spec/nonfunctional.md`: the merge read-budget row, which now includes
-  #     the change-record read and the CI-workflow read, and the merge record-kind
+  #   - the merge reference page `check:help` resolves: branch and read-at-head
+  #     resolution, the declaration's 256-character cap and six closed reasons,
+  #     the gate set, the refresh and exit-status causes, the new refusal examples
+  #     WITH the `command`/`ref` fields, and the one new authoring obligation.
+  #   - `doc/spec/nonfunctional.md`: the merge read-budget row (one provider read
+  #     plus <= 3 bounded local record reads, no fetch) and the merge record-kind
   #     statement where it restates a merge count.
   #   - `doc/guides/change-lifecycle.md`: the `branch` declaration is the new
-  #     authoring obligation on a change record; the artifact table gains the key.
+  #     authoring obligation on a change record; the artifact table gains the key
+  #     (its 256-character cap, the closed refusal reasons, read-at-head, and the
+  #     declaration-free convergence case).
+  #   - `doc/guides/unified-change-convention-tracker-agnostic-specification.md`:
+  #     the change-artifact set gains the `branch` declaration, documented where a
+  #     change is created rather than only where it merges.
+  #   - `.ai/agent/pm-instructions.md`: the PM instruction surface states that a
+  #     change record declares `branch` when the change is opened, with the cap and
+  #     the refusal vocabulary named.
+  #   - `.opencode/agent/pm.md`: the `@pm` prompt carries the same obligation. The
+  #     prompt is edited through `@toolsmith` (never hand-patched), and the
+  #     generated Claude Code mirror `.ados-claude/agents/pm.md` is REGENERATED by
+  #     `scripts/build-claude-plugin.sh`, never hand-edited; the phase gate proves
+  #     the mirror is current.
+  #   - `doc/spec/features/feature-agents-and-commands.md`: only if it enumerates
+  #     the change-record keys (it is the page that states the PM prompt's
+  #     obligations); the declaration is named there when it does.
   #   - Any further page an invariant check names for a moved total is reconciled
   #     here in the same commit; no page is exempted.
-  #   - If the guide's or a page's pinned phrases move, the phrase table in
-  #     `tests/checks/doc-conformance.test.ts` moves with them.
+  #   - The phrase table in `tests/checks/doc-conformance.test.ts` rotates with the
+  #     pages: `167` stays a banned stale total, the outgoing `+ 136` joins the
+  #     legacy forms and `+ 139` is published as the live arithmetic; the other
+  #     pinned-count carriers already declared move here too.
   #
-  # TC allocation (1): TC-MRG-038 (identities move 167 -> 170 with the gate-set
-  #   identity unchanged) — the machine/documented-table half and the pin sites
-  #   land in phase 2; 038's closing assertions read the THREE doc surfaces
-  #   reconciled here (reference page, feature spec, test specification) for the
-  #   same total, the same family, the unchanged identity string
+  # TC allocation (1 of 48): TC-MRG-038 (identities move 170 -> 173 with the
+  #   gate-set identity unchanged). 038 is OWNED BY THIS PHASE ONLY: its
+  #   machine-table, documented-table, pin-site and phrase-table VALUES are
+  #   authored in phase 2, and this phase re-runs 038 over the RECONCILED doc
+  #   surfaces (reference page, feature spec, test specification, documented
+  #   table) for the same total (173 / 173 / 172 / 71 / `+ 139`, kind 12), the same
+  #   family, the unchanged identity string
   #   `delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,owner-gate,squash-preflight,tracker-freshness]`,
-  #   and no survivor total (167, 164, 156). 038 is re-run at this boundary over
-  #   the reconciled surfaces; this phase edits no machine table.
+  #   no survivor total (167, 164, 156) and no live `170` or `+ 136` claim. This
+  #   phase edits no machine table; phase 2 edits no contract prose.
   #
   # Release obligations (declared as scope, not prose):
   #   - ONE changeset at `.changeset/gh-366-merge-command-conformance-minor.md`
@@ -726,15 +1003,16 @@ phases:
   # Gate (final; expected exit 0 for every command):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH jaiship plan validate GH-366
-  #   bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/structure/merge-refusal-rows.test.ts tests/checks/doc-conformance.test.ts
+  #   bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts tests/structure/merge-refusal-rows.test.ts tests/structure/merge-contract.test.ts tests/checks/doc-conformance.test.ts tests/checks/merge-suite-discovery.test.ts
+  #   bash scripts/build-claude-plugin.sh && git diff --exit-code -- .ados-claude
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check
   #   bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Documentation reconciliation and release: current-truth pages, the single minor changeset, plan validation and the aggregate gate"
+    title: "Documentation reconciliation and release: current-truth pages, the authoring obligation on the PM surface with its regenerated mirror, the single minor changeset, plan validation and the aggregate gate"
     kind: delivery
-    summary: "docs(GH-366): reconcile the merge contract pages and land the release obligations"
+    summary: "reconcile the merge contract pages and land the release obligations"
     scope:
       files:
         - doc/spec/features/feature-merge-verify-deploy.md
@@ -742,11 +1020,26 @@ phases:
         - doc/planning/oss-tooling/milestones/m1/commands/merge.md
         - doc/spec/nonfunctional.md
         - doc/guides/change-lifecycle.md
+        - doc/guides/unified-change-convention-tracker-agnostic-specification.md
+        # The authoring-obligation surfaces (spec §19, RSK-1's mitigation): the
+        # PM instruction file, the canonical prompt, and the generated mirror.
+        - .ai/agent/pm-instructions.md
+        - .opencode/agent/pm.md
+        - .ados-claude/agents/pm.md
+        # Conditional: only if this page enumerates the change-record keys.
+        - doc/spec/features/feature-agents-and-commands.md
         - .changeset/gh-366-merge-command-conformance-minor.md
         - doc/changes/2026-11/2026-11-20--GH-366--merge-command-conformance/chg-GH-366-plan.yaml
         # The phrase table follows the reconciled pages when a pinned phrase
         # moves; declared so the alignment stages here rather than in a
         # hand-edited check outside the plan.
         - tests/checks/doc-conformance.test.ts
+    interactions:
+      - kind: generated-code
+        target: .opencode/agent/pm.md
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents/pm.md
+        role: consumer
     doneArtifacts:
-      pipelineId: "CI pipeline for the GH-366 phase-7 commit: `jaiship plan validate GH-366` valid, `pnpm check` green with every check executed, the doc-distribution guard green, and the captured log attached to the change"
+      pipelineId: "CI pipeline for the GH-366 phase-7 commit: `jaiship plan validate GH-366` valid, `pnpm check` green with every check executed, the doc-distribution guard green, the regenerated `.ados-claude` mirror current, and the captured log attached to the change"
