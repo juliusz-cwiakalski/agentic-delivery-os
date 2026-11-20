@@ -67,6 +67,8 @@ export type FakeProviderOptions = {
   readonly writeWorkItem?: CloseoutWriteOutcome;
   readonly transitionWorkItem?: CloseoutWriteOutcome;
   readonly resolveDeliveryThread?: CloseoutWriteOutcome;
+  /** The milestone close outcome; absent is a successful close. */
+  readonly closeMilestone?: CloseoutWriteOutcome;
   /**
    * Opt-in strict identity set (GH-310 DM-8): when supplied, a
    * `transition-work-item` naming an id outside the set fails as an unavailable
@@ -206,6 +208,10 @@ export const makeProvider = (options: FakeProviderOptions = {}): FakeProvider =>
         args: input,
       });
       return options.resolveDeliveryThread ?? { ok: true };
+    },
+    closeMilestone: async (input) => {
+      calls.push({ kind: "closeMilestone", target: input.milestone, args: input });
+      return options.closeMilestone ?? { ok: true };
     },
   };
   return { runtime, calls };
@@ -381,6 +387,10 @@ export const makeFacts = (overrides: Partial<CloseoutPlanFacts> = {}): CloseoutP
     persisted: {},
     retro: { available: true, collected: false },
     sessions: { available: true, sessionIds: [] },
+    // The shared fixture models a project with no milestone construct: the
+    // thirteenth step is a declared gap and produces no withheld residue, so the
+    // delivered golden pair moves only by its step line.
+    milestone: { declaration: "none" },
   };
   const merged = overrides.mergedRequest ?? base.mergedRequest;
   const derived =

@@ -78,28 +78,50 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
     expect(baseline.rows).toHaveLength(150);
     // The captured baseline includes GH-335's four harness rows; it predates
-    // GH-299's `metrics` row, the two supervise rows, and GH-346's eleven
-    // install rows. GH-350 inserts three provider rows INSIDE the provider
-    // block, so the comparison is "the baseline plus the three declared new
-    // provider codes": filter those codes out first, then compare row for row.
+    // GH-299's `metrics` row, the two supervise rows, GH-346's eleven install
+    // rows, GH-349's three additive rows (the two `merge` rows and the one
+    // `lint` row), and GH-350's three provider rows inserted INSIDE the provider
+    // block. The comparison excludes those additive identities and compares the
+    // remaining rows positionally, so every baseline row must still be present,
+    // byte-identical, and in its delivered relative order.
     const NEW_PROVIDER_CODES = new Set([
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
       "provider.migrate.refused",
     ]);
+    const NEW_GH349_CODES = new Set([
+      "lint.phases.divergent",
+      "merge.mergeability-unknown",
+      "merge.sync-required",
+    ]);
+    const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) =>
         entry.domainKind !== "supervise" &&
         entry.domainKind !== "metrics" &&
         entry.domainKind !== "install" &&
-        !NEW_PROVIDER_CODES.has(entry.code),
+        !NEW_PROVIDER_CODES.has(entry.code) &&
+        !NEW_GH349_CODES.has(entry.code),
     );
     expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // The three new rows are declared inside the provider block, not appended.
+    for (const row of baseline.rows) {
+      const found = entries.find((entry) => entry.code === row[0]);
+      expect(found, row[0]).toBeDefined();
+      if (found !== undefined) expect(tupleOf(found), row[0]).toEqual([...row]);
+    }
+    expect(entries.map((entry) => entry.code).filter((code) => baselineCodes.has(code))).toEqual(
+      baseline.rows.map((row) => row[0]),
+    );
     expect(
       entries.filter((entry) => NEW_PROVIDER_CODES.has(entry.code)).map((entry) => entry.code),
     ).toEqual([...NEW_PROVIDER_CODES]);
+    expect(
+      entries
+        .filter((entry) => NEW_GH349_CODES.has(entry.code))
+        .map((entry) => entry.code)
+        .sort(),
+    ).toEqual([...NEW_GH349_CODES].sort());
     // The tail kinds are positionally unchanged: the last fourteen rows are the
     // two supervise rows, the one metrics row, and the eleven install rows.
     expect(entries.slice(-14).map((entry) => entry.domainKind)).toEqual([

@@ -176,7 +176,7 @@ The tension is between **fixture expressiveness** (it must express enough to rep
 | `resolve` is mutating and its payload has six keys in a pinned order | FACT | `feature-provider-engine.md` §CLI surface; `packages/cli/src/commands/provider.ts` | C-5 would be wrong | High |
 | The CLI family already validates grammar before any read or write | FACT | `packages/cli/src/commands/provider.ts` | Simulate could inherit a weaker posture | High |
 | Tests already drive the engine with fake clock, credential port, transport, and state | FACT | provider test suites (hermetic) | A fixture schema would be new invention rather than a projection of test seams | High |
-| Zone offsets can be declared as a step table, so a replay is reproducible without host tz data | ASSUMPTION | ADR-0012 port shape | Non-UTC fixtures would rely on host tz data and lose byte-stability across hosts | Medium |
+| Zone offsets can be declared as a step table, so a replay is reproducible without host tz data | ASSUMPTION | ADR-0013 port shape | Non-UTC fixtures would rely on host tz data and lose byte-stability across hosts | Medium |
 | Operators can author the fixture shape without a generator | ASSUMPTION | schema size (six optional blocks) | A `provider simulate init` helper would be needed later (additive) | Medium |
 | No consumer needs a textual diff of two runs in the machine payload | ASSUMPTION | repository search: no diff contract exists | A diff contract would be an additive decision | Medium |
 
@@ -262,7 +262,7 @@ A strict JSON object; unknown keys refuse. Policy (providers, chains, credential
 | `credentials` | record of reference name → `"resolved"` \| `"missing"` | no | The credential port's outcome per reference; **no value field exists**. An undeclared name defaults to `"resolved"` for the references the selected chain needs, and is disclosed. |
 | `quota` | record of entry name → `{ "httpStatus": number, "body": string }` or `{ "transport": "outage" }` | no | The transport result per entry; the delivered normalizer and evaluator consume it unchanged. An entry with no block is not probed (treated as an entry without a quota policy). |
 | `spend` | `{ "telemetryState": "present" \| "absent", "points": [{ "atMs": number, "cost": number, "tokens": number }] }` | no | The spend-totals port's facts; `absent` is the verified-empty reading. Points are projected per budget window exactly as the production projection does. |
-| `zones` | record of zone name → ordered list of `{ "fromMs": number, "offsetSeconds": number }` | no | A step table for zone offsets. When absent, the edge's zone resolver is used (ADR-0012) and `simulation.inputs.zones` records `runtime`. |
+| `zones` | record of zone name → ordered list of `{ "fromMs": number, "offsetSeconds": number }` | no | A step table for zone offsets. When absent, the edge's zone resolver is used (ADR-0013) and `simulation.inputs.zones` records `runtime`. |
 
 Credential-shaped fields are structurally impossible: the `credentials` value is an enum, and the schema has no `value`, `secret`, `token`, or `key` field anywhere. A fixture containing one refuses as unknown-key.
 
@@ -357,7 +357,7 @@ The chosen alternative satisfies C-1 … C-7: the delivered engine performs ever
 ## References
 
 - [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) — the pure engine and its injected seams.
-- [ADR-0012](ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md) — the zone port the fixture can pin.
+- [ADR-0013](ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md) — the zone port the fixture can pin.
 - [TDR-0031](TDR-0031-engine-first-evaluation-surfaces.md) — engine-first evaluation surface precedent.
 - [TDR-0038](TDR-0038-simulated-stateful-tracker-double-declared-effects.md) — declared-effect simulation precedent.
 - Feature specs: [Provider Engine](../spec/features/feature-provider-engine.md), [Provider Profiles](../spec/features/feature-provider-profiles.md).

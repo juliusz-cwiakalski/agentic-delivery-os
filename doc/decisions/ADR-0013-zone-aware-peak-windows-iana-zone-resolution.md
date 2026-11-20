@@ -1,5 +1,5 @@
 ---
-id: ADR-0012
+id: ADR-0013
 decision_type: adr
 status: Proposed
 created: 2026-11-19
@@ -73,7 +73,7 @@ links:
   roadmap_items: ["M4-S4"]
 ---
 
-# ADR-0012: Zone-Aware Peak Windows — IANA Zone Names Resolved at the Composition Edge
+# ADR-0013: Zone-Aware Peak Windows — IANA Zone Names Resolved at the Composition Edge
 
 ## Context
 

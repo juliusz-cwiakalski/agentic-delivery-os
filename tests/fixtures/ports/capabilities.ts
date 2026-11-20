@@ -217,6 +217,7 @@ export const EXPECTED_SEED_POSTURES = {
       "read-pipeline-run": "provider-unsupported",
       "resolve-delivery-thread": "provider-unsupported",
       "merge-delivery-request": "provider-unsupported",
+      "close-milestone": "provider-unsupported",
     },
   },
   gitlab: {
@@ -231,6 +232,7 @@ export const EXPECTED_SEED_POSTURES = {
       "write-comment": "adapter-not-implemented",
       "resolve-delivery-thread": "adapter-not-implemented",
       "merge-delivery-request": "adapter-not-implemented",
+      "close-milestone": "adapter-not-implemented",
     },
   },
   github: {
@@ -246,6 +248,7 @@ export const EXPECTED_SEED_POSTURES = {
       "merge-delivery-request",
       "write-comment",
       "write-delivery-request",
+      "close-milestone",
     ],
     gapReasons: {},
   },

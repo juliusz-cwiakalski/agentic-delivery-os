@@ -31,6 +31,7 @@ created (after plan approval).
 - AC: fresh install creates only Jaiship paths; migration moves existing
   state; scan fails on new old-namespace identifiers.
 - Depends on: none.
+- Ticket: GH-365 (milestone M4)
 
 ### M4-S9 Dispatch core parity — durable lane, resume, admission, classifier
 - Goal: `dispatch` is a complete typed replacement for the shell lane.
@@ -73,6 +74,7 @@ created (after plan approval).
 - Ticket: GH-349 (milestone M4)
 
 ### M4-S3 Delivery command conformance and repair
+- Ticket: GH-366 (milestone M4, residual scope)
 - Goal: Every primitive works reliably on the installed binary.
 - Tasks: merge (verified ready item, UNKNOWN-mergeability recovery, merge-queue
   rebase); dispatch (concurrency-safe admission, resume semantics, classifier
@@ -113,7 +115,7 @@ created (after plan approval).
 - AC: two projects deliver in parallel with no queue interference; every event
   is project-attributable; filters return exact sets.
 - Depends on: M4-S3, M3-S6.
-- Ticket: none yet (follows the flip)
+- Ticket: GH-367 (milestone M4)
 
 ### M4-S6 Delivery history and statistics export
 - Goal: A stable machine-readable contract for delivery history.
@@ -126,7 +128,7 @@ created (after plan approval).
 - AC: contract documented and schema-tested; covers planned, in-flight, and
   delivered work; additive-only evolution.
 - Depends on: M4-S5.
-- Ticket: none yet (follows the flip)
+- Ticket: GH-368 (milestone M4)
 
 ### M4-S7 Agent prompts on Jaiship primitives
 - Goal: The agent team drives Jaiship, not shell scripts.

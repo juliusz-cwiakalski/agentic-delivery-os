@@ -1,5 +1,5 @@
 /**
- * The single `Intl`-backed zone edge (GH-350 F-1, DM-1; ADR-0012 as revised).
+ * The single `Intl`-backed zone edge (GH-350 F-1, DM-1; ADR-0013 as revised).
  *
  * The only module in the workspace that reads zone data for provider policy:
  * `createIntlZonePort()` implements the three required `ProviderZonePort`

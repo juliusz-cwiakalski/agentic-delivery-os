@@ -33,7 +33,7 @@ export const BANNED_GLOBALS = [
   "setInterval",
   "fetch",
   // GH-350: zone data is read only at the declared adapters edge, never in the
-  // neutral core tier (ADR-0012 as revised).
+  // neutral core tier (ADR-0013 as revised).
   "Intl",
 ];
 export const BANNED_PROPERTY_ACCESS: Array<[string, string]> = [

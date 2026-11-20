@@ -1,0 +1,604 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-349
+branch: feat/GH-349/merge-closeout-queue-repair
+status: FAIL
+summary: >-
+  The delivery is large, disciplined, and largely faithful to spec v2.3: the one
+  landing mechanism composes the closed `merge-delivery-request` operation with
+  the crafted title/fallback and the exact verbatim trailer, the exact-head
+  guard, provider-asserted truth, and a total four-state refusal taxonomy; the
+  emittable declaration now carries the gate family and the two additive rows;
+  `shaOnBase` is widened to `boolean | "unknown"` with a state-layer validator
+  and a real write-then-read round trip; the phase mirror is derived from the
+  post-transition fold on every document-writing branch and the read-only
+  `lint.phases.divergent` row is scoped to ledger-backed, completion-only
+  phases; the seven queue properties and the three defect-named suites carry
+  genuine substituted/derived controls; the tenth operation, thirteenth step,
+  seventh operation name, seventh assertion family, ninth residue kind, thirty
+  parity cells and the identity total 167 are coherent on both tables and all
+  seven pin sites (targeted suites: error-table sync/structure 249 pass,
+  milestone 40 pass, defect/refusal 53 pass, queue/removal 33 pass, structure
+  pin set 131 pass, pilot/merge 25 pass, doc-conformance 25 pass,
+  privacy-release 7 pass). One blocker survives the green battery and four
+  majors weaken acceptance evidence. The blocker: the milestone attachment
+  check strips the `M<n>:` prefix from the declaration but compares against the
+  provider-native title (which carries that prefix), so a real GitHub work item
+  ("M4: Jaiship-native delivery") never matches the declaration
+  ("M4: Jaiship-native delivery") and `closeout --apply` reports
+  `attachment-mismatch` instead of `applied`/withheld-closure; the suites pass
+  only because their fixtures use the phrase-only title. Majors: the
+  not-mergeable checks-posture classifier ranges over every page job rather
+  than the declared required set (AC-F3-3); the AC-F4-5 recorded
+  `close-milestone` round trip through the real state validator is unproven;
+  TC-F4-011's second apply uses an already-closed observation so it does not
+  isolate ledger-terminal idempotency; `merge-probe` is edited although
+  AC-F1-1/§16 declare it one of the eight green-unedited suites; and the
+  withheld milestone residue forces the `attention` exit for every change
+  without a conforming milestone declaration, contradicting the rollout's
+  "no behaviour change beyond one extra plan line" and AC-F4-7's
+  "success-shaped" claim.
+severity_breakdown:
+  blocker: 1
+  major: 5
+  minor: 6
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS_WITH_NOTES
+ac_verdict_totals:
+  total: 46
+  pass: 39
+  pass_with_notes: 3
+  fail: 4
+  unverified: 0
+ac_verdicts:
+  - id: AC-F1-1
+    verdict: PASS_WITH_NOTES
+    note: >-
+      One composed landing call, no platform merge CLI, no local squash, crafted
+      metadata and exact-head guard all hold. Note: AC's "other eight merge
+      suites stay green unedited" is false — `merge-probe` was edited (M4).
+  - id: AC-F1-2
+    verdict: PASS
+    note: >-
+      Provider truth + provider merge commit recorded; `shaOnBase` answers only
+      when a local read can; validator widened and TC-F1-012 round-trips
+      `"unknown"` through `readMergeTransactions`; legacy boolean reads as before.
+  - id: AC-F1-3
+    verdict: PASS
+    note: >-
+      Local containment true + provider not merged refuses landing-unverified at
+      exit 2 with consequence unknown; containment never landing evidence.
+  - id: AC-F1-4
+    verdict: PASS
+    note: >-
+      Merged read-back without a merge commit records an unknown identity; a
+      re-run re-verifies rather than re-lands.
+  - id: AC-F1-5
+    verdict: PASS
+    note: >-
+      Head moved between verification and landing refuses `merge.gates-stale` at
+      exit 1 with zero landing calls (merge-head-guard suite).
+  - id: AC-F1-6
+    verdict: PASS
+    note: >-
+      Title verbatim, empty/absent -> `merge(<ref>): squash <sourceRef>`, message
+      exactly `Landed by the delivery lifecycle merge primitive.`; byte assertions
+      in merge-landing-metadata.
+  - id: AC-F1-7
+    verdict: PASS
+    note: >-
+      Declared landing gap refuses `merge.transaction-aborted` at exit 1 with
+      operation + gap reason, zero landings; concrete merge rows stay nine.
+  - id: AC-F1-8
+    verdict: PASS
+    note: >-
+      Production scan with mandatory failing control finds zero composed callers
+      of squashLand/refresh; merge-git-seam-capabilities proves each at the seam.
+  - id: AC-F1-9
+    verdict: PASS
+    note: >-
+      Re-run replays `merged` with the recorded identity, zero landing calls, no
+      duplicate transaction append.
+  - id: AC-F2-1
+    verdict: PASS
+    note: >-
+      Conflicting -> one `merge.sync-required` reason `dirty`, exit 1, zero
+      rebase/head mutation/landing.
+  - id: AC-F2-2
+    verdict: PASS_WITH_NOTES
+    note: >-
+      Guarded landing + one bounded post-refusal re-read + classification holds.
+      Note: the re-read classification ranges over every page job and does not
+      re-compare the head (M1/m5).
+  - id: AC-F2-3
+    verdict: PASS
+    note: >-
+      Out-of-date resolves to `behind-unconfirmed` with observed state and the
+      caveated sync remediation; no confirmed reason, no prose matching.
+  - id: AC-F2-4
+    verdict: PASS
+    note: >-
+      Unknown/absent -> exactly one exact-head re-read; recovered classifies,
+      moved head gates-stale, still-unknown mergeability-unknown exit 2.
+  - id: AC-F2-5
+    verdict: PASS
+    note: >-
+      Emitted code/kind/exit match declared rows; two rows documented+machine
+      declared together; `merge.rebase-conflict` retained and unreachable.
+  - id: AC-F2-6
+    verdict: PASS
+    note: >-
+      No internal rebase, no head mutation, no force/bypass/auto-merge/queue/retry
+      member representable; structure + scan controls present.
+  - id: AC-F3-1
+    verdict: PASS
+    note: >-
+      queued/running are not-green with `ci-pending` in the declared battery,
+      pinned by contract; canceled/skipped/failed keep delivered reasons.
+  - id: AC-F3-2
+    verdict: PASS
+    note: >-
+      Probe extends to all not-green declared jobs; evidence carries exactly one
+      attribution; recorded arm names gate id, job, verdict; no timestamp.
+  - id: AC-F3-3
+    verdict: FAIL
+    note: >-
+      Main probe excludes undeclared jobs, but the not-mergeable post-refusal
+      classifier (`checksPostureOf`) evaluates every pipeline name on the page, so
+      an undeclared non-green job can still produce a `merge.gate.ci-green.failed`
+      refusal (M1).
+  - id: AC-F3-4
+    verdict: PASS
+    note: >-
+      Provider-required refusal classified, never retried/bypassed; no second
+      evaluator and no prose matching on the path.
+  - id: AC-F4-1
+    verdict: PASS
+    note: >-
+      13 steps (milestone-sync 12, capsule 13), 7 operation names + arm, flow 15,
+      family 7 with `milestone-state`, goldens 13 lines, 18 membership pins, trap
+      families unchanged; suites green.
+  - id: AC-F4-2
+    verdict: FAIL
+    note: >-
+      Blocker B1 — with a real provider-native title the attachment never matches,
+      so the `applied` arm is unreachable in production; the test passes only on a
+      phrase-only fixture.
+  - id: AC-F4-3
+    verdict: PASS
+    note: >-
+      Absent/non-conforming declaration and true mismatch -> skipped-noop with one
+      residue and zero writes; `none` -> skipped-gap.
+  - id: AC-F4-4
+    verdict: PASS
+    note: >-
+      Open item/unknown state/unavailable/truncated each withhold with the closed
+      reason; unknown state carried in bounded evidence; one page, no pagination.
+  - id: AC-F4-5
+    verdict: FAIL
+    note: >-
+      Vocabulary unrepresentability and at-most-once/read-back hold, but the
+      recorded `close-milestone` round trip through the real state-layer
+      `validArguments` + `readCloseoutHistory` is not exercised by any test; the
+      plan's TC-SYNC-002 round-trip case is absent (M2).
+  - id: AC-F4-6
+    verdict: PASS_WITH_NOTES
+    note: >-
+      Plan is zero-write and the applied path converges via planFacts/outcomeFor.
+      Note: TC-F4-011's second apply uses an already-closed observation, so it
+      cannot detect a broken ledger-terminal reuse (M3); the milestone residue also
+      forces attention (M5).
+  - id: AC-F4-7
+    verdict: FAIL
+    note: >-
+      Blocker B1 makes GH-349's own step report `attachment-mismatch` rather than
+      attachment-pass + withheld closure; even when fixed, the withheld residue
+      forces the attention exit, contradicting "success-shaped" (M5).
+  - id: AC-F4-8
+    verdict: PASS
+    note: >-
+      A non-landing close/read-back failure returns `closeout.write.failed` at
+      exit 2 with the earlier-failure guard skipping capsule; a gap provider is
+      skipped-gap.
+  - id: AC-F4-9
+    verdict: PASS
+    note: >-
+      Read is adapter-local (no closed operation/flag); both surfaces ride the
+      injected transport/credential port; secret-read allowlist unchanged.
+  - id: AC-F5-1
+    verdict: PASS
+    note: >-
+      Every document-writing branch derives completion from the post-transition
+      fold; `started` immutable; reopen writes null.
+  - id: AC-F5-2
+    verdict: PASS
+    note: >-
+      complete -> reopen -> re-complete leaves the second value on fold, list and
+      document; pre-reopen value absent; no-op reports the fold.
+  - id: AC-F5-3
+    verdict: PASS
+    note: >-
+      Both-target comparison yields one `lint.phases.divergent` at exit 1 naming
+      the phase and both bounded values with the remediation; null != timestamp.
+  - id: AC-F5-4
+    verdict: PASS
+    note: >-
+      Ledger-less phase and document-only completion are excluded and stated;
+      `verify change` source untouched.
+  - id: AC-F5-5
+    verdict: PASS
+    note: >-
+      Detection is pure: zero writes, fences, appends, tracker reads, clock reads;
+      deterministic across replays.
+  - id: AC-F5-6
+    verdict: PASS
+    note: >-
+      No phase repair/lint fix/new state kind; five delivered rows unchanged; new
+      row appended with documented+machine entries moving together.
+  - id: AC-F5-7
+    verdict: PASS
+    note: >-
+      Phase-4 pm-notes records the corpus measurement (81 folders, 7 ledger-backed,
+      71 comparisons, 0 findings); no suppression mechanism exists.
+  - id: AC-F6-1
+    verdict: PASS
+    note: >-
+      Seven property suites with declared-shape controls (derived comparison or
+      broken double); no control claims a production-input breach.
+  - id: AC-F6-2
+    verdict: PASS
+    note: >-
+      No control demonstrated a breach, so no repair was needed; the conditional
+      clause is satisfied and queue.ts was correctly left untouched.
+  - id: AC-F6-3
+    verdict: PASS
+    note: >-
+      Verb set, record kinds, state keys and flag grammar are exactly delivered;
+      exact-set invariants green.
+  - id: AC-F6-4
+    verdict: PASS
+    note: >-
+      Automatic landed removal stays non-step, fail-open, merge-truth-gated,
+      idempotent; unchanged across withheld/gap milestone variants; no second
+      fence.
+  - id: AC-F6-5
+    verdict: PASS
+    note: >-
+      Parked removal appends the park release before the removal in one fence;
+      refusals append nothing and leave the entry intact.
+  - id: AC-F6-6
+    verdict: PASS
+    note: >-
+      Fold cap, reconcile cap, four reasons and refusal-detail bound unchanged; a
+      truncated reconcile reports its remainder.
+  - id: AC-F7-1
+    verdict: PASS
+    note: >-
+      Gate-family refusal carries the family code, merge kind, exit 1, no
+      fallback.internal; declared emittable set covers emitted codes including the
+      family; live mismatch control still contains.
+  - id: AC-F7-2
+    verdict: PASS
+    note: >-
+      F4 substituted-history control yields T1 and fails; fixed path carries the
+      second completion on three surfaces; hand-edited completion named;
+      document-only excluded; zero writes/fences.
+  - id: AC-F7-3
+    verdict: PASS
+    note: >-
+      Three-merge serial fixture lands 1/0/0, zero head mutations/rebase, typed
+      sync refusals; substituted refresh control mutates the head by name.
+  - id: AC-F7-4
+    verdict: PASS
+    note: >-
+      Each defect suite has a substituted pre-fix control that fails by name; note
+      some inline refusal-taxonomy "controls" are tautological (m4).
+  - id: AC-F7-5
+    verdict: PASS
+    note: >-
+      Defect and queue suites run offline in existing jobs; no workflow file/job
+      added; topology contract green.
+findings:
+  - id: B1
+    severity: blocker
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/closeout.ts:1155
+    ac_refs: [AC-F4-2, AC-F4-7]
+    message: >-
+      [B | owner: plan Phase 5] The milestone attachment check normalizes the
+      declaration with `/^M(\d+):\s*(\S.*)$/` and compares the captured phrase
+      (`declaredTitle`, e.g. "Jaiship-native delivery") to
+      `facts.observedWorkItem.value.milestone`, which the GitHub normalizer copies
+      verbatim from the provider milestone title (e.g. "M4: Jaiship-native
+      delivery"). The prefix is dropped on one side only, so a real work item never
+      matches its declaration: `milestoneStep` returns `attachment-mismatch` and
+      the step is skipped-noop with residue instead of the applied/withheld outcome
+      the ACs require. Verified empirically by driving `buildCloseoutPlan` with the
+      production-shaped observed title ("M4: Jaiship-native delivery") and a
+      conforming open record: outcome `skipped-noop`, reason/`residue.item`
+      `attachment-mismatch`. The suites pass only because
+      `tests/fixtures/closeout/milestone.ts` sets `MILESTONE_TITLE` to the
+      phrase-only form and `milestoneFacts` uses it for the work item, so AC-F4-2's
+      `applied` arm and AC-F4-7's attachment-pass outcome are vacuous with respect
+      to the real provider shape. GH-349's own work item carries
+      "M4: Jaiship-native delivery" (verified via `gh issue view 349`).
+    suggestion: >-
+      Compare the full declaration against the provider-asserted title (or strip
+      the `M<n>:` prefix from both sides) and add a regression case whose work-item
+      milestone is the real prefixed title; re-point the M4 fixture
+      (`m4-attached-set.ts`/`milestone.ts`) to the prefixed title so the oracle
+      cannot pass on the phrase-only form. Add an end-to-end composition case
+      (`production.ts` `planFacts` -> `milestoneStep`) so the glue is exercised.
+  - id: M1
+    severity: major
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:478
+    ac_refs: [AC-F3-3, AC-F2-2]
+    message: >-
+      [M | owner: plan Phase 2] `checksPostureOf` collects every `pipelineName` on
+      the bounded check-run page and classifies the first non-green one through
+      `evaluateRequiredJobGate`, without intersecting the page against the
+      effective gate set's declared required jobs. The delivered `ci-green` gate
+      is evaluated over `workflow.names`; a job outside that expected set is not
+      gate evidence. Consequently the not-mergeable post-refusal classifier can
+      emit `merge.gate.ci-green.failed` for an undeclared failing job even though
+      the provider refused the landing for a different protection rule, violating
+      AC-F3-3 ("a job the effective gate set does not declare ... produces no
+      refusal") and misdirecting the operator's remediation. The main probe loop
+      correctly restricts to declared entries; only this branch is over-broad and
+      is untested for the undeclared case.
+    suggestion: >-
+      Derive the candidate job set from `config.gateSet.enforcedMergeEntries`
+      (the effective declared required jobs) rather than the raw page (or thread
+      the expected workflow names through), and add a not-mergeable case with an
+      undeclared non-green job asserting `behind-unconfirmed` rather than a
+      checks-posture row.
+  - id: M2
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/state/closeout.ts:101
+    ac_refs: [AC-F4-5, AC-F4-1]
+    message: >-
+      [M | owner: plan Phase 5] AC-F4-5's "recorded `close-milestone` operation
+      round-trips through the verified closeout-history read ... no
+      `state.store.torn`/`state.keys.missing`" is not exercised. The
+      `validArguments` arm was added, but no test imports
+      `packages/core/src/state/closeout` or appends a `close-milestone` record and
+      reads it back via `readCloseoutHistory`; the milestone behaviour suites drive
+      `makeState`, a fake `readHistory` that never validates arguments. The
+      test-plan's declared TC-SYNC-002 round-trip case is absent from the tree. A
+      regression restoring `default: false` (the poisoning the AC names) would go
+      unnoticed even though the merge analogue (TC-F1-012) is properly tested.
+    suggestion: >-
+      Add a case that appends a `close-milestone` operation through a temp real
+      state store and asserts `readCloseoutHistory` returns it (no torn state),
+      plus a failing control that removes the arm (or adds a second operand) and
+      must be rejected.
+  - id: M3
+    severity: major
+    confidence: medium
+    category: test-quality
+    location: tests/behaviour/closeout-milestone-sync.test.ts:382
+    ac_refs: [AC-F4-6, AC-F4-2]
+    message: >-
+      [M | owner: plan Phase 5] TC-F4-011's "two applies" case builds the second
+      plan from `alreadyClosedMilestone()`, so `milestoneStep` returns `satisfied`
+      for the closed record before the ledger is consulted. It therefore does not
+      isolate the declared mechanism ("apply mode folds the ledger and reuses any
+      terminal outcome"); a broken `outcomeFor`/`planFacts` ledger reuse would
+      still pass. The spec's acceptance text and the test-plan's idempotency clause
+      are broader than the delivered evidence.
+    suggestion: >-
+      Run the second apply with the same open-record observation
+      (`satisfyingMilestone()`) and a persisted `applied` close record; assert
+      `satisfied`, zero second close, and `would-apply` only before the record is
+      persisted.
+  - id: M4
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: tests/behaviour/merge-probe.test.ts:114
+    ac_refs: [AC-F1-1, AC-F3-3]
+    message: >-
+      [M | owner: plan Phase 2] AC-F1-1 (and spec §16) declare
+      `merge-probe` one of the eight delivered merge suites that "stay green
+      unedited", and `tests/structure/merge-suite-obligations.test.ts` lists it in
+      `GREEN` and asserts only that its delivered case ids are still present. The
+      delivery edits `merge-probe` substantially: TC-MERGE-016 is inverted from "a
+      red job on the verified head refuses ci-green" to "a red job the gate set
+      does not declare is not evidence and the merge proceeds". The inversion is
+      correct under the new AC-F3-3, but the AC/§16 partition is factually wrong
+      (it should be nine changed / seven green) and the meta-check cannot detect
+      the semantic edit. This also means the delivered behaviour change for the
+      previously-declared-unedited suite is undisclosed.
+    suggestion: >-
+      Correct AC-F1-1/§16 and the test-plan delta to move `merge-probe` into the
+      changed set (ninth changed / seventh green) and state the inversion, or
+      relocate the undeclared-job case into the new
+      `merge-required-job-probe` suite and revert `merge-probe`; strengthen the
+      "green unedited" check where it can actually observe a semantic edit.
+  - id: M5
+    severity: major
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/closeout.ts:50
+    ac_refs: [AC-F4-3, AC-F4-7]
+    message: >-
+      [M | owner: plan Phase 5] The withheld/absent milestone outcome always
+      appends one `milestone-sync-withheld` residue item (absent declaration ->
+      `declared-milestone-missing`; withholding -> `closure-withheld`), and
+      `exitProjection` maps any applied-mode residue to the `attention` exit (1).
+      The production `planFacts` always supplies a `milestone` fact set, so every
+      change without a conforming declaration now exits attention on
+      `closeout --apply` — contradicting the rollout's "a repository whose
+      declaration is absent or non-conforming sees skipped-noop ... with no
+      behaviour change beyond one extra plan line" and AC-F4-7's "success-shaped"
+      wording. Flow 3's "exits 1 through attention when other residue remains"
+      implies the withheld milestone residue alone should not force it.
+    suggestion: >-
+      Exclude the `milestone-sync-withheld` residue from the `attention`
+      projection so a withheld closure stays success-shaped (as AC-F4-7 says), or
+      correct the rollout/Flow 3 to declare the attention exit explicitly and
+      accept that every non-milestone change now exits 1; do not leave the two
+      statements contradictory.
+  - id: m1
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/production.ts:2407
+    ac_refs: [AC-F1-3, AC-F1-4]
+    message: >-
+      [m | owner: plan Phase 2] `mergeLanding` maps only
+      `provider.payload.invalid` with no `httpStatus` (the transport-exception
+      case) to `requestState:"unknown"` -> `merge.landing-unverified`. Any other
+      non-2xx/outage result (e.g. a 5xx carrying a status) becomes
+      `merge.transaction-aborted` (not_landed, exit 1), although a 5xx after the
+      landing PUT leaves the mutation possibly applied and the truth unobserved.
+      The truthful classification for an uncertain post-PUT failure is unverified,
+      not a clean pre-mutation abort.
+    suggestion: >-
+      Reserve the clean abort for genuine pre-mutation failures (credential,
+      not-found, 4xx refusal) and classify non-4xx/transport failures after the
+      PUT as unverified (`requestState:"unknown"`).
+  - id: m2
+    severity: minor
+    confidence: low
+    category: spec-compliance
+    location: packages/adapters/src/github/client.ts:818
+    ac_refs: [AC-F1-2, AC-F1-4]
+    message: >-
+      [m | owner: plan Phase 2] On a 2xx landing response the adapter treats any
+      body other than `merged === false` as merged without performing the
+      read-back the spec says is "the only success signal". The read-back is used
+      only on the already-merged 405/409 path. For GitHub a 2xx is effectively a
+      merged assertion, but the spec's F-1/API-1 wording ("`result=merged`
+      requires a read-back in which the provider asserts the request merged") is
+      stronger than the delivered behaviour. Pre-existing adapter code, newly
+      relied upon.
+    suggestion: >-
+      Require `merged === true` in the 2xx body or perform the same read-back on
+      the 2xx path, or narrow the spec wording to accept a 2xx as the provider
+      assertion.
+  - id: m3
+    severity: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/closeout.ts:793
+    ac_refs: [AC-F4-5]
+    message: >-
+      [m | owner: plan Phase 5] `alreadyApplied` is declared on the close write
+      and the domain maps `alreadyApplied === true` to `satisfied`, but the
+      GitHub `closeMilestone` never returns it and `milestoneStep` short-circuits
+      on `record.state === "closed"` before any write, so the field is
+      unreachable. AC-F4-5's "`alreadyApplied` when the record already reads
+      closed" is satisfied at the step level, not the operation level; the
+      declared field is dead surface.
+    suggestion: >-
+      Either return `alreadyApplied` from the adapter when the record already
+      reads closed (and drive it from the step) or state that the step-level
+      satisfied outcome is the `alreadyApplied` realisation and drop the unused
+      field.
+  - id: m4
+    severity: minor
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/merge-refusal-taxonomy.test.ts:164
+    ac_refs: [AC-F7-4, AC-F2-2]
+    message: >-
+      [m | owner: plan Phase 2] Several inline "controls" are tautological
+      constant assertions rather than substituted derivations: e.g. TC-F2-002's
+      control asserts `expect(3).toBe(count)` throws and
+      `["dirty","behind-unconfirmed"]` does not contain `"behind"`; TC-F2-003's
+      control asserts two string literals differ. These cannot fail when the
+      behaviour regresses. The genuine discrimination lives in the count
+      assertions and the defect/mutation suites, so the suite is not vacuous
+      overall, but the claimed controls overstate their power.
+    suggestion: >-
+      Replace the token-assertion controls with substitutions that mutate the
+      classification/inventory and must diverge (as the defect suites do), or
+      label them as "shape notes" rather than controls so the mutation-control
+      count is honest.
+  - id: m5
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:975
+    ac_refs: [AC-F2-2, AC-F2-4]
+    message: >-
+      [m | owner: plan Phase 2] `classifyNotMergeable` performs the one
+      post-refusal re-read but never compares the re-read's head to the verified
+      head; a head moved during the refusal is still classified as
+      sync-required/checks rather than `merge.gates-stale`. The unknown branch
+      does compare the head, so the two recovery paths are inconsistent.
+    suggestion: >-
+      Compare `reRead.request.headSha` to `head` and refuse `merge.gates-stale`
+      on a move before classifying the posture, mirroring the unknown branch.
+  - id: m6
+    severity: minor
+    confidence: low
+    category: correctness
+    location: packages/core/src/domain/closeout.ts:1162
+    ac_refs: [AC-F4-8, AC-F4-3]
+    message: >-
+      [m | owner: plan Phase 5] The capability-gap check (line 1171) runs after
+      the attachment comparison (line 1162). For a gap adapter whose work item
+      carries no observable milestone (e.g. a GitLab/Jira work item with no
+      milestone field), the step reports `attachment-mismatch` (skipped-noop +
+      residue, attention) rather than the declared `skipped-gap` AC-F4-8
+      requires. The ordering is untested for the absent-attachment gap case.
+    suggestion: >-
+      Evaluate the adapter capability gap before the attachment comparison, or
+      document the precedence explicitly and add the absent-attachment-on-a-gap
+      case asserting `skipped-gap`.
+  - id: m7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:2525
+    ac_refs: [AC-F4-4]
+    message: >-
+      [I | owner: plan Phase 5] The composition maps every failed `readMilestone`
+      to `observation:"unavailable"`, so the domain's `observation:"invalid"`
+      branch is unreachable in production. Both share the
+      `milestone-signal-unavailable` residue reason, so the impact is limited to
+      the loss of the `invalid` detail.
+    suggestion: >-
+      No action required; if the distinction matters, surface the adapter's
+      payload-invalid failure as the `invalid` observation.
+  - id: m8
+    severity: info
+    confidence: medium
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2501
+    ac_refs: [AC-F4-2, AC-F4-7]
+    message: >-
+      [I | owner: plan Phase 5] The milestone step is proven at the pure planner
+      and the adapter separately, but the production composition glue
+      (`milestoneDeclarationFor`, `milestoneEntityIdFor`, the one read, the close
+      provider) has no end-to-end case; the blocker B1 is exactly a
+      composition-realism defect that only an end-to-end case with the real
+      prefixed title would catch.
+    suggestion: >-
+      Add one composition-level milestone case over the production `planFacts`
+      with the real prefixed work-item title and a fixture provider, asserting the
+      read-once, matched attachment and the applied/withheld outcome.
+reviewed_at: 2026-11-19T15:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: >-
+  None in phase coverage (all seven plan phases have pm-notes completion
+  evidence with commits and gates). Plan/test-plan evidence gaps: the
+  `merge-probe` "green unedited" claim (M4), the AC-F4-5 TC-SYNC-002 round-trip
+  case (M2), and the AC-F4-6 idempotency oracle (M3) are stated in the plan but
+  not delivered as described.
+test_coverage_gaps: >-
+  (1) Milestone attachment never exercised with the provider-native prefixed
+  title (B1). (2) No `close-milestone` recorded-operation round trip through the
+  real state validator / `readCloseoutHistory` (M2). (3) Closeout idempotency
+  does not isolate ledger-terminal reuse (M3). (4) No undeclared-job case on the
+  not-mergeable checks-posture path (M1). (5) No production composition
+  end-to-end milestone case (m8).

@@ -726,19 +726,28 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "The table declares 153 machine identities",
       "The table declares 164 machine identities",
       "allowlist of 65 declared identities",
+      "allowlist of 66 declared identities",
     ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 167 machine identities",
-      "allowlist of 66 declared identities",
+      "The table declares 170 machine identities",
+      "allowlist of 68 declared identities",
       "the eleven `install` rows",
       "the thirteen `harness` rows",
+      "the nine concrete `merge` rows",
     ],
   },
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
-    stale: ["149 identities", "153 identities", "164 identities", "65-entry allowlist"],
-    required: ["167 identities", "66-entry allowlist"],
+    stale: [
+      "149 identities",
+      "153 identities",
+      "164 identities",
+      "167 identities",
+      "65-entry allowlist",
+      "66-entry allowlist",
+    ],
+    required: ["170 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -746,25 +755,29 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "149 entries",
       "153 entries",
       "164 entries",
+      "167 entries",
       "163 delivered rows",
+      "166 delivered rows",
       "BASELINE_ROWS.length + 115",
       "BASELINE_ROWS.length + 119",
       "BASELINE_ROWS.length + 130",
+      "BASELINE_ROWS.length + 133",
+      "66 allowlisted two-segment codes",
       "family count (25)",
       "family count (26)",
     ],
     required: [
-      "167 entries",
-      "166 delivered rows",
-      "66 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 133",
+      "170 entries",
+      "169 delivered rows",
+      "68 allowlisted two-segment codes",
+      "BASELINE_ROWS.length + 136",
       "family count (27)",
     ],
   },
   {
     page: "doc/spec/features/feature-supervise.md",
-    stale: ["65-member allowlist", "26th family"],
-    required: ["66-member allowlist", "25th family"],
+    stale: ["65-member allowlist", "66-member allowlist", "26th family"],
+    required: ["68-member allowlist", "25th family"],
   },
   {
     page: "doc/spec/features/feature-branding-seam.md",
@@ -880,10 +893,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("167 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("170 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 167 identities",
+      "missing required phrase: 170 identities",
     );
   });
 
@@ -954,14 +967,17 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
     page: "doc/spec/features/feature-result-contract.md",
     stale: [
       "The table declares 164 machine identities",
+      "The table declares 167 machine identities",
       "the same 164 identities",
+      "the same 167 identities",
       "BASELINE_ROWS.length + 130",
+      "BASELINE_ROWS.length + 133",
     ],
     required: [
-      "167 machine identities",
-      "the same 167 identities",
+      "170 machine identities",
+      "the same 170 identities",
       "delivered-rows metric",
-      "BASELINE_ROWS.length + 133",
+      "BASELINE_ROWS.length + 136",
       "the sixteen `provider` rows",
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
@@ -970,18 +986,29 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
   },
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
-    stale: ["164 identities"],
-    required: ["167 identities", "66-entry allowlist"],
+    stale: ["164 identities", "167 identities", "66-entry allowlist"],
+    required: ["170 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
-    stale: ["164 entries", "163 delivered rows", "BASELINE_ROWS.length + 130"],
-    required: ["167 entries", "166 delivered rows", "BASELINE_ROWS.length + 133"],
+    stale: [
+      "164 entries",
+      "167 entries",
+      "163 delivered rows",
+      "166 delivered rows",
+      "BASELINE_ROWS.length + 130",
+      "BASELINE_ROWS.length + 133",
+    ],
+    required: ["170 entries", "169 delivered rows", "BASELINE_ROWS.length + 136"],
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
-    stale: ["declared table total at 164 machine identities"],
-    required: ["declared table total at 167 machine identities", "66 declared identities"],
+    stale: [
+      "declared table total at 164 machine identities",
+      "declared table total at 167 machine identities",
+      "66 declared identities",
+    ],
+    required: ["declared table total at 170 machine identities", "68 declared identities"],
   },
   {
     page: "doc/spec/features/feature-provider-engine.md",
@@ -1070,7 +1097,7 @@ describe("GH-350 the phase-1 count and vocabulary pages state the delivered trut
 
 describe("GH-350 the eight decision records are Proposed and indexed", () => {
   const RECORDS = [
-    "ADR-0012-zone-aware-peak-windows-iana-zone-resolution.md",
+    "ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md",
     "PDR-0006-per-project-provider-policy-repository-config-layers.md",
     "TDR-0057-budget-ceilings-park-before-spend-injected-spend-totals.md",
     "TDR-0058-provider-simulate-fixture-and-zero-write-simulation.md",
@@ -1092,7 +1119,7 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
   test("the spec references every record and the index", () => {
     const spec = read("doc/changes/2026-11/2026-11-19--GH-350--provider-policy/chg-GH-350-spec.md");
     for (const id of [
-      "ADR-0012",
+      "ADR-0013",
       "PDR-0006",
       "TDR-0057",
       "TDR-0058",

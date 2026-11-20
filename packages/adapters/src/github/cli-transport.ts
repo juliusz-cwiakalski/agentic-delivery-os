@@ -91,6 +91,7 @@ export const GITHUB_TRANSPORT_MATRIX: Readonly<
   "write-comment": { preferred: "gh", fallback: "api" },
   "resolve-delivery-thread": { preferred: "gh", fallback: "api" },
   "merge-delivery-request": { preferred: "gh", fallback: "api" },
+  "close-milestone": { preferred: "gh", fallback: "api" },
 };
 
 /** The closed composition policy (Table C). */

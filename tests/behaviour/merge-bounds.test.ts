@@ -5,7 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   MERGE_DEFAULT_GATE_ENTRIES,
-  MERGE_MAX_CONFLICT_PATHS,
+  MERGE_MAX_EVIDENCE_NAMES,
   MERGE_MAX_HUMAN_BYTES,
   MERGE_MAX_HUMAN_LINES,
   MERGE_MAX_MACHINE_BYTES,
@@ -16,8 +16,6 @@ import {
 import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
 import {
   baseCheckRuns,
-  baseRequest,
-  createFakeGit,
   createMergeHarness,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
@@ -124,27 +122,41 @@ describe("TC-MERGE-033 output bounds", () => {
     }
   });
 
-  test("many conflicting paths are capped with an explicit +N mark", async () => {
-    const paths = Array.from(
+  test("many recorded not-green jobs are capped with an explicit +N mark", async () => {
+    const jobs = Array.from(
       { length: 12 },
-      (_, index) => `packages/core/src/conflict-${index}.ts`,
+      (_, index) => `CI / job-${String(index).padStart(2, "0")}`,
     );
-    const git = createFakeGit({
-      refresh: { outcome: "conflicted", paths },
+    const record = verificationRecord({
+      verifiedAt: isoAt(-2 * MINUTE),
+      gates: verificationRecord().gates.map((gate) =>
+        gate.id === "ci-green"
+          ? {
+              ...gate,
+              verdict: "fail" as const,
+              reason: "ci-failed",
+              citation: {
+                ...gate.citation,
+                names: [{ kind: "failed-jobs" as const, values: jobs, omitted: 0 }],
+                reasons: ["ci-failed" as const],
+              },
+            }
+          : gate,
+      ),
     });
-    const harness = createMergeHarness({
-      git,
-      request: baseRequest({ mergeableState: "conflicting" }),
-    });
+    const harness = createMergeHarness();
     try {
-      harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+      harness.seedVerification(record);
       const result = await harness.run(undefined, { json: false });
       expect(result.exitCode).toBe(1);
-      expect(result.stderr).toContain(`+${paths.length - MERGE_MAX_CONFLICT_PATHS}`);
+      expect(result.stderr).toContain(`+${jobs.length - MERGE_MAX_EVIDENCE_NAMES}`);
       const summary = result.stderr.split("summary: ")[1] ?? "";
       expect(summary.split("\n").length).toBeLessThanOrEqual(MERGE_MAX_HUMAN_LINES);
       expect(Buffer.byteLength(summary, "utf8")).toBeLessThanOrEqual(MERGE_MAX_HUMAN_BYTES);
-      expect(summary).toContain("conflicting-paths=");
+      expect(summary).toContain("new-red-jobs=");
+      expect(summary).toContain("attribution=recorded");
+      // Nothing landed: the bounded refusal is the whole outcome.
+      expect(harness.counts.landing).toBe(0);
     } finally {
       harness.cleanup();
     }

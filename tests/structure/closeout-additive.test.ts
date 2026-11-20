@@ -21,6 +21,7 @@ const APPENDIX_C = [
   "merged-diff-sweep",
   "retro-coverage-move",
   "session-compaction",
+  "milestone-sync",
   "capsule",
 ] as const;
 

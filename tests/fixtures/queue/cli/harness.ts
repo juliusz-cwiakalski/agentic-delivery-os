@@ -4,7 +4,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { QueueComposition, QueueFactSource } from "../../../../packages/cli/src/edge";
 import { createConfigProgram } from "../../../../packages/cli/src/edge";
 import { runCli } from "../../../../packages/cli/src/index";
@@ -12,7 +11,7 @@ import { queueGraphDocumentPath } from "../../../../packages/core/src/app/queue"
 import type { StateStorePort } from "../../../../packages/core/src/contracts/index";
 import { bufferSink } from "../../../golden/helpers";
 import { baseFacts, queueRuntime } from "../../queue-ready/harness";
-import { makeAuditStore } from "../../state/harness";
+import { makeAuditStore, removeRoot } from "../../state/harness";
 import { ciSucceeded, observed, REPO_A, REPO_B, RUNNER } from "../schedule/harness";
 
 export const NOW_ISO = "2026-11-07T10:00:00Z";
@@ -104,6 +103,8 @@ export type QueueEdgeHarness = {
   readonly writeLog?: StoreWriteLog;
   /** The derived queue-graph document bytes, when one was written. */
   readonly graphDocument: () => string | undefined;
+  /** Remove the temporary state root this harness created. */
+  readonly dispose: () => void;
 };
 
 export type QueueEdgeHarnessOptions = {
@@ -212,6 +213,7 @@ export const createQueueEdgeHarness = (
         return undefined;
       }
     },
+    dispose: () => removeRoot(fixture.root),
   };
 };
 

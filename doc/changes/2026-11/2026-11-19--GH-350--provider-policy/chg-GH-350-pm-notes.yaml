@@ -16,7 +16,7 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "ADR-0012 — Peak windows admit `UTC` (default, alias of Etc/UTC) plus IANA
+  - text: "ADR-0013 — Peak windows admit `UTC` (default, alias of Etc/UTC) plus IANA
       zone names resolved only at a composition edge through one injected
       `ProviderZonePort`; the pure core receives offset facts and never reads
       Intl/TZ. Windows stay non-crossing local seconds-of-day; DST resolves to
@@ -81,7 +81,7 @@ decisions:
       `maxAgeSeconds`; no new park cause, skip reason, announcement, error,
       command, cache or quota freshness key."
     date: "2026-11-19"
-  - text: "ADR-0012 amended during phase 2 (delivery-discovered contradiction): the
+  - text: "ADR-0013 amended during phase 2 (delivery-discovered contradiction): the
       port gains a required third member `nextTransitionAtOrAfter(zone, atMs)`;
       the pure core consumes `ProviderZoneFacts` with `UTC_ZONE_FACTS` as a
       definitional constant; the expiry uses a bounded transition-segment walk
@@ -192,12 +192,12 @@ notes:
   - text: "Resume sync finding (resolved before the merge): origin/main-tools
       advanced by f802f71a (GH-347 dispatch core parity) and already carries the
       decision records 0049..0054; GH-348 holds 0055 and 0056 in flight. The six
-      ADR-0012 companion records this branch created therefore moved to the next
+      ADR-0013 companion records this branch created therefore moved to the next
       free ids TDR-0057..TDR-0062: 0049 -> 0057 (budget ceilings), 0050 -> 0058
       (provider simulate), 0051 -> 0059 (legacy migration), 0052 -> 0060 (watch
       freshness), 0053 -> 0061 (family mounting), 0054 -> 0062 (budget work-item
       ref). The renumber is applied across the six filenames, their front matter
-      and headings, the decision index rows and narrative block, ADR-0012, the
+      and headings, the decision index rows and narrative block, ADR-0013, the
       spec, test plan, plan, pm-notes and the three readiness reviews, and the
       source comments in edge.ts, production.ts, config/catalog.ts,
       contracts/provider.ts, provider/engine.ts and provider/budgets.ts.
@@ -526,14 +526,14 @@ notes:
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 decision-record renumber (pre-merge, no phase transition): the six
-      ADR-0012 companion records moved to TDR-0057..TDR-0062 because upstream
+      ADR-0013 companion records moved to TDR-0057..TDR-0062 because upstream
       main-tools already carries records 0049..0054 (GH-347, f802f71a) and
       GH-348 holds 0055 and 0056 in flight. Mapping: 0049 -> 0057 (budget
       ceilings), 0050 -> 0058 (provider simulate), 0051 -> 0059 (legacy
       migration), 0052 -> 0060 (watch freshness), 0053 -> 0061 (family
       mounting), 0054 -> 0062 (budget work-item ref). Applied by git mv on the
       six filenames plus id, heading and cross-reference updates in the records
-      themselves, the 00-index rows and narrative block, ADR-0012,
+      themselves, the 00-index rows and narrative block, ADR-0013,
       feature-config-layer, the spec, test plan, plan, pm-notes, all three
       readiness reviews, and the source comments in edge.ts, production.ts,
       config/catalog.ts, contracts/provider.ts, provider/engine.ts and

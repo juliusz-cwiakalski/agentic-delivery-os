@@ -549,7 +549,7 @@ export type ProviderClock = {
 };
 
 /**
- * The single zone edge (GH-350, DM-1, ADR-0012 as revised). Three required
+ * The single zone edge (GH-350, DM-1, ADR-0013 as revised). Three required
  * members: existence, the offset in effect at an instant, and the smallest
  * transition instant at or after an instant. `undefined` from the transition
  * lookup means "no transition in the horizon" — never a refusal, never UTC.

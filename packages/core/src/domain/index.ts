@@ -490,7 +490,6 @@ export {
 export {
   defaultFreshnessSeconds,
   gateSetFromValues,
-  internalMergeFailure,
   type MergeCheckRunPage,
   type MergeFailure,
   type MergeFailureEvidence,
@@ -574,7 +573,10 @@ export {
   validatePlanValue,
 } from "./plan-validate.js";
 export {
+  comparedPhaseCount,
+  firstPhaseDivergence,
   lintPmNotes,
+  type PhaseDivergence,
   type PmNotesLintFinding,
   type PmNotesLintLocation,
   type PmNotesLintVerdict,

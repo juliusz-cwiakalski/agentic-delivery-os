@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CAPSULE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-15
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The change capsule: the existing change folder as a self-contained memory episode, an append-only delivery.capsule.event.v1 events.jsonl stream with a closed eleven-kind/four-writer vocabulary, deterministic per-capsule sequences and event keys, per-capsule append locking, torn-tail refusal, the first-event `capsule.opened` rule, and a terminal capsule.closed; the phase, commit, and verify producers with non-gating disclosure; the one-file-per-candidate `<id>.yaml` candidates/ layout, the candidate schema, capture bar, five evidence-link shapes, deterministic dedup and contradiction predicate; the closed promotion routing table with exactly one decision per candidate, confined lessons/tacit home writes, and sanctioned handoffs; and closeout's read-only validation, pre-contract backfill, review-verdict ingestion, per-candidate promotion decisions, and terminal close."
+summary: "The change capsule: the existing change folder as a self-contained memory episode, an append-only delivery.capsule.event.v1 events.jsonl stream with a closed eleven-kind/four-writer vocabulary, deterministic per-capsule sequences and event keys, per-capsule append locking, torn-tail refusal, the first-event `capsule.opened` rule, and a terminal capsule.closed; the phase, commit, and verify producers with non-gating disclosure; the one-file-per-candidate `<id>.yaml` candidates/ layout, the candidate schema, capture bar, five evidence-link shapes, deterministic dedup and contradiction predicate; the closed promotion routing table with exactly one decision per candidate, confined lessons/tacit home writes, and sanctioned handoffs; and closeout's read-only validation, pre-contract backfill, review-verdict ingestion, per-candidate promotion decisions, the nine-kind judgment residue that carries a withheld milestone closure, and terminal close."
 links:
-  related_changes: ["GH-240", "GH-300", "GH-301"]
+  related_changes: ["GH-240", "GH-300", "GH-301", "GH-349"]
   contracts:
     - "packages/core/src/contracts/capsule.ts"
     - "packages/core/src/contracts/memory-record.ts"
@@ -222,6 +222,7 @@ The `capsule.compaction-checkpoint` event carries bounded session identities or 
 - An invalid capsule is refused in the read-only pre-flight before any provider write, git mutation, or state append, so it produces zero effects.
 - A review artifact without readable `iteration:` and `status:` lines is `review-verdict-unreadable` residue, not capsule damage.
 - A missing expected event, cross-checked against the durable phase, commit, and gate-verification records, is `capsule-event-gap` residue, not capsule damage.
+- A withheld milestone closure is closeout's step outcome plus one `milestone-sync-withheld` residue item: it is not a capsule event, and the event vocabulary, the cross-check, and the terminal-close rules are unchanged by it.
 - A re-run of a landed phase/commit/gate evaluation with the same identity appends nothing.
 
 ## 4. Technical Architecture & Codebase Map

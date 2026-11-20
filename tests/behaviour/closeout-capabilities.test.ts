@@ -20,6 +20,7 @@ describe("TC-CLOSE-054 Jira posture", () => {
       { operation: "read-pipeline-run", reason: "provider-unsupported" },
       { operation: "resolve-delivery-thread", reason: "provider-unsupported" },
       { operation: "merge-delivery-request", reason: "provider-unsupported" },
+      { operation: "close-milestone", reason: "provider-unsupported" },
     ]);
   });
 });
@@ -58,6 +59,7 @@ describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
       "merge-delivery-request",
       "write-comment",
       "write-delivery-request",
+      "close-milestone",
     ]);
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([]);
   });
@@ -73,6 +75,8 @@ describe("TC-CLOSE-053/055 GitHub and GitLab postures", () => {
       "write-delivery-request",
       "write-comment",
       "resolve-delivery-thread",
+      "merge-delivery-request",
+      "close-milestone",
     ]) {
       expect(gaps.has(operation as never)).toBe(true);
     }

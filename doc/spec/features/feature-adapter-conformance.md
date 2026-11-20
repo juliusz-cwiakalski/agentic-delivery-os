@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-ADAPTER-CONFORMANCE
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os provider adapters
-summary: "The provider-agnostic adapter conformance suite: one three-flow, fourteen-step registry over the nine closed adapter operations, capability-gated execution with explicit declared-gap and capability-absent skips, production write execution in the mock tier including the provider-side landing, the comment write, and the delivery-request content write, deterministic exact-URL mock tenants, cross-transport normalization parity, structural and runtime coverage gates, a declared cross-adapter parity matrix over a six-dimension basis with derived columns, an adjudicated class-set difference register and a pure parity gate over a gate-local observation record, a conformance-level tracker error taxonomy with a six-family trap vocabulary and per-adapter family accounting, a runtime-neutral simulated stateful tracker double with a closed effect vocabulary, the registration-only participation contract with its identity-construct scan and composition-injected control registration, the throwing-fetch and child-process guards, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its streaming-starter registration, unchanged six-scenario classification floor, four additive extension scenarios (version-window, version-unknown, mode-unavailable, profile-propagation), the refusal-to-scenario map, and a liveness read."
+summary: "The provider-agnostic adapter conformance suite: one three-flow, fifteen-step registry over the ten closed adapter operations, capability-gated execution with explicit declared-gap and capability-absent skips, production write execution in the mock tier including the provider-side landing, the milestone close, the comment write, and the delivery-request content write, deterministic exact-URL mock tenants, cross-transport normalization parity, structural and runtime coverage gates, the closed seven-member assertion-family union with the six-family trap vocabulary kept separate, a declared cross-adapter parity matrix of thirty cells over a six-dimension basis with derived columns, an adjudicated class-set difference register and a pure parity gate over a gate-local observation record, a conformance-level tracker error taxonomy with per-adapter family accounting, a runtime-neutral simulated stateful tracker double with a closed effect vocabulary, the registration-only participation contract with its identity-construct scan and composition-injected control registration, the throwing-fetch and child-process guards, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its streaming-starter registration, unchanged six-scenario classification floor, four additive extension scenarios (version-window, version-unknown, mode-unavailable, profile-propagation), the refusal-to-scenario map, and a liveness read."
 links:
-  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233", "GH-275", "GH-335", "GH-338", "GH-339"]
+  related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233", "GH-275", "GH-335", "GH-338", "GH-339", "GH-349"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008", "TDR-0032", "TDR-0033", "TDR-0036", "TDR-0037", "TDR-0038", "TDR-0039", "TDR-0043"]
 ---
 
@@ -20,19 +20,21 @@ The adapter conformance suite proves that every shipped provider adapter respond
 
 The suite has two tiers. The mock tier runs inside the existing `pnpm test` path — and therefore inside the existing TypeScript test jobs — with zero live network calls and zero live child processes. The live tier is scheduled read-only evidence against configured scratch tenants, not a merge gate; it records a versioned `delivery.conformance.v1` artifact in every terminal status.
 
-Beyond per-adapter coverage the suite declares cross-adapter parity: one matrix over the nine closed operations and the registered adapters, one adjudicated register for the differences it names, and one pure gate that compares matrix, capability declarations, and observed outcome. Parity is declared data with a failure mode, never a claim that the adapters happen to agree.
+Beyond per-adapter coverage the suite declares cross-adapter parity: one matrix over the ten closed operations and the registered adapters, one adjudicated register for the differences it names, and one pure gate that compares matrix, capability declarations, and observed outcome. Parity is declared data with a failure mode, never a claim that the adapters happen to agree.
 
 ## Flow registry
 
-The registry is exactly three flows and fourteen ordered steps. Flow and step ids are stable data used in failures and in the artifact.
+The registry is exactly three flows and fifteen ordered steps. Flow and step ids are stable data used in failures and in the artifact.
 
 | Flow | Steps | Operations |
 |---|---|---|
-| `change-lifecycle` | read-work-item, read-delivery-request, read-pipeline-run, open-change, transition, create-delivery-request, comment, resolve-delivery-thread, merge-delivery-request | `read-work-item`, `read-delivery-request`, `read-pipeline-run`, `write-work-item`, `transition-work-item`, `write-delivery-request`, `write-comment`, `resolve-delivery-thread`, `merge-delivery-request` |
+| `change-lifecycle` | read-work-item, read-delivery-request, read-pipeline-run, open-change, transition, create-delivery-request, comment, resolve-delivery-thread, merge-delivery-request, close-milestone | `read-work-item`, `read-delivery-request`, `read-pipeline-run`, `write-work-item`, `transition-work-item`, `write-delivery-request`, `write-comment`, `resolve-delivery-thread`, `merge-delivery-request`, `close-milestone` |
 | `comment-provenance` | read-comments, carrier-roundtrip | `read-work-item`, `write-comment` |
 | `label-semantics` | read-labels, replace, sweep | `read-work-item`, `write-work-item` |
 
-Together the registry represents all nine closed adapter operations. The provider-side landing sits **inside** the `change-lifecycle` flow as its last step and executes against the mock tenant; pipeline-trace and dedicated transition-mapping flows remain deferred. The deploy-trace read and the two bounded evidence reads sit outside the three-flow registry because none of them is a closed operation. See [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md) for the bounded adapter-local reads, [Adapter Reference Behavior](feature-adapter-reference-behavior.md) for the operations they support, and [Merge and Verify Deploy](feature-merge-verify-deploy.md) for the deploy-trace consumer.
+Together the registry represents all ten closed adapter operations. The provider-side landing and the milestone close sit **inside** the `change-lifecycle` flow as its last two steps and execute against the mock tenant; pipeline-trace and dedicated transition-mapping flows remain deferred. The milestone read, the deploy-trace read, and the two bounded evidence reads sit outside the three-flow registry because none of them is a closed operation. See [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md) for the bounded adapter-local reads, [Adapter Reference Behavior](feature-adapter-reference-behavior.md) for the operations they support, and [Merge and Verify Deploy](feature-merge-verify-deploy.md) for the deploy-trace consumer.
+
+Every flow step declares one assertion family from a closed, seven-member union: `work-item`, `delivery-request`, `pipeline-run`, `comment-provenance`, `label-semantics`, `delivery-thread`, and `milestone-state` — the last meaning the milestone record's asserted state and its bounded attached-item set, which the runner asserts through its own dispatch branch. The assertion-family union and the tracker trap-family vocabulary are different declarations: the trap vocabulary stays at six families and its eighteen-cell accounting is unchanged, because `milestone-state` is an assertion family and `close-milestone` is not a trap family.
 
 ## Adapter registry
 
@@ -60,11 +62,11 @@ Production registrations execute supported writes through their adapter client's
 
 ## Coverage gates
 
-The structural gate proves the registry and every adapter declaration are complete: unique flow and step ids, membership in the closed operation set, all nine operations represented, per-adapter supported operations and declared gaps each backed by a step and together covering every closed operation, declared carriers backed by a carrier step, and no adapter that declares no operations. The runtime gate proves execution is non-vacuous: at least one executed step per adapter, every supported operation executed (or, in live mode only, recorded as a `live-read-only` deferral), every declared gap encountered with its exact reason, every declared carrier exercised, and no failed step counted as passed. Every violation names the registry, provider, flow, step, or operation at fault.
+The structural gate proves the registry and every adapter declaration are complete: unique flow and step ids, membership in the closed operation set, all ten operations represented, per-adapter supported operations and declared gaps each backed by a step and together covering every closed operation, declared carriers backed by a carrier step, and no adapter that declares no operations. The runtime gate proves execution is non-vacuous: at least one executed step per adapter, every supported operation executed (or, in live mode only, recorded as a `live-read-only` deferral), every declared gap encountered with its exact reason, every declared carrier exercised, and no failed step counted as passed. Every violation names the registry, provider, flow, step, or operation at fault.
 
 ## Cross-adapter parity matrix and difference register
 
-Parity is declared once, as data, in `packages/testkit/src/conformance/parity.ts`. The matrix has one row per closed operation — the nine `ADAPTER_OPERATIONS` entries, imported and never re-declared — and one column per registered adapter. Columns are derived from the conformance registration list, so the module authors no provider-name key, lookup operand, or comparison; a hand-authored column key fails the identity-construct scan, and each authored column and register entry is bound to its imported contract rather than to a list position. GitHub is the single declared reference adapter (the first registration), and its column is uniformly `same-as-reference`.
+Parity is declared once, as data, in `packages/testkit/src/conformance/parity.ts`. The matrix has one row per closed operation — the ten `ADAPTER_OPERATIONS` entries, imported and never re-declared — and one column per registered adapter, for thirty cells. Columns are derived from the conformance registration list, so the module authors no provider-name key, lookup operand, or comparison; a hand-authored column key fails the identity-construct scan, and each authored column and register entry is bound to its imported contract rather than to a list position. The reference column is derived from the operation set; the GitLab and Jira columns are authored literal rows that each carry their own `close-milestone` gap entry. GitHub is the single declared reference adapter (the first registration), and its column is uniformly `same-as-reference`.
 
 | Cell value | Meaning |
 |---|---|
@@ -116,7 +118,7 @@ The gate returns clause-tagged violation records — empty means pass — ordere
 | `observed-contradiction` | An observation contradicts its cell: a differing dimension on a `same-as-reference` cell, or a differing dimension missing from an entry's class set. |
 | `register-bijection` | A `declared-difference` cell with no resolvable entry, an entry naming no cell, two entries for one pair, a duplicate `differenceId`, an entry with an empty rationale, or an entry with no adjudication reference. |
 | `column-registration` | A registered adapter has no column, or a column names no registration. |
-| `cell-set` | The cell set is not exactly nine operations × registered adapters (missing, duplicate, or extra cell). |
+| `cell-set` | The cell set is not exactly ten operations × registered adapters (missing, duplicate, or extra cell). |
 | `reference-purity` | The reference column is not uniformly `same-as-reference`, or a register entry names the reference. |
 | `cell-vocabulary` | A cell kind outside the three-member closed set, or a cell carrying a class. |
 | `difference-class` | An entry whose class set is empty or holds a class outside the closed vocabulary. |

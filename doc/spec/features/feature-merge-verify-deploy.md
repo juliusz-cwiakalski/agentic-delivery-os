@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the coexistence of the adapter's provider-side landing capability with that deliberately unchanged lifecycle path, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338"]
-  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349"]
+  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
     - "packages/core/src/contracts/verify-deploy.ts"
@@ -27,10 +27,11 @@ ids stay reserved, mandatory, and byte-identical by default.
 
 The merge transaction consumes the newest gate-verification record, enforces the
 freshness envelope, performs one bounded post-verification probe, verifies any
-waiver override against the gate class's declared policy, attempts exactly one
-rebase-refresh when the request is behind its base, lands one squash commit,
-verifies the landing, and records the outcome. No daemon path fires a merge and
-no force operation exists in the mutation vocabulary.
+waiver override against the gate class's declared policy, resolves the request's
+mergeability into one declared outcome, lands through exactly one provider-side
+call at the head the envelope verified, records the provider's own merged truth,
+and records the outcome. No daemon path fires a merge, no branch mutates the head
+it verified, and no force operation exists in the mutation vocabulary.
 
 The production composition supplies the transaction's reads for real: the tracker
 work-item read, the check-run page, and the request-detail read run through the
@@ -58,24 +59,50 @@ verification or transaction append, and never the contained `fallback.internal`.
 the platform merge command (`gh pr merge`, `glab mr merge`) is not the primary
 path, and `@pr-manager` never merges.
 
-Two merge mechanisms coexist deliberately. The adapter layer now declares a
-provider-side landing capability — the closed `merge-delivery-request`
-operation, which lands one delivery request with a squash strategy, optional
-crafted commit title and message, and an optional expected head, at most once
-per invocation and never retried. The lifecycle merge path documented on this
-page is **not** rewired onto it: `merge` still lands through the recorded local
-git transaction described below, and no coordinator, daemon, dispatch, or
-closeout path composes the adapter landing. Reconciling the two mechanisms is a
-separate decision; until then a consumer that needs the provider-side landing
-calls the adapter operation directly and receives its own classified outcome.
-See [Adapter Reference Behavior](feature-adapter-reference-behavior.md) for the
-operation's contract.
+## One landing mechanism
+
+`merge` composes exactly one landing mechanism: the closed
+`merge-delivery-request` adapter operation, through the transaction's landing
+port. The call carries the request identity, the squash strategy, the verified
+head as the expected head, the crafted title, and the crafted message; it is
+issued at most once per invocation, never re-issued after a failure, and carries
+no force, bypass, auto-merge, queue, or landing-retry variant — those are absent
+from the type rather than rejected at runtime. See [Adapter Reference
+Behavior](feature-adapter-reference-behavior.md) for the operation's contract and
+[Adapter Ports](feature-adapter-ports.md) for its canonical arguments.
+
+The crafted metadata is deterministic and operator-free. The title is the
+delivery request's provider-asserted title, verbatim; when the provider asserts
+no title, the deterministic fallback is `merge(<ref>): squash <sourceRef>` —
+the change ref, then the request's source ref. The message is one fixed verbatim
+trailer for every landing: `Landed by the delivery lifecycle merge primitive.`
+No flag, free-form input, request body, interpolation, or provider prose
+participates in either field.
+
+The landing verdict is provider truth only. `result=merged` requires a read-back
+in which the provider asserts the request merged, and the provider's merge-commit
+identity becomes the recorded landing identity; an absent merge commit is unknown
+rather than derived. The exact-head guard binds the landing to the evidence: the
+expected head is the head the envelope verified, and a head that moved between
+verification and the landing refuses `merge.gates-stale` with zero landing calls.
+A landing refused by the provider is returned as a refusal and is never converted
+into a local commit, a fallback landing, or a success by inference. Where an
+adapter declares the landing a gap, `merge` refuses `merge.transaction-aborted` at
+exit 1 naming the operation and its declared gap reason, with zero landing
+attempts, zero local squash, and zero fallback — capability honesty instead of a
+silent local path. A re-run over a request already recorded as landed replays
+`merged` with the recorded identity and performs no second landing call.
+
+The local squash landing and the local rebase-refresh remain declared,
+seam-level-tested git capabilities with no composed caller: nothing in the
+coordinator, daemon, dispatch, closeout, or merge path invokes them, and a
+production-source scan with a mandatory failing control proves the absence.
 
 ## Command surfaces
 
 | Invocation | Outcome |
 |---|---|
-| `merge <ref>` | Land one verified squash commit; `result=merged` with `squash=` on success. |
+| `merge <ref>` | Land one delivery request through the provider-side landing call at the verified head; `result=merged` with `squash=` carrying the provider's merge commit on success. |
 | `merge <ref> --dry-run` | Evaluate the merge-applicable set, append one verification record, land nothing: no waiver record, no transaction record, no git mutation, never `result=merged`/`squash=`. |
 | `merge <ref> --waive <gate-id> --waived-by <principal>` | Declare an override; the authorizer is verified before any record or mutation. |
 | `verify deploy <ref>` | Read the deploy-job trace once and render `verdict=verified|unknown|failed`. |
@@ -142,10 +169,34 @@ refuses `merge.state-unverified` at exit 2.
 One work-item read, one check-run page on the verified head, and one
 request-detail read. A tracker transition into an owner-attention posture after
 verification refuses `merge.gate.tracker-freshness.failed` with the transition
-and its age. A newly failing job on the verified head refuses
-`merge.gate.ci-green.failed` with the job id. A different-SHA page is not head
-evidence. When the freshness envelope is also violated, `merge.gates-stale` is
-primary and the probe observation rides as additional evidence.
+and its age. A declared required job that is not green on the verified head —
+queued, running, canceled, skipped, or failed — refuses on the
+`merge.gate.<gate-id>.failed` family with the delivered reason
+(`ci-pending`, `ci-canceled`, `ci-all-skipped`, `ci-failed`). A job the effective
+gate set does not declare is never gate evidence, and a check-run page for
+another SHA is not head evidence. The post-refusal checks posture reads that same
+declared set — every `required-ci-job` entry of the effective gate set, by
+`job ?? id` — so a non-green job the set does not declare produces no refusal and
+the refusal stays `behind-unconfirmed`. When the freshness envelope is also violated,
+`merge.gates-stale` is primary and the probe observation rides as additional
+evidence.
+
+The declared gate evaluation treats `queued` and `running` as not green with the
+pending reason, and the probe uses the same per-job evaluation, so the
+post-check is never narrower than the gate it post-checks. Every not-green
+required-job refusal names its evidence source in one additive optional bounded
+field whose vocabulary is the closed pair:
+
+| Attribution | Meaning |
+|---|---|
+| `recorded` | The persisted gate verdict already reported that job not green; the evidence also names the gate's effective id, the job, and the verdict, which together identify the persisted `merge.gate-verification` record. |
+| `probe` | The recorded verdict was green and the probe observed the job not green. |
+
+The verification timestamp is not an evidence field: it stays on the persisted
+verification record that the gate id plus job resolves to. Provider-required
+checks remain the provider's authority — a provider refusal is classified, never
+retried and never bypassed, and there is no second required-check evaluator and
+no prose matching anywhere on the path.
 
 ## Classification and waivers
 
@@ -155,9 +206,11 @@ projection: the state-read and read-fault constructors derive both the kind and
 the exit from the same resolved row, so `config.credential.missing` is a `config`
 refusal at `user-validation` (exit `1`), never the contained `fallback.internal`
 at exit `2`. The composition publishes its emittable failure-code set as one
-named exported constant, `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by
-construction over its refusal branches and a declaration only — it adds no row,
-kind, or exit. The configuration-read branch contributes its forwarded codes:
+named exported constant, `MERGE_COMPOSITION_EMITTABLE_CODES`, plus one declared
+family type for `merge.gate.<gate-id>.failed`; the declaration is exhaustive by
+construction over every code its refusal branches can emit — including the gate
+family those branches emit — and it is a declaration only: it adds no row, kind,
+or exit. The configuration-read branch contributes its forwarded codes:
 they are declared in one tuple typed against the delivered configuration
 taxonomy, so a code the taxonomy does not declare cannot reach the declaration,
 and they are members of the emittable set like every other branch. A read fault
@@ -183,31 +236,73 @@ a gate with a recorded owner-gate waiver is collected as `waiver`-kind with its
 recorded authorizer, while an unwaived gate stays `owner-review` with
 `waivedBy: null`; the board payload schema remains `delivery.board.v1`.
 
-## Rebase-refresh
+## Mergeability refusal taxonomy
 
-A behind-base request gets exactly one refresh attempt per invocation. A
-conflict refuses `merge.rebase-conflict` naming the conflicting paths. A
-successful refresh changes the head, voids the SHA-bound verification, and
-refuses `merge.gates-stale` with the old-to-new SHA transition and the re-verify
-remediation. No force variant exists in the declared mutation union.
+The decision rule is total over the four normalized mergeability states plus
+absence, and every path is bounded:
 
-## Squash landing and convergence
+| Observed condition | Outcome |
+|---|---|
+| `mergeable` | Proceed to the guarded landing. |
+| `conflicting` | `merge.sync-required` with reason `dirty`, exit 1; no landing call, no rebase, no head mutation. |
+| `not-mergeable` | Offer the guarded landing once — the provider is the authority on whether its protection rule blocks a behind, unstable, blocked, or draft request — and classify a refusal with exactly one bounded post-refusal re-read of the same request: a checks posture over the effective gate set's declared `required-ci-job` entries yields the effective required-job row with its delivered reason; any other re-read, including one whose only non-green job the gate set does not declare, yields `merge.sync-required` with reason `behind-unconfirmed`, naming the observed provider state. |
+| `unknown` or absent | Exactly one bounded re-read of the same request, compared on the exact head: recovered reads classify by the rule above, a changed head refuses `merge.gates-stale`, and a still-unknown read refuses `merge.mergeability-unknown` at exit 2. The command never waits or polls. |
+| Landing fired, provider truth not observed | `merge.landing-unverified` at exit 2 with consequence `unknown`; a re-run re-verifies and never re-lands. |
+
+`merge.sync-required` carries a closed `reason` vocabulary of exactly two values:
+`dirty` (the request reads conflicting, so the sync cause is certain and no
+landing is attempted) and `behind-unconfirmed` (the request was offered to the
+provider, the provider refused, and the one bounded re-read cannot separate an
+out-of-date head from another protection rule). The delivered four-value
+normalization collapses `behind`, `blocked`, `unstable`, and `draft` into
+`not-mergeable` and exposes no second provider signal, so a confirmed out-of-date
+reason has no carrier and is not declared; prose matching is not a substitute.
+The `behind-unconfirmed` remediation instructs the operator to update the
+delivery branch onto the base by the normal path, re-verify, and retry, and
+states that a refusal persisting after the sync means the protection rule is the
+cause.
+
+There is no internal refresh on the landing path. Each attempt performs one
+bounded probe, at most one landing call, and at most one recovery read, and never
+mutates the head: a local-only rebase cannot change what the provider accepts, and
+a force push is not representable. An out-of-date request therefore resolves as an
+instruction to the coordinator rather than as an internal loop.
+
+`merge.rebase-conflict` is retained and reserved: it keeps its code, category,
+projection, and remediation, stays in the composition's declared emittable set,
+and is reachable from no delivered command path. Its removal or re-purposing is a
+recorded revisit trigger tied to a coordinator-side sync action, never an
+undocumented delete.
+
+## Landing evidence and convergence
 
 With every enforced gate passing (by fresh verification plus probe, or a
-recorded authorized waiver) the request lands as one squash commit through the
-lifecycle merge transaction's own local git path. The landing
-is verified (squash SHA on the base, request merged) and recorded
-(`delivery.merge.transaction.v1`, kind `merge.transaction`) with the landing
-evidence, refresh attempts, waiver references, and post-landing step statuses
-(branch deletion, closeout-ready). A fired but unverifiable landing refuses
+recorded authorized waiver) the request lands through the one composed landing
+call and the outcome is recorded (`delivery.merge.transaction.v1`, kind
+`merge.transaction`) with the landing evidence, the refresh evidence,
+waiver references, and post-landing step statuses (branch deletion,
+closeout-ready). The record's `squashSha` is the provider-asserted merge commit.
+
+`landing.shaOnBase` is retained with a narrowed, truthful meaning: it reports
+whether the provider-asserted merge commit is contained on the base **only when a
+local containment read answers for that identity**, and reports `unknown`
+otherwise. Its value domain is `boolean | "unknown"`, the state-layer record
+validator accepts exactly that domain so a written `unknown` round-trips through
+the verified read, a legacy boolean record reads exactly as before, and the human
+line renders the third state as `unknown`. After a provider landing with no fetch
+the object is not in the checkout, so a production run reports `unknown` rather
+than a locally derived `true`, and the field is never landing evidence — the
+verdict is the provider's merged assertion plus the merge-commit identity.
+
+A fired landing whose provider truth is not observed refuses
 `merge.landing-unverified` at exit 2 with consequence `unknown`; a re-run
 re-verifies and never re-lands. A clean pre-mutation abort refuses
 `merge.transaction-aborted` at exit 1 with retryable `true` and consequence
 `not_landed`. A post-landing cleanup failure never flips a verified landing and
-is never silent. A recorded contained landing replays `merged` at exit 0 with the
-same squash SHA, zero git mutations, and no duplicate records.
+is never silent. A recorded landing replays `merged` at exit 0 with the recorded
+identity, zero landing calls, and no duplicate record.
 
-The recorded `merge.transaction` is the merged evidence anchor for closeout's read-only merged-diff sweep: the sweep reads the recorded squash SHA and its parent to obtain one bounded added-line diff. No merge contract, gate set, or mutation vocabulary changes for that consumer; closeout reads the record and performs no merge action. See [Closeout Transaction](feature-closeout.md).
+The recorded `merge.transaction` is the merged evidence anchor for closeout's read-only merged-diff sweep: the sweep reads the recorded merge commit and its parent to obtain one bounded added-line diff. Because `merge` performs no fetch, the squash object of a provider landing is not in the operator's checkout until a later operation fetches it, so the sweep degrades to `skipped-gap` with `merged-diff-unavailable` in that window; the sweep stays detection-only and its two honest repairs are deferred to their own decision. No merge contract, gate set, or mutation vocabulary changes for that consumer; closeout reads the record and performs no merge action. See [Closeout Transaction](feature-closeout.md).
 
 ## verify deploy
 
@@ -241,16 +336,28 @@ every row is reachable from its reason.
 
 ## Error identities
 
-The machine table declares a `merge` domain kind with seven concrete rows
+The machine table declares a `merge` domain kind with nine concrete rows
 (`merge.gates-stale`, `merge.waiver-unauthorized`,
 `merge.owner-gate-override-without-waiver`, `merge.rebase-conflict`,
 `merge.state-unverified`, `merge.landing-unverified`,
-`merge.transaction-aborted`) and the one open-slot family
+`merge.transaction-aborted`, `merge.sync-required`,
+`merge.mergeability-unknown`) and the one open-slot family
 `merge.gate.<gate-id>.failed`; the `verify` kind carries
 `verify.deploy.trace-missing`, `verify.deploy.status-stale`, and
 `verify.deploy.trace-failed`. Every row is documented and machine-declared
 together; the family slot is validated against the effective declared gate set,
 with no pattern widening.
+
+| Row | Category | Retryable | Consequence | Projection | Exit |
+|---|---|---|---|---|---|
+| `merge.sync-required` | user | no | `not_landed` | `user-validation` | 1 |
+| `merge.mergeability-unknown` | platform | yes | `not_landed` | `platform-provider` | 2 |
+
+`merge.sync-required` also carries its closed `reason` pair; the family row
+carries the not-green required-job findings and, where the finding came from a
+declared required job, the `recorded` or `probe` attribution. A declared landing
+gap is refused through the delivered `merge.transaction-aborted` row and adds no
+identity.
 
 ## Invariants
 
@@ -259,21 +366,30 @@ with no pattern widening.
   and never a waiver record, a transaction record, a git mutation,
   `result=merged`, or `squash=`.
 - No daemon or dispatch path composes the merge mutation surface; the merge
-  command is the only composed producer of the lifecycle merge. The adapter's
-  `merge-delivery-request` capability is not composed into it and is reachable
-  only by a direct adapter caller.
-- The mutation union declares no force variant; a production-source scan runs
-  with a mandatory failing control.
+  command is the only composed producer of the lifecycle merge, and it composes
+  exactly one landing mechanism — the closed `merge-delivery-request` operation.
+  The local squash landing and the rebase-refresh stay declared git-seam
+  capabilities with no composed caller.
+- No path mutates the head it verified: there is no internal rebase, no fetch,
+  no push, and no force, bypass, auto-merge, queue, or landing-retry variant; the
+  mutation union cannot express them, and a production-source scan runs with a
+  mandatory failing control.
+- The composition's declared emittable set (`MERGE_COMPOSITION_EMITTABLE_CODES`
+  plus the declared `merge.gate.<gate-id>.failed` family) is exhaustive over
+  every code its refusal branches can emit, and every emitted pair resolves to a
+  row whose declared kind equals the emitted kind, so `fallback.internal` is
+  reachable only for a genuinely undeclared failure.
 - Secrets, payloads, titles, bodies, and log lines never reach output or records;
   the single redaction chokepoint covers every surface.
 - Reads are bounded (one verification read, one work-item read, one check-run
-  page, one request-detail read, one deploy trace read) and outputs are bounded
+  page, one request-detail read, at most one post-refusal re-read, at most one
+  unknown-recovery re-read, one deploy trace read) and outputs are bounded
   (65 536-byte machine data; 24-line/4 096-byte human summaries) with explicit
   `+N` marks.
 
 ## Quality evidence
 
-The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The production composition's reachability and classification are covered by the merge-production-composition, merge-dry-run, merge-classification, and merge-classification-conformance suites; the delivered determinism, budget, bounds, state-write, idempotency, no-force, coordinator-only, privacy, and verify-gates rows of that specification are unchanged.
+The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The enduring coverage spans the production composition's reachability and classification (`merge-production-composition`, `merge-dry-run`, `merge-classification`, `merge-classification-conformance`), the landing mechanism and its crafted metadata (`merge-landing`, `merge-landing-metadata`, `merge-head-guard`, `merge-landing-retirement`), the refusal taxonomy (`merge-refusal-taxonomy`, `merge-refusal-surface`, `merge-refusal-rows`), the required-check contract and attribution (`merge-required-job-probe`, `merge-probe`, `merge-check-path-scan`), the retained git-seam capabilities (`merge-git-seam-capabilities`), idempotent replay (`merge-convergence`), and the named-defect regressions `defect-f1-merge-refusal-containment` and `defect-f8-serial-merge-churn`. The determinism, budget, bounds, state-write, privacy, and verify-gates rows of that specification are unchanged.
 
 ## Related
 
@@ -283,7 +399,8 @@ The enduring coverage map is the [merge and verify-deploy test specification](..
 [Closeout Transaction](feature-closeout.md) ·
 [Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md) ·
 [Engine-first Delivery Operations](../../guides/engine-first-operations.md) ·
-[TDR-0031 — Engine-first evaluation surfaces](../../decisions/TDR-0031-engine-first-evaluation-surfaces.md)
+[TDR-0031 — Engine-first evaluation surfaces](../../decisions/TDR-0031-engine-first-evaluation-surfaces.md) ·
+[ADR-0012 — Provider-side landing path](../../decisions/ADR-0012-provider-side-merge-landing-path.md)
 
 ## Scheduling engine reconciliation (GH-237)
 

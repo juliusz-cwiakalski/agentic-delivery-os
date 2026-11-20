@@ -1010,7 +1010,7 @@ export const AMBIENT_CASES: AmbientCase[] = [
     "export const value = fetch;\n",
   ),
   // GH-350: provider policy receives zone facts through the injected port and
-  // never reads Intl in the neutral tier (ADR-0012 as revised).
+  // never reads Intl in the neutral tier (ADR-0013 as revised).
   ambient(
     "ambient-provider-intl",
     "ambient-globals-neutral-tiers",

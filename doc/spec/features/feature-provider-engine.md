@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, the typed spend-ceiling budget gate over one ref-scoped totals read, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, offline simulation and legacy policy migration, the seven-member `provider` CLI family mounted as the twenty-seventh and last prompt-required one, the five provider-engine error identities, and the pure-core / provider-quota / time-zone adapter boundaries."
 links:
   related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231", "GH-350"]
-  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0012", "PDR-0006", "TDR-0057", "TDR-0058", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062"]
+  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0013", "PDR-0006", "TDR-0057", "TDR-0058", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
     - "packages/core/src/contracts/provider-profile.ts"

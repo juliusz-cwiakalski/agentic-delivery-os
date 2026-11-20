@@ -54,7 +54,7 @@ export const localSecondsOfDay = (nowMs: number, offsetSeconds: number): number 
   SECONDS_PER_DAY;
 
 /**
- * The definitional UTC facts (GH-350, ADR-0012 as revised). A fact about UTC,
+ * The definitional UTC facts (GH-350, ADR-0013 as revised). A fact about UTC,
  * not host tz data, so a `UTC` declaration needs no port.
  */
 export const UTC_ZONE_FACTS: ProviderZoneFacts = {
@@ -97,7 +97,7 @@ export type PeakWindowEndRule = {
 };
 
 /**
- * The one named expiry derivation (GH-350, ADR-0012 as revised): the earliest
+ * The one named expiry derivation (GH-350, ADR-0013 as revised): the earliest
  * instant at or after `nowMs` whose local reading is at or after the declared
  * local end. A bounded transition-segment walk, not a fixed-point loop.
  *

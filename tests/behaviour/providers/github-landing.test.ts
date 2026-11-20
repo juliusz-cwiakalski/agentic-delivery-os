@@ -109,9 +109,10 @@ const parsedBody = (body: string | undefined): Record<string, unknown> => {
 
 describe("TC-LAND-001 the ninth operation exists with squash-only arguments", () => {
   test("merge-delivery-request appends to the closed set and is supported by GitHub", () => {
-    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(10);
     expect(ADAPTER_OPERATIONS[7]).toBe("resolve-delivery-thread");
     expect(ADAPTER_OPERATIONS[8]).toBe("merge-delivery-request");
+    expect(ADAPTER_OPERATIONS[9]).toBe("close-milestone");
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toContain(
       "merge-delivery-request",
     );

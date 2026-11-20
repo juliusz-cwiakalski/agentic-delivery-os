@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the `verify.gates.*` (including the narrowed-scope refusal) and `verify.deploy.*` rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239", "GH-300", "GH-338"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239", "GH-300", "GH-338", "GH-349"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
@@ -95,6 +95,7 @@ Registry reads are presence-tolerant but verification-strict:
 - An absent per-change record in an otherwise verified store is no evidence (`present: false`), not `state.keys.missing`.
 - A store that does not exist at all is a verified-empty store, also no evidence.
 - The derived `phase-state.<REF>.json` projection is not read as evidence. Verification folds the verified ledger directly, so a stale or missing projection cannot change the verdict.
+- A pm-notes mirror completion that disagrees with the registry fold is a bookkeeping defect reported by the both-target lint as `lint.phases.divergent`; it is not a finalization verdict and changes nothing on this surface. Detection lives on [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md), which also states the two declared exclusions (a phase with no ledger history, and a document-only completion).
 
 ### Delivery result enum and taxonomy
 

@@ -9,13 +9,17 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { classifyThrown } from "../../packages/cli/src/classify";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import {
+  ADAPTER_OPERATIONS,
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_COLLECTOR_IDS,
+  CLOSEOUT_STEP_IDS,
   DOMAIN_KINDS,
   ERROR_TABLE,
   type ErrorTableEntry,
+  PM_NOTES_LINT_CODES,
 } from "../../packages/core/src/contracts/index";
 import {
   collectorIdOfFamilyCode,
@@ -1079,8 +1083,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 133) {
-    failures.push(`table length ${live.length} != baseline + 133 (${BASELINE_ROWS.length + 133})`);
+  if (live.length !== BASELINE_ROWS.length + 136) {
+    failures.push(`table length ${live.length} != baseline + 136 (${BASELINE_ROWS.length + 136})`);
   }
   return failures;
 };
@@ -1100,7 +1104,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       input: 1,
       config: 10,
       state: 9,
-      lint: 6,
+      lint: 7,
       plan: 5,
       verify: 7,
       closeout: 5,
@@ -1108,7 +1112,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       commit: 5,
       status: 2,
       doctor: 1,
-      merge: 7,
+      merge: 9,
       harness: 13,
       spend: 1,
       queue: 7,
@@ -1160,7 +1164,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 133,
+      BASELINE_ROWS.length + 136,
     );
   });
 
@@ -1183,7 +1187,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 133);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 136);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1774,12 +1778,13 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 160 (GH-292 added the two queue lifecycle
+ * documented table, the total is 170 (GH-292 added the two queue lifecycle
  * identities, GH-309 the three group-surface identities, GH-309 the moved
  * three repos flat identities, GH-287 the three action-registry identities,
- * GH-298 the three steer identities, GH-299 the one metrics identity, and
- * GH-295 the two supervise identities), and the corpora
- * are non-vacuous.
+ * GH-298 the three steer identities, GH-299 the one metrics identity,
+ * GH-295 the two supervise identities, GH-335 the four harness refusal
+ * identities, GH-346 the eleven install identities, and GH-349 the two merge
+ * and one lint identities), and the corpora are non-vacuous.
  */
 describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
   const COORDINATOR_CODES = [
@@ -1791,11 +1796,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 167 entries and 167 documented rows", async () => {
+  test("the live tree is green at 170 entries and 170 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(167);
-    expect(result.counts.documentedRows).toBe(167);
+    expect(result.counts.sourceEntries).toBe(170);
+    expect(result.counts.documentedRows).toBe(170);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1806,7 +1811,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("167 identities");
+    expect(doc).toContain("170 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
@@ -1835,8 +1840,9 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
 
 /**
  * GH-350 — the provider register moves as one edit-set: three declared rows,
- * both table counts at 167, the delivered-rows metric at 166, the arithmetic at
- * `+ 133`, the allowlist unchanged at 66, and the corpus at 84 (59 / 25).
+ * both table counts at 170, the delivered-rows metric at 169, the arithmetic at
+ * `+ 136`, the allowlist at 68 (GH-349 added two reserved codes), and the corpus
+ * at 84 (59 / 25).
  */
 describe("GH-350 the provider register moves as one edit-set", () => {
   const NEW_CODES = [
@@ -1863,22 +1869,22 @@ describe("GH-350 the provider register moves as one edit-set", () => {
     }
   });
 
-  test("both counts hold 167, the delivered-rows metric 166, the arithmetic +133 and the allowlist 66", async () => {
+  test("both counts hold 170, the delivered-rows metric 169, the arithmetic +136 and the allowlist 68", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(167);
-    expect(result.counts.documentedRows).toBe(167);
+    expect(result.counts.sourceEntries).toBe(170);
+    expect(result.counts.documentedRows).toBe(170);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(166);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(66);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(169);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(68);
     const doc = readFile(ROOT, DOC);
-    expect(doc).toContain("167 machine identities");
-    expect(doc).toContain("the same 167 identities");
+    expect(doc).toContain("170 machine identities");
+    expect(doc).toContain("the same 170 identities");
     expect(doc).toContain("delivered-rows metric");
-    expect(doc).toContain("166");
-    expect(doc).toContain("BASELINE_ROWS.length + 133");
-    expect(doc).toContain("exact two-segment allowlist of 66 declared identities");
+    expect(doc).toContain("169");
+    expect(doc).toContain("BASELINE_ROWS.length + 136");
+    expect(doc).toContain("exact two-segment allowlist of 68 declared identities");
   });
 
   test("the corpus holds 84 rows: 59 true-positive and 25 false-positive, one resolving row per new code", () => {
@@ -1899,6 +1905,181 @@ describe("GH-350 the provider register moves as one edit-set", () => {
         falsePositives.rows.filter((row) => row.text === code),
         code,
       ).toHaveLength(0);
+    }
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* TC-SYNC-001 — the row-reachability half and the residual pin floor          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The row-REACHABILITY half of TC-SYNC-001 (authored in the final delivery
+ * phase, the first phase in which all three additive rows have an emitting
+ * branch) plus the residual pin floor re-asserted as a whole.
+ *
+ * Reachability is a property of the production sources, not of the table: a
+ * declared row is reachable when a named refusal branch emits its exact code.
+ * The retained reserved row is the discriminator — it is declared, carried by
+ * the declaration, and emitted by no branch, so a scan that reported every
+ * declared row as reachable could not pass this block.
+ */
+const REACHABILITY_BRANCHES = [
+  {
+    code: "merge.sync-required",
+    source: "packages/core/src/domain/merge-transaction.ts",
+    branch: "the `conflicting` arm and the `behind-unconfirmed` classification",
+  },
+  {
+    code: "merge.mergeability-unknown",
+    source: "packages/core/src/domain/merge-transaction.ts",
+    branch: "the `unknown`-after-one-re-read arm",
+  },
+  {
+    code: "lint.phases.divergent",
+    source: "packages/cli/src/commands/lint.ts",
+    branch: "the both-target divergence comparison",
+  },
+] as const;
+
+const RESERVED_UNREACHABLE = "merge.rebase-conflict";
+
+const sourceOf = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
+
+/** The exact `code:` emission sites a source carries for one code. */
+const emissionCount = (relative: string, code: string): number =>
+  sourceOf(relative).split(`code: "${code}"`).length - 1;
+
+describe("TC-SYNC-001 every additive row is emitted by a named branch", () => {
+  test("the two merge rows and the lint row each have an emitting branch", () => {
+    for (const entry of REACHABILITY_BRANCHES) {
+      expect(
+        emissionCount(entry.source, entry.code),
+        `${entry.code} (${entry.branch})`,
+      ).toBeGreaterThan(0);
+      const rows = ERROR_TABLE.filter((row) => row.code === entry.code);
+      expect(rows, entry.code).toHaveLength(1);
+      const row = rows[0] as ErrorTableEntry;
+      expect(row.domainKind).toBe(entry.code.startsWith("lint.") ? "lint" : "merge");
+      expect([0, 1, 2]).toContain(projectExitCode(row.projectionClass));
+    }
+  });
+
+  test("the retained reserved row is declared and emitted by no branch", () => {
+    // The discriminator: reserved is not unreachable-by-accident. It keeps its
+    // row, its projection and its remediation, and no delivered path emits it.
+    const rows = ERROR_TABLE.filter((row) => row.code === RESERVED_UNREACHABLE);
+    expect(rows).toHaveLength(1);
+    for (const source of [
+      "packages/core/src/domain/merge-transaction.ts",
+      "packages/cli/src/production.ts",
+    ]) {
+      expect(emissionCount(source, RESERVED_UNREACHABLE), source).toBe(0);
+    }
+  });
+
+  test("the reachability scan is non-vacuous: an undeclared code has no branch", () => {
+    expect(
+      emissionCount("packages/core/src/domain/merge-transaction.ts", "merge.declared-nowhere"),
+    ).toBe(0);
+    // The scan reads real sources, so a wrongly-named branch fails here.
+    expect(emissionCount("packages/cli/src/commands/lint.ts", "lint.phases.divergent")).toBe(1);
+  });
+});
+
+/**
+ * The residual floor: the identity total on all seven pin sites and both pages,
+ * the two-segment allowlist, the delivered-row count, the lint-row
+ * decomposition, the legacy-token scan's planted controls, and the two closeout
+ * goldens at thirteen step lines. Each value is asserted exactly in every place
+ * it exists; none is loosened to a range.
+ *
+ * The operation set's eighteen enforcing pins, the ten moved sets and the merge
+ * golden split are owned by `TC-SYNC-009`, `TC-SYNC-002`, `TC-SYNC-003` and
+ * `TC-FLOOR-001..005`; this block re-asserts the identity-and-count floor those
+ * cases share, not their oracles.
+ */
+const FLOOR_IDENTITY_TOTAL = 170;
+const FLOOR_DELIVERED_TOTAL = 169;
+const FLOOR_ALLOWLIST_TOTAL = 68;
+
+const FLOOR_IDENTITY_SITES = [
+  "tests/checks/error-table-sync.test.ts",
+  "tests/checks/supervision-error-socialization.test.ts",
+  "tests/structure/error-table.test.ts",
+  "tests/structure/dispatch-attempts-taxonomy.test.ts",
+  "tests/structure/verify-gates-suite-map-contract.test.ts",
+  "tests/structure/ceremony-contract.test.ts",
+  "tests/behaviour/ceremony-nonregression.test.ts",
+] as const;
+
+describe("TC-SYNC-001 the residual pin floor is exact and non-vacuous", () => {
+  test("all seven identity sites carry the live total and the delivered-row pin", () => {
+    for (const site of FLOOR_IDENTITY_SITES) {
+      const text = sourceOf(site);
+      expect(text, site).toContain(String(FLOOR_IDENTITY_TOTAL));
+    }
+    expect(sourceOf("tests/structure/error-table.test.ts")).toContain(
+      String(FLOOR_DELIVERED_TOTAL),
+    );
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).filter((row) => row.domainKind !== "spend"),
+    ).toHaveLength(FLOOR_DELIVERED_TOTAL);
+  });
+
+  test("the two identity pages carry the live numbers, not a superseded one", () => {
+    const metrics = sourceOf("doc/spec/features/feature-metrics.md");
+    expect(metrics).toContain(
+      `${FLOOR_IDENTITY_TOTAL} entries, ${FLOOR_DELIVERED_TOTAL} delivered rows, and ${FLOOR_ALLOWLIST_TOTAL} allowlisted two-segment codes`,
+    );
+    const ceremony = sourceOf("doc/spec/features/feature-ceremony-runner.md");
+    expect(ceremony.split(`${FLOOR_IDENTITY_TOTAL} identities`).length - 1).toBe(3);
+  });
+
+  test("the lint decomposition stays five / six / seven", () => {
+    // The pm-notes-only constant declares what that invocation can emit; the
+    // documented pm-notes set and the machine lint rows are different counts.
+    expect([...PM_NOTES_LINT_CODES]).toHaveLength(5);
+    expect([...PM_NOTES_LINT_CODES]).not.toContain("lint.phases.divergent");
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[]).filter((row) => row.domainKind === "lint"),
+    ).toHaveLength(7);
+    const documented = sourceOf("doc/spec/features/feature-result-contract.md");
+    expect(documented).toContain("carries the six pm-notes lint identities");
+  });
+
+  test("the legacy-token scan keeps its planted stale controls", () => {
+    const scan = sourceOf("tests/structure/error-table.test.ts");
+    // The scan exists, the two planted-stale controls exist, and the live
+    // total is not a legacy token.
+    expect(scan).toContain("leftoverPins(");
+    expect(scan).toContain("STALE_TOTAL");
+    expect(scan).toContain("STALE_DELIVERED");
+    expect(scan).toContain("LEGACY_ARITHMETIC_DELIVERED");
+    // The live total is asserted above at every site; a stale token anywhere in
+    // the scanned set fails that suite, which is why this block does not repeat
+    // the legacy literals.
+  });
+
+  test("the two closeout goldens carry thirteen step lines in the declared order", () => {
+    const human = sourceOf("tests/fixtures/closeout/golden/human.txt");
+    const numbered = human.split("\n").filter((line) => /^\d+\. /u.test(line));
+    expect(numbered).toHaveLength(CLOSEOUT_STEP_IDS.length);
+    expect(CLOSEOUT_STEP_IDS).toHaveLength(13);
+    const envelope = JSON.parse(sourceOf("tests/fixtures/closeout/golden/envelope-data.json")) as {
+      readonly steps: readonly { readonly stepId: string }[];
+    };
+    expect(envelope.steps.map((step) => step.stepId)).toEqual([...CLOSEOUT_STEP_IDS]);
+    expect(human).toContain("12. milestone-sync:");
+    expect(human).toContain("13. capsule:");
+  });
+
+  test("the closed operation set is ten and the reference behavior page names all ten", () => {
+    expect(ADAPTER_OPERATIONS).toHaveLength(10);
+    expect(ADAPTER_OPERATIONS.at(-1)).toBe("close-milestone");
+    const reference = sourceOf("doc/spec/features/feature-adapter-reference-behavior.md");
+    for (const operation of ADAPTER_OPERATIONS) {
+      expect(reference, operation).toContain(`| \`${operation}\` |`);
     }
   });
 });

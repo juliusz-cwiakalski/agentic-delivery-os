@@ -23,6 +23,7 @@ export const GITHUB_ADAPTER_CONTRACT: AdapterContract = {
       "merge-delivery-request",
       "write-comment",
       "write-delivery-request",
+      "close-milestone",
     ],
     declaredGaps: [],
     writableCarriers: [],

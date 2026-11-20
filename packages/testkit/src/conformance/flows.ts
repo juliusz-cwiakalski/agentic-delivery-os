@@ -1,5 +1,6 @@
 /**
- * The three-flow, fourteen-step conformance registry (GH-189 F-1, DEC-9).
+ * The three-flow, fifteen-step conformance registry (GH-189 F-1, DEC-9;
+ * GH-349 appends `change-lifecycle.close-milestone` as the fifteenth step).
  *
  * Data only. Flow ids, step ids, operations, and assertion families are stable
  * across providers; capability gating is applied by the runner.
@@ -7,9 +8,8 @@
 import type { ConformanceFlow } from "./types.js";
 
 /**
- * The v1 registry: exactly three flows covering all nine closed operations,
- * including `merge-delivery-request` via the
- * `change-lifecycle.merge-delivery-request` step.
+ * The v1 registry: exactly three flows covering all ten closed operations,
+ * including `merge-delivery-request` and the appended `close-milestone`.
  */
 export const CONFORMANCE_FLOWS: readonly ConformanceFlow[] = [
   {
@@ -60,6 +60,11 @@ export const CONFORMANCE_FLOWS: readonly ConformanceFlow[] = [
         stepId: "change-lifecycle.merge-delivery-request",
         operation: "merge-delivery-request",
         assertionFamily: "delivery-request",
+      },
+      {
+        stepId: "change-lifecycle.close-milestone",
+        operation: "close-milestone",
+        assertionFamily: "milestone-state",
       },
     ],
   },

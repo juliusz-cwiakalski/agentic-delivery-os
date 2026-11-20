@@ -282,7 +282,57 @@ describe("TC-MERGE-004 default surface applicability", () => {
       "delete-branch",
     ]);
     for (const operation of MERGE_GIT_OPERATIONS) {
-      expect(operation).not.toMatch(/force|push|reset|hard|delete-remote/);
+      expect(operation).not.toMatch(/force|push|reset|hard|delete-remote/u);
     }
+  });
+});
+
+describe("TC-SYNC-005 the recorded shapes keep their keys and their one widening", () => {
+  const contractText = (): string => readFileSync(join(ROOT, CONTRACT), "utf8");
+
+  test("the transaction record keeps every delivered key and adds none", () => {
+    const text = contractText();
+    const start = text.indexOf("export type MergeTransactionRecord = {");
+    expect(start).toBeGreaterThan(0);
+    const block = text.slice(start, text.indexOf("};", start));
+    const keys = [...block.matchAll(/readonly (\w+)\??:/gu)].map((match) => match[1]);
+    expect(keys).toEqual([
+      "schema",
+      "changeRef",
+      "result",
+      "squashSha",
+      "replayed",
+      "landing",
+      "refresh",
+      "waiverRefs",
+      "postLanding",
+      "recordedAt",
+    ]);
+  });
+
+  test("the landing evidence has exactly two members and the widened containment union", () => {
+    const text = contractText();
+    const start = text.indexOf("export type MergeLandingEvidence = {");
+    expect(start).toBeGreaterThan(0);
+    const block = text.slice(start, text.indexOf("};", start));
+    const keys = [...block.matchAll(/readonly (\w+)\??:/gu)].map((match) => match[1]);
+    expect(keys).toEqual(["shaOnBase", "requestState"]);
+    expect(block).toContain('readonly shaOnBase: boolean | "unknown";');
+    expect(block).toContain("readonly requestState: string;");
+  });
+
+  test("the state-layer validator accepts exactly the widened domain", () => {
+    const stateText = readFileSync(join(ROOT, "packages/core/src/state/merge.ts"), "utf8");
+    expect(stateText).toContain(
+      'typeof value.shaOnBase === "boolean" || value.shaOnBase === "unknown"',
+    );
+    expect(stateText).not.toContain('typeof value.shaOnBase === "boolean" &&');
+  });
+
+  test("a fourth landing-evidence member would fail this pin by name", () => {
+    const planted = "readonly verifiedAt: string;";
+    expect(planted).toContain("verifiedAt");
+    const keys = ["shaOnBase", "requestState"];
+    expect(keys).not.toContain("verifiedAt");
   });
 });

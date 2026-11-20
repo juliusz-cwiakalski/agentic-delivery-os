@@ -24,6 +24,7 @@ export const CONTROL_CONTRACT: AdapterContract = {
       { operation: "write-comment", reason: "provider-unsupported" },
       { operation: "resolve-delivery-thread", reason: "provider-unsupported" },
       { operation: "merge-delivery-request", reason: "provider-unsupported" },
+      { operation: "close-milestone", reason: "provider-unsupported" },
     ],
     writableCarriers: [],
     readableCarriers: [],
@@ -79,7 +80,7 @@ export const CONTROL_REGISTRATION: ConformanceAdapterRegistration = {
   buildClient: () => ({ readWorkItem: async () => ({ ok: true, value: CONTROL_ITEM }) }),
 };
 
-/** The control's nine-cell matrix column, declared as data by the test. */
+/** The control's ten-cell matrix column, declared as data by the test. */
 export const CONTROL_COLUMN = [
   { operation: "read-work-item", cell: { kind: "same-as-reference" as const } },
   ...CONTROL_CONTRACT.capabilities.declaredGaps.map((gap) => ({

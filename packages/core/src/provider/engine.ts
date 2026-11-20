@@ -72,7 +72,7 @@ export type ProviderEngineDependencies = {
   readonly stateStore?: StateStorePort;
   readonly newFenceToken?: () => string;
   /**
-   * Bind the zone port to one declared zone (GH-350, ADR-0012 as revised). A
+   * Bind the zone port to one declared zone (GH-350, ADR-0013 as revised). A
    * `UTC` window needs no seam; a non-UTC window with no facts refuses
    * `provider.peak.zone-unknown` before any evaluation.
    */

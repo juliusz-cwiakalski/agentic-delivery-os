@@ -147,6 +147,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "write-comment",
   "resolve-delivery-thread",
   "merge-delivery-request",
+  "close-milestone",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
@@ -816,12 +817,12 @@ const carrierStepFor = (
 };
 
 describe("TC-PARITY-001 registry equals the closed set and coverage is non-vacuous", () => {
-  test("the flow registry operation set equals the nine-operation closed set", () => {
+  test("the flow registry operation set equals the ten-operation closed set", () => {
     const registry = new Set(
       CONFORMANCE_FLOWS.flatMap((flow) => flow.steps.map((s) => s.operation)),
     );
     expect([...registry].sort()).toEqual([...ADAPTER_OPERATIONS].sort());
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(15);
   });
 
   test("every supported operation of every adapter executes and every declared gap is encountered", async () => {
@@ -850,7 +851,7 @@ describe("TC-PARITY-001 registry equals the closed set and coverage is non-vacuo
     }
   });
 
-  test("GitHub executes all nine supported operations", async () => {
+  test("GitHub executes all ten supported operations", async () => {
     const report = await runSingle("github", loadMockTenant("github"), "github-parity-coverage");
     const executed = new Set(
       report.steps
@@ -860,7 +861,7 @@ describe("TC-PARITY-001 registry equals the closed set and coverage is non-vacuo
     expect([...executed].sort()).toEqual([...ADAPTER_OPERATIONS].sort());
   });
 
-  test("a tenth operation in the registry fails structural coverage by name", () => {
+  test("an eleventh operation in the registry fails structural coverage by name", () => {
     const flows = CONFORMANCE_FLOWS.map((flow) => ({
       ...flow,
       steps:
@@ -1017,12 +1018,12 @@ const runSingle = async (
   });
 
 describe("TC-CONF-006 mock suite green for all three adapters", () => {
-  test("each adapter produces three flows and fourteen registry-ordered step results", async () => {
+  test("each adapter produces three flows and fifteen registry-ordered step results", async () => {
     const report = await runProduction("matrix-run");
     const expectedStepIds = CONFORMANCE_FLOWS.flatMap((flow) =>
       flow.steps.map((step) => step.stepId),
     );
-    expect(expectedStepIds).toHaveLength(14);
+    expect(expectedStepIds).toHaveLength(15);
     expect(report.status).toBe("passed");
     for (const provider of ["github", "gitlab", "jira"]) {
       const flows = report.flows.filter((flow) => flow.provider === provider);

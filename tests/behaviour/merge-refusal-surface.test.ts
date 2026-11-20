@@ -110,6 +110,11 @@ const cases = (): Case[] => {
   });
   conflict.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
 
+  const mergeabilityUnknown = createMergeHarness({
+    request: baseRequest({ mergeableState: "unknown" }),
+  });
+  mergeabilityUnknown.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+
   const aborted = createMergeHarness({
     workItem: ownerGatedWork,
     ownerPrincipal: "owner-principal",
@@ -135,7 +140,8 @@ const cases = (): Case[] => {
       harness: withoutWaiver,
       flags: [],
     },
-    { code: "merge.rebase-conflict", exit: 1, harness: conflict, flags: [] },
+    { code: "merge.sync-required", exit: 1, harness: conflict, flags: [] },
+    { code: "merge.mergeability-unknown", exit: 2, harness: mergeabilityUnknown, flags: [] },
     {
       code: "merge.transaction-aborted",
       exit: 1,

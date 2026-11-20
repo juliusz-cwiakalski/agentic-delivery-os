@@ -64,6 +64,7 @@ export const exactDeliveryRequest: Exact<
   | "mergeableState"
   | "commitCount"
   | "changedFileCount"
+  | "title"
 > = true;
 
 export const exactWorkItem: Exact<

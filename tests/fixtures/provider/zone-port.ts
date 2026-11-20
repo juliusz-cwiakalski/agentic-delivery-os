@@ -1,6 +1,6 @@
 /**
  * The shared counting zone port for the GH-350 zone suites (spec v1.4,
- * ADR-0012 `## Revision`). A step table's `fromMs` boundaries ARE the
+ * ADR-0013 `## Revision`). A step table's `fromMs` boundaries ARE the
  * transitions, so a transition lookup spends no hidden offset probe; the port
  * counts `offsetSecondsAt` and `nextTransitionAtOrAfter` separately so the
  * per-method probe budget (≤3 + ≤3) is assertable.

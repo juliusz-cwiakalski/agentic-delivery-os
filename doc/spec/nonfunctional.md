@@ -351,7 +351,7 @@ while nothing but the delivered launcher is at that path. See
   live child processes, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
-- Cross-adapter parity is a declared matrix over the nine closed operations and the
+- Cross-adapter parity is a declared matrix over the ten closed operations and the
   registered adapters with a six-dimension basis, an adjudicated class-set
   difference register, and a pure gate over a gate-local observation record whose
   violations name provider, operation, and one of nine closed clause ids. The gate
@@ -412,7 +412,7 @@ while nothing but the delivered launcher is at that path. See
   `session-admin-reboot.test.ts`, `session-admin-privacy.test.ts`.
   `tests/behaviour/blockers-records.test.ts`, `blockers-record-integrity.test.ts`,
   `blockers-read-cost.test.ts`.
-- Closeout is a twelve-step transaction, plan by default, `--apply` for mutation.
+- Closeout is a thirteen-step transaction, plan by default, `--apply` for mutation.
   Command-specific production composition bridges raw clients, real git, state,
   the capsule runtime, and resolved harness settings; it derives real worktree
   facts and the bounded merged-diff read, derives session attribution from the

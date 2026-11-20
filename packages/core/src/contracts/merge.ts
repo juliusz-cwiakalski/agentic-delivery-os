@@ -144,6 +144,33 @@ export const MERGE_REFRESH_OUTCOMES = ["not-attempted", "succeeded", "conflicted
 export type MergeRefreshOutcome = (typeof MERGE_REFRESH_OUTCOMES)[number];
 
 /**
+ * The closed reason vocabulary of the one `merge.sync-required` refusal (F-2,
+ * DM-2, API-2).
+ *
+ * `dirty` means the request reads `conflicting`, so the sync cause is certain
+ * and no landing call is made. `behind-unconfirmed` means the request was
+ * offered to the provider, the provider refused, and the post-refusal re-read
+ * cannot separate an out-of-date head from another protection rule. There is no
+ * confirmed out-of-date member: the delivered four-value normalization exposes
+ * no signal that could confirm one, so declaring it would be a value no branch
+ * can emit.
+ */
+export const MERGE_SYNC_REQUIRED_REASONS = ["dirty", "behind-unconfirmed"] as const;
+export type MergeSyncRequiredReason = (typeof MERGE_SYNC_REQUIRED_REASONS)[number];
+
+/**
+ * The closed attribution pair of the one additive refusal-evidence field (F-3,
+ * DM-2, API-2).
+ *
+ * `recorded` means the persisted gate-verification verdict already reported the
+ * job not green; `probe` means the recorded verdict was green and the
+ * post-verification probe observed it. The pair is the whole vocabulary and the
+ * field is bounded: no second evidence member and no timestamp exists.
+ */
+export const MERGE_REFUSAL_ATTRIBUTIONS = ["recorded", "probe"] as const;
+export type MergeRefusalAttribution = (typeof MERGE_REFUSAL_ATTRIBUTIONS)[number];
+
+/**
  * The closed merge git operation vocabulary (F-7, GAP-14).
  *
  * There is deliberately no force-capable variant: the transaction's mutation
@@ -208,9 +235,19 @@ export type MergePostLandingStep = {
   readonly status: MergePostLandingStatus;
 };
 
-/** The landing-verification evidence (EVT-3, DM-3). */
+/**
+ * The landing-verification evidence (EVT-3, DM-3).
+ *
+ * `shaOnBase` answers the containment of the provider-asserted merge commit on
+ * the base, and only when a local containment read answers for that identity:
+ * after a provider landing with no fetch the object is not in the checkout, so
+ * the field is `"unknown"` rather than a locally derived `true`. The value
+ * domain is exactly `boolean | "unknown"`, the delivered state-layer validator
+ * accepts the same domain so a written `unknown` round-trips, and a legacy
+ * boolean record reads exactly as before. The field is never landing evidence.
+ */
 export type MergeLandingEvidence = {
-  readonly shaOnBase: boolean;
+  readonly shaOnBase: boolean | "unknown";
   readonly requestState: string;
 };
 

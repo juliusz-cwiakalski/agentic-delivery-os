@@ -1,17 +1,18 @@
 /**
- * TC-MERGE-026 / TC-MERGE-027 — a clean pre-mutation abort is a retryable
- * refusal that converges on re-run, and a recorded contained landing replays
- * idempotently without a second landing.
+ * TC-MERGE-026 / TC-MERGE-027 / TC-F1-009 / TC-F1-010 / TC-SYNC-005 — a clean
+ * pre-mutation abort is a retryable refusal that converges on re-run, and a
+ * recorded landing replays idempotently from provider truth with zero landing
+ * calls. The delivered local-landing counts are re-pointed at the one composed
+ * provider landing call.
  */
 import { describe, expect, test } from "bun:test";
 import {
-  baseCheckRuns,
   baseRequest,
   baseWorkItem,
-  createFakeGit,
   createMergeHarness,
   MERGE_CLOCK_ISO,
   MERGE_CLOCK_MS,
+  MERGE_LANDING_SHA,
   MERGE_RUN_ID,
   transactionRecord,
   verificationRecord,
@@ -49,11 +50,11 @@ const gatedRecord = () =>
     ],
   });
 
+const mergedRequest = () => baseRequest({ reviewState: "merged", headSha: MERGE_LANDING_SHA });
+
 describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
-  test("a state failure before mutation aborts retryably with nothing landed", async () => {
-    const git = createFakeGit();
+  test("a state failure before the landing aborts retryably with nothing landed", async () => {
     const harness = createMergeHarness({
-      git,
       workItem: gatedWorkItem(),
       ownerPrincipal: "owner-principal",
       appendWaiverFault: "state.lock.busy",
@@ -71,7 +72,7 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
       expect(errorOf(result)?.code).toBe("merge.transaction-aborted");
       expect(errorOf(result)?.retryable).toBe(true);
       expect(errorOf(result)?.consequence).toBe("not_landed");
-      expect(git.operations).not.toContain("squash-land:feat/GH-301/merge");
+      expect(harness.counts.landing).toBe(0);
       expect(harness.transactions()).toHaveLength(0);
       expect(harness.auditRecords).toHaveLength(1);
       expect(harness.auditRecords[0]?.exitCode).toBe(1);
@@ -80,26 +81,26 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
     }
   });
 
-  test("a git refusal before mutation aborts retryably and converges on re-run", async () => {
-    const baseGit = createFakeGit();
-    let fail = true;
-    const git = {
-      ...baseGit,
-      land: (input: Parameters<typeof baseGit.land>[0]) =>
-        fail ? Promise.resolve({ ok: false as const, code: "squash-failed" }) : baseGit.land(input),
-    };
-    const harness = createMergeHarness({ git });
+  test("a provider refusal before any mutation aborts retryably and converges on re-run", async () => {
+    let refuse = true;
+    const harness = createMergeHarness({
+      landing: () =>
+        refuse
+          ? ({ ok: false, code: "protection-rule" } as const)
+          : ({ ok: true, requestState: "merged", mergeCommitSha: MERGE_LANDING_SHA } as const),
+    });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const aborted = await harness.run();
       expect(aborted.exitCode).toBe(1);
       expect(errorOf(aborted)?.code).toBe("merge.transaction-aborted");
       expect(harness.transactions()).toHaveLength(0);
-      fail = false;
+      expect(harness.counts.landing).toBe(1);
+      refuse = false;
       const converged = await harness.run();
       expect(converged.exitCode).toBe(0);
       expect(harness.transactions()).toHaveLength(1);
-      expect(harness.events.filter((event) => event === "git-squash-land")).toHaveLength(2);
+      expect(harness.counts.landing).toBe(2);
     } finally {
       harness.cleanup();
     }
@@ -108,16 +109,10 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
 
 describe("TC-MERGE-026/027 append faults on convergence paths are declared, never swallowed", () => {
   test("a failed record-less replay append keeps merged and declares the cleanup failure", async () => {
-    const git = createFakeGit({ contained: true });
-    const harness = createMergeHarness({ git, appendTransactionFault: "state.write.failed" });
+    const harness = createMergeHarness({ appendTransactionFault: "state.write.failed" });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
-      harness.setRequest(
-        baseRequest({
-          reviewState: "merged",
-          headSha: "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
-        }),
-      );
+      harness.setRequest(mergedRequest());
       const result = await harness.run();
       expect(result.exitCode).toBe(0);
       expect(dataOf(result)?.result).toBe("merged");
@@ -127,17 +122,15 @@ describe("TC-MERGE-026/027 append faults on convergence paths are declared, neve
         { id: "closeout-ready", status: "failed" },
       ]);
       expect(harness.transactions()).toHaveLength(0);
-      expect(git.operations).not.toContain("squash-land:feat/GH-301/merge");
+      expect(harness.counts.landing).toBe(0);
       // A re-run after the write fault clears converges with one record and
-      // still no second landing.
+      // still no landing.
       harness.setAppendTransactionFault(undefined);
       const replay = await harness.run();
       expect(replay.exitCode).toBe(0);
       expect(dataOf(replay)?.replayed).toBe(true);
       expect(harness.transactions()).toHaveLength(1);
-      expect(
-        git.operations.filter((operation) => operation.startsWith("squash-land:")),
-      ).toHaveLength(0);
+      expect(harness.counts.landing).toBe(0);
     } finally {
       harness.cleanup();
     }
@@ -145,10 +138,10 @@ describe("TC-MERGE-026/027 append faults on convergence paths are declared, neve
 
   test("a failed landing-unverified outcome append is declared and re-runs re-verify", async () => {
     const squashSha = "c0ffee00a1b2c3d4e5f60718293a4b5c6d7e8f90";
-    const git = createFakeGit({
-      land: { ok: true, squashSha, requestState: "open", containedOnBase: true },
+    const harness = createMergeHarness({
+      landing: { ok: true, requestState: "closed", mergeCommitSha: squashSha },
+      appendTransactionFault: "state.write.failed",
     });
-    const harness = createMergeHarness({ git, appendTransactionFault: "state.write.failed" });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run();
@@ -157,36 +150,32 @@ describe("TC-MERGE-026/027 append faults on convergence paths are declared, neve
       expect(errorOf(result)?.consequence).toBe("unknown");
       expect(String(errorOf(result)?.summary)).toContain("record-append-failed:state.write.failed");
       expect(harness.transactions()).toHaveLength(0);
-      expect(
-        git.operations.filter((operation) => operation.startsWith("squash-land:")),
-      ).toHaveLength(1);
+      expect(harness.counts.landing).toBe(1);
       // The provider now reports the landing; the re-run re-verifies and
       // converges without a second landing.
-      harness.setRequest(baseRequest({ reviewState: "merged", headSha: squashSha }));
+      harness.setRequest(mergedRequest());
       harness.setAppendTransactionFault(undefined);
       const replay = await harness.run();
       expect(replay.exitCode).toBe(0);
       expect(dataOf(replay)?.result).toBe("merged");
-      expect(
-        git.operations.filter((operation) => operation.startsWith("squash-land:")),
-      ).toHaveLength(1);
+      expect(harness.counts.landing).toBe(1);
     } finally {
       harness.cleanup();
     }
   });
 });
 
-describe("TC-MERGE-027 a recorded contained landing replays idempotently", () => {
-  test("exit 0 with the same squash SHA, zero git mutations, and no duplicate records", async () => {
-    const git = createFakeGit({ contained: true });
-    const harness = createMergeHarness({ git });
+describe("TC-MERGE-027 a recorded landing replays from provider truth", () => {
+  test("exit 0 with the same squash SHA, zero landing calls, and no duplicate records", async () => {
+    const harness = createMergeHarness();
     try {
       harness.seedTransaction(transactionRecord());
+      harness.setRequest(mergedRequest());
       const result = await harness.run(undefined, { runId: "run-merge-replay" });
       expect(result.exitCode).toBe(0);
       expect(dataOf(result)?.result).toBe("merged");
-      expect(dataOf(result)?.squashSha).toBe("b1b2c3d4e5f60718293a4b5c6d7e8f9012345678");
-      expect(git.operations).toEqual(["read-base-containment"]);
+      expect(dataOf(result)?.squashSha).toBe(MERGE_LANDING_SHA);
+      expect(harness.counts.landing).toBe(0);
       expect(harness.transactions()).toHaveLength(1);
       expect(harness.auditRecords).toHaveLength(1);
       expect(harness.auditRecords[0]?.runId).toBe("run-merge-replay");
@@ -200,6 +189,7 @@ describe("TC-MERGE-027 a recorded contained landing replays idempotently", () =>
     const harness = createMergeHarness();
     try {
       harness.seedTransaction(transactionRecord());
+      harness.setRequest(mergedRequest());
       expect(harness.verifications()).toHaveLength(0);
       const result = await harness.run();
       expect(result.exitCode).toBe(0);
@@ -208,16 +198,16 @@ describe("TC-MERGE-027 a recorded contained landing replays idempotently", () =>
     }
   });
 
-  test("a SHA no longer contained is landing-unverified, never a second landing", async () => {
-    const git = createFakeGit({ contained: false });
-    const harness = createMergeHarness({ git });
+  test("a provider that no longer asserts merged is landing-unverified, never a second landing", async () => {
+    const harness = createMergeHarness();
     try {
       harness.seedTransaction(transactionRecord());
+      harness.setRequest(baseRequest({ reviewState: "open", headSha: MERGE_LANDING_SHA }));
       const result = await harness.run();
       expect(result.exitCode).toBe(2);
       expect(errorOf(result)?.code).toBe("merge.landing-unverified");
       expect(errorOf(result)?.consequence).toBe("unknown");
-      expect(git.operations).not.toContain("squash-land:feat/GH-301/merge");
+      expect(harness.counts.landing).toBe(0);
       expect(harness.transactions()).toHaveLength(1);
     } finally {
       harness.cleanup();
@@ -228,6 +218,7 @@ describe("TC-MERGE-027 a recorded contained landing replays idempotently", () =>
     const harness = createMergeHarness();
     try {
       harness.seedTransaction(transactionRecord());
+      harness.setRequest(mergedRequest());
       const result = await harness.run();
       const postLanding = dataOf(result)?.postLanding as readonly {
         id: string;
@@ -246,10 +237,9 @@ describe("TC-MERGE-027 a recorded contained landing replays idempotently", () =>
     const harness = createMergeHarness();
     try {
       harness.seedTransaction(transactionRecord({ recordedAt: MERGE_CLOCK_ISO }));
+      harness.setRequest(mergedRequest());
       const result = await harness.run();
       expect(errorOf(result)?.code).not.toBe("merge.state-unverified");
-      expect(baseRequest().reviewState).toBe("open");
-      expect(baseCheckRuns().items.length).toBeGreaterThan(0);
     } finally {
       harness.cleanup();
     }

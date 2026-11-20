@@ -25,7 +25,8 @@
     "issueNumber": 601,
     "pullNumber": 504,
     "commitSha": "1111111111111111111111111111111111111111",
-    "threadId": "PRRT_2"
+    "threadId": "PRRT_2",
+    "milestoneNumber": 4
   },
   "routes": [
     {
@@ -223,6 +224,26 @@
           "ref": "main-tools"
         }
       }
+    },
+    {
+      "method": "PATCH",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/milestones/4",
+      "status": 200,
+      "body": {
+        "number": 4,
+        "title": "Jaiship-native delivery",
+        "state": "closed"
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/milestones/4",
+      "status": 200,
+      "body": {
+        "number": 4,
+        "title": "Jaiship-native delivery",
+        "state": "closed"
+      }
     }
   ],
   "expected": {
@@ -399,6 +420,9 @@
     "change-lifecycle.merge-delivery-request": {
       "merged": true,
       "mergeCommitSha": "3333333333333333333333333333333333333333"
+    },
+    "change-lifecycle.close-milestone": {
+      "closed": true
     },
     "change-lifecycle.comment": {
       "commentId": "9001"
