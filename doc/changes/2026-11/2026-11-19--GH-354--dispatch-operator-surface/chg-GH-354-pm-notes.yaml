@@ -11,24 +11,24 @@ phases:
   dor_check: { started: null, completed: 2026-11-19T21:41:28.668Z }
   delivery: { started: null, completed: 2026-11-20T00:58:09.436Z }
   system_spec_update: { started: null, completed: 2026-11-20T01:09:56.570Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-20T02:03:54.884Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "PM-decided (sync 2026-11-20): the branch is merged with `main-tools` at
-      ccc83383 (GH-348, loop supervision), merge commit 00d1d72a. Upstream claimed
-      TDR-0056 and TDR-0057, so this change's governing record is renumbered
-      TDR-0056 -> TDR-0058 (file name, id, index row, and every reference); the
-      precedent is GH-347's renumber on the same ground. The merged tree adopts
-      upstream's changeset-additivity validator (pinned baseline plus
-      content-validated additions) in place of the earlier fixed list, so five
-      additions are accepted, this change's among them."
+      ccc83383 (GH-348, loop supervision), merge commit 00d1d72a. Upstream
+      claimed TDR-0056 and TDR-0057, so this change's governing record is
+      renumbered TDR-0056 -> TDR-0058 (file name, id, index row, and every
+      reference); the precedent is GH-347's renumber on the same ground. The
+      merged tree adopts upstream's changeset-additivity validator (pinned
+      baseline plus content-validated additions) in place of the earlier fixed
+      list, so five additions are accepted, this change's among them."
     date: "2026-11-20"
   - text: "PM-decided (phase-8 scope, disclosed at PR review): three non-product
-      fixes land with the release phase because the aggregate gate cannot be green
-      otherwise. (a) The changeset additivity pin hardcodes the changesets added
-      since its capture; this change's own changeset is appended to that
+      fixes land with the release phase because the aggregate gate cannot be
+      green otherwise. (a) The changeset additivity pin hardcodes the changesets
+      added since its capture; this change's own changeset is appended to that
       declared list — a delivered expectation that every later delivery updates,
       never the baseline. (b) The doc-distribution guard derives its 'actual'
       install set by running the real installer with the inherited HOME, so on a
@@ -67,31 +67,45 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Review iteration 2: PASS. F1 and F2 verified closed in the production
+      path (one `entrypointSecrets` resolver feeds the serializer and the
+      dispatch runtime; `TC-MSG-011` seeds only the environment and fails if the
+      wiring is reverted; the sole `readDispatchLog` call omits `maxLines`, and
+      `TC-LOG-012` proves the 220-line machine answer). No assertion weakened;
+      no collateral effect outside `last-message`. Advisories F-1/F-2 (two doc
+      wording slips), F-3 (test plan reconciled to v0.4: 74 cases, 86 links),
+      F-4 (this note and the phase-9 evidence), F-5 (comment scoped) are closed.
+      Post-sync renumber commit c3d50eba: TDR-0056 -> TDR-0058 across the
+      record, its index row and every reference, plus the advisory edits."
+    type: info
+    date: "2026-11-20"
   - text: "Plan phase 9 (review remediation) = 95f7d609: F1 wires one credential
       resolver (`entrypointSecrets`) into both the serializer and the dispatch
       operator runtime (invocation fact → runtime `secrets`), with TC-MSG-011
       seeding the credential only through the environment and asserting a
-      straddling prefix is absent from both outputs (forcing the old wiring makes
-      it leak, verified then reverted); F2 bounds machine `log` data by 65 536
-      bytes only and moves the 200-line/32 768-byte bound into the human renderer,
-      with TC-LOG-012 proving a 220-line window answers 220 lines at `--tail 500`
-      (before: 200 and an invented bound); A2/A3 closed. Gates: message and log
-      conformance 9+9, operator battery 161, behaviour set 27, pinned trio 41,
-      no-shell 0, exit-literals 0, doc conformance 29, build 0. Sync merge
-      00d1d72a; the record renumber lands with this phase's follow-up."
+      straddling prefix is absent from both outputs (forcing the old wiring
+      makes it leak, verified then reverted); F2 bounds machine `log` data by 65
+      536 bytes only and moves the 200-line/32 768-byte bound into the human
+      renderer, with TC-LOG-012 proving a 220-line window answers 220 lines at
+      `--tail 500` (before: 200 and an invented bound); A2/A3 closed. Gates:
+      message and log conformance 9+9, operator battery 161, behaviour set 27,
+      pinned trio 41, no-shell 0, exit-literals 0, doc conformance 29, build 0.
+      Sync merge 00d1d72a; the record renumber lands with this phase's
+      follow-up."
     type: info
     date: "2026-11-20"
   - text: "Review iteration 1: FAIL — two blocking findings, both real and both
-      invisible to the offline battery because the fixtures inject what production
-      does not. F1: the shipped bins never pass `registeredSecrets` to the dispatch
-      operator runtime, so `last-message` redacted an empty set before the
-      512-character bound and a straddling credential could survive as a prefix;
-      remediation wires the same declared-credential set the serializer uses and
-      adds an environment-seeded straddling case. F2: the machine `log` payload was
-      capped by the human 200-line bound, so `--json --tail 300..500` dropped lines
-      the retained window held; remediation bounds machine data by bytes only,
-      enforces the line bound in the human renderer, adds the 220-line case, and
-      aligns two current-truth lines. Remediation is plan phase 9."
+      invisible to the offline battery because the fixtures inject what
+      production does not. F1: the shipped bins never pass `registeredSecrets`
+      to the dispatch operator runtime, so `last-message` redacted an empty set
+      before the 512-character bound and a straddling credential could survive
+      as a prefix; remediation wires the same declared-credential set the
+      serializer uses and adds an environment-seeded straddling case. F2: the
+      machine `log` payload was capped by the human 200-line bound, so `--json
+      --tail 300..500` dropped lines the retained window held; remediation
+      bounds machine data by bytes only, enforces the line bound in the human
+      renderer, adds the 220-line case, and aligns two current-truth lines.
+      Remediation is plan phase 9."
     type: info
     date: "2026-11-20"
   - text: "Documentation reconciliation (phase 7): 10 pages updated (dispatch
