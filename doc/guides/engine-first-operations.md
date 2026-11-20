@@ -3,12 +3,12 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-18
+last_updated: 2026-11-20
 owners: ["engineering"]
-summary: "Operating guide for engine-first delivery: the daily routine, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, and the shell fallback with the declared residuals."
+summary: "Operating guide for engine-first delivery: the daily routine, the four per-reference inspection queries, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, and the shell fallback with the declared residuals."
 links:
-  related_changes: ["GH-293"]
-  related_decisions: ["TDR-0031"]
+  related_changes: ["GH-293", "GH-354"]
+  related_decisions: ["TDR-0031", "TDR-0056"]
 ---
 
 # Engine-first delivery operations
@@ -40,9 +40,92 @@ daemon, a scheduler tick, or a background watcher.
 The bash entry points (`deliver-ticket.sh`, `batch-deliver.sh`, `ceo-loop.sh`,
 `pm-liveness.sh`) stay executable throughout. In `dual-run` they behave exactly as
 before; after an owner flip they keep their output and exits and print the bounded
-authoritative-mode pointer (section 4).
+authoritative-mode pointer (section 5).
 
-## 2. Reading the gate
+## 2. Inspecting one delivery
+
+Four read-only queries answer the per-reference inspection questions without
+reading any of the shell's files:
+
+```
+dispatch status <ref>                  # lane view for one reference
+dispatch log <ref> --tail 200          # bounded tail of the harness's own stdout
+dispatch is-delivering [<ref>]         # 0 in progress, 1 not in progress
+dispatch last-message <ref>            # the session's final assistant message
+```
+
+Each takes the global `--json`. A query that needs repository identity resolves it
+with persistence disabled, so no checkout marker is created, repaired, or
+re-persisted. All four read only typed state: no ledger append, no fence, no
+process start, no deletion, and no read of `tmp/deliver-ticket/**` or
+`.ai/local/delivery/**`.
+
+**Inspect a live delivery.** `dispatch status <ref>` reports `delivering`,
+`marker` (`active`, `terminal`, or `absent`), `probe` (`live`, `dead`, `unknown`,
+or `not-applicable`), the owner `pid`, the `sessionId`, and the lane facts
+(`attemptId`, `harness`, `iterationOrdinal`, `restartsConsumed`,
+`ownerStartedAt`, `lastToken`, `lastOutcome`, `recordedAt`). Read it as:
+
+- `marker=active` with `probe=live` is a live delivery; `delivering=true`.
+- `marker=terminal` is a finished lane; `lastToken` and `lastOutcome` carry the
+  recorded outcome. A terminal lane is never stale.
+- `marker=absent` is a successful answer at exit `0`: no lane exists for that
+  reference in this repository.
+- `stale=true` means an `active` record whose recorded owner is confirmed gone.
+  The lane is inspectable but **not repaired**: the read never rewrites, clears,
+  or resets it, because a stale lane is still the resumable artifact. A stale
+  lane does not block a new delivery; the queue lease remains the exclusion
+  mechanism.
+- `probe=unknown` (an unreadable process table) never asserts staleness: the
+  durable state stands, and the answer says so rather than guessing.
+
+**Gate on `is-delivering`.** Use the per-ref form when one delivery is in
+question and the ref-less form to ask whether the repository is busy; the
+ref-less form lists up to 20 delivering references and one truncation fact when
+more exist. Both exit `0` for "in progress" and `1` for "not in progress", and
+`--json` carries the boolean in `data` with no error object. Use the payload
+fact, not the exit digit, in a scripted consumer: exit `1` is a negative answer,
+not a failure. An active lane whose owner is confirmed gone answers "not in
+progress", so a stale lane never makes a reference or the repository look busy.
+
+**Diagnose from the bounded tail.** `dispatch log <ref> --tail 200` returns the
+newest lines of the streaming harness's own stdout, oldest-to-newest; `--tail`
+defaults to 50 and accepts `1..500`. The reader stitches the newest two retained
+files in name order, drops an unterminated tail (a torn write), and returns a
+snapshot of what was durable when it ran — an append or a segment switch in
+flight may not be in the answer, so re-run the query. When a bound binds, the
+answer carries exactly one truncation fact (`scope`, `bound`, `omittedLines`);
+the retained window is two files, so the newest file is not the whole story.
+
+What the tail does **not** contain:
+
+- the opencode child's stderr — that is the shell's `tmp/deliver-ticket/<REF>.log`,
+  which the shell's `--log` tails;
+- the wrapper's own progress lines — those go to the wrapper's terminal.
+
+For opencode the typed tail is the JSON event stream, not human log text. A
+`no-log` answer (`available=false`, exit `0`) means **no artifact exists for that
+reference**, with two causes: the lane's adapter is one-shot (Claude Code streams
+nothing) or the lane predates the artifact family. It never means "nothing ran";
+`status` still answers the lane. An unreadable file answers `unreadable` at exit
+`1`.
+
+**Read the PM's final message.** `dispatch last-message <ref>` returns the
+session's final assistant message, flattened to one line and bounded to 512
+characters with registered credential values replaced before the bound. `final`
+is true exactly when the lane is terminal; on a live lane the answer is the
+latest message observed so far and may be partial, so treat it as provisional.
+The query is capability-gated: opencode supports the read, while a Claude Code
+lane declares the `session-introspection` gap and answers `capability-gap`. Every
+negative answer is one closed reason — `no-lane`, `capability-gap`,
+`session-unknown`, `no-message`, or `unreadable` — at exit `1`, with the fact in
+the payload.
+
+The per-ref queries never compose a sentence from a classifier or derivation: a
+`last-message` answer is the transcript's own text, and an unavailable answer
+names why. Contract detail is in [Dispatch Engine](../spec/features/feature-dispatch-engine.md).
+
+## 3. Reading the gate
 
 Eligibility for a repository is the conjunction of four conditions, in the
 declared order:
@@ -81,7 +164,7 @@ A row whose ledger cannot be read is a classified failure (`repos.state-unavaila
 rather than a fabricated row, and a first-use repository reports the empty-window
 evaluation with `countedDeliveries: 0`.
 
-## 3. Flipping a repository and reversing the flip
+## 4. Flipping a repository and reversing the flip
 
 A flip is a separate owner act, never a side effect of a delivery:
 
@@ -108,7 +191,7 @@ dispatch handover <host/owner/name> --revert   # restore dual-run
 flipped repository and `false` after the reversal, and other repositories are
 unaffected.
 
-## 4. The shell fallback
+## 5. The shell fallback
 
 The shell stack is the documented fallback, not a deprecated path:
 
@@ -122,7 +205,7 @@ The shell stack is the documented fallback, not a deprecated path:
 - Reversibility is read from the engine surface (`dispatch handover` data or the
   fleet row), never from shell output.
 
-## 5. Declared residuals
+## 6. Declared residuals
 
 Three limits are stated so an operator does not plan around capability that does not
 exist:

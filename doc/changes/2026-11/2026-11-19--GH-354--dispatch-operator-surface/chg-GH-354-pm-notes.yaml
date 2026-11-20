@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-19T21:35:03.038Z }
   dor_check: { started: null, completed: 2026-11-19T21:41:28.668Z }
   delivery: { started: null, completed: 2026-11-20T00:58:09.436Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-20T01:09:56.570Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -56,6 +56,43 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Documentation reconciliation (phase 7): 10 pages updated (dispatch
+      engine, state layer, harness adapters, autonomous delivery,
+      engine-first-operations, glossary, the dispatch reference page,
+      doc/00-index descriptors, cli entrypoint composition, the dispatch test
+      spec). Stale 'the typed path has no status/log surface' scan: 0 hits.
+      doc-conformance 25 pass, dispatch-doc-conformance 4 pass, doc distribution
+      no drift (96 docs). Deferred, not a gap: `.opencode/agent/ceo.md` still
+      names the shell query forms; the typed queries are a superset and the
+      shell remains the documented fallback, and prompt migration belongs to the
+      prompts flip item (GH-351), not this ticket."
+    type: info
+    date: "2026-11-20"
+  - text: "Plan-phase delivery evidence (one entry per plan phase; commit, gates,
+      result): phase 1 satisfied at plan time, no commit, TDR tracked at
+      86aa74e8; phase 2 = 87994ebe (status+isdel conformance 15 pass, e2e+resume
+      parity 17, pinned trio 39, no-shell 0, exit-literals 0, diff-check 0);
+      phase 3 = ca4a596e (persist 9, artifact-writer 3, e2e+battery 13, trio 39,
+      no-shell 0); phase 4 = b3fa6a47 (log 8, log-bounds 3, persist+writer 10,
+      trio 39, no-shell 0); phase 5 = ae038556 (message 8,
+      composition+transcript 4, claude session 9, full dispatch conformance 143,
+      trio 39); phase 6 = 5ba12d4c (grammar+composition 7, help pins+reference
+      parity 22, help coverage+doc conformance 29, no-shell 0); phase 7 =
+      795bda2d (dispatch conformance 159, behaviour 33, checks 5+5+4+4, trio 39,
+      no-shell 0); phase 8 = 6d19bd86 (lint/format/typecheck/plan
+      validate/no-shell/exit-literals/
+      diff-check/doc-distribution/privacy/changeset-additivity/install all 0;
+      aggregate pnpm check 11,736 pass, 4 skip, 1 fail — TC-BIN-084 half (b)
+      timed out under load at 162 s and passes 5/5 standalone in 99.6 s, a
+      load-sensitivity class, not a behaviour change)."
+    type: info
+    date: "2026-11-20"
+  - text: "Branch-range commit-message gate (phase 9): PASS — base
+      origin/main-tools, merge-base bd95665b, head 7c471f02, 20 commits in
+      range, 0 offending commits, 0 rules hit, real local commitlint binary (not
+      SKIP, not ERROR)."
+    type: info
+    date: "2026-11-20"
   - text: "DoR gate: iteration 1 NOT_READY (F1-F5 text-level findings), iteration 2
       NOT_READY (N1-N3 allocation/ownership), iteration 3 READY
       (`readiness-review/readiness-iter-3.md`). Residuals R1-R8 recorded there;

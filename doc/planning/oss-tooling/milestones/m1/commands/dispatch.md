@@ -235,9 +235,12 @@ carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
   list), `ref=null` with up to 20 `refs` and one truncation fact for the
   repository-wide form. Exit `0` when in progress and `1` when not; the JSON
   answer carries the boolean with no error object.
-- `log` answers `available`, the newest `tail` lines oldest-to-newest, and at most
-  one `truncation` fact (`scope` `tail` | `bytes`, `bound`, `omittedLines`). Human
-  output is the raw tail followed by at most one `truncation=` line. The content
+- `log` answers `available`, `tail`, the newest `lines` oldest-to-newest, and at
+  most one `truncation` fact (`scope` `tail` | `bytes`, `bound`, `omittedLines`).
+  The selected lines are bounded to 200 lines and the machine `data` bound, so a
+  request above 200 lines answers at most 200 lines plus a truncation fact. Human
+  output is the raw tail followed by at most one `truncation=` line, or
+  `reason=<reason>` when nothing is available. The content
   is a **streaming harness's own stdout** (for opencode, its JSON event stream),
   not the shell's child-stderr log: the shell's `--log` tails
   `tmp/deliver-ticket/<REF>.log`, which holds the opencode child's stderr, while
@@ -249,16 +252,19 @@ carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
   `reason=no-log`, exit `0`; `no-log` never means "the session printed nothing".
   A retained file with no complete line is `available=true` with an empty line
   list. An unreadable file is `available=false`, `reason=unreadable`, exit `1`.
-- `last-message` answers the session's final assistant message, composed
+- `last-message` answers `available`, `final`, `message` (or explicit `null`),
+  `truncated` (true exactly when the composed text was cut),
+  `recordedAt` (or explicit `null`), and one closed `reason` when it cannot
+  answer: `no-lane`, `capability-gap`, `session-unknown`, `no-message`,
+  `unreadable`. The message is the session's final assistant text, composed
   `redact -> flatten -> bound(512) -> mark` (registered credential values are
   replaced first, so a credential straddling the cut cannot survive as a
-  prefix), `final` true exactly for a terminal lane, and one closed `reason` when
-  it cannot answer: `no-lane`, `capability-gap`, `session-unknown`,
-  `no-message`, `unreadable`. `capability-gap` means the lane's harness declares
-  the existing `session-introspection` capability as a gap (Claude Code,
-  `headless-mode-limitation`); it is never produced for opencode. The query reads
-  no attempt record, derivation payload, or envelope field, and performs no
-  session operation.
+  prefix), and `final` is true exactly for a terminal lane. `capability-gap`
+  means the lane's harness declares the existing `session-introspection`
+  capability as a gap (Claude Code, `headless-mode-limitation`); it is never
+  produced for opencode. Human output is the key set `available`, `final`,
+  `reason` when present, and `last_message`. The query reads no attempt record,
+  derivation payload, or envelope field, and performs no session operation.
 
 All four queries are read-only and shell-free: zero ledger appends, zero fence
 acquisitions, zero lane rewrites, zero identity-marker writes, zero process
@@ -316,8 +322,9 @@ $ <binary> dispatch handover github.com/owner/repo --revert
 `dispatch.resume-uneconomical`, `dispatch.state-unverified`. The operator
 queries add no error-table row: `no-lane`, `no-log`, `capability-gap`,
 `session-unknown`, `no-message`, and `unreadable` are DATA facts on the payload,
-not error identities, and a malformed or missing reference, an unexpected extra
-positional, or an invalid `--tail` value is the delivered
+not error identities — `capability-gap` applies exactly when the lane's harness
+declares `session-introspection` as a gap — and a malformed or missing reference,
+an unexpected extra positional, or an invalid `--tail` value is the delivered
 `input.value.rejected`, decided before any runtime call. A pre-session
 refusal (unknown harness, rejected input, an unresolvable credential, a failing
 admission read, an active owner hold reporting `queue.precondition.unmet` with
