@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-20T02:14:33.023Z }
   quality_gates: { started: null, completed: 2026-11-20T02:14:41.459Z }
   dod_check: { started: null, completed: 2026-11-20T02:15:43.852Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-20T02:18:56.891Z }
 decisions:
   - text: "ADR-0013 — Peak windows admit `UTC` (default, alias of Etc/UTC) plus IANA
       zone names resolved only at a composition edge through one injected
@@ -205,6 +205,13 @@ notes:
       tracked here so the renumber is not mistaken for scope drift."
     type: blocker
     date: "2026-11-19"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/372 —
+      feat(GH-350): deliver declarative provider policy, base main-tools, head
+      feat/GH-350/provider-policy @ cd967108, 54 commits, MERGEABLE, open for
+      review. Merge authority stays with the CEO/human."
+    type: info
+    date: "2026-11-20"
   - text: "Review iteration 3 + final sync confirmation: Status PASS, 0 blocking.
       Iterations 1-2 findings all remediated with fail-on-regression tests (B1
       migrate write root, B2 unknown-zone silent UTC, B3/B4 doc truth, M1 exit
