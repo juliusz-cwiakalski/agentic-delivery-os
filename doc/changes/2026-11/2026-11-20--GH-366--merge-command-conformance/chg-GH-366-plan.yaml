@@ -80,11 +80,12 @@
 # and is not re-decided here.
 #
 # LANDING FAULTS ARE ALWAYS A DECLARED IDENTITY (phase 2). Every landing-port
-# failure maps through one closed, total mapping — `provider.auth.rejected` for a
-# rejected credential, `merge.landing-unverified` when the landing fired without
-# observed merged truth, and `provider.outage` as the declared default — so no
-# raw port code (for example `protection-rule` or `head-mismatch`) can reach an
-# envelope.
+# failure maps through one closed, total mapping — `config.credential.missing` (no
+# credential to attempt), `provider.auth.rejected` for a rejected credential,
+# `merge.landing-unverified` when the landing fired without observed merged truth,
+# and `provider.outage` as the declared default for a transient, transport or
+# unclassified fault — so no raw port code (for example `protection-rule` or
+# `head-mismatch`) can reach an envelope.
 #
 # TITLE/SUMMARY TRACKER-TOKEN RULE (commit-primitive constraint): the commit
 # primitive rejects any tracker-like token in the subject or body that is not the
@@ -430,19 +431,24 @@ phases:
   #      the invocation's ref (there is no empty-value branch: every merge refusal
   #      path is reached with a usable ref, so `ref=-` is not a declared state),
   #      and a dedicated `operation=<token>` field beside its code, the breached
-  #      contract and the offending object. The `operation` vocabulary is CLOSED
-  #      and validated at the rendering site: `github-work-item`,
-  #      `github-check-runs`, `github-delivery-request-list`,
-  #      `github-delivery-request-detail`, `repository-ci-workflow`,
+  #      contract and the offending object. The `operation` vocabulary is CLOSED —
+  #      eight tokens plus `-` — and validated at the rendering site, where an
+  #      out-of-vocabulary value is a rendering failure and never passed through:
+  #      `github-work-item`, `github-check-runs`, `github-delivery-request-list`
+  #      (either state filter on the one delivery-request list read, which also
+  #      supplies the request detail), `github-merge-delivery-request`,
+  #      `repository-ci-workflow`, `delivery-registry`,
   #      `local-change-record-read`, `local-git-object-read`, and `-` where the
   #      refusal names no operation (a gate refusal, a stale or unverified
   #      evidence set, a declaration-value condition). It is declared once as a
-  #      merge contract export derived from the delivered source-name vocabulary
-  #      plus the two local read tokens and `-`; the battery's own
-  #      `VERIFY_GATES_SOURCE_NAMES` is not widened (NG-2). All three fields are
-  #      authored here, in the command's refusal cause data and the human/scripted
-  #      rendering, because they are the vocabulary every later refusal reports
-  #      in. GOLDEN CONSEQUENCE, PERFORMED IN THIS PHASE AND NOT DEFERRED: the
+  #      merge contract export that FILTERS the delivered source-name vocabulary
+  #      (excluding `repository-head`, `pm-notes` and the unreachable
+  #      `github-delivery-request-detail`, each for a stated reason) and adds the
+  #      two local read tokens, the one landing-operation token and `-`; the
+  #      battery's own `VERIFY_GATES_SOURCE_NAMES` is not widened (NG-2). All
+  #      three fields are authored here, in the command's refusal cause data and
+  #      the human/scripted rendering, because they are the vocabulary every later
+  #      refusal reports in. GOLDEN CONSEQUENCE, PERFORMED IN THIS PHASE AND NOT DEFERRED: the
   #      uniform field moves all TEN delivered refusal goldens (five human, five
   #      scripted) — `refusal-gate-human.txt`/`-scripted.json`,
   #      `refusal-stale-human.txt`/`-scripted.json`,
