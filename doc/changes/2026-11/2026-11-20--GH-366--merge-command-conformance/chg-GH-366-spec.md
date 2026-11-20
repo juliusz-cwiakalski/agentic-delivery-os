@@ -123,8 +123,14 @@ precedent for a refusal summary that names both. A non-resolving request or work
 item is mapped onto `merge.transaction-aborted`, whose hint instructs the
 operator to "clear the named pre-condition" while naming no condition, and whose
 declared row claims `retryable: true` with a convergence promise even for causes
-that do not converge on a re-run. No refusal rendering names the command or the
-invocation's change ref at all: the human and scripted summaries are
+that do not converge on a re-run. The row also reaches every landing fault: the
+transaction converts any landing-port failure into it, and the composition maps a
+provider refusal to `provider.outage` for a payload-invalid response whose status
+is neither 401 nor 403. A provider outage converges on a plain re-run, so the
+row's convergence promise is not merely unnamed for that cause — it is false. No
+refusal rendering names the command, the invocation's change ref, or a validated
+operation token, and no read operation appears as a field at all: the human and
+scripted summaries are
 `result=refused; condition=<code>` plus evidence lines, and the code's own
 `merge.` prefix is the only occurrence of the command name — which is exactly why
 an assertion on that occurrence would be vacuous.
@@ -155,15 +161,17 @@ key is opaque, preserved and never inspected, so an added `branch` declaration i
 additively admissible and survives every document-writing branch
 value-faithfully.
 
-**Contract that this change amends.** `feature-merge-verify-deploy` currently
-states that the composition resolves the branch from the checkout's git facts,
-that the verification record's head is the checkout head, that the default gate
-set is six entries of which one is merge-applicable, that the merged report's
-gate list is the verification record's, and that the declared emittable set is
-exhaustive so `fallback.internal` is reachable only for a genuinely undeclared
-failure. The coverage map `test-spec-merge-verify-deploy` states the same branch
-resolution in its "Composition reachability" row. Both must be reconciled in the
-same change.
+**Contract that this change amends, and one it states.** `feature-merge-verify-deploy`
+currently states that the composition resolves the branch from the checkout's git
+facts, that the verification record's head is the checkout head, that the default
+gate set is six entries of which one is merge-applicable, and that the declared
+emittable set is exhaustive so `fallback.internal` is reachable only for a
+genuinely undeclared failure — four statements this change amends. It discusses
+the merged report not at all, so the merged report's gate semantics are stated
+here and written into that page by this change's doc reconciliation rather than
+amended there. The coverage map `test-spec-merge-verify-deploy` states the
+checkout-facts branch resolution in its "Composition reachability" row. The page
+and the coverage map must be reconciled in the same change.
 
 ### 2.2 Pain Points / Gaps
 
@@ -225,10 +233,13 @@ which contract to repair.
   breached contract, and the offending object; a credential refusal names the
   credential reference and the environment variable; a read fault names the
   operation that failed.
-- **G-4**: No credential condition is reported as `merge.transaction-aborted`, no
-  declared row claims `retryable: true` while a cause it reaches needs an operator
-  act before a re-run can converge, and no remediation hint instructs an operator
-  to clear a condition that is not named.
+- **G-4**: No credential condition is reported as `merge.transaction-aborted`,
+  no landing fault is reported as that row either (a refused landing reports the
+  provider identity the composition computes, and a landing that fired without
+  observed merged truth reports its own declared row), no declared row claims
+  `retryable: true` while a cause it reaches needs an operator act before a re-run
+  can converge, and no remediation hint instructs an operator to clear a condition
+  that is not named.
 - **G-5**: Every code the merge transaction can emit resolves to a declared row
   or the declared family, and the composition declares that family at runtime
   rather than only in a type, so its exhaustiveness is proven over the runtime
@@ -249,8 +260,10 @@ which contract to repair.
 | Successful resolutions reporting a resolution source other than `declared-at-head` | 0 |
 | Provider reads on the resolution path, success or refusal | 1 — the bounded open-request list read, which also supplies the request detail; a `merge.branch-unresolved` or `merge.request-unresolved` refusal spends exactly that one and no other (the declaration causes add no further provider read; `record-unreadable` adds no provider read for the missing object) |
 | Local change-record reads on the resolution path | ≤ 3 (one per candidate), 0 working-tree reads, 0 fetches |
-| Refusals missing a named cause (dedicated `command` field, code, dedicated `ref` field, offending object) | 0 across the enumerated refusal matrix (≥ 18 cases) |
+| Refusals missing a named cause (dedicated `command` field, code, dedicated `ref` field, dedicated `operation` field, offending object) | 0 across the enumerated refusal matrix (≥ 18 cases) |
+| Refusals rendering an `operation` token outside the closed vocabulary | 0 (the vocabulary is validated at the rendering site; `-` is the only value for a refusal that names no operation) |
 | Credential refusals naming reference **and** environment variable | 100 % |
+| Landing faults reported as `merge.transaction-aborted` | 0 — a transient or transport fault reports `provider.outage`, a rejected credential `provider.auth.rejected`, and a landing that fired without observed merged truth `merge.landing-unverified` |
 | Emitted codes resolving to a declared row or the declared family | 100 %; the containment identity reachable only by an undeclared failure, proven by a live mismatch control, and the totality proof fails by name when the runtime family declaration is removed |
 | Declared rows advertising `retryable: true` while a cause they reach needs an operator act before a re-run can converge | 0 |
 | Refusals rendering a `retryable` other than their emitted code's declared row value | 0 |
@@ -309,18 +322,25 @@ Resolution order and outcomes:
 2. **Already-merged convergence** is matched by the invocation's change ref from
    that same list read, **before any change-record read**: a merged request whose
    source ref follows the declared convention for the ref, matching uniquely,
-   replays from provider truth. Because a converged re-run lands nothing, it
-   neither reads a change record nor requires a readable head object. Zero or
-   several merged matches refuse rather than guess.
+   replays from provider truth at exit 0 and reports `replayed=true` with the
+   matched request's identity, and reports neither a `declared-at-head` resolution
+   source nor a resolved head taken from the candidate resolution below.
+   Because a converged re-run lands nothing, it neither reads a change record nor
+   requires a readable head object. Zero merged matches continue to step 3; two
+   or more merged matches refuse rather than rank.
 3. **Candidate set** = the open entries whose provider-asserted source ref
    matches the repository's declared branch convention for the invocation's ref
    (`^[a-z][a-z0-9-]*/<REF>/.+$`, the delivered predicate already used by the
-   closeout resolution), capped at `MERGE_BRANCH_CANDIDATE_MAX = 3`. Zero
-   candidates refuse `merge.request-unresolved` with `no-open-request`; more than
-   three refuse it with `ambiguous-open-request`; a saturated bounded page
-   refuses it with `ambiguous-open-request`, because a truncated page cannot
-   establish uniqueness. A candidate whose asserted head is absent or is not a
-   full hex SHA refuses `head-unresolved` and is never read.
+   closeout resolution), capped at `MERGE_BRANCH_CANDIDATE_MAX = 3`. **Saturation
+   is evaluated before the candidate count**: a bounded page that saturated
+   refuses `ambiguous-open-request` naming the saturation, *even when zero
+   convention-matching candidates are on the page*, because a truncated page
+   cannot establish any uniqueness claim and a zero count taken from it would be
+   a claim about a page the run did not see. On an unsaturated page, zero
+   candidates refuse `merge.request-unresolved` with `no-open-request` and more
+   than three refuse it with `ambiguous-open-request`. A candidate whose asserted
+   head is absent or is not a full hex SHA refuses `head-unresolved` and is never
+   read.
 4. **Each candidate's record is read at that candidate's own asserted head**
    through one bounded local read (at most two fixed-argv git invocations: a
    `ls-tree -r --name-only <sha> -- <pathspec>` locate, then one bounded blob
@@ -455,8 +475,11 @@ evidence.
 The merged report states the projection the run evaluated, not the verification
 record's battery list: on success it renders `gates=2/2 passed` with one line per
 merge-applicable entry and that entry's verdict and reason, so a landing says
-which gates it actually enforced. This is the same projection the dry run
-reports.
+which gates it **freshly evaluated**. The enforced set stays as delivered — all
+five built-ins enter the merge path regardless of declared surface, which is what
+keeps the recorded-verdict check reachable — so the report's two lines are the
+fresh projection, not a claim that the other three were not enforced. This is the
+same projection the dry run reports.
 
 Authored gate sets keep the five built-in ids reserved and mandatory. A declared
 built-in entry may not change a built-in's recipe or class; its `surface` must
@@ -482,38 +505,64 @@ Every refusal the merge command emits carries, in one rendering contract:
   rendered field, not a token that can be satisfied incidentally by a code
   prefix;
 - a **dedicated `ref=<ref>` field** — the invocation's change ref as its own
-  rendered field (`ref=-` when no usable ref was supplied, so the field is always
-  present and never inferred);
+  rendered field. The field always carries the invocation's ref: every merge
+  refusal path is reached with a usable ref, so there is no empty-value branch
+  and nothing about the field is left unasserted;
+- a **dedicated `operation=<token>` field** — the read or citation source the
+  refusal is about, drawn from a **closed vocabulary**: `github-work-item`,
+  `github-check-runs`, `github-delivery-request-list`,
+  `github-delivery-request-detail`, `repository-ci-workflow`,
+  `local-change-record-read`, `local-git-object-read`, and `-` when the refusal
+  names no operation (a gate refusal, a stale or unverified evidence set, or a
+  condition about the declaration's *value* rather than a read). The vocabulary
+  is closed and validated at the rendering site, so a token outside it is a
+  declared failure rather than free prose, and the field is what makes "names the
+  operation that failed" assertable without parsing the summary;
 - the refusal code, and the gate id when the code is a family instance;
 - the breached contract in operator terms (the candidate source ref and the
   change-record path at the head for a branch refusal; the convention, ref and
-  observed counts for a request refusal; the work item that does not resolve; the
-  gate and job that are not green; the operation that failed to read; the
-  credential reference and environment variable that are unresolvable);
+  observed counts for a request refusal, including a saturated page; the work
+  item that does not resolve; the gate and job that are not green; the operation
+  that failed to read; the credential reference and environment variable that are
+  unresolvable);
 - bounded, secret-free evidence members, never raw payloads, titles, bodies, or
   log lines;
 - an actionable remediation, or none at all — never an instruction to clear a
   condition the refusal does not name.
 
-The command and ref fields are part of the contract because no delivered refusal
-renders either: the rendering is `result=refused; condition=<code>` plus evidence
-lines, so implementing this contract moves **every** refusal rendering — the human
-and scripted forms of all five delivered refusal goldens — in the same change.
-No refusal code, category, consequence, exit digit, or envelope property moves
-with them.
+The command, ref and operation fields are part of the contract because no
+delivered refusal renders any of them as a field: the rendering is
+`result=refused; condition=<code>` plus evidence lines, so implementing this
+contract moves **every** refusal rendering — the human and scripted forms of all
+five delivered refusal goldens — in the same change. No refusal code, category,
+consequence, exit digit, or envelope property moves with them.
 
 Credential refusals name the credential reference and the environment variable
 exactly as the tracker family already does, and a credential condition is never
 reported as `merge.transaction-aborted`. A tracker object that does not resolve
 is reported by its own identity naming the object and the read operation, never
-as the generic abort. `retryable` is always the emitted code's declared row value
-and never a per-instance value, and a declared row may not carry `retryable: true`
-while any cause reachable for that row requires an operator act before a re-run
-can converge. Convergence that needs no act — a pending check — is carried by the
+as the generic abort.
+
+**A refused landing never reaches `merge.transaction-aborted`.** A landing fault
+reports the identity the composition already computes: the provider identity —
+`provider.outage` for a transient or transport fault, `provider.auth.rejected` for
+a rejected credential — or `merge.landing-unverified` when the landing fired but
+merged truth was not observed. The abort row therefore reaches exactly two causes,
+both **pre-mutation** and both requiring an operator act before a re-run can
+converge: a **waiver-append failure** and a **declared landing gap**. The cause
+removed from it — the refused landing — reports the identities above in place of
+the abort, so no converging landing fault is narrated by a row that claims no
+convergence.
+
+`retryable` is always the emitted code's declared row value and never a
+per-instance value, and a declared row may not carry `retryable: true` while any
+cause reachable for that row requires an operator act before a re-run can
+converge. Convergence that needs no act — a pending check — is carried by the
 refusal's named reason and an accurate remediation, not by a different
 `retryable`. `merge.transaction-aborted` therefore declares `retryable: false`
-with a remediation true of its residual causes; the delivered convergence suite's
-assertion that this row is retryable moves with the row in the same change.
+with a remediation that names the aborted pre-mutation condition and promises no
+convergence — true of both causes it reaches. The delivered convergence suite
+asserts the row's old shape and moves with the row in the same change.
 
 #### F-4 — Emitted-identity totality
 
@@ -559,7 +608,8 @@ Flow 1 — Coordinator merges from the integration base checkout.
   Coordinator (on the base branch) runs `merge GH-366`.
     -> one bounded open-request list read (also the request detail)
     -> already merged? a unique merged request for GH-366 replays from provider
-       truth right here — no record read, no declaration needed (converged re-run)
+       truth right here — exit 0, replayed=true, no record read, no declaration
+       needed (converged re-run)
     -> otherwise candidate set: open entries whose source ref follows the declared
        convention for GH-366 (at most three)
     -> each candidate's change record read at its own asserted head
@@ -575,7 +625,13 @@ Flow 1 — Coordinator merges from the integration base checkout.
     -> required-check set evaluated per job on the fresh page
        -> any not green: merge.gate.<id>.failed naming the gate and job(s) (exit 1)
        -> all green + tracker gate fresh: one guarded landing at the resolved head
-    -> result=merged, gates=2/2, command=merge ref=GH-366 in any refusal
+          -> refused or faulted: provider.outage (transient/transport) or
+             provider.auth.rejected (rejected credential), naming the operation
+          -> landed but merged truth not observed: merge.landing-unverified
+          -> never merge.transaction-aborted (that row reaches only the
+             waiver-append failure and a declared landing gap)
+    -> result=merged, gates=2/2, command=merge ref=GH-366 operation=<token>
+       in any refusal
 ```
 
 ```
@@ -615,8 +671,9 @@ Flow 4 — A required check is pending at merge time.
 Flow 5 — A credential is absent.
   Coordinator runs `merge GH-366` with no token in the environment.
     -> the open-request list read reports the credential condition
-    -> config.credential.missing at exit 1, command=merge ref=GH-366, naming the
-       reference, the environment variable, and the operation that needed it
+    -> config.credential.missing at exit 1, command=merge ref=GH-366
+       operation=github-delivery-request-list, naming the reference, the
+       environment variable, and the operation that needed it
     -> never merge.transaction-aborted; zero landing calls
 ```
 
@@ -697,9 +754,9 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 
 | ID | Surface | Contract change |
 |----|---------|-----------------|
-| API-1 | `merge <ref>` | Resolves the change branch from the declaration read at the delivery request's asserted head, binds the verified head to that request's head, evaluates the merge-applicable required-check set on that head, and refuses by name on every non-green, unreadable, or unresolvable condition. Added machine data: resolved branch, resolution source (`declared-at-head`), matched request identity, observed candidate count, resolved head, evaluated required-check count and set size. The merged report states the merge-applicable projection the run evaluated (`gates=<passed>/<total>` over the two merge-applicable entries, one line per entry with its verdict and reason) and does not echo the verification record's battery gate list. |
+| API-1 | `merge <ref>` | Resolves the change branch from the declaration read at the delivery request's asserted head, binds the verified head to that request's head, evaluates the merge-applicable required-check set on that head, and refuses by name on every non-green, unreadable, or unresolvable condition. Added machine data: resolved branch, resolution source (`declared-at-head`), matched request identity, observed candidate count, resolved head, a convergence flag (`replayed=true` for an already-merged request, which carries no resolution source and resolves no candidate), evaluated required-check count and set size. The merged report states the merge-applicable projection the run evaluated (`gates=<passed>/<total>` over the two merge-applicable entries, one line per entry with its verdict and reason) and does not echo the verification record's battery gate list. |
 | API-2 | `merge <ref> --dry-run` | Same resolution as `API-1`; reports the same resolved object and the same merge-applicable gate projection; appends exactly one verification record for the resolved head; still performs zero mutations and never reports `result=merged` or `squash=`. |
-| API-3 | Refusal envelope | `error.code` is the stored identity or the family instance; `error.summary` renders a dedicated `command=merge` field, a dedicated `ref=<ref>` field (`ref=-` when no usable ref was supplied), the code, the breached contract, and the offending object; evidence members are bounded and secret-free; `retryable` is always the emitted code's declared row value, and no row declares `true` while a cause it reaches needs an operator act before a re-run can converge. |
+| API-3 | Refusal envelope | `error.code` is the stored identity or the family instance; `error.summary` renders a dedicated `command=merge` field, a dedicated `ref=<ref>` field carrying the invocation's ref, a dedicated `operation=<token>` field drawn from the closed vocabulary and validated at the rendering site (or `-` when the refusal names no operation), the code, the breached contract, and the offending object; evidence members are bounded and secret-free; `retryable` is always the emitted code's declared row value, and no row declares `true` while a cause it reaches needs an operator act before a re-run can converge. A landing fault reports the provider identity (`provider.outage`, `provider.auth.rejected`) or `merge.landing-unverified`, never `merge.transaction-aborted`. |
 
 ### 8.2 Events / Messages
 
@@ -713,7 +770,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | ID | Element | Description |
 |----|---------|-------------|
 | DM-1 | Change-record `branch` declaration | One additive top-level key on the change's pm-notes document. Read **at the candidate delivery request's asserted head** through one bounded local tree/blob read and the delivered parse; never through the working tree. The value is a string of at most `MERGE_BRANCH_DECLARATION_MAX_CHARS = 256` characters carrying no whitespace or control character, and it must equal its own request's provider-asserted source ref exactly. Preserved value-faithfully by every document-writing branch, opaque to lint, and read by no other surface. No fallback derivation, no truncation. |
-| DM-2 | Resolved change context | Non-persisted derived facts reported in command data: resolved branch, resolution source (`declared-at-head` on a successful resolution), matched delivery-request identity, observed candidate count, resolved head, evaluated required-check count and set size, and the merge-applicable gate projection rendered in the report. Bounded; never a stored record. |
+| DM-2 | Resolved change context | Non-persisted derived facts reported in command data: resolved branch, resolution source (`declared-at-head` on a successful resolution), matched delivery-request identity, observed candidate count, resolved head, a convergence flag (`replayed`, true only for an already-merged replay, where the resolution fields are absent), evaluated required-check count and set size, and the merge-applicable gate projection rendered in the report. Bounded; never a stored record. |
 | DM-3 | Merge-applicable gate membership and admitted surfaces | Contract data: the shipped default set's merge-applicable membership becomes two entries; each reserved built-in gains a declared admitted surface set; a built-in's declared class may be omitted to adopt the shipped class. No identity, schema-version, recipe, or configuration-key change. |
 
 ### 8.4 External Integrations
@@ -740,20 +797,31 @@ No HTTP surface is added. The changed contract surfaces are command-level:
   envelope properties; three additive rows appear at exit 1
   (`merge.branch-unresolved` and `merge.request-unresolved` at `not_landed` and
   `retryable: false`, `merge.work-item-unresolved` likewise).
-  **Every refusal's rendered summary changes**, because the dedicated `command`
-  and `ref` fields are new: the human and scripted forms of all five delivered
-  refusal goldens move in this change, while their codes and exits do not.
+  **Every refusal's rendered summary changes**, because the dedicated `command`,
+  `ref` and `operation` fields are new: the human and scripted forms of all five
+  delivered refusal goldens move in this change, while their codes and exits do
+  not.
 - The merged report's gate list changes meaning: it states the merge-applicable
-  projection the run evaluated rather than the verification record's battery gate
-  list, so a successful landing reports `gates=2/2` with two gate lines where it
-  previously echoed five. The dry-run report already describes the projection it
-  evaluates.
+  projection the run **freshly evaluated** rather than the verification record's
+  battery gate list, so a successful landing reports `gates=2/2` with two gate
+  lines where it previously echoed five. The enforced set is unchanged — all five
+  built-ins still enter the merge path for the recorded-verdict check — so the two
+  lines are the fresh projection, not a narrowing of enforcement. The dry-run
+  report already describes the projection it evaluates.
 - `merge.transaction-aborted` keeps its code, category, consequence, and
   projection, and is narrowed in use: it no longer carries credential conditions,
-  unresolvable requests or work items, and it declares `retryable: false` with a
+  unresolvable requests or work items, **and no longer carries a refused
+  landing**. A landing fault reports the provider identity the composition already
+  computes — `provider.outage` for a transient or transport fault,
+  `provider.auth.rejected` for a rejected credential — or
+  `merge.landing-unverified` when the landing fired but merged truth was not
+  observed. The row reaches exactly two causes, both pre-mutation: a waiver-append
+  failure and a declared landing gap. It declares `retryable: false` with a
   remediation naming the aborted pre-mutation condition and promising no
-  convergence — true of every cause it still reaches. The delivered convergence
-  suite's retryability assertion on that row moves in the same change.
+  convergence — now true of every cause it reaches. The delivered convergence
+  suite asserts that row's old shape (a `retryable: true` expectation) and moves
+  with the row in the same change; the delivered landing-fault cells move to the
+  identities above.
 - `--waive`, waiver authorization, owner-gate classification, the landing
   mechanism, the mutation vocabulary, and the persisted record schemas are
   unchanged.
@@ -770,7 +838,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | NFR-2 | Read budget | Per invocation: **one provider read** — the bounded open-request list read, which also supplies the request detail — plus at most `MERGE_BRANCH_CANDIDATE_MAX` = 3 bounded local change-record reads (each at most two fixed-argv git invocations), one work-item read, one CI-workflow read, one check-run page on the resolved head, one verification-record read; at most one post-refusal re-read and one unknown-recovery re-read; ≤ 1 landing call; zero retries, zero pagination, zero fetches. A `merge.branch-unresolved` or `merge.request-unresolved` refusal spends exactly that one provider read and no other. |
 | NFR-3 | Output bounds | Machine `data` ≤ 65 536 UTF-8 bytes; human summary ≤ 24 lines and ≤ 4 096 UTF-8 bytes; every dropped item marked `+N`; no new unbounded field. |
 | NFR-4 | Offline determinism | Zero network calls in every new suite; the new suites spawn no real child process (the local record read and the git seam run through the injected child runner); the existing no-live-call guards stay green. |
-| NFR-5 | Refusal completeness | 100 % of refusals across the enumerated matrix (≥ 18 cases) render the dedicated `command` and `ref` fields, the code, at least one named cause, and an actionable or absent remediation; 0 refusals carry an instruction to clear an unnamed condition. |
+| NFR-5 | Refusal completeness | 100 % of refusals across the enumerated matrix (≥ 18 cases) render the dedicated `command`, `ref` and `operation` fields, the code, at least one named cause, and an actionable or absent remediation; every `operation` token is a member of the closed vocabulary or `-`, and 0 tokens outside it are rendered because the value is validated at the rendering site; 0 refusals carry an instruction to clear an unnamed condition. |
 | NFR-6 | No ambient read | 0 reads of the checkout's branch **and 0 reads of the checkout's head** on the merge path, 0 working-tree change-record reads, and 0 fetch/pull invocations, proven by a production-source scan with a mandatory failing control. |
 | NFR-7 | Identity totality | 100 % of emitted codes resolve to a declared row or the declared family, with the family slot validated against the effective gate set; the proof ranges over the runtime family declaration and fails by name when it is removed; no pattern widening; a live mismatch control still reaches the containment identity. |
 | NFR-8 | Identity stability | The effective gate-set id sequence equals the pre-change sequence. Documented and machine error identities move together on the synced base: **170 → 173** machine entries, **169 → 172** delivered rows, **68 → 71** two-segment allowlist members, arithmetic **`BASELINE_ROWS.length + 136` → `+ 139`**, and the `merge` kind from **9** to **12** concrete rows; the reference page, feature spec, test specification, and the phrase-table authority state the same counts in the same change. The phrase table rotates with them: **167 stays a banned stale total**, the outgoing arithmetic base `+ 136` joins the legacy forms, and the incoming `+ 139` is published as the live arithmetic rather than left as a legacy token. |
@@ -781,14 +849,18 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 
 - The merged report and the dry-run report expose the resolved object (branch,
   resolution source `declared-at-head`, request identity, observed candidate
-  count, resolved head) and `gates=<passed>/<total>` over the merge-applicable
-  projection the run evaluated, so a coordinator can see both which object a
-  verdict is about and which gates the merge actually enforced. The merged report
-  does not echo the verification record's battery gate list; the record's own
-  gates remain readable in the verification record.
-- Every refusal's rendering carries the dedicated `command=merge` and `ref=<ref>`
-  fields beside its code, so a refusal is attributable to a command and a change
-  without parsing evidence prose.
+  count, resolved head, or `replayed=true` for an already-merged replay) and
+  `gates=<passed>/<total>` over the merge-applicable projection the run
+  **freshly evaluated**, so a coordinator can see both which object a verdict is
+  about and which gates the merge evaluated fresh. The enforced set — every
+  built-in, including the recorded-verdict check — stays as delivered and is not
+  what the two reported lines describe. The merged report does not echo the
+  verification record's battery gate list; the record's own gates remain readable
+  in the verification record.
+- Every refusal's rendering carries the dedicated `command=merge`, `ref=<ref>`
+  and `operation=<token>` fields beside its code, so a refusal is attributable to
+  a command, a change, and a named read without parsing evidence prose, and the
+  closed `operation` vocabulary makes read-fault rates countable per source.
 - Every refusal's code is the observable signal; the additive rows make the
   previously indistinguishable causes separable in aggregation, and the closed
   branch reasons make "the declaration could not be established" separable from
@@ -865,7 +937,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | OQ-2 | If a repository declares CI across several workflow files, is the expected job set the union of all of them? | The delivered expected-job read targets one declared path. Widening it is a capability change with its own fidelity questions and is not required by this slice. | Deferred; decision needed: consult `@decision-advisor` (TDR-0072 scope) |
 | OQ-3 | Should `verify gates` also resolve the change branch from the change record so a fresh record can be produced from any checkout with merge-equivalent fidelity? | This change binds the merge path only. Making the battery record for a requested head from a base checkout is the natural follow-on, but it changes battery semantics and goldens. | Deferred; decision needed: consult `@decision-advisor` |
 | OQ-4 | Should the merge path fetch a request head object the invocation's object database does not hold, instead of refusing `record-unreadable`? | A fetch turns a local fail-closed refusal into a network operation with its own credential, timeout, and failure surface, and would make the same provider state resolve differently in two clones unless carefully bounded. The run refuses today and names the repair. | Deferred; decision needed: consult `@decision-advisor` (TDR-0071 revisit trigger) |
-| OQ-5 | Do any runtime consumers (as opposed to prompt prose or runbooks) treat `merge.transaction-aborted` as a generic "merge blocked" signal? | The three additive rows split the causes it used to swallow, and the row's `retryable` becomes `false`. A consumer keying on the literal would lose a signal it must re-express over the new vocabulary. | Deferred; owner: `@pm` at the PR review |
+| OQ-5 | Do any runtime consumers (as opposed to prompt prose or runbooks) treat `merge.transaction-aborted` as a generic "merge blocked" signal? | The three additive rows split the causes it used to swallow, its `retryable` becomes `false`, and a refused landing leaves it for `provider.outage` / `provider.auth.rejected` / `merge.landing-unverified`. A consumer keying on the literal would lose a signal it must re-express over the new vocabulary. | Deferred; owner: `@pm` at the PR review |
 
 ## 15. DECISION LOG
 
@@ -875,29 +947,29 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | DEC-2 | The resolved delivery request's asserted head is the resolved head: the freshness envelope compares against it, the landing's expected head is it, and the reported head is it. | The merged object is the request, not the checkout; comparing the record against the request head makes a base-tip evidence set refuse `merge.gates-stale` with both SHAs instead of "verifying" the base. Record: TDR-0071. | 2026-11-20 |
 | DEC-3 | The shipped default set makes the reserved built-in `ci-green` merge-applicable, and the merge-applicable required-check set is the declared `required-ci-job` entries plus the `ci-green` entry's repository-declared expected job set, evaluated on the fresh check-run page. | The recorded verdict is consulted but the fresh page is never consulted and the fresh projection carries one gate, so a head that turns red inside the freshness bound is invisible. Making `ci-green` merge-applicable fixes the fresh half with the reserved id, one mapping, and no new id, recipe, or configuration key; the entry-id sequence — and therefore the gate-set identity — does not change. Record: TDR-0072. | 2026-11-20 |
 | DEC-4 | The check gate is enforced fail-closed and gains no waivability; the declared remedy is the authored `ci-green` surface opt-out, and the admitted surface sets of the reserved built-ins become contract data. | An in-band waiver class on CI would let a failing pipeline land silently-by-policy; a reviewed configuration act is the recorded override. Requiring declaration of surface-not-equal-to-default would invalidate every existing authored set. Record: TDR-0072. | 2026-11-20 |
-| DEC-5 | Diagnostics become a contract: every refusal renders a dedicated `command=merge` field, a dedicated `ref=<ref>` field, the breached contract, and the offending object; credential refusals name the reference and the environment variable; a read fault names the operation; remediation is actionable or absent; `retryable` is the declared row's value, and no row may declare `true` while a cause it reaches needs an operator act before a re-run can converge. | The observed refusals were unactionable and unattributable: no rendering names the command or the ref, and the code's own `merge.` prefix makes a token assertion vacuous. Dedicated fields give the contract a non-vacuous oracle. The retryability rule follows because a static row value is the delivered envelope's only retryability field, so the row's cause set must be narrow enough — and honest enough — to make that one value true. Record: TDR-0073. | 2026-11-20 |
-| DEC-6 | `merge.transaction-aborted` is narrowed: no credential condition, no unresolvable request, no unresolvable work item, and it declares `retryable: false` with no convergence hint. Three additive rows carry the removed causes. | Each cause has a different operator and a different repair; the generic abort erased that. Additive rows keep existing codes stable. The residual causes (a waiver-append failure, a refused landing, a declared landing gap) need an operator act, so `true` would be false for the row's own cause set. Record: TDR-0073. | 2026-11-20 |
+| DEC-5 | Diagnostics become a contract: every refusal renders a dedicated `command=merge` field, a dedicated `ref=<ref>` field carrying the invocation's ref, a dedicated `operation=<token>` field drawn from a closed vocabulary and validated at the rendering site, the breached contract, and the offending object; credential refusals name the reference and the environment variable; a read fault names the operation in that field; remediation is actionable or absent; `retryable` is the declared row's value, and no row may declare `true` while a cause it reaches needs an operator act before a re-run can converge. | The observed refusals were unactionable and unattributable: no rendering names the command, the ref, or the failed read as a field, and the code's own `merge.` prefix makes a token assertion vacuous. Dedicated fields give the contract a non-vacuous oracle; the closed operation vocabulary makes the read-fault assertion a membership test rather than prose matching. The retryability rule follows because a static row value is the delivered envelope's only retryability field, so the row's cause set must be narrow enough — and honest enough — to make that one value true. Record: TDR-0073. | 2026-11-20 |
+| DEC-6 | `merge.transaction-aborted` is narrowed: no credential condition, no unresolvable request or work item, and **no refused landing**; it reaches only two pre-mutation, act-requiring causes — a waiver-append failure and a declared landing gap — and declares `retryable: false` with no convergence hint. Three additive rows carry the removed resolution causes, and a landing fault reports the provider identity (`provider.outage`, `provider.auth.rejected`) or `merge.landing-unverified`. | Each cause has a different operator and a different repair; the generic abort erased that. Additive rows keep existing codes stable. The refused landing is removed rather than re-pinned because a provider refusal or outage converges on a plain re-run, so a row whose remediation promises no convergence would be false for it; naming the provider identity also satisfies the change's own rule that a refusal names the breached contract. The two remaining causes both need an operator act, so `false` is true of every cause the row still reaches. Record: TDR-0073. | 2026-11-20 |
 | DEC-7 | Emitted-identity totality is closed in this change by giving the composition a runtime declaration of the gate family, beside its exact-member list, with the slot validated against the effective gate set and the totality proof ranging over that declaration. | The classifier already resolves an emitted family instance to the declared family row; what is missing is the composition's own runtime statement that a family emission is admissible, which today exists only as a type and is asserted only by source text — so the mechanism behind AC 3's guarantee must be made declarative here rather than deferred. Record: TDR-0073. | 2026-11-20 |
 | DEC-8 | The dry run and the real merge share one resolution, so a dry run describes the object the merge would land. | A pre-flight verdict about a different object is worse than no verdict. | 2026-11-20 |
 | DEC-9 | No new configuration key, schema version, record kind, recipe, or gate id is introduced; the one new declaration lives on the change artifact, and the three new constants are contract constants rather than configuration. | The existing surfaces carry the facts; a configuration key would make the change branch (or the declaration's cap) a per-repository setting, which it is not. | 2026-11-20 |
 | DEC-10 | The ticket body's family-wide battery is not claimed; the `merge` slice and the diagnostics contract are claimed, with the remainder recorded as out of scope and no follow-up ticket created. | Owner scope, recorded in the change's pm-notes; PM never creates tickets autonomously. | 2026-11-20 |
-| DEC-11 | The refusal rendering contract is uniform: every refusal renders dedicated `command=merge` and `ref=<ref>` fields (with `ref=-` when no usable ref was supplied), and all five delivered refusal golden pairs are regenerated in this change. | A uniform field is the only rendering in which "names the command and the ref" can be asserted non-vacuously: the code prefix already contains `merge`, and nothing today contains the ref. Narrowing the contract instead would leave the owner's "every refusal names the command" item with no oracle. | 2026-11-20 |
-| DEC-12 | The merged report renders the **merge-applicable projection the run evaluated**, not the verification record's battery gate list. | The report's subject is what the merge enforced; echoing the battery's five gates states the verification's posture and hides the merge's. Rendering the evaluated projection makes the success and dry-run reports tell the same story and makes the "two merge-applicable gates" metric observable in normal output. | 2026-11-20 |
+| DEC-11 | The refusal rendering contract is uniform: every refusal renders dedicated `command=merge`, `ref=<ref>` and `operation=<token>` fields — the ref is always the invocation's ref, the operation is a closed-vocabulary token or `-` — and all five delivered refusal golden pairs are regenerated in this change. | A uniform field is the only rendering in which "names the command, the ref and the read" can be asserted non-vacuously: the code prefix already contains `merge`, nothing today contains the ref, and no delivered summary carries a validated operation token. An empty-ref placeholder branch was considered and dropped because every merge refusal path is reached with a usable ref, so the branch would be unasserted by construction. Narrowing the contract instead would leave the owner's "every refusal names the command" item with no oracle. | 2026-11-20 |
+| DEC-12 | The merged report renders the **merge-applicable projection the run evaluated**, not the verification record's battery gate list. | The report's subject is what the merge **freshly evaluated**; echoing the battery's five gates states the verification's posture and hides the merge's. The enforced set — every built-in, including the recorded-verdict check — is unchanged and is not what the two reported lines describe. Rendering the evaluated projection makes the success and dry-run reports tell the same story and makes the "two merge-applicable gates" metric observable in normal output. | 2026-11-20 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
 | Component | Impact |
 |-----------|--------|
-| Merge production composition | Updated — candidate-set resolution over one open-request list read, a bounded local change-record read at each candidate head, the `branch` declaration resolution with its closed reasons and precedence, exact-match acceptance with the full-SHA head guard, resolved-head binding, credential and read-fault naming, removal of the checkout-branch, checkout-head, branch-name-parse and working-tree change-record reads from this path, and a runtime family declaration for the gate family |
-| Merge contracts (report shapes, default gate set, admitted surfaces) | Updated — the merged and dry-run report shapes gain the resolved object, resolution source, candidate count and the merge-applicable gate projection; `ci-green` merge-applicable by default; declared admitted-surface sets; the three new resolution constants |
+| Merge production composition | Updated — candidate-set resolution over one open-request list read, a bounded local change-record read at each candidate head, the `branch` declaration resolution with its closed reasons and precedence, exact-match acceptance with the full-SHA head guard, resolved-head binding, credential and read-fault naming, removal of the checkout-branch, checkout-head, branch-name-parse and working-tree change-record reads from this path, a runtime family declaration for the gate family, and the refusal rendering work: the third dedicated `operation` field with its closed vocabulary validated where the summary is rendered (rendering work only — no new record kind, event, or persisted surface) |
+| Merge contracts (report shapes, default gate set, admitted surfaces) | Updated — the merged and dry-run report shapes gain the resolved object, the resolution source or `replayed` flag, candidate count and the merge-applicable gate projection; `ci-green` merge-applicable by default; declared admitted-surface sets; the three new resolution constants |
 | Merge git seam (local object read) | Extended — its existing bounded, fixed-argv, local tree-of-commit read is the precedent for the one record read at a candidate head; no provider, network or credential surface is added |
 | Merge emittable-code declaration and totality proof | Updated — the family is declared at runtime beside the exact-member list, the proof ranges over that declaration and fails by name when it is removed, and the delivered classifier family resolution is unchanged |
-| Merge transaction (freshness, probe, refusal evidence) | Updated — required-check set derivation, merge-surface CI evaluation on the fresh page, refused page-not-head, evidence members, and the merged report's gate projection |
+| Merge transaction (freshness, probe, refusal evidence) | Updated — required-check set derivation, merge-surface CI evaluation on the fresh page, refused page-not-head, evidence members, the merged report's gate projection, and the landing-fault attribution: a refused or faulted landing reports `provider.outage`, `provider.auth.rejected` or `merge.landing-unverified` instead of being converted into the abort row, which keeps only the waiver-append failure and a declared landing gap |
 | Merge probe / required-check mapping | Reused unchanged as the single evaluator; the required-check set it is fed is extended |
 | Change-record read (pm-notes) | Reused — the delivered parse applied to text read from the candidate head; no parser change |
 | CI-workflow expected-job read | Reused — one additional consumer |
-| Error table (machine and documented) | Updated — three additive `merge` rows, the narrowed abort row's `retryable` and remediation, remediation and summary adjustments, totals **170 → 173** (delivered 169 → 172, two-segment allowlist 68 → 71, arithmetic `BASELINE_ROWS.length + 136` → `+ 139`, `merge` kind 9 → 12) |
-| Merge reference page | Updated — branch and head resolution, the declaration's cap and closed reasons, gate set, exit-status causes, refusal examples with the new fields |
+| Error table (machine and documented) | Updated — three additive `merge` rows, the narrowed abort row's `retryable` and remediation with its two-cause set (the refused-landing cause removed to `provider.outage` / `provider.auth.rejected` / `merge.landing-unverified`), remediation and summary adjustments, totals **170 → 173** (delivered 169 → 172, two-segment allowlist 68 → 71, arithmetic `BASELINE_ROWS.length + 136` → `+ 139`, `merge` kind 9 → 12) |
+| Merge reference page | Updated — branch and head resolution, the declaration's cap and closed reasons, gate set, the convergence case, exit-status causes, refusal examples with the three new fields and the closed `operation` vocabulary |
 | Merge feature spec | Updated — Overview resolution paragraph, gate registry defaults, verification-record head meaning, merged-report gate semantics, error identities, invariants |
 | Merge test specification | Updated — "Composition reachability", "Required-check awareness", "Classification fidelity", "Emittable-code totality", "Error-identity stability" rows |
 | Change-lifecycle and change-convention guidance for change records | Updated — the `branch` declaration requirement, its 256-character cap, its closed refusal reasons, its read-at-head semantics, and the declaration-free convergence case |
@@ -913,8 +985,9 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | AC-F1-1 | **Given** an open delivery request for the change and a fixture whose working tree carries **no** change folder and whose checkout HEAD is the integration-base tip, **when** `merge <ref>` runs, **then** the declaration is read at the request's asserted head, the resolution source is reported as `declared-at-head`, the run reports the request's head as the resolved head, verifies or refuses against that head, and can never report the base tip as the verified head. *(owner AC 1; regression (a))* | F-1, API-1, DM-1, DM-2 |
 | AC-F1-2 | **Given** the same request and an invocation from the change-branch checkout at the request head, **when** `merge <ref>` runs, **then** the record read at the request head governs over any record present in the checkout's working tree, the verified head equals the request head, and the result is `merged` only after the one guarded landing at that head. *(owner AC 1)* | F-1, API-1 |
 | AC-F1-3 | **Given** an invocation whose candidate change records cannot establish a declaration — no `branch` key, a non-string or empty value, a value containing whitespace or a control character or longer than 256 characters, a value that disagrees with its own request's source ref, a head carrying no record, a record that does not parse, or a head object the checkout does not hold — **when** `merge <ref>` runs, **then** it refuses `merge.branch-unresolved` at exit 1 with exactly one closed reason (`declaration-missing`, `declaration-unusable`, `declaration-disagrees`, `record-missing`, `record-invalid`, `record-unreadable`) chosen by the declared precedence, naming the candidate's source ref, the change-record tree path at that head, and the `branch` key, having spent exactly that one bounded open-request list read — the read the request resolution needs anyway — and no other provider read, plus at most three local record reads, with zero landing calls. | F-1, DM-1, NFR-5 |
-| AC-F1-4 | **Given** an open-request list read where zero open entries follow the declared convention for the ref, where more than three do, where the bounded page saturated, where two or more candidates are accepted, or where a candidate's asserted head is absent or not a full hex SHA, **when** `merge <ref>` runs, **then** it refuses `merge.request-unresolved` at exit 1 with `no-open-request`, `ambiguous-open-request`, or `head-unresolved` accordingly, naming the convention, the change ref, the observed open count and the candidate count, and a candidate whose head is not a full SHA is never read. | F-1, API-3, DM-2 |
+| AC-F1-4 | **Given** an open-request list read where zero open entries follow the declared convention for the ref, where more than three do, where the bounded page saturated — including a saturated page on which **zero** convention-matching candidates appear — where two or more candidates are accepted, or where a candidate's asserted head is absent or not a full hex SHA, **when** `merge <ref>` runs, **then** it refuses `merge.request-unresolved` at exit 1 with `no-open-request`, `ambiguous-open-request`, or `head-unresolved` accordingly, naming the convention, the change ref, the observed open count and the candidate count, and a candidate whose head is not a full SHA is never read. Saturation is evaluated before the candidate count, so a truncated page refuses `ambiguous-open-request` even with zero convention-matching entries rather than claiming `no-open-request`. | F-1, API-3, DM-2 |
 | AC-F1-5 | **Given** a fresh verification record whose head is the integration base and a resolved request head that differs, **when** `merge <ref>` runs, **then** it refuses `merge.gates-stale` at exit 1 recording both SHAs and performs zero landing calls. | F-1, F-2, API-1 |
+| AC-F1-6 | **Given** a delivery-request list read carrying exactly one merged request whose source ref follows the declared convention for the change ref, and no readable change record anywhere (no change folder in the working tree, a head object absent from the local object database, and no declaration reachable), **when** `merge <ref>` runs, **then** it replays from provider truth at exit 0 and reports `replayed=true`, performs **zero** change-record reads and zero record-read git invocations, reports neither `declared-at-head` nor `merge.branch-unresolved`, and lands nothing; two or more merged matches refuse rather than rank. *(owner AC 1)* | F-1, API-1, NFR-2 |
 
 ### 17.2 Required checks on the resolved head (owner AC 2)
 
@@ -933,12 +1006,12 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F3-1 | **Given** any refusal across the enumerated refusal matrix, **when** it is rendered, **then** it carries a dedicated `command=merge` field, a dedicated `ref=<ref>` field (`ref=-` when no usable ref was supplied), the code, and at least one named cause, and its remediation is actionable or absent — never an instruction to clear an unnamed condition. The command and ref assertions are made against those fields, not against the occurrence of the string `merge` or of the ref anywhere in the summary. *(owner AC 3)* | F-3, API-3, NFR-5 |
+| AC-F3-1 | **Given** any refusal across the enumerated refusal matrix, **when** it is rendered, **then** it carries a dedicated `command=merge` field, a dedicated `ref=<ref>` field carrying the invocation's ref, a dedicated `operation=<token>` field drawn from the closed vocabulary (or `-` when the refusal names no operation), the code, and at least one named cause, and its remediation is actionable or absent — never an instruction to clear an unnamed condition. The command, ref and operation assertions are made against those fields, not against the occurrence of the string `merge`, of the ref, or of an operation name anywhere in the summary. *(owner AC 3)* | F-3, API-3, NFR-5 |
 | AC-F3-2 | **Given** an absent token in the environment, **when** `merge <ref>` runs, **then** it refuses `config.credential.missing` at exit 1 naming the credential reference, the environment variable, and the operation that required it. *(owner AC 3; regression (c))* | F-3, API-3, NFR-9 |
-| AC-F3-3 | **Given** any credential condition on the merge path, **when** it is rendered, **then** the reported code is the declared credential or auth identity and never `merge.transaction-aborted`. | F-3, API-3 |
+| AC-F3-3 | **Given** any credential condition on the merge path, **when** it is rendered, **then** the reported code is the declared credential or auth identity (`config.credential.missing`, `provider.auth.rejected`) and never `merge.transaction-aborted`; and **given** any landing fault, **when** it is rendered, **then** it is reported as the provider identity the composition already computes — `provider.outage` for a transient or transport fault, `provider.auth.rejected` for a rejected credential — or as `merge.landing-unverified` when the landing fired but merged truth was not observed, and never as `merge.transaction-aborted`. | F-3, API-3 |
 | AC-F3-4 | **Given** a tracker work item that does not resolve, **when** `merge <ref>` runs, **then** it refuses `merge.work-item-unresolved` at exit 1 naming the work-item ref and the read operation, and the remediation names that cause. | F-3, API-3, NFR-5 |
 | AC-F3-5 | **Given** any refusal the merge command emits, **when** it is rendered, **then** `retryable` equals the declared row value of the emitted code and is never a per-instance value, and its remediation is accurate for the named cause — a condition that clears without an operator act (a pending check) is expressed by the refusal's named reason and a remediation that says so, and no remediation instructs an operator to clear a condition the refusal does not name. | F-3, API-3 |
-| AC-F3-6 | **Given** every declared row on the merge refusal surface, **when** each row's reachable cause set is inspected, **then** no row declares `retryable: true` while a cause it reaches requires an operator act before a re-run can converge; `merge.transaction-aborted` declares `retryable: false` with a remediation that names the aborted pre-mutation condition and promises no convergence, true of its residual causes (a waiver-append failure, a refused landing, a declared landing gap); and the family row's single `false` stays honest for every gate cause, including the act-free pending one. *(owner AC 3)* | F-3, API-3, NFR-5 |
+| AC-F3-6 | **Given** every declared row on the merge refusal surface, **when** each row's reachable cause set is inspected, **then** no row declares `retryable: true` while a cause it reaches requires an operator act before a re-run can converge; `merge.transaction-aborted` reaches exactly two causes — a waiver-append failure and a declared landing gap, both pre-mutation — and declares `retryable: false` with a remediation that names the aborted pre-mutation condition and promises no convergence, true of both; a refused landing is not among its causes, reporting `provider.outage` (transient or transport fault), `provider.auth.rejected` (rejected credential), or `merge.landing-unverified` (landing fired, merged truth not observed); and the family row's single `false` stays honest for every gate cause, including the act-free pending one. *(owner AC 3)* | F-3, API-3, NFR-5 |
 
 ### 17.4 Emitted-identity totality
 
@@ -960,6 +1033,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | Owner item | Carried by |
 |---|---|
 | AC 1 — branch resolved from the change record + open PR; from the base checkout it verifies the PR head or refuses; never `head=<base tip>` | AC-F1-1, AC-F1-2, AC-F1-5, AC-F5-2 |
+| Already-merged convergence — a converged re-run replays from provider truth with no change-record read and no declaration, and lands nothing | AC-F1-6 |
 | AC 2 — required checks read on the resolved head; failing and pending each fail closed and are named | AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-8 |
 | AC 3 — every refusal names the command and the breached contract, including the credential reference and environment name | AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1, AC-F4-2 |
 | AC 4 — regressions: (a) base-checkout invocation does not verify the base tip; (b) one failing required check refuses with that check named; (c) absent `GITHUB_TOKEN` names the variable | AC-F1-1, AC-F2-1, AC-F3-2, AC-F5-3 |
@@ -973,7 +1047,7 @@ This change is done when every row below holds, with the evidence named in it.
 
 | # | Condition | Evidence |
 |---|---|---|
-| DOD-1 | Every acceptance criterion is green: the 22 carried-forward ids (AC-F1-1…AC-F1-5, AC-F2-1…AC-F2-7, AC-F3-1…AC-F3-6, AC-F4-1, AC-F5-1…AC-F5-3) plus the two added by this revision (AC-F2-8 merged-report projection, AC-F4-2 runtime-declaration negative control). | The test plan's per-AC case results, with each criterion's named cases green inside the aggregate gate. |
+| DOD-1 | Every acceptance criterion is green: the 22 carried forward from v1.0/v1.2 (AC-F1-1…AC-F1-5, AC-F2-1…AC-F2-7, AC-F3-1…AC-F3-6, AC-F4-1, AC-F5-1…AC-F5-3), plus the two added in v2.0 (AC-F2-8 merged-report projection, AC-F4-2 runtime-declaration negative control) and the one added in v2.1 (AC-F1-6 already-merged convergence) — 25 ids in all. | The test plan's per-AC case results, with each criterion's named cases green inside the aggregate gate. |
 | DOD-2 | All ten non-functional requirements (NFR-1…NFR-10) are green at their stated thresholds. | The test plan's NFR rows and the gates that execute them. |
 | DOD-3 | Every declared plan phase is complete, with its pm-notes evidence entry recording the gate it passed. | `phase list` shows all phases complete; the pm-notes `notes:` entries carry each phase's evidence. |
 | DOD-4 | TDR-0071, TDR-0072 and TDR-0073 are accepted or amended at the PR review, and no record's premise contradicts the delivered behaviour (the recorded-versus-fresh CI account, the read-at-head resolution, the `retryable: false` abort row). | The PR review record and each record's status and decision date. |
@@ -1090,8 +1164,11 @@ invocation's change ref, which is not personal data.
   that, and the pinned totals move with any future identity change.
 - Refusal renderings are now a consumed surface: anything that parsed
   `result=refused; condition=<code>` keeps working on the code line, but the
-  summary gains the `command` and `ref` fields and the five refusal goldens are
-  regenerated.
+  summary gains the `command`, `ref` and `operation` fields and the five refusal
+  goldens are regenerated. A refused landing now appears under the provider
+  identity or the landing-unverified row rather than under the abort, so an
+  operator or a runbook that watched for the abort on a landing fault switches to
+  the named provider condition.
 
 ## 23. GLOSSARY
 
@@ -1105,9 +1182,11 @@ invocation's change ref, which is not personal data.
 | Resolved head | The head commit the accepted delivery request asserts; the object the run verifies and the head the landing must match. |
 | Local change-record read | The one bounded, fixed-argv, network-free git object read (a tree locate plus one blob read) that obtains the change record at a candidate head. |
 | Repository-declared expected job set | The job names the repository's own CI workflow declares, read through the delivered expected-job read. |
-| Merge-applicable projection | The gates a merge actually evaluates under the effective set — two entries on the shipped default (`ci-green` and `tracker-freshness`) — as distinct from the enforced set (every built-in, used for the recorded-verdict check) and the record's battery gate list. |
+| Merge-applicable projection | The gates a merge **freshly evaluates** under the effective set — two entries on the shipped default (`ci-green` and `tracker-freshness`), and what the merged and dry-run reports state — as distinct from the enforced set (every built-in, used for the recorded-verdict check, which enters the merge path regardless of declared surface) and the record's battery gate list. |
 | Merge-applicable required-check set | The union of the declared required-job entries and the CI entry's repository-declared expected job set, evaluated per job against the resolved head's check-run page. |
 | Admitted surface set | The surfaces within which a reserved built-in gate entry may be declared. |
+| Operation token | The closed-vocabulary value of a refusal's dedicated `operation` field: one of `github-work-item`, `github-check-runs`, `github-delivery-request-list`, `github-delivery-request-detail`, `repository-ci-workflow`, `local-change-record-read`, `local-git-object-read`, or `-` when the refusal names no operation. Validated at the rendering site. |
+| Converged re-run | A `merge` whose change ref matches exactly one already-merged delivery request: it replays from provider truth at exit 0 with `replayed=true`, reads no change record, needs no declaration, and lands nothing. |
 | Refusal cause | The named object or operation a refusal reports: the candidate source ref and record path, the unresolved request, the unresolved work item, the non-green job, the failed read, or the unresolvable credential. |
 | Containment identity | The generic internal failure rendered when an emitted code is not declared; reachable only for a genuinely undeclared failure. |
 | Named checks refusal | A refusal on the `merge.gate.<gate-id>.failed` family that names the gate and the offending check. |
@@ -1120,14 +1199,18 @@ invocation's change ref, which is not personal data.
    read); record the open count and whether the page saturated.
 2. Match already-merged convergence by the invocation's change ref against that
    read: a unique merged request whose source ref follows the convention replays
-   from provider truth, so the run skips steps 3–5 entirely — no record read, no
-   declaration needed, and no head taken from the resolution below (the replay is
-   decided from provider truth).
+   from provider truth at exit 0 with `replayed=true`, so the run skips steps 3–5
+   entirely — no record read, no declaration needed, and no head taken from the
+   resolution below (the replay is decided from provider truth). Two or more
+   merged matches refuse rather than rank.
 3. Build the candidate set: open entries whose provider-asserted source ref
    matches `^[a-z][a-z0-9-]*/<REF>/.+$` for the invocation's ref, capped at three.
-   Zero → `merge.request-unresolved` / `no-open-request`; more than three, or a
-   saturated page → `ambiguous-open-request`; a candidate head absent or not a
-   full hex SHA → `head-unresolved`, and that candidate is never read.
+   **Saturation is evaluated first**: a saturated page →
+   `merge.request-unresolved` / `ambiguous-open-request`, even with zero
+   convention-matching entries, because a truncated page establishes no
+   uniqueness. On an unsaturated page: zero → `no-open-request`; more than three
+   → `ambiguous-open-request`; a candidate head absent or not a full hex SHA →
+   `head-unresolved`, and that candidate is never read.
 4. For each candidate (at most three), read the change record at that candidate's
    own asserted head through the bounded local read and classify that candidate's
    own cause: `record-missing`, `record-invalid`, `record-unreadable`,
@@ -1152,8 +1235,10 @@ invocation's change ref, which is not personal data.
 
 ### B. Refusal matrix (each row must name the cause in §17's sense)
 
-Every row renders the dedicated `command=merge` and `ref=<ref>` fields (§5.1 F-3,
-API-3) in addition to the cause named below. Every `merge.branch-unresolved`
+Every row renders the dedicated `command=merge`, `ref=<ref>` and `operation=<token>`
+fields (§5.1 F-3, API-3) in addition to the cause named below; the `operation`
+token is a member of the closed vocabulary or `-`, and the `ref` is always the
+invocation's ref. Every `merge.branch-unresolved`
 cause performs exactly one provider read — the bounded open-request list read
 that locates the candidates — and no other; the declaration causes add no further
 provider read beyond it, and `record-unreadable` adds no provider read for the
@@ -1169,7 +1254,7 @@ missing object, only the local read attempt that could not observe it. Every
 | `merge.branch-unresolved` (`record-invalid`) | candidate source ref, tree path, the parse cause | yes — fix the record's YAML |
 | `merge.branch-unresolved` (`record-unreadable`) | candidate source ref, the attempted tree path | yes — make the head object present locally (no fetch on this path) |
 | `merge.request-unresolved` (`no-open-request`) | convention, change ref, open count, candidate count | yes — open a conforming request |
-| `merge.request-unresolved` (`ambiguous-open-request`) | convention, change ref, open count, candidate count (or page saturation) | yes — resolve the duplicate or narrow the open set |
+| `merge.request-unresolved` (`ambiguous-open-request`) | convention, change ref, open count, candidate count (or page saturation) | yes — resolve the duplicate or narrow the open set. A saturated page refuses this way even with zero convention-matching candidates: saturation is evaluated before the candidate count |
 | `merge.request-unresolved` (`head-unresolved`) | candidate source ref, request identity, the unusable head | yes — push a full-SHA head |
 | `merge.work-item-unresolved` | work-item ref, read operation | yes — repair the ref or the tracker |
 | `merge.gate.<id>.failed` (failing/canceled/skipped) | gate id, job(s), reason, attribution | yes — repair CI or declare the surface opt-out |
@@ -1180,9 +1265,10 @@ missing object, only the local read attempt that could not observe it. Every
 | `merge.state-unverified` | the unreadable state reason | yes — produce a verification |
 | `config.credential.missing` | reference, environment variable, operation | yes — supply the credential |
 | `provider.auth.rejected` | reference, operation | yes — supply a usable credential |
-| `provider.outage` | the failed operation | no |
-| `merge.transaction-aborted` | the aborted pre-mutation condition (waiver append, refused landing, declared landing gap) | yes for at least one residual cause — the row declares `retryable: false` and claims no convergence |
-| `merge.sync-required` / `merge.mergeability-unknown` / `merge.landing-unverified` / `merge.owner-gate-override-without-waiver` / `merge.waiver-unauthorized` | delivered causes, unchanged | unchanged |
+| `provider.outage` | the failed operation | no — a plain re-run converges |
+| `merge.transaction-aborted` | the aborted pre-mutation condition — only a waiver-append failure or a declared landing gap; a refused landing is **not** this row | yes (both remaining causes need an operator act) — the row declares `retryable: false` and claims no convergence, true of the two causes it reaches |
+| Landing fault | a transient or transport fault reports `provider.outage` naming the failed operation; a rejected credential reports `provider.auth.rejected` naming the reference and the operation; a landing that fired without observed merged truth reports `merge.landing-unverified` | per the delivered rows: `provider.outage` no, `provider.auth.rejected` yes (supply a usable credential), `merge.landing-unverified` as its delivered row declares; none is ever `merge.transaction-aborted` |
+| `merge.sync-required` / `merge.mergeability-unknown` / `merge.owner-gate-override-without-waiver` / `merge.waiver-unauthorized` | delivered causes, unchanged | unchanged |
 
 ### C. Decision records
 
@@ -1203,6 +1289,7 @@ the records.
 | 1.1 | 2026-11-20 | spec-writer | Corrected F-1's migration statement (§5.1) to match the unconditional `merge.branch-unresolved` refusal, and restated the retryability rule at row level (§4.1, F-3, API-3, §8.5, AC-F3-5/AC-F3-6, Appendix B, DEC-5) so it is satisfiable by the delivered error envelope |
 | 1.2 | 2026-11-20 | spec-writer | Corrected the current-state and totality claims: the family is resolved at classification (a gate refusal already renders as its declared family row), and the real gap is the composition's type-only declaration and its source-text proof. Restated §2.1, P-4, G-5, F-4, the §5 table rationale, §7.1, §16, RSK-6, §21, and DEC-7 accordingly; no AC text, scope, or identity changed |
 | 2.0 | 2026-11-20 | spec-writer | DoR-remediated revision answering the readiness gate's 22 findings. (1) The branch declaration is read **at the delivery request's asserted head** through one bounded local tree/blob read (Critical 1): F-1, §2.1, P-7, §3, G-1, §6 Flows 1–3, §7.1/§7.3, §8.3 DM-1/DM-2, §9 NFR-1/NFR-2/NFR-6/NFR-10, §11, §12, §13, §16, §17.1, §19, §22, §24-A and §24-B are restated on the candidate-set resolution order, the six closed branch reasons with their precedence, the three request reasons, the three pinned constants, and the one-provider-read budget. (2) The identity arithmetic is restated on the synced base — 170 → 173 entries, 169 → 172 delivered, 68 → 71 allowlist, `+136` → `+139`, `merge` kind 9 → 12 — in §4.1, §8.5, §9 NFR-8, §16, §18, and 167 is recorded as a banned stale total (Critical 2). (3) The totality deliverable gains a runtime oracle: AC-F4-1 ranges over the exported runtime family declaration and AC-F4-2 is its negative control, with no source-text proof remaining (Critical 3). (4) The recorded-CI premise is corrected in §2.1, P-3 and DEC-3: the recorded verdict is consulted, the fresh page is not, and the fresh projection carries one gate. (5) §17.7 Definition of Done is added inside §17. (6) The abort row is pinned to `retryable: false` (AC-F3-6, §8.5, §24-B), with the delivered convergence assertion moving with it. (7) The refusal rendering contract is decided (DEC-11): dedicated `command=merge` and `ref=<ref>` fields, with AC-F3-1 asserting the fields and all five refusal golden pairs moving. (8) The merged report's gate semantics are decided (DEC-12, AC-F2-8, API-1, §10): the evaluated merge-applicable projection, not the record's battery list. (9) §16/§19 add the PM instruction surface and the change-convention guide as the home of the authoring obligation. (10) §7.2/§18 state that no installed-binary end-to-end conformance run is claimed. (11) §17.6 re-traces the waiver item and drops AC-F2-7 from it. (12) The final TDR-0071 amendment is folded in: the branch refusal's read claim is exactly one provider read — never zero — with the declaration causes adding no further provider read and `record-unreadable` adding none for the missing object (F-1, §4.1, AC-F1-3, NFR-2/NFR-10, Appendix B); convergence is decided before any record read, so a converged re-run needs no declaration (F-1 step 2, §6 Flow 1, §24-A); the six branch reasons, the three request reasons and their precedence are stated verbatim; and the pinned constants plus the `declared-at-head` source are restated. No previously accepted capability, non-goal or identity was withdrawn; the AC inventory grew from 22 to 24 ids |
+| 2.1 | 2026-11-20 | spec-writer | Answers the second readiness iteration's specification findings. (1) The abort row's truth claim is repaired by narrowing its cause set rather than by re-pinning it (major 2): a refused landing no longer reaches `merge.transaction-aborted` and instead reports the provider identity the composition already computes — `provider.outage` for a transient or transport fault, `provider.auth.rejected` for a rejected credential, `merge.landing-unverified` when the landing fired without observed merged truth — so the row reaches exactly the waiver-append failure and a declared landing gap, both pre-mutation and both act-requiring, and `retryable: false` with no convergence promise is true of every cause it still reaches; F-3, AC-F3-3, AC-F3-6, §2.1, G-4, §4.1, §6 Flow 1, §8.5, §16, §22, DEC-6, OQ-5 and §24-B carry it, and §8.5 records that the delivered convergence test asserts the row's old shape and moves with it. (2) Convergence gains an acceptance criterion (major 3): AC-F1-6 asserts a unique already-merged request replays at exit 0 with `replayed=true`, zero change-record reads and zero record-read git invocations, reporting neither `declared-at-head` nor `merge.branch-unresolved` and landing nothing, while two merged matches refuse; F-1 step 2, API-1, DM-2, §24-A, §22 and the glossary state the `replayed` flag, and the inventory grows from 24 to 25 ids (§17.6, DOD-1). (3) The failed operation becomes a third dedicated field (major 4): `operation=<token>` with the closed vocabulary `github-work-item`, `github-check-runs`, `github-delivery-request-list`, `github-delivery-request-detail`, `repository-ci-workflow`, `local-change-record-read`, `local-git-object-read` and `-`, validated at the rendering site and asserted by AC-F3-1 (F-3, API-3, §4.1, NFR-5, §10, §16, §22, §24-B, DEC-5, DEC-11); rendering work only, no new record kind. (4) The `ref` field's empty-value branch is dropped (minor 10): the field always carries the invocation's ref, which every merge refusal path has, and F-3, API-3, AC-F3-1 and DEC-11 say so with no unasserted branch. (5) Saturation precedence is stated (minor 11): a saturated bounded page refuses `ambiguous-open-request` before the candidate count is taken, even with zero convention-matching entries, in F-1 step 3, AC-F1-4, §24-A and §24-B. (6) The merged report is said to state the gates it **freshly evaluated**, with the enforced set named separately (F-2, §10, glossary, DEC-12; nit 12). (7) §2.1's contract paragraph distinguishes the four statements this change amends from the merged-report semantics it states and reconciles (nit 13). (8) DOD-1's inventory arithmetic is restated so the sentence adds up and no id is listed twice — 22 carried forward from v1.0/v1.2, plus AC-F2-8 and AC-F4-2 added in v2.0, plus AC-F1-6 added in v2.1 = 25 — and the validation checklist states the same split. No identity total moved: 173 / 173 / 172 / 71 / `+ 139`, `merge` kind 9 → 12 |
 
 ---
 
@@ -1222,6 +1309,11 @@ emitted-identity totality, the refusal rendering contract, and the report's gate
 semantics. Version 2.0 answers the readiness gate's findings: the read-at-head
 resolution, the synced-base identity arithmetic, the runtime-declaration oracle,
 and the decisions the gate found undecidable are now stated rather than implied.
+Version 2.1 answers the second iteration: the abort row's cause set is narrowed so
+its `retryable` claim is true of every cause it reaches, convergence gains an
+acceptance criterion, the failed operation becomes a declared rendering field, the
+unasserted empty-ref branch is removed, saturation precedence is stated, and the
+report and current-state wording distinguishes freshly evaluated from enforced.
 No implementation steps, file paths, or code-level instructions are given; the
 specification states behaviour, contracts, and identities.
 
@@ -1237,8 +1329,8 @@ specification states behaviour, contracts, and identities.
 - [x] ID prefixes consistent and unique (F-, API-, EVT-, DM-, NFR-, AC-, DEC-,
       RSK-, OQ-)
 - [x] Acceptance criteria reference at least one F-/API-/EVT-/DM-/NFR- ID and use
-      Given/When/Then; the inventory is 24 ids (22 recycled, AC-F2-8 and AC-F4-2
-      added)
+      Given/When/Then; the inventory is 25 ids (22 carried forward, AC-F2-8 and
+      AC-F4-2 added in v2.0, AC-F1-6 added in v2.1)
 - [x] NFRs include measurable values, including the one-provider-read budget
 - [x] Risks include Impact, Probability, mitigation, and residual risk
 - [x] No implementation details (no file-level code paths, no step-by-step tasks)
