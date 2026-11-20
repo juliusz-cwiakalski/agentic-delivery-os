@@ -1010,11 +1010,11 @@ comment arithmetic, are the binding statement.
 
 **Preconditions**:
 
-- **No authored `merge.gates` declaration**: the shipped default set is in force,
-  so the merge projection is the effective merge-applicable membership **at this
-  phase** — one entry, the CI gate. `tracker-freshness` joins the merge surface in
-  phase 6, and this case derives the ids from the exported set rather than pinning
-  a length, so it stays true when that second entry arrives.
+- **No authored `merge.gates` declaration**: the shipped default set is in force.
+  This phase makes `ci-green` merge-applicable, so the effective merge projection
+  is two entries — `ci-green` and the already merge-applicable
+  `tracker-freshness` — and this case derives those ids from the exported set
+  rather than pinning a count.
 - A fresh verification record for the resolved head; a repository CI workflow
   whose expected job set is `CI / test`; the check-run page for the resolved head
   reports that one job `completed`/`failure`.
@@ -1046,12 +1046,12 @@ comment arithmetic, are the binding statement.
 - Zero landing calls; zero transaction records; no `fallback.internal` anywhere.
 - The contrast cell exits 0 with `result=merged` and exactly **one** landing call,
   and its report's `gates` ids equal the **effective merge-applicable entry ids the
-  run actually evaluated** (at this phase: the CI gate id alone; after phase 6: the
-  CI gate id and `tracker-freshness`), derived from the exported gate set, never a
-  literal length — so a green and a failing request never share a verdict. This
-  cell makes **no** two-entry or cross-phase projection claim: the `gates=2/2`
-  end state and the dry-run/merged equality are `TC-MRG-044`'s assertion in
-  phase 6 (readiness iteration 3, finding 2).
+  run actually evaluated** (at this phase and after: `ci-green` and
+  `tracker-freshness`), derived from the exported gate set, never a literal
+  length — so a green and a failing request never share a verdict. This cell makes
+  **no** cross-phase projection claim: the `gates=2/2` end state and the
+  dry-run/merged equality are `TC-MRG-044`'s assertion in phase 6 (readiness
+  iteration 3, finding 2).
 
 **Notes / Clarifications**:
 
@@ -1087,9 +1087,9 @@ comment arithmetic, are the binding statement.
 **Expected Outcome**:
 
 - Dry run exits 0 with `result=verified` and a `gates` array whose ids equal the
-  **effective merge-applicable set this run evaluated** — at this phase the CI
-  entry alone; `tracker-freshness` joins the merge surface in phase 6 — every entry
-  `pass`. The ids are derived from the exported set, never a literal length.
+  **effective merge-applicable set this run evaluated** — at this phase
+  `ci-green` and `tracker-freshness`, both `pass` — with the ids derived from the
+  exported set, never a literal length.
 - Exactly one verification record appended by the dry run; zero transactions;
   zero waivers; zero landing calls.
 - The real merge exits 0 with `result=merged` and exactly one landing at the
@@ -1991,12 +1991,13 @@ exactly the expected code:
   page order is varied between runs to prove the match is by convention plus exact
   equality and not by position.
 - **Phase-local projection truth.** At the end of this phase the merge-applicable
-  set is `ci-green` alone, so the dry run renders `gates=1/1`; the merged report
-  still renders the verification record's battery list, because the merged report's
-  gate list changes in phase 6. This case therefore asserts **each run's own**
-  projection and makes no cross-run, cross-phase projection claim; the two-entry
-  `gates=2/2` projection and the dry-run/merged equality are `TC-MRG-044`'s
-  assertion in phase 6 (readiness iteration 3, finding 2).
+  set is `tracker-freshness` alone (`ci-green` is still on the `battery` surface),
+  so the dry run renders `gates=1/1`; the merged report still renders the
+  verification record's battery list, because the merged report's gate list changes
+  in phase 6. This case therefore asserts **each run's own** projection and makes
+  no cross-run, cross-phase projection claim; the two-entry `gates=2/2` projection
+  and the dry-run/merged equality are `TC-MRG-044`'s assertion in phase 6
+  (readiness iteration 3, finding 2).
 
 **Steps**:
 
@@ -2017,9 +2018,9 @@ exactly the expected code:
   `candidateCount` equal to the observed candidate count (`1` in this fixture).
 - Both name the same request identity, not merely the same branch.
 - The dry run's `data.gates` ids equal the **effective merge-applicable set this
-  run evaluated** (at this phase: the CI gate alone, `gates=1/1`); the real
-  merge's report `gates` equals the verification record's `gates` list, which is
-  the pre-phase-6 rendering. The two lists are **not** asserted equal here.
+  run evaluated** (at this phase: `tracker-freshness` alone, `gates=1/1`); the
+  real merge's report `gates` equals the verification record's `gates` list, which
+  is the pre-phase-6 rendering. The two lists are **not** asserted equal here.
 - The real merge's landing expected head equals the dry run's reported head.
 - Neither report contains the checkout's base branch or base-tip SHA as any
   resolved fact.
@@ -2065,8 +2066,11 @@ exactly the expected code:
   `rebase-refresh`, push, fetch or head mutation; the checkout's `HEAD` still
   points at the base branch and its SHA is unchanged after the run.
 - Neither stdout nor stderr contains `result=merged` or `squash=`.
-- Exit 0 with `result=verified`, `resolutionSource=declared-at-head`, and `gates`
-  of length 2 (both passing).
+- Exit 0 with `result=verified`, `resolutionSource=declared-at-head`, and a
+  `gates` array whose ids equal the **effective merge-applicable set this run
+  evaluated** (at this phase `tracker-freshness` alone, `gates=1/1`; `ci-green`
+  becomes merge-applicable in phase 4) with every entry passing. The ids are derived
+  from the exported set, not pinned to a length.
 
 #### TC-MRG-032 - The merge-surface CI entry is cited by source; battery records unchanged
 
