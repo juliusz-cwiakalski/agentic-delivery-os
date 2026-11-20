@@ -920,6 +920,32 @@ export const RULE_CASES: RuleCase[] = [
     "packages/core/src/app/daemon-clean.ts",
     'import "../contracts/index";\n',
   ),
+  // GH-350 TC-MIG-004: the migration module may not import a child-process,
+  // shell, VM, or worker capability. The import fails by name.
+  dep(
+    "provider-migrate-shell-import",
+    "TC-MIG-004",
+    "provider-migrate-no-shell",
+    ["core"],
+    "packages/core/src/provider/migrate.ts",
+    'import { spawn } from "node:child_process";\nexport const run = spawn;\n',
+  ),
+  // GH-350 TC-SIM-009: the simulation fixture reader is reachable only from the
+  // simulate composition. A composition that reads a fixture path fails by name.
+  dep(
+    "provider-fixture-reader-reachable",
+    "TC-SIM-009",
+    "provider-fixture-read-only-simulate",
+    ["adapters", "cli"],
+    "packages/cli/src/production.ts",
+    'import { readProviderSimulateFixture } from "../../adapters/src/file/provider-simulate-fixture.js";\nexport const read = readProviderSimulateFixture;\n',
+    {
+      extraFiles: {
+        "packages/adapters/src/file/provider-simulate-fixture.ts":
+          "export const readProviderSimulateFixture = (): number => 1;\n",
+      },
+    },
+  ),
 ];
 
 export type AmbientCase = {
@@ -982,6 +1008,23 @@ export const AMBIENT_CASES: AmbientCase[] = [
     "ambient-globals-neutral-tiers",
     "packages/core/src/index.ts",
     "export const value = fetch;\n",
+  ),
+  // GH-350: provider policy receives zone facts through the injected port and
+  // never reads Intl in the neutral tier (ADR-0013 as revised).
+  ambient(
+    "ambient-provider-intl",
+    "ambient-globals-neutral-tiers",
+    "packages/core/src/provider/probe.ts",
+    'export const zone = new Intl.DateTimeFormat("en-US", { timeZone: "UTC" });\n',
+  ),
+  // GH-350 rule 4: a provider-shaped environment name is refused, not
+  // projected. Provider policy is configuration data; the provider tier declares
+  // no environment source, so a provider-shaped read is a boundary violation.
+  ambient(
+    "ambient-provider-environment",
+    "ambient-globals-neutral-tiers",
+    "packages/core/src/provider/probe.ts",
+    "export const enabled = process.env.JAISHIP_PROVIDER__ENTRIES__DEFAULT__ENABLED;\n",
   ),
   ...Object.entries(GLOBALS).flatMap(([globalName, source]) =>
     NEUTRAL_TIERS.map((tier) =>

@@ -8,7 +8,7 @@
  * clock, randomness, environment, filesystem, or network access is declared
  * here.
  */
-import type { ProviderPeakTimezone, QuotaLimit } from "./provider.js";
+import type { QuotaLimit } from "./provider.js";
 
 /** The closed pacing classes (F-7, DEC-1). */
 export const PACING_CLASSES = ["judgment", "execution"] as const;
@@ -160,12 +160,12 @@ export type ProviderPacingConfiguration = {
 /**
  * One declared peak-window rule window (GH-294 DM-3, DEC-1).
  *
- * Evaluated on the UTC basis only: the time-zone declaration admits the
- * delivered `UTC` designation and nothing else (OQ-TP-1). The multiplier is
+ * The `timezone` declaration admits `UTC` or an IANA zone name (GH-350,
+ * DM-1); existence is decided at the composition edge. The multiplier is
  * declared rule data for cost accounting; it never prices or converts (NG-5).
  */
 export type ProviderProfilePeakWindow = {
-  readonly timezone: ProviderPeakTimezone;
+  readonly timezone: string;
   readonly startSecondsOfDay: number;
   readonly endSecondsOfDay: number;
   readonly multiplier: number;
@@ -194,6 +194,13 @@ export type ProviderWatchTarget = {
   readonly credentialRef: string;
   readonly floor?: number;
   readonly thresholdPercent?: number;
+  /**
+   * The observation-freshness bound in seconds (GH-350 F-7, AC-F7-1): a positive
+   * integer; absent means `PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS` (900),
+   * applied policy-side. The catalog's `default` is declaration metadata and
+   * gives a record child no defaults-layer origin.
+   */
+  readonly maxAgeSeconds?: number;
 };
 
 /** The declared env-record grammar options (DM-7, DEC-3). */
@@ -334,12 +341,25 @@ export type ProfileSelectionResult =
       readonly events: readonly ProfileEvent[];
     };
 
-/** One read-only watch condition view (DM-9). */
+/**
+ * One read-only watch condition view (DM-9; GH-350 F-7, DM-8).
+ *
+ * `condition` is the declared six-value watch domain (phase 1's closed set), so
+ * `watch-stale` is representable here and nowhere else. The three additive
+ * fields disclose the observation: `observedAt` is the instant the reading
+ * stands for, `ageSeconds` is `floor((nowMs - observedAtMs) / 1000)` clamped at
+ * zero, and `maxAgeSeconds` is the declared or defaulted bound. `checkedAt`
+ * keeps its delivered meaning ("when the command read") and `source` stays the
+ * delivered summary string.
+ */
 export type ProviderWatchConditionView = {
   readonly name: string;
-  readonly condition: string;
+  readonly condition: import("./provider.js").ProviderWatchCondition;
   readonly source: string;
   readonly checkedAt: string;
+  readonly observedAt: string;
+  readonly ageSeconds: number;
+  readonly maxAgeSeconds: number;
 };
 
 /** The normalized snapshot a vendor watch mapping produces (DM-9). */

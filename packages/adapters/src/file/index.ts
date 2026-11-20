@@ -199,6 +199,20 @@ export {
   readProjectGroupsConfig,
 } from "./projects-config.js";
 export {
+  type ProviderMigrateFileSystem,
+  type ProviderMigrateSourceFile,
+  type ProviderMigrateSourceKind,
+  type ProviderMigrateSourceState,
+  type ProviderMigrateSourcesFailure,
+  type ProviderMigrateSourcesInput,
+  type ProviderMigrateSourcesRead,
+  readProviderMigrateSources,
+} from "./provider-migrate-source.js";
+export {
+  type ProviderSimulateFixtureRead,
+  readProviderSimulateFixture,
+} from "./provider-simulate-fixture.js";
+export {
   createSecretScanner,
   SECRET_CONTENT_PATTERNS,
   SECRET_FILENAME_PATTERNS,

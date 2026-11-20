@@ -79,20 +79,32 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
     expect(baseline.rows).toHaveLength(150);
     // The captured baseline includes GH-335's four harness rows; it predates
     // GH-299's `metrics` row, the two supervise rows, GH-346's eleven install
-    // rows, and GH-349's three additive rows (the two `merge` rows and the one
-    // `lint` row), so the comparison excludes those three kinds. Every baseline
-    // row must still be present, byte-identical and in its delivered relative
-    // order, so the positional oracle is preserved; the rows outside the
-    // baseline are exactly those three additive declarations, named here so no
-    // fourth row can appear unnoticed.
+    // rows, GH-349's three additive rows (the two `merge` rows and the one
+    // `lint` row), and GH-350's three provider rows inserted INSIDE the provider
+    // block. The comparison excludes those additive identities and compares the
+    // remaining rows positionally, so every baseline row must still be present,
+    // byte-identical, and in its delivered relative order.
+    const NEW_PROVIDER_CODES = new Set([
+      "provider.peak.zone-unknown",
+      "provider.budget.exceeded",
+      "provider.migrate.refused",
+    ]);
+    const NEW_GH349_CODES = new Set([
+      "lint.phases.divergent",
+      "merge.mergeability-unknown",
+      "merge.sync-required",
+    ]);
     const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) =>
         entry.domainKind !== "supervise" &&
         entry.domainKind !== "metrics" &&
-        entry.domainKind !== "install",
+        entry.domainKind !== "install" &&
+        !NEW_PROVIDER_CODES.has(entry.code) &&
+        !NEW_GH349_CODES.has(entry.code),
     );
-    expect(live).toHaveLength(153);
+    expect(live).toHaveLength(150);
+    expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
     for (const row of baseline.rows) {
       const found = entries.find((entry) => entry.code === row[0]);
       expect(found, row[0]).toBeDefined();
@@ -102,14 +114,17 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
       baseline.rows.map((row) => row[0]),
     );
     expect(
-      live
-        .filter((entry) => !baselineCodes.has(entry.code))
+      entries.filter((entry) => NEW_PROVIDER_CODES.has(entry.code)).map((entry) => entry.code),
+    ).toEqual([...NEW_PROVIDER_CODES]);
+    expect(
+      entries
+        .filter((entry) => NEW_GH349_CODES.has(entry.code))
         .map((entry) => entry.code)
         .sort(),
-    ).toEqual(["lint.phases.divergent", "merge.mergeability-unknown", "merge.sync-required"]);
-    // The post-baseline kinds are appended after every delivered row: indices
-    // 153..155 hold supervise/metrics and 156..166 hold the eleven install rows.
-    expect(entries.slice(153).map((entry) => entry.domainKind)).toEqual([
+    ).toEqual([...NEW_GH349_CODES].sort());
+    // The tail kinds are positionally unchanged: the last fourteen rows are the
+    // two supervise rows, the one metrics row, and the eleven install rows.
+    expect(entries.slice(-14).map((entry) => entry.domainKind)).toEqual([
       "supervise",
       "supervise",
       "metrics",

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import type {
   ConfigAcquisition,
   ConfigFailure,
@@ -16,6 +16,13 @@ export type RuntimePlatform = "linux" | "darwin" | "win32";
 export type FileSystemFacts = {
   readonly exists: (path: string) => boolean;
   readonly readText: (path: string) => string;
+  /**
+   * The file's size in bytes when the facts can supply it without reading the
+   * content (production stats the file). Bounded readers use it to refuse an
+   * oversized path before allocating its text; absent means the reader falls
+   * back to measuring the text it already read.
+   */
+  readonly size?: (path: string) => number | undefined;
 };
 
 export type FileAcquisitionInput = {
@@ -287,6 +294,10 @@ export const neutralEnvironmentFacts = (
 export const nodeFileSystemFacts = (): FileSystemFacts => ({
   exists: (path) => existsSync(path),
   readText: (path) => readFileSync(path, "utf8"),
+  size: (path) => {
+    const stat = statSync(path, { throwIfNoEntry: false });
+    return stat?.isFile() === true ? stat.size : undefined;
+  },
 });
 
 /** The host platform is an injected fact; this wrapper is for the runtime edge. */

@@ -64,7 +64,7 @@ const composeProduction = () => {
 
 describe("TC-BOARD-040/043 mounting", () => {
   test("board is the twenty-first member, ceremony the twenty-second, and the delivered twenty keep their order", () => {
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(27);
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(28);
     expect([...PROMPT_REQUIRED_COMMANDS].slice(0, 20)).toEqual([...DELIVERED]);
     expect(PROMPT_REQUIRED_COMMANDS[20]).toBe("board");
     expect(PROMPT_REQUIRED_COMMANDS[21]).toBe("ceremony");
@@ -75,7 +75,7 @@ describe("TC-BOARD-040/043 mounting", () => {
     try {
       expect(program.commands.board).toBeDefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(27);
+      expect(Object.keys(selected.commands)).toHaveLength(28);
       expect(selected.commands.board).toBeDefined();
       for (const name of DELIVERED) expect(selected.commands[name]).toBeDefined();
     } finally {

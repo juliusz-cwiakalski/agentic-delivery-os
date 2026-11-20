@@ -169,9 +169,9 @@ const PROVIDER_PROFILE_PEAK_WINDOW = {
 
 /**
  * GH-294 F-2/DM-3 — per-profile peak-window rules as versioned profile data.
- * Validation semantics (UTC-only designation, duplicate refusal, grace bound)
- * live in the provider rule parser; the catalog declares only the shapes so
- * the resolver passes declared values through.
+ * Validation semantics (the declared zone grammar, duplicate refusal, grace
+ * bound) live in the provider rule parser; the catalog declares only the shapes
+ * so the resolver passes declared values through.
  */
 const PROVIDER_PROFILE_PEAK_WINDOWS = {
   type: "object",
@@ -211,6 +211,11 @@ const PROVIDER_WATCH_TARGET = {
     credentialRef: { type: "string", required: true },
     floor: { type: "number" },
     thresholdPercent: { type: "number" },
+    // The observation-freshness bound (GH-350 F-7). The effective default (900)
+    // is applied policy-side; this declaration is shape metadata, so an omitted
+    // bound carries no defaults-layer origin. Positivity is refused by the
+    // consumer that honours the bound.
+    maxAgeSeconds: { type: "number" },
   },
 } as const satisfies CatalogField;
 
@@ -251,6 +256,30 @@ const PROVIDER_PROFILES = {
         maxRecords: { type: "number" },
       },
     },
+  },
+} as const satisfies CatalogField;
+
+/**
+ * One declared spend ceiling (GH-350 F-2, DM-2; TDR-0059).
+ *
+ * The catalog pins the child *shape* only: `enabled` defaults to `true`, and
+ * `scope`, `basis` and `ceiling` are required for every declared budget. The
+ * conditional `windowSeconds` rule (required for `scope: window`, refused on
+ * `scope: ticket`) and the closed scope/basis vocabularies are semantic and
+ * validated fail-closed by the provider rule parser, which names the offending
+ * field path. `entries` is a list of declared descriptor names and replaces
+ * whole on merge. The record ships empty: no ceiling is invented.
+ */
+const PROVIDER_BUDGET_VALUE = {
+  type: "object",
+  required: true,
+  fields: {
+    enabled: { type: "boolean", default: true },
+    scope: { type: "string", required: true },
+    basis: { type: "string", required: true },
+    ceiling: { type: "number", required: true },
+    windowSeconds: { type: "number" },
+    entries: { type: "array", items: { type: "string" } },
   },
 } as const satisfies CatalogField;
 
@@ -509,6 +538,7 @@ export const PRODUCTION_CATALOG = {
       entries: { type: "record", value: PROVIDER_ENTRY_VALUE },
       chains: { type: "record", value: PROVIDER_CHAIN_VALUE },
       profiles: PROVIDER_PROFILES,
+      budgets: { type: "record", value: PROVIDER_BUDGET_VALUE },
     },
   },
   commit: {

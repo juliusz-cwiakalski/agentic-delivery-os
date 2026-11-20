@@ -80,8 +80,9 @@ exhaustion that reports success or PARTIAL on unverified tracker state.
 
 - Prefer sunk-cost subscription quota over pay-per-token providers when both
   are eligible.
-- Park on declared peak windows (weekday 06:00-10:00Z today) instead of burning
-  quota or paying peak rates; the policy engine evaluates this per spawn.
+- Park on declared peak windows (weekday 06:00-10:00Z today, each evaluated on
+  its declared zone's clock) instead of burning quota or paying peak rates; the
+  policy engine evaluates this per spawn.
 - Never retry against an exhausted provider: park with a typed reason and the
   next eligible timestamp, and verify balance live because cached balances lag
   top-ups.
@@ -92,6 +93,18 @@ exhaustion that reports success or PARTIAL on unverified tracker state.
   never values.
 - Migration reads the legacy shell profiles and the hook once as a
   compatibility input and then removes the runtime dependency.
+
+**F2 evidence pointer (GH-350).** The stage's delivered surfaces are the typed
+`provider` and `provider.profiles` declaration branches, the zone-aware engine
+and daemon watcher on one bounded expiry derivation, the `provider.budgets`
+ceilings measured from one ref-scoped spend read with the parked-versus-failed
+split, the `provider.profiles.watch.<name>.maxAgeSeconds` freshness bound with
+`watch-stale`, `provider simulate --fixture <path>` for offline policy replay
+with zero state writes, `provider migrate legacy` as the guided import that
+takes the hook off the delivery path, and the family mounted as the
+twenty-eighth and last prompt-required one. The bar below is evidenced by the
+simulation fixtures, the migration refusal battery, and the mount,
+reachability, and coverage suites delivered with GH-350.
 
 ## Sequencing amendment
 
@@ -123,7 +136,7 @@ ported: provider policy (F2) replaces its purpose.
 |---|---|
 | F0 | clean-profile install; dirty or mid-change repository still delivers; upgrade reversible; version+commit reported; worktree target refused |
 | F1a | eleven-class replay battery; two concurrent dispatches admit; resume over a pr-open attempt continues; poll exhaustion never reports success |
-| F2 | policy simulation reproduces documented routing; a delivery runs with the hook and profiles disabled; spend attributable per dimension |
+| F2 | policy simulation reproduces documented routing; a delivery runs with the hook and profiles disabled; spend attributable per dimension (evidence: `provider simulate` fixtures, the migration refusal battery, and the mount/reachability/coverage suites, GH-350) |
 | F3 | loop start/stop/status/log/reset parity; durable stop across restarts; single instance; stuck session restarted |
 | F4 | merge lands with crafted metadata without a platform CLI; DIRTY/BEHIND returns a typed sync-required result; closeout is idempotent |
 | F5 | prompt conformance scan green; shell-orchestrator imperatives absent |

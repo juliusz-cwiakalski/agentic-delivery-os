@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-18
+last_updated: 2026-11-19
 owners: ["engineering"]
 service: delivery-os
-summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, UTC-only), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
+summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, declared-zone grammar), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293"]
-  related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030"]
+  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293", "GH-350"]
+  related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030", "ADR-0013"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
     - "packages/core/src/contracts/queue.ts"
@@ -43,13 +43,13 @@ Each profile under `provider.profiles` may declare a `peakWindows` branch as ver
 
 | Field | Shape | Rule |
 |---|---|---|
-| `windows[]` | list | Each window declares `timezone` (`UTC` designation only), `startSecondsOfDay`, `endSecondsOfDay`, `multiplier`, `bufferBeforeSeconds`, `bufferAfterSeconds`. |
+| `windows[]` | list | Each window declares `timezone` (`UTC` or an IANA zone name matching the declared grammar), `startSecondsOfDay`, `endSecondsOfDay`, `multiplier`, `bufferBeforeSeconds`, `bufferAfterSeconds`. |
 | `multiplier` | number ≥ 1 | Declared cost-accounting data; it never prices or converts spend. |
 | `bufferBeforeSeconds` / `bufferAfterSeconds` | non-negative integers | The window opens at `start − bufferBefore` and its effective end is `end + bufferAfter`; the buffers bound the grace. |
 | `graceSecondsDefault` | required integer | The profile's default bounded-grace stop bound. |
 | `graceSecondsMax` | derived | The smallest declared buffer across the profile's windows, computed at parse time and exposed on the parsed value, so the applied grace can never outlast the buffer protecting the window. |
 
-Validation is fail-closed and classified: only the `UTC` designation validates — any non-UTC zone literal is a validation refusal naming the field — an exact-duplicate window (same start and end) on one profile refuses as ambiguous, distinct overlapping windows validate without arbitration (enforcement unions the intervals; multipliers are never reconciled), a `graceSecondsDefault` above the derived maximum is a validation error, and every malformed field names the offending field and returns no partial decision. A profile with no `peakWindows` branch has no peak enforcement. Windows are declared and evaluated on the UTC basis only (DEC-1); the schema is validated at configuration time, so drift fails fast and classified.
+Validation is fail-closed and classified: a malformed zone literal refuses naming the field, a grammar-valid zone the composition cannot resolve refuses `provider.peak.zone-unknown` at the edge, an exact-duplicate window (same start and end) on one profile refuses as ambiguous, distinct overlapping windows validate without arbitration (enforcement unions the intervals; multipliers are never reconciled), a `graceSecondsDefault` above the derived maximum is a validation error, and every malformed field names the offending field and returns no partial decision. A profile with no `peakWindows` branch has no peak enforcement. Windows are declared and evaluated on their declared zone's clock (ADR-0013 as revised), through the same `peakWindowEndInstantMs` derivation the admission gate uses, so a lane parks and resumes at the instant the gate computed; the schema is validated at configuration time, so drift fails fast and classified.
 
 ## 4. Window watch and in-flight parking
 
@@ -106,7 +106,7 @@ no read of the input itself exists:
 | Input condition | Delivered engine-visible effect surfaces |
 |---|---|
 | Owner hold (host-wide, no expiry) | Dispatch admission refusal; queue blocking; `status.ownerHold`; board `ownerHold` |
-| Peak window (declared UTC window) | Lane parks with `reason: "peak-window"`, `until`, `preservation`; `status.laneParks`; brief park fields; `lanes` `peakEnforcement`; window-scoped spend evidence; `stop` and `parked` events |
+| Peak window (evaluated on its declared zone) | Lane parks with `reason: "peak-window"`, `until`, `preservation`; `status.laneParks`; brief park fields; `lanes` `peakEnforcement`; window-scoped spend evidence; `stop` and `parked` events |
 
 A declared or currently open peak window has **no read surface** of its own: it is
 not listed, polled, or projected as a window object, and this change adds no such
@@ -122,7 +122,7 @@ Without a resident daemon there is no window watcher and no mid-flight park. The
 
 | Level | Suites | Scope |
 |---|---|---|
-| Rules data | `provider-peak-rules-schema` | Round-trip, derived grace bound, the fail-closed matrix including the non-UTC refusal, duplicate-refuses, and overlap-validates fixtures. |
+| Rules data | `provider-peak-rules-schema` | Round-trip, derived grace bound, the fail-closed matrix including the malformed-literal and runtime-unknown-zone arms, duplicate-refuses, and overlap-validates fixtures. |
 | Nomination | `provider-nomination-admission` | Records agreement across both admission paths, the four refusal identities at their exits, claim parity, pre-change classified absence, no-default/no-guess/no-borrow. |
 | Watch and park | `daemon-peak-window-park` | Window-open stop with deadline, park record under one fence, grace-bound matrix, supervision-cycle bound, preservation-failure parking, stay-parked. |
 | Resume and isolation | `daemon-peak-window-isolation`, `daemon-peak-window-resume` | Set-equality isolation matrix, preserved resume, recovery routing, budget exhaustion, owner-hold precedence with record-level no-append. |

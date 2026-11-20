@@ -7,8 +7,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PHASE_TRANSITION_KIND,
-  type ProviderParkEvidence,
   PROVIDER_RECORD_KINDS,
+  type ProviderParkEvidence,
 } from "../../packages/core/src/contracts/index";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
 import {
@@ -58,11 +58,11 @@ describe("TC-PROV-028 park shape and closed allowlist", () => {
     expect(record.schemaVersion).toBe("delivery.provider.park.v1");
   });
 
-  test("every evidence key belongs to the eight-field allowlist", () => {
+  test("every evidence key belongs to the fourteen-field allowlist", () => {
     for (const key of Object.keys(park().evidence)) {
       expect(allowlist.fields).toContain(key);
     }
-    expect(allowlist.fields).toHaveLength(8);
+    expect(allowlist.fields).toHaveLength(14);
   });
 });
 
@@ -449,5 +449,132 @@ describe("TC-PROV-028..033/050 state integration", () => {
     } finally {
       removeRoot(root);
     }
+  });
+});
+
+/**
+ * GH-350 TC-ZONE-009 — a window-derived park and its announcement are
+ * self-describing about their basis: every one carries `timezone` = the
+ * effective declared zone (including `UTC`), while cause/kind/code stay
+ * delivered, and the allowlist constant is not an emitted object's field count.
+ */
+describe("GH-350 TC-ZONE-009 window parks carry the effective declared zone", () => {
+  const window = {
+    startSecondsOfDay: 0,
+    endSecondsOfDay: 36_000,
+    bufferSeconds: 0,
+  };
+
+  test("UTC and Europe/Berlin parks and announcements carry their zone", async () => {
+    const { createParkAnnouncement } = await import(
+      "../../packages/core/src/provider/announcements"
+    );
+    const { evaluatePeakWindow, bindZoneFacts } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const now = Date.parse("2026-07-13T08:00:00.000Z");
+    const berlin = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const base = {
+      ...window,
+      bufferSeconds: 0,
+    };
+    const utcCondition = evaluatePeakWindow(
+      { ...base, timezone: "UTC", endSecondsOfDay: 43_200 },
+      now,
+    );
+    const berlinCondition = evaluatePeakWindow(
+      { ...base, timezone: "Europe/Berlin", endSecondsOfDay: 43_200 },
+      now,
+      berlin,
+    );
+    for (const [condition, zone] of [
+      [utcCondition, "UTC"],
+      [berlinCondition, "Europe/Berlin"],
+    ] as const) {
+      if (condition.status !== "parked") throw new Error(condition.status);
+      expect(condition.kind).toBe("peak-window");
+      expect(condition.announcementCode).toBe("provider.peak.parked");
+      expect(condition.evidence.timezone).toBe(zone);
+      const record = createParkRecord({
+        subjectKind: "provider",
+        subjectName: "zai-coding-plan",
+        cause: condition.cause ?? "peak-window",
+        conditions: condition.evidence.conditionKinds ?? ["peak-window"],
+        createdAtMs: now,
+        expiresAtMs: condition.expiresAtMs,
+        evidence: condition.evidence,
+      });
+      expect(record.evidence.timezone).toBe(zone);
+      const announcement = createParkAnnouncement(record, now);
+      expect(announcement.code).toBe("provider.peak.parked");
+      expect(announcement.severity).toBe("info");
+      expect(announcement.evidence.timezone).toBe(zone);
+      expect(Object.keys(announcement.evidence)).toContain("timezone");
+    }
+    // The allowlist constant is 14; a peak park carries the eight delivered
+    // base fields plus `timezone` (nine), never the five budget fields.
+    const { PARK_EVIDENCE_FIELDS, ANNOUNCEMENT_EVIDENCE_FIELDS } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    expect(PARK_EVIDENCE_FIELDS).toHaveLength(14);
+    expect(ANNOUNCEMENT_EVIDENCE_FIELDS).toHaveLength(17);
+    expect(allowlist.fields).toHaveLength(14);
+  });
+});
+
+/**
+ * GH-350 m2 (review remediation) — the declared TC-ZONE-009 arithmetic arms:
+ * a park's `waitSeconds` is exactly `floor((expiresAtMs - nowMs) / 1000)`, and
+ * a gap-crossing end is not the naive `end - localSeconds`.
+ */
+describe("GH-350 m2 TC-ZONE-009 the waitSeconds arithmetic and the gap-crossing inequality", () => {
+  test("a park's waitSeconds is the floored remaining duration", async () => {
+    const { bindZoneFacts, evaluatePeakWindow } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const facts = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const now = Date.parse("2026-07-13T10:00:00.000Z"); // 12:00 local (+02:00)
+    const condition = evaluatePeakWindow(
+      {
+        timezone: "Europe/Berlin",
+        startSecondsOfDay: 0,
+        endSecondsOfDay: 50_400,
+        bufferSeconds: 0,
+      },
+      now,
+      facts,
+    );
+    if (condition.status !== "parked") throw new Error(condition.status);
+    expect(condition.waitSeconds).toBe(Math.floor((condition.expiresAtMs - now) / 1_000));
+    expect(condition.waitSeconds).toBe(7_200);
+  });
+
+  test("a gap-crossing end resolves to the transition and is not end - localSeconds", async () => {
+    const { bindZoneFacts, evaluatePeakWindow } = await import(
+      "../../packages/core/src/provider/peak"
+    );
+    const { BERLIN_STEPS, createCountingZonePort } = await import("../fixtures/provider/zone-port");
+    const facts = bindZoneFacts(
+      "Europe/Berlin",
+      createCountingZonePort({ "Europe/Berlin": BERLIN_STEPS }),
+    );
+    const now = Date.parse("2026-03-29T00:30:00.000Z"); // 01:30 local (+01:00), before the gap
+    const condition = evaluatePeakWindow(
+      { timezone: "Europe/Berlin", startSecondsOfDay: 0, endSecondsOfDay: 9_000, bufferSeconds: 0 },
+      now,
+      facts,
+    );
+    if (condition.status !== "parked") throw new Error(condition.status);
+    expect(condition.expiresAtMs).toBe(Date.parse("2026-03-29T01:00:00.000Z"));
+    expect(condition.waitSeconds).toBe(1_800);
+    expect(condition.waitSeconds).not.toBe(9_000 - 5_400);
   });
 });

@@ -155,7 +155,7 @@ the shipped binary cannot reach the family.
   live pick-deliver-merge not proven so the nine/six boundary is unchanged.
 - `tests/checks/reference-page-parity.test.ts`, `tests/structure/metrics-mounting.test.ts`,
   `tests/checks/install-conformance-mutants.test.ts`, and the help-guide coverage
-  inventory — the prompt-required set at 27 families with `loop` last, the M4
+  inventory — the prompt-required set at 28 families with `provider` last and `loop` 27th, the M4
   reference-page root for `loop`, and a removal control that fails by name.
 
 ## Test Data

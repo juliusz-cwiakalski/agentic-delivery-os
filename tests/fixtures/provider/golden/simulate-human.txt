@@ -1,0 +1,4 @@
+simulate /repo/simulate.json at 2026-01-01T12:00:00Z stateWrites=0
+inputs credentials=fixture quota=fixture spend=fixture zones=runtime
+parked chain:ch (chain-exhausted) until 2026-01-01T12:59:00.000Z
+skipped 1; announcements provider.budget.parked, provider.chain.exhausted

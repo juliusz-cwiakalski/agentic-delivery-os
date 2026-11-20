@@ -596,6 +596,8 @@ const DEPCRUISE_RULES = [
   "matrix-opencode-importer",
   "no-deep-package-import",
   "no-relative-cross-package-import",
+  "provider-fixture-read-only-simulate",
+  "provider-migrate-no-shell",
   "runtime-apis-confinement",
   "subpath-adapters-core-branding",
   "subpath-adapters-core-state",

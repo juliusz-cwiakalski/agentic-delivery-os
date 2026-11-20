@@ -164,3 +164,37 @@ describe("GH-346 TC-INST-104 the M4 install page participates in the same guard"
     }
   });
 });
+
+describe("GH-350 TC-MOUNT-010 the M1 provider page and row participate in the same guard", () => {
+  test("dropping the provider row from the inventory fails naming provider", () => {
+    const root = tempRoot();
+    try {
+      const coverage = JSON.parse(readFileSync(join(root, COVERAGE), "utf8")) as {
+        commands: string[];
+        referencePages: string[];
+      };
+      coverage.commands = coverage.commands.filter((command) => command !== "provider");
+      writeFileSync(join(root, COVERAGE), JSON.stringify(coverage));
+      const failures = runHelpGuideCoverage(root);
+      expect(failures.some((failure) => failure.id === "provider")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("the page stripped of --version fails naming provider", () => {
+    const root = tempRoot();
+    try {
+      const page = join(root, COMMANDS, "provider.md");
+      writeFileSync(page, readFileSync(page, "utf8").replaceAll("--version", "version"));
+      const failures = runHelpGuideCoverage(root);
+      expect(
+        failures.some(
+          (failure) => failure.id === "provider" && failure.detail.includes("--version"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

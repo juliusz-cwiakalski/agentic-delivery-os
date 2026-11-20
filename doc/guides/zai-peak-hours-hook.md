@@ -9,8 +9,63 @@ ados_distribution: redistributable
 The Z.AI pre-iteration hook pauses autonomous delivery during the Z.AI Coding
 Plan peak window (so you don't burn quota at 3x rates) **and**, when you opt
 in, when the Z.AI token quota is exhausted (so delivery sleeps until the quota
-resets instead of restart-storming). It is an opt-in, user-owned executable
-that `deliver-ticket.sh` and `ceo-loop.sh` invoke before every PM/CEO spawn.
+resets instead of restart-storming). It is a legacy, opt-in user-owned
+executable that `deliver-ticket.sh` and `ceo-loop.sh` invoke before every PM/CEO
+spawn; the delivered provider engine no longer depends on it, and this guide
+documents both the hook and the declarative surface that replaces it.
+
+## Declarative policy replaces the hook
+
+Provider policy is declared in Jaiship configuration and evaluated by the
+delivered provider engine, so the hook is **off the delivery path**. The peak
+window is `provider.entries.<name>.peak` (a declared zone — `UTC` by default or a
+valid IANA name — with seconds-of-day and a buffer); quota watching is
+`provider.entries.<name>.quota` plus `provider.profiles.watch.<name>`; spend
+ceilings are `provider.budgets.<name>`. The engine parks the lane with a recorded
+reason and resumes automatically at the computed instant, so a delivery needs
+neither a shell executable nor an environment-variable convention. A hook file
+may remain on disk; it is inert because no composition reads it.
+
+### Migrating off the hook: `provider migrate legacy`
+
+`provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]` reads
+the legacy profile directory (`~/.<priorWorkingName>/config/profiles/*.sh`) and
+the hook as **data**, under one assignment-only grammar: blank lines, `#`
+comments, and `NAME=value` or `export NAME=value` with a single literal token.
+Nothing is executed, sourced, word-split, glob-expanded, evaluated, or shelled
+out, and no environment is read. Anything outside that grammar refuses the whole
+run as `provider.migrate.refused` — `shell-construct` or `dynamic-value` — naming
+the file and line, with no proposal and nothing written.
+
+The shipped example is a program (driver loop, condition functions), so it
+refuses as `shell-construct`. **The supported posture for the hook is a
+parameters file only.** The remedy is to declare the window, the quota endpoint,
+and the credential reference in the provider branch and retire the hook from the
+path; no hook import is implied.
+
+The read maps recognised variables literally: `OC_ADOS_MODEL_PROFILE`,
+`OC_ADOS_AGENT_<AGENT>_MODEL` (addressed under the profile literal),
+`ADOS_ZAI_PEAK_START_UTC`, `ADOS_ZAI_PEAK_END_UTC`, `ADOS_ZAI_BUFFER_SECONDS`,
+`ADOS_ZAI_MAX_SLEEP_LOOPS`, and `ADOS_ZAI_QUOTA_DISABLED` (`1` and `0` only).
+A credential-shaped name (`*_API_KEY`, `*_API_TOKEN`, `*_ACCESS_TOKEN`,
+`*_SECRET`, `*_PASSWORD`, `*_PRIVATE_KEY`, `*_CLIENT_SECRET`) is classified
+before its value is examined and contributes a **reference only**; the value is
+discarded at the parse boundary. `ADOS_ZAI_CONDITIONS`, `ADOS_HOOK_AGENT`,
+`ADOS_HOOK_ENV_V1`, and every unrecognised name are reported `unmapped` by name
+and omitted.
+
+The proposal is printed on stdout; the report — sources with byte counts, mapped
+names, unmapped names, absent sources — goes to the diagnostic stream, or to
+`data.report` with `--json`. Every read is bounded by
+`PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536`, `PROVIDER_MIGRATE_SOURCE_MAX_LINES
+= 2000`, and `PROVIDER_MIGRATE_MAX_SOURCES = 64`. `--write` creates the
+project-committed document only when it does not exist; an existing document
+refuses `target-exists` and is never modified. Review and complete the proposal
+before committing it.
+
+This command is a **provider-policy** import: it moves no name, path, state root,
+or artifact. It is not the M4-S2 namespace migration, and it does not delegate to
+the install lifecycle's `--migrate` flag.
 
 ## Z.AI peak hours and quota rates
 

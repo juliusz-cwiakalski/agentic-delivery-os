@@ -52,6 +52,7 @@ describe("TC-PROV-034 announcement shape, severity, and identity", () => {
     const expected: Array<[ParkCause, string, "info" | "warning"]> = [
       ["peak-window", "provider.peak.parked", "info"],
       ["quota-exhausted", "provider.quota.parked", "info"],
+      ["budget-exhausted", "provider.budget.parked", "info"],
       ["provider-outage", "provider.quota.unreachable", "warning"],
       ["credential-missing", "provider.credential.missing", "warning"],
       ["credential-rejected", "provider.quota.auth_rejected", "warning"],
@@ -72,10 +73,11 @@ describe("TC-PROV-034 announcement shape, severity, and identity", () => {
     expect(severityForAnnouncementCode("provider.resumed")).toBe("info");
   });
 
-  test("every announcement carries only the eleven-field allowlist and a safe message", () => {
+  test("every announcement carries only the seventeen-field allowlist and a safe message", () => {
     for (const cause of [
       "peak-window",
       "quota-exhausted",
+      "budget-exhausted",
       "provider-outage",
       "credential-missing",
       "credential-rejected",

@@ -1,5 +1,5 @@
 /**
- * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry holds 167 identities
+ * GH-289 TC-ATTEMPT-017 — taxonomy closure: the registry holds 170 identities
  * (GH-290's three `events.*` rows, GH-292's two queue
  * lifecycle rows, GH-309's three group-surface rows, GH-309's three
  * moved `repos.*` rows, GH-287's three action-registry rows, GH-298's
@@ -48,9 +48,9 @@ const SCAN_TARGETS = [
 ] as const;
 
 describe("TC-ATTEMPT-017 taxonomy closure", () => {
-  test("the registry holds exactly 167 identities and four dispatch rows", () => {
+  test("the registry holds exactly 170 identities and four dispatch rows", () => {
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries).toHaveLength(167);
+    expect(entries).toHaveLength(170);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.some((entry) => entry.code.startsWith("attempts."))).toBe(false);
     expect(entries.map((entry) => entry.code)).toContain("queue.reason-missing");

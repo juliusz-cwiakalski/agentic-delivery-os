@@ -8,6 +8,12 @@
     "httpStatus",
     "failureClass",
     "credentialRefName",
+    "timezone",
+    "budgetName",
+    "budgetScope",
+    "budgetBasis",
+    "budgetMeasured",
+    "budgetCeiling",
     "parkName",
     "parkExpiresAt",
     "announcementCode"

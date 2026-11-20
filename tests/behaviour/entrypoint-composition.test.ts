@@ -42,6 +42,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "supervise",
   "install",
   "loop",
+  "provider",
 ];
 
 const withExtras = (): CommandProgram => {
@@ -51,7 +52,6 @@ const withExtras = (): CommandProgram => {
       ...base.commands,
       config: { handler: () => ({ data: {} }) },
       doctor: { handler: () => ({ data: {} }) },
-      provider: { handler: () => ({ data: {} }) },
       db: { handler: () => ({ data: {} }) },
       watchdog: { handler: () => ({ data: {} }) },
       board: { handler: () => ({ data: {} }) },

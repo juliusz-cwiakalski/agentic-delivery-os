@@ -1,0 +1,184 @@
+{
+  "summary": "parked chain:ch (chain-exhausted) until 2026-01-01T12:59:00.000Z",
+  "chain": "ch",
+  "decision": {
+    "kind": "parked",
+    "chainName": "ch",
+    "park": {
+      "schemaVersion": "delivery.provider.park.v1",
+      "name": "chain:ch",
+      "subjectKind": "chain",
+      "subjectName": "ch",
+      "cause": "chain-exhausted",
+      "conditions": [
+        "budget-exhausted"
+      ],
+      "state": "active",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "createdAtMs": 1767268800000,
+      "expiresAt": "2026-01-01T12:59:00.000Z",
+      "expiresAtMs": 1767272340000,
+      "evidence": {
+        "chainName": "ch",
+        "conditionKinds": [
+          "budget-exhausted"
+        ],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40
+      }
+    }
+  },
+  "skipped": [
+    {
+      "providerName": "sub",
+      "reason": "budget-exhausted"
+    }
+  ],
+  "parks": [
+    {
+      "schemaVersion": "delivery.provider.park.v1",
+      "name": "provider:sub",
+      "subjectKind": "provider",
+      "subjectName": "sub",
+      "cause": "budget-exhausted",
+      "conditions": [
+        "budget-exhausted"
+      ],
+      "state": "active",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "createdAtMs": 1767268800000,
+      "expiresAt": "2026-01-01T12:59:00.000Z",
+      "expiresAtMs": 1767272340000,
+      "evidence": {
+        "providerName": "sub",
+        "conditionKinds": [
+          "budget-exhausted"
+        ],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40
+      }
+    },
+    {
+      "schemaVersion": "delivery.provider.park.v1",
+      "name": "chain:ch",
+      "subjectKind": "chain",
+      "subjectName": "ch",
+      "cause": "chain-exhausted",
+      "conditions": [
+        "budget-exhausted"
+      ],
+      "state": "active",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "createdAtMs": 1767268800000,
+      "expiresAt": "2026-01-01T12:59:00.000Z",
+      "expiresAtMs": 1767272340000,
+      "evidence": {
+        "chainName": "ch",
+        "conditionKinds": [
+          "budget-exhausted"
+        ],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40
+      }
+    }
+  ],
+  "announcements": [
+    {
+      "schemaVersion": "delivery.provider.announcement.v1",
+      "identity": "provider:sub:provider.budget.parked:budget-exhausted:1767272340000",
+      "code": "provider.budget.parked",
+      "severity": "info",
+      "subjectKind": "provider",
+      "subjectName": "sub",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "cause": "budget-exhausted",
+      "conditions": [
+        "budget-exhausted"
+      ],
+      "parkName": "provider:sub",
+      "parkExpiresAt": "2026-01-01T12:59:00.000Z",
+      "message": "provider sub is parked on budget daily (window, cost 40 of 40) for GH-350 until 2026-01-01T12:59:00.000Z",
+      "evidence": {
+        "providerName": "sub",
+        "conditionKinds": [
+          "budget-exhausted"
+        ],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40,
+        "parkName": "provider:sub",
+        "parkExpiresAt": "2026-01-01T12:59:00.000Z",
+        "announcementCode": "provider.budget.parked"
+      }
+    },
+    {
+      "schemaVersion": "delivery.provider.announcement.v1",
+      "identity": "chain:ch:provider.chain.exhausted:chain-exhausted:1767272340000",
+      "code": "provider.chain.exhausted",
+      "severity": "warning",
+      "subjectKind": "chain",
+      "subjectName": "ch",
+      "createdAt": "2026-01-01T12:00:00.000Z",
+      "cause": "chain-exhausted",
+      "conditions": [
+        "budget-exhausted"
+      ],
+      "parkName": "chain:ch",
+      "parkExpiresAt": "2026-01-01T12:59:00.000Z",
+      "message": "chain ch chain is exhausted until 2026-01-01T12:59:00.000Z",
+      "evidence": {
+        "chainName": "ch",
+        "conditionKinds": [
+          "budget-exhausted"
+        ],
+        "waitSeconds": 3540,
+        "budgetName": "daily",
+        "budgetScope": "window",
+        "budgetBasis": "cost",
+        "budgetMeasured": 40,
+        "budgetCeiling": 40,
+        "parkName": "chain:ch",
+        "parkExpiresAt": "2026-01-01T12:59:00.000Z",
+        "announcementCode": "provider.chain.exhausted"
+      }
+    }
+  ],
+  "simulation": {
+    "fixturePath": "/repo/simulate.json",
+    "fixtureSchemaVersion": "delivery.provider.simulate.v1",
+    "now": "2026-01-01T12:00:00Z",
+    "workItemRef": "GH-350",
+    "stateWrites": 0,
+    "inputs": {
+      "credentials": "fixture",
+      "quota": "fixture",
+      "spend": "fixture",
+      "zones": "runtime"
+    },
+    "summary": {
+      "decision": "parked",
+      "parkCause": "chain-exhausted",
+      "resumeAt": "2026-01-01T12:59:00.000Z",
+      "skippedCount": 1,
+      "announcementCodes": [
+        "provider.budget.parked",
+        "provider.chain.exhausted"
+      ]
+    }
+  }
+}

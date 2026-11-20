@@ -22,6 +22,7 @@ All decision records for this repository, ordered by type and number.
 | [ADR-0010](ADR-0010-session-admin-port-mutating-contract.md) | ADR | Separate Mutating `SessionAdminPort` from the Read-Only `SessionStore` (ADR-0003 Reconciliation) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0011](ADR-0011-canonical-memory-record-schema.md) | ADR | One Canonical Agent-Memory Record Schema — Required Spine, Closed Optional Set, Dispositions, and a One-Way Reconciliation Direction | Proposed | 2026-11-15 | Juliusz Ćwiąkalski |
 | [ADR-0012](ADR-0012-provider-side-merge-landing-path.md) | ADR | Provider-Side Landing Is the Lifecycle Merge Path — One Mechanism, Exact-Head Guards, and Typed Sync-Required Outcomes | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [ADR-0013](ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md) | ADR | Zone-Aware Peak Windows — IANA Zone Names Resolved at the Composition Edge | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | [ODR-0005](ODR-0005-closeout-milestone-synchronization.md) | ODR | Milestone Synchronization in `closeout --apply` — Attachment Verification and Exit-Review-Gated Closure | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
@@ -30,6 +31,7 @@ All decision records for this repository, ordered by type and number.
 | [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
 | [PDR-0004](PDR-0004-memory-practices-concept-repo-internal.md) | PDR | Meta-Learning Reference Stays Repo-Internal — Not Part of the Bootstrap Install Surface | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | [PDR-0005](PDR-0005-milestone-first-planning-and-delivery.md) | PDR | Milestone-First Planning and Delivery — Tracker-Attached Scope Before Work Starts | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
+| [PDR-0006](PDR-0006-per-project-provider-policy-repository-config-layers.md) | PDR | Per-Project Provider Overrides — The Repository-Owned Configuration Layers Are the Mechanism | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | TDR-0001 | TDR | @bootstrapper Inception Sub-Mode Prompt Structure | Proposed | 2026-06-27 | Juliusz Ćwiąkalski |
 | TDR-0002 | TDR | Pre-Iteration Hook Contract — Lifecycle, Failure Semantics, Distribution, and Testability | Accepted | 2026-07-16 | Juliusz Ćwiąkalski |
 | [TDR-0003](TDR-0003-config-parser-schema-and-acquisition.md) | TDR | Config Parser, Schema, and Acquisition | Proposed | 2026-10-30 | Juliusz Ćwiąkalski |
@@ -88,6 +90,12 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0058](TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md) | TDR | Dispatch Session-Output Artifacts and the Transcript Read Seam — A Bounded Per-Ref Sidecar Family and an Adapter-Owned Read Kept Outside the Closed Operation Set | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0059](TDR-0059-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0060](TDR-0060-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0061](TDR-0061-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0062](TDR-0062-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0063](TDR-0063-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0064](TDR-0064-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0071](TDR-0071-merge-change-branch-and-resolved-head-authority.md) | TDR | Change-Branch Resolution from the Change Record and the Delivery Request's Head as the Verified Head | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
 | [TDR-0072](TDR-0072-required-check-authority-and-gate-membership.md) | TDR | Required-Check Authority and Gate Membership — The Shipped Default Enforces the Repository-Declared Expected Job Set on the Resolved Head | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
 | [TDR-0073](TDR-0073-refusal-diagnostics-and-emitted-identity-totality.md) | TDR | Refusal Diagnostics and Emitted-Identity Totality — Named Causes, Three Additive Rows, Row-Level `retryable`, and a Runtime Family Declaration | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
@@ -100,10 +108,34 @@ Decisions TDR-0049 … TDR-0054 are the binding design of change GH-347; their o
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 
-Decision TDR-0058 is the binding design of change GH-354; its owner acceptance is
-that change's pull-request review, and its status moves from `Proposed` there
-rather than in the delivery commits.
+Decisions ADR-0012, TDR-0055, and ODR-0005 are the binding design of change GH-349;
+their owner acceptance is that change's pull-request review, and their status moves
+from `Proposed` there rather than in the delivery commits.
+
+Decision TDR-0058 (the dispatch session-output record) is the binding design of
+change GH-354; its owner acceptance is that change's pull-request review, and its
+status moves from `Proposed` there rather than in the delivery commits.
 
 Decisions TDR-0056 and TDR-0057 are the binding design of change GH-348; their owner
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
+
+Decisions ADR-0013, PDR-0006, and TDR-0059 … TDR-0064 are the binding design of
+change GH-350; their owner acceptance is that change's pull-request review, and
+their status moves from `Proposed` there rather than in the delivery commits.
+ADR-0013 is the zone-aware peak-window record (renumbered from ADR-0012 when the
+GH-349 merge brought upstream's provider-side landing ADR-0012). TDR-0057 … TDR-0064
+were renumbered two places: 0057 … 0062 → 0058 … 0063 when the GH-348 merge brought
+its own TDR-0057, then 0058 … 0063 → 0059 … 0064 when the GH-354 merge brought
+TDR-0058; TDR-0063 mounts the provider family as the twenty-eighth and last
+prompt-required member after GH-348's `loop` (twenty-seventh), and TDR-0064 fixes the
+work-item ref the budget gate measures, so the GH-350 specification must carry all of
+them before readiness re-review.
+
+Decisions TDR-0071, TDR-0072, and TDR-0073 are the binding design of change GH-366;
+their owner acceptance is that change's pull-request review, and their status moves
+from `Proposed` there rather than in the delivery commits. TDR-0071 fixes the
+change-branch source and the resolved-head binding, TDR-0072 the required-check
+authority and the default merge-applicable gate membership, and TDR-0073 the refusal
+diagnostics contract, the row-level `retryable` rule, and the runtime family
+declaration proven for emitted-identity totality.

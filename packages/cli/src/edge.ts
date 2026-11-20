@@ -12,6 +12,7 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   statSync,
   writeFileSync,
@@ -37,6 +38,7 @@ import {
   nodeDecisionRecordFileSystem,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  type ProviderMigrateFileSystem,
   parseCeremonyNoteText,
   parseConfigYaml,
   type RuntimePlatform,
@@ -53,6 +55,8 @@ import {
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
+  readProviderMigrateSources,
+  readProviderSimulateFixture,
   runtimePlatform,
   scanMetricsCorpus,
   stagePmNotesPhaseEntry,
@@ -80,7 +84,7 @@ import {
   createOpencodeTelemetryExtractor,
 } from "@delivery-os/adapters/harness";
 import { JIRA_ADAPTER_CONTRACT, type JiraClient } from "@delivery-os/adapters/jira";
-import { createLegacyCompat } from "@delivery-os/adapters/legacy";
+import { createLegacyCompat, PROVIDER_LEGACY_MIGRATION_TABLE } from "@delivery-os/adapters/legacy";
 import { createProviderWatchMappings } from "@delivery-os/adapters/provider-quota";
 import {
   findGitRoot,
@@ -96,6 +100,7 @@ import {
   createSessionStore,
   type OpencodeSessionIo,
 } from "@delivery-os/adapters/session";
+import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   type ActionArtifactVerdict,
@@ -133,6 +138,7 @@ import {
   classifyPruneCandidate,
   closeRetroAction,
   collectRetro,
+  compileTrustedSchema,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
   computeMetricsReport,
@@ -172,6 +178,7 @@ import {
   memberRefFor,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
+  PRODUCTION_DEFAULTS,
   parkConditionForCause,
   parseCapsuleEvents,
   parseMemberRef,
@@ -260,6 +267,7 @@ import {
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
+import type { ProviderZoneFacts } from "@delivery-os/core/contracts";
 import {
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
@@ -315,6 +323,7 @@ import {
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
   type ConfigFailure,
+  type ConfigValue,
   type ControlTransport,
   type CredentialPort,
   type CrossRepositoryCloseoutObservation,
@@ -357,11 +366,15 @@ import {
   type PhaseTransitionRecord,
   type PlanDiffPort,
   type PlanMemberDeclaration,
+  PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
   type ProviderAnnouncementRecord,
   type ProviderClock,
   type ProviderConfiguration,
   type ProviderParkRecord,
   type ProviderSleep,
+  type ProviderSpendTotalsPort,
+  type ProviderSpendTotalsRead,
+  type ProviderWorkItemRefResolver,
   QUEUE_BATTERY_ONLY_PARK_CAUSES,
   type QueueDegradationReason,
   type QueueTrackerRead,
@@ -397,19 +410,30 @@ import {
   type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
+  bindZoneFacts,
+  buildProviderMigrationProposal,
   createProfileProbePort,
   createProviderEngine,
   createProviderWatchStatus,
   evaluatePeakWindow,
   evaluateProfileLifecycle,
+  normaliseZoneName,
+  PROVIDER_MIGRATE_TARGET_NAME,
+  type ProviderMigrateAssignment,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  parseProviderMigrateSource,
+  parseProviderSimulateFixture,
   persistProfileTarget,
+  providerMigrateNoCheckoutRefusal,
+  providerMigrateRefusalSummary,
   readProfileTarget,
   readProviderLedger,
   readProviderParkViews,
   resolveProfileForSpawn,
   selectProfile,
+  simulateProviderResolution,
+  UTC_ZONE_FACTS,
 } from "@delivery-os/core/provider";
 import {
   appendAuditInvocation,
@@ -1703,7 +1727,7 @@ export function createProductionDependencies(options: EdgeOptions): CliDependenc
   };
 }
 
-/** Injected I/O and seams for the provider command family (GH-182 PD-G). */
+/** Injected I/O and seams for the provider command family (GH-182 PD-G; GH-350 F-2). */
 export type ProviderComposition = {
   readonly clock: ProviderClock;
   readonly credentialPort: CredentialPort;
@@ -1711,6 +1735,40 @@ export type ProviderComposition = {
   readonly sleep: ProviderSleep;
   readonly stateStore: StateStorePort;
   readonly newFenceToken: () => string;
+  /**
+   * The one read-only spend-totals port (GH-350, DM-3). Absent means the edge
+   * projects it from this composition's store; an injected port (the tests'
+   * counting fake) wins.
+   */
+  readonly spendTotals?: ProviderSpendTotalsPort;
+  /** The local delivery-context tier of the budget ref seam (TDR-0064). */
+  readonly resolveWorkItemRef?: ProviderWorkItemRefResolver;
+  /** The context path the unresolvable-ref refusal names. */
+  readonly workItemContextPath?: string;
+  /**
+   * The filesystem seam the simulate fixture read uses (GH-350 F-5). Absent
+   * means the composition's configuration filesystem, then the node facts; a
+   * test injects its recording stub here so a fixture open is observable.
+   */
+  readonly fixtureFs?: FileSystemFacts;
+  /**
+   * The filesystem seam the migration reads use (GH-350 F-6). Absent means the
+   * composition's configuration filesystem extended with directory listing.
+   */
+  readonly migrateFs?: ProviderMigrateFileSystem;
+  /**
+   * The observation instant a watch read stands for (GH-350 F-7). Absent means
+   * the read instant, which is what this composition supplies by default; a test
+   * injects a retained instant to exercise staleness.
+   */
+  readonly watchObservedAtMs?: () => number;
+  /**
+   * The zone seam the peak evaluation binds through (GH-350 F-1/F-8, ADR-0013).
+   * Absent means the engine's zone-unaware default: a non-UTC window refuses
+   * `provider.peak.zone-unknown` at the edge. The production composition supplies
+   * the Intl-backed binder so a declared IANA zone evaluates.
+   */
+  readonly zoneFactsFor?: (zone: string) => ProviderZoneFacts | undefined;
 };
 
 /** The injected provider transport shape used by the GitHub reads. */
@@ -2724,9 +2782,103 @@ const providerFailure = (failure: { readonly code: string }): StatusReadFailure 
  * available. Module-level so the provider command path and the production
  * nomination composition read one probe truth.
  */
+const providerZonePort = createIntlZonePort();
+
+/** Resolve a declared zone to its bound facts through the single Intl edge. */
+const providerZoneFactsFor = (zone: string): ProviderZoneFacts | undefined => {
+  const normalised = normaliseZoneName(zone);
+  if (normalised === "UTC") return UTC_ZONE_FACTS;
+  return providerZonePort.isKnownZone(normalised)
+    ? bindZoneFacts(normalised, providerZonePort)
+    : undefined;
+};
+
+/**
+ * The first declared peak zone in `names` that this composition cannot resolve
+ * (GH-350 F-1/F-8, NFR-5). A surface that would probe these providers uses this
+ * to refuse `provider.peak.zone-unknown` before any probe, so an unresolvable
+ * zone is never silently evaluated as UTC. `names` may be every declared entry
+ * or the entries a profile selection can probe.
+ */
+export const unknownProviderPeakZone = (
+  entries: ProviderConfiguration["entries"],
+  names: readonly string[],
+  zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined = providerZoneFactsFor,
+): { readonly providerName: string; readonly zone: string } | undefined => {
+  for (const name of names) {
+    const peak = entries[name]?.peak;
+    if (peak === undefined) continue;
+    if (zoneFactsFor(peak.timezone) === undefined) {
+      return { providerName: name, zone: peak.timezone };
+    }
+  }
+  return undefined;
+};
+
+/** The classification a zone refusal carries at the command surface. */
+const zoneUnknownRefusal = (unknown: { readonly providerName: string; readonly zone: string }) => ({
+  ok: false as const,
+  code: "provider.peak.zone-unknown" as const,
+  summary:
+    `provider ${unknown.providerName} declares peak zone ${unknown.zone}, which this composition ` +
+    `cannot resolve; correct the zone name, or run where zone data is available (a UTC declaration ` +
+    `needs none)`,
+});
+
+const stepInstantMs = (step: {
+  readonly finishedAt: string | null;
+  readonly capturedAt: string;
+}): number => Date.parse(step.finishedAt ?? step.capturedAt);
+
+/**
+ * The one read-only spend-totals projection (GH-350 F-2, DM-3, TDR-0059 D2).
+ *
+ * One verified `readSpendLedger` per evaluation, then one projection per
+ * declared budget scope over the delivered fold (`computeSpendReport`): both
+ * bases are returned for every scope so budgets on different bases share the
+ * read, and no per-record data crosses the port. A failed read returns the
+ * delivered `state.*` identity; verified-empty telemetry measures zero.
+ */
+export const createProviderSpendTotalsPort = (store: StateStorePort): ProviderSpendTotalsPort => ({
+  read: async (input) => {
+    const read = readSpendLedger(store, input.workItemRef);
+    if (!read.ok)
+      return { status: "failed", code: read.error.code } satisfies ProviderSpendTotalsRead;
+    const ledger = read.value;
+    if (ledger.verifiedEmpty) return { status: "empty" };
+    const { scopes } = input;
+    const totals = scopes.map((scope) => {
+      const steps = (ledger.steps ?? []).filter((step) => stepInstantMs(step) >= scope.fromMs);
+      const records = ledger.records.filter(
+        (record) => Date.parse(record.capturedAt) >= scope.fromMs,
+      );
+      const folded = computeSpendReport(
+        { ...ledger, steps, records },
+        { workItemRef: ledger.workItemRef },
+      );
+      const newestCandidates = [
+        ...steps.map(stepInstantMs),
+        ...records.map((record) => Date.parse(record.capturedAt)),
+      ].filter((instant) => Number.isFinite(instant));
+      const tokens = folded.ok
+        ? Object.values(folded.data.tokensByClass).reduce((sum, value) => sum + value, 0)
+        : 0;
+      return {
+        scopeKey: scope.scopeKey,
+        cost: folded.ok ? (folded.data.costTotals.total ?? 0) : 0,
+        tokens,
+        newestAtMs: newestCandidates.length === 0 ? null : Math.max(...newestCandidates),
+        ...(folded.ok ? { sparse: folded.data.costTotals.sparse } : {}),
+      };
+    });
+    return { status: "measured", totals };
+  },
+});
+
 export const createResolvedProviderProbe = (
   entries: ProviderConfiguration["entries"],
   nowMs: number,
+  zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined = providerZoneFactsFor,
 ): ReturnType<typeof createProfileProbePort> =>
   createProfileProbePort((providerName) => {
     const descriptor = entries[providerName];
@@ -2759,7 +2911,27 @@ export const createResolvedProviderProbe = (
       };
     }
     if (descriptor.peak !== undefined) {
-      const peak = evaluatePeakWindow(descriptor.peak, nowMs);
+      const facts = zoneFactsFor(descriptor.peak.timezone);
+      if (facts === undefined) {
+        // Never read an unresolvable zone as UTC: the provider is unavailable
+        // for a reason that names the zone, and the command surfaces refuse
+        // `provider.peak.zone-unknown` before they call this probe.
+        return {
+          available: false,
+          condition: "provider.peak.zone-unknown",
+          blockers: [
+            {
+              kind: "condition",
+              value: "provider.peak.zone-unknown",
+              detail:
+                `provider ${providerName}: peak zone ${descriptor.peak.timezone} cannot be ` +
+                `resolved by this composition`,
+            },
+          ],
+          source: `provider ${providerName}: peak zone ${descriptor.peak.timezone} unresolved`,
+        };
+      }
+      const peak = evaluatePeakWindow(descriptor.peak, nowMs, facts);
       if (peak.status === "parked") {
         return {
           available: false,
@@ -4771,6 +4943,56 @@ export const createCeremonyCommandRuntime = (
   };
 };
 
+/** Deep-merge plain objects; the proposal is validated over the shipped defaults. */
+const isConfigRecord = (value: unknown): value is Record<string, ConfigValue> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const mergePlain = (
+  base: Readonly<Record<string, ConfigValue>>,
+  overlay: Readonly<Record<string, ConfigValue>>,
+): Record<string, ConfigValue> => {
+  const merged: Record<string, ConfigValue> = { ...base };
+  for (const [key, value] of Object.entries(overlay)) {
+    const current = merged[key];
+    merged[key] =
+      isConfigRecord(value) && isConfigRecord(current) ? mergePlain(current, value) : value;
+  }
+  return merged;
+};
+
+/**
+ * Validate a migration proposal before it is printed or written (GH-350 F-6,
+ * DM-7). The document is validated as one configuration **layer** — the exact
+ * partial view the delivered resolver applies to every supplied source before
+ * merging (F-3) — and its provider branch is then checked by the delivered
+ * provider validator over the shipped defaults it overrides, so an entry's
+ * `class` and a quota's endpoint/credential reference come from the defaults
+ * rather than from an invented value.
+ */
+const validateProviderMigrateProposal = (
+  yaml: string,
+  catalog: ConfigCatalog,
+): { readonly ok: true } | { readonly ok: false; readonly detail: string } => {
+  const parsed = parseConfigYaml(yaml, "project-committed", "migration proposal");
+  if (!parsed.ok) return { ok: false, detail: "the proposal is not a parseable document" };
+  const values: Record<string, unknown> = { ...parsed.facts.values };
+  const schemaReference = values.$schema;
+  if (schemaReference !== undefined && typeof schemaReference !== "string") {
+    return { ok: false, detail: "the schema pointer is not a string" };
+  }
+  delete values.$schema;
+  if (!compileTrustedSchema(catalog, true)(values)) {
+    return { ok: false, detail: "the proposal does not satisfy the configuration schema" };
+  }
+  const overlay = isConfigRecord(values.provider) ? values.provider : {};
+  const defaults = isConfigRecord(PRODUCTION_DEFAULTS.provider) ? PRODUCTION_DEFAULTS.provider : {};
+  const validated = parseAndValidateProviderConfiguration({
+    provider: mergePlain(defaults, overlay),
+  });
+  if (!validated.ok) return { ok: false, detail: validated.error.detail };
+  return { ok: true };
+};
+
 /** Compose a frozen brand, acquired sources, legacy facts and the packed defaults
  * manifest into one config command program. Brand resolution happens before any
  * filesystem or root discovery.
@@ -4910,7 +5132,12 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.provider !== undefined) {
     const provider = options.provider;
-    const engine = createProviderEngine(provider);
+    const engine = createProviderEngine({
+      ...provider,
+      ...(provider.spendTotals === undefined
+        ? { spendTotals: createProviderSpendTotalsPort(provider.stateStore) }
+        : {}),
+    });
     const providerRuntime: ProviderCommandRuntime = {
       resolve: async (input) => {
         const snapshot = resolve({});
@@ -5004,8 +5231,25 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
             summary: profileParsed.error.detail,
           };
         }
+        // Validate every zone the selection can probe before probing: an
+        // unresolvable declared zone refuses by name instead of reading as UTC.
+        const probeNames = [
+          ...new Set(
+            Object.values(profileParsed.config.profiles).flatMap((profile) => profile.providers),
+          ),
+        ];
+        const unknownZone = unknownProviderPeakZone(
+          providerParsed.config.entries,
+          probeNames,
+          provider.zoneFactsFor ?? providerZoneFactsFor,
+        );
+        if (unknownZone !== undefined) return zoneUnknownRefusal(unknownZone);
         const nowMs = provider.clock.nowMs();
-        const probe = createResolvedProviderProbe(providerParsed.config.entries, nowMs);
+        const probe = createResolvedProviderProbe(
+          providerParsed.config.entries,
+          nowMs,
+          provider.zoneFactsFor ?? providerZoneFactsFor,
+        );
         const selection = selectProfile({
           profiles: profileParsed.config,
           probe,
@@ -5082,6 +5326,154 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         }
         return lifecycle.selection;
       },
+      migrate: async (input) => {
+        const fs: ProviderMigrateFileSystem = provider.migrateFs ?? {
+          ...(options.fs ?? nodeFileSystemFacts()),
+          readDirectory: (path) => readdirSync(path),
+        };
+        const read = readProviderMigrateSources({
+          homeDirectory: options.homeDirectory,
+          ...(options.priorConfigurationDirectoryName === undefined
+            ? {}
+            : { priorDirectoryName: options.priorConfigurationDirectoryName }),
+          ...(input.profilesDir === undefined ? {} : { profilesDir: input.profilesDir }),
+          ...(input.hookPath === undefined ? {} : { hookPath: input.hookPath }),
+          fs,
+        });
+        if (!read.ok) {
+          const location = read.source === undefined ? "" : ` at ${read.source}`;
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: `provider migrate legacy refused (${read.reason})${location}: ${read.summary}`,
+          };
+        }
+        const parsedAssignments: ProviderMigrateAssignment[] = [];
+        for (const source of read.sources) {
+          const parsedSource = parseProviderMigrateSource(source);
+          if (!parsedSource.ok) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: providerMigrateRefusalSummary(parsedSource.refusal),
+            };
+          }
+          parsedAssignments.push(...parsedSource.assignments);
+        }
+        const built = buildProviderMigrationProposal({
+          sources: read.states,
+          assignments: parsedAssignments,
+          table: PROVIDER_LEGACY_MIGRATION_TABLE,
+        });
+        if (!built.ok) {
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: providerMigrateRefusalSummary(built.refusal),
+          };
+        }
+        const validation = validateProviderMigrateProposal(
+          built.proposal.yaml,
+          options.catalog ?? PRODUCTION_CATALOG,
+        );
+        if (!validation.ok) {
+          return {
+            ok: false,
+            code: "provider.migrate.refused",
+            summary: `provider migrate legacy refused (proposal-invalid): ${validation.detail}`,
+          };
+        }
+        let report = built.proposal.report;
+        if (input.write) {
+          // The project-committed document lives at the effective checkout root,
+          // the same root the configuration resolver reads. The root is resolved
+          // only on the write path: a read-only invocation produces its proposal
+          // wherever it runs and needs no checkout. A write from a subdirectory
+          // resolves to the checkout root rather than creating a document no
+          // layer reads.
+          const checkoutRoot = findGitRoot(options.cwd, repositoryIo);
+          if (checkoutRoot === undefined) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: providerMigrateRefusalSummary(providerMigrateNoCheckoutRefusal(options.cwd)),
+            };
+          }
+          const target = `${checkoutRoot}/${brand.configDirectoryName}/${PROVIDER_MIGRATE_TARGET_NAME}`;
+          if (fs.exists(target)) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: `provider migrate legacy refused (target-exists) at ${target}: the project-committed document already exists and is never modified; merge the proposal by hand`,
+            };
+          }
+          mkdirSync(`${checkoutRoot}/${brand.configDirectoryName}`, { recursive: true });
+          writeFileSync(target, built.proposal.yaml);
+          report = { ...report, writtenPath: target };
+        }
+        return { ok: true, data: { proposal: built.proposal.yaml, report } };
+      },
+      simulate: async (input) => {
+        const snapshot = resolve({});
+        if (!snapshot.ok) {
+          return {
+            ok: false,
+            code: snapshot.error.code,
+            summary: `configuration rejected (${snapshot.error.code})`,
+          };
+        }
+        const parsed = parseAndValidateProviderConfiguration(snapshot.value.config.values);
+        if (!parsed.ok) {
+          return { ok: false, code: parsed.error.code, summary: parsed.error.detail };
+        }
+        // One bounded read, then the pure parser: a fixture defect refuses
+        // before any evaluation and never echoes the document.
+        const read = readProviderSimulateFixture({
+          path: input.fixturePath,
+          fs: provider.fixtureFs ?? options.fs ?? nodeFileSystemFacts(),
+          maxBytes: PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+        });
+        if (!read.ok) return { ok: false, code: read.code, summary: read.summary };
+        const fixtureParsed = parseProviderSimulateFixture(
+          read.document,
+          PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+        );
+        if (!fixtureParsed.ok) {
+          return { ok: false, code: fixtureParsed.code, summary: fixtureParsed.summary };
+        }
+        let profileScope:
+          | { readonly name: string; readonly providers: readonly string[] }
+          | undefined;
+        if (fixtureParsed.fixture.profile !== undefined) {
+          const profileParsed = parseAndValidateProfileConfiguration(
+            snapshot.value.config.values,
+            parsed.config,
+          );
+          if (!profileParsed.ok) {
+            return {
+              ok: false,
+              code: profileParsed.error.code,
+              summary: profileParsed.error.detail,
+            };
+          }
+          const profile = profileParsed.config.profiles[fixtureParsed.fixture.profile];
+          if (profile === undefined) {
+            return {
+              ok: false,
+              code: "provider.profile.invalid",
+              summary: `profile ${fixtureParsed.fixture.profile} is not declared`,
+            };
+          }
+          profileScope = { name: profile.name, providers: profile.providers };
+        }
+        return simulateProviderResolution({
+          fixturePath: input.fixturePath,
+          fixture: fixtureParsed.fixture,
+          config: parsed.config,
+          ...(profileScope === undefined ? {} : { profile: profileScope }),
+          zoneFactsFor: (zone) => providerZoneFactsFor(zone),
+        });
+      },
       watchStatus: async (input) => {
         const snapshot = resolve({});
         if (!snapshot.ok) {
@@ -5120,6 +5512,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           targets: profileParsed.config.watch ?? {},
           credentials: providerParsed.config.credentials,
           ...(input.providerName === undefined ? {} : { providerName: input.providerName }),
+          ...(provider.watchObservedAtMs === undefined
+            ? {}
+            : { observedAtMs: provider.watchObservedAtMs() }),
         });
       },
     };

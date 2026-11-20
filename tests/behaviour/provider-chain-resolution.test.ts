@@ -185,11 +185,10 @@ describe("TC-PROV-002/004/005 provider validation", () => {
   });
 
   test("peak ranges, timezone, credential references, and endpoints are validated", () => {
-    for (const name of [
-      "peak-invalid-timezone.yaml",
-      "peak-end-before-start.yaml",
-      "peak-out-of-range.yaml",
-    ]) {
+    // GH-350: a grammar-valid but runtime-unknown zone (`Mars/Olympus` in the
+    // re-purposed fixture) is an EDGE refusal (`provider.peak.zone-unknown`),
+    // not a validation refusal; its arm lives in the phase-2 zone suite.
+    for (const name of ["peak-end-before-start.yaml", "peak-out-of-range.yaml"]) {
       const parsed = parseAndValidateProviderConfiguration(
         parse(readFileSync(join(ROOT, "tests/fixtures/provider/config", name), "utf8")) as never,
       );
@@ -520,5 +519,62 @@ describe("TC-PROV-063/AC-F2-6 failed entry skip-then-continue", () => {
     expect(resolved.decision.park.expiresAtMs).toBe(NOW + 3600 * 1000);
     expect(resolved.skipped).toEqual([{ providerName: "quota-failed", reason: "quota-exhausted" }]);
     expect(resolved.parks.map((entry) => entry.name)).toContain("provider:quota-failed");
+  });
+});
+
+describe("GH-350 TC-BUD-012 the chain park unions budget-exhausted with the earliest expiry", () => {
+  const parkedAt = (
+    kind: ProviderConditionKind,
+    expiryMs: number,
+    evidence: Record<string, unknown>,
+  ): CombinedProviderCondition => ({
+    status: "parked",
+    cause: kind,
+    conditions: [kind],
+    waitSeconds: Math.floor((expiryMs - NOW) / 1000),
+    expiresAtMs: expiryMs,
+    announcementCode: announcementFor(kind),
+    evidence: { conditionKinds: [kind], ...evidence },
+  });
+
+  test("cause chain-exhausted, the union in tie order, the earliest contributing expiry", () => {
+    const outcome = resolveProviderChain({
+      chain: { name: "default", entries: ["peak", "budget", "quota"], allowPaidFallback: true },
+      nowMs: NOW,
+      states: {
+        peak: {
+          descriptor: descriptor("peak"),
+          condition: parkedAt("peak-window", NOW + 3 * 3600 * 1000, { timezone: "UTC" }),
+        },
+        budget: {
+          descriptor: descriptor("budget"),
+          condition: parkedAt("budget-exhausted", NOW + 3600 * 1000, {
+            budgetName: "daily",
+            budgetScope: "window",
+            budgetBasis: "cost",
+            budgetMeasured: 40,
+            budgetCeiling: 40,
+          }),
+        },
+        quota: {
+          descriptor: descriptor("quota"),
+          condition: parkedAt("quota-exhausted", NOW + 2 * 3600 * 1000, { httpStatus: 200 }),
+        },
+      },
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.decision.kind).toBe("parked");
+    if (outcome.decision.kind !== "parked") return;
+    const park = outcome.decision.park;
+    expect(park.cause).toBe("chain-exhausted");
+    expect(park.conditions).toEqual(["peak-window", "quota-exhausted", "budget-exhausted"]);
+    expect(park.conditions.length).toBe(new Set(park.conditions).size);
+    expect(park.expiresAtMs).toBe(NOW + 3600 * 1000);
+    expect(park.expiresAtMs).toBeGreaterThan(park.createdAtMs);
+    // The only emitted object that can carry both a timezone and a budget field.
+    expect(park.evidence.timezone).toBe("UTC");
+    expect(park.evidence.budgetName).toBe("daily");
+    expect(park.evidence.budgetMeasured).toBe(40);
   });
 });

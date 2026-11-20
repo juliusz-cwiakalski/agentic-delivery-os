@@ -1,0 +1,36 @@
+{
+  "sources": [
+    {
+      "kind": "profiles",
+      "path": "<home>/.delivery-os/config/profiles",
+      "state": "read",
+      "bytes": 135
+    },
+    {
+      "kind": "hook",
+      "path": "<home>/.delivery-os/hooks/pre-opencode-iteration",
+      "state": "absent"
+    }
+  ],
+  "mapped": [
+    {
+      "name": "OC_ADOS_MODEL_PROFILE",
+      "target": "provider.profiles.preferenceChain.base"
+    },
+    {
+      "name": "ADOS_ZAI_PEAK_START_UTC",
+      "target": "provider.entries.zai-coding-plan.peak.startSecondsOfDay"
+    },
+    {
+      "name": "ADOS_ZAI_PEAK_END_UTC",
+      "target": "provider.entries.zai-coding-plan.peak.endSecondsOfDay"
+    },
+    {
+      "name": "ZAI_API_KEY",
+      "target": "provider.credentials.zai.sourceKey"
+    }
+  ],
+  "unmapped": [
+    "ADOS_HOOK_AGENT"
+  ]
+}

@@ -294,6 +294,39 @@ export const ERROR_TABLE = [
     summary: "The env record exceeds a configured size limit.",
   },
   {
+    code: "provider.peak.zone-unknown",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the zone name, or run where zone data is available; a UTC declaration needs no zone data.",
+    projectionClass: "user-validation",
+    summary: "The declared peak-window zone cannot be resolved at runtime.",
+  },
+  {
+    code: "provider.budget.exceeded",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Raise or clear the ceiling, or start a new ticket; the ceiling cannot reopen.",
+    projectionClass: "user-validation",
+    summary: "A ticket-scope budget ceiling was crossed with no honest resume instant.",
+  },
+  {
+    code: "provider.migrate.refused",
+    domainKind: "provider",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Read the named reason, file, and line; hand-author the policy, or correct the source and re-run.",
+    projectionClass: "user-validation",
+    summary: "The legacy provider migration refused the whole run.",
+  },
+  {
     code: "input.value.rejected",
     domainKind: "input",
     category: "user",
