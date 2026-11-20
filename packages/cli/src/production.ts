@@ -514,7 +514,7 @@ const daemonConfigurationRefusal = (): {
 } => ({ error: { kind: "config", code: "config.value.invalid" } });
 
 /**
- * The production provider composition (GH-350 F-2, TDR-0063 D1).
+ * The production provider composition (GH-350 F-2, TDR-0064 D1).
  *
  * The seam supply the budget gate and the zone-aware peak evaluation need, built
  * from delivered parts only: the six declared `ProviderComposition` members, the
@@ -5348,7 +5348,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       phase: committedPhaseRuntime,
       commit: commitOptions,
       // The provider family is registered unconditionally through the delivered
-      // config program (GH-350 F-8, TDR-0062): the six declared
+      // config program (GH-350 F-8, TDR-0063): the six declared
       // `ProviderComposition` seams and the Intl-backed zone binder are supplied
       // here, so the composed program carries `provider` on every invocation, a
       // declared non-UTC window evaluates, and a configuration failure is a typed

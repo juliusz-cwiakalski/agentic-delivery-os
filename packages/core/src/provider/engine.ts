@@ -84,7 +84,7 @@ export type ProviderEngineDependencies = {
    */
   readonly spendTotals?: ProviderSpendTotalsPort;
   /**
-   * The local delivery-context tier of the ref seam (GH-350, TDR-0063). The
+   * The local delivery-context tier of the ref seam (GH-350, TDR-0064). The
    * composition supplies it from the delivered `readLocalPmContext`; it is
    * called only when an enabled budget is evaluated and no explicit fact wins.
    */
@@ -227,7 +227,7 @@ export type ProviderResolveInput = {
   readonly profile?: ProviderResolveProfileScope;
   readonly persist?: boolean;
   /**
-   * Tier 1 of the ref seam (GH-350, TDR-0063): an explicitly supplied
+   * Tier 1 of the ref seam (GH-350, TDR-0064): an explicitly supplied
    * ref-bearing fact. Today only the simulate fixture supplies one; its value
    * wins over the local delivery context.
    */
@@ -553,7 +553,7 @@ const enabledBudgetNames = (config: ProviderConfiguration): readonly string[] =>
   enabledBudgets(config.budgets).map(({ name }) => name);
 
 /**
- * The budget gate (GH-350 F-2, DM-3/DM-4, TDR-0058/TDR-0063): resolve the ref
+ * The budget gate (GH-350 F-2, DM-3/DM-4, TDR-0059/TDR-0064): resolve the ref
  * once, perform exactly one verified read, and evaluate every enabled budget.
  * No budget means no seam call, no read, and no condition.
  */
@@ -662,7 +662,7 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
       // zone refuses `provider.peak.zone-unknown` without touching the spend
       // seam (GH-350 F-1/F-2). The budget gate then runs before any probe,
       // credential read, transport call, or state write: an unresolvable ref
-      // refuses once here (TDR-0063 D4).
+      // refuses once here (TDR-0064 D4).
       const zoneFailure = zoneRefusal(deps, input.config, chain.entries);
       if (zoneFailure !== undefined) return zoneFailure;
       const gate = await evaluateBudgetGate(deps, input.config, input.workItemRef, nowMs);

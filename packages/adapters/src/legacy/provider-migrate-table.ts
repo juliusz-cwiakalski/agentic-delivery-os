@@ -1,5 +1,5 @@
 /**
- * The legacy provider-policy mapping table (GH-350 F-6, Appendix E; TDR-0060 D3).
+ * The legacy provider-policy mapping table (GH-350 F-6, Appendix E; TDR-0061 D3).
  *
  * This is the one declared home for the pre-freeze provider variable names and
  * the targets they map to. It lives in the legacy compatibility subpath because

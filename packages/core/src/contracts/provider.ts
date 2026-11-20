@@ -88,7 +88,7 @@ export const ANNOUNCEMENT_CODES = [
 export type AnnouncementCode = (typeof ANNOUNCEMENT_CODES)[number];
 
 /**
- * The closed watch-only condition set (GH-350, TDR-0061). `watch-stale` is a
+ * The closed watch-only condition set (GH-350, TDR-0062). `watch-stale` is a
  * watch view condition only: it joins no park cause, condition kind, skip
  * reason, or announcement code.
  */
@@ -396,12 +396,12 @@ export type ProviderBudgetOutcome =
       readonly sparse?: boolean;
     };
 
-/** A resolved work-item ref, or the refusal state (GH-350, TDR-0063). */
+/** A resolved work-item ref, or the refusal state (GH-350, TDR-0064). */
 export type ProviderWorkItemRefResolution =
   | { readonly status: "resolved"; readonly workItemRef: string }
   | { readonly status: "unresolved" };
 
-/** The declaration-only ref seam the composition supplies (GH-350, TDR-0063). */
+/** The declaration-only ref seam the composition supplies (GH-350, TDR-0064). */
 export type ProviderWorkItemRefResolver = () => ProviderWorkItemRefResolution;
 
 /**
@@ -517,7 +517,7 @@ type ProviderStateFailureIdentity = `state.${string}`;
 /**
  * Every identity a `resolve` decision may refuse with (GH-350): the provider
  * conditions, the delivered `state.*` read failure, and the one pre-resolution
- * input refusal for an unresolvable budget work-item ref (TDR-0063 D4).
+ * input refusal for an unresolvable budget work-item ref (TDR-0064 D4).
  */
 type ProviderFailureIdentity =
   | ProviderErrorCode

@@ -90,12 +90,12 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0058](TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md) | TDR | Dispatch Session-Output Artifacts and the Transcript Read Seam — A Bounded Per-Ref Sidecar Family and an Adapter-Owned Read Kept Outside the Closed Operation Set | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0058](TDR-0058-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0059](TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0060](TDR-0060-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0061](TDR-0061-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0062](TDR-0062-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
-| [TDR-0063](TDR-0063-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0059](TDR-0059-budget-ceilings-park-before-spend-injected-spend-totals.md) | TDR | Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0060](TDR-0060-provider-simulate-fixture-and-zero-write-simulation.md) | TDR | `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0061](TDR-0061-legacy-provider-profile-and-hook-migration.md) | TDR | Legacy Provider Migration — A Bounded Declarative Reader, a Validated Proposal, and Typed Refusals | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0062](TDR-0062-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0063](TDR-0063-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0064](TDR-0064-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -117,13 +117,14 @@ Decisions TDR-0056 and TDR-0057 are the binding design of change GH-348; their o
 acceptance is that change's pull-request review, and their status moves from
 `Proposed` there rather than in the delivery commits.
 
-Decisions ADR-0013, PDR-0006, and TDR-0058 … TDR-0063 are the binding design of
+Decisions ADR-0013, PDR-0006, and TDR-0059 … TDR-0064 are the binding design of
 change GH-350; their owner acceptance is that change's pull-request review, and
 their status moves from `Proposed` there rather than in the delivery commits.
 ADR-0013 is the zone-aware peak-window record (renumbered from ADR-0012 when the
-GH-349 merge brought upstream's provider-side landing ADR-0012). TDR-0057 … TDR-0063
-were renumbered one place (0057 … 0062 → 0058 … 0063) when the GH-348 merge brought
-its own TDR-0057; TDR-0062 mounts the provider family as the twenty-eighth and last
-prompt-required member after GH-348's `loop` (twenty-seventh), and TDR-0063 fixes the
+GH-349 merge brought upstream's provider-side landing ADR-0012). TDR-0057 … TDR-0064
+were renumbered two places: 0057 … 0062 → 0058 … 0063 when the GH-348 merge brought
+its own TDR-0057, then 0058 … 0063 → 0059 … 0064 when the GH-354 merge brought
+TDR-0058; TDR-0063 mounts the provider family as the twenty-eighth and last
+prompt-required member after GH-348's `loop` (twenty-seventh), and TDR-0064 fixes the
 work-item ref the budget gate measures, so the GH-350 specification must carry all of
 them before readiness re-review.

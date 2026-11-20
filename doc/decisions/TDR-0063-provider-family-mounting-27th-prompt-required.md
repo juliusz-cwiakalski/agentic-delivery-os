@@ -1,5 +1,5 @@
 ---
-id: TDR-0062
+id: TDR-0063
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -81,13 +81,13 @@ links:
     - "tests/fixtures/supervise/mounting.ts"
     - "tests/fixtures/entrypoint/alias-baseline.json"
   diagrams: []
-  decisions: ["TDR-0044", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0063", "ADR-0007"]
+  decisions: ["TDR-0044", "TDR-0060", "TDR-0061", "TDR-0062", "TDR-0064", "ADR-0007"]
   experiments: []
   metrics: []
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0062: Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop`
+# TDR-0063: Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop`
 
 ## Context
 
@@ -153,7 +153,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 ### C-6: The mount adds no new error identity and no new state kind
 
 - **Statement:** The mount introduces no error-table row, no state record kind, and no write path; a provider member's failures are the delivered provider/config/state identities or the containment identity.
-- **Source:** Change spec `NG-11`, `NG-12`; TDR-0059 C-6 (lean-process driver).
+- **Source:** Change spec `NG-11`, `NG-12`; TDR-0060 C-6 (lean-process driver).
 - **Verification:** `error-table-sync` green with unchanged counts; no record-kind registration.
 - **Negotiable:** no.
 
@@ -210,7 +210,7 @@ The framing that follows: **mount the whole family as the twenty-seventh and las
 - **5 Whys:** why is the family unreachable? It is absent from the declarative set, and production never supplies the `provider` seam, so the composed program has no family. Why? Because its only registration path is a conditional arm (`options.provider !== undefined`) that production does not satisfy. Why did nobody notice? Because the tests drove the command layer. Why did the tests drive the command layer? Because there was no case or oracle that required the entrypoint. Why? Because reachability was assumed from a registration arm that production never takes. The fifth answer is the defect class this record closes with a negative control.
 - **Second-order thinking:** appending after `install` keeps every delivered ordinal true forever; inserting earlier would make ordinals a function of mount history and invite the next author to renumber again.
 - **Systems thinking:** the count lives in one declaration and in ~20 derived assertions, two fixtures, one byte baseline, and six documentation pages. A mount is therefore a *propagation* task; the record's job is to enumerate the propagation so it is not discovered as breakage.
-- **Boundary thinking:** what this record does **not** decide: the ref source for budget evaluation (TDR-0063), the fixture schema (TDR-0059), the migration grammar (TDR-0060), the watch freshness rule (TDR-0061), and the budget semantics (TDR-0058). The mount carries them; it does not re-decide them.
+- **Boundary thinking:** what this record does **not** decide: the ref source for budget evaluation (TDR-0064), the fixture schema (TDR-0060), the migration grammar (TDR-0061), the watch freshness rule (TDR-0062), and the budget semantics (TDR-0059). The mount carries them; it does not re-decide them.
 - **KISS:** one array entry, one six-runtime composition seam, eight help entries, one coverage row, one page edit, and mechanical count propagation — no new abstraction, no generated inventory.
 
 ## Alternatives Considered
@@ -286,12 +286,12 @@ The family's declared invocation paths, each of which must reach its handler and
 
 | Member | Invocation | Evaluates a budget? | Needs a work-item ref? |
 |---|---|---|---|
-| resolve | `provider resolve [--chain <name>] [--profile <name>]` | yes (chain resolution) | yes, when an enabled budget is declared (TDR-0063) |
+| resolve | `provider resolve [--chain <name>] [--profile <name>]` | yes (chain resolution) | yes, when an enabled budget is declared (TDR-0064) |
 | quota | `provider quota [--provider <name>]` | no | no |
 | parks | `provider parks list [--all] [--provider <name>]` | no | no |
-| profile | `provider profile resolve [--agent <name>] [--for-spawn]` | no (budget joins chain resolution, not profile eligibility — TDR-0058) | no |
+| profile | `provider profile resolve [--agent <name>] [--for-spawn]` | no (budget joins chain resolution, not profile eligibility — TDR-0059) | no |
 | watch | `provider watch status [--provider <name>]` | no | no |
-| simulate | `provider simulate --fixture <path>` | yes (replays `resolve`) | yes, from the fixture (TDR-0063) |
+| simulate | `provider simulate --fixture <path>` | yes (replays `resolve`) | yes, from the fixture (TDR-0064) |
 | migrate | `provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]` | no | no |
 
 `provider parks`, `provider profile`, `provider watch`, and `provider migrate` are grammar groups, not help entries: an intermediate path has no static help row, exactly as `install`'s family has none between `install` and `install status`. The declared help inventory is therefore **one family entry plus seven member entries = eight entries**, and `provider <group> --help` falls through to the classified composition failure as every unknown help path does.
@@ -305,7 +305,7 @@ The family's declared invocation paths, each of which must reach its handler and
 
 - `packages/cli/src/help.ts` gains the family entry and the seven member entries, each with the five declared sections, using the existing M1 page helper so `seeAlso` is `doc/planning/oss-tooling/milestones/m1/commands/provider.md` on all eight.
 - **The M1 page is the served page; no `pageFor` branch and no M4 page are added.** The default `pageFor` root is the M1 commands directory and already contains `provider.md`; the family's own milestone is M1 (it shipped in M0-S13 and was extended in M1-S21). TDR-0044's rule — "the default M1 snapshot root must not serve a **new** family" — governs a family created in a later milestone, which provider is not. `retro`'s two-page fork exists because its M1 page is the shipped-in-M1 snapshot of a differently-scoped surface; forking provider now would create a second truth for one family with no milestone boundary to justify it.
-- The page must gain the two strings the gate requires (`--help`, `--version`), the `--chain` flag the grammar already accepts, the two new members, the budget gate's ref rule (TDR-0063), and the `watch-stale` condition (TDR-0061). Its `ERRORS` list must name the three new rows (`provider.peak.zone-unknown`, `provider.budget.exceeded`, `provider.migrate.refused`) rather than the delivered set alone.
+- The page must gain the two strings the gate requires (`--help`, `--version`), the `--chain` flag the grammar already accepts, the two new members, the budget gate's ref rule (TDR-0064), and the `watch-stale` condition (TDR-0062). Its `ERRORS` list must name the three new rows (`provider.peak.zone-unknown`, `provider.budget.exceeded`, `provider.migrate.refused`) rather than the delivered set alone.
 
 ### 4. Coverage inventory
 
@@ -466,17 +466,17 @@ The chosen alternative (ALT-1) satisfies C-1 through C-6. No accepted-risk excep
   to **twenty-eighth and last, appended after `loop`**; `install` stays the
   twenty-sixth and `supervise` the twenty-fifth, and the principle (the provider
   family is appended last) is unchanged. The record was also renumbered
-  `TDR-0061` → `TDR-0062` (and its companion records `TDR-0057..0062` →
-  `TDR-0058..0063`) because GH-348 owns `TDR-0056`/`TDR-0057`; the historical
+  `TDR-0062` → `TDR-0063` (and its companion records `TDR-0057..0062` →
+  `TDR-0059..0063`) because GH-348 owns `TDR-0056`/`TDR-0057`; the historical
   matrix below records the pre-merge 26→27 movement and is retained as history.
 
 ## References
 
 - [TDR-0044](TDR-0044-install-lifecycle-composed-command-family.md) — the mount precedent: membership, help, page root, count movement, and the declared conformance surface.
-- [TDR-0059](TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md) — `provider simulate`.
-- [TDR-0060](TDR-0060-legacy-provider-profile-and-hook-migration.md) — `provider migrate`.
-- [TDR-0061](TDR-0061-watch-observation-freshness-and-stale-condition.md) — the `watch-stale` condition the page must document.
-- [TDR-0063](TDR-0063-provider-budget-work-item-ref-source.md) — the work-item ref source the mounted family consumes.
+- [TDR-0060](TDR-0060-provider-simulate-fixture-and-zero-write-simulation.md) — `provider simulate`.
+- [TDR-0061](TDR-0061-legacy-provider-profile-and-hook-migration.md) — `provider migrate`.
+- [TDR-0062](TDR-0062-watch-observation-freshness-and-stale-condition.md) — the `watch-stale` condition the page must document.
+- [TDR-0064](TDR-0064-provider-budget-work-item-ref-source.md) — the work-item ref source the mounted family consumes.
 - [ADR-0007](ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md) — the engine the family exposes.
 - Feature specs: [CLI Entrypoint and Self-Description](../spec/features/feature-cli-entrypoint.md), [Provider Engine](../spec/features/feature-provider-engine.md), [Provider Profiles](../spec/features/feature-provider-profiles.md).
 - Readiness evidence: `doc/changes/2026-11/2026-11-19--GH-350--provider-policy/readiness-review/readiness-iter-1.md` (B1, B6).

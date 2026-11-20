@@ -1101,12 +1101,12 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
   const RECORDS = [
     "ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md",
     "PDR-0006-per-project-provider-policy-repository-config-layers.md",
-    "TDR-0058-budget-ceilings-park-before-spend-injected-spend-totals.md",
-    "TDR-0059-provider-simulate-fixture-and-zero-write-simulation.md",
-    "TDR-0060-legacy-provider-profile-and-hook-migration.md",
-    "TDR-0061-watch-observation-freshness-and-stale-condition.md",
-    "TDR-0062-provider-family-mounting-27th-prompt-required.md",
-    "TDR-0063-provider-budget-work-item-ref-source.md",
+    "TDR-0059-budget-ceilings-park-before-spend-injected-spend-totals.md",
+    "TDR-0060-provider-simulate-fixture-and-zero-write-simulation.md",
+    "TDR-0061-legacy-provider-profile-and-hook-migration.md",
+    "TDR-0062-watch-observation-freshness-and-stale-condition.md",
+    "TDR-0063-provider-family-mounting-27th-prompt-required.md",
+    "TDR-0064-provider-budget-work-item-ref-source.md",
   ] as const;
 
   test("each record exists, is Proposed, and has exactly one index row", () => {
@@ -1123,12 +1123,12 @@ describe("GH-350 the eight decision records are Proposed and indexed", () => {
     for (const id of [
       "ADR-0013",
       "PDR-0006",
-      "TDR-0058",
       "TDR-0059",
       "TDR-0060",
       "TDR-0061",
       "TDR-0062",
       "TDR-0063",
+      "TDR-0064",
     ]) {
       expect(spec, id).toContain(id);
     }

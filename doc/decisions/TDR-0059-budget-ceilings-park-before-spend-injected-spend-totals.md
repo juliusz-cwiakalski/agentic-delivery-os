@@ -1,5 +1,5 @@
 ---
-id: TDR-0058
+id: TDR-0059
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -73,7 +73,7 @@ links:
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0058: Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket
+# TDR-0059: Budget Ceilings — A Pure Evaluator over an Injected Spend-Totals Port, Park on the Sliding Window, Terminal Refusal on the Ticket
 
 ## Context
 

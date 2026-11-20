@@ -3,7 +3,7 @@
  * is exactly 28 with `loop` 27th and `provider` last, the composition filter drops an extra
  * family and keeps the declared keys, the pin set is derived from the fixture,
  * every listed file carries a 28 pin, the tails shift one place, and the
- * stale-detector class is widened to `2[34567]` (AC-F8-4, AC-F8-5; TDR-0062).
+ * stale-detector class is widened to `2[34567]` (AC-F8-4, AC-F8-5; TDR-0063).
  */
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";

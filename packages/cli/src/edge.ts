@@ -1741,7 +1741,7 @@ export type ProviderComposition = {
    * counting fake) wins.
    */
   readonly spendTotals?: ProviderSpendTotalsPort;
-  /** The local delivery-context tier of the budget ref seam (TDR-0063). */
+  /** The local delivery-context tier of the budget ref seam (TDR-0064). */
   readonly resolveWorkItemRef?: ProviderWorkItemRefResolver;
   /** The context path the unresolvable-ref refusal names. */
   readonly workItemContextPath?: string;
@@ -2831,7 +2831,7 @@ const stepInstantMs = (step: {
 }): number => Date.parse(step.finishedAt ?? step.capturedAt);
 
 /**
- * The one read-only spend-totals projection (GH-350 F-2, DM-3, TDR-0058 D2).
+ * The one read-only spend-totals projection (GH-350 F-2, DM-3, TDR-0059 D2).
  *
  * One verified `readSpendLedger` per evaluation, then one projection per
  * declared budget scope over the delivered fold (`computeSpendReport`): both

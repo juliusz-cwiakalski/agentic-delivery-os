@@ -1,5 +1,5 @@
 /**
- * Offline provider-policy simulation (GH-350 F-5, DM-5, DM-6; TDR-0059).
+ * Offline provider-policy simulation (GH-350 F-5, DM-5, DM-6; TDR-0060).
  *
  * One strict versioned facts document replayed through the DELIVERED pure
  * engine: this module parses the fixture, supplies the engine's seams from the
@@ -629,7 +629,7 @@ export const simulateProviderResolution = async (
 };
 
 /**
- * The fixture's ref rule (TDR-0063, TC-REF-004): a ref is required exactly when
+ * The fixture's ref rule (TDR-0064, TC-REF-004): a ref is required exactly when
  * the resolved configuration declares an enabled budget, and the fixture is its
  * only source — simulate never reads the local delivery context.
  */

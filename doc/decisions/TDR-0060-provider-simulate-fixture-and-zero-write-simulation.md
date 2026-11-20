@@ -1,5 +1,5 @@
 ---
-id: TDR-0059
+id: TDR-0060
 decision_type: tdr
 status: Proposed
 created: 2026-11-19
@@ -65,11 +65,11 @@ links:
     - "packages/core/src/contracts/provider.ts"
     - "packages/core/src/provider/engine.ts"
     - "packages/cli/src/commands/provider.ts"
-  decisions: ["ADR-0007", "TDR-0031", "TDR-0038", "TDR-0058"]
+  decisions: ["ADR-0007", "TDR-0031", "TDR-0038", "TDR-0059"]
   roadmap_items: ["M4-S4"]
 ---
 
-# TDR-0059: `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee
+# TDR-0060: `provider simulate` — One Strict Fixture, the Real Pure Engine, and a Zero-Write Guarantee
 
 ## Context
 

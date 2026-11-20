@@ -5,7 +5,7 @@
 - **Date:** 2026-11-19
 - **Verdict:** `READY`
 - **Iteration:** 3 of 3, plus a narrow remediation confirmation
-- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.3 (31 ACs), `chg-GH-350-test-plan.md` v1.5 (108 cases), `chg-GH-350-plan.yaml` (9 phases, validator green), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md` and `-2.md`, TDR-0062 (corrected), TDR-0063, ADR-0013, PDR-0006, TDR-0058..0063
+- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.3 (31 ACs), `chg-GH-350-test-plan.md` v1.5 (108 cases), `chg-GH-350-plan.yaml` (9 phases, validator green), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md` and `-2.md`, TDR-0063 (corrected), TDR-0064, ADR-0013, PDR-0006, TDR-0059..0063
 
 ## Iteration-2 adjudication
 
@@ -13,12 +13,12 @@
 |---|---|
 | D2-1 §7.2 "no edit / stays 26" | REMEDIATED |
 | D2-2 spec §18 order | REMEDIATED |
-| D2-3 TDR-0062 + spec §2.1 composition truth and mount cost | REMEDIATED (the record and the spec now state that the mount adds membership **and** the six-seam `ProviderComposition` wiring) |
+| D2-3 TDR-0063 + spec §2.1 composition truth and mount cost | REMEDIATED (the record and the spec now state that the mount adds membership **and** the six-seam `ProviderComposition` wiring) |
 | D2-4 engine/metrics/cli-entrypoint count sentences | REMEDIATED (owned by the phases that move them and pinned by TC-DOC-001/002) |
 | D2-5 `.dependency-cruiser.cjs` | REMEDIATED (declared in the two rule phases; the other two promised rules have non-import-graph homes with failing fixtures) |
 | D2-6 TC-MOUNT-003 harness | REMEDIATED (temp copy with **every** relative import rewritten; same-machinery control) |
 | D2-7 TC-CONFORM-004 maximal evidence | REMEDIATED (chain-park union or constructed object; budget park = 13, peak = 9) |
-| D2-8 TDR-0062 C-5 write-set | REMEDIATED (`profile resolve` named as a writer; identity neutrality separated from write behaviour) |
+| D2-8 TDR-0063 C-5 write-set | REMEDIATED (`profile resolve` named as a writer; identity neutrality separated from write behaviour) |
 | D2-9 TC-MOUNT-008 owner/comparison | REMEDIATED |
 | D2-10 plan header facts | REMEDIATED |
 | D2-11 test-plan self-consistency | REMEDIATED |

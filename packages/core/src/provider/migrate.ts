@@ -1,5 +1,5 @@
 /**
- * One-time legacy provider-policy migration (GH-350 F-6, DM-7; TDR-0060).
+ * One-time legacy provider-policy migration (GH-350 F-6, DM-7; TDR-0061).
  *
  * The legacy files are parsed as DATA under one assignment-only grammar. Nothing
  * is executed, sourced, word-split, glob-expanded, evaluated, or shelled out; no
@@ -45,7 +45,7 @@ export const PROVIDER_MIGRATE_CREDENTIAL_SUFFIXES = [
 ] as const;
 
 /**
- * The legacy→policy mapping is DATA (TDR-0060 D3): this pure module owns the
+ * The legacy→policy mapping is DATA (TDR-0061 D3): this pure module owns the
  * grammar, the firewall, and the mapper engine, while the vendor names and
  * their targets are supplied by the compatibility edge that reads the legacy
  * identity (`packages/adapters/src/file`). The provider tier therefore carries

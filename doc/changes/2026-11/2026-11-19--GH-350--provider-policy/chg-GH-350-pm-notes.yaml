@@ -27,7 +27,7 @@ decisions:
       `packages/adapters/src/time-zone/` hosts `createIntlZonePort`. Causes,
       codes and skip reasons unchanged."
     date: "2026-11-19"
-  - text: "TDR-0058 — Budgets gate before spend through a pure `evaluateBudgets`
+  - text: "TDR-0059 — Budgets gate before spend through a pure `evaluateBudgets`
       over one injected read-only `ProviderSpendTotalsPort` implemented at the
       edge from the delivered spend fold; no persisted counter and no new state
       kind. `window` scope parks with an honest expiry (`newestAtMs +
@@ -49,7 +49,7 @@ decisions:
       refusal, and the CI=true case. Multi-checkout shared policy remains
       M4-S5."
     date: "2026-11-19"
-  - text: "TDR-0059 — `provider simulate --fixture <path> [--json]` composes the
+  - text: "TDR-0060 — `provider simulate --fixture <path> [--json]` composes the
       delivered `createProviderEngine` with fixture seams and calls `resolve`
       with `persist: false`. Fixture schema `delivery.provider.simulate.v1`
       (now, chain?, profile?, credentials resolved|missing, quota
@@ -60,7 +60,7 @@ decisions:
       fixture defects reuse `input.value.rejected`. Parity with `resolve` is a
       test."
     date: "2026-11-19"
-  - text: "TDR-0060 — Legacy migration is `provider migrate legacy [--profiles-dir
+  - text: "TDR-0061 — Legacy migration is `provider migrate legacy [--profiles-dir
       <dir>] [--hook <path>] [--write] [--json]`. Legacy
       `~/.<priorWorkingName>/config/profiles/*.sh` and the hook are parsed as
       data under an assignment-only subset and never executed, sourced,
@@ -72,7 +72,7 @@ decisions:
       names classify name-first and the value is discarded at the parse
       boundary; unmapped recognised names are disclosed by name and omitted."
     date: "2026-11-19"
-  - text: "TDR-0061 — Watch freshness is per-target
+  - text: "TDR-0062 — Watch freshness is per-target
       `provider.profiles.watch.<name>.maxAgeSeconds` (positive integer, default
       900) with predicate `ageSeconds >= maxAgeSeconds` and a closed watch-only
       condition `watch-stale`, distinct from `provider-outage`. Watch-derived
@@ -94,8 +94,8 @@ decisions:
       Bisection was rejected because the predicate is not monotone across a
       fall-back, and 'last candidate' as pass-parity, not calendar."
     date: "2026-11-19"
-  - text: "TDR-0062 — `provider` is mounted as the twenty-seventh and last
-      prompt-required family (appended after `install`): membership, one family
+  - text: "TDR-0063 — `provider` is mounted as the twenty-eighth and last
+      prompt-required family (appended after GH-348's `loop`, the twenty-seventh): membership, one family
       help entry plus seven member entries, a coverage row in both directions,
       the M1 reference page completed with `--help`/`--version`, and every
       pinned count/tail assertion move in one change. `install` stays 26th and
@@ -104,7 +104,7 @@ decisions:
       composer plus a negative control, because the delivered suite drove
       `createConfigProgram`/`runCli` and never `runEntrypoint`."
     date: "2026-11-19"
-  - text: "TDR-0063 — The budget work-item ref resolves in one three-tier
+  - text: "TDR-0064 — The budget work-item ref resolves in one three-tier
       precedence: an explicit ref-bearing fact (today only the simulate
       fixture's `workItemRef`), otherwise the delivered `readLocalPmContext`
       seam at `<cwd>/.ai/local/pm-context.yaml` with no store read and no
@@ -193,7 +193,7 @@ notes:
       advanced by f802f71a (GH-347 dispatch core parity) and already carries the
       decision records 0049..0054; GH-348 holds 0055 and 0056 in flight. The six
       ADR-0013 companion records this branch created therefore moved to the next
-      free ids TDR-0058..TDR-0063: 0049 -> 0057 (budget ceilings), 0050 -> 0058
+      free ids TDR-0059..TDR-0064: 0049 -> 0057 (budget ceilings), 0050 -> 0058
       (provider simulate), 0051 -> 0059 (legacy migration), 0052 -> 0060 (watch
       freshness), 0053 -> 0061 (family mounting), 0054 -> 0062 (budget work-item
       ref). The renumber is applied across the six filenames, their front matter
@@ -218,7 +218,7 @@ notes:
       table, M2 typed failed-read, M3 page scope, m1-m7, n1-n7). Three base
       syncs absorbed GH-347 (TDR-0049..0054), GH-349 (ADR-0012, TDR-0055,
       ODR-0005) and GH-348 (TDR-0056/0057, loop family); this branch's records
-      are now TDR-0058..0063 and its zone ADR is ADR-0013. Final mount truth: 28
+      are now TDR-0059..0063 and its zone ADR is ADR-0013. Final mount truth: 28
       families, loop 27th, provider 28th and last, install 26th, supervise
       25th."
     type: evidence
@@ -394,7 +394,7 @@ notes:
       B1..B7 adjudicated REMEDIATED; four new blocking findings: D2-1 test plan
       §7.2 says three mount suites need no edit and the count stays 26; D2-2
       spec §18 orders the mount before simulation/migration/watch while the plan
-      mounts last; D2-3 TDR-0062 and spec §2.1 claimed the family was already
+      mounts last; D2-3 TDR-0063 and spec §2.1 claimed the family was already
       registered/composed when the production composer composes no provider
       command; D2-4 the engine and metrics page count sites are unowned and
       unpinned. Plus majors D2-5..D2-12. Reopened specification, test_planning,
@@ -423,7 +423,7 @@ notes:
       mounted-family filter, not only through the command handler."
     type: retro
     date: "2026-11-19"
-  - text: "Naming caution for review: `provider migrate legacy` (TDR-0060) is
+  - text: "Naming caution for review: `provider migrate legacy` (TDR-0061) is
       provider-policy migration, distinct from M4-S2's namespace migration and
       from the `install --migrate` delegation refusal (TDR-0048). The spec and
       docs must not conflate them."
@@ -556,7 +556,7 @@ notes:
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 decision-record renumber (pre-merge, no phase transition): the six
-      ADR-0013 companion records moved to TDR-0058..TDR-0063 because upstream
+      ADR-0013 companion records moved to TDR-0059..TDR-0064 because upstream
       main-tools already carries records 0049..0054 (GH-347, f802f71a) and
       GH-348 holds 0055 and 0056 in flight. Mapping: 0049 -> 0057 (budget
       ceilings), 0050 -> 0058 (provider simulate), 0051 -> 0059 (legacy
@@ -583,7 +583,7 @@ notes:
       50a1482b (parents 5c189f46 and f802f71a), no conflict aborted and no
       --abort used. Three conflicts resolved as union. (1)
       doc/decisions/00-index.md: upstream's six GH-347 dispatch rows
-      TDR-0049..TDR-0054 and this branch's six provider rows TDR-0058..TDR-0063
+      TDR-0049..TDR-0054 and this branch's six provider rows TDR-0059..TDR-0064
       both kept, and the three narrative blocks (GH-346 0044..0048, GH-347
       0049..0054, GH-350 0057..0062) kept in id order; nothing renumbered
       further and no row dropped. (2) doc/spec/features/feature-config-layer.md:
@@ -591,14 +591,14 @@ notes:
       provider.budgets table, declared-zone peak value domain, record-map list
       and per-repository section (precedence matrix, origins, CI=true,
       selected-file, multi-checkout boundary); the front-matter links union
-      GH-347 and TDR-0050/TDR-0051 with GH-350 and PDR-0006/TDR-0058. (3)
+      GH-347 and TDR-0050/TDR-0051 with GH-350 and PDR-0006/TDR-0059. (3)
       packages/cli/src/production.ts: this branch's
       createProductionProviderComposition (readLocalPmContext ref seam plus
       createProviderSpendTotalsPort) landed as a pure 47-line addition over
       upstream's dispatch composition; the DispatchLaneFacts type import was
       dropped because upstream deleted its only consumer (laneFactsFor, replaced
       by resolveDispatchLane), which the build named as TS6133. Renumber
-      interplay: the six provider records stay TDR-0058..TDR-0063 (0057 budgets,
+      interplay: the six provider records stay TDR-0059..TDR-0064 (0057 budgets,
       0058 simulate, 0059 migration, 0060 watch, 0061 mount, 0062 ref);
       upstream's 0049..0054 are its own dispatch records and are untouched.
       Counts: UNCHANGED, established after the merge rather than assumed. bun
@@ -790,9 +790,10 @@ notes:
     type: evidence
     date: "2026-11-19"
   - text: "GH-350 plan phase 8 (delivery) complete: the provider family is mounted
-      as the twenty-seventh and last prompt-required family (install
-      twenty-sixth, supervise twenty-fifth, no delivered ordinal moved).
-      PROMPT_REQUIRED_COMMANDS is exactly 27 with provider last; the production
+      as the twenty-eighth and last prompt-required family (install
+      twenty-sixth, loop twenty-seventh, supervise twenty-fifth, no delivered
+      ordinal moved). PROMPT_REQUIRED_COMMANDS is exactly 28 with loop 27th and
+      provider last; the production
       composition supplies the six ProviderComposition seams (clock,
       credentialPort, transport, sleep, stateStore, newFenceToken) through
       createProductionProviderComposition and registers the family
@@ -847,7 +848,7 @@ notes:
       NOT modified: the delivered TC-RELEASE-001 guard requires exactly one
       added changeset and no modified pre-existing one, and this change's own
       .changeset/gh350-provider-policy-minor.md already states the
-      twenty-seventh family; the plan, spec v1.6 and test plan v2.0 record that
+      twenty-eighth family; the plan, spec v1.6 and test plan v2.0 record that
       correction. The uncommitted phase-7 note was sanitized to remove an
       absolute operator path so privacy-literals stays green. Commit
       3d07b1f50fb0756929bc3d8400f2ffec3b8df156."
@@ -1038,7 +1039,7 @@ notes:
       (doc/decisions/ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md,
       slug kept; front-matter id and heading updated) and every GH-350 reference
       moved with it: chg-GH-350-spec.md (including DEC-1 and all citations),
-      plan, test plan, pm-notes, the three readiness reviews, TDR-0059, the
+      plan, test plan, pm-notes, the three readiness reviews, TDR-0060, the
       engine, profiles, peak-pausing, resident-daemon, result-contract,
       adapter-ports, architecture, glossary and M1 provider pages, the code
       comments in adapters/time-zone, cli/edge, contracts/provider,
@@ -1241,7 +1242,7 @@ notes:
       tests/structure/provider-mounting.test.ts and
       tests/fixtures/supervise/mounting.ts header comments now say 28 (the
       metrics fixture's 27-family-set history line is left as correct history),
-      and the three GH-350 readiness reviews' range now reads TDR-0058..0063.
+      and the three GH-350 readiness reviews' range now reads TDR-0059..0063.
       The mount record's filename slug is left unchanged (its content and ##
       Revision are correct). Gates: bun test
       tests/checks/doc-conformance.test.ts 55 pass / 0 fail; HOME=$(mktemp -d)
