@@ -1863,6 +1863,9 @@ phases:
         # green. The guard's sandbox install is made HOME-hermetic (its own scratch
         # home); no marker, install-set, or assertion semantics change.
         - scripts/.tests/test-doc-distribution.sh
+        # Same authorisation: the refusal message's unescaped backticks run
+        # /usr/bin/install on every refusal; escaped so the message is literal.
+        - scripts/install.sh
         # STAGING ONLY (lifecycle phase 7 reconciles them; this plan authors no
         # current-truth prose). Declared so a reconciliation touch stages here.
         - doc/spec/features/feature-dispatch-engine.md
