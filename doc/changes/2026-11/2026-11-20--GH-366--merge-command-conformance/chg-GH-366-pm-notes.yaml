@@ -8,7 +8,7 @@ milestone: "M4: Jaiship-native delivery"
 branch: fix/GH-366/merge-command-conformance
 phases:
   clarify_scope: { started: 2026-11-20T11:45:00.000Z, completed: 2026-11-20T10:47:14.870Z }
-  specification: { started: null, completed: 2026-11-20T10:54:58.262Z }
+  specification: { started: null, completed: 2026-11-20T11:03:58.721Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -56,6 +56,35 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Specification reopened and re-completed (v1.2): the DoR was not the
+      discovery point — the PM verified the F-4 premise against the tree while
+      validating the test plan. `packages/cli/src/classify.ts:76-97`
+      (`mergeGateFamilyEntry`) already resolves any emitted
+      `merge.gate.<gate-id>.failed` code of kind `merge` to the declared family
+      row, and `tests/structure/defect-f1-merge-refusal-containment.test.ts`
+      already asserts a live gate-family refusal is that row at exit 1, never
+      the containment identity. The spec's §2.1 claimed a gate refusal 'can
+      reach the containment identity'; that was an over-inference from the
+      type-only family expression. The real residual — the composition's runtime
+      emittable declaration enumerates exact members only, so the totality proof
+      matches source text instead of ranging over a runtime declaration — is
+      still delivery work and is now stated accurately (F-4, G-5, §7.1, §16,
+      RSK-6, DEC-7). No AC text, scope, or identity changed, so the completed
+      test plan (22/22 AC coverage) remains valid."
+    type: retro
+    date: "2026-11-20"
+  - text: "Test plan (phase 3): chg-GH-366-test-plan.md written, TC-MRG-001..041 (41
+      cases), 22/22 ACs covered with no TODO, 10/10 NFRs, all 8 interface
+      elements, 41 index rows = 41 detail blocks = 41 automation rows. Five
+      author open questions recorded (OQ-TP-1..5); OQ-TP-1 is the F-4 premise,
+      resolved by the spec v1.2 correction above. OQ-TP-2 (which of the 13 merge
+      goldens move when the merge projection becomes two entries) must be a
+      declared per-file list in the plan. The plan's §7.3 also pins the
+      meta-suite registration obligations (merge-suite-obligations closed
+      population, merge-suite-discovery NEW_SUITES, two export inventories,
+      merge-contract pinned default set, 13-file golden set)."
+    type: info
+    date: "2026-11-20"
   - text: "PM-decided (this change's own change record): the pm-notes gains the
       top-level `branch` declaration that this change introduces as DM-1, so the
       change is mergeable by its own contract. The spec's §19 seeding paragraph
