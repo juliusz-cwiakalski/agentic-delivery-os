@@ -7,9 +7,16 @@
  * and the "lane exists before any attempt" probe observes the acquisition
  * rather than the classification.
  */
+
+import { appendDaemonLane, readDaemonLanes } from "../../../../packages/core/src/app/daemon";
 import {
-  type DaemonLaneRecord,
+  appendDispatchLane,
+  readDispatchAttempts,
+  readDispatchLanes,
+} from "../../../../packages/core/src/app/dispatch-ledger";
+import {
   DAEMON_LANE_PAYLOAD_SCHEMA,
+  type DaemonLaneRecord,
   DISPATCH_LANE_PAYLOAD_SCHEMA,
   DISPATCH_LANE_RECORD_KIND,
   type DispatchLaneRecord,
@@ -17,14 +24,8 @@ import {
   type HarnessOutcome,
   type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
-import { appendDaemonLane, readDaemonLanes } from "../../../../packages/core/src/app/daemon";
-import {
-  appendDispatchLane,
-  readDispatchAttempts,
-  readDispatchLanes,
-} from "../../../../packages/core/src/app/dispatch-ledger";
-import { createParityHarness, type ParityEnvelope, type ParityObservation } from "./harness";
 import { readEconomicsRecords } from "../../../../packages/core/src/state/index";
+import { createParityHarness, type ParityEnvelope, type ParityObservation } from "./harness";
 import { createGuardedRunner } from "./process-runner";
 
 export const LANE_NOW = "2026-11-19T00:00:00.000Z";
@@ -106,6 +107,31 @@ export const dispatchLanesOf = (
   if (!read.ok) throw new Error("lane read failed");
   return read.records.filter((record) => record.ref === ref);
 };
+
+/**
+ * Append several real lane records in the given order (GH-354 §7.2).
+ *
+ * The lane key carries no repository component, so a sequence is the only way
+ * to express "a NEWER record for the same ref under another repository"; both
+ * records land under `dispatch.lanes:<ref>` and only the filter order decides
+ * which one answers.
+ */
+export const seedDispatchLaneSequence = (
+  store: StateStorePort,
+  seeds: readonly LaneSeed[],
+): readonly DispatchLaneRecord[] => seeds.map((seed) => seedDispatchLane(store, seed));
+
+/**
+ * Append one record for the SAME ref under ANOTHER repository.
+ *
+ * The default foreign repository differs from the parity repository, so a
+ * per-ref query must answer from the local record and never from this one.
+ */
+export const seedForeignRepositoryLane = (
+  store: StateStorePort,
+  seed: LaneSeed,
+  repository = "github.com/other/repo",
+): DispatchLaneRecord => seedDispatchLane(store, { ...seed, repository });
 
 /** The daemon lane records for a ref, in append order (the delivered reader). */
 export const daemonLanesOf = (store: StateStorePort, ref: string) => {

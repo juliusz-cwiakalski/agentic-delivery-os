@@ -25,6 +25,7 @@ import {
 import { resolveBrandIdentity } from "../../../packages/core/src/branding/index";
 import type {
   DispatchAttemptRecord,
+  StateFailureCode,
   StateRecord,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
@@ -177,6 +178,36 @@ export const attemptLedgerRecord = (
   sequence,
   checksum: "fixture",
   payload: attempt as unknown as StateRecord["payload"],
+});
+
+/**
+ * A store wrapper that fails exactly one record kind's read with a NAMED state
+ * code, while every other port call stays real (GH-354 §6.2).
+ *
+ * The delivered `failAppendFor` pattern, on the read side; the named code is what
+ * `TC-STATUS-008`, `TC-ISDEL-006`, and `TC-MSG-006` assert, because the exit
+ * projection is a property of the error-table row, not of the `state` kind.
+ */
+export const storeWithReadFailure = (
+  store: StateStorePort,
+  kind: string,
+  code: StateFailureCode = "state.store.torn",
+): StateStorePort => ({
+  ...store,
+  readRecords: () => {
+    const read = store.readRecords();
+    if (!read.ok) return read;
+    if (!read.value.records.some((record) => record.kind === kind)) return read;
+    return {
+      ok: false,
+      error: {
+        kind: "state",
+        code,
+        consequence: "not_landed",
+        location: { path: "state/ledger.log" },
+      },
+    };
+  },
 });
 
 const brand = (() => {

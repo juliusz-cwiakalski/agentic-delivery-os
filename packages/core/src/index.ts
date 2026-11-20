@@ -95,6 +95,35 @@ export {
   readDispatchAttemptHistory,
 } from "./app/dispatch-attempts.js";
 export {
+  DISPATCH_RESUMABLE_DAEMON_STATES,
+  type DispatchLaneResolutionInput,
+  resolveDispatchLane,
+} from "./app/dispatch-lane.js";
+export {
+  type OperatorDeliveringRead,
+  type OperatorLaneReadFailure,
+  type OperatorStatusRead,
+  readOperatorDelivering,
+  readOperatorStatus,
+} from "./app/dispatch-lane-view.js";
+export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./app/dispatch-log-tail.js";
+export {
+  type DispatchLastMessageRead,
+  type DispatchTranscriptRead,
+  type DispatchTranscriptResult,
+  readDispatchLastMessage,
+} from "./app/dispatch-last-message.js";
+export {
+  createDispatchLogSink,
+  type DispatchLogSinkInput,
+  dispatchLogsDirectoryName,
+  dispatchLogsFamilyRoot,
+  dispatchLogsRefDirectory,
+} from "./app/dispatch-log-sink.js";
+export {
   type DispatchGateRead,
   type DispatchHandoverData,
   type DispatchHandoverResult,
@@ -105,11 +134,6 @@ export {
   revertDispatchHandoverEvidence,
   summarizeDispatchEvidence,
 } from "./app/dispatch-gate.js";
-export {
-  DISPATCH_RESUMABLE_DAEMON_STATES,
-  type DispatchLaneResolutionInput,
-  resolveDispatchLane,
-} from "./app/dispatch-lane.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -746,6 +770,36 @@ export {
   evaluateDispatchResumeEconomics,
   planDispatchResume,
 } from "./domain/dispatch-resume.js";
+export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+  type OperatorLaneVerdict,
+} from "./domain/dispatch-operator-view.js";
+export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./domain/dispatch-message.js";
+export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  dispatchLogByteLength,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  type DispatchLogWrite,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./domain/dispatch-log.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
   DISPATCH_TRACKER_LADDER_ATTEMPTS,

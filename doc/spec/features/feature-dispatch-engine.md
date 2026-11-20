@@ -3,15 +3,16 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-19
+last_updated: 2026-11-20
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution with the pinned supported-version window and declared integration mode evaluated once before the lease, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the dispatch-owned durable per-ref `dispatch.lane` record appended at each session acquisition and at the terminal classification with latest-wins reads and recorded-attempt resume (a recorded `pr-open` attempt included), the dispatch family's atomic per-ref admission decided inside the claim with the declared same-ref/other-ref verdicts and a bounded fence wait, spawn or resume through the harness session port with the caller agent identity `pm`, the single-seat binding, the deterministic `ticket-<REF>` title, and the ref-parameterized delivery-lifecycle prompt, handle acquisition before completion, the five-attempt tracker retry ladder, progress-based liveness with a bounded in-process restart loop that terminates a corroborated stall through the capability-gated `terminate` operation before any restart, the one total derivation ladder shared with the daemon path including the retired ledger no-work arm, the subsumed exit-0-no-artifact failure arm, the tracker-done `merged` arm, the artifact `partial` arm, and arm-aware corroboration, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, the published parity proof boundary, the CLI-independent bash fallback authority read, and the offline parity battery that proves all eleven classes with no shell dependency."
+summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`, and the four read-only per-ref operator queries `dispatch status`, `dispatch log`, `dispatch is-delivering`, and `dispatch last-message`, each with the global `--json`), the operator lane view over the durable record with the tri-state advisory owner probe, the per-ref per-stream harness-stdout artifact family and its bounded stitched tail, the capability-gated transcript read seam behind `last-message`, harness resolution with the pinned supported-version window and declared integration mode evaluated once before the lease, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the dispatch-owned durable per-ref `dispatch.lane` record appended at each session acquisition and at the terminal classification with latest-wins reads and recorded-attempt resume (a recorded `pr-open` attempt included), the dispatch family's atomic per-ref admission decided inside the claim with the declared same-ref/other-ref verdicts and a bounded fence wait, spawn or resume through the harness session port with the caller agent identity `pm`, the single-seat binding, the deterministic `ticket-<REF>` title, and the ref-parameterized delivery-lifecycle prompt, handle acquisition before completion, the five-attempt tracker retry ladder, progress-based liveness with a bounded in-process restart loop that terminates a corroborated stall through the capability-gated `terminate` operation before any restart, the one total derivation ladder shared with the daemon path including the retired ledger no-work arm, the subsumed exit-0-no-artifact failure arm, the tracker-done `merged` arm, the artifact `partial` arm, and arm-aware corroboration, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, the published parity proof boundary, the CLI-independent bash fallback authority read, and the offline parity battery that proves all eleven classes with no shell dependency."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293", "GH-335", "GH-347"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293", "GH-335", "GH-347", "GH-354"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054", "TDR-0058"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
+    - "packages/core/src/contracts/dispatch-operator.ts"
     - "packages/core/src/contracts/harness.ts"
     - "packages/core/src/contracts/pm-notes.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -22,17 +23,26 @@ links:
     - "packages/core/src/app/dispatch-lane.ts"
     - "packages/core/src/app/dispatch-ledger.ts"
     - "packages/core/src/app/dispatch-gate.ts"
+    - "packages/core/src/app/dispatch-lane-view.ts"
+    - "packages/core/src/app/dispatch-log-sink.ts"
+    - "packages/core/src/app/dispatch-log-tail.ts"
+    - "packages/core/src/app/dispatch-last-message.ts"
     - "packages/core/src/app/queue.ts"
     - "packages/core/src/app/daemon-dispatch-result.ts"
     - "packages/core/src/domain/dispatch-result.ts"
+    - "packages/core/src/domain/dispatch-operator-view.ts"
+    - "packages/core/src/domain/dispatch-log.ts"
+    - "packages/core/src/domain/dispatch-message.ts"
     - "packages/core/src/domain/dispatch-liveness.ts"
     - "packages/core/src/domain/dispatch-prompt.ts"
     - "packages/core/src/domain/dispatch-resume.ts"
     - "packages/core/src/domain/dispatch-tracker.ts"
     - "packages/core/src/domain/lane-launch-plan.ts"
     - "packages/adapters/src/harness/opencode.ts"
+    - "packages/adapters/src/harness/opencode-transcript.ts"
     - "packages/adapters/src/harness/claude.ts"
     - "packages/adapters/src/file/dispatch-identity.ts"
+    - "packages/adapters/src/file/dispatch-logs.ts"
     - "packages/adapters/src/file/pm-notes-parser.ts"
     - "packages/adapters/src/repo/index.ts"
     - "packages/cli/src/commands/dispatch.ts"
@@ -54,7 +64,9 @@ A repository is either `dual-run` (bash authoritative, dispatch evidence only) o
 
 The typed dispatch lane is parity-complete for the eleven result classes and the shell's supervision semantics: the durable lane, the atomic admission verdict, recorded-attempt resume, the tracker retry ladder, the stall termination, the in-process bounded restart loop, and the resolved spawn identity, title, and lifecycle prompt. It has no shell dependency, and the shell entry points remain the documented fallback until a separate handover.
 
-The shipped production composition wires the one-shot run path with its admission preflight, the durable lane resolver and writer, the atomic dispatch claim, the injected delay, the restart ledger append, the spawn identity and title, the lifecycle prompt, the attempt read side, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), and the repository identity resolver with its checkout-scoped first-use marker. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
+It also owns the per-ref operator surface. Four read-only queries — `dispatch status <ref>`, `dispatch log <ref> [--tail <n>]`, `dispatch is-delivering [<ref>]`, and `dispatch last-message <ref>` — answer over the durable `dispatch.lane` record, a bounded per-ref harness-stdout artifact family, and a capability-gated transcript read, so an operator inspects a typed delivery without reading the shell's marker, PID, stdout, or last-message files. The queries append nothing, take no fence, start no process, delete nothing, and read no shell-owned path.
+
+The shipped production composition wires the one-shot run path with its admission preflight, the durable lane resolver and writer, the atomic dispatch claim, the injected delay, the restart ledger append, the spawn identity and title, the lifecycle prompt, the attempt read side, the evidence-gate runtime (`dual-run summary`, `dual-run resolve`, and `handover [--revert]`), the repository identity resolver with its checkout-scoped first-use marker, and the four operator read surfaces over the same store with a persistence-disabled identity resolution, the advisory owner probe, the per-ref artifact-family filesystem, and the capability-gated transcript read. The daemon lane seam is composed at the CLI/daemon factory; the production composition mounts the daemon family without a lane composition, so supplying that seam remains resident-daemon production scope (GH-238).
 
 ## Command grammar
 
@@ -65,8 +77,12 @@ The shipped production composition wires the one-shot run path with its admissio
 | `dispatch dual-run summary --repo <repo>` | Report the evidence window, class coverage, divergences, corroboration, and the four-condition verdict. |
 | `dispatch dual-run resolve <divergence-id> --note <text>` | Append a bounded resolution to an open divergence. |
 | `dispatch handover <repo> [--revert]` | Flip one repository to engine-authoritative, or append a reversal back to dual-run. |
+| `dispatch status <ref> [--json]` | Answer the operator lane view for one reference: delivering, stale, marker, probe verdict, owner pid, session, and the lane facts. |
+| `dispatch log <ref> [--tail <n>] [--json]` | Answer a bounded tail of the reference's own harness-stdout artifact, or the classified `no-log` absence. |
+| `dispatch is-delivering [<ref>] [--json]` | Answer whether one reference — or any reference in the resolved repository — has an active, non-stale lane. |
+| `dispatch last-message <ref> [--json]` | Answer the persisted session's final assistant message, bounded and redacted, or one closed absence reason. |
 
-A work-item reference matches `[A-Z]+-\d+`. The harness resolves from `--harness` when supplied and from the typed harness configuration otherwise; an unknown harness name is an input refusal. Grammar runs before any runtime call, and the handler returns data or a classified failure rather than choosing an exit digit.
+A work-item reference matches `[A-Z]+-\d+`. The four operator queries join the family with the delivered grammar, refusal identities, and global `--json`; `--tail` is a `log`-only value flag. The harness resolves from `--harness` when supplied and from the typed harness configuration otherwise; an unknown harness name is an input refusal. Grammar runs before any runtime call, and the handler returns data or a classified failure rather than choosing an exit digit.
 
 Refusals before any session attempt exists are: an unknown harness, rejected input, a provider profile nomination refusal (the delivery cannot nominate a profile), an admission preflight refusal (an unresolvable truth-read credential or a failing bounded admission read), a pre-session harness admission refusal (an out-of-window or indeterminate version, an unavailable integration mode, or an unreadable harness resolution), an active owner hold, a conflicting lease on another ref, a live lease that already records the requested ref (the atomic per-ref admission refusal), and the port-boundary profile refusals (an unrepresentable seat model, a named agent the profile assigns no seat, and a present empty or invalid agent identity). Each emits the classified top-level error envelope with its mapped identity and exit and appends no lease, attempt, lane, or queue record; the nomination refusal and the admission preflight are the two whose exit can be `2` (the nomination when every candidate is ineligible, `provider.profile.unavailable`), and the per-ref refusal names the live holder in the envelope-root `detail`. The version and mode refusals run before the lease claim; the port-boundary profile refusals run at spawn or resume after the lease is claimed and released, and still append no attempt record. Every other failure after the lease claim is an attempt-stage failure and appends exactly one attempt record with its pinned token and outcome.
 
@@ -231,6 +247,247 @@ attempt is resumable; a daemon lane is a candidate only in `delivering`,
 rather than fabricating a session from a partial read, so a ref with no readable
 candidate resolves the classified "no lane" outcome, and a pre-change state with
 no `dispatch.lane` records simply resolves "no lane".
+
+## Operator surface
+
+Four read-only queries answer per-reference operator questions over the durable lane
+record and two reference-scoped read sources. Each answer carries exactly one
+`query` discriminator (`status`, `log`, `is-delivering`, `last-message`) and is
+available as human key=value output — except `log`, whose human form is the raw
+tail — and as the standard machine envelope through the global `--json`. A
+malformed or missing reference, an unexpected extra positional, and an invalid
+`--tail` value are `input.value.rejected`, decided before any runtime call; an
+undeclared flag is `fallback.invocation`; a query surface the composition does not
+supply refuses `input.value.rejected` rather than answering an empty success.
+
+### Lane view
+
+`status` and both `is-delivering` forms perform one bounded retained-window read of
+`dispatch.lane` (the newest 5,000 records) and derive their answer from it:
+
+1. **Filter to the resolved repository first.** The lane key carries no repository
+   component, so the records are filtered on their own `repository` field before
+   any fold. Folding first would let a newer record for the same reference under a
+   foreign repository win and turn a local answer into `absent` or carry foreign
+   facts into it.
+2. **Fold to the newest record per reference.** The last matching record in ledger
+   order is the lane. Daemon lanes contribute nothing; the surface is
+   dispatch-lane-only.
+3. **Join the advisory probe verdict.** The owner facts `{processId, startedAt}`
+   are observed through an injected process-table read that returns `live`, `dead`,
+   or `unknown`. A process id is `live` only when it exists, is not a zombie, and
+   its observed start instant is within the declared 5,000 ms tolerance of the
+   recorded instant — the shell's PID-reuse guard — so a reused process id is not
+   reported live. An unreadable table is `unknown`. The probe is advisory: no
+   admission, exclusion, or resumability decision reads it, and the queue lease
+   remains the exclusion mechanism.
+
+`status` answers `ref`, `repository`, `delivering`, `stale`, `marker`, `probe`,
+`pid`, `sessionId`, and either the lane facts (`attemptId`, `harness`,
+`iterationOrdinal`, `restartsConsumed`, `ownerStartedAt`, `lastToken`,
+`lastOutcome`, `recordedAt`) or a null lane. The derived values follow four rules:
+
+| Fact | Derivation |
+|---|---|
+| `marker` | Mirrors the durable record's state: `active` for an active record, `terminal` for a terminal record, `absent` when the reference has no lane in this repository. No marker file is read, written, or invented. |
+| `probe` | `live`, `dead`, or `unknown` for a present lane; `not-applicable` for an absent reference. |
+| `delivering` | True exactly when the newest record is `active` and the probe has not confirmed the owner gone. A terminal record is never delivering. |
+| `stale` | True exactly when the newest record is `active` and the probe is `dead`. An `unknown` probe never asserts staleness: the durable state stands and the reader sees `probe=unknown`. A terminal record is never stale. |
+
+A reference with no lane is a successful answer at exit `0`, not a failure. The
+read never rewrites, clears, or repairs the lane: a stale-but-recorded lane is
+still the resumable artifact, and the shell's PID-file self-healing is a
+shell-file concern that does not transfer to a durable record. An unreadable lane
+store keeps the store's own typed `state.*` identity with that row's projection;
+the query never fabricates `absent` or `false`.
+
+`is-delivering` keeps the shell's two admissible forms. The per-ref form answers
+whether that reference's newest lane is active and not stale, with `ref` set and no
+`refs` list. The ref-less form answers whether any reference in the resolved
+repository has such a lane, lists up to 20 of them in deterministic reference
+order, and adds one truncation fact (`bound`, `omitted`) when more exist. Both forms
+exit `0` for "in progress" and `1` for "not in progress"; the machine answer carries
+the boolean in `data` with no `error` object, so a JSON consumer never infers the
+answer from the exit digit. An active lane whose owner is confirmed gone does not
+make either form true.
+
+### Per-ref harness-stdout artifact family
+
+During a dispatch of a **streaming** adapter, the engine writes the harness's own
+stdout for the reference into `dispatch-logs.<workspace>/<REF>/`:
+
+- One directory per work-item reference, holding one append-only file per **stream**
+  the reference opens. A stream is a spawn, a resume, or a deliver. Each sink is
+  bound when its stream starts and before that stream's first yielded value, so the
+  line on which the handle settles and everything before it are captured, and a
+  restarted iteration's output lands in its own file.
+- A **one-shot** adapter (Claude Code) yields no `stream.lines`, so it opens no
+  stream, gets no sink, and produces no artifact directory.
+- Every file is `0600`, receives only `O_APPEND` appends, is never modified after
+  it is written, and needs no lock or coordination file because no two streams share
+  a write target.
+- **One writer rule:** every yielded value is written followed by exactly one LF,
+  including the stream's final remnant. Nothing is appended verbatim, so the
+  concatenation of one stream's files in name order reproduces that stream's value
+  stream exactly, every value followed by one LF.
+- **One tear rule:** an unterminated tail in a file is a torn write — bytes left by
+  a process killed mid-write — and the reader drops it; it is never returned as
+  content.
+- **Per-file cap by segmentation.** A file is at most 1,048,576 bytes: the writer
+  starts the stream's next segment rather than modifying bytes already written. A
+  value whose bytes and LF fit in the current file is appended in one write; a
+  shorter value that does not fit starts the next file whole; and a value longer
+  than the cap is split at the cap and continued in the next file, so the single
+  stated exception to the writer rule is that such a file ends mid-value. No value
+  is dropped for being large.
+- **Newest-two retention.** After a new file exists, the writer keeps the newest two
+  file names in lexical order and removes older ones best-effort. Retention is the
+  only deletion path in the family; a failed removal may leave more than two until
+  the next append.
+- **Family bound.** Two retained files of at most 1,048,576 bytes bound one
+  reference's family at 2,097,152 bytes.
+- **Lexical order is creation order.** File names derive from data the writer
+  already holds — the stream's recorded time, the attempt identity, the iteration
+  ordinal, the stream kind (`spawn`, `resume`, `deliver`), and the zero-padded
+  segment ordinal — so a plain lexical sort equals creation order across restarts
+  and concurrent streams, and no shared counter exists.
+- **Non-gating.** A sink fault never changes the delivery token, exit, outcome,
+  attempt record, lane record, or evidence, and adds no evidence identifier. An
+  absent sink keeps the delivered stream behaviour exactly. The append runs on the
+  delivered line iteration, so it can add latency to the drain; the claim is
+  non-gating, not non-blocking.
+
+The directory lives beside the ledger, outside the state store's record set; its
+layout, mode, and retention are recorded in
+[the state layer](feature-state-layer.md).
+
+### The `log` read
+
+The query lists only the addressed reference's own directory — the only listing it
+performs — and reads only files inside it. It never lists, globs, or reads across
+references and never touches another reference's directory. It stitches the
+retained files in name order into one byte stream, drops an unterminated tail, and
+splits on LF **after** the stitch, so a value continued across a segment boundary is
+reconstructed rather than read as two fragments. It returns the newest requested
+lines oldest-to-newest.
+
+- **Tail range.** `--tail <n>` is a canonical decimal in `1..500` with a default of
+  `50`. An out-of-range, signed, fractional, whitespace-bearing, or leading-zero
+  value is refused as `input.value.rejected` rather than clamped.
+- **Output bounds.** The machine `data` is bounded by the requested line count and
+  by 65,536 UTF-8 bytes only; the human form is additionally bounded to 200 lines
+  and 32,768 bytes. The bound that binds yields that form's single truncation fact,
+  so a machine request above 200 lines over a window that holds those lines returns
+  them all, while the human form answers at most 200 of them plus a `tail`-scope
+  fact naming the human line bound.
+- **Truncation precedence.** A bound that binds yields exactly one truncation fact
+  `{scope, bound, omittedLines}` per answered form. The byte bound is applied after
+  line selection, so a binding byte bound yields `scope=bytes`; otherwise a shorter
+  line count — the requested tail, or a retained window holding fewer lines — yields
+  `scope=tail`, whose `bound` names the line bound that bound. The human 200-line
+  bound is a line bound and therefore a `tail`-scope fact, applied by the human
+  renderer; the machine form never carries it.
+- **Snapshot.** The read states what was durable when it ran: a segment switch or an
+  append in flight may mean the newest bytes are not in the answer. There is no
+  lock, flush, or coordination with the writer; re-running the query is the remedy.
+- **Absences.** `available=false` with `reason=no-log` at exit `0` means **no
+  artifact exists for this reference**. It has exactly two causes: the lane's
+  adapter is one-shot and streams nothing, or the lane predates the artifact family.
+  It never means "the session printed nothing". A file that exists but cannot be read
+  is `available=false` with `reason=unreadable` at exit `1`. A retained file holding
+  no complete line is `available=true` with an empty line list, so "no capture" and
+  "no output" stay distinct. Human output renders `reason=<reason>` when nothing is
+  available.
+- **Human shape.** The human form is the raw tail followed by at most one
+  `truncation=scope:<scope>,bound:<n>,omitted:<n>` line. A log rendered as key=value
+  would not be a log, so this one query differs deliberately from the family's other
+  human key sets.
+
+### The transcript read and `last-message`
+
+`last-message` resolves the newest lane for `(repository, ref)`, takes its
+`sessionId` and `harnessKind`, and reads the harness's own persisted session
+transcript through one injected, adapter-owned, read-only seam. The seam returns the
+stored final assistant text under the adapter's own read cap (262,144 characters)
+or one closed absence; it does not flatten, bound, redact, or mark the text, so no
+message bound exists at the seam. The seam is the **content use of the existing
+`session-introspection` lifecycle capability**:
+
+- opencode declares `session-introspection` supported and implements the read.
+- Claude Code declares it as a gap (`headless-mode-limitation`), so a Claude lane
+  answers `capability-gap`; no Claude transcript read exists.
+- No operation, capability-union member, or gap reason is added; the seam is a read,
+  not a member of the closed session operation set. It takes no live handle, spawns
+  nothing, resumes nothing, and writes nothing to the harness's storage.
+
+The query composes the answer in a fixed order: **redact → flatten → bound → mark**.
+The delivered serialization chokepoint first replaces registered credential values
+with `[redacted]` in the derived text, then the text is flattened to a single line,
+then bounded to 512 characters (the delivered `DISPATCH_MAX_LAST_MESSAGE_CHARS`),
+and only then is `truncated` set from the post-redaction length, true exactly when
+text was cut. A registered credential straddling the cut therefore cannot survive as
+a disclosed prefix. The answer makes no general content-scrubbing claim: prose and
+values the harness itself printed are returned within the bound.
+
+The answer carries `available`, `final`, `message` (or explicit `null`),
+`truncated`, `recordedAt` (or explicit `null`), and one closed `reason` when
+unavailable. `final` is true exactly when the lane's newest record is `terminal`; on
+an `active` lane the answer is the latest assistant message observed so far, which
+may be partial because a live transcript can be mid-write, and is declared not
+final. The fallback ladder is closed and ordered:
+
+| Reason | Condition |
+|---|---|
+| `no-lane` | The reference has no lane in the resolved repository. |
+| `capability-gap` | The lane's harness declares `session-introspection` as a gap. |
+| `session-unknown` | The harness's storage does not know the recorded session. |
+| `no-message` | The transcript holds no assistant message. |
+| `unreadable` | The stored transcript cannot be read. |
+
+Every reason is a data fact at exit `1`, never a new error identity. An unreadable
+lane store keeps the store's own typed `state.*` identity instead of a reason. The
+query reads no attempt record, derivation payload, or envelope field — the
+envelope's synthesized `lastMessage` is never a source — and performs zero session
+operations. The human form is the declared key set `available`, `final`, `reason`
+when present, and `last_message`.
+
+### Exit projections and posture
+
+| Query | Exit | Projection |
+|---|---|---|
+| `status` | `0` in every state, including an absent reference | `success` |
+| `is-delivering` | `0` in progress, `1` not in progress | `success` / `user-validation` |
+| `log` | `0` for a produced tail or `no-log`, `1` for `unreadable` | `success` / `user-validation` |
+| `last-message` | `0` produced, `1` for every closed negative reason | `success` / `user-validation` |
+
+Because `1` is also the `user-validation` exit, every negative answer carries its
+fact in the payload and in `--json`; no query emits a delivery `result` token or
+adds an error-table row. These exits go through the delivered data projection, so
+the command definition never chooses an exit digit.
+
+All four queries are read-only and shell-free. The repository-scoped queries resolve
+identity with persistence disabled, so no checkout marker is created, repaired, or
+re-persisted; each query takes at most one bounded lane read and at most one
+bounded artifact read (a stitched join of at most the two retained files, after
+listing only the addressed reference's directory) or one transcript read, acquires
+no fence, appends nothing, deletes nothing inside the artifact family, starts no
+process, and makes no network call. None reads a shell-lane artifact: the delivering
+marker, PID files, `<REF>.pm.out`, `<REF>.log`, and `<REF>.last-message` are neither
+read nor written, so the shell's files can never become a second answer for a typed
+dispatch. The four query surfaces and the per-stream sink are in the declared
+dispatch-flow surface list the `check:no-shell` invariant scans, so a script-path
+literal or shell-capable child-process use in them fails the invariant by name.
+
+### Stream divergence from the shell's `--log`
+
+The typed tail is a **streaming harness's own stdout** — for opencode, its JSON
+event stream. The shell's `--log` answers a different question: it tails
+`tmp/deliver-ticket/<REF>.log`, which holds the **opencode child's stderr**. The
+wrapper's own `log_info`/`log_warn` progress lines go to the wrapper's terminal, not
+to either file. The two surfaces are therefore related but not interchangeable:
+neither is a truth source for the other, the shell's files stay untouched, and an
+operator who needs the child's stderr or the wrapper's progress lines uses the shell
+lane or its terminal.
 
 ## Result derivation and exit projection
 
@@ -438,9 +695,10 @@ The watch contributes its observed verdict trail as `liveness:<verdict>` evidenc
 family: it does not change the root family listing or the prompt-required set.
 It reads the durable attempt record and adds no record kind, schema version, key
 prefix, fold, configuration key, or error identity. The static help inventory
-carries five `dispatch` entries — the family plus `attempts`,
-`dual-run summary`, `dual-run resolve`, and `handover` — and both
-reference-page parity pins assert that count. The read side's rulings — the
+carries nine `dispatch` entries — the family plus `attempts`,
+`dual-run summary`, `dual-run resolve`, `handover`, `status`, `log`,
+`is-delivering`, and `last-message` — and both reference-page parity pins assert
+that count. The read side's rulings — the
 closed-taxonomy reuse, the empty-history success, the record-bounded projection
 cardinality, the unconditional evidence mode, the one exact divergence count, and
 the twice-enforced repository scope — are recorded in
@@ -567,7 +825,7 @@ The production composition supplies the real harness session port for the config
 
 The production composition also resolves the `lane` policy branch and composes the run path end to end: the newest recorded lane carrying a session identity supplies the existing session handle on `--resume-prompt` (a dispatch lane in any state, or a resumable daemon lane), the folded phase ledger supplies the completed-phase position, the adapter's declared capability decides attach-and-continue versus re-entry, the verified economics records supply the persisted restart count, the atomic dispatch claim supplies the lease, the composition's lane owner facts and the store supply the durable lane record, the injected delay binds the real timer for the fence wait, the tracker ladder, and the terminate grace, the composition binds the terminate process-tree seam, the composition guarantees the adapter's own capability declaration reaches the engine — an absent declaration is filled from the adapter's exported constant and a present one is never overridden, so a resolved opencode override and the implementation that reads it cannot diverge — the composition supplies the `pm` agent identity, the resolved binding, the `ticket-<REF>` title, and the resolved base branch, and `coordinator.kill-grace` supplies the terminate grace. The evidence-gate runtime is composed once over the same store and identity resolver, so `dispatch attempts`, `dispatch dual-run summary`, `dispatch dual-run resolve`, and `dispatch handover [--revert]` run in the shipped CLI.
 
-Every dispatch-flow process is started with a fixed argv and no shell, and no script path appears in the flow (API-7, NFR-5). The static invariant is the named package script `check:no-shell` (`bun run scripts/checks/no-shell-dispatch.ts`), which scans a declared dispatch-flow surface file list with an empty allowlist and four named rules — a script-path literal, a `shell: true`, a shell-capable child-process import or call, and a child-process `spawn` without a literal `shell: false` — and is also discovered by `bun test` through its own suite.
+Every dispatch-flow process is started with a fixed argv and no shell, and no script path appears in the flow (API-7, NFR-5). The static invariant is the named package script `check:no-shell` (`bun run scripts/checks/no-shell-dispatch.ts`), which scans a declared dispatch-flow surface file list — the four operator query surfaces and the per-stream artifact sink included — with an empty allowlist and four named rules — a script-path literal, a `shell: true`, a shell-capable child-process import or call, and a child-process `spawn` without a literal `shell: false` — and is also discovered by `bun test` through its own suite.
 
 The daemon lane seam supplies `createLaneLaunchPlanner`: a pure planner that returns the lifecycle prompt and only the declared environment variable names, resolving no secret value and reading no parent environment. It composes `createLaneExecutor` over the selected session port and execution-environment descriptor, so a daemon can claim, start, record, observe, collect, and resume lanes. An unavailable planner or declared capability gap leaves the daemon in honest `supervise-only` mode.
 
@@ -616,6 +874,14 @@ Every dispatch failure resolves by exact code; no kind-only dispatch discriminan
 
 The read side adds no row either: `dispatch attempts` maps its malformed request, unresolvable active reference, and unresolvable identity to `input.value.rejected` (`kind: "input"`, exit 1), keeps the failing `state.*` identity for an unreadable store (`kind: "state"`, that row's projection), and treats a verified empty history as success. The exit always follows the row: `state.permission.denied` projects `user-validation` at exit `1`, and the platform state rows project exit `2`. No `attempts.*` identity is declared, emitted, or documented; a document that names one is stale.
 
+The operator queries add no row either. `no-lane`, `no-log`, `capability-gap`,
+`session-unknown`, `no-message`, and `unreadable` are data facts on the answer
+payload, not error identities; a malformed or missing reference, an unexpected
+extra positional, and an invalid `--tail` value are the delivered
+`input.value.rejected` decided before any runtime call; and a lane store that
+cannot be read keeps the store's own typed `state.*` identity at that row's
+projection, never a fabricated `absent`, `false`, or `no-log`.
+
 The admission refusals and resolve failures add no `dispatch` row. An admission refusal carries an existing `provider`, `config`, or `input` identity (the admission table above); the nomination refusal reuses the profile resolve identities (`provider.profile.absent`, `provider.profile.invalid`, `provider.profile.capability-denied`, `provider.profile.unavailable`) and adds no identity of its own; a resolve store failure carries the failing `state` identity with `kind: "state"`; and an absent divergence identifier is `input.value.rejected` with `kind: "input"`. The engine's local result error-kind union admits the existing `provider` and `config` kinds; `DOMAIN_KINDS` and the error-table row count are unchanged.
 
 The lane record, the terminate result, the restart loop, the tracker ladder, and the parity battery add no identity either. A missing terminate capability reuses the delivered `harness.capability.gap`, a durable `dispatch.lane` record is state, not an error identity, and no domain kind, error row, or projection moves.
@@ -629,6 +895,16 @@ The lane record, the terminate result, the restart loop, the tracker ladder, and
 | Attempt rows beside a human truncation line | 37 |
 | Machine `data` | 65,536 UTF-8 bytes |
 | Human output | 40 lines, 8,192 bytes |
+| Log artifact file | 1,048,576 bytes, enforced by segmentation |
+| Log artifact retained files per reference | 2, newest by name; older removed best-effort |
+| Log artifact family per reference | 2 × 1,048,576 bytes |
+| `log` tail | 50 default, 1..500 canonical decimal |
+| `log` human selected lines | 200 |
+| `log` human output | 32,768 bytes |
+| `is-delivering` ref list | 20 |
+| Transcript read cap | 262,144 characters |
+| Owner start-instant tolerance | 5,000 ms |
+| Lane records retained per verified read | 5,000 |
 | `last_message` | 512 characters, single line, redacted |
 | `data.error.detail` | 256 characters, identifiers only, single line |
 | Envelope-root `detail.holder` | 128 characters, identifiers only, single line |
@@ -650,7 +926,7 @@ The delivered state read verifies the JSONL ledger once. The attempt fold retain
 
 ## Quality evidence
 
-The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth-derivation, token-closure, liveness, watch, evidence, gate, handover, clean-accrual, conditions-projection, handover-conditions, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the GH-347 parity battery is covered by the parity admission, lane-resume, tracker, stall-loop, spawn, no-shell, and battery suites under `tests/conformance/dispatch/`, with the whole-battery registry in `tests/fixtures/dispatch/parity/cases.ts` and the permanent proof boundary in `tests/fixtures/dispatch/parity/evidence.ts`; the no-shell invariant is the `no-shell-dispatch` check suite and the named `check:no-shell` package script; the fleet row's additive fields and read-time evaluation are covered by the repos handover-gate, repos-list-contract, projects-flat-alias, engine-first-cross-surface, and engine-first-no-flip suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
+The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth-derivation, token-closure, liveness, watch, evidence, gate, handover, clean-accrual, conditions-projection, handover-conditions, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the GH-347 parity battery is covered by the parity admission, lane-resume, tracker, stall-loop, spawn, no-shell, and battery suites under `tests/conformance/dispatch/`, with the whole-battery registry in `tests/fixtures/dispatch/parity/cases.ts` and the permanent proof boundary in `tests/fixtures/dispatch/parity/evidence.ts`; the GH-354 operator surface is covered by the operator grammar, status, is-delivering, log, message, artifact-persistence, posture, and answer-matrix suites under `tests/conformance/dispatch/`, the artifact-writer, log-bounds, message-composition, transcript, and latency suites under `tests/behaviour/`, the composition suite under `tests/structure/`, and the contract-invariance, seam-identity, proof-boundary, and test-isolation checks under `tests/checks/`; the no-shell invariant is the `no-shell-dispatch` check suite and the named `check:no-shell` package script; the fleet row's additive fields and read-time evaluation are covered by the repos handover-gate, repos-list-contract, projects-flat-alias, engine-first-cross-surface, and engine-first-no-flip suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
 
 ## Related
 
@@ -683,5 +959,7 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [TDR-0052 — In-process bounded restart loop](../../decisions/TDR-0052-in-process-bounded-restart-loop.md) — the one-invocation loop, the stall ladder, and one terminal attempt record.
 - [TDR-0053 — Total derivation ladder and corroboration](../../decisions/TDR-0053-total-derivation-ladder-and-corroboration.md) — the total order, the pm-notes artifact fact, and arm-aware corroboration.
 - [TDR-0054 — Dispatch spawn identity, title, and prompt](../../decisions/TDR-0054-dispatch-spawn-identity-title-and-prompt.md) — the `pm` identity, the `ticket-<REF>` title, and the built lifecycle prompt.
+- [TDR-0058 — Dispatch session-output artifacts and the transcript read seam](../../decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md) — the per-ref per-stream artifact family, its write and tear rules, the two-file family bound, and the capability-gated transcript read.
+- [State Layer](feature-state-layer.md) — the store the operator queries read and the `dispatch-logs.<workspace>/` artifact family's layout and posture.
 
-**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation), and `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/` (the durable lane, atomic admission, recorded-attempt resume, tracker ladder, terminate, the in-process loop, spawn identity, the total derivation, and the parity battery).
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation), and `doc/changes/2026-11/2026-11-18--GH-347--dispatch-core-parity/` (the durable lane, atomic admission, recorded-attempt resume, tracker ladder, terminate, the in-process loop, spawn identity, the total derivation, and the parity battery), and `doc/changes/2026-11/2026-11-19--GH-354--dispatch-operator-surface/` (the four operator queries, the lane view and advisory probe, the per-ref per-stream stdout artifact family, and the capability-gated transcript read).

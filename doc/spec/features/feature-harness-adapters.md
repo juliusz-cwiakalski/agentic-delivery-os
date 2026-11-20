@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-19
+last_updated: 2026-11-20
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps, including the additive optional capability-gated `terminate` operation and the additive optional session process id on the handle; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, the caller-supplied fresh-spawn `--title` rendering, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations, and the supported terminate); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, terminate, liveness kinds, and both sourced-signal kinds declared as gaps; the built delivery-lifecycle prompt with its five stable sections; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and held-identity-scoped reads; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, union session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the pinned supported-version window and probe grammar with the version refusals, the declared integration mode with its origin, the per-spawn caller-supplied agent identity and single-seat binding mapped onto the honoured surface (the dispatch `pm` identity and the loop `ceo` identity), the observed-store telemetry contract with seat, resolved-model, duration, and observed-axis-absence facts, and the conformance extension scenarios on the delivered registry; the typed dispatch engine and the `loop` supervision profile are the production consumers of the session port."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps, including the additive optional capability-gated `terminate` operation and the additive optional session process id on the handle; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, the caller-supplied fresh-spawn `--title` rendering, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations, and the supported terminate); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, terminate, liveness kinds, and both sourced-signal kinds declared as gaps; the built delivery-lifecycle prompt with its five stable sections; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and held-identity-scoped reads; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, union session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the pinned supported-version window and probe grammar with the version refusals, the declared integration mode with its origin, the per-spawn caller-supplied agent identity and single-seat binding mapped onto the honoured surface (the dispatch `pm` identity and the loop `ceo` identity), the observed-store telemetry contract with seat, resolved-model, duration, and observed-axis-absence facts, and the conformance extension scenarios on the delivered registry; the adapter-owned transcript read seam as the content use of the existing `session-introspection` lifecycle capability, implemented by opencode and a declared gap on Claude Code (whose statistics-only telemetry capture is `telemetry-extraction`, not this seam); the typed dispatch engine and the `loop` supervision profile are the production consumers of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291", "GH-335", "GH-347", "GH-348"]
-  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0043", "TDR-0051", "TDR-0054", "TDR-0056", "TDR-0057"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-238", "GH-239", "GH-240", "GH-241", "GH-275", "GH-277", "GH-286", "GH-291", "GH-335", "GH-347", "GH-348", "GH-354"]
+  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0043", "TDR-0051", "TDR-0054", "TDR-0056", "TDR-0057", "TDR-0058"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
     - "packages/core/src/contracts/economics.ts"
@@ -206,6 +206,42 @@ imports the delivery-result taxonomy and contains no harness-kind comparison or
 token literal. The deny-by-default builder is
 `packages/core/src/domain/harness-spawn-env.ts`. The neutral liveness assembly
 is `packages/core/src/domain/harness-liveness.ts`.
+
+### Transcript read seam
+
+Session content is read through one adapter-owned seam that is covered by the
+delivered `session-introspection` lifecycle capability. It is a read, not a member
+of the closed session operation set: it takes no handle, spawns nothing, resumes
+nothing, terminates nothing, lists nothing, and writes nothing to the harness's
+storage. It adds
+no operation, capability-union member, or gap reason, so the delivered operation
+vocabulary, capability declarations, gap inventory, and adapter parity are
+unchanged.
+
+The seam answers, for one harness kind, one recorded session identity, and one
+work-item reference, the stored final assistant text under the adapter's own read
+cap, or one closed absence: `session-unknown` (the storage does not know the
+session), `no-message` (the transcript holds no assistant message), or
+`unreadable` (the stored transcript cannot be read). A harness that declares
+`session-introspection` as a gap answers `capability-gap` before the seam is
+called. The seam does not flatten, bound, redact, or mark the text; the consuming
+query composes redact → flatten → bound → mark, so no cut can precede redaction.
+
+- **opencode** declares every lifecycle capability, `session-introspection`
+  included, and implements the read over its own persisted session store on a
+  read-only connection.
+- **Claude Code** declares `session-introspection` as a gap
+  (`headless-mode-limitation`), so a Claude lane answers `capability-gap`; its only
+  persisted-session reader is the statistics-only telemetry capture, which is
+  `telemetry-extraction` and is not this seam. No Claude transcript content read
+  exists.
+
+The seam is the content use of an existing declaration, not a new capability: an
+adapter either already supports `session-introspection` or already declares it as
+a gap, and the read is bounded by the adapter's own storage read cap
+(262,144 characters) rather than by any message bound. The consuming query and its
+closed absence ladder are specified in [Dispatch Engine](feature-dispatch-engine.md);
+the design is recorded in [TDR-0058](../../decisions/TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md).
 
 ### Classification
 

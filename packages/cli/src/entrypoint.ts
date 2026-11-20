@@ -63,6 +63,19 @@ export type EntrypointInvocationFact = {
   /** The invoking bin's declared prior identity, when it declares one. */
   readonly priorWorkingName?: string;
   /**
+   * The one registered credential set for this invocation (GH-354 AC-F4-7).
+   *
+   * The entrypoint resolves the declared credential references against the
+   * injected environment exactly once and hands the SAME values to the
+   * serializer and to the composition root, so a surface that redacts before
+   * bounding (the operator `last-message` read) cannot see an empty set while
+   * the egress path sees the real one. No second discovery algorithm exists for
+   * this operator/credential set: `registerEdgeSecrets` in the edge is the
+   * separate lookup that still feeds `blockers` and `steer`, and it is not a
+   * second discovery path for the values handed here.
+   */
+  readonly registeredSecrets?: readonly string[];
+  /**
    * The composition-scoped notice sink: every queued warning line the
    * composition would attach to a handler's outcome is also reported here, so a
    * composition that fails before returning a program still lets the entrypoint
@@ -280,13 +293,14 @@ const dependenciesFor = (
   entrypoint: Entrypoint,
   program: CommandProgram,
   runId: string,
+  secrets: readonly string[],
 ): CliDependencies => ({
   brand: entrypoint.brand,
   clock: options.clock ?? { now: () => Date.now() },
   // The invocation's one run identity: generated once here so the composed
   // capture paths and the audit record share it.
   newRunId: () => runId,
-  secrets: entrypointSecrets(options, entrypoint.brand),
+  secrets,
   program,
   ...(options.mode === undefined ? {} : { mode: options.mode }),
   ...(options.audit === undefined ? {} : { audit: options.audit }),
@@ -428,6 +442,11 @@ export const runEntrypoint = async (
   // composition that fails (or is discarded for an uncomposed command) still
   // reports its fallback read through the delivered warnings channel (F-1).
   const compositionNotices: string[] = [];
+  // The ONE registered credential set (GH-354 AC-F4-7): the declared
+  // credential references resolved against the injected environment plus any
+  // injected values. The composed program receives it as an invocation fact so
+  // the operator runtime redacts with the same values the serializer does.
+  const registeredSecrets = entrypointSecrets(options, entrypoint.brand);
   // The await stays inside the containment `try`: a rejected composition (a
   // synchronous throw or a rejected promise) yields the containment identity
   // instead of an unhandled rejection, exactly as the delivered sync path did.
@@ -437,6 +456,7 @@ export const runEntrypoint = async (
         command,
         runId,
         groupScoped: isGroupScopedInvocation(command, argv),
+        registeredSecrets,
         ...(options.priorWorkingName === undefined
           ? {}
           : { priorWorkingName: options.priorWorkingName }),
@@ -456,7 +476,11 @@ export const runEntrypoint = async (
     ? { commands: { [command]: uncomposedDefinition(command, compositionNotices) } }
     : composed;
 
-  return runCli(cliArgv, options.streams, dependenciesFor(options, entrypoint, program, runId));
+  return runCli(
+    cliArgv,
+    options.streams,
+    dependenciesFor(options, entrypoint, program, runId, registeredSecrets),
+  );
 };
 
 /** The help inventory rendered for the current brand (used by coverage checks). */

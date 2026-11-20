@@ -349,6 +349,36 @@ export {
   runDispatchTrackerLadder,
 } from "./dispatch-tracker.js";
 export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+  type OperatorLaneVerdict,
+} from "./dispatch-operator-view.js";
+export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./dispatch-message.js";
+export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  dispatchLogByteLength,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  type DispatchLogWrite,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./dispatch-log.js";
+export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
   renderDoctorHuman,

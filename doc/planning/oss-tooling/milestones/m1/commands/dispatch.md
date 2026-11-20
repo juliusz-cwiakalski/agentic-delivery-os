@@ -15,6 +15,10 @@ the bash stack.
 <binary> dispatch dual-run summary --repo <repo>
 <binary> dispatch dual-run resolve <divergence-id> --note <text>
 <binary> dispatch handover <repo> [--revert]
+<binary> dispatch status <ref> [--json]
+<binary> dispatch log <ref> [--tail <n>] [--json]
+<binary> dispatch is-delivering [<ref>] [--json]
+<binary> dispatch last-message <ref> [--json]
 <binary> dispatch --help
 <binary> dispatch --version
 ```
@@ -182,6 +186,11 @@ existing `tracker.credential-unavailable` check keeps parity through tests.
 - `--repo <repo>` - repository identity for `dual-run summary` and `handover`.
 - `--note <text>` - bounded resolution note for `dual-run resolve`.
 - `--revert` - revert a recorded handover to dual-run.
+- `--tail <n>` - `dispatch log` only: the number of newest lines to return, a
+  canonical decimal in `1..500` with a default of `50`. An out-of-range,
+  negative, fractional, leading-zero, or non-numeric value is refused
+  (`input.value.rejected`) rather than clamped. A missing value is the shared
+  parser's refusal (`fallback.invocation`).
 - `--help` - pure self-description; reads no state, git, network, or model.
 - `--version` - pure version identity.
 
@@ -205,6 +214,70 @@ appends `clean_dispatches=`, `consecutive_clean_dispatches=`, and
 `conditions=truth:<status>,coverage:<status>,floor:<status>,corroboration:<status>`
 after `unmet_conditions=` and before the optional truncation line.
 
+### The four per-ref operator queries
+
+`dispatch status <ref>`, `dispatch log <ref> [--tail <n>]`,
+`dispatch is-delivering [<ref>]`, and `dispatch last-message <ref>` read the
+durable `dispatch.lane` record and two reference-scoped read sources. Every answer
+carries exactly one `query` discriminator (`status`, `log`, `is-delivering`,
+`last-message`).
+
+- `status` answers `delivering`, `stale`, `marker` (`active` | `terminal` |
+  `absent`), `probe` (`live` | `dead` | `unknown` | `not-applicable`), `pid`,
+  `sessionId`, `repository`, `ref`, and the lane facts (`attemptId`, `harness`,
+  `iterationOrdinal`, `restartsConsumed`, `ownerStartedAt`, `lastToken`,
+  `lastOutcome`, `recordedAt`) or a null lane. `marker` is derived from the lane
+  record's state; no marker file exists on the typed path. `stale` is true only
+  for an `active` lane whose recorded owner is confirmed gone; an `unknown`
+  probe never asserts staleness, and a stale lane is never rewritten, cleared, or
+  repaired.
+- `is-delivering` answers a boolean: `ref` set for the per-ref form (no `refs`
+  list), `ref=null` with up to 20 `refs` and one truncation fact for the
+  repository-wide form. Exit `0` when in progress and `1` when not; the JSON
+  answer carries the boolean with no error object.
+- `log` answers `available`, `tail`, the newest `lines` oldest-to-newest, and at
+  most one `truncation` fact (`scope` `tail` | `bytes`, `bound`, `omittedLines`).
+  The machine `data` is bounded by the requested line count and by 65 536 UTF-8
+  bytes only, so a request above 200 lines is not cut at 200: when the retained
+  window holds at least the requested tail there is no truncation and no fact, and
+  when the window holds fewer lines than requested the answer carries one
+  `tail`-scope fact naming that window. The human form is additionally bounded to
+  200 lines and 32 768 bytes, and a bound that binds yields that form's single
+  truncation fact, the binding byte bound taking precedence. Human output is the raw
+  tail followed by at most one `truncation=` line, or `reason=<reason>` when nothing
+  is available.
+  The content
+  is a **streaming harness's own stdout** (for opencode, its JSON event stream),
+  not the shell's child-stderr log: the shell's `--log` tails
+  `tmp/deliver-ticket/<REF>.log`, which holds the opencode child's stderr, while
+  the wrapper's own progress lines reach the terminal. The typed reader lists only
+  `dispatch-logs.<workspace>/<REF>/`, stitches the newest two files in name order,
+  drops an unterminated tail, and returns a snapshot of what was durable. A lane
+  that streams nothing — a one-shot adapter such as Claude Code — and a
+  pre-change lane with no artifact both answer `available=false`,
+  `reason=no-log`, exit `0`; `no-log` never means "the session printed nothing".
+  A retained file with no complete line is `available=true` with an empty line
+  list. An unreadable file is `available=false`, `reason=unreadable`, exit `1`.
+- `last-message` answers `available`, `final`, `message` (or explicit `null`),
+  `truncated` (true exactly when the composed text was cut),
+  `recordedAt` (or explicit `null`), and one closed `reason` when it cannot
+  answer: `no-lane`, `capability-gap`, `session-unknown`, `no-message`,
+  `unreadable`. The message is the session's final assistant text, composed
+  `redact -> flatten -> bound(512) -> mark` (registered credential values are
+  replaced first, so a credential straddling the cut cannot survive as a
+  prefix), and `final` is true exactly for a terminal lane. `capability-gap`
+  means the lane's harness declares the existing `session-introspection`
+  capability as a gap (Claude Code, `headless-mode-limitation`); it is never
+  produced for opencode. Human output is the key set `available`, `final`,
+  `reason` when present, and `last_message`. The query reads no attempt record,
+  derivation payload, or envelope field, and performs no session operation.
+
+All four queries are read-only and shell-free: zero ledger appends, zero fence
+acquisitions, zero lane rewrites, zero identity-marker writes, zero process
+starts, zero network reads, and zero deletions inside the artifact family. They
+read no shell-owned path, so the shell's marker, PID, stdout, and last-message
+files can never steer a typed answer.
+
 ## EXIT STATUS
 
 - `0` for `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `finished`, and
@@ -217,6 +290,15 @@ after `unmet_conditions=` and before the optional truncation line.
   provider reports absent (`input.value.rejected`); `2` for a pre-session
   provider outage or a malformed 2xx payload. None of these appends an attempt
   record, so a consumer must read the refusal identity, not an attempt.
+- The operator queries declare their own convention: `status` is `0` in every
+  state, including an absent ref. `is-delivering` is `0` when in progress and `1`
+  when not. `log` is `0` for a produced tail and for `no-log`, `1` for
+  `unreadable`. `last-message` is `0` when produced and `1` for every closed
+  negative reason. Because `1` is also the `user-validation` exit, every negative
+  answer carries its fact in the payload and in `--json`. A lane store that
+  cannot be read keeps the store's own typed `state.*` identity at that row's
+  projection (`state.store.torn` is `2`, `state.permission.denied` is `1`),
+  never a fabricated `absent` or `false`.
 
 ## EXAMPLES
 
@@ -243,7 +325,13 @@ $ <binary> dispatch handover github.com/owner/repo --revert
 `config.credential.missing`, `provider.auth.rejected`, `provider.outage`,
 `provider.payload.invalid`, `input.value.rejected`,
 `dispatch.session.spawn-failed`, `dispatch.restart-budget-exceeded`,
-`dispatch.resume-uneconomical`, `dispatch.state-unverified`. A pre-session
+`dispatch.resume-uneconomical`, `dispatch.state-unverified`. The operator
+queries add no error-table row: `no-lane`, `no-log`, `capability-gap`,
+`session-unknown`, `no-message`, and `unreadable` are DATA facts on the payload,
+not error identities — `capability-gap` applies exactly when the lane's harness
+declares `session-introspection` as a gap — and a malformed or missing reference,
+an unexpected extra positional, or an invalid `--tail` value is the delivered
+`input.value.rejected`, decided before any runtime call. A pre-session
 refusal (unknown harness, rejected input, an unresolvable credential, a failing
 admission read, an active owner hold reporting `queue.precondition.unmet` with
 reason `owner-hold`, or a conflicting lease before a spawn) emits the classified
