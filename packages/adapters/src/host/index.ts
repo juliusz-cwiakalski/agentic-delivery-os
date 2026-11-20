@@ -281,6 +281,15 @@ export const createHostSpawnStarter = (): HarnessSpawnStarter => {
     if (options.stdin === undefined) child.stdin?.end();
     else child.stdin?.end(options.stdin, "utf8");
 
-    return { lines: channel.lines, completion, acquired, kill };
+    // GH-348 DM-3: the started child's pid rides the stream as an OPTIONAL
+    // fact. An unreadable pid stays absent — never fabricated and never `0`.
+    const childPid = typeof child.pid === "number" && child.pid > 0 ? child.pid : undefined;
+    return {
+      lines: channel.lines,
+      completion,
+      acquired,
+      kill,
+      ...(childPid === undefined ? {} : { pid: childPid }),
+    };
   };
 };

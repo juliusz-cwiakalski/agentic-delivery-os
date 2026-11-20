@@ -9,7 +9,7 @@
 import { describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type HelpEntry, allHelpEntries } from "../../packages/cli/src/help";
+import { allHelpEntries, type HelpEntry } from "../../packages/cli/src/help";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import { runHelpGuideCoverage } from "../../scripts/checks/help-guide-coverage";
 
@@ -45,11 +45,11 @@ const writeCoverage = (root: string, coverage: Coverage): void => {
 export const familyViolations = (actual: readonly string[]): readonly string[] => {
   const failures: string[] = [];
   const expected = [...PROMPT_REQUIRED_COMMANDS];
-  if (actual.length !== 26) failures.push(`count ${actual.length} != 26`);
+  if (actual.length !== 27) failures.push(`count ${actual.length} != 27`);
   for (const name of expected) if (!actual.includes(name)) failures.push(`missing ${name}`);
   for (const name of actual) if (!expected.includes(name)) failures.push(`undeclared ${name}`);
-  if (actual.at(-1) !== "install") failures.push("tail is not install");
-  if (actual.at(-2) !== "supervise") failures.push("supervise is not immediately before install");
+  if (actual.at(-1) !== "loop") failures.push("tail is not loop");
+  if (actual.at(-2) !== "install") failures.push("install is not immediately before loop");
   return failures;
 };
 
@@ -87,9 +87,11 @@ describe("TC-INST-104 each conformance gate fails by name on an injected fixture
     expect(familyViolations([...PROMPT_REQUIRED_COMMANDS, "doctor"])).toContain(
       "undeclared doctor",
     );
-    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain(
-      "tail is not install",
-    );
+    expect(familyViolations([...PROMPT_REQUIRED_COMMANDS].reverse())).toContain("tail is not loop");
+    // The `loop` removal control keeps its named failure (DOD-8).
+    const withoutLoop = PROMPT_REQUIRED_COMMANDS.filter((name) => name !== "loop");
+    expect(familyViolations(withoutLoop)).toContain("missing loop");
+    expect(familyViolations(withoutLoop)).toContain("count 26 != 27");
   });
 
   test("the help-entry mutant names the missing entry", () => {

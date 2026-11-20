@@ -23,6 +23,7 @@ export {
   renderInstallPlan,
   renderInstallStatus,
 } from "./install-text.js";
+export { renderLoopStartHuman, renderLoopStatusHuman } from "./loop-text.js";
 export { renderDryRunHuman, renderMergeHuman } from "./merge-text.js";
 export {
   daemonCell,

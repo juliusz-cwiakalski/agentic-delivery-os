@@ -8,8 +8,8 @@ service: delivery-os
 ados_distribution: internal
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "TDR-0050", "TDR-0051"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347", "GH-348"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "TDR-0050", "TDR-0051", "TDR-0056", "TDR-0057"]
 ---
 
 # Feature: Configuration Layer and Inspection
@@ -245,6 +245,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 | Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
+| Loop supervision profile | The `loop` family's consumption of the six coordinator keys unchanged — zero keys added, no default changed — with the shell loop's environment knobs mapping onto them. |
 | Metrics branch | The typed `metrics.burn-rate` threshold declaration (positive `threshold`, `cost` or `tokens` `basis`, 1..90-day `window`) with no default; absent means undeclared and every defect is refused `config.value.invalid` before any read. |
 
 See also: [Local Install and Prior-Identity Transition](../../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
@@ -420,6 +421,19 @@ policy data: resolving the branch starts no supervisor.
 
 The lane keys `lane.liveness-interval` and `lane.restart-budget` are neither
 reused nor aliased. See [Coordinator Supervision](feature-coordinator-supervision.md).
+
+The `loop` supervision profile adds **zero** configuration keys and changes no
+default. It consumes these same six keys unchanged: `coordinator.stuck-window`
+and `coordinator.progress-bound` drive its two-signal verdict,
+`coordinator.collection-interval` is its cycle cadence and the base of the
+lease-age fallback, `coordinator.kill-grace` is its termination grace,
+`coordinator.restart-budget` is its per-epoch restart bound, and
+`coordinator.resume-context-limit` is read only if a total-context source exists
+(unreachable today). The shell loop's `CEO_LOOP_*` and `CEO_RESUME_TOKEN_LIMIT`
+environment knobs are not read by the typed path; five of them map onto these
+keys value-for-value, `CEO_LOOP_SLEEP_SECONDS` is replaced by the declared
+backoff schedule plus the collection interval, and `MAX_ITERATIONS=0` is replaced
+by an unbounded loop. See [Loop Supervision](feature-loop-supervision.md).
 
 The typed dispatch lane adds no configuration key and changes no default. It
 consumes four delivered values as policy data: `lane.restart-budget` (default

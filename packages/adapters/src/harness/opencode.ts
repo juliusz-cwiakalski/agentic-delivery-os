@@ -652,6 +652,9 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
       sessionId: outcome.sessionId,
       treeRoot: outcome.sessionId,
       workItemRef: input.workItemRef,
+      // GH-348 DM-3: the session handle carries the process it leads when the
+      // starter reports one; an absent fact stays absent (never `0`).
+      ...(stream.pid === undefined ? {} : { pid: stream.pid }),
     };
     sessions.set(outcome.sessionId, {
       handle,
@@ -745,6 +748,9 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
     const handle: HarnessSessionHandle = {
       ...input.handle,
       treeRoot: record?.handle.treeRoot ?? input.handle.treeRoot,
+      // GH-348 DM-3: a resumed stream is a NEW live process tree, so the handle
+      // carries the resumed child's pid when the starter reports it.
+      ...(stream.pid === undefined ? {} : { pid: stream.pid }),
     };
     // GH-347 AC-F3-1: a resume continues a session recorded by an earlier
     // process, so the resumed stream's completion is registered even when this

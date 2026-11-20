@@ -60,7 +60,7 @@ describe("TC-EVT-061 events self-description", () => {
       .split("\n")
       .filter((line) => /^ {2}\S+ {2}\S/u.test(line))
       .map((line) => (line.trim().split(/\s+/u)[0] ?? "").trim());
-    expect(families).toHaveLength(26);
+    expect(families).toHaveLength(27);
     expect(families).toContain("events");
     expect(families).toContain("board");
     expect(families).toContain("ceremony");

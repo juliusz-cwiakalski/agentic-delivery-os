@@ -417,8 +417,13 @@ import {
   appendBlockerQuestion,
   appendCloseoutOutcome,
   appendCommitTelemetry,
+  appendCoordinatorFence,
+  appendCoordinatorRestart,
+  appendCoordinatorStuck,
   appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
+  appendLoopSession,
+  appendLoopStop,
   appendMergeGateVerification,
   appendMergeTransaction,
   appendMergeWaiver,
@@ -451,6 +456,8 @@ import {
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
+  readCoordinatorRecords,
+  readLoopRecords,
   readMergeGateVerifications,
   readMergeTransactions,
   readMergeWaivers,
@@ -514,6 +521,11 @@ import {
   type CoordinatorSupervisorPorts,
   createCoordinatorCommandDefinition,
   createCoordinatorSupervisor,
+  createLoopCommandDefinition,
+  createLoopSupervisor,
+  type LoopCommandRuntime,
+  type LoopLedgerPort,
+  type LoopSupervisorPorts,
 } from "./commands/index.js";
 import { createLanesCommandDefinition } from "./commands/lanes.js";
 import {
@@ -3926,6 +3938,99 @@ export const createCoordinatorCommandRuntime = (
   });
 
 /**
+ * The loop supervision composition seams (GH-348 F-1, F-2, F-6): the injected
+ * ledger port, clock and id/fence factories, the resolved coordinator settings
+ * (consumed, not added), the process port with its declared capabilities, the
+ * session-effect port, the bounded log sink, and the injected cycle driver. The
+ * loop is a profile over the delivered engine under the distinct identity
+ * `loop-main`; nothing here reads an ambient clock or spawns a process.
+ */
+export type LoopComposition = Omit<LoopSupervisorPorts, "loopId"> & {
+  /** The supervisor identity; defaults to the single declared loop identity. */
+  readonly loopId?: string;
+};
+
+/** Compose the loop family over the injected seams. */
+export const createLoopCommandRuntime = (composition: LoopComposition): LoopCommandRuntime =>
+  createLoopSupervisor({
+    ...composition,
+    loopId: composition.loopId ?? "loop-main",
+  });
+
+/**
+ * Build the loop's ledger port from the delivered store: the two loop record
+ * kinds plus the coordinator record kinds the cycle reuses under the loop
+ * identity. Every append rides the delivered NON-CLAIM per-append fence path.
+ */
+export const createLoopLedgerPort = (
+  store: StateStorePort,
+  loopId: string,
+  newFenceToken: () => string,
+): LoopLedgerPort => ({
+  read: () => {
+    const raw = store.readRecords();
+    // ONE verified read for both halves: the cached view folds the coordinator
+    // and loop record sets from the same snapshot (NFR-11).
+    const cached: StateStorePort = { ...store, readRecords: () => raw };
+    return {
+      loop: readLoopRecords(cached, loopId),
+      coordinator: readCoordinatorRecords(cached, loopId),
+    };
+  },
+  acquireFence: (token) => store.acquireFence(token),
+  releaseFence: (handle) => {
+    store.releaseFence(handle);
+  },
+  fenceStatus: () => {
+    const status = store.fenceStatus();
+    return { held: status.held, stale: status.stale };
+  },
+  recoverFence: (token) => store.recoverFence(token).ok,
+  appendSession: (record) => appendLoopSession(store, newFenceToken(), record),
+  appendStuck: (record) => {
+    const appended = appendCoordinatorStuck(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
+  appendStop: (record) => {
+    const appended = appendLoopStop(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
+  appendRestart: (record) => {
+    const appended = appendCoordinatorRestart(store, newFenceToken(), record);
+    return appended.ok
+      ? { ok: true, appended: appended.appended }
+      : { ok: false, code: appended.code };
+  },
+  lastRestartSequence: () => {
+    const read = store.readRecords();
+    if (!read.ok) return null;
+    for (let index = read.value.records.length - 1; index >= 0; index -= 1) {
+      const entry = read.value.records[index];
+      if (entry?.kind === "coordinator.restart" && entry.key.endsWith(`:${loopId}`)) {
+        return entry.sequence;
+      }
+    }
+    return null;
+  },
+  appendFence: (record, held) => {
+    if (held !== undefined) {
+      const appended = store.append(held, {
+        kind: "coordinator.fence",
+        recordKey: `coordinator.fence:${loopId}`,
+        payload: record,
+      });
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    }
+    const appended = appendCoordinatorFence(store, newFenceToken(), record);
+    return appended.ok ? { ok: true } : { ok: false, code: appended.code };
+  },
+});
+
+/**
  * The steer composition seams (GH-298 F-1..F-8): the shared state store,
  * injected time/id/fence factories, the derived invoking-checkout origin, the
  * delivered phase fold, and the delivered open-question view with its
@@ -4016,6 +4121,7 @@ export type ConfigProgramOptions = {
   readonly merge?: MergeCommandRuntime;
   readonly daemon?: DaemonCommandRuntime;
   readonly coordinator?: CoordinatorComposition;
+  readonly loop?: LoopComposition;
   readonly retro?: RetroCompositionOptions;
   readonly ceremony?: CeremonyCompositionOptions;
   readonly steer?: SteerComposition;
@@ -5158,6 +5264,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
     commands.coordinator = createCoordinatorCommandDefinition(
       createCoordinatorCommandRuntime(options.coordinator),
     );
+  }
+  if (options.loop !== undefined) {
+    commands.loop = createLoopCommandDefinition(createLoopCommandRuntime(options.loop));
   }
   return {
     ok: true,

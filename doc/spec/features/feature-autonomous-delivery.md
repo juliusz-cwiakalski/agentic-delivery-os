@@ -9,10 +9,10 @@ created: 2026-07-07
 last_updated: 2026-11-20
 owners: ["engineering"]
 service: delivery-os
-summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
+summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Mode A has two equivalent operator surfaces: the typed `jaiship loop start|stop|status|log|reset` family, a composition profile over the delivered supervision engine, and the retained `scripts/ceo-loop.sh` fallback. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery, while the typed loop reads the delivered dispatch/daemon lane records as its corroborator. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313", "GH-293", "GH-354"]
-  decisions: ["TDR-0002"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313", "GH-293", "GH-348", "GH-354"]
+  decisions: ["TDR-0002", "TDR-0056", "TDR-0057"]
   guides:
     - "doc/guides/delivery-modes.md"
     - "doc/guides/autonomous-batch-delivery.md"
@@ -23,18 +23,19 @@ links:
 
 ## Overview
 
-Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. It is delivered as the deterministic bash scripts and tool that `scripts/install.sh` declares — the `ADOS_DELIVERY_SCRIPTS` set (`opencode-session.sh`, `deliver-ticket.sh`, `lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`, `lint-commit-range.sh`) plus `tools/clean-merged-branches` — which wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, and branch hygiene, carry the pre-PR commit-range lint the lifecycle runs before PR creation, and — in Mode B — gate the merge on human approval.
+Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. Mode A runs as the typed `jaiship loop` family over the delivered supervision engine, with the deterministic bash scripts below as its retained fallback; Mode B runs as `batch-deliver.sh`. The bash set is the one `scripts/install.sh` declares — the `ADOS_DELIVERY_SCRIPTS` set (`opencode-session.sh`, `deliver-ticket.sh`, `lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`, `lint-commit-range.sh`) plus `tools/clean-merged-branches` — which wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, and branch hygiene, carry the pre-PR commit-range lint the lifecycle runs before PR creation, and — in Mode B — gate the merge on human approval.
 
 > **Canonical detail lives in the guide.** The full modes table, component-responsibility matrix, mermaid diagrams, recovery semantics, configuration, and troubleshooting are in [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) (the canonical modes guide) and [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) (canonical for Mode B operations). This spec names the capabilities, invariants, and the merge/liveness contracts; it does not restate the guide tables. Where the two describe the same machinery, they are kept consistent.
 
 > **Engine-first operating definition.** The regular delivery path is the typed
-> engine: `dispatch <ref>` appends real `pilot` attempt records, and the lifecycle
-> merge and closeout run through the engine primitives. The bash entry points this
-> page specifies remain the documented, still-executable fallback: they keep their
-> five-key delivery-summary tail, their exits, and the delivered authoritative-mode
-> deprecation pointer. No repository is flipped by this change; a flip is a
-> separate owner act executed with `dispatch handover <repo>` once the gate reads
-> eligible, and its reversal is `dispatch handover <repo> --revert`.
+> engine: `dispatch <ref>` appends real `pilot` attempt records, the lifecycle
+> merge and closeout run through the engine primitives, and the Mode A outer loop
+> runs as `jaiship loop` over the delivered supervision engine. The bash entry
+> points this page specifies remain the documented, still-executable fallback: they
+> keep their five-key delivery-summary tail, their exits, and the delivered
+> authoritative-mode deprecation pointer. No repository is flipped by this change;
+> a flip is a separate owner act executed with `dispatch handover <repo>` once the
+> gate reads eligible, and its reversal is `dispatch handover <repo> --revert`.
 >
 > The four per-reference inspection queries the shell exposes — `--status`,
 > `--log`, `--is-delivering`, and `--last-message` — have typed equivalents:
@@ -70,7 +71,7 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 ### Capabilities
 
 - **Two unattended modes (F-1):**
-  - **Mode A — Autonomous CEO loop (`ceo-loop.sh`):** a long-running outer script spawns one `@ceo` agent session at a time; the `@ceo` picks the next ticket, calls `deliver-ticket.sh` (foreground, blocking), reads the delivery summary, merges approved + PM-finalized PRs through the `merge` primitive, handles blockers, and loops. Each iteration is a sequence of typed calls: `status` for the digest (including typed questions and ready-to-merge), `blockers answer` for open questions, `verify change`/`phase list` for finalization evidence, `merge <ref>` per ready item, `closeout <ref> --apply`, and `queue plan --next N` for the next pick; `brief` serves the owner-facing view, and `lanes`/`queue` carry lane state. The human is uninvolved until they stop the loop.
+  - **Mode A — Autonomous CEO loop (`jaiship loop`, or the retained `scripts/ceo-loop.sh`):** a long-running outer supervisor spawns one `@ceo` agent session at a time; the `@ceo` picks the next ticket, calls `deliver-ticket.sh` (foreground, blocking), reads the delivery summary, merges approved + PM-finalized PRs through the `merge` primitive, handles blockers, and loops. Each iteration is a sequence of typed calls: `status` for the digest (including typed questions and ready-to-merge), `blockers answer` for open questions, `verify change`/`phase list` for finalization evidence, `merge <ref>` per ready item, `closeout <ref> --apply`, and `queue plan --next N` for the next pick; `brief` serves the owner-facing view, and `lanes`/`queue` carry lane state. The human is uninvolved until they stop the loop. The typed outer loop is `jaiship loop start|stop|status|log|reset` ([Loop Supervision](feature-loop-supervision.md)); `scripts/ceo-loop.sh` stays present and executable as the documented fallback until the F6 handover.
   - **Mode B — Manual batch (`batch-deliver.sh`):** the human provides an explicit ticket list; the batch script delivers each sequentially. The **human** is the merge authority — they approve via the `approved` label; `batch-deliver.sh` then rebases, waits for green quality gates, and squash-merges.
   - (Manual and Autopilot are the interactive run modes of the same lifecycle and are out of scope for this spec; see [change-lifecycle.md](../../guides/change-lifecycle.md).)
 - **Per-ticket engine (F-2, `deliver-ticket.sh`):** the foreground, blocking, single-flight lifecycle runner. It spawns/resumes the PM opencode session, monitors liveness, kill-and-restarts on stall, classifies the result, and returns a delivery summary. It exposes scriptable subcommands so the AI does not burn tokens rediscovering scriptable facts: `--is-delivering [REF]`, `--last-message REF`, and `REF --resume-prompt "<text>"`.
@@ -78,7 +79,19 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 - **No-merge contract (F-3):** `deliver-ticket.sh` **does not merge**. It returns `pr-open` (+ PR URL + PM last-message). The legacy auto-merge-on-`approved`-label path inside the PM is retired. Merge authority is the `@ceo` (Mode A, after PM-finalization verification, through the `merge` primitive) or `batch-deliver.sh` (Mode B, after human approval + rebase + green-gate).
 - **Session-traffic liveness (F-4, `pm-liveness.sh`):** "liveness" is measured by **opencode session-message traffic** (new assistant/tool messages), not by process-alive — and it is **multi-signal**. The primary signal queries the **current message store** across the **recursive session tree** (traversing `session.parent_id`), so traffic from child sessions (when the PM delegates to `@coder`/`@spec-writer`/…) is counted — a quiet parent with active children is NOT a false stall. On the reference opencode 1.19.3 schema messages live in `message` and parts in `part`; `session_message` is a legacy table that is empty on the reference store and is not the current source. The delivered `scripts/pm-liveness.sh` currently queries `session_message`, so on the reference store its session-tree signal observes no traffic and liveness is carried by the git/worktree signal until the script is reconciled; that script change is an owner follow-up outside this feature change. A session with no tree traffic for ≥ `DELIVER_STUCK_MINUTES` (default **10**) AND no git/worktree activity is declared stalled and killed-and-resumed. Git commits and worktree file mtimes are an always-on **secondary signal**: if EITHER signal shows recent activity, the session is healthy. The earlier 30-minute, file-mtime heuristic is retired.
 - **Mode B merge gate — rebase-before-merge + green-gate wait (F-5):** for a human-approved PR, `batch-deliver.sh` rebases onto the latest `main`, pushes, waits for the PR quality gates to go green, and squash-merges using the **PR title and description as the commit message**. Rebase conflicts are resolved by an AI agent, after which the gates re-run.
-- **CEO stuck detection + session resume + durable stop (F-6, `ceo-loop.sh`):** the loop detects a *genuinely stuck* CEO (no session traffic **and** no healthy delivery in progress) and kills+restarts it; a **race-free delivering marker file** (written by `deliver-ticket.sh` on its OWN path, before the delivery starts) tells the loop the CEO is blocked on a delivery, so a blocked-but-healthy CEO is never killed; it resumes the previous CEO session when its context is under `CEO_RESUME_TOKEN_LIMIT` (default 100000 tokens); the stop/park signal is durable across loop restarts.
+- **CEO stuck detection + session resume + durable stop (F-6):** both Mode A outer
+  supervisors detect a *genuinely stuck* CEO (no session traffic **and** no
+  healthy delivery in progress) and restart it; a blocked-but-healthy CEO is
+  never killed. The shell path uses a **race-free delivering marker file**
+  (written by `deliver-ticket.sh` on its OWN path, before the delivery starts) and
+  the `--is-delivering` PID probe; the typed `jaiship loop` path reads the
+  delivered `dispatch.lane` and `daemon.lane` records read-only as its
+  corroborator and never runs a shell probe. The shell path resumes the previous
+  CEO session when its context is under `CEO_RESUME_TOKEN_LIMIT` (default 100000
+  tokens); the typed path has no total-context source and starts a fresh session.
+  The stop/park signal is durable across loop restarts in both paths: a workspace
+  file under the shell, and the identity-scoped `loop.stop` ledger record under
+  the typed loop (only an explicit `loop reset` clears it).
 - **Branch hygiene (F-7, `tools/clean-merged-branches`):** deletes only branches already squash-merged into the base (verified by ancestry); never deletes unmerged or protected branches.
 - **Optional pre-iteration hook (F-8):** both wrapper OWN paths execute an
   opt-in, user-owned executable immediately before every actual OpenCode
@@ -175,7 +188,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 |----|-----------|
 | **INV-DM-1** | `deliver-ticket.sh` runs **foreground, never detached** — a caller blocks until merged/blocked/pr-open/pr-open-unverified/failed/finished/max-restarts/state-unverified/partial/noop-lane-permission/noop-lane-nothing-to-do. The CEO must never `setsid … & disown` it. |
 | **INV-DM-2** | `deliver-ticket.sh` is **single-flight + join, per repo working tree** — a live instance for the same ticket is *joined* (wait + classify), never raced with a duplicate PM. SIGTERM/SIGINT is propagated to the PM child (grace period → SIGKILL). |
-| **INV-DM-3** | `ceo-loop.sh` detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress — checked via both the `--is-delivering` PID probe **and** the race-free delivering marker file) — not a healthy wait. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
+| **INV-DM-3** | A Mode A outer supervisor detects a **stuck** CEO (no session traffic **and** no healthy delivery in progress) — not a healthy wait. The shell path checks both the `--is-delivering` PID probe **and** the race-free delivering marker file; the typed `jaiship loop` path decides the same two-signal definition from sourced session progress and the delivered `dispatch.lane` / `daemon.lane` corroborator, with an owner-liveness test on the recorded process id only. Its primary job is stuck-CEO recovery; "parking while a delivery is in progress" is the CEO blocking on `deliver-ticket.sh`, not the loop's job. |
 | **INV-DM-4** | In Mode A the **`@ceo` is the merge authority** — it verifies the PR is approved **and** the PM has finalized all 11 phases (`chg-<ref>-pm-notes.yaml`) before running `merge <ref>`. `merge` is the lifecycle merge path; the CEO does not use a platform merge command as the primary path. "Merge-not-yield": a ready, approved, finalized PR is merged, not deferred indefinitely. `deliver-ticket.sh` and `ceo-loop.sh` remain retained and executable: the typed engine is the regular delivery path, and for a repository in `dual-run` the scripts stay the documented fallback (`deliver-ticket.sh` the per-ticket script and `ceo-loop.sh` the outer process supervisor); after a per-repository handover they print a deprecation pointer naming `dispatch` and remain executable as fallback. |
 | **INV-DM-5** | **Liveness = multi-signal progress, not process-alive.** The session-tree signal (recursive message traffic across the parent + child sessions, read from the current `message`/`part` store on opencode 1.19.3; `session_message` is legacy and empty) is combined with a git/worktree-activity signal; if EITHER shows recent activity the session is healthy. A hung LLM stream (process alive, both signals silent) is *stalled*, not slow. |
 | **INV-DM-6** | **One ticket in flight per repo working tree.** Parallel deliveries in different repos / independent clones are allowed (tracking is keyed on the working tree). |
@@ -183,7 +196,7 @@ These are the non-negotiable contract the tooling enforces. Full rationale and e
 ### User Flows
 
 ```
-Mode A (autonomous):   scripts/ceo-loop.sh
+Mode A (autonomous):   jaiship loop start --foreground      (or: scripts/ceo-loop.sh)
                          └─ @ceo (per session) ──► deliver-ticket.sh REF (block)
                                                       └─ PM opencode (11 phases)
                          └─ @ceo merges approved + finalized PRs (INV-DM-4)
@@ -217,7 +230,8 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 
 | Path | Kind | Responsibility |
 |------|------|----------------|
-| `scripts/ceo-loop.sh` | Script (outer, Mode A) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal. **Not platform-aware** (OQ-3): delegates delivery to `deliver-ticket.sh` and merges to the `@ceo` agent, so needs no tracker access itself |
+| `scripts/ceo-loop.sh` | Script (outer, Mode A fallback) | Spawn one `@ceo` session at a time; invoke the optional hook before every spawn/resume; detect stuck CEO; resume previous session under token limit; honor durable stop signal. **Not platform-aware** (OQ-3): delegates delivery to `deliver-ticket.sh` and merges to the `@ceo` agent, so needs no tracker access itself. Retained and executable as the documented fallback; it is not edited by the typed loop |
+| `jaiship loop` (`packages/core/src/app/loop-supervisor.ts`, `packages/cli/src/commands/loop.ts`) | Typed command (outer, Mode A) | The typed Mode A operator surface: `start --foreground [--fresh-budget]`, `stop [--mode drain\|immediate]`, `status`, `log [--lines n]`, `reset`. Composes the delivered supervision engine under the identity `loop-main`, spawns the CEO through the harness port (`--agent ceo`, resolved seat model, `ceo-loop-<stamp>` title), decides the two-signal stuck verdict from sourced progress plus the lane corroborator, terminates through the delivered harness `terminate`, records a durable `loop.stop` and a bounded operational log, and reads the six `coordinator.*` keys. It runs no shell probe and invokes no script ([Loop Supervision](feature-loop-supervision.md)) |
 | `scripts/deliver-ticket.sh` | Script (per-ticket engine) | Single-flight + join; invoke the optional hook before every PM iteration; spawn/resume PM; log-progress liveness watchdog; kill-and-restart on stall; signal propagation; **platform-aware result classification & PR URL resolution** (F-9); emits a conventional-subject resume-sync merge instruction (F-10); writes the delivering marker on its OWN path; `--is-delivering` / `--last-message` / `--resume-prompt` subcommands; **does not merge** |
 | `scripts/lib/dispatch-authority.sh` | Sourced shell library | Reads the derived per-repository dispatch authority document (`dispatch-authority.json`) as a plain file with shell built-ins; absent or malformed means `dual-run`, so a missing typed installation never breaks the fallback. Sourced at startup by `deliver-ticket.sh`, `batch-deliver.sh`, `pm-liveness.sh`, and `ceo-loop.sh` |
 | `scripts/lint-commit-range.sh` | Script (pre-PR gate) | Lint the change branch's own merge-base range against the root commitlint configuration; per-commit diagnostics (short and full SHA, rule id, line, bounded excerpt) and a remediation mode; verdicts `PASS` / `FAIL` / `SKIP` / `ERROR`; read-only and offline |
@@ -244,7 +258,7 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 
 ### Data Architecture
 
-- **In-progress tracking** lives in repo-local, git-ignored files under `.ai/local/delivery/<REF>.pid` and `.ai/local/opencode-sessions/<REF>.json`. A single `.ai/local/delivery/delivering` marker file (INV-DM-3) is written by `deliver-ticket.sh` on its OWN path and read by `ceo-loop.sh` as a race-free "CEO blocked on a delivery" signal. Callers never inspect these directly — they go through the `--is-delivering` / `--last-message` subcommands. Tracking is keyed on the working tree, so independent clones never see each other's deliveries (INV-DM-6).
+- **In-progress tracking** lives in repo-local, git-ignored files under `.ai/local/delivery/<REF>.pid` and `.ai/local/opencode-sessions/<REF>.json`. A single `.ai/local/delivery/delivering` marker file (INV-DM-3) is written by `deliver-ticket.sh` on its OWN path and read by `ceo-loop.sh` as a race-free "CEO blocked on a delivery" signal. Callers never inspect these directly — they go through the `--is-delivering` / `--last-message` subcommands. Tracking is keyed on the working tree, so independent clones never see each other's deliveries (INV-DM-6). The typed `jaiship loop` path adds no file: its durable session identity, its durable stop, and its restart accounting are state-ledger records under the loop identity, and its delivery corroborator is the delivered dispatch/daemon lane records.
 
 ## Non-Functional Requirements
 
@@ -254,7 +268,7 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 | NFR-2 | Liveness precision | Liveness is measured by opencode session-message traffic (recursive session tree) + git/worktree activity, not process-alive | Stalled stream killed within `DELIVER_STUCK_MINUTES` (default 10) |
 | NFR-3 | Merge safety | `deliver-ticket.sh` never merges; merge requires an approval signal + (Mode A) PM finalization or (Mode B) rebase + green-gate | Zero auto-merges from the per-ticket engine |
 | NFR-4 | No orphans | All delivery scripts propagate SIGTERM/SIGINT → SIGKILL to their AI children | No orphaned opencode instance after a kill |
-| NFR-5 | Durable control | `ceo-loop.sh`'s stop/park signal survives a loop restart; it is not wiped at startup | Stop honored until explicitly cleared |
+| NFR-5 | Durable control | The Mode A stop signal survives a loop restart and is not wiped at startup: the shell loop's workspace marker, and the typed loop's identity-scoped `loop.stop` ledger record, which only an explicit `loop reset` clears | Stop honored until explicitly cleared |
 | NFR-6 | Commit-range hygiene | Every commit in a delivered change's range satisfies the root commitlint configuration before PR creation, and a delivery-branch sync carries a conventional subject rather than a plain merge subject | 0 commit-message CI failures per change; pre-PR verdict `PASS` or recorded `SKIP` |
 
 ## Quality Assurance Strategy
@@ -263,7 +277,8 @@ The guiding principle is the **AI-vs-script split**: the expensive, stateless, j
 
 | Level | Scope | Notes |
 |-------|-------|-------|
-| Manual | Mode A walk-through | Start `ceo-loop.sh`, kill a stuck CEO, verify single-flight + resume; verify merge-not-yield on an approved finalized PR |
+| Manual | Mode A walk-through | Start `ceo-loop.sh`, kill a stuck CEO, verify single-flight + resume; verify merge-not-yield on an approved finalized PR. The typed loop counterpart is the offline parity battery: `jaiship loop` parity, durable stop, single instance, and a stuck-session restart are proven under `tests/conformance/loop/` |
+| Manual | Mode A typed-stop walk-through | `jaiship loop start --foreground`; `jaiship loop stop --mode drain`; restart the process and confirm the next start exits 0 with `state=stopped`; `jaiship loop reset` and confirm it runs |
 | Manual | Mode B walk-through | Deliver a batch, approve via label, re-run, verify rebase + green-gate + squash-merge |
 | Grep | No-merge contract | `deliver-ticket.sh` must not contain a merge code path; guides/spec must state "does not merge" |
 | Grep | Liveness wording | Docs must describe multi-signal liveness (recursive session-tree traffic from the current `message`/`part` store + git/worktree) with the 10-minute default, and must not name `session_message` as the current message store; the retired 30-minute/file-mtime heuristic is absent |
@@ -301,6 +316,19 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 
 `CEO_LOOP_STALL_MINUTES` (default `10`) is the `pm-liveness.sh` probe threshold, not the loop knob; both wrappers export it aligned to their own stuck threshold when invoking the probe.
 
+The table above configures the shell path. The typed `jaiship loop` reads no
+environment knob at all: the six shell knobs map onto the delivered
+`coordinator.*` configuration keys — `CEO_LOOP_STUCK_MINUTES` →
+`coordinator.stuck-window` (600 000 ms), `CEO_LOOP_POLL_SECONDS` →
+`coordinator.collection-interval` (30 000 ms), `CEO_LOOP_KILL_GRACE_SECONDS` →
+`coordinator.kill-grace` (20 000 ms), `CEO_LOOP_MAX_RESTARTS` →
+`coordinator.restart-budget` (10), and `CEO_RESUME_TOKEN_LIMIT` →
+`coordinator.resume-context-limit` (100 000) — while `CEO_LOOP_SLEEP_SECONDS` is
+replaced by the declared backoff schedule plus the collection interval,
+`MAX_ITERATIONS=0` is replaced by the unbounded loop, and
+`coordinator.progress-bound` (300 000 ms) has no shell counterpart. No key is
+added for the typed loop ([Loop Supervision](feature-loop-supervision.md)).
+
 ## Dependencies & Risks
 
 - **Depends on:** the 11-phase delivery lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)); the documented, stable opencode CLI (`opencode session list`, `opencode run --session`, `opencode db` for token totals).
@@ -316,6 +344,7 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 ## Related Documentation
 
 - **Canonical modes guide:** [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) — modes table, component responsibilities, the AI-vs-script split, INV-DM-1..6, recovery semantics, configuration, troubleshooting.
+- **Typed Mode A surface:** [Loop Supervision](feature-loop-supervision.md) — the `jaiship loop` family, the engine-reuse boundary, the two-signal verdict and corroborator, the durable stop, and the proof boundary.
 - **Planned-scope precondition:** [doc/guides/milestone-management.md](../../guides/milestone-management.md) — the milestone-first operating rule an unattended run assumes.
 - **Mode B operations guide:** [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) — `batch-deliver.sh` / `deliver-ticket.sh` usage, approval workflow, labels.
 - **CEO agent prompt:** `.opencode/agent/ceo.md` — autonomous delivery model (merge-not-yield, wait-for-delivery).
@@ -325,4 +354,4 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 - **Sibling spec (session-database admin):** [feature-session-database-admin.md](feature-session-database-admin.md) — the typed `ados db` surface over the same session store.
 - **Hook decision:** [TDR-0002](../../decisions/TDR-0002-pre-iteration-hook-contract-details.md) — lifecycle, failure, distribution, and environment-return contract.
 - **Z.AI hook guide:** [doc/guides/zai-peak-hours-hook.md](../../guides/zai-peak-hours-hook.md) — peak-hours + quota-aware behavior, condition-function extensibility, and configuration of the inactive example hook.
-- **Enduring test specification:** [test-spec-autonomous-delivery.md](../../quality/test-specs/test-spec-autonomous-delivery.md) — automated coverage of loop and hook behavior.
+- **Enduring test specification:** [test-spec-autonomous-delivery.md](../../quality/test-specs/test-spec-autonomous-delivery.md) — automated coverage of loop and hook behavior; the typed loop's own coverage map is [test-spec-loop-supervision.md](../../quality/test-specs/test-spec-loop-supervision.md).

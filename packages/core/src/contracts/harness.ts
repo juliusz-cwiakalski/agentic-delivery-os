@@ -272,6 +272,14 @@ export type HarnessSessionHandle = {
   readonly sessionId: string;
   readonly treeRoot: string;
   readonly workItemRef: string;
+  /**
+   * The additive OPTIONAL process id of the session the handle leads
+   * (GH-348 DM-3). An adapter that can report the started child fills it; an
+   * adapter that cannot leaves it ABSENT — never fabricated and never `0`. No
+   * capability name is added, and an existing double that constructs a handle
+   * without the member stays valid.
+   */
+  readonly pid?: number;
 };
 
 /**
@@ -433,6 +441,13 @@ export type HarnessSpawnStream = {
   readonly completion: Promise<HarnessSpawnRunnerResult>;
   readonly acquired: () => void;
   readonly kill: () => void;
+  /**
+   * The additive OPTIONAL started-child process id (GH-348 DM-3), so the
+   * adapter can carry the live process identity onto the handle it constructs.
+   * Absent stays absent: a stream double that declares nothing keeps the
+   * delivered behaviour and the loop records `null`.
+   */
+  readonly pid?: number;
 };
 
 /**

@@ -5,7 +5,6 @@
  * no evidence was hand-inserted and no non-controlled-proof record counted.
  */
 import { describe, expect, test } from "bun:test";
-import { createControlledRepo, type ControlledRepo } from "./controlled-repo";
 import {
   COMPLETED_EVIDENCE,
   SPAWN_REFUSED_EVIDENCE,
@@ -13,6 +12,7 @@ import {
   TOOL_FAILURE_EVIDENCE,
 } from "../../fixtures/dispatch/harness";
 import { artifacts, ledger, prNone, readFail, readOk } from "../../fixtures/dispatch/truth";
+import { type ControlledRepo, createControlledRepo } from "./controlled-repo";
 
 const drive = async (repo: ControlledRepo, token: string): Promise<void> => {
   switch (token) {

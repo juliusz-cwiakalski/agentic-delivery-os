@@ -1137,6 +1137,71 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     ["<binary> install purge", "<binary> install purge --yes", "<binary> install purge --dry-run"],
   ),
+  m4PageEntry("loop")(
+    ["loop"],
+    "Run, stop, inspect, tail, and reset the CEO outer delivery loop — a composition profile over the delivered supervision engine under the loop-main identity",
+    [
+      "<binary> loop start --foreground [--fresh-budget]",
+      "<binary> loop stop [--mode drain|immediate]",
+      "<binary> loop status [--json]",
+      "<binary> loop log [--lines <n>]",
+      "<binary> loop reset",
+    ],
+    [
+      ["--foreground", "Run the supervision cycle in the foreground (required by start)"],
+      ["--fresh-budget", "Open the next restart-budget epoch on start"],
+      [
+        "--mode <drain|immediate>",
+        "Stop mode: drain finishes the session; immediate terminates it",
+      ],
+      ["--lines <n>", "Read the last n log lines (1..100, default 50)"],
+    ],
+    [
+      "<binary> loop start --foreground",
+      "<binary> loop status --json",
+      "<binary> loop log --lines 20",
+      "<binary> loop stop --mode immediate",
+      "<binary> loop reset",
+    ],
+  ),
+  m4PageEntry("loop")(
+    ["loop", "start"],
+    "Claim the instance lease, establish or re-find the CEO session, and run the supervision cycle",
+    ["<binary> loop start --foreground [--fresh-budget]"],
+    [
+      ["--foreground", "Required in v1; detached hosting is not declared"],
+      ["--fresh-budget", "Open the next restart-budget epoch"],
+    ],
+    ["<binary> loop start --foreground", "<binary> loop start --foreground --fresh-budget"],
+  ),
+  m4PageEntry("loop")(
+    ["loop", "stop"],
+    "Append one durable loop-identity stop request; the loop honours it at its next boundary",
+    ["<binary> loop stop [--mode drain|immediate]"],
+    [["--mode <drain|immediate>", "drain (default) finishes the session; immediate terminates it"]],
+    ["<binary> loop stop", "<binary> loop stop --mode immediate"],
+  ),
+  m4PageEntry("loop")(
+    ["loop", "status"],
+    "Project the delivery.loop.v1 observation read-only: the six shell keys, then the additive keys",
+    ["<binary> loop status [--json]"],
+    [],
+    ["<binary> loop status", "<binary> loop status --json"],
+  ),
+  m4PageEntry("loop")(
+    ["loop", "log"],
+    "Return the bounded tail of the loop's operational log",
+    ["<binary> loop log [--lines <n>]"],
+    [["--lines <n>", "An integer 1..100 (default 50)"]],
+    ["<binary> loop log", "<binary> loop log --lines 100"],
+  ),
+  m4PageEntry("loop")(
+    ["loop", "reset"],
+    "Append one durable stop clearance when a request is folded; otherwise a no-op success",
+    ["<binary> loop reset"],
+    [],
+    ["<binary> loop reset"],
+  ),
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];
