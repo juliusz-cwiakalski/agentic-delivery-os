@@ -8,11 +8,22 @@
 # plan phase id, the commit hash, and the test result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-350-spec.md (v1.4: F-1..F-8; **31** ACs
+#   MERGED-BASE NOTE (the branch was integrated with `main-tools`): the merge
+#   re-derived every count in this plan to the merged tree — error-table entries
+#   and `documentedRows` 170 (not 167), the delivered-rows metric 169 (not 166),
+#   the sync arithmetic `BASELINE_ROWS.length + 136` (not `+ 133`), and the
+#   two-segment allowlist 68 (not 66, because GH-349's two reserved merge rows
+#   landed first; none of GH-350's three codes is kind-first two-segment). The
+#   pre-merge outgoing values survive only where a comment describes HISTORY
+#   (e.g. "164 -> 170"). The merge also RENUMBERED the zone decision record:
+#   the zone ADR is now **ADR-0013** (`ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md`);
+#   `ADR-0012` is `provider-side-merge-landing-path`. Every ADR reference in this
+#   plan points at ADR-0013.
+#   - Spec:      ./chg-GH-350-spec.md (v1.8: F-1..F-8; **31** ACs
 #                AC-F1-1..AC-F8-5 — AC-F8-5 (entrypoint reachability, one
 #                criterion with two arms) sits inside F-8, so the capability list
 #                stays at eight; DM-1..DM-10 — **DM-1 and DM-8 carry the AMENDED
-#                ZONE CONTRACT** (v1.4, per ADR-0013's `## Revision`, which is
+#                ZONE CONTRACT** (v1.8, per ADR-0013's `## Revision`, which is
 #                authoritative: three-member port, `ProviderZoneFacts`,
 #                `UTC_ZONE_FACTS`, `PeakWindowEndRule`, the transition-segment
 #                expiry and its probe budget); NFR-1..NFR-16; RSK-1..RSK-19;
@@ -40,7 +51,7 @@
 #                including `workItemRef`), E (migration subset, mapping table,
 #                refusals), F (watch freshness), G (the three declared provider
 #                rows)).
-#   - Test plan: ./chg-GH-350-test-plan.md (v1.7: **108** cases in eleven blocks — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
+#   - Test plan: ./chg-GH-350-test-plan.md (v2.3 (merged): **108** cases in eleven blocks — TC-ZONE-001..011 (11), TC-BUD-001..017 (17; BUD-017 is the
 #                class-T paid-entry case), TC-CFG-001..011 (11),
 #                TC-INDEP-001..004 (4), TC-SIM-001..011 (11),
 #                TC-MIG-001..015 (15), TC-WFRESH-001..010 (10),
@@ -123,7 +134,7 @@
 #                `bash scripts/.tests/test-doc-distribution.sh` runs in phase 9's
 #                battery as a control).
 #
-# AMENDED ZONE CONTRACT — PHASE 2 SUMMARY (spec v1.4; ADR-0013's `## Revision` is
+# AMENDED ZONE CONTRACT — PHASE 2 SUMMARY (spec v1.8; ADR-0013's `## Revision` is
 # authoritative; this block is the plan-level digest of what phase 2 must now
 # build):
 #   ONE THREE-MEMBER PORT. `ProviderZonePort` = `isKnownZone(zone)`,
@@ -191,11 +202,13 @@
 #        so TC-ZONE-010's fixture had no rule to fail) and the parks-list golden
 #        move in PHASE 2; the golden also moves again in PHASE 3 for the budget
 #        park. The DoR verdict record itself is declared in PHASE 1.
-#   B4 — `documentedRows` is 167 after the change, not 166. Phase 1 states both
+#   B4 — `documentedRows` is 170 after the change (the pre-change base 164 plus
+#        GH-350's three rows; GH-349 moved the base to 167 first), not 169. Phase 1
+#        states both
 #        numbers with their different homes: `sourceEntries` and `documentedRows`
-#        are EQUAL at 167 (the delivered `documentedRows === sourceEntries`
+#        are EQUAL at 170 (the delivered `documentedRows === sourceEntries`
 #        assertion holds in `tests/checks/error-table-sync.test.ts`), while
-#        163 -> 166 is the DELIVERED-ROWS metric — `ERROR_TABLE` entries minus the
+#        163 -> 169 is the DELIVERED-ROWS metric — `ERROR_TABLE` entries minus the
 #        single `spend` row — stated as "163 delivered rows" on
 #        `feature-metrics.md` (lines 260, 348 and 390) and derived by the sync and
 #        structural suites, never in that equality and never on the install page.
@@ -221,7 +234,7 @@
 #        ordinal stays.
 #   B7 — TC-ZONE-008's structural oracle is unsatisfiable as written. Phase 2
 #        declares `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` in
-#        `packages/core/src/provider/peak.ts` (spec v1.4: only the second
+#        `packages/core/src/provider/peak.ts` (spec v1.8: only the second
 #        parameter's TYPE changed, from a scalar offset to `ProviderZoneFacts`, so
 #        the structural binding is unchanged) and makes both the engine's
 #        `expiresAtMs` and the daemon watcher's window end derive from it; the
@@ -339,7 +352,7 @@
 #        read-only members (`quota`, `parks list`, `watch status`, `simulate`)
 #        write nothing", not "a provider invocation writes nothing".
 #   D2-9 — TC-MOUNT-008's owner and setup. DECLARED: the owner is
-#        `tests/checks/provider-alias-baseline.test.ts` (test plan v1.4 §7.1/§7.3
+#        `tests/checks/provider-alias-baseline.test.ts` (test plan v2.3 §7.1/§7.3
 #        agree), and the comparison is cell by cell against the committed baseline
 #        INCLUDING `git show <capturedFrom>:tests/fixtures/entrypoint/
 #        alias-baseline.json` for the provenance cell. Phase 8 states it.
@@ -355,7 +368,7 @@
 #        former packs each publishable package's declarations generically, so a new
 #        subpath needs no entry there; the latter enumerates the jira/gitlab/github
 #        TRACKER clients, asserts nothing about the new adapters subpath or the
-#        measurement path, and is consumed as an UNEDITED CONTROL (test plan v1.4
+#        measurement path, and is consumed as an UNEDITED CONTROL (test plan v2.3
 #        §3.2, §7.2, §7.3) — its existing enumeration is what proves the new
 #        time-zone subpath was not smuggled into a tracker client's surface. The
 #        measurement-path arm's structural home is
@@ -366,14 +379,18 @@
 #
 # DOR ITERATION-3 CORRECTIONS (blocking N-1; N-3, N-6, N-8 and the harness note):
 #   N-1 — THE CONTRACTS-EXPORT INVENTORY WAS UNDECLARED. ANSWERED:
-#        `tests/fixtures/ports/v1-contract-inventory.json` and
-#        `tests/structure/port-contract-inventory.test.ts` pin the ENTIRE contracts
-#        surface in both directions (60 `provider.ts` and ~2903 `index.ts` exports
-#        committed), so every phase that adds, renames or retires a contract export
-#        falsifies them. Both files are now declared in PHASES 1, 2, 3, 5 and 7 —
+#        `tests/fixtures/ports/v1-contract-inventory.json` pins the ENTIRE contracts
+#        surface (60 `provider.ts` and ~2903 `index.ts` exports committed) two-way
+#        against `tests/structure/port-contract-inventory.test.ts`, so every phase
+#        that adds, renames or retires a contract export falsifies the FIXTURE. The
+#        fixture is declared in PHASES 1 and 2 —
 #        P1 the vocabulary names and barrel rows, P2 the `PROVIDER_PEAK_TIMEZONES`
-#        retirement and the zone/port names, P3 the budget-outcome and ref types,
-#        P5 the simulate fixture and block types, P7 the watch default bound — and
+#        retirement and the zone/port names — and in NO later phase, because phases
+#        3, 5 and 7 add no contracts export (they change type MEMBERS or declare
+#        their types in the provider subpath). THE SUITE is a GUARD and is declared
+#        by no phase: delivery proved GH-350 never edited it, and the plan must not
+#        declare a file it does not edit (N-8 supersedes N-1's "both files" wording;
+#        the gate is green because the fixture carries the pin). Each declared phase
 #        each phase's comment states that the fixture and the suite move as ONE
 #        edit-set with the export change. They are named in the multi-phase
 #        ownership list for the same reason, and an escalation trigger forbids the
@@ -515,13 +532,13 @@
 #   (P1 new names / P2 retirement and zone names — and NO other phase: a phase
 #   that changes only a type's MEMBERS or adds a non-exported alias does not move
 #   it, which is what phase 3's delivery established),
-#   `tests/fixtures/ports/v1-contract-inventory.json` and
-#   `tests/structure/port-contract-inventory.test.ts` (P1, P2 ONLY — the
-#   inventory pin is a TWO-WAY snapshot of the whole contracts surface (60
-#   `provider.ts` and ~2903 `index.ts` exports), so ANY phase that adds, renames
-#   or retires a contract export falsifies it; each of those phases declares both
-#   files and moves them as one edit-set with its export change, which is the only
-#   way the aggregate gate stays green at the boundary — N-1),
+#   `tests/fixtures/ports/v1-contract-inventory.json` (P1, P2 ONLY — the two-way
+#   snapshot of the whole contracts surface (60 `provider.ts` and ~2903 `index.ts`
+#   exports), so ANY phase that adds, renames or retires a contract export
+#   falsifies the FIXTURE; each of those phases moves it as one edit-set with its
+#   export change. The SUITE `tests/structure/port-contract-inventory.test.ts` is
+#   the guard and is declared by NO phase — delivery established this change never
+#   edited it — N-1 as corrected by the N-8 rule),
 #   `tests/fixtures/provider/contract-inventory.json` (P1 the vocabulary names and
 #   closed sets; P2 the zone exports — `ProviderZonePort` with its three members,
 #   `ProviderZoneFacts`, `PeakWindowEndRule`, `PROVIDER_DEFAULT_ZONE`, the grammar
@@ -583,11 +600,12 @@
 #   edit-set — counts, enumerated lists, tie order and the two allowlist
 #   enumerations — P2 the zone basis, P9 the budget/ref/announcement/CLI prose),
 #   `doc/spec/features/feature-metrics.md` (P1 the ERROR-TABLE numbers — lines
-#   260, 348 and the counts half of 390, 164/163/+130 -> 167/166/+133 — P8 the
+#   260, 348 and the counts half of 390, 164/163/+130 -> 170/169/+136 and the
+#   allowlist 66 -> 68 (GH-349) — P8 the
 #   FAMILY COUNT on line 390, 26 -> 27 — P9 the gate-versus-alarm paragraph; the
 #   page is a three-phase file and each phase moves ONE number family),
 #   `doc/spec/features/feature-install-lifecycle.md` (P1 the TABLE TOTAL,
-#   164 -> 167, which the page states at "the declared table total at 164 machine
+#   164 -> 170, which the page states at "the declared table total at 164 machine
 #   identities" — it carries NO delivered-rows metric — and P8 the FAMILY COUNT
 #   26 -> 27 while its `install` "twenty-sixth" ordinals stay; the page carries
 #   both kinds of number, so each phase moves one and neither leaves it
@@ -611,8 +629,8 @@
 #   fixtures, so a row cannot be added where its emitter is written without
 #   moving every count site and every count-bearing page in the SAME commit — and
 #   three emitters in three phases would stage the movement three times
-#   (164->165->166->167, corpus 81->82->83->84,
-#   `+130`->`+131`->`+132`->`+133`) across nine suites and five pages, which is
+#   (167->168->169->170, corpus 81->82->83->84,
+#   `+133`->`+134`->`+135`->`+136`) across nine suites and five pages, which is
 #   exactly the staggered count move test plan TR-10 declares a gap. The rows are
 #   therefore declared ONCE, with the vocabulary they belong to, in phase 1 (spec
 #   §18's "contracts and the vocabulary first — nothing else can compile against
@@ -622,29 +640,34 @@
 #   (`packages/core/src/contracts/error-table.ts`), the three documented rows and
 #   the prose facts spec §16 binds to
 #   `doc/spec/features/feature-result-contract.md` (the `provider` kind at sixteen
-#   rows; the table entries AND `documentedRows` at 167 — the two are equal and
+#   rows; the table entries AND `documentedRows` at 170 — the two are equal and
 #   the delivered equality assertion must hold; the separate DELIVERED-ROWS
-#   metric at 166, which is the page's own number and one below the table's; the
-#   arithmetic at `BASELINE_ROWS.length + 133`; the allowlist stated as explicitly
-#   unchanged at 66; and the corpus statement at 84 rows), one true-positive
+#   metric at 169, which is the page's own number and one below the table's; the
+#   arithmetic at `BASELINE_ROWS.length + 136`; the allowlist at 68 (it moved
+#   66 -> 68 with GH-349's two reserved codes, which the merged change owns, so
+#   THIS change does not move it); and the corpus statement at 84 rows), one
+#   true-positive
 #   result-code corpus row per new code
 #   (`tests/fixtures/result/code-corpora/true-positives.json`, 81 -> 84), the
 #   three other COUNT-BEARING pages (`feature-ceremony-runner.md`,
 #   `feature-metrics.md`, `feature-install-lifecycle.md` — and
 #   `feature-supervise.md` is deliberately NOT in this set: its only restatement
-#   is the 66-member allowlist, which does not move, so editing it would make a
-#   false claim and TC-DOC-001 asserts its `66` stays `66`), the TEN delivered
+#   is the 68-member allowlist — moved 66 -> 68 by GH-349 and already at 68 in the
+#   merged tree — and GH-350's three codes are three-segment, so THIS change moves
+#   nothing there; editing it would make a false claim, and TC-DOC-001 asserts its
+#   `68` stays `68`), the TEN delivered
 #   count/membership suites (`error-table-sync`, `error-table`,
 #   `cross-repository-contract`, `supervision-error-family`,
 #   `supervision-error-socialization`, `ceremony-contract`,
 #   `dispatch-attempts-taxonomy`, `verify-gates-suite-map-contract`,
 #   `ceremony-nonregression`, `merge-classification-conformance`), the
-#   `BASELINE_ROWS.length + 130` arithmetic — which
+#   `BASELINE_ROWS.length + 130` arithmetic (the pre-change base; the merged target
+#   is `+ 136`) — which
 #   lives in `tests/checks/error-table-sync.test.ts`, NOT in
 #   `scripts/checks/error-table-sync.ts` (that script DERIVES the counts from the
 #   live table and is declared by no phase: the arithmetic base and every `+ 130`
-#   site are the test's, and its two-segment allowlist stays 66 because none of the
-#   three new codes is kind-first) — the repo-wide no-leftover scan in
+#   site are the test's, and its two-segment allowlist moves only by GH-349's two
+#   codes — none of GH-350's three is kind-first) — the repo-wide no-leftover scan in
 #   `tests/structure/error-table.test.ts` (its `APPENDIX_D_FILES` list gains
 #   `feature-install-lifecycle.md`, and its token pattern gains this change's
 #   outgoing forms as WORDING-BOUND forms in the existing style — the outgoing
@@ -655,8 +678,9 @@
 #   `toHaveLength(163)` · `toHaveLength(164)` ·
 #   `entries: 164, documented: 164` · `documented: 164` · plus the
 #   `BASELINE_ROWS.length + 130` arithmetic form. THE DELTA CARVE-OUT IS
-#   EXPLICIT: `164 -> 167`, `163 -> 166`, `8 -> 14`, `11 -> 17`, `26 -> 27` and
-#   every bare-arrow form (including the unicode `164 → 167`) do NOT trip the scan,
+#   EXPLICIT: `164 -> 170`, `163 -> 169`, `8 -> 14`, `11 -> 17`, `66 -> 68`,
+#   `26 -> 27` and
+#   every bare-arrow form (including the unicode `164 → 170`) do NOT trip the scan,
 #   because an arrow line is history and a wording line is a live claim — so a page
 #   or suite that still states the number as CURRENT fails by name while a declared
 #   delta survives), and the count phrases of the delivered
@@ -691,23 +715,23 @@
 #           allowlist, a different set
 #       (c) every `eight-field`/`eleven` hit in the event envelope, steer record,
 #           daemon rows and delivery-result token sets — other closed sets
-#     PROVIDER-KIND AND TABLE TOTALS (13 -> 16; 164/163 -> 167/166; +130 -> +133;
-#     corpus 81 -> 84):
+#     PROVIDER-KIND AND TABLE TOTALS (13 -> 16; 164/163 -> 170/169;
+#     +130 -> +136; allowlist 66 -> 68 by GH-349; corpus 81 -> 84):
 #       (a) `tests/structure/merge-classification-conformance.test.ts:83`
 #           `counts.get("provider")).toBe(13)` -> 16 — FOUND BY THIS SWEEP, declared
 #           by no phase before it
 #       (a) `tests/checks/error-table-sync.test.ts:1081,1082,1162,1185` (`+ 130` ->
-#           `+ 133`), `:1793,1796,1797,1808` (164 -> 167, phrase)
-#       (a) `tests/checks/supervision-error-socialization.test.ts:60,61` 164 -> 167,
+#           `+ 136`), `:1793,1796,1797,1808` (164 -> 170, phrase)
+#       (a) `tests/checks/supervision-error-socialization.test.ts:60,61` 164 -> 170,
 #           `:62` corpusRows 81 -> 84
 #       (a) `tests/structure/error-table.test.ts:849,925,1159,1799,1892,1911,2336,
 #           2372,2530,2532,2534,2544,2545,2622,2623,2669,2670,2688-2690,2735,2736,
-#           2750,2751,2805,2806,2843-2845` (164 -> 167, 163 -> 166, phrases,
+#           2750,2751,2805,2806,2843-2845` (164 -> 170, 163 -> 169, phrases,
 #           APPENDIX_D_FILES + wording-bound forms)
 #       (a) `tests/structure/verify-gates-suite-map-contract.test.ts:149,150`,
 #           `tests/structure/ceremony-contract.test.ts:113,119`,
 #           `tests/structure/dispatch-attempts-taxonomy.test.ts:2,58,60`,
-#           `tests/behaviour/ceremony-nonregression.test.ts:56` (164 -> 167)
+#           `tests/behaviour/ceremony-nonregression.test.ts:56` (164 -> 170)
 #       (a) `tests/structure/cross-repository-contract.test.ts:495-527` — the
 #           `additive` set gains the three provider codes so the exact
 #           pre-change snapshot equality holds; `DOMAIN_KINDS` unchanged
@@ -715,15 +739,17 @@
 #           (count phrases and the stale/required pairs)
 #       (a) `doc/spec/features/feature-result-contract.md:9` (summary "thirteen
 #           provider-kind rows"), `:63` ("carries thirteen rows"), `:312`
-#           ("thirteen `provider` rows" + 164 -> 167), `:439` ("thirteen provider
+#           ("thirteen `provider` rows" + 164 -> 170), `:439` ("thirteen provider
 #           identities") -> sixteen
 #       (a) `doc/spec/features/feature-metrics.md:260,348,390` (164/163/+130 ->
-#           167/166/+133; line 390's family count is phase 8's)
+#           170/169/+136; line 390's family count is phase 8's)
 #       (a) `doc/spec/features/feature-install-lifecycle.md:264` (table total 164
-#           -> 167; no delivered-rows metric on that page)
-#       (a) `doc/spec/features/feature-ceremony-runner.md` (164/66 restatements)
+#           -> 170; no delivered-rows metric on that page)
+#       (a) `doc/spec/features/feature-ceremony-runner.md` (164 and 66 restatements
+#           -> 170 and 68)
 #       (c) `scripts/checks/error-table-sync.ts` — DERIVES every count; its
-#           `RESERVED_TWO_SEGMENT_CODES` stays 66. Executed by the phase-1 gate,
+#           `RESERVED_TWO_SEGMENT_CODES` moves only by GH-349's two codes (66 -> 68).
+#           Executed by the phase-1 gate,
 #           declared by no phase
 #       (c) `tests/fixtures/result/code-corpora/false-positives.json` — unchanged
 #           (the change adds true-positive rows only)
@@ -992,7 +1018,7 @@
 #                 TC-CONFORM-009
 #   Phase 7 (10): TC-WFRESH-001..TC-WFRESH-010
 #   Phase 8 (10): TC-MOUNT-001..TC-MOUNT-009 (9), TC-CONFORM-006 (owner
-#                 `tests/checks/provider-coverage-mount.test.ts` in test plan v1.4)
+#                 `tests/checks/provider-coverage-mount.test.ts` in test plan v2.3)
 #   Phase 9 (6): TC-CONFORM-007, TC-DOC-001..TC-DOC-005
 #   Count: 3 + 11 + 22 + 16 + 12 + 18 + 10 + 10 + 6 = 108.
 #   MOUNT-TP-1 / OQ-TP-10 is the reachability seam: TC-MOUNT-001..003 are phase 8's
@@ -1052,14 +1078,14 @@ tier:
     - "A count sentence the register or the mount moves is left at its outgoing value on `feature-provider-engine.md` (skip reasons 8, the closed eight-value set, allowlist 8/11, five provider-engine rows for a sixteen-row kind), on `feature-metrics.md` (the 24-family mount, family-count pins read 24) or on `feature-cli-entrypoint.md` (26 families, `install` \"and last\"), or the engine page's sixteen-row sentence is over-corrected so the engine FAMILY stops reading five (AC-F8-3, DoR D2-4, TC-DOC-001/002)"
     - "A boundary rule promised by TC-CONFORM-008 has no home in the production `.dependency-cruiser.cjs` the harness materialises, or a rule is re-homed into a suite the boundary meta-check cannot exercise (DoR D2-5, TC-CONFORM-008)"
     - "A declared adapters subpath is missing from an enumeration that compares the live manifest against a list (`tests/structure/subpaths.test.ts`, `scripts/checks/workspace-entrypoints.ts`), or a subpath claim is attributed to a suite that does not police it (DoR D2-12)"
-    - "A phase changes a contracts export — adds, renames or retires one — without moving `tests/fixtures/ports/v1-contract-inventory.json` and `tests/structure/port-contract-inventory.test.ts` in the SAME commit, so the two-way contracts inventory is falsified and `pnpm check` is red with the fix outside declared scope (N-1)"
+    - "A phase changes a contracts export — adds, renames or retires one — without moving `tests/fixtures/ports/v1-contract-inventory.json` in the SAME commit, so the two-way contracts inventory is falsified and `pnpm check` is red with the fix outside declared scope (N-1 as corrected at delivery: the fixture is the edit, the suite is the guard)"
     - "A delivered ordinal moves — `supervise` renumbered from 25, `install` from 26, `steer` from 23 or `metrics` from 24 — or a page is over-corrected so its ordinal becomes the count (AC-F8-3, TDR-0061 C-4, TC-MOUNT-009)"
     - "The family is mounted at fewer than seven members, a help entry is added before the family is mounted (its `seeAlso` target would be unregistered and reference-page parity would fail), or the mount splits across phases (TDR-0061 C-3, AC-F8-5)"
     - "A delivered assertion is deleted, loosened to a floor, renamed, or made conditional instead of moved — specifically TC-PAUSE-011's non-UTC refusal arm, TC-PAUSE-090's UTC-basis instants, TC-PROV-001's `exactly eight and eleven fields` evidence assertion, the `BASELINE_ROWS.length + 130` arithmetic base, or a delivered profile/watch assertion that states the closed watch condition set (test plan §7.2, §4.4)"
     - "A page and the doc-conformance phrase that pins it move in different commits, a phrase row is added for prose a later phase contradicts, a page outside the closed page set states a claim this change falsifies, or `feature-supervise.md` is edited at all (the one-edit-set rule; spec §16's closed page set and family-count class)"
     - "`Intl`, `TZ`, an ambient clock, an environment read, a filesystem read or a network read appears anywhere in packages/core/src/provider or in the provider tier the ambient-globals check scans, `scripts/checks/ambient-globals.ts` still bans neither `Intl` nor a `TZ` access after phase 2, or a second workspace module reads zone data for provider policy (AC-F1-3, NFR-1, TC-ZONE-010)"
     - "The engine's `expiresAtMs` and the daemon watcher's window end stop deriving from the one named `peakWindowEndInstantMs(nowMs, zoneFacts, rule)`, or a second expiry computation reappears (AC-F1-2, NFR-4, TC-ZONE-008, DoR B7)"
-    - "A zone derivation spends a FOURTH probe of either port method (`offsetSecondsAt` or `nextTransitionAtOrAfter`), or returns a gap-adjacent instant instead of the transition instant itself — the segment-3 guard returns before a fourth offset probe, the per-method budget is ≤3 + ≤3 with a ceiling of 6, and a spring-forward cell must equal the transition instant to the millisecond (spec v1.4, ADR-0013 `## Revision`, AC-F1-2, TC-ZONE-005/-007/-008)"
+    - "A zone derivation spends a FOURTH probe of either port method (`offsetSecondsAt` or `nextTransitionAtOrAfter`), or returns a gap-adjacent instant instead of the transition instant itself — the segment-3 guard returns before a fourth offset probe, the per-method budget is ≤3 + ≤3 with a ceiling of 6, and a spring-forward cell must equal the transition instant to the millisecond (spec v1.8, ADR-0013 `## Revision`, AC-F1-2, TC-ZONE-005/-007/-008)"
     - "A budget evaluation writes state, performs more than one spend-totals read per evaluation at any budget count, opens a second measurement path, or lets a paid entry become selectable while a subscription entry is budget-PARKED (AC-F2-2, AC-F2-4, AC-F2-5, NFR-6, NFR-7, NFR-9, TC-BUD-007/010/016)"
     - "A budget-evaluating invocation measures zero, skips as clear, or downgrades to a window-only evaluation when no work-item ref resolves; the ref seam gains a flag, an environment variable or a state-store read; a read-only member (`quota`, `parks list`, `profile resolve`, `watch status`) resolves a ref; or `simulate` reads the local context (AC-F2-5, TDR-0062, TC-REF-001..005)"
     - "A budget park carries a non-future, absent or guessed expiry, a ticket-scope crossing is presented as a park, or the class-T paid-entry behaviour is implemented as class P (AC-F2-3, NFR-6, DEC-7, TC-BUD-010/017)"
@@ -1160,9 +1186,9 @@ phases:
   # `APPENDIX_D_FILES` / no-leftover pattern among them), and
   # the count phrases of the delivered doc-conformance block.
   # `feature-install-lifecycle.md` IS A TWO-NUMBER PAGE AND MOVES HERE FOR ONE OF
-  # THEM (Fix 3): THIS phase moves its TABLE TOTAL only, 164 -> 167 — the page
+  # THEM (Fix 3): THIS phase moves its TABLE TOTAL only, 164 -> 170 — the page
   # states it as "the declared table total at 164 machine identities" and carries
-  # **NO delivered-rows metric**, so 163/166 belongs to `feature-metrics.md` and to
+  # **NO delivered-rows metric**, so 163/169 belongs to `feature-metrics.md` and to
   # the sync suite, never to this page. Its FAMILY COUNT (26 -> 27) is phase 8's
   # and its three "`install` is the twenty-sixth" ORDINALS stay untouched in both.
   # `feature-metrics.md` IS A THREE-NUMBER PAGE AND MOVES HERE FOR ONE FAMILY
@@ -1170,7 +1196,8 @@ phases:
   # counts half of 390** — "the table holds 164 entries, 163 delivered rows … at
   # `BASELINE_ROWS.length + 130`" (260), "at 164 entries / 163 delivered / 66
   # allowlist / +130" (348) and "(164 / 163 / 66 / +130)" (390) — to
-  # 167/166/+133. Line 390 also carries the MOUNTED FAMILY COUNT, and that half is
+  # 170/169/+136, and the allowlist to 68 (GH-349's two codes; this change moves
+  # none of them). Line 390 also carries the MOUNTED FAMILY COUNT, and that half is
   # PHASE 8's (26 -> 27); the same line is therefore edited twice, once per number
   # family, and neither phase may touch the other's half. Its gate-versus-alarm
   # paragraph is phase 9's.
@@ -1189,8 +1216,9 @@ phases:
   # machine identities`, `… documented`, `… delivered`, `… delivered rows`,
   # `entries).toHaveLength(…`, `toBe(…)`, `toHaveLength(…)`, the `entries: 164,
   # documented: 164` pair, and the arithmetic form. THE DELTA CARVE-OUT IS
-  # EXPLICIT: `164 -> 167`, `163 -> 166`, `8 -> 14`, `11 -> 17`, `26 -> 27` and
-  # every bare-arrow form (`164 → 167` with the unicode arrow, `x -> y`) do NOT
+  # EXPLICIT: `164 -> 170`, `163 -> 169`, `8 -> 14`, `11 -> 17`, `66 -> 68`,
+  # `26 -> 27` and
+  # every bare-arrow form (`164 → 170` with the unicode arrow, `x -> y`) do NOT
   # trip the scan, because the arrow form is history and the wording form is a
   # live claim. That is what makes the scan discriminate: a page or suite that
   # still states the number as CURRENT fails by name, while a declared delta line
@@ -1241,14 +1269,15 @@ phases:
   # watch `mapping`, a different union. Any consumer this sweep missed joins the
   # phase that widens the set, in the same commit — never a later phase.
 
-  # THE CONTRACTS-EXPORT INVENTORY MOVES WITH THE EXPORTS (N-1):
+  # THE CONTRACTS-EXPORT INVENTORY FIXTURE MOVES WITH THE EXPORTS (N-1; the SUITE
+  # is a guard this change never edits, so it is not declared — N-8):
   # `tests/structure/port-contract-inventory.test.ts` compares the ENTIRE
   # contracts surface two-way against
   # `tests/fixtures/ports/v1-contract-inventory.json` (60 `provider.ts` exports
   # and ~2903 `index.ts` exports committed), so the names and barrel rows this
   # phase adds falsify the fixture in BOTH directions — an added export is
   # "undocumented in the inventory" and a stale inventory row is "missing from the
-  # source". Both files therefore move in THIS commit, as one edit-set with
+  # source". The fixture therefore moves in THIS commit, as one edit-set with
   # `contracts/provider.ts` and `contracts/index.ts`; a phase that moves one
   # without the other leaves `pnpm check` red with the fix outside declared scope.
   # The same pairing recurs in phases 2 (retirement), 3 (budget/ref types), 5
@@ -1358,6 +1387,13 @@ phases:
         # entry for the evaluator-driven arm (`provider.budget.crossed` and DEC-10's
         # sparsity annotation). See the sweep note in the phase comment above.
         - packages/core/src/provider/announcements.ts
+        # OWNER-AUTHORISED (during delivery): comment-only correction of the
+        # superseded eight-/eleven-field allowlist wording on the two evidence
+        # projectors — "closed fourteen-field allowlist" and "closed
+        # seventeen-field allowlist". No code, type or behaviour changes: the
+        # projection loops the allowlist arrays this phase widens, and the comments
+        # must state the delivered sizes or they document a superseded set.
+        - packages/core/src/provider/parks.ts
         # The delivered structural mirrors of the closed sets, the evidence
         # allowlists and the export inventory. THIS phase owns the moved sizes
         # (6/8/9/13, 14/17, the five bound constants, the tie order, the ref
@@ -1375,17 +1411,20 @@ phases:
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         # THE CONTRACTS-EXPORT INVENTORY MOVES AS ONE EDIT-SET WITH THE EXPORT
-        # CHANGE (N-1): `port-contract-inventory.test.ts` pins the entire
-        # contracts surface two-way against this fixture (60 `provider.ts` and
-        # ~2903 `index.ts` exports committed, and it fails in BOTH directions), so
-        # the new names and the barrel rows falsify it and `pnpm check` is red at
-        # this boundary unless both files move in the SAME commit. Declared again
-        # in PHASE 2 for the retirement, and in NO later phase: a phase that adds
-        # only members to existing exported types (phase 3's delivered case) or
-        # declares its new types in the provider subpath (phases 5 and 7) adds no
-        # export name, so the inventory is not falsified.
+        # CHANGE (N-1; CORRECTED at delivery): `port-contract-inventory.test.ts`
+        # pins the entire contracts surface two-way against this fixture (60
+        # `provider.ts` and ~2903 `index.ts` exports committed, and it fails in
+        # BOTH directions), so the new names and the barrel rows falsify the
+        # FIXTURE — and the fixture alone is the edit. Delivery established that the
+        # SUITE is a GUARD that never needed a change (GH-349 last touched it, not
+        # this change), so it is NOT declared here or in phase 2: the phase must not
+        # declare a file it does not edit (the N-8 rule), and N-1's "both files"
+        # bundling is superseded by that evidence. Declared again in PHASE 2 for the
+        # retirement, and in NO later phase: a phase that adds only members to
+        # existing exported types (phase 3) or declares its new types in the
+        # provider subpath (phases 5 and 7) adds no export name, so the inventory is
+        # not falsified.
         - tests/fixtures/ports/v1-contract-inventory.json
-        - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/result/code-corpora/true-positives.json
         # THE RELEASE METADATA LANDS WITH THE FIRST PUBLISHABLE EDIT (delivery
         # finding: `tests/checks/privacy-release.test.ts` fails `expect(publishable)
@@ -1404,9 +1443,10 @@ phases:
         # gains the outgoing forms, so a page or suite left behind fails by name.
         # `scripts/checks/error-table-sync.ts` is EXECUTED by this phase's gate and
         # NOT edited: it derives every count from the live table and its documented
-        # counterpart, and its `RESERVED_TWO_SEGMENT_CODES` set stays at 66 because
-        # none of the three new codes is kind-first two-segment. Declaring it would
-        # be the declared-but-unedited noise the DoR flagged (N-8).
+        # counterpart. Its `RESERVED_TWO_SEGMENT_CODES` set moves only by GH-349's
+        # two reserved codes (66 -> 68); none of GH-350's three new codes is
+        # kind-first two-segment, so THIS change does not move it. Declaring it
+        # would be the declared-but-unedited noise the DoR flagged (N-8).
         - tests/checks/error-table-sync.test.ts
         - tests/structure/error-table.test.ts
         - tests/structure/cross-repository-contract.test.ts
@@ -1441,10 +1481,10 @@ phases:
         # split is named here so no boundary leaves either page half-moved:
         #   - `feature-metrics.md` — THIS phase moves its error-table numbers
         #     (lines 260, 348 and the counts half of 390: 164/163/+130 ->
-        #     167/166/+133); PHASE 8 moves the family count on line 390 (26 -> 27);
+        #     170/169/+136, allowlist 68); PHASE 8 moves the family count on line 390 (26 -> 27);
         #     PHASE 9 moves the gate-versus-alarm paragraph.
         #   - `feature-install-lifecycle.md` — THIS phase moves its TABLE TOTAL
-        #     only (164 -> 167, "the declared table total at 164 machine
+        #     only (164 -> 170, "the declared table total at 164 machine
         #     identities"); PHASE 8 moves its family count (26 -> 27) while its
         #     `install` "twenty-sixth" ordinals stay. The page carries NO
         #     delivered-rows metric.
@@ -1510,7 +1550,7 @@ phases:
   # boundary instant through ONE named function — or refuses by name instead of
   # reinterpreting the zone.
   #
-  # Contract (SPEC v1.4 — the AMENDED ZONE CONTRACT; ADR-0013's `## Revision` is
+  # Contract (SPEC v1.8 — the AMENDED ZONE CONTRACT; ADR-0013's `## Revision` is
   # authoritative, see the header digest):
   # `provider.entries.<name>.peak.timezone` and
   # `provider.profiles.profiles.<name>.peakWindows.windows[].timezone` admit the
@@ -1548,7 +1588,7 @@ phases:
   # `endSecondsOfDay ≤ 86400`, so any expiry lies at most 24 h ahead, and a zone
   # that transitions in that day has a transition to report. Refusing on
   # `undefined` would fail a zone that lawfully abolished DST.
-  # THE ONE NAMED EXPIRY DERIVATION (DoR B7; spec v1.4):
+  # THE ONE NAMED EXPIRY DERIVATION (DoR B7; spec v1.8):
   # `peakWindowEndInstantMs(nowMs, zoneFacts, rule)` with `PeakWindowEndRule =
   # { endSecondsOfDay, bufferAfterSeconds }` (the same end-rule shape
   # `peakWindowEndSeconds` already accepts) is declared in
@@ -1631,9 +1671,11 @@ phases:
   #     evaluation instants on the UTC basis (the literal itself is refused at
   #     validation)" become false: the UTC matrix stays byte-identical and the
   #     non-UTC arm moves to the zone suite.
-  #   - tests/behaviour/provider-peak-window.test.ts — TC-PROV-011/012/013 extend
-  #     to the zone basis with the delivered UTC expectations preserved as the
-  #     compatibility arm.
+  #   - tests/behaviour/provider-peak-window.test.ts — NOT EDITED (corrected at
+  #     delivery): the delivered UTC expectations stay byte-unchanged as the
+  #     compatibility arm, and the zone-basis arms (TC-PROV-011/012/013's zone
+  #     halves) live in `provider-peak-zone.test.ts` instead. The suite is a control,
+  #     declared by no phase.
   #   - tests/golden/provider-parks-list.test.ts and the
   #     `tests/fixtures/provider/golden/` data — every park now carries
   #     `timezone`, so the parks-list and resolve goldens are regenerated as a
@@ -1714,15 +1756,14 @@ phases:
         - packages/core/src/contracts/provider.ts
         - packages/core/src/contracts/index.ts
         # THE CONTRACTS-EXPORT INVENTORY MOVES AS ONE EDIT-SET WITH THE EXPORT
-        # CHANGE (N-1): `port-contract-inventory.test.ts` compares the whole
-        # contracts surface two-way against this fixture (60 `provider.ts` and
-        # ~2903 `index.ts` exports committed), so retiring an exported name here
-        # falsifies it and `pnpm check` is red at this boundary unless both files
-        # move in the SAME commit. They are named in the multi-phase ownership
-        # list for exactly this reason.
+        # CHANGE (N-1; CORRECTED at delivery): `port-contract-inventory.test.ts`
+        # compares the whole contracts surface two-way against this fixture, so
+        # retiring an exported name here falsifies the FIXTURE — which is the only
+        # edit this phase makes. The SUITE is a GUARD (delivery: GH-349 last touched
+        # it, this change never did), so it is NOT declared; the phase declares only
+        # files it edits (N-8).
         - tests/fixtures/ports/v1-contract-inventory.json
-        - tests/structure/port-contract-inventory.test.ts
-        # THE PROVIDER CONTRACT INVENTORY MOVES WITH THE ZONE EXPORTS (spec v1.4):
+        # THE PROVIDER CONTRACT INVENTORY MOVES WITH THE ZONE EXPORTS (spec v1.8):
         # `tests/structure/provider-contract.test.ts` compares `provider.ts`'s
         # export names two-way against this fixture, so adding `ProviderZonePort`
         # (three members), `ProviderZoneFacts`, `PeakWindowEndRule`,
@@ -1731,7 +1772,7 @@ phases:
         # phase 1 for the vocabulary names and HERE for the zone names, one
         # edit-set with the contract file.
         - tests/fixtures/provider/contract-inventory.json
-        # THE COUNTING ZONE-PORT FIXTURE (spec v1.4, ADR-0013 `## Revision`): the
+        # THE COUNTING ZONE-PORT FIXTURE (spec v1.8, ADR-0013 `## Revision`): the
         # shared fake the zone suites inject — a step table whose `fromMs`
         # boundaries ARE the transitions (so a transition lookup spends no hidden
         # probe), PER-METHOD call counters for `offsetSecondsAt` and
@@ -1806,8 +1847,12 @@ phases:
         - tests/checks/provider-zone-refusal.test.ts
         - tests/structure/provider-peak-rules-schema.test.ts
         - tests/behaviour/peak-window-utc-clock.test.ts
-        - tests/behaviour/provider-peak-window.test.ts
-        - tests/behaviour/daemon-peak-window-isolation.test.ts
+        # NOT EDITED, consumed as controls (corrected at delivery): the delivered
+        # UTC-basis compatibility arm in `provider-peak-window.test.ts` (last touched
+        # by GH-182) and the lane-isolation arm in
+        # `daemon-peak-window-isolation.test.ts` (last touched by GH-294) stay
+        # byte-unchanged and green — the zone and three-surface arms live in
+        # `provider-peak-zone.test.ts`, so neither suite is declared.
         # `provider-parks.test.ts` is a MULTI-PHASE suite: PHASE 1 already moved
         # its allowlist size (8 -> 14) and its stale "eight-field" title, because
         # the size is falsified the moment the register widens; THIS phase adds the
@@ -1972,7 +2017,7 @@ phases:
   # place for a scan of the new budget surface. `tests/structure/
   # provider-surface.test.ts` is NOT declared and NOT edited: it enumerates the
   # jira/gitlab/github TRACKER clients, it asserts nothing about the new adapters
-  # subpath or the measurement path, and test plan v1.4 (§3.2, §7.2, §7.3) calls it
+  # subpath or the measurement path, and test plan v2.3 (§3.2, §7.2, §7.3) calls it
   # an unedited control — its existing enumeration is exactly what proves the new
   # time-zone subpath was not smuggled into a tracker client's surface, and a
   # control that is edited stops proving anything (DoR D2-12, review caveat).
@@ -2053,7 +2098,7 @@ phases:
         # it is the phase's own budget suite and the honest home for a scan of the
         # new budget surface. `tests/structure/provider-surface.test.ts` is NOT
         # declared and NOT edited — it enumerates the jira/gitlab/github tracker
-        # clients and is consumed as an UNEDITED CONTROL (test plan v1.4 §3.2,
+        # clients and is consumed as an UNEDITED CONTROL (test plan v2.3 §3.2,
         # §7.2 and §7.3), running inside `pnpm check` like any other control: its
         # existing enumeration is what proves the new
         # time-zone subpath was not smuggled into a tracker client's surface, and a
@@ -2641,7 +2686,7 @@ phases:
   # after `install` AND one `referencePages` row for the M1 page (the pre-mount
   # inventory had neither, which is why the both-directions assertion was
   # vacuous — DoR B6). The both-directions proof is now `tests/checks/
-  # provider-coverage-mount.test.ts` (TC-CONFORM-006's owner in test plan v1.4),
+  # provider-coverage-mount.test.ts` (TC-CONFORM-006's owner in test plan v2.3),
   # which drives the fixture and the static help inventory in both directions and
   # carries the two non-vacuous mutant arms (a dropped `commands` row and a
   # dropped `referencePages` row); `tests/checks/help-guide-coverage-mutants.test.ts`
@@ -2732,9 +2777,9 @@ phases:
   # non-prompt-required list drops `provider`; the composition table gains a
   # `provider` row and the quality-evidence table a provider mount row),
   # `feature-install-lifecycle.md` — A TWO-NUMBER PAGE, and THIS phase moves ONE of
-  # them: its TABLE TOTAL (164 -> 167, stated as "the declared table total at 164
+  # them: its TABLE TOTAL (164 -> 170, stated as "the declared table total at 164
   # machine identities") moved in PHASE 1 with the register, and it is NOT re-moved
-  # here; the page carries no delivered-rows metric, so 163/166 belongs to
+  # here; the page carries no delivered-rows metric, so 163/169 belongs to
   # `feature-metrics.md` and the sync suite and NEVER to this page. THIS phase
   # moves its family count: its two mounted-count sites 26 -> 27, while its
   # three "`install` is the twenty-sixth" ordinal statements STAY. A boundary that
@@ -2906,7 +2951,7 @@ phases:
   # scope", provider policy depending on shell profiles or the hook, "no
   # simulation surface", "watch cannot be stale", a hard real-time budget cap, and
   # every outgoing count form (164, 163, +130) or outgoing family count (26) as a
-  # current value — while declared delta lines (`164 -> 167`, `26 -> 27`) must not
+  # current value — while declared delta lines (`164 -> 170`, `26 -> 27`) must not
   # trip the scan. The ordinal guard on `feature-supervise.md` (`stale: "26th
   # family"`, `required: "25th family"`) is present and byte-unchanged, so an
   # over-correction fails. Every phrase row for the pages moved in phases 1, 2, 4,
@@ -2935,9 +2980,9 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base main-tools
-  # Expected signal: exit 0 at every line; the sync script reports 167 entries and
-  # 167 documented rows in two-way agreement, the page's delivered-row metric at
-  # 166, 16 provider rows, 66 two-segment identities, arithmetic +133, and 84
+  # Expected signal: exit 0 at every line; the sync script reports 170 entries and
+  # 170 documented rows in two-way agreement, the page's delivered-row metric at
+  # 169, 16 provider rows, 68 two-segment identities, arithmetic +136, and 84
   # corpus rows (59 true-positive / 25 false-positive); `PROMPT_REQUIRED_COMMANDS`
   # is 27 with `provider` last; the range gate reports PASS (a SKIP or an
   # unresolved ERROR is recorded as itself, never rounded to PASS).

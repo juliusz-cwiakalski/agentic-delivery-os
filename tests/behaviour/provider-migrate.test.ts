@@ -975,3 +975,41 @@ describe("TC-MIG-015 no legacy file is written, moved, or deleted", () => {
     }
   });
 });
+
+/**
+ * GH-350 NB2 (review remediation) — the closed refusal set carries the typed
+ * `no-checkout` reason, and the write-path helper builds it through the same
+ * `refusal` shape as every other reason.
+ */
+describe("GH-350 NB2 the migration refusal set is closed and eight-strong", () => {
+  test("the declared reasons are exactly the eight the specification carries", async () => {
+    const { PROVIDER_MIGRATE_REFUSAL_REASONS } = await import(
+      "../../packages/core/src/provider/migrate"
+    );
+    expect([...PROVIDER_MIGRATE_REFUSAL_REASONS]).toEqual([
+      "no-source",
+      "unreadable-source",
+      "oversized-source",
+      "shell-construct",
+      "dynamic-value",
+      "target-exists",
+      "proposal-invalid",
+      "no-checkout",
+    ]);
+    expect(new Set(PROVIDER_MIGRATE_REFUSAL_REASONS).size).toBe(8);
+  });
+
+  test("the write-path helper names the reason, the cwd, and the remedy", async () => {
+    const { providerMigrateNoCheckoutRefusal, providerMigrateRefusalSummary } = await import(
+      "../../packages/core/src/provider/migrate"
+    );
+    const refusal = providerMigrateNoCheckoutRefusal("/scratch/outside");
+    expect(refusal.reason).toBe("no-checkout");
+    expect(refusal.source).toBe("/scratch/outside");
+    const summary = providerMigrateRefusalSummary(refusal);
+    expect(summary).toContain("(no-checkout)");
+    expect(summary).toContain("/scratch/outside");
+    expect(summary).toContain("run the write inside a checkout");
+    expect(summary).not.toContain("--project-root");
+  });
+});

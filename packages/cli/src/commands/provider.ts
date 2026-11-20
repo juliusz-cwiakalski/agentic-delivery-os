@@ -50,7 +50,6 @@ export type ProviderSimulateOutcome =
 export type ProviderMigrateInput = {
   readonly profilesDir?: string;
   readonly hookPath?: string;
-  readonly projectRoot?: string;
   readonly write: boolean;
 };
 
@@ -102,7 +101,6 @@ type Grammar =
       readonly kind: "migrate";
       readonly profilesDir?: string;
       readonly hookPath?: string;
-      readonly projectRoot?: string;
       readonly write: boolean;
     };
 
@@ -127,11 +125,7 @@ const grammarOf = (
     if (flags["--provider"] !== undefined || flags["--all"] !== undefined) {
       return invocationError("resolve accepts only --chain and --profile");
     }
-    if (
-      flags["--agent"] !== undefined ||
-      flags["--for-spawn"] !== undefined ||
-      flags["--project-root"] !== undefined
-    ) {
+    if (flags["--agent"] !== undefined || flags["--for-spawn"] !== undefined) {
       return invocationError("resolve accepts only --chain and --profile");
     }
     const chainName = stringFlag(flags, "--chain");
@@ -148,11 +142,7 @@ const grammarOf = (
     if (flags["--chain"] !== undefined || flags["--all"] !== undefined) {
       return invocationError("quota accepts only --provider");
     }
-    if (
-      flags["--profile"] !== undefined ||
-      flags["--agent"] !== undefined ||
-      flags["--project-root"] !== undefined
-    ) {
+    if (flags["--profile"] !== undefined || flags["--agent"] !== undefined) {
       return invocationError("quota accepts only --provider");
     }
     const providerName = stringFlag(flags, "--provider");
@@ -162,11 +152,7 @@ const grammarOf = (
     if (second !== "list" || rest.length > 0) {
       return invocationError('provider parks requires the "list" subcommand');
     }
-    if (
-      flags["--chain"] !== undefined ||
-      flags["--profile"] !== undefined ||
-      flags["--project-root"] !== undefined
-    ) {
+    if (flags["--chain"] !== undefined || flags["--profile"] !== undefined) {
       return invocationError("parks list accepts only --all and --provider");
     }
     const providerName = stringFlag(flags, "--provider");
@@ -184,8 +170,7 @@ const grammarOf = (
     if (
       flags["--chain"] !== undefined ||
       flags["--provider"] !== undefined ||
-      flags["--all"] !== undefined ||
-      flags["--project-root"] !== undefined
+      flags["--all"] !== undefined
     ) {
       return invocationError("profile resolve accepts only --agent and --for-spawn");
     }
@@ -209,8 +194,7 @@ const grammarOf = (
       flags["--all"] !== undefined ||
       flags["--provider"] !== undefined ||
       flags["--agent"] !== undefined ||
-      flags["--for-spawn"] !== undefined ||
-      flags["--project-root"] !== undefined
+      flags["--for-spawn"] !== undefined
     ) {
       return invocationError(
         "simulate accepts only --fixture; chain and profile selection live inside the fixture",
@@ -233,19 +217,15 @@ const grammarOf = (
       flags["--agent"] !== undefined ||
       flags["--for-spawn"] !== undefined
     ) {
-      return invocationError(
-        "migrate legacy accepts only --profiles-dir, --hook, --project-root and --write",
-      );
+      return invocationError("migrate legacy accepts only --profiles-dir, --hook and --write");
     }
     const profilesDir = stringFlag(flags, "--profiles-dir");
     const hookPath = stringFlag(flags, "--hook");
-    const projectRoot = stringFlag(flags, "--project-root");
     return {
       kind: "migrate",
       write: flags["--write"] === true,
       ...(profilesDir === undefined ? {} : { profilesDir }),
       ...(hookPath === undefined ? {} : { hookPath }),
-      ...(projectRoot === undefined ? {} : { projectRoot }),
     };
   }
   if (subcommand === "watch") {
@@ -257,8 +237,7 @@ const grammarOf = (
       flags["--chain"] !== undefined ||
       flags["--all"] !== undefined ||
       flags["--agent"] !== undefined ||
-      flags["--for-spawn"] !== undefined ||
-      flags["--project-root"] !== undefined
+      flags["--for-spawn"] !== undefined
     ) {
       return invocationError("watch status accepts only --provider");
     }
@@ -382,7 +361,6 @@ export const createProviderCommandDefinition = (
     "--provider",
     "--profile",
     "--agent",
-    "--project-root",
   ],
   positionals: { max: 3 },
   humanSuccess: true,
@@ -536,7 +514,6 @@ export const createProviderCommandDefinition = (
         write: grammar.write,
         ...(grammar.profilesDir === undefined ? {} : { profilesDir: grammar.profilesDir }),
         ...(grammar.hookPath === undefined ? {} : { hookPath: grammar.hookPath }),
-        ...(grammar.projectRoot === undefined ? {} : { projectRoot: grammar.projectRoot }),
       });
       if (!migrated.ok) return providerError(migrated.code, migrated.summary);
       return { data: migrated.data, warnings: migrateReportLines(migrated.data.report) };

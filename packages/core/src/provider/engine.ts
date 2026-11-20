@@ -428,6 +428,27 @@ const announcementContextFor = (
     : {}),
 });
 
+/**
+ * The facts one evaluated entry's window is bound to.
+ *
+ * The zone refusal validates every evaluated entry before evaluation, so an
+ * absent lookup here is an ordering regression rather than a UTC fallback. This
+ * helper makes that non-optional: `UTC` keeps its definitional constant path,
+ * and an unresolved non-UTC zone fails loudly instead of evaluating on UTC.
+ */
+const zoneFactsForEvaluatedEntry = (
+  deps: ProviderEngineDependencies,
+  zone: string,
+): ProviderZoneFacts => {
+  const facts = zoneFactsForPeak(deps, zone);
+  if (facts === undefined) {
+    throw new Error(
+      `provider peak zone ${zone} reached evaluation without resolved facts; the zone refusal must run first`,
+    );
+  }
+  return facts;
+};
+
 const evaluateEntry = async (
   deps: ProviderEngineDependencies,
   config: ProviderConfiguration,
@@ -441,7 +462,7 @@ const evaluateEntry = async (
   }
   const results: ProviderConditionResult[] = [...budgetConditions];
   if (descriptor.peak !== undefined) {
-    const facts = zoneFactsForPeak(deps, descriptor.peak.timezone) ?? UTC_ZONE_FACTS;
+    const facts = zoneFactsForEvaluatedEntry(deps, descriptor.peak.timezone);
     results.push(evaluatePeakWindow(descriptor.peak, nowMs, facts));
   }
   const quota = await evaluateQuotaCondition(deps, config, descriptor, nowMs);

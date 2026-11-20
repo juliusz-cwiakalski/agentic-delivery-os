@@ -29,6 +29,7 @@ export const PROVIDER_MIGRATE_REFUSAL_REASONS = [
   "dynamic-value",
   "target-exists",
   "proposal-invalid",
+  "no-checkout",
 ] as const;
 export type ProviderMigrateRefusalReason = (typeof PROVIDER_MIGRATE_REFUSAL_REASONS)[number];
 
@@ -126,6 +127,19 @@ const refusal = (
   ...(source === undefined ? {} : { source }),
   ...(line === undefined ? {} : { line }),
 });
+
+/**
+ * The typed `--write` refusal when no git checkout resolves from the invoking
+ * directory. It is emitted only by the write path (the read-only path produces
+ * its proposal wherever it runs) and it goes through the same `refusal` builder
+ * as every other closed reason.
+ */
+export const providerMigrateNoCheckoutRefusal = (cwd: string): ProviderMigrateRefusal =>
+  refusal(
+    "no-checkout",
+    "no git checkout resolves from the invoking directory; run the write inside a checkout",
+    cwd,
+  );
 
 /** A credential-shaped name is classified before its value is examined. */
 export const isCredentialShapedName = (name: string): boolean =>

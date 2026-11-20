@@ -281,6 +281,7 @@ import {
   type BrandIdentity,
   CANONICAL_PHASE_IDS,
   CAPSULE_MAX_SESSIONS,
+  type CapabilityGapReason,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
@@ -344,10 +345,9 @@ import {
   type HarnessSeatBinding,
   type HarnessSessionPort,
   type HarnessTruncation,
+  type MergeDeliveryRequestInput,
   type MetricsReadSeams,
   type MetricsStateRead,
-  type CapabilityGapReason,
-  type MergeDeliveryRequestInput,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   type OwnerGateSlaDecisionRecord,
@@ -416,6 +416,7 @@ import {
   parseProviderMigrateSource,
   parseProviderSimulateFixture,
   persistProfileTarget,
+  providerMigrateNoCheckoutRefusal,
   providerMigrateRefusalSummary,
   readProfileTarget,
   readProviderLedger,
@@ -5204,21 +5205,6 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           ...(options.fs ?? nodeFileSystemFacts()),
           readDirectory: (path) => readdirSync(path),
         };
-        // The project-committed document lives at the effective checkout root,
-        // the same root the configuration resolver reads (`--project-root` when
-        // supplied, otherwise the git root discovered from the invoking cwd). A
-        // write from a subdirectory must not create a document no layer reads.
-        const checkoutRoot = input.projectRoot ?? findGitRoot(options.cwd, repositoryIo);
-        if (checkoutRoot === undefined) {
-          return {
-            ok: false,
-            code: "provider.migrate.refused",
-            summary:
-              "provider migrate legacy refused (no-checkout): no git checkout resolves from " +
-              `${options.cwd}; run inside a checkout, or pass --project-root <dir> to name the ` +
-              "project-committed root explicitly",
-          };
-        }
         const read = readProviderMigrateSources({
           homeDirectory: options.homeDirectory,
           ...(options.priorConfigurationDirectoryName === undefined
@@ -5273,6 +5259,20 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
         }
         let report = built.proposal.report;
         if (input.write) {
+          // The project-committed document lives at the effective checkout root,
+          // the same root the configuration resolver reads. The root is resolved
+          // only on the write path: a read-only invocation produces its proposal
+          // wherever it runs and needs no checkout. A write from a subdirectory
+          // resolves to the checkout root rather than creating a document no
+          // layer reads.
+          const checkoutRoot = findGitRoot(options.cwd, repositoryIo);
+          if (checkoutRoot === undefined) {
+            return {
+              ok: false,
+              code: "provider.migrate.refused",
+              summary: providerMigrateRefusalSummary(providerMigrateNoCheckoutRefusal(options.cwd)),
+            };
+          }
           const target = `${checkoutRoot}/${brand.configDirectoryName}/${PROVIDER_MIGRATE_TARGET_NAME}`;
           if (fs.exists(target)) {
             return {

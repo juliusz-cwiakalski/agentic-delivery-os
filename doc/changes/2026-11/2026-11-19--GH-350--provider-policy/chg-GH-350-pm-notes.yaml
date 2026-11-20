@@ -987,3 +987,59 @@ notes:
       164061c9ff4daef541974dde349ae41a6fb02723."
     type: evidence
     date: "2026-11-20"
+  - text: "GH-350 synced with main-tools (merge of bd95665b, GH-349) as merge commit
+      a8210ebe33261c5d1c09309e30d044bbc7413f32 on parents f8d55be6 and bd95665b. ADR RENUMBER: the
+      merged tree carried two ADR-0012 records — upstream GH-349's provider-side landing record
+      and this branch's zone-aware peak-window record. This branch's record was renumbered to the
+      next free id ADR-0013
+      (doc/decisions/ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md, slug kept;
+      front-matter id and heading updated) and every GH-350 reference moved with it:
+      chg-GH-350-spec.md (including DEC-1 and all citations), plan, test plan, pm-notes, the three
+      readiness reviews, TDR-0058, the engine, profiles, peak-pausing, resident-daemon,
+      result-contract, adapter-ports, architecture, glossary and M1 provider pages, the code
+      comments in adapters/time-zone, cli/edge, contracts/provider, provider/engine,
+      provider/peak, scripts/checks/ambient-globals, and the boundary/zone-port fixtures and
+      doc-conformance checks — 61 ADR-0013 occurrences across 26 files, and zero stale references
+      to the zone record as ADR-0012. Upstream's ADR-0012 (provider-side landing), GH-347's
+      TDR-0049..0054, GH-349's TDR-0055 and ODR-0005, and the GH-346 records are untouched; the
+      index carries both ADR-0012 and ADR-0013 rows in id order, and TDR-0055 is present between
+      0054 and 0057..0062 with no collision. FOURTEEN CONFLICTS resolved as unions:
+      decisions/00-index.md (all rows, ordered by id, with a GH-349 narrative block and the GH-350
+      narrative naming ADR-0013); architecture-overview.md and glossary.md (related_changes = both
+      sides, including GH-349 and GH-350; related_decisions = upstream ADR-0012 + our ADR-0013 +
+      ODR-0005; summary terms united); feature-adapter-ports.md (our ADR-0013 + upstream
+      ODR-0005); feature-ceremony-runner.md (merged 170 identities and 68-entry allowlist);
+      feature-install-lifecycle.md (27 families and 170 total, 68 allowlist); feature-metrics.md
+      (27-family mount, 170/169/68/+136); feature-result-contract.md (16 provider rows, nine merge
+      rows, seven lint rows — six pm-notes plus document.unreadable — frontmatter union,
+      consumed-by union); doc-conformance.test.ts (GH-346 and GH-350 phase-1 rows now require the
+      merged truth and treat 167/166/66/+133 as stale); error-table-sync.test.ts (both blocks
+      kept: upstream's TC-SYNC-001 reachability floor and this branch's GH-350 edit-set, with the
+      live arithmetic moved to +136); supervision-error-socialization.test.ts (corpus 84, provider
+      16, merge 9); error-table.test.ts (both legacy-arithmetic bases plus the merged +133
+      outgoing base, and a declared-delta-line exemption because both sides' outgoing totals are
+      now bare tokens; bare 136 removed because it is the live arithmetic);
+      merge-classification-conformance.test.ts (provider 16, merge 9);
+      supervision-error-family.test.ts (baseline plus both additive sets excluded, 150 baseline
+      rows, six added rows, tail unchanged). COUNTS RE-DERIVED from the merged source table, not
+      assumed: error-table-sync reports entries=170 documented=170; the delivered-rows metric is
+      169; the arithmetic is BASELINE_ROWS.length + 136; the allowlist is 68 (GH-349 added
+      merge.sync-required and merge.mergeability-unknown as reserved two-segment codes; GH-350
+      adds none); the corpus stays 84 (59 true-positive / 25 false-positive); the provider kind
+      stays 16; GH-349's own kinds are merge 9 (was 7), lint 7 (six pm-notes including
+      lint.phases.divergent, plus lint.document.unreadable), closeout steps 13 and adapter
+      operations 10; DOMAIN_KINDS stays 31. Old -> new at every declared site: entries 167 -> 170,
+      documentedRows 167 -> 170, delivered rows 166 -> 169, arithmetic +133 -> +136, allowlist 66
+      -> 68; the historical 164/163/+130 forms stay in the stale scan. NON-CONFLICT COLLISION:
+      tests/structure/changeset-additivity.test.ts (upstream) expected exactly three added
+      changesets; GH-350's gh350-provider-policy-minor.md joined the declared four, per the union
+      rule. GATES: pnpm typecheck, lint and format green after one formatter fix;
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11939 pass / 4 skip / 2 fail across 1449 files. Both
+      failures are the known HOST-ENVIRONMENT doc-distribution guard (TC-BIN-071 and
+      TC-MEMNFR-004) seeing a concurrent session's installed artifact under the operator's home;
+      both pass 19/19 with a clean HOME. The privacy suites (53/53), the installer suite (18/18)
+      and the changeset additivity suite (11/11) pass alone; their full-battery failures were 5 s
+      timeouts under host load. Merge commit a8210ebe33261c5d1c09309e30d044bbc7413f32."
+    type: evidence
+    date: "2026-11-20"

@@ -2621,6 +2621,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "credentialReferenceName",
     "isCredentialShapedName",
     "parseProviderMigrateSource",
+    "providerMigrateNoCheckoutRefusal",
     "providerMigrateRefusalSummary",
     "renderProviderMigrateProposal",
   ],

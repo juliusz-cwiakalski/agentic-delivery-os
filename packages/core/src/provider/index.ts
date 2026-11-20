@@ -68,6 +68,7 @@ export {
   type ProviderMigrateSourceState,
   type ProviderMigrateTable,
   parseProviderMigrateSource,
+  providerMigrateNoCheckoutRefusal,
   providerMigrateRefusalSummary,
   renderProviderMigrateProposal,
 } from "./migrate.js";

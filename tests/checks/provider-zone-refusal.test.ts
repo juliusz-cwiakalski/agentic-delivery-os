@@ -288,3 +288,18 @@ describe("GH-350 n7 the zone refusal precedes the budget gate", () => {
     expect(refReads).toBe(0);
   });
 });
+
+/**
+ * GH-350 NB5 (review remediation) — the engine's evaluated-entry zone lookup is
+ * non-optional. The `?? UTC_ZONE_FACTS` substitution was the exact pattern B2
+ * removed from the probe surfaces; the zone refusal runs first, and a lookup
+ * that cannot resolve now fails loudly instead of evaluating on UTC.
+ */
+describe("GH-350 NB5 the engine never substitutes UTC for an evaluated entry", () => {
+  test("the evaluated-entry lookup is an assertion, not a fallback", () => {
+    const source = readFileSync(join(ROOT, "packages/core/src/provider/engine.ts"), "utf8");
+    expect(source).not.toContain("?? UTC_ZONE_FACTS");
+    expect(source).toContain("zoneFactsForEvaluatedEntry");
+    expect(source).toContain("the zone refusal must run first");
+  });
+});
