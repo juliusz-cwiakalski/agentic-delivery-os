@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-20T00:58:09.436Z }
   system_spec_update: { started: null, completed: 2026-11-20T01:09:56.570Z }
   review_fix: { started: null, completed: 2026-11-20T02:03:54.884Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-20T03:00:48.577Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -67,6 +67,19 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Quality gates: PASS. `pnpm check` exit 0 on 95f96462 — 11,876 pass, 4
+      skip, 0 fail (11,880 tests across 1,459 files; tests 1,157 s), with
+      boundaries, memory, prompt-conformance, help-guide-coverage and
+      exports-parity all clean. Branch-range commit-message gate: PASS — base
+      origin/main-tools, merge-base ccc8338, head 95f9646, 26 commits in range,
+      0 offending, real local commitlint. The prior aggregate run was blocked by
+      a merge-artifact duplicate `install.ts` key in the contract inventory
+      (fixed in 95f96462) and, separately, by two load-sensitive delivered
+      timing suites (daemon foreground stop 262 ms vs <=250 ms; telemetry growth
+      30 s timeout) that passed standalone and passed in the clean re-run;
+      neither is change-caused."
+    type: info
+    date: "2026-11-20"
   - text: "Review iteration 2: PASS. F1 and F2 verified closed in the production
       path (one `entrypointSecrets` resolver feeds the serializer and the
       dispatch runtime; `TC-MSG-011` seeds only the environment and fails if the
