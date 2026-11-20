@@ -1043,3 +1043,41 @@ notes:
       timeouts under host load. Merge commit a8210ebe33261c5d1c09309e30d044bbc7413f32."
     type: evidence
     date: "2026-11-20"
+  - text: "GH-350 review remediation NB1/NB2/NB5 complete. NB1: the migrate write-root resolution and
+      the no-checkout refusal moved inside `if (input.write)` (edge.ts); a read-only run reads the
+      legacy sources and prints the validated proposal regardless of whether a checkout exists.
+      Guard: the tests/checks/provider-migrate-cli.test.ts case `a read-only run outside a
+      checkout still produces the proposal` (exit 0, data.proposal carries the schema pointer and
+      the mapped window, no file written); the write-outside-checkout arm still refuses. NB2: the
+      `--project-root` flag is removed from `migrate legacy` and from every member
+      (commands/provider.ts), so the provider family introduces no flag; the write root is the
+      cwd's git root (`findGitRoot(options.cwd, repositoryIo)`), which still resolves a
+      subdirectory to its checkout root. `no-checkout` joins the closed
+      `PROVIDER_MIGRATE_REFUSAL_REASONS` as the eighth member, in the declared order no-source,
+      unreadable-source, oversized-source, shell-construct, dynamic-value, target-exists,
+      proposal-invalid, no-checkout; the edge emits it only from the write path through the new
+      typed `providerMigrateNoCheckoutRefusal(cwd)` helper, which builds the refusal with the
+      module's `refusal()` builder (reason, cwd as source, remedy) and is summarised by
+      `providerMigrateRefusalSummary`. Guards: tests/behaviour/provider-migrate.test.ts asserts
+      the eight-member closed set in order and the typed helper's reason/source/remedy (and that
+      the summary never names a flag); tests/checks/provider-migrate-cli.test.ts asserts
+      `--project-root` is not accepted (fallback.invocation) and that the no-checkout summary is
+      typed and flag-free. The help entry and M1 reference page enumerate neither the removed flag
+      nor the reason set, so they are left to the documentation pass. NB5: engine.ts no longer
+      substitutes `?? UTC_ZONE_FACTS` for an evaluated entry; `zoneFactsForEvaluatedEntry` makes
+      the lookup non-optional, keeping the UTC/Etc/UTC definitional constant path while asserting
+      the ordering invariant (the zone refusal validates every evaluated entry first) instead of
+      silently reinterpreting an unresolved zone as UTC. Guard:
+      tests/checks/provider-zone-refusal.test.ts asserts the engine source carries no `??
+      UTC_ZONE_FACTS` and does carry the asserting helper. Gates: pnpm typecheck green; the
+      affected suites (migrate CLI, migrate behaviour, migrate secrets, migrate golden, zone
+      refusal, peak zone, provider CLI, content inventory, provider composition absence) 86 pass /
+      0 fail; GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 11943 pass / 4 skip / 4 fail across 1449 files, where
+      both TC-BIN-071/TC-MEMNFR-004 doc-distribution failures are the known host-environment class
+      (19/19 with a clean HOME) and both TC-SHELL-001 arms are 5 s timeouts under host load (4/4
+      and 189 expects when run alone). The separately authored spec v1.8, test plan and plan
+      corrections in the tree rode this commit and match the eight-reason set and the
+      read-only/write split. Commit 1fccc86926fcfabf92f975aec579f1f84d4e1c31."
+    type: evidence
+    date: "2026-11-20"
