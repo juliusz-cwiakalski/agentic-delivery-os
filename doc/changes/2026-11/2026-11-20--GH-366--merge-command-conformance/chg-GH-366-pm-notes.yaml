@@ -8,9 +8,9 @@ milestone: "M4: Jaiship-native delivery"
 branch: fix/GH-366/merge-command-conformance
 phases:
   clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
-  specification: { started: null, completed: 2026-11-20T12:34:02.847Z }
-  test_planning: { started: null, completed: 2026-11-20T12:34:13.928Z }
-  delivery_planning: { started: null, completed: 2026-11-20T12:34:24.631Z }
+  specification: { started: null, completed: 2026-11-20T12:49:42.433Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,6 +56,35 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PM-decided (read-budget ruling, DoR iteration 3 finding 1): the change's
+      own 'exactly one provider read' claim is withdrawn as too strong for the
+      convergence path. The delivered truth is that merged requests are not in
+      the open list: `listDeliveryRequests` reads `?state=open`, and merged
+      truth comes from a separate bounded `?state=closed` read
+      (`findMergedDeliveryRequest`), which today also ranks multiple matches
+      through `selectMerged`. The owner's acceptance never required a one-read
+      budget; this change imposed it. The ruling: **one bounded open-list read
+      on the resolution path, plus at most one bounded closed-list read on the
+      convergence path** (no pagination, no retry, no fetch), and the merge path
+      must observe `0 | 1 | 2+` merged matches and refuse on 2+ rather than rank
+      — the shared closeout ranking stays as it is for closeout, and the merge
+      composition stops using it. This keeps the owner's fail-closed requirement
+      and drops a self-imposed constraint that the delivered adapter cannot
+      satisfy without reworking a shared read."
+    type: decision
+    date: "2026-11-20"
+  - text: "DoR iteration 3: NOT_READY — 3 blocking findings (1 critical, 2 major), 7
+      facets FAIL / 3 PASS. 13 of iteration 2's 14 findings closed; the
+      timestamp rebuttal (iteration 2 minor 9) was independently confirmed and
+      is closed. The critical one is the convergence read budget above; the two
+      majors are phase-boundary sequencing defects (the projection render and
+      the abort's request-resolution causes land after the phases whose gates
+      assert them). Record: `readiness-review/readiness-iter-3.md`. The gate
+      explicitly permits a fourth iteration because the findings are
+      author-level once the read-budget ruling is made; escalation to the human
+      only if iteration 4 leaves them open."
+    type: info
+    date: "2026-11-20"
   - text: "DoR iteration 2: NOT_READY — 6 major, 5 minor, 3 nit; 6 facets FAIL
       (spec_completeness, ac_quality, plan_coverage, test_traceability,
       cross_artifact_consistency, plan_code_area_coverage) and 4 PASS
