@@ -42,8 +42,9 @@ delivery command family: the change branch is read from the invocation
 checkout's git facts, the merge-applicable gate set evaluates exactly one gate
 and never consults CI, and refusals do not name the breached contract (a missing
 credential names neither its reference nor its environment variable, an
-unreadable work item collapses into an opaque `merge.transaction-aborted`, and a
-gate refusal can reach the containment identity). The change resolves the change
+unreadable work item collapses into an opaque `merge.transaction-aborted`, and the
+composition's own emittable declaration cannot express the gate family at runtime,
+so its exhaustiveness rests on a source-text assertion). The change resolves the change
 branch from the change record, cross-checks it against the open delivery request
 and binds the freshness envelope to that request's head, makes the shipped
 default set enforce the repository-declared CI job set on the resolved head
@@ -111,9 +112,16 @@ precedent for a refusal summary that names both. A non-resolving request or work
 item is mapped onto `merge.transaction-aborted`, whose hint instructs the
 operator to "clear the named pre-condition" while naming no condition, and whose
 declared row claims `retryable: true` even for causes that do not converge on a
-re-run. The `merge.gate.<gate-id>.failed` family is emitted by the transaction
-but is absent from the composition's declared emittable set, so a gate refusal
-can reach the containment identity (the `defect-f1` shape).
+re-run. The `merge.gate.<gate-id>.failed` family is emitted by the transaction and
+**is** resolved at classification: the classifier recognizes an emitted code whose
+kind is `merge` and whose slot has the declared gate-id shape and returns the
+declared family row (kind `merge`, exit 1), so a gate refusal already renders as
+its own row. What is weaker is the composition's side of the contract: its
+runtime emittable declaration enumerates exact codes only and expresses the family
+as a type, so nothing in that runtime vocabulary states that a family emission is
+admissible, and the totality proof closes the gap by asserting the presence of
+that type name and the family prefix/suffix constants in the composition's source
+text rather than by ranging over a runtime declaration.
 
 **Change record reads.** The closeout composition already reads the change's
 pm-notes through the delivered pm-notes text read to obtain its declared
@@ -143,8 +151,10 @@ genuinely undeclared failure. The coverage map
   carrying a failing `ci-green` verdict cannot refuse the merge.
 - **P-4 — Refusals are opaque.** A credential condition narrates no reference and
   no environment variable; an unreadable work item reports
-  `merge.transaction-aborted` whose hint names nothing; a gate refusal can render
-  as the containment identity instead of the gate row.
+  `merge.transaction-aborted` whose hint names nothing; and the composition's own
+  declaration cannot express the gate family at runtime, so no part of the
+  composition's vocabulary says a family emission is admissible and the totality
+  proof stands on a source-text match rather than on a runtime declaration.
 - **P-5 — A row's retryability claim is false for causes it reaches.** A declared
   row advertises `retryable: true` and a remediation that promises convergence,
   while causes routed to that same row need an operator act before a re-run can
@@ -181,7 +191,9 @@ tell which condition blocked a delivery or which contract to repair.
   act before a re-run can converge, and no remediation hint instructs an operator
   to clear a condition that is not named.
 - **G-5**: Every code the merge transaction can emit resolves to a declared row
-  or the declared family — gate refusals never reach the containment identity.
+  or the declared family, and the composition declares that family at runtime
+  rather than only in a type, so its exhaustiveness is proven over the runtime
+  declaration instead of over source text.
 - **G-6**: A dry run resolves and describes exactly the object the real merge
   would land.
 
@@ -220,7 +232,7 @@ tell which condition blocked a delivery or which contract to repair.
 | F-1 | Change-branch resolution from the change record, cross-checked against the open delivery request | Removes the ambient checkout from the merge path (P-1, P-6) and gives the invocation a single declared source with a fail-closed refusal when it is absent. |
 | F-2 | Required-check enforcement on the resolved head under the shipped default gate set | Makes the merge-applicable set non-vacuous and turns the delivered per-job mapping into a real merge gate (P-2, P-3). |
 | F-3 | Refusal diagnostics contract | Makes every refusal actionable and non-misleading, and keeps `retryable` a row property that is nonetheless true of every cause the row reaches (P-4, P-5). |
-| F-4 | Emitted-identity totality for the gate family | Closes the containment hole that turns a gate refusal into an internal defect (P-4). |
+| F-4 | Emitted-identity totality for the gate family | Gives the composition a runtime family declaration so its exhaustiveness is proven over that declaration rather than over source text, while the classifier's delivered family resolution is preserved unchanged (P-4). |
 | F-5 | Dry-run / real-merge object agreement | Makes the pre-flight verdict a true statement about the object the merge would land (P-6). |
 
 ### 5.1 Capability Details
@@ -362,14 +374,25 @@ with a remediation true of every cause it still reaches.
 
 #### F-4 — Emitted-identity totality
 
-The composition's declared emittable surface is extended to cover the declared
-`merge.gate.<gate-id>.failed` family expression, so a gate refusal emitted by the
-transaction resolves to its declared family row instead of the containment
-identity. The gate-id slot stays validated against the effective declared gate
-set at emission: no pattern widening, no unvalidated slot, and no second
-vocabulary. The declaration remains exhaustive over every code the refusal
-branches can emit, and a live mismatch control still drives an undeclared code to
-the containment identity so the assertion cannot pass vacuously.
+The classifier's family resolution is delivered and stays exactly as it is: an
+emitted code whose kind is `merge` and whose slot is a valid gate id resolves to
+the declared family row. The gap is on the composition's side, and this change
+closes it by giving the composition a **runtime** family declaration beside its
+exact-member list — the declared family expression together with its slot rule —
+so the composition's vocabulary states that a family emission is admissible and
+`MERGE_COMPOSITION_EMITTABLE_CODES` plus that declaration are runtime-exhaustive
+over every code the refusal branches emit. The totality proof then ranges over
+the runtime declaration, so it fails when a family emission loses its declaration
+rather than when a type name disappears from a file's text.
+
+Closing the gap adds no second vocabulary and no second resolver: the family
+expression is the contract's own declared prefix, suffix, and template, the slot
+stays validated against the effective declared gate set at emission, and the
+gate-id pattern is not widened. Adding `ci-green` to the merge surface adds one
+more family instance the declaration must cover — `merge.gate.ci-green.failed` —
+which becomes the live proof case for the runtime declaration. A mismatch control
+still drives an undeclared code to the containment identity, so the assertion
+cannot pass vacuously.
 
 #### F-5 — Dry-run / real-merge object agreement
 
@@ -445,7 +468,9 @@ Flow 4 — A credential is absent.
 - The refusal-diagnostics contract, the retryability rule, and the three additive
   `merge` rows (`merge.branch-unresolved`, `merge.request-unresolved`,
   `merge.work-item-unresolved`) with their closed reason vocabularies.
-- Emitted-identity totality for the gate family.
+- Emitted-identity totality for the gate family: a runtime family declaration
+  beside the exact-member list, with the totality proof ranging over that
+  declaration and the classifier's delivered family resolution untouched.
 - Dry-run / real-merge object agreement.
 - Reconciliation of the merge feature spec, the merge test specification, and the
   merge reference page with the amended contract, and the release note.
@@ -580,7 +605,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | RSK-3 | The expected-job set is read from the checkout's workflow while the verified object is the request head, so a job that exists only on the head is not required evidence | M | M | The page-versus-expected comparison surfaces the gap as a named missing-job condition; the docs state that a change-branch checkout gives exact fidelity | A head-only job is not enforced until the checkout contains it |
 | RSK-4 | Blocking on pending checks increases merge latency and may push operators toward unrelated overrides | L | M | Pending refusals name the pending job and state that the condition converges without an act; no override exists for the check gate | Repeated waiting remains an operator cost |
 | RSK-5 | New rows, changed remediation text, and a changed default set drift between the machine table, the documented table, the reference page, and the test specification | M | M | One change moves all four with the pinned-count requirement in NFR-8 and the existing sync checks | None once gated; a partial delivery fails the gate |
-| RSK-6 | Closing the family-containment gap could be implemented as pattern widening, accepting undeclared gate ids | H | L | NFR-7 pins slot validation against the effective gate set and forbids widening; a mismatch control proves the containment identity still works | None accepted |
+| RSK-6 | A runtime family declaration could be written as pattern widening, accepting gate ids the effective set does not declare — or could drift from the classifier's delivered family resolution and become a second vocabulary | H | L | NFR-7 pins slot validation against the effective gate set and forbids widening; the declaration reuses the contract's prefix/suffix/template and adds no resolver; a mismatch control proves the containment identity still works | None accepted |
 | RSK-7 | The admitted-surface rule for built-ins is read as licence to weaken other built-ins | M | L | Only `ci-green` gains `both`; the other four keep `battery` alone; the opt-out is visible in configuration and reviewed | A repository may still opt out of CI enforcement by declaration |
 | RSK-8 | A dry run executed from the integration base produces a record about the request head, which an operator may mistake for a checkout verification | L | M | The data names the resolution source and the resolved head; the docs state that the record describes the request, not the checkout | Operator confusion on a first run |
 
@@ -636,7 +661,7 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | DEC-4 | The check gate is enforced fail-closed and gains no waivability; the declared remedy is the authored `ci-green` surface opt-out, and the admitted surface sets of the reserved built-ins become contract data. | An in-band waiver class on CI would let a failing pipeline land silently-by-policy; a reviewed configuration act is the recorded override. Requiring declaration of surface-not-equal-to-default would invalidate every existing authored set. Record: TDR-0072. | 2026-11-20 |
 | DEC-5 | Diagnostics become a contract: every refusal names the command, the breached contract, and the offending object; credential refusals name the reference and the environment variable; a read fault names the operation; remediation is actionable or absent; `retryable` is the declared row's value, and no row may declare `true` while a cause it reaches needs an operator act before a re-run can converge. | The observed refusals were unactionable; a static row value is the delivered envelope's only retryability field, so the row's cause set must be narrow enough — and honest enough — to make that one value true. Record: TDR-0073. | 2026-11-20 |
 | DEC-6 | `merge.transaction-aborted` is narrowed: no credential condition, no unresolvable request, no unresolvable work item. Three additive rows carry those causes. | Each cause has a different operator and a different repair; the generic abort erased that. Additive rows keep existing codes stable. Record: TDR-0073. | 2026-11-20 |
-| DEC-7 | Emitted-identity totality is closed in this change by declaring the gate family in the composition's emittable surface, with the slot validated against the effective gate set. | A gate refusal that renders as the containment identity is exactly the failure AC 3 forbids, so the mechanism behind AC 3 must be repaired here rather than deferred. | 2026-11-20 |
+| DEC-7 | Emitted-identity totality is closed in this change by giving the composition a runtime declaration of the gate family, beside its exact-member list, with the slot validated against the effective gate set and the totality proof ranging over that declaration. | The classifier already resolves an emitted family instance to the declared family row; what is missing is the composition's own runtime statement that a family emission is admissible, which today exists only as a type and is asserted only by source text — so the mechanism behind AC 3's guarantee must be made declarative here rather than deferred. | 2026-11-20 |
 | DEC-8 | The dry run and the real merge share one resolution, so a dry run describes the object the merge would land. | A pre-flight verdict about a different object is worse than no verdict. | 2026-11-20 |
 | DEC-9 | No new configuration key, schema version, record kind, recipe, or gate id is introduced; the one new declaration lives on the change artifact. | The existing surfaces carry the facts; a configuration key would make the change branch a per-repository setting, which it is not. | 2026-11-20 |
 | DEC-10 | The ticket body's family-wide battery is not claimed; the `merge` slice and the diagnostics contract are claimed, with the remainder recorded as out of scope and no follow-up ticket created. | Owner scope, recorded in the change's pm-notes; PM never creates tickets autonomously. | 2026-11-20 |
@@ -645,7 +670,8 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 
 | Component | Impact |
 |-----------|--------|
-| Merge production composition | Updated — change-record branch resolution, request resolution, resolved head, credential and read-fault naming, removal of checkout-branch and branch-name parsing |
+| Merge production composition | Updated — change-record branch resolution, request resolution, resolved head, credential and read-fault naming, removal of checkout-branch and branch-name parsing, and a runtime family declaration for the gate family |
+| Merge emittable-code declaration and totality proof | Updated — the family is declared at runtime beside the exact-member list, and the totality proof ranges over that declaration instead of a source-text match; the delivered classifier family resolution is unchanged |
 | Merge contracts (default gate set, admitted surfaces) | Updated — `ci-green` merge-applicable by default; declared admitted surface sets |
 | Merge transaction (freshness, probe, refusal evidence) | Updated — required-check set derivation, merge-surface CI evaluation reuse, evidence members |
 | Merge probe / required-check mapping | Reused unchanged as the single evaluator; the required-check set it is fed is extended |
@@ -769,8 +795,8 @@ non-secret identifiers. Evidence members stay bounded and secret-free.
 - The change introduces no new provider capability, scope, or credential
   reference; read-only operations are reused.
 - The gate-id slot of the refusal family stays validated against the effective
-  gate set, so closing the containment gap does not open a code-injection or
-  pattern-widening hole.
+  gate set, so giving the composition a runtime family declaration does not open a
+  code-injection or pattern-widening hole.
 - Refusal naming must never echo secret material: the reference name and the
   environment-variable name are reported, never the value, and a canary test
   proves it.
@@ -867,6 +893,7 @@ specification does not author them.
 |---------|------|--------|---------|
 | 1.0 | 2026-11-20 | spec-writer | Initial specification for the merge slice of the M4-S3 conformance residual |
 | 1.1 | 2026-11-20 | spec-writer | Corrected F-1's migration statement (§5.1) to match the unconditional `merge.branch-unresolved` refusal, and restated the retryability rule at row level (§4.1, F-3, API-3, §8.5, AC-F3-5/AC-F3-6, Appendix B, DEC-5) so it is satisfiable by the delivered error envelope |
+| 1.2 | 2026-11-20 | spec-writer | Corrected the current-state and totality claims: the family is resolved at classification (a gate refusal already renders as its declared family row), and the real gap is the composition's type-only declaration and its source-text proof. Restated §2.1, P-4, G-5, F-4, the §5 table rationale, §7.1, §16, RSK-6, §21, and DEC-7 accordingly; no AC text, scope, or identity changed |
 
 ---
 
