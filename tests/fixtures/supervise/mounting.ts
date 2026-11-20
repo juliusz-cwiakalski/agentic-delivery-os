@@ -2,7 +2,7 @@
  * The captured pre-change prompt-required family list (GH-295 TC-SUP-096): the
  * single statement of the delivered base of 23 (through GH-298's `steer`), so
  * the appended families (`metrics`, `supervise`, then GH-346's `install` = 26,
- * then GH-350's `provider` = 27) are asserted once and every count pin is
+ * then GH-348's `loop` = 27 and GH-350's `provider` = 28) are asserted once and every count pin is
  * checked here.
  */
 export const BASE_FAMILIES = [

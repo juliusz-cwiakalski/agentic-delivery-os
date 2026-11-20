@@ -5,7 +5,7 @@
 - **Date:** 2026-11-19
 - **Verdict:** `READY`
 - **Iteration:** 3 of 3, plus a narrow remediation confirmation
-- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.3 (31 ACs), `chg-GH-350-test-plan.md` v1.5 (108 cases), `chg-GH-350-plan.yaml` (9 phases, validator green), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md` and `-2.md`, TDR-0062 (corrected), TDR-0063, ADR-0013, PDR-0006, TDR-0058..0052
+- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.3 (31 ACs), `chg-GH-350-test-plan.md` v1.5 (108 cases), `chg-GH-350-plan.yaml` (9 phases, validator green), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md` and `-2.md`, TDR-0062 (corrected), TDR-0063, ADR-0013, PDR-0006, TDR-0058..0063
 
 ## Iteration-2 adjudication
 

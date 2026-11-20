@@ -2792,7 +2792,7 @@ phases:
   # the phase that owns that family). ITS NAMED SENTENCES (DoR D2-4): the
   # quality-evidence
   # line "the 24-family mount with the family-count pins and the stale-count scan"
-  # becomes the **27-family** mount with the same pins and the widened stale-count
+  # becomes the **28-family** mount with the same pins and the widened stale-count
   # scan, and every "family-count pins read 24" statement becomes 27, WHILE
   # `metrics`'s OWN "twenty-fourth prompt-required command family" ordinal STAYS
   # (it is a position, not a size) and its gate-versus-alarm paragraph remains
@@ -2819,7 +2819,7 @@ phases:
   # AC-F8-3's ordinal half (TC-MOUNT-009).
   #
   # Gate (expected signal: exit 0 at every line; 7/7 handler paths and 8/8 help
-  # surfaces; the composer-construction count is 1 per invocation; 27 family rows
+  # surfaces; the composer-construction count is 1 per invocation; 28 family rows
   # in both bins; the coverage mutant fails by name; the alias baseline differs in
   # exactly one cell):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck

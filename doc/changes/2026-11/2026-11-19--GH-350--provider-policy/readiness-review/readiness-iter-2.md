@@ -5,7 +5,7 @@
 - **Date:** 2026-11-19
 - **Verdict:** `NOT_READY`
 - **Iteration:** 2 of 3
-- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.2 (31 ACs), `chg-GH-350-test-plan.md` v1.2 (108 cases), `chg-GH-350-plan.yaml` (9 phases, `plan validate` = valid), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md`, TDR-0062, TDR-0063, ADR-0013, PDR-0006, TDR-0058..0052
+- **Artifacts reviewed:** `chg-GH-350-spec.md` v1.2 (31 ACs), `chg-GH-350-test-plan.md` v1.2 (108 cases), `chg-GH-350-plan.yaml` (9 phases, `plan validate` = valid), `chg-GH-350-pm-notes.yaml`, `readiness-review/readiness-iter-1.md`, TDR-0062, TDR-0063, ADR-0013, PDR-0006, TDR-0058..0063
 
 ## Facet summary
 

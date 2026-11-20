@@ -1081,3 +1081,56 @@ notes:
       read-only/write split. Commit 1fccc86926fcfabf92f975aec579f1f84d4e1c31."
     type: evidence
     date: "2026-11-20"
+  - text: "GH-350 synced with main-tools tip ccc83383 (GH-348, loop supervision) as merge commit
+      8e8a5bce4f31ef66b63f0ded6c5ccf47aa9720b5 on parents 2c26af80 and ccc83383. DECISION-ID
+      RENUMBER: GH-348 owns TDR-0056 and TDR-0057, so this branch's six provider records moved one
+      place, preserving order — 0057 -> 0058 (budget ceilings), 0058 -> 0059 (simulate), 0059 ->
+      0060 (migration), 0060 -> 0061 (watch freshness), 0061 -> 0062 (mount), 0062 -> 0063 (budget
+      ref) — by git mv keeping each slug, with front-matter ids, headings, the index rows and
+      narrative, and every reference updated: 272 id occurrences across 30 files (GH-350 spec/test
+      plan/plan/pm-notes/readiness reviews, ADR-0013, the six records, the provider
+      engine/profiles/spend pages, provider code comments, doc-conformance and provider-mounting)
+      plus the merged frontmatter lists, the decisions index and the glossary. The mount record
+      also gained a Revision section recording the move to twenty-eighth and last after loop.
+      Verified: no stale id+slug pair remains (a config-layer body link was the one straggler,
+      corrected), and TDR-0055 stays GH-349's, TDR-0056/0057 stay GH-348's. FAMILY-MOUNT
+      RE-DERIVATION: the merged truth is 28 families with GH-348's `loop` 27th and `provider` 28th
+      and last, `install` 26th and `supervise` 25th. PROMPT_REQUIRED_COMMANDS orders loop before
+      provider; fixtures/metrics/mounting.ts adds LOOP_MOUNTED_FAMILIES and MOUNTED_FAMILIES = 28,
+      PINNING_FILES 11 -> 17 (adds loop-production-composition and loop-production-session),
+      fixtures/supervise/mounting.ts ends loop, provider; the stale-detector class is `2[34567]`
+      (derived from GH-348's `2[3456]` and widened to catch 26 and 27 as well as 28). Every
+      pinning suite moved as one edit-set: entrypoint-bin array/count 28,
+      supervision/metrics/steer tails to provider/loop/install/supervise/metrics with titles 28
+      and 23 of 28, board/daemon/dispatch/events/loop session and composition counts 28,
+      install-conformance and its mutants (count 28, missing provider, loop controls, 27 != 28),
+      board-help/events-mount-help/repos-help/ceremony-cli/entrypoint-two-bins 28,
+      install-family-surface tail loop/provider, entrypoint-composition and help-coverage literal
+      lists gain loop and provider, event-mount-guards missing set gains both, and
+      provider-mounting derives 28 with the tail and loop ordinal. The alias baseline gains
+      exactly one provider line after GH-348's loop line; the suite compares the Commands list
+      against the recorded GH-346 baseline d1fff222 (+loop+provider) and against the GH-348 tip
+      ccc83383 (+provider only), with every other cell byte-identical and the provenance note
+      extended. Docs moved with the pins: feature-cli-entrypoint (28 families, loop 27th, provider
+      28th, composition and quality tables carry both), feature-install-lifecycle (28),
+      feature-metrics (28, pins read 28), doc/00-index, glossary (28 with loop and provider),
+      cli-command-registry (28th, loop 27th), the M1 provider page (28th), the M4
+      backlog/flip-plan marker, and the doc-conformance phrase rows and ordinal guard; spec
+      F-8/§8.5/DM-10/§16 rows/AC-F8-4 (exactly 28, appended after loop) and AC-F8-5 (7/7 member
+      paths and 8/8 help surfaces, family now 28th), the test plan's
+      TC-MOUNT/TC-CONFORM-006/TC-DOC mount rows and the plan's phase-8 comments/counts were
+      updated in the same edit-set. COUNTS re-derived and unchanged by GH-348 (it adds no error
+      rows): entries/documentedRows 170/170, delivered rows 169, arithmetic +136, allowlist 68,
+      corpus 84 (59/25), provider kind 16; bun run scripts/checks/error-table-sync.ts reports
+      entries=170 documented=170 S1=591 S3=32 corpus=84. CONFLICTS: 27 files resolved as unions,
+      preserving GH-348's loop family and supervision behaviour, GH-347/GH-349's dispatch/merge
+      work and all GH-350 provider work; changeset-additivity took GH-348's relaxed
+      pinned-baseline-plus-additions rule. GATES: pnpm typecheck, lint and format green;
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false
+      TMPDIR=$PWD/tmp/tmpdir pnpm check -> 12080 pass / 4 skip / 2 fail across 1466 files, where
+      both failures are the known HOST-ENVIRONMENT doc-distribution guard (TC-BIN-071 and
+      TC-MEMNFR-004) and pass 19/19 with a clean HOME; ./scripts/lint-commit-range.sh --base
+      main-tools reports PASS, 50 commits in range, 0 offending. Merge commit
+      8e8a5bce4f31ef66b63f0ded6c5ccf47aa9720b5."
+    type: evidence
+    date: "2026-11-20"

@@ -1,6 +1,6 @@
 /**
  * GH-350 TC-MOUNT-004..007 — the mount's structural truth: the declarative set
- * is exactly 27 with `provider` last, the composition filter drops an extra
+ * is exactly 28 with `loop` 27th and `provider` last, the composition filter drops an extra
  * family and keeps the declared keys, the pin set is derived from the fixture,
  * every listed file carries a 28 pin, the tails shift one place, and the
  * stale-detector class is widened to `2[34567]` (AC-F8-4, AC-F8-5; TDR-0062).

@@ -2270,3 +2270,117 @@ describe("GH-350 review remediation the zone composition and the provider row co
     expect(gh350ReviewViolations(GH350_REVIEW_ROWS, withMoves)).toEqual([]);
   });
 });
+
+/**
+ * GH-350 documentation-truth pin — the pages that state the mount outside the
+ * phase-8 page set: the engine page (the family's own page), the board page and
+ * GH-348's loop test spec. The delivered truth is 28 families with `loop` 27th
+ * and `provider` 28th and last; the 27 forms are stale, and a declared delta
+ * line (`27 -> 28`, `27 → 28`) is carved out before the stale check.
+ */
+const GH350_TRUTH_PAGES = [
+  "doc/spec/features/feature-provider-engine.md",
+  "doc/spec/features/feature-board.md",
+  "doc/quality/test-specs/test-spec-loop-supervision.md",
+] as const;
+
+const GH350_TRUTH_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/spec/features/feature-provider-engine.md",
+    stale: [
+      "the twenty-seventh and last prompt-required one",
+      "the twenty-seventh and last prompt-required family",
+      "the 27-family mount",
+    ],
+    required: [
+      "the twenty-eighth and last prompt-required one, after `loop`",
+      "the twenty-eighth and last prompt-required family, after",
+      "the 28-family mount",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-board.md",
+    stale: ["27-family counts"],
+    required: ["28-family counts"],
+  },
+  {
+    page: "doc/quality/test-specs/test-spec-loop-supervision.md",
+    stale: ["the prompt-required set at 27 families with `loop` last"],
+    required: ["the prompt-required set at 28 families with `provider` last and `loop` 27th"],
+  },
+];
+
+/** A declared family delta line is history, never a current value. */
+const withoutFamilyDeltas = (text: string): string =>
+  text
+    .split("\n")
+    .filter((line) => !/(?:26|27)\s*(?:->|→)\s*(?:27|28)/u.test(line))
+    .join("\n");
+
+export const gh350TruthViolations = (
+  rows: readonly GH350Row[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...GH350_TRUTH_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push("GH-350 truth page set is not the declared three");
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const raw = pageText(row.page);
+    if (raw === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    const text = withoutFamilyDeltas(raw);
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-350 documentation truth: the mount pages state 28 families", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the three declared pages state the 28-family truth", () => {
+    expect(gh350TruthViolations(GH350_TRUTH_ROWS, pageText)).toEqual([]);
+  });
+
+  test("a reintroduced 27 form and a missing 28 form each fail by name", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-board.md"
+        ? `${pageText(page) ?? ""}\nthe 27-family counts\n`
+        : pageText(page);
+    expect(gh350TruthViolations(GH350_TRUTH_ROWS, stale).join("\n")).toContain(
+      "stale phrase present: 27-family counts",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-engine.md"
+        ? (pageText(page) ?? "").replace("the 28-family mount", "the current mount")
+        : pageText(page);
+    expect(gh350TruthViolations(GH350_TRUTH_ROWS, missing).join("\n")).toContain(
+      "missing required phrase: the 28-family mount",
+    );
+  });
+
+  test("a declared family delta line is carved out of the stale arm", () => {
+    const withDelta = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-board.md"
+        ? `${pageText(page) ?? ""}\nthe 27-family counts move 27 -> 28\n`
+        : pageText(page);
+    expect(gh350TruthViolations(GH350_TRUTH_ROWS, withDelta)).toEqual([]);
+  });
+});
