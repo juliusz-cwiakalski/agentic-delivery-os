@@ -10,7 +10,7 @@ phases:
   clarify_scope: { started: 2026-11-20T11:45:00.000Z, completed: 2026-11-20T10:47:14.870Z }
   specification: { started: null, completed: 2026-11-20T11:03:58.721Z }
   test_planning: { started: null, completed: 2026-11-20T11:04:06.265Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-20T11:21:55.123Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,6 +56,36 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Delivery planning (phase 4): chg-GH-366-plan.yaml authored and validated
+      — `plan validate` verdict=valid, tier=full, readyForDevelopment=true;
+      `lint plan` valid. Seven phases (1 planning: the three reserved decision
+      records; 2 refusal identities and diagnostics; 3 change-branch resolution
+      and head binding; 4 required-check enforcement and admitted surfaces; 5
+      runtime family declaration and totality proof; 6 resolution facts plus
+      declared golden regeneration; 7 documentation reconciliation and release).
+      41/41 test cases allocated one phase each; golden set declared per file (7
+      moved, 6 byte-identical, 6 added, pinned set 13 -> 19) which discharges
+      test-plan OQ-TP-2. Two authoring hazards recorded by the plan: the
+      commit-primitive tracker-token matcher matches the tail of a hyphenated
+      test-case id, so no title or summary carries a test-case or
+      decision-record id (they ride in comments and scope paths only); and
+      `merge-production-composition` must move from the meta-suite's GREEN set
+      to CHANGED with a declared obligation in phase 3."
+    type: info
+    date: "2026-11-20"
+  - text: "Decision records (plan phase 1): TDR-0071
+      (merge-change-branch-and-resolved-head-authority), TDR-0072
+      (required-check-authority-and-gate-membership) and TDR-0073
+      (refusal-diagnostics-and-emitted-identity-totality) are authored by
+      @decision-advisor on this branch, each with exactly one index row, all
+      three classified R3 and all three `Proposed` — the human owner accepts at
+      the PR review; AI does not accept. No independent challenge has been run
+      yet and no record claims one. TDR-0071 caught a genuine coupling the spec
+      states but the plan must not split: removing the ambient branch read while
+      leaving the head read on the checkout reproduces the defect behind a
+      better report, so branch authority and head binding are one unit."
+    type: info
+    date: "2026-11-20"
   - text: "Specification reopened and re-completed (v1.2): the DoR was not the
       discovery point — the PM verified the F-4 premise against the tree while
       validating the test plan. `packages/cli/src/classify.ts:76-97`

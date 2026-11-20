@@ -88,6 +88,9 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0056](TDR-0056-loop-supervision-as-a-profile-of-the-coordinator-engine.md) | TDR | Loop Supervision as a Profile over the Coordinator Supervision Engine | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0057](TDR-0057-durable-loop-stop-as-a-state-ledger-record.md) | TDR | The Durable Loop Stop Is a State-Ledger Record, Not a File | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0058](TDR-0058-dispatch-session-output-artifacts-and-transcript-read-seam.md) | TDR | Dispatch Session-Output Artifacts and the Transcript Read Seam — A Bounded Per-Ref Sidecar Family and an Adapter-Owned Read Kept Outside the Closed Operation Set | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0071](TDR-0071-merge-change-branch-and-resolved-head-authority.md) | TDR | Change-Branch Resolution from the Change Record and the Delivery Request's Head as the Verified Head | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
+| [TDR-0072](TDR-0072-required-check-authority-and-gate-membership.md) | TDR | Required-Check Authority and Gate Membership — The Shipped Default Enforces the Repository-Declared Expected Job Set on the Resolved Head | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
+| [TDR-0073](TDR-0073-refusal-diagnostics-and-emitted-identity-totality.md) | TDR | Refusal Diagnostics and Emitted-Identity Totality — Named Causes, Three Additive Rows, Row-Level `retryable`, and a Runtime Family Declaration | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
