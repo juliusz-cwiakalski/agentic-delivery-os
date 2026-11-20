@@ -374,17 +374,19 @@ lines oldest-to-newest.
 - **Tail range.** `--tail <n>` is a canonical decimal in `1..500` with a default of
   `50`. An out-of-range, signed, fractional, whitespace-bearing, or leading-zero
   value is refused as `input.value.rejected` rather than clamped.
-- **Output bounds.** The answer is bounded by the requested line count, by a
-  200-line bound, and by 65,536 UTF-8 bytes of machine `data`; the human form is
-  additionally bounded to 32,768 bytes. The 200-line bound is the declared human
-  log bound and is applied to the selected lines, so a request above 200 lines
-  answers at most 200 lines plus a truncation fact.
+- **Output bounds.** The machine `data` is bounded by the requested line count and
+  by 65,536 UTF-8 bytes only; the human form is additionally bounded to 200 lines
+  and 32,768 bytes. Each bound that binds yields its own truncation fact, so a
+  machine request above 200 lines over a window that holds those lines returns
+  them all, while the human form answers at most 200 of them plus a `tail`-scope
+  fact naming the human line bound.
 - **Truncation precedence.** A bound that binds yields exactly one truncation fact
-  `{scope, bound, omittedLines}`. The byte bound is applied after line selection, so
-  a binding byte bound yields `scope=bytes`; otherwise a shorter line count — the
-  requested tail, the human 200-line bound, or a retained window holding fewer lines
-  — yields `scope=tail`, whose `bound` names the line bound that bound. The human
-  200-line bound is a line bound and therefore a `tail`-scope fact.
+  `{scope, bound, omittedLines}` per answered form. The byte bound is applied after
+  line selection, so a binding byte bound yields `scope=bytes`; otherwise a shorter
+  line count — the requested tail, or a retained window holding fewer lines — yields
+  `scope=tail`, whose `bound` names the line bound that bound. The human 200-line
+  bound is a line bound and therefore a `tail`-scope fact, applied by the human
+  renderer; the machine form never carries it.
 - **Snapshot.** The read states what was durable when it ran: a segment switch or an
   append in flight may mean the newest bytes are not in the answer. There is no
   lock, flush, or coordination with the writer; re-running the query is the remedy.
@@ -897,7 +899,7 @@ The lane record, the terminate result, the restart loop, the tracker ladder, and
 | Log artifact retained files per reference | 2, newest by name; older removed best-effort |
 | Log artifact family per reference | 2 × 1,048,576 bytes |
 | `log` tail | 50 default, 1..500 canonical decimal |
-| `log` selected lines | 200 |
+| `log` human selected lines | 200 |
 | `log` human output | 32,768 bytes |
 | `is-delivering` ref list | 20 |
 | Transcript read cap | 262,144 characters |

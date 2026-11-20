@@ -13,9 +13,11 @@ import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { createNodeDispatchLogFileSystem } from "../../../../packages/adapters/src/file/dispatch-logs";
 import { createOpencodeSession } from "../../../../packages/adapters/src/harness/opencode";
+import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import { readDispatchLanes } from "../../../../packages/core/src/app/dispatch-ledger";
 import { createDispatchLogSink } from "../../../../packages/core/src/app/dispatch-log-sink";
 import type {
+  CredentialReference,
   DispatchLaneRecord,
   DispatchLogFileSystem,
   DispatchOwnerProbe,
@@ -30,8 +32,6 @@ import {
 } from "../../../../packages/core/src/domain/index";
 import { countStore, type StoreCounters } from "../attempts-harness";
 import { createParityHarness, PARITY_REPOSITORY } from "../parity/harness";
-import type { GuardedRunner } from "../parity/process-runner";
-import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import {
   type LaneSeed,
   seedDaemonLane,
@@ -39,6 +39,7 @@ import {
   seedDispatchLaneSequence,
   seedForeignRepositoryLane,
 } from "../parity/lane";
+import type { GuardedRunner } from "../parity/process-runner";
 import { createScriptedStreams, type ScriptedStream, type StreamsFixture } from "./streams";
 
 /** The reference every operator case addresses unless it says otherwise. */
@@ -83,6 +84,17 @@ export type OperatorHarnessOptions = {
   readonly probe?: DispatchOwnerProbe;
   /** The registered credential values the run's envelope is redacted with. */
   readonly secrets?: readonly string[];
+  /**
+   * Additional injected environment facts. A case seeds a declared credential
+   * HERE (never through `secrets`) when it proves the production resolution.
+   */
+  readonly environment?: Readonly<Record<string, string | undefined>>;
+  /**
+   * The declared credential references; present drives each run through the
+   * production entrypoint so the registered set is resolved from `environment`
+   * and reaches the composed program as the entrypoint passes it.
+   */
+  readonly credentialReferences?: readonly CredentialReference[];
   /** The artifact-family root; defaults to `<state>/dispatch-logs.<workspace>`. */
   readonly artifactRoot?: string;
   /** The artifact-family filesystem edge; absent means the family is unreadable. */
@@ -311,6 +323,10 @@ export const createOperatorHarness = (options: OperatorHarnessOptions = {}): Ope
     ...(options.extraRefs === undefined ? {} : { extraRefs: options.extraRefs }),
     ownerProbe: probe,
     ...(options.secrets === undefined ? {} : { secrets: options.secrets }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
+    ...(options.credentialReferences === undefined
+      ? {}
+      : { credentialReferences: options.credentialReferences }),
     ...(options.artifactRoot === undefined ? {} : { artifactRoot: options.artifactRoot }),
     ...(options.artifactFs === undefined ? {} : { artifactFs: options.artifactFs }),
     ...(options.guarded === undefined ? {} : { guarded: options.guarded }),

@@ -412,6 +412,11 @@ export type HarnessSpawnStreamOptions = {
    * The additive per-stream raw-stdout observer (GH-354 API-8). It is built by
    * the adapter before the stream starts and before its first yielded value; an
    * absent member keeps the delivered stream behaviour exactly.
+   *
+   * The ADAPTER's stream drain consumes it, once per raw value, before its own
+   * decoder runs. The host starter must not consume it: the sink is driven
+   * solely inside the adapter's acquisition drain, so a host that also wrote to
+   * it would double-write the artifact family for one value.
    */
   readonly stdoutSink?: HarnessStreamSink;
 };

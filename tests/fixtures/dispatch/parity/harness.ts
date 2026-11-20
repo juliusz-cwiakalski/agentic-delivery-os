@@ -13,8 +13,13 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
+import { type EntrypointComposer, runEntrypoint } from "../../../../packages/cli/src/entrypoint";
 import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
-import { createProductionComposer } from "../../../../packages/cli/src/production";
+import {
+  createProductionComposer,
+  type ProductionCompositionFacts,
+} from "../../../../packages/cli/src/production";
+import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import {
   readDispatchAttempts,
   readDispatchDivergences,
@@ -22,10 +27,10 @@ import {
 } from "../../../../packages/core/src/app/dispatch-ledger";
 import { claimQueueLease, declareQueueEntry } from "../../../../packages/core/src/app/queue";
 import { resolveBrandIdentity } from "../../../../packages/core/src/branding/index";
-import type { DispatchTranscriptRead } from "../../../../packages/core/src/app/dispatch-last-message";
 import type {
   BrandIdentity,
   CredentialPort,
+  CredentialReference,
   DispatchAttemptRecord,
   DispatchDelay,
   DispatchEnvelopeData,
@@ -198,6 +203,14 @@ export type ParityHarnessOptions = {
   readonly transcriptRead?: DispatchTranscriptRead;
   /** The adapter capability the transcript read is gated by (GH-354 DM-3). */
   readonly supportsIntrospection?: (kind: HarnessKind) => boolean;
+  /**
+   * The declared credential references the production entrypoint resolves
+   * against the injected environment (GH-354 AC-F4-7). Present routes each run
+   * through `runEntrypoint`, so the composed program receives the registered
+   * set as an invocation fact — the same values the serializer redacts with.
+   * Absent keeps the direct `runCli` path.
+   */
+  readonly credentialReferences?: readonly CredentialReference[];
   /**
    * An observability seam over the main state store (GH-354 §7.2). The composed
    * program keeps using the returned port, so a case can count reads without
@@ -388,7 +401,7 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
   const runs: ParityRunResult[] = [];
   let runIndex = 0;
 
-  const program = createProductionComposer({
+  const compositionFacts: ProductionCompositionFacts = {
     harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: {
       HOME: home,
@@ -434,7 +447,10 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
             };
           },
         }),
-  })(brand);
+  };
+  const composer: EntrypointComposer = (composedBrand, invocation) =>
+    createProductionComposer(compositionFacts)(composedBrand, invocation);
+  const program = composer(brand);
 
   const run = async (argv?: readonly string[]): Promise<ParityRunResult> => {
     const out: string[] = [];
@@ -444,13 +460,29 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
       stderr: { write: (chunk: string) => err.push(chunk) },
     };
     runIndex += 1;
-    const exit = await runCli(argv ?? ["dispatch", ref, "--json"], streams, {
-      brand,
-      clock: { now: () => clock.nowMs() },
-      newRunId: () => `run-parity-${runIndex}`,
-      secrets: [...(options.secrets ?? [])],
-      program,
-    });
+    const effectiveArgv = argv ?? ["dispatch", ref, "--json"];
+    // The credential-wiring probe (GH-354 F-1 remediation): with declared
+    // credential references the run goes through the PRODUCTION entrypoint, so
+    // the registered set is resolved from the injected environment and travels
+    // the same invocation fact production uses. Absent, the delivered direct
+    // `runCli` path is kept byte-for-byte.
+    const exit =
+      options.credentialReferences === undefined
+        ? await runCli(effectiveArgv, streams, {
+            brand,
+            clock: { now: () => clock.nowMs() },
+            newRunId: () => `run-parity-${runIndex}`,
+            secrets: [...(options.secrets ?? [])],
+            program,
+          })
+        : await runEntrypoint(effectiveArgv, {
+            streams,
+            environment: compositionFacts.environment,
+            declaredWorkingName: "delivery-os",
+            credentialReferences: options.credentialReferences,
+            newRunId: () => `run-parity-${runIndex}`,
+            composeProgram: composer,
+          });
     const stdout = out.join("");
     const stderr = err.join("");
     const envelope = stdout.trim().startsWith("{")

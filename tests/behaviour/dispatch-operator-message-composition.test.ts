@@ -1,13 +1,13 @@
 /**
  * GH-354 F-4 — the message composition order (TC-MSG-008).
  *
- * The expectation is computed with the delivered redaction chokepoint and the
- * production composition function; the case then asserts the composed program's
- * answer equals it. A fixture-local scrub is never used: `redact` comes from
- * `packages/cli/src/output/serialize.ts`, the one chokepoint.
+ * The expectation is computed by the production composition function itself, and
+ * the case then asserts the composed program's answer is EQUIVALENT to it: the
+ * delivered `composeDispatchMessage` is the one composition both sides use, so a
+ * divergence is the wiring, never an expectation. A fixture-local scrub is never
+ * used.
  */
 import { describe, expect, test } from "bun:test";
-import { redact } from "../../packages/cli/src/output/serialize";
 import { composeDispatchMessage } from "../../packages/core/src/domain/dispatch-message";
 import { createOperatorHarness, OPERATOR_REF } from "../fixtures/dispatch/operator/harness";
 import { createTranscriptDouble } from "../fixtures/dispatch/operator/transcript";
@@ -36,7 +36,8 @@ describe("TC-MSG the message composition order", () => {
         h.seedLane({ ref: OPERATOR_REF, state: "terminal", sessionId: "ses-secret" });
       }
 
-      // The expectation, computed from the delivered chokepoint.
+      // The expectation, computed by the production composition function; the
+      // case asserts equivalence with the composed program's answer.
       const expected = composeDispatchMessage({
         text: straddling,
         secrets: [CREDENTIAL],

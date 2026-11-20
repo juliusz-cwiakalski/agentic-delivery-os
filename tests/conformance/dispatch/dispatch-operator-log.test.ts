@@ -1,5 +1,5 @@
 /**
- * GH-354 F-2 — the bounded, reference-scoped `log` (TC-LOG-001..006, 010, 011
+ * GH-354 F-2 — the bounded, reference-scoped `log` (TC-LOG-001..006, 010..012
  * plus the command-projection halves of 007..009).
  *
  * Every case drives the composed production program (D1) over a family the
@@ -7,14 +7,15 @@
  * needs a recording one.
  */
 import { describe, expect, test } from "bun:test";
-import { join } from "node:path";
 import { rmSync } from "node:fs";
+import { join } from "node:path";
+import { DISPATCH_LOG_MAX_HUMAN_LINES } from "../../../packages/core/src/contracts/index";
+import { stitchDispatchLogLines } from "../../../packages/core/src/domain/dispatch-log";
 import {
   createOperatorHarness,
   createRecordingLogFs,
   OPERATOR_REF,
 } from "../../fixtures/dispatch/operator/harness";
-import { stitchDispatchLogLines } from "../../../packages/core/src/domain/dispatch-log";
 import {
   familySnapshot,
   materializeFamily,
@@ -352,6 +353,50 @@ describe("TC-LOG the bounded reference-scoped tail", () => {
       // No lock file, no write, no deletion.
       expect(logFs.records.every((record) => record.op !== "remove")).toBe(true);
       expect(familySnapshot(familyRoot, OPERATOR_REF)).toEqual(before);
+    } finally {
+      h.dispose();
+      rmSync(familyRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("TC-LOG-012 the machine window is byte-bounded only and names the retained window, never the human line bound", async () => {
+    const { a } = twoSegments();
+    const familyRoot = join(process.cwd(), "tmp", "tmpdir", "gh354-log-012");
+    rmSync(familyRoot, { recursive: true, force: true });
+    const h = createOperatorHarness({ label: "log-012", artifactRoot: familyRoot });
+    try {
+      materializeFamily({
+        familyRoot,
+        ref: OPERATOR_REF,
+        files: [{ name: a, text: numberedLines({ prefix: "W-", from: 1, count: 220 }) }],
+      });
+
+      // The machine `data` is bounded by bytes only: a 220-line window under
+      // 65 536 bytes is returned WHOLE, with one `tail` fact naming 220 — the
+      // retained window — and never the human 200-line bound.
+      const machine = await h.run(["dispatch", "log", OPERATOR_REF, "--tail", "500", "--json"]);
+      expect(machine.exit).toBe(0);
+      const data = dataOf(machine.data);
+      const lines = data.lines as readonly string[];
+      expect(lines).toHaveLength(220);
+      expect(lines[0]).toBe("W-1");
+      expect(lines[219]).toBe("W-220");
+      expect(data.truncation).toEqual({ scope: "tail", bound: 220, omittedLines: 280 });
+      expect((data.truncation as Record<string, unknown>).bound).not.toBe(
+        DISPATCH_LOG_MAX_HUMAN_LINES,
+      );
+
+      // The human form still caps at 200 lines, keeps the NEWEST 200, and says
+      // so with its own `tail` fact over the total omission.
+      const human = await h.run(["dispatch", "log", OPERATOR_REF, "--tail", "500"]);
+      expect(human.exit).toBe(0);
+      const rendered = human.stdout.trimEnd().split("\n");
+      expect(rendered[rendered.length - 1]).toBe(
+        `truncation=scope:tail,bound:${DISPATCH_LOG_MAX_HUMAN_LINES},omitted:${500 - DISPATCH_LOG_MAX_HUMAN_LINES}`,
+      );
+      expect(rendered.length - 1).toBe(DISPATCH_LOG_MAX_HUMAN_LINES);
+      expect(rendered[0]).toBe("W-21");
+      expect(rendered[DISPATCH_LOG_MAX_HUMAN_LINES - 1]).toBe("W-220");
     } finally {
       h.dispose();
       rmSync(familyRoot, { recursive: true, force: true });

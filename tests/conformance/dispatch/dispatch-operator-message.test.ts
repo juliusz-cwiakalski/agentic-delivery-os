@@ -1,11 +1,13 @@
 /**
- * GH-354 F-4 — `last-message` (TC-MSG-001..007, 009).
+ * GH-354 F-4 — `last-message` (TC-MSG-001..007, 009, 011).
  *
  * Driver D1 over the composed program with the injected transcript seam. The
  * capability gate is the production one: the adapter declaration decides, so the
  * Claude Code gap is data, never a test-local branch.
  */
 import { describe, expect, test } from "bun:test";
+import { DECLARED_CREDENTIAL_REFERENCES } from "../../../packages/cli/src/production";
+import { DISPATCH_MAX_LAST_MESSAGE_CHARS } from "../../../packages/core/src/contracts/index";
 import { storeWithReadFailure } from "../../fixtures/dispatch/attempts-harness";
 import { createOperatorHarness, OPERATOR_REF } from "../../fixtures/dispatch/operator/harness";
 import { createTranscriptDouble } from "../../fixtures/dispatch/operator/transcript";
@@ -306,6 +308,54 @@ describe("TC-MSG the last-message read", () => {
       } finally {
         h.dispose();
       }
+    }
+  });
+
+  test("TC-MSG-011 the environment-seeded credential reaches the operator runtime and is redacted before the cut", async () => {
+    // The credential arrives ONLY through the injected environment: no
+    // `secrets` and no `registeredSecrets` are passed to the fixture, so the
+    // production entrypoint must resolve the declared reference itself.
+    const credential = `ghp_${"b".repeat(36)}`;
+    // It straddles the 512-character cut: 490 prose characters, the credential,
+    // then more text with the line breaks and tab the composition flattens.
+    const straddling = `${"p".repeat(490)}${credential}\nstill\tgoing ${"q".repeat(200)}`;
+    const transcript = createTranscriptDouble({ messages: { "ses-straddle": straddling } });
+    const h = createOperatorHarness({
+      label: "msg-011-env",
+      transcriptRead: transcript.read,
+      environment: { GITHUB_TOKEN: credential },
+      credentialReferences: DECLARED_CREDENTIAL_REFERENCES,
+    });
+    try {
+      h.seedLane({ ref: OPERATOR_REF, state: "terminal", sessionId: "ses-straddle" });
+
+      const json = await h.run(["dispatch", "last-message", OPERATOR_REF, "--json"]);
+      expect(json.exit).toBe(0);
+      const data = dataOf(json.data);
+      const message = data.message as string;
+      // The surrounding prose survives; the credential — whole or as the prefix
+      // a bound-before-redact cut would have disclosed — does not.
+      expect(message.startsWith("p".repeat(490))).toBe(true);
+      expect(message).toContain("[redacted]");
+      expect(message).toContain("still");
+      expect(message).not.toContain(credential);
+      expect(message).not.toContain(credential.slice(0, 12));
+      // A naive cut at the declared bound would have disclosed the prefix.
+      expect(straddling.slice(0, DISPATCH_MAX_LAST_MESSAGE_CHARS)).toContain(
+        credential.slice(0, 12),
+      );
+      // The bound is applied to the POST-redaction text, so `truncated` is the
+      // declared 512-character answer, not the credential-inflated one.
+      expect(message.length).toBe(DISPATCH_MAX_LAST_MESSAGE_CHARS);
+      expect(data.truncated).toBe(true);
+
+      const human = await h.run(["dispatch", "last-message", OPERATOR_REF]);
+      expect(human.exit).toBe(0);
+      expect(human.stdout).toContain("still");
+      expect(human.stdout).not.toContain(credential);
+      expect(human.stdout).not.toContain(credential.slice(0, 12));
+    } finally {
+      h.dispose();
     }
   });
 });

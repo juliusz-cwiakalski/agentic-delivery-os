@@ -16,8 +16,8 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "PM-decided (phase-8 scope, disclosed at PR review): two non-product fixes
-      land with the release phase because the aggregate gate cannot be green
+  - text: "PM-decided (phase-8 scope, disclosed at PR review): three non-product
+      fixes land with the release phase because the aggregate gate cannot be green
       otherwise. (a) The changeset additivity pin hardcodes the changesets added
       since its capture; this change's own changeset is appended to that
       declared list — a delivered expectation that every later delivery updates,
@@ -25,8 +25,10 @@ decisions:
       install set by running the real installer with the inherited HOME, so on a
       machine with a lifecycle-installed product it refuses to overwrite that
       binary and the aggregate fails; the sandbox install is made HOME-hermetic
-      with its own scratch home. Neither changes product behaviour, a marker, or
-      an assertion's meaning; both are named in the PR body."
+      with its own scratch home. (c) The install refusal message's unescaped
+      backticks were escaped so it stops executing `/usr/bin/install`. None
+      changes product behaviour, a marker, or an assertion's meaning; all three
+      are named in the PR body."
     date: "2026-11-20"
   - text: "Scope is the ticket body plus the committed M4 backlog row M4-S12 and the
       flip-plan F1 split rationale: the four per-ref operator queries (`status`,
@@ -56,6 +58,19 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Review iteration 1: FAIL — two blocking findings, both real and both
+      invisible to the offline battery because the fixtures inject what production
+      does not. F1: the shipped bins never pass `registeredSecrets` to the dispatch
+      operator runtime, so `last-message` redacted an empty set before the
+      512-character bound and a straddling credential could survive as a prefix;
+      remediation wires the same declared-credential set the serializer uses and
+      adds an environment-seeded straddling case. F2: the machine `log` payload was
+      capped by the human 200-line bound, so `--json --tail 300..500` dropped lines
+      the retained window held; remediation bounds machine data by bytes only,
+      enforces the line bound in the human renderer, adds the 220-line case, and
+      aligns two current-truth lines. Remediation is plan phase 9."
+    type: info
+    date: "2026-11-20"
   - text: "Documentation reconciliation (phase 7): 10 pages updated (dispatch
       engine, state layer, harness adapters, autonomous delivery,
       engine-first-operations, glossary, the dispatch reference page,

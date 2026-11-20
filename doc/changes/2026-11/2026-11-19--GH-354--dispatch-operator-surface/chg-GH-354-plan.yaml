@@ -1876,3 +1876,55 @@ phases:
         - doc/overview/glossary.md
     doneArtifacts:
       pipelineId: "CI pipeline for the GH-354 phase-8 commit (the aggregate pnpm check green with every check executed, plan validate valid, the no-shell invariant green; the captured log is attached to the change)"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Review remediation (review iteration 1, findings F1 and F2).
+  #
+  # F1 (blocking, security/privacy): the operator runtime never receives the
+  #   registered credential values in the shipped bins. `createProductionComposer`
+  #   is called without `registeredSecrets`, and the edge fallback derives only
+  #   environment-only catalog fields (none exist), while the real credential is
+  #   resolved as a declared credential reference into the serializer set. So
+  #   `dispatch last-message` redacts an empty set before the 512-character bound,
+  #   and a credential straddling the cut survives as a prefix. Fix: give the
+  #   operator runtime the same registered set the serializer uses, and add a case
+  #   that seeds the credential through `environment` (not the fixture's
+  #   `registeredSecrets`) and asserts a straddling credential is absent from both
+  #   outputs.
+  #
+  # F2 (blocking, AC-F2-5/NFR-3/DM-6): the machine `log` payload is capped at the
+  #   human 200-line bound because the edge passes `maxLines` into the shared read.
+  #   Fix: bound machine `data` by bytes only (65 536), enforce the 200-line bound
+  #   in the human renderer, add a 220-line `--json --tail 500` case, and align the
+  #   two current-truth lines that codified the narrower behaviour.
+  #
+  # No delivered assertion may be relaxed; both fixes are additive coverage plus a
+  # wiring/bound correction.
+  - id: 9
+    title: "Review remediation: production credential wiring and the machine log bound"
+    kind: delivery
+    summary: "fix(GH-354): wire production credentials and the machine log bound"
+    scope:
+      files:
+        - packages/cli/src/bin-launcher.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/entrypoint.ts
+        - packages/cli/src/output/dispatch-text.ts
+        - packages/core/src/app/dispatch-last-message.ts
+        - packages/core/src/domain/dispatch-message.ts
+        - packages/core/src/contracts/harness.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/dispatch/operator/harness.ts
+        - tests/behaviour/dispatch-operator-message-composition.test.ts
+        - tests/behaviour/dispatch-operator-log-bounds.test.ts
+        - tests/conformance/dispatch/dispatch-operator-message.test.ts
+        - tests/conformance/dispatch/dispatch-operator-log.test.ts
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: producer
+    doneArtifacts:
+      pipelineId: "CI pipeline for the GH-354 phase-9 commit (the message and log conformance suites green including the straddling-credential and 220-line-window cases, the operator battery green, the pinned trio and the no-shell invariant green)"

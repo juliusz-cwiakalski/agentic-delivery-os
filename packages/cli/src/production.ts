@@ -804,8 +804,10 @@ export type ProductionCompositionFacts = {
    */
   /**
    * The registered credential set the operator runtime redacts the final
-   * message with (GH-354 AC-F4-7). Production derives it from the resolved
-   * credential references; an embedder may inject the same runtime fact.
+   * message with (GH-354 AC-F4-7). The entrypoint resolves the declared
+   * credential references against the injected environment once and passes the
+   * same values in the composition invocation fact; an embedder that composes
+   * without an entrypoint may inject the same runtime fact here.
    */
   readonly registeredSecrets?: readonly string[];
   readonly operatorTranscript?: DispatchTranscriptRead;
@@ -1659,6 +1661,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
+    // The one registered credential set (GH-354 AC-F4-7). The entrypoint
+    // resolved the declared references against the injected environment once
+    // and hands the same values to the serializer; an embedder may inject the
+    // fact instead. The operator runtime redacts with this set BEFORE bounding,
+    // so a credential straddling the 512-character cut cannot survive.
+    const registeredSecrets = invocation?.registeredSecrets ?? facts.registeredSecrets;
     // The configuration filesystem facts: production uses the node facts; a
     // test may inject counting facts so per-layer reads are observable.
     const localFs = facts.configurationFs ?? nodeFileSystemFacts();
@@ -3694,7 +3702,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // The operator read surfaces (GH-354 DEC-7): the same single store, a
       // persistence-disabled repository resolution, and the advisory probe.
       // No configuration key is added.
-      ...(facts.registeredSecrets === undefined ? {} : { secrets: facts.registeredSecrets }),
+      ...(registeredSecrets === undefined ? {} : { secrets: registeredSecrets }),
       ...createDispatchOperatorRuntime({
         store,
         resolveRepository: () => resolveProductionRepository(undefined, { persist: false }),

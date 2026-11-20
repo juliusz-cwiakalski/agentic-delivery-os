@@ -9,9 +9,10 @@ import {
   ATTEMPTS_HUMAN_ROW_BUDGET,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
+  DISPATCH_LOG_MAX_HUMAN_BYTES,
+  DISPATCH_LOG_MAX_HUMAN_LINES,
   DISPATCH_MAX_HUMAN_BYTES,
   DISPATCH_MAX_HUMAN_LINES,
-  DISPATCH_LOG_MAX_HUMAN_BYTES,
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
   type DispatchDeliveringData,
@@ -233,13 +234,22 @@ export const renderDispatchLastMessageText = (data: DispatchLastMessageData): st
 /**
  * `log` as the RAW tail plus at most one `truncation=` line (DEC-8, §8.5).
  *
- * The human byte bound (32 768 bytes) is applied here, after the machine
- * selection, so the scope names the bound that actually bound. `omitted` is the
- * total dropped: the runtime's own omission plus the human-bound drop.
+ * The machine payload is byte-bounded only, so the declared HUMAN bounds are
+ * applied here: the 200-line bound first, then the 32 768-byte bound, so the
+ * scope names the bound that actually bound. A binding line bound is a
+ * `tail`-scope fact naming the human 200-line bound; a binding byte bound is a
+ * `bytes`-scope fact. `omitted` is the total dropped: the runtime's own
+ * omission plus the human-bound drops.
  */
 export const renderDispatchLogText = (data: DispatchLogData): string => {
   if (!data.available) return `reason=${data.reason ?? "no-log"}\n`;
-  const lines = [...data.lines];
+  const machineLines = [...data.lines];
+  const kept =
+    machineLines.length > DISPATCH_LOG_MAX_HUMAN_LINES
+      ? machineLines.slice(machineLines.length - DISPATCH_LOG_MAX_HUMAN_LINES)
+      : machineLines;
+  const droppedByLineBound = machineLines.length - kept.length;
+  const lines = [...kept];
   let omitted = data.truncation?.omittedLines ?? 0;
   const humanBytes = (candidate: readonly string[]): number =>
     candidate.reduce((total, line) => total + utf8Bytes(line) + 1, 0);
@@ -248,12 +258,14 @@ export const renderDispatchLogText = (data: DispatchLogData): string => {
     lines.shift();
     droppedByHuman += 1;
   }
-  omitted += droppedByHuman;
+  omitted += droppedByLineBound + droppedByHuman;
   const fact =
     droppedByHuman > 0
       ? `truncation=scope:bytes,bound:${DISPATCH_LOG_MAX_HUMAN_BYTES},omitted:${omitted}`
-      : data.truncation === undefined
-        ? undefined
-        : `truncation=scope:${data.truncation.scope},bound:${data.truncation.bound},omitted:${data.truncation.omittedLines}`;
+      : droppedByLineBound > 0
+        ? `truncation=scope:tail,bound:${DISPATCH_LOG_MAX_HUMAN_LINES},omitted:${omitted}`
+        : data.truncation === undefined
+          ? undefined
+          : `truncation=scope:${data.truncation.scope},bound:${data.truncation.bound},omitted:${data.truncation.omittedLines}`;
   return `${[...lines, ...(fact === undefined ? [] : [fact])].join("\n")}${lines.length === 0 && fact === undefined ? "" : "\n"}`;
 };

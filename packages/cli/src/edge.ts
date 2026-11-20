@@ -146,11 +146,13 @@ import {
   type DispatchPorts,
   type DispatchPreflightResult,
   type DispatchRepositoryScope,
+  type DispatchTranscriptRead,
   type DispatchTruthReads,
   declareQueueEntry,
   decodeTelemetryStepFrame,
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
+  dispatchLogByteLength,
   emptyIngestTally,
   evaluateCeremonyTier,
   evaluateClaimPreconditions,
@@ -193,7 +195,6 @@ import {
   type QueueRemovalMutationResult,
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
-  dispatchLogByteLength,
   queueRemovalForCloseout,
   rankBlockerQuestions,
   readActiveLeases,
@@ -203,7 +204,6 @@ import {
   readDispatchAttempts,
   readDispatchLastMessage,
   readDispatchLog,
-  type DispatchTranscriptRead,
   readOperatorDelivering,
   readOperatorStatus,
   readOutboxEffects,
@@ -321,7 +321,6 @@ import {
   type DaemonClockPort,
   type DeliveryRequest,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
-  DISPATCH_LOG_MAX_HUMAN_LINES,
   DISPATCH_MAX_MACHINE_BYTES,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
@@ -7300,6 +7299,11 @@ export const createDispatchOperatorRuntime = (
       ? {}
       : {
           log: {
+            // The machine `data` is bounded by BYTES only (GH-354 AC-F2-5,
+            // NFR-3, DM-6): the requested tail selects the lines and the
+            // declared machine bound trims them. The human 200-line and
+            // 32 768-byte bounds are the human renderer's, so a machine answer
+            // never reports a line bound it did not apply.
             read: async (input: { readonly ref: string; readonly tail: number }) => ({
               ok: true as const,
               data: readDispatchLog({
@@ -7307,7 +7311,6 @@ export const createDispatchOperatorRuntime = (
                 ref: input.ref,
                 tail: input.tail,
                 fs: composition.artifactFs as DispatchLogFileSystem,
-                maxLines: DISPATCH_LOG_MAX_HUMAN_LINES,
                 maxBytes: DISPATCH_MAX_MACHINE_BYTES,
                 measureBytes: (candidate: readonly string[]) =>
                   dispatchLogByteLength(
