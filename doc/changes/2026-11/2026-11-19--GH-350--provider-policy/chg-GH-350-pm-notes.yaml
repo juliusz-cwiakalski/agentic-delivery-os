@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-19T21:48:56.218Z }
   review_fix: { started: null, completed: 2026-11-20T02:14:33.023Z }
   quality_gates: { started: null, completed: 2026-11-20T02:14:41.459Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-20T02:15:43.852Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "ADR-0013 — Peak windows admit `UTC` (default, alias of Etc/UTC) plus IANA
