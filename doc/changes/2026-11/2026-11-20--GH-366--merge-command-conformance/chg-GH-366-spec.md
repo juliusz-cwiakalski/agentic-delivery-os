@@ -145,10 +145,11 @@ maps the provider failure vocabulary it knows, but the port itself admits any
 token, and one delivered convergence cell exercises exactly that with an
 arbitrary code. Removing the abort wrapper without closing the port's failure set
 would therefore let an arbitrary token become an emitted identity that resolves
-to no declared row. No
-refusal rendering names the command, the invocation's change ref, or a validated
-operation token, and no read operation appears as a field at all: the human and
-scripted summaries are
+to no declared row.
+
+No refusal rendering names the command, the invocation's change ref, or a
+validated operation token, and no read operation appears as a field at all: the
+human and scripted summaries are
 `result=refused; condition=<code>` plus evidence lines, and the code's own
 `merge.` prefix is the only occurrence of the command name — which is exactly why
 an assertion on that occurrence would be vacuous.
@@ -252,12 +253,13 @@ which contract to repair.
   credential reference and the environment variable; a read fault names the
   operation that failed.
 - **G-4**: No credential condition is reported as `merge.transaction-aborted`,
-  no landing fault is reported as that row either (a refused landing reports the
-  provider identity the composition computes, and a landing that fired without
-  observed merged truth reports its own declared row), no declared row claims
-  `retryable: true` while a cause it reaches needs an operator act before a re-run
-  can converge, and no remediation hint instructs an operator to clear a condition
-  that is not named.
+  no landing fault is reported as that row either — every landing-port failure
+  resolves to one of the four declared identities (`config.credential.missing`,
+  `provider.auth.rejected`, `provider.outage` including the unclassified case, or
+  `merge.landing-unverified`) and never to the port's own token — no declared row
+  claims `retryable: true` while a cause it reaches needs an operator act before a
+  re-run can converge, and no remediation hint instructs an operator to clear a
+  condition that is not named.
 - **G-5**: Every code the merge transaction can emit resolves to a declared row
   or the declared family, and the composition declares that family at runtime
   rather than only in a type, so its exhaustiveness is proven over the runtime
@@ -1448,7 +1450,7 @@ more than two.
 | `merge.gate.<id>.failed` (failing/canceled/skipped) | gate id, job(s), reason, attribution; `operation=-` | yes — repair CI or declare the surface opt-out |
 | `merge.gate.<id>.failed` (pending) | gate id, pending job(s), reason; `operation=-` | no — the check converges |
 | `merge.gate.<id>.failed` (missing job) | gate id, missing job(s); `operation=-` | yes — run or declare the job |
-| `merge.gate.<id>.failed` (page not head) | gate id, both SHAs; `operation=github-check-runs` | no |
+| `merge.gate.<id>.failed` (page not head) | gate id, both SHAs; `operation=-` | no |
 | `merge.gates-stale` | age/bound, both SHAs, or set delta; `operation=-` | yes — re-verify the resolved head |
 | `merge.state-unverified` | the unreadable state reason; `operation=delivery-registry` | yes — produce a verification |
 | `config.credential.missing` | reference, environment variable, and the operation that required it (`github-delivery-request-list` for the list read, `github-check-runs` for a check read, `github-merge-delivery-request` for a landing) | yes — supply the credential |

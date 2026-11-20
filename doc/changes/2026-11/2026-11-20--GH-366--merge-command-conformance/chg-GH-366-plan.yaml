@@ -13,7 +13,7 @@
 #             the `ambiguous-merged-request` reason, no ranking on the merge path,
 #             and every landing fault always a declared identity; F-1..F-5,
 #             API-1..API-3, EVT-1..EVT-2, DM-1..DM-3, NFR-1..NFR-10,
-#             DEC-1..DEC-12, RSK-1..RSK-10, §4.2 the seven non-goals, §5.1
+#             DEC-1..DEC-14, RSK-1..RSK-13, §4.2 the seven non-goals, §5.1
 #             capability details, §6 the five flows, §7.1 in scope, §17 the 25
 #             ACs and §17.7 the change's Definition of Done, §18 the delivery
 #             order, §19 the no-migration statement, Appendix A the normative
@@ -172,18 +172,18 @@
 # golden and re-runs the suite as a regression. Phase 5 changes the totality
 # proof's input, not a rendered byte, and moves none either.
 #
-# TEST-PLAN NOTE (declared, not hidden). TC-MRG-046's §5.2 precondition names
-# "phase 6's declared per-file movement" and its outcome says `EXPECTED` moves
-# 13 -> 19 "in the same commit as the rendering change": that phrasing describes
-# a single-phase movement. This plan supersedes that DETAIL ONLY. The case's
-# substance is unchanged and remains assertable — the three parsed fields, the
-# five refusal pairs moving, all thirteen committed files moving, six files
-# added, `EXPECTED` 13 -> 19, the comparison count 11 -> 17, and the mutation
-# control — while the movement is split across phases 2, 3 and 6 exactly as the
-# table above declares, because a phase that changes a rendered byte must
-# regenerate it in that phase or leave its own boundary red. The test plan's
-# wording is owed an update at the next test-plan revision; no acceptance
-# criterion, case id or coverage mapping changes.
+# TEST-PLAN NOTE (declared, not hidden; DISCHARGED by test plan v1.3). An earlier
+# test-plan revision phrased TC-MRG-046's movement as a single phase ("`EXPECTED`
+# moves 13 -> 19 in the same commit as the rendering change"). The case's substance was
+# never in doubt — the three parsed fields, the five refusal pairs moving, all
+# thirteen committed files moving, six files added, `EXPECTED` 13 -> 19, the
+# comparison count 11 -> 17, and the mutation control — and the plan splits the
+# movement across phases 2, 3 and 6 exactly as the table above declares, because a
+# phase that changes a rendered byte must regenerate it in that phase or leave its
+# own boundary red. Test plan v1.3 states that per-phase split on the case's
+# `Plan Phase(s)` line and in its §5.2 text, so the note records the resolution
+# rather than an owed edit; no acceptance criterion, case id or coverage mapping
+# changed.
 #
 # TEST-PLAN NOTE 2 (DoR iteration-3 alignment; declared, not hidden). The
 # iteration-3 revision of the test plan moves NO case between phases: the
@@ -270,7 +270,7 @@ tier:
   phases: [1, 2, 3, 4, 5, 6, 7]
   escalationTriggers:
     - "An error identity, an exit digit, a row category/consequence/projection, or an identity total moves without the machine table, the documented table, every identity pin site, every pinned-count page and the phrase-table rotation moving in the same commit (NFR-8, TC-MRG-038)"
-    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection; `merge.transaction-aborted` reaches any cause other than its two pre-mutation causes (a waiver-append failure and a declared landing gap), advertises `true`, or promises convergence; a refused landing is reported as `merge.transaction-aborted` instead of `provider.outage` (transient or transport fault), `provider.auth.rejected` (rejected credential) or `merge.landing-unverified` (landing fired, merged truth not observed); or a landing-port failure reaches an envelope as a raw port code (for example `protection-rule` or `head-mismatch`) because the landing-fault mapping lacks its declared `provider.outage` default (AC-F3-3, AC-F3-5, AC-F3-6, TC-MRG-023, TC-MRG-025, TC-MRG-026, TC-MRG-047)"
+    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection; `merge.transaction-aborted` reaches any cause other than its two pre-mutation causes (a waiver-append failure and a declared landing gap), advertises `true`, or promises convergence; a refused landing is reported as `merge.transaction-aborted` instead of one of the four closed declared identities — `config.credential.missing` (no credential to attempt), `provider.auth.rejected` (rejected credential), `provider.outage` (transient, transport or unclassified fault), `merge.landing-unverified` (landing fired, merged truth not observed); or a landing-port failure reaches an envelope as a raw port code (for example `protection-rule` or `head-mismatch`) because the landing-fault mapping lacks its declared `provider.outage` default (AC-F3-3, AC-F3-5, AC-F3-6, TC-MRG-023, TC-MRG-025, TC-MRG-026, TC-MRG-047)"
     - "A refusal renders an `operation` token outside the closed vocabulary, or the field is satisfied by an operation name occurring anywhere in the summary instead of by the dedicated `operation=<token>` field — the same rule that governs the dedicated `command=merge` and `ref=<ref>` fields (AC-F3-1, API-3, NFR-5, TC-MRG-023, TC-MRG-024)"
     - "The merge path reads the invocation checkout's branch, reads the invocation checkout's head, reads a change record from the working tree, resolves the branch from a second source, keeps a fallback for an absent declaration, or fetches/pulls to make a head object readable (G-1, NFR-6, NG-7, AC-F1-3, TC-MRG-037)"
     - "The resolution path performs more than two provider reads, performs the closed merged-request list read more than once, performs it without the declared convention filter, performs it while a convention-matching open request already is the delivery request, or paginates/retries/fetches it; or performs more than three bounded local record reads, or a record read issues more than two fixed-argv git invocations or reads more than 262 144 bytes (NFR-2, NFR-10, TC-MRG-034, TC-MRG-040, TC-MRG-049)"
@@ -381,14 +381,15 @@ phases:
   #      The cause set is narrowed by ROUTING THE REFUSED LANDING, not by
   #      re-pinning the value. The transaction's landing-refusal site applies ONE
   #      closed, TOTAL mapping over the landing port's fault and stops wrapping
-  #      the fault in the abort row: `provider.auth.rejected` for a rejected
+  #      the fault in the abort row: `config.credential.missing` when there is no
+  #      credential to attempt the landing, `provider.auth.rejected` for a rejected
   #      credential, `merge.landing-unverified` when the landing fired without
   #      observed merged truth, and `provider.outage` as the declared DEFAULT for
-  #      every other transient or transport fault (AC-F3-3). The default arm is
-  #      load-bearing: the delivered port's `code` is an open string, so without
-  #      it a raw port code could reach an envelope, and `protection-rule` — the
-  #      code the delivered convergence cell drives — would resolve to no declared
-  #      row (NFR-7). `mergeReadCodeOf`'s
+  #      every other transient, transport or unclassified fault (AC-F3-3). The
+  #      default arm is load-bearing: the delivered port's `code` is an open
+  #      string, so without it a raw port code could reach an envelope, and
+  #      `protection-rule` — the code the delivered convergence cell drives — would
+  #      resolve to no declared row (NFR-7, RSK-13). `mergeReadCodeOf`'s
   #      `provider.not-found -> merge.transaction-aborted` branch is removed at
   #      the landing site, where the production seam cannot produce it. This is a
   #      declared mapping, not a pass-through. The delivered cells that assert the
