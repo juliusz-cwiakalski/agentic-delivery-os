@@ -24,6 +24,21 @@ export const firstMessageReason = (
 ): DispatchMessageReason | undefined =>
   DISPATCH_MESSAGE_LADDER.find((reason) => reasons.includes(reason));
 
+/**
+ * Replace every registered credential VALUE with `[redacted]`.
+ *
+ * This applies the delivered serialization chokepoint's replace semantics to
+ * session text, over the SAME registered set the chokepoint receives, so the
+ * policy has one source (the set) and the observable behaviour is identical. It
+ * runs BEFORE the bound, which is the whole point: a credential straddling the
+ * 512-character cut is removed before the cut is applied.
+ */
+export const replaceRegisteredCredentials = (text: string, secrets: readonly string[]): string =>
+  secrets.reduce(
+    (value, secret) => (secret.length === 0 ? value : value.split(secret).join("[redacted]")),
+    text,
+  );
+
 /** Flatten stored text to ONE line: every line break and tab becomes a space. */
 export const flattenMessageText = (text: string): string =>
   text
@@ -39,11 +54,12 @@ export const flattenMessageText = (text: string): string =>
  */
 export const composeDispatchMessage = (input: {
   readonly text: string;
-  readonly redact: (text: string) => string;
+  /** The registered credential VALUES the answer is redacted with. */
+  readonly secrets: readonly string[];
   readonly bound?: number;
 }): { readonly message: string; readonly truncated: boolean } => {
   const bound = input.bound ?? DISPATCH_MAX_LAST_MESSAGE_CHARS;
-  const redacted = input.redact(input.text);
+  const redacted = replaceRegisteredCredentials(input.text, input.secrets);
   const flattened = flattenMessageText(redacted);
   const truncated = flattened.length > bound;
   return { message: truncated ? flattened.slice(0, bound) : flattened, truncated };

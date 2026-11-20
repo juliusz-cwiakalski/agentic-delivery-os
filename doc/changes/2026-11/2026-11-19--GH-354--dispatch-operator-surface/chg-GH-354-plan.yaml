@@ -1852,6 +1852,17 @@ phases:
     scope:
       files:
         - .changeset/gh-354-dispatch-operator-surface-minor.md
+        # CONDITIONAL DELIVERED-EXPECTATION (§25.1, DOD-2): the additivity pin
+        # hardcodes the changesets added since its baseline; this change's own
+        # changeset is appended to that declared list, never the baseline.
+        - tests/structure/changeset-additivity.test.ts
+        # ENVIRONMENT-ROBUSTNESS FIX (PM-decided, disclosed in pm-notes): the
+        # doc-distribution guard derives its "actual" install set by running the
+        # real installer with the inherited HOME, so a developer machine with a
+        # lifecycle-installed product refuses the run and the aggregate cannot be
+        # green. The guard's sandbox install is made HOME-hermetic (its own scratch
+        # home); no marker, install-set, or assertion semantics change.
+        - scripts/.tests/test-doc-distribution.sh
         # STAGING ONLY (lifecycle phase 7 reconciles them; this plan authors no
         # current-truth prose). Declared so a reconciliation touch stages here.
         - doc/spec/features/feature-dispatch-engine.md

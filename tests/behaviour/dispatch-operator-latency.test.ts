@@ -103,7 +103,7 @@ describe("TC-NFR-003 the query latency budget", () => {
     const message = measure(() => {
       composeDispatchMessage({
         text: "the final message of the session ".repeat(40),
-        redact: (text) => text,
+        secrets: [],
       });
     });
 

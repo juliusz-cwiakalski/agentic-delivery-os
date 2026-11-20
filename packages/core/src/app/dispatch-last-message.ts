@@ -53,8 +53,8 @@ export const readDispatchLastMessage = async (input: {
   readonly transcript: DispatchTranscriptRead;
   /** The adapter's declared `session-introspection` support, injected as data. */
   readonly supportsIntrospection: (kind: HarnessKind) => boolean;
-  /** The delivered redaction chokepoint (registered credential values only). */
-  readonly redact: (text: string) => string;
+  /** The registered credential VALUES the answer is redacted with. */
+  readonly secrets: readonly string[];
 }): Promise<DispatchLastMessageRead> => {
   const lanes = readDispatchLanes(input.store);
   if (!lanes.ok) return { ok: false, code: lanes.code, path: lanes.path };
@@ -73,7 +73,7 @@ export const readDispatchLastMessage = async (input: {
   });
   if (!read.ok) return { ok: true, data: absent(input.ref, read.reason, final) };
 
-  const composed = composeDispatchMessage({ text: read.message, redact: input.redact });
+  const composed = composeDispatchMessage({ text: read.message, secrets: input.secrets });
   return {
     ok: true,
     data: {

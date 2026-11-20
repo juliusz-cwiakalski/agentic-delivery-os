@@ -1,7 +1,7 @@
 /**
  * TC-SYNC-011 — the release additivity pin. The delivered `.changeset/*.md` set
- * equals the phase-1 baseline plus exactly the three declared added files — the
- * GH-349 delivery's own changeset plus the two upstream deliveries that landed on
+ * equals the phase-1 baseline plus exactly the declared added files — each later
+ * delivery's own changeset plus the two upstream deliveries that landed on
  * the integration base after the pin was captured (PR #363, PR #364); each of them
  * declares exactly the five fixed-group packages at `minor` with
  * `@delivery-os/testkit` absent, no sixth package and a non-empty body; all 64
@@ -30,11 +30,12 @@ const CHANGESET_DIR = ".changeset";
 /**
  * The declared additions over the pre-GH-349 baseline, sorted: the two upstream
  * deliveries that landed on the integration base after capture (PR #363's install
- * lifecycle, PR #364's dispatch core parity) and GH-349's own changeset.
+ * lifecycle, PR #364's dispatch core parity), GH-349's own changeset, and GH-354's.
  */
 const ADDED_CHANGESETS = [
   "gh-347-dispatch-core-parity-minor.md",
   "gh-349-merge-closeout-queue-repair-minor.md",
+  "gh-354-dispatch-operator-surface-minor.md",
   "install-lifecycle-minor.md",
 ] as const;
 const PINNED_CHANGESET_COUNT = 64;
@@ -284,7 +285,7 @@ describe("TC-SYNC-011 the phase-1 changeset baseline pin", () => {
     }
   });
 
-  test("the delivered changeset directory is the baseline plus exactly the three declared additions", () => {
+  test("the delivered changeset directory is the baseline plus exactly the declared additions", () => {
     const added = addedFrom(readTree());
     expect(added).toEqual([...ADDED_CHANGESETS].sort());
   });

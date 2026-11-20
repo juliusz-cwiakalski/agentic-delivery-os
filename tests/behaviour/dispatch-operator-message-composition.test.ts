@@ -39,7 +39,7 @@ describe("TC-MSG the message composition order", () => {
       // The expectation, computed from the delivered chokepoint.
       const expected = composeDispatchMessage({
         text: straddling,
-        redact: (text) => redact(text, [CREDENTIAL]),
+        secrets: [CREDENTIAL],
       });
 
       const result = await registered.run(["dispatch", "last-message", OPERATOR_REF, "--json"]);

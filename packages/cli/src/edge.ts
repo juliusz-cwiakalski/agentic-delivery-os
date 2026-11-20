@@ -590,7 +590,6 @@ import type {
   CommandFlags,
   CommandProgram,
 } from "./index.js";
-import { redact } from "./output/serialize.js";
 
 const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
 
@@ -7353,7 +7352,7 @@ export const createDispatchOperatorRuntime = (
                 supportsIntrospection: composition.supportsIntrospection as (
                   kind: HarnessKind,
                 ) => boolean,
-                redact: (text: string) => redact(text, input.secrets),
+                secrets: input.secrets,
               });
               if (!read.ok) {
                 return {

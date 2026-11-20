@@ -264,6 +264,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DISPATCH_MESSAGE_LADDER",
     "firstMessageReason",
     "flattenMessageText",
+    "replaceRegisteredCredentials",
   ],
   "adapters/src/harness/opencode-transcript.ts": [
     "createOpencodeTranscriptReader",

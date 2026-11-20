@@ -817,53 +817,61 @@ const UNBOUND_SCOPE_WARNING =
   "outside any git work tree: delivery state is not repository-scoped (unbound scope)";
 
 /**
- * The process start instant in epoch milliseconds, read from the host's process
- * table (Linux `/proc`). `undefined` means the table could not be read, which
- * the probe reports as `unknown` rather than guessing.
+ * One host process-table row: its state and its start instant in epoch
+ * milliseconds, read from `/proc` through the filesystem only (no process
+ * handle is touched).
  */
-const processStartMs = (processId: number): number | undefined => {
+type ProcStat = { readonly state: string; readonly startedMs: number };
+
+const readProcStat = (processId: number): ProcStat | "missing" | "unreadable" => {
+  if (!Number.isFinite(processId) || processId <= 0) return "missing";
+  let text: string;
   try {
-    const stat = readFileSync(`/proc/${processId}/stat`, "utf8");
-    // Field 2 (`comm`) may contain spaces and is parenthesised; fields follow.
-    const closing = stat.lastIndexOf(")");
-    if (closing < 0) return undefined;
-    const fields = stat
-      .slice(closing + 2)
-      .trim()
-      .split(/\s+/u);
-    // After `comm`, fields[0] is field 3 (state); starttime is field 22.
-    const startTicks = Number(fields[19]);
-    if (!Number.isFinite(startTicks)) return undefined;
+    text = readFileSync(`/proc/${processId}/stat`, "utf8");
+  } catch (error) {
+    const code = (error as { readonly code?: unknown }).code;
+    return code === "ENOENT" ? "missing" : "unreadable";
+  }
+  // Field 2 (`comm`) may contain spaces and is parenthesised; fields follow.
+  const closing = text.lastIndexOf(")");
+  if (closing < 0) return "unreadable";
+  const fields = text
+    .slice(closing + 2)
+    .trim()
+    .split(/\s+/u);
+  const state = fields[0];
+  const startTicks = Number(fields[19]);
+  if (state === undefined || !Number.isFinite(startTicks)) return "unreadable";
+  try {
     const bootLine = readFileSync("/proc/stat", "utf8")
       .split("\n")
       .find((line) => line.startsWith("btime "));
     const bootSeconds = Number(bootLine?.slice("btime ".length));
-    if (!Number.isFinite(bootSeconds)) return undefined;
+    if (!Number.isFinite(bootSeconds)) return "unreadable";
     // `starttime` is in USER_HZ (100 on Linux): ticks / 100 s, then ms.
-    return bootSeconds * 1000 + startTicks * 10;
+    return { state, startedMs: bootSeconds * 1000 + startTicks * 10 };
   } catch {
-    return undefined;
+    return "unreadable";
   }
 };
 
 /**
- * The production owner probe (GH-354 API-10): alive-or-not from the process
- * table plus the recorded start instant within the declared tolerance, so a
- * reused process id is never reported live. An unreadable table is `unknown`,
- * which never asserts staleness.
+ * The production owner probe (GH-354 API-10): the recorded process must exist,
+ * must not be a zombie, and its observed start instant must be within the
+ * declared tolerance of the recorded instant, so a reused process id is never
+ * reported live. An unreadable table is `unknown`, which never asserts staleness.
+ *
+ * The read goes through the process TABLE (a filesystem read), never through a
+ * process handle: the inspection surface must not signal or probe a live process.
  */
 const productionOwnerProbe: DispatchOwnerProbe = (owner) => {
-  try {
-    process.kill(owner.processId, 0);
-  } catch (error) {
-    const code = (error as { readonly code?: unknown }).code;
-    return code === "EPERM" ? "unknown" : "dead";
-  }
-  const observed = processStartMs(owner.processId);
-  if (observed === undefined) return "unknown";
+  const observed = readProcStat(owner.processId);
+  if (observed === "missing") return "dead";
+  if (observed === "unreadable") return "unknown";
+  if (observed.state === "Z") return "dead";
   const recorded = Date.parse(owner.startedAt);
   if (!Number.isFinite(recorded)) return "unknown";
-  return Math.abs(observed - recorded) <= DISPATCH_PROBE_TOLERANCE_MS ? "live" : "dead";
+  return Math.abs(observed.startedMs - recorded) <= DISPATCH_PROBE_TOLERANCE_MS ? "live" : "dead";
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

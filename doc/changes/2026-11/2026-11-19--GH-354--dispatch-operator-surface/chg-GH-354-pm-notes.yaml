@@ -16,8 +16,20 @@ phases:
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "Scope is the ticket body plus the committed M4 backlog row M4-S12 and the
-      flip-plan F1 split rationale: the four per-ref operator queries (`status`,
+  - text: "PM-decided (phase-8 scope, disclosed at PR review): two non-product
+      fixes land with the release phase because the aggregate gate cannot be green
+      otherwise. (a) The changeset additivity pin hardcodes the changesets added
+      since its capture; this change's own changeset is appended to that declared
+      list — a delivered expectation that every later delivery updates, never the
+      baseline. (b) The doc-distribution guard derives its 'actual' install set by
+      running the real installer with the inherited HOME, so on a machine with a
+      lifecycle-installed product it refuses to overwrite that binary and the
+      aggregate fails; the sandbox install is made HOME-hermetic with its own
+      scratch home. Neither changes product behaviour, a marker, or an assertion's
+      meaning; both are named in the PR body."
+    date: "2026-11-20"
+  - text: "Scope is the ticket body plus the committed M4 backlog row M4-S12 and
+      the flip-plan F1 split rationale: the four per-ref operator queries (`status`,
       `log`, `is-delivering`, `last-message`), bounded per-ref log persistence,
       and one command family with `--json`. GH-347's F1a core parity (durable
       lane, resume, admission, derivation) is the data source and is out of

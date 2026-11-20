@@ -514,7 +514,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   entry(
     ["dispatch"],
-    "Run one typed dispatch, read dual-run evidence, inspect a per-ref lane, or move authority",
+    "Run one typed dispatch, read dual-run evidence, or move authority",
     [
       "<binary> dispatch <ref> [--harness <name>] [--resume-prompt <text>]",
       "<binary> dispatch attempts [--ref <ref>] [--limit <n>]",
