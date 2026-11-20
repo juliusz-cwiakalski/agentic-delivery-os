@@ -1128,9 +1128,9 @@ No HTTP surface is added. The changed contract surfaces are command-level:
 | Merge probe / required-check mapping | Reused unchanged as the single evaluator; the required-check set it is fed is extended |
 | Change-record read (pm-notes) | Reused — the delivered parse applied to text read from the candidate head; no parser change |
 | CI-workflow expected-job read | Reused — one additional consumer |
-| Error table (machine and documented) | Updated — three additive `merge` rows, the narrowed abort row's `retryable` and remediation with its two-cause set (the refused-landing cause removed to `provider.outage` / `provider.auth.rejected` / `merge.landing-unverified`), remediation and summary adjustments, totals **170 → 173** (delivered 169 → 172, two-segment allowlist 68 → 71, arithmetic `BASELINE_ROWS.length + 136` → `+ 139`, `merge` kind 9 → 12) |
-| Merge reference page | Updated — branch and head resolution, the declaration's cap and closed reasons, gate set, the convergence case, exit-status causes, refusal examples with the three new fields and the closed `operation` vocabulary |
-| Merge feature spec | Updated — Overview resolution paragraph, gate registry defaults, verification-record head meaning, merged-report gate semantics, error identities, invariants |
+| Error table (machine and documented) | Updated — three additive `merge` rows, the narrowed abort row's `retryable` and remediation with its two-cause set (the refused-landing cause removed to the four landing identities `config.credential.missing` / `provider.auth.rejected` / `provider.outage` / `merge.landing-unverified`), remediation and summary adjustments, totals **170 → 173** (delivered 169 → 172, two-segment allowlist 68 → 71, arithmetic `BASELINE_ROWS.length + 136` → `+ 139`, `merge` kind 9 → 12) |
+| Merge reference page | Updated — branch and head resolution, the declaration's cap and closed reasons, gate set, the convergence case with its single closed-request read and four request reasons, exit-status causes, refusal examples with the three new fields, the closed `operation` vocabulary and its rejection rule, and the four landing-fault identities |
+| Merge feature spec | Updated — Overview resolution paragraph, the open-list/closed-list read posture and the convergence attempt, gate registry defaults, verification-record head meaning, merged-report gate semantics, error identities (including the fourth request reason and the closed landing identities), invariants |
 | Merge test specification | Updated — "Composition reachability", "Required-check awareness", "Classification fidelity", "Emittable-code totality", "Error-identity stability" rows |
 | Change-lifecycle and change-convention guidance for change records | Updated — the `branch` declaration requirement, its 256-character cap, its closed refusal reasons, its read-at-head semantics, and the declaration-free convergence case |
 | PM instruction surface (`.ai/agent/pm-instructions.md`, the `@pm` prompt and its generated `.ados-claude` mirror) | Updated — the change record declares `branch` when the change is opened, with the cap and the refusal vocabulary named; the prompt edit is regenerated, not hand-edited |
@@ -1226,9 +1226,10 @@ This change is done when every row below holds, with the evidence named in it.
   arithmetic `+136` → `+139`, `merge` kind 9 → 12).
 - Delivery order: refusal identities and the diagnostics contract first (they are
   the vocabulary the other capabilities report in), then the branch/head
-  resolution, then the required-check enforcement, then the report and dry-run
-  agreement; every phase leaves the delivered behaviour consistent with its
-  declarations.
+  resolution together with the convergence attempt and its fourth request reason
+  (they share the one resolution path and the same convention filter), then the
+  required-check enforcement, then the report and dry-run agreement; every phase
+  leaves the delivered behaviour consistent with its declarations.
 - No feature flag and no staged default: the shipped default gate set is the
   contract, and a repository that must keep a `battery`-surface CI gate declares
   it.
