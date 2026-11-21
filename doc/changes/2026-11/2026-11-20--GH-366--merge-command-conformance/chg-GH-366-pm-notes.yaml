@@ -53,7 +53,15 @@ decisions:
       stays open — merge authority is the CEO (Mode A) or the human (Mode B).
       This change type is `fix`."
     date: "2026-11-20"
-open_questions: []
+open_questions:
+  - text: "Owner decision (DoR iteration 4, blocking): what may the shared
+      merged-request read expose — (A) authorise the minimal additive extension so
+      the merge path observes 0/1/many match identities on every outcome with a
+      read fault distinguishable from zero (and count the read's own review-thread
+      query in the budget), closeout behaviour unchanged; or (B) keep the
+      count-only signal and relax AC-F1-6/AC-F3-6/F-3/Flow 6/Appendix B to a count
+      plus the selected identity. Posted on GH-366; awaiting the owner."
+    date: "2026-11-21"
 blockers: []
 notes:
   - text: "DoR iteration 4: NOT_READY — Pause Required: yes. Iteration 3's three
