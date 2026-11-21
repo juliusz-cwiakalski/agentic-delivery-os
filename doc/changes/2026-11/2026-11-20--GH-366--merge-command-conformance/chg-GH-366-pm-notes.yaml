@@ -56,6 +56,36 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR iteration 4: NOT_READY — Pause Required: yes. Iteration 3's three
+      blockers are CLOSED (verified against the emission sites); findings 4-9 are
+      closed with one nit carried. Four NEW blocking findings arise from the
+      CEO-D-111 mechanism itself: (1) a count cannot name the duplicate
+      identities the ruling requires the abort to name — `findMergedDeliveryRequest`
+      returns one selected request, so the abort can only name that selection;
+      (2) `mergedMatches = 0` has no carrier — the read answers
+      `observation: unavailable` for both no-match and read-failure, and that arm
+      carries no signals, so the zero half of AC-F1-4/AC-F1-6 is unproducible and
+      an outage would surface as `no-open-request`; (3) the 'verbatim' read is two
+      requests — after selecting it issues a GraphQL review-threads query, so a
+      match-bearing convergence costs three transport requests against the
+      declared two; (4) TC-MRG-043's oracle is impossible (a dry run reporting
+      `result=merged`/`replayed=true`, and post-landing steps on a replay).
+      Record: `readiness-review/readiness-iter-4.md`. Escalated to the owner;
+      delivery is NOT started."
+    type: blocker
+    date: "2026-11-21"
+  - text: "Escalation question for the owner (DoR iteration 4): what may the shared
+      merged-request read expose? (A) Authorize the minimal additive extension so
+      the merge path observes 0/1/many match IDENTITIES — carried on every outcome,
+      with a read fault distinguishable from zero — and count the read's own bounded
+      review-thread query in the budget, closeout's behaviour and output unchanged;
+      or (B) keep the count-only signal and relax AC-F1-6/AC-F3-6/F-3/Flow 6/
+      Appendix B to 'a count plus the selected identity', which still needs the
+      zero-path carrier. The PM does not choose: option A changes the shared read's
+      contract beyond CEO-D-111's 'no change to closeout', and option B weakens an
+      owner-stated acceptance clause."
+    type: question
+    date: "2026-11-21"
   - text: "Owner ruling CEO-D-111 (GH-366, posted on the ticket; resumed
       2026-11-21): option (a) — declare the delivered read. Primary read is the
       bounded open-list read (`TRUTH_PROVIDER_LIMIT`, `includeGateFacts: true`)
