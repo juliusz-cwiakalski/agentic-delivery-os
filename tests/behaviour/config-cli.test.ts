@@ -570,3 +570,43 @@ describe("TC-HDA-022 config get harness.environment --show-origin", () => {
     );
   });
 });
+
+describe("GH-365 TC-ROOT-004 the project-local overlay is read normally and ci-disabled under CI", () => {
+  test("the overlay reads at <repo>/<configDirectoryName>/config.local.yaml and is skipped under CI", async () => {
+    const contents = {
+      [FILES.committed]: "x-test:\n  requiredValue: from-file\n",
+      [FILES.local]: "x-test:\n  nested:\n    second: 9\n",
+    };
+    const normal = await run(["--debug", "--project-root", REPO], {
+      contents,
+      catalog: FIXTURE_CATALOG,
+      environment: baseEnvironment,
+    });
+    expect(normal.exitCode).toBe(0);
+    const normalPayload = JSON.parse(normal.stdout) as {
+      loadedFiles: string[];
+      skippedLayers: Array<{ layer: string; reason: string }>;
+    };
+    expect(normalPayload.loadedFiles).toContain(FILES.local);
+    expect(normalPayload.skippedLayers).not.toContainEqual({
+      layer: "project-local",
+      reason: "ci-disabled",
+    });
+
+    const ci = await run(["--debug", "--project-root", REPO], {
+      contents,
+      catalog: FIXTURE_CATALOG,
+      environment: { ...baseEnvironment, CI: "true" },
+    });
+    expect(ci.exitCode).toBe(0);
+    const ciPayload = JSON.parse(ci.stdout) as {
+      loadedFiles: string[];
+      skippedLayers: Array<{ layer: string; reason: string }>;
+    };
+    expect(ciPayload.loadedFiles).not.toContain(FILES.local);
+    expect(ciPayload.skippedLayers).toContainEqual({
+      layer: "project-local",
+      reason: "ci-disabled",
+    });
+  });
+});

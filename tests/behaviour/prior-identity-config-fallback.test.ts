@@ -21,6 +21,7 @@ import {
   scratchCheckout,
   scratchHome,
 } from "../fixtures/entrypoint/prior-identity/harness";
+import { goldenNotice } from "../fixtures/namespace/golden/notices";
 
 const PRIOR_DIR = ".delivery-os";
 const CURRENT_DIR = ".jaiship";
@@ -116,6 +117,8 @@ const withTrees = async <T>(
 describe("TC-BIN-020 status --json reads the prior file as project-committed", () => {
   test("prior-read: the delivered acquisition reads the prior file and notices once", async () => {
     await withTrees(async ({ checkout, home }) => {
+      const priorRoot = join(checkout.root, PRIOR_DIR);
+      const before = snapshot(priorRoot);
       const run = await runThroughComposition({
         bin: "jaiship",
         argv: ["status", "--json"],
@@ -125,12 +128,13 @@ describe("TC-BIN-020 status --json reads the prior file as project-committed", (
       expect(run.exitCode).toBe(0);
       const payload = JSON.parse(run.stdout) as { readonly data?: unknown };
       expect(payload.data).toBeDefined();
+      expect(snapshot(priorRoot)).toEqual(before);
       const priorFile = join(checkout.root, PRIOR_DIR, "config.yaml");
       expect(run.fs.readCalls).toContain(priorFile);
+      const currentFile = join(checkout.root, CURRENT_DIR, "config.yaml");
       const notices = run.notices.filter((line) => line.includes("config-read"));
       expect(notices).toHaveLength(1);
-      expect(notices[0]).toContain(priorFile);
-      expect(notices[0]).toContain(join(checkout.root, CURRENT_DIR, "config.yaml"));
+      expect(notices[0]?.trimEnd()).toBe(goldenNotice("config-read", priorFile, currentFile));
       expect(run.stdout).not.toContain("prior-identity-fallback");
     }, SHAPES.configOnly);
   });
@@ -233,7 +237,13 @@ describe("TC-BIN-021 the current file wins and the prior file is reported not us
       expect(run.exitCode).toBe(0);
       const skipped = run.notices.filter((line) => line.includes("config-skipped"));
       expect(skipped).toHaveLength(1);
-      expect(skipped[0]).toContain(join(checkout.root, PRIOR_DIR, "config.yaml"));
+      expect(skipped[0]?.trimEnd()).toBe(
+        goldenNotice(
+          "config-skipped",
+          join(checkout.root, PRIOR_DIR, "config.yaml"),
+          join(checkout.root, CURRENT_DIR, "config.yaml"),
+        ),
+      );
       expect(run.notices.some((line) => line.includes("config-read"))).toBe(false);
     }, files);
   });

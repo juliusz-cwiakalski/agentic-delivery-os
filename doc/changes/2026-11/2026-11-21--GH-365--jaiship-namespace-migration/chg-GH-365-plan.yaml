@@ -1761,6 +1761,13 @@ phases:
         # pins; `--migrate` is still present (retired in P6).
         - tests/structure/install-conformance.test.ts
         - tests/fixtures/namespace/evidence.ts
+        # AUTHORISED DELIVERY-TIME DISCOVERY (P5): the two migration schema ids
+        # share the error-code shape, so the sync scanner's reserved record-kind
+        # set gains them; the fixture gains the migration runtime option; the
+        # inventory allowance map gains the five modules and the new constants.
+        - scripts/checks/error-table-sync.ts
+        - tests/fixtures/install/home.ts
+        - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
     interactions:
       - kind: contract-file
@@ -1926,6 +1933,23 @@ phases:
         - doc/planning/oss-tooling/milestones/m4/install-model.md
         - doc/planning/oss-tooling/milestones/m4/backlog.md
         - doc/planning/oss-tooling/milestones/m4/schedule.md
+        # AUTHORISED DELIVERY-TIME DISCOVERY (P6): retiring one error identity
+        # moves the global identity-total floor (170/169 -> 169/168, +136 -> +135)
+        # through every declared pin site, the two error-table schema enumerations,
+        # the two count pages, the content-inventory allowance map, and the
+        # change's own changeset body.
+        - tests/structure/error-table.test.ts
+        - tests/checks/supervision-error-socialization.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/ceremony-contract.test.ts
+        - tests/behaviour/ceremony-nonregression.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/events/state-additivity-baseline.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-ceremony-runner.md
+        - .changeset/gh-365-jaiship-namespace-migration-minor.md
         - tests/fixtures/namespace/evidence.ts
         - tests/structure/inventory.json
     interactions:
@@ -2055,6 +2079,11 @@ phases:
         - tests/behaviour/config-cli.test.ts
         - tests/structure/state-scope.test.ts
         - tests/fixtures/entrypoint/prior-identity/harness.ts
+        # AUTHORISED DELIVERY-TIME DISCOVERY (P7): the alias `--help` baseline
+        # must carry the P5 deprecation sentence (AC-F4-4's doc half), and the
+        # two-bins suite is the hermetic guard's executed baseline.
+        - tests/fixtures/entrypoint/alias-baseline.json
+        - tests/behaviour/entrypoint-two-bins.test.ts
         - tests/fixtures/namespace/golden/notices.ts
         - tests/fixtures/namespace/evidence.ts
         - tests/conformance/namespace/namespace-proof-boundary.test.ts

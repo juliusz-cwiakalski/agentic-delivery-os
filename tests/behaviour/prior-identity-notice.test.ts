@@ -20,6 +20,7 @@ import {
   scratchCheckout,
   scratchHome,
 } from "../fixtures/entrypoint/prior-identity/harness";
+import { goldenNotice } from "../fixtures/namespace/golden/notices";
 import { bufferSink } from "../golden/helpers";
 
 const PRIOR_ROOT = ".delivery-os-state";
@@ -71,6 +72,9 @@ describe("TC-BIN-040 exactly one notice per source kind per composed program", (
       expect(run.notices).toHaveLength(2);
       expect(run.notices.filter((line) => line.includes("config-read"))).toHaveLength(1);
       expect(run.notices.filter((line) => line.includes("state-read"))).toHaveLength(1);
+      expect(run.notices.find((line) => line.includes("state-read"))?.trimEnd()).toBe(
+        goldenNotice("state-read", join(home.root, PRIOR_ROOT), join(home.root, CURRENT_ROOT)),
+      );
       const payload = JSON.parse(run.stdout) as { readonly data?: unknown };
       expect(payload.data).toBeDefined();
       expect(run.stdout).not.toContain("prior-identity-fallback");
@@ -523,5 +527,32 @@ describe("TC-BIN-045 the notice changes no payload and no exit projection", () =
       expect(grammar.exitCode).toBe(1);
       expect(grammar.stdout).not.toContain("prior-identity-fallback");
     }, priorRootFiles);
+  });
+});
+
+describe("GH-365 TC-ROOT-002 a migrated checkout and host emit nothing", () => {
+  test("the current checkout layer and current host root are silent in both modes", async () => {
+    const checkout = scratchCheckout("migrated", {
+      [`${CURRENT_CONFIG_DIR}/config.yaml`]: laneYaml(4),
+    });
+    const home = scratchHome("migrated-home", {
+      [`${CURRENT_ROOT}/projects/seed/edge.log`]: '{"kind":"delivery.seed"}\n',
+    });
+    try {
+      for (const argv of [["status", "--json"], ["status"]]) {
+        const run = await runThroughComposition({
+          bin: "jaiship",
+          argv,
+          checkout: checkout.root,
+          home: home.root,
+        });
+        expect({ argv, exit: run.exitCode }).toEqual({ argv, exit: 0 });
+        expect({ argv, notices: run.notices }).toEqual({ argv, notices: [] });
+        expect(run.stdout).not.toContain("prior-identity-fallback");
+      }
+    } finally {
+      checkout.dispose();
+      home.dispose();
+    }
   });
 });
