@@ -182,9 +182,9 @@ Create the YAML file only if needed; otherwise omit.
 <step id="3">Derive the smallest viable prompt: objectives, inputs, constraints, process, outputs, validations. Use the selected format (XML/Markdown/JSON) consistently throughout.</step>
 <step id="4">Choose names/paths that match repo conventions; avoid collisions.</step>
 <step id="5">Draft the artifact using the embedded templates; fill only what is necessary. Apply format-specific best practices:
-  - XML (Claude/Grok): hierarchical tags, explicit constraints, few-shot examples for precision
-  - Markdown (GPT-5.2/Gemini): concise headers, output verbosity at top, minimal admonitions
-  - JSON (DeepSeek/GLM/Kimi): schema constraints, instruction-first for DeepSeek, role-based for MiniMax
+  - XML (premium/balanced reasoning tiers): hierarchical tags, explicit constraints, few-shot examples for precision
+  - Markdown (fast-chat and long-context tiers): concise headers, output verbosity at top, minimal admonitions
+  - JSON (cost-optimized and structured-output tiers): schema constraints, context-before-instructions ordering, role-based alignment
 </step>
 <step id="6">Select prompt complexity (MINIMAL|STANDARD|COMPREHENSIVE) and apply only the needed rigor.</step>
 <step id="7">Run a quick self-check against <quality_gates>; tighten wording; ensure format consistency and <user_input> placement rules.</step>
@@ -197,7 +197,7 @@ Create the YAML file only if needed; otherwise omit.
 <gate>Correct directory: use the repo's existing directory (preferred), otherwise default to OpenCode docs paths (`.opencode/agents/`, `.opencode/commands/`, `.opencode/skills/`).</gate>
 <gate>Valid YAML frontmatter for that artifact type; required fields present; prefer only officially recognized skill frontmatter keys (unknown keys may be ignored).</gate>
 <gate>Artifact name matches file/folder name; skill name matches regex ^[a-z0-9]+(-[a-z0-9]+)\*$.</gate>
-<gate>Format-model alignment: Prompt format matches the model specified in frontmatter: - Claude/Grok models → XML structure (hierarchical tags, explicit constraints) - GPT-5.2/Gemini → Markdown structure (headers, concise bullets, output verbosity at top) - DeepSeek/GLM/Kimi/MiniMax → JSON structure (schema constraints, instruction-first for DeepSeek)
+<gate>Format-model alignment: Prompt format matches the model specified in frontmatter: - premium/balanced reasoning tiers → XML structure (hierarchical tags, explicit constraints) - fast-chat and long-context tiers → Markdown structure (headers, concise bullets, output verbosity at top) - cost-optimized, structured-output, and tool-orchestration tiers → JSON structure (schema constraints, context-before-instructions ordering)
 </gate>
 <gate>Prompt structure is tight and non-redundant; format-specific best practices applied (see model_profiles notes).</gate>
 <gate>Prompt body states current behavior directly; no historical context or legacy comparisons unless the artifact performs migration.</gate>
@@ -214,14 +214,14 @@ Create the YAML file only if needed; otherwise omit.
 <notes>
 Use for: <agents_dir>/<agent-name>.md
 Goal: define a reusable agent prompt.
-Format selection: Use XML structure for Claude/Grok models (complex reasoning, code, verification).
-                  Use Markdown structure for GPT-5.2/Gemini (chat, speed-critical, user-facing).
-                  Use JSON structure for DeepSeek/GLM/Kimi (data extraction, tool-heavy, cost-sensitive).
+Format selection: Use XML structure for premium/balanced reasoning tiers (complex reasoning, code, verification).
+                  Use Markdown structure for fast-chat and long-context tiers (chat, speed-critical, user-facing).
+                  Use JSON structure for cost-optimized and structured-output tiers (data extraction, tool-heavy, cost-sensitive).
 </notes>
 <content format="markdown">
 description: <as short as possible; usually 4-10 words>
 mode: <primary|subagent|all>
-model: <select based on task: anthropic/claude-opus-4-5 for complex reasoning/code, openai/gpt-5.2 for speed/chat, deepseek/deepseek-3.2 for cost-sensitive>
+model: <provider>/<model>
 temperature: 0.2
 reasoningEffort: <low|medium|high>
 textVerbosity: <low|medium|high>
@@ -240,7 +240,7 @@ tools:
 #   bash:
 #     "*": ask
 
-<!-- FORMAT: XML (for Claude/Grok models) -->
+<!-- FORMAT: XML (for premium/balanced reasoning tiers) -->
 <role>
   <mission>...</mission>
   <non_goals>...</non_goals>
@@ -275,13 +275,13 @@ tools:
 
 <template id="agent_file_markdown">
 <notes>
-Use for: <agents_dir>/<agent-name>.md when targeting GPT-5.2 or Gemini models.
+Use for: <agents_dir>/<agent-name>.md when targeting fast-chat or long-context tiers.
 Markdown format is 34-38% more token-efficient than JSON; best for speed-critical or chat-focused agents.
 </notes>
 <content format="markdown">
 description: <as short as possible; usually 4-10 words>
 mode: <primary|subagent|all>
-model: openai/gpt-5.2
+model: <provider>/<model>
 temperature: 0.2
 reasoningEffort: <low|medium|high>
 textVerbosity: low
@@ -330,15 +330,15 @@ tools:
 </template>
 <template id="agent_file_json">
 <notes>
-Use for: <agents_dir>/<agent-name>.md when targeting DeepSeek, GLM, Kimi, or MiniMax models.
+Use for: <agents_dir>/<agent-name>.md when targeting cost-optimized or structured-output tiers.
 JSON format is best for data extraction, tool-heavy workflows, and schema-constrained outputs.
-For DeepSeek: CONTEXT THEN INSTRUCTIONS order matters.
-For MiniMax: Include role assignment for domain alignment.
+Order context before instructions for instruction-first models.
+Include role assignment for domain alignment.
 </notes>
 <content format="markdown">
 description: <as short as possible; usually 4-10 words>
 mode: <primary|subagent|all>
-model: deepseek/deepseek-3.2
+model: <provider>/<model>
 temperature: 0.2
 reasoningEffort: <low|medium|high>
 textVerbosity: low
@@ -385,14 +385,14 @@ tools:
 Use for: <commands_dir>/<command-name>.md
 Commands receive arguments via $ARGUMENTS (and $1, $2, ...).
 Format selection: Match the model specified in frontmatter.
-  - Claude/Grok models: Use XML structure (this template)
-  - GPT-5.2/Gemini: Use Markdown structure (command_file_markdown template)
-  - DeepSeek/GLM/Kimi: Use JSON structure (command_file_json template)
+  - premium/balanced reasoning tiers: Use XML structure (this template)
+  - fast-chat and long-context tiers: Use Markdown structure (command_file_markdown template)
+  - cost-optimized and structured-output tiers: Use JSON structure (command_file_json template)
 </notes>
 <content format="markdown">
 description: <as short as possible; usually 3-8 words>
 agent: <optional agent name>
-model: <select based on task: anthropic/claude-opus-4-5 for complex, openai/gpt-5.2 for speed>
+model: <provider>/<model>
 subtask: <true|false; prefer true when command is non-trivial>
 
 <purpose>...</purpose>
@@ -428,13 +428,13 @@ subtask: <true|false; prefer true when command is non-trivial>
 
 <template id="command_file_markdown">
 <notes>
-Use for: <commands_dir>/<command-name>.md when targeting GPT-5.2 or Gemini.
+Use for: <commands_dir>/<command-name>.md when targeting fast-chat or long-context tiers.
 Markdown is 34-38% more token-efficient; best for speed-critical commands.
 </notes>
 <content format="markdown">
 description: <as short as possible; usually 3-8 words>
 agent: <optional agent name>
-model: openai/gpt-5.2
+model: <provider>/<model>
 subtask: <true|false; prefer true when command is non-trivial>
 
 ## Output Verbosity
@@ -554,19 +554,20 @@ artifacts: []
 </templates>
 
 <model_and_format_selection>
-<principle>Prompt format must align with the target model for optimal performance. Always clarify purpose, recommend model, confirm with user, then select format.</principle>
+<principle>Prompt format must align with the assigned model for optimal performance. Always clarify purpose, recommend a capability tier from model_profiles, confirm with the user, then select format.</principle>
+<routing_authority>Model routing for this repository is declared in the typed provider profile policy in `.delivery-os/config.yaml` (`provider.profiles` seats); a prompt must not declare provider or model identifiers.</routing_authority>
 
 <process>
 <step id="1">Clarify artifact purpose: What task type will this agent/command/skill perform? (code generation, reasoning, data extraction, tool calling, creative, chat, multimodal, multi-step verification)</step>
 <step id="2">Assess complexity: 1=trivial, 2=simple, 3=moderate, 4=complex, 5=extreme (multi-agent/tool orchestration)</step>
 <step id="3">Identify priority: accuracy, speed, cost, or balanced</step>
-<step id="4">Recommend model based on task+priority (see model_profiles)</step>
-<step id="5">Confirm model with user (propose default, ask only if ambiguous)</step>
+<step id="4">Recommend a capability tier based on task+priority (see model_profiles)</step>
+<step id="5">Confirm the tier with the user (propose a default, ask only if ambiguous)</step>
 <step id="6">Select prompt format based on confirmed model + task type + complexity</step>
 </process>
 
 <model_profiles>
-<model id="claude-opus-4-6">
+<model id="premium-reasoning">
 <primary_format>XML</primary_format>
 <secondary_format>JSON</secondary_format>
 <best_for>Code generation, multi-step reasoning, complex constraint adherence, verification loops</best_for>
@@ -575,14 +576,14 @@ artifacts: []
 <speed>slow (50 tok/s)</speed>
 <notes>Avoid ALL CAPS emphasis; use conditional logic; combine with few-shot for precision</notes>
 </model>
-<model id="claude-sonnet-4-6">
+<model id="balanced-reasoning">
 <primary_format>XML</primary_format>
 <secondary_format>JSON</secondary_format>
-<best_for>Same as Opus but cost-sensitive; good balance of accuracy and cost</best_for>
+<best_for>Same strengths as premium-reasoning but cost-sensitive; good balance of accuracy and cost</best_for>
 <performance>93/100</performance>
 <cost>$$</cost>
 </model>
-<model id="gpt-5.2">
+<model id="fast-chat">
 <primary_format>Markdown</primary_format>
 <secondary_format>JSON</secondary_format>
 <best_for>Real-time chat, token-constrained tasks, rapid iteration, user-facing apps</best_for>
@@ -591,7 +592,7 @@ artifacts: []
 <speed>fastest (187 tok/s)</speed>
 <notes>Place output verbosity at beginning; pin reasoning_effort explicitly; 34-38% fewer tokens than JSON</notes>
 </model>
-<model id="grok-4-1">
+<model id="deep-reasoning">
 <primary_format>XML</primary_format>
 <secondary_format>JSON</secondary_format>
 <best_for>Multi-step reasoning, emotional intelligence context, complex decision-making</best_for>
@@ -599,7 +600,7 @@ artifacts: []
 <cost>$$</cost>
 <notes>Break tasks into 4-6 numbered phases; native tool awareness pre-wired</notes>
 </model>
-<model id="grok-code-fast-1">
+<model id="fast-tool-orchestration">
 <primary_format>JSON</primary_format>
 <secondary_format>Markdown</secondary_format>
 <best_for>Code generation requiring speed, multi-tool sequential workflows, cache optimization</best_for>
@@ -608,24 +609,24 @@ artifacts: []
 <speed>4x faster than competitors</speed>
 <notes>Detailed system prompt is critical; place reusable instructions at prompt start for cache hits</notes>
 </model>
-<model id="deepseek-3.2">
+<model id="cost-optimized-json">
 <primary_format>JSON</primary_format>
 <secondary_format>CSV</secondary_format>
 <best_for>Deterministic output, format compliance, cost-optimized workflows, classification</best_for>
 <performance>88/100</performance>
-<cost>$ (94% cheaper than Claude Opus)</cost>
+<cost>$ (cheapest tier)</cost>
 <notes>CONTEXT THEN INSTRUCTIONS order matters; format specification mandatory; use CSV for batch processing</notes>
 </model>
-<model id="gemini-3.0-pro">
+<model id="long-context-multimodal">
 <primary_format>Markdown</primary_format>
 <secondary_format>YAML</secondary_format>
 <best_for>Multimodal (video+image+text), long context (1M tokens), minimal prompt engineering</best_for>
 <performance>94/100</performance>
 <cost>$</cost>
-<speed>20% faster than 2.0</speed>
+<speed>fastest in the long-context tier</speed>
 <notes>One-sentence instructions are often sufficient; remove 30-50% of unnecessary prompt verbosity</notes>
 </model>
-<model id="kimi-k2">
+<model id="open-source-reasoning">
 <primary_format>JSON</primary_format>
 <secondary_format>Markdown</secondary_format>
 <best_for>Multi-step reasoning with dynamic tool invocation (200-300 sequential calls), open-source deployment</best_for>
@@ -633,7 +634,7 @@ artifacts: []
 <cost>$</cost>
 <notes>JSON schemas define tools; enable_thinking for transparent reasoning; INT4 quantization for 2x speed</notes>
 </model>
-<model id="glm-4.7">
+<model id="structured-output">
 <primary_format>JSON</primary_format>
 <secondary_format>YAML</secondary_format>
 <best_for>Structured output, multi-step automation, metadata enrichment, long document analysis (200K)</best_for>
@@ -641,7 +642,7 @@ artifacts: []
 <cost>$$</cost>
 <notes>JSON Schema constraints; preserve_thinking for auto-verification</notes>
 </model>
-<model id="minimax-m2">
+<model id="domain-specialist">
 <primary_format>JSON</primary_format>
 <secondary_format>Markdown</secondary_format>
 <best_for>Specialized domain expertise, constraint specification, role-based alignment</best_for>
@@ -652,14 +653,14 @@ artifacts: []
 </model_profiles>
 
 <task_type_format_mapping>
-<task type="code_generation" optimal_format="XML" gain="+23.1% vs Markdown" best_models="Claude Opus 4.5, Grok-Code-Fast-1, Kimi K2"/>
-<task type="mathematical_reasoning" optimal_format="XML" gain="+23% accuracy" best_models="Claude Opus 4.5, Grok 4.1 Thinking, Kimi K2"/>
-<task type="data_extraction" optimal_format="JSON" gain="+15% consistency" best_models="DeepSeek 3.2, GLM 4.7, Kimi K2"/>
-<task type="tool_calling" optimal_format="JSON" gain="+18% invocation accuracy" best_models="Grok-4-1, Kimi K2, GLM 4.7"/>
-<task type="creative_writing" optimal_format="Markdown" gain="+18% ideation quality" best_models="GPT-5.2, Gemini 3.0 Pro, Claude Opus"/>
-<task type="real_time_chat" optimal_format="Markdown" gain="-34% latency, -20% cost" best_models="GPT-5.2, Gemini 3.0 Pro, Grok-Code-Fast-1"/>
-<task type="multimodal" optimal_format="Markdown" gain="+20% throughput" best_models="Gemini 3.0 Pro, MiniMax M2, Claude Opus"/>
-<task type="multi_step_verification" optimal_format="XML" gain="+13.79% Pass@1" best_models="Claude Opus 4.5, Grok 4.1 Thinking, Kimi K2"/>
+<task type="code_generation" optimal_format="XML" gain="+23.1% vs Markdown" best_models="premium-reasoning, fast-tool-orchestration, open-source-reasoning"/>
+<task type="mathematical_reasoning" optimal_format="XML" gain="+23% accuracy" best_models="premium-reasoning, deep-reasoning, open-source-reasoning"/>
+<task type="data_extraction" optimal_format="JSON" gain="+15% consistency" best_models="cost-optimized-json, structured-output, open-source-reasoning"/>
+<task type="tool_calling" optimal_format="JSON" gain="+18% invocation accuracy" best_models="deep-reasoning, open-source-reasoning, structured-output"/>
+<task type="creative_writing" optimal_format="Markdown" gain="+18% ideation quality" best_models="fast-chat, long-context-multimodal, premium-reasoning"/>
+<task type="real_time_chat" optimal_format="Markdown" gain="-34% latency, -20% cost" best_models="fast-chat, long-context-multimodal, fast-tool-orchestration"/>
+<task type="multimodal" optimal_format="Markdown" gain="+20% throughput" best_models="long-context-multimodal, domain-specialist, premium-reasoning"/>
+<task type="multi_step_verification" optimal_format="XML" gain="+13.79% Pass@1" best_models="premium-reasoning, deep-reasoning, open-source-reasoning"/>
 </task_type_format_mapping>
 
 <complexity_format_escalation>
@@ -685,7 +686,7 @@ artifacts: []
 3. Apply complexity_format_escalation (escalate if complexity >= 4, deescalate if <= 2)
 4. Apply priority override:
    - cost: prefer CSV > Markdown > YAML > JSON > XML
-   - speed: prefer model's fastest format (usually Markdown for GPT-5.2)
+   - speed: prefer the model's fastest format (usually Markdown for fast-chat tiers)
    - accuracy: use model's primary format
    - balanced: use model's primary, adjust only if task demands
 5. If confidence < 0.60, recommend secondary format and flag for testing
@@ -695,11 +696,11 @@ artifacts: []
 <default_design_choices>
 <choice>
 <topic>Model Selection</topic>
-<decision>Clarify artifact purpose and recommend model. Default to anthropic/claude-opus-4-5 for complex agents (code, reasoning, verification), gpt-5.2 for speed-critical or chat-focused tools, deepseek-3.2 for cost-sensitive batch tasks. Always confirm with user before proceeding.</decision>
+<decision>Clarify artifact purpose and recommend a capability tier. Default to premium-reasoning for complex agents (code, reasoning, verification), fast-chat for speed-critical or chat-focused tools, cost-optimized-json for cost-sensitive batch tasks. Always confirm with the user before proceeding.</decision>
 </choice>
 <choice>
 <topic>Format Selection</topic>
-<decision>After model confirmation, select format: XML for Claude/Grok reasoning tasks, Markdown for GPT-5.2/Gemini, JSON for tool-heavy or data extraction tasks. Match format to model's primary preference unless task type strongly overrides.</decision>
+<decision>After tier confirmation, select format: XML for premium/balanced reasoning tiers, Markdown for fast-chat and long-context tiers, JSON for tool-heavy or data-extraction tiers. Match format to the tier's primary preference unless task type strongly overrides.</decision>
 </choice>
 <choice>
 <topic>Verbosity</topic>
@@ -707,7 +708,7 @@ artifacts: []
 </choice>
 <choice>
 <topic>Examples</topic>
-<decision>Include at most one micro-example if it prevents misuse; otherwise omit. For XML prompts targeting Claude, few-shot examples improve precision.</decision>
+<decision>Include at most one micro-example if it prevents misuse; otherwise omit. For XML prompts on reasoning-first models, few-shot examples improve precision.</decision>
 </choice>
 </default_design_choices>
 
@@ -724,6 +725,6 @@ For model selection: "This [agent/command] will do [task type]. I recommend [mod
 </when_asking>
 <model_confirmation_shortcut>
 If user has already specified a model in the request, skip confirmation and proceed with format selection for that model.
-If task type clearly maps to one optimal model (e.g., "fast chat" → GPT-5.2, "complex code review" → Claude Opus), propose and proceed unless user objects.
+If the task type clearly maps to one optimal tier (e.g., "fast chat" → fast-chat, "complex code review" → premium-reasoning), propose and proceed unless the user objects.
 </model_confirmation_shortcut>
 </clarifying_questions_policy>

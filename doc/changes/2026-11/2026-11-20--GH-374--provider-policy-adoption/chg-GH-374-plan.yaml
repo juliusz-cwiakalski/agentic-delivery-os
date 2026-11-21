@@ -1,0 +1,1422 @@
+# GH-374 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the ONLY plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap` and `lint plan` read it
+# directly. Extra phase data (goal, contract/decisions, AC/TC acceptance, the
+# exact gate commands, the commit subject and the "done" evidence) rides in YAML
+# COMMENTS so the parsed document stays schema-strict: the plan declares phases
+# and scope only — no `tasks` key, no progress log. Plan-phase progress is a
+# pm-notes `notes:` entry naming the plan phase id, the commit hash and the test
+# result; nothing about progress is ever written here.
+#
+# REVISION 1.2 — Definition-of-Ready iteration 3, reconciled to
+# readiness-review/readiness-iter-2.md (which reviewed this plan's revision 1.1
+# against spec v1.4 / test plan v1.1). It closes the TWO PLAN-SIDE items and
+# re-confirms the rest IN PLACE — no phase boundary, scope, case count or AC
+# ownership moves: 55 cases (0/3/17/22/7/6) and 15/15 ACs (0/1/2/9/2/1) stand.
+#   N4 [critical] — NO LITERAL SECRET-SHAPED VALUE REMAINS IN THIS PLAN. Revision
+#     1.1 printed a realistic `*_API_KEY` assignment inside the phase-5 SEC-003
+#     contract, and this plan is one of the files SEC-003 scans, so the case's own
+#     prose made it unsatisfiable. Phase 5 now states that the positive control is
+#     SYNTHESIZED INSIDE THE TEST AT RUNTIME (a key name joined from fragments, a
+#     value assembled from fragments plus a random suffix), that the scanner is a
+#     pure `(path, text)` function driven over in-memory samples, and that NO
+#     SCANNED DOCUMENT CONTAINS A REALISTIC VALUE. The negative control (declared
+#     documentation placeholders are not reported) is kept, and the carve-out is
+#     restated as a CLOSED list of documented FORMS compared as declared constants
+#     — never a generic "ends with an ellipsis" rule, which would silently nullify
+#     the positive control.
+#   N1 [major] — the generated-pair proof is safe. Phase 2 now (a) asserts the
+#     provenance header separately on all EIGHT lines the preamble really has (the
+#     revision-1.1 text said "first five header lines" and named four of them,
+#     omitting `# If behavior must change, edit the source file above and
+#     rebuild.`), (b) scopes the identifier
+#     CONTAINMENT to the PROMPT BODY AFTER that header, (c) uses the spec v1.5
+#     MODEL-ANCHORED family classes — `claude-(opus|sonnet|haiku|\d)`, `gemini-\d`,
+#     `gpt-\d`, `glm-\d`, `deepseek-[a-z0-9]` — instead of the bare `claude-`
+#     prefix that matched the generator path, and (d) adds an arm asserting the
+#     header line `# Regenerate with: scripts/build-claude-plugin.sh` is NOT
+#     reported. A correct pair can no longer turn its own gate red.
+#   N8-class citation — the `layer=… file=… line=…` form the reference phase
+#     asserts is produced by `originLabel` in
+#     `packages/core/src/config/provenance.ts`; phase 3 now cites that module (the
+#     plan carried no resolver citation to correct, and the delivered identity
+#     `config.key.unknown` in phase 5 is unchanged).
+#   RE-CONFIRMED UNCHANGED AND STILL BINDING (reviewed and left byte-identical):
+#     the phase-1 WHOLE-DOCUMENT validator gate (B3 — the review re-executed it in
+#     the plan's exact `bun -e` shape and it is the only green shape), the 20/30
+#     ceilings with the
+#     `failed`-outranks-`parked` ordering (B2/DEC-21), the 25/30 spend bands
+#     (window park / ticket stop), G0 `pnpm build` before EVERY bun-test gate (M8),
+#     and the commitlint PATH APPEND precondition (m6). The
+#     `provider-migration-evidence` suite stays absent from every scope, gate and
+#     `doneArtifacts` list: MIG-001..-003 are arms of the reference suite (phase 3).
+#   REVISION 1.1 (kept for traceability) closed the iteration-1 plan-side findings:
+#   B2 (ceilings re-ordered 20/30, fixtures re-measured at 25/30), B3 (whole
+#   document to the profile validator), B4 (`{ sourceKey: { style, name } }`),
+#   M1 (declared values pinned, four delivered defaults asserted separately), M5
+#   (hostile key refused by the config layer as `config.key.unknown`, ignored by
+#   the raw parser), M8 (G0), M11 (scan surface, `install.sh` exception, blueprint
+#   half) and m6 (commitlint PATH); B1 became phase 2 (DEC-20).
+#
+# WHAT THIS CHANGE IS (spec §1, §7.1). An ADOPTION plus one CONFORMANCE CLEANUP,
+# not a capability. The delivered provider engine, profile/seat branch, nomination
+# gate, budgets, offline replay and legacy reader are consumed exactly as
+# delivered; this change supplies (a) the CONFIGURATION they read
+# (`.delivery-os/config.yaml`), (b) the removal of the illustrative provider/model
+# identifiers from ONE agent prompt and the regeneration of its Claude Code
+# counterpart, and (c) the tests and documentation that pin both. No provider key,
+# condition kind, park cause, skip reason, announcement code, error row, command,
+# flag or state kind is added (NG-1); no migrator behaviour changes (NG-2); no
+# other prompt or command is touched (DEC-20, NFR-7).
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:            ./chg-GH-374-spec.md v1.5 (the delivered revision; it
+#                      carries N1's model-anchored family classes in AC-F2-2's
+#                      identifier table) — G-1..G-14; F-1..F-8; DM-1..DM-11;
+#                      NFR-1..NFR-9 (NFR-7 carries the CLOSED file set); DEC-1..DEC-24
+#                      (DEC-16 R1 mixed base, DEC-17 R2 union window, DEC-18 R3
+#                      grace/buffer arithmetic, DEC-19 chain-park shape, DEC-20 the
+#                      prompt cleanup, DEC-21 window 20 < ticket 30, DEC-23 the
+#                      named profiles-page sentence); OQ-1..OQ-3 non-blocking;
+#                      RSK-1..RSK-17; §6 flows 1-6; §7.1/§7.2; §8.1 the invoked
+#                      grammar; §8.3 DM-1..DM-8 (the declaration), DM-9 (the six
+#                      fixtures), DM-10 (the migration evidence); §16 affected
+#                      components + the CLOSED documentation obligation table
+#                      (four rows plus the distribution row); §17 AC-F1-1..AC-F7-3
+#                      with the "four fully traced / one by declared substitution"
+#                      traceability; §18 delivery order, the OWNER-REVIEW TABLE and
+#                      the commitlint PATH precondition.
+#   - Test plan:       ./chg-GH-374-test-plan.md v1.2 — 55 cases in nine blocks
+#                      (CFG-001..010, SEAT-001..006, SIM-001..009, SCAN-001..007,
+#                      DRIFT-001..007, DOC-001..006, NOM-001..004, MIG-001..003,
+#                      SEC-001..003); 15/15 ACs in both directions; §5.2 the
+#                      per-case oracles and negative controls; §6.2 the fixtures
+#                      (spend 25 and 30) and scratch constructions; §6.3 the gate
+#                      battery G0..G8; §7.1 the SIX test files (five new suites
+#                      plus the extended `doc-conformance`); §7.2 the moved files
+#                      and the UNEDITED controls; §7.3 the case-to-suite map
+#                      (17 + 22 + 4 + 3 + 3 + 6 = 55); §8.3 no open question.
+#                      The plan applies the same N1/N4 corrections test plan v1.2
+#                      carries (body-scoped containment,
+#                      model-anchored classes, in-memory SEC-003 controls); the
+#                      case ids, oracles' subjects and counts are unchanged.
+#   - DoR reviews:     ./readiness-review/readiness-iter-1.md (closed by revision
+#                      1.1) and ./readiness-review/readiness-iter-2.md (closed by
+#                      revision 1.2 — N1, N4 and the citation class; see the
+#                      revision block above).
+#   - PM record:       ./chg-GH-374-pm-notes.yaml — the adoption route, the policy
+#                      home, R1/R2/R3, the verified legacy-behaviour correction
+#                      (the only INCREMENTAL cost of the union window is the
+#                      04:00-06:00 time-of-day interval), D9 (the prompt cleanup)
+#                      and D10 (the ceiling ordering).
+#   - Evidence:        ./migration-output.md — the two `provider.migrate.refused`
+#                      outcomes (oversized-source 75215 B vs the 65536 B cap;
+#                      dynamic-value at ados-agent-tiers.sh:11), the source
+#                      inventory, the read-only guarantee and the owner
+#                      disposition. Assertion target of TC-POL-MIG-001; edited by
+#                      NO phase.
+#   - Schema:          doc/spec/features/feature-plan-schema.md — `delivery.plan.v1`;
+#                      phase `id/title/kind/summary/scope{files,folders,packages}`,
+#                      optional `weightClass`, `interactions`, `doneArtifacts`,
+#                      `leases`, `leaseClass`; `tier` is required and echoes
+#                      verbatim; a `tasks` key does not exist.
+#   - Template:        doc/templates/implementation-plan-template.md.
+#   - Precedent:       ./../2026-11-18--GH-346--installable-versioned-binary/
+#                      chg-GH-346-plan.yaml (comment-carried phase data, one commit
+#                      per plan phase, the SCOPE DECLARATION RULE, the AC/TC
+#                      ownership tables) and ./../2026-11-19--GH-350--provider-policy/
+#                      chg-GH-350-plan.yaml (the same shape for the delivered
+#                      provider engine this change configures).
+#   - Rules:           AGENTS.md (branch from and target `main-tools`; one commit
+#                      per act; NEVER hand-edit `.ados-claude/**` — regenerate it;
+#                      agent/command edits go through `@toolsmith`; the
+#                      doc-distribution obligation; the supplementary range gate),
+#                      .ai/rules/typescript.md (strict typing, injected
+#                      clock/environment/randomness, pure domain, adapters own I/O,
+#                      injected fakes over `mock.module`),
+#                      .ai/rules/testing-strategy.md (`bun:test` under
+#                      `tests/**/*.test.ts`; layers structure/behaviour/checks;
+#                      permanent suites assert the CURRENT tree, never a diff
+#                      against a moving base; `pnpm check` is the aggregate gate).
+#
+# DELIVERED CODE THE CASES DRIVE (read, never edited by this change):
+#   packages/core/src/provider/{validate,peak-rules,profile,chain,budgets,engine,
+#   simulate,migrate,parks,announcements,profile-env-record}.ts,
+#   packages/core/src/domain/harness-profile-propagation.ts (`resolveBinding`,
+#   `evaluateModelExpressibility`), packages/core/src/config/{catalog,defaults,
+#   resolver}.ts (the credential schema, the four shipped quota defaults and the
+#   `config.key.unknown` identity), packages/cli/src/edge.ts
+#   (`createResolvedProviderProbe` — reads `descriptor.peak` and NO `peakWindows`),
+#   packages/cli/src/production.ts, packages/cli/src/commands/provider.ts (the
+#   grammar quoted below), packages/adapters/src/file/{pm-context,commitlint}.ts,
+#   and `scripts/build-claude-plugin.sh` (the generator whose output phase 2
+#   commits).
+#   VERIFIED AT PLAN TIME (each fact the DoR review corrected, re-checked against
+#   the delivered source rather than taken on trust):
+#     - `parseAndValidateProfileConfiguration(WHOLE_DOCUMENT, providers)` reads
+#       `values.provider.profiles`: with a profiles branch it reaches the branch
+#       parser (`provider.profile.invalid` naming `tiers.delivery` in the probe),
+#       while the branch alone and `undefined` both answer
+#       `provider.profile.absent` — B3 confirmed, and the corrected call shape is
+#       the one written into phase 1's gate.
+#     - a flat credential child `{ style, name }` is REFUSED with detail
+#       `credentials.zai.sourceKey`, and `{ sourceKey: { style, name } }` parses
+#       `ok` — B4 confirmed.
+#     - 24 files in `.opencode/agent/*.md`; `createResolvedProviderProbe` reads
+#       only `descriptor.peak`; `PROVIDER_SIMULATE_KEYS` is the nine-key set;
+#       `PROVIDER_MIGRATE_SOURCE_MAX_BYTES|MAX_LINES|MAX_SOURCES` = 65536|2000|64;
+#       `no-checkout` is the eighth closed migrate reason; `migrate legacy`
+#       accepts only `--profiles-dir`, `--hook`, `--write` plus global `--json`.
+#
+# CHANGE LOCALITY (NFR-7's CLOSED set; test plan §6.3 G8 — the pre-PR locality
+#   diff must show only these paths):
+#     - `.delivery-os/config.yaml` (phase 1);
+#     - `.opencode/agent/toolsmith.md` and the regenerated
+#       `.ados-claude/agents/toolsmith.md` (phase 2 — the ONLY prompt change);
+#     - `tests/checks/provider-policy-adoption-prompt-scan.test.ts` (phase 2);
+#     - `tests/structure/provider-policy-adoption-reference.test.ts` (phase 3);
+#     - `tests/behaviour/provider-policy-adoption.test.ts` and the six
+#       `tests/fixtures/provider/policy-adoption/simulate/*.json` (phase 4);
+#     - `tests/checks/provider-legacy-source-scan.test.ts` and
+#       `tests/checks/provider-policy-credential-canary.test.ts` (phase 5);
+#     - `doc/guides/provider-conditions-and-parks.md`,
+#       `doc/guides/opencode-model-configuration.md`,
+#       `doc/guides/zai-peak-hours-hook.md`,
+#       `doc/spec/features/feature-provider-profiles.md` and the EXTENDED
+#       `tests/checks/doc-conformance.test.ts` (phase 6);
+#     - the change folder itself (spec, this plan, test plan, pm-notes,
+#       `migration-output.md`, the readiness review, `events.jsonl`,
+#       `candidates/`).
+#   NOTHING ELSE: no `packages/**`, no other prompt or command, no `.ai/**`, no
+#   `.jaiship/**` (which must not be created at all, NG-6), no other configuration
+#   layer, no `scripts/**` (the generator is RUN, never edited), no `.changeset/**`,
+#   CI, release, install or packaging metadata (NG-8: no package behaviour moves,
+#   so no changeset is required). A path outside that set is a SCOPE DEFECT.
+#
+# SCOPE DECLARATION RULE (binding on every phase; GH-346/GH-350 precedent):
+#   A phase declares every path whose CONTENT it authors or edits — that is what
+#   gives the commit primitive staging authority. A file that is only READ,
+#   COPIED into a scratch checkout, or RE-RUN as a delivered control is NOT
+#   declared: `.delivery-os/config.yaml` is declared by PHASE 1 ONLY (phases 3-6
+#   read it), `migration-output.md` is read by phase 3, `scripts/build-claude-plugin.sh`
+#   and all `scripts/**` are run and never declared, and the delivered control
+#   suites (`verify-gates-suite-map-reference`, `milestone-prompts`,
+#   `provider-legacy-reads`, `provider-composition-absence`, `provider-simulate`,
+#   the provider profile/chain/budget/watch suites and the goldens) appear in gate
+#   commands and in no scope.
+#
+# COMMIT SHAPE: six plan phases, all `kind: delivery`, each one self-verifying
+#   commit on `feat/GH-374/provider-policy-adoption` with the subject in its
+#   `summary`. The plan declares no `tasks`; the coder executes the phase and runs
+#   `commit` once with the phase's declared scope and subject, then continues.
+#   `phase complete GH-374 delivery` runs at the lifecycle boundary, not per plan
+#   phase (AGENTS.md: phase state is written only through the `phase` family).
+#   Phase 2's prompt edit is DELEGATED to `@toolsmith` (AGENTS.md: agents and
+#   commands are edited through it); the CODER coordinates the delegation,
+#   regenerates the plugin with `scripts/build-claude-plugin.sh`, and commits the
+#   SOURCE AND GENERATED PAIR TOGETHER (RSK-17: a hand-edited generated file or a
+#   stale pair is the defect this phase exists to prevent).
+#
+# ENVIRONMENT PRECONDITIONS (verified at plan time; every gate below assumes them):
+#   (a) G0 — BUILD ONCE PER WORKTREE. `TMPDIR=$PWD/tmp/tmpdir pnpm build` runs
+#       before the FIRST bun-test gate and is the precondition of EVERY bun-test
+#       gate below: the workspace packages (`@delivery-os/core|adapters|cli|...`)
+#       export from `dist/`, so a bare `bun test` on a clean checkout cannot
+#       resolve `@delivery-os/adapters/credentials` (reproduced at plan time, then
+#       cleared by `pnpm build`, after which
+#       `tests/structure/verify-gates-suite-map-reference.test.ts` reports
+#       14 pass / 0 fail). `dist/**` is git-ignored, is NOT declared scope, and is
+#       never committed. G0 is a precondition, not a per-phase verdict; the
+#       aggregate `pnpm check` runs its own build through `pretest`.
+#   (b) `TMPDIR=$PWD/tmp/tmpdir` on every gate line (the test plan's scratch root).
+#   (c) Every suite is IN-PROCESS: no installed binary, no built artifact under
+#       test, no network, no live credential, no real sleep, no child spawn, and no
+#       read or write of the operator's real `$HOME` state. The compose-through-CLI
+#       arms (`createConfigProgram` + `runCli`) run in the test process with an
+#       injected credential port, transport, spend read and clock.
+#   (d) The `prior-identity-fallback: config-read` notice on stderr is THIS
+#       checkout's delivered posture (`.jaiship` is absent; `.delivery-os` is
+#       read): tests tolerate it and assert the payload, never silence
+#       (TC-POL-CFG-003).
+#   (e) COMMITLINT PATH (m6). The commit primitive's commitlint probe spawns bare
+#       `commitlint` from `PATH`, which is absent on this workstation, so lifecycle
+#       commands must run with `node_modules/.bin` APPENDED to `PATH` — e.g.
+#       `PATH="$PATH:$PWD/node_modules/.bin"`. APPEND, never prepend: prepending
+#       shadows the installed `jaiship` with the unbuilt dev shim and fails to
+#       resolve `@delivery-os/adapters/credentials`. This is an environment fact of
+#       the delivery workstation, NOT a product change: nothing in the repository
+#       is edited for it.
+#   (f) The coder does not start a second delivery: `dispatch GH-374` is never run
+#       (DEC-13; see NO SELF-DISPATCH below).
+#
+# FIXTURE RULES (DM-9; every one is load-bearing):
+#   - Each of the six fixtures declares `schemaVersion:
+#     "delivery.provider.simulate.v1"`, `now` with an explicit `Z`, and
+#     `workItemRef: "GH-374"`, because the committed policy declares ENABLED
+#     budgets and the delivered budget gate resolves a work-item ref exactly when
+#     an enabled budget exists (TDR-0064). TC-POL-SIM-009 pins the ref in every
+#     fixture.
+#   - No fixture, at any depth, carries a credential VALUE: `credentials` maps a
+#     declared reference to the closed outcome words only (`resolved`, ...).
+#   - THE FIGURES ARE THE DECLARED POLICY'S: window ceiling 20, ticket ceiling 30.
+#     `budget-park.json` measures **25** (inside `[20, 30)` — the window-park band,
+#     ticket scope CLEAR) and `ticket-ceiling.json` measures **30** (at the ticket
+#     ceiling). A single figure can never be both parked and skipped: the delivered
+#     combination reports a `failed` condition ahead of every `parked` one
+#     (DEC-21; the earlier 30/20 pair made the window park unreachable). TC-POL-SIM-009
+#     pins both figures, so a drifted ceiling fails before the matrix can pass.
+#   - `budget-park.json` runs on the DEFAULT chain (`subscription-first`): both the
+#     subscription and the paid entry park on the WINDOW scope, so a window-scope
+#     subscription park must also block the paid escape — that is the assertion.
+#   - The peak-park and quota-park fixtures run on `subscription-only`, and
+#     `ticket-ceiling.json` too, because the mixed base lists both providers and
+#     isolates no entry (DEC-3, DEC-19).
+#   - The fixtures are never named `*.test.ts` and are never a nested git repo.
+#
+# SUITE-MAP AND AGGREGATE (verified at plan time): `verify.suite-map` must stay
+#   BYTE-IDENTICAL — the top-level document gains one sibling `provider` branch and
+#   nothing else (TC-POL-DRIFT-007 pins the two-key top level and the `verify`
+#   subtree; the delivered control suite
+#   `tests/structure/verify-gates-suite-map-reference.test.ts` is re-run UNEDITED
+#   at phase 1's gate and asserted unedited at phase 3). `tests/**` is already
+#   inside the aggregate `tests` suite (the map declares the LAYER, not a file
+#   list), so adding suites needs NO suite-map edit and NO workflow edit.
+#
+# GATES THAT DO NOT BELONG TO A PLAN PHASE (stated so no phase invents them):
+#   `TMPDIR=$PWD/tmp/tmpdir pnpm check` (G5, the aggregate), the supplementary
+#   commit-range gate `./scripts/lint-commit-range.sh --base main-tools` (G7), and
+#   the pre-PR locality check `git diff --name-only main-tools...HEAD` plus
+#   `git status --porcelain -- .ados-claude .opencode` (G8) are the lifecycle's
+#   quality_gates obligations. They are recorded as pm-notes `notes:` evidence
+#   there, not per plan phase, so a plan phase never claims a verdict it cannot
+#   attribute to its own commit. G0 (build) is a precondition, and G1..G4 (the
+#   `bun test` gates) are the per-phase gates below.
+#
+# NO SELF-DISPATCH AND THE DECLARED SUBSTITUTION (DEC-13; AC-F7-3; TC-POL-NOM-003):
+#   `dispatch GH-374` is NEVER run as proof — it would claim the repository lease
+#   and start a SECOND delivery of this same change, and the delivered grammar has
+#   no dry-run form. Admission evidence is the nomination predicate over the real
+#   resolved configuration, the seat/binding/env-record proofs for all 24 roles,
+#   `provider resolve`, the six replays and the scans. THE TICKET'S TYPED-ATTEMPT
+#   HALF IS NOT OBSERVED and is stated as a substitution (spec §17: four of five
+#   clauses fully traced, one by declared substitution) in this plan, in the pull
+#   request and in the pm-notes evidence entry.
+#
+# doneArtifacts RULE (why the typed slots are sparse): the schema's `doneArtifacts`
+#   accepts exactly `mergeRequestUrl`, `pipelineId`, `deployedEnvironment`,
+#   `trackerTransition`, each a non-empty string; an arbitrary file path is NOT a
+#   legal slot, so a phase's "files it must leave behind" is carried by (i) its
+#   declared `scope.files` — the authoritative set — and (ii) the `Done evidence:`
+#   line in its comment block. Only phase 6 declares `doneArtifacts`, and only for
+#   the two lifecycle artifacts that exist by then (`pipelineId`,
+#   `trackerTransition`); the PR URL is a pm-notes `notes:` entry at lifecycle
+#   phase 11 (AGENTS.md) and is never invented here.
+#
+# OWNER REVIEW AT THE PULL REQUEST (spec §18's table; the three deliberate
+#   deviations the owner must confirm — stated here as the pre-PR-readable record):
+#   1. INITIAL SPEND CEILINGS `20` per trailing day and `30` per ticket, in
+#      harness-reported cost units. The first post-merge delivery is the
+#      calibration; a too-low ceiling stops work with a classified refusal whose
+#      remedy is raising the figure, a one-line document edit (DEC-10, DEC-21).
+#   2. SEAT `envName` DERIVED as `OC_JAISHIP_AGENT_` + the upper-snake seat +
+#      `_MODEL`, not committed as a product-prefixed literal. The ticket lists
+#      `envName` among the seat fields; the requirement is met at the RECORD level
+#      (every seat appears under a branded name) and the deviation is brand
+#      neutrality (DEC-7).
+#   3. THE PAID ENTRY'S SINGLE UNION WINDOW 01:00-10:00 UTC and its cost: the
+#      04:00-06:00 time-of-day interval of paid off-peak capacity is given up
+#      daily, and weekends and Chinese public holidays are additionally paused
+#      (DEC-9, DEC-17, OQ-2, OQ-3).
+#
+# AC OWNERSHIP (15/15; exactly one owning phase each — the phase whose commit lands
+#   the LAST assertion that completes the criterion; earlier evidence is additive
+#   and never transfers ownership):
+#   Phase 1 (0):  none. Phase 1 authors the ARTIFACT UNDER TEST (the committed
+#                 policy). An AC is closed only when its assertion exists, and every
+#                 AC's assertion lives in phases 2-6; phase 1's own acceptance is
+#                 the validator gate plus the suite-map control, and it unblocks the
+#                 whole change by making the branch loadable.
+#   Phase 2 (1):  AC-F2-2  (SCAN-004's full-roster scan, SCAN-006's generated-pair
+#                 proof and SCAN-007's regression arm all land here. The test plan's
+#                 AC→TC row ALSO lists TC-POL-SCAN-002 in phase 5, and that listing
+#                 is a POINTER, not an oracle: SCAN-002 asserts three SOURCE classes
+#                 and two allowed idioms, and its own detail says "the fourth planted
+#                 class required by AC-F6-1 (a provider/model identifier) is owned by
+#                 TC-POL-SCAN-004, which is listed on that criterion". The only
+#                 AC-F2-2 assertions are therefore the prompt-scan suite's, and the
+#                 criterion completes in phase 2 where that suite lands; phase 5
+#                 asserts none of its oracles)
+#   Phase 3 (2):  AC-F6-2, AC-F7-1
+#   Phase 4 (9):  AC-F1-1, AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1, AC-F4-1,
+#                 AC-F5-1, AC-F7-3
+#   Phase 5 (2):  AC-F6-1, AC-F6-3
+#   Phase 6 (1):  AC-F7-2
+#   Count: 0 + 1 + 2 + 9 + 2 + 1 = 15. No AC is unowned, none is claimed twice, and
+#   each owner is re-derived from the case→phase map below by ONE rule — an AC's
+#   owner is the phase where its LAST COMPLETING ASSERTION lands, and a case that
+#   merely CROSS-REFERENCES an AC owns nothing — which resolves every criterion
+#   except the single pointer AC-F2-2 carries (see phase 2 above). AC-F6-1 lands
+#   in phase 5 because its fourth planted class is SCAN-004's and the other three
+#   are SCAN-002's: the criterion completes where the last of the four is asserted,
+#   which is the delivery-surface scan's own phase — its phase-2 half already
+#   exists, additively.
+#
+# TC → PHASE MAP (55 ids; each id owned by exactly ONE phase, test plan §7.3 —
+#   one owner per case, and this plan adds no second owner):
+#   Phase 1 (0 cases): the declaration is authored here and asserted from phase 3.
+#   Phase 2 (3):  TC-POL-SCAN-004, TC-POL-SCAN-006, TC-POL-SCAN-007
+#   Phase 3 (17): TC-POL-CFG-001, TC-POL-CFG-004, TC-POL-CFG-006,
+#                 TC-POL-CFG-007, TC-POL-CFG-008, TC-POL-CFG-009,
+#                 TC-POL-SEAT-006, TC-POL-DRIFT-001 .. TC-POL-DRIFT-007 (7),
+#                 TC-POL-MIG-001 .. TC-POL-MIG-003 (3 — tree invariants folded into
+#                 the reference suite; there is no `provider-migration-evidence`
+#                 suite)
+#   Phase 4 (22): TC-POL-CFG-002, TC-POL-CFG-003, TC-POL-CFG-005,
+#                 TC-POL-CFG-010, TC-POL-SEAT-001 .. TC-POL-SEAT-005 (5),
+#                 TC-POL-SIM-001 .. TC-POL-SIM-009 (9),
+#                 TC-POL-NOM-001 .. TC-POL-NOM-004 (4)
+#   Phase 5 (7):  TC-POL-SCAN-001, TC-POL-SCAN-002, TC-POL-SCAN-003,
+#                 TC-POL-SCAN-005, TC-POL-SEC-001, TC-POL-SEC-002,
+#                 TC-POL-SEC-003
+#   Phase 6 (6):  TC-POL-DOC-001 .. TC-POL-DOC-006 (6)
+#   Count: 0 + 3 + 17 + 22 + 7 + 6 = 55. Every id in test plan v1.2 §5.1 appears
+#   exactly once above and no id above is absent from it: no orphan case. The
+#   suite arithmetic reconciles with §7.3: 17 (reference) + 22 (behaviour) +
+#   3 (prompt scan) + 4 (delivery-surface scan) + 3 (canary) + 6 (doc-conformance)
+#   = 55, over the SIX test files §7.1 declares.
+#
+# PHASE ORDER AND WHY IT IS FIXED (spec §18; PM-decided sequence; "the plan owns
+#   the phase boundaries, this specification owns the contract"):
+#   0. G0 (build) once per worktree, before the first bun-test gate.
+#   1. The DECLARATION comes first: nothing can be proven, and no case can be
+#      green, before the document exists (every case reads the resolved policy).
+#   2. The PROMPT CLEANUP comes second, and its position is deliberate. The claim
+#      AC-F2-2 makes is a claim about the TREE, so the tree must be true before the
+#      suite that asserts it exists: phase 2 edits the one prompt, regenerates its
+#      Claude Code counterpart from it, and lands the scanner in the same commit,
+#      so no boundary ever has a green scan over a false tree or a true tree with
+#      no assertion. The phase is INDEPENDENT of the declaration (it reads no
+#      configuration), so landing it early costs nothing and keeps the pair
+#      consistent from the first boundary on. Spec §18 lists the cleanup with the
+#      scans; the plan moves it earlier for this reason and declares the move.
+#   3. The REFERENCE PINS come third: they parse the real document through the
+#      delivered validators, so an arithmetic slip in the declaration (a zero
+#      buffer, a grace bound above the smallest buffer — RSK-15/DEC-18) or an
+#      inverted ceiling pair fails HERE, before two more phases are built on an
+#      unloadable or self-defeating branch. They also carry the migration-bridge
+#      tree invariants (MIG-001..-003), because those are HEAD invariants over
+#      change artifacts and pinned files, not a runtime behaviour — so they need no
+#      sixth suite.
+#   4. The REPLAY PROOF comes fourth: the only phase that authors fixtures, and the
+#      one that turns the pinned policy into behaviour (resolve, seats, replays,
+#      nomination).
+#   5. The RETIREMENT PROOF comes fifth: the delivery-surface scan and the canary
+#      are independent of phases 3-4 and assert the NEGATIVE claims (nothing
+#      sources the legacy profiles, nothing installs the hook, no credential value
+#      anywhere) plus the declared exception and the blueprint second half.
+#   6. DOCUMENTATION comes last: the guides and the one spec-page sentence state
+#      what phases 1-5 made true, and their doc-conformance phrases land in the
+#      same commit as the prose, so no page is ever ahead of or behind the tree
+#      (the one-edit-set rule). It also carries the release hand-off.
+#
+# OPEN QUESTIONS (plan level): NONE BLOCKING, and none is carried into delivery.
+#   Every module name, constant, exit code, grammar flag, closed reason set, park
+#   shape, credential shape and validator argument shape the cases assert was read
+#   from the delivered tree at plan time (see VERIFIED AT PLAN TIME), and the three
+#   environment facts a plan could otherwise get wrong — the G0 build, the
+#   prior-identity notice and the commitlint PATH — are stated as preconditions,
+#   not discovered at a boundary. The three SPEC questions (OQ-1 profile windows
+#   do not gate admission; OQ-2 the pauses are daily; OQ-3 the union closes
+#   04:00-06:00) are non-blocking citations the owning cases already encode
+#   (CFG-009, DOC-001, DOC-006) and change no assertion. Two observational notes,
+#   neither a question: (i) `doc/00-index.md` carries one generic row for the
+#   conditions guide and no retired-dependency claim, so DOC-005's closed page set
+#   needs NO index edit — if it ever did, that edit is a declared-scope decision,
+#   never a silent widening of phase 6; (ii) `feature-provider-profiles.md`'s
+#   line-38 sentence IS edited (DOC-006, DEC-23) and is declared in phase 6, while
+#   the other three provider/config specification pages remain phase-7
+#   (`system_spec_update`) verification obligations (spec §16).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-374
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "The committed document does not load through the delivered validators at a phase boundary — the provider branch refuses, a profile window declares a zero buffer, `graceSeconds` exceeds the smallest buffer, or the profile branch answers `provider.profile.invalid`/`provider.profile.absent` (RSK-15, DEC-18, A-10, TC-POL-CFG-001/DRIFT-003): stop, fix the declaration in phase 1's scope, and re-run phase 1's gate."
+    - "`window-cost.ceiling` is not strictly below `ticket-cost.ceiling`, or a fixture measures a figure that is both at the window ceiling and at the ticket ceiling (DEC-21, AC-F4-1, TC-POL-CFG-005/DRIFT-004/DRIFT-005/SIM-003/SIM-006): a `failed` condition outranks every `parked` one, so the window park becomes unreachable and the ticket AC half cannot be evidenced."
+    - "A credential child is not exactly `{ sourceKey: { style, name } }`, or a value-bearing key exists at any level (B4, DM-1, AC-F6-3, NFR-4): the config layer refuses the branch and the whole change is unloadable — the delivered parser's own detail is `credentials.<name>.sourceKey`."
+    - "The declared policy cannot be expressed in the delivered grammar — a needed key, condition kind, park cause, skip reason, announcement code, error row, command, flag, seat field or window shape does not exist (NG-1, DEC-2, §8.3 DM-1..DM-8): STOP and report; this change adopts configuration and may never add capability."
+    - "A phase needs to edit a path outside NFR-7's closed set — `packages/**`, any prompt or command OTHER than `.opencode/agent/toolsmith.md` and its generated counterpart, `.ai/**`, `.jaiship/**`, `scripts/**`, any other configuration layer, or `verify.suite-map` (NFR-7, §7.2, DEC-20): stop and escalate instead of widening the phase, because the whole change is a locality claim."
+    - "The toolsmith source and its generated `.ados-claude` counterpart drift — the generated file is hand-edited, committed stale, or carries a provenance header the generator does not write (RSK-17, SCAN-006): regenerate with `scripts/build-claude-plugin.sh`; never edit `.ados-claude/**` by hand (AGENTS.md)."
+    - "The prompt scan reports a finding on the real roster, or reports a declared carve-out (bare family prose, `claude.model: opus|sonnet|haiku`), or passes because it scanned fewer than 24 files (AC-F2-2, SCAN-004, SCAN-006, SCAN-007, TR-8): a green scan must mean the identifiers are gone, not that the scanner is blind or a false-positive machine."
+    - "A test mutates the committed document, writes a fixture into the real tree, reads the operator's `$HOME`/state root, or is green only because a mutant was applied to the committed file instead of a `tmp/tmpdir` copy (test plan §5.2.5, TR-2, TC-POL-DRIFT-005): the case is invalid by construction."
+    - "A gate is green only by weakening, skipping, renaming or deleting an oracle, or a guard ships without its failing negative control (test plan §4.3, §4.4): a case that cannot fail is not evidence."
+    - "A suite-map edit is proposed, the top-level document gains a third key, or the delivered control suite `tests/structure/verify-gates-suite-map-reference.test.ts` is edited (TC-POL-DRIFT-007, test plan §7.2): the map is a byte-identical control and `tests/**` needs no registration."
+    - "A page and the doc-conformance phrase that pins it move in different commits, a phrase row is added for prose a later phase contradicts, or a page outside the closed page set states a claim this change falsifies (spec §16, AC-F7-2, TC-POL-DOC-005/006): the one-edit-set rule is broken."
+    - "A real credential-shaped value appears in any committed file — the document, a fixture, a test, the evidence artifact, a guide or this change folder — or a fixture carries a credential value or omits `workItemRef: \"GH-374\"` while the enabled budgets are declared (NFR-4, AC-F6-3, DM-9): a credential leak is a defect, not a review note. Documentation PLACEHOLDERS are the declared CLOSED carve-out list (`...`, `<...>`, `$VAR`, `${VAR}`, the documented `sk-ant-…` form, a bare name with no value), compared as declared constants and proven by control; the realistic positive control is SYNTHESIZED IN THE TEST at runtime and is never written into a scanned file (SEC-003, N4)."
+    - "The proof starts reaching for the real thing — a `dispatch`, a lease claim, a single-flight predicate, a child spawn, a live network call, a live credential resolution, a real `sleep`, or an installed-binary subprocess (DEC-13, NFR-6, TC-POL-NOM-003, SEAM-TP-1): every proof is in-process, and a dispatch would start a second delivery."
+    - "`provider migrate legacy`, its caps (`65536`/`2000`/`64`), its eight closed reasons, its three flags, its fixtures, its goldens or its output would have to change, or a suite re-runs the migration against an operator home (NG-2, AC-F6-2, TC-POL-MIG-002/003): the refusals are recorded evidence; the migrator gaps stay with M4-S17."
+    - "The union window or the declared-costs honesty is dropped or softened — the paid entry peak narrowed to 06:00-10:00, the 01:00-10:00 union weakened, the exact 04:00-06:00 time-of-day interval removed, the daily-versus-weekday superset restated as weekday-only, or the ticket ceiling described as a park (DEC-9, DEC-10, DEC-17, OQ-2, OQ-3, RSK-4, RSK-6): a false claim about the deployed policy is worse than the cost it hides."
+    - "A phase's gate fails and its fix lies in ANOTHER phase's scope — for example a phase-4 replay exposing a declaration value phase 1 owns, or a phase-6 phrase exposing prose a phase-3 pin contradicts: stop and re-plan (or reopen the owning phase with a new commit) rather than editing an undeclared file."
+defaultLeases:
+  - repo:main-tools
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Declare the repository provider policy in the tracked
+  # project-committed configuration document (F-1..F-5; DM-1..DM-8; DEC-1,
+  # DEC-3..DEC-11, DEC-16, DEC-17, DEC-18, DEC-21; AC: none owned — see AC
+  # OWNERSHIP).
+  #
+  # Goal: `.delivery-os/config.yaml` stops declaring only `verify.suite-map` and
+  # gains ONE sibling `provider` branch carrying exactly the spec's declaration,
+  # so `provider resolve` and every delivery entry point stop failing closed with
+  # `provider.profile.absent` / `provider.chain.empty`. This phase is the whole
+  # CONFIGURATION change: nothing else.
+  #
+  # Contract (spec §8.3 and Appendix A; the values are not negotiable prose — a
+  # coder who changes one changes the review). TWO SHAPES ARE LOAD-BEARING and
+  # both were re-verified against the delivered parser at plan time:
+  #   DM-1 credentials — the child's ONLY key is `sourceKey`; `sourceKey`'s only
+  #     keys are `style` and `name` (plus `suffix` in the environment-prefixed
+  #     form). A flat `{ style, name }` child is REFUSED by the delivered parser
+  #     with detail `credentials.<name>.sourceKey` (B4):
+  #       zai:      { sourceKey: { style: literal, name: ZAI_API_KEY } }
+  #       deepseek: { sourceKey: { style: literal, name: DEEPSEEK_API_KEY } }
+  #     Reference only: an environment-variable NAME, never a value, and no
+  #     value-bearing key at any level.
+  #   DM-2 entries:
+  #     zai-coding-plan: class: subscription, enabled: true,
+  #       peak: { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000,
+  #               bufferSeconds: 7200 }              # effective [04:00, 10:00) daily
+  #       quota: { enabled: true,
+  #                endpoint: https://api.z.ai/api/monitor/usage/quota/limit,
+  #                credentialRef: zai, thresholdPercent: 100, maxSleepLoops: 24 }
+  #     deepseek: class: pay-per-token, enabled: true,
+  #       peak: { timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 36000,
+  #               bufferSeconds: 0 }                 # the ONE union window 01:00-10:00
+  #       and NO `quota` key (TC-POL-CFG-006 asserts its absence).
+  #     The document declares exactly FIVE quota leaves; the delivered defaults
+  #     add four more (`timeoutMs: 15000`, `outageParkTtlSeconds: 300`,
+  #     `credentialParkTtlSeconds: 900`, `capParkTtlSeconds: 300`) at
+  #     `layer=defaults`. That split is CORRECT and is asserted as such (M1): the
+  #     document does NOT restate the defaults, and nothing in this phase deep-equals
+  #     a resolved node against a defaults-omitting literal.
+  #   DM-3 chains + defaultChain (DEC-3):
+  #     subscription-first: entries [zai-coding-plan, deepseek], allowPaidFallback: true
+  #     subscription-only:  entries [zai-coding-plan],          allowPaidFallback: false
+  #     provider.defaultChain: subscription-first
+  #   DM-4/DM-5 profiles (DEC-4..DEC-7, DEC-16): one tier `delivery`; base
+  #     `delivery` over providers [zai-coding-plan, deepseek]; fallback `paid` over
+  #     [deepseek]; THE SAME 24 seat names in both, named exactly as
+  #     `.opencode/agent/*.md`; NO `agentOverrides`, NO `pacing`, NO `envRecord`
+  #     override, NO seat `envName` (each record name derives from the brand's
+  #     environment prefix: this build emits `OC_JAISHIP_AGENT_` + the upper-snake
+  #     seat name + `_MODEL`). Base models: `zai-coding-plan/glm-5.3` for
+  #     bootstrapper, ceo, decision-advisor, decision-critic, plan-writer,
+  #     readiness-reviewer, reviewer, toolsmith; `zai-coding-plan/glm-5.3-flash`
+  #     for pm and editor; `deepseek/deepseek-flash` for the other fourteen. Paid
+  #     models: `deepseek/deepseek-flash` for all 24. `pacingClass: judgment` for
+  #     bootstrapper, ceo, coder, decision-advisor, decision-critic, fixer,
+  #     plan-writer, pm, readiness-reviewer, review-feedback-applier, reviewer,
+  #     spec-writer, test-plan-writer, toolsmith (14); `execution` for the other
+  #     10. `capability: vision-capable` ONLY for designer and image-reviewer
+  #     (both on their paid-model seat, on BOTH profiles); every z.ai seat and
+  #     every other seat is `text-only` — including image-generator, which
+  #     produces images and delegates review (DEC-6). The base therefore declares
+  #     NO text-only vision seat (RSK-16).
+  #   DM-4 profile peakWindows (rule data for the daemon lane watch; they do NOT
+  #     gate admission — OQ-1). BOTH profiles declare the SAME two windows with
+  #     BOTH buffers non-zero and `graceSeconds: 300` (DEC-18, A-10; a zero buffer
+  #     makes the derived bound 0 and the whole branch unloadable):
+  #       { timezone: UTC, startSecondsOfDay: 3600,  endSecondsOfDay: 14400,
+  #         multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }
+  #       { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000,
+  #         multiplier: 3 (base) | 2 (paid), bufferBeforeSeconds: 7200,
+  #         bufferAfterSeconds: 600 }
+  #     Effective watcher pauses are therefore [00:30, 04:05) and [04:00, 10:10).
+  #   DM-6 preferenceChain { base: delivery, fallbacks: [paid] } and the one tier.
+  #   DM-7 watch targets (references only, read-only): zai-coding-plan ->
+  #     { mapping: coding-plan-windows,
+  #       endpoint: https://api.z.ai/api/monitor/usage/quota/limit,
+  #       credentialRef: zai, thresholdPercent: 100 }; deepseek ->
+  #     { mapping: deepseek-balance,
+  #       endpoint: https://api.deepseek.com/user/balance,
+  #       credentialRef: deepseek, floor: 2, maxAgeSeconds: 900 }.
+  #   DM-8 budgets (DEC-10, DEC-21; both enabled, initial and owner-reviewable):
+  #     window-cost { enabled: true, scope: window, basis: cost, ceiling: 20,
+  #                   windowSeconds: 86400 }
+  #     ticket-cost { enabled: true, scope: ticket, basis: cost, ceiling: 30 }
+  #     Neither declares `entries` (both govern every entry).
+  #     THE ORDERING IS A CONTRACT, NOT A COINCIDENCE: the window ceiling (20) is
+  #     STRICTLY BELOW the ticket ceiling (30), because `combineProviderConditions`
+  #     reports a `failed` condition ahead of every `parked` one. With the former
+  #     30/20 pair any spend reaching the window ceiling also failed the ticket
+  #     scope, the window park was unreachable, and half of AC-F4-1 was impossible
+  #     (B2, DEC-21). With 20 < 30: `[20, 30)` is the window-park band and `>= 30`
+  #     is the terminal ticket stop (`provider.budget.exceeded`, exit 1, no park,
+  #     no expiry) — the divergence is stated, not papered over (RSK-6).
+  #   Everything else in the document is untouched: `verify.suite-map` stays
+  #   BYTE-IDENTICAL and no third top-level key appears (TC-POL-DRIFT-007).
+  #
+  # Why these values and not the ticket's weekday wording: the delivered entry peak
+  #   is ONE window evaluated EVERY day and only the ENTRY window gates admission
+  #   (`createResolvedProviderProbe` reads `descriptor.peak`; profile `peakWindows`
+  #   do not). The declaration is therefore a documented DAILY SUPERSET (DEC-9,
+  #   OQ-2), and the paid entry carries the single UNION window 01:00-10:00 because
+  #   one entry holds one window (DEC-17): it keeps paid capacity out of BOTH
+  #   DeepSeek 2x windows (01:00-04:00, 06:00-10:00) and out of the subscription's
+  #   buffered pause, at the stated cost of the 04:00-06:00 TIME-OF-DAY INTERVAL —
+  #   the only interval newly closed relative to today's DeepSeek target, beside the
+  #   weekend/Chinese-holiday mornings the daily model also pauses (DEC-9, OQ-3,
+  #   RSK-3). The union window and its cost are on the OWNER-REVIEW list.
+  #
+  # Acceptance (phase boundary, not an AC claim): the delivered validators load
+  #   the COMMITTED file — the provider branch parses and validates, both chains
+  #   validate, `defaultChain` is `subscription-first`, the profile branch parses
+  #   and validates over it (including every `peakWindows` grace/buffer bound), and
+  #   both profiles declare 24 seats — and `verify.suite-map` is provably untouched.
+  #
+  # Gate (expected: G0 green; the validator line prints the chain/profile/seat
+  # summary and exits 0; the control suite reports 14 pass / 0 fail):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree; `dist/**` ignored
+  #   TMPDIR=$PWD/tmp/tmpdir bun -e '
+  #     import { readFileSync } from "node:fs";
+  #     import { parse } from "yaml";
+  #     import { parseAndValidateProviderConfiguration,
+  #              parseAndValidateProfileConfiguration }
+  #       from "./packages/core/src/provider/validate.ts";
+  #     const doc = parse(readFileSync(".delivery-os/config.yaml", "utf8"));
+  #     const providers = parseAndValidateProviderConfiguration(doc);
+  #     if (!providers.ok) { console.error("provider branch refused: " +
+  #       JSON.stringify(providers.error)); process.exit(1); }
+  #     // THE WHOLE DOCUMENT, not doc.provider.profiles: the delivered profile
+  #     // parser reads `values.provider.profiles`, so the branch alone parses as
+  #     // the EMPTY branch and then refuses `provider.profile.absent` (B3).
+  #     const profiles = parseAndValidateProfileConfiguration(doc, providers.config);
+  #     if (!profiles.ok) { console.error("profile branch refused: " +
+  #       JSON.stringify(profiles.error)); process.exit(1); }
+  #     const seats = (name) => Object.keys(profiles.config.profiles[name].seats).length;
+  #     console.log("provider policy loads; defaultChain=" +
+  #       String(providers.config.defaultChain) + "; chains=" +
+  #       Object.keys(providers.config.chains).join(",") + "; profiles=" +
+  #       Object.keys(profiles.config.profiles).join(",") + "; seats=" +
+  #       seats("delivery") + "/" + seats("paid"));
+  #   '
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/verify-gates-suite-map-reference.test.ts
+  # G0 is listed because this gate's second line is a bun-test gate; on a warm
+  # worktree it is a no-op. The one-off validator probe is a PHASE GATE ONLY: it is
+  # not committed as a suite, because the permanent equivalent is phase 3's
+  # reference test (which asserts far more, and must not be a script nobody runs).
+  #
+  # Done evidence (files that must exist / facts that must hold at the boundary):
+  #   - `.delivery-os/config.yaml` declares `provider` (DM-1..DM-8) beside the
+  #     unchanged `verify` branch; top-level keys are exactly {provider, verify}.
+  #   - the gate lines above are green on the phase commit.
+  #   - no fixture, test, prompt edit or document edit exists yet.
+  #   - no credential VALUE is present anywhere: the only credential content is
+  #     two `sourceKey` references.
+  #
+  # Commit: feat(GH-374): declare the repository provider policy
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Declare the repository provider policy: the `provider` branch of the tracked project-committed configuration document (two `sourceKey` credential references, two entries, two chains, window 20 / ticket 30 ceilings, two profiles with 24 seats each, preference chain and two watch targets) beside an untouched `verify.suite-map`"
+    kind: delivery
+    summary: "feat(GH-374): declare the repository provider policy"
+    weightClass: medium
+    scope:
+      files:
+        # THE ONLY CONFIGURATION CHANGE OF THIS CHANGE (spec §16). Authored here and
+        # nowhere else; phases 3-6 READ it, so declaring it again would be a false
+        # authorship claim.
+        - .delivery-os/config.yaml
+    interactions:
+      # The document is the change's configuration contract: the delivered
+      # composition and every case read it. A future plan touching the same path
+      # must be ordered after this phase (`plan overlap` reason
+      # `shared-contract-files`).
+      - kind: contract-file
+        target: .delivery-os/config.yaml
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Remove provider/model identifiers from the toolsmith prompt and
+  # regenerate the Claude plugin (F-8; DEC-20; AC-F2-2; 3 cases: SCAN-004,
+  # SCAN-006, SCAN-007).
+  #
+  # Goal: make the ticket's "no model literal lives in an agent prompt" TRUE OF THE
+  # TREE rather than narrowed away (DEC-20, B1). `.opencode/agent/toolsmith.md` is
+  # the one prompt that carries illustrative provider/model identifiers; every one
+  # becomes a NEUTRAL PLACEHOLDER (`<provider>/<model>` or `<model>`) with a pointer
+  # to the typed `provider.profiles` policy, and the generated
+  # `.ados-claude/agents/toolsmith.md` is REBUILT from that source with
+  # `scripts/build-claude-plugin.sh` and committed with it. Family names may stay
+  # as prose (`the glm family`, `Claude Opus`); the documented Claude Code
+  # frontmatter `claude.model: opus|sonnet|haiku` stays as it is — it is a
+  # TOOL-SPECIFIC ASSIGNMENT CONTRACT under AGENTS.md, carries no provider
+  # qualifier and assigns no Jaiship route, and the scan declares it as a carve-out.
+  #
+  # Delegation (binding): the prompt edit is delegated to `@toolsmith` (AGENTS.md:
+  #   agent and command definitions are edited through it). The coder coordinates
+  #   that delegation, runs the generator, and commits the SOURCE + GENERATED PAIR
+  #   TOGETHER. Never hand-edit `.ados-claude/**`: it is build output, and a
+  #   hand-edited or stale pair is exactly the defect this phase prevents (RSK-17).
+  #
+  # Contract (test plan §5.2.4; the 3 owned cases):
+  #   SCAN-004  THE FULL ROSTER, not one file: all 24 `.opencode/agent/*.md` files
+  #             are scanned with the exported identifier table — provider-qualified
+  #             `zai-coding-plan/`, `deepseek/`, `openai/`, `anthropic/`, `gemini/`;
+  #             MODEL-ANCHORED family ids as a value — `claude-(opus|sonnet|haiku|\d)`,
+  #             `gemini-\d`, `gpt-\d`, `glm-\d`, `deepseek-[a-z0-9]` (spec v1.5).
+  #             The anchoring is what keeps ordinary hyphenation out: the generator
+  #             path `scripts/build-claude-plugin.sh` contains `build-claude-` and
+  #             is NOT an identifier. Result: 24 files scanned, ZERO findings for
+  #             all ten patterns, per-file zero for `toolsmith.md`. TEN planted
+  #             samples (one per class) each produce a finding naming its class and
+  #             line. The TWO CARVE-OUTS are asserted as exported declarations: a
+  #             bare family name in prose is not a literal, and `claude.model` is
+  #             the documented Claude Code assignment contract.
+  #             `.opencode/command/**` is outside this scan by declaration. A
+  #             23-file scan (a stale roster) FAILS.
+  #   SCAN-006  the GENERATED PAIR, in FOUR parts, with the containment scoped to
+  #             the BODY so a correct pair cannot fail on its own provenance (N1):
+  #             (a) HEADER, asserted separately and never fed to the identifier
+  #                 comparison — the generator preamble is the eight lines
+  #                 `---`, `# GENERATED FILE — DO NOT EDIT DIRECTLY.`,
+  #                 `# Source of truth: .opencode/agent/toolsmith.md`,
+  #                 `# Regenerate with: scripts/build-claude-plugin.sh`,
+  #                 `# If behavior must change, edit the source file above and
+  #                 rebuild.`, the copyright line, the licence line and the
+  #                 `# source:` line (all eight named; the revision-1.1 text said
+  #                 "first five header lines" while naming four, and omitted the
+  #                 `If behavior must change` line);
+  #             (b) CONTAINMENT over the PROMPT BODY THAT FOLLOWS THE HEADER (from
+  #                 the first generated frontmatter field, `name:`, onward): the
+  #                 body's identifier set for the ten classes is a SUBSET of its
+  #                 source's set and BOTH ARE EMPTY; every neutral placeholder
+  #                 occurrence in the source (`<provider>/<model>`, `<model>`)
+  #                 appears in the generated body; the generated frontmatter carries
+  #                 `model: opus` from the source's `claude.model` (the declared
+  #                 carve-out, not an identifier);
+  #             (c) HEADER-IS-NOT-REPORTED ARM: the header line
+  #                 `# Regenerate with: scripts/build-claude-plugin.sh` is scanned
+  #                 by the same identifier table and produces NO finding — the
+  #                 model-anchored classes cannot match `build-claude-plugin`, and
+  #                 the header is outside the compared body. This arm is what makes
+  #                 the pair provable rather than accidental;
+  #             (d) NO-OP: a `.ados-claude/**` digest map is identical after running
+  #                 the build, `git status --porcelain -- .ados-claude .opencode` is
+  #                 empty, and the delivered control
+  #                 `tests/checks/milestone-prompts.test.ts` passes UNEDITED.
+  #             A hand-edited temp pair (an identifier the source body lacks), a
+  #             stale pair, and a header with a missing provenance line each fail by
+  #             name.
+  #   SCAN-007  the REGRESSION ARM, so a green roster means the literals are gone
+  #             rather than the scanner being blind: a temp tree carrying the
+  #             RECORDED pre-change toolsmith text (the DoR line evidence:
+  #             `deepseek/deepseek-3.2` at 232/353, `deepseek-3.2` at 630/717,
+  #             `glm-4.7` at 655, `anthropic/claude-opus-4-5` at 232/409/717,
+  #             `openai/gpt-5.2` at 232/409, `gpt-5.2`, `gemini-3.0-pro` at 638)
+  #             reports EVERY one and therefore FAILS the zero-findings assertion —
+  #             asserted as the expected outcome of that arm — while the real
+  #             `.opencode/agent/toolsmith.md` reports 0 and the four literals the
+  #             ticket names are absent from it.
+  #
+  # Scope note: this phase authors THREE files — the prompt, its generated
+  #   counterpart, and the suite that pins them. The suite is declared because its
+  #   cases are owned here (test plan §7.3) and its gate must be green in this
+  #   commit; a phase cannot own a case whose suite lands later.
+  #
+  # Acceptance: AC-F2-2 — the full twenty-four-prompt roster reports zero
+  #   provider/model identifiers under the model-anchored class table, every
+  #   planted class is reported by the same scanner, the scan definition states the
+  #   two carve-outs, and the generated counterpart's BODY (after its provenance
+  #   header) contains no identifier its source lacks, with the header's generator
+  #   path proven unreported and the pair proven build output (a second build is a
+  #   no-op). Evidence cases: TC-POL-SCAN-004, TC-POL-SCAN-006, TC-POL-SCAN-007.
+  #   This phase also supplies the fourth planted class that AC-F6-1 names; AC-F6-1
+  #   itself remains phase 5's (see AC OWNERSHIP), because its other three classes
+  #   complete there.
+  #
+  # Gate (expected: G0 green; the roster scan reports 24 files / 0 findings / 10 of
+  # 10 planted classes; the generated-pair arms report header ✓, body containment ✓,
+  # the generator path unreported ✓, and a build no-op; the regression arm reports
+  # the pre-change literals; the delivered milestone-prompts control is green):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/milestone-prompts.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-policy-adoption-prompt-scan.test.ts
+  # The first line is the delivered generator/freshness control (a byte-identical
+  # second build plus prompt conformance); it is UNEDITED and undeclared — the
+  # generator writes `.ados-claude/**`, which IS declared because this phase commits
+  # its output.
+  #
+  # Done evidence: the prompt carries no provider/model identifier and keeps its
+  #   family-name prose and `claude.model` frontmatter; the generated counterpart is
+  #   rebuilt from it and carries the four provenance lines; the prompt-scan suite
+  #   exists and is green with its 10/10 planted controls and its regression arm;
+  #   `.opencode/**` differs from HEAD in exactly this one file; no other prompt or
+  #   command changed.
+  #
+  # Commit: refactor(GH-374): remove model literals from the toolsmith prompt
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Remove provider/model identifiers from the toolsmith prompt and regenerate the Claude plugin: every identifier becomes a neutral placeholder with a pointer to the typed profile policy, and the pair is pinned by the full-roster scan with ten planted controls, a carve-out declaration, a generated-pair no-op proof and a pre-change regression arm"
+    kind: delivery
+    summary: "refactor(GH-374): remove model literals from the toolsmith prompt"
+    weightClass: small
+    scope:
+      files:
+        # The one prompt edited (delegated to `@toolsmith`), its build output, and
+        # the suite that owns SCAN-004/006/007.
+        - .opencode/agent/toolsmith.md
+        - .ados-claude/agents/toolsmith.md
+        - tests/checks/provider-policy-adoption-prompt-scan.test.ts
+      # Deliberately absent: `scripts/build-claude-plugin.sh` (RUN, never edited),
+      # every other `.opencode/agent/*.md` and `.opencode/command/*.md`
+      # (byte-unchanged, DEC-20/NFR-7), and
+      # `tests/checks/milestone-prompts.test.ts` (UNEDITED control re-run by the
+      # gate).
+    interactions:
+      # The prompt is the source of truth; the Claude Code file is generated code
+      # that must be rebuilt from it, never edited (AGENTS.md, RSK-17).
+      - kind: contract-file
+        target: .opencode/agent/toolsmith.md
+        role: producer
+      - kind: generated-code
+        target: .ados-claude/agents/toolsmith.md
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The permanent reference test over the REAL document, the
+  # agent-roster/chain/peak/ceiling/origin pins, and the migration-bridge tree
+  # invariants (F-1, F-2, F-3, F-5, F-6, F-7; DM-1..DM-10; DEC-3, DEC-5, DEC-6,
+  # DEC-18, DEC-19, DEC-21; AC-F6-2, AC-F7-1; 17 cases).
+  #
+  # Goal: one suite that fails BY NAME when the committed policy or the recorded
+  # bridge drifts, so the declaration stops being a claim and becomes an asserted
+  # repository fact. It parses the REAL `.delivery-os/config.yaml` through the
+  # delivered validators — never a copy, never a fixture — reads the roster from
+  # `.opencode/agent/*.md` at assertion time, pins every DECLARED value, and pins
+  # the migrator's owned contract as a tree invariant.
+  #
+  # Why the migration cases live here (test plan v1.2 §5.2.8): MIG-001..-003 are
+  #   HEAD/tree invariants over a change artifact and pinned files, not runtime
+  #   behaviour; they need a read of `migration-output.md`, the migrator module and
+  #   `tests/**`, all of which a structure suite already does. Folding them in keeps
+  #   the change at FIVE new suites plus the extended `doc-conformance` (NFR-7) and
+  #   removes the sixth file revision 1.0 declared, which never existed.
+  #
+  # Contract (test plan §5.2.1, §5.2.2, §5.2.5, §5.2.8; the 17 owned cases):
+  #   CFG-001   the real document acquires through `acquireFileConfig` with the
+  #             brand's current (`.jaiship`, ABSENT) and prior (`.delivery-os`)
+  #             names; exactly one `prior` entry with `state: "read"`; provider
+  #             branch parses/validates with zero failure; `chains` keys exactly
+  #             {subscription-first, subscription-only} and both validate;
+  #             `defaultChain` is `subscription-first`; profile branch
+  #             parses/validates; `graceSeconds === 300` for BOTH profiles with
+  #             both windows and all four buffers non-zero. Mutant:
+  #             `bufferAfterSeconds: 0` on window[1] must be refused through
+  #             `peakWindows.graceSeconds` (RSK-15).
+  #   CFG-004   SIX declaration defects refuse with the delivered identity AND ITS
+  #             EXACT DETAIL PROSE before any evaluation, writing nothing and
+  #             reading no spend: (a) subscription entry after the paid entry in
+  #             `subscription-first` → `provider.chain.invalid`, summary contains
+  #             `chain subscription-first places subscription entries after
+  #             pay-per-token entries`; (b) an undeclared entry `alt` → `chain
+  #             subscription-first references unknown provider alt`; (c) a DUPLICATE
+  #             entry → `chain subscription-first lists provider zai-coding-plan…`;
+  #             (d) `quota.credentialRef: nope` → the unknown-credential detail;
+  #             (e) `defaultChain: nope` → `default chain nope is not declared`;
+  #             (f) `chains.subscription-only.entries: []` → `provider.chain.empty`
+  #             with `chain empty has no entries`. Plus the two `field`-bearing arms
+  #             that DO carry a field (a budget `ceiling: 0`, a profile
+  #             `graceSeconds: 600`). NO `field` member is asserted for a chain
+  #             defect — the delivered chain validator has none (M3).
+  #   CFG-006   the DOCUMENT's declared entry bodies are pinned exactly (five quota
+  #             leaves, `deepseek` with NO `quota`), and the FOUR delivered quota
+  #             defaults are then asserted SEPARATELY on the resolved entry at
+  #             `layer=defaults` — never by deep-equalling the resolved node against
+  #             a defaults-omitting literal (M1).
+  #   CFG-007   `tiers` keys exactly {delivery}; `profiles` keys exactly
+  #             {delivery, paid}; `delivery.providers` =
+  #             ["zai-coding-plan","deepseek"]; `paid.providers` = ["deepseek"];
+  #             both `tier === "delivery"`; no
+  #             `agentOverrides`/`pacing`/`envRecord` anywhere (NG-5's
+  #             second-name-authority guard).
+  #   CFG-008   both watch targets deep-equal DM-7; every watch key names a declared
+  #             entry, every `credentialRef` a declared credential; `maxAgeSeconds`
+  #             a positive integer, `floor` a positive number.
+  #   CFG-009   entry peaks are the ADMISSION truth, evaluated DAILY at nine
+  #             instants (02:00, 03:30, 04:00, 04:30, 05:00, 09:59, 10:00, 12:00,
+  #             Saturday 05:00Z) through the delivered `evaluatePeakWindow` +
+  #             `UTC_ZONE_FACTS`; the union covers both legacy DeepSeek 2x windows
+  #             and the subscription's buffered pause; the ONLY newly closed
+  #             TIME-OF-DAY INTERVAL relative to today's DeepSeek target is exactly
+  #             04:00-06:00 UTC, with the DEC-9 weekend/Chinese-holiday superset
+  #             stated in the same assertion block (m3). STRUCTURAL arm:
+  #             `createResolvedProviderProbe` reads `descriptor.peak` and contains
+  #             no `peakWindows` read (OQ-1).
+  #   SEAT-006  all 48 declared seat models are expressible: 48/48
+  #             `evaluateModelExpressibility` ok, `provider/model[#variant]`
+  #             grammar, length within `HARNESS_MODEL_EXPRESSION_MAX_CHARS` (200),
+  #             zero `harness.profile.model-unrepresentable`; the distinct model
+  #             set is exactly {zai-coding-plan/glm-5.3,
+  #             zai-coding-plan/glm-5.3-flash, deepseek/deepseek-flash}.
+  #   DRIFT-001 the DECLARED credentials/entries/chains are pinned (credentials as
+  #             `{ sourceKey: { style, name } }`, `sourceKey` the only child key),
+  #             then the RESOLVED leaves are compared individually: every declared
+  #             leaf is `project-committed`, the four quota leaves are
+  #             `layer=defaults`, the resolved credential child adds no key.
+  #   DRIFT-002 each profile's seat-name set EQUALS the roster in BOTH directions,
+  #             both profiles agree, roster count is 24.
+  #   DRIFT-003 the 48 seat bodies (model, pacingClass, capability) and both
+  #             profiles' `peakWindows` pinned, including
+  #             `deriveGraceSecondsMax() === 300` and `graceSeconds <= 300`.
+  #   DRIFT-004 preferenceChain, tiers, watch targets, the 20/30 ceilings and THE
+  #             ORDERING (`window-cost.ceiling < ticket-cost.ceiling`, with the
+  #             `failed`-outranks-`parked` reason recorded) pinned; neither budget
+  #             declares `entries`; no `agentOverrides`/`pacing`/`envRecord`.
+  #   DRIFT-005 EIGHT named drifts each fail by name (missing paid seat; pm's base
+  #             model moved to glm-5.3; a new agent without a seat; reordered
+  #             chain; paid peak narrowed to 06:00-10:00; ticket ceiling changed to
+  #             25; the ceilings INVERTED; a profile window `bufferAfterSeconds: 0`).
+  #             8/8 must fail; a mutant that survives is a gap and fails the case's
+  #             own count.
+  #   DRIFT-006 `config get provider.defaultChain --show-origin --json` reports
+  #             origin `layer=project-committed
+  #             file=.*/\.delivery-os/config\.yaml line=\d+`, `config debug` agrees,
+  #             AND the DEFAULTS ARM: `provider.entries.zai-coding-plan.quota.timeoutMs`
+  #             resolves 15000 with `layer=defaults file=core/src/config/defaults.ts
+  #             line=\d+`, the four default-only leaves are enumerated as such, and
+  #             no DECLARED leaf reports `layer=defaults` (M1). The asserted
+  #             `layer=… file=… line=…` form is produced by `originLabel`
+  #             (`packages/core/src/config/provenance.ts`), which is the module the
+  #             contract cites — not the resolver (N8's citation class).
+  #   DRIFT-007 top-level keys exactly {provider, verify};
+  #             `verify.suite-map.schemaVersion` is `delivery.verify.suite-map.v1`;
+  #             its single job "TS aggregate check" carries the same eight
+  #             suites/locals as the delivered control suite's own fixture (never
+  #             re-typed); the control suite is UNEDITED (content hash against the
+  #             recorded pin).
+  #   MIG-001   `migration-output.md` records BOTH refusals with `code`,
+  #             `category: "user"`, `retryable: false` — `oversized-source` naming
+  #             the hook at 75215 B against `PROVIDER_MIGRATE_SOURCE_MAX_BYTES =
+  #             65536`, and `dynamic-value` naming `ados-agent-tiers.sh` line 11 —
+  #             plus both source paths, the per-file byte/line inventory, the
+  #             read-only guarantee, the disposition (migrator not extended; M4-S17
+  #             owns the gaps), and NO file content and NO credential-shaped value.
+  #   MIG-002   the migrator's owned contract as a tree invariant: caps exactly
+  #             65536/2000/64; the closed EIGHT-reason set {no-source,
+  #             unreadable-source, oversized-source, shell-construct, dynamic-value,
+  #             target-exists, proposal-invalid, no-checkout}; the grammar accepting
+  #             exactly `--profiles-dir`, `--hook`, `--write` plus the global
+  #             `--json` (an undeclared flag answers `fallback.invocation`); the
+  #             module/reader/CLI member/fixtures/goldens exist at their declared
+  #             paths and this change added none; no suite here imports the migrator.
+  #   MIG-003   no suite re-runs the migration against an operator home: the scan
+  #             over `tests/**` finds no `migrate` invocation with a `$HOME`-shaped
+  #             source path, the only migrate coverage here is the static evidence
+  #             read, the legacy-present arm records ZERO opens of either legacy
+  #             path, and the artifact's digests are unchanged after the run.
+  #
+  # Mutants and cleanliness (TR-2, TR-3, TR-13): every mutant is a copy under
+  #   `tmp/tmpdir/mutants/**`, driven through the SAME pinned assertions; the
+  #   committed document is never written, and a mutation of it fails the case's
+  #   cleanliness arm. The 8/8 drift count, the 6/6 validator count and the 4/4
+  #   defaults count are asserted as counts, so a pin that stops being exercised
+  #   fails.
+  #
+  # Acceptance: AC-F7-1 — the real document loads and validates through the
+  #   delivered validator (including each profile's `peakWindows` grace/buffer
+  #   bound), every DECLARED value is pinned, the four delivered defaults are
+  #   asserted separately at their own layer, each profile's seat set equals the
+  #   roster in both directions, eight named drifts fail by name, and the two
+  #   origins (`project-committed` and `defaults`) are reported. AC-F6-2 — the
+  #   evidence artifact records both refusals, the migrator's owned surfaces are
+  #   unchanged, and nothing re-runs the migration against a home. Evidence cases:
+  #   CFG-001/004/006/007/008/009, SEAT-006, DRIFT-001..-007, MIG-001..-003. It also
+  #   supplies the first half of AC-F1-1, AC-F2-1, AC-F2-3, AC-F3-1, AC-F4-1 and
+  #   AC-F5-1 (phase 4 completes them) — additive evidence, no ownership transfer.
+  #
+  # Gate (expected: G0 green; the suite reports 17 cases green and prints no
+  # failure; any surviving mutant arm is a failure of the gate):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/provider-policy-adoption-reference.test.ts
+  #
+  # Done evidence: the suite exists, is green, and its 8/8 drift mutants fail by
+  #   name; the committed document, `.opencode/agent/**` and the migrator are
+  #   unmodified; `migration-output.md` is unmodified; no fixture directory exists
+  #   yet (phase 4 authors it); no sixth test file was created.
+  #
+  # Commit: test(GH-374): pin the committed provider policy
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "The permanent reference test over the real committed document: validator load with the grace/buffer bound, the declared credentials/entries/chains/ceilings/watch pins with the four delivered quota defaults asserted separately, the 24-seat roster equality in both directions, eight named drift mutants, both origins, the byte-identical suite-map sibling and the migration-bridge tree invariants"
+    kind: delivery
+    summary: "test(GH-374): pin the committed provider policy"
+    weightClass: medium
+    scope:
+      files:
+        # The one suite. MIG-001..-003 are arms INSIDE it: the change ships five
+        # new suites plus the extended `doc-conformance` (NFR-7), never a sixth.
+        - tests/structure/provider-policy-adoption-reference.test.ts
+      # Deliberately absent: `.delivery-os/config.yaml` (read, not authored — phase
+      # 1), `migration-output.md` (read as the assertion target), the migrator and
+      # `packages/**` (pinned, never edited), `tests/structure/
+      # verify-gates-suite-map-reference.test.ts` and the delivered provider
+      # suites/goldens (UNEDITED controls), and `tests/fixtures/**`.
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The composed behaviour proof: seeded resolve, seats/env record/
+  # binding for all 24 roles, the named vision arms, the watch view, the six
+  # committed replays and the nomination/admission evidence (F-1..F-7; DM-4, DM-5,
+  # DM-7, DM-8, DM-9; DEC-3, DEC-10, DEC-12, DEC-13, DEC-19, DEC-21; AC-F1-1,
+  # AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1, AC-F4-1, AC-F5-1, AC-F7-3;
+  # 22 cases).
+  #
+  # Goal: prove the adopted policy BEHAVES as declared, offline, through the
+  # delivered engine and the delivered CLI composition — a scratch checkout
+  # carrying a BYTE COPY of the real document, a scratch home/state root, a frozen
+  # clock, and injected credential/transport/spend seams — plus six committed
+  # `provider simulate` fixtures a reviewer can run. No dispatch, no network, no
+  # credential, no spawn (DEC-13). This is the only phase that authors fixtures.
+  #
+  # Contract (test plan §5.2.1..§5.2.3, §5.2.7; the 22 owned cases):
+  #   CFG-002   seeded default-chain resolve: exit 0, chain `subscription-first`,
+  #             selected `zai-coding-plan` costClass `subscription`,
+  #             `data.skipped` deep-equals [{providerName:"deepseek",
+  #             reason:"shadowed"}] AFTER the selection (declared order), no parks,
+  #             no announcements, ONE injected quota call; `--chain subscription-only`
+  #             selects the subscription entry alone with `skipped: []`; the
+  #             legacy-present arm is BYTE-IDENTICAL and records ZERO opens of
+  #             either legacy path.
+  #   CFG-003   the prior-identity notice: exactly one
+  #             `prior-identity-fallback: config-read` line on stderr naming the
+  #             prior file and the absent current file, nothing on stdout, and
+  #             `--json` data equal to the human rendering; the control checkout
+  #             (`.jaiship` present) emits `config-skipped` — the assertion is about
+  #             THIS checkout, never about silence (TR-15).
+  #   CFG-005   the resolved budgets are exactly {window-cost, ticket-cost} with
+  #             DM-8's fields (20 window / 30 ticket), the ordering 20 < 30 is
+  #             asserted with its reason, and neither declares `entries`; a
+  #             verified-empty ledger measures zero with EXACTLY ONE spend read;
+  #             the ref seam resolves GH-374 from `.ai/local/pm-context.yaml` once.
+  #             No-context arm: the refusal names the CONTEXT PATH and the
+  #             delivered phrase (`no active work-item ref was found at …`), not an
+  #             invented `workItemRef` substring (m4).
+  #   CFG-010   `provider watch status --json`: one closed-condition entry per
+  #             declared target with `observedAt`, computed `ageSeconds` and the
+  #             declared bound (`900` for deepseek); a below-floor balance reports
+  #             `quota-exhausted` with NO invented reset; zero state writes, zero
+  #             live calls.
+  #   SEAT-001  all 24 roles resolve on the base profile (exit 0,
+  #             `data.profile === "delivery"`) and `resolveBinding` returns
+  #             `binding` naming seat == role and the declared model; ZERO
+  #             `unassigned`.
+  #   SEAT-002  all 24 bind on `paid` with `deepseek/deepseek-flash`, and the paid
+  #             seat-name set equals the base's (a profile switch costs no role its
+  #             seat — RSK-1).
+  #   SEAT-003  `--for-spawn` env record: `data-v1`, one entry per declared seat
+  #             (24, sorted), each name derived from the brand's environment prefix
+  #             as `OC_JAISHIP_AGENT_` + the upper-snake seat + `_MODEL`, each value
+  #             equal to that seat's declared model, re-parses clean,
+  #             `<= ENV_RECORD_MAX_RECORDS (256)` and `<= ENV_RECORD_MAX_BYTES
+  #             (65536)`; NO seat declares `envName` (the derived-name deviation is
+  #             on the owner-review list).
+  #   SEAT-004  both visual seats `vision-capable` on the image-capable paid model
+  #             on BOTH profiles; image-generator text-only; every z.ai seat
+  #             text-only; zero vision claims on a text-only model; the per-seat
+  #             capability map identical across profiles. THE VISION ARMS NAME THE
+  #             AGENT: `selectProfile({ requireVision: true, agent: "designer" })`
+  #             then `agent: "image-reviewer"`, each selecting that role's seat and
+  #             NOT `provider.profile.capability-denied`; the agent-less call is
+  #             asserted as the DENIED TRAP (it resolves the alphabetically first
+  #             seat, `bootstrapper`, a text-only z.ai seat) rather than used as the
+  #             oracle (M12, AC-F2-3).
+  #   SEAT-005  the per-seat model and pacing map equals the recorded legacy intent
+  #             on both profiles (8 / 2 / 14 base split; 14 judgment / 10 execution;
+  #             no other seat key).
+  #   SIM-001..-009 the six committed fixtures, one owner each (see FIXTURE RULES
+  #             for the figures and chains): peak park on `subscription-only`
+  #             (chain park `chain:subscription-only`, cause `chain-exhausted`,
+  #             kinds exactly ["peak-window"], resume 2026-11-20T10:00:00Z,
+  #             provider park cause `peak-window` with `evidence.timezone: "UTC"`,
+  #             announcements exactly {provider.peak.parked info,
+  #             provider.chain.exhausted warning}); quota park at the reported
+  #             reset with the quota + chain announcements BESIDE the default-chain
+  #             fallback arm; the WINDOW park at spend 25 on the DEFAULT chain —
+  #             both `provider:zai-coding-plan` and `provider:deepseek` parked with
+  #             cause `budget-exhausted`, ticket scope CLEAR, expiry exactly
+  #             `newestAtMs + 86_400_000` and strictly future, the announcement's
+  #             five budget fields (`window-cost`/`window`/`cost`/`25`/`20`), and NO
+  #             paid escape; subscription-first selection with `deepseek`
+  #             `shadowed`; paid fallback on an exhausted quota but NEVER on a peak
+  #             park (the no-paid-escalation rule); the TICKET stop at spend 30 on
+  #             `subscription-only` — `provider.budget.exceeded` at exit 1 with **no
+  #             `data` payload, no `skipped` list, no park and no expiry**, the
+  #             cannot-reopen statement and `[provider.budget.crossed]` (M2);
+  #             `stateWrites: 0` with the seven-key `simulation` block on all six
+  #             and armed throwing seams never called; byte-identical repeats and
+  #             key-order-insensitive twins; the hostile-fixture refusals (unknown
+  #             key, `credentials.zai.value`, quota `secret`, missing `workItemRef`,
+  #             zoneless `now`, wrong `chain` type) at `input.value.rejected` with
+  #             NO content echoed — AND the pinned figures 25/30 and every
+  #             fixture's `workItemRef`.
+  #   NOM-001   `nominateProviderProfile` over the real resolved configuration at
+  #             12:00Z returns `delivery` with the credential/transport ports
+  #             called 0 times; the `provider.profiles: {}` control arm refuses
+  #             `provider.profile.absent` — proving the difference is this document
+  #             and the identity still exists (DEC-13).
+  #   NOM-002   inside the pause no profile is eligible: the nomination refusal as
+  #             `ok === false` plus the EXACT eligibility STRING array
+  #             (`delivery:ineligible:condition+condition`,
+  #             `paid:ineligible:condition` at 05:00Z), while the composed
+  #             `provider profile resolve --json` arm carries the blocker VALUES
+  #             ({ kind: "condition", value: "peak-window" }) and answers exit 2 with
+  #             `provider.profile.unavailable`; at 02:00Z the paid UNION window is
+  #             the blocker; at 12:00Z `delivery` is nominated; zero lease claims,
+  #             attempts or lanes (M4).
+  #   NOM-003   the no-self-dispatch record: this plan declares that
+  #             `dispatch GH-374` is not run, states the TYPED-ATTEMPT SUBSTITUTION,
+  #             names the evidence set, the throwing dispatch-adjacent seams are
+  #             called 0 times, and no suite invokes the delivery CLI, a lease or a
+  #             spawn.
+  #   NOM-004   nomination, resolve, binding and the env record AGREE per role (same
+  #             profile, seat and model) for all 24 roles.
+  #
+  # Acceptance: AC-F1-1 (the payload reports the declared order and the never-pay
+  #   chain resolves alone, with the delivered detail prose on the defect arms),
+  #   AC-F1-2 (quota park at the reset + the declared fallback), AC-F1-3
+  #   (subscription-first, `shadowed`, paid only per policy and never for a peak),
+  #   AC-F2-1 (24/24 seats, env records and bindings), AC-F2-3 (no text-only vision
+  #   seat; both named vision arms eligible), AC-F3-1 (peak park, both blockers,
+  #   02:00/05:00/12:00 eligibility, daily semantics), AC-F4-1 (spend 25 window park
+  #   with the exact expiry and no substitution; spend 30 ticket stop with no data,
+  #   no skipped list, no park, no expiry; `stateWrites: 0`), AC-F5-1 (watch targets
+  #   answer one closed condition with age/bound, read-only), AC-F7-3 (nomination
+  #   returns `delivery`; `provider.profile.absent` is proven not producible; the
+  #   typed-attempt half is a declared substitution and no real dispatch is run).
+  #
+  # Gate (expected: G0 green; the suite green; 6/6 replays reproduce their declared
+  # outcome; a vacuous replay — fixtures passing on any policy — shows as SIM-001's
+  # chain-substitution arm passing, which fails the case):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-policy-adoption.test.ts
+  #
+  # Done evidence: the six fixtures and the behaviour suite exist; the policy in
+  #   every arm comes from the COPIED real document (never a fixture); the figures
+  #   are 25/30; the committed document, `.opencode/**` and `.ai/**` are unmodified;
+  #   no dispatch, lease, network call, credential resolution or spawn occurred.
+  #
+  # Commit: test(GH-374): replay the adopted provider policy offline
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Offline replay of the adopted policy: the seeded resolve and prior-identity posture, the 24-role seat/env-record/binding proofs on both profiles with named-agent vision arms, the watch view, the six committed simulate fixtures (spend 25 window park and 30 ticket stop) and the nomination plus no-self-dispatch evidence"
+    kind: delivery
+    summary: "test(GH-374): replay the adopted provider policy offline"
+    weightClass: large
+    scope:
+      files:
+        - tests/fixtures/provider/policy-adoption/simulate/peak-park.json
+        - tests/fixtures/provider/policy-adoption/simulate/quota-park.json
+        - tests/fixtures/provider/policy-adoption/simulate/budget-park.json
+        - tests/fixtures/provider/policy-adoption/simulate/subscription-first.json
+        - tests/fixtures/provider/policy-adoption/simulate/paid-fallback.json
+        - tests/fixtures/provider/policy-adoption/simulate/ticket-ceiling.json
+        - tests/behaviour/provider-policy-adoption.test.ts
+      # Deliberately absent: `.delivery-os/config.yaml` (copied, never written),
+      # `tests/fixtures/provider/**` delivered fixtures (read as controls),
+      # `tests/checks/provider-legacy-reads.test.ts`,
+      # `tests/behaviour/provider-simulate.test.ts` and the provider
+      # chain/budget/profile/watch suites plus the goldens (UNEDITED controls whose
+      # baselines the new arms cite, test plan §7.2).
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Prove the legacy path retired and the credential surface empty
+  # (F-1, F-5, F-6; DM-7, DM-10; DEC-2, DEC-12, DEC-22; AC-F6-1, AC-F6-3;
+  # 7 cases).
+  #
+  # Goal: make the story's negative claims evidence rather than assertion — over
+  # the DECLARED DELIVERY SURFACE, no committed script or prompt sources the legacy
+  # profile directory, none installs the pre-iteration hook, and no credential value
+  # exists on any surface. Two suites, two layers: a source scanner with planted
+  # controls and an empty-set guard, and a credential suite with a canary, the exact
+  # credential key-set proof and a real-value scan with a declared placeholder
+  # carve-out.
+  #
+  # Contract (test plan §5.2.4, §5.2.9; the 7 owned cases):
+  #   SCAN-001  the DECLARED DELIVERY SURFACE (AC-F6-1's scope, M11): the include set
+  #             is `scripts/**`, `tools/**`, `.opencode/**`, `packages/**`,
+  #             `tests/**`; the exclusions are DECLARED WITH THEIR REASONS —
+  #             `scripts/hooks/**` (inactive adopter examples),
+  #             `scripts/.tests/**` (their tests), `tests/fixtures/**` (fixture text
+  #             is data), `doc/templates/blueprints/**` (adopter scaffolding,
+  #             counted by SCAN-005), `doc/**` (documentation describes the legacy
+  #             surface), and the scan module itself. Findings empty; the three
+  #             counters 0 each; the report names the include set and EVERY
+  #             exclusion with its reason; each include root exists; the scanned
+  #             count equals the enumerated set; `scripts/install.sh` is IN the
+  #             scanned set and produces NO finding (its example copy is the
+  #             declared exception).
+  #   SCAN-002  THREE planted source classes are reported by the SAME scanner
+  #             (sourcing a `profiles` path; `cp`/`install`/`tee`/redirect onto a
+  #             `pre-opencode-iteration` path; `mkdir` of a hooks directory) while
+  #             the TWO ALLOWED IDIOMS are not: INVOKING an installed hook
+  #             (`"$HOOK"`, `$ADOS_PRE_ITERATION_HOOK`) — invoking is not sourcing
+  #             and not installing (DEC-12) — and `scripts/install.sh`'s example
+  #             copy, which ships each example under its EXAMPLE path, never as
+  #             `hooks/pre-opencode-iteration`. A clean sample produces nothing. The
+  #             FOURTH planted class AC-F6-1 names (a provider/model identifier) is
+  #             SCAN-004's, in phase 2 (M11).
+  #   SCAN-003  NEITHER scanner can pass on nothing: an empty include set FAILS with
+  #             a typed non-empty-include refusal for the delivery-surface scanner
+  #             and for the prompt scanner (the prompt-suite empty-set arm is an ARM
+  #             of this case, through the exported `scan(samples, include)` seam —
+  #             not a second owner), a missing root fails naming it, and a planted
+  #             finding in a one-file include set is reported, proving the seam is
+  #             live.
+  #   SCAN-005  every exclusion is REAL in both directions and compared against the
+  #             exported constant by exact value; a `doc/**` sample produces none;
+  #             the `install.sh` EXAMPLE COPY is not reported while a copy to
+  #             `hooks/pre-opencode-iteration` IS — a naming accident becomes a
+  #             declared rule with an exported reason. SECOND HALF: exactly ONE file
+  #             in the tree installs at a path ending `pre-opencode-iteration` (the
+  #             adopter blueprint), identified as documentation scaffolding, and NO
+  #             delivery-surface file references it.
+  #   SEC-001   a canary credential injected at the composition appears on NO
+  #             surface — document text, the six fixtures, the `--for-spawn` env
+  #             record, the resolve data, the replay data, `migration-output.md`,
+  #             stdout and stderr — while the scanner's non-vacuity arm REPORTS a
+  #             planted string containing it, and a non-credential name carrying the
+  #             same value is still reported (no blanket redaction).
+  #   SEC-002   every credential node is EXACTLY `{ sourceKey: { style, name } }`:
+  #             two children; each child's key set exactly `{sourceKey}`;
+  #             `sourceKey`'s key set exactly `{style, name}`; `style === "literal"`;
+  #             `name` a non-empty string (the delivered parser requires no pattern,
+  #             so none is invented). THE HOSTILE ARM HAS TWO SIDES AND BOTH ARE
+  #             ASSERTED (M5): through the CONFIG LAYER (`acquireFileConfig` +
+  #             `resolveConfig`) an extra `value`/`secret`/`token`/`key`/`raw` —
+  #             beside `sourceKey` or inside it — is REFUSED as
+  #             `config.key.unknown`; the failure carries `layer:
+  #             "project-committed"` and NO `key` member, so the case asserts the
+  #             code PLUS A DIFFERENTIAL ORACLE (the identical document without the
+  #             hostile key resolves `ok`), attributing the refusal without
+  #             inventing a path string; through the RAW PARSER
+  #             (`parseAndValidateProviderConfiguration`) the same key is IGNORED
+  #             (parse ok, hostile key absent from the parsed credential) and is
+  #             NEVER asserted as a refusal. There is no delivered path that
+  #             refuses an extra key at the credential node, and this phase does not
+  #             claim one.
+  #   SEC-003   no committed file in this change's DECLARED SET carries a REAL
+  #             credential-shaped value. The set is test plan §7.2's: the document,
+  #             the six fixtures, the SIX test files, the three guides,
+  #             `feature-provider-profiles.md`, the two toolsmith files,
+  #             `migration-output.md`, this plan and the spec (set equality is
+  #             asserted, so nothing is excluded by accident).
+  #             THE POSITIVE CONTROL IS SYNTHESIZED INSIDE THE TEST AT RUNTIME and
+  #             never written into any scanned artifact (N4, critical): the scanner
+  #             is a pure `(path, text)` function driven over in-memory samples, and
+  #             the realistic sample is BUILT by the case — a `*_API_KEY` name
+  #             joined from fragments plus `=`, and a value assembled from fragments
+  #             with a random suffix — so it matches the real-value rule, is
+  #             REPORTED, and exists only in the test's memory. NO SCANNED DOCUMENT
+  #             CONTAINS A REALISTIC VALUE: this plan, the spec and the test plan
+  #             carry none, which is what makes the case satisfiable over its own
+  #             declared set. (For exactly that reason this comment describes the
+  #             sample and does not print one.)
+  #             THE PLACEHOLDER CARVE-OUT IS A CLOSED LIST OF DOCUMENTED FORMS,
+  #             exported and asserted by value, and it is never a generic
+  #             "ends with an ellipsis" rule (which would nullify the positive
+  #             control): `ANTHROPIC_API_KEY=sk-ant-...`,
+  #             `ZAI_API_KEY=<YOUR_KEY>`, `OPENAI_API_KEY=$OPENAI_API_KEY`, the
+  #             documented `sk-ant-…` form, and a bare reference NAME with no value
+  #             are NOT reported — each compared as its declared constant — while
+  #             the synthesized realistic value IS. This plan is itself in the
+  #             scanned set and carries ONLY those carve-out forms, so filtering the
+  #             real set is the negative control applied to a real file rather than
+  #             an exemption granted to the case's own document. Both directions are
+  #             asserted, so a scanner that reports everything and one that hides
+  #             everything both fail (M6).
+  #
+  # Acceptance: AC-F6-1 — over the declared delivery surface zero sourced profile
+  #   directories, zero hook installations and zero hooks-directory creations; the
+  #   allowed invocation and the `install.sh` example copy are not reported; the
+  #   three planted source classes are; the empty include set fails; the blueprint
+  #   second half holds. AC-F6-3 — the canary is on no surface, every credential
+  #   child is exactly a `{ sourceKey: { style, name } }` reference (the config-layer
+  #   refusal and the raw-parser ignore arm both asserted), and no real
+  #   credential-shaped value is committed. Evidence cases: SCAN-001/002/003/005,
+  #   SEC-001/002/003.
+  #
+  # Gate (expected: G0 green; the scan reports 0 findings, 3/3 planted classes, the
+  # two allowed idioms unreported, the exception declared, the blueprint half
+  # counted; the canary suite reports 3/3 with both carve-out directions):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-legacy-source-scan.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/provider-policy-credential-canary.test.ts
+  #
+  # Done evidence: both suites exist and are green; `migration-output.md`, the
+  #   migrator, its fixtures/goldens and the adopter blueprint are byte-unchanged;
+  #   no legacy path under `$HOME` was read, executed or written by any suite.
+  #
+  # Commit: test(GH-374): prove the legacy provider path retired
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Retirement and credential evidence: the delivery-surface legacy-source scan with every exclusion and its reason, the install.sh example-copy exception, three planted classes, the blueprint second half and each scanner's empty-set guard, plus the canary, the exact `{sourceKey: {style, name}}` key-set proof with both hostile-key arms, and the real-value scan with a declared placeholder carve-out"
+    kind: delivery
+    summary: "test(GH-374): prove the legacy provider path retired"
+    weightClass: medium
+    scope:
+      files:
+        - tests/checks/provider-legacy-source-scan.test.ts
+        - tests/checks/provider-policy-credential-canary.test.ts
+      # Deliberately absent: `migration-output.md` (READ as the assertion target),
+      # the migrator and `packages/**` (pinned, never edited — NG-2),
+      # `scripts/install.sh` and the adopter blueprint (scanned, not edited), and
+      # `tests/checks/provider-legacy-reads.test.ts` +
+      # `tests/behaviour/provider-simulate.test.ts` (UNEDITED controls).
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Documentation truth: the three guides state the adopted policy, its
+  # declared limits and the retirement, the one contradicted spec-page sentence is
+  # replaced, and the doc-conformance table pins all four (F-7; NFR-8; AC-F7-2;
+  # 6 cases: DOC-001..DOC-006).
+  #
+  # Goal: no page still presents the shell profile directory or the pre-iteration
+  # hook as THIS repository's delivery path, no page claims profile `peakWindows`
+  # gate admission, and the adopted policy — including its three honest limits — is
+  # stated where operators meet it. Docs and their phrase rows land in ONE commit
+  # (the one-edit-set rule), so no boundary is ahead of or behind the tree.
+  #
+  # Contract (spec §16's CLOSED obligation table; test plan §5.2.6; the 6 owned
+  # cases). The obligations, per page:
+  #   doc/guides/provider-conditions-and-parks.md — a "this repository's adopted
+  #     policy" block under `## Configuration`: the mixed base (`delivery`) with its
+  #     paid fallback (`paid`); the two chains (default `subscription-first` with
+  #     declared paid fallback, never-pay `subscription-only`); the buffered DAILY
+  #     admission pause 01:00-10:00 UTC = the subscription's `[04:00, 10:00)` plus
+  #     the paid rail's 01:00-10:00 union; the trailing-day ceiling (20) that PARKS
+  #     and the ticket ceiling (30) that STOPS and cannot reopen; the two watch
+  #     targets (subscription quota windows, DeepSeek balance floor 2 USD); the
+  #     synchronous probe reads NO live quota or balance and live verification
+  #     belongs to the daemon path; and the union's only newly closed TIME-OF-DAY
+  #     INTERVAL is exactly 04:00-06:00 UTC — stated AS A COST, with the
+  #     weekend/Chinese-holiday superset beside it (DEC-9, OQ-3).
+  #     RETIRED: "not declared yet"; "04:00-10:00" as the only pause; a shell
+  #     profile or hook deciding routing; the ticket ceiling described as a park; a
+  #     weekday-only claim.
+  #   doc/guides/opencode-model-configuration.md §6 "Provider and model policy" —
+  #     the typed profile branch is THE canonical routing path; this repository's
+  #     seats and models are committed in `.delivery-os/config.yaml`; the per-agent
+  #     table is harness assignment and the harness configuration stays the
+  #     assignment authority; NO provider/model identifier belongs in an agent
+  #     prompt or command definition (the phase-2 cleanup is the proof).
+  #     RETIRED: model choice is only an OpenCode-config concern; a model (or a
+  #     provider/model identifier) belongs in an agent prompt; provider policy is
+  #     undeclared.
+  #   doc/guides/zai-peak-hours-hook.md `## Declarative policy replaces the hook` —
+  #     the hook is off THIS repository's delivery path and NONE is installed; the
+  #     window/quota/ceiling policy is committed configuration; the hook example
+  #     remains for other adopters; invoking an opt-in hook is a fallback of the
+  #     SHELL entry points, not of the typed path.
+  #     RETIRED: any instruction presented as this repository's operating procedure
+  #     for installing the hook.
+  #   doc/spec/features/feature-provider-profiles.md (line 38) — ONE NAMED SENTENCE
+  #     (DEC-23, DOC-006): the claim that profile `peakWindows` drive "the admission
+  #     gating below" becomes "Profile `peakWindows` are daemon lane-watch rule
+  #     data: they drive the in-flight lane watch and do not participate in profile
+  #     eligibility or admission; admission is gated by each provider entry's
+  #     declared peak." The page's own line 61 already states the delivered truth;
+  #     the page keeps `ados_distribution: internal`. Nothing else on the page moves.
+  #   tests/checks/doc-conformance.test.ts — a CLOSED `GH-374` block added beside
+  #     the delivered GH-242/GH-350 blocks: required/stale phrase pairs at every
+  #     site that states the fact (the three guides PLUS the profiles-page sentence
+  #     pair), the marker assertions (guides `redistributable`, spec page
+  #     `internal`), BOTH-DIRECTIONS arms over injected copies, and a delta
+  #     carve-out (a line stating `04:00-10:00 -> 01:00-10:00`, `hook ->
+  #     configuration` or the profiles-page correction must NOT trip the stale
+  #     direction). PREFIXED `GH-374`; no delivered label renamed, no delivered row
+  #     edited.
+  #   Each edited guide keeps its existing `ados_distribution: redistributable`
+  #   inside its EXISTING front matter (no new `---` block, no license header added
+  #   — AGENTS.md); the spec page keeps `internal`.
+  #   The closed page set for DOC-005 is the four edited pages plus `doc/00-index.md`
+  #   and the other provider/config specification pages; verified at plan time, the
+  #   index carries ONE generic row for the conditions guide and no
+  #   retired-dependency claim, so NO index edit is declared. The other three
+  #   specification pages gain no repository-specific policy and remain phase-7
+  #   (`system_spec_update`) verification obligations; if one contradicted the
+  #   adopted policy, correcting it is a phase-7 act, not a silent widening here.
+  #
+  # Acceptance: AC-F7-2 — the operator guide states the adopted policy and its
+  #   limits (daily pause, ticket stop, synchronous-probe limit, the 04:00-06:00
+  #   time-of-day interval and the weekend/holiday superset), the config reference
+  #   states the canonical routing path and the no-identifier-in-a-prompt rule, the
+  #   hook guide states the retirement, the profiles page states the lane-watch-only
+  #   role of profile windows, each page keeps a valid marker and the distribution
+  #   guard passes, and no closed page presents the shell profile or hook as this
+  #   repository's delivery path or profile windows as admission-gating. Evidence
+  #   cases: TC-POL-DOC-001..-006.
+  #
+  # Gate (expected: G0 green; the extended conformance suite green with the GH-374
+  #   block's both-directions arms green; the distribution guard exit 0 with no
+  #   `::error::` annotation):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build     # G0, once per worktree
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #
+  # Release, owner-review and spec-reconciliation obligations (declared here as
+  # scope, not as prologue): this phase is the LAST plan phase and carries the
+  #   hand-off to the lifecycle's remaining acts.
+  #   - OWNER REVIEW AT THE PR (spec §18): the initial ceilings 20 per trailing day
+  #     and 30 per ticket; the derived seat `envName`
+  #     (`OC_JAISHIP_AGENT_` + upper-snake seat + `_MODEL`) instead of a committed
+  #     literal; and the paid entry's single union window with its 04:00-06:00
+  #     time-of-day cost and the weekend/holiday superset. Each is a decision the
+  #     owner confirms at review, not an oversight.
+  #   - THE TYPED-ATTEMPT SUBSTITUTION is stated in the PR: four of five ticket
+  #     clauses are fully traced; the dispatch typed-attempt half is not observed
+  #     because a real dispatch would claim the repository lease and start a second
+  #     delivery, and the delivered grammar has no dry-run form (AC-F7-3, M9).
+  #   - `system_spec_update` verifies `feature-provider-engine.md`,
+  #     `feature-peak-pausing.md` and `feature-config-layer.md` against the adopted
+  #     policy and RECORDS the verification (a contradicted sentence is corrected
+  #     there, never supplemented here); the profiles page was moved HERE by DEC-23
+  #     and is not re-touched; `doc/00-index.md` is verified, not edited.
+  #   - The pull request is opened against `main-tools` at lifecycle phase 11 and
+  #     STOPPED OPEN for owner merge; the PR URL, the aggregate `pnpm check`
+  #     verdict, the remaining gate evidence (G1..G8), the commit-range verdict and
+  #     the locality diff are recorded as pm-notes `notes:` entries there, never
+  #     here; rollback is reverting the branch, after which the engine falls back to
+  #     `provider.chain.empty` / `provider.profile.absent` and the toolsmith pair
+  #     reverts together with the operator's legacy files untouched (§18).
+  #
+  # Done evidence: the three guides state the adopted policy, the canonical routing
+  #   path and the retirement with valid markers; the profiles page states the
+  #   lane-watch-only role with its `internal` marker; the extended conformance
+  #   suite and the distribution guard are green; the change folder is the only
+  #   other place this change touched.
+  #
+  # Commit: docs(GH-374): document the adopted provider policy
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Documentation truth: the conditions guide states the adopted policy with its declared costs, the config reference states the canonical routing path and the no-identifier rule, the hook guide states the retirement, the profiles page's line-38 sentence states the lane-watch-only role, and the doc-conformance table pins all four in one closed GH-374 block"
+    kind: delivery
+    summary: "docs(GH-374): document the adopted provider policy"
+    weightClass: small
+    doneArtifacts:
+      pipelineId: "the ls-* / ts-* matrix and the ts-doc-distribution job green on the GH-374 pull request targeting main-tools"
+      trackerTransition: "GH-374 dod_check pass with all six plan phases complete; pull request opened against main-tools at lifecycle phase 11 and left open for owner merge"
+    scope:
+      files:
+        - doc/guides/provider-conditions-and-parks.md
+        - doc/guides/opencode-model-configuration.md
+        - doc/guides/zai-peak-hours-hook.md
+        - doc/spec/features/feature-provider-profiles.md
+        - tests/checks/doc-conformance.test.ts
+      # Deliberately absent: `doc/00-index.md` (verified: no retired-dependency
+      # claim, no row edit needed), the other three provider/config SPECIFICATION
+      # pages (phase-7 obligations, spec §16),
+      # `scripts/.tests/test-doc-distribution.sh` and the GH-242/GH-350 blocks
+      # inside `doc-conformance.test.ts`'s delivered rows (UNEDITED controls — this
+      # suite is EXTENDED, never relocated).

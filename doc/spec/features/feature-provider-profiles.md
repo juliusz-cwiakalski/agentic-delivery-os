@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-PROFILES
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
 summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, optional per-profile peak-window rules, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
 links:
-  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335", "GH-350"]
+  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335", "GH-350", "GH-374"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0013", "TDR-0028", "TDR-0032", "TDR-0062"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -35,7 +35,7 @@ Peak pausing in the daemon, the audit ledger, and spend reporting are outside th
 The `provider.profiles` branch is a typed record-map branch (GH-234 F-1, DM-1..DM-5):
 
 - `tiers`: a dynamic-name map of named responsibility groups.
-- `profiles`: a dynamic-name map; each profile declares `tier`, `providers`, `seats`, and optional `agentOverrides`. A seat declares `model`, `pacingClass` (`judgment` | `execution`), `capability` (`vision-capable` | `text-only`), and an optional explicit `envName`. A profile may also declare optional `peakWindows` rules: a window list (a declared `timezone`, `UTC` by default, plus start/end seconds-of-day, a multiplier per window, and non-negative buffers before and after each window) with a required `graceSeconds` default whose maximum is derived as the smallest declared buffer, versioned with the profile; with no branch declared, the profile has no peak enforcement. These rules drive both the admission gating below and the daemon's lane-level peak pausing ([Provider Peak Pausing](feature-peak-pausing.md)).
+- `profiles`: a dynamic-name map; each profile declares `tier`, `providers`, `seats`, and optional `agentOverrides`. A seat declares `model`, `pacingClass` (`judgment` | `execution`), `capability` (`vision-capable` | `text-only`), and an optional explicit `envName`. A profile may also declare optional `peakWindows` rules: a window list (a declared `timezone`, `UTC` by default, plus start/end seconds-of-day, a multiplier per window, and non-negative buffers before and after each window) with a required `graceSeconds` default whose maximum is derived as the smallest declared buffer, versioned with the profile; with no branch declared, the profile has no peak enforcement. Profile `peakWindows` are daemon lane-watch rule data: they drive the in-flight lane watch and do not participate in profile eligibility or admission; admission is gated by each provider entry's declared peak ([Provider Peak Pausing](feature-peak-pausing.md)).
 - `preferenceChain`: `base` plus ordered `fallbacks`; the effective order is base-first.
 - `pacing`: an ordered `goalPriorities` list, a `tailThresholdPercent`, and a dynamic-name map of `rungs` (each with `thresholdPercent` and `executionModel`).
 - `watch`: a dynamic-name map keyed by provider name; each target declares a mapping kind, an HTTPS endpoint, a credential reference, an optional `maxAgeSeconds` (a positive integer with the policy default `900`), and optional floor and threshold. Watch targets live only under `provider.profiles.watch`; `provider.entries` carries no watch data.
