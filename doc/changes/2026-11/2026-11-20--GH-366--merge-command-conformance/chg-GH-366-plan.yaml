@@ -196,20 +196,18 @@
 # rather than an owed edit; no acceptance criterion, case id or coverage mapping
 # changed.
 #
-# TEST-PLAN NOTE 2 (spec v2.3 alignment; declared, not hidden). The spec's v2.3
-# revision implements CEO-D-111 and moves NO case between phases: the allocation
-# in the index above is unchanged at 8 / 16 / 16 / 3 / 5 / 1 = 49, and no case id,
-# AC mapping or NFR mapping moves. It restates merged truth on the delivered read
-# used verbatim with one additive optional `mergedMatches` count (exactly one
-# replays, zero refuses `no-open-request`, more than one aborts
-# `merge.transaction-aborted` naming the duplicate identities) and withdraws the
-# superseded merged-ambiguity request reason. The test plan's current revision
-# still restates that one rule in its superseded form on the convergence carriers;
-# the carrier restatement is an owed documentation edit owned by the test-plan
-# author, not a change to the case set, the phase ownership or the totals. This
-# plan implements the v2.3 ruling: phase 2 owns the placeholder routing, phase 3
-# owns the candidate-set resolution, the convergence attempt and the duplicate
-# aborts that supersede the placeholder.
+# TEST-PLAN NOTE 2 (spec v2.3 alignment; declared, not hidden). Test plan v1.5
+# mirrors spec v2.3 / CEO-D-111 and moves NO case between phases: the allocation
+# in the index above is unchanged at 8 / 16 / 16 / 3 / 5 / 1 = 49 (phase 1
+# carries none), and no case id, AC mapping or NFR mapping moves. The convergence
+# carriers use the delivered read verbatim with one additive optional
+# `mergedMatches` count (exactly one replays, zero refuses `no-open-request`, more
+# than one aborts `merge.transaction-aborted` naming the duplicate identities),
+# the superseded merged-ambiguity request reason is withdrawn, and the abort row
+# moves to its three act-requiring causes with the duplicate-open (one provider
+# read) and duplicate-merged (two) sub-runs. This plan implements that ownership:
+# phase 2 owns the placeholder routing, phase 3 owns the candidate-set resolution,
+# the convergence attempt and the duplicate aborts that supersede the placeholder.
 #
 # DECLARED CROSS-PHASE READS (a case is owned by one phase; a fact it depends on
 # is authored by the phase that lands its last dependency, and the owning phase
