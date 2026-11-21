@@ -133,7 +133,7 @@ describe("TC-INST-101 every lifecycle entry has a full static-inventory help ent
         "--stop-daemon",
         "--yes",
       ]);
-      expect(definition.requiresValue).toEqual(["--shell-profile"]);
+      expect(definition.requiresValue).toEqual(["--shell-profile", "--backup-dir"]);
       expect(brand.value.binaryName).toBe("jaiship");
     } finally {
       scratch.dispose();

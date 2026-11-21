@@ -7,6 +7,8 @@
  * one typed refusal naming the M4-S2 story as owner; no migration port is
  * composed, so the flag cannot silently no-op.
  */
+import type { InstallMigrationRoot } from "#contracts";
+import { MIGRATION_DERIVED_ENTRIES } from "#contracts";
 import { expandHome } from "./install-path-block.js";
 
 /**
@@ -19,6 +21,65 @@ export const PRIOR_NAMESPACE_NAMES = {
   config: ".delivery-os",
   state: ".delivery-os-state",
 } as const;
+
+/** The three brand-derived migration root classes (GH-365 F-3, DM-6). */
+export const MIGRATION_ROOT_CLASSES = [
+  { label: "host-configuration", priorName: PRIOR_NAMESPACE_NAMES.config, derived: [] },
+  {
+    label: "host-state",
+    priorName: PRIOR_NAMESPACE_NAMES.state,
+    derived: [...MIGRATION_DERIVED_ENTRIES],
+  },
+  {
+    label: "project-configuration",
+    priorName: PRIOR_NAMESPACE_NAMES.config,
+    derived: [],
+  },
+] as const;
+
+/** The default backup root: inside the destination configuration root (DM-5). */
+export const migrationBackupRoot = (currentConfigRoot: string): string =>
+  `${currentConfigRoot.replace(/\/+$/u, "")}/migration-backups`;
+
+/**
+ * Compose the three migration roots from the resolved identities. The project
+ * root is absent outside a work tree, which makes the project class `unscoped`.
+ */
+export const migrationRoots = (input: {
+  readonly homeDirectory: string;
+  readonly projectRoot?: string;
+  readonly currentConfigDirectoryName: string;
+  readonly currentStateDirectoryName: string;
+}): readonly InstallMigrationRoot[] => {
+  const hostConfigSource = `${input.homeDirectory}/${PRIOR_NAMESPACE_NAMES.config}`;
+  const hostStateSource = `${input.homeDirectory}/${PRIOR_NAMESPACE_NAMES.state}`;
+  const hostConfigDestination = `${input.homeDirectory}/${input.currentConfigDirectoryName}`;
+  const hostStateDestination = `${input.homeDirectory}/${input.currentStateDirectoryName}`;
+  const project = input.projectRoot;
+  return [
+    {
+      label: "host-configuration",
+      scope: "scoped",
+      source: hostConfigSource,
+      destination: hostConfigDestination,
+    },
+    {
+      label: "host-state",
+      scope: "scoped",
+      source: hostStateSource,
+      destination: hostStateDestination,
+      derivedEntries: [...MIGRATION_DERIVED_ENTRIES],
+    },
+    project === undefined
+      ? { label: "project-configuration", scope: "unscoped" }
+      : {
+          label: "project-configuration",
+          scope: "scoped",
+          source: `${project}/${PRIOR_NAMESPACE_NAMES.config}`,
+          destination: `${project}/${input.currentConfigDirectoryName}`,
+        },
+  ];
+};
 
 /** The prior identity's executable name, derived from its directory name. */
 export const priorBinaryName = (): string => PRIOR_NAMESPACE_NAMES.config.replace(/^\./u, "");

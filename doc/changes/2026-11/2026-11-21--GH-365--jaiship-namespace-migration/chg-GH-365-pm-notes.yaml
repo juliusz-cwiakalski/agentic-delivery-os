@@ -448,3 +448,23 @@ notes:
       12 pass; pnpm typecheck green; git diff --check clean."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 4 COMPLETE: commit 560b1e11. The tree arm reads the prior-root
+      prefix set from the shim registry's prior-config-directory and
+      prior-state-root literals cross-checked with the forbidden registry's
+      home-form seed (reported .delivery-os/, .delivery-os-state/,
+      ~/.delivery-os/), asserts zero tracked prior paths, zero tracked symlinks
+      into one, the committed layer present, the runtime project files ignored in
+      a rule-world, and no tracked runtime file. The two negative controls and the
+      tracked-runtime-file case fail by name. M55 is exercised through a declared
+      test seam (`priorRootPrefixes`): the narrowed set fails only the
+      AC-F1-2-named reported-set assertion while the real-tree checks stay green
+      (per-assertion attribution). `ts-namespace-tree` is a non-advisory CI job
+      with permissions.contents read, full history, the recorded baseline fetch,
+      and the arm command; both arms are now in the aggregate `check` chain and the
+      TS_JOBS pin is updated. Committed-head gate green: tree arm exit 0;
+      ci-topology OK (17 TS jobs); ci-bindingness OK; namespace-tree 8 pass;
+      namespace-gate-binding 5 pass; ci-checks 43 pass; content arm 7/7 with 0
+      violations; content-inventory 12 pass; pnpm typecheck green; git diff
+      --check clean."
+    type: info
+    date: "2026-11-21"

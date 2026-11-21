@@ -78,6 +78,7 @@ export type InstallRuntimeOptions = {
   readonly priorNamespaceArtifacts?: readonly string[];
   readonly fs?: InstallFilePort;
   readonly fault?: InstallRuntime["fault"];
+  readonly migration?: InstallRuntime["migration"];
 };
 
 /** Compose one runtime over the scratch roots with every seam injected. */
@@ -104,6 +105,7 @@ export const createInstallRuntime = (options: InstallRuntimeOptions): InstallRun
     stop: async () => ({ ok: true }),
   },
   priorNamespaceArtifacts: options.priorNamespaceArtifacts ?? [],
+  ...(options.migration === undefined ? {} : { migration: options.migration }),
   ...(options.fault === undefined ? {} : { fault: options.fault }),
 });
 

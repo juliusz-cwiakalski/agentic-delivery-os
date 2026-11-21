@@ -107,6 +107,7 @@ import type {
 import {
   type AuthorityEvidence,
   aggregateProjectMemberOutcomes,
+  artifactAdvancedSince,
   assembleHarnessLiveness,
   bindingEnvironmentRecords,
   bindingInvocationArgs,
@@ -148,17 +149,20 @@ import {
   type LoopLogSink,
   type LoopSessionFacts,
   legacyStoreWarning,
-  artifactAdvancedSince,
-  newestLanePerRef,
   logByteLength,
   maintainHostIndex,
+  migrationBackupRoot,
+  migrationRoots,
+  newestLanePerRef,
   normalizeDispatchRepositoryKey,
   normalizeRepositoryKey,
   normalizeRepositoryRemote,
   orderProjectEntries,
+  PRIOR_NAMESPACE_NAMES,
   PRODUCTION_DEFAULTS,
   type ProjectsScopeFailure,
   parseHostIndexDocument,
+  parseInstallRecord,
   parsePlanMembers,
   parseProjectIdentityMarker,
   planLogAppend,
@@ -5686,6 +5690,28 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           homeDirectory,
           exists: (path: string) => installFs.exists(path),
         }),
+        migration: (() => {
+          const recordText = installFs.readText(`${configRoot}/${INSTALL_RECORD_FILE_NAME}`);
+          const parsed = recordText === undefined ? undefined : parseInstallRecord(recordText);
+          const pathBlock = parsed?.kind === "record" ? parsed.record.pathBlock : undefined;
+          return {
+            roots: migrationRoots({
+              homeDirectory,
+              projectRoot: checkoutRoot,
+              currentConfigDirectoryName: brand.configDirectoryName,
+              currentStateDirectoryName: brand.stateDirectoryName,
+            }),
+            backupRoot: migrationBackupRoot(configRoot),
+            runId: () => globalThis.crypto.randomUUID(),
+            clock: { nowIso },
+            ...(facts.buildIdentity === undefined ? {} : { artifactIdentity: facts.buildIdentity }),
+            ...(pathBlock === undefined ? {} : { managedPathBlock: pathBlock }),
+            priorPrefixes: [
+              `${homeDirectory}/${PRIOR_NAMESPACE_NAMES.config}`,
+              `${homeDirectory}/${PRIOR_NAMESPACE_NAMES.state}`,
+            ],
+          };
+        })(),
       };
     })();
     const installProgram = {

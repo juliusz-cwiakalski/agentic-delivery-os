@@ -317,6 +317,8 @@ export type InstallRuntime = {
   readonly daemon: InstallDaemonPort;
   /** Detected prior-namespace artifacts, reported and never moved (F-13). */
   readonly priorNamespaceArtifacts: readonly string[];
+  /** The migration family's declared roots and injected facts (GH-365 F-3). */
+  readonly migration?: InstallMigrationRuntime;
   /** The optional test-only fault port; production never supplies it. */
   readonly fault?: InstallFaultPort;
 };
@@ -339,3 +341,149 @@ export const INSTALL_DOMAIN_CODES = [
   "install.purge.unconfirmed",
 ] as const;
 export type InstallDomainCode = (typeof INSTALL_DOMAIN_CODES)[number];
+
+// ---------------------------------------------------------------------------
+// The migration family (GH-365 F-3, DM-5..DM-8). Two structurally distinct
+// documents: the CLI plan/verdict payload and the backup manifest. One id never
+// names two shapes.
+// ---------------------------------------------------------------------------
+
+export const INSTALL_MIGRATION_PLAN_SCHEMA = "install.migration.plan.v1" as const;
+export const INSTALL_MIGRATION_MANIFEST_SCHEMA = "install.migration.manifest.v1" as const;
+
+/** The three fixed root labels (DM-6). */
+export const MIGRATION_ROOT_LABELS = [
+  "host-configuration",
+  "host-state",
+  "project-configuration",
+] as const;
+export type MigrationRootLabel = (typeof MIGRATION_ROOT_LABELS)[number];
+
+/** The closed root-scope pair; `unscoped` is a scope, never a disposition. */
+export const MIGRATION_ROOT_SCOPES = ["scoped", "unscoped"] as const;
+export type MigrationRootScope = (typeof MIGRATION_ROOT_SCOPES)[number];
+
+/** The six non-derived entry dispositions, in decision-table order (DM-6). */
+export const MIGRATION_DISPOSITIONS = [
+  "moved",
+  "already-migrated",
+  "duplicate-identical",
+  "conflict",
+  "blocked",
+  "absent",
+] as const;
+export type MigrationDisposition = (typeof MIGRATION_DISPOSITIONS)[number];
+
+/** The five composed verdicts (DM-6). */
+export const MIGRATION_VERDICTS = [
+  "migrated",
+  "already-migrated",
+  "partial",
+  "conflict",
+  "blocked",
+] as const;
+export type MigrationVerdict = (typeof MIGRATION_VERDICTS)[number];
+
+/** The declared derived-entry set: outside the move set (DM-6, data). */
+export const MIGRATION_DERIVED_ENTRIES = ["host-index.json"] as const;
+export type MigrationDerivedEntry = (typeof MIGRATION_DERIVED_ENTRIES)[number];
+
+/** DM-6's stated severity order: migrated < duplicate-identical < conflict < blocked. */
+export const MIGRATION_VERDICT_SEVERITY = {
+  neutral: 0,
+  migrated: 1,
+  "duplicate-identical": 2,
+  conflict: 3,
+  blocked: 4,
+} as const;
+
+/** One planned entry in the CLI payload (API-2). */
+export type MigrationEntryData = {
+  readonly relativePath: string;
+  readonly disposition: MigrationDisposition;
+  readonly files: number;
+  readonly bytes: number;
+  readonly reason?: string;
+  readonly derived?: boolean;
+};
+
+/** One planned root in the CLI payload (API-2). */
+export type MigrationRootData = {
+  readonly label: MigrationRootLabel;
+  readonly scope: MigrationRootScope;
+  readonly source?: string;
+  readonly destination?: string;
+  readonly verdict?: MigrationVerdict;
+  readonly entries: readonly MigrationEntryData[];
+};
+
+/** The CLI plan and verdict payload under `install.migration.plan.v1` (API-2). */
+export type MigrationPlanPayload = {
+  readonly schemaId: typeof INSTALL_MIGRATION_PLAN_SCHEMA;
+  readonly runId: string;
+  readonly verdict: MigrationVerdict;
+  readonly daemon: "unchecked" | "stopped" | "running";
+  readonly backupPath?: string;
+  readonly roots: readonly MigrationRootData[];
+  readonly conflicts: readonly string[];
+  readonly residuals: readonly string[];
+  readonly retiredRoots: readonly string[];
+};
+
+/** One file entry in the backup manifest (DM-5). */
+export type MigrationManifestFile = {
+  readonly relativePath: string;
+  readonly size: number;
+  readonly sha256: string;
+};
+
+/** One moved entry in the backup manifest (DM-5). */
+export type MigrationManifestEntry = {
+  readonly rootLabel: MigrationRootLabel;
+  readonly relativePath: string;
+  readonly files: number;
+  readonly bytes: number;
+  readonly fileEntries: readonly MigrationManifestFile[];
+};
+
+/** The backup manifest under `install.migration.manifest.v1` (DM-5). */
+export type MigrationManifestPayload = {
+  readonly schemaId: typeof INSTALL_MIGRATION_MANIFEST_SCHEMA;
+  readonly runId: string;
+  readonly createdAt: string;
+  readonly artifactIdentity?: InstallArtifactIdentity;
+  readonly roots: readonly {
+    readonly label: MigrationRootLabel;
+    readonly source: string;
+    readonly destination: string;
+  }[];
+  readonly entries: readonly MigrationManifestEntry[];
+  readonly verdict: MigrationVerdict;
+};
+
+/** One declared migration root (the domain's input; DM-6). */
+export type InstallMigrationRoot = {
+  readonly label: MigrationRootLabel;
+  readonly scope: MigrationRootScope;
+  readonly source?: string;
+  readonly destination?: string;
+  readonly derivedEntries?: readonly string[];
+};
+
+/** The migration runtime the install family composes (P5). */
+export type InstallMigrationRuntime = {
+  readonly roots: readonly InstallMigrationRoot[];
+  /** The default backup root (inside the destination configuration root). */
+  readonly backupRoot: string;
+  readonly runId: () => string;
+  readonly clock: { readonly nowIso: () => string };
+  readonly artifactIdentity?: InstallArtifactIdentity;
+  /** A test seam: return true to fail the move at this 1-based ordinal. */
+  readonly failAtOrdinal?: (ordinal: number) => boolean;
+  /** A test seam: observe each 1-based move ordinal before it runs. */
+  readonly onMove?: (ordinal: number) => void;
+  /** The delivered managed PATH block record, when the record carries one. */
+  readonly managedPathBlock?: InstallPathBlockRecord;
+  /** The prior-root prefixes the managed-PATH residual is detected against. */
+  readonly priorPrefixes: readonly string[];
+};

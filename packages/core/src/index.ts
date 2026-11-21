@@ -95,6 +95,17 @@ export {
   readDispatchAttemptHistory,
 } from "./app/dispatch-attempts.js";
 export {
+  type DispatchGateRead,
+  type DispatchHandoverData,
+  type DispatchHandoverResult,
+  type DispatchSummaryResult,
+  handoverDispatchEvidence,
+  readDispatchGate,
+  resolveDispatchDivergenceEvidence,
+  revertDispatchHandoverEvidence,
+  summarizeDispatchEvidence,
+} from "./app/dispatch-gate.js";
+export {
   DISPATCH_RESUMABLE_DAEMON_STATES,
   type DispatchLaneResolutionInput,
   resolveDispatchLane,
@@ -107,33 +118,11 @@ export {
   readOperatorStatus,
 } from "./app/dispatch-lane-view.js";
 export {
-  type DispatchLogReadInput,
-  readDispatchLog,
-} from "./app/dispatch-log-tail.js";
-export {
   type DispatchLastMessageRead,
   type DispatchTranscriptRead,
   type DispatchTranscriptResult,
   readDispatchLastMessage,
 } from "./app/dispatch-last-message.js";
-export {
-  createDispatchLogSink,
-  type DispatchLogSinkInput,
-  dispatchLogsDirectoryName,
-  dispatchLogsFamilyRoot,
-  dispatchLogsRefDirectory,
-} from "./app/dispatch-log-sink.js";
-export {
-  type DispatchGateRead,
-  type DispatchHandoverData,
-  type DispatchHandoverResult,
-  type DispatchSummaryResult,
-  handoverDispatchEvidence,
-  readDispatchGate,
-  resolveDispatchDivergenceEvidence,
-  revertDispatchHandoverEvidence,
-  summarizeDispatchEvidence,
-} from "./app/dispatch-gate.js";
 export {
   appendDispatchAttempt,
   appendDispatchDivergence,
@@ -152,6 +141,17 @@ export {
   resolveDispatchDivergence,
   writeDispatchAuthority,
 } from "./app/dispatch-ledger.js";
+export {
+  createDispatchLogSink,
+  type DispatchLogSinkInput,
+  dispatchLogsDirectoryName,
+  dispatchLogsFamilyRoot,
+  dispatchLogsRefDirectory,
+} from "./app/dispatch-log-sink.js";
+export {
+  type DispatchLogReadInput,
+  readDispatchLog,
+} from "./app/dispatch-log-tail.js";
 export {
   appendCommandReceipt,
   appendOutboxEffect,
@@ -222,7 +222,6 @@ export {
   type LaneLiveness,
   LOOP_EVIDENCE_CLASSES,
   type LoopCoordinatorRead,
-  newestLanePerRef,
   type LoopDelay,
   type LoopDelayReason,
   type LoopEvidenceClass,
@@ -249,6 +248,7 @@ export {
   loopLeaseOf,
   loopSpawnInput,
   loopSpawnPrompt,
+  newestLanePerRef,
   normalizedQueueEdges,
   prioritizeQueueEntry,
   type QueueActiveLeaseRead,
@@ -733,6 +733,36 @@ export {
   evaluateDispatchLiveness,
 } from "./domain/dispatch-liveness.js";
 export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  type DispatchLogWrite,
+  dispatchLogByteLength,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./domain/dispatch-log.js";
+export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./domain/dispatch-message.js";
+export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  type OperatorLaneVerdict,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+} from "./domain/dispatch-operator-view.js";
+export {
   buildLifecyclePrompt,
   DISPATCH_LIFECYCLE_SECTION_TITLES,
   DISPATCH_LIFECYCLE_SECTIONS,
@@ -770,36 +800,6 @@ export {
   evaluateDispatchResumeEconomics,
   planDispatchResume,
 } from "./domain/dispatch-resume.js";
-export {
-  boundDeliveringRefs,
-  buildRefDeliveringData,
-  buildRepositoryDeliveringData,
-  buildStatusData,
-  operatorLaneFactsOf,
-  operatorLaneFor,
-  operatorLanesInRepository,
-  operatorLaneVerdictOf,
-  operatorMarkerOf,
-  type OperatorLaneVerdict,
-} from "./domain/dispatch-operator-view.js";
-export {
-  composeDispatchMessage,
-  DISPATCH_MESSAGE_LADDER,
-  firstMessageReason,
-  flattenMessageText,
-} from "./domain/dispatch-message.js";
-export {
-  boundDispatchLogLines,
-  cutAtByteCap,
-  type DispatchLogNameInput,
-  dispatchLogByteLength,
-  dispatchLogFileName,
-  dispatchLogTimestamp,
-  type DispatchLogWrite,
-  planDispatchLogWrites,
-  retainedDispatchLogNames,
-  stitchDispatchLogLines,
-} from "./domain/dispatch-log.js";
 export {
   DISPATCH_TRACKER_EXHAUSTED_IDENTITY,
   DISPATCH_TRACKER_LADDER_ATTEMPTS,
@@ -844,6 +844,8 @@ export {
   ageFallbackBoundMs,
   aggregateDoctorReport,
   aggregateStatus,
+  artifactAdvancedSince,
+  artifactInstantOf,
   artifactMatches,
   assembleHarnessLiveness,
   authorizeMergeWaiver,
@@ -1067,13 +1069,9 @@ export {
   isProtectedRef,
   isReservedEscalationQuestion,
   isStaleAge,
-  artifactAdvancedSince,
-  artifactInstantOf,
   LOOP_MAX_EVIDENCE_BYTES,
   LOOP_PROMPT_PRIMITIVES,
-  MERGE_TRANSACTION_RECORD_KIND,
   LOOP_RESTART_DELAYS_MS,
-  loopStopInstruction,
   type LoopLogAppendPlan,
   type LoopStatusFacts,
   type LoopVerdictInput,
@@ -1087,6 +1085,8 @@ export {
   logByteLength,
   loopPromptFor,
   loopSessionTitle,
+  loopStopInstruction,
+  MERGE_TRANSACTION_RECORD_KIND,
   type MergeCheckRunPage,
   type MergeEffectiveGateSet,
   type MergeFailure,
@@ -1349,11 +1349,49 @@ export {
 } from "./domain/install-compatibility.js";
 export {
   detectPriorNamespace,
+  MIGRATION_ROOT_CLASSES,
   migrationAdvisory,
+  migrationBackupRoot,
+  migrationRoots,
   migrationUnavailableSummary,
   PRIOR_NAMESPACE_NAMES,
   priorNamespacePaths,
 } from "./domain/install-migration.js";
+export {
+  applyMigrationPlan,
+  type MigrationApplyFailureCode,
+  type MigrationApplyResult,
+  migrationBackupPath,
+  migrationStamp,
+} from "./domain/install-migration-apply.js";
+export {
+  entryFacts,
+  factsEqual,
+  type MigrationEntryFacts,
+  type MigrationFileFact,
+} from "./domain/install-migration-digest.js";
+export {
+  buildMigrationManifest,
+  type MovedEntry,
+  movedEntries,
+  serializeMigrationManifest,
+  validateMigrationManifestPayload,
+  validateMigrationPlanPayload,
+} from "./domain/install-migration-manifest.js";
+export {
+  buildMigrationPlan,
+  type MigrationPlan,
+  migrationConflictPaths,
+  type PlannedEntry,
+  type PlannedRoot,
+  planRootsData,
+} from "./domain/install-migration-plan.js";
+export {
+  composeVerdict,
+  decideDerived,
+  decideNonDerived,
+  type NonDerivedDecisionInput,
+} from "./domain/install-migration-table.js";
 export {
   hasIdenticalBlock,
   mergePathBlock,

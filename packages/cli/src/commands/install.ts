@@ -22,6 +22,8 @@ import {
 } from "@delivery-os/adapters/file";
 import {
   compatibilityAdvisories as advisoriesOf,
+  applyMigrationPlan,
+  buildMigrationPlan,
   evaluateInstallAdmission,
   type InstallRecordRead,
   incompatibleRoots,
@@ -29,9 +31,12 @@ import {
   judgeStateFormat,
   mergePathBlock,
   migrationAdvisory,
+  migrationBackupPath,
+  migrationConflictPaths,
   migrationUnavailableSummary,
   parseInstallRecord,
   planReplace,
+  planRootsData,
   provenanceOfAdmission,
   purgeMembers,
   type RemovalFacts,
@@ -54,6 +59,7 @@ import {
 import type {
   InstallArtifactIdentity,
   InstallDaemonState,
+  InstallMigrationRoot,
   InstallOutcome,
   InstallRecord,
   InstallRecordState,
@@ -61,8 +67,13 @@ import type {
   InstallSlotReport,
   InstallStateFormatVerdict,
   InstallStateRootVerdict,
+  MigrationPlanPayload,
 } from "@delivery-os/core/contracts";
-import { INSTALL_DEV_BUILD_CODE, INSTALL_MAX_JUDGED_ROOTS } from "@delivery-os/core/contracts";
+import {
+  INSTALL_DEV_BUILD_CODE,
+  INSTALL_MAX_JUDGED_ROOTS,
+  INSTALL_MIGRATION_PLAN_SCHEMA,
+} from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
   renderInstallFailure,
@@ -72,7 +83,7 @@ import {
 } from "../output/install-text.js";
 
 /** The subcommand vocabulary; every other token is the delivered grammar refusal. */
-export const INSTALL_SUBCOMMANDS = ["status", "rollback", "uninstall", "purge"] as const;
+export const INSTALL_SUBCOMMANDS = ["migrate", "status", "rollback", "uninstall", "purge"] as const;
 export type InstallSubcommand = (typeof INSTALL_SUBCOMMANDS)[number];
 
 /** The build entry the dev-build refusal names. */
@@ -1038,18 +1049,217 @@ const runPurge = async (
   };
 };
 
+/** The input-value refusal's plain class (the table supplies the projection). */
+const inputRefusal = (summary: string): Refusal => ({
+  error: { kind: "input", code: "input.value.rejected", summary },
+});
+
+const stateRefusal = (code: string, summary: string): Refusal => ({
+  error: { kind: "state", code, summary },
+});
+
+const absolutePath = (path: string): boolean => path.startsWith("/");
+
+const insideSourceRoot = (path: string, roots: readonly InstallMigrationRoot[]): boolean => {
+  const normalized = path.replace(/\/+$/u, "");
+  return roots.some((root) => {
+    if (root.scope !== "scoped" || root.source === undefined) return false;
+    const source = root.source.replace(/\/+$/u, "");
+    return normalized === source || normalized.startsWith(`${source}/`);
+  });
+};
+
+const migrationPayload = (input: {
+  readonly plan: Parameters<typeof planRootsData>[0];
+  readonly runId: string;
+  readonly verdict: MigrationPlanPayload["verdict"];
+  readonly daemon: MigrationPlanPayload["daemon"];
+  readonly backupPath?: string;
+  readonly conflicts: readonly string[];
+  readonly residuals: readonly string[];
+  readonly retiredRoots: readonly string[];
+}): MigrationPlanPayload => ({
+  schemaId: INSTALL_MIGRATION_PLAN_SCHEMA,
+  runId: input.runId,
+  verdict: input.verdict,
+  daemon: input.daemon,
+  ...(input.backupPath === undefined ? {} : { backupPath: input.backupPath }),
+  roots: planRootsData(input.plan),
+  conflicts: [...input.conflicts],
+  residuals: [...input.residuals],
+  retiredRoots: [...input.retiredRoots],
+});
+
+/** The bounded, ANSI-free human block (API-2, NFR-2). */
+export const renderMigrationHuman = (payload: MigrationPlanPayload): string => {
+  const lines: string[] = [];
+  for (const root of payload.roots) {
+    if (root.scope === "unscoped") {
+      lines.push(`${root.label}: unscoped (outside a work tree) · 0 entries`);
+      continue;
+    }
+    lines.push(
+      `${root.label}: ${root.scope} · ${root.source ?? ""} → ${root.destination ?? ""}` +
+        (root.verdict === undefined ? "" : ` · ${root.verdict}`),
+    );
+    for (const entry of root.entries) {
+      lines.push(
+        `  ${entry.disposition} ${entry.relativePath} · ${String(entry.files)} file(s) · ${String(entry.bytes)} byte(s)`,
+      );
+    }
+  }
+  for (const conflict of payload.conflicts) lines.push(`conflict: ${conflict}`);
+  for (const residual of payload.residuals) lines.push(`residual: ${residual}`);
+  for (const retired of payload.retiredRoots) lines.push(`retired: ${retired}`);
+  if (payload.backupPath !== undefined) lines.push(`backup: ${payload.backupPath}`);
+  lines.push(`verdict: ${payload.verdict}`);
+  if (payload.daemon === "unchecked") lines.push("daemon: unchecked");
+  if (lines.length > 60) {
+    const kept = lines.slice(0, 59);
+    kept.push(`… ${String(lines.length - 59)} more`);
+    return kept.join("\n");
+  }
+  return lines.join("\n");
+};
+
+/** The migration verb: admission, plan, daemon guard, apply (API-1/API-2). */
+const runMigration = async (
+  command: InstallCommandInput,
+  options: {
+    readonly dryRun: boolean;
+    readonly stopDaemon: boolean;
+    readonly backupDir?: string;
+  },
+): Promise<unknown> => {
+  const { runtime } = command;
+  const migration = runtime.migration;
+  if (migration === undefined) {
+    return internalFailure("the migration runtime is not composed; nothing was moved");
+  }
+  if (options.backupDir !== undefined) {
+    if (!absolutePath(options.backupDir)) {
+      return inputRefusal(
+        `refused: --backup-dir must be an absolute path; received "${options.backupDir}" — nothing was moved`,
+      );
+    }
+    if (insideSourceRoot(options.backupDir, migration.roots)) {
+      return inputRefusal(
+        "refused: --backup-dir must not be inside a source root — nothing was moved",
+      );
+    }
+  }
+  if (runtime.runningIdentity === undefined) {
+    return admissionRefusal({ code: INSTALL_DEV_BUILD_CODE });
+  }
+  const artifactDirectory = artifactDirectoryOf(runtime);
+  const admission = evaluateInstallAdmission({
+    artifactDirectory,
+    identity: runtime.runningIdentity,
+    git: runtime.git.readCheckout(artifactDirectory),
+  });
+  if (!admission.ok) return admissionRefusal(admission);
+
+  const backupRoot = options.backupDir ?? migration.backupRoot;
+  const runId = migration.runId();
+  const createdAt = migration.clock.nowIso();
+  const plan = buildMigrationPlan({ roots: migration.roots, fs: runtime.fs });
+
+  if (options.dryRun) {
+    return {
+      data: migrationPayload({
+        plan,
+        runId,
+        verdict: plan.verdict,
+        daemon: "unchecked",
+        backupPath: migrationBackupPath(backupRoot, createdAt),
+        conflicts: migrationConflictPaths(plan),
+        residuals: [],
+        retiredRoots: [],
+      }),
+    };
+  }
+
+  let daemon: MigrationPlanPayload["daemon"] = "unchecked";
+  const live = await runtime.daemon.status();
+  if (live.running) {
+    if (!options.stopDaemon) {
+      return refusal(
+        "install.daemon.running",
+        "refused: a live daemon would race the state move; re-run with --stop-daemon — " +
+          "nothing was moved, copied, or deleted",
+      );
+    }
+    const stopped = await runtime.daemon.stop();
+    if (!stopped.ok) {
+      return internalFailure("the live daemon could not be stopped; nothing was moved");
+    }
+    daemon = "stopped";
+  }
+
+  const applied = applyMigrationPlan({
+    plan,
+    fs: runtime.fs,
+    runId,
+    createdAt,
+    ...(migration.artifactIdentity === undefined
+      ? {}
+      : { artifactIdentity: migration.artifactIdentity }),
+    backupRoot,
+    ...(migration.failAtOrdinal === undefined ? {} : { failAtOrdinal: migration.failAtOrdinal }),
+    ...(migration.onMove === undefined ? {} : { onMove: migration.onMove }),
+    ...(migration.managedPathBlock === undefined
+      ? {}
+      : { managedPathBlock: migration.managedPathBlock }),
+    priorPrefixes: migration.priorPrefixes,
+  });
+  if (applied.failureCode !== undefined) {
+    return stateRefusal(
+      applied.failureCode,
+      `internal failure: ${applied.failureDetail ?? "the migration could not complete"}; ` +
+        "no non-derived byte was moved, copied, or deleted",
+    );
+  }
+  return {
+    data: migrationPayload({
+      plan: applied.plan,
+      runId,
+      verdict: applied.verdict,
+      daemon,
+      ...(applied.backupPath === undefined ? {} : { backupPath: applied.backupPath }),
+      conflicts: migrationConflictPaths(applied.plan),
+      residuals: applied.residuals,
+      retiredRoots: applied.retiredRoots,
+    }),
+  };
+};
+
 /** The family definition: one grammar, five handlers, the owning-role gate. */
 export const createInstallCommandDefinition = (runtime: InstallRuntime): CommandDefinition => ({
   positionals: { max: 1 },
   flags: ["--add-to-path", "--migrate", "--dry-run", "--stop-daemon", "--yes"],
-  requiresValue: ["--shell-profile"],
+  requiresValue: ["--shell-profile", "--backup-dir"],
   humanSuccess: true,
   humanText: (data) => {
     if (typeof data !== "object" || data === null) return undefined;
     const record = data as Record<string, unknown>;
+    if (record.schemaId === INSTALL_MIGRATION_PLAN_SCHEMA) {
+      return renderMigrationHuman(data as MigrationPlanPayload);
+    }
     if (record.schemaVersion === "install.status.v1") return renderInstallStatus(record);
     if (record.outcome === "plan") return renderInstallPlan(data as InstallOutcome);
     return renderInstallOutcome(data as InstallOutcome);
+  },
+  exitProjection: (data) => {
+    if (typeof data === "object" && data !== null) {
+      const record = data as Record<string, unknown>;
+      if (record.schemaId === INSTALL_MIGRATION_PLAN_SCHEMA) {
+        const verdict = record.verdict;
+        return verdict === "partial" || verdict === "conflict" || verdict === "blocked"
+          ? "attention"
+          : "success";
+      }
+    }
+    return "success";
   },
   humanFailureText: (error, brand) => renderInstallFailure(error, brand),
   handler: async (invocation) => {
@@ -1064,6 +1274,15 @@ export const createInstallCommandDefinition = (runtime: InstallRuntime): Command
             `install, ${INSTALL_SUBCOMMANDS.map((name) => `install ${name}`).join(", ")}`,
           "fallback",
         );
+      }
+      if (subcommand === "migrate") {
+        return runMigration(command, {
+          dryRun: boolFlag(command, "--dry-run"),
+          stopDaemon: boolFlag(command, "--stop-daemon"),
+          ...(stringFlag(command, "--backup-dir") === undefined
+            ? {}
+            : { backupDir: stringFlag(command, "--backup-dir") as string }),
+        });
       }
       if (subcommand === "status") return runStatus(runtime);
       if (subcommand === "rollback") {

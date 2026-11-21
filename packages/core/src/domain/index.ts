@@ -303,6 +303,36 @@ export {
   evaluateDispatchLiveness,
 } from "./dispatch-liveness.js";
 export {
+  boundDispatchLogLines,
+  cutAtByteCap,
+  type DispatchLogNameInput,
+  type DispatchLogWrite,
+  dispatchLogByteLength,
+  dispatchLogFileName,
+  dispatchLogTimestamp,
+  planDispatchLogWrites,
+  retainedDispatchLogNames,
+  stitchDispatchLogLines,
+} from "./dispatch-log.js";
+export {
+  composeDispatchMessage,
+  DISPATCH_MESSAGE_LADDER,
+  firstMessageReason,
+  flattenMessageText,
+} from "./dispatch-message.js";
+export {
+  boundDeliveringRefs,
+  buildRefDeliveringData,
+  buildRepositoryDeliveringData,
+  buildStatusData,
+  type OperatorLaneVerdict,
+  operatorLaneFactsOf,
+  operatorLaneFor,
+  operatorLanesInRepository,
+  operatorLaneVerdictOf,
+  operatorMarkerOf,
+} from "./dispatch-operator-view.js";
+export {
   buildLifecyclePrompt,
   DISPATCH_LIFECYCLE_SECTION_TITLES,
   DISPATCH_LIFECYCLE_SECTIONS,
@@ -349,36 +379,6 @@ export {
   dispatchTrackerLadderWait,
   runDispatchTrackerLadder,
 } from "./dispatch-tracker.js";
-export {
-  boundDeliveringRefs,
-  buildRefDeliveringData,
-  buildRepositoryDeliveringData,
-  buildStatusData,
-  operatorLaneFactsOf,
-  operatorLaneFor,
-  operatorLanesInRepository,
-  operatorLaneVerdictOf,
-  operatorMarkerOf,
-  type OperatorLaneVerdict,
-} from "./dispatch-operator-view.js";
-export {
-  composeDispatchMessage,
-  DISPATCH_MESSAGE_LADDER,
-  firstMessageReason,
-  flattenMessageText,
-} from "./dispatch-message.js";
-export {
-  boundDispatchLogLines,
-  cutAtByteCap,
-  type DispatchLogNameInput,
-  dispatchLogByteLength,
-  dispatchLogFileName,
-  dispatchLogTimestamp,
-  type DispatchLogWrite,
-  planDispatchLogWrites,
-  retainedDispatchLogNames,
-  stitchDispatchLogLines,
-} from "./dispatch-log.js";
 export {
   aggregateDoctorReport,
   formatDoctorFailureSummary,
@@ -1151,6 +1151,56 @@ export {
   type ProjectedEvent,
   type ProjectionWatermarkEntry,
 } from "./event-projection.js";
+export {
+  detectPriorNamespace,
+  MIGRATION_ROOT_CLASSES,
+  migrationAdvisory,
+  migrationBackupRoot,
+  migrationRoots,
+  migrationUnavailableSummary,
+  PRIOR_NAMESPACE_NAMES,
+  priorNamespacePaths,
+} from "./install-migration.js";
+/**
+ * The migration domain (GH-365 F-3, DM-5..DM-8): the plan builder and decision
+ * table, the digest facts, the apply step, the manifest, and the three declared
+ * root classes. Pure over injected facts; no ambient clock, filesystem or env.
+ */
+export {
+  applyMigrationPlan,
+  type MigrationApplyFailureCode,
+  type MigrationApplyResult,
+  migrationBackupPath,
+  migrationStamp,
+} from "./install-migration-apply.js";
+export {
+  entryFacts,
+  factsEqual,
+  type MigrationEntryFacts,
+  type MigrationFileFact,
+} from "./install-migration-digest.js";
+export {
+  buildMigrationManifest,
+  type MovedEntry,
+  movedEntries,
+  serializeMigrationManifest,
+  validateMigrationManifestPayload,
+  validateMigrationPlanPayload,
+} from "./install-migration-manifest.js";
+export {
+  buildMigrationPlan,
+  type MigrationPlan,
+  migrationConflictPaths,
+  type PlannedEntry,
+  type PlannedRoot,
+  planRootsData,
+} from "./install-migration-plan.js";
+export {
+  composeVerdict,
+  decideDerived,
+  decideNonDerived,
+  type NonDerivedDecisionInput,
+} from "./install-migration-table.js";
 /* ------------------------ loop supervision (GH-348) ---------------------- */
 export {
   detectionBoundMs,
@@ -1168,10 +1218,10 @@ export {
 } from "./loop-log.js";
 export {
   LOOP_PROMPT_PRIMITIVES,
-  loopStopInstruction,
   type LoopPromptPrimitive,
   loopPromptFor,
   loopSessionTitle,
+  loopStopInstruction,
   promptNamesPrimitives,
 } from "./loop-prompt.js";
 export {
@@ -1191,9 +1241,9 @@ export {
   evaluateLoopVerdict,
   evidenceCorpus,
   LOOP_MAX_EVIDENCE_BYTES,
-  MERGE_TRANSACTION_RECORD_KIND,
   type LoopVerdictInput,
   type LoopVerdictResult,
+  MERGE_TRANSACTION_RECORD_KIND,
   observeProgress,
 } from "./loop-verdict.js";
 /**

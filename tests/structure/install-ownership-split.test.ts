@@ -112,3 +112,15 @@ describe("TC-INST-093 neither surface deletes the other's artifacts and each nam
     expect(UNINSTALLER).toContain("record_path=");
   });
 });
+
+describe("GH-365 the migration verb is one owned family member", () => {
+  test("the family declares the migration subcommand and keeps ownership in one gate", async () => {
+    const { INSTALL_SUBCOMMANDS } = await import("../../packages/cli/src/commands/install");
+    expect(INSTALL_SUBCOMMANDS).toContain("migrate");
+    const source = readFileSync(join(ROOT, "packages/cli/src/commands/install.ts"), "utf8");
+    const gate = source.indexOf("if (!runtime.ownsInstallation) return notOwningRefusal(runtime);");
+    const dispatch = source.indexOf("const [subcommand] = invocation.positionals;");
+    expect(gate).toBeGreaterThan(-1);
+    expect(dispatch).toBeGreaterThan(gate);
+  });
+});

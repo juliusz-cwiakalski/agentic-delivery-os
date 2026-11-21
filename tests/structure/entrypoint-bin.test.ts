@@ -696,3 +696,38 @@ describe("GH-346 TC-INST-107 the identity-literal inventory has two declared sca
     expect(launcher).toContain("resolveReentryEntryPath");
   });
 });
+
+describe("GH-365 the alias refuses the migration verb before it dispatches", () => {
+  test("the alias returns install.identity.not-owning for install migrate", async () => {
+    const { createInstallCommandDefinition } = await import(
+      "../../packages/cli/src/commands/install"
+    );
+    const { createInstallRuntime, createInstallScratch, fixtureIdentity } = await import(
+      "../fixtures/install/home"
+    );
+    const scratch = createInstallScratch("entrypoint-bin-migrate");
+    try {
+      const definition = createInstallCommandDefinition(
+        createInstallRuntime({
+          scratch,
+          runningArtifactPath: "/nonexistent/artifact",
+          identity: fixtureIdentity(),
+          ownsInstallation: false,
+          invokedIdentity: "delivery-os",
+        }),
+      );
+      const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
+      if (!resolved.ok) throw new Error("brand");
+      const outcome = (await definition.handler({
+        command: "install",
+        flags: { "--json": true },
+        argv: ["install", "migrate"],
+        positionals: ["migrate"],
+        brand: resolved.value,
+      } as never)) as { readonly error?: { readonly code?: string } };
+      expect(outcome.error?.code).toBe("install.identity.not-owning");
+    } finally {
+      scratch.dispose();
+    }
+  });
+});

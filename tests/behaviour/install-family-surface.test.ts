@@ -8,6 +8,7 @@
  * flag, argument, or environment value can redirect the destination.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { allHelpEntries, renderRootHelp } from "../../packages/cli/src/help";
@@ -293,5 +294,31 @@ describe("TC-INST-006 no flag, argument, or environment value redirects the dest
     expect(outcome.data?.destination).toBe(
       brandOf("jaiship").installPath.replace("~", scratch.home),
     );
+  });
+});
+
+describe("GH-365 the migration verb is a family member", () => {
+  test("install migrate --dry-run resolves to the migration plan on the primary identity", async () => {
+    const runtime = createInstallRuntime({
+      scratch,
+      runningArtifactPath: artifact.path,
+      identity: fixtureIdentity(),
+      migration: {
+        roots: [],
+        backupRoot: join(scratch.configRoot, "migration-backups"),
+        runId: () => "run-migration-surface",
+        clock: { nowIso: () => "2026-11-18T12:05:00.000Z" },
+        priorPrefixes: [],
+      },
+    });
+    const install = createInstallCommandDefinition(runtime);
+    const outcome = (await install.handler({
+      command: "install",
+      flags: { "--dry-run": true, "--json": true },
+      argv: ["install", "migrate", "--dry-run"],
+      positionals: ["migrate"],
+      brand: brandOf("jaiship"),
+    } as never)) as { readonly data?: { readonly schemaId?: string } };
+    expect(outcome.data?.schemaId).toBe("install.migration.plan.v1");
   });
 });

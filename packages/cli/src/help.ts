@@ -1066,7 +1066,7 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
 
   m4PageEntry("install")(
     ["install"],
-    "Install, upgrade, inspect, roll back, and remove the installed product; installation is owned by the primary identity, so the compatibility alias advertises the family and refuses it — run the lifecycle through the installed product binary as the reference page and the local install guide document",
+    "Install, upgrade, inspect, roll back, and remove the installed product; installation is owned by the primary identity, so the compatibility alias advertises the family and refuses it — the alias is a declared compatibility shim removed in release 0.2.0, so run the lifecycle through the installed product binary as the reference page and the local install guide document",
     [
       "<binary> install [--add-to-path] [--shell-profile <path>] [--migrate] [--dry-run] [--stop-daemon]",
       "<binary> install status [--json]",

@@ -433,6 +433,20 @@ const outcomeFromResult = (result: unknown): Outcome => {
 
 const GLOBAL_FLAGS: ReadonlySet<string> = new Set(["--json", "--verbose", "--pretty"]);
 
+/**
+ * The migration's declared command-audit exception (GH-365 DM-7, API-1).
+ *
+ * Keyed PRE-PARSE on the invocation tokens, so every migration mode — an
+ * applying run, a dry run, and a pre-parse refusal such as `install migrate
+ * --force` — is covered. The audit dependency stays composed and recording; the
+ * recorder observes zero writes, which distinguishes suppression from an absent
+ * seam.
+ */
+const isMigrationInvocation = (argv: readonly string[]): boolean => {
+  const tokens = argv.filter((token) => !GLOBAL_FLAGS.has(token));
+  return tokens[0] === "install" && (tokens[1] === "migrate" || tokens.includes("--migrate"));
+};
+
 const commandToken = (argv: readonly string[]): string =>
   argv.find((token) => !GLOBAL_FLAGS.has(token)) ?? "";
 
@@ -614,6 +628,9 @@ export async function runCli(
   const auditDiagnostic = (() => {
     const audit = deps.audit;
     if (audit === undefined) return undefined;
+    // The migration is the one declared audit exception (DM-7): zero records of
+    // any kind in every mode, so the delivered pair is never composed for it.
+    if (isMigrationInvocation(argv)) return undefined;
     const identity = audit.identity;
     const facts: AuditInvocationFacts = {
       runId,
