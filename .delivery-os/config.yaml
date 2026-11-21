@@ -24,3 +24,142 @@ verify:
       - prompt-conformance
       - help-guide-coverage
       - exports-parity
+provider:
+  defaultChain: subscription-first
+  credentials:
+    zai:
+      sourceKey:
+        style: literal
+        name: ZAI_API_KEY
+    deepseek:
+      sourceKey:
+        style: literal
+        name: DEEPSEEK_API_KEY
+  entries:
+    zai-coding-plan:
+      class: subscription
+      enabled: true
+      peak:
+        timezone: UTC
+        startSecondsOfDay: 21600
+        endSecondsOfDay: 36000
+        bufferSeconds: 7200
+      quota:
+        enabled: true
+        endpoint: https://api.z.ai/api/monitor/usage/quota/limit
+        credentialRef: zai
+        thresholdPercent: 100
+        maxSleepLoops: 24
+    deepseek:
+      class: pay-per-token
+      enabled: true
+      peak:
+        timezone: UTC
+        startSecondsOfDay: 3600
+        endSecondsOfDay: 36000
+        bufferSeconds: 0
+  chains:
+    subscription-first:
+      entries: [zai-coding-plan, deepseek]
+      allowPaidFallback: true
+    subscription-only:
+      entries: [zai-coding-plan]
+      allowPaidFallback: false
+  budgets:
+    window-cost:
+      enabled: true
+      scope: window
+      basis: cost
+      ceiling: 20
+      windowSeconds: 86400
+    ticket-cost:
+      enabled: true
+      scope: ticket
+      basis: cost
+      ceiling: 30
+  profiles:
+    tiers:
+      delivery:
+        description: this repository's delivery roles
+    profiles:
+      delivery:
+        tier: delivery
+        providers: [zai-coding-plan, deepseek]
+        seats:
+          bootstrapper: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          ceo: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          coder: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          committer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          decision-advisor: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          decision-critic: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          designer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          doc-syncer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          editor: { model: zai-coding-plan/glm-5.3-flash, pacingClass: execution, capability: text-only }
+          external-researcher: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          fixer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          image-generator: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          image-reviewer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          meeting-organizer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          plan-writer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          pm: { model: zai-coding-plan/glm-5.3-flash, pacingClass: judgment, capability: text-only }
+          pr-manager: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          readiness-reviewer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          review-feedback-applier: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          reviewer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          runner: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          spec-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          test-plan-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          toolsmith: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+        peakWindows:
+          graceSeconds: 300
+          windows:
+            - { timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 14400, multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }
+            - { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000, multiplier: 3, bufferBeforeSeconds: 7200, bufferAfterSeconds: 600 }
+      paid:
+        tier: delivery
+        providers: [deepseek]
+        seats:
+          bootstrapper: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          ceo: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          coder: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          committer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          decision-advisor: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          decision-critic: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          designer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          doc-syncer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          editor: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          external-researcher: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          fixer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          image-generator: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          image-reviewer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          meeting-organizer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          plan-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          pm: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          pr-manager: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          readiness-reviewer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          review-feedback-applier: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          reviewer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          runner: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
+          spec-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          test-plan-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+          toolsmith: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
+        peakWindows:
+          graceSeconds: 300
+          windows:
+            - { timezone: UTC, startSecondsOfDay: 3600, endSecondsOfDay: 14400, multiplier: 2, bufferBeforeSeconds: 1800, bufferAfterSeconds: 300 }
+            - { timezone: UTC, startSecondsOfDay: 21600, endSecondsOfDay: 36000, multiplier: 2, bufferBeforeSeconds: 7200, bufferAfterSeconds: 600 }
+    preferenceChain:
+      base: delivery
+      fallbacks: [paid]
+    watch:
+      zai-coding-plan:
+        mapping: coding-plan-windows
+        endpoint: https://api.z.ai/api/monitor/usage/quota/limit
+        credentialRef: zai
+        thresholdPercent: 100
+      deepseek:
+        mapping: deepseek-balance
+        endpoint: https://api.deepseek.com/user/balance
+        credentialRef: deepseek
+        floor: 2
+        maxAgeSeconds: 900

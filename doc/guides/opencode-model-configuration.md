@@ -3,6 +3,8 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/opencode-model-configuration.md
 ados_distribution: redistributable
+links:
+  related_changes: ["GH-374"]
 ---
 # OpenCode Model Configuration Guide
 
@@ -231,7 +233,22 @@ ADOS agents have different complexity levels. Match model capability to task:
 
 ### Provider and model policy
 
-Model *assignment* stays in the OpenCode configuration described in this guide. Provider and model *policy* — which provider may serve a spawn, its cost class, declared-zone peak windows, subscription quota, spend ceilings, model profiles, and watch freshness — is declared in the tool's typed `provider` and `provider.profiles` branches. The typed profile branch is the canonical path for routing: `provider profile resolve` answers which model a seat receives, and the per-agent assignments above remain the harness-level override. See the [provider engine](../spec/features/feature-provider-engine.md) and [provider profiles](../spec/features/feature-provider-profiles.md) specifications, and the [provider conditions and parks guide](provider-conditions-and-parks.md).
+The typed `provider` and `provider.profiles` branches are the canonical routing
+path for this repository. The typed profile branch is the canonical path for
+routing: `provider profile resolve` answers which model a seat receives, and this
+repository's seats and models are committed in `.delivery-os/config.yaml`. The
+per-agent table above is harness assignment — the OpenCode configuration remains
+the assignment authority for a spawn — while routing policy (provider
+eligibility, cost class, declared-zone peak windows, subscription quota, spend
+ceilings, and watch freshness) is configuration, not a prompt.
+
+No provider/model identifier belongs in an agent prompt or command definition: a
+prompt that names a model is a second policy authority. Prompt-authoring guidance
+uses neutral `<provider>/<model>` placeholders with a pointer to the typed policy,
+and its generated Claude Code counterpart was rebuilt from that source by
+`scripts/build-claude-plugin.sh`. See the [provider engine](../spec/features/feature-provider-engine.md)
+and [provider profiles](../spec/features/feature-provider-profiles.md)
+specifications, and the [provider conditions and parks guide](provider-conditions-and-parks.md).
 
 ### Agent-to-Agent Communication
 

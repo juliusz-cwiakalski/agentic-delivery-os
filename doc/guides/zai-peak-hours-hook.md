@@ -3,6 +3,8 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/zai-peak-hours-hook.md
 ados_distribution: redistributable
+links:
+  related_changes: ["GH-374"]
 ---
 # Z.AI Peak-Hours & Quota Hook Guide
 
@@ -25,6 +27,17 @@ ceilings are `provider.budgets.<name>`. The engine parks the lane with a recorde
 reason and resumes automatically at the computed instant, so a delivery needs
 neither a shell executable nor an environment-variable convention. A hook file
 may remain on disk; it is inert because no composition reads it.
+
+**This repository's posture:** the window, quota, and ceiling policy is committed
+configuration (see the [provider conditions and parks
+guide](provider-conditions-and-parks.md)), and the hook is off this repository's
+delivery path: this repository installs no pre-iteration hook and does not source
+a legacy shell profile, so the typed delivery path reads configuration only. If an
+operator's legacy hook or profile directory is present, it is left untouched and
+is reached only by the retained shell fallbacks (`deliver-ticket.sh`,
+`ceo-loop.sh`) as an opt-in input. The hook example remains for other adopters who
+still choose it; invoking an opt-in hook is a fallback of the shell entry points,
+not of the typed path.
 
 ### Migrating off the hook: `provider migrate legacy`
 
@@ -233,6 +246,9 @@ Example config snippet (`.opencode/opencode.jsonc` or `~/.config/opencode/openco
 ```
 
 ## Install (one-liner)
+
+The instructions in this section are for adopters who still choose the hook. They
+are not this repository's delivery procedure.
 
 From the repository root (where `scripts/hooks/` lives):
 

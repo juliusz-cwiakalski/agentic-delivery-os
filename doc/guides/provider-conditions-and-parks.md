@@ -4,9 +4,9 @@ id: GUIDE-PROVIDER-CONDITIONS-AND-PARKS
 status: Draft
 created: 2026-10-31
 owners: ["engineering"]
-summary: "Provider condition and park contract: the declared-zone basis, causes, resume times, budget ceilings, watch freshness, fail-loud announcements, and the configuration pointer."
+summary: "Provider condition and park contract: the declared-zone basis, causes, resume times, budget ceilings, watch freshness, fail-loud announcements, the configuration pointer, and this repository's adopted policy."
 links:
-  related_changes: ["GH-182", "GH-350"]
+  related_changes: ["GH-182", "GH-350", "GH-374"]
 ---
 # Provider Conditions and Parks
 
@@ -179,3 +179,39 @@ profiles specification (`doc/spec/features/feature-provider-profiles.md`); this
 guide does not duplicate them. The shipped descriptor is overridable, and a
 fresh installation ships no enabled chain, so a resolve fails closed until an
 operator declares one.
+
+### This repository's adopted policy
+
+This repository declares its policy in the committed configuration document
+(`.delivery-os/config.yaml`), so provider selection, seating, and the ceilings
+are visible in review and to CI:
+
+- **Profiles.** A mixed base profile `delivery` serves both providers — the
+  sunk-cost subscription and the pay-per-token rail — with one named seat per
+  agent role; the paid fallback profile `paid` carries the same seats on the paid
+  rail, so a profile switch never costs a role its seat.
+- **Chains.** The default chain `subscription-first` walks the subscription entry
+  first and allows the declared paid fallback; `subscription-only` is the
+  never-pay chain — the subscription entry alone, with paid fallback disallowed.
+- **Admission pause.** Each entry's declared peak closes admission **every day**
+  from 01:00 to 10:00 UTC: the subscription's buffered peak `[04:00, 10:00)` plus
+  the paid rail's `01:00–10:00` union window. Because the window model is daily,
+  weekends and the Chinese public holidays are paused as well.
+- **Ceilings.** A trailing-day cost ceiling of 20 **parks** every governed entry
+  with a computed resume instant; a per-ticket cost ceiling of 30 **stops** the
+  delivery with a classified refusal and cannot reopen.
+- **Watch targets.** The subscription quota windows and the DeepSeek balance floor
+  (2 USD) are declared watch targets, read-only. The synchronous probe reads **no
+  live quota or balance**; live verification belongs to the daemon path.
+- **Declared cost.** The paid entry's single union window is what keeps paid
+  capacity out of both DeepSeek price peaks and out of the subscription's buffered
+  pause. Its only newly closed **time-of-day interval** is exactly 04:00–06:00 UTC
+  daily — the gap between the two DeepSeek price-peak windows — given up as a
+  stated cost.
+- **Retired dependency.** The shell profile directory and the pre-iteration hook
+  are not on this repository's delivery path: this repository installs no
+  pre-iteration hook and does not source a legacy shell profile, so the typed
+  delivery path reads configuration only. If an operator's legacy hook or profile
+  directory is present, it is left untouched and is reached only by the retained
+  shell fallbacks (`deliver-ticket.sh`, `ceo-loop.sh`) as an opt-in input. The
+  [hook guide](zai-peak-hours-hook.md) keeps the example for other adopters.
