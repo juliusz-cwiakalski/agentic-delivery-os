@@ -42,7 +42,11 @@ import {
 } from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import type { BrandIdentity, OwnerHoldFact, StateStorePort } from "@delivery-os/core/contracts";
-import { STATE_SCHEMA_VERSION } from "@delivery-os/core/contracts";
+import {
+  renderPriorIdentityNotice,
+  resolveWorkingNameOverride,
+  STATE_SCHEMA_VERSION,
+} from "@delivery-os/core/contracts";
 import { readProviderParkViews } from "@delivery-os/core/provider";
 import {
   createNodeStateEdge,
@@ -57,10 +61,8 @@ import type { VerifyArtifactToolRuntime, VerifyPmNotesRead } from "./commands/ve
 import { type LifecycleDiagnostics, type LifecycleOutcome, runLifecycle } from "./lifecycle.js";
 import { runProtocol } from "./output/protocol.js";
 
-const DEFAULT_WORKING_NAME = "delivery-os";
+const DEFAULT_WORKING_NAME = "jaiship";
 const SERVER_VERSION = "0.0.0";
-/** The neutral working-name override the smoke and operators supply. */
-const WORKING_NAME_OVERRIDE = "DELIVERY_OS_WORKING_NAME";
 
 const diagnostics: LifecycleDiagnostics = {
   write: (line) => {
@@ -77,14 +79,32 @@ type BrandResolution =
   | { readonly ok: true; readonly brand: BrandIdentity }
   | { readonly ok: false; readonly outcome: LifecycleOutcome };
 
-const resolveBrand = (
+export const resolveServeBrand = (
   environment: Readonly<Record<string, string | undefined>>,
 ): BrandResolution => {
-  const override = environment[WORKING_NAME_OVERRIDE];
+  const base = resolveBrandIdentity({ workingName: DEFAULT_WORKING_NAME });
+  if (!base.ok) {
+    return { ok: false, outcome: configurationOutcome(`${base.error.field}:${base.error.code}`) };
+  }
+  const resolution = resolveWorkingNameOverride({
+    environment,
+    environmentPrefix: base.value.environmentPrefix,
+  });
+  if (resolution.channel === "prior" || resolution.channel === "pre-freeze") {
+    diagnostics.write(
+      `${renderPriorIdentityNotice({
+        reason: "override-read",
+        priorLocation:
+          resolution.channel === "prior" ? resolution.priorVariable : resolution.preFreezeVariable,
+        currentLocation: resolution.currentVariable,
+      })}
+`,
+    );
+  }
   const input =
-    override === undefined
+    resolution.override === undefined
       ? { workingName: DEFAULT_WORKING_NAME }
-      : { workingName: DEFAULT_WORKING_NAME, override };
+      : { workingName: DEFAULT_WORKING_NAME, override: resolution.override };
   const branded = resolveBrandIdentity(input);
   return branded.ok
     ? { ok: true, brand: branded.value }
@@ -352,7 +372,7 @@ const run = async (): Promise<void> => {
     runLifecycle(configurationOutcome("HOME is not set"), diagnostics);
   }
 
-  const brandResult = resolveBrand(environment);
+  const brandResult = resolveServeBrand(environment);
   const brand: BrandIdentity = (() => {
     if (brandResult.ok) return brandResult.brand;
     return runLifecycle(brandResult.outcome, diagnostics);

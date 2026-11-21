@@ -147,7 +147,7 @@ const DECLARED_INVENTORY: readonly LiteralSite[] = [
   {
     file: "packages/mcp/src/serve.ts",
     constant: "DEFAULT_WORKING_NAME",
-    value: "delivery-os",
+    value: "jaiship",
     exported: false,
   },
   {
@@ -364,7 +364,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
         "packages/cli/bin/jaiship.ts",
         'const DEFAULT_WORKING_NAME = "jaiship";\nconst PRIOR_WORKING_NAME = "delivery-os";\n',
       );
-      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
       seed("packages/core/src/branding/index.ts", 'const SCOPE_ORG = "delivery-os";\n');
       expect(inventoryViolations(literalSites(root))).toEqual([]);
 
@@ -399,7 +399,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
       const seed = (relative: string, content: string) => write(root, relative, content);
       seed("packages/cli/bin/delivery-os.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
       seed("packages/cli/bin/jaiship.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
-      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
       seed("packages/core/src/branding/index.ts", 'const SCOPE_ORG = "delivery-os";\n');
       const baseline = literalSites(root);
       expect(inventoryViolations(baseline).join("\n")).toContain("PRIOR_WORKING_NAME");

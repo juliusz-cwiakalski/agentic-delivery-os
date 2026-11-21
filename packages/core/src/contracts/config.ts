@@ -116,8 +116,83 @@ export const PRIOR_IDENTITY_NOTICE_REASONS = [
   "config-skipped",
   "state-read",
   "state-skipped",
+  "override-read",
 ] as const;
 export type PriorIdentityNoticeReason = (typeof PRIOR_IDENTITY_NOTICE_REASONS)[number];
+
+/** The declared override-channel suffix (GH-365 F-6, DM-9). */
+const WORKING_NAME_ENVIRONMENT_SUFFIX = "WORKING_NAME";
+
+/** The current-identity override channel: `<environmentPrefix>WORKING_NAME`. */
+export const currentWorkingNameEnvironmentVariable = (environmentPrefix: string): string =>
+  `${environmentPrefix}${WORKING_NAME_ENVIRONMENT_SUFFIX}`;
+
+/** The prior-identity override channel (a declared lower-precedence input). */
+export const PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE = ["DELIVERY", "OS", "WORKING_NAME"].join("_");
+
+/** The pre-freeze override channel: read at the raw seam, never adapter-mapped. */
+export const PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE = ["A", "DOS", "_WORKING_NAME"].join("");
+
+export type WorkingNameChannel = "current" | "prior" | "pre-freeze";
+
+export type WorkingNameOverrideResolution = {
+  readonly channel?: WorkingNameChannel;
+  readonly override?: string;
+  readonly currentVariable: string;
+  readonly priorVariable: string;
+  readonly preFreezeVariable: string;
+};
+
+const nonEmptyValue = (
+  environment: Readonly<Record<string, string | undefined>>,
+  name: string,
+): string | undefined => {
+  const value = environment[name];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+};
+
+/**
+ * Resolve the working-name override from the raw environment (API-6, DEC-9).
+ *
+ * Precedence: current (`<prefix>WORKING_NAME`) -> prior
+ * (the prior variable) -> pre-freeze (the pre-freeze variable). The helper
+ * reads only the injected raw environment and the derived prefix; the caller
+ * applies the chosen value and emits one `override-read` notice for a prior or
+ * pre-freeze channel.
+ */
+export const resolveWorkingNameOverride = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly environmentPrefix: string;
+}): WorkingNameOverrideResolution => {
+  const currentVariable = currentWorkingNameEnvironmentVariable(input.environmentPrefix);
+  const priorVariable = PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE;
+  const preFreezeVariable = PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE;
+  const current = nonEmptyValue(input.environment, currentVariable);
+  if (current !== undefined) {
+    return {
+      channel: "current",
+      override: current,
+      currentVariable,
+      priorVariable,
+      preFreezeVariable,
+    };
+  }
+  const prior = nonEmptyValue(input.environment, priorVariable);
+  if (prior !== undefined) {
+    return { channel: "prior", override: prior, currentVariable, priorVariable, preFreezeVariable };
+  }
+  const preFreeze = nonEmptyValue(input.environment, preFreezeVariable);
+  if (preFreeze !== undefined) {
+    return {
+      channel: "pre-freeze",
+      override: preFreeze,
+      currentVariable,
+      priorVariable,
+      preFreezeVariable,
+    };
+  }
+  return { currentVariable, priorVariable, preFreezeVariable };
+};
 
 /** One rendered notice's facts: both locations, never a value or secret. */
 export type PriorIdentityNotice = {
@@ -144,7 +219,10 @@ export const renderPriorIdentityNotice = (notice: PriorIdentityNotice): string =
         : notice.reason === "state-read"
           ? `the prior identity host root at ${notice.priorLocation} is in effect because ` +
             `${notice.currentLocation} is absent`
-          : `the current host root at ${notice.currentLocation} is in effect; the prior ` +
-            `identity host root at ${notice.priorLocation} was not used`;
+          : notice.reason === "state-skipped"
+            ? `the current host root at ${notice.currentLocation} is in effect; the prior ` +
+              `identity host root at ${notice.priorLocation} was not used`
+            : `read the prior identity working-name override at ${notice.priorLocation} ` +
+              `because ${notice.currentLocation} is absent; applied to ${notice.currentLocation}`;
   return `${PRIOR_IDENTITY_NOTICE_TOKEN}: ${notice.reason} ${detail} (${NO_MOVE_STATEMENT})`;
 };

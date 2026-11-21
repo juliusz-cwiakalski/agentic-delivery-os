@@ -224,3 +224,48 @@ describe("legacy config facts", () => {
     expect(quiet.messages).toEqual([]);
   });
 });
+
+describe("GH-365 the pre-freeze mapping is bounded to declared catalog keys", () => {
+  test("a declared mapped name is read, an undeclared name is inert, and the override is not adapter-mapped", () => {
+    const home = makeHome();
+    const declared = new Set(["SYNTH_MAPPED"]);
+    const messages: string[] = [];
+    const compat = createLegacyCompat({
+      current: CURRENT,
+      warn: (message) => messages.push(message),
+      catalogEnvironmentNames: declared,
+    });
+    const result = compat.resolveLegacy({
+      facts: {
+        ADOS_MAPPED: "mapped-value",
+        ADOS_OTHER: "inert-value",
+        ADOS_FOO: "bar",
+        ADOS_WORKING_NAME: "acme",
+      },
+      homeDirectory: home,
+    });
+    expect(result.environment).toEqual({ SYNTH_MAPPED: "mapped-value" });
+    expect(result.environment).not.toHaveProperty("SYNTH_OTHER");
+    expect(result.environment).not.toHaveProperty("SYNTH_FOO");
+    expect(result.environment).not.toHaveProperty("SYNTH_WORKING_NAME");
+    expect(result.legacySourcesPresent).toBe(true);
+    expect(messages).toHaveLength(1);
+  });
+
+  test("a world with only inert pre-freeze names is silent and unmapped", () => {
+    const home = makeHome();
+    const messages: string[] = [];
+    const compat = createLegacyCompat({
+      current: CURRENT,
+      warn: (message) => messages.push(message),
+      catalogEnvironmentNames: new Set(["SYNTH_MAPPED"]),
+    });
+    const result = compat.resolveLegacy({
+      facts: { ADOS_FOO: "bar", ADOS_OTHER: "x", ADOS_WORKING_NAME: "acme" },
+      homeDirectory: home,
+    });
+    expect(result.environment).toEqual({});
+    expect(result.legacySourcesPresent).toBe(false);
+    expect(messages).toEqual([]);
+  });
+});

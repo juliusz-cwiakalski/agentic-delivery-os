@@ -980,3 +980,20 @@ export const resolvePollSettings = (
  * composition and one override precedence exist in the tree (GH-288 DEC-12).
  * Configuration keeps the daemon branch and every other resolved setting.
  */
+
+/**
+ * The declared current-prefix environment names for one catalog (GH-365 F-6).
+ * The legacy adapter maps a pre-freeze name only when `<prefix><suffix>` is in
+ * this set; the prefix is the invoking identity's derived environment prefix.
+ */
+export const configEnvironmentNames = (
+  catalog: ConfigCatalog,
+  environmentPrefix: string,
+): ReadonlySet<string> =>
+  new Set(
+    catalogPaths(catalog).flatMap(([path, field]) =>
+      field.env
+        ? [`${environmentPrefix}${path.toUpperCase().replaceAll(".", "__").replaceAll("-", "_")}`]
+        : [],
+    ),
+  );

@@ -2256,6 +2256,15 @@ phases:
         # blast radius is computable and a catalog edit is declared, never an
         # undeclared edit.
         - packages/core/src/config/catalog.ts
+        # AUTHORISED DELIVERY-TIME DISCOVERY (P8): the catalog's environment-name
+        # selector is re-exported through the config index; the MCP default change
+        # moves the entrypoint-bin inventory, the identity-docs pin, the alias
+        # baseline, and the executable/port inventories.
+        - packages/core/src/config/index.ts
+        - tests/checks/identity-docs.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/fixtures/entrypoint/alias-baseline.json
         - packages/cli/src/edge.ts
         - packages/cli/src/entrypoint.ts
         - packages/cli/src/bin-launcher.ts

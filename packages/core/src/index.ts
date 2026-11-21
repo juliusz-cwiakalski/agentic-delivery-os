@@ -396,6 +396,7 @@ export {
   type CoordinatorSettings,
   catalogPaths,
   compileTrustedSchema,
+  configEnvironmentNames,
   type DefaultPositionManifest,
   defaultsFor,
   generateConfigSchema,

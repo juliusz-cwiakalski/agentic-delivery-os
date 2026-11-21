@@ -30,11 +30,17 @@ export {
   type ConfigSourceFacts,
   type ConfigValue,
   type ConfigWarning,
+  currentWorkingNameEnvironmentVariable,
+  PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE,
   PRIOR_IDENTITY_NOTICE_REASONS,
+  PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE,
   type PriorIdentityNotice,
   type PriorIdentityNoticeReason,
   priorIdentityNoticeToken,
   renderPriorIdentityNotice,
+  resolveWorkingNameOverride,
+  type WorkingNameChannel,
+  type WorkingNameOverrideResolution,
 } from "./config.js";
 
 /**

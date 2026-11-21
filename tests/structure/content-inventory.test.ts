@@ -2505,6 +2505,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "cli/src/entrypoint.ts": [
     "workingNameEnvironmentVariable",
+    "workingNameEnvironmentVariables",
     "PROMPT_REQUIRED_COMMANDS",
     "resolveWorkingName",
     "resolveEntrypointBrand",
@@ -2842,9 +2843,14 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/contracts/config.ts": [
     "CONFIG_LAYERS",
+    "PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE",
     "PRIOR_IDENTITY_NOTICE_REASONS",
+    "PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE",
+    "currentWorkingNameEnvironmentVariable",
     "priorIdentityNoticeToken",
     "renderPriorIdentityNotice",
+    "resolveWorkingNameOverride",
+    "WORKING_NAME_ENVIRONMENT_SUFFIX",
   ],
   "core/src/contracts/supervise.ts": [
     "SUPERVISE_ERROR_CODES",
@@ -3112,6 +3118,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/config/catalog.ts": [
     "BOOTSTRAP_DESCRIPTOR",
+    "configEnvironmentNames",
     "COORDINATOR_BRANCH",
     "DAEMON_BRANCH",
     "LANE_BRANCH",
@@ -3262,7 +3269,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "mcp/src/output/payload.ts": ["failureFromValue", "inputRejection"],
   "mcp/src/output/protocol.ts": ["runProtocol"],
   "mcp/src/lifecycle.ts": ["exitCodeFor", "runLifecycle"],
-  "mcp/src/serve.ts": ["composeServeState", "composeServeSurface", "serve"],
+  "mcp/src/serve.ts": ["composeServeState", "composeServeSurface", "resolveServeBrand", "serve"],
   "adapters/src/github/client.ts": ["createGitHubClient", "createGithubNativeTransport"],
   "adapters/src/github/index.ts": [
     "GITHUB_ADAPTER_CONTRACT",

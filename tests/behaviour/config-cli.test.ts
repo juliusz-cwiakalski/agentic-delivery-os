@@ -310,6 +310,7 @@ describe("TC-CONFIG-007/016/022 classified failures and warnings", () => {
       {
         environment: baseEnvironment,
         catalog: FIXTURE_CATALOG,
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the literal is the interpolation fixture
         contents: committed('x-test:\n  oldValue: "${SECRET:-default}"\n'),
       },
       "config.interpolation.rejected",
@@ -608,5 +609,33 @@ describe("GH-365 TC-ROOT-004 the project-local overlay is read normally and ci-d
       layer: "project-local",
       reason: "ci-disabled",
     });
+  });
+});
+
+describe("GH-365 TC-IDENTITY-003 the pre-freeze environment is inert and ADOS_WORKING_NAME reaches the override", () => {
+  test("eight owner-named variables and ADOS_FOO neither error nor become values", async () => {
+    const pkg = await import("../fixtures/namespace/pre-freeze-env");
+    const environment: Record<string, string> = { ...baseEnvironment };
+    for (const name of pkg.PRE_FREEZE_VARIABLES) environment[name] = "pre-freeze-fixture";
+    environment.ADOS_FOO = "bar";
+    const result = await run(["--debug", "--project-root", REPO], {
+      environment,
+      catalog: FIXTURE_CATALOG,
+      contents: committed("x-test:\n  requiredValue: from-file\n"),
+    });
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as { config: Record<string, unknown> };
+    expect(JSON.stringify(payload.config)).not.toContain("pre-freeze-fixture");
+    expect(JSON.stringify(payload.config)).not.toContain("bar");
+  });
+
+  test("ADOS_WORKING_NAME is read at the raw seam and resolves the current identity", () => {
+    const built = build({
+      environment: { ...baseEnvironment, ADOS_WORKING_NAME: "acme" },
+      catalog: FIXTURE_CATALOG,
+      contents: committed("x-test:\n  requiredValue: from-file\n"),
+    });
+    expect(built.brand.binaryName).toBe("acme");
+    expect(built.brand.configDirectoryName).toBe(".acme");
   });
 });

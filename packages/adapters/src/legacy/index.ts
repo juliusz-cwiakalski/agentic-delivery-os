@@ -39,6 +39,14 @@ export type LegacyResolveResult = {
 export type LegacyCompatOptions = {
   readonly current: LegacyCurrentNames;
   readonly warn: (message: string) => void;
+  /**
+   * The declared current-prefix environment names (the catalog key set). When
+   * supplied, `ADOS_<suffix>` maps only if `<prefix><suffix>` is declared; an
+   * undeclared name is inert (not an error, not a value, not a notice).
+   * `ADOS_WORKING_NAME` is never mapped here: it is read at the raw
+   * entrypoint/edge seam (GH-365 DEC-9).
+   */
+  readonly catalogEnvironmentNames?: ReadonlySet<string>;
 };
 
 export type LegacyConfigInput = LegacyResolveInput & {
@@ -74,6 +82,7 @@ const mapLegacy = (
   warn: (message: string) => void,
   current: LegacyCurrentNames,
   input: LegacyResolveInput,
+  catalogEnvironmentNames: ReadonlySet<string> | undefined,
 ): LegacyResolveResult => {
   const environment: Record<string, string> = {};
   let legacyEnvironmentPresent = false;
@@ -81,7 +90,11 @@ const mapLegacy = (
     if (!key.startsWith(LEGACY_ENV_PREFIX) || !isOwn(input.facts, key)) continue;
     const value = input.facts[key];
     if (value === undefined) continue;
-    environment[`${current.environmentPrefix}${key.slice(LEGACY_ENV_PREFIX.length)}`] = value;
+    const suffix = key.slice(LEGACY_ENV_PREFIX.length);
+    if (suffix === "WORKING_NAME") continue;
+    const mappedName = `${current.environmentPrefix}${suffix}`;
+    if (catalogEnvironmentNames !== undefined && !catalogEnvironmentNames.has(mappedName)) continue;
+    environment[mappedName] = value;
     legacyEnvironmentPresent = true;
   }
 
@@ -114,7 +127,13 @@ const mapLegacy = (
 export const createLegacyCompat = (options: LegacyCompatOptions): LegacyCompat => {
   const state: WarningState = { warned: false };
   const configFacts = (input: LegacyConfigInput): LegacyConfigFacts => {
-    const mapped = mapLegacy(state, options.warn, options.current, input);
+    const mapped = mapLegacy(
+      state,
+      options.warn,
+      options.current,
+      input,
+      options.catalogEnvironmentNames,
+    );
     const environment: Record<string, string | undefined> = {
       ...input.environment,
       ...mapped.environment,
@@ -134,7 +153,8 @@ export const createLegacyCompat = (options: LegacyCompatOptions): LegacyCompat =
     };
   };
   return {
-    resolveLegacy: (input) => mapLegacy(state, options.warn, options.current, input),
+    resolveLegacy: (input) =>
+      mapLegacy(state, options.warn, options.current, input, options.catalogEnvironmentNames),
     resolveConfigFacts: configFacts,
   };
 };
@@ -145,7 +165,7 @@ const processState: WarningState = { warned: false };
 export const resolveProcessLegacy = (
   input: LegacyResolveInput & { readonly current: LegacyCurrentNames },
 ): LegacyResolveResult =>
-  mapLegacy(processState, (message) => console.warn(message), input.current, input);
+  mapLegacy(processState, (message) => console.warn(message), input.current, input, undefined);
 
 const processEnvironmentFacts = (): Record<string, string> => {
   const facts: Record<string, string> = {};

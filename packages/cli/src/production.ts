@@ -5344,6 +5344,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       environment,
       cwd,
       homeDirectory,
+      onNotice: (line) => {
+        compositionNotices.push(line);
+        invocation?.onCompositionNotice?.(line);
+      },
       ...(priorNames === undefined
         ? {}
         : { priorConfigurationDirectoryName: priorNames.configDirectoryName }),

@@ -517,3 +517,26 @@ notes:
       `--migrate` flag remains documented at this boundary; P6 retires it."
     type: info
     date: "2026-11-21"
+  - text: "Plan amendment + phase 7 COMPLETE: commit 203951f0. The plan now
+      declares the delivery-time discoveries for review (P5: error-table-sync,
+      fixtures/install/home, content-inventory; P6: the identity-total floor-ripple
+      files, the two count pages, the ports/state-additivity fixtures and the
+      changeset body; P7: the alias baseline and its two-bins suite) under a
+      one-line AUTHORISED DELIVERY-TIME DISCOVERY comment each; `plan validate`
+      reports valid/full/ready and `lint plan` is valid. The delivered notice
+      machinery already satisfies the loaded-path guarantee, so production.ts
+      needed no change: the current file wins, the shadowed prior is reported not
+      used with both paths in the one config-skipped line, a prior-only world
+      emits exactly one config-read naming both paths with zero prior writes, and
+      a migrated checkout/host emits nothing in human and --json mode. The
+      project-local overlay reads at .jaiship/config.local.yaml and is
+      ci-disabled under CI; the group document remains the delivered
+      projects-groups-list regression control (not edited). The four golden notice
+      lines are committed and compared to the declaration; the permanent
+      NAMESPACE_PROOF_BOUNDARY now covers all eight proven ids with five planted
+      controls. Committed-head gate: prior-identity-config-fallback 18 pass;
+      prior-identity-notice 15; config-cli 19; projects-groups-list 9 (verify
+      only); state-scope 10; conformance/namespace 7; prior-identity-hermetic 5;
+      content-inventory 12; pnpm typecheck green; git diff --check clean."
+    type: info
+    date: "2026-11-21"

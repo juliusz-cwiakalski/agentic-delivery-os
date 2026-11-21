@@ -9,8 +9,10 @@
  */
 
 import type { GithubChildRunner, GithubTransportPolicy } from "@delivery-os/adapters/github";
+import { resolveBrandIdentity } from "@delivery-os/core/branding";
+import { resolveWorkingNameOverride } from "@delivery-os/core/contracts";
 import type { BuildIdentity } from "./build-identity.js";
-import { runEntrypoint, workingNameEnvironmentVariable } from "./entrypoint.js";
+import { runEntrypoint } from "./entrypoint.js";
 import {
   createProductionComposer,
   DECLARED_CREDENTIAL_REFERENCES,
@@ -90,9 +92,14 @@ export const resolveReentryEntryPath = (input: {
  */
 export const runBinLauncher = async (options: BinLauncherOptions): Promise<number> => {
   const environment = options.environment;
-  const override = environment[workingNameEnvironmentVariable()];
-  const workingName =
-    override !== undefined && override.length > 0 ? override : options.declaredWorkingName;
+  const base = resolveBrandIdentity({ workingName: options.declaredWorkingName });
+  const resolution = base.ok
+    ? resolveWorkingNameOverride({
+        environment,
+        environmentPrefix: base.value.environmentPrefix,
+      })
+    : undefined;
+  const workingName = resolution?.override ?? options.declaredWorkingName;
   return runEntrypoint(options.argv, {
     streams: options.streams,
     environment,

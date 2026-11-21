@@ -281,7 +281,7 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
     ]);
     expect(existsSync(join(ROOT, "doc/documentation-profile.md"))).toBe(false);
     const mcp = read("packages/mcp/src/serve.ts");
-    expect(mcp).toContain('"delivery-os"');
+    expect(mcp).toContain('DEFAULT_WORKING_NAME = "jaiship"');
     const shell = read("scripts/lib/dispatch-authority.sh");
     expect(shell).toContain("${HOME:-/nonexistent}/.delivery-os");
     expect(read("README.md")).not.toContain("~/.jaiship/bin/jaiship");

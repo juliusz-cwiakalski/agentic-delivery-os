@@ -500,8 +500,9 @@ describe("TC-BIN-045 the notice changes no payload and no exit projection", () =
         extra: { DELIVERY_OS_WORKING_NAME: "bad/name" },
       });
       expect(run.exitCode).toBe(2);
-      expect(run.notices).toHaveLength(1);
-      expect(run.notices[0]).toContain("prior-identity-fallback: config-read");
+      expect(run.notices).toHaveLength(2);
+      expect(run.notices.filter((line) => line.includes("config-read"))).toHaveLength(1);
+      expect(run.notices.filter((line) => line.includes("override-read"))).toHaveLength(1);
       const payload = JSON.parse(run.stdout) as { readonly error?: { readonly code?: string } };
       expect(payload.error?.code).toBe("fallback.internal");
       expect(run.stdout).not.toContain("prior-identity-fallback");

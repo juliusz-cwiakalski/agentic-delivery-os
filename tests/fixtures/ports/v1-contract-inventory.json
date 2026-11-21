@@ -617,11 +617,17 @@
       "ConfigSourceFacts",
       "ConfigValue",
       "ConfigWarning",
+      "PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE",
       "PRIOR_IDENTITY_NOTICE_REASONS",
+      "PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE",
       "PriorIdentityNotice",
       "PriorIdentityNoticeReason",
+      "WorkingNameChannel",
+      "WorkingNameOverrideResolution",
+      "currentWorkingNameEnvironmentVariable",
       "priorIdentityNoticeToken",
-      "renderPriorIdentityNotice"
+      "renderPriorIdentityNotice",
+      "resolveWorkingNameOverride"
     ],
     "control.ts": [
       "CONTROL_DEGRADED_REASONS",
@@ -3333,7 +3339,9 @@
       "PM_NOTES_REQUIRED_TOP_LEVEL_KEYS",
       "PM_NOTES_VARIANT_VALUES",
       "POLL_PLATFORMS",
+      "PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE",
       "PRIOR_IDENTITY_NOTICE_REASONS",
+      "PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE",
       "PROFILE_BLOCKER_KINDS",
       "PROFILE_CAPABILITIES",
       "PROFILE_ELIGIBILITY_VERDICTS",
@@ -4475,11 +4483,14 @@
       "WorkflowMap",
       "WorkflowStateMapping",
       "WorkflowTransitionMechanism",
+      "WorkingNameChannel",
+      "WorkingNameOverrideResolution",
       "auditChainKeyArtifactName",
       "auditIdentityVariableName",
       "builtinCeremonyDeclaration",
       "commandReceiptRecordKey",
       "controlInteractionClass",
+      "currentWorkingNameEnvironmentVariable",
       "daemonLaneRecordKey",
       "daemonPreemptionRecordKey",
       "daemonReconciliationRecordKey",
@@ -4495,6 +4506,7 @@
       "planArtifactPath",
       "priorIdentityNoticeToken",
       "renderPriorIdentityNotice",
+      "resolveWorkingNameOverride",
       "retroActionClosureRecordKey",
       "retroActionRecordKey",
       "retroChainKeyArtifactName",
@@ -6295,7 +6307,9 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": ["CredentialPort"],
+  "credentialPort": [
+    "CredentialPort"
+  ],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",
