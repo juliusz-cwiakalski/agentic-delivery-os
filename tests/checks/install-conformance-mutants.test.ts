@@ -57,6 +57,7 @@ export const familyViolations = (actual: readonly string[]): readonly string[] =
 /** The install family's help entries, in the order the gate names them. */
 const INSTALL_HELP_PATHS = [
   "install",
+  "install migrate",
   "install status",
   "install rollback",
   "install uninstall",
@@ -65,7 +66,7 @@ const INSTALL_HELP_PATHS = [
 
 /**
  * The help-entry conformance rule, over an injected entry list: the family and
- * each of its four subcommands must resolve their own static entry.
+ * each of its five subcommands must resolve their own static entry.
  */
 export const installHelpViolations = (entries: readonly HelpEntry[]): readonly string[] => {
   const failures: string[] = [];
@@ -113,7 +114,7 @@ describe("TC-INST-104 each conformance gate fails by name on an injected fixture
     const withoutRollback = allHelpEntries().filter(
       (entry) => entry.path.join(" ") !== "install rollback",
     );
-    expect(installHelpViolations(withoutRollback)).toContain("install help entries 4 != 5");
+    expect(installHelpViolations(withoutRollback)).toContain("install help entries 5 != 6");
   });
 
   test("a missing page, a page without --version, and an M1-placed page all fail by name", () => {

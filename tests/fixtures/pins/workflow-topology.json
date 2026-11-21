@@ -20,6 +20,7 @@
         "ts-invariants",
         "ts-license-audit",
         "ts-lint",
+        "ts-namespace-tree",
         "ts-pins",
         "ts-publish-guard",
         "ts-test",

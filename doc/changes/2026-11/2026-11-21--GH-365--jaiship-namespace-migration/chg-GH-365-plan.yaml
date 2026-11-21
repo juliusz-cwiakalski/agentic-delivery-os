@@ -994,6 +994,13 @@ phases:
         # VERIFY-AND-REGISTER (kind iii): the phase adds no package module and
         # keeps the delivered inventory gate green.
         - tests/structure/inventory.json
+        # REVIEW REMEDIATION (N-1, real-document consumers of the moved layer):
+        # these GH-374 suites read the committed provider policy from the real
+        # checkout and follow the moved path to `.jaiship/config.yaml`.
+        - tests/structure/provider-policy-adoption-reference.test.ts
+        - tests/checks/provider-policy-credential-canary.test.ts
+        - tests/structure/verify-gates-suite-map-reference.test.ts
+        - tests/behaviour/provider-policy-adoption.test.ts
         # THE STAGED DECISION RECORD (pm-notes STAGING CONSTRAINT): both are
         # pending at plan time; this declaration is what lets the plan-union
         # commit land them together, so no index row points at an untracked record.
@@ -1521,6 +1528,18 @@ phases:
         # PIN UPDATE (kind ii): TS_JOBS and the exact aggregate `check` chain
         # (AC-F5-6, API-7); no bypass or advisory control is relaxed.
         - tests/checks/ci-checks.test.ts
+        # REVIEW REMEDIATION (N-11, CI topology/aggregate/scan-class pins): the
+        # `ts-namespace-tree` job, the two aggregate scan members, and 7/7.
+        - tests/checks/privacy-ci-wiring.test.ts
+        - tests/checks/license-ci-binding.test.ts
+        - tests/checks/milestone-gate.test.ts
+        - tests/checks/merge-suite-discovery.test.ts
+        - tests/structure/ci-topology-pin.test.ts
+        - tests/checks/ci-baseline-parity.test.ts
+        - tests/fixtures/pins/workflow-topology.json
+        # REVIEW REMEDIATION (seven-class registry ripple): the migration note's
+        # registry row assertion follows the widened scope-class set.
+        - tests/behaviour/projects-migration.test.ts
         - tests/fixtures/namespace/evidence.ts
         - tests/structure/inventory.json
     interactions:
@@ -1760,6 +1779,12 @@ phases:
         # PIN UPDATE (kind ii): `--backup-dir` joins the flag and requires-value
         # pins; `--migrate` is still present (retired in P6).
         - tests/structure/install-conformance.test.ts
+        # REVIEW REMEDIATION (N-2, P5/P6 PIN): the family mutant set gains the
+        # sixth install help path (`install migrate`) and the count expectation.
+        - tests/checks/install-conformance-mutants.test.ts
+        # REVIEW REMEDIATION (N-6, P5 PIN): the alias help baseline carries the
+        # delivered deprecation sentence on the install row.
+        - tests/checks/provider-alias-baseline.test.ts
         - tests/fixtures/namespace/evidence.ts
         # AUTHORISED DELIVERY-TIME DISCOVERY (P5): the two migration schema ids
         # share the error-code shape, so the sync scanner's reserved record-kind
@@ -1952,6 +1977,16 @@ phases:
         - .changeset/gh-365-jaiship-namespace-migration-minor.md
         - tests/fixtures/namespace/evidence.ts
         - tests/structure/inventory.json
+        # REVIEW REMEDIATION (N-1, P6 PIN): the install error-domain suite pins
+        # the delivered ten identities, not the retired eleven-row set.
+        - tests/checks/install-error-domain.test.ts
+        # REVIEW REMEDIATION (N-2/N-12, P6 PIN): the supervision tail is thirteen
+        # rows (ten install) and the operator error-row baseline is 169.
+        - tests/structure/supervision-error-family.test.ts
+        - tests/fixtures/dispatch/operator/contract-baseline.ts
+        # REVIEW REMEDIATION (N-2, P5/P6 PIN): the help-entry mutant set gains
+        # `install migrate` and the six-entry count.
+        - tests/checks/install-conformance-mutants.test.ts
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/install.ts
@@ -2269,6 +2304,12 @@ phases:
         # constant at the override contract, so the branding seam gains its one
         # narrow, exact exception (one file, one name, one value).
         - tests/structure/branding-seam.test.ts
+        # REVIEW REMEDIATION (N-3, P8 PIN): the bounded mapping's WORKING_NAME
+        # literal is in the reviewed legacy inventory.
+        - tests/fixtures/legacy/literal-inventory.json
+        # REVIEW REMEDIATION (P8 bounded mapping): an unmapped legacy name is
+        # inert, not a configuration error.
+        - tests/behaviour/provider-config-precedence.test.ts
         - tests/checks/identity-docs.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json

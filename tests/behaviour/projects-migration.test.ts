@@ -315,7 +315,7 @@ describe("TC-PROJ-028 the migration note is registered and distributed", () => {
       readFileSync(join(process.cwd(), "scripts/checks/forbidden-literals.registry.json"), "utf8"),
     ) as { readonly registered: readonly string[]; readonly scopeClasses: readonly unknown[] };
     expect(registry.registered).toContain(STATE_MIGRATION_NOTE_PATH);
-    expect(registry.scopeClasses).toHaveLength(5);
+    expect(registry.scopeClasses).toHaveLength(7);
     // The six required statements, quoted from the note.
     for (const fragment of [
       "Designate exactly **one** checkout as the primary project",

@@ -79,7 +79,7 @@ describe("CI baseline parity (hermetic partial clone)", () => {
 
       const repaired = scanIn(partial);
       expect(repaired.status).toBe(0);
-      expect(repaired.stdout).toContain("5/5 scope classes scanned, 0 violations");
+      expect(repaired.stdout).toContain("7/7 scope classes scanned, 0 violations");
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }

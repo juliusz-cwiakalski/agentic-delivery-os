@@ -422,6 +422,23 @@ describe("TC-MIGRATE-001 grammar, admission and the unscoped project scope", () 
     }
   });
 
+  test("ordinary install commands still record exactly one", async () => {
+    const world = WORLD("audit-control");
+    try {
+      seedCleanWorld(world);
+      for (const argv of [
+        ["install", "status", "--json"],
+        ["install", "--dry-run", "--json"],
+        ["install", "status", "--migrate", "--json"],
+      ]) {
+        const run = await runMigration(world, argv);
+        expect(run.records.length, argv.join(" ")).toBe(1);
+      }
+    } finally {
+      world.dispose();
+    }
+  });
+
   test("outside a work tree the project class is unscoped and the host classes migrate", async () => {
     const world = WORLD("unscoped");
     try {

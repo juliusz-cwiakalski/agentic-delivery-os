@@ -73,6 +73,40 @@ decisions:
       the current host root; the migration guide records it."
     date: "2026-11-21"
 notes:
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml): the eight
+      iteration-1 findings are CLOSED (root symlink, container descent, audit
+      suppression, TC-MIGRATE-009, literal site, backup-dir normalization,
+      remedy, bookkeeping). New blocking findings are aggregate-gate regressions
+      that predate the remediation: N-1 (install-error-domain pin still 11),
+      N-2 (INSTALL_HELP_PATHS still 5), N-3 (two inventory fixtures not
+      format-clean), plus N-4 (over-suppression of `install status --migrate`)
+      and N-5 (API-2 path/reason drift). Remediation is one pass: fix the pins
+      and formatting, narrow the --migrate arm to the no-subcommand path, and
+      bump the spec to v1.6 for API-2. Then the final review iteration 3."
+    type: info
+    date: "2026-11-21"
+  - text: "RANGE COMMIT GATE (pre-flight, phase 9 evidence; re-run at the final
+      head): VERDICT PASS — base origin/main-tools, merge-base c1dd722c,
+      head 1cae5f4b, 37 commits in range, 0 offending commits, 0 distinct rules
+      hit, mode none, resolved commitlint node_modules/.bin/commitlint
+      (repository-local, ref origin/main-tools)."
+    type: info
+    date: "2026-11-21"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml): F-1 BLOCKER
+      (root-level destination/source symlink followed, not conflict/blocked),
+      F-2 MAJOR (container directories not descended), F-3 MAJOR (audit
+      suppression bypassed by flag-before-subcommand), F-4 MAJOR
+      (TC-MIGRATE-009 weakened vs AC-F3-7), F-5/F-6/F-7 minors (split-literal
+      site, --backup-dir normalization, symlink remedy), F-8 info. Remediated in
+      f453a440 (evidence 1cae5f4b): root roots are lstat-classified and never
+      followed; containers descend with copy-verify-remove; suppression keys on
+      the parsed command + first positional (all flag orders and --migrate);
+      TC-MIGRATE-009 restored with install-status before/after and multi-header
+      seed; the plain prior literal is a budgeted site; --backup-dir is
+      normalized; remedies are rendered. Plan amendment declares the new paths
+      (P8 registry site, branding-seam test). Re-review iteration 2 in progress."
+    type: info
+    date: "2026-11-21"
   - text: "DoR iteration 3 = READY (readiness-review/readiness-iter-3.md), all ten
       facets PASS, Pause Required: no. All iteration-2 blocking findings
       resolved; C21 partially resolved (bookkeeping only: one header/historical
@@ -566,8 +600,10 @@ notes:
       prior-identity-notice 15; content-inventory 12; port-contract-inventory
       16; entrypoint-bin 34; identity-docs 13; conformance/namespace 7;
       prior-identity-hermetic 5; content arm 7/7; pnpm typecheck green; git diff
-      --check clean. No out-of-scope formatted files remain (an accidental broad
-      biome write was fully restored)."
+      --check clean. The accidental broad biome write was reverted except two
+      formatting-only fixture hunks (`tests/structure/inventory.json`,
+      `tests/fixtures/ports/v1-contract-inventory.json`), which
+      review-iteration-2 N-3 reformatted to the biome baseline."
     type: info
     date: "2026-11-21"
   - text: "Plan amendment + phase 9 COMPLETE: commit 9f4a0803. The plan declares the

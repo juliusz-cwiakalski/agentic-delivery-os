@@ -1287,16 +1287,18 @@ describe("TC-INDEP-004 every policy input is a typed configuration value holding
     }
   });
 
-  test("a legacy-prefixed provider-shaped variable cannot participate", async () => {
+  test("a legacy-prefixed provider-shaped variable is inert, not an error", async () => {
     const tree = scratch("legacy-prefix");
     try {
       tree.write(tree.committed, POLICY_CONFIG);
       const run = await runConfig(tree, {
         environment: { ADOS_PROVIDER__ENTRIES__P__CLASS: "pay-per-token" },
       });
-      expect(run.error?.code).toBe("config.environment.unmapped");
-      expect(run.error?.layer).toBe("environment");
-      expect(run.data).toBeUndefined();
+      // The bounded legacy mapping leaves a name untouched when it has no
+      // declared catalog key: not an error, not a value, not a notice.
+      expect(run.error).toBeUndefined();
+      const entries = providerOf(run).entries as Record<string, { class?: string }>;
+      expect(entries.p?.class).toBe("subscription");
     } finally {
       tree.dispose();
     }

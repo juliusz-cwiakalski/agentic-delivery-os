@@ -451,7 +451,7 @@ const MIGRATION_VALUE_FLAGS: ReadonlySet<string> = new Set(["--backup-dir", "--s
 const isMigrationTokens = (argv: readonly string[]): boolean => {
   const tokens = argv.filter((token) => !GLOBAL_FLAGS.has(token));
   if (tokens[0] !== "install") return false;
-  if (tokens.includes("--migrate")) return true;
+  let sawMigrateFlag = false;
   for (let index = 1; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (token === undefined) return false;
@@ -459,16 +459,21 @@ const isMigrationTokens = (argv: readonly string[]): boolean => {
       index += 1;
       continue;
     }
+    if (token === "--migrate") {
+      sawMigrateFlag = true;
+      continue;
+    }
     if (token.startsWith("-")) continue;
     return token === "migrate";
   }
-  return false;
+  return sawMigrateFlag;
 };
 
 const isParsedMigration = (parsed: ParsedInvocation): boolean =>
   parsed.ok &&
   parsed.command === "install" &&
-  (parsed.positionals[0] === "migrate" || parsed.flags["--migrate"] === true);
+  (parsed.positionals[0] === "migrate" ||
+    (parsed.flags["--migrate"] === true && parsed.positionals[0] === undefined));
 
 const commandToken = (argv: readonly string[]): string =>
   argv.find((token) => !GLOBAL_FLAGS.has(token)) ?? "";

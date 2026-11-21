@@ -1,0 +1,468 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-365
+branch: feat/GH-365/jaiship-namespace-migration
+status: FAIL
+summary: >-
+  Re-review after remediation f453a440 (evidence 1cae5f4b). All eight
+  iteration-1 findings are independently CLOSED (root-symlink classification,
+  container descent + merge, parsed-command audit suppression, restored
+  TC-MIGRATE-009, plain/declared prior literal, canonicalised --backup-dir,
+  symlink path+remedy, A1/A5/A6 wording). However the branch was never green and
+  is broadly red at HEAD: a full `bun test tests/checks tests/structure` run
+  (392 files) reports ~53 failures (one environmental), and `pnpm format:check`
+  reports 2 errors. GH-365's ripple changes were not propagated to all
+  consumer/pin suites: (a) the P1 committed-layer move removed the tracked
+  `.delivery-os/config.yaml`, but the GH-374 provider-policy suites (reference 34,
+  credential canary 1), the verify-gates reference suite (4) and the behaviour
+  provider-policy suite (1) still read that path (ENOENT); (b) the P6
+  `install.migration.unavailable` retirement left `install-error-domain.test.ts`
+  (eleven→ten), `supervision-error-family.test.ts` (fourteen→thirteen tail) and
+  the operator contract baseline (`errorRowCount` 170→169) stale; (c) the P5
+  alias deprecation sentence broke `provider-alias-baseline.test.ts`; (d) the P8
+  bounded mapping added a `"WORKING_NAME"` literal without updating the legacy
+  literal inventory; (e) the `install migrate` help entry left
+  `install-conformance-mutants.test.ts` stale; (f) the new `ts-namespace-tree`
+  CI job, the two aggregate-chain entries and the seven-class scan left six
+  topology/aggregate/scan-class pins stale (privacy-ci-wiring, milestone-gate,
+  merge-suite-discovery, ci-topology-pin, license-ci-binding, ci-baseline-parity);
+  (g) two inventory fixtures carry formatting churn. These predate f453a440 and
+  were not caught in iteration 1 because the full aggregate suite was not run, but
+  they block DOD-2 and CI `ts-test`. Severity mapping: blocker = critical, major =
+  high, minor = medium/low, info = info.
+severity_breakdown:
+  critical: 9
+  high: 0
+  medium: 2
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: FAIL
+working_tree_note: >-
+  This record reviews COMMITTED HEAD 1cae5f4b. During the review a concurrent
+  process (not this reviewer) introduced uncommitted edits to
+  packages/cli/src/index.ts, tests/checks/install-error-domain.test.ts,
+  tests/checks/install-conformance-mutants.test.ts,
+  tests/fixtures/ports/v1-contract-inventory.json, tests/structure/inventory.json,
+  tests/behaviour/install-migrate.test.ts and the change spec/plan/pm-notes. Those
+  in-flight edits appear to address N-4, N-5, N-7, N-8 and N-9 (and they are not
+  part of the reviewed HEAD). They do NOT address N-1 (the removed
+  `.delivery-os/config.yaml` readers), N-2 (TC-SUP-070), N-3 (legacy inventory),
+  N-6 (provider alias baseline), N-11 (CI topology/aggregate/scan-class pins) or
+  N-12 (operator contract baseline), so the branch remains red even if the
+  in-flight edits are committed. The 53-failure checks+structure sweep was run on
+  a clean HEAD working tree (3562 pass / 53 fail across 392 files) before those
+  edits. Environmental caveat: this workstation holds seven ignored
+  `.opencode/agent/naming-*.md` files, which inflate the agent roster and make
+  `provider-policy-adoption-prompt-scan.test.ts` fail independently of GH-365, and
+  `forbidden-literals.test.ts`'s "read-only over the live tree" case fails when
+  the working tree is mutated during the run. Neither is counted against the
+  change; it should be re-verified in a clean checkout. The GH-365-caused failures
+  (removed `.delivery-os/config.yaml` readers, retirement pins, alias help
+  baseline, legacy literal inventory, CI-topology/aggregate pins, operator
+  contract baseline, format drift) reproduce in a clean checkout.
+findings:
+  # ---------------------------------------------------------------------------
+  # Iteration-1 dispositions (each independently verified at HEAD)
+  # ---------------------------------------------------------------------------
+  - id: F-1
+    disposition: CLOSED
+    severity: critical
+    confidence: high
+    category: security
+    location: packages/core/src/domain/install-migration-plan.ts:260-292
+    message: >-
+      Root symlinks are classified (lstat) before enumeration: a destination root
+      is `conflict`, a source root `blocked`, never listed/renamed through.
+      Independent probes reproduce the exact `.jaiship -> .delivery-os` shape as
+      `conflict` exit 1 with the source kept, and an external target left
+      untouched; the delivered root-case test carries a write recorder.
+    suggestion: none — closed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-2
+    disposition: CLOSED
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/install-migration-plan.ts:170-253; install-migration-apply.ts:85-108,316-330
+    message: >-
+      Container directories descend into per-entry decisions and file merges use
+      copy-verify-remove. Probes: pre-existing destination `projects/` moves
+      `projects/p1`; a disjoint child merges; a differing child stays `conflict`
+      with both sides unchanged; partial failure recovers; idempotent.
+    suggestion: none — closed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-3
+    disposition: CLOSED
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/cli/src/index.ts:436-472,594-598,655
+    message: >-
+      Suppression keys on the parsed command + first positional. Probe: all five
+      required migration orders record 0; `install status`, `install --dry-run`,
+      `install` record 1. Residual over-suppression → N-8.
+    suggestion: none for the migration orders; see N-8.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-4
+    disposition: CLOSED
+    severity: high
+    confidence: high
+    category: testing
+    location: tests/behaviour/install-migrate.test.ts:890-947
+    message: >-
+      TC-MIGRATE-009 reads `install status` before/after over two root headers and
+      a foreign record, asserting identical verdict/observed and byte identity;
+      non-vacuous via injected `stateRoots`.
+    suggestion: none — closed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-5
+    disposition: CLOSED
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/contracts/config.ts:130-140; scripts/checks/namespace-shims.registry.json:170-174; tests/structure/branding-seam.test.ts:87-112
+    message: >-
+      `PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE` is the plain literal, declared as a
+      budgeted site; the branding seam carries one exact exception; row G asserts
+      the plain literal/site and that the pre-freeze literal is not a site; content
+      arm green. Pre-freeze literal remains documented fragment assembly (N-10).
+    suggestion: none — closed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-6
+    disposition: CLOSED
+    severity: low
+    confidence: high
+    category: security
+    location: packages/cli/src/commands/install.ts:1065-1094,1188-1190
+    message: >-
+      `canonicalPath` resolves lexically and realpaths the deepest existing
+      ancestor; delivered rows reject relative, in-source, `..`-normalised and
+      symlinked-parent `--backup-dir` values.
+    suggestion: none — closed; see N-10.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-7
+    disposition: CLOSED
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/install-migration-plan.ts:104-150,330-345; install-migration-apply.ts:186-205; packages/cli/src/commands/install.ts:1129-1136
+    message: >-
+      Symlink/differing entries carry `path` + bounded `remedy`; conflicts,
+      residuals and the human line render them; the delivered test asserts the
+      absolute path and "re-run install migrate".
+    suggestion: none — closed; see N-9 on the spec enumeration.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-8
+    disposition: CLOSED
+    severity: info
+    confidence: high
+    category: docs
+    location: chg-GH-365-spec.md:251,273; chg-GH-365-plan.yaml:212; chg-GH-365-pm-notes.yaml:228
+    message: >-
+      A5 reworded to "No record is written …"; A1 122→121 in plan C21 + pm-notes;
+      A6 recorded in the remediation pm-notes.
+    suggestion: none — closed.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  # ---------------------------------------------------------------------------
+  # New findings (present at HEAD; predate f453a440; surfaced by the full gate)
+  # ---------------------------------------------------------------------------
+  - id: N-1
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: spec-compliance
+    clause: "F-1/AC-F1-1 (prior path leaves the tracked set) requires updating every reader; DOD-2; plan test-impact coverage"
+    location: tests/structure/provider-policy-adoption-reference.test.ts:40,677-680,1475; tests/checks/provider-policy-credential-canary.test.ts:29; tests/structure/verify-gates-suite-map-reference.test.ts:40,215-216; tests/behaviour/provider-policy-adoption.test.ts:47
+    message: >-
+      The P1 move removed the tracked `.delivery-os/config.yaml`, but these suites
+      still read it from the real checkout, so they fail with ENOENT (and derived
+      assertions): provider-policy-adoption-reference 34 failures (including the
+      `--show-origin` regex expecting `.../.delivery-os/config.yaml` and
+      `expect(existsSync(ROOT/.jaiship)).toBe(false)`), provider-policy-credential-canary
+      1, verify-gates-suite-map-reference 4 (TC-SMAP-004), and behaviour
+      provider-policy-adoption 1. The change updated
+      `namespace-layer.test.ts`/`verify-gates-suite-map-contract.test.ts` but not
+      these consumers. This is the largest aggregate-gate regression.
+    suggestion: >-
+      Re-point the four suites to the current committed document via the branding
+      seam (`jaiship` identity) or to a committed/synthetic fixture; change the
+      verify-gates reference suite to resolve the current identity; invert the
+      "current directory is absent" assertion; update the reference-map/`--show-origin`
+      expectations. Add all four files to the plan's test-impact scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-2
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P6 error-identity retirement ripple; DOD-2"
+    location: tests/structure/supervision-error-family.test.ts:78-130
+    message: >-
+      TC-SUP-070 asserts the last fourteen rows are the two supervise rows, the one
+      metrics row, and the eleven install rows. After `install.migration.unavailable`
+      retired, there are ten install rows and the tail is thirteen, so the positional
+      tail assertion (and the comment "GH-346's eleven install rows") fails.
+    suggestion: >-
+      Update the tail to thirteen rows (2 supervise + 1 metrics + 10 install) and the
+      comment/counts from eleven to ten; add the file to the P6 pin set.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-3
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P8 bounded legacy mapping ripple; DOD-2"
+    location: tests/structure/legacy-confinement.test.ts:174; tests/fixtures/legacy/literal-inventory.json
+    message: >-
+      The bounded mapping added `if (suffix === "WORKING_NAME") continue;` to
+      `packages/adapters/src/legacy/index.ts`, introducing the string literal
+      `"WORKING_NAME"` that is not in the reviewed inventory. The confinement test
+      fails with `literal "WORKING_NAME" is not in the reviewed inventory`.
+    suggestion: >-
+      Add `"WORKING_NAME"` to `tests/fixtures/legacy/literal-inventory.json`
+      `structuralLiterals` (or compare against the declared
+      `WORKING_NAME_ENVIRONMENT_SUFFIX` constant); add the fixture to P8 scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-4
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P6 error-identity retirement ripple; DOD-2"
+    location: tests/checks/install-error-domain.test.ts:29-92
+    message: >-
+      Unmodified GH-346 suite still pins eleven install identities.
+      `toHaveLength(11)` fails (got 10) and the closed-set mutant
+      `slice(0, 10)` now equals the full ten-row set, so `.not.toEqual([])` fails.
+    suggestion: >-
+      Update to ten: wording, `toHaveLength(10)`, closed-set slice 10→9, message
+      "ten declared rows"; add to P6 PIN scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-5
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P5/P6 install-migrate help entry ripple; DOD-2"
+    location: tests/checks/install-conformance-mutants.test.ts:57-70,104-121
+    message: >-
+      `INSTALL_HELP_PATHS` lists five install entries; the `migrate` verb makes six,
+      so `installHelpViolations(allHelpEntries())` fails ("install help entries
+      6 != 5"), aborting before the stale "install help entries 4 != 5" assertion.
+    suggestion: >-
+      Add `"install migrate"` (six paths); update the rollback-removal expectation
+      to "install help entries 5 != 6"; add to the P5/P6 PIN scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-6
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P5 alias deprecation sentence ripple; DOD-2"
+    location: tests/checks/provider-alias-baseline.test.ts:179
+    message: >-
+      The alias `--help` install sentence gained the delivered deprecation clause
+      ("… the alias is a declared compatibility shim removed in release 0.2.0 …"),
+      but the provider alias baseline still expects the old sentence, so
+      TC-MOUNT-008 fails. The plan updated the entrypoint alias baseline but not this
+      one.
+    suggestion: >-
+      Regenerate the provider alias baseline with the deprecation sentence; add the
+      file to the P5/P7 scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-7
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: repo-rules
+    clause: "`pnpm check` includes `pnpm format:check`; out-of-scope formatting churn (P8 'fully restored' claim)"
+    location: tests/structure/inventory.json:476-480; tests/fixtures/ports/v1-contract-inventory.json:6310-6313
+    message: >-
+      `pnpm format:check` fails: `inventory.json` expands the `opencode` array from
+      one line to three; `v1-contract-inventory.json` expands
+      `"credentialPort": ["CredentialPort"]`. Both base blobs are format-clean under
+      the same biome config (verified by formatting the base content), so this branch
+      introduced the drift; `credentialPort` is pure formatting-only churn. The P8
+      pm-notes "fully restored" claim is inaccurate.
+    suggestion: >-
+      `biome format --write` both files (keep the legitimate additions), correct the
+      P8 claim, and declare them where touched.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-8
+    disposition: NEW
+    severity: medium
+    task_severity: minor
+    confidence: high
+    category: correctness
+    clause: "DM-7/API-1 'zero records' is scoped to `install migrate`; no over-suppression of ordinary install commands"
+    location: packages/cli/src/index.ts:466-472
+    message: >-
+      `isParsedMigration` returns true on `--migrate` for any install subcommand, so
+      `install status --migrate` runs status but records 0 (verified; `install
+      status` records 1). The retired `--migrate` only refuses on the no-subcommand
+      path.
+    suggestion: >-
+      When keying on `--migrate`, require `positionals[0] === undefined`; add an
+      over-suppression control.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-9
+    disposition: NEW
+    severity: medium
+    task_severity: minor
+    confidence: high
+    category: docs
+    clause: "Spec v1.5 API-2 payload/human contract"
+    location: chg-GH-365-spec.md:252
+    message: >-
+      The remediation adds an optional `path` on `install.migration.plan.v1`
+      `entries[]` and appends ` · <reason>` to the human entry line, but API-2 still
+      enumerates only `relativePath, disposition, files, bytes` and documents the
+      human line without the suffix. Behaviour is correct (DM-6/AC-F3-1 require
+      path+remedy); this is spec/contract drift.
+    suggestion: >-
+      Update API-2 for the optional `path`/`reason` fields and the human suffix. No
+      code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-10
+    disposition: NEW
+    severity: info
+    task_severity: info
+    confidence: medium
+    category: code-quality
+    clause: "NFR-1 purity/injected-FS; DM-9 pre-freeze literal"
+    location: packages/cli/src/commands/install.ts:1068-1086; packages/core/src/contracts/config.ts:140-144
+    message: >-
+      `canonicalPath` calls `node:fs` `realpathSync` outside the injected
+      `InstallFilePort` (tests stay hermetic on scratch roots; boundaries/ambient
+      checks pass), and the pre-freeze `ADOS_WORKING_NAME` literal remains
+      fragment-assembled (documented; required by the frozen DEC-8 allowlist). Both
+      are accepted/residual, not gate failures.
+    suggestion: >-
+      Optional: route canonicalisation through `runtime.fs`; note the fragment
+      assembly in DM-9's exception list.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-11
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "API-7/AC-F5-6/NF-8 CI binding and aggregate chain; P3/P4 ripple; DOD-2"
+    location: tests/checks/privacy-ci-wiring.test.ts:145; tests/checks/milestone-gate.test.ts:44; tests/checks/merge-suite-discovery.test.ts:145; tests/structure/ci-topology-pin.test.ts:90; tests/checks/license-ci-binding.test.ts:108; tests/checks/ci-baseline-parity.test.ts:82
+    message: >-
+      GH-365 added the `ts-namespace-tree` CI job and the
+      `check:forbidden-literals`/`check:namespace-tree` aggregate-chain entries,
+      and widened the content scan to seven classes, but six topology/aggregate
+      pins were not updated and fail: privacy-ci-wiring and license-ci-binding pin
+      the aggregate `check` string (still the old chain); milestone-gate pins the
+      aggregate order (memory at 9, now 11); merge-suite-discovery and
+      ci-topology-pin pin the workflow job set (missing/unpinned
+      `ts-namespace-tree`); ci-baseline-parity expects the old
+      "5/5 scope classes scanned, 0 violations" (now 7/7). The plan updated
+      `ci-topology.ts`, `ci.yml`, and `tests/checks/ci-checks.test.ts` only.
+    suggestion: >-
+      Update all six pins to the new job set, aggregate chain/order, and the 7/7
+      class summary; add the files to the P3/P4 PIN scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: N-12
+    disposition: NEW
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: testing
+    clause: "P6 error-row-count ripple; DOD-2"
+    location: tests/fixtures/dispatch/operator/contract-baseline.ts (errorRowCount); tests/checks/operator-contract-invariance.test.ts:29
+    message: >-
+      The retired install identity moved the global error-row count from 170 to
+      169, but the operator contract baseline still records `errorRowCount: 170`,
+      so TC-CONTRACT-001 fails. The change updated the other 170→169 pin sites but
+      missed `tests/fixtures/dispatch/operator/contract-baseline.ts`.
+    suggestion: >-
+      Update the baseline `errorRowCount` to 169 (and any adjacent count) and add
+      the fixture to the P6 pin scope.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-21T22:52:12Z
+next_step: >-
+  CALL_CODER — all eight iteration-1 findings are closed, but the branch is red at
+  HEAD and cannot pass until the change's ripple is fully propagated. Ordered:
+  (1) N-1 re-point the four real-document provider-policy/reference suites to the
+  current `.jaiship/config.yaml` (or a committed fixture via the brand seam);
+  (2) N-2 update the TC-SUP-070 tail to thirteen rows (ten install);
+  (3) N-3 add `"WORKING_NAME"` to the legacy literal inventory;
+  (4) N-4 update install-error-domain to ten; (5) N-5 add `install migrate` to
+  INSTALL_HELP_PATHS; (6) N-6 regenerate the provider alias baseline; (7) N-7
+  format the two inventory fixtures and correct the P8 claim; (8) N-8 narrow the
+  `--migrate` suppression; (9) N-9 update API-2; (10) N-11 update the six
+  CI-topology/aggregate/scan-class pins (ts-namespace-tree job, the aggregate
+  chain/order, the 7/7 class summary); (11) N-12 update the operator contract
+  baseline errorRowCount 170→169; then add all changed test/fixture files to the
+  plan scope and re-run the FULL `pnpm check` (lint, format, typecheck,
+  `pnpm test`, scans) in a clean checkout before re-review. N-10 is optional.
