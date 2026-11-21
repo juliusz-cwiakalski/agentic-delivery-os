@@ -1,0 +1,806 @@
+---
+change:
+  ref: GH-365
+  type: feat
+  status: Proposed
+  slug: jaiship-namespace-migration
+  title: "M4-S2: one product identity — the committed project layer, the migration command, the declared one-release shims, and the namespace conformance scan (M4)"
+  owners: ["engineering"]
+  service: delivery-os configuration, state, and install surfaces (namespace identity)
+  milestone: "M4: Jaiship-native delivery"
+  labels: ["namespace", "migration", "identity", "m4-s2", "install", "conformance", "shims"]
+  version_impact: minor
+  audience: internal
+  security_impact: low
+  risk_level: high
+  dependencies:
+    internal:
+      - the branding seam and its one resolver (`configDirectoryName`, `stateDirectoryName`, `environmentPrefix`, `installPath`, prior identity)
+      - the two declared CLI bins and the shared launcher composition (per-bin default and prior identity)
+      - the seven-layer configuration layer and its per-layer prior-identity fallback (read-only, notice-bearing)
+      - the two-layer state scope and its prior-default-root selection
+      - the delivered `install` lifecycle family (admission, daemon guard, dry-run discipline, typed refusals, state-format check)
+      - the legacy compatibility adapter and its one-warning-per-process discipline
+      - the delivered configuration catalog (the authority for environment-name mapping)
+      - the registry-as-authority forbidden-literal scan and its CI binding
+      - the repository ignore-rule hygiene check and the ADR root-workspace declaration
+      - the help inventory, the reference-page coverage check, and the content inventory
+    external: []
+---
+
+# CHANGE SPECIFICATION
+
+> **PURPOSE**: Make the Jaiship identity the single authoritative one on every surface — the committed project configuration layer, the host configuration and state roots, the environment prefix, the override channel, and the product identifiers in docs, guides, and prompts — by committing the project layer under `.jaiship/`, delivering an idempotent `install migrate` with dry-run and backup, declaring every one-release compatibility shim in a machine-readable registry, and binding a conformance scan that fails on any newly introduced prior-namespace identifier.
+
+## 1. SUMMARY
+
+The identity the product derives is already Jaiship: `packages/core/src/branding/index.ts` turns the working name into `configDirectoryName .jaiship`, `stateDirectoryName .jaiship-state`, `environmentPrefix JAISHIP_`, and `installPath ~/.jaiship/bin/jaiship`. What is missing is **committed truth and an owned transition**. The repository's own project configuration is still tracked at `.delivery-os/config.yaml`; on this workstation it is reachable only through an untracked `.jaiship -> .delivery-os` symlink that a fresh clone does not have, so every fresh checkout resolves configuration through the prior-identity fallback rather than through the Jaiship identity. Host state still sits at `~/.delivery-os-state`. The migration hook detects the prior roots and refuses (`install.migration.unavailable`) rather than moving anything. And the prior namespace is **silent**: nothing enumerates where `.delivery-os`, `.delivery-os-state`, `DELIVERY_OS_*`, or the `delivery-os` executable may still appear, and nothing fails when a new one is introduced.
+
+This change delivers six linked outcomes: (1) the committed project layer moves to tracked `.jaiship/config.yaml`, byte-identically, with repository ignore rules that keep a fresh clone clean through normal runtime writes; (2) the current-identity root becomes the single authoritative one, with the prior root read only through a declared, notice-bearing compatibility input and no fallback notice on a migrated host; (3) `install migrate` — a new verb in the delivered install family — performs the one-time move of the prior host and project roots with a dry-run, a verified backup, per-entry precedence, idempotence, and byte-preserving semantics that never re-version a stored record; (4) every one-release shim (the `delivery-os` alias, the prior config/state read, `DELIVERY_OS_WORKING_NAME`) is enumerated in a machine-readable registry with its notice text, its deprecation window, and its removal release; (5) a namespace conformance scan extends the registry-as-authority forbidden-literal machinery with prior-namespace seeds over product source, prompts, scripts, tools, and registered docs, plus a repository-tree arm that fails on a tracked file under a prior root or a reintroduced symlink; and (6) the product identifiers in docs, guides, and prompts are updated to the current identity while declared compatibility mentions stay, the override channel becomes identity-derived, and the pre-freeze `ADOS_*` mapping is bounded to names that map onto a declared configuration key.
+
+No operator surface is removed: the compatibility alias, the shell entry points, and the agent prompt workflows all stay. One error identity is retired and zero are added; one subcommand is added and one flag form retired; no delivered record, schema version, or configuration key changes.
+
+## 2. CONTEXT
+
+### 2.1 Current State Snapshot
+
+- **The derivation is already current; the values are already Jaiship.** `packages/core/src/branding/index.ts` derives `configDirectoryName` (`.` + name), `stateDirectoryName` (`<configDirectoryName>-state`), `environmentPrefix` (`<NAME>_`), and `installPath` (`~/<configDirectoryName>/bin/<binaryName>`) from the resolved working name; the docs/repository URLs derive from the fixed neutral scope org. With the working name `jaiship` this yields `~/.jaiship/`, `~/.jaiship-state/`, `JAISHIP_`, and `~/.jaiship/bin/jaiship`. No derivation rule changes in this change.
+- **The bins are the one declared place the two identities meet.** `packages/cli/bin/jaiship.ts` declares `DEFAULT_WORKING_NAME = "jaiship"` and `PRIOR_WORKING_NAME = "delivery-os"`; `packages/cli/bin/delivery-os.ts` declares `DEFAULT_WORKING_NAME = "delivery-os"` and no prior identity. Both delegate to `packages/cli/src/bin-launcher.ts` and the same `runEntrypoint` composition.
+- **The prior-identity fallback is delivered, read-only, and notice-bearing.** `packages/adapters/src/file/config-source.ts` orders the prior file second for the two repository-owned layers and reports it `read` or `not used`; `packages/core/src/app/state-scope.ts` selects the host root by override → current default (if it exists) → prior default (if it exists) → current default on first use; `packages/cli/src/production.ts` composes both and emits the `prior-identity-fallback` notices (`config-read`, `config-skipped`, `state-read`, `state-skipped`) on stderr once per source kind per composed program, never in a payload, with no exit-code change. Machine-global layers never fall back.
+- **The committed project layer is still under the prior root.** `git ls-files .delivery-os .jaiship` on `main-tools` (`c1dd722c`) returns exactly `.delivery-os/config.yaml` — a real, live document: this repository's `verify.suite-map` and its whole `provider` policy (descriptors, chains, budgets, profiles, seats, `preferenceChain`, `watch`). `.jaiship/` exists on this workstation as an untracked directory holding an ignored `config.local.yaml` and an untracked `projects.yaml`, and `.git/info/exclude` on this machine hides both `.delivery-os/` and `.jaiship/`. A fresh clone has neither the exclude file nor the directory: it has the prior path and no current one.
+- **The repository ignore rules do not cover the runtime-written project files.** `.gitignore` declares `.*/config.local.yaml` (brand-free, rename-surviving) and nothing that covers `<repo>/.jaiship/projects.yaml`, so a fresh clone in which the runtime write set — or an operator-declared group document — appears shows dirt. `scripts/checks/ignore-rules.ts` asserts four coverage classes, the brand-free config glob, rename survival, and real `git check-ignore` behaviour in a rule-world.
+- **The migration hook detects and refuses; it moves nothing.** `packages/core/src/domain/install-migration.ts` declares `PRIOR_NAMESPACE_NAMES` (`config: ".delivery-os"`, `state: ".delivery-os-state"`), derives the prior binary name from the config directory name, detects `~/.delivery-os`, `~/.delivery-os-state`, and `~/.delivery-os/bin/delivery-os`, and produces the advisory line and the delegation sentence. `packages/cli/src/commands/install.ts` accepts `--migrate`, and without a dry-run answers the typed refusal `install.migration.unavailable` naming M4-S2 as owner; with `--dry-run` it prints the detection list and states that nothing would be migrated. No other lifecycle entry point accepts the flag.
+- **The install family owns the disciplines the migration needs.** The family is one prompt-required family mounted as the twenty-sixth; the compatibility alias composes it for parity and refuses every lifecycle entry point with `install.identity.not-owning`; every write path accepts `--dry-run` (which never evaluates the daemon guard, never reads or stops the daemon, and reports `daemon: unchecked`); a live daemon is refused with `install.daemon.running` unless `--stop-daemon`, and the stop precedes the mutation; admission refuses a dev build (`install.dev-build`) and a linked worktree (`install.target.worktree`). `install status` reports the state-format verdict read-only. Exactly eleven `install.*` identities exist, all exit 1.
+- **The state root is a host root with per-project roots, and the host index is a derived cache.** `<host root>/projects/<project key>` holds every delivery artifact; the host root holds `host-index.json`, `owner-hold`, `projects/`, `unbound/`. The host index records a derived `stateLocation` per entry but maintenance "always re-derives every state location from its key, and reports a disagreement as a warning that never redirects a read" — so a moved host root self-heals on the next store-opening invocation rather than breaking reads. No ledger header carries an absolute path; the header is the compatibility surface TDR-0047 compares.
+- **The prior namespace is currently silent in the scan.** `scripts/checks/forbidden-literals.registry.json` declares exactly the three DEC-8 seeds (`ados`, `ADOS_`, `~/.ados`) over five scope classes (`packageTree`, `rootManifests`, `rootWorkspaceFiles`, `ignoreRules`, `userFacingDocs`), with a path allowlist and a registered-doc list; `scripts/checks/forbidden-literals.ts` validates that shape exactly (five classes, three seeds, five allowlist ids) and binds in CI as `ts-forbidden-literals` with a fixed corpus baseline. It does not scan `.opencode/**`, `scripts/**`, or `tools/**`, and it knows nothing about `.delivery-os`, `DELIVERY_OS_`, or the prior executable name.
+- **The prior literals that exist today are small and enumerable.** In `packages/**` the prior namespace appears in five files (the install-migration declaration, the edge's and entrypoint's override-name constants, the MCP serve default, and one adapter comment). In `.opencode/**` it appears in exactly one file — `.opencode/agent/toolsmith.md`, whose routing-authority sentence names `.delivery-os/config.yaml` — and its generated projection `.ados-claude/agents/toolsmith.md` mirrors it. In `scripts/**` and `tools/**` it appears in seven files, dominated by the owner-hold example hook and its battery (`$HOME/.delivery-os-state/owner-hold`, `DELIVERY_OS_OWNER_HOLD*`), plus `scripts/lib/dispatch-authority.sh` (`${HOME}/.delivery-os`), `scripts/install.sh` and `scripts/uninstall.sh` (which unset `DELIVERY_OS_WORKING_NAME` around a self-description read), and three shell batteries. In `doc/**` it appears in thirteen files: three guides with stale paths, one guide using the prior name as an example, the glossary, the MCP-surface, autonomy, branding, CLI-entrypoint, and config pages, two M1 snapshot command pages, one inception analysis record, and one quality test spec. The neutral workspace scope `@delivery-os` and the repository name `agentic-delivery-os` occur far more widely and are deliberately out of the rename (D1).
+- **The pre-freeze `ADOS_` mapping is unconditional, and that is a live defect.** `packages/adapters/src/legacy/index.ts` maps every `ADOS_<suffix>` to `<currentPrefix><suffix>`. With the pre-freeze environment loaded, `ADOS_CONFIG_ROOT`, `ADOS_DS_BALANCE_CACHE_FILE`, `ADOS_HOOK_ENV_ALLOWLIST`, `ADOS_OPENAI_QUOTA_CACHE_FILE`, `ADOS_PROFILES_DIR`, `ADOS_PROVIDER_STATE_FILE`, `ADOS_STATE_DIR`, and `ADOS_ZAI_QUOTA_CACHE_FILE` each map to a current-prefixed name that is not a declared catalog key, and the strict resolver answers `config.environment.unmapped` at exit 1. The owner reproduced this on `e1ebc76` for `provider resolve`, `provider profile resolve`, and `dispatch`.
+- **The override channel is currently a prior-product token.** `DELIVERY_OS_WORKING_NAME` is read at the edge (`packages/cli/src/edge.ts`, `packages/cli/src/entrypoint.ts`, `packages/mcp/src/serve.ts`) and is documented as a product-free token. After the identity is Jaiship it is a *prior-product* token: keeping it as the only channel would mean the next release's shim removal leaves no override at all.
+- **The MCP composition still defaults to the prior identity.** `packages/mcp/src/serve.ts` declares `DEFAULT_WORKING_NAME = "delivery-os"`, so an MCP invocation with no configured name resolves the prior identity's directories and prefix — a fresh-install path violation the CLI does not have.
+- **The binding decisions are already taken.** D1: the package scope `@delivery-os` is a fixed neutral scope, not a product identity, and is not renamed. D2: the alias, the prior config/state read, and `DELIVERY_OS_WORKING_NAME` are the one-release declared shims. D3: the in-repo project layer becomes tracked `.jaiship/config.yaml`, `config.local.yaml` stays local, and runtime-written `.jaiship/` files must not dirty a fresh clone. D4: no new legacy identifier anywhere, and the new scan must fail on one while allowing declared shim sites.
+
+### 2.2 Pain Points / Gaps
+
+- **PG-1 — The committed project layer is under the superseded root.** `.delivery-os/config.yaml` is the only tracked configuration, so a fresh clone has no `.jaiship/config.yaml` and every invocation resolves through the fallback rather than through the Jaiship identity (owner finding, 2026-11-19).
+- **PG-2 — The current-identity root is ambiguous at runtime.** On this workstation a local, untracked `.jaiship -> .delivery-os` symlink makes `git status` permanently dirty and makes `git add -A` capable of committing a symlink into the prior tree — worse than either intended state. The repository's own ignore rules cover neither `.jaiship/` nor `.jaiship/projects.yaml`, so the symlink (or a stray runtime file) is the only thing keeping the tree clean, and only on machines that added a local exclude.
+- **PG-3 — The prior namespace is silent.** Nothing enumerates where `.delivery-os`, `.delivery-os-state`, `DELIVERY_OS_*`, or the `delivery-os` executable may appear, and nothing fails when a new one appears in product source, a prompt, a script, or a registered doc. A shim site and a fresh regression are indistinguishable.
+- **PG-4 — The migration is refused, not owned.** `install --migrate` answers a delegation refusal and moves nothing; the operator's only route is a hand-performed move described in prose, with no dry-run, no backup, no precedence rule for a machine that has both roots, and no idempotence guarantee.
+- **PG-5 — The deprecation has no window.** No machine-readable declaration states which prior-namespace inputs are supported, where they may be read, what an operator sees when one is used, or in which release they disappear.
+- **PG-6 — The pre-freeze environment mapping is unbounded.** Any `ADOS_*` name becomes a current-prefixed configuration name, so loading the pre-freeze environment breaks every command that resolves configuration (owner finding, 2026-11-21).
+- **PG-7 — Paths, prefixes, and identifiers still differ across surfaces.** The MCP composition defaults to the prior identity; the override channel is a prior-product token; and thirteen documents plus one agent prompt still name the prior path or prefix as if it were current.
+
+## 3. PROBLEM STATEMENT
+
+Because the repository's committed project configuration lives only under the prior namespace and the current-identity root exists on a machine only as a local, untracked symlink, while the product's host state, override channel, and MCP default still resolve prior-identity paths, the migration that would settle the namespace is a typed refusal rather than an operation, and no scan distinguishes a declared compatibility input from a newly introduced legacy identifier — a fresh clone resolves configuration through the fallback instead of through the Jaiship identity, an operator cannot move an existing machine with a dry-run, a backup, or a second-run guarantee, and the one-release deprecation the ticket requires has neither an enumeration nor an enforceable expiry.
+
+## 4. GOALS
+
+- **G-1**: A fresh clone carries the project configuration at tracked `.jaiship/config.yaml` and nothing under the prior root, and normal runtime writes leave `git status` clean without any local exclude file.
+- **G-2**: The current-identity configuration root is the single authoritative location; the prior root is read only through a declared compatibility input with a bounded, one-time notice, and a migrated host emits none.
+- **G-3**: An operator migrates a machine once with `install migrate`, seeing the exact plan first (`--dry-run`), keeping a verified backup, and re-running safely.
+- **G-4**: Every one-release shim is declared in machine-readable form with its sites, notice, deprecation window, and removal release — current compatibility inputs, never silent legacy.
+- **G-5**: The namespace conformance scan fails on any newly introduced prior-namespace identifier in product source, prompts, scripts, tools, or a registered doc, and on any tracked file under a prior root or a reintroduced symlink, while allowing exactly the declared shim sites.
+- **G-6**: Docs, guides, and prompts name the current identity; the override channel is identity-derived; the MCP composition resolves the current identity; and the pre-freeze environment mapping is bounded to names that map onto a declared configuration key.
+
+### 4.1 Success Metrics / KPIs
+
+| Metric | Target |
+|--------|--------|
+| Committed layer | `git ls-files .jaiship/config.yaml` returns exactly that path; `git ls-files .delivery-os` returns nothing; the tracked blob is byte-identical to the pre-move blob (1/1) |
+| Clean clone | A scratch clone at the change head with no local exclude and the full runtime write set seeded reports 0 lines from `git status --porcelain` |
+| Authoritative root | On a migrated checkout, 100% of project-committed values report an origin at the current path; 0 `config-read` and 0 `state-read` notices; where any notice is emitted it names the current path (0 notices naming the prior path as loaded) |
+| Migration coverage | 3/3 root classes handled (host configuration, host state, invoking project configuration); 100% of moved files digest-equal at the destination; 0 prior files deleted except those moved; 0 stored records rewritten; 0 schema-version changes |
+| Migration safety | 100% of plans reproducible by `--dry-run` with 0 writes; 100% of moved entries backed up before the move with a manifest covering them; 1 conflict or failure never deletes a differing byte; a second run moves 0 files and creates 0 backups |
+| Shims | 1 registry; 100% of prior-namespace occurrences in the scanned corpora inside a declared site or declared corpus; 100% of declared sites present in the tree (both directions fail closed); 1 notice maximum per process per source kind |
+| Conformance | 7 scope classes scanned; 6 of them carry the prior-namespace seeds; at least 1 mutation per class failing by name; 2 explicit negative controls (reintroduced symlink, new file under the prior root) failing by name; 0 live occurrences |
+| Identity spread | 0 prior-namespace identifiers in the updated current-truth documents and prompt set outside declared mentions; 5/5 declared product-surface literal sites unchanged in count; MCP default resolves the current identity |
+| Contract invariance | 1 error identity retired, 0 added; 1 subcommand added, 1 flag form retired; 0 configuration keys added, removed, or renamed; 0 delivered record schemas or state-format identifiers changed |
+
+### 4.2 Non-Goals
+
+- **NG-1**: No rename of the workspace package scope `@delivery-os`, the repository name `agentic-delivery-os`, the docs/URL derivation, or the monorepo layout (D1, ADR-0003 DEC-4).
+- **NG-2**: No publication, versioning-channel, or packaging decision for the five private packages.
+- **NG-3**: No retirement of the `delivery-os` executable alias, the prior-identity read, the `DELIVERY_OS_WORKING_NAME` reading, or the pre-freeze `ADOS_` adapter in this change; they are declared and scheduled, not removed (D2).
+- **NG-4**: No retirement, rewrite, or re-pointing of the shell entry points (`deliver-ticket.sh`, `ceo-loop.sh`, `install.sh`, `uninstall.sh`, `hooks/*`) and no rewrite of agent prompt workflows; this change edits one prompt sentence that names a prior path.
+- **NG-5**: No change to the seven-layer configuration model, the two-layer state scope, the branding derivation rules, or the install family's admission and replace semantics.
+- **NG-6**: No state re-versioning, no schema-version bump, no record rewrite, and no backfill (TDR-0047).
+- **NG-7**: No merge, closeout, dispatch, queue, loop, or provider behaviour change.
+- **NG-8**: No new configuration key and no new environment variable beyond the identity-derived override name, which is a derivation of the existing prefix rather than a new key.
+- **NG-9**: No live-machine claim beyond the declared proof boundary (Appendix C): a real operator home, a real second machine, and a real GitHub account are not proven.
+- **NG-10**: No `~/.ados`/`.ados` retirement plan and no pre-freeze adapter removal; only its mapping is bounded.
+
+## 5. FUNCTIONAL CAPABILITIES
+
+| ID | Capability | Rationale |
+|----|------------|-----------|
+| F-1 | The committed project layer under the current identity, with ignore rules that keep a fresh clone clean | The owner finding is that committed truth is the only thing a fresh clone can see; a symlink is local, invisible, and worse than either state. |
+| F-2 | One authoritative configuration root, with the prior root as a declared bounded read | The owner requires the current root to be authoritative and no fallback notice on a migrated host; the delivered fallback must not become a silent second authority. |
+| F-3 | `install migrate`: an idempotent, dry-run-first, backup-bearing namespace move | The ticket names an idempotent migration command with dry-run and backup; the family already owns admission, the daemon guard, and the dry-run discipline. |
+| F-4 | A machine-readable one-release shim registry with notices, window, and removal release | D2 requires enumeration and a bounded window; "declared" is only checkable if it is data. |
+| F-5 | A namespace conformance scan over content and repository tree, with negative controls | D4 requires the scan to fail on a new legacy identifier while allowing declared sites; the delivered registry-as-authority scan is the proven mechanism. |
+| F-6 | Identity alignment of docs, guides, prompts, the override channel, the MCP default, and the pre-freeze environment mapping | "One product identity across every surface" is the story goal; the unbounded `ADOS_*` mapping is a live failure the owner reproduced. |
+
+### 5.1 Capability Details
+
+**F-1 — The committed layer and its ignore rules.** The change moves `.delivery-os/config.yaml` to `.jaiship/config.yaml` **byte-identically** (the delivered content — this repository's `verify.suite-map` and its whole `provider` policy — is the payload, not a rewrite), and leaves no tracked path under the prior root. Because `.gitignore` already declares the brand-free `.*/config.local.yaml`, the local overlay is covered; the change adds the equally brand-free `.*/projects.yaml` so the runtime-written project-groups document is covered too. Two properties are load-bearing and are asserted: the patterns stay **brand-free** (so a future rename does not repoint them, and the rename drill's config-glob survival property is preserved), and the tracked `config.yaml` is **not** matched by either. The change must not depend on `.git/info/exclude`: that file is local to this workstation and a fresh clone has none, which is exactly why the current state dirties a clone. A **fresh-clone drill** (scratch clone at the change head, no local exclude, runtime write set seeded) is the acceptance instrument, and the repository-tree arm of F-5 is the standing guard.
+
+**F-2 — One authoritative root, one bounded prior read.** The current root is authoritative by construction: the configuration layers resolve `<repo>/.jaiship/config.yaml` (project-committed) and `<repo>/.jaiship/config.local.yaml` (project-local), and the host root resolves `~/.jaiship-state`. The prior root remains a **declared compatibility input** with the delivered semantics unchanged in kind: the two repository-owned configuration layers consider the prior file second and read it only when the current file is absent; the host root falls back to the prior default root only when the current default root does not exist; machine-global layers never fall back; both are read-only. What this change fixes is the *observable consequence*: on a migrated checkout or host the current path exists, so the fallback reads nothing and emits nothing, and where a notice is emitted at all it names the **current** path as the loaded file and the prior path as not used. Project-local overlays get their declared home: `<repo>/.jaiship/config.local.yaml` (local, ignored, `ci-disabled` under `CI=true` as delivered) and `<repo>/.jaiship/projects.yaml` (local, ignored, the unchanged `delivery.projects.groups.v1` document at the unchanged brand-derived location). The two overlays are **not** part of the configuration stack change: their paths already derive from `configDirectoryName`, so the move is a disposition change (tracked → ignored) and a documentation change, not a resolver change. The group document is **operator-authored** — no product command writes it — so a fresh clone's group read is the delivered empty listing and the ceremony mirror's declared target set is empty until an operator declares the group locally; the mirror composes its target set from the invoking checkout's own document and never reads another checkout's (DEC-12, TDR-0074).
+
+**F-3 — The migration command.** `install migrate` is a new verb in the delivered `install` family. Its surface is decided here (DEC-3) and its contract is API-1..API-3; the operational shape is:
+
+1. **Scope.** Three root classes, all brand-derived rather than re-declared: the host configuration root (`~/.jaiship`, prior `~/.delivery-os`), the host state root (`~/.jaiship-state`, prior `~/.delivery-os-state`), and the **invoking checkout's** project configuration root (`<git root>/.jaiship`, prior `<git root>/.delivery-os`). One checkout per run; an invocation outside a work tree reports the project class `unscoped` and migrates the two host classes.
+2. **Unit of work is an entry, not a root.** A root is a container; the plan enumerates its entries (files and subdirectories, descending into container directories such as `projects/`). The per-entry decision table is DM-6. This is what makes the command usable on the real machine, where the destination root usually already exists because the artifact is installed there.
+3. **Plan first, always.** `--dry-run` prints the complete per-entry plan with absolute paths, byte and file counts, the destination disposition, the backup path that *would* be created, and `daemon: unchecked`; it writes nothing, creates no directory (including no backup directory), reads no daemon, and answers `install.daemon.running` never.
+4. **Backup before move.** For every entry the plan schedules for a move, the run copies the entry to `<backup>/<run stamp>/<root label>/…` and writes one `manifest.json` (`install.migration.v1`, DM-5), verifying the copy's per-file digests against the source before any move. The default backup root is `~/.jaiship/migration-backups/<UTC yyyymmdd-hhmmss>/` — inside the current configuration root, beside `bin/`, `config.yaml`, and `install.json`, so `install purge` removes it with the root, and outside every source root so a backup can never re-enter the plan. `--backup-dir <absolute path>` overrides it and is refused with `input.value.rejected` when relative or inside a source root.
+5. **Move by rename, never by rewrite.** A planned move is a directory-entry rename when the destination path is free, and a copy-then-verify-then-remove only when the entry must merge into an existing destination directory. Neither path rewrites a byte: no ledger header is touched, no state-format identifier changes, no record is re-serialised (TDR-0047).
+6. **Never delete a difference.** A differing entry that exists on both sides is a **conflict**: it is reported, left in both places, and makes the run exit 1. A byte-identical duplicate is reported and left. Only an entry the run itself moved disappears from the source. An emptied source root is retired with one reported line; a non-empty one keeps its residual paths in the report.
+7. **Derived entries are destination-wins.** The host index (`host-index.json`) is a derived, rebuildable cache whose maintenance already re-derives every state location from its key and reports a disagreement as a warning; the migration therefore never rewrites it and never conflicts on it. The declared derived-entry set is data, and adding an entry to it is a reviewed change.
+8. **Verdict and exit.** Per-entry verdicts compose to a per-root and a run verdict; `migrated` and `already-migrated` exit 0, `partial`, `conflict`, and `blocked` exit 1 as data-bearing verdicts with no new error identity (DM-8).
+9. **Guards.** The delivered admission gates apply, because TDR-0046 binds the migration path to the same rule: `install.dev-build` for a run with no injected identity, `install.target.worktree` for a linked-worktree target. A live daemon is refused with `install.daemon.running` unless `--stop-daemon`, which stops it through the delivered stop path **before** the first move and does not restart it (the plan says so). The alias refuses the verb with `install.identity.not-owning`.
+10. **Idempotence.** A second run on a clean result finds every source entry `absent` and every destination entry `already-migrated`, moves nothing, creates no backup, and exits 0 with the same vocabulary.
+
+**F-4 — The declared shims.** A new registry document (`scripts/checks/namespace-shims.registry.json`, DM-3) is the single authority for the prior namespace: one entry per shim, each with an `id`, a `kind` (`executable` | `path` | `environment` | `environment-prefix`), the literal, the direction (`invocation` | `read-only` | `mapping`), the notice id and text, the window (`declaredIn`, `removalRelease`), an owner note, and the **enumerated sites** at which the shim may appear. The registry distinguishes two lineages honestly: the three delivery-os shims carry the one-release window this change declares (removal in the release after the one that ships it); the pre-freeze `ADOS_`/`.ados` inputs carry their own older declaration with no removal release assigned and name their owner. Every site is a file path plus a role sentence; a site may carry an occurrence budget so that an allowed file cannot silently accumulate new occurrences. The registry is validated like the forbidden-literal registry (shape, unique ids, resolvable window, non-empty sites, every site present in the tree) and is consumed by the conformance scan as the allowlist authority, so "declared" and "allowed" cannot drift apart.
+
+**F-5 — The conformance scan.** Two arms, one gate:
+
+- **Content arm (extends the delivered scan).** `scripts/checks/forbidden-literals.ts` gains a **prior-namespace seed class** applied to six of seven scope classes: `packageTree`, `rootManifests`, `ignoreRules`, and two new classes — `promptSurface` (`.opencode`) and `scriptSurface` (`scripts`, `tools`) — plus `userFacingDocs`. The seeds (DM-4) are `.delivery-os`, `.delivery-os-state`, `~/.delivery-os`, `DELIVERY_OS_`, and the prior executable token. Matching keeps the delivered semantics (case-insensitive, delimited from lowercase ASCII letters, longest match reported) with two declared structural exclusions on the executable token: an occurrence preceded by `@` (the neutral package scope sigil, D1) and an occurrence inside the repository name `agentic-delivery-os`. The DEC-8 seed class, its five classes, and its allowlist are untouched in behaviour.
+- **Tree arm (new sibling check).** `scripts/checks/namespace-tree.ts` asserts the repository-tree properties no content scan can see: zero tracked paths under a declared prior-namespace root prefix; zero tracked symlinks whose target resolves into one (including the exact `.jaiship -> .delivery-os` shape); the tracked set contains the current committed layer; the runtime-written project files are ignored by the repository's own rules, probed in a rule-world rather than against the live tree. Its two negative controls are the acceptance instrument for the owner's "reintroduced symlink or new file under the prior root" clause.
+- **Gate.** Both arms run in `pnpm check`; the content arm stays bound as the existing `ts-forbidden-literals` job and the tree arm is declared as a new `ts-*` job through the delivered CI-topology check, which rejects an advisory job or a bypass construct.
+
+**F-6 — Identity alignment.** (a) The override channel becomes identity-derived: `<environmentPrefix>WORKING_NAME` (today `JAISHIP_WORKING_NAME`) is the current channel and wins; the prior literal `DELIVERY_OS_WORKING_NAME` remains a declared shim at lower precedence and its use emits exactly one bounded `prior-identity-fallback: override-read` notice per process. (b) The MCP composition's declared default working name becomes the current identity, so no composed surface resolves prior-identity directories when nothing is configured. (c) The pre-freeze mapping becomes **bounded**: a legacy-prefixed name maps only when its mapped current name is a declared configuration catalog key; every other legacy-prefixed name is left untouched — not an error, not a configuration value — so a loaded pre-freeze environment no longer breaks the resolver, and an arbitrary `ADOS_FOO` is inert. (d) The enumerated product-identifier updates land in the documents, the one prompt sentence (`.opencode/agent/toolsmith.md` routing authority names `.jaiship/config.yaml`, and the generated `.ados-claude` projection is regenerated), while declared compatibility mentions — the alias's own description, the prior-identity explains, and the shim tables — stay and are marked as declarations rather than as current identity.
+
+## 6. USER & SYSTEM FLOWS
+
+```
+Flow 1: Inspect before moving
+  install migrate --dry-run
+    → compose the roots (host config, host state, invoking project)
+    → enumerate entries, classify each against the destination   → DM-6 table
+    → print: per-entry lines (path, disposition, bytes, files), the backup path,
+             residual/conflict lines, `daemon: unchecked`
+    → exit 0 always (a plan is not a verdict); 0 writes, 0 directory creation
+
+Flow 2: Migrate a machine
+  install migrate [--stop-daemon] [--backup-dir <abs>]
+    → admission: dev build? worktree?            → install.dev-build / install.target.worktree
+    → daemon guard                                → install.daemon.running (unless --stop-daemon)
+    → plan (Flow 1, not printed unless --verbose)
+    → for each planned entry: copy → verify digests → rename/copy-merge → verify
+    → conflicts?  → leave both sides, no delete
+    → write the manifest, report the backup, retire emptied roots
+    → verdict migrated | partial | conflict | blocked        → exit 0 | 1 | 1 | 1
+
+Flow 3: Re-run (idempotence)
+  install migrate
+    → every source entry absent, every destination entry present and equal
+    → verdict already-migrated, 0 moves, 0 backups                → exit 0
+
+Flow 4: Day one on a fresh clone
+  git clone … && cd …
+    → .jaiship/config.yaml is tracked and present   → the project-committed layer loads
+    → no .delivery-os path exists                   → 0 fallback notices
+    → the runtime write set (.jaiship/config.local.yaml) and an operator-declared .jaiship/projects.yaml are ignored
+    → state lives under ~/.jaiship-state
+    → git status --porcelain is empty
+
+Flow 5: A not-yet-migrated checkout or host
+  <any command>
+    → current config root absent, prior present   → read prior, emit `config-read` once (names both paths)
+    → current host root absent, prior present     → select prior root, emit `state-read` once
+    → both present                                → current wins, emit `config-skipped` / `state-skipped` naming the current path
+    → nothing is written to a prior root
+
+Flow 6: A pull request that introduces a prior identifier
+  contributor adds `.delivery-os/x` or a new `DELIVERY_OS_*` read outside a declared site
+    → content arm: FAIL naming file, line, token            (ts-forbidden-literals)
+    → tree arm:    FAIL naming the tracked path or the symlink target   (ts-namespace-conformance)
+    → merge blocked; a declared shim site stays green
+```
+
+## 7. SCOPE & BOUNDARIES
+
+### 7.1 In Scope
+
+- The tracked move of `.delivery-os/config.yaml` → `.jaiship/config.yaml`, byte-identically, and the resulting empty prior root in the tree.
+- The brand-free ignore rules covering the runtime-written project files, and the fresh-clone drill that proves them.
+- `install migrate` with `--dry-run`, `--backup-dir`, and `--stop-daemon`; the per-entry plan, the backup and its manifest, the precedence table, idempotence, partial-failure recovery, and the state-root move that re-versions nothing.
+- The retirement of `install --migrate` as a recognised refusable flag form with a remedy naming the verb, and the retirement of `install.migration.unavailable`.
+- `scripts/checks/namespace-shims.registry.json` (new) and its validation.
+- The prior-namespace seed class, the `promptSurface` and `scriptSurface` scope classes, the neutral-scope exclusion rule, and the shim-site allowlist in the delivered forbidden-literal machinery; the new `namespace-tree` arm; both CI bindings.
+- The enumerated document, guide, prompt, MCP-default, override-channel, and pre-freeze-mapping updates.
+- One new quality test-specification page and the phase-7 reconciliation of the affected current-truth pages.
+
+### 7.2 Out of Scope
+
+- [OUT] Renaming the `@delivery-os` package scope, the root manifest name, the repository, or the derived docs/repository URLs (D1).
+- [OUT] Removing the alias, the prior read, `DELIVERY_OS_WORKING_NAME`, or the pre-freeze adapter; removal is scheduled, not delivered (D2).
+- [OUT] Editing `scripts/deliver-ticket.sh`, `scripts/ceo-loop.sh`, `scripts/install.sh`, `scripts/uninstall.sh`, or `scripts/hooks/*` — including re-pointing their prior-root defaults; they remain declared sites (NG-4, DEC-13).
+- [OUT] Rewriting agent prompt workflows; the prompt surface change is one routing-authority sentence plus its generated projection.
+- [OUT] Any state schema bump, record rewrite, ledger re-version, or data backfill.
+- [OUT] A general prior-prefix environment mapping (`DELIVERY_OS_*` → `JAISHIP_*`); only the working-name override is a prior environment input, exactly as today.
+- [OUT] A migration of other checkouts, of `~/.ados`, or of a custom `<PREFIX>_STATE_DIR` override root.
+- [OUT] A migration of a prior launcher or prior install record beyond moving it with its root; neither is promoted, read, or removed by this change.
+- [OUT] Publication, release, versioning-channel, or package-visibility changes.
+- [OUT] A live-machine, live-clone, or second-operator claim beyond Appendix C.
+
+### 7.3 Deferred / Maybe-Later
+
+- **Shim removal.** The next release removes the alias bin, the prior config/state read, and `DELIVERY_OS_WORKING_NAME`, and at that point the executable token becomes enforceable over docs as well (the declared prose exception disappears). Trigger: the release after the one that ships this change, as the registry declares.
+- **Pre-freeze adapter retirement.** The `ADOS_`/`.ados` inputs carry no removal release; retiring them is the GH-171 lineage's decision, not this story's.
+- **The executable-token seed over registered docs.** Deliberately not enforced today because valid prose names the alias; revisit at shim removal (RSK-11).
+- **A `--prune-duplicates` behaviour.** Identical duplicates are reported, not removed. Revisit if operators ask for one-shot cleanup; the current rule (never delete a difference, report the duplicate) is the safe default.
+- **Migrating a custom `<PREFIX>_STATE_DIR` override root.** A custom override is not a prior-namespace root; if an operator moves it, they move it. Revisit only if a state-root relocation surface is ever requested.
+- **Repointing the shell fallback's prior-root defaults.** Owned by M4-S8 (thin wrappers); decided as DEC-13. The fix shape is the delivered current-else-prior selection rule, not a string swap, so the obligation lands on the wrapper cutover rather than on this change; until then the declared operator remediation is the fallback's own override pointed at the current host root.
+- **A tracked template for the project-groups document** (for example a committed `.example` file). Decided deferred by DEC-12/TDR-0074: the live document stays operator-local and the mirror's target set is declaration-only, so no template lands in this change. Trigger: cross-checkout mirroring must work from a fresh clone with no operator step — a template does not satisfy that on its own, so the trigger reopens the disposition rather than only the template question.
+
+## 8. INTERFACES & INTEGRATION CONTRACTS
+
+### 8.1 REST / HTTP Endpoints
+
+No inbound or outbound HTTP endpoint is added, changed, or removed. The interfaces are the command surface and the repository gates:
+
+| ID | Surface | Contract |
+|----|---------|----------|
+| API-1 | `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` | The family's fifth verb. Admission, in order: the alias refuses with `install.identity.not-owning` (exit 1); a grammar defect or an undeclared flag is `fallback.invocation` (exit 1); a relative or in-source `--backup-dir` is `input.value.rejected` (exit 1); a run with no injected identity is `install.dev-build` (exit 1); a linked-worktree target is `install.target.worktree` (exit 1); a live daemon without `--stop-daemon` is `install.daemon.running` (exit 1), and with it the daemon is stopped through the delivered stop path before the first move and is not restarted. The global flags `--json`, `--verbose`, and `--pretty` are accepted and are never refusals. Zero state records are appended, zero install-record fields are written, and the delivered audit ledger records the invocation. |
+| API-2 | `install migrate` plan and verdict | Human output is a bounded, ANSI-free block: one header line per root class, one line per planned entry (`<disposition> <path> · <files> file(s) · <bytes> byte(s)`), one line per residual or conflict, one backup line, and (dry-run only) `daemon: unchecked`. Machine output is `install.migration.v1`: `schemaId`, `runId`, `verdict`, `daemon` (`unchecked` \| `stopped` \| `running`), `backupPath`, `roots[]` (label, source, destination, verdict, `entries[]` with `relativePath`, `disposition`, `files`, `bytes`), `conflicts[]`, `residuals[]`, and `retiredRoots[]`. Dispositions are the closed set `moved`, `already-migrated`, `duplicate-identical`, `conflict`, `blocked`, `absent`; verdicts are the closed set `migrated`, `already-migrated`, `partial`, `conflict`, `blocked`. Exit: `0` for `migrated`/`already-migrated`, `1` for the other three. No error identity is added; a data-bearing negative verdict carries no error code. |
+| API-3 | `install --migrate` | Recognised and refused: exit 1, `fallback.invocation`, summary naming the retired flag form and the remedy `install migrate`; performs no install and no migration. Without `--migrate`, `install` keeps the delivered advisory detection line and moves nothing. |
+| API-4 | Prior-identity notices | The four delivered reasons (`config-read`, `config-skipped`, `state-read`, `state-skipped`) keep their names and semantics, with the loaded-file fact always naming the current path when the current file was the one read and the prior path as not used; one new reason `override-read` reports a prior working-name override. Bounded: at most one line per reason per composed program, stderr in every mode including `--json`, never in a payload, never changing an exit code, and never emitted when no prior input exists (so a migrated host emits none). |
+| API-5 | Environment mapping contract | `<currentPrefix><suffix>` is a configuration-layer name only when `<suffix>` is part of a declared catalog key; a legacy-prefixed (`ADOS_`) name maps only when its mapped current name satisfies that rule and is left untouched otherwise. Untouched legacy names are not errors, not values, and not notices. The current-prefixed unknown-name strictness (`config.environment.unmapped`) is unchanged for the current prefix. |
+| API-6 | Working-name override contract | A non-empty `<environmentPrefix>WORKING_NAME` is the override channel; a non-empty `DELIVERY_OS_WORKING_NAME` is the declared prior channel, read only when the current one is absent or empty, with one `override-read` notice. Precedence: current override → prior override → the invoking bin's (or composition's) declared default. A present but invalid override keeps the delivered containment (`fallback.internal`, exit 2) for a configuration-bearing invocation and the delivered field-and-code error for a self-description read; there is no silent fallback from an invalid override to the prior channel. |
+| API-7 | Conformance gate | `bun run scripts/checks/forbidden-literals.ts` (content arm, seven scope classes) and `bun run scripts/checks/namespace-tree.ts` (tree arm) each exit `0` with a per-class summary and exit `1` naming the offending file and line and token, or the tracked path, or the symlink target. Both are read-only, offline, and deterministic; both join `pnpm check`; the content arm keeps the CI job `ts-forbidden-literals` and the tree arm is declared in the CI-topology check as its own `ts-*` job with the same baseline-fetch obligation. Neither ever writes to the tree. |
+
+### 8.2 Events / Messages
+
+No event, telemetry record, metric, alert, queue message, or rendered owner surface is added. The migration happens offline and local; it emits no event. The `prior-identity-fallback` lines are process diagnostics, not events, and enter no payload. No new record kind is introduced, so the state-layer record-kind inventory is unchanged.
+
+### 8.3 Data Model Impact
+
+| ID | Element | Description |
+|----|---------|-------------|
+| DM-1 | The committed project layer | `doc`-free, path-only change: `<repo>/.delivery-os/config.yaml` becomes `<repo>/.jaiship/config.yaml` with byte-identical content (schema-less YAML; the document's own `verify.suite-map` and `provider` branches are untouched). The prior path disappears from the tracked set. Nothing reads the content differently: the path derives from `configDirectoryName`, so the layer contract is unchanged and the document's contents are the payload. |
+| DM-2 | Ignore rules | Two declared properties plus one additive pattern. Existing: `.*/config.local.yaml` (brand-free). Added: `.*/projects.yaml` (brand-free). Both are anchored at the repository root by the embedded separator, so a nested `packages/x/projects.yaml` is not matched. The tracked `config.yaml` is not matched by either. The ignore-rule hygiene check gains the runtime-written-project-file coverage class, and the rule-world probe set gains the two runtime paths plus a positive control (the tracked file is not ignored). |
+| DM-3 | Shim registry document | New `scripts/checks/namespace-shims.registry.json`, schema `namespace.shims.v1`: `schemaId`, `window` defaults, and `shims[]`. Each shim: `id`, `kind` (`executable` \| `path` \| `environment` \| `environment-prefix`), `literal`, `direction` (`invocation` \| `read-only` \| `mapping`), `lineage` (`delivery-os` \| `pre-freeze`), `noticeId`, `notice` (one bounded sentence, no environment values, no paths beyond the two the notice is about), `window` (`declaredIn`, `removalRelease`), `owner`, and `sites[]` (`file`, `role`, optional `maxOccurrences`). Validation fails closed on: a duplicate id; an unknown kind or direction; an empty site list; a site absent from the tree; a wildcard site (only a file path or a path prefix with a trailing `/`); a window whose `removalRelease` is not strictly greater than `declaredIn` under semver; and any occurrence in the scanned corpora outside a declared site or declared corpus. The delivery-os lineage carries the one-release window this change declares; the pre-freeze lineage carries `removalRelease: null` plus an owner note. **Seed resolution:** every forbidden-literal `priorNamespace` seed resolves to exactly one shim, and a match resolves to the shim whose literal equals the **longest** matching literal at that position — so `DELIVERY_OS_WORKING_NAME` resolves to `prior-working-name-override` at that shim's declared sites, while any other bare `DELIVERY_OS_` occurrence resolves to the `prior-environment-prefix` shim and must lie inside one of its declared sites (the example owner-hold hook, its battery, the owner-hold tables on the autonomous-delivery page, guide, and test spec, and the prior-environment fixtures). Without that entry a seed would have no site authority and the both-directions reconciliation could not pass on a clean tree. |
+| DM-4 | Prior-namespace seed class in the forbidden-literal registry | `scripts/checks/forbidden-literals.registry.json` gains `priorNamespace`: `seeds[]` with ids `prior-config-directory` (`.delivery-os`), `prior-state-directory` (`.delivery-os-state`), `prior-home-config` (`~/.delivery-os`), `prior-environment-prefix` (`DELIVERY_OS_`), `prior-executable` (`delivery-os`, `match: "delimited-token"`, `excludePrecededBy: ["@"]`, `excludeWithin: ["agentic-delivery-os"]`, applied to `packageTree`, `rootManifests`, `ignoreRules`, `promptSurface`, `scriptSurface` — not to `userFacingDocs`), the `scopeSelection` mapping (which classes carry which seed class), the `neutralSites[]` (the private root manifest name, and `pnpm-lock.yaml` as generated), the `declaredCorpora[]` (the delivered `doc/changes/` and `doc/decisions/` prefixes, the immutable M1 snapshot command pages, and the one dated inception analysis record), and `shimRegistry: "scripts/checks/namespace-shims.registry.json"` as the site authority. `scopeClasses` gains `promptSurface` (`root: ".opencode"`) and `scriptSurface` (`roots: ["scripts", "tools"]`). **`scopeSelection` is explicit about which seed class applies where:** `scriptSurface` and `promptSurface` carry the `priorNamespace` class **only** — not the delivered DEC-8 `seedLiterals` class — so the unbounded `ADOS_*` inventory in `scripts/**` and `tools/**` does not join the scan, and the delivered class keeps its five classes and its allowlist mapping unchanged. The existing `seedLiterals`, its five classes, and its allowlist keep their behaviour and their exact-shape validation. |
+| DM-5 | Migration backup and manifest | Backup root default `~/.jaiship/migration-backups/<UTC yyyymmdd-hhmmss>/`, overridable; never auto-pruned; removed only with the configuration root by `install purge`; reported by absolute path with its file and byte totals. Layout: `<stamp>/manifest.json` plus one subtree per root label holding a byte copy of every entry the plan scheduled for a move. `manifest.json` schema `install.migration.v1`: `schemaId`, `runId`, `createdAt`, `artifactIdentity`, `roots[]` (`label`, `source`, `destination`) and `entries[]` (`rootLabel`, `relativePath`, `files`, `bytes`, `files[]` with `relativePath`, `size`, `sha256`), plus `verdict`. The manifest carries no credential, environment value, or record payload; file names and digests are the only content of a file entry. |
+| DM-6 | Migration root and entry policy | **Roots (3, brand-derived):** host configuration (`configDirectoryName`), host state (`stateDirectoryName`), invoking project configuration (`<git root>/<configDirectoryName>`). **Entry classes:** a file or a subdirectory of a root; container directories descend (`projects/`, `documents.*/`, `quarantine.*/`). **Per-entry decisions, evaluated in this order:** (1) source absent, destination absent → `absent`; (2) source absent, destination present → `already-migrated`; (3) source present, destination absent → `moved`; (4) source present, destination present and byte-identical → `duplicate-identical` (both retained); (5) source present, destination present and differing, and the entry is in the declared derived set → destination wins, reported, no conflict; (6) otherwise → `conflict` (both retained, run exits 1). **Derived set (data, today):** `host-index.json`. **Never:** a merge of two ledger files, a rename over an existing differing path, a deletion of a `conflict` or `duplicate-identical` entry, or a rewrite of any file. **Retirement:** a source root whose entries are all `absent`/`already-migrated` after the run is removed and reported as retired. |
+| DM-7 | State-move invariants | Byte preservation: every moved file's digest equals its pre-move digest (asserted from the manifest). No re-versioning (TDR-0047): every `header.<workspace>.json` file is byte-identical after the move and its recorded format identifier is unchanged; the artifact's accepted state format is a constant and does not move; `install status`'s compatibility verdict is identical before and after. No absolute-path rewrite is required, because no header carries the host-root path; the host index is a derived cache that re-derives every `stateLocation` from its key on the next store-opening invocation and warns on disagreement without redirecting a read. |
+| DM-8 | Error identities | Exactly one retirement and zero additions. `install.migration.unavailable` is removed from the `install` domain (11 → 10 identities) together with its error-table row, its documentation row, and its result-code fixture. Every migration failure maps onto a delivered identity: `install.identity.not-owning`, `fallback.invocation`, `input.value.rejected`, `install.dev-build`, `install.target.worktree`, `install.daemon.running`, `state.permission.denied` (a root whose bytes cannot be read or written), `state.write.failed` (a copy, rename, or verify failure at the destination). Negative verdicts (`partial`, `conflict`, `blocked`) are data, not codes. |
+| DM-9 | Declared literal sites after the change | The five product-surface inventory sites hold, in order: the alias bin's default (`delivery-os`, unchanged, declared shim), the primary bin's default (`jaiship`), the primary bin's prior identity (`delivery-os`, unchanged, declared shim), the MCP composition default (**now the current identity**), and the resolver's scope-org derivation input (unchanged). The build-side site under `scripts/` is unchanged. The override name is no longer a committed literal: it derives from `environmentPrefix` plus the declared `WORKING_NAME` suffix, with the prior literal carried only at the declared shim sites and in the shim registry. Site count is unchanged; two site values are re-stated and one is re-derived. |
+
+### 8.4 External Integrations
+
+No live external integration is added or changed. The migration is a local filesystem operation that performs no network call, invokes no package manager, no build tool, and no git write; the backup is a local copy. The conformance gate reads git metadata (tracked set, symlink modes) and the recorded corpus baseline, exactly as the delivered scan already does. Provider, tracker, harness, and platform integrations are untouched and are not exercised.
+
+### 8.5 Backward Compatibility and Deliberate Behaviour Changes
+
+**What stays exactly as delivered.** The seven-layer configuration model, its key set, its precedence, its `ci-disabled` rule, its warnings, and its nine classified errors; the two-layer state scope and its prior-default-root selection; the branding derivation rules and the twelve `BrandIdentity` fields; the install family's admission, replace, rollback, uninstall, and purge semantics; the legacy adapter's one-warning-per-process discipline and its notice wording; the `delivery-os` alias's composition and its `install.identity.not-owning` refusal; the shell entry points and their tests; every agent prompt except one sentence.
+
+**Deliberate changes, each with a reason and a criterion:**
+
+| # | Before | After | Reason |
+|---|---|---|---|
+| 1 | The committed project layer is `<repo>/.delivery-os/config.yaml` | `<repo>/.jaiship/config.yaml`, byte-identical | The current root must be the authoritative one for a fresh clone (owner finding). |
+| 2 | `<repo>/.jaiship/projects.yaml` is untracked but not ignored by the repository's own rules | Ignored by a brand-free `.*/projects.yaml` pattern | A fresh clone must stay clean through normal runtime writes. |
+| 3 | `install --migrate` refuses with `install.migration.unavailable` and moves nothing | `install --migrate` is a recognised refusable form naming `install migrate`; the verb performs the move | The flag never performed an action, so no working behaviour breaks; one operation must have one contract (DEC-3). |
+| 4 | The migration is an operator hand-performed move | `install migrate` with dry-run, verified backup, per-entry precedence, idempotence, and recovery | The ticket requires it; a hand-performed move is not idempotent and has no backup. |
+| 5 | The prior namespace is invisible to the scan | The shim registry enumerates it and both scan arms fail on a new occurrence, a tracked file under a prior root, or a reintroduced symlink | D4 requires it; "declared" must be checkable. |
+| 6 | `DELIVERY_OS_WORKING_NAME` is the only override channel, described as product-free | `<environmentPrefix>WORKING_NAME` is the channel; the prior literal is a declared lower-precedence shim with one notice | After the identity is Jaiship the prior token is a prior-product token; keeping it as the only channel would leave no channel after removal (D2). |
+| 7 | The MCP composition defaults to the prior identity | It defaults to the current identity | A composed surface with no configured name must not resolve prior-identity directories ("a fresh install creates only Jaiship paths"). |
+| 8 | Every `ADOS_<suffix>` maps to `<currentPrefix><suffix>` | A legacy name maps only when the mapped name is a declared catalog key | Loading the pre-freeze environment breaks every configuration-resolving command today (owner repro, `e1ebc76`); mapping a non-key is never useful. |
+| 9 | `install.migration.unavailable` exists as the delegation refusal | Retired | Migration is delivered; the row could never be raised again, and a dead row violates the table's totality. |
+| 10 | The project-groups document is described as project-committed | It is an operator-local, git-ignored overlay at the same path and schema, authored by the operator; the ceremony mirror's target set comes from the invoking checkout's own document only | The owner requires a declared local home for operator overlays (D2); the document's members are absolute local checkout roots, so a committed live document publishes one machine's layout, and the fresh-clone rule forbids tracking a document any write dirties. A fresh clone's target set is therefore declared empty until the operator declares the group locally; no tracked template lands in this change; no checkout reads another's document (DEC-12, TDR-0074). Today's file is already untracked, so this is a disposition and documentation correction rather than a behaviour change. |
+| 11 | `scripts/lib/dispatch-authority.sh` defaults its authority root to `${HOME}/.delivery-os`, and the example owner-hold hook reads `${HOME}/.delivery-os-state/owner-hold` | Both literals are **unchanged** in this change | Deferred to the wrapper cutover (DEC-13, M4-S8/GH-352). The two literals are different defect kinds — the first is a **configuration** root where the typed host root is the **state** root, so it is wrong before and after the migration for different reasons; the second is correct before the migration and wrong after it — so the fix is the delivered current-else-prior selection rule, not a literal swap, which would regress an unmigrated host. The declared operator remediation until then is the fallback's own override pointed at the current host root, and the example hook's marker path per its own header. |
+
+**A host that has already migrated.** Every fallback path is quiet: the current configuration file exists, the current host root exists, so neither prior read occurs and no notice is emitted. A residual prior file left by a conflict produces `config-skipped` naming the current path — never a read of the prior bytes.
+
+**A host that has not migrated.** Behaviour is exactly today's: the prior file is read with the current path named as the target, one notice per source kind, nothing written to a prior root. `install migrate --dry-run` shows the plan; nothing changes until the operator runs it.
+
+## 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
+
+| ID | Requirement | Threshold |
+|----|-------------|-----------|
+| NFR-1 | Offline determinism | 0 network calls, 0 package-manager or build invocations, and 0 reads or writes of the real operator home from any test: every case runs over injected filesystem and home facts or a scratch root; two consecutive runs of each case produce identical payloads, plans, and verdicts |
+| NFR-2 | Bounded output | Human migration output ≤ 60 lines for a plan and ≤ 60 for a run, ANSI-free, one line per entry; machine `install.migration.v1` ≤ 65 536 bytes; every line ≤ 512 bytes; a plan with more entries than the line bound truncates with one counted `… N more` line rather than growing unbounded |
+| NFR-3 | Byte preservation | 100% of moved files digest-equal at the destination; 0 rewritten bytes; 0 deleted entries other than those moved; 0 schema-version or format-identifier changes; a second run reports a byte-identical state |
+| NFR-4 | Idempotence and recovery | A second clean run moves 0 files, creates 0 backup directories, and exits 0 with `already-migrated`; an injected failure after *k* of *n* moves leaves the *n−k* unmoved entries intact, the backup complete for all *n*, and a re-run completes the remainder without duplicating a moved entry |
+| NFR-5 | Conformance coverage | 7 scope classes scanned; 6 carry the prior-namespace seed class; ≥ 1 mutation per class failing by name; 2 negative controls failing by name; 0 live occurrences in the change head; the gate completes in ≤ 60 s on the repository and performs 0 writes |
+| NFR-6 | Declared-site integrity | 100% of declared shim sites present in the tree; 100% of prior-namespace matches inside a declared site, a declared corpus, or a neutral site; 0 matches outside; every occurrence-budgeted site at or below its budget; 0 wildcard sites |
+| NFR-7 | Notice discipline | ≤ 1 notice per reason per composed program; 0 notices in any payload; 0 exit-code changes from a notice; 0 notices on a migrated host; every notice line ≤ 200 bytes and free of environment values, credentials, and file contents |
+| NFR-8 | Contract invariance | 1 error identity retired, 0 added; 1 subcommand added, 1 flag form retired; 0 configuration keys added, removed, or renamed; 0 delivered record schemas, payload schemas, or state-format identifiers changed; the five declared product-surface literal sites unchanged in count |
+| NFR-9 | Documentation discipline | Every new or changed distributable page declares `ados_distribution`; the doc-distribution guard is green; every new doc is registered in the forbidden-literal registry in the same change; `pnpm check:help` green with the family page carrying `--help` and `--version` |
+
+## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
+
+- **The plan is the observability surface.** A migration is reconstructible from its dry-run plan plus the manifest: per entry, what was found, what was scheduled, what happened, and where the bytes are.
+- **The verdict is machine-readable and closed.** Five verdicts and six dispositions; no free-text status, no extra token.
+- **Nothing is silent.** A prior read is announced once by kind; a duplicate, a conflict, a residual, a retired root, and an unreadable root each appear in the report; a shim that is used appears as its declared notice.
+- **The backup is the audit trail.** Its manifest records digests for every moved file, so a later dispute can be settled without trusting the report.
+- **No new metric, dashboard row, event, or alert.** The delivered command audit ledger records the invocation as it records any command.
+- **Bounded cost.** One plan pass over the entries of three roots; one copy of the planned entries; no repeated scan; the conformance gate is a single pass over seven corpora plus one tracked-set read.
+
+## 11. RISKS & MITIGATIONS
+
+| ID | Risk | Impact | Probability | Mitigation | Residual Risk |
+|----|------|--------|-------------|------------|---------------|
+| RSK-1 | The migration destroys, splits, or silently merges operator state | H | M | The unit is an entry with a total decision table (DM-6); a differing entry is never deleted or overwritten; every planned entry is copied and digest-verified before any move; the manifest is written before and reported after; `--dry-run` is the default operator habit and the reference page says so | M |
+| RSK-2 | A prior root stays authoritative because a read is silent | H | M | The read is notice-bearing by kind; a migrated host emits none; AC-F2-2/AC-F2-3 assert the loaded path; the shim registry declares the only allowed read sites | L |
+| RSK-3 | The declared-site allowlist becomes a rubber stamp that hides new prior identifiers | H | M | Sites are file-level with an optional occurrence budget; a wildcard is refused; both directions are reconciled (site present ⇔ allowed); each scope class has a mutation that fails by name | M |
+| RSK-4 | The neutral-scope exclusion is abused to smuggle a product identifier past the scan | H | L | The neutral rule is structural (`@`-prefixed scope and the repository name) and the root manifest name is one declared neutral site; a mutation proves a product-identifier use of the token fails while `@delivery-os/x` passes | L |
+| RSK-5 | A fresh clone is still dirtied by a runtime-written path nobody declared | M | M | The ignore-rule hygiene check gains a runtime-written-project-file coverage class; the fresh-clone drill seeds the declared write set; the trigger for adding a path is any new runtime write into `<repo>/<configDirectoryName>/` | M |
+| RSK-6 | A stale `host-index.json` sends a read to the prior root | H | L | The index is a derived cache that re-derives every state location from its key and warns without redirecting; the migration never rewrites it; AC-F3-8 asserts post-move locations | L |
+| RSK-7 | Retiring the error row leaves stale references in docs, fixtures, or corpora | M | M | The retirement enumerates every site (§16); `error-table-sync`, the result code corpora, and the install docs test are updated in the same change | L |
+| RSK-8 | The MCP default change breaks a consumer relying on the prior identity | M | L | Declared behaviour change (§8.5 row 7); no external release exists; the MCP page and the identity sections are reconciled; the MCP composition is covered by its mount suite | L |
+| RSK-9 | The bounded `ADOS_` mapping drops a mapping an operator actually used | M | L | The rule keeps every mapping whose target is a declared catalog key; the eight owner-named variables are the fixture evidence for the non-key arm; `ADOS_STATE_DIR` never had a working path through the shim (the state-scope rule reads the current prefix only) | L |
+| RSK-10 | The migration runs against a live daemon and races an open store | H | L | The delivered daemon guard refuses without `--stop-daemon`, and the stop precedes the first move; a dry-run never touches the daemon | L |
+| RSK-11 | A new prior identifier in prose passes because the executable token is not scanned in docs | M | M | Declared residual, bounded by the path and environment seeds which catch the real defects; the restriction lifts at shim removal | M |
+| RSK-12 | A migrated host is later re-dirtied by the shell fallback's hardcoded prior root | M | M | Declared in §8.5 row 11 and decided as DEC-13: both literals stay, declared as sites with occurrence budgets; the migration guide carries the operator remediation (the fallback's declared override pointed at the current host root, and the example hook's marker path per its own header); and the fix shape is recorded for M4-S8 as the current-else-prior selection rule rather than a literal swap | M |
+
+## 12. ASSUMPTIONS
+
+- The branding derivation already produces the Jaiship values, so this change moves paths and dispositions rather than derivation rules.
+- A fresh clone can only see committed truth; therefore the committed layer, not a local symlink, is the only durable fix.
+- The delivered fallback reads the prior namespace read-only and never writes it; this change keeps that property and does not add a write path except the explicit migration move.
+- No ledger header, record payload, fence, key file, or audit-chain entry carries the absolute host-root path, so a byte-preserving directory move cannot invalidate stored state. The host index does carry derived locations and is rebuildable.
+- The host index's maintenance re-derivation is the delivered self-healing path, and a disagreement warning is acceptable and is not a fallback read.
+- The prior namespace's live occurrences are enumerable and small (five product files, one prompt file, seven script files, thirteen documents), so a declared-site allowlist is tractable rather than a blanket prefix.
+- The neutral scope `@delivery-os` and the repository name `agentic-delivery-os` are not product identifiers and must not be renamed (D1).
+- `install --migrate` never performed a working action in any released build, so replacing it with a verb breaks no working operator expectation.
+- A pre-freeze environment variable is only meaningful to the configuration layer when its mapped name is a declared catalog key; every other name was already either ignored or a hard failure.
+- The install family's admission gates are the right gates for the migration because TDR-0046 names the migration path explicitly.
+- Tests may not touch the real operator home; every case runs over injected facts or a scratch root.
+
+## 13. DEPENDENCIES
+
+| Direction | Item | Notes |
+|-----------|------|-------|
+| Depends on | The branding seam and its single resolver | Consumed unchanged: `configDirectoryName`, `stateDirectoryName`, `environmentPrefix`, `installPath`, and the prior identity derivation |
+| Depends on | The two declared CLI bins and the launcher composition | Consumed unchanged except the override-name derivation; the alias stays declared |
+| Depends on | The configuration layer and its prior-identity fallback | Path and per-layer ordering unchanged; the notice gains one reason and one loaded-path guarantee |
+| Depends on | The two-layer state scope | Consumed unchanged; its prior-default-root selection is what the migration retires on a migrated host |
+| Depends on | The `install` lifecycle family | Admission, daemon guard, dry-run discipline, and typed refusals are reused; the family gains one verb and loses one flag form |
+| Depends on | The legacy compatibility adapter and the configuration catalog | The mapping rule reads the catalog's declared keys; the adapter's one-warning discipline is unchanged |
+| Depends on | The forbidden-literal scan, its registry, and its CI job | Extended, not replaced; the exact-shape validation is widened deliberately and reviewed |
+| Depends on | The ignore-rule hygiene check | Gains the runtime-written-project-file coverage class |
+| Depends on | CI topology and bindingness checks | The new tree-arm job is declared and cannot be advisory or bypassable |
+| Depends on | The help inventory and reference-page coverage | One subcommand help entry on the existing family page; no inventory or coverage-fixture change |
+| Blocks | The shim-removal release | The alias, the prior read, and the prior override cannot be removed until this declaration exists |
+| Related | M4-S8 (dogfood and thin wrappers) | Owns re-pointing the shell fallback's prior-root defaults (DEC-13); GH-352's task list carries the obligation, recorded there by PM |
+| Related | The GH-171 lineage (pre-freeze adapter) | Owns `ADOS_`/`.ados` retirement; this change only bounds the mapping |
+
+## 14. OPEN QUESTIONS
+
+Two questions were raised and both are now resolved by the decisions in section 15 (DEC-12, DEC-13). Neither ever blocked an acceptance criterion: every criterion in section 17 was decidable before the rulings, and both questions concern a **consequence** that the deliverable ships with as declared. They stay on the record because the ruling, not the question, is what a later reader needs.
+
+| ID | Question | Context | Status |
+|----|----------|---------|--------|
+| OQ-1 | Does making `<repo>/<configDirectoryName>/projects.yaml` operator-local and git-ignored retire the cross-checkout group declaration that the ceremony mirror and the project-group reads rely on today? | The owner text is explicit that `projects.yaml` is an operator-local overlay with a declared git-ignored home, and the file holds absolute local checkout roots, so it cannot usefully be committed as-is. Two current-truth statements still describe it as project-committed (`feature-project-groups.md`, `feature-ceremony-runner.md`), and the ceremony mirror resolves its target set from another checkout's members. Options: (a) accept the declared degradation (a target checkout declares its own local document; the mirror's target set degrades declaredly when absent) and reconcile the two pages in phase 7; (b) add a tracked template separately and keep the live document local. | **Resolved — option (a); see DEC-12 and TDR-0074.** The document is an operator-local, git-ignored overlay; the mirror's target set is the invoking checkout's own declaration, an absent document is the declared empty target set, and no tracked template lands. AC-F1-3, AC-F2-4, and every other criterion hold unchanged. |
+| OQ-2 | After a migration, do the shell fallback's hardcoded prior-root defaults get re-pointed in this change or in M4-S8? | `scripts/lib/dispatch-authority.sh` defaults its home authority root to `${HOME}/.delivery-os`, and `scripts/hooks/pre-opencode-iteration-owner-hold.sh` reads `${HOME}/.delivery-os-state/owner-hold`. After a migration, both would create or read a fresh prior root, so an operator who migrates and then uses the shell fallback silently gets a second, empty namespace. The PM constraint forbids retiring or re-pointing the shell entry points in this change, and M4-S8 owns thin wrappers, so the two constraints do not decide it. | **Resolved — defer to M4-S8 (GH-352); DEC-13.** The two literals are different defect kinds: `${HOME}/.delivery-os` is a **configuration** root where the typed host root is the **state** root, so it is wrong before and after the migration for different reasons, while `${HOME}/.delivery-os-state/owner-hold` is correct before the migration and wrong after it. The fix is the delivered current-else-prior selection rule, not a literal swap — a swap regresses every unmigrated host — so no shell prior-root literal is re-pointed here. No criterion depends on the answer. |
+
+## 15. DECISION LOG
+
+| ID | Decision | Rationale | Date |
+|----|----------|-----------|------|
+| DEC-1 | **The committed layer moves, byte-identically, and the prior root empties.** `.delivery-os/config.yaml` → `.jaiship/config.yaml` with identical bytes; no tracked path remains under `.delivery-os/`; the ignore rules gain the brand-free `.*/projects.yaml` beside the delivered `.*/config.local.yaml`; the change never depends on `.git/info/exclude`. | The owner's finding is that committed truth is what a fresh clone resolves, and a local symlink is both invisible and a `git add -A` hazard. Byte identity is required because the document is live policy (`verify.suite-map`, `provider`), not a sample. Brand-free patterns preserve the rename-survival property the ignore check already asserts. | 2026-11-21 |
+| DEC-2 | **One authoritative root; the prior root stays a declared read-only fallback.** The current root wins whenever it exists; the prior file is read only when the current is absent; every notice names the current path as the target and the prior as not used; a migrated host emits no notice. Project-local overlays (`config.local.yaml`, `projects.yaml`) live under the current root and are ignored. | The owner requires the current root to be the single authority and no fallback notice on a migrated host. Removing the fallback outright would break the very machines the migration has not yet visited, which is the audience this shim exists for (D2). | 2026-11-21 |
+| DEC-3 | **The migration is a verb in the `install` family (`install migrate`), and `install --migrate` is retired as a recognised refusable form.** | The ticket and M4-S2 both name a *migration command*; the operation has preconditions (daemon stopped, both roots present, a backup destination) and effects (a directory move) that are not install-transaction concerns; it must be runnable on an already-installed host without re-installing; and the family's verb idiom is subcommand-shaped. The old flag never performed an action, so retiring it with a remedy breaks nothing, and keeping two entry points to one move would duplicate the contract that must stay in sync (dry-run, backup, precedence, verdict). The delivered `--dry-run`, daemon guard, and admission rules are reused because TDR-0046 binds the migration path to them. | 2026-11-21 |
+| DEC-4 | **Entries, not roots, are the migration unit; the current side always wins; no difference is ever deleted.** The per-entry decision table (DM-6) governs; the derived set (today `host-index.json`) is destination-wins; identical duplicates are reported and retained; differing entries are conflicts that fail the run and are retained on both sides. | The realistic machine already has the destination root (the artifact is installed there), so a whole-root "both present ⇒ skip" rule would make the primary case unmigratable. Deleting a difference to "finish" the move is the one unrecoverable failure; retaining it costs a warning and a manual decision. | 2026-11-21 |
+| DEC-5 | **The move is byte-preserving and re-versions nothing; the host index is not rewritten.** Every moved file's digest is verified; no header, record, or format identifier changes; the derived host index heals through its delivered re-derivation. | TDR-0047 fixes the state-format contract and names M4-S2 as the change that moves roots without re-versioning them. Rewriting a derived cache inside a move would be a second, unreviewed mutation. | 2026-11-21 |
+| DEC-6 | **The shim registry is the single authority for the prior namespace, and the conformance scan consumes it.** `scripts/checks/namespace-shims.registry.json` declares every shim, site, notice, window, and removal release; the forbidden-literal registry declares the seeds, scope classes, neutral sites, and declared corpora and points at the shim registry for sites; both directions fail closed. | D2 and D4 require declaration and enforcement. Two independent allowlists would drift; one authority read by the gate makes "declared" and "allowed" the same fact. The two lineages (`delivery-os`, pre-freeze) are separated so one removal schedule cannot be read onto the other. | 2026-11-21 |
+| DEC-7 | **The conformance scan has two arms and one gate posture.** The content arm extends the delivered scan with a prior-namespace seed class over six of seven scope classes and two new scope classes (`.opencode`, `scripts`+`tools`); the tree arm is a new sibling check for tracked-path and symlink properties; both join `pnpm check` and both are CI-bound, with the tree arm declared through the CI-topology check. | Content seeds cannot see a tracked path or a symlink target, and a tree invariant cannot see a string inside a file: the owner's negative control needs both. Reusing the delivered matching, listing, registry-validation, and baseline machinery avoids a second scanner with its own semantics. The tree arm is separate because a path rule reported as a "forbidden literal" would be mislabelled. | 2026-11-21 |
+| DEC-8 | **The override channel becomes identity-derived; the prior literal is a declared lower-precedence shim; the MCP default becomes the current identity.** `<environmentPrefix>WORKING_NAME` is the channel; `DELIVERY_OS_WORKING_NAME` is read only when the current one is absent, with one `override-read` notice; no silent fallback from an invalid override. | D2 schedules the prior literal's removal, and a channel with no successor would vanish with it. A composed surface with no configured name must not resolve prior-identity directories, which is the "fresh install creates only Jaiship paths" clause applied to MCP. | 2026-11-21 |
+| DEC-9 | **The pre-freeze environment mapping is bounded to declared catalog keys.** `ADOS_<suffix>` maps only when `<currentPrefix><suffix>` is a declared catalog key; every other legacy name is left untouched and is neither an error nor a value; current-prefix strictness is unchanged. | The owner reproduced a total configuration failure with eight pre-freeze variables present. Mapping a name that is not a key can never succeed, so the mapping rule and resolvability must be the same rule. Leaving the rest untouched also means an operator's unrelated `ADOS_*` tooling variables stop breaking the product. | 2026-11-21 |
+| DEC-10 | **`install.migration.unavailable` is retired; negative migration verdicts are data.** Zero new error identities; every failure maps onto a delivered identity (DM-8). | Migration is delivered, so the delegation refusal can never be raised again; a row that cannot be raised violates the table's totality and misleads an operator who greps for it. A conflict is an outcome of a successful plan, not a failure of the program, so it belongs in the verdict vocabulary at exit 1 rather than in a new code. | 2026-11-21 |
+| DEC-11 | **The scope of this change is the namespace, not the shell or the prompts.** No shell entry point is edited or re-pointed; no prompt workflow is rewritten; the prompt surface change is one routing-authority sentence naming the current path plus its regenerated projection. | The owner's binding items name the committed layer, the authoritative root, the shims, and the scan — not the shell. M4-S8 owns the wrapper cutover, F5 owns prompt re-pointing; conflating them would put an unbounded shell rewrite inside an identity story. | 2026-11-21 |
+| DEC-12 | **The project-groups document is an operator-local, git-ignored overlay; the ceremony mirror's target set is declaration-only.** The document keeps its path (`<repo>/<configDirectoryName>/projects.yaml`) and schema (`delivery.projects.groups.v1`), is covered by the brand-free ignore rule and the tree arm, is authored by the operator, and is never tracked and never a member of the ranked configuration stack. The mirror composes its target set from **the invoking checkout's own** document and nothing else: an absent document, a zero-group document, or a member with no declared local checkout root is the delivered declared degradation (empty target set / `absent`); no checkout reads another checkout's document (no federation); and no tracked template (`.example`, `projects init`, or generation path) lands in this change. | The owner's binding requirement names both local overlays as having a declared, git-ignored home (D2); the document's member selectors are absolute local checkout roots, so a committed live document would publish one machine's filesystem layout and declare paths that do not exist in another clone (C-3 of TDR-0074); and the fresh-clone rule forbids tracking a document any write dirties. Today's file is already untracked, so the ruling corrects a **documentation** claim and a disposition, not a behaviour; the delivered mirror contract already declares absence as a degradation, which is why no reader, validator, envelope, seed, site, or corpus changes. Recorded as TDR-0074. | 2026-11-21 |
+| DEC-13 | **No shell prior-root literal is re-pointed in this change; the wrapper cutover owns them.** `scripts/lib/dispatch-authority.sh` keeps `${HOME}/.delivery-os` and `scripts/hooks/pre-opencode-iteration-owner-hold.sh` keeps `${HOME}/.delivery-os-state/owner-hold`, both as declared sites with occurrence budgets; their batteries keep asserting the current literals. (i) **Path and root-kind analysis:** the first is a **configuration** root used where the typed host root is the **state** root, so it is not a one-token rename of a current default — it is wrong before *and* after the migration, for different reasons; the second is the example hook's own marker default, which is correct **before** the migration and wrong **after** it. (ii) **Prescription:** M4-S8 (GH-352) implements the delivered current-else-prior selection rule — current host root when it exists, prior root only when it does not — and must not perform a string swap, because a swap would regress every unmigrated host. (iii) **Operator remediation until the cutover:** the shell fallback's own declared override is pointed at the current host root, and the example hook is used per its own header's marker-path default; the migration guide carries both sentences. | The PM constraint forbids editing or re-pointing the shell surface in this change (NG-4, DEC-11), and M4-S8 owns the wrapper cutover, so the obligation has a named owner rather than an open question. Declaring the sites now keeps the conformance scan truthful (a declaration, not a regression) and makes the residual risk bounded and visible instead of silent. The two literals cannot share one mechanical fix, which is exactly why the ruling records the fix shape rather than swapping strings. | 2026-11-21 |
+
+### 15.1 Decision records
+
+| DEC | Decision record | Status |
+|-----|-----------------|--------|
+| DEC-1…DEC-11, DEC-13 | No new decision record is authored by this change. | The decisions above are change-local: each fixes a disposition, a surface, or an allowlist shape over already-delivered contracts (ADR-0003 C-3/DEC-4/DEC-8 naming firewall, TDR-0044 install family, TDR-0046 admission rule, TDR-0047 state-format compatibility, TDR-0022 state scope), and none sets a new architectural precedent. DEC-3 and DEC-8 touch delivered contracts but only as their own next step, which those records already anticipate ("M4-S2 owns the move"; "the prior identity's environment names are never read"). DEC-13 is a deferral with a named owner and a recorded fix shape, which its owning change (M4-S8/GH-352) carries. If PM or the reviewer judges DEC-3 or DEC-6 precedent-setting, a TDR is authored before delivery planning; the spec's criteria do not depend on which record type carries the reasoning. `@decision-advisor` is the authoring owner. |
+| DEC-12 | TDR-0074 — *The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only* | Recorded as TDR-0074, status **Proposed**; owner acceptance is the GH-365 pull-request review, where its status moves from `Proposed` rather than in a delivery commit. |
+
+## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
+
+Composition map — what is added or moved, and what is deliberately untouched.
+
+| Component / module | Impact |
+|---|---|
+| `packages/core/src/domain/install-migration.ts` | Extended: the prior-namespace declaration becomes the root set for the plan; the advisory and delegation sentence are replaced by plan and apply seams (today's exports stay as the detection surface) |
+| Migration domain modules (new) | New: the per-entry decision table, the plan builder, the manifest writer/reader, the digest verification, and the byte-preserving apply step |
+| `packages/cli/src/commands/install.ts` | Extended: the `migrate` verb handler, `--backup-dir`, the last-install-time detection advisory, and the recognised-and-refused `--migrate` form |
+| `packages/cli/src/production.ts` | Extended: the migration runtime (three roots, injected filesystem, clock, daemon guard and stop path, backup root) composed from the delivered install runtime |
+| `packages/core/src/contracts/install.ts` | Extended: the `install.migration.v1` payload and manifest types, the closed disposition/verdict vocabularies, the verb set; `INSTALL_DOMAIN_CODES` loses `install.migration.unavailable` (11 → 10) |
+| `packages/core/src/contracts/error-table.ts` | Updated: the `install.migration.unavailable` row is removed; no row is added or reworded |
+| `packages/cli/src/help.ts` | Extended: one `["install","migrate"]` entry on the existing M4 page, the flag list, and the retirement note for `--migrate` |
+| `packages/adapters/src/legacy/index.ts` | Updated: the mapping rule becomes catalog-key-bounded; the one-warning discipline and the notice wording are unchanged |
+| `packages/cli/src/edge.ts`, `packages/cli/src/entrypoint.ts`, `packages/cli/src/bin-launcher.ts` | Updated: the override name derives from `environmentPrefix`; the prior literal is read as a declared fallback with the `override-read` notice; the legacy mapping receives the declared key set |
+| `packages/mcp/src/serve.ts` | Updated: the declared default working name becomes the current identity; the override name derives |
+| `packages/cli/bin/jaiship.ts`, `packages/cli/bin/delivery-os.ts` | **Unchanged in behaviour**: the primary bin keeps its declared prior identity; the alias keeps its declared identity. Both remain declared shim sites |
+| `packages/core/src/branding/index.ts`, `packages/adapters/src/file/config-source.ts`, `packages/core/src/app/state-scope.ts` | **Unchanged** — derivation rules, per-layer prior ordering, and host-root selection keep their delivered semantics |
+| `scripts/checks/namespace-shims.registry.json` | New: the shim authority (DM-3) |
+| `scripts/checks/forbidden-literals.registry.json` | Extended: `priorNamespace` seeds, `scopeSelection`, `neutralSites`, `declaredCorpora`, the shim-registry pointer, and two new scope classes (`promptSurface`, `scriptSurface`); `seedLiterals`, the five delivered classes, and the delivered allowlist keep their behaviour |
+| `scripts/checks/forbidden-literals.ts` | Extended: the per-class seed mapping, the prior-namespace matcher with its two structural exclusions, the shim-registry load and the both-directions site reconciliation; the delivered DEC-8 path is unchanged |
+| `scripts/checks/namespace-tree.ts` | New: the tracked-path, symlink-target, committed-layer, and ignore-probe arm |
+| `scripts/checks/ignore-rules.ts` | Extended: the runtime-written-project-file coverage class and the two new rule-world probes plus their positive control |
+| `scripts/checks/ci-topology.ts`, `.github/workflows/ci.yml` | Extended: the new tree-arm `ts-*` job with the baseline-fetch obligation; the content arm keeps `ts-forbidden-literals` |
+| `package.json` | Extended: `check:namespace-tree` joins the aggregate check |
+| `.gitignore` | Extended: `.*/projects.yaml` |
+| `tests/behaviour/install-migrate.test.ts` | New: plan, moves, precedence, conflicts, backup, recovery, idempotence, verdicts, guards |
+| `tests/checks/namespace-conformance.test.ts` | New: per-class mutations, both-directions site reconciliation, the two negative controls, the neutral-scope cases, and the declared-corpora cases |
+| `tests/structure/namespace-shims-registry.test.ts` | New: registry shape, window resolvability and ordering, site presence, no wildcard |
+| `tests/checks/install-lifecycle-path.test.ts` | Updated: the delegation-refusal case is replaced by the verb cases and the recognised `--migrate` refusal |
+| `tests/checks/install-lifecycle-docs.test.ts` | Updated: `install.migration.unavailable` leaves the guide's required-fact set; the migration facts enter it |
+| `tests/behaviour/install-family-surface.test.ts` | Updated: the family's verb set and flag set |
+| `packages/adapters/src/file/decision-register.ts` | **Comment-only**: the mirror's source/target sentences name the invoking checkout's local group document rather than a project-committed `projects.yaml`; no read, validation, or composition changes (DEC-12) |
+| `tests/checks/forbidden-literals.test.ts` | Updated: the exact-shape assertions for the widened registry and the new class mutations |
+| `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/config-cli.test.ts` | Updated: the catalog-key-bounded mapping, the eight owner-named variables, and the inert `ADOS_FOO` fixture |
+| `tests/behaviour/identity-override.test.ts`, `tests/structure/entrypoint-bin.test.ts`, `tests/behaviour/prior-identity-notice.test.ts`, `tests/behaviour/prior-identity-config-fallback.test.ts`, `tests/behaviour/prior-identity-state-fallback.test.ts`, `tests/checks/prior-identity-hermetic.test.ts`, `tests/structure/state-scope.test.ts` | Updated: the derived override name, the `override-read` reason, and the loaded-path facts |
+| `tests/structure/cross-repository-contract.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/fixtures/result/code-corpora/true-positives.json` | Updated: the install domain at ten identities and the retired code removed from the corpora |
+| `tests/structure/inventory.json` | Updated: every new module registered |
+| `tests/structure/rename-drill-doc.test.ts`, `tests/checks/prompt-conformance` surface | Verify only: the drill's config-glob survival property and the prompt-conformance scan must stay green with the additive ignore pattern and the one prompt sentence |
+| `doc/guides/local-install.md` | Updated: the migration section replaces the hand-performed move; the notice and disposition facts |
+| `doc/spec/features/feature-install-lifecycle.md` | Updated: the verb, the backup, the verdicts, the admission reuse, and the ten-identity domain |
+| `doc/spec/features/feature-branding-seam.md` | Updated: the shim registry, the prior-namespace scan class, the override channel, the MCP default, and the declared literal sites |
+| `doc/spec/features/feature-cli-entrypoint.md` | Updated: the override name and precedence, the alias's declaration, the `install migrate` subcommand |
+| `doc/spec/features/feature-config-layer.md` | Updated: the authoritative path, the loaded-path guarantee, the bounded legacy mapping |
+| `doc/spec/features/feature-projects.md`, `doc/spec/features/feature-project-groups.md` | Updated: the host index's post-move re-derivation; the group document's **operator-local overlay** disposition (absolute local roots stay local, absent ⇒ the delivered empty listing) and the declared degradation of the mirror's target set (DEC-12) |
+| `doc/spec/features/feature-ceremony-runner.md` | Updated: the mirror's target-set sentence names the **invoking checkout's own** local document — absent ⇒ the declared empty target set — instead of a project-committed `projects.yaml` (DEC-12) |
+| `doc/spec/features/feature-state-layer.md` | Updated: the state-root move, byte preservation, and the unchanged header/format contract |
+| `doc/spec/features/feature-mcp-surface.md` | Updated: the MCP composition's current-identity default |
+| `doc/spec/features/feature-autonomous-delivery.md`, `doc/quality/test-specs/test-spec-autonomous-delivery.md` | Updated: the owner-hold environment names are the example hook's declared `prior-environment-prefix` shim (`DELIVERY_OS_`, read-only) rather than the current brand's name; the current names derive from the resolved prefix |
+| `doc/spec/features/feature-result-contract.md` | Updated: the install domain at ten identities with the retirement stated |
+| `doc/overview/glossary.md` | Updated: namespace migration, shim registry, disposition, verdict, declared site, authoritative root |
+| `doc/planning/oss-tooling/milestones/m4/commands/install.md` | Updated: the verb, its flags, its verdicts, the remedies, and the retired flag form |
+| `doc/planning/oss-tooling/milestones/m4/install-model.md`, `backlog.md`, `schedule.md` | Updated: M4-S2 ownership discharged; the migration is delivered by this change |
+| `doc/guides/opencode-model-configuration.md`, `doc/guides/provider-conditions-and-parks.md`, `doc/guides/ceremony-runner.md`, `doc/guides/delivery-modes.md` | Updated: the current configuration path; the prior name leaves the brand-neutral example; the ceremony guide's composed-landing paragraph names the invoking checkout's own local group document and the declared empty target set (DEC-12); the delivery-modes owner-hold names are the declared `prior-environment-prefix` shim (DEC-13) |
+| `doc/quality/test-specs/test-spec-namespace-conformance.md` | New: the enduring test specification for both scan arms and the migration battery, with the proof boundary |
+| `.opencode/agent/toolsmith.md` and the regenerated `.ados-claude/agents/toolsmith.md` | Updated: the routing-authority sentence names `.jaiship/config.yaml` |
+| `scripts/**`, `tests/**` prior-namespace occurrences — including `scripts/lib/dispatch-authority.sh`, `scripts/hooks/pre-opencode-iteration-owner-hold.sh`, and those two scripts' batteries | **Unchanged content**, declared sites with occurrence budgets (DEC-13); the two shell batteries keep asserting the current literals |
+| Coordinator, dispatch, daemon, queue, loop, provider, merge, closeout modules | **Unchanged** |
+
+## 17. ACCEPTANCE CRITERIA
+
+Every criterion names the class of proof that closes it: **behaviour** (a command or composition driven over injected filesystem/home facts or a scratch root), **checks** (a gate or mutation battery), **structure** (a source, contract, or registry invariant), **doc** (a page's required-fact battery), **aggregate** (`pnpm check`).
+
+### 17.1 The committed project layer (F-1)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F1-1 | **Given** the change head, **when** the tracked set is read, **then** `git ls-files .jaiship/config.yaml` is exactly that path and the blob is byte-identical to the pre-move blob, **and** `git ls-files .delivery-os` is empty (no tracked path under the prior root). | structure: one assertion per clause over `git ls-files` plus a blob-digest comparison against the recorded pre-move blob. | F-1, DM-1 |
+| AC-F1-2 | **Given** the change head, **when** the tree arm runs, **then** it reports zero tracked paths under any declared prior-namespace root prefix and zero tracked symlinks whose target resolves into one, and it names the committed layer as present. | checks: the tree arm over the real tree; two synthetic trees (tracked prior path; `configDirectoryName -> prior root` symlink) each fail by name. | F-1, F-5, DM-2 |
+| AC-F1-3 | **Given** a freshly cloned scratch repository at the change head with **no** local exclude file, **when** the normal runtime write set is seeded (`.jaiship/config.local.yaml`, `.jaiship/projects.yaml`) and `git status --porcelain` is read, **then** it reports zero lines, the tracked `config.yaml` is present and not ignored, and both patterns are brand-free and root-anchored (a nested `packages/x/projects.yaml` is not matched). | behaviour: a scratch clone plus a rule-world `git check-ignore` probe set (two runtime paths ignored, the tracked path not ignored, a nested path not matched, synthetic brand names matched by the same globs). | F-1, DM-2, NFR-5 |
+| AC-F1-4 | **Given** any composed invocation on a migrated checkout, **when** it resolves the project configuration, **then** the loaded file is `<repo>/.jaiship/config.yaml`, the suite map it declares is the one the verify gate reads, and no prior-root path is opened. | behaviour: a composed read over a scratch checkout whose current layer holds the moved document, asserting the reported origin path and the resolved suite map, with an injected filesystem that records every opened path. | F-1, F-2, DM-1 |
+
+### 17.2 The authoritative root and the bounded prior read (F-2)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F2-1 | **Given** both the current and the prior configuration file exist, **when** a composed invocation resolves configuration, **then** the current file is the loaded file, the prior file is reported as **not used**, and the notice — if any is emitted — names the current path as the target with the prior path as not read. | behaviour: the delivered fallback battery extended with a both-present case asserting the loaded file, the skip reason, and the notice text against a golden line. | F-2, API-4 |
+| AC-F2-2 | **Given** a migrated checkout and a migrated host (no prior root present), **when** any composed invocation runs in human and in `--json` mode, **then** zero `prior-identity-fallback` lines are emitted, the machine payload is unchanged, and the exit code is the command's own. | behaviour: two modes × three representative commands, asserting zero notice lines and a clean payload. | F-2, API-4, NFR-7 |
+| AC-F2-3 | **Given** the current configuration file is absent and the prior one is present, **when** a composed invocation resolves configuration, **then** exactly one `config-read` line is emitted naming both paths, the prior file's values carry its own path as their origin, and nothing is written to the prior root. | behaviour: the delivered prior-read battery, asserting one notice, the origin path, and a zero-write assertion on the prior tree. | F-2, API-4 |
+| AC-F2-4 | **Given** `<repo>/.jaiship/config.local.yaml` exists, **when** configuration resolves in normal mode and under `CI=true`, **then** the overlay is read as the project-local layer in normal mode and reported `ci-disabled` with no read under CI; **and given** `<repo>/.jaiship/projects.yaml` exists, **then** the group document resolves from that path and its absence is the empty listing; **and** neither file is tracked, **and** no tracked file matches `<configDirectoryName>/projects.yaml.*` (no template). | behaviour: the delivered layer battery for the overlay, plus a group-document read from the current path and tracked-set assertions. | F-2, DM-1, OQ-1, DEC-12, TDR-0074 |
+
+### 17.3 The migration command (F-3)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F3-1 | **Given** the migration verb, **when** it is invoked with a declared flag set it performs the declared effect; **when** it is invoked with an undeclared flag, a relative `--backup-dir`, or a `--backup-dir` inside a source root it is refused (`fallback.invocation`, `input.value.rejected`) at exit 1; **when** the alias invokes it, it is refused `install.identity.not-owning`; **when** the running artifact carries no injected identity it is refused `install.dev-build`; **when** the target is a linked worktree it is refused `install.target.worktree`; **when** a daemon is live without `--stop-daemon` it is refused `install.daemon.running`, and with the flag the daemon is stopped before the first move and not restarted. | behaviour: one case per arm, asserting exit, identity, the daemon ordering observation, and a zero-write assertion on every refusal. | F-3, API-1, DM-8 |
+| AC-F3-2 | **Given** any machine state, **when** `install migrate --dry-run` runs, **then** it prints one header per root class and one line per entry with the absolute path, disposition, file count, and byte count, plus the backup path that would be created and `daemon: unchecked`; it writes nothing, creates no directory (including no backup directory), reads no daemon, appends no record, and never answers `install.daemon.running`; two runs of the same state produce identical output. | behaviour: a dry-run over a seeded scratch home and checkout, with a counting filesystem double, a refusing daemon port, and a canonicalised double-run comparison. | F-3, API-2, NFR-1, NFR-2 |
+| AC-F3-3 | **Given** the three root classes present with no destination conflicts, **when** `install migrate` runs, **then** every planned entry is moved, every moved file's digest equals its pre-move digest, the source entries are gone, every emptied source root is reported as retired, the backup directory exists with `manifest.json` covering every moved file and byte-identical copies, the verdict is `migrated`, and the exit is 0. | behaviour: a seeded scratch home and checkout migrated end to end, asserting the manifest, the digests, the retired roots, the verdict, and the exit. | F-3, API-2, DM-5, DM-6, NFR-3 |
+| AC-F3-4 | **Given** a completed migration, **when** the command runs a second time, **then** it moves 0 files, creates 0 backup directories, reports `already-migrated`, exits 0, and both roots are byte-identical to their post-first-run state. | behaviour: the second run immediately after AC-F3-3's case, asserting the verdict, the zero counts, and the byte-identity. | F-3, NFR-4 |
+| AC-F3-5 | **Given** a destination that already holds entries, **when** the command runs, **then** source-only entries are `moved`, byte-identical duplicates are `duplicate-identical` and retained on both sides, differing entries are `conflict` and retained on both sides, a declared derived entry (`host-index.json`) is destination-wins and reported without a conflict, the run verdict is `partial` or `conflict` with exit 1, and no differing byte is deleted or overwritten. | behaviour: one case per DM-6 row plus a mixed case asserting the verdict and a byte-level before/after comparison of both trees. | F-3, DM-6, NFR-3 |
+| AC-F3-6 | **Given** an injected failure after *k* of *n* planned moves, **when** the run ends, **then** the *n−k* unmoved entries are intact in the source, the backup is complete for all *n* planned entries, the payload names the moved and unmoved sets and the backup path, the exit is 1 with verdict `blocked` or `partial`, and a subsequent run completes the remainder without duplicating a moved entry. | behaviour: a failing-filesystem double injected at a fixed ordinal, then the recovery run; asserting the residual set, the manifest completeness, and the final `already-migrated`. | F-3, NFR-4, DM-5 |
+| AC-F3-7 | **Given** a seeded host state root with ledger headers and records, **when** the migration moves it, **then** every `header.<workspace>.json` file is byte-identical afterwards, the recorded format identifier is unchanged, no record payload is re-serialised, `install status` reports the same compatibility verdict as before the move, and the artifact's accepted state format is unchanged. | behaviour: a before/after digest comparison of every header and record file, plus the delivered `install status` verdict read before and after; structure: the accepted-format constant is unchanged in the diff. | F-3, DM-7, NFR-3, NFR-8 |
+| AC-F3-8 | **Given** a migrated host root, **when** a store-opening invocation runs and `repos list`/`projects list` are read, **then** every reported state location is under the new host root, no read targets the prior root, and the index disagreement appears as the delivered warning without redirecting a read. | behaviour: the delivered host-index battery over a seeded migrated root, asserting the locations, the absence of prior-root opens (injected filesystem recorder), and the warning. | F-3, DM-7 |
+
+### 17.4 The declared shims (F-4)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F4-1 | **Given** the shim registry, **when** it is validated, **then** every shim has an id, kind, literal, direction, lineage, notice id and text, window, owner, and at least one non-wildcard site; ids are unique; every declared site exists in the tree; and `removalRelease` is strictly greater than `declaredIn` under semver for every delivery-os-lineage entry, with the pre-freeze lineage declaring `removalRelease: null` and its owner. | structure: the registry-shape battery plus the window-order and site-presence cases. | F-4, DM-3, NFR-6 |
+| AC-F4-2 | **Given** the scanned corpora, **when** the content arm runs, **then** every prior-namespace match lies inside a declared shim site, a declared corpus, or a neutral site, and every declared site is reported as present and matched at or below its occurrence budget; a new match outside a declared site fails by name, and a declared site that disappears fails by name. | checks: the both-directions reconciliation case plus one mutation per direction. | F-4, F-5, DM-3, NFR-6 |
+| AC-F4-3 | **Given** each declared read-only shim, **when** it is exercised, **then** it reads the prior namespace only at its declared site, emits exactly one bounded notice per process per source kind, never writes to a prior root, and the notice never enters a payload or changes an exit code. | behaviour: one case per shim (prior config, prior state root, prior override) with a write-recording filesystem double and a golden notice line. | F-4, API-4, NFR-7 |
+| AC-F4-4 | **Given** the compatibility alias, **when** it invokes a lifecycle entry point including `install migrate`, **then** it refuses with `install.identity.not-owning` at exit 1 and writes nothing; **and** its `--help` carries the declared deprecation sentence naming the removal release; **and** its machine payloads and `--version` are byte-unchanged. | behaviour: the delivered alias battery extended with the migrate verb, plus a doc case over the alias `--help` text. | F-4, API-1, DM-3 |
+
+### 17.5 The namespace conformance scan (F-5)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F5-1 | **Given** a new prior-namespace path or environment identifier in `packages/**`, `.opencode/**`, `scripts/**`, `tools/**`, a root manifest, `.gitignore`, or a registered doc — or a new product-identifier use of the prior executable token in `packages/**`, `.opencode/**`, `scripts/**`, or `tools/**` — **when** the content arm runs, **then** it exits 1 naming the file, the line, and the token; and one planted occurrence per class that carries the prior-namespace seed class fails by name (six classes), while the class that does not carry it stays green for that seed and fails for its DEC-8 seed. | checks: one mutation per prior-namespace-carrying class, one control for the non-carrying class, and the real-tree green run. | F-5, DM-4, NFR-5 |
+| AC-F5-2 | **Given** a line containing `@delivery-os/core`, `agentic-delivery-os`, and a line containing a product-identifier use of the prior executable token, **when** the prior-namespace matcher runs, **then** the first two do not match and the third does; the root manifest's private name is a declared neutral site that does not fail; a new unscoped package name equal to the prior token fails. | checks: the neutral-scope case set with positive and negative controls. | F-5, DM-4 |
+| AC-F5-3 | **Given** the repository tree, **when** the tree arm runs, **then** it reports zero tracked paths under a prior root, zero symlinks into one, the committed layer present, and the runtime-written project files ignored by the repository's own rules; a tracked `.jaiship/projects.yaml` fails by name. | checks: the tree arm over the real tree plus the tracked-runtime-file mutation. | F-1, F-5, DM-2 |
+| AC-F5-4 | **Given** a synthetic tree containing a tracked `.jaiship -> .delivery-os` symlink, **when** the tree arm runs, **then** it exits 1 naming the path and the target. | checks: negative-control case A. | F-5, F-1 |
+| AC-F5-5 | **Given** a synthetic tree containing a tracked file under `.delivery-os/`, **when** the tree arm runs, **then** it exits 1 naming the tracked path. | checks: negative-control case B. | F-5, F-1 |
+| AC-F5-6 | **Given** the repository, **when** the gates run, **then** both arms complete offline and deterministically within the declared bound, join `pnpm check`, and are CI-bound (the content arm keeps `ts-forbidden-literals`; the tree arm is declared by the CI-topology check with the baseline-fetch obligation), with the topology and bindingness checks rejecting an advisory job or a bypass construct. | checks: the aggregate gate, the CI-topology and bindingness checks, and two identical runs. | F-5, API-7, NFR-1, NFR-5 |
+
+### 17.6 Identity alignment (F-6)
+
+| ID | Criterion | Proof | Linked |
+|----|-----------|-------|--------|
+| AC-F6-1 | **Given** a clean home with no prior namespace, **when** each composed surface runs one representative command (including the MCP composition with no configured working name), **then** every created path is under `~/.jaiship/` or `~/.jaiship-state/`, zero prior-namespace paths are created, and the resolved identity is the current one. | behaviour: a scratch-home run per surface with an injected filesystem recording every created path. | F-6, DM-9, NFR-8 |
+| AC-F6-2 | **Given** the override channel, **when** both `<environmentPrefix>WORKING_NAME` and `DELIVERY_OS_WORKING_NAME` are non-empty, **then** the current one wins; **when** only the prior one is set, **then** it is used and exactly one `override-read` notice is emitted; **when** either is present but invalid, **then** the delivered containment (`fallback.internal`, exit 2) answers and no fallback to the other channel occurs. | behaviour: the delivered override battery extended with the three arms, asserting the resolved identity, the notice count, and the containment. | F-6, API-6, NFR-7 |
+| AC-F6-3 | **Given** a process environment carrying the eight owner-named pre-freeze variables, **when** each configuration-resolving command runs (including `provider resolve`, `provider profile resolve`, and `dispatch`'s pre-flight), **then** no command answers `config.environment.unmapped` and each behaves exactly as with the variables absent; **and given** `ADOS_FOO=bar`, **then** the run neither errors nor exposes `bar` as a configuration value. | behaviour: the legacy-adapter battery over an environment built from the eight variables plus the `ADOS_FOO` case, asserting exits, identities, and the resolved tree. | F-6, API-5, RSK-9 |
+| AC-F6-4 | **Given** the enumerated current-truth pages and the prompt surface, **when** they are read, **then** the routing-authority sentence names the current configuration path, every other prior-namespace mention on those pages is a declared compatibility mention or a declared corpus entry, the reference pages agree with `--help`, and the generated projection matches its source. | doc: the documented-fact battery over the enumerated pages plus the generated-projection currency case. | F-6, DM-9, NFR-9 |
+| AC-F6-5 | **Given** the branding structure guard, **when** it runs, **then** exactly the five declared product-surface literal sites are found and every found literal is declared (the alias default, the primary default, the primary prior identity, the MCP default now equal to the current identity, and the scope-org input), the build-side site is unchanged, no sixth site exists, and the override name is not a committed literal at any of them. | structure: the delivered inventory guard in both directions plus the override-literal absence case. | F-6, DM-9, NFR-8 |
+
+## 18. DEFINITION OF DONE
+
+The change is done only when every item below is observed, not merely asserted. Every acceptance criterion in section 17 is closed by a named case, and section 17 contains **31** criteria (4 + 4 + 8 + 4 + 6 + 5).
+
+| ID | Definition-of-Done item | How observed |
+|----|-------------------------|--------------|
+| DOD-1 | All 31 acceptance criteria are satisfied, each with its named evidence. | The test plan's traceability matrix maps every `AC-*` (31/31, reconciled against section 17) to its owning case; the DoD check confirms from the final aggregate-gate log that each owning case ran green. |
+| DOD-2 | The aggregate quality gate is green. | `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0; the captured log is attached to the change; no check is skipped, disabled, or made vacuous. |
+| DOD-3 | The branch-range commit-message gate is `PASS`. | The repository's range lint prints `PASS` over the change branch's own commits (not `SKIP`, not an unresolved `ERROR`), recorded as a pm-notes `notes:` entry. |
+| DOD-4 | The committed-layer claims are observed, not asserted. | `git ls-files .jaiship/config.yaml` is that one path; `git ls-files .delivery-os` is empty; the blob digest equals the recorded pre-move digest; the fresh-clone drill reports an empty `git status --porcelain` with the runtime write set seeded and no local exclude. |
+| DOD-5 | The migration is proven on a scratch machine, not on the operator's. | The migration battery runs over an injected or scratch home and checkout with zero real-home access; every case asserts its write set; a dry-run case asserts zero writes and zero directory creation. |
+| DOD-6 | The shim declaration is complete and reconciled. | The registry validates; every declared site is present; every scanned occurrence is inside a declared site, corpus, or neutral site; the both-directions mutation pair fails by name. |
+| DOD-7 | The scan fails on a new legacy identifier and allows the declared sites. | Seven per-class mutations fail by name; the two negative controls (reintroduced symlink, new file under the prior root) fail by name; the real tree is green; two runs are identical. |
+| DOD-8 | The contract-invariance claim is observed. | A contract diff shows 1 retired error identity and 0 added, 1 added subcommand and 1 retired flag form, 0 configuration-key changes, 0 record/schema/format-identifier changes, and the five declared literal sites unchanged in count; every delivered suite that pins a count passes at its new declared value. |
+| DOD-9 | Current-truth documentation is reconciled with no residual gap. | Every page named in Appendix A is updated in the documentation phase; the new quality test-specification page is registered with its distribution marker; the doc-distribution guard and `pnpm check:help` are green; the phase-7 stale-statement check is a grep over the reconciled page set for a prior configuration path or prefix presented as current, **and for `projects.yaml` presented as project-committed or committed**, reporting zero hits outside declared mentions and declared corpora. |
+| DOD-10 | The declared consequences are on the record rather than implicit. | The two resolved questions carry their resolution, their decision row (DEC-12, DEC-13), and their owner; the declared consequences (prose-scoped executable token; shell fallback prior-root defaults; the group document's declaration-only target set) appear in §8.5 rows and in the risks with their triggers; the shim registry names the removal release. |
+
+## 19. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
+
+- Delivered as one change on `feat/GH-365/jaiship-namespace-migration` targeting the tooling integration branch; merge authority stays outside this change.
+- Landed by outcome so each claim is proven with the evidence that depends on it: (1) the committed layer and the ignore rules; (2) the shim registry and its validation; (3) the prior-namespace seed class, the two scope classes, and the content arm; (4) the tree arm and its CI binding; (5) the migration domain and its battery; (6) the `install migrate` verb, the flag retirement, and the error-row retirement; (7) the loaded-path and notice guarantees; (8) the override channel, the MCP default, and the bounded legacy mapping; (9) the document, guide, and prompt updates; (10) the new quality page and the phase-7 reconciliation.
+- No feature flag. The migration is opt-in by invocation; the prior read stays; nothing forces an operator to migrate on upgrade, and a migrated host is strictly quieter than an unmigrated one.
+- Ordering constraint inside the change: the committed layer must move before the fresh-clone drill runs, and the shim registry must exist before the content arm consumes it, so the battery cannot pass by an empty allowlist.
+- Release impact is a minor version change for a pre-1.0 CLI: one new subcommand, one retired flag form, one retired error identity, and a path and identifier alignment. No record, schema, or configuration-key change.
+- Communication targets the configuration, install, state, conformance, and prompt owners. Reviewers should read DEC-3 and DEC-6 first: they decide the surface and the authority.
+
+## 20. DATA MIGRATION / SEEDING (IF APPLICABLE)
+
+This section is the change's own data story, and it is the reason the change exists.
+
+- **In-repository:** one tracked file moves, byte-identically. No content migration, no re-formatting, no key rewrite. The moved document remains the live `verify.suite-map` and provider policy, so a content edit would be an unrelated change.
+- **On an operator machine:** the `install migrate` verb moves the three root classes by entry, under DEC-4. The move is byte-preserving (DEC-5): no record is rewritten, no header changes, no format identifier moves, and no data is backfilled. Stored state that the product already reads by key needs no path repair; the host index is re-derived by its delivered maintenance.
+- **Precedence and conflicts:** the current side wins; a differing entry is retained on both sides and reported; an identical duplicate is retained; the derived entry set is destination-wins. Nothing is merged.
+- **Reversibility:** the backup is a complete copy of every moved entry with a digest manifest, so a move is reversible by hand without trusting the tool. The tool itself performs no automatic reversal, and the reference page states the manual reversal.
+- **Fresh install:** nothing to seed. A clean home creates only current-namespace paths (AC-F6-1), and no seeded default differs from the shipped defaults.
+- **No backfill container:** no state record, capsule candidate, or event is written by the migration, so there is no new data to reconcile in phase 7.
+
+## 21. PRIVACY / COMPLIANCE REVIEW
+
+- No personal data is introduced. The migration handles configuration and delivery state that already exists on the operator's machine; it copies and moves bytes and writes file names and digests.
+- **The group document's absolute local roots are never committed.** `<repo>/<configDirectoryName>/projects.yaml` is an operator-local, git-ignored overlay whose members are paths on one machine, so no checkout publishes another operator's filesystem layout and no per-machine fact becomes a merge surface (DEC-12, TDR-0074).
+- The manifest holds relative paths, sizes, and digests — no file contents, no record payloads, no configuration values, no environment values, and no credential. The backup holds the operator's own bytes in the operator's own home, which is the point of a backup.
+- Notices are bounded and identifier-only: they name a source kind and the two paths involved, never a value. A notice never enters a machine payload.
+- No telemetry flow is added; the command audit ledger's entry is the delivered one.
+- The repository-side change removes no licence header and adds none; the one new `doc/` page declares its distribution class like every other distributable page, and the doc-distribution guard stays green.
+- The scan reads repository content and git metadata only; it never reads the operator's home or the network.
+
+## 22. SECURITY REVIEW HIGHLIGHTS
+
+- **The migration is the privilege-sensitive surface, and it deletes nothing it did not move.** It copies before it moves, verifies digests, refuses to overwrite a differing entry, never follows a symlink into a prior root as a destination, and never writes outside the three declared roots and the declared backup root. A relative or in-source `--backup-dir` is refused.
+- **A live store is not raced.** The delivered daemon guard refuses without `--stop-daemon`, and the stop precedes the first move.
+- **No shell, no privilege escalation.** The command runs in-process over injected filesystem facts; it invokes no shell, no `sudo`, no system path, and no network client. Every destination derives from the brand install/configuration/state derivation, not from an operator-supplied path, with the single declared exception of `--backup-dir`, which is validated.
+- **The scan is a merge gate, not an advisory.** Both arms are CI-bound, and the topology and bindingness checks reject an advisory job, a bypass construct, or a missing baseline fetch.
+- **The allowlist cannot be widened silently.** Sites are file-level, wildcards are refused, occurrence budgets bound an allowed file, and a declared site that disappears fails. Widening the allowlist is a reviewed registry change, exactly like widening the DEC-8 allowlist today.
+- **Secret hygiene is unchanged.** The override channel reads a working name, never a secret; the bounded legacy mapping never records a value; the migration manifest records none.
+- **The neutral-scope exclusion is structural, not discretionary.** It admits only the `@`-prefixed scope sigil and the repository name, and a mutation proves a product-identifier use still fails.
+- **Nothing is silently trusted.** An unreadable root is a typed failure rather than a skipped entry, a conflict is a failure rather than a merge, and an unverifiable copy is a failure rather than a move.
+
+## 23. MAINTENANCE & OPERATIONS IMPACT
+
+- **One authority per fact.** The shim registry owns the prior namespace; the forbidden-literal registry owns the seeds and scopes; the configuration catalog owns which environment names exist. Each has one owner and one validation.
+- **Adding a shim site is a visible, reviewed change**, with a role sentence and, where needed, a budget. Adding a *new* prior identifier is a failing gate, which is the point.
+- **Adding a derived migration entry is a data change** in the declared derived set, reviewed like any other allowlist widening.
+- **Adding a runtime-written project file is a two-line change**: the ignore pattern and the coverage class. The triggers are named in RSK-5.
+- **The migration is one-time per machine and idempotent**, so an operator needs one run per host and one per checkout, never a loop.
+- **On-call reads a plan and a manifest.** A migration dispute is settled from the manifest's digests, not from logs.
+- **The scan's false-positive cost is bounded** by the declared corpora and the neutral rule, so a contributor is never asked to rewrite historical records or the workspace scope.
+- **Decommissioning is scheduled, not discovered.** The delivery-os lineage's removal release is declared in the registry, and the deferred items name their triggers (shim removal, the wrapper cutover at M4-S8/GH-352, and the project-groups bootstrap trigger recorded in DEC-12).
+
+## 24. GLOSSARY
+
+| Term | Definition |
+|------|------------|
+| Current identity | The working name the product resolves today (`jaiship`) and every value derived from it: `.jaiship`, `.jaiship-state`, `JAISHIP_`, `~/.jaiship/bin/jaiship`. |
+| Prior identity | The declared pre-rename working name (`delivery-os`) and the values derived from it; read only through declared compatibility inputs. |
+| Prior namespace | The set of prior-identity artifacts: `.delivery-os`, `~/.delivery-os`, `.delivery-os-state`, `DELIVERY_OS_*`, and the prior executable name. |
+| Authoritative root | The current-identity configuration directory, or the current host state root: the location that is read whenever it exists. |
+| Shim | A declared compatibility input that keeps a prior-identity artifact working for a bounded window; it has an id, a site list, a notice, and a removal release. |
+| Shim registry | `scripts/checks/namespace-shims.registry.json` — the single authority for which prior-namespace inputs are supported, where, and until when. |
+| Declared site | A file path (or path prefix) at which one shim may legitimately appear, with a role sentence and an optional occurrence budget. |
+| Declared corpus | A whole corpus that is historical or immutable and therefore outside the content scan (`doc/changes/`, `doc/decisions/`, the M1 snapshot command pages, one dated inception analysis record). |
+| Neutral scope | The workspace package scope `@delivery-os`, the repository name `agentic-delivery-os`, and the private root manifest name: naming that is not a product identity and is not renamed. |
+| Migration root | One of the three root classes the migration moves: host configuration, host state, invoking project configuration. |
+| Migration entry | The unit the migration decides on: a file or subdirectory of a root, descending through container directories. |
+| Disposition | The per-entry outcome: `moved`, `already-migrated`, `duplicate-identical`, `conflict`, `blocked`, `absent`. |
+| Verdict | The per-root or per-run composition: `migrated`, `already-migrated`, `partial`, `conflict`, `blocked`. |
+| Derived entry | An entry declared rebuildable, so the destination wins without a conflict (today the host index). |
+| Backup manifest | `install.migration.v1`, the digest manifest that makes a move reversible and auditable. |
+| Byte-preserving move | A move in which every file's digest is identical before and after, and no record, header, or format identifier is rewritten. |
+| Bounded prior read | The delivered fallback: read the prior file or root only when the current one is absent, read-only, one notice per source kind. |
+| Override channel | `<environmentPrefix>WORKING_NAME` (current) with `DELIVERY_OS_WORKING_NAME` as the declared prior input. |
+| Content arm | The extended forbidden-literal scan: prior-namespace seeds over seven scope classes. |
+| Tree arm | The repository-tree check: tracked paths under a prior root, symlinks into one, the committed layer, and the ignore probes. |
+| Proof boundary | The declared list of what the change's tests prove and what they do not (Appendix C). |
+
+## 25. APPENDICES
+
+### 25.1 Appendix A — Phase-7 documentation impacts
+
+| Document | Required reconciliation |
+|----------|-------------------------|
+| `doc/guides/local-install.md` | Replace the optional hand-performed move with `install migrate`: the flags, the dry-run first, the backup and its default location, the per-entry precedence, the verdicts and exits, the daemon rule, the idempotence, the manual reversal from the backup, and the residual line for a prior launcher or record. Keep the cadence, the origins, the dev-build rule, the `PATH` block, the compatibility asymmetry, and the ownership split; add the loaded-path guarantee and drop the claim that `--migrate` refuses; **and carry the operator remediation for the shell fallback after a migration** — the shell entry points keep their prior-root defaults until the wrapper cutover, so the fallback's declared override is pointed at the current host root, and the installed example owner-hold hook's marker default remains the pre-rename path until then (DEC-13). |
+| `doc/spec/features/feature-install-lifecycle.md` | The family gains its fifth verb: grammar, flags, admission reuse, the plan and verdict vocabularies, the backup and manifest, the derived-entry rule, and the ten-identity domain with `install.migration.unavailable` retired. Keep the delivered dry-run discipline and the daemon ordering explicit. |
+| `doc/spec/features/feature-branding-seam.md` | The shim registry as an authority; the prior-namespace scan class and its neutral exclusion; the override channel's derivation and its declared prior input; the MCP default reconciled with the current identity; the declared literal-site inventory re-stated (values, not count). |
+| `doc/spec/features/feature-cli-entrypoint.md` | The override name and precedence with the `override-read` notice; the alias declared as a scheduled shim with its `--help` deprecation sentence; the `install migrate` subcommand in the composed set. |
+| `doc/spec/features/feature-config-layer.md` | The authoritative committed path; the loaded-path guarantee and the four notice reasons; the bounded legacy mapping rule and its consequence (an untouched legacy name is not an error). |
+| `doc/spec/features/feature-projects.md` | The host index's post-move re-derivation and the "warning never redirects" guarantee; the operator-local disposition of `projects.yaml`. |
+| `doc/spec/features/feature-project-groups.md` | `projects.yaml` is an **operator-local, git-ignored overlay** at the unchanged path and schema, authored by the operator, with absolute member roots staying on the operator's machine; the absent-document and zero-group document are both the ordinary **empty listing**; the ceremony mirror's target set is the invoking checkout's own declaration, so a fresh clone has the declared empty target set and no template exists in the tree (DEC-12, TDR-0074). |
+| `doc/spec/features/feature-ceremony-runner.md` | §9's mirror paragraph stops saying "project-committed": the target set is composed from the **invoking checkout's own** local group document, an absent document is the **declared empty target set**, and no checkout reads another checkout's document; the declared-degradation sentence keeps its delivered wording (DEC-12, TDR-0074). |
+| `doc/spec/features/feature-state-layer.md` | The state-root move, byte preservation, and the unchanged header/format contract (TDR-0047). |
+| `doc/spec/features/feature-mcp-surface.md` | The MCP composition's declared default is the current identity; the override name derives. |
+| `doc/spec/features/feature-autonomous-delivery.md`, `doc/quality/test-specs/test-spec-autonomous-delivery.md` | The owner-hold names stop being called "the current default brand's names": `DELIVERY_OS_OWNER_HOLD` and `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` are named as the example hook's declared **`prior-environment-prefix`** shim (literal `DELIVERY_OS_`, read-only), the current names derive from the resolved prefix, and the hook's behaviour description stays accurate. |
+| `doc/spec/features/feature-result-contract.md` | The install domain at ten identities, the retirement stated, and the negative migration verdicts described as data rather than codes. |
+| `doc/overview/glossary.md` | Add the glossary rows from section 24. |
+| `doc/planning/oss-tooling/milestones/m4/commands/install.md` | The verb entry, the flag table (`--backup-dir`; `--migrate` retired with its remedy), the verdict table, the backup and reversal workflow, and the removed error row. |
+| `doc/planning/oss-tooling/milestones/m4/install-model.md`, `backlog.md`, `schedule.md` | M4-S2 is delivered by this change: the migration hook paragraph, the backlog line, and the schedule row. |
+| `doc/guides/opencode-model-configuration.md`, `doc/guides/provider-conditions-and-parks.md` | The current configuration path; no prior path presented as current. |
+| `doc/guides/ceremony-runner.md` | The brand-neutral example must not be the prior name; state the directory as a brand-derived parameter. The "Composed landing" paragraph stops calling the members "committed": the target set is the invoking checkout's own local `projects.yaml` members, an absent or empty declaration is the declared empty target set with `dry-run` still at exit `0`, and no target checkout's document is read (DEC-12, TDR-0074). |
+| `doc/guides/delivery-modes.md` | The owner-hold names (`DELIVERY_OS_OWNER_HOLD`, `DELIVERY_OS_OWNER_HOLD_POLL_SECONDS`) are the example hook's declared `prior-environment-prefix` shim, not the current-brand names; the current names derive from the resolved `<PREFIX>_`; the marker path is the hook's declared default until the wrapper cutover (DEC-13). |
+| `doc/quality/test-specs/test-spec-namespace-conformance.md` (new) | The enduring page: the two arms and their corpora, the shim-registry reconciliation, the per-class mutations and the two negative controls, the migration battery and its scenarios, the fixtures and the seam each doubles, and the proof boundary mirroring Appendix C. |
+| `.opencode/agent/toolsmith.md` + generated `.ados-claude/agents/toolsmith.md` | The routing-authority sentence names `.jaiship/config.yaml`; the projection is regenerated, never hand-edited. |
+| `doc/planning/oss-tooling/milestones/m1/commands/*` | **Kept byte-unchanged** as the M1 snapshot corpus. Their prior-namespace mentions are declared as examples of reading a compatibility input (`provider migrate legacy` naming the pre-freeze profiles directory; the entrypoint page naming the neutral default of its own milestone), not as current identity — the declared corpus entry in the forbidden-literal registry records that reason. |
+| `doc/00-index.md` | Index the new quality page if the page set is listed there. |
+
+Each new or changed distributable page declares its `ados_distribution` class; the doc-distribution guard must stay green; the new page is registered in the forbidden-literal registry in the same change.
+
+### 25.2 Appendix B — Ticket-to-spec traceability
+
+| Ticket element | Where satisfied |
+|---|---|
+| Task — finish configuration and state directories under the Jaiship identity (`~/.jaiship/`, `~/.jaiship-state/`, `<repo>/.jaiship/`) | F-1, F-2, F-3; AC-F1-1…AC-F1-4, AC-F2-1…AC-F2-4, AC-F3-3, AC-F3-7; DEC-1, DEC-2, DEC-5. Derivation is already current (§2.1); the change delivers committed truth and the move. |
+| Task — environment prefix | F-6; AC-F6-1, AC-F6-2, AC-F6-3; DEC-8, DEC-9. The directory and prefix values derive today; the delivered gap is the unbounded pre-freeze mapping and the prior-only override channel. |
+| Task — package/CLI identifiers in docs, guides, and prompts | F-6; AC-F6-4, AC-F6-5; DM-9; Appendix A. The scope itself is neutral and out of scope (NG-1, D1). |
+| Task — an idempotent migration command with dry-run and backup for the prior namespace roots | F-3; AC-F3-1…AC-F3-8; DEC-3, DEC-4, DEC-5, DEC-10; DM-5, DM-6, DM-7. |
+| Task — one-release deprecation shims declared as current compatibility inputs | F-4; AC-F4-1…AC-F4-4; DEC-6; DM-3. |
+| Task — a conformance scan that fails on newly introduced old-namespace identifiers | F-5; AC-F5-1…AC-F5-6; DEC-7; DM-4; API-7. |
+| AC — a fresh install creates only Jaiship paths | AC-F6-1 (per surface, including MCP); AC-F1-4 (the committed layer is the current one); DEC-8. |
+| AC — migration moves existing state with a dry-run and a backup, idempotently | AC-F3-2 (dry-run, zero writes), AC-F3-3 (backup and digests), AC-F3-4 (idempotence), AC-F3-6 (recovery); DEC-4, DEC-5. |
+| AC — the scan fails on new old-namespace identifiers | AC-F5-1, AC-F5-2, AC-F5-3; the two negative controls AC-F5-4/AC-F5-5; the gate AC-F5-6. |
+| AC — shims read the prior namespace only where declared | AC-F4-2 (both directions), AC-F4-3 (per-shim behaviour); DEC-6. |
+| Owner comment 2026-11-19 — `git ls-files .jaiship/config.yaml` is non-empty and no tracked file lives under the prior root | AC-F1-1; DOD-4. |
+| Owner comment 2026-11-19 — `git status` is clean on a fresh clone | AC-F1-3 (fresh-clone drill with no local exclude); DOD-4. |
+| Owner comment 2026-11-19 — the prior-identity fallback reports that it read the new path rather than the old one | AC-F2-1, AC-F2-2, AC-F2-3; API-4; DEC-2. |
+| Owner comment 2026-11-19 — negative control: a reintroduced symlink or a new file under the prior root fails the scan | AC-F5-4, AC-F5-5 (and AC-F1-2 over the real tree). |
+| Owner comment 2026-11-19 — declare the prior namespace as a one-release compatibility input with an explicit window rather than leaving an untracked symlink | F-4; AC-F4-1, AC-F4-2; DM-3; DEC-6; the symlink is removed by AC-F1-3's clean-clone result. |
+| Owner comment 2026-11-21 D1 — a host with the pre-freeze environment loaded runs every command without `unset`; `ADOS_FOO=bar` neither errors nor becomes a value | AC-F6-3; API-5; DEC-9; RSK-9. |
+| Owner comment 2026-11-21 D2 — one authoritative config root; the prior root read only through a declared, bounded, one-time notice; local overlays have a declared git-ignored home; no fallback notice on a migrated host | F-2; AC-F2-1…AC-F2-4, AC-F1-3; DEC-2; API-4. |
+| Delivery convention — never introduce new legacy identifiers; shims are compatibility inputs and are declared as such | F-4, F-5; AC-F4-1, AC-F4-2, AC-F5-1, AC-F5-2; DOD-6, DOD-7. |
+| Delivery convention — full lifecycle, PR targets the integration branch, STOP with the PR open | §19; §18 DOD-2/DOD-3. |
+| M4 blueprint M4-S2 (backlog), install-model (M4-S2 owns the move), schedule (namespace row), ranking (follows the flip) | §1, §2.1, §19; DEC-3 (the surface the install model anticipated). |
+
+### 25.3 Appendix C — What the change's tests prove and do not prove
+
+**Proven, by test class.**
+
+| Class | What it proves | Criteria |
+|---|---|---|
+| structure | The committed layer's tracked state and byte identity; the shim registry's shape, window, and site presence; the declared literal-site inventory in both directions; the unchanged accepted state format | AC-F1-1, AC-F3-7 (structure half), AC-F4-1, AC-F6-5 |
+| checks | The content arm per class and per mutation; the neutral-scope rules; the tree arm and the ignore probes; both negative controls; the both-directions site reconciliation; the CI binding and non-advisory posture | AC-F1-2, AC-F4-2, AC-F5-1…AC-F5-6 |
+| behaviour | The migration plan and verdicts; moves with digest equality; precedence and conflicts; idempotence; partial-failure recovery; the post-move state facts; the guarded refusals; the loaded-path and notice guarantees; the override channel; the bounded legacy mapping; the per-surface fresh-install path set; the alias refusals | AC-F1-3, AC-F1-4, AC-F2-1…AC-F2-4, AC-F3-1…AC-F3-8, AC-F4-3, AC-F4-4 (behaviour half), AC-F6-1, AC-F6-2, AC-F6-3 |
+| doc | The enumerated pages' required facts; the alias `--help` deprecation sentence; the reference pages agreeing with `--help`; the generated prompt projection's currency | AC-F6-4, AC-F4-4 (doc half) |
+| aggregate | That no delivered gate regressed and no pinned value was weakened | DOD-2, AC-F5-6 |
+
+**Not proven, and why.**
+
+1. **A real operator home and a real pre-existing prior namespace.** The battery runs over scratch roots and injected facts; it proves the contract and the ordering, not the state of one machine.
+2. **A fresh clone on a second physical machine.** The drill is a scratch clone plus rule-world probes; it proves the ignore rules and the clean status over the declared write set, not that an unknown tool writes elsewhere.
+3. **A real CI runner's home and workspace.** The gates run in the repository; runner-local state is outside the boundary.
+4. **Other checkouts and other operators' repositories.** The migration handles the invoking checkout; a fleet is not exercised.
+5. **Third-party tooling that still invokes `delivery-os`.** The alias keeps working; whether a consumer notices its deprecation is not observable here.
+6. **The real shim-removal release.** The window's expiry is a declaration and a registry value; its execution is a later change.
+7. **The prose residual.** The executable token is not enforced over registered docs (RSK-11), so a new prior identifier in prose is not proven to fail — the path and environment seeds are.
+8. **The shell fallback after a migration.** Its prior-root defaults stay as they are (DEC-13), so nothing re-points them and the fallback's namespace behaviour after a migration is **declared, not tested**; the operator remediation is the fallback's own declared override pointed at the current host root, and the installed example hook's marker default per its own header. The wrapper cutover (M4-S8/GH-352) is where the behaviour becomes testable.
+
+### 25.4 Appendix D — Implementation-decided and fixture-decided details
+
+None of the following reopens a decision: the exact module split of the migration domain; the exact internal ordering of the copy and verify steps beyond "copy and verify precede the move"; the human line wording after the declared fields; the exact run-stamp format beyond its sortability and the declared directory shape; the digest algorithm choice (SHA-256, matching the manifest field name); whether a planned move is a rename or a copy-merge for a given entry, as long as the byte-preservation and no-delete rules hold; the exact fixture names; the exact values of the two declared window versions beyond their order and their derivation from the change's changeset; the exact occurrence budgets per declared site; and the exact CI job name string for the tree arm.
+
+Not implementation-decided: whether the committed layer moves byte-identically (DEC-1); whether the current root is authoritative (DEC-2); whether the migration is a verb and the flag is retired (DEC-3); whether entries are the unit and the current side wins (DEC-4); whether the move re-versions nothing (DEC-5); whether the shim registry is the site authority (DEC-6); whether the scan has two arms (DEC-7); whether the override channel is identity-derived and the MCP default is current (DEC-8); whether the pre-freeze mapping is bounded to catalog keys (DEC-9); whether the delegation row is retired (DEC-10); whether the shell and prompt workflows are out of scope (DEC-11); whether the project-groups document is an operator-local overlay and the ceremony mirror's target set is declaration-only (DEC-12, TDR-0074); and whether the shell prior-root literals are re-pointed here or by the wrapper cutover (DEC-13).
+
+### 25.5 Appendix E — Verified baseline
+
+Every seam named in §2.1 was read on `feat/GH-365/jaiship-namespace-migration` at `98cb4963`, level with `main-tools` at `c1dd722c`, unless stated otherwise. Read directly rather than assumed: the branding resolver's derivation rules and its declared-fields table; both CLI bins and the shared launcher composition; the prior-identity ordering in the configuration source and the host-root selection in the state-scope policy; the production composition's prior-name derivation and notice emission; the install-migration declaration and its two sentences; the install command's `--migrate` branch, its dry-run plan line, its flag list, and its eleven-row domain; the install reference page and the local-install guide (including their required-fact batteries); the help inventory's `install` entries and the reference-page coverage mapping; the state-layer header contract and the host-index derivation and maintenance rules; the forbidden-literal scan, its registry, its exact-shape validation, and its CI job; the ignore-rule hygiene check; the legacy adapter's unconditional prefix mapping; the configuration resolver's `config.environment.unmapped` arm; the MCP composition's default and override constants; and the tracked/untracked reality of `.delivery-os`, `.jaiship`, `.gitignore`, and `.git/info/exclude` on this branch. Occurrence counts quoted in §2.1 are `git grep` counts over the tracked tree, excluding `doc/changes`, `doc/decisions`, and the generated lockfile. The eight owner-named pre-freeze variables and the dispatch reproduction are quoted from the 2026-11-21 owner comment on `e1ebc76`, not re-run here.
+
+### 25.6 Appendix F — Normative registries (shape)
+
+**Shim registry — normative shape** (`scripts/checks/namespace-shims.registry.json`, `namespace.shims.v1`):
+
+```
+schemaId, window { declaredIn, removalRelease }, shims[]
+shim: {
+  id, kind: executable|path|environment|environment-prefix,
+  literal, direction: invocation|read-only|mapping, lineage: delivery-os|pre-freeze,
+  noticeId, notice, window { declaredIn, removalRelease|null }, owner,
+  sites[]: { file, role, maxOccurrences? }
+}
+```
+
+Declared entries and their families: `executable-alias` (`delivery-os`, executable, invocation); `prior-config-directory` (`.delivery-os`, path, read-only); `prior-state-root` (`.delivery-os-state`, path, read-only); `prior-working-name-override` (`DELIVERY_OS_WORKING_NAME`, environment, read-only); `prior-environment-prefix` (`DELIVERY_OS_`, environment-prefix, read-only); `pre-freeze-environment-prefix` (`ADOS_`, environment-prefix, mapping, bounded to declared catalog keys); `pre-freeze-config-directory` (`.ados`, path, read-only, lineage `pre-freeze`).
+
+Seed-to-shim resolution — every `priorNamespace` seed resolves to exactly one declared shim, and a match resolves to the shim whose literal equals the **longest** matching literal at that position:
+
+| Seed | Shim | Consequence |
+|---|---|---|
+| `prior-config-directory` (`.delivery-os`) | `prior-config-directory` | The configuration root at a project path and at its home form (`~/.delivery-os`, which the `prior-home-config` seed also matches) |
+| `prior-state-directory` (`.delivery-os-state`) | `prior-state-root` | The host state root |
+| `prior-home-config` (`~/.delivery-os`) | `prior-config-directory` | The same shim's home form; the home seed exists to catch the full path, not a second artifact |
+| `prior-environment-prefix` (`DELIVERY_OS_`) | `prior-environment-prefix` | Sites: `scripts/hooks/pre-opencode-iteration-owner-hold.sh`, its battery, the owner-hold tables on `feature-autonomous-delivery.md`, `doc/guides/delivery-modes.md`, and its test spec, and the prior-environment fixtures (the entrypoint prior-identity harness and the eight-variable pre-freeze fixture) |
+| `prior-executable` (`delivery-os`, delimited) | `executable-alias` | The prior executable token; the longer `DELIVERY_OS_` literal keeps working-name occurrences on their own shim |
+
+A `DELIVERY_OS_WORKING_NAME` occurrence therefore resolves to `prior-working-name-override` (the longer literal) at that shim's declared sites, while a bare `DELIVERY_OS_` occurrence resolves to `prior-environment-prefix` and must lie inside one of its sites — which is what keeps `AC-F4-2`'s both-directions reconciliation satisfiable on a clean tree rather than failing on the owner-hold example.
+
+**Forbidden-literal registry — normative additions:**
+
+```
+priorNamespace: {
+  seeds[]: { id, literal, match: delimited, excludePrecededBy?[], excludeWithin?[] },
+  scopeSelection: { promptSurface: [...], scriptSurface: [...], ... },
+  neutralSites[]: { file, reason },
+  declaredCorpora[]: { prefix, reason },
+  shimRegistry: "scripts/checks/namespace-shims.registry.json"
+}
+scopeClasses += promptSurface { root: ".opencode" }, scriptSurface { roots: ["scripts","tools"] }
+```
+
+Seeds: `prior-config-directory` `.delivery-os`; `prior-state-directory` `.delivery-os-state`; `prior-home-config` `~/.delivery-os`; `prior-environment-prefix` `DELIVERY_OS_`; `prior-executable` `delivery-os` with `excludePrecededBy: ["@"]` and `excludeWithin: ["agentic-delivery-os"]`, applied to `packageTree`, `rootManifests`, `ignoreRules`, `promptSurface`, `scriptSurface` only.
+
+`scopeSelection` maps `promptSurface` and `scriptSurface` to the `priorNamespace` class **only**; the delivered `seedLiterals` class keeps its five classes and its allowlist, so the unbounded `ADOS_*` inventory in `scripts/**` and `tools/**` never joins the scan.
+
+**Declared derived migration entries (data):** `host-index.json`.
+
+**Declared root labels:** `host-configuration`, `host-state`, `project-configuration`.
+
+### 25.7 Appendix G — Proof-boundary constant (normative shape)
+
+The permanent fixture constant is `NAMESPACE_PROOF_BOUNDARY` with exactly these ids, in this order:
+
+- **Proven (8):** `committed-layer`, `clean-clone`, `authoritative-root`, `prior-notice`, `migration-plan`, `migration-move`, `shim-reconciliation`, `conformance-negative-controls`.
+- **Not proven (8):** `real-operator-home`, `second-machine-clone`, `ci-runner-home`, `other-checkouts`, `third-party-alias-consumers`, `shim-removal-release`, `prose-residual`, `shell-fallback-post-migration`.
+
+Every battery row declares one proven id, and the boundary case asserts the counts, the order, and that no row names a not-proven surface. The new quality test-specification page publishes the same two lists, and a page/constant mismatch is a documentation-phase defect rather than a delivery-phase test failure.
+
+## 26. DOCUMENT HISTORY
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2026-11-21 | @spec-writer | Initial specification for GH-365, grounded in the ticket body, both owner comments (2026-11-19 and 2026-11-21), the M4 blueprint (backlog M4-S2, install-model, schedule, ranking, flip-plan sequencing), the PM clarify-scope notes and their four scope decisions, the current-truth branding, CLI-entrypoint, configuration, projects/project-groups, state, install-lifecycle, result-contract, autonomy, and MCP pages, the local-install guide, the forbidden-literal scan and registry, the ignore-rule check, and the delivered install, migration-hook, legacy-adapter, resolver, and entrypoint code re-read on `c1dd722c`/`98cb4963`. Decisions DEC-1…DEC-11; two non-blocking open questions recorded with their consequence and owner; 31 acceptance criteria. |
+| 1.1 | 2026-11-21 | @spec-writer | Revision applying the decision-advisor ruling. **Q1:** OQ-1 resolved to the operator-local overlay (DEC-12, recorded as TDR-0074) — §5.1 F-2, §7.3, §8.5 row 10, §14, §15, §15.1, §16, §18 DOD-9, §21, §25.1 Appendix A, §25.4 Appendix D, and the "no template" clause with its decision links on AC-F2-4. **Q2:** OQ-2 resolved to defer the shell prior-root literals to the wrapper cutover (DEC-13) — §7.2, §7.3, §8.5 row 11, §11 RSK-12, §13, §14, §15, §16, §18 DOD-10, §25.1 Appendix A, §25.3 Appendix C item 8, §25.4. **Coherence:** a `prior-environment-prefix` shim plus an explicit seed-to-shim resolution with longest-literal precedence (DM-3, Appendix F) so AC-F4-2's both-directions reconciliation holds on a clean tree; `scopeSelection` bounded to the `priorNamespace` class for `promptSurface`/`scriptSurface` (DM-4, Appendix F); `feature-autonomous-delivery.md` names the `DELIVERY_OS_` shim rather than calling the owner-hold names current-brand; the migration guide carries the post-migration shell-fallback remediation. Acceptance-criteria count unchanged at 31. |
+
+---
+
+## AUTHORING GUIDELINES
+
+- **Sources.** The GH-365 ticket body; the two owner comments on the ticket (2026-11-19 committed-truth finding; 2026-11-21 environment and authoritative-root findings); the M4 blueprint (backlog M4-S2, install-model's migration paragraph, schedule's namespace row, ranking's placement, flip-plan's sequencing); the PM clarify-scope notes and their scope decisions; the current-truth branding, CLI-entrypoint, configuration, projects, project-groups, state, install-lifecycle, result-contract, autonomy, MCP, and privacy pages; the local-install guide; the forbidden-literal scan, its registry, and its CI binding; the ignore-rule hygiene check; and the delivered install, migration-hook, legacy-adapter, resolver, state-scope, and entrypoint code, re-read on this branch. No behaviour is invented; implementation-decided details are listed in Appendix D.
+- **Approach.** The spec is organised around the story's six tasks and four acceptance criteria, then around outcomes: capabilities state behaviour and rationale; interfaces state contracts with closed vocabularies; each acceptance criterion names the class of proof that closes it. The authority boundary is stated once (DEC-6) and used consistently; the surface decision is stated once (DEC-3) and every consequence of the retired flag is derived from it.
+- **Constraints applied.** Declare rather than rename what the decisions leave alone (the neutral scope, the alias, the shell, the prompts); move rather than rewrite (byte preservation, no re-versioning); reuse the delivered machinery (the install family's admission and dry-run, the forbidden-literal scan's matching and registry validation, the ignore-rule hygiene check, the CI-topology binding); fail closed on every list (sites, seeds, dispositions, verdicts); keep every negative claim testable.
+- **Deliberate omissions.** No step-by-step implementation tasks, no file-by-file code instructions, no commit or merge instructions, and no technology tuning beyond what the outcomes require. Module paths appear only in the composition map, at the granularity the planning input requested.
+
+## VALIDATION CHECKLIST
+
+- [x] `change.ref` matches the provided `workItemRef` (`GH-365`)
+- [x] `owners` has at least one entry (`engineering`)
+- [x] `status` is `Proposed`
+- [x] `change.milestone` is the tracker milestone title verbatim and equals the planning-notes milestone (`M4: Jaiship-native delivery`)
+- [x] All sections present in order (1–26 + authoring guidelines + checklist), with the Definition of Done after the acceptance criteria
+- [x] A Definition of Done is present, each item names its observation, and the AC count reference matches the 31 declared criteria
+- [x] ID prefixes are consistent and unique (`F-`, `API-`, `DM-`, `NFR-`, `AC-`, `RSK-`, `DEC-`, `PG-`, `DOD-`, `G-`, `NG-`, `OQ-`)
+- [x] Acceptance criteria reference at least one `F-`/`API-`/`DM-`/`NFR-` ID, use Given/When/Then, and each names its class of proof
+- [x] NFRs include measurable values
+- [x] Risks include Impact and Probability with mitigation and residual risk
+- [x] No implementation step lists; module names appear only in the composition map
+- [x] Out-of-scope items are prefixed `[OUT]`
+- [x] The owner comment's four checks are each an acceptance criterion, verbatim in substance
+- [x] The negative control (reintroduced symlink; new file under the prior root) is a named criterion
+- [x] Every binding PM decision is recorded as a decision and none is reopened
+- [x] The migration surface, its dry-run, its backup, its precedence, its idempotence, its recovery, its guard rules, and its error-identity disposition are stated once each
+- [x] The shim declaration is machine-readable, bounded, and consumed by the scan as its allowlist authority
+- [x] The proof boundary is machine-checkable (Appendix G) and its not-proven list is explicit (Appendix C)
+- [x] The two questions carry their resolution, their decision row (DEC-12, DEC-13), their owner, and the fact that no criterion depends on them

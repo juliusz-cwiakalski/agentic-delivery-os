@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-21T15:14:16.564Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-21T15:36:20.232Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -49,7 +49,57 @@ decisions:
       the existing tracked file within this change and no other tracked file may
       live under `.delivery-os/`."
     date: "2026-11-21"
+  - text: "OQ-1 RULED by @decision-advisor and recorded as TDR-0074 (Proposed; human
+      acceptance at the GH-365 PR review): the project-groups document is an
+      operator-local, git-ignored overlay at its unchanged path and schema; the
+      ceremony mirror's cross-checkout target set is declaration-only from the
+      invoking checkout's own document, absent = empty target set, no
+      federation, no tracked template in this change. Evidence: the live
+      document already holds absolute local roots and is already untracked, so a
+      fresh clone's target set is already empty — the ruling corrects the prose,
+      it does not remove a delivered behaviour. The three pages that call it
+      project-committed are reconciled in phase 7."
+    date: "2026-11-21"
+  - text: "OQ-2 RULED by @decision-advisor: DEFER the shell fallback's prior-root
+      defaults to M4-S8 (GH-352). The two literals are different defect kinds —
+      `scripts/lib/dispatch-authority.sh:66` defaults to `${HOME}/.delivery-os`
+      (a config root where the typed host root is the state root) and
+      `scripts/hooks/pre-opencode-iteration-owner-hold.sh:46` reads
+      `${HOME}/.delivery-os-state/owner-hold` (correct before migration, wrong
+      after), so a literal swap would regress unmigrated hosts. M4-S8 implements
+      the delivered current-else-prior selection rule, not a swap. Obligation
+      recorded on GH-352 as issue comment 7064946031. Operator remediation until
+      then: set the fallback's declared override `ADOS_DISPATCH_STATE_ROOT` to
+      the current host root; the migration guide records it."
+    date: "2026-11-21"
 notes:
+  - text: "STAGING CONSTRAINT for TDR-0074: the plan-absent commit scope is the
+      change folder only, so an untracked decision record under doc/decisions is
+      excluded as a stray while the tracked doc/decisions/00-index.md row would
+      still be staged (scopeDrift). To avoid an index row pointing at an
+      untracked record, the index row was restored out before the specification
+      commit. The delivery plan MUST declare BOTH
+      `doc/decisions/TDR-0074-project-groups-document-operator-local-overlay.md`
+      and `doc/decisions/00-index.md` in an early delivery phase scope, and the
+      index row must be re-added at that point (decision-advisor owns the row).
+      DoD must confirm no index row points at an untracked record."
+    type: risk
+    date: "2026-11-21"
+  - text: "OWNER SCOPE UPDATE (comment 7064717722, 2026-11-21T15:14:30Z): the first
+      native `jaiship dispatch` exposed two namespace defects and the owner
+      requires both in scope. D1: with the legacy environment loaded, arbitrary
+      `ADOS_*` variables (eight reproduced) make every config-resolving command
+      fail `config.environment.unmapped`; the legacy shim must map only declared
+      catalog keys and leave every other `ADOS_*` untouched, with a fixture
+      pinning `ADOS_FOO=bar` proving no error and no config value. D2: the
+      current-identity config root must be the single authoritative location;
+      the prior root is a bounded one-time compatibility read with no notice on
+      a migrated host; operator-local `config.local.yaml` and `projects.yaml`
+      get a declared git-ignored home. Evidence to carry: the eight-variable
+      reproduction and the provider resolve before/after. The authored spec
+      already covers these as AC-F6-3 and AC-F2-1..4."
+    type: info
+    date: "2026-11-21"
   - text: "State detection (2026-11-21): no GH-365 branch, no change folder, no
       phase ledger records (`phase list` returned empty phases over an
       integrity-clean 7206-record registry), and no delivery PR existed; only
