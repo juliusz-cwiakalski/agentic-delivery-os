@@ -4,8 +4,8 @@
  * declared-exception working-name variable. Pure data: no probe and no
  * filesystem effect live here; the behaviour cases drive the raw environment.
  *
- * This module holds `ADOS_` literals and never a `DELIVERY_OS_` literal, so it is
- * a declaration-only site of the pre-freeze shims, never a site of
+ * This module holds `ADOS_` literals and never a prior-namespace prefix literal,
+ * so it is a declaration-only site of the pre-freeze shims, never a site of
  * `prior-environment-prefix`.
  */
 
