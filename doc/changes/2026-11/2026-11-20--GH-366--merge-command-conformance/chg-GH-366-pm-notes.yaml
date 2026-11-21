@@ -8,7 +8,7 @@ milestone: "M4: Jaiship-native delivery"
 branch: fix/GH-366/merge-command-conformance
 phases:
   clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
-  specification: { started: null, completed: 2026-11-20T12:49:42.433Z }
+  specification: { started: null, completed: 2026-11-21T07:07:16.317Z }
   test_planning: { started: null, completed: 2026-11-20T12:51:51.000Z }
   delivery_planning: { started: null, completed: 2026-11-20T12:52:10.409Z }
   dor_check: { started: null, completed: null }
@@ -56,6 +56,26 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Owner ruling CEO-D-111 (GH-366, posted on the ticket; resumed
+      2026-11-21): option (a) — declare the delivered read. Primary read is the
+      bounded open-list read (`TRUTH_PROVIDER_LIMIT`, `includeGateFacts: true`)
+      filtered to the change's resolved branch; convergence uses the delivered
+      `findMergedDeliveryRequest(workItemRef, TRUTH_PROVIDER_LIMIT)` verbatim;
+      more than one match in either read refuses `merge.transaction-aborted`
+      naming the duplicate identities and never silently chooses; no new
+      provider operation, no change to closeout's behaviour, no unbounded read.
+      This supersedes the PM's iteration-3 read-budget design (the fourth reason
+      `ambiguous-merged-request`, the convention filter on merged candidates and
+      the `selectMerged` rework). PM assumption, stated for owner review:
+      because the delivered merged read exposes no count and rule 4 forbids
+      reworking it, the change adds ONE additive, optional
+      `signals.mergedMatches` count computed before its delivered selection;
+      closeout ignores it. The abort row therefore reaches three act-requiring
+      causes (waiver-append failure, declared landing gap, duplicate matching
+      requests) and stays `retryable: false`. Being aligned to v2.3: spec,
+      TDR-0072, TDR-0073, the test plan (v1.5) and the plan (14)."
+    type: decision
+    date: "2026-11-21"
   - text: "PM-decided (read-budget ruling, DoR iteration 3 finding 1): the change's
       own 'exactly one provider read' claim is withdrawn as too strong for the
       convergence path. The delivered truth is that merged requests are not in
