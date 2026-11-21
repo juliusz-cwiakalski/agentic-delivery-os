@@ -540,3 +540,27 @@ notes:
       content-inventory 12; pnpm typecheck green; git diff --check clean."
     type: info
     date: "2026-11-21"
+  - text: "Plan amendment + phase 8 COMPLETE: commit 62ffbaa5. The plan now also
+      declares the P8 delivery-time discoveries (config/index.ts selector export,
+      identity-docs pin, content-inventory/ports inventories, alias baseline) under
+      the AUTHORISED DELIVERY-TIME DISCOVERY comment. `<PREFIX>WORKING_NAME` is the
+      current override channel; `DELIVERY_OS_WORKING_NAME` is the prior channel and
+      `ADOS_WORKING_NAME` the pre-freeze channel, read at the raw entrypoint/edge
+      seam before brand derivation with precedence current -> prior -> pre-freeze ->
+      default; one `override-read` notice is emitted per prior channel used (the
+      fifth golden line). A present-but-invalid override keeps self-description on
+      the declared identity and fails a configuration-bearing command through the
+      delivered `fallback.internal` containment with no lower-channel fallback. The
+      MCP default is the current identity with a derived override; the legacy
+      adapter maps a pre-freeze name only when the mapped current name is a declared
+      catalog key (the selector is `configEnvironmentNames(PRODUCTION_CATALOG,
+      prefix)`), `ADOS_WORKING_NAME` is never adapter-mapped, and `ADOS_FOO` is
+      inert. Committed-head gate: identity-override 9; legacy-adapter 16;
+      namespace-identity-surfaces 4; branding-contract 9; prior-identity-state 11 +
+      config 18; config-cli 21; prior-identity-notice 15; content-inventory 12;
+      port-contract-inventory 16; entrypoint-bin 34; identity-docs 13;
+      conformance/namespace 7; prior-identity-hermetic 5; content arm 7/7; pnpm
+      typecheck green; git diff --check clean. No out-of-scope formatted files
+      remain (an accidental broad biome write was fully restored)."
+    type: info
+    date: "2026-11-21"
