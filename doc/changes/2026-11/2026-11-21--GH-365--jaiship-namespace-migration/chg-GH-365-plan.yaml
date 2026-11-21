@@ -9,9 +9,9 @@
 # result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-365-spec.md (v1.2; F-1..F-6; API-1..API-7; DM-1..DM-9;
+#   - Spec:     ./chg-GH-365-spec.md (v1.4; F-1..F-6; API-1..API-7; DM-1..DM-9;
 #               NFR-1..NFR-9; NG-1..NG-10; RSK-1..RSK-12; DEC-1..DEC-13;
-#               §6 flows 1–6; §7.1/§7.2 scope; §8.5 the eleven deliberate
+#               §6 flows 1–6; §7.1/§7.2 scope; §8.5 the twelve deliberate
 #               changes; §16 the affected components; §17 the 31 acceptance
 #               criteria in six groups; §18 the ten DoD items; §19 the ten
 #               outcome landings; §20 the data story; §25.1 Appendix A the
@@ -20,11 +20,25 @@
 #               §25.6 Appendix F the normative registry shapes and the
 #               seed-to-shim longest-literal resolution; §25.7 Appendix G the
 #               permanent `NAMESPACE_PROOF_BOUNDARY` constant. v1.1 applied the
-#               decision-advisor ruling (DEC-12/TDR-0074 and DEC-13) and v1.2 the
-#               OQ-TP-1 PM ruling on the mid-apply failure split; neither moved an
-#               AC, case, or decision, so this plan's obligations are unchanged by
-#               them.)
-#   - Tests:    ./chg-GH-365-test-plan.md (revision 0.2; 36 cases in six groups —
+#               decision-advisor ruling (DEC-12/TDR-0074 and DEC-13), v1.2 the
+#               OQ-TP-1 PM ruling on the mid-apply failure split, v1.3 the DoR
+#               iteration-1 rulings R1–R8 and v1.4 findings S10–S17. The v1.3/v1.4
+#               provisions this plan carries: the delivered command-audit pair is
+#               the migration's ONLY store write and lands at the destination host
+#               state root after planning and before the first move (DM-7, API-1,
+#               AC-F3-3/004); DM-6 names the derived disposition
+#               `already-migrated`, states the single verdict-composition rule,
+#               and retires only a root that existed at plan time; two schema ids
+#               (`install.migration.plan.v1` payload, `install.migration.manifest.v1`
+#               manifest); the symlink rule (source `blocked`, destination
+#               `conflict`, never followed, never moved); the managed-`PATH`
+#               residual with the `install` remedy and no profile edit; the
+#               `unscoped` root scope; `ADOS_WORKING_NAME` as the one declared
+#               exception to the catalog-key bound; the `SCOPE_ORG` neutral site;
+#               the declared-prefix distinguishing property of AC-F1-2. No
+#               AC, case, identity, or decision moved across v1.3/v1.4, so this
+#               plan's ownership arithmetic is unchanged by them.)
+#   - Tests:    ./chg-GH-365-test-plan.md (revision 0.3; 36 cases in six groups —
 #               LAYER 4, ROOT 4, MIGRATE 12, SHIM 4, SCAN 6, IDENTITY 6; 31/31 ACs
 #               mapped with 37 AC→case links, 0 unmapped, 0 orphans; 2 cases pin a
 #               contract without an AC (`TC-MIGRATE-012`, `TC-IDENTITY-006`);
@@ -37,12 +51,19 @@
 #               hosts; §6.2 the seam mechanisms; §7.1 the eleven seams and their
 #               production identities; §7.2 the four migration-proof observations
 #               and assumption A4; §7.3 the file mapping (13 new suites, 11 new
-#               fixture modules, 11 extended files); §7.4 the 54-row mutation
-#               register M1–M54; §7.5 the per-phase gate battery and the
-#               PHASE-GATE SELF-SUFFICIENCY RULE; §7.6 non-functional
+#               fixture modules, 11 extended files); §7.4 the 55-row mutation
+#               register M1–M55 with the phase allocation
+#               `5+3+5+5+21+3+4+8+1 = 55`; §7.5 the per-phase gate battery and
+#               the PHASE-GATE SELF-SUFFICIENCY RULE; §7.6 non-functional
 #               verification; §7.7 the proof boundary and its publication; §8.2
 #               assumptions 1–10, including assumption 3 on the staged TDR-0074
-#               files).
+#               files. Revision 0.3's changes this plan reflects: B1 (the derived
+#               entry is `already-migrated`/`absent`, never a seventh token), B2
+#               (the two audit records at the destination), B3 (no
+#               `projects-config.test.ts` / `ceremony-mirror-composition.test.ts`
+#               claim), B4 (`--dry-run --stop-daemon`), B5
+#               (`help-guide-coverage.ts` is verify-only), and the spec v1.4
+#               consequences folded into existing cases plus `M55`.)
 #   - PM record: ./chg-GH-365-pm-notes.yaml (delivery_mode autonomous; the
 #               clarify-scope decisions D1 neutral scope / D2 declared shims /
 #               D3 committed project layer; the OQ-1 ruling as TDR-0074 with its
@@ -79,6 +100,50 @@
 #               scope semantics; the template's markdown wrapper is not part of
 #               this artifact).
 #
+# DoR ITERATION 1 REMEDIATION (this revision; findings C1–C9 and the spec v1.4 /
+#   test plan r0.3 consequences — recorded here so the next gate can audit the
+#   disposition without re-deriving it):
+#   C1  P3 now restates SEVEN documents (the five scanned registered pages plus
+#       `doc/guides/opencode-model-configuration.md` and `doc/overview/glossary.md`)
+#       and the prompt pair, and P3's registry edit declares the
+#       `packages/core/src/branding/index.ts` `SCOPE_ORG` neutral site for
+#       `prior-executable` at one occurrence. The set is re-derived by the three
+#       `git grep` commands in SCAN-FIRST IDENTIFIER ALIGNMENT.
+#   C2  The single minor changeset is AUTHORED IN P2 (the window values derive from
+#       it) and VERIFIED in P10 (changesets-group plus the registry's window
+#       equality); P10 declares it verify-only.
+#   C3  `tests/fixtures/namespace/pre-freeze-env.ts` is CREATED IN P2 as data (the
+#       declared `prior-environment-prefix` site must exist at P2's gate) and
+#       EXTENDED in P8 with the inertness probe and the exception row.
+#   C4  No page prints a pre-freeze literal. P9's guide names
+#       `scripts/lib/dispatch-authority.sh` and points the operator at that script's
+#       own header for the override variable name; the delivered ADR-0003 DEC-8
+#       allowlist is NOT widened. P3's restatement rule states the same prohibition.
+#   C5  P2's site enumeration now includes the three permanent doc sites of
+#       `prior-environment-prefix` (the autonomous-delivery page, the delivery-modes
+#       guide, and the autonomous-delivery test spec) with role sentences and
+#       budgets.
+#   C6  P7 declares `tests/behaviour/config-cli.test.ts` and
+#       `tests/behaviour/projects-groups-list.test.ts` (the delivered group/read
+#       batteries), and states that `projects-config.test.ts` and
+#       `ceremony-mirror-composition.test.ts` are NOT edited (DEC-12; r0.3 B3).
+#   C7  P8 declares `packages/core/src/config/catalog.ts` (the `PRODUCTION_CATALOG`
+#       key-set authority), so the bounded-mapping blast radius is computable.
+#   C8  The "six documents" arithmetic error is gone: the header states the
+#       enumerated set, the count that matches it, and the grep that produces it.
+#   C9  A GATE ORDERING block binds P1 (and every HEAD-reading case): commit first,
+#       then gate the committed head; a pre-commit dry read is not evidence.
+#   Spec v1.4 / r0.3 consequences carried: S2 (P5 declares the audit-seam site
+#       `packages/cli/src/edge.ts` and the destination-side ordering), S3 (DM-6's
+#       stated composition rule and the derived entry's `already-migrated`), S4 (the
+#       two schema ids), S5 (source-symlink `blocked`, destination-symlink
+#       `conflict`), S6 (managed-`PATH` residual, profile never edited), S7
+#       (`unscoped` root scope), S11 (`M55`, the declared prefix set), S14
+#       (`ADOS_WORKING_NAME` exception), S17 (never-existent root neither retired nor
+#       reported), B1–B5. 55 mutations, allocation `5+3+5+5+21+3+4+8+1 = 55`.
+#   OWNERSHIP IS UNCHANGED by the remediation: 31/31 ACs and 36/36 TCs keep their
+#       owning phases, and no case is added, removed, renumbered, or moved.
+#
 # PLAN SHAPE: ten phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. The spec is
 #   complete at v1.2 and the test plan at revision 0.2, so no design work remains
@@ -88,8 +153,9 @@
 #   numbering is never conflated.
 #   `P10` is the sole phase with NO delivery case: it authors the enduring quality
 #   page, indexes it, registers it in the forbidden-literal registry, keeps
-#   `doc-conformance` truthful, and carries the release obligation (the single
-#   minor changeset). The page/constant comparison and the DOD-9 stale-statement
+#   `doc-conformance` truthful, and VERIFIES the release (the single minor changeset
+#   is P2's, because the shim registry's window values derive from it). The
+#   page/constant comparison and the DOD-9 stale-statement
 #   grep are LIFECYCLE phase-7 (`system_spec_update`) checks performed once by
 #   @doc-syncer and recorded in pm-notes; no permanent delivery case reads the new
 #   page and no suite reads `doc/changes/**`.
@@ -127,34 +193,90 @@
 #           new module (P1..P8). It is declared for registration and for the
 #           delivered inventory gate; a phase that adds no package module
 #           registers none and simply keeps the gate green.
+#     (iv)  A VERIFY-ONLY declaration: P10 declares
+#           `.changeset/gh-365-jaiship-namespace-migration-minor.md` because it
+#           RE-ASSERTS the changeset and the registry's window/changeset equality,
+#           while P2 authors the file (C2). A verify-only declaration carries no
+#           staging authority for a content edit; a change to it is an escalation,
+#           not a P10 edit.
 #
 # SCAN-FIRST IDENTIFIER ALIGNMENT (binding on P3; the one place where this plan
 #   makes the landing order explicit). The content arm is a GATE (`API-7`,
-#   `NFR-5`): from the phase that adds the prior-namespace seed class, the real
-#   tree must be seed-clean, so every surface the arm scans has to name the
-#   current identity BEFORE the arm can be green. Six registered documents still
-#   present a prior path or prefix as current (`feature-cli-entrypoint.md`,
-#   `feature-branding-seam.md`, `feature-mcp-surface.md`,
-#   `doc/guides/provider-conditions-and-parks.md`, `doc/guides/ceremony-runner.md`)
-#   and one prompt sentence does (`toolsmith.md`'s routing authority naming the
-#   prior configuration path, mirrored in its generated projection). P3 therefore
-#   lands the MINIMAL identifier restatement on exactly those surfaces, together
-#   with the arm. This is identifier alignment, not reconciliation: P3 authors no
-#   new fact, count, page structure, reference-page entry, or coverage row, and
-#   every Appendix A obligation — including these pages' substantive content — stays
-#   with P9, which owns `AC-F6-4`/`TC-IDENTITY-004`. The restatement names the
-#   derived channel/path and treats a prior literal as the shim the P2 registry
-#   already declares, so no page asserts behaviour a later phase must deliver.
+#   `NFR-5`/`NFR-6`): from the phase that adds the prior-namespace seed class, the
+#   real tree must carry 0 UNDECLARED occurrences, so every surface the arm scans
+#   has to name the current identity — or be a declared site, a declared corpus, or
+#   a neutral site — BEFORE the arm can be green.
+#   DERIVATION (mechanical, re-run before P3's gate; this enumeration is the
+#   output of these commands, not a judgement):
+#     git grep -Iln -E '\.delivery-os|DELIVERY_OS_' -- packages .opencode scripts tools .gitignore package.json pnpm-lock.yaml
+#     git grep -Iln -E '(^|[^@[:alnum:]_-])delivery-os([^[:alnum:]_-]|$)' -- packages .opencode scripts tools package.json pnpm-lock.yaml | grep -v agentic-delivery-os
+#     git grep -Iln -E '\.delivery-os|DELIVERY_OS_' -- doc | grep -v '^doc/changes/' | grep -v '^doc/decisions/'
+#   then intersect the `doc/**` hits with the registry's `registered` list (the
+#   scanned docs) and add every page `DM-4` names as "reworded, not declared".
+#   The uniform classification rule `DM-4` states (and this plan applies): a page
+#   that PRESENTS a prior path, prefix, or override as current is REWORDED; a page
+#   that DEFINES the prior namespace as prior is a DECLARED SITE; a neutral naming
+#   input is a NEUTRAL SITE.
+#   THE SET P3 RESTATES — seven documents plus one prompt pair (eight files):
+#     scanned registered pages presenting prior as current (5):
+#       doc/spec/features/feature-cli-entrypoint.md
+#       doc/spec/features/feature-branding-seam.md
+#       doc/spec/features/feature-mcp-surface.md
+#       doc/guides/provider-conditions-and-parks.md
+#       doc/guides/ceremony-runner.md
+#     pages DM-4 names as reworded-not-declared (2):
+#       doc/guides/opencode-model-configuration.md   (the configuration-path line)
+#       doc/overview/glossary.md                     (the override row and the
+#                                                    reference-declaration row;
+#                                                    the page becomes a DECLARED
+#                                                    SITE in P9, with the rows that
+#                                                    make it a declaration)
+#     the prompt surface (1 sentence in one file, plus its generated projection):
+#       .opencode/agent/toolsmith.md  →  .ados-claude/agents/toolsmith.md
+#   The three permanent doc sites `Appendix F` names are NOT in this set: they
+#   DEFINE the prior owner-hold namespace as prior and are declared at P2
+#   (`feature-autonomous-delivery.md`, `doc/guides/delivery-modes.md`,
+#   `doc/quality/test-specs/test-spec-autonomous-delivery.md`).
+#   THE NEUTRAL SITE P3 ADDS: `packages/core/src/branding/index.ts` —
+#   `SCOPE_ORG = "delivery-os"` is the scope-org derivation input, matched by the
+#   `prior-executable` seed because it is neither `@`-preceded nor inside
+#   `agentic-delivery-os`; it is declared in `neutralSites[]` with
+#   `seed: "prior-executable"` and `maxOccurrences: 1` (DM-4).
+#   THE ALLOWLIST IS INDEPENDENT (DM-4): the frozen ADR-0003 DEC-8 path allowlist
+#   does NOT filter the prior-namespace class — `packages/core/src/branding/` and
+#   `packages/adapters/src/legacy/` are still scanned for prior-namespace literals.
+#   `neutralSites[]`, `declaredCorpora[]`, and the shim registry's declared sites
+#   are the only authorities for the new class. P3 asserts this with a control
+#   (`TC-SCAN-002`), so no discretionary hole exists (RSK-4, §22).
+#   P3 lands the MINIMAL identifier restatement on exactly that set, together with
+#   the arm. This is identifier alignment, not reconciliation: P3 authors no new
+#   fact, count, page structure, reference-page entry, or coverage row, and every
+#   Appendix A obligation — including these pages' substantive content — stays with
+#   P9, which owns `AC-F6-4`/`TC-IDENTITY-004`. The restatement names the derived
+#   channel/path and treats a prior literal as the shim the P2 registry already
+#   declares, so no page asserts behaviour a later phase must deliver.
+#   NO LITERAL-ADDING SHORTCUT (C4, binding on P3 and P9): where a page must point
+#   an operator at a pre-freeze input that the delivered ADR-0003 DEC-8 allowlist
+#   would flag (`ADOS_` is a delivered seed), the page NAMES THE SCRIPT and tells
+#   the operator to read the variable name from that script's own header; it never
+#   writes the literal and the DEC-8 allowlist is NEVER widened. The rule applies
+#   to `doc/guides/local-install.md`'s post-migration shell-fallback remediation
+#   (name `scripts/lib/dispatch-authority.sh` and its header; state the
+#   current-else-prior selection rule the wrapper cutover implements) and to every
+#   page P3 restates.
 #   Ordinal self-sufficiency is preserved: every behaviour `TC-IDENTITY-004`
 #   asserts is implemented at or before P9.
 #
 # SEQUENCING (spec §19's outcome order, made concrete; every phase is
 #   independently committable and gate-green at its own boundary):
 #   P1  committed layer + ignore rules + the staged TDR-0074 pair
-#   P2  the shim registry and its validation
+#   P2  the shim registry, its validation, the pre-freeze fixture and the release
+#       changeset the window values derive from
 #   P3  the prior-namespace seed class, the two scope classes, the content arm,
-#       and the identifier restatement that lets the arm be green
-#   P4  the tree arm, its two negative controls, and the CI/aggregate binding
+#       the `SCOPE_ORG` neutral site, and the identifier restatement that lets the
+#       arm be green
+#   P4  the tree arm with its declared prefix set, its two negative controls, and
+#       the CI/aggregate binding
 #   P5  the migration domain and the `install migrate` verb (spec §19 items 5+6)
 #   P6  the two retirements and the family/help surface
 #   P7  the authoritative root, the loaded path, the notices, and the proof
@@ -162,14 +284,18 @@
 #   P8  the override channel, the MCP default, and the bounded legacy mapping
 #   P9  the documents, guides, and the doc battery
 #   P10 the new quality page, its index row and registry registration, the
-#       doc-conformance update, and the release changeset
+#       doc-conformance update, and the release verification (the changeset is
+#       P2's)
 #   WHY THIS ORDER AND NOT ANOTHER:
 #   - P1 first because a fresh clone can only see committed truth; every later
 #     phase reads the moved layer, and the fresh-clone drill must run against the
 #     moved head (spec §19's ordering constraint 1).
 #   - P2 before P3 because the content arm consumes the registry as its SITE
 #     AUTHORITY; without it the arm could pass on an empty allowlist (spec §19's
-#     ordering constraint 2).
+#     ordering constraint 2). P2 also authors the changeset and the pre-freeze
+#     fixture here because both are PRECONDITIONS of its own gate: the window values
+#     derive from the changeset, and a declared site that does not exist fails the
+#     registry validator (C2, C3).
 #   - P3 before P4 because a tree invariant cannot see a string and a content seed
 #     cannot see a tracked path or a symlink target (DEC-7); the content arm proves
 #     the seeds before the tree arm adds the path and symlink properties.
@@ -192,8 +318,8 @@
 #     delivery battery already carries, and the doc-conformance update indexes a
 #     page that must exist.
 #   - P10 last because it is the only phase that adds no case: it makes the
-#     change's own claims durable (page, index, registry registration) and carries
-#     the release obligation.
+#     change's own claims durable (page, index, registry registration) and verifies
+#     the release P2 authored.
 #
 # AC OWNERSHIP (31/31; exactly one owning phase each; 0 orphans, 0 double-owned).
 #   "Owning phase" = the phase whose commit lands the LAST named case for the AC,
@@ -325,10 +451,26 @@
 #   - Every phase boundary records its gate result and its commit hash as a
 #     pm-notes `notes:` entry naming the plan phase id.
 #
+# GATE ORDERING VERSUS THE PHASE COMMIT (binding on P1; the rule generalises):
+#   A gate is evidence about the COMMITTED phase head. The phase is committed
+#   first (one commit through the commit primitive), and the gate battery is then
+#   executed — or, where a read is destructive of the committed state, re-executed
+#   — against that committed head. A pre-commit read is a dry run, never gate
+#   evidence. This is load-bearing for P1: `TC-LAYER-003` (the fresh-clone drill)
+#   and `TC-LAYER-001` (the tracked set) both read HEAD, so before the commit the
+#   clone has neither `.jaiship/config.yaml` nor the added ignore pattern and the
+#   drill's "0 status lines" assertion fails for a reason unrelated to the change.
+#   The drill's own precondition ("the workspace tree is clean") is the post-commit
+#   reading. P1 therefore commits, then runs the battery on the committed head, and
+#   records the result; a pre-commit dry read of the drill is NOT gate evidence and
+#   is never reported as green. Any later phase whose gate includes a HEAD-reading
+#   or real-tree-reading case follows the same ordering: commit, then gate the
+#   committed head.
+#
 # COMMIT CONVENTION (one commit per plan phase through the commit primitive;
 #   conventional subjects <= 72 chars, every body/footer line <= 100 chars):
 #   P1   feat(GH-365): committed jaiship project layer and brand-free ignore rules
-#   P2   feat(GH-365): declared one-release namespace shim registry
+#   P2   feat(GH-365): namespace shim registry, window and release changeset
 #   P3   feat(GH-365): prior-namespace seed class and content-arm conformance
 #   P4   feat(GH-365): namespace tree arm, negative controls and CI binding
 #   P5   feat(GH-365): install migrate verb with plan, backup and byte-preserving move
@@ -336,7 +478,7 @@
 #   P7   feat(GH-365): authoritative root, loaded-path notices and proof boundary
 #   P8   feat(GH-365): identity-derived override, MCP default and bounded mapping
 #   P9   feat(GH-365): namespace identity across docs, guides and current truth
-#   P10  docs(GH-365): namespace conformance test spec, index and release changeset
+#   P10  docs(GH-365): namespace conformance spec, index and release check
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
 #   1.  ZERO new error identities and exactly ONE retirement
@@ -413,8 +555,11 @@
 #       revision, never a silent deviation.
 #   (c) The content arm cannot be green before the surfaces it scans name the
 #       current identity — see SCAN-FIRST IDENTIFIER ALIGNMENT. P3 therefore
-#       declares five registered pages and the prompt pair in addition to the
-#       check modules, and P9 keeps every substantive reconciliation obligation.
+#       declares SEVEN documents (the five scanned registered pages plus the two
+#       DM-4 reworded pages), the prompt pair, and the `SCOPE_ORG` neutral site, in
+#       addition to the check modules, and P9 keeps every substantive
+#       reconciliation obligation. The set is derived by the grep quoted there, not
+#       by reading the review; the count and the enumeration move together (C8).
 #   (d) `packages/cli/src/help.ts` is edited by TWO phases: P5 adds the alias's
 #       declared deprecation sentence (`AC-F4-4`'s doc half, asserted by
 #       `TC-SHIM-004` at that boundary) and P6 adds the `install migrate` entry,
@@ -435,24 +580,60 @@
 #   (h) There is no `doc/documentation-profile.md` (engineering-repo default), so
 #       no `doc/business/**` area is created or touched.
 #   (i) `version_impact: minor` and the lockstep package group mean exactly ONE
-#       minor changeset; P10 authors it, because this plan has no separate release
-#       phase and the ceremony tier's lifecycle phase 9 runs the aggregate gate.
-#   (j) The 54-row mutation register (test plan §7.4, M1–M54) is a REVIEWER/FIXER
+#       minor changeset. It is AUTHORED IN P2 — not in the last phase — because the
+#       shim registry's two delivery-os window values are derived from it
+#       (`removalRelease` strictly after `declaredIn`; Appendix D leaves only the
+#       values implementation-decided), so P2's own gate and P5's alias deprecation
+#       sentence depend on it existing; P10 VERIFIES it (changesets-group check plus
+#       the window/changeset equality) and does not author it.
+#   (j) The 55-row mutation register (test plan §7.4, M1–M55) is a REVIEWER/FIXER
 #       exercise, not a committed suite; the permanent non-vacuity proofs are the
 #       planted controls inside the owning cases. Every row is allocated to the
 #       phase that owns the case it names, exactly once:
-#       P1 5 (M1–M5); P2 3 (M32–M34); P3 5 (M31, M36–M39); P4 4 (M40–M43);
-#       P5 21 (M10–M30); P6 3 (M52–M54); P7 4 (M6–M9); P8 8 (M35, M44–M50);
-#       P9 1 (M51).
-#       5 + 3 + 5 + 4 + 21 + 3 + 4 + 8 + 1 = 54, every id M1–M54 present once.
-#       M35 follows `TC-SHIM-003` (P8), not the notice machinery's own phase, and
-#       M51 follows `TC-IDENTITY-004` (P9). A row that stops producing its named
-#       failure is a BLOCKING finding; it is never repaired by deleting the row or
-#       relaxing the expected failure family.
+#       P1 5 (M1–M5); P2 3 (M32–M34); P3 5 (M31, M36–M39);
+#       P4 5 (M40–M43, M55); P5 21 (M10–M30); P6 3 (M52–M54);
+#       P7 4 (M6–M9); P8 8 (M35, M44–M50); P9 1 (M51).
+#       5 + 3 + 5 + 5 + 21 + 3 + 4 + 8 + 1 = 55, every id M1–M55 present once.
+#       M35 follows `TC-SHIM-003` (P8), not the notice machinery's own phase;
+#       M51 follows `TC-IDENTITY-004` (P9); M55 follows `TC-SCAN-003` (P4) and is
+#       the only row whose expected failure is `AC-F1-2` alone (the declared
+#       prior-root prefix set, never a hardcoded list). A row that stops producing
+#       its named failure is a BLOCKING finding; it is never repaired by deleting
+#       the row or relaxing the expected failure family.
 #   (k) `scripts/lib/dispatch-authority.sh` and the example owner-hold hook keep
 #       their prior-root literals; their batteries keep asserting them. The
 #       declaration and the budgets are what change, never the scripts
 #       (DEC-13, `TC-SHIM-002` row D, `TC-IDENTITY-006`'s not-proven list).
+#   (l) THE PRE-FREEZE FIXTURE IS AUTHORED IN P2, not P8. DM-3 fails a declared
+#       site that is absent from the tree, and Appendix F names the eight-variable
+#       pre-freeze fixture as a `prior-environment-prefix` site, so the fixture must
+#       exist in the same commit that declares it. P2 creates
+#       `tests/fixtures/namespace/pre-freeze-env.ts` with the eight owner-named
+#       variable names and the inert `ADOS_FOO=bar` marker as pure data (no probe);
+#       P8 extends it with the inertness probe and the catalog/tree assertions
+#       `TC-IDENTITY-003` drives. Both phases declare it.
+#   (m) THE CATALOG KEY-SET AUTHORITY IS `packages/core/src/config/catalog.ts`
+#       (`PRODUCTION_CATALOG`), declared by P8. The adapter imports no workspace
+#       package, so the derivation's blast radius must be explicit: P8 either reads
+#       the key set through a contracts-level selector that P8 also declares
+#       (`packages/core/src/contracts/config.ts`) or through an injected key set;
+#       the module that owns the set is `catalog.ts`, and a change to it is inside
+#       this phase's declared scope, never an undeclared edit.
+#   (n) THE DELIVERED COMMAND-AUDIT PAIR IS THE MIGRATION'S ONLY STORE WRITE
+#       (spec v1.3 DM-7, API-1). P5 declares the audit-seam composition site
+#       `packages/cli/src/edge.ts` and states the ordering: the pair
+#       (`audit.reservation` then `audit.invocation`) is written at the destination
+#       host state root after the plan is composed and before the first move, never
+#       into a source root, and never appears in the plan's `entries[]`. A dry run
+#       writes no record at all. The migration adds no record kind.
+#   (o) `tests/behaviour/projects-config.test.ts` and
+#       `tests/behaviour/ceremony-mirror-composition.test.ts` are NOT edited by any
+#       phase: DEC-12 changes no reader, validator, envelope, or composition, and
+#       test plan r0.3 (B3) dropped their "(extended)" claim. The group-document
+#       behaviour is asserted where it is already delivered
+#       (`tests/behaviour/projects-groups-list.test.ts` and
+#       `tests/behaviour/config-cli.test.ts`, both declared by P7). Declaring them
+#       would imply an edit the change deliberately does not make.
 #
 # CHANGE-ARTIFACT NOTE. Every phase commit also carries this change folder's
 #   pm-notes evidence entry and its `events.jsonl` capsule event. The folder is
@@ -476,6 +657,12 @@ tier:
     - "The TDR-0074 record or its `doc/decisions/00-index.md` row is not tracked after P1, an index row points at an untracked record, or either the record or the row is edited to match the code (THE STAGED DECISION RECORD; P1's mechanical done criterion)"
     - "A shell entry point, `scripts/lib/dispatch-authority.sh`, `scripts/hooks/*`, or one of their batteries is edited or re-pointed, or a prior-root literal leaves the declared site list (DEC-13, DEC-11, NG-4, RSK-12)"
     - "The migration deletes or overwrites a differing byte, moves before the backup copy's digests verify, creates a backup directory during `--dry-run`, or lets a second run move a file (DEC-4, DM-6, NFR-3, NFR-4, AC-F3-3/005/006)"
+    - "The migration appends a migration-specific record, writes the command-audit pair into a source root, or writes it after the first move; a dry run appends any record at all (DM-7, API-1, AC-F3-2/003/004)"
+    - "A symlink entry is followed or moved instead of being retained as `blocked` (source) or `conflict` (destination); `unscoped` is treated as a disposition, or an unscoped root carries a source, destination, entries, or a verdict (DM-6, API-2, AC-F3-1)"
+    - "A differing entry is given a seventh disposition, the derived entry is reported as anything but `already-migrated`/`absent` with its reason, or a root that never existed is retired or reported (DM-6, AC-F3-5/007, TC-MIGRATE-005)"
+    - "The release changeset is authored after P2, duplicated, or no longer equal to the shim registry's delivery-os window pair; the registry's `removalRelease` is not strictly after `declaredIn` (DM-3, AC-F4-1, C2)"
+    - "A page prints a pre-freeze `ADOS_`-class literal instead of naming the script whose header declares it; the delivered ADR-0003 DEC-8 allowlist is widened to make a gate pass (C4, DM-4, RSK-3)"
+    - "The tree arm hardcodes its prior-root prefix set instead of reading it from the declaration, or the `SCOPE_ORG` neutral site is removed or unbudgeted (AC-F1-2, DM-4, M55)"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -565,6 +752,11 @@ phases:
   #   local exclude reporting zero status lines; the composed read naming the
   #   current path and opening no prior path; the record and its index row tracked
   #   with `doc/decisions` clean):
+  #   EXECUTION ORDER (GATE ORDERING VERSUS THE PHASE COMMIT, header): commit this
+  #   phase FIRST, then run the battery below on the COMMITTED head. `TC-LAYER-001`
+  #   and `TC-LAYER-003` read HEAD, so a pre-commit dry read of the fresh-clone drill
+  #   has neither `.jaiship/config.yaml` nor the added ignore pattern and is NOT gate
+  #   evidence; it is never reported as green (C9).
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/namespace-layer.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/namespace-fresh-clone.test.ts
@@ -583,7 +775,8 @@ phases:
   #      .delivery-os` is empty.
   #   d2 the tracked blob's digest equals the recorded pre-move digest and the
   #      parsed document is structurally unchanged.
-  #   d3 the fresh-clone drill reports zero status lines with no local exclude.
+  #   d3 the fresh-clone drill reports zero status lines with no local exclude,
+  #      measured on the COMMITTED phase head (a pre-commit read is not evidence).
   #   d4 the TDR-0074 path is tracked (`--error-unmatch` exits 0) and
   #      `git status --porcelain -- doc/decisions` is empty.
   # ---------------------------------------------------------------------------
@@ -618,7 +811,9 @@ phases:
       pipelineId: "CI pipeline for the GH-365 phase-1 commit (layer, ignore, clone and loaded-path suites green; the record and index tracked with doc/decisions clean; the aggregate runs in lifecycle phase 9)"
 
   # ---------------------------------------------------------------------------
-  # PHASE 2 — The declared one-release shim registry (F-4; DM-3).
+  # PHASE 2 — The declared one-release shim registry, the release changeset its
+  # window values derive from, and the pre-freeze fixture its sites require (F-4;
+  # DM-3).
   #
   # Goal: make "declared" checkable. One machine-readable document becomes the
   # single authority for every prior-namespace compatibility input: one entry per
@@ -626,8 +821,19 @@ phases:
   # enumerated sites. This phase is second because the content arm in P3 consumes
   # this registry as its SITE AUTHORITY — without it the arm could pass on an empty
   # allowlist (spec §19's second ordering constraint).
+  # This phase also authors the two things its OWN gate needs and cannot get from a
+  # later phase: the release changeset the delivery-os window values derive from
+  # (C2) and the eight-variable pre-freeze fixture that `Appendix F` declares as a
+  # `prior-environment-prefix` site and whose absence would fail the
+  # "every declared site is present" validator (C3).
   #
   # Obligations:
+  #   2.0 Author the single minor changeset
+  #       `.changeset/gh-365-jaiship-namespace-migration-minor.md` for the lockstep
+  #       group, FIRST, so the window values below derive from a document that
+  #       exists: the release that ships this change is the `declaredIn` value and
+  #       the next minor is the `removalRelease` value. P10 verifies the changeset
+  #       and the window equality (`changesets-group.ts`) and never re-authors it.
   #   2.1 Author `scripts/checks/namespace-shims.registry.json` as
   #       `namespace.shims.v1`: `schemaId`, `window { declaredIn, removalRelease }`
   #       defaults, `shims[]` with `id`, `kind` (`executable` | `path` |
@@ -640,75 +846,121 @@ phases:
   #       `prior-working-name-override`, `prior-environment-prefix`,
   #       `pre-freeze-environment-prefix`, `pre-freeze-config-directory`. The
   #       delivery-os lineage carries this change's one-release window
-  #       (`removalRelease` strictly greater than `declaredIn` under semver, derived
-  #       from the change's changeset); the pre-freeze lineage carries
+  #       (`removalRelease` strictly greater than `declaredIn` under semver, taken
+  #       from the changeset authored in 2.0); the pre-freeze lineage carries
   #       `removalRelease: null` plus its owner note.
-  #   2.3 Enumerate the sites truthfully and file-level with a role sentence: the
-  #       prior-namespace implementation and detection surfaces in `packages/**`
-  #       (the install-migration declaration, the edge/entrypoint override
-  #       constants, the MCP serve default, and the one adapter comment that
-  #       documents the prior directory as the migration source — that comment is a
-  #       DECLARED SITE, never an edit), the compatibility alias bin and the primary
-  #       bin's prior identity, both registry documents themselves (self-
-  #       declaration with a budget — never a wildcard), and the shell surfaces
-  #       DEC-13 keeps (`scripts/lib/dispatch-authority.sh`, the example owner-hold
-  #       hook, `scripts/install.sh`, `scripts/uninstall.sh`, and the batteries of
-  #       those scripts). Budgets bound any file that legitimately repeats a
-  #       literal more than once.
+  #   2.3 Enumerate the sites truthfully and file-level with a role sentence. The
+  #       enumeration is re-derived by the header's three `git grep` commands before
+  #       this phase's gate, and it must cover:
+  #       (a) the prior-namespace implementation and detection surfaces in
+  #           `packages/**` — the install-migration declaration, the
+  #           edge/entrypoint override constants, the MCP serve default, the alias
+  #           bin's name and package bin entry, the primary bin's prior identity,
+  #           and the one adapter comment that documents the prior directory as the
+  #           migration source (a DECLARED SITE, never an edit);
+  #       (b) both registry documents themselves (self-declaration with a budget —
+  #           never a wildcard);
+  #       (c) the shell surfaces DEC-13 keeps — `scripts/lib/dispatch-authority.sh`,
+  #           `scripts/hooks/pre-opencode-iteration-owner-hold.sh`,
+  #           `scripts/install.sh`, `scripts/uninstall.sh`, and their batteries
+  #           (`scripts/.tests/test-dispatch-bash-fallback.sh`,
+  #           `scripts/.tests/test-hook-owner-hold-example.sh`,
+  #           `scripts/.tests/test-uninstall.sh`);
+  #       (d) THE THREE PERMANENT DOC SITES Appendix F names, each with a role
+  #           sentence and an occurrence budget:
+  #           `doc/spec/features/feature-autonomous-delivery.md` (the owner-hold
+  #           table names the example hook's declared `prior-environment-prefix`
+  #           shim), `doc/guides/delivery-modes.md` (the same names in the delivery
+  #           modes' pre-iteration-hook section), and
+  #           `doc/quality/test-specs/test-spec-autonomous-delivery.md` (the
+  #           owner-hold test specification). They DEFINE the prior namespace as
+  #           prior, so they are declared, never reworded (C5, DM-4);
+  #       (e) the eight-variable pre-freeze fixture authored in 2.6, which Appendix
+  #           F names as a `prior-environment-prefix` site.
+  #       Budgets bound any file that legitimately repeats a literal more than once.
+  #       The glossary is NOT declared here: it still presents the prior override
+  #       and the prior configuration path as current, so it is reworded in P3 and
+  #       becomes a declared site in P9 with the rows that make it a declaration.
   #   2.4 Author `tests/structure/namespace-shims-registry.test.ts` and
   #       `tests/fixtures/namespace/shim-registry.ts`: the loader plus the six
   #       mutant builders (duplicate id, unknown kind/direction, empty sites, absent
   #       site, wildcard site, non-increasing window) and the window-order
   #       comparator. The case proves shape, unique ids, window order, site
   #       presence, budgets, and wildcard refusal — and that each mutant fails by
-  #       name.
+  #       name. It also asserts the window/changeset equality: the delivery-os
+  #       `declaredIn` equals the changeset's release and `removalRelease` the next
+  #       minor, so a window that no changeset delivers fails by name.
   #   2.5 Append this phase's boundary rows to `tests/fixtures/namespace/evidence.ts`
   #       (`shim-reconciliation` starts here) and keep the inventory gate green.
+  #   2.6 Create `tests/fixtures/namespace/pre-freeze-env.ts` as pure data: the eight
+  #       owner-named pre-freeze variable names and the inert `ADOS_FOO=bar` marker,
+  #       with no probe and no filesystem effect. It exists at this boundary because
+  #       a declared site must be present in the tree (DM-3, C3). P8 EXTENDS it with
+  #       the inertness probe and the resolved-tree assertions `TC-IDENTITY-003`
+  #       drives.
   #
   # Verb surface at this boundary: none. The registry is data; nothing consumes it
   #   until P3, and no product surface changes.
   #
   # Code areas (concrete):
+  #   .changeset/gh-365-jaiship-namespace-migration-minor.md  (new: the release)
   #   scripts/checks/namespace-shims.registry.json        (new: the authority)
   #   tests/structure/namespace-shims-registry.test.ts    (new)
   #   tests/fixtures/namespace/shim-registry.ts           (new)
+  #   tests/fixtures/namespace/pre-freeze-env.ts          (new: data only)
   #   tests/fixtures/namespace/evidence.ts                (rows appended)
   #   tests/structure/inventory.json                      (register/verify)
   #
   # Acceptance: AC-F4-1 (TC-SHIM-001). 1 AC, 1 TC. `TC-SHIM-002` (both directions)
   #   is P3's: the reconciliation needs the scan that consumes the registry.
   #
-  # Gate (expected signal: exit 0; the registry validates; every declared site
-  #   exists in the tree; every delivery-os window is strictly ordered and every
-  #   pre-freeze entry declares `null` plus an owner; six mutants fail by name):
+  # Gate (expected signal: exit 0; the changeset group check passes; the registry
+  #   validates; every declared site — including the three permanent doc sites and
+  #   the pre-freeze fixture — exists in the tree; every delivery-os window is
+  #   strictly ordered AND equal to the changeset-derived pair; every pre-freeze
+  #   entry declares `null` plus an owner; six mutants fail by name):
   #   mkdir -p tmp/tmpdir
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/changesets-group.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/namespace-shims-registry.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/content-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   #
   # Done criteria:
-  #   d1 the registry validates and every site resolves to an existing path.
-  #   d2 the six mutant controls each fail by their declared message family.
-  #   d3 no wildcard site and no empty sites array exists.
+  #   d1 the changeset exists and the registry's window pair equals the
+  #      changeset-derived release pair.
+  #   d2 the registry validates and every site resolves to an existing path,
+  #      including the three permanent doc sites and the pre-freeze fixture.
+  #   d3 the six mutant controls each fail by their declared message family.
+  #   d4 no wildcard site and no empty sites array exists.
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "The declared one-release shim registry: every prior-namespace compatibility input with kind, literal, direction, lineage, notice, window, owner and enumerated sites"
+    title: "The declared one-release shim registry with its three permanent doc sites and pre-freeze fixture, the release changeset its window values derive from, and the window/changeset equality"
     kind: delivery
-    summary: "feat(GH-365): declared one-release namespace shim registry"
+    summary: "feat(GH-365): namespace shim registry, window and release changeset"
     scope:
       files:
+        # Authored HERE so the registry's window values derive from it (C2);
+        # P10 declares it verify-only.
+        - .changeset/gh-365-jaiship-namespace-migration-minor.md
         - scripts/checks/namespace-shims.registry.json
         - tests/structure/namespace-shims-registry.test.ts
         - tests/fixtures/namespace/shim-registry.ts
+        # Created here as data so the declared prior-environment-prefix site
+        # exists at this gate (C3); extended by P8.
+        - tests/fixtures/namespace/pre-freeze-env.ts
         - tests/fixtures/namespace/evidence.ts
         - tests/structure/inventory.json
     interactions:
       - kind: contract-file
         target: scripts/checks/namespace-shims.registry.json
         role: producer
+      - kind: contract-file
+        target: .changeset/gh-365-jaiship-namespace-migration-minor.md
+        role: producer
     doneArtifacts:
-      pipelineId: "CI pipeline for the GH-365 phase-2 commit (registry shape, window, site-presence and mutant suites green)"
+      pipelineId: "CI pipeline for the GH-365 phase-2 commit (changeset group, registry shape, window/changeset equality, site-presence and mutant suites green)"
+
 
   # ---------------------------------------------------------------------------
   # PHASE 3 — The prior-namespace seed class, the two new scope classes, the
@@ -724,12 +976,14 @@ phases:
   # cannot see a tracked path or a symlink target, and a tree invariant cannot see a
   # string (DEC-7).
   #
-  # SCAN-FIRST IDENTIFIER ALIGNMENT (header block) is this phase's second, smaller
-  # job: the arm is a gate, so the five registered pages that still present a prior
-  # path or prefix as current, and the one prompt sentence that does, are restated
-  # HERE — identifier only. No new fact, count, structure, reference-page entry, or
-  # coverage row is authored at this boundary; P9 owns every substantive Appendix A
-  # reconciliation and `AC-F6-4`.
+  # SCAN-FIRST IDENTIFIER ALIGNMENT (header block) is this phase's second job: the
+  # arm is a gate, so every surface that presents a prior path, prefix, or override
+  # as current is restated HERE — identifier only, on the SEVEN documents and the
+  # one prompt pair the header derives mechanically (C1/C8). No new fact, count,
+  # structure, reference-page entry, or coverage row is authored at this boundary;
+  # P9 owns every substantive Appendix A reconciliation and `AC-F6-4`. The arm is
+  # also only green once `packages/core/src/branding/index.ts` is a declared
+  # `neutralSites[]` entry (the `SCOPE_ORG` constant), which is 3.1's job.
   #
   # Obligations:
   #   3.1 Extend `scripts/checks/forbidden-literals.registry.json` with
@@ -739,15 +993,20 @@ phases:
   #       `prior-executable` `delivery-os` delimited with
   #       `excludePrecededBy: ["@"]` and `excludeWithin:
   #       ["agentic-delivery-os"]`), the explicit `scopeSelection` mapping,
-  #       `neutralSites[]` (the private root manifest name and the generated
-  #       lockfile), `declaredCorpora[]` (the delivered `doc/changes/` and
-  #       `doc/decisions/` prefixes, the immutable M1 snapshot command pages, and
-  #       the one dated inception analysis record), and `shimRegistry` pointing at
-  #       the P2 document. `seedLiterals`, the five delivered classes, and the
-  #       delivered allowlist keep their exact behaviour.
+  #       `neutralSites[]` (the private root manifest name, `pnpm-lock.yaml` as
+  #       generated, AND `packages/core/src/branding/index.ts` — `SCOPE_ORG =
+  #       "delivery-os"` is the scope-org derivation input, absorbed by the
+  #       `prior-executable` seed, `maxOccurrences: 1`, DM-4), `declaredCorpora[]`
+  #       (the delivered `doc/changes/` and `doc/decisions/` prefixes, the immutable
+  #       M1 snapshot command pages, and the one dated inception analysis record),
+  #       and `shimRegistry` pointing at the P2 document. `seedLiterals`, the five
+  #       delivered classes, and the delivered allowlist keep their exact behaviour
+  #       — and the ADR-0003 DEC-8 path allowlist does NOT filter the new class (the
+  #       shim registry's sites, `neutralSites[]`, and `declaredCorpora[]` are its
+  #       only authorities).
   #   3.2 Add `promptSurface` (`root: ".opencode"`) and `scriptSurface`
   #       (`roots: ["scripts", "tools"]`) to `scopeClasses`, mapped to the
-  #       `priorNamespace` class ONLY — never to the DEC-8 seed class, so the
+  #       `priorNamespace` class ONLY — never to the delivered seed class, so the
   #       unbounded pre-freeze inventory in `scripts/**` and `tools/**` does not
   #       join the scan.
   #   3.3 Extend `scripts/checks/forbidden-literals.ts`: the per-class seed
@@ -755,35 +1014,43 @@ phases:
   #       and its longest-match reporting, the shim-registry load, and the
   #       both-directions site reconciliation (every match inside a declared site, a
   #       declared corpus, or a neutral site; every declared site present and at or
-  #       below its budget). Widen the exact-shape validation deliberately — seven
-  #       classes, the prior-namespace block, the five seeds, the site authority —
-  #       and keep the delivered DEC-8 path unchanged.
+  #       below its budget), with the class's own allowlist independence from the
+  #       delivered one. Widen the exact-shape validation deliberately — seven
+  #       classes, the prior-namespace block, the five seeds, the neutral site set,
+  #       the site authority — and keep the delivered path unchanged.
   #   3.4 Restate the scope-class order assertion in `tests/checks/identity-docs.test.ts`
   #       to the seven declared classes (PIN UPDATE, authorising clause DM-4/API-7);
-  #       keep every DEC-8 seed, splice and unregistered-doc control green.
+  #       keep every delivered seed, splice and unregistered-doc control green.
   #   3.5 Author `tests/checks/namespace-conformance.test.ts` and
   #       `tests/fixtures/namespace/seeds.ts` (the seed corpus and
   #       `sow(repo, class, line)` over a temp-copy repository): one planted
   #       occurrence per prior-namespace-carrying class failing by name, the one
   #       non-carrying class staying green for the prior seeds and failing for its
-  #       DEC-8 seed, the neutral-scope cases (scope sigil and repository name pass;
-  #       a product-identifier use of the prior executable fails; an unscoped
-  #       package name equal to the prior token fails), and the both-directions
+  #       delivered seed, the neutral-scope cases with the `SCOPE_ORG` neutral site
+  #       and the allowlist-independence control (an occurrence under the delivered
+  #       path allowlist still fails this class), and the both-directions
   #       reconciliation with one mutation per direction. Extend
   #       `tests/fixtures/forbidden-literals/{true,false}-positives.json` with the
-  #       neutral-scope and longest-literal rows, and extend
-  #       `tests/fixtures/forbidden-literals`' mutation mechanism via
-  #       `tests/checks/fixture-repo.ts`.
-  #   3.6 Restate the identifiers so the arm is green over the real tree: the
-  #       routing-authority sentence in `.opencode/agent/toolsmith.md` names the
-  #       current configuration path, and `.ados-claude/agents/toolsmith.md` is
-  #       REGENERATED by `scripts/build-claude-plugin.sh` (never hand-edited); the
-  #       prior literals in `doc/spec/features/feature-cli-entrypoint.md`,
-  #       `feature-branding-seam.md`, `feature-mcp-surface.md`,
-  #       `doc/guides/provider-conditions-and-parks.md` and
-  #       `doc/guides/ceremony-runner.md` stop being presented as the current
-  #       channel or path — each names the derived channel/path and treats the prior
-  #       literal as the shim P2 already declares.
+  #       neutral-scope and longest-literal rows, and extend the mutation mechanism
+  #       via `tests/checks/fixture-repo.ts`.
+  #   3.6 Restate the identifiers on the SEVEN documents and the prompt pair, so the
+  #       arm is green over the real tree. Each page names the derived channel/path
+  #       and treats the prior literal as the shim P2 already declares:
+  #       (a) the prompt: the routing-authority sentence in
+  #           `.opencode/agent/toolsmith.md` names `.jaiship/config.yaml`, and
+  #           `.ados-claude/agents/toolsmith.md` is REGENERATED by
+  #           `scripts/build-claude-plugin.sh` (never hand-edited);
+  #       (b) the five scanned registered pages: `doc/spec/features/feature-cli-entrypoint.md`,
+  #           `feature-branding-seam.md`, `feature-mcp-surface.md`,
+  #           `doc/guides/provider-conditions-and-parks.md`,
+  #           `doc/guides/ceremony-runner.md`;
+  #       (c) the two pages DM-4 names as reworded: the configuration-path line in
+  #           `doc/guides/opencode-model-configuration.md`, and the override row plus
+  #           the reference-declaration row in `doc/overview/glossary.md`.
+  #       Where a page must point at a pre-freeze input, it names the SCRIPT and the
+  #       operator reads the variable name from that script's header; the
+  #       `ADOS_`-class literals are never written and the delivered allowlist is
+  #       never widened (the header's NO-LITERAL-ADDING SHORTCUT rule).
   #   3.7 Append this phase's boundary rows to `tests/fixtures/namespace/evidence.ts`
   #       and keep the inventory gate green.
   #
@@ -792,7 +1059,7 @@ phases:
   #
   # Code areas (concrete):
   #   scripts/checks/forbidden-literals.ts                 (seed class + matcher + reconciliation)
-  #   scripts/checks/forbidden-literals.registry.json      (seeds, classes, corpora, pointer)
+  #   scripts/checks/forbidden-literals.registry.json      (seeds, classes, corpora, neutral sites, pointer)
   #   tests/checks/namespace-conformance.test.ts           (new)
   #   tests/checks/forbidden-literals.test.ts              (extended shape assertions)
   #   tests/checks/identity-docs.test.ts                   (PIN UPDATE: class order)
@@ -808,17 +1075,22 @@ phases:
   #   doc/spec/features/feature-mcp-surface.md             (identifier restatement only)
   #   doc/guides/provider-conditions-and-parks.md          (identifier restatement only)
   #   doc/guides/ceremony-runner.md                        (identifier restatement only)
+  #   doc/guides/opencode-model-configuration.md           (the configuration-path line)
+  #   doc/overview/glossary.md                             (the override and reference rows)
   #   tests/structure/inventory.json                       (register/verify)
   #
   # Acceptance: AC-F4-2 (TC-SHIM-002), AC-F5-1 (TC-SCAN-001), AC-F5-2
   #   (TC-SCAN-002). 3 ACs, 3 TCs.
   #
   # Gate (expected signal: exit 0; seven scope classes scanned with six carrying
-  #   the prior seeds; zero violations over the real tree; one mutation per carrying
-  #   class and one control for the non-carrying class failing by name; both
-  #   reconciliation directions reconciled; the two neutral shapes green and both
-  #   product-identifier uses red; the shell and prompt surfaces unchanged except the
-  #   one regenerated sentence):
+  #   the prior seeds; ZERO UNDECLARED occurrences over the real tree — the seven
+  #   restated documents, the prompt pair, the `SCOPE_ORG` neutral site, the three
+  #   permanent doc sites and every declared shim site included; one mutation per
+  #   carrying class and one control for the non-carrying class failing by name;
+  #   both reconciliation directions reconciled; the two neutral shapes green, the
+  #   allowlist-independence control red and both product-identifier uses red; the
+  #   shell surface byte-unchanged and the prompt surface changed by exactly one
+  #   regenerated sentence):
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/forbidden-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/namespace-conformance.test.ts
@@ -830,7 +1102,8 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   #
   # Done criteria:
-  #   d1 the real tree is seed-clean and the per-class summary names seven classes.
+  #   d1 the real tree reports 0 undeclared occurrences and the per-class summary
+  #      names seven classes.
   #   d2 the two reconciliation directions each fail by name when mutated.
   #   d3 the generated projection equals a fresh `scripts/build-claude-plugin.sh`
   #      run (no hand edit).
@@ -838,7 +1111,7 @@ phases:
   #      to a declared site.
   # ---------------------------------------------------------------------------
   - id: 3
-    title: "The prior-namespace seed class over seven scope classes, the shim-registry reconciliation, the neutral-scope controls, and the identifier restatement that makes the content arm green"
+    title: "The prior-namespace seed class over seven scope classes with the SCOPE_ORG neutral site, the shim-registry reconciliation, the neutral-scope and allowlist-independence controls, and the seven-document plus prompt-pair restatement that makes the content arm green"
     kind: delivery
     summary: "feat(GH-365): prior-namespace seed class and content-arm conformance"
     scope:
@@ -848,7 +1121,7 @@ phases:
         - tests/checks/namespace-conformance.test.ts
         - tests/checks/forbidden-literals.test.ts
         # PIN UPDATE (kind ii): the exact scope-class order list gains the two new
-        # classes (DM-4, API-7); every DEC-8 control is kept.
+        # classes (DM-4, API-7); every delivered control is kept.
         - tests/checks/identity-docs.test.ts
         - tests/checks/fixture-repo.ts
         - tests/fixtures/namespace/seeds.ts
@@ -856,7 +1129,8 @@ phases:
         - tests/fixtures/forbidden-literals/false-positives.json
         - tests/fixtures/namespace/evidence.ts
         # SCAN-FIRST IDENTIFIER ALIGNMENT: one prompt sentence + its regenerated
-        # projection; identifier-only restatement on the five registered pages.
+        # projection, the five scanned registered pages, and the two DM-4
+        # reworded pages — the header's mechanically derived set (C1/C8).
         - .opencode/agent/toolsmith.md
         - .ados-claude/agents/toolsmith.md
         - doc/spec/features/feature-cli-entrypoint.md
@@ -864,44 +1138,60 @@ phases:
         - doc/spec/features/feature-mcp-surface.md
         - doc/guides/provider-conditions-and-parks.md
         - doc/guides/ceremony-runner.md
+        - doc/guides/opencode-model-configuration.md
+        - doc/overview/glossary.md
         - tests/structure/inventory.json
     interactions:
       - kind: contract-file
         target: scripts/checks/forbidden-literals.registry.json
         role: producer
-      # The shim registry is CONSUMED here as the site authority but is not edited
-      # by this phase, so it is not declared as scope (P2 authors it).
+      # The shim registry is CONSUMED here as the site authority and is not edited
+      # by this phase, so it is not declared as scope (P2 authors it; P9 adds the
+      # glossary site it earns).
     doneArtifacts:
-      pipelineId: "CI pipeline for the GH-365 phase-3 commit (content arm green over the real tree; per-class mutations and both reconciliation directions failing by name)"
+      pipelineId: "CI pipeline for the GH-365 phase-3 commit (content arm green over the real tree with 0 undeclared occurrences; per-class mutations, the SCOPE_ORG neutral site and both reconciliation directions failing by name)"
 
   # ---------------------------------------------------------------------------
-  # PHASE 4 — The tree arm, its two negative controls, the ignore probes, and the
-  # CI/aggregate binding (F-1, F-5; DM-2, DM-4; API-7).
+  # PHASE 4 — The tree arm with its declared prefix set, its two negative controls,
+  # the ignore probes, and the CI/aggregate binding (F-1, F-5; DM-2, DM-3, DM-4;
+  # API-7).
   #
   # Goal: assert the repository-tree properties no content scan can see — zero
   # tracked paths under a declared prior-namespace root, zero tracked symlinks whose
   # target resolves into one (including the exact `.jaiship -> .delivery-os` shape),
-  # the committed layer present, and the runtime-written project files ignored by
-  # the repository's own rules, probed in a rule-world rather than against a live
-  # tree. Both arms then become CI-bound, non-advisory, and part of the aggregate.
-  # This phase follows P3 because the seeds prove strings before the tree arm proves
-  # paths, and it precedes P5 because the aggregate must range over the migration
-  # subsystem before it exists.
+  # the committed layer present, the runtime-written project files ignored by the
+  # repository's own rules (probed in a rule-world), and a tracked
+  # `.jaiship/projects.yaml` failing by name. Both arms then become CI-bound,
+  # non-advisory, and part of the aggregate. This phase follows P3 because the
+  # seeds prove strings before the tree arm proves paths, and it precedes P5
+  # because the aggregate must range over the migration subsystem before it exists.
   #
   # Obligations:
   #   4.1 Author `scripts/checks/namespace-tree.ts` (the tree arm): the tracked-set
-  #       read, the symlink-target resolution, the committed-layer assertion, and the
-  #       rule-world ignore probes. Read-only, offline, deterministic; it accepts a
-  #       root so a temp-copy repository can be scanned and never writes the tree.
-  #   4.2 Author `tests/checks/namespace-tree.test.ts` (the real tree plus the two
-  #       negative controls: a tracked symlink into the prior root and a tracked file
-  #       under it, each failing by name), `tests/checks/namespace-gate-binding.test.ts`
-  #       (the CI binding, the non-advisory posture, the baseline-fetch obligation,
-  #       the aggregate membership, and the deterministic double run), and
+  #       read, the symlink-target resolution, the committed-layer assertion, the
+  #       rule-world ignore probes, and the explicit-tracking check. The prior-root
+  #       PREFIX SET is READ FROM THE DECLARATION — the shim registry's
+  #       `prior-config-directory` (plus its home form) and `prior-state-directory`
+  #       literals, cross-checked with the forbidden-literal registry — never a
+  #       hardcoded list, and the arm REPORTS the set it used so the property is
+  #       observable (AC-F1-2's distinguishing property, S11). Read-only, offline,
+  #       deterministic; it accepts a root so a temp-copy repository can be scanned
+  #       and never writes the tree.
+  #   4.2 Author `tests/checks/namespace-tree.test.ts` (the real tree, the reported
+  #       prefix-set equality, and the two negative controls: a tracked symlink into
+  #       the prior root and a tracked file under it, each failing by name),
+  #       `tests/checks/namespace-gate-binding.test.ts` (the CI binding, the
+  #       non-advisory posture, the baseline-fetch obligation, the aggregate
+  #       membership, and the deterministic double run), and
   #       `tests/fixtures/namespace/tree.ts` (the synthetic tracked-set builder with
   #       real git index modes including `120000`, and the rule-world ignore probe
   #       runner). Extend `tests/checks/fixture-repo.ts` with the mode-`120000`
   #       symlink helper.
+  #       MUTATION `M55` (this phase's only new row, `5+3+5+5+21+3+4+8+1 = 55`):
+  #       hardcode the prefix set in the arm (drop `.delivery-os-state`, or add a
+  #       literal no declaration carries); `TC-SCAN-003` must fail by name on the
+  #       reported-set equality while the real tree stays green and both synthetic
+  #       controls still pass — the only failure attributable to `AC-F1-2` alone.
   #   4.3 Extend `scripts/checks/ci-topology.ts` with the tree-arm `ts-*` job and its
   #       baseline-fetch obligation, keeping `ts-forbidden-literals` for the content
   #       arm; edit `.github/workflows/ci.yml` so the new job is not advisory, has no
@@ -919,11 +1209,11 @@ phases:
   #   the aggregate and in CI.
   #
   # Code areas (concrete):
-  #   scripts/checks/namespace-tree.ts                 (new)
+  #   scripts/checks/namespace-tree.ts                 (new: declared prefix set)
   #   scripts/checks/ci-topology.ts                    (tree-arm job declaration)
   #   .github/workflows/ci.yml                         (the non-advisory job)
   #   package.json                                     (scripts + aggregate chain)
-  #   tests/checks/namespace-tree.test.ts              (new)
+  #   tests/checks/namespace-tree.test.ts              (new: prefix-set equality)
   #   tests/checks/namespace-gate-binding.test.ts      (new)
   #   tests/fixtures/namespace/tree.ts                 (new)
   #   tests/checks/fixture-repo.ts                     (mode-120000 helper)
@@ -931,14 +1221,17 @@ phases:
   #   tests/fixtures/namespace/evidence.ts             (rows appended)
   #   tests/structure/inventory.json                   (register/verify)
   #
-  # Acceptance: AC-F1-2 (TC-SCAN-003/004/005), AC-F5-3 (TC-SCAN-003), AC-F5-4
-  #   (TC-SCAN-004), AC-F5-5 (TC-SCAN-005), AC-F5-6 (TC-SCAN-006). 5 ACs, 4 TCs.
+  # Acceptance: AC-F1-2 (TC-SCAN-003/004/005 — the real-tree prefix-set property and
+  #   the two controls), AC-F5-3 (TC-SCAN-003), AC-F5-4 (TC-SCAN-004), AC-F5-5
+  #   (TC-SCAN-005), AC-F5-6 (TC-SCAN-006). 5 ACs, 4 TCs.
   #
   # Gate (expected signal: exit 0; the real tree green with zero tracked prior paths,
   #   zero symlinks into one, the committed layer present and both runtime files
-  #   ignored in the rule-world; both negative controls failing by name; the topology
-  #   and bindingness checks accepting the new job and rejecting an advisory or
-  #   bypassed variant; two runs identical; 0 writes):
+  #   ignored in the rule-world; the reported prefix set equal to the declared set;
+  #   a tracked `.jaiship/projects.yaml` failing by name in the temp copy; both
+  #   negative controls failing by name; `M55`'s hardcoded set failing only
+  #   `TC-SCAN-003`; the topology and bindingness checks accepting the new job and
+  #   rejecting an advisory or bypassed variant; two runs identical; 0 writes):
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/namespace-tree.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/ci-topology.ts
@@ -954,17 +1247,20 @@ phases:
   # Done criteria:
   #   d1 the tree arm is green on the real tree and both negative controls fail by
   #      name with the tracked path or the symlink target.
-  #   d2 the topology and bindingness checks reject an advisory job, a bypass
+  #   d2 the reported prefix set equals the declared set; a hardcoded set fails only
+  #      `TC-SCAN-003` (`M55`).
+  #   d3 the topology and bindingness checks reject an advisory job, a bypass
   #      construct, and a missing baseline fetch.
-  #   d3 both arms appear in the aggregate chain and in CI.
+  #   d4 both arms appear in the aggregate chain and in CI.
   # ---------------------------------------------------------------------------
   - id: 4
-    title: "The repository-tree arm with its four properties, the two negative controls, the rule-world ignore probes, and the non-advisory CI plus aggregate binding of both arms"
+    title: "The repository-tree arm with its declared prior-root prefix set, the explicit-tracking check, the two negative controls, the rule-world ignore probes, and the non-advisory CI plus aggregate binding of both arms"
     kind: delivery
     summary: "feat(GH-365): namespace tree arm, negative controls and CI binding"
     scope:
       files:
         - scripts/checks/namespace-tree.ts
+
         - scripts/checks/ci-topology.ts
         - .github/workflows/ci.yml
         - package.json
@@ -1002,8 +1298,13 @@ phases:
   #
   # Obligations:
   #   5.1 Author the migration domain as pure modules: the plan builder and
-  #       entry enumeration with container descent, the ordered per-entry decision
-  #       table, the byte-preserving apply step (rename, or copy-verify-rename for a
+  #       entry enumeration with container descent, the ROOT-SCOPE resolution
+  #       (`scoped` | `unscoped`; an invocation outside a work tree reports the
+  #       project class `unscoped` with no source, no destination, no entries, and
+  #       no verdict — a scope, never a disposition), the ordered per-entry decision
+  #       table including the SYMLINK RULE evaluated before the byte rules (a source
+  #       symlink `blocked`, a destination symlink `conflict`, never followed, never
+  #       moved), the byte-preserving apply step (rename, or copy-verify-rename for a
   #       merge), the manifest writer/reader, and the digest comparison. No ambient
   #       clock, filesystem, environment, or network: facts are injected (assumption
   #       A4 — the run stamp and `runId` are composition-injected, or `NFR-1` and the
@@ -1011,41 +1312,66 @@ phases:
   #       reachable core surface.
   #   5.2 Extend `packages/core/src/domain/install-migration.ts`: the prior-namespace
   #       declaration becomes the three brand-derived root classes (host
-  #       configuration, host state, invoking project configuration) and the old
-  #       advisory/delegation surfaces become the plan/apply seams while today's
-  #       detection exports stay.
-  #   5.3 Extend `packages/core/src/contracts/install.ts` and its index with the
-  #       `install.migration.v1` payload and manifest types, the closed six-value
-  #       disposition vocabulary, the closed five-value verdict vocabulary, the
-  #       declared derived-entry set (`host-index.json`), the three root labels, and
-  #       the verb set.
+  #       configuration, host state, invoking project configuration) with their fixed
+  #       labels, and the old advisory/delegation surfaces become the plan/apply seams
+  #       while today's detection exports stay.
+  #   5.3 Extend `packages/core/src/contracts/install.ts` and its index with TWO
+  #       schema documents and their types — the CLI payload
+  #       `install.migration.plan.v1` (with `roots[].scope`) and the backup manifest
+  #       `install.migration.manifest.v1` — the closed six-value disposition
+  #       vocabulary, the closed five-value verdict vocabulary, the closed
+  #       root-scope pair, the DM-6 verdict-composition rule as data, the declared
+  #       derived-entry set (`host-index.json`), the three root labels, and the verb
+  #       set. One id never names two shapes (S4).
   #   5.4 Author the verb handler in `packages/cli/src/commands/install.ts`
   #       (grammar, `--dry-run`, `--backup-dir`, `--stop-daemon`, the bounded human
-  #       block, the machine payload, the verdict/exit composition, and the
-  #       zero-write/zero-directory dry-run discipline) and restate the flag pin in
-  #       `tests/structure/install-conformance.test.ts` (PIN UPDATE: `--backup-dir`
-  #       joins the flags and the requires-value set; `--migrate` is still present at
-  #       this boundary because its retirement is P6's).
+  #       block with NFR-2's truncation line, the machine payload, the verdict/exit
+  #       composition, and the zero-write/zero-directory dry-run discipline) and
+  #       restate the flag pin in `tests/structure/install-conformance.test.ts`
+  #       (PIN UPDATE: `--backup-dir` joins the flags and the requires-value set;
+  #       `--migrate` is still present at this boundary because its retirement is
+  #       P6's).
   #   5.5 Compose the migration runtime in `packages/cli/src/production.ts`: the
   #       three roots, the injected filesystem and clock, the admission gates, the
-  #       daemon guard and its stop-before-first-move ordering, and the backup root
-  #       inside the destination configuration root.
+  #       daemon guard and its stop-before-first-move ordering, the managed-`PATH`
+  #       residual detection (read-only: a recorded block whose install directory is
+  #       under a prior root is reported with the `install` remedy and NO profile is
+  #       opened for writing or edited), and the backup root inside the destination
+  #       configuration root.
   #   5.6 Add the alias's declared deprecation sentence to `packages/cli/src/help.ts`
   #       (AC-F4-4's doc half, asserted at this boundary by `TC-SHIM-004`); the verb's
   #       help entry and the flag retirement note are P6's.
-  #   5.7 Author `tests/behaviour/install-migrate.test.ts` over driver D2 with the
+  #   5.7 COMPOSE THE AUDIT SEAM (`packages/cli/src/edge.ts`, declared here and by
+  #       P8): the migration takes the delivered command-audit pair
+  #       (`audit.reservation` then `audit.invocation`) and writes it at the
+  #       DESTINATION host state root — never a source root — after the plan is
+  #       composed and BEFORE the first move. The pair is the only store write the
+  #       command makes: the migration appends no migration record, writes no
+  #       install-record field, and the pair never appears in the plan's
+  #       `entries[]`. A `--dry-run` writes no record of any kind. The edge's
+  #       state-root selection must be the current-root one for this write, so an
+  #       unmigrated host does not receive an audit record inside the source tree it
+  #       is about to move (S2, DM-7, API-1).
+  #   5.8 Author `tests/behaviour/install-migrate.test.ts` over driver D2 with the
   #       five fixtures `tests/fixtures/migration/{roots,filesystem,manifest,plan,guards}.ts`:
-  #       the admission and grammar arms with zero writes, the daemon ordering, the
-  #       dry-run plan (completeness, zero writes, zero directory creations, no daemon
-  #       read, two identical runs), the clean move with digest equality, the backup
-  #       manifest, the six-row disposition matrix plus the mixed world, the derived
-  #       destination-wins entry, idempotence, the injected partial failure and its
-  #       recovery, the byte-preservation/no-re-versioning facts, and the post-move
+  #       the admission, grammar, symlink and `unscoped` arms with zero writes; the
+  #       daemon ordering (including `--dry-run --stop-daemon` never reading the
+  #       port); the dry-run plan (completeness, the ≤ 60-line bound and the single
+  #       counted truncation line, zero writes, zero directory creations, no daemon
+  #       read, NO record of any kind, two identical runs); the clean move with
+  #       digest equality, the `install.migration.manifest.v1` manifest, the TWO
+  #       audit records at the destination root in the declared order, the
+  #       managed-`PATH` residual with the profile untouched, and the retired roots;
+  #       the six-row DM-6 matrix plus the mixed, conflicts-only and duplicates-only
+  #       worlds under DM-6's stated composition rule; the derived entry as
+  #       `already-migrated`; idempotence including the never-existent source root
+  #       (neither retired nor reported); the injected partial failure and its
+  #       recovery; the byte-preservation/no-re-versioning facts; and the post-move
   #       state locations. Extend `tests/behaviour/install-family-surface.test.ts`,
   #       `tests/structure/install-ownership-split.test.ts` and
   #       `tests/structure/entrypoint-bin.test.ts` for the alias refusal, the family
   #       surface, and the derived-override fact the alias shares.
-  #   5.8 Append this phase's boundary rows to `tests/fixtures/namespace/evidence.ts`
+  #   5.9 Append this phase's boundary rows to `tests/fixtures/namespace/evidence.ts`
   #       (`migration-plan`, `migration-move`) and REGISTER the five new domain
   #       modules in `tests/structure/inventory.json` — an unregistered module fails
   #       the delivered inventory gate by name.
@@ -1063,11 +1389,12 @@ phases:
   #   packages/core/src/domain/install-migration.ts          (extended)
   #   packages/core/src/domain/index.ts                      (re-exports)
   #   packages/core/src/index.ts                             (reachable export surface)
-  #   packages/core/src/contracts/install.ts                 (payload/manifest/vocabularies)
+  #   packages/core/src/contracts/install.ts                 (two schema documents + vocabularies)
   #   packages/core/src/contracts/index.ts                   (re-exports)
   #   packages/cli/src/commands/install.ts                   (verb handler)
   #   packages/cli/src/help.ts                               (alias deprecation sentence)
   #   packages/cli/src/production.ts                         (migration runtime)
+  #   packages/cli/src/edge.ts                               (AUDIT SEAM composition; shared with P8)
   #   tests/behaviour/install-migrate.test.ts                (new)
   #   tests/fixtures/migration/roots.ts                      (new)
   #   tests/fixtures/migration/filesystem.ts                 (new)
@@ -1085,16 +1412,25 @@ phases:
   #   (MIGRATE-005), AC-F3-5 (MIGRATE-006/007), AC-F3-6 (MIGRATE-008), AC-F3-7
   #   (MIGRATE-009), AC-F3-8 (MIGRATE-010), AC-F4-4 (SHIM-004). 8 ACs, 11 TCs.
   #   `AC-F3-1` is NOT claimed here: its last observation is P6's retirement case.
+  #   The ownership is unchanged by the v1.3/v1.4 fold: MIGRATE-004 and MIGRATE-010
+  #   now assert the audit pair and MIGRATE-001 the symlink/`unscoped` arms, all
+  #   within the same two cases this phase already owns.
   #
   # Gate (expected signal: exit 0; every refusal at its delivered identity with zero
   #   writes and zero directory creations; the daemon stopped before move 1 and not
-  #   restarted; the dry-run plan complete and identical across two runs; the clean
-  #   move digest-equal with a complete manifest and retired roots; the second run
-  #   `already-migrated` with zero backups; the matrix total with no differing byte
-  #   lost; the injected failure leaving the remainder intact and recovering without
-  #   a duplicate; headers byte-identical and `install status` unchanged; every
-  #   reported location under the new root; the alias refusing the verb with its
-  #   deprecation sentence and byte-unchanged payloads):
+  #   restarted; the dry-run plan complete, bounded and identical across two runs
+  #   with no record; the clean move digest-equal with the manifest under its own id
+  #   and EXACTLY the two audit records at the destination root, ordered after the
+  #   plan and before move 1; the managed-`PATH` residual reported with the profile
+  #   byte-unchanged; retired roots reported and a never-existent root neither
+  #   retired nor reported; the four DM-6 worlds under the stated composition rule
+  #   with no differing byte lost; a source symlink `blocked` and a destination
+  #   symlink `conflict`, both retained; an outside-work-tree run reporting
+  #   `unscoped` while the two host classes migrate; the injected failure leaving the
+  #   remainder intact and recovering without a duplicate; headers byte-identical and
+  #   `install status` unchanged; every reported location under the new root; the
+  #   alias refusing the verb with its deprecation sentence and byte-unchanged
+  #   payloads):
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/install-migrate.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/install-family-surface.test.ts
@@ -1106,15 +1442,19 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   #
   # Done criteria:
-  #   d1 a dry-run writes nothing, creates no directory, and reads no daemon.
-  #   d2 every moved file's digest is unchanged and the manifest covers every
-  #      planned entry.
-  #   d3 a conflict and a duplicate are both retained; only a moved entry leaves the
-  #      source.
+  #   d1 a dry-run writes nothing, creates no directory, reads no daemon, and
+  #      appends no record of any kind.
+  #   d2 every moved file's digest is unchanged, the manifest covers every planned
+  #      entry under `install.migration.manifest.v1`, and the only store write is
+  #      the audit pair at the destination root.
+  #   d3 a conflict, a duplicate, and a symlink entry are all retained; only a moved
+  #      entry leaves the source; no symlink is ever followed.
   #   d4 the five new modules are registered and the inventory gate is green.
+  #   d5 no operator profile is written and the managed-`PATH` residual carries its
+  #      remedy.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "The migration domain (plan, table, apply, manifest, digest), the install migrate verb with dry-run, verified backup, per-entry precedence, idempotence and recovery, and the alias's declared deprecation"
+    title: "The migration domain (plan, table, apply, manifest, digest) with root scope, the symlink rule and the two schema ids, the install migrate verb with dry-run, audit-seam composition, verified backup, per-entry precedence, idempotence and recovery, and the alias's declared deprecation"
     kind: delivery
     summary: "feat(GH-365): install migrate verb with plan, backup and byte-preserving move"
     scope:
@@ -1132,6 +1472,10 @@ phases:
         - packages/cli/src/commands/install.ts
         - packages/cli/src/help.ts
         - packages/cli/src/production.ts
+        # AUDIT-SEAM composition (S2): the delivered command-audit pair is written
+        # at the destination host state root, after planning and before move 1.
+        # Shared with P8, which edits the same file for the derived override.
+        - packages/cli/src/edge.ts
         - tests/behaviour/install-migrate.test.ts
         - tests/fixtures/migration/roots.ts
         - tests/fixtures/migration/filesystem.ts
@@ -1413,6 +1757,11 @@ phases:
         - tests/behaviour/prior-identity-config-fallback.test.ts
         - tests/behaviour/prior-identity-notice.test.ts
         - tests/checks/prior-identity-hermetic.test.ts
+        # TC-ROOT-004's delivered group/read batteries (test plan r0.3 / B3).
+        # NOT declared, deliberately: `tests/behaviour/projects-config.test.ts` and
+        # `tests/behaviour/ceremony-mirror-composition.test.ts` — DEC-12 changes no
+        # reader, validator, envelope, or composition, so both stay byte-unchanged
+        # and are re-run only as regression controls (assumption (o)).
         - tests/behaviour/config-cli.test.ts
         - tests/behaviour/projects-groups-list.test.ts
         - tests/structure/state-scope.test.ts
@@ -1461,17 +1810,33 @@ phases:
   #   8.4 Bound the pre-freeze mapping in `packages/adapters/src/legacy/index.ts`:
   #       `ADOS_<suffix>` maps only when `<currentPrefix><suffix>` is a declared
   #       catalog key; every other legacy name is left untouched — not an error, not a
-  #       value, not a notice. Keep the one-warning-per-process discipline and the
-  #       notice wording.
+  #       value, not a notice. The key set's authority is
+  #       `packages/core/src/config/catalog.ts` (`PRODUCTION_CATALOG`), declared by
+  #       this phase so the D1 fix's blast radius is computable, reached either
+  #       through a contracts-level selector declared in
+  #       `packages/core/src/contracts/config.ts` or injected as data — never a
+  #       second hand-copied list. Keep the one-warning-per-process discipline and
+  #       the notice wording.
+  #       THE ONE DECLARED EXCEPTION (S14, DEC-9, API-5): `ADOS_WORKING_NAME` maps
+  #       onto the current override channel `<environmentPrefix>WORKING_NAME`,
+  #       because that channel has a successor and the entrypoint resolves it BEFORE
+  #       any catalog key is considered. The exception is declared in the mapping
+  #       table as data (one row), never special-cased in the adapter with a branch,
+  #       adds no configuration key, and emits no `override-read` notice (that
+  #       notice belongs to the prior literal `DELIVERY_OS_WORKING_NAME`). Every
+  #       other legacy name keeps the catalog-key bound.
   #   8.5 Update `tests/behaviour/identity-override.test.ts` and
   #       `tests/fixtures/branding/edge.ts` (three arms: current wins; prior only with
   #       one `override-read`; invalid contained with no fallback),
   #       `tests/behaviour/legacy-adapter.test.ts` and
   #       `tests/behaviour/config-cli.test.ts` with the eight owner-named pre-freeze
-  #       variables plus the inert `ADOS_FOO=bar` fixture
-  #       (`tests/fixtures/namespace/pre-freeze-env.ts`), the catalog key set in
-  #       `tests/fixtures/config/{catalog,facts}.ts`, the per-shim notice discipline
-  #       in `tests/behaviour/prior-identity-config-fallback.test.ts`,
+  #       variables plus the inert `ADOS_FOO=bar` marker and the
+  #       `ADOS_WORKING_NAME` arm (`tests/fixtures/namespace/pre-freeze-env.ts` —
+  #       created in P2 as data, EXTENDED here with the inertness probe, the
+  #       exception row and the resolved-tree assertions `TC-IDENTITY-003` drives),
+  #       the catalog key set in `tests/fixtures/config/{catalog,facts}.ts`, the
+  #       per-shim notice discipline in
+  #       `tests/behaviour/prior-identity-config-fallback.test.ts`,
   #       `tests/behaviour/prior-identity-state-fallback.test.ts` and
   #       `tests/behaviour/identity-override.test.ts`, the per-surface clean-home path
   #       set in the new `tests/behaviour/namespace-identity-surfaces.test.ts` (with
@@ -1484,12 +1849,13 @@ phases:
   #   mapping rule, and one notice reason.
   #
   # Code areas (concrete):
-  #   packages/core/src/contracts/config.ts                 (override-read reason)
+  #   packages/core/src/contracts/config.ts                 (override-read reason; key-set selector)
+  #   packages/core/src/config/catalog.ts                   (the declared key-set authority)
   #   packages/cli/src/edge.ts                              (derived override)
   #   packages/cli/src/entrypoint.ts                        (derived + prior fallback)
   #   packages/cli/src/bin-launcher.ts                      (composition override)
   #   packages/mcp/src/serve.ts                             (current default + derived override)
-  #   packages/adapters/src/legacy/index.ts                 (catalog-key-bounded mapping)
+  #   packages/adapters/src/legacy/index.ts                 (catalog-key-bounded mapping + declared exception)
   #   tests/behaviour/identity-override.test.ts
   #   tests/behaviour/legacy-adapter.test.ts
   #   tests/behaviour/config-cli.test.ts
@@ -1500,20 +1866,23 @@ phases:
   #   tests/fixtures/branding/edge.ts                       (derived override rows)
   #   tests/fixtures/config/catalog.ts                      (declared key set)
   #   tests/fixtures/config/facts.ts                        (layer facts)
-  #   tests/fixtures/namespace/pre-freeze-env.ts            (new)
+  #   tests/fixtures/namespace/pre-freeze-env.ts            (extended: probe + exception row)
   #   tests/fixtures/namespace/golden/notices.ts            (fifth golden line)
   #   tests/fixtures/namespace/evidence.ts                  (rows appended)
   #   tests/structure/inventory.json                        (register/verify)
   #
   # Acceptance: AC-F4-3 (SHIM-003), AC-F6-1 (IDENTITY-001), AC-F6-2
-  #   (IDENTITY-002), AC-F6-3 (IDENTITY-003), AC-F6-5 (IDENTITY-005). 5 ACs, 5 TCs.
+  #   (IDENTITY-002), AC-F6-3 (IDENTITY-003 — including the `ADOS_WORKING_NAME`
+  #   declared exception), AC-F6-5 (IDENTITY-005). 5 ACs, 5 TCs.
   #   `AC-F6-4` is P9's: the pages and the projection currency are the documentation
   #   boundary.
   #
   # Gate (expected signal: exit 0; the current override wins; the prior override
   #   works with exactly one `override-read`; an invalid override is contained at exit
-  #   2 with no fallback; the eight pre-freeze variables are inert and `ADOS_FOO` is
-  #   neither an error nor a value; a clean home creates only `~/.jaiship/` and
+  #   2 with no fallback; the eight pre-freeze variables are inert, `ADOS_FOO` is
+  #   neither an error nor a value, a known-key mapping still works and
+  #   `ADOS_WORKING_NAME` reaches the current channel as the declared exception with
+  #   no `config.environment.unmapped`; a clean home creates only `~/.jaiship/` and
   #   `~/.jaiship-state/` paths on every surface including MCP; exactly five declared
   #   literal sites exist with no committed override literal; every declared read-only
   #   shim reads only at its site, writes nothing to a prior root, and its notice equals
@@ -1533,19 +1902,25 @@ phases:
   # Done criteria:
   #   d1 the override precedence is current → prior → declared default, with exactly
   #      one bounded notice on the prior arm.
-  #   d2 an arbitrary legacy name is inert and a known key still maps.
+  #   d2 an arbitrary legacy name is inert, a known key still maps, and
+  #      `ADOS_WORKING_NAME` reaches the current override channel as the one declared
+  #      exception with no `config.environment.unmapped` and no second channel.
   #   d3 the MCP composition with no configured name creates only current-identity
   #      paths.
   #   d4 the five literal sites hold in both directions and the override name is not
   #      a committed literal.
   # ---------------------------------------------------------------------------
   - id: 8
-    title: "The identity-derived override channel with its one declared prior input, the current-identity MCP default, the catalog-key-bounded pre-freeze mapping, and the per-shim notice plus literal-site proofs"
+    title: "The identity-derived override channel with its one declared prior input, the current-identity MCP default, the catalog-key-bounded pre-freeze mapping with its ADOS_WORKING_NAME exception, and the per-shim notice plus literal-site proofs"
     kind: delivery
     summary: "feat(GH-365): identity-derived override, MCP default and bounded mapping"
     scope:
       files:
         - packages/core/src/contracts/config.ts
+        # THE KEY-SET AUTHORITY (C7): PRODUCTION_CATALOG, so the bounded mapping's
+        # blast radius is computable and a catalog edit is declared, never an
+        # undeclared edit.
+        - packages/core/src/config/catalog.ts
         - packages/cli/src/edge.ts
         - packages/cli/src/entrypoint.ts
         - packages/cli/src/bin-launcher.ts
@@ -1595,22 +1970,38 @@ phases:
   #   9.1 Reconcile `doc/guides/local-install.md`: replace the hand-performed move
   #       with `install migrate` (flags, dry-run first, backup and its default
   #       location, per-entry precedence, verdicts and exits, the daemon rule,
+  #       the symlink disposition — never followed; source `blocked`, destination
+  #       `conflict` — the managed-`PATH` residual with its `install` remedy and the
+  #       statement that the migration never rewrites the recorded block,
   #       idempotence, the manual reversal from the backup, the residual line for a
   #       prior launcher or record), keep the cadence/origins/dev-build rule/`PATH`
   #       block/compatibility asymmetry/ownership split, add the loaded-path
-  #       guarantee, drop the claim that `--migrate` refuses, and carry DEC-13's
-  #       operator remediation for the shell fallback after a migration.
+  #       guarantee, and drop the claim that `--migrate` refuses.
+  #       THE POST-MIGRATION SHELL-FALLBACK REMEDIATION (C4, DEC-13) is stated
+  #       WITHOUT A PRE-FREEZE LITERAL: the guide names
+  #       `scripts/lib/dispatch-authority.sh` and tells the operator to read the
+  #       override variable's name from that script's own header, then point it at
+  #       the current host state root; it states that the shell entry points keep
+  #       their prior-root defaults until the M4-S8 wrapper cutover, which implements
+  #       the current-else-prior selection rule rather than a literal swap, and that
+  #       the installed example owner-hold hook keeps its declared marker default
+  #       until then (the hook's own header is the authority for that path). The
+  #       delivered ADR-0003 DEC-8 allowlist is NEVER widened to print the literal,
+  #       and a contributor must not "fix" a red gate by adding one.
   #   9.2 Reconcile the current-truth pages per Appendix A:
-  #       `feature-install-lifecycle.md` (fifth verb, flags, admission reuse, plan and
-  #       verdict vocabularies, backup and manifest, derived-entry rule, ten-identity
-  #       domain), `feature-branding-seam.md` (the registry as an authority, the scan
-  #       class and its neutral exclusion, the derived override channel and its
-  #       declared prior input, the MCP default, the literal-site inventory),
-  #       `feature-cli-entrypoint.md` (override name and precedence with the
-  #       `override-read` notice, the alias as a scheduled shim with its `--help`
+  #       `feature-install-lifecycle.md` (fifth verb, flags, admission reuse, the two
+  #       schema ids, the plan/verdict vocabularies, the derived-entry disposition,
+  #       the audit pair, the symlink rule, the managed-`PATH` residual, the
+  #       never-existent-root rule, ten-identity domain), `feature-branding-seam.md`
+  #       (the registry as an authority, the scan class and its neutral site set
+  #       including `SCOPE_ORG`, the allowlist independence, the derived override
+  #       channel and its declared prior input, the MCP default, the literal-site
+  #       inventory), `feature-cli-entrypoint.md` (override name and precedence with
+  #       the `override-read` notice, the alias as a scheduled shim with its `--help`
   #       deprecation, the `install migrate` subcommand), `feature-config-layer.md`
   #       (the authoritative committed path, the loaded-path guarantee and the five
-  #       notice reasons, the bounded legacy mapping and its consequence),
+  #       notice reasons, the bounded legacy mapping WITH its `ADOS_WORKING_NAME`
+  #       exception and the "an untouched name is not an error" consequence),
   #       `feature-projects.md` (the host index's post-move re-derivation and the
   #       "warning never redirects" guarantee, the operator-local disposition),
   #       `feature-project-groups.md` and `feature-ceremony-runner.md` §9 (the
@@ -1619,14 +2010,31 @@ phases:
   #       invoking checkout's own declaration with the declared empty set on a fresh
   #       clone; no federation; no template — DEC-12, TDR-0074),
   #       `feature-state-layer.md` (the state-root move, byte preservation, the
-  #       unchanged header/format contract), `feature-mcp-surface.md` (the
-  #       current-identity default), `feature-result-contract.md` (ten identities, the
-  #       retirement, negative verdicts as data),
+  #       unchanged header/format contract, the command-audit pair's destination
+  #       side), `feature-mcp-surface.md` (the current-identity default),
+  #       `feature-result-contract.md` (ten identities, the retirement, negative
+  #       verdicts as data),
   #       `feature-autonomous-delivery.md` and
   #       `doc/quality/test-specs/test-spec-autonomous-delivery.md` (the owner-hold
   #       names are the example hook's declared `prior-environment-prefix` shim; the
   #       current names derive from the resolved prefix),
-  #       `doc/overview/glossary.md` (the §24 rows).
+  #       `doc/overview/glossary.md` (the §24 rows INCLUDING disposition, verdict,
+  #       root scope, symlink entry, command audit, derived entry and both schema ids;
+  #       the two stale rows were reworded at P3 and are re-read here so no row
+  #       presents a prior path, prefix, or override as current — S8).
+  #       The glossary becomes a DECLARED SITE of the prior-namespace shims in this
+  #       phase: the rows that define the prior namespace as prior are what earn it,
+  #       so 9.6 adds the site to the registry in the same commit.
+  #   9.3 Reconcile the guides and the M4 blueprint:
+  #       `doc/guides/opencode-model-configuration.md`,
+  #       `doc/guides/provider-conditions-and-parks.md`,
+  #       `doc/guides/ceremony-runner.md` (the brand-neutral example stops being the
+  #       prior name; the "composed landing" paragraph becomes the invoking
+  #       checkout's own local members with the declared empty target set),
+  #       `doc/guides/delivery-modes.md` (the DEC-13 remedy and the shim status of the
+  #       owner-hold names), and
+  #       `doc/planning/oss-tooling/milestones/m4/{commands/install.md,install-model.md,backlog.md,schedule.md}`
+  #       (M4-S2 discharged by this change).
   #   9.3 Reconcile the guides and the M4 blueprint:
   #       `doc/guides/opencode-model-configuration.md`,
   #       `doc/guides/provider-conditions-and-parks.md`,
@@ -1648,7 +2056,15 @@ phases:
   #       only if the drill enumerates the config-glob set — its glob-survival
   #       property must stay green with the additive pattern and must never be
   #       weakened.
-  #   9.6 Edit NO prompt here. The one routing-authority sentence and its regenerated
+  #   9.6 Declare the glossary's shim site: add
+  #       `doc/overview/glossary.md` to `scripts/checks/namespace-shims.registry.json`
+  #       as a site of `prior-working-name-override` (and of
+  #       `prior-config-directory` for its reference-declaration row) with a role
+  #       sentence and an occurrence budget, in the SAME commit as the rows that make
+  #       it a declaration (DM-4(c), DM-3). Re-run
+  #       `tests/structure/namespace-shims-registry.test.ts` so site presence and
+  #       the both-directions reconciliation stay green after the addition.
+  #   9.7 Edit NO prompt here. The one routing-authority sentence and its regenerated
   #       projection landed in P3 — the phase whose content arm scans
   #       `.opencode/**` and therefore could not be gate-green otherwise (SCAN-FIRST
   #       IDENTIFIER ALIGNMENT). This phase asserts their currency through
@@ -1682,6 +2098,7 @@ phases:
   #   doc/planning/oss-tooling/milestones/m4/backlog.md
   #   doc/planning/oss-tooling/milestones/m4/schedule.md
   #   packages/adapters/src/file/decision-register.ts        (comment-only)
+  #   scripts/checks/namespace-shims.registry.json           (glossary site added)
   #   tests/checks/namespace-doc-battery.test.ts              (new)
   #   tests/checks/doc-conformance.test.ts
   #   tests/structure/rename-drill-doc.test.ts
@@ -1693,11 +2110,14 @@ phases:
   #   and no stale statement presented as current; the alias help carries the
   #   deprecation sentence naming the removal release; every reference page agrees with
   #   `--help`; the generated projection equals a fresh build; the distribution guard
-  #   is green for every changed distributable page):
+  #   is green for every changed distributable page; the shim registry still validates
+  #   AFTER the glossary site is added, with both reconciliation directions green and
+  #   the content arm still at 0 undeclared occurrences):
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/namespace-doc-battery.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/rename-drill-doc.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/namespace-shims-registry.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/forbidden-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/help-guide-coverage.ts
@@ -1708,9 +2128,12 @@ phases:
   #      presents a prior path, prefix, or an operator-local group document as current.
   #   d2 the doc battery and `pnpm check:help` are green.
   #   d3 every changed distributable page declares `ados_distribution`.
+  #   d4 the glossary's declared site is present, budgeted, and reconciled in both
+  #      directions; the guide's fallback remediation names the script and not the
+  #      pre-freeze literal.
   # ---------------------------------------------------------------------------
   - id: 9
-    title: "The namespace identity across every Appendix A page: the migration workflow, the ten-identity domain, the shim and scan, the override channel, the operator-local group overlay, the state move, the owner-hold shim and the M4 blueprint"
+    title: "The namespace identity across every Appendix A page: the migration workflow, the ten-identity domain, the shim and scan, the override channel, the operator-local group overlay, the state move, the owner-hold shim, the glossary's declared site and the M4 blueprint"
     kind: delivery
     summary: "feat(GH-365): namespace identity across docs, guides and current truth"
     scope:
@@ -1740,26 +2163,30 @@ phases:
         # Comment-only (DEC-12): the mirror's source/target sentences. No read,
         # validation, or composition changes.
         - packages/adapters/src/file/decision-register.ts
+        # The glossary becomes a DECLARED SITE of the prior-namespace shims in the
+        # same commit as the rows that make it a declaration (DM-4(c), DM-3).
+        - scripts/checks/namespace-shims.registry.json
         - tests/checks/namespace-doc-battery.test.ts
         - tests/checks/doc-conformance.test.ts
         - tests/structure/rename-drill-doc.test.ts
     doneArtifacts:
-      pipelineId: "CI pipeline for the GH-365 phase-9 commit (doc battery, doc-conformance, rename drill and the doc-distribution guard green)"
+      pipelineId: "CI pipeline for the GH-365 phase-9 commit (doc battery, doc-conformance, rename drill, the registry's glossary site and the doc-distribution guard green)"
 
   # ---------------------------------------------------------------------------
   # PHASE 10 — The enduring quality page, the index, the registry registration,
-  # the doc-conformance coverage, and the release changeset (DOD-9, DOD-10;
+  # the doc-conformance coverage, and the RELEASE VERIFICATION (DOD-9, DOD-10;
   # NFR-9; Appendix G).
   #
-  # Goal: make the change's own claims DURABLE and release the change. The new
+  # Goal: make the change's own claims DURABLE and verify the release. The new
   # quality test specification publishes the two arms and their corpora, the
   # shim-registry reconciliation, the per-class mutations and the two negative
   # controls, the migration battery and its fixtures, and the proof boundary
   # mirroring Appendix C. It is indexed, registered in the forbidden-literal
   # registry in the SAME commit (a new doc after the recorded corpus baseline must be
   # registered or the docs scope fails closed), and covered by the doc-conformance
-  # page set. The phase also authors the single minor changeset the lockstep package
-  # group needs.
+  # page set. The single minor changeset is P2's (it is a precondition of the
+  # registry's window values); this phase VERIFIES it and the window/changeset
+  # equality and never re-authors it (C2).
   #
   # This is the ONLY phase with no delivery case. The page/constant comparison and
   # the DOD-9 stale-statement grep are LIFECYCLE phase-7 (`system_spec_update`)
@@ -1767,19 +2194,20 @@ phases:
   #   - the page publishes the same eight proven and eight not-proven ids, in the
   #     same order, as `NAMESPACE_PROOF_BOUNDARY`;
   #   - the stale-statement grep is a read over the reconciled page set for a prior
-  #     configuration path or prefix presented as current, and for `projects.yaml`
-  #     presented as project-committed, reporting zero hits outside declared mentions
-  #     and declared corpora.
+  #     configuration path or prefix presented as current, for `projects.yaml`
+  #     presented as project-committed, and for the two reworded rows P3 restated
+  #     (the override row and the reference-declaration row), reporting zero hits
+  #     outside declared mentions and declared corpora.
   # No permanent delivery case reads the new page, and no suite reads
   # `doc/changes/**`.
   #
   # Obligations:
   #   10.1 Author `doc/quality/test-specs/test-spec-namespace-conformance.md` with
   #        its `ados_distribution` marker, the two arms and their corpora, the
-  #        shim-registry reconciliation, the per-class mutations, the two negative
-  #        controls, the migration battery and its fixtures with the seam each
-  #        doubles, and the proof boundary (eight proven / eight not-proven, declared
-  #        order).
+  #        shim-registry reconciliation, the per-class mutations (including `M55`),
+  #        the two negative controls, the migration battery and its fixtures with the
+  #        seam each doubles, and the proof boundary (eight proven / eight not-proven,
+  #        declared order).
   #   10.2 Index the page in `doc/00-index.md`.
   #   10.3 Register the page in `scripts/checks/forbidden-literals.registry.json`
   #        (`registered`) in the same commit and keep its body seed-clean; the
@@ -1787,19 +2215,23 @@ phases:
   #        closed.
   #   10.4 Update `tests/checks/doc-conformance.test.ts` for the new page's coverage
   #        without weakening a delivered row.
-  #   10.5 Author the single minor changeset for the lockstep group
-  #        (`.changeset/gh-365-jaiship-namespace-migration-minor.md`) and keep
-  #        `bun run scripts/checks/changesets-group.ts` green.
+  #   10.5 VERIFY the release, do not author it: the changeset authored in P2
+  #        (`.changeset/gh-365-jaiship-namespace-migration-minor.md`) is the only
+  #        one, it covers the lockstep group, `bun run
+  #        scripts/checks/changesets-group.ts` is green, and the shim registry's two
+  #        delivery-os window values still equal the changeset-derived pair (re-run
+  #        `tests/structure/namespace-shims-registry.test.ts`). A missing, duplicated,
+  #        or out-of-step changeset is an escalation, never a silent re-author here.
   #
   # Verb surface at this boundary: none. No source or behaviour changes; the release
-  #   obligation is documentation, registration and versioning.
+  #   obligation is documentation, registration and verification.
   #
   # Code areas (concrete):
   #   doc/quality/test-specs/test-spec-namespace-conformance.md  (new)
   #   doc/00-index.md
   #   scripts/checks/forbidden-literals.registry.json            (registered += page)
   #   tests/checks/doc-conformance.test.ts
-  #   .changeset/gh-365-jaiship-namespace-migration-minor.md     (new)
+  #   .changeset/gh-365-jaiship-namespace-migration-minor.md     (VERIFY ONLY, P2 authors)
   #
   # Acceptance: none (0 AC, 0 TC). The phase re-establishes evidence for the whole
   #   change; it moves no ownership. A reviewer who wants ownership moved is asking
@@ -1807,9 +2239,11 @@ phases:
   #
   # Gate (expected signal: exit 0; the new page exists with its distribution marker,
   #   is indexed, is registered and seed-clean, the doc-conformance set covers it, the
-  #   distribution guard is green, and the changeset group check passes):
+  #   distribution guard is green, the changeset group check passes with exactly one
+  #   minor changeset, and the registry's window pair still equals it):
   #   mkdir -p tmp/tmpdir
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/namespace-shims-registry.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/forbidden-literals.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/changesets-group.ts
@@ -1819,15 +2253,16 @@ phases:
   #   d1 the page exists, carries `ados_distribution`, and publishes both boundary
   #      lists in the declared order.
   #   d2 the page is indexed, registered, and seed-clean.
-  #   d3 exactly one minor changeset covers the lockstep group.
+  #   d3 exactly one minor changeset covers the lockstep group and the registry's
+  #      window pair equals it (verified, not re-authored).
   #   d4 no delivery phase's gate was made vacuous to reach this boundary; the
   #      aggregate `pnpm check` and the branch-range commit-message gate are
   #      lifecycle phase 9's, recorded in pm-notes.
   # ---------------------------------------------------------------------------
   - id: 10
-    title: "The enduring namespace-conformance test specification, its index row and registry registration, the doc-conformance coverage, and the single minor release changeset (no delivery case)"
+    title: "The enduring namespace-conformance test specification, its index row and registry registration, the doc-conformance coverage, and the release verification of P2's single minor changeset (no delivery case)"
     kind: delivery
-    summary: "docs(GH-365): namespace conformance test spec, index and release changeset"
+    summary: "docs(GH-365): namespace conformance spec, index and release check"
     scope:
       files:
         - doc/quality/test-specs/test-spec-namespace-conformance.md
@@ -1835,6 +2270,9 @@ phases:
         - scripts/checks/forbidden-literals.registry.json
         # Edited by P6 and P9 too: the page-set coverage moves as one.
         - tests/checks/doc-conformance.test.ts
+        # VERIFY-ONLY (kind iv): P2 AUTHORS this changeset so the shim registry's
+        # window values derive from it; this phase re-asserts the changeset group and
+        # the window/changeset equality and never re-authors the file (C2).
         - .changeset/gh-365-jaiship-namespace-migration-minor.md
       folders:
         - doc/changes/2026-11/2026-11-21--GH-365--jaiship-namespace-migration
