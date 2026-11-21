@@ -1,0 +1,130 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-365
+branch: feat/GH-365/jaiship-namespace-migration
+status: PASS
+summary: >-
+  Final permitted review at HEAD a7509e78 (code fix 814b7095; HEAD differs only by
+  the pm-notes evidence note). All eight iteration-1 findings remain CLOSED and
+  all twelve iteration-2 findings (N-1..N-12) are CLOSED with independent
+  evidence. The captured full-gate log at 814b7095
+  (`tmp/tmpdir/full-check-2.log`) records `pnpm check` PASS — 12 402 pass, 4
+  skip, 0 fail (12 406 across 1 502 files), with lint, format:check, typecheck,
+  boundaries, memory, forbidden-literals 7/7, namespace-tree, prompt-conformance,
+  help-guide coverage, and exports-parity all green. I re-ran it independently:
+  `pnpm format:check` is green; the four real-document suites pass 46/6/14 (and
+  the behaviour suite 33); the six CI-topology/aggregate/scan pins pass; the
+  retirement/help/alias/legacy/operator pins pass; install-migrate and the
+  namespace scans pass; both scan arms are green; and independent probes
+  reproduce the root-symlink conflict (exact and external) and the container
+  descent/merge/idempotence/differing-child behaviour. Every changed path is
+  declared in the plan, and no formatting-only churn remains. No new blocking
+  finding was found; residual advisories are listed for the PR body.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+verification:
+  full_check_log: "tmp/tmpdir/full-check-2.log (mtime 2026-11-22T00:47Z, 814b7095): pnpm check PASS — 12402 pass / 4 skip / 0 fail (12406 across 1502 files); no dependency violations (520 modules); ambient-globals/workspace-entrypoints/secret-read-boundary OK; forbidden-literals 7/7 0 violations; namespace-tree OK; prompt-conformance 5 prompts clean; help-guide coverage all covered; exports-parity 5 publishables; memory-lint 0 errors."
+  head_note: "HEAD a7509e78 differs from 814b7095 only by chg-GH-365-pm-notes.yaml (verified with git diff --name-only)."
+  spot_runs:
+    - "provider-policy-adoption-reference 46 pass / 0 fail; provider-policy-credential-canary 6 / 0; verify-gates-suite-map-reference 14 / 0; behaviour/provider-policy-adoption 33 / 0."
+    - "supervision-error-family 7 / 0; legacy-confinement 7 / 0; install-error-domain 6 / 0; install-conformance-mutants 5 / 0; provider-alias-baseline pass; operator-contract-invariance pass."
+    - "privacy-ci-wiring 14 / 0; milestone-gate 7 / 0; merge-suite-discovery 5 / 0; ci-topology-pin 4 / 0; license-ci-binding 4 / 0; ci-baseline-parity 1 / 0."
+    - "install-migrate + namespace-conformance + namespace-tree + namespace-fresh-clone + namespace-layer: 61 pass / 0 fail."
+    - "branding-seam + namespace-shims-registry: 14 pass / 0 fail."
+    - "doc-conformance + namespace-doc-battery + pm-notes-lint + content-inventory: 106 pass / 0 fail (HEAD pm-notes note does not regress the gate)."
+  scan_arms: "forbidden-literals OK 7/7 0 violations; namespace-tree OK (tracked prior paths/symlinks none; committed layer present; runtime files ignored/untracked)."
+  format_scope: "pnpm format:check green (3150 files, no fixes). No formatting-only churn in tests/structure/inventory.json or tests/fixtures/ports/v1-contract-inventory.json; every file changed in 814b7095 and every cumulative changed path is in plan scope (only the P10 change-folder artifacts sit outside per-file scope)."
+  migration_probes: >-
+    F-1: exact `.jaiship -> .delivery-os` root symlink => conflict, source kept;
+    external target => conflict, moved 0, external untouched, source kept.
+    F-2: pre-existing destination `projects/` descends and merges
+    (`projects/p1/a.jsonl` moved, `b.jsonl` already-migrated, host-index derived
+    absent), second run already-migrated/moved 0; a differing child stays conflict
+    with both bytes unchanged.
+  audit_probe: >-
+    runCli: install migrate / install --dry-run migrate / install --backup-dir
+    <abs> migrate / install --stop-daemon migrate / install --migrate / install
+    migrate --force record 0; install status / install --dry-run / install status
+    --migrate / install record 1.
+  suite_map_hash: "SUITE_MAP_CONTROL_SHA256 (8428820a…4e81) equals sha256 of tests/structure/verify-gates-suite-map-reference.test.ts."
+dispositions:
+  - id: F-1
+    disposition: CLOSED
+    evidence: "Root symlinks classified before enumeration; probes reproduce exact/external conflict with source kept and no follow-through; delivered root-case test present."
+  - id: F-2
+    disposition: CLOSED
+    evidence: "Container descent + copy-verify-remove merge; probes reproduce pre-existing projects/ merge, idempotence, differing-child conflict; delivered tests pass."
+  - id: F-3
+    disposition: CLOSED
+    evidence: "Parsed-command suppression; all migration orders record 0; ordinary install commands record 1 (probe + delivered audit-control test)."
+  - id: F-4
+    disposition: CLOSED
+    evidence: "TC-MIGRATE-009 reads install status before/after over two headers and a foreign record; passes."
+  - id: F-5
+    disposition: CLOSED
+    evidence: "Plain declared prior literal + narrow seam exception; branding-seam and namespace-shims-registry pass; content arm 7/7."
+  - id: F-6
+    disposition: CLOSED
+    evidence: "canonicalised --backup-dir; relative/in-source/`..`/symlinked-parent rows pass in install-migrate."
+  - id: F-7
+    disposition: CLOSED
+    evidence: "path + remedy rendered in conflicts/residuals/human; install-migrate symlink cases pass."
+  - id: F-8
+    disposition: CLOSED
+    evidence: "A1/A5/A6 wording corrected; spec/plan/pm-notes consistent."
+  - id: N-1
+    disposition: CLOSED
+    evidence: "Four real-document suites read `.jaiship/config.yaml` (46/6/14/33 pass); CFG-001 premise inverted (no prior read), `--show-origin` regex on `.jaiship`, suite-map hash matches; synthetic prior-only checkouts still exercised by the canary/behaviour suites."
+  - id: N-2
+    disposition: CLOSED
+    evidence: "TC-SUP-070 tail is 13 rows (ten install); supervision-error-family 7 pass."
+  - id: N-3
+    disposition: CLOSED
+    evidence: "WORKING_NAME in tests/fixtures/legacy/literal-inventory.json; legacy-confinement 7 pass."
+  - id: N-4
+    disposition: CLOSED
+    evidence: "install-error-domain pins ten with nine-row closed-set mutant; 6 pass."
+  - id: N-5
+    disposition: CLOSED
+    evidence: "INSTALL_HELP_PATHS carries install migrate (six) and `5 != 6`; install-conformance-mutants 5 pass."
+  - id: N-6
+    disposition: CLOSED
+    evidence: "provider-alias-baseline accounts only for the install-row deprecation; passes."
+  - id: N-7
+    disposition: CLOSED
+    evidence: "format:check green; both fixtures collapsed; P8 claim corrected in pm-notes."
+  - id: N-8
+    disposition: CLOSED
+    evidence: "`--migrate` suppression requires no subcommand positional; install status --migrate records 1 (probe + delivered control)."
+  - id: N-9
+    disposition: CLOSED
+    evidence: "Spec v1.6 API-2 documents optional path/reason/derived and the human ` · <reason>` suffix."
+  - id: N-10
+    disposition: CLOSED
+    evidence: "Informational; no change required."
+  - id: N-11
+    disposition: CLOSED
+    evidence: "Six CI-topology/aggregate/scan pins pass; workflow-topology.json carries ts-namespace-tree; aggregate chain/order and 7/7 updated."
+  - id: N-12
+    disposition: CLOSED
+    evidence: "Operator contract baseline errorRowCount 169; operator-contract-invariance passes."
+new_findings: []
+residual_advisories:
+  - "TDR-0074 remains Proposed; owner acceptance at the GH-365 PR review moves it forward (declared in the spec/decision record)."
+  - "DEC-13: the shell fallback's prior-root defaults (`scripts/lib/dispatch-authority.sh`, the example owner-hold hook) stay as declared sites until the M4-S8/GH-352 wrapper cutover; the migration guide carries the operator remediation."
+  - "RSK-11: the prior executable token is deliberately not enforced over registered docs until shim removal; the path and environment seeds are enforced."
+  - "The pre-freeze `ADOS_WORKING_NAME` literal remains fragment-assembled in `packages/core/src/contracts/config.ts` so the frozen ADR-0003 DEC-8 allowlist is never widened; it is documented and asserted (namespace-conformance row G)."
+  - "Minor test-strength nit (non-blocking): the CFG-001 acquisition sub-case asserts `acquired.prior` is undefined and `.jaiship/config.yaml` exists but does not assert the current source record in `acquired.sources`; the other 45 cases read/validate the real document and the config-layer suites cover acquisition, so this is a follow-up cleanup, not a defect."
+  - "Local worktree hygiene: an untracked operator file `.jaiship/config.local.yaml.bridge` is present (not part of HEAD, not ignored); it does not affect the committed tree or the fresh-clone drill, but removing/renaming it keeps the operator's `git status` clean."
+reviewed_at: 2026-11-21T23:51:59Z
+next_step: >-
+  PROCEED — the change passes review at a7509e78. Carry the residual advisories
+  above in the PR body, open the PR against main-tools, and leave merge authority
+  with the owner. No further code change or re-review is required.

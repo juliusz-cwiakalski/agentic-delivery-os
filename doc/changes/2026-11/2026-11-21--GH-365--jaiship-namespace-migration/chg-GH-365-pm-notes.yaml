@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-21T19:47:25.912Z }
   delivery: { started: null, completed: 2026-11-21T21:57:52.738Z }
   system_spec_update: { started: null, completed: 2026-11-21T22:15:39.453Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-21T23:52:46.272Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -73,12 +73,40 @@ decisions:
       the current host root; the migration guide records it."
     date: "2026-11-21"
 notes:
+  - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml). All 20
+      dispositions CLOSED (F-1..F-8 and N-1..N-12), 0 new findings. Independent
+      spot-runs green; captured full `pnpm check` at 814b7095 = 12402 pass / 4
+      skip / 0 fail. HEAD a7509e78 differs only by the pm-notes evidence note.
+      No out-of-scope formatting churn; every changed path is in plan scope
+      (only the P10 change-folder artifacts sit outside per-file scope).
+      Residual advisories for the PR body: TDR-0074 Proposed (owner acceptance
+      at PR review); DEC-13 shell defaults until M4-S8; RSK-11 prose residual;
+      the pre-freeze literal stays fragment-assembled; the CFG-001 acquisition
+      sub-case is a non-blocking follow-up; an untracked
+      `.jaiship/config.local.yaml.bridge` operator file is present locally."
+    type: info
+    date: "2026-11-22"
+  - text: "Review iteration 2 broadened sweep = FAIL at 1cae5f4b, then remediated in
+      814b7095 (evidence a7509e78): the eight iteration-1 findings stayed
+      CLOSED; the new findings were all unpropagated ripple — N-1 real-document
+      suites reading the removed `.delivery-os/config.yaml` (40 failures), N-2
+      TC-SUP-070 tail, N-3 legacy literal inventory, N-4/N-5 stale install pins,
+      N-6 provider alias baseline, N-7 two formatting drifts, N-8
+      over-suppression, N-9 API-2 drift, N-11 six CI topology/aggregate/scan
+      pins, N-12 operator contract errorRowCount. All fixed and declared in the
+      plan scope. FULL `pnpm check` at 814b7095 = PASS: lint, format, typecheck,
+      test 12402 pass / 4 skip / 0 fail across 12406 tests and 1502 files,
+      boundaries, memory, forbidden-literals 7/7, namespace-tree,
+      prompt-conformance, help-guide-coverage, exports-parity. Final review
+      iteration 3 in progress."
+    type: info
+    date: "2026-11-22"
   - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml): the eight
       iteration-1 findings are CLOSED (root symlink, container descent, audit
       suppression, TC-MIGRATE-009, literal site, backup-dir normalization,
       remedy, bookkeeping). New blocking findings are aggregate-gate regressions
-      that predate the remediation: N-1 (install-error-domain pin still 11),
-      N-2 (INSTALL_HELP_PATHS still 5), N-3 (two inventory fixtures not
+      that predate the remediation: N-1 (install-error-domain pin still 11), N-2
+      (INSTALL_HELP_PATHS still 5), N-3 (two inventory fixtures not
       format-clean), plus N-4 (over-suppression of `install status --migrate`)
       and N-5 (API-2 path/reason drift). Remediation is one pass: fix the pins
       and formatting, narrow the --migrate arm to the no-subcommand path, and
@@ -86,25 +114,25 @@ notes:
     type: info
     date: "2026-11-21"
   - text: "RANGE COMMIT GATE (pre-flight, phase 9 evidence; re-run at the final
-      head): VERDICT PASS — base origin/main-tools, merge-base c1dd722c,
-      head 1cae5f4b, 37 commits in range, 0 offending commits, 0 distinct rules
-      hit, mode none, resolved commitlint node_modules/.bin/commitlint
+      head): VERDICT PASS — base origin/main-tools, merge-base c1dd722c, head
+      1cae5f4b, 37 commits in range, 0 offending commits, 0 distinct rules hit,
+      mode none, resolved commitlint node_modules/.bin/commitlint
       (repository-local, ref origin/main-tools)."
     type: info
     date: "2026-11-21"
   - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml): F-1 BLOCKER
       (root-level destination/source symlink followed, not conflict/blocked),
       F-2 MAJOR (container directories not descended), F-3 MAJOR (audit
-      suppression bypassed by flag-before-subcommand), F-4 MAJOR
-      (TC-MIGRATE-009 weakened vs AC-F3-7), F-5/F-6/F-7 minors (split-literal
-      site, --backup-dir normalization, symlink remedy), F-8 info. Remediated in
-      f453a440 (evidence 1cae5f4b): root roots are lstat-classified and never
-      followed; containers descend with copy-verify-remove; suppression keys on
-      the parsed command + first positional (all flag orders and --migrate);
-      TC-MIGRATE-009 restored with install-status before/after and multi-header
-      seed; the plain prior literal is a budgeted site; --backup-dir is
-      normalized; remedies are rendered. Plan amendment declares the new paths
-      (P8 registry site, branding-seam test). Re-review iteration 2 in progress."
+      suppression bypassed by flag-before-subcommand), F-4 MAJOR (TC-MIGRATE-009
+      weakened vs AC-F3-7), F-5/F-6/F-7 minors (split-literal site, --backup-dir
+      normalization, symlink remedy), F-8 info. Remediated in f453a440 (evidence
+      1cae5f4b): root roots are lstat-classified and never followed; containers
+      descend with copy-verify-remove; suppression keys on the parsed command +
+      first positional (all flag orders and --migrate); TC-MIGRATE-009 restored
+      with install-status before/after and multi-header seed; the plain prior
+      literal is a budgeted site; --backup-dir is normalized; remedies are
+      rendered. Plan amendment declares the new paths (P8 registry site,
+      branding-seam test). Re-review iteration 2 in progress."
     type: info
     date: "2026-11-21"
   - text: "DoR iteration 3 = READY (readiness-review/readiness-iter-3.md), all ten
@@ -665,77 +693,78 @@ notes:
     type: info
     date: "2026-11-21"
   - text: "Review-iteration-1 remediation COMPLETE: commit f453a440 (review record
-      code-review/review-iter-1.yaml included). F-1: planRoot lstat-classifies the
-      source and destination ROOTS before enumerating; a destination-root symlink
-      (including the exact .jaiship -> .delivery-os shape and an external target)
-      is a conflict, a source-root symlink is blocked, both retained with the
-      absolute path and remedy, exit 1, never listed or renamed through; the
-      root case is asserted with a write recorder. F-2: container directories
-      (projects, documents.*, quarantine.*) descend recursively into per-entry
-      decisions, and a file merging into an existing destination directory uses
-      copy-verify-then-remove; disjoint-child container cases assert a
-      pre-existing projects/ no longer blankets a conflict. F-3: audit
-      suppression keys on the parsed command + first positional (plus the
-      --migrate refusal), with a value-flag-aware fallback; install migrate,
-      install --dry-run migrate, install --backup-dir <abs> migrate,
-      install --stop-daemon migrate and install --migrate all record zero with
-      the audit dependency composed. F-4: TC-MIGRATE-009 restores the install
-      status before/after compatibility verdict, two root-level headers and a
-      foreign record, with digest identity and no new header. F-5: the prior
-      override literal is written plainly at packages/core/src/contracts/config.ts
-      and declared as a budgeted prior-working-name-override site; the branding
-      seam gains exactly that one file/name/value exception; the pre-freeze
-      literal stays fragment-assembled because the frozen ADR-0003 DEC-8
-      allowlist is never widened (recorded as the explicit reviewed exception).
-      F-6: --backup-dir is lexically resolved and realpath-canonicalised before
-      the in-source check, with `..` and symlinked-parent refusal rows. F-7:
-      symlink (and differing-entry) conflicts/residuals and the human entry line
-      carry the absolute path and bounded remedy, asserted. F-8: A5 reworded to
-      'No record is written' in API-1/DM-7, the 122->121 ledger figure corrected
-      in the plan C21 note and the delivery-planning note, and A6 recorded here:
-      `.*/projects.yaml` pre-existed at 3f7f4d7b, so P1 1.2 is a no-op and the
-      fresh-clone evidence is a change-head property. Committed-head gate:
-      install-migrate 27; namespace-conformance 21; shim registry 8;
-      namespace-doc-battery 5; doc-conformance 61; retirement 7; lifecycle-path
-      12; lifecycle-docs 7; reference-page-parity 5; family-surface 10;
-      ownership-split 5; cross-repository-contract 21; branding-seam 6;
-      entrypoint-bin 34; content-inventory 12; error-table-sync 108;
-      identity-docs 13; identity-override 9; legacy-adapter 16; content arm
-      7/7 0 violations; tree arm green; pnpm typecheck green; git diff --check
-      clean."
+      code-review/review-iter-1.yaml included). F-1: planRoot lstat-classifies
+      the source and destination ROOTS before enumerating; a destination-root
+      symlink (including the exact .jaiship -> .delivery-os shape and an
+      external target) is a conflict, a source-root symlink is blocked, both
+      retained with the absolute path and remedy, exit 1, never listed or
+      renamed through; the root case is asserted with a write recorder. F-2:
+      container directories (projects, documents.*, quarantine.*) descend
+      recursively into per-entry decisions, and a file merging into an existing
+      destination directory uses copy-verify-then-remove; disjoint-child
+      container cases assert a pre-existing projects/ no longer blankets a
+      conflict. F-3: audit suppression keys on the parsed command + first
+      positional (plus the --migrate refusal), with a value-flag-aware fallback;
+      install migrate, install --dry-run migrate, install --backup-dir <abs>
+      migrate, install --stop-daemon migrate and install --migrate all record
+      zero with the audit dependency composed. F-4: TC-MIGRATE-009 restores the
+      install status before/after compatibility verdict, two root-level headers
+      and a foreign record, with digest identity and no new header. F-5: the
+      prior override literal is written plainly at
+      packages/core/src/contracts/config.ts and declared as a budgeted
+      prior-working-name-override site; the branding seam gains exactly that one
+      file/name/value exception; the pre-freeze literal stays fragment-assembled
+      because the frozen ADR-0003 DEC-8 allowlist is never widened (recorded as
+      the explicit reviewed exception). F-6: --backup-dir is lexically resolved
+      and realpath-canonicalised before the in-source check, with `..` and
+      symlinked-parent refusal rows. F-7: symlink (and differing-entry)
+      conflicts/residuals and the human entry line carry the absolute path and
+      bounded remedy, asserted. F-8: A5 reworded to 'No record is written' in
+      API-1/DM-7, the 122->121 ledger figure corrected in the plan C21 note and
+      the delivery-planning note, and A6 recorded here: `.*/projects.yaml`
+      pre-existed at 3f7f4d7b, so P1 1.2 is a no-op and the fresh-clone evidence
+      is a change-head property. Committed-head gate: install-migrate 27;
+      namespace-conformance 21; shim registry 8; namespace-doc-battery 5;
+      doc-conformance 61; retirement 7; lifecycle-path 12; lifecycle-docs 7;
+      reference-page-parity 5; family-surface 10; ownership-split 5;
+      cross-repository-contract 21; branding-seam 6; entrypoint-bin 34;
+      content-inventory 12; error-table-sync 108; identity-docs 13;
+      identity-override 9; legacy-adapter 16; content arm 7/7 0 violations; tree
+      arm green; pnpm typecheck green; git diff --check clean."
     type: info
     date: "2026-11-21"
   - text: "Review-iteration-2 remediation COMPLETE: commit 814b7095 (review record
       code-review/review-iter-2.yaml included). N-1: the four real-document
       provider-policy/reference suites read the moved committed layer at
       `.jaiship/config.yaml`; the CFG-001 prior-read premise is inverted to the
-      current file with no prior read, the `--show-origin` regex names the current
-      path, the verify-gates reference resolves `jaiship`, the credential canary
-      and suite-map control hash follow, and the synthetic prior-fallback checkouts
-      stay prior-only. N-2: TC-SUP-070's tail is thirteen rows (ten install).
-      N-3: `WORKING_NAME` joins the reviewed legacy literal inventory. N-4: the
-      install error domain pins ten identities with a nine-row closed-set mutant.
-      N-5: INSTALL_HELP_PATHS carries `install migrate` (six) and the
-      rollback-removal expectation is `5 != 6`. N-6: the provider alias baseline
-      delta accounts for the delivered deprecation sentence on the install row.
-      N-7: the two inventory fixtures are format-clean and the P8 'fully restored'
-      claim now names the two corrected hunks. N-8: the `--migrate` arm requires no
-      positional, so ordinary `install status`/`install --dry-run`/
-      `install status --migrate` each record exactly one. N-9: API-2 documents the
-      optional `path`/`reason` entry fields and the human ` · <reason>` suffix;
-      spec revision 1.6. N-11: the six CI-topology/aggregate/scan pins carry the
-      `ts-namespace-tree` job, the two aggregate scan members, the 11-part order,
-      and the 7/7 class summary. N-12: the operator contract baseline's
-      errorRowCount is 169. Additional delivery-time ripple pins: the bounded
-      mapping leaves a legacy provider-shaped variable inert (not an error), and
-      the migration-note registry assertion follows the seven-class set. All
-      changed test/fixture paths are declared in P1/P4/P5/P6/P8 scope. FULL
-      `pnpm check` at 814b7095: PASS — lint, format:check, typecheck, test,
-      boundaries, memory, forbidden-literals 7/7, namespace-tree, prompt
-      conformance, help-guide coverage, exports parity; tests 12402 pass, 4 skip,
-      0 fail (12406 across 1502 files). The earlier full run's eight failures were
-      the then-present ignored `.opencode/agent/naming-*.md` files (six provider
-      roster/scan cases) plus the two real ripple pins fixed here; the ignored
-      naming files are now absent from the worktree, and the clean rerun passes."
+      current file with no prior read, the `--show-origin` regex names the
+      current path, the verify-gates reference resolves `jaiship`, the
+      credential canary and suite-map control hash follow, and the synthetic
+      prior-fallback checkouts stay prior-only. N-2: TC-SUP-070's tail is
+      thirteen rows (ten install). N-3: `WORKING_NAME` joins the reviewed legacy
+      literal inventory. N-4: the install error domain pins ten identities with
+      a nine-row closed-set mutant. N-5: INSTALL_HELP_PATHS carries `install
+      migrate` (six) and the rollback-removal expectation is `5 != 6`. N-6: the
+      provider alias baseline delta accounts for the delivered deprecation
+      sentence on the install row. N-7: the two inventory fixtures are
+      format-clean and the P8 'fully restored' claim now names the two corrected
+      hunks. N-8: the `--migrate` arm requires no positional, so ordinary
+      `install status`/`install --dry-run`/ `install status --migrate` each
+      record exactly one. N-9: API-2 documents the optional `path`/`reason`
+      entry fields and the human ` · <reason>` suffix; spec revision 1.6. N-11:
+      the six CI-topology/aggregate/scan pins carry the `ts-namespace-tree` job,
+      the two aggregate scan members, the 11-part order, and the 7/7 class
+      summary. N-12: the operator contract baseline's errorRowCount is 169.
+      Additional delivery-time ripple pins: the bounded mapping leaves a legacy
+      provider-shaped variable inert (not an error), and the migration-note
+      registry assertion follows the seven-class set. All changed test/fixture
+      paths are declared in P1/P4/P5/P6/P8 scope. FULL `pnpm check` at 814b7095:
+      PASS — lint, format:check, typecheck, test, boundaries, memory,
+      forbidden-literals 7/7, namespace-tree, prompt conformance, help-guide
+      coverage, exports parity; tests 12402 pass, 4 skip, 0 fail (12406 across
+      1502 files). The earlier full run's eight failures were the then-present
+      ignored `.opencode/agent/naming-*.md` files (six provider roster/scan
+      cases) plus the two real ripple pins fixed here; the ignored naming files
+      are now absent from the worktree, and the clean rerun passes."
     type: info
     date: "2026-11-22"
