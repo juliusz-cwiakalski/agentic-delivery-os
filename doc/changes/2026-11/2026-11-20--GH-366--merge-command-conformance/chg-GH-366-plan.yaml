@@ -8,9 +8,14 @@
 # the plan phase id, the commit hash and the gate result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:   ./chg-GH-366-spec.md (v2.2 — the two-read ruling: one bounded open
-#             list read plus at most one bounded closed merged-request list read,
-#             the `ambiguous-merged-request` reason, no ranking on the merge path,
+#   - Spec:   ./chg-GH-366-spec.md (v2.3 — the at-most-two ruling as fixed by
+#             CEO-D-111: one bounded open-list read plus at most one bounded
+#             merged-request read taken only when the primary has no match, the
+#             delivered merged read used verbatim with ONE additive optional
+#             `signals.mergedMatches` count computed before its selection,
+#             duplicate matching requests (open or merged) aborting with their
+#             duplicate identities rather than any silent selection, the request
+#             row's three reasons, the abort row's three act-requiring causes,
 #             and every landing fault always a declared identity; F-1..F-5,
 #             API-1..API-3, EVT-1..EVT-2, DM-1..DM-3, NFR-1..NFR-10,
 #             DEC-1..DEC-14, RSK-1..RSK-13, §4.2 the seven non-goals, §5.1
@@ -27,8 +32,9 @@
 #             writes a change record into a base checkout" rule; §7.1 the
 #             scenario-to-file map; §7.3 the meta-suite registration obligations;
 #             §7.4 the documentation surfaces; §8.3 OQ-TP-3 closed by §5.1. The
-#             DoR iteration-3 revision restates the convergence case's read
-#             assertion on the two-read ruling — see TEST-PLAN NOTE 2 below.)
+#             plan-phase allocation is spec-independent and is adopted verbatim;
+#             the merged-truth carriers are restated on spec v2.3's ruling — see
+#             TEST-PLAN NOTE 2 below.)
 #   - Decisions: doc/decisions/TDR-0071 (branch resolution and resolved-head
 #             authority; the 2026-11-20 amendment selects ALT-6, the declaration
 #             read at the request head), TDR-0072 (required-check authority and
@@ -55,29 +61,34 @@
 #             chg-GH-354-plan.yaml (comment-carried phase data; a planning phase
 #             satisfied at plan time; an explicit scope for a no-edit boundary).
 #
-# READ BUDGET — the TWO-READ ruling (spec v2.2; TDR-0072's fact row as amended;
-# discharges readiness iteration 3 finding 1 on the plan side). The resolution
-# path spends ONE bounded open-request list read plus AT MOST ONE bounded
-# closed-request list read — the delivered merged-request read
-# (`GET …/pulls?state=closed`), now filterable by the declared branch convention
-# and exposing the match count/ambiguity (`0 | 1 | 2+`) — and nothing else: no
-# pagination, no retry, no fetch, no second closed read and no second open read.
-# The closed read is performed only after the open read leaves no open request
-# able to be the delivery request (an empty, unsaturated candidate set); therefore
-# a converged re-run, an `ambiguous-merged-request` refusal and a `no-open-request`
-# refusal each spend exactly two provider reads, while every other
-# resolution-path refusal — every `merge.branch-unresolved` cause,
-# `ambiguous-open-request`, `head-unresolved` — spends exactly the one open read
-# and no closed read. Record reads stay at most
-# three bounded local reads (<= 2 fixed-argv git invocations and <= 262 144 bytes
-# each), with no shell, no retry and no fetch.
+# READ BUDGET — the AT-MOST-TWO ruling (spec v2.3; CEO-D-111; discharges
+# readiness iteration 3 finding 1 on the plan side). The resolution path spends
+# ONE bounded open-request list read — the delivered `listDeliveryRequests` at
+# `TRUTH_PROVIDER_LIMIT` with gate facts, which also supplies the request detail
+# — plus AT MOST ONE bounded merged-request read: the delivered
+# `findMergedDeliveryRequest(workItemRef, limit = TRUTH_PROVIDER_LIMIT)`, used
+# VERBATIM (its delivered work-item-ref filter and its delivered deterministic
+# selection), with ONE additive optional `signals.mergedMatches` count computed
+# before that selection. Nothing else: no pagination, no retry, no fetch, no
+# second open read and no second merged read. The merged read is performed only
+# when the open page leaves no open entry whose source ref equals the resolved
+# branch (an empty, unsaturated candidate set). Per-path counts: a
+# candidate-resolution run and every refusal taken from the open page —
+# `merge.branch-unresolved`, `ambiguous-open-request`, `head-unresolved` — spend
+# exactly ONE delivery-request provider read; a duplicate-open abort also spends
+# exactly ONE (the open read that observed the duplicates); a convergence replay,
+# a `no-open-request` refusal and a duplicate-merged abort each spend exactly TWO.
+# Record reads stay at most three bounded local reads (<= 2 fixed-argv git
+# invocations and <= 262 144 bytes each), with no shell, no retry and no fetch.
 #
-# NO RANKING ON THE MERGE PATH. Two or more merged matches refuse
-# `merge.request-unresolved` with `ambiguous-merged-request`; no merged request is
-# selected, scored or ordered on the merge path. Closeout keeps the delivered
-# ranking UNCHANGED (`selectMerged` remains its selection rule and its default
-# call keeps the delivered work-item filter); its regression is named in phase 3
-# and is not re-decided here.
+# NO SILENT SELECTION ON THE MERGE PATH. The merge path never chooses between
+# duplicates: more than one open entry whose provider-asserted source ref equals
+# the resolved branch, or `mergedMatches > 1` on the convergence attempt, refuses
+# `merge.transaction-aborted` naming the duplicate identities. The delivered merged
+# read is reused verbatim, so its filter and its ranked selection are untouched;
+# the only change is the additive count the merge path reads. Closeout keeps the
+# delivered ranking UNCHANGED and ignores the signal, so its behaviour and output
+# are unchanged; its regression is named in phase 3 and is not re-decided here.
 #
 # LANDING FAULTS ARE ALWAYS A DECLARED IDENTITY (phase 2). Every landing-port
 # failure maps through one closed, total mapping — `config.credential.missing` (no
@@ -185,24 +196,28 @@
 # rather than an owed edit; no acceptance criterion, case id or coverage mapping
 # changed.
 #
-# TEST-PLAN NOTE 2 (DoR iteration-3 alignment; declared, not hidden). The
-# iteration-3 revision of the test plan moves NO case between phases: the
-# allocation in the index above is unchanged at 8 / 16 / 16 / 3 / 5 / 1 = 49.
-# It restates the convergence case's read assertion on the two-read ruling (one
-# open list read plus at most one closed list read, and zero change-record reads)
-# and re-points `tests/behaviour/merge-production-composition.test.ts`'s
-# unresolved-request cell to `merge.request-unresolved`. This plan implements
-# that ownership: phase 2 owns the placeholder routing and the cell, and phase 3
-# owns the candidate-set and convergence resolution that supersedes the
-# placeholder. A test plan that still asserts exactly one provider read on the
-# replay path, or that leaves the abort cell owned by phase 3, is the mismatch to
-# report; case ids, phase ownership and the totals do not change.
+# TEST-PLAN NOTE 2 (spec v2.3 alignment; declared, not hidden). The spec's v2.3
+# revision implements CEO-D-111 and moves NO case between phases: the allocation
+# in the index above is unchanged at 8 / 16 / 16 / 3 / 5 / 1 = 49, and no case id,
+# AC mapping or NFR mapping moves. It restates merged truth on the delivered read
+# used verbatim with one additive optional `mergedMatches` count (exactly one
+# replays, zero refuses `no-open-request`, more than one aborts
+# `merge.transaction-aborted` naming the duplicate identities) and withdraws the
+# superseded merged-ambiguity request reason. The test plan's current revision
+# still restates that one rule in its superseded form on the convergence carriers;
+# the carrier restatement is an owed documentation edit owned by the test-plan
+# author, not a change to the case set, the phase ownership or the totals. This
+# plan implements the v2.3 ruling: phase 2 owns the placeholder routing, phase 3
+# owns the candidate-set resolution, the convergence attempt and the duplicate
+# aborts that supersede the placeholder.
 #
 # DECLARED CROSS-PHASE READS (a case is owned by one phase; a fact it depends on
 # is authored by the phase that lands its last dependency, and the owning phase
 # re-runs rather than re-authors):
 #   - 047 is authored in phase 2 (the abort row's value and the convergence
-#     assertion move together there) and is re-run by every later phase's gate.
+#     assertion move together there) and is re-run by every later phase's gate;
+#     phase 3 grows the row's cause set to its third cause, so 047's cause
+#     assertion is re-run there rather than re-authored.
 #   - 046 is owned by phase 6, where it asserts the complete rendering contract
 #     over the whole golden set, the mutation control and the 19-file arithmetic.
 #     The `command`/`ref`/`operation` fields it asserts are authored in phase 2
@@ -214,8 +229,8 @@
 #     evaluated two-entry projection; the projection itself (two merge-applicable
 #     entries) is authored in phase 4, which therefore moves no golden.
 #   - 049 is owned by phase 3 with 043: 049 proves the zero-record-read replay
-#     and its two-match refusal, 043 proves the ordering claim and the paired
-#     control that zero merged matches continue to the candidate path.
+#     and its duplicate-merged abort, 043 proves the convergence outcomes and the
+#     paired control that zero merged matches continue to `no-open-request`.
 #   - 038 is owned by phase 7 and ONLY by phase 7. Its machine-table, pin-site
 #     and phrase-table values are authored in phase 2, so phase 2 is the
 #     authoring phase and phase 7 is the reconciling phase that re-runs 038 over
@@ -228,7 +243,7 @@
 #     `phase complete` write in `tests/behaviour/phase-completion-convergence.test.ts`
 #     plus its support fixtures.
 #
-# IDENTITIES AND COUNTS (NFR-8, spec v2.2 — unchanged by the two-read ruling). The
+# IDENTITIES AND COUNTS (NFR-8, spec v2.3 — unchanged by the at-most-two ruling). The
 # base is `origin/main-tools` at
 # `e1ebc76c` (GH-350 merged): **170** machine entries / **170** documented rows /
 # **169** delivered rows / **68** two-segment allowlist members / arithmetic
@@ -256,13 +271,15 @@
 # refresh, force, bypass, queue, retry or head-mutation capability; any new
 # configuration key, schema version, record kind or gate id.
 #
-# The two-read ruling is NOT a new provider operation: it reuses the delivered
-# `state=closed` merged-request read and the delivered open list read. The one
-# shared-surface edit it forces (additive optional members on the merged-request
-# read's input and observation, and the adapter's filter plus count) is declared
-# in phase 3 and changes no closeout behaviour: closeout's default call keeps the
-# delivered work-item filter and `selectMerged` ranking, and `edge.ts` is a
-# no-edit boundary. A closeout behaviour change remains out of scope (NG-5).
+# The at-most-two ruling is NOT a new provider operation: it reuses the delivered
+# open list read and the delivered merged-request read verbatim. The one
+# shared-surface edit it forces is ONE additive optional `signals.mergedMatches:
+# number` on the merged read, computed by the adapter before its delivered
+# selection, plus the matching optional `mergedMatches` member on the shared
+# `signals` type in `packages/core/src/contracts/closeout.ts`. Closeout ignores
+# the signal, so its behaviour and output are unchanged; a closeout behaviour
+# change remains out of scope (NG-5). The edit is declared in phase 3, where it
+# lands; `packages/cli/src/edge.ts` is a no-edit boundary.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-366
@@ -271,12 +288,12 @@ tier:
   phases: [1, 2, 3, 4, 5, 6, 7]
   escalationTriggers:
     - "An error identity, an exit digit, a row category/consequence/projection, or an identity total moves without the machine table, the documented table, every identity pin site, every pinned-count page and the phrase-table rotation moving in the same commit (NFR-8, TC-MRG-038)"
-    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection; `merge.transaction-aborted` reaches any cause other than its two pre-mutation causes (a waiver-append failure and a declared landing gap), advertises `true`, or promises convergence; a refused landing is reported as `merge.transaction-aborted` instead of one of the four closed declared identities — `config.credential.missing` (no credential to attempt), `provider.auth.rejected` (rejected credential), `provider.outage` (transient, transport or unclassified fault), `merge.landing-unverified` (landing fired, merged truth not observed); or a landing-port failure reaches an envelope as a raw port code (for example `protection-rule` or `head-mismatch`) because the landing-fault mapping lacks its declared `provider.outage` default (AC-F3-3, AC-F3-5, AC-F3-6, TC-MRG-023, TC-MRG-025, TC-MRG-026, TC-MRG-047)"
+    - "A `retryable` value is assigned anywhere but by the emitted code's declared row or family projection; `merge.transaction-aborted` reaches any cause other than its three act-requiring causes (a waiver-append failure and a declared landing gap, both pre-mutation, and duplicate matching delivery requests — open or merged — named by their duplicate identities), advertises `true`, or promises convergence; a refused landing is reported as `merge.transaction-aborted` instead of one of the four closed declared identities — `config.credential.missing` (no credential to attempt), `provider.auth.rejected` (rejected credential), `provider.outage` (transient, transport or unclassified fault), `merge.landing-unverified` (landing fired, merged truth not observed); or a landing-port failure reaches an envelope as a raw port code (for example `protection-rule` or `head-mismatch`) because the landing-fault mapping lacks its declared `provider.outage` default (AC-F3-3, AC-F3-5, AC-F3-6, TC-MRG-023, TC-MRG-025, TC-MRG-026, TC-MRG-047)"
     - "A refusal renders an `operation` token outside the closed vocabulary, or the field is satisfied by an operation name occurring anywhere in the summary instead of by the dedicated `operation=<token>` field — the same rule that governs the dedicated `command=merge` and `ref=<ref>` fields (AC-F3-1, API-3, NFR-5, TC-MRG-023, TC-MRG-024)"
     - "The merge path reads the invocation checkout's branch, reads the invocation checkout's head, reads a change record from the working tree, resolves the branch from a second source, keeps a fallback for an absent declaration, or fetches/pulls to make a head object readable (G-1, NFR-6, NG-7, AC-F1-3, TC-MRG-037)"
-    - "The resolution path performs more than two provider reads, performs the closed merged-request list read more than once, performs it without the declared convention filter, performs it while a convention-matching open request already is the delivery request, or paginates/retries/fetches it; or performs more than three bounded local record reads, or a record read issues more than two fixed-argv git invocations or reads more than 262 144 bytes (NFR-2, NFR-10, TC-MRG-034, TC-MRG-040, TC-MRG-049)"
-    - "A branch refusal renders a reason outside the six-member closed set, or resolves precedence outside `declaration-disagrees` > `record-invalid` > `record-unreadable` > `record-missing` > `declaration-missing` > `declaration-unusable`, or a request refusal renders a reason outside its four (`no-open-request`, `ambiguous-open-request`, `head-unresolved`, `ambiguous-merged-request`), or a saturated bounded page is answered by the candidate count instead of `ambiguous-open-request`, or two or more merged matches are ranked, scored or otherwise reduced to one instead of refusing `ambiguous-merged-request` (AC-F1-3, AC-F1-4, AC-F1-6, TC-MRG-006, TC-MRG-042, TC-MRG-043)"
-    - "Convergence is decided after any change-record read, a converged re-run performs one record read or one record-read git invocation, is made to require a readable record or a declared branch, lands anything, or is decided without the one closed merged-request read; or closeout's delivered merged-request ranking is changed, forked or re-decided on the merge path (AC-F1-6, TC-MRG-043, TC-MRG-049)"
+    - "The resolution path performs more than two provider reads, performs the merged-request read more than once, performs it before the open read or while an open entry's source ref equals the resolved branch, supplies it a filter of the merge path's own instead of using the delivered read verbatim, ranks or otherwise reduces its matches instead of aborting on more than one, or paginates/retries/fetches it; or performs more than three bounded local record reads, or a record read issues more than two fixed-argv git invocations or reads more than 262 144 bytes (NFR-2, NFR-10, TC-MRG-034, TC-MRG-040, TC-MRG-049)"
+    - "A branch refusal renders a reason outside the six-member closed set, or resolves precedence outside `declaration-disagrees` > `record-invalid` > `record-unreadable` > `record-missing` > `declaration-missing` > `declaration-unusable`, or a request refusal renders a reason outside its three (`no-open-request`, `ambiguous-open-request`, `head-unresolved`), or a saturated bounded page is answered by the candidate count instead of `ambiguous-open-request`, or an open duplicate or a merged duplicate is ranked, scored or otherwise reduced to one instead of refusing `merge.transaction-aborted` naming the duplicate identities (AC-F1-3, AC-F1-4, AC-F1-6, TC-MRG-006, TC-MRG-042, TC-MRG-043, TC-MRG-049)"
+    - "Convergence is decided after any change-record read, a converged re-run performs one record read or one record-read git invocation, is made to require a readable record or a declared branch, lands anything, or is decided without the one bounded merged-request read used verbatim; or closeout's delivered merged-request ranking is changed, forked or re-decided on the merge path, or closeout consumes the additive `mergedMatches` signal (AC-F1-6, TC-MRG-043, TC-MRG-049)"
     - "The verified head, the freshness comparison, the landing's expected head or the reported head is anything but the matched delivery request's asserted head (DEC-2, AC-F1-1, AC-F5-1)"
     - "A second required-check evaluator appears, the required-check set is derived anywhere but once per invocation, the expected-set validity rule is restated on the merge path instead of importing the exported `expectedSetValid`, or the gate-id slot pattern is widened (NFR-7, F-2, RSK-6, TDR-0072 DR-1, tests/checks/merge-check-path-scan.test.ts)"
     - "The runtime family declaration duplicates the classifier's resolution, enumerates gate ids, the containment identity becomes reachable by a declared code, or the removal mutation fails the totality proof by name instead of by a source-text or generic-coverage failure (F-4, AC-F4-1, AC-F4-2, TC-MRG-029, TC-MRG-045)"
@@ -329,7 +346,8 @@ phases:
   #   - the refusal diagnostics record binds phase 2 and phase 5 (named causes,
   #     the dedicated `command`/`ref`/`operation` rendering fields with the closed
   #     operation vocabulary, row-level retryability honesty with the abort row at
-  #     `false` over its two pre-mutation causes, the landing-fault attribution,
+  #     `false` over its act-requiring causes (two at the phase-2 boundary, the
+  #     duplicate-request third from phase 3), the landing-fault attribution,
   #     the runtime family declaration and the totality proof over it).
   #
   # Gate (expected signal: exit 0, three records tracked, `doc/decisions` clean,
@@ -361,24 +379,34 @@ phases:
   # Goal (spec F-3, F-4's vocabulary half, DEC-5/DEC-6/DEC-11; §18 "diagnostics
   #   first — they are the vocabulary the other capabilities report in"):
   #   1. Three additive rows: `merge.branch-unresolved` (six closed reasons,
-  #      §5.1 F-1 step 7), `merge.request-unresolved` (four closed reasons —
-  #      `no-open-request`, `ambiguous-open-request`, `head-unresolved`,
-  #      `ambiguous-merged-request`; `no-open-request` is this phase's
-  #      pre-resolution placeholder and is re-emitted by phase 3's candidate set,
-  #      which also emits the other three),
+  #      §5.1 F-1 step 7), `merge.request-unresolved` (three closed reasons —
+  #      `no-open-request`, `ambiguous-open-request`, `head-unresolved`;
+  #      `no-open-request` is this phase's pre-resolution placeholder and is
+  #      re-emitted by phase 3's convergence attempt, while phase 3's candidate
+  #      set emits the other two and aborts on a duplicate instead of adding a
+  #      fourth reason),
   #      `merge.work-item-unresolved` (AC-F3-4). Each row: category `user`,
   #      non-retryable, consequence `not_landed`, projection `user-validation` at
   #      exit 1, a remediation naming the object to repair. The reason
   #      vocabulary is authored here because the row is authored here; the
   #      emitters land with the capability that produces them.
   #   2. `merge.transaction-aborted` keeps its code, category, consequence and
-  #      projection and is NARROWED IN CAUSE AND PINNED to exactly its two
-  #      pre-mutation causes — (a) a waiver-append failure and (b) a declared
-  #      landing gap — both act-requiring, so the row declares `retryable: false`
-  #      with a remediation naming the aborted pre-mutation condition and
-  #      promising no convergence, true of both (AC-F3-6, §8.5, Appendix B). This
-  #      is not a decision to be taken during delivery: it is the delivered
-  #      contract.
+  #      projection and is NARROWED IN CAUSE AND, at this boundary, PINNED to its
+  #      two reachable pre-mutation causes — (a) a waiver-append failure and (b) a
+  #      declared landing gap — both act-requiring, so the row declares
+  #      `retryable: false` with a remediation naming the aborted pre-mutation
+  #      condition and promising no convergence, true of both (AC-F3-6, §8.5,
+  #      Appendix B). This is not a decision to be taken during delivery: it is
+  #      the delivered contract.
+  #      THE ROW'S THIRD CAUSE ARRIVES IN PHASE 3, and the documented row grows
+  #      there. Duplicate matching delivery requests — more than one open entry
+  #      whose source ref equals the resolved branch, or `mergedMatches > 1` on the
+  #      convergence attempt — is not representable before the resolution that can
+  #      observe duplicates exists, so this phase documents exactly the two causes
+  #      it can reach and phase 3 grows the documented row to three in the same
+  #      commit that lands the resolution. No boundary lies: the documented cause
+  #      count equals the reachable cause count at each boundary (two here, three
+  #      from phase 3), and AC-F3-6 is true at both.
   #      The cause set is narrowed by ROUTING THE REFUSED LANDING, not by
   #      re-pinning the value. The transaction's landing-refusal site applies ONE
   #      closed, TOTAL mapping over the landing port's fault and stops wrapping
@@ -415,14 +443,20 @@ phases:
   #        - the undefined-target return, and
   #        - the "no open and no merged match" return
   #      become `merge.request-unresolved` with reason `no-open-request` as the
-  #      PRE-RESOLUTION PLACEHOLDER. Phase 3 SUPERSEDES that routing with the
-  #      candidate-set resolution (`no-open-request` after the open read,
-  #      `ambiguous-open-request`, `head-unresolved`, `ambiguous-merged-request`);
-  #      phase 3 does not re-add the abort cause. At the end of THIS phase the
-  #      abort row therefore reaches exactly its two pre-mutation causes — a
-  #      waiver-append failure and a declared landing gap — so the documented
-  #      two-cause set, AC-F3-6 and escalation trigger 2 are true AT THE PHASE-2
-  #      BOUNDARY, not only after phase 3.
+  #      PRE-RESOLUTION PLACEHOLDER. That placeholder routing stays as declared.
+  #      Phase 3 SUPERSEDES it with the candidate-set resolution and the
+  #      convergence attempt (`no-open-request` after that attempt observes zero
+  #      merged matches, `ambiguous-open-request`, `head-unresolved`) and adds the
+  #      two duplicate aborts (an open duplicate
+  #      and `mergedMatches > 1`, both `merge.transaction-aborted` naming the
+  #      duplicate identities); phase 3 does not re-add an abort cause that exists
+  #      here. At the end of THIS phase the abort row therefore reaches exactly
+  #      its two pre-mutation causes — a waiver-append failure and a declared
+  #      landing gap — so the documented two-cause set and AC-F3-6 are true AT THE
+  #      PHASE-2 BOUNDARY, and escalation trigger 2's end-state statement is not
+  #      violated there (the row reaches a subset of its three declared causes),
+  #      while phase 3 grows both the documented row and the trigger's cause
+  #      statement to the third cause without either boundary being false.
   #      `tests/behaviour/merge-production-composition.test.ts` is already in this
   #      phase's scope and gate; its unresolved-request cell (which asserts
   #      `merge.transaction-aborted` today) moves with this routing to
@@ -495,12 +529,13 @@ phases:
   #   substituted pre-change row that must fail by name — its cause population is
   #   read from the transaction's emission sites AT THIS BOUNDARY, where the abort
   #   row reaches exactly its two pre-mutation causes because the two
-  #   request-resolution returns are routed here; no cause is counted from a path
-  #   phase 3 replaces), TC-MRG-027 (a pending
+  #   request-resolution returns are routed here; the duplicate-request third
+  #   cause is not representable yet and is counted at phase 3), TC-MRG-027 (a pending
   #   cause converges without an act and its remediation says so),
   #   TC-MRG-039 (canary secrets never reach output or records), TC-MRG-047 (the
-  #   abort row declares `false` over its two causes and the delivered convergence
-  #   assertion moves, with the pre-change row as the mutation control), TC-MRG-048
+  #   abort row declares `false` over every cause it reaches — two at this
+  #   boundary, three from phase 3 — and the delivered convergence assertion
+  #   moves, with the pre-change row as the mutation control), TC-MRG-048
   #   (an explicit `--waive` still authorizes where a class binding exists;
   #   executed UNCHANGED in the delivered waiver suite — a gate entry, not a scope
   #   edit).
@@ -516,13 +551,14 @@ phases:
   #   surfaces. Neither phase claims both halves.
   #
   # Declared row change in this phase: the documented `merge.transaction-aborted`
-  #   row (value, the two-cause list, no-convergence remediation), the
+  #   row (value, the two causes reachable here, no-convergence remediation), the
   #   landing-fault attribution note, and the three new rows in
   #   `doc/spec/features/feature-result-contract.md`, in the same commit as the
-  #   machine table.
+  #   machine table. The same documented row gains its third cause in phase 3,
+  #   together with the resolution that can observe a duplicate.
   #
   # Code areas, by file: `packages/core/src/contracts/error-table.ts` (three rows,
-  #   the four-reason request row and the abort narrowing),
+  #   the three-reason request row and the abort narrowing),
   #   `packages/core/src/contracts/merge.ts` (the closed `operation` vocabulary,
   #   the closed landing-fault identity set and any cause-evidence member),
   #   `packages/core/src/domain/merge-transaction.ts` (the refusal mapping, the
@@ -645,51 +681,56 @@ phases:
   #
   # Goal (spec F-1, F-5's resolution half, DEC-1/DEC-2; Appendix A steps 1-7;
   #   TDR-0071 ALT-6):
-  #   1. TWO provider reads AT MOST, in a fixed order (spec v2.2's two-read
-  #      ruling; discharges readiness iteration 3 finding 1 on the plan side).
-  #      FIRST the one bounded open-request list read (the delivered read, with
-  #      gate facts, which is also the request-detail read); it yields the open
-  #      entries, the observed open count and whether the page saturated. The
-  #      candidate set (point 2) is built from that page, and a NON-EMPTY candidate
-  #      set is resolved without any convergence read. THEN, only when that
-  #      candidate set is EMPTY ON AN UNSATURATED page — i.e. only where the open
-  #      page offers nothing to resolve — AT MOST ONE bounded closed-request list
-  #      read: the delivered merged-request read (`GET …/pulls?state=closed`), now
-  #      filterable by the declared branch convention (supplied by the merge call
-  #      in place of the delivered work-item-ref predicate, which stays closeout's
-  #      filter) and exposing the match count/ambiguity (`0 | 1 | 2+`). No
-  #      pagination, no retry, no fetch, no second closed read, never a closed read
-  #      while a convention-matching open entry is the delivery request, and never
-  #      a closed read before the open read.
-  #      Convergence is decided on that attempt, BEFORE any change-record read: on
-  #      an unsaturated closed page exactly one merged match whose source ref
-  #      follows the declared convention replays from provider truth at exit 0 and
-  #      reports `replayed=true` with the matched request's identity, performs zero
-  #      change-record reads and zero record-read git invocations, reports neither
-  #      `declared-at-head` nor `merge.branch-unresolved`, and lands nothing. A
-  #      SATURATED closed page refuses `ambiguous-merged-request` on the same
-  #      saturation rule as the open page (a truncated page cannot establish that
-  #      the merged set is unique); on an unsaturated page two or more merged
-  #      matches refuse `merge.request-unresolved` with `ambiguous-merged-request`
-  #      — the merge path NEVER ranks, selects or scores among merged matches —
-  #      and zero merged matches refuse `no-open-request` (AC-F1-6, TC-MRG-043,
-  #      TC-MRG-049). This phase SUPERSEDES phase 2's placeholder routing of the
-  #      two request-resolution returns; it does not re-add an abort cause.
-  #      DECLARED SHARED-CONTRACT EDIT, NOT A CLOSEOUT CHANGE. The merged-request
+  #   1. TWO provider reads AT MOST, in a fixed order (spec v2.3's at-most-two
+  #      ruling as fixed by CEO-D-111; discharges readiness iteration 3 finding 1
+  #      on the plan side). FIRST the one bounded open-request list read (the
+  #      delivered `listDeliveryRequests` at `TRUTH_PROVIDER_LIMIT` with gate
+  #      facts, which is also the request-detail read); it yields the open entries,
+  #      the observed open count and whether the page saturated, and the delivery
+  #      request is the open entry whose `sourceRef` equals the resolved branch
+  #      exactly. The candidate set (point 2) is built from that page, and a
+  #      NON-EMPTY candidate set is resolved without any convergence read. THEN,
+  #      only when the open page offers nothing to resolve — no entry's source ref
+  #      equals the resolved branch and the candidate set is empty on an
+  #      unsaturated page — AT MOST ONE bounded merged-request read: the delivered
+  #      `findMergedDeliveryRequest(workItemRef, limit = TRUTH_PROVIDER_LIMIT)`,
+  #      used VERBATIM — its delivered work-item-ref filter and its delivered
+  #      deterministic selection, with NO filter of this change's own — together
+  #      with its ONE additive optional `signals.mergedMatches: number`, computed
+  #      by the read before that selection. No pagination, no retry, no fetch, no
+  #      second open read and no second merged read.
+  #      Convergence is decided on that attempt, BEFORE any change-record read,
+  #      from the observed count:
+  #        - exactly 1: the run replays from provider truth at exit 0 and reports
+  #          `replayed=true` with that request's identity; it performs zero
+  #          change-record reads and zero record-read git invocations, reports
+  #          neither `declared-at-head` nor `merge.branch-unresolved`, and lands
+  #          nothing; the delivered selection is used only to name that identity.
+  #        - 0: the run refuses `merge.request-unresolved` with `no-open-request`.
+  #        - more than 1: the run refuses `merge.transaction-aborted` at exit 1,
+  #          `not_landed`, `retryable: false`, naming the duplicate identities and
+  #          never inheriting the delivered selection. This is where the abort
+  #          row's duplicate-request cause becomes representable (AC-F1-6,
+  #          TC-MRG-043, TC-MRG-049).
+  #      This phase SUPERSEDES phase 2's placeholder routing of the two
+  #      request-resolution returns and grows the documented abort row to its third
+  #      cause in the same commit, so no boundary documents a cause it cannot
+  #      reach.
+  #      DECLARED ADDITIVE-SIGNAL EDIT, NOT A CLOSEOUT CHANGE. The merged-request
   #      read is shared with closeout, so this phase edits the adapter
-  #      (`packages/adapters/src/github/client.ts`) to add the convention filter
-  #      and the count/ambiguity fact, and the additive optional members of the
-  #      observation and input types in
-  #      `packages/core/src/contracts/closeout.ts`. The convention itself is
-  #      supplied from the one exported predicate (point 5) — the adapter compiles
-  #      no third grammar of its own. The MERGE composition stops relying on
-  #      `selectMerged`'s ranking and consumes the count instead. CLOSEOUT'S USE OF
-  #      THE RANKING IS UNCHANGED: its default call keeps the delivered work-item
-  #      filter and `selectMerged` selection byte-for-byte, and its regression is
-  #      named in the gate below. `packages/cli/src/edge.ts` is a declared NO-EDIT
-  #      BOUNDARY: its closeout wiring forwards the input and reads `.value`, so
-  #      additive optional members require no change there, and an edit that
-  #      re-decides closeout's merged-request behaviour is out-of-plan (NG-5).
+  #      (`packages/adapters/src/github/client.ts`) to add exactly ONE additive
+  #      optional `signals.mergedMatches: number` computed before its delivered
+  #      selection, and the matching optional `mergedMatches` member on the shared
+  #      `signals` type in `packages/core/src/contracts/closeout.ts`. Nothing else
+  #      on that read moves: no convention filter, no filter of the merge path's
+  #      own, no change to the delivered selection or ranking, and no change to
+  #      closeout's default call. Closeout ignores the signal, so its behaviour and
+  #      output are unchanged; the regression that proves the ranking is unchanged
+  #      is named in the gate below. `packages/cli/src/edge.ts` is a declared
+  #      NO-EDIT BOUNDARY: its closeout wiring forwards the input and reads
+  #      `.value`, so an additive optional member requires no change there, and an
+  #      edit that re-decides closeout's merged-request behaviour is out-of-plan
+  #      (NG-5).
   #   2. Candidate set = the open entries whose provider-asserted source ref
   #      matches the repository's declared branch convention for the ref, capped
   #      at `MERGE_BRANCH_CANDIDATE_MAX = 3`. SATURATION PRECEDENCE (stated here,
@@ -697,15 +738,19 @@ phases:
   #      refuses `ambiguous-open-request` BEFORE the candidate count is taken,
   #      even when zero convention-matching entries are on the page, because a
   #      truncated page cannot establish any uniqueness claim; on an unsaturated
-  #      page zero candidates refuse `no-open-request` and more than three refuse
+  #      page a candidate set that leaves nothing to resolve proceeds to the
+  #      convergence attempt, while more than three candidates refuse
   #      `ambiguous-open-request`. A candidate whose asserted head is absent or is
   #      not a full hex SHA refuses `head-unresolved` and is never read
-  #      (AC-F1-4). `merge.request-unresolved` carries four closed reasons after
-  #      this phase: `no-open-request`, `ambiguous-open-request`, `head-unresolved`
-  #      and `ambiguous-merged-request`. They partition by the page they are read
-  #      from: `ambiguous-open-request` and `head-unresolved` from the open page,
-  #      `no-open-request` and `ambiguous-merged-request` from the convergence
-  #      attempt (point 1).
+  #      (AC-F1-4). More than one open entry whose provider-asserted source ref
+  #      equals the resolved branch is a DUPLICATE-REQUEST condition: the run
+  #      refuses `merge.transaction-aborted` naming the duplicate identities and
+  #      never selects one, spending exactly this one open read and no merged read
+  #      (AC-F1-6). `merge.request-unresolved` carries three closed reasons after
+  #      this phase: `no-open-request`, `ambiguous-open-request`,
+  #      `head-unresolved`. They partition by the page they are read from:
+  #      `ambiguous-open-request` and `head-unresolved` from the open page, and
+  #      `no-open-request` from the convergence attempt (point 1).
   #   3. Each candidate's change record is read AT THAT CANDIDATE'S OWN ASSERTED
   #      HEAD through the merge git seam: the bounded, fixed-argv local read
   #      (`ls-tree -r --name-only <sha> -- <pathspec>` to locate, then one
@@ -724,11 +769,13 @@ phases:
   #   5. The branch-convention predicate is REUSED, NOT COPIED: the predicate the
   #      closeout resolution uses is module-private today (`branchConvention` at
   #      `packages/core/src/domain/closeout.ts:313-314`), so this phase EXPORTS it
-  #      as a named predicate and imports it in the merge composition, which also
-  #      SUPPLIES it to the merged-request read as the filter value. The second
-  #      delivered copy in `packages/adapters/src/git/index.ts` is not forked, and
-  #      neither the adapter nor the composition writes a third grammar; the
-  #      convention narrows WHERE to look and never supplies the value.
+  #      as a named predicate and imports it in the merge composition, where it
+  #      builds the candidate set only. The merged-request read is used verbatim and
+  #      receives no convention value: the predicate narrows WHICH CANDIDATE HEADS
+  #      are read and never supplies a filter to that read. The second delivered
+  #      copy in `packages/adapters/src/git/index.ts` is not forked, and neither the
+  #      adapter nor the composition writes a third grammar; the convention
+  #      narrows WHERE to look and never supplies the value.
   #   6. Acceptance is exact string equality between the record's `branch`
   #      declaration and that candidate's own provider-asserted source ref.
   #      Exactly one accepted candidate is the delivery request and the
@@ -754,8 +801,9 @@ phases:
   #      verification record whose head is the resolved head, with zero waiver,
   #      transaction or git mutation (AC-F5-1, AC-F5-2). Both reports name the
   #      resolved branch, the resolution source, the request identity, the
-  #      observed candidate count, the resolved head, or `replayed=true` for an
-  #      already-merged replay (DM-2) — so the report's machine data and its human
+  #      observed candidate count, the resolved head — or, for an already-merged
+  #      replay, `replayed=true` with the observed merged-match count
+  #      (`mergedMatches`) (DM-2) — so the report's machine data and its human
   #      rendering both move here, and the three success goldens move with them.
   #  10. The ambient reads are DELETED, not bypassed: no checkout branch read, no
   #      checkout head read, no branch-name parsing recovery, no working-tree
@@ -788,8 +836,9 @@ phases:
   #   provider truth with zero record reads), TC-MRG-049 (the dedicated
   #   zero-record-read replay: `replayed=true`, zero record reads and zero
   #   record-read git invocations, nothing landed, exactly two provider reads —
-  #   one open list plus one closed list — and two merged matches refuse
-  #   `ambiguous-merged-request` rather than ranking).
+  #   one open list plus one merged list used verbatim — and more than one merged
+  #   match aborts `merge.transaction-aborted` naming the duplicates rather than
+  #   inheriting the delivered selection).
   #
   # TC-MRG-009's second half is DM-1's load-bearing claim and gets a real oracle:
   #   `tests/behaviour/phase-completion-convergence.test.ts` writes the pm-notes
@@ -804,29 +853,36 @@ phases:
   # Mandatory controls in this phase: TC-MRG-002 proves the head assertion is
   #   sensitive (it fails against the pre-fix branch source); TC-MRG-037 plants
   #   the pre-fix read and requires the matcher to find it by file and line, once
-  #   per absence claim; the resolve-refusal fixtures assert the TWO-READ CONTRACT
-  #   as an exact multiset, not an upper bound: every `merge.branch-unresolved`
-  #   cause and every `ambiguous-open-request` / `head-unresolved` refusal shows
-  #   EXACTLY ONE provider read (the open list) and no closed read, while a
-  #   converged re-run, an `ambiguous-merged-request` refusal (including the
-  #   saturated closed page) and a `no-open-request` refusal show EXACTLY TWO (the
-  #   open list and one closed list) and no third read; no cell shows a fetch, a
-  #   retry, a pagination or a second closed read. That exactness is the difference
-  #   between a fail-closed refusal and a late one.
+  #   per absence claim; the resolve-refusal fixtures assert the AT-MOST-TWO
+  #   CONTRACT as an exact multiset, not an upper bound: every
+  #   `merge.branch-unresolved` cause, every `ambiguous-open-request` /
+  #   `head-unresolved` refusal and every duplicate-open abort shows EXACTLY ONE
+  #   provider read (the open list) and no merged read, while a convergence replay,
+  #   a `no-open-request` refusal and a duplicate-merged abort show EXACTLY TWO
+  #   (the open list and one merged list) and no third read; no cell shows a fetch,
+  #   a retry, a pagination, a second open read or a second merged read. That
+  #   exactness is the difference between a fail-closed refusal and a late one.
   #
-  # Code areas: the composition's two-read sequence, candidate-set resolution,
-  #   record read and resolution result, plus the deletion of the ambient reads and
-  #   the branch-name parse; the adapter's merged-request read (the declared
-  #   convention filter supplied by the caller, the `0 | 1 | 2+` count/ambiguity
-  #   fact, and the UNCHANGED default ranking closeout still receives) with the
-  #   additive shared-contract members it returns; the merge git seam's bounded
+  # Code areas: the composition's at-most-two read sequence, candidate-set
+  #   resolution (including the duplicate-open abort), record read and resolution
+  #   result, the convergence decision over `mergedMatches: 1` / `0` / `> 1` with
+  #   its duplicate-merged abort, plus the deletion of the ambient reads and the
+  #   branch-name parse; THE ONE SHARED-READ EDIT — the adapter's merged-request
+  #   read in `packages/adapters/src/github/client.ts` gains exactly one additive
+  #   optional `signals.mergedMatches: number` computed before its delivered
+  #   selection, with the matching optional `mergedMatches` member on the shared
+  #   `signals` type in `packages/core/src/contracts/closeout.ts`, the adapter's
+  #   own merged-read tests, and the merge convergence fixture; the read's filter
+  #   and delivered selection stay unchanged, closeout's ranking is unchanged, and
+  #   no convention filter is added to that read; the merge git seam's bounded
   #   tree/blob read and its union/inventory; the delivered parse (reused, not
-  #   edited); the exported branch-convention predicate; the transaction's
-  #   resolved-branch/resolved-head inputs and its freshness/landing bindings; the
-  #   command's resolved-object machine data; the report shapes (`MergeReport`,
-  #   `MergeDryRunReport`) that carry the resolved object; the human rendering of
-  #   the resolution facts; the three new contract constants; the change record's
-  #   own `branch` declaration (already carried — DM-1, §19 seeding).
+  #   edited); the exported branch-convention predicate (candidate set only); the
+  #   transaction's resolved-branch/resolved-head inputs and its
+  #   freshness/landing bindings; the command's resolved-object machine data; the
+  #   report shapes (`MergeReport`, `MergeDryRunReport`) that carry the resolved
+  #   object; the human rendering of the resolution facts; the three new contract
+  #   constants; the documented abort row's third cause; the change record's own
+  #   `branch` declaration (already carried — DM-1, §19 seeding).
   #
   # GOLDEN SUBSET OWNED BY THIS PHASE (see the header movement table; the suite
   #   runs in the gate below and a file regenerated outside this subset fails by
@@ -873,18 +929,19 @@ phases:
   #   worktree carrying NO change folder) and the recording child-runner seam for
   #   the local read; the record is committed on the feature branch and is
   #   obtained only through the read. It also gains the CONVERGENCE fixture the
-  #   two-read ruling needs: the reply matcher must distinguish the open list read
-  #   from the closed merged-request list read (both are `/pulls?` URLs today, so
-  #   the discriminator is the `state=` parameter), serve a one-merged-match page
-  #   and a two-merged-match page, and record the provider-read sequence so the
-  #   exact multiset above is assertable. The fixture does NOT write a change
-  #   record into the base checkout (that fabricates a state the real checkout
-  #   cannot be in), and it does not fabricate a merged section inside the
-  #   open-list reply (that fabricates a provider shape that cannot occur). The
-  #   adapter's own merged-read fixtures are declared too: the two-match page is
-  #   served inline by the adapter behaviour suite, so no committed provider
-  #   fixture file is added or moved for it, and the committed merged-pulls
-  #   fixture keeps serving closeout's default call unchanged. The phase declares
+  #   at-most-two ruling needs: the reply matcher must distinguish the open list
+  #   read from the merged-request list read (both are `/pulls?` URLs today, so
+  #   the discriminator is the `state=` parameter), serve a one-merged-match page,
+  #   a zero-merged-match page and a two-merged-match page, and record the
+  #   provider-read sequence so the exact multiset above is assertable. The
+  #   fixture does NOT write a change record into the base checkout (that
+  #   fabricates a state the real checkout cannot be in), and it does not
+  #   fabricate a merged section inside the open-list reply (that fabricates a
+  #   provider shape that cannot occur). The adapter's own merged-read fixtures are
+  #   declared too: the multi-match page is served inline by the adapter behaviour
+  #   suite, so no committed provider fixture file is added or moved for it, and
+  #   the committed merged-pulls fixture keeps serving closeout's default call
+  #   unchanged. The phase declares
   #   the three merge fixture FILES explicitly instead of the `tests/fixtures/merge`
   #   folder, and it declares its own golden files by exact path: the committed
   #   goldens are moved and added here, `EXPECTED` moves with them, and every
@@ -900,7 +957,8 @@ phases:
   #   bun test tests/behaviour/merge-production-composition.test.ts tests/behaviour/merge-git-seam-capabilities.test.ts tests/behaviour/merge-dry-run.test.ts tests/behaviour/merge-landing.test.ts tests/behaviour/merge-verification-record.test.ts tests/behaviour/merge-freshness.test.ts tests/behaviour/merge-classification.test.ts tests/behaviour/merge-gate-set.test.ts tests/behaviour/merge-privacy.test.ts tests/behaviour/merge-convergence.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/pm-notes-lint.test.ts tests/behaviour/phase-write-path-lint.test.ts tests/behaviour/phase-completion-convergence.test.ts
   #   bun test tests/behaviour/providers/github-closeout.test.ts tests/behaviour/providers/github-collection.test.ts tests/behaviour/providers/github-trap.test.ts tests/structure/provider-surface.test.ts
   #   bun test tests/golden/merge.test.ts
-  #   bun test tests/checks/merge-branch-read-scan.test.ts tests/checks/merge-suite-discovery.test.ts tests/checks/merge-deploy-no-live-calls.test.ts tests/structure/merge-suite-obligations.test.ts tests/structure/merge-contract.test.ts tests/structure/content-inventory.test.ts
+  #   bun test tests/checks/merge-branch-read-scan.test.ts tests/checks/merge-suite-discovery.test.ts tests/checks/merge-deploy-no-live-calls.test.ts tests/checks/error-table-sync.test.ts tests/structure/merge-suite-obligations.test.ts tests/structure/merge-contract.test.ts tests/structure/error-table.test.ts tests/structure/content-inventory.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
   # ---------------------------------------------------------------------------
   - id: 3
     title: "Change-branch resolution from the change record read at the request head, the bounded local read seam, and the resolved-head binding across freshness, landing and reporting"
@@ -917,19 +975,25 @@ phases:
         # closed union, the operation member plus its pin.
         - packages/core/src/contracts/merge.ts
         - packages/core/src/contracts/index.ts
-        # THE SHARED MERGED-REQUEST READ (readiness iteration 3 finding 1). The
-        # adapter's read must be filterable by the declared convention (supplied
-        # by the composition from the one exported predicate — the adapter writes
-        # no third grammar) and must expose the match count/ambiguity
-        # (`0 | 1 | 2+`), so the merge composition can refuse
-        # `ambiguous-merged-request` instead of ranking through `selectMerged`.
-        # The input option and the observation member are ADDITIVE OPTIONAL
-        # members of the shared closeout contract declared next; they are the
-        # minimum edit that avoids a new provider operation (NG-1). Closeout's
-        # default call keeps the delivered filter and `selectMerged` ranking
-        # byte-for-byte.
+        # THE ONE SHARED-READ EDIT — THE ADDITIVE SIGNAL, AND NOTHING ELSE. The
+        # delivered merged-request read is used VERBATIM (its work-item-ref filter
+        # and its deterministic selection). This phase adds exactly one additive
+        # optional `signals.mergedMatches: number` in the adapter, computed before
+        # that delivered selection, and the matching optional `mergedMatches`
+        # member on the shared `signals` type in the contract file declared next.
+        # No convention filter is added to this read, no filter of the merge path's
+        # own reaches it, its delivered selection/ranking is not changed, and
+        # closeout's default call and output are unchanged (it ignores the signal).
+        # The members are the minimum edit that avoids a new provider operation
+        # (NG-1).
         - packages/adapters/src/github/client.ts
         - packages/core/src/contracts/closeout.ts
+        # The abort row's third cause (duplicate matching delivery requests) and
+        # its remediation land here, in the machine row and its documented
+        # counterpart, in the same commit as the resolution that can observe a
+        # duplicate — so the documented row never exceeds the reachable cause set.
+        - packages/core/src/contracts/error-table.ts
+        - doc/spec/features/feature-result-contract.md
         - packages/cli/src/commands/merge.ts
         - packages/cli/src/output/merge-text.ts
         # --- the bounded local read seam -------------------------------------
@@ -945,10 +1009,11 @@ phases:
         # key; pm-notes progress entries go through the lifecycle primitives and
         # are never plan scope.
         - tests/behaviour/merge-production-composition.test.ts
-        # The adapter's merged-request read pins (readiness iteration 3 finding
-        # 1): TC-CLOSE-057's highest-numeric-wins cell is the regression proving
-        # closeout's ranking is unchanged, and the new cells cover the convention
-        # filter and the count/ambiguity (`0 | 1 | 2+`) the merge path consumes.
+        # The adapter's merged-request read pins: TC-CLOSE-057's
+        # highest-numeric-wins cell is the regression proving closeout's ranking is
+        # unchanged, and the new cells cover the additive `mergedMatches` count
+        # (0 / 1 / > 1) the merge path consumes. Closeout's own read reports the
+        # same value it reported before: the signal is added, not consulted.
         # `tests/behaviour/providers/github-trap.test.ts` and
         # `tests/structure/provider-surface.test.ts` run in the gate as UNCHANGED
         # regressions (gate entries, not scope edits): the first pins closeout's
@@ -957,7 +1022,7 @@ phases:
         # function fails there by name.
         - tests/behaviour/providers/github-closeout.test.ts
         # The adapter harness the merged-read cells are served from. The
-        # two-match ambiguity page is built inline by the suite, so no committed
+        # multi-match page is built inline by the suite, so no committed
         # provider fixture file is added or moved for it.
         - tests/fixtures/closeout/github-client.ts
         - tests/behaviour/merge-git-seam-capabilities.test.ts
@@ -1087,18 +1152,18 @@ phases:
   #   (`retryable` is the emitted row's declared value across the matrix),
   #   TC-MRG-032 (the merge-surface CI entry is cited by source; battery records
   #   and goldens unchanged), TC-MRG-034 (the per-invocation read budget holds
-  #   exactly: one open list read, the single closed merged-request read where the
-  #   convergence path takes it and no second closed read, one check-run page on
-  #   the resolved head, one work-item read, one CI-workflow read, no fetch and no
-  #   retry), TC-MRG-040 (the added reads are filesystem/git-local reads with no
-  #   added polling or waiting).
+  #   exactly: one open list read, the single verbatim merged-request read where
+  #   the convergence path takes it and no second merged read, one check-run page
+  #   on the resolved head, one work-item read, one CI-workflow read, no fetch and
+  #   no retry), TC-MRG-040 (the added reads are filesystem/git-local reads with
+  #   no added polling or waiting).
   #
   # Mandatory controls in this phase: TC-MRG-013 runs the same bytes under two
   #   SHAs so "other head" is genuinely tested; TC-MRG-024's control makes
   #   TC-MRG-023 non-vacuous; TC-MRG-025's source read for a per-instance
   #   `retryable` assignment carries a planted control; TC-MRG-034's read
   #   assertion is an exact multiset, not an upper bound, and it counts the
-  #   closed merged-request read separately from the open list read.
+  #   merged-request read separately from the open list read.
   #
   # `evaluateRequiredJobGate` in `packages/core/src/domain/merge-probe.ts` is
   #   declared in scope as a NO-EDIT boundary: this change feeds it a wider
@@ -1281,9 +1346,10 @@ phases:
   #   verification record's battery list; the record keeps its own five-entry
   #   list. The dry-run report states the same projection, and both reports also
   #   expose the resolved object phase 3 added — resolved branch, resolution
-  #   source (`declared-at-head`) or `replayed=true`, matched request identity,
-  #   observed candidate count, resolved head, evaluated required-check count and
-  #   set size. Bounds hold (machine data <= 65 536 bytes, human <= 24 lines /
+  #   source (`declared-at-head`) or `replayed=true` with the observed
+  #   merged-match count, matched request identity, observed candidate count,
+  #   resolved head, evaluated required-check count and set size. Bounds hold
+  #   (machine data <= 65 536 bytes, human <= 24 lines /
   #   <= 4 096 bytes, every dropped item marked `+N`), the determinism sweep is
   #   byte-identical across twenty runs for one success and six refusals with a
   #   changed-fact control that differs, and no record kind, key or event schema
@@ -1410,20 +1476,25 @@ phases:
   #     Required-check awareness, Classification fidelity, Emittable-code
   #     totality, Error-identity stability.
   #   - the merge reference page `check:help` resolves: branch and read-at-head
-  #     resolution, the already-merged convergence case and its two-read budget
-  #     (one open list plus at most one closed list), the declaration's
-  #     256-character cap and six closed reasons, the request row's four closed
-  #     reasons including `ambiguous-merged-request`, the no-ranking rule on the
-  #     merge path, the gate set, the refresh and exit-status causes, the new
+  #     resolution, the already-merged convergence case and its at-most-two read
+  #     budget (one open list plus at most one merged list, the second used
+  #     verbatim with its additive merged-match count), the declaration's
+  #     256-character cap and six closed reasons, the request row's three closed
+  #     reasons, the abort row's three act-requiring causes (including duplicate
+  #     matching delivery requests, open or merged, named by their duplicate
+  #     identities), the never-choose-silently rule on the merge path, the gate
+  #     set, the refresh and exit-status causes, the new
   #     refusal examples WITH the `command`/`ref`/`operation` fields and the
   #     closed operation vocabulary, the landing-fault attribution, and the one
   #     new authoring obligation.
   #   - `doc/spec/nonfunctional.md`: the merge read-budget row (one bounded open
-  #     list read plus at most one bounded closed merged-request list read, plus
+  #     list read plus at most one bounded verbatim merged-request read, plus
   #     <= 3 bounded local record reads, with no fetch, no pagination and no
   #     retry) and the merge record-kind statement where it restates a merge
-  #     count. The row is restated on the two-read ruling, not the superseded
-  #     one-read claim.
+  #     count. The row is restated on the at-most-two ruling, not the superseded
+  #     one-read claim, and the per-path counts name one read for a resolution or
+  #     open-page refusal, two for a convergence replay, a `no-open-request`
+  #     refusal or a duplicate-merged abort.
   #   - `doc/guides/change-lifecycle.md`: the `branch` declaration is the new
   #     authoring obligation on a change record; the artifact table gains the key
   #     (its 256-character cap, the closed refusal reasons, read-at-head, and the
