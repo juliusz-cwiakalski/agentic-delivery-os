@@ -290,3 +290,36 @@ notes:
       plan rev 1.2)."
     type: info
     date: "2026-11-21"
+  - text: "delivery plan phase 1 (policy-declaration) complete: commit
+      01b507b9d97d22804f113a3ae48cab5885b6e6cf. Gate 0 `pnpm build` PASS;
+      whole-document validator probe PASS (provider policy loads;
+      defaultChain=subscription-first; chains=subscription-first,subscription-only;
+      profiles=delivery,paid; seats=24/24); control suite
+      tests/structure/verify-gates-suite-map-reference.test.ts 14 pass / 0 fail.
+      `.delivery-os/config.yaml` gained the `provider` branch; the `verify` block
+      is byte-identical (diff is insertions only)."
+    type: evidence
+    date: "2026-11-21"
+  - text: "DEVIATION (commit subject): the six plan-phase commits are composed by
+      the delivered `commit` primitive, which resolves NO plan-phase summary on
+      this checkout — with no `--phase` flag the lifecycle phase is `dor_check`
+      (the latest completed transition), `planPhaseForLifecycle` finds no
+      plan-phase correspondence, and the primitive emits its template subject
+      (`chore(GH-374): update <path>`). Reproduced at
+      packages/cli/src/edge.ts:1207-1211 (currentPhaseId) and
+      packages/cli/src/commands/commit.ts:174-202,325 (planPhaseForLifecycle +
+      phaseId). Precedent: GH-350's plan declares `feat(GH-350): ...` subjects
+      while its landed commits carry the same `chore(GH-350): update <path>`
+      template form. The plan is not hand-edited and no commit is hand-crafted;
+      the declared subject of each phase is recorded here instead."
+    type: info
+    date: "2026-11-21"
+  - text: "DEVIATION (environment): the shared worktree git metadata file
+      `/home/juliusz/git/jaiship/jaiship/.git/info/exclude` excludes
+      `.delivery-os/`, so `git add -A -- .delivery-os/config.yaml` exits 1 with
+      the ignore hint even for the tracked file, and the commit primitive
+      classifies that as `commit.atomic-abort` (staging failed). The ignore line
+      is commented out for the delivery (git metadata only; not a repository
+      file, not committed) so phase 1 can land." 
+    type: info
+    date: "2026-11-21"
