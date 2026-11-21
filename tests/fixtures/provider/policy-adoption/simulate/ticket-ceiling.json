@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "delivery.provider.simulate.v1",
+  "now": "2026-11-20T12:00:00Z",
+  "chain": "subscription-only",
+  "workItemRef": "GH-374",
+  "credentials": { "zai": "resolved" },
+  "quota": {
+    "zai-coding-plan": {
+      "httpStatus": 200,
+      "body": "{\"code\":200,\"success\":true,\"data\":{\"limits\":[{\"type\":\"TOKENS_LIMIT\",\"percentage\":0}]}}"
+    }
+  },
+  "spend": {
+    "telemetryState": "present",
+    "points": [{ "atMs": 1795174200000, "cost": 30, "tokens": 600 }]
+  }
+}
