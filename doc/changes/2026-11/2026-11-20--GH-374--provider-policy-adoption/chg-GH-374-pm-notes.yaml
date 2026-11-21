@@ -31,7 +31,7 @@ phases:
     completed: 2026-11-21T07:31:23.626Z
   quality_gates:
     started: "2026-11-21T07:32:00Z"
-    completed: null
+    completed: 2026-11-21T08:22:10.722Z
   dod_check:
     started: null
     completed: null
@@ -316,13 +316,13 @@ notes:
     type: info
     date: "2026-11-21"
   - text: "DEVIATION (environment): the shared worktree git metadata file
-      `$HOME/git/jaiship/jaiship/.git/info/exclude` excludes
-      `.delivery-os/`, so `git add -A -- .delivery-os/config.yaml` exits 1 with
-      the ignore hint even for the tracked file, and the commit primitive
-      classifies that as `commit.atomic-abort` (staging failed). The ignore line
-      was commented out for the delivery (git metadata only; not a repository
-      file, not committed) so phase 1 could land, and it is restored after the
-      final plan-phase commit."
+      `$HOME/git/jaiship/jaiship/.git/info/exclude` excludes `.delivery-os/`, so
+      `git add -A -- .delivery-os/config.yaml` exits 1 with the ignore hint even
+      for the tracked file, and the commit primitive classifies that as
+      `commit.atomic-abort` (staging failed). The ignore line was commented out
+      for the delivery (git metadata only; not a repository file, not committed)
+      so phase 1 could land, and it is restored after the final plan-phase
+      commit."
     type: info
     date: "2026-11-21"
   - text: "delivery plan phase 2 (prompt-cleanup) complete: commit
@@ -447,4 +447,19 @@ notes:
       SHA pin of an unrelated control test file, F-5 a host-state `.jaiship`
       existence assertion."
     type: info
+    date: "2026-11-21"
+  - text: "QUALITY GATES (final): outcome PASS. `pnpm build` exit 0; `pnpm check`
+      exit 0 (12284 pass, 4 skip, 0 fail across 1489 files, 113485 assertions;
+      boundaries 515 modules / 1639 dependencies clean; ambient-globals 256
+      neutral-set files clean; workspace-entrypoints OK; secret-read-boundary
+      480 production files clean; memory-lint 3 records / 0 errors;
+      prompt-conformance 5 prompts clean; help-guide-coverage all
+      prompt-required commands covered; exports-parity 5 publishables pass).
+      Range lint: base=main-tools, merge-base e1ebc76c, head 00efadc2,
+      commits=24, offending=0, mode=none, binary node_modules/.bin/commitlint,
+      origin=repository-local. First run failed only on
+      `private.absolute-user-path` in three change artifacts; fixed in 00efadc2
+      by sanitizing host paths to `$HOME` (no rule weakened); targeted privacy
+      suite 53 pass / 0 fail; full re-run green. Range lint verdict PASS."
+    type: evidence
     date: "2026-11-21"
