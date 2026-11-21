@@ -3,6 +3,8 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/zai-peak-hours-hook.md
 ados_distribution: redistributable
+links:
+  related_changes: ["GH-374"]
 ---
 # Z.AI Peak-Hours & Quota Hook Guide
 

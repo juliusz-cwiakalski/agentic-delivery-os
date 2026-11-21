@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-PROFILES
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
 summary: "Model-profile selection and provider watching: the typed provider.profiles branch (tiers, profiles, seats with a typed pacingClass, preference chain, pacing rungs, watch targets, optional per-profile peak-window rules, shipped empty), the pure selection engine (declarative heuristics, hard capability gate, lazy memoized eligibility probes), profile park/switch/revert with a persisted target record, the coding-plan/DeepSeek/OpenAI watch mappings, the provider profile resolve and provider watch status CLI surfaces, and resolve-before-spawn with a hardened data-v1 env-record contract."
 links:
-  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335", "GH-350"]
+  related_changes: ["GH-234", "GH-182", "GH-233", "GH-242", "GH-294", "GH-335", "GH-350", "GH-374"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0013", "TDR-0028", "TDR-0032", "TDR-0062"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"

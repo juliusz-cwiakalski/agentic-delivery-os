@@ -3,6 +3,8 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/opencode-model-configuration.md
 ados_distribution: redistributable
+links:
+  related_changes: ["GH-374"]
 ---
 # OpenCode Model Configuration Guide
 
@@ -241,10 +243,10 @@ eligibility, cost class, declared-zone peak windows, subscription quota, spend
 ceilings, and watch freshness) is configuration, not a prompt.
 
 No provider/model identifier belongs in an agent prompt or command definition: a
-prompt that names a model is a second policy authority. The one prompt that
-violated this now carries neutral `<provider>/<model>` placeholders with a
-pointer to the typed policy, and its generated Claude Code counterpart was
-rebuilt from that source. See the [provider engine](../spec/features/feature-provider-engine.md)
+prompt that names a model is a second policy authority. Prompt-authoring guidance
+uses neutral `<provider>/<model>` placeholders with a pointer to the typed policy,
+and its generated Claude Code counterpart was rebuilt from that source by
+`scripts/build-claude-plugin.sh`. See the [provider engine](../spec/features/feature-provider-engine.md)
 and [provider profiles](../spec/features/feature-provider-profiles.md)
 specifications, and the [provider conditions and parks guide](provider-conditions-and-parks.md).
 

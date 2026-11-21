@@ -24,7 +24,7 @@ phases:
     started: "2026-11-21T07:12:00Z"
     completed: 2026-11-21T07:14:11.634Z
   system_spec_update:
-    started: null
+    started: "2026-11-21T07:18:00Z"
     completed: null
   review_fix:
     started: null
