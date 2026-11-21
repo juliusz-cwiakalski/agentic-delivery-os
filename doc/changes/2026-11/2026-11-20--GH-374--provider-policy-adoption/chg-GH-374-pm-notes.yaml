@@ -323,3 +323,44 @@ notes:
       file, not committed) so phase 1 can land." 
     type: info
     date: "2026-11-21"
+  - text: "delivery plan phase 2 (prompt-cleanup) complete: commit
+      114a1d34993cfff9739c9adcffda85842b172aa8. The `.opencode/agent/toolsmith.md`
+      edit was DELEGATED to @toolsmith (AGENTS.md): every provider-qualified model
+      identifier and every model-anchored family id became a neutral placeholder
+      (`<provider>/<model>`), the `<model_profiles>` ids became capability-tier ids,
+      and a `<routing_authority>` sentence points at the typed
+      `.delivery-os/config.yaml` policy. `claude.model: opus` frontmatter kept.
+      `scripts/build-claude-plugin.sh` regenerated `.ados-claude/agents/toolsmith.md`
+      (re-run after the final source edit; only the toolsmith pair changed across
+      the whole `.ados-claude` tree). Gate: `tests/checks/milestone-prompts.test.ts`
+      15 pass / 0 fail; `tests/checks/provider-policy-adoption-prompt-scan.test.ts`
+      12 pass / 0 fail (24/24 prompts, 0 identifiers, 10/10 planted classes,
+      pre-change regression arm reports every recorded literal, generated pair a
+      build no-op)."
+    type: evidence
+    date: "2026-11-21"
+  - text: "delivery plan phase 3 (reference-pins) complete: commit
+      6f2cc9df9b1e859f7f671aa3b82623a1dfcafb08. Gate: `bun test
+      tests/structure/provider-policy-adoption-reference.test.ts` 46 pass / 0 fail
+      (17 owned cases, 625 assertions): acquisition reads the prior file once with
+      `.jaiship` absent; both chains validate; grace bound 300/300; six chain
+      mutants plus a budget defect and a profile defect refuse with the exact
+      detail prose; declared entry bodies pinned and the four delivered quota
+      defaults asserted separately at `layer=defaults`; the 24-seat roster equality
+      both directions; eight named drift mutants fail by name; both origins
+      reported; `verify.suite-map` pinned with the control suite's content hash;
+      MIG-001..003 pinned as tree invariants."
+    type: evidence
+    date: "2026-11-21"
+  - text: "delivery plan phase 4 (replay-proof) complete: commit
+      ddbe0664e22f5c7f9857036ddb751a1e3a0ac0fa. Gate: `bun test
+      tests/behaviour/provider-policy-adoption.test.ts` 33 pass / 0 fail (22 owned
+      cases, 893 assertions): seeded resolve and prior-identity posture, 24-role
+      seats/env record/binding, named vision arms with the agent-less trap, the
+      watch view with age and bound, six committed replays (spend 25 window park,
+      spend 30 ticket stop), byte-identical repeats and a key-shuffled twin, the
+      hostile-fixture refusal matrix, and nomination with the exact pause strings.
+      Six fixtures committed under
+      `tests/fixtures/provider/policy-adoption/simulate/`."
+    type: evidence
+    date: "2026-11-21"
