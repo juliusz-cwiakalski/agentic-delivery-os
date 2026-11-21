@@ -36,8 +36,8 @@ phases:
     started: "2026-11-21T08:23:00Z"
     completed: 2026-11-21T08:23:12.381Z
   pr_creation:
-    started: null
-    completed: null
+    started: "2026-11-21T08:26:00Z"
+    completed: 2026-11-21T08:25:21.972Z
 
 decisions:
   - text: "Adoption route follows the owner's disposition on GH-374 (2026-11-20): do
@@ -461,5 +461,16 @@ notes:
       `private.absolute-user-path` in three change artifacts; fixed in 00efadc2
       by sanitizing host paths to `$HOME` (no rule weakened); targeted privacy
       suite 53 pass / 0 fail; full re-run green. Range lint verdict PASS."
+    type: evidence
+    date: "2026-11-21"
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/376 (base
+      `main-tools`, head `feat/GH-374/provider-policy-adoption`, PR head
+      015ada96). Not merged; left open for review. Ticket GH-374 relabelled
+      [change, review], assigned to the owner, and commented with the PR link,
+      the three owner-review deviations and the declared limits. The
+      commit-range lint re-run at the PR head reports 26 commits, 0 offenders
+      (the two additional commits are pm-notes-only lifecycle updates after the
+      recorded gate run)."
     type: evidence
     date: "2026-11-21"
