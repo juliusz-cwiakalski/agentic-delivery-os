@@ -19,7 +19,7 @@ phases:
     completed: 2026-11-20T12:56:07.203Z
   dor_check:
     started: "2026-11-20T11:58:00Z"
-    completed: null
+    completed: 2026-11-21T06:45:20.933Z
   delivery:
     started: null
     completed: null
@@ -264,3 +264,29 @@ notes:
       delivered MAX-combination precedence before pinning fixtures to it."
     type: retro
     date: "2026-11-20"
+  - text: "DoR iteration 2 verdict: NOT_READY
+      (readiness-review/readiness-iter-2.md). N1-N8: generated-pair scoping,
+      reversed ceiling prose, ticket-scope skip wording, the SEC-003 canary
+      literal living in its own scanned files, the sixth-suite note, SCAN-002's
+      AC link and the originLabel citation. All were author-level corrections;
+      no design or value changed. The three phases were reopened, corrected, and
+      re-completed."
+    type: blocker
+    date: "2026-11-20"
+  - text: "DoR iteration 3 verdict: READY (readiness-review/readiness-iter-3.md).
+      N1-N8 all CLOSED against the tree; consistency reconciled at 55 cases, 15
+      ACs, phase counts 0/3/17/22/7/6, AC ownership 0/1/2/9/2/1, 19 scope paths,
+      five new suites plus doc-conformance, 25/30 bands, G0 in all phases and
+      the whole-document P1 validator gate. Non-blocking advisory carried to the
+      coder: the plan's phase-5 carve-out enumeration is narrower than SEC-003's
+      closed token set, so the implementation must take the token set from the
+      owning case, not the plan summary; a mismatch fails a named arm rather
+      than passing silently."
+    type: info
+    date: "2026-11-21"
+  - text: "Session resumed on 2026-11-21 after the provider returned Insufficient
+      Balance on 2026-11-20; no artifacts were re-authored because the
+      iteration-2 remediation had already landed (spec v1.5, test plan v1.2,
+      plan rev 1.2)."
+    type: info
+    date: "2026-11-21"
