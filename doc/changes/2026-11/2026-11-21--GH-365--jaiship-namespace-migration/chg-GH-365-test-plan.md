@@ -1,14 +1,14 @@
 ---
 id: chg-GH-365-test-plan
-version: 0.3
+version: 0.4
 status: Updated
 created: 2026-11-21
-last_updated: 2026-11-21T18:47:29Z
+last_updated: 2026-11-21T19:25:46Z
 owners: ["engineering"]
 service: "delivery-os configuration, state, and install surfaces (namespace identity)"
 labels: ["namespace", "migration", "identity", "m4-s2", "install", "conformance", "shims"]
 version_impact: minor
-summary: "Offline, deterministic battery for the Jaiship namespace migration: the committed project layer and its brand-free ignore rules, the one authoritative root with a bounded notice-bearing prior read, the `install migrate` verb with dry-run, verified backup, per-entry precedence, the delivered command-audit pair at the destination, symlink dispositions, the `unscoped` project scope, idempotence and recovery, the declared one-release shim registry, the two-arm namespace conformance gate with its two negative controls and its declared prior-root prefix set, and the identity alignment of the override channel, the MCP default and the bounded pre-freeze mapping with its one declared exception — 36 cases across 6 groups mapped to all 31 acceptance criteria, with a 55-row mutation register and the permanent eight-proven / eight-not-proven proof boundary."
+summary: "Offline, deterministic battery for the Jaiship namespace migration: the committed project layer and its brand-free ignore rules, the one authoritative root with a bounded notice-bearing prior read, the `install migrate` verb with dry-run, verified backup, per-entry precedence, the declared zero-record audit exception, symlink dispositions, the `unscoped` project scope, the derived entry outside the move set with its derived residual, idempotence and recovery, the declared one-release shim registry with presence-validated declaration-only sites, the two-arm namespace conformance gate with its two negative controls and its declared prior-root prefix set, and the identity alignment of the override channel, the MCP default and the bounded pre-freeze mapping with its one declared exception at the raw-environment seam — 36 cases across 6 groups mapped to all 31 acceptance criteria, with a 55-row mutation register and the permanent eight-proven / eight-not-proven proof boundary."
 links:
   change_spec: ./chg-GH-365-spec.md
   implementation_plan: ./chg-GH-365-plan.yaml
@@ -31,10 +31,10 @@ The integrity risks that shape the cases are the ones the spec names: a migratio
 - `NFR-1`…`NFR-9`, and the interface/data-model contracts `API-1`…`API-7` and `DM-1`…`DM-9`.
 - The committed-layer move and its ignore rules (`DM-1`, `DM-2`): the byte-identical tracked move, the tracked-set emptiness under the prior root, the two brand-free root-anchored globs, the nested-path non-match, and the fresh-clone drill with no local exclude.
 - The authoritative root and the bounded prior read (`DM-1`, `API-4`): both-present precedence, the zero-notice migrated host in human and `--json`, the prior-only single notice naming both paths, the write-free prior read, the project-local overlay under `CI=true`, and the operator-local group document with its empty-listing absence and its declaration-only mirror target set (spec `DEC-12`, TDR-0074).
-- The migration surface (`API-1`, `API-2`, `API-3`, `DM-5`, `DM-6`, `DM-7`, `DM-8`): every refusal arm, the dry-run's zero-write, zero-directory and zero-record discipline with the `NFR-2` line bound and its single truncation line, the full move with digest equality, the backup and its two-id document split, the complete `DM-6` disposition matrix including the derived entry's `already-migrated`/`absent` disposition and `DM-6`'s stated verdict-composition rule, the symlink dispositions (source `blocked`, destination `conflict`, never followed or moved), the `unscoped` project scope, the delivered command-audit pair at the destination, the managed-`PATH` residual, idempotence, injected partial failure and recovery, byte preservation with no re-versioning, and post-move state locations.
-- The declared shims (`DM-3`): registry shape, window order, site presence, no wildcard, both-directions reconciliation, one notice per process per source kind, zero prior writes, and the alias's refusal plus its `--help` deprecation sentence.
+- The migration surface (`API-1`, `API-2`, `API-3`, `DM-5`, `DM-6`, `DM-7`, `DM-8`): every refusal arm, the dry-run's zero-write, zero-directory and zero-record discipline with the `NFR-2` line bound and its single truncation line, the full move with digest equality, the backup and its two-id document split, the complete `DM-6` disposition matrix for non-derived entries, the derived entry **outside the move set** (`already-migrated`/`absent`, never moved, backed up, counted or conflicted) with its source-side **derived residual**, `DM-6`'s stated verdict-composition rule and its non-derived retirement rule, the symlink dispositions (source `blocked`, destination `conflict`, never followed or moved), the `unscoped` project scope, the declared **zero-record audit exception**, the managed-`PATH` residual, idempotence, injected partial failure and recovery, byte preservation with no re-versioning, and post-move state locations.
+- The declared shims (`DM-3`): registry shape, window order, site presence (all sites) with match validation only inside a scanned corpus, the declaration-only sites, no wildcard, both-directions reconciliation, one notice per process per source kind, zero prior writes, and the alias's refusal plus its `--help` deprecation sentence.
 - The conformance gate (`DM-4`, `API-7`): one planted occurrence per prior-namespace-carrying class, the two non-carrying controls, the neutral-scope cases with their positive controls (including the `SCOPE_ORG` neutral site), the ADR-0003 DEC-8 allowlist-independence control, the tree arm over the real tree with its prior-root prefix set read from the declaration and reported, the two negative controls, and the CI binding with deterministic double runs.
-- Identity alignment (`DM-9`, `API-5`, `API-6`): per-surface clean-home path creation including MCP, override precedence and containment, the eight owner-named pre-freeze variables plus the inert `ADOS_FOO` fixture and the one declared `ADOS_WORKING_NAME` exception, the enumerated documentation battery with projection currency, and the five declared product-surface literal sites.
+- Identity alignment (`DM-9`, `API-5`, `API-6`): per-surface clean-home path creation on the current-identity surfaces including MCP (the alias excluded as a declared prior-default shim), override precedence and containment with the pre-freeze channel at the raw-environment seam, the eight owner-named pre-freeze variables plus the inert `ADOS_FOO` fixture and the one declared `ADOS_WORKING_NAME` exception, the enumerated documentation battery with projection currency, and the five declared product-surface literal sites.
 - The proof boundary as a permanent fixture constant (`NAMESPACE_PROOF_BOUNDARY`: eight proven ids, eight not-proven ids, declared order, spec Appendix G) and the statement of every not-proven surface (spec Appendix C).
 
 ### 1.2 Out of Scope & Known Gaps
@@ -66,7 +66,7 @@ Also out of scope (spec §7.2, `NG-1`…`NG-10`): renaming the workspace package
 
 | Reference | Use |
 |-----------|-----|
-| `./chg-GH-365-spec.md` (v1.4) | Source of the 31 ACs, `F-1`…`F-6`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-9`, `RSK-1`…`RSK-12`, `DEC-1`…`DEC-13`, `DOD-1`…`DOD-10`, §8.5 (twelve deliberate changes), Appendix A (phase-7 documentation impacts), Appendix C (proof boundary), Appendix D (implementation-decided details), Appendix F (normative registry shapes, the two migration schema ids and the allowlist independence), Appendix G (proof-boundary constant) |
+| `./chg-GH-365-spec.md` (v1.5) | Source of the 31 ACs, `F-1`…`F-6`, `API-1`…`API-7`, `DM-1`…`DM-9`, `NFR-1`…`NFR-9`, `RSK-1`…`RSK-12`, `DEC-1`…`DEC-13`, `DOD-1`…`DOD-10`, §8.5 (thirteen deliberate changes), Appendix A (phase-7 documentation impacts), Appendix C (proof boundary), Appendix D (implementation-decided details), Appendix F (normative registry shapes, the two migration schema ids, the allowlist independence, the declared-site validation split and the command-audit exception), Appendix G (proof-boundary constant) |
 | `./chg-GH-365-pm-notes.yaml` | The clarify-scope decisions (D1 neutral scope, D2 declared shims, D3 project layer, the TDR-0074 ruling, the DEC-13 deferral), the **staging constraint** for TDR-0074 and its `doc/decisions/00-index.md` row, the owner scope update of 2026-11-21 (D1/D2 defects), the TDR-0047 no-re-versioning constraint, and the `TMPDIR`/`PATH` operational prerequisite |
 | `doc/decisions/TDR-0074-project-groups-document-operator-local-overlay.md` | `DEC-12`: the group document is an operator-local, git-ignored overlay at its unchanged path and schema; the mirror's target set is declaration-only from the invoking checkout's own document; no tracked template |
 | `doc/changes/2026-11/2026-11-19--GH-348--loop-supervision/chg-GH-348-test-plan.md` | Structural precedent: stable-id groups, AC traceability matrix, phase-gate segment discipline, mutation register, fixture inventory, gate battery, proof-boundary constant |
@@ -102,8 +102,8 @@ Also out of scope (spec §7.2, `NG-1`…`NG-10`): renaming the workspace package
 | `AC-F2-2` | F-2 | API-4, NFR-7 | `TC-ROOT-002` | P7 | Planned |
 | `AC-F2-3` | F-2 | API-4 | `TC-ROOT-003` | P7 | Planned |
 | `AC-F2-4` | F-2 | DM-1, NFR-9, DEC-12, TDR-0074 | `TC-ROOT-004` | P7 | Planned |
-| `AC-F3-1` | F-3 | API-1, API-2, DM-6, DM-8 | `TC-MIGRATE-001`, `TC-MIGRATE-002`, `TC-MIGRATE-011` | P5, P6 | Planned |
-| `AC-F3-2` | F-3 | API-2, NFR-1, NFR-2 | `TC-MIGRATE-003` | P5 | Planned |
+| `AC-F3-1` | F-3 | API-1, API-2, DM-6, DM-7, DM-8 | `TC-MIGRATE-001`, `TC-MIGRATE-002`, `TC-MIGRATE-011` | P5, P6 | Planned |
+| `AC-F3-2` | F-3 | API-2, DM-7, NFR-1, NFR-2 | `TC-MIGRATE-003` | P5 | Planned |
 | `AC-F3-3` | F-3 | API-2, DM-5, DM-6, DM-7, NFR-3 | `TC-MIGRATE-004` | P5 | Planned |
 | `AC-F3-4` | F-3 | DM-7, NFR-4 | `TC-MIGRATE-005` | P5 | Planned |
 | `AC-F3-5` | F-3 | DM-6, NFR-3 | `TC-MIGRATE-006`, `TC-MIGRATE-007` | P5 | Planned |
@@ -145,20 +145,20 @@ The matrix carries **37** AC→case links (31 + 6 extras), because four criteria
 
 | Contract | Case(s) | Note |
 |----------|---------|------|
-| `API-1` `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` | `TC-MIGRATE-001`, `TC-MIGRATE-002`, `TC-MIGRATE-003`, `TC-MIGRATE-004`, `TC-SHIM-004`, `TC-MIGRATE-012` | Admission order asserted arm by arm: alias `install.identity.not-owning` → grammar/undeclared flag `fallback.invocation` → relative or in-source `--backup-dir` `input.value.rejected` → `install.dev-build` → `install.target.worktree` → `install.daemon.running` unless `--stop-daemon`; `--json`, `--verbose`, `--pretty` accepted and never refusals; the stop precedes the first move and the daemon is not restarted; an applying run appends exactly the delivered command-audit pair (`audit.reservation`, `audit.invocation`) at the destination host state root, a dry run appends no record of any kind, and no arm writes a migration record or an install-record field |
-| `API-2` plan and verdict | `TC-MIGRATE-001`, `TC-MIGRATE-003`, `TC-MIGRATE-004`, `TC-MIGRATE-006`, `TC-MIGRATE-007`, `TC-MIGRATE-008` | `install.migration.plan.v1` field set with the closed `scope` values `scoped`/`unscoped`; the closed six dispositions and five verdicts composed by `DM-6`'s maximum-severity rule; the derived entry is `already-migrated` (destination copy exists) or `absent` (none), never in the source-move set and never a conflict; a source symlink is `blocked` and a destination symlink `conflict`; exit `0` only for `migrated`/`already-migrated`; a data-bearing negative verdict carries no error code |
-| `API-3` `install --migrate` retired | `TC-MIGRATE-011` | Exit 1, `fallback.invocation`, summary naming the retired form and the remedy `install migrate`; no install and no migration; without `--migrate`, the delivered advisory detection line and nothing moved |
+| `API-1` `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` | `TC-MIGRATE-001`, `TC-MIGRATE-002`, `TC-MIGRATE-003`, `TC-MIGRATE-004`, `TC-SHIM-004`, `TC-MIGRATE-012` | Admission order asserted arm by arm: alias `install.identity.not-owning` → grammar/undeclared flag `fallback.invocation` → relative or in-source `--backup-dir` `input.value.rejected` → `install.dev-build` → `install.target.worktree` → `install.daemon.running` unless `--stop-daemon`; `--json`, `--verbose`, `--pretty` accepted and never refusals; the stop precedes the first move and the daemon is not restarted; **zero records of any kind are written on every arm** — dry run, applying run and every refusal — because the delivered `audit.reservation`/`audit.invocation` pair is suppressed for this command as the one declared exception (`DM-7`); no migration record exists and no install-record field is written |
+| `API-2` plan and verdict | `TC-MIGRATE-001`, `TC-MIGRATE-003`, `TC-MIGRATE-004`, `TC-MIGRATE-006`, `TC-MIGRATE-007`, `TC-MIGRATE-008` | `install.migration.plan.v1` field set with the closed `scope` values `scoped`/`unscoped`; the closed six dispositions for **non-derived** entries and five verdicts composed by `DM-6`'s maximum-severity rule; a declared derived entry is **outside the move set** — never moved, backed up, counted or conflicted; a destination copy is `already-migrated` (present) or `absent` (absent), a source copy is a reported derived residual; a source symlink is `blocked` and a destination symlink `conflict`; exit `0` only for `migrated`/`already-migrated`; a data-bearing negative verdict carries no error code |
+| `API-3` `install --migrate` retired | `TC-MIGRATE-011`, `TC-MIGRATE-012` | **Two surfaces.** The **parser grammar** keeps `--migrate` as a recognised flag so the refusal is reachable: exit 1, `fallback.invocation`, summary naming the retired flag form and the remedy `install migrate`; no install and no migration. The **documented/help flag set** (help text, reference page, documented flag list) no longer lists it as supported and carries the retirement note and remedy. Without `--migrate`, the delivered advisory detection line and nothing moved |
 | `API-4` prior-identity notices | `TC-ROOT-001`, `TC-ROOT-002`, `TC-ROOT-003`, `TC-SHIM-003` | The four delivered reasons keep their names and semantics; the loaded-file fact names the current path when the current file was read and the prior path as not used; the one new `override-read` reason; ≤ 1 line per reason per composed program, stderr in every mode including `--json`, never in a payload, never an exit-code change, never emitted when no prior input exists |
-| `API-5` environment mapping contract | `TC-IDENTITY-003` | A legacy-prefixed name maps only when its mapped current name is a declared catalog key; every other legacy name is untouched — not an error, not a value, not a notice; **the one declared exception is `ADOS_WORKING_NAME` → `<environmentPrefix>WORKING_NAME`**, read as the override channel, adding no configuration key; current-prefix strictness unchanged |
-| `API-6` working-name override | `TC-IDENTITY-002` | `<environmentPrefix>WORKING_NAME` wins; the prior literal is read only when the current one is absent or empty with exactly one `override-read`; precedence current → prior → the bin's or composition's declared default; an invalid override is contained (`fallback.internal`, exit 2) with no fallback to the other channel |
+| `API-5` environment mapping contract | `TC-IDENTITY-003` | A legacy-prefixed name maps only when its mapped current name is a declared catalog key; every other legacy name is untouched — not an error, not a value, not a notice; **the one declared exception is `ADOS_WORKING_NAME`, read at the entrypoint/edge raw-environment seam before brand/prefix derivation**, alongside `DELIVERY_OS_WORKING_NAME` and never through the adapter's catalog-key mapping; the mapped override name is excluded from the configuration layer's unknown-name strictness and adds no configuration key; current-prefix strictness unchanged |
+| `API-6` working-name override | `TC-IDENTITY-002`, `TC-IDENTITY-003`, `TC-SHIM-003` | `<environmentPrefix>WORKING_NAME` wins; `DELIVERY_OS_WORKING_NAME` is the prior channel and `ADOS_WORKING_NAME` the pre-freeze channel, each read from the **raw process environment at the entrypoint/edge seam before brand and prefix derivation** only when the higher-precedence channel is absent or empty, with exactly one `override-read` per prior channel used; precedence current → prior → pre-freeze → the bin's or composition's declared default; an invalid override is contained (`fallback.internal`, exit 2) with no fallback to a lower-precedence channel |
 | `API-7` conformance gate | `TC-SCAN-001`…`TC-SCAN-006` | Both arms read-only, offline, deterministic, each exiting `0` with a per-class summary and `1` naming file+line+token or tracked path or symlink target; both in `pnpm check`; the content arm keeps `ts-forbidden-literals` and the tree arm is a declared `ts-*` job with the baseline-fetch obligation; neither writes the tree |
 | `DM-1` committed project layer | `TC-LAYER-001`, `TC-LAYER-004`, `TC-ROOT-004` | Path-only change with byte-identical content; the prior path disappears from the tracked set; the layer contract and the document's own `verify.suite-map`/`provider` branches untouched |
 | `DM-2` ignore rules | `TC-LAYER-002`, `TC-LAYER-003`, `TC-SCAN-003` | `.*/config.local.yaml` (delivered) and `.*/projects.yaml` (added), both brand-free and root-anchored; a nested `packages/x/projects.yaml` is not matched; the tracked `config.yaml` is not matched; the new coverage class and the two probes plus the positive control |
-| `DM-3` shim registry | `TC-SHIM-001`, `TC-SHIM-002`, `TC-SHIM-003`, `TC-SHIM-004` | `namespace.shims.v1`; every field; unique ids; resolvable window with the delivery-os lineage ordered and the pre-freeze lineage at `removalRelease: null`; no wildcard; site presence both directions; the longest-literal seed-to-shim resolution; the glossary declared site and the `ADOS_WORKING_NAME` mapping exception |
-| `DM-4` seed class and scope classes | `TC-SCAN-001`, `TC-SCAN-002`, `TC-SHIM-002` | Five seeds, the two new classes, the explicit `scopeSelection` (prompt/script carry the `priorNamespace` class **only**), the two structural exclusions, the `SCOPE_ORG` neutral site, the preserved ADR-0003 DEC-8 class and its allowlist, and the **allowlist independence** (the frozen ADR-0003 DEC-8 path allowlist does not filter the `priorNamespace` class; the shim registry is that class's only site authority) |
+| `DM-3` shim registry | `TC-SHIM-001`, `TC-SHIM-002`, `TC-SHIM-003`, `TC-SHIM-004` | `namespace.shims.v1`; every field; unique ids; resolvable window with the delivery-os lineage ordered and the pre-freeze lineage at `removalRelease: null`; no wildcard; **every declared site present, with match/budget validation only for a site inside a scanned corpus**; a site outside every scanned corpus (an unregistered document, a `tests/**` fixture) is **declaration-only** (present, zero matches permitted); the longest-literal seed-to-shim resolution; the pre-freeze sites (the legacy adapter and the eight-variable fixture) separated from the `DELIVERY_OS_` sites; the glossary's two declared sites |
+| `DM-4` seed class and scope classes | `TC-SCAN-001`, `TC-SCAN-002`, `TC-SHIM-002` | Five seeds, the two new classes, the explicit `scopeSelection` (prompt/script carry the `priorNamespace` class **only**), the two structural exclusions, the `SCOPE_ORG` neutral site, the preserved ADR-0003 DEC-8 class and its allowlist, the **allowlist independence** (the frozen ADR-0003 DEC-8 path allowlist does not filter the `priorNamespace` class; the shim registry is that class's only site authority), and the registered-only `userFacingDocs` corpus (a pre-baseline document is never scanned and may only be declaration-only) |
 | `DM-5` backup and manifest | `TC-MIGRATE-004`, `TC-MIGRATE-008` | `<stamp>/manifest.json` plus one subtree per root label; the manifest field set with its own id `install.migration.manifest.v1` (distinct from the payload's `install.migration.plan.v1`); digests verified before any move; no credential, environment value, or record payload |
-| `DM-6` root and entry policy | `TC-MIGRATE-001`, `TC-MIGRATE-004`, `TC-MIGRATE-006`, `TC-MIGRATE-007` | The three brand-derived roots; the closed root scope `scoped`/`unscoped` (unscoped carries no source, destination, entries or verdict); entries as the unit with container descent; the six-row ordered decision table; the derived set (today `host-index.json`) as `already-migrated`/`absent`; the stated maximum-severity composition rule; the symlink dispositions and the never-followed rule; retirement only for a root that existed at plan time; the managed-`PATH` residual; never a merge, an overwrite, a deletion of a difference, or a rewrite |
-| `DM-7` state-move invariants | `TC-MIGRATE-004`, `TC-MIGRATE-005`, `TC-MIGRATE-009`, `TC-MIGRATE-010` | Byte preservation per file; no re-versioning; the unchanged accepted state format; the identical `install status` verdict; the delivered command-audit pair written at the destination root before the first move, never in a source root, never a migration record; a dry run writes no record; the host index re-derivation with a warning that never redirects a read |
+| `DM-6` root and entry policy | `TC-MIGRATE-001`, `TC-MIGRATE-004`, `TC-MIGRATE-006`, `TC-MIGRATE-007` | The three brand-derived roots; the closed root scope `scoped`/`unscoped`; entries as the unit with container descent; the **derived rule evaluated before the entry table** (a derived entry is outside the move set — never moved, backed up, counted or conflicted; a destination copy is `already-migrated`/`absent`, a source copy is a reported derived residual that is safe to delete and is removed with a retired root); the five-row ordered decision table for non-derived entries; the stated maximum-severity composition rule; the symlink dispositions and the never-followed rule; retirement of a root whose **non-derived** entries are resolved, with a retained derived residual not preventing the retirement line; the managed-`PATH` residual; never a merge, an overwrite, a deletion of a difference, or a rewrite |
+| `DM-7` state-move invariants | `TC-MIGRATE-001`, `TC-MIGRATE-003`, `TC-MIGRATE-004`, `TC-MIGRATE-005`, `TC-MIGRATE-009`, `TC-MIGRATE-010` | Byte preservation per file; no re-versioning; the unchanged accepted state format; the identical `install status` verdict; the **command-audit exception**: zero records of any kind for `install migrate` in every mode (dry run, refusals, applying run), the delivered `audit.reservation`/`audit.invocation` pair suppressed as the one declared exception, no migration record, nothing written into a source or destination root; the host index re-derivation with a warning that never redirects a read |
 | `DM-8` error identities | `TC-MIGRATE-011` | Exactly one retirement and zero additions: 11 → 10 in the install domain with the error-table row, the documentation row, and the result-code fixture entry removed; every migration failure maps onto a delivered identity; negative verdicts are data |
 | `DM-9` declared literal sites | `TC-IDENTITY-005`, `TC-IDENTITY-001`, `TC-IDENTITY-004` | The five product-surface sites in order (alias default, primary default, primary prior identity, MCP default now the current identity, resolver scope-org input); the build-side site unchanged; the override name is not a committed literal |
 | `EVT-*` | — | No event, message, telemetry record, metric, alert, or rendered-surface row is added (spec §8.2, §10); nothing to test |
@@ -172,7 +172,7 @@ The matrix carries **37** AC→case links (31 + 6 extras), because four criteria
 | `NFR-3` byte preservation | `TC-MIGRATE-004`, `TC-MIGRATE-006`, `TC-MIGRATE-009` | 100% of moved files digest-equal at the destination; 0 rewritten bytes; 0 deleted entries other than those moved; 0 schema-version or format-identifier changes; the second run reports a byte-identical state |
 | `NFR-4` idempotence and recovery | `TC-MIGRATE-005`, `TC-MIGRATE-008` | Second clean run: 0 moves, 0 backup directories, exit 0, `already-migrated`; injected failure after *k* of *n*: the *n−k* unmoved entries intact, the backup complete for all *n*, the re-run completes the remainder with no duplicate |
 | `NFR-5` conformance coverage | `TC-SCAN-001`…`TC-SCAN-006` | 7 scope classes scanned, 6 carrying the prior-namespace class; ≥ 1 mutation per carrying class failing by name; 2 negative controls failing by name; **0 undeclared occurrences** at the change head (occurrences inside a declared site, a declared corpus, or a neutral site are the declared ones); ≤ 60 s and 0 writes |
-| `NFR-6` declared-site integrity | `TC-SHIM-001`, `TC-SHIM-002` | 100% of declared sites present; 100% of matches inside a declared site, a declared corpus, or a neutral site; 0 outside; every budgeted site at or below its budget; 0 wildcard sites |
+| `NFR-6` declared-site integrity | `TC-SHIM-001`, `TC-SHIM-002` | 100% of declared sites present in the tree; 100% of matches inside a declared site, a declared corpus, or a neutral site; 0 outside; every budgeted site **that lies in a scanned corpus** at or below its budget; a site outside every scanned corpus is declaration-only (present, zero matches permitted, never reported as matched); 0 wildcard sites |
 | `NFR-7` notice discipline | `TC-ROOT-002`, `TC-ROOT-003`, `TC-SHIM-003`, `TC-IDENTITY-002` | ≤ 1 notice per reason per composed program; 0 notices in any payload; 0 exit-code changes from a notice; 0 notices on a migrated host; every notice line ≤ 200 bytes and free of environment values, credentials and file contents |
 | `NFR-8` contract invariance | `TC-MIGRATE-009`, `TC-MIGRATE-011`, `TC-IDENTITY-005` | 1 error identity retired and 0 added; 1 subcommand added and 1 flag form retired; 0 configuration keys added, removed or renamed; 0 delivered record/payload schemas or state-format identifiers changed; the five declared literal sites unchanged in count; the prompt-required inventory unchanged at 28 |
 | `NFR-9` documentation discipline | `TC-IDENTITY-004`, `TC-MIGRATE-012`, `TC-ROOT-004` | Every new or changed distributable page declares `ados_distribution`; the doc-distribution guard is green; every new page is registered in the forbidden-literal registry in the same change; `pnpm check:help` green with the install family page carrying `--help` and `--version` |
@@ -196,7 +196,7 @@ No live layer participates: no network, no live provider, no live tracker, no re
 ### 4.1 Drivers
 
 - **D1 — composed production program.** `createProductionComposer({...injected facts})(brand)` → `runEntrypoint([...])`, the pattern proven by `tests/fixtures/entrypoint/prior-identity/harness.ts`. Injected facts: `environment`, `homeDirectory`, `cwd`, `workingName`, `clock`, `newRunId`, `processId`, and the notice sink. Used for the notice, loaded-path, override and clean-home cases.
-- **D2 — in-process edge.** A `createTestEdge`-composed edge registering the `install` family → `runCli([...])`, the pattern proven by the delivered install suites. Used for the migration verb's grammar, refusals, dry-run and apply cases.
+- **D2 — in-process edge.** A `createTestEdge`-composed edge registering the `install` family → `runCli([...])`, the pattern proven by the delivered install suites, **with the delivered audit dependency composed and recording** so the migration's declared suppression is observable. Used for the migration verb's grammar, refusals, dry-run and apply cases.
 - **D3 — pure domain.** The exported migration decision table, plan builder, manifest writer/reader, digest comparer, registry validators, seed matcher, and disposition/verdict composers, called directly, for the table cases.
 - **D4 — repository gate.** `bun run scripts/checks/<check>.ts` and the matching `tests/checks/**` mutation suite, over the real tree or a temp-copy tree. Used for both scan arms, the ignore rules, the CI topology/bindingness, the help coverage and the documentation battery.
 - **D5 — scratch clone and scratch home.** A real `git clone` of the change head into `tmp/tmpdir` with **no** `.git/info/exclude`, plus a scratch HOME and a scratch checkout built by the prior-identity harness. Used by the fresh-clone drill and the clean-home cases. This is the only driver that creates a git repository; it never touches the workspace's own index and never fetches.
@@ -233,32 +233,32 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 | `TC-SHIM-001` | The shim registry is shape-complete, id-unique, window-ordered, site-present, budget-bounded and wildcard-free | Structure | Checks | Critical | `AC-F4-1` | P2 | New |
 | `TC-SCAN-001` | The content arm fails by name for one planted occurrence per prior-namespace-carrying class and keeps the two non-carrying controls, the `SCOPE_ORG` neutral site and the ADR-0003 DEC-8 allowlist-independence control green | Invariant | Checks | Critical | `AC-F5-1` | P3 | Extended (`forbidden-literals.ts` + registry + mutation suite) |
 | `TC-SCAN-002` | The neutral-scope exclusions are structural: the scope sigil, the repository name and the scope-org neutral site pass, a product-identifier use of the prior executable fails, and an unscoped package name fails | Invariant | Checks | Critical | `AC-F5-2` | P3 | Extended (`forbidden-literals.test.ts` + corpora) |
-| `TC-SHIM-002` | Both directions reconcile: every match lies in a declared site, corpus or neutral site, and every declared site is present and at or below its budget | Invariant | Checks | Critical | `AC-F4-2` | P3 | New |
+| `TC-SHIM-002` | Both directions reconcile: every match lies in a declared site, corpus or neutral site; every declared site is present; and every site inside a scanned corpus is matched at or below its budget while declaration-only sites are presence-only | Invariant | Checks | Critical | `AC-F4-2` | P3 | New |
 | `TC-SCAN-003` | The tree arm passes on the real tree: zero tracked prior paths, zero symlinks into one, the committed layer present, the runtime files ignored in a rule-world, and the prior-root prefix set read from the declaration and reported | Invariant | Checks | Critical | `AC-F5-3`, `AC-F1-2` | P4 | New |
 | `TC-SCAN-004` | Negative control A: a tracked `.jaiship -> .delivery-os` symlink fails by name | Negative | Checks | Critical | `AC-F5-4`, `AC-F1-2` | P4 | New |
 | `TC-SCAN-005` | Negative control B: a tracked file under `.delivery-os/` fails by name | Negative | Checks | Critical | `AC-F5-5`, `AC-F1-2` | P4 | New |
 | `TC-SCAN-006` | Both arms are CI-bound, non-advisory, in the aggregate, and deterministic within the declared bound | Invariant | Checks | Critical | `AC-F5-6` | P4 | Extended (`ci-topology.ts`, `ci.yml`, `package.json`) |
-| `TC-MIGRATE-001` | Every declared flag performs its effect and every admission refusal is its delivered identity with zero writes, including the symlink dispositions and the `unscoped` project scope | Negative | Behaviour | Critical | `AC-F3-1` | P5 | New |
+| `TC-MIGRATE-001` | Every declared flag performs its effect and every admission refusal is its delivered identity with zero writes and zero records, including the symlink dispositions and the `unscoped` project scope | Negative | Behaviour | Critical | `AC-F3-1` | P5 | New |
 | `TC-MIGRATE-002` | A live daemon is refused without `--stop-daemon`; with it the daemon stops before the first move and is not restarted; a dry run with the flag still reads no daemon | Integration | Behaviour | Critical | `AC-F3-1` | P5 | New |
 | `TC-MIGRATE-003` | Dry-run prints the complete plan within the `NFR-2` bound with its single truncation line, writes nothing, creates no directory, appends no record of any kind, reads no daemon, and two runs are identical | Integration | Behaviour | Critical | `AC-F3-2` | P5 | New |
-| `TC-MIGRATE-004` | A clean migration moves every entry with digests intact, writes a complete manifest under its own schema id and the delivered command-audit pair at the destination, reports the managed-`PATH` residual, retires the emptied roots, and reports `migrated` | Happy Path | Behaviour | Critical | `AC-F3-3` | P5 | New |
+| `TC-MIGRATE-004` | A clean migration moves every non-derived entry with digests intact, writes a complete manifest under its own schema id, writes zero records (the declared audit exception), retains the derived residual, reports the managed-`PATH` residual, retires the resolved non-derived roots, and reports `migrated` | Happy Path | Behaviour | Critical | `AC-F3-3` | P5 | New |
 | `TC-MIGRATE-005` | A second run moves nothing, creates no backup, reports `already-migrated`, leaves both roots byte-identical, and never retires or reports a root that never existed | Edge Case | Behaviour | Critical | `AC-F3-4` | P5 | New |
 | `TC-MIGRATE-006` | The `DM-6` disposition matrix holds row by row, the verdict follows DM-6's composition rule, and no differing byte is ever deleted or overwritten | Edge Case | Behaviour | Critical | `AC-F3-5` | P5 | New |
-| `TC-MIGRATE-007` | The derived host index takes `already-migrated` (or `absent`): reported with its reason, never rewritten, never in the source-move set, never a conflict | Corner Case | Behaviour | Critical | `AC-F3-5` | P5 | New |
+| `TC-MIGRATE-007` | The derived host index is outside the move set: `already-migrated` (destination copy present) or `absent` (absent), with a source copy reported as a derived residual and no effect on the non-derived retirement line | Corner Case | Behaviour | Critical | `AC-F3-5` | P5 | New |
 | `TC-MIGRATE-008` | A failure after *k* of *n* moves leaves the remainder intact and the backup complete, and the re-run completes without duplicating | Negative | Behaviour | Critical | `AC-F3-6` | P5 | New |
 | `TC-MIGRATE-009` | The state move preserves every byte, re-versions nothing, and leaves `install status`'s compatibility verdict identical | Integration | Behaviour | Critical | `AC-F3-7` | P5 | New |
 | `TC-MIGRATE-010` | After the move every reported state location is under the new host root and an index disagreement warns without redirecting a read | Integration | Behaviour | Critical | `AC-F3-8` | P5 | New |
 | `TC-SHIM-004` | The alias refuses the migrate verb, carries the deprecation sentence in `--help`, and keeps its payloads and `--version` byte-unchanged | Negative | Behaviour | Critical | `AC-F4-4` | P5 | Extended (`install-family-surface`, `entrypoint-bin`, `install-ownership-split`) |
 | `TC-MIGRATE-011` | The retired error identity is removed from the code table and every pinned corpus, not relaxed | Invariant | Checks | Critical | `AC-F3-1`, `NFR-8` | P6 | Extended (error table, cross-repository contract, corpora, docs battery) |
-| `TC-MIGRATE-012` | The verb joins the existing family: the prompt-required inventory stays 28, the M4 page carries it, and the help/coverage gate stays green | Invariant | Checks | Critical | `NFR-9`, `API-1` | P6 | Extended (`install-family-surface`, `help-guide/coverage.json`) |
+| `TC-MIGRATE-012` | The verb joins the existing family: the prompt-required inventory stays 28, the parser grammar keeps `--migrate` recognised while the documented/help set retires it, and the help/coverage gate stays green | Invariant | Checks | Critical | `NFR-9`, `API-1` | P6 | Extended (`install-family-surface`, `help-guide/coverage.json`) |
 | `TC-ROOT-001` | Both files present: the current one loads, the prior one is reported not used, and any notice names the current path | Edge Case | Behaviour | Critical | `AC-F2-1` | P7 | Extended (`prior-identity-config-fallback`) |
 | `TC-ROOT-002` | A migrated checkout and host emit zero prior-identity lines in human and `--json` mode, with payload and exit unchanged | Regression | Behaviour | Critical | `AC-F2-2` | P7 | Extended (`prior-identity-notice`, `prior-identity-hermetic`) |
 | `TC-ROOT-003` | Prior only: exactly one `config-read` names both paths, the values carry the prior origin, and nothing is written there | Edge Case | Behaviour | Critical | `AC-F2-3` | P7 | New |
 | `TC-ROOT-004` | The local overlay is `ci-disabled` under `CI=true`; the group document reads from the current path with absence as the empty listing; nothing is tracked and no template exists | Edge Case | Behaviour | Critical | `AC-F2-4` | P7 | Extended (`config-cli`, `projects` group battery) |
 | `TC-IDENTITY-006` | The proof boundary is a permanent constant: eight proven, eight not-proven, in declared order, with every battery row on a proven id | Structure | Conformance | Critical | `NFR-1`, `DOD-5` | P7 | New |
-| `TC-IDENTITY-001` | A clean home creates only current-identity paths on every surface, including the MCP composition with no configured name | Happy Path | Behaviour | Critical | `AC-F6-1` | P8 | New |
+| `TC-IDENTITY-001` | A clean home creates only current-identity paths on every current-identity surface, including the MCP composition with no configured name; the alias's declared prior default is asserted as a separate shim fact | Happy Path | Behaviour | Critical | `AC-F6-1` | P8 | New |
 | `TC-IDENTITY-002` | The identity-derived override wins; the prior literal works with exactly one `override-read`; an invalid override is contained and never falls back | Edge Case | Behaviour | Critical | `AC-F6-2` | P8 | Extended (`identity-override`) |
-| `TC-IDENTITY-003` | The eight owner-named pre-freeze variables are inert, `ADOS_FOO=bar` neither errors nor becomes a value, and `ADOS_WORKING_NAME` is the one declared override mapping | Regression | Behaviour | Critical | `AC-F6-3` | P8 | Extended (`legacy-adapter`, `config-cli`) |
+| `TC-IDENTITY-003` | The eight owner-named pre-freeze variables are inert, `ADOS_FOO=bar` neither errors nor becomes a value, and `ADOS_WORKING_NAME` is the one declared exception at the raw-environment seam | Regression | Behaviour | Critical | `AC-F6-3` | P8 | Extended (`legacy-adapter`, `config-cli`) |
 | `TC-IDENTITY-005` | Exactly the five declared product-surface literal sites exist, the build-side site is unchanged, and the override name is not a committed literal | Structure | Checks | Critical | `AC-F6-5` | P8 | Extended (`branding-contract`) |
 | `TC-SHIM-003` | Each read-only shim reads only at its declared site, emits one bounded notice per process per source kind, writes nothing to a prior root, and never enters a payload | Integration | Behaviour | Critical | `AC-F4-3` | P8 | Extended (`prior-identity-*`) |
 | `TC-IDENTITY-004` | The enumerated pages and the prompt surface name the current identity, the reference pages agree with `--help`, and the generated projection matches its source | Integration | Checks | Critical | `AC-F6-4` | P9 | Extended (`doc-conformance`, projection build, page batteries) |
@@ -411,24 +411,28 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 
 **Preconditions**:
 - `P2` has landed; the registry declares the seven entries of spec Appendix F (`executable-alias`, `prior-config-directory`, `prior-state-root`, `prior-working-name-override`, `prior-environment-prefix`, `pre-freeze-environment-prefix`, `pre-freeze-config-directory`).
+- The registry's site set includes **declaration-only** sites outside every scanned corpus — the three permanent doc sites (`feature-autonomous-delivery.md`, `doc/guides/delivery-modes.md`, `test-spec-autonomous-delivery.md`), the glossary (`doc/overview/glossary.md`, two shims), the entrypoint prior-identity harness and the eight-variable pre-freeze fixture — which are presence-validated only.
 - The change's changeset exists, so the two delivery-os window values are derivable.
 
 **Steps**:
 1. Validate `schemaId` is `namespace.shims.v1` and that `window` defaults exist and are resolvable.
 2. For every shim, assert all required fields are present and of the declared type: `id`, `kind`, `literal`, `direction`, `lineage`, `noticeId`, `notice`, `window`, `owner`, `sites[]`.
 3. Assert ids are unique and that exactly one shim declares each of the seven literals in Appendix F.
-4. Assert every `sites[]` entry is non-empty, is a file path or a path prefix ending in `/` (no `*`, no `**`, no glob), and **exists in the tree**.
-5. Assert `removalRelease` is strictly greater than `declaredIn` under semver comparison for every `delivery-os`-lineage shim, and that every `pre-freeze`-lineage shim declares `removalRelease: null` plus a non-empty owner note.
-6. Assert `notice` is one bounded sentence and each optional `maxOccurrences` is a positive integer.
-7. Run each of the six mutant builders against the validator and assert each fails by name.
+4. Assert every `sites[]` entry is non-empty, is a file path or a path prefix ending in `/` (no `*`, no `**`, no glob), and **exists in the tree** — presence is validated for **every** declared site.
+5. Assert the pre-freeze and `DELIVERY_OS_` lineages have distinct sites: `pre-freeze-environment-prefix` (`ADOS_`) and `pre-freeze-config-directory` (`.ados`) are sited at the legacy adapter and the eight-variable fixture, while `prior-environment-prefix` (`DELIVERY_OS_`) is sited at the owner-hold hook, its battery, the three owner-hold documents and the entrypoint prior-identity harness; no fixture that holds `ADOS_` is a `DELIVERY_OS_` site.
+6. Assert `removalRelease` is strictly greater than `declaredIn` under semver comparison for every `delivery-os`-lineage shim, and that every `pre-freeze`-lineage shim declares `removalRelease: null` plus a non-empty owner note.
+7. Assert `notice` is one bounded sentence and each optional `maxOccurrences` is a positive integer.
+8. Assert each declared site is classified by whether it lies in a scanned corpus: an in-corpus site is match-validated; a site outside every corpus (the named declaration-only set) may record zero matches and is never reported as matched.
+9. Run each of the six mutant builders against the validator and assert each fails by name.
 
 **Expected Outcome**:
-- A clean registry validates; each mutant fails with its own message.
-- The pre-freeze lineage cannot acquire a removal release that would be read onto the delivery-os schedule, and vice versa.
+- A clean registry validates; each mutant fails with its own message; every declared site is present, and presence validation does not require a match for a declaration-only site.
+- The pre-freeze lineage cannot acquire a removal release that would be read onto the delivery-os schedule, and vice versa; a pre-freeze site is never a `DELIVERY_OS_` site.
 
 **Notes / Clarifications**:
 - Mutation controls `M32` (drop an existing declared site), `M33` (wildcard site), `M34` (non-increasing window).
 - This case is the `P2` gate; the content arm consumes the registry only at `P3`, so `TC-SCAN-001` cannot pass by an empty allowlist (`TC-SHIM-002` asserts both directions).
+- Presence for every site and matching only in-corpus is `DM-3`/AC-F4-2's declared split; the declaration-only set is named in the precondition so a zero-match site cannot be mistaken for a vanished or vacuous one.
 
 #### TC-SCAN-001 - The content arm fails by name for one planted occurrence per prior-namespace-carrying class and keeps the two non-carrying controls, the `SCOPE_ORG` neutral site and the ADR-0003 DEC-8 allowlist-independence control green
 
@@ -454,7 +458,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 4. Row G (control, class `rootWorkspaceFiles`): sow `.delivery-os/x` into `tsconfig.base.json` and assert the arm stays **green** for the prior-namespace seed, then sow `ADOS_` there and assert it **fails** for its ADR-0003 DEC-8 seed — proving the new class is additive and the old class still guards the class it always guarded.
 5. Row H (control, executable seed in docs): sow a prose occurrence of the prior executable token into a registered doc and assert the arm stays **green**, pinning the declared `RSK-11` residual so an implementer cannot over-enforce and break the corpus.
 6. Assert `scopeSelection` maps `promptSurface` and `scriptSurface` to the `priorNamespace` class **only**, by sowing `ADOS_FOO` in `scripts/` and `tools/` and asserting no ADR-0003 DEC-8 violation is reported.
-7. Assert the delivered ADR-0003 DEC-8 five-class/three-seed/five-allowlist exact-shape validation still rejects a five-class registry (i.e. a registry missing the two new classes fails by name).
+7. Assert the **widened** exact-shape validation: it accepts exactly **seven** classes and rejects the old **five-class** registry by name (the five-class mutant fails naming the missing `promptSurface`/`scriptSurface`). Assert the delivered ADR-0003 DEC-8 seed/allowlist exact shape is **unchanged** for its own class set (three seeds, five allowlist ids), so the widening is additive to `scopeClasses` and does not relax the delivered shape.
 8. Row I — assert the `SCOPE_ORG` neutral site: `packages/core/src/branding/index.ts` is declared with `seed: "prior-executable"` and `maxOccurrences: 1`, the real tree is green because of that declaration, and a second occurrence in the same file fails by budget naming the file — so the occurrence is **declared neutral**, not excluded.
 9. Row J — assert the ADR-0003 DEC-8 allowlist independence: sow a `.delivery-os` path in a file the frozen ADR-0003 DEC-8 path allowlist exempts (today `packages/adapters/src/legacy/index.ts`) and assert the arm still exits 1 naming it; assert the `seedLiterals` class keeps its own allowlist behaviour unchanged in the same run.
 10. Row K — assert the two reworded pages are green without being declared: `doc/guides/opencode-model-configuration.md` presents `.jaiship/config.yaml` as the configuration path and `doc/overview/glossary.md`'s override and reference-declaration rows name the current channel and path, so neither page is a `neutralSite` and neither needs a shim site for those lines; the glossary's prior-namespace rows remain the declared site `DM-3` names.
@@ -506,7 +510,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - Mutation controls `M38` (remove the `@` exclusion) and `M39` (widen the exclusion to every occurrence, or drop the `SCOPE_ORG` neutral site — the two directions of the neutral-domain rule).
 - The exclusion is **structural**, not discretionary: only the `@`-prefixed sigil and the repository name are admitted, which is what `RSK-4` requires the mutation to prove; a legitimate scope-org occurrence is admitted only through the **declared** neutral site, never through an exclusion.
 
-#### TC-SHIM-002 - Both directions reconcile: every match lies in a declared site, corpus or neutral site, and every declared site is present and at or below its budget
+#### TC-SHIM-002 - Both directions reconcile: every match lies in a declared site, corpus or neutral site; every declared site is present; and every site inside a scanned corpus is matched at or below its budget while declaration-only sites are presence-only
 
 **Scenario Type**: Invariant
 **Impact Level**: Critical
@@ -523,21 +527,23 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - `P3` has landed; `TC-SHIM-001` is green, so the registry is shape-valid and every declared site exists.
 
 **Steps**:
-1. Run the content arm over the real tree; assert 0 violations and that every declared site is reported present and matched at or below its `maxOccurrences`.
-2. Assert every **matched** occurrence in the six carrying classes resolves to a shim whose literal is the **longest** match at that position, and lies inside one of that shim's declared sites (or a declared corpus / neutral site).
+1. Run the content arm over the real tree; assert 0 violations and that **every declared site is reported present** (presence spans all sites). Assert the match/budget facts only for sites **inside a scanned corpus**: each such site is reported matched at or below its `maxOccurrences`. Name the **declaration-only** sites — the three permanent doc sites (`feature-autonomous-delivery.md`, `doc/guides/delivery-modes.md`, `test-spec-autonomous-delivery.md`), the glossary (`doc/overview/glossary.md`, two shims), the entrypoint prior-identity harness and the eight-variable pre-freeze fixture — and assert they are present, may record zero matches, and are never reported as matched.
+2. Assert every **matched** occurrence in the six carrying classes resolves to a shim whose literal is the **longest** match at that position, and lies inside one of that shim's declared sites (or a declared corpus / neutral site); assert no match is attributed to a declaration-only site.
 3. Row A (undeclared occurrence): sow a new `DELIVERY_OS_CUSTOM` read outside every declared site and assert the arm exits 1 naming the file, line and token.
-4. Row B (vanished site): delete a declared site's file in a temp copy and assert the arm exits 1 naming the missing declared site.
-5. Row C (budget): add one occurrence above a budgeted site's `maxOccurrences` and assert exit 1 naming the site and the budget.
+4. Row B (vanished site): delete a declared site's file in a temp copy and assert the arm exits 1 naming the missing declared site — for an in-corpus site and for a declaration-only site alike (presence is unconditional).
+5. Row C (budget): add one occurrence above a budgeted **in-corpus** site's `maxOccurrences` and assert exit 1 naming the site and the budget; assert a declaration-only site has no budget obligation and its zero matches do not fail.
 6. Row D (longest-literal precedence): assert the owner-hold example script's `DELIVERY_OS_OWNER_HOLD*` occurrences resolve to `prior-environment-prefix` and stay green, while a `DELIVERY_OS_WORKING_NAME` occurrence at the working-name shim's declared sites resolves to `prior-working-name-override` and also stays green.
 7. Row E (declared corpus): assert an occurrence inside `doc/changes/`, `doc/decisions/`, an M1 snapshot command page, and the dated inception analysis record stays green, and that removing a prefix from `declaredCorpora` makes it fail.
+8. Row F (site separation): assert the eight-variable pre-freeze fixture, which holds `ADOS_` literals, is a site of the pre-freeze shims only and is never claimed as a `prior-environment-prefix` (`DELIVERY_OS_`) site; assert the `DELIVERY_OS_` sites are the owner-hold hook, its battery, the three owner-hold documents and the entrypoint prior-identity harness.
 
 **Expected Outcome**:
-- Both directions green on the real tree; each of the five mutations fails by name.
-- The both-directions check cannot pass vacuously: an empty registry fails `TC-SHIM-001` first, and a registry with no sites fails row B.
+- Presence is green for every declared site, including the declaration-only sites; every in-corpus site is matched at or below budget; every match resolves to the longest literal and lies inside a site, corpus or neutral site; each of the six mutations fails by name.
+- The both-directions check cannot pass vacuously: an empty registry fails `TC-SHIM-001` first, and a registry with no sites fails row B; a declaration-only site counted as "matched" or a `DELIVERY_OS_` site carrying the `ADOS_` fixture fails row F.
 
 **Notes / Clarifications**:
 - Mutation control `M31` (shortest-literal resolution: a bare `DELIVERY_OS_` occurrence resolving to `prior-working-name-override`).
 - Row D is the load-bearing one for `AC-F4-2`'s satisfiability on a clean tree: without the `prior-environment-prefix` shim the owner-hold example would have no site authority and the reconciliation could not pass (spec Appendix F).
+- The presence/match split is `DM-3`/AC-F4-2's declared rule: `userFacingDocs` scans only the post-baseline registered list, and `tests/**` is in no scope class, so those sites can never be matched; declaring them is still required, and presence is what "declared" means for them.
 
 #### TC-SCAN-003 - The tree arm passes on the real tree: zero tracked prior paths, zero symlinks into one, the committed layer present, the runtime files ignored in a rule-world, and the prior-root prefix set read from the declaration and reported
 
@@ -564,7 +570,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 5. In a rule-world seeded with the repository's own `.gitignore`, assert `.jaiship/config.local.yaml` and `.jaiship/projects.yaml` are ignored and `.jaiship/config.yaml` is not; then in a temp copy of the tree, add a tracked `.jaiship/projects.yaml` and assert the arm exits 1 naming that path.
 6. Assert the check performs **0 writes** to the tree and completes within the declared bound.
 7. Assert the arm **reports the prior-root prefixes it used**, and that the reported set equals the declared set read from the shim registry and the forbidden-literal registry (`prior-config-directory` `.delivery-os` with its home form, `prior-state-directory` `.delivery-os-state`) — never a hardcoded list. Assert the summary names each prefix once.
-8. Mutation `M55` — hardcode the prefix set in the arm (drop `.delivery-os-state`, or add a literal that no declaration carries). Assert `TC-SCAN-003` fails by name on the reported-set equality while the real tree stays green (no tracked path matches either way) and `TC-SCAN-004`/`TC-SCAN-005` (and the runtime-file check of `AC-F5-3`) still pass — the failure is attributable to `AC-F1-2` alone.
+8. Mutation `M55` — hardcode the prefix set in the arm (drop `.delivery-os-state`, or add a literal that no declaration carries). Assert the **AC-F1-2-named declared-prefix assertion** (step 7's reported-set equality) fails by name while the real-tree checks stay green and every `AC-F5-3` assertion (`TC-SCAN-003` steps 2–6 and the two synthetic controls) still passes. The mutation may share this owning case; **attribution is per assertion**, not per case (spec AC-F1-2 v1.5 proof column).
 
 **Expected Outcome**:
 - Zero prior tracked paths, zero symlinks into one, the committed layer present, the runtime files ignored by the repository's own rules, and the prior-root prefix set read from the declaration and reported.
@@ -572,7 +578,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 
 **Notes / Clarifications**:
 - This case is `AC-F1-2`'s real-tree half and `AC-F5-3`'s whole. The two synthetic controls are `TC-SCAN-004` and `TC-SCAN-005`.
-- `M55` is the **only** register row whose expected failure is `AC-F1-2` alone; it is the mutation the spec names for the criterion's distinguishing property (the declared prefix set), not a restatement of the tracked-path checks.
+- `M55` fails **one AC-F1-2-named assertion inside this case** — the declared-prefix reported-set equality — while the case's `AC-F5-3` assertions stay green. The spec dropped the "only this criterion" case-level claim and states per-assertion attribution; `DOD-1` credit for `AC-F1-2` therefore requires step 7's assertion green, not merely the case's overall result.
 - The check reads git metadata only; it never mutates the index and never fetches.
 
 #### TC-SCAN-004 - Negative control A: a tracked `.jaiship -> .delivery-os` symlink fails by name
@@ -665,18 +671,18 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Notes / Clarifications**:
 - Mutation controls `M42` (`continue-on-error: true`) and `M43` (missing baseline fetch).
 
-#### TC-MIGRATE-001 - Every declared flag performs its effect and every admission refusal is its delivered identity with zero writes, including the symlink dispositions and the `unscoped` project scope
+#### TC-MIGRATE-001 - Every declared flag performs its effect and every admission refusal is its delivered identity with zero writes and zero records, including the symlink dispositions and the `unscoped` project scope
 
 **Scenario Type**: Negative (refusal battery) with green rows
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-1, API-1, API-2, DM-6, DM-8
+**Related IDs**: F-3, AC-F3-1, API-1, API-2, DM-6, DM-7, DM-8
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/install-migrate.test.ts` (§1: grammar and admission)
 **Tags**: @backend, @install, @migration, @offline
 **Seam**: `S-guard` + the `install` command definition through `runCli` (driver `D2`)
-**Fixture mechanism**: `tests/fixtures/install/{home,checkouts,daemon,artifact}.ts` (`createInstallScratch`, `createFixtureCheckouts`, `createRecordingDaemon`, `createFixtureArtifact`) plus `tests/fixtures/migration/filesystem.ts` for the write recorder.
+**Fixture mechanism**: `tests/fixtures/install/{home,checkouts,daemon,artifact}.ts` (`createInstallScratch`, `createFixtureCheckouts`, `createRecordingDaemon`, `createFixtureArtifact`) plus `tests/fixtures/migration/filesystem.ts` for the write recorder and the **record recorder**; the `D2` edge composition carries the delivered audit dependency so the suppression is observable rather than assumed.
 
 **Preconditions**:
 - `P5` has landed.
@@ -690,18 +696,19 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 5. Alias: `delivery-os install migrate` → `install.identity.not-owning`, exit 1, 0 writes.
 6. Dev build: a run with no injected identity → `install.dev-build`, exit 1, 0 writes.
 7. Linked worktree target → `install.target.worktree`, exit 1, 0 writes.
-8. For every refusal row, assert the write recorder saw **0 writes** and the directory-creation recorder saw **0 creations**, and that no state record was appended.
+8. For every refusal row, assert the write recorder saw **0 writes**, the directory-creation recorder saw **0 creations**, and the **record recorder — with the delivered audit dependency composed — saw 0 records of any kind**: the delivered `audit.reservation`/`audit.invocation` pair is suppressed for every migration mode, including a refusal (`DM-7`, API-1).
 9. Assert each exit is the delivered projection of its identity (through `ERROR_TABLE`), never a literal digit.
 10. Source symlink: a symlink entry in a source root (for example `bin/<launcher>`) takes the disposition `blocked`; assert it is retained, its target is never followed, its bytes are unchanged, the payload names the absolute path and the remedy, and the run exits 1.
 11. Destination symlink: a destination root or entry that resolves through a symlink into a prior root — the exact untracked `.jaiship -> .delivery-os` shape at the project root — takes the disposition `conflict`; assert the link is retained, nothing is written through it (the recorder shows no write under the link target), the absolute path and remedy are reported, and the run exits 1.
 12. Unscoped project class: invoke from outside a work tree; assert the project class reports `scope: unscoped` with no source, no destination, no entries and no verdict, the two host classes still plan and apply, and the run verdict composes from the host dispositions alone (`migrated` with exit 0 on a clean host world). Assert `unscoped` never appears as a disposition.
 
 **Expected Outcome**:
-- Every declaration performs its effect; every refusal is its delivered identity with a zero-write, zero-directory, zero-append consequence; a source symlink is `blocked` and a destination symlink `conflict`, both retained with path and remedy at exit 1; an invocation outside a work tree reports `unscoped` and still migrates the two host classes.
-- An accepted undeclared flag, a resolved relative backup path, a refusal that wrote anything, a followed or moved symlink, or an `unscoped` root carrying entries or a verdict fails by name.
+- Every declaration performs its effect; every refusal is its delivered identity with a zero-write, zero-directory, **zero-record** consequence; a source symlink is `blocked` and a destination symlink `conflict`, both retained with path and remedy at exit 1; an invocation outside a work tree reports `unscoped` and still migrates the two host classes.
+- An accepted undeclared flag, a resolved relative backup path, a refusal that wrote anything, a refusal that recorded anything, a followed or moved symlink, or an `unscoped` root carrying entries or a verdict fails by name.
 
 **Notes / Clarifications**:
-- Mutation controls `M10` (accept an undeclared flag), `M11` (resolve a relative `--backup-dir`), `M12` (accept an in-source `--backup-dir`), `M13` (let the alias migrate), `M14` (skip dev-build/worktree admission), and `M19`'s symlink branch (follow or move a symlink entry instead of retaining it).
+- Mutation controls `M10` (accept an undeclared flag), `M11` (resolve a relative `--backup-dir`), `M12` (accept an in-source `--backup-dir`), `M13` (let the alias migrate), `M14` (skip dev-build/worktree admission), `M19`'s symlink branch (follow or move a symlink entry instead of retaining it), and `M24`'s suppression branch (do not suppress the delivered audit pair, so a refusal or a dry run records).
+- The audit dependency stays **present** in the `D2` composition for every row; removing it would make the zero-record assertion vacuous and is itself a finding, not a fixture convenience.
 - The symlink rows are data-bearing, not error-bearing: neither link produces a new identity (`DM-8`), and neither side is followed (`DM-6`'s symlink rule, evaluated before the byte rules).
 - The `unscoped` row asserts a **scope** value, never a disposition: the closed dispositions stay six, the closed verdicts stay five, and the two host classes still migrate.
 - The `--backup-dir` rows apply in `--dry-run` too: admission precedes planning (§8.2 assumption on AC-F3-2's "exit 0" scope).
@@ -745,7 +752,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Scenario Type**: Integration
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-2, API-2, NFR-1, NFR-2
+**Related IDs**: F-3, AC-F3-2, API-2, DM-7, NFR-1, NFR-2
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/install-migrate.test.ts` (§2: plan)
@@ -763,21 +770,22 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 2. Assert one header line per root class, one line per planned entry with `<disposition> <path> · <files> file(s) · <bytes> byte(s)`, one backup line with an absolute path, and the trailing `daemon: unchecked`.
 3. Assert ≤ 60 human lines (the `NFR-2` plan bound), 0 ANSI escapes, every line ≤ 512 bytes, and one line per planned entry within the bound.
 4. Run the same state with `--json`; assert `install.migration.plan.v1`, ≤ 65 536 bytes, the field set of `API-2`, the closed `scope` values, and dispositions from the closed six.
-5. Assert the write recorder saw 0 writes, the creation recorder saw **0 directory creations including no backup directory**, the store saw **0 records appended of any kind** (neither a migration record nor the delivered command-audit pair), and the daemon port saw 0 calls.
+5. Assert the write recorder saw 0 writes, the creation recorder saw **0 directory creations including no backup directory**, the **record recorder — with the delivered audit dependency composed — saw 0 records of any kind** (no migration record and no delivered `audit.reservation`/`audit.invocation` pair: the declared audit exception), and the daemon port saw 0 calls.
 6. Assert exit 0 on both runs.
 7. Run the human dry-run a second time from a fresh but identical scratch world at the same pinned instant; assert the canonicalised output is byte-identical (the run stamp is derived from the injected clock, §8.2 assumption).
 8. Seed a world with more entries than the line bound and assert the output is ≤ 60 lines with **exactly one** counted `… N more` truncation line, that the count equals the number of planned entries omitted, and that no entry line is cut mid-line or duplicated.
 
 **Expected Outcome**:
 - A complete, bounded, ANSI-free plan with the would-be backup path and `daemon: unchecked`; 0 writes, 0 creations, 0 records, 0 daemon reads; the over-bound world truncates to one counted `… N more` line inside the 60-line bound; two runs identical.
-- A dry-run that creates the backup directory, appends the audit pair (or any record), consults the daemon, exceeds the line bound without its single truncation line, or varies between runs fails by name.
+- A dry-run that creates the backup directory, writes a record (including letting the suppressed audit pair through), consults the daemon, exceeds the line bound without its single truncation line, or varies between runs fails by name.
 
 **Notes / Clarifications**:
-- Mutation controls `M17` (create the backup directory during dry-run, or append the delivered command-audit pair) and `M18` (take the run stamp from ambient time).
+- Mutation controls `M17` (create the backup directory during dry-run, or fail to suppress the delivered command-audit pair on a dry run) and `M18` (take the run stamp from ambient time).
 - NFR-1's determinism is attained because the composition injects `clock`; a plan built from `Date.now()` fails step 7, which is the intended testability consequence.
+- The audit dependency is **present** in the composition (a removing harness would make step 5 vacuous); the assertion is that the migration suppresses the delivered pair in this mode, not that no audit seam exists.
 - Step 8 is `AC-F3-2`'s `NFR-2` consequence: the criterion's one-line-per-entry claim holds **within** the bound and degrades only through the single counted truncation line. The payload id is `install.migration.plan.v1`; the manifest's `install.migration.manifest.v1` is asserted in `TC-MIGRATE-004`.
 
-#### TC-MIGRATE-004 - A clean migration moves every entry with digests intact, writes a complete manifest under its own schema id and the delivered command-audit pair at the destination, reports the managed-`PATH` residual, retires the emptied roots, and reports `migrated`
+#### TC-MIGRATE-004 - A clean migration moves every non-derived entry with digests intact, writes a complete manifest under its own schema id, writes zero records (the declared audit exception), retains the derived residual, reports the managed-`PATH` residual, retires the resolved non-derived roots, and reports `migrated`
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -788,42 +796,42 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Target Layer / Location**: `tests/behaviour/install-migrate.test.ts` (§3: apply)
 **Tags**: @backend, @install, @migration, @backup, @offline
 **Seam**: `S-apply` + `S-manifest` — the apply step and the backup/manifest writer over injected filesystem facts
-**Fixture mechanism**: `tests/fixtures/migration/{roots,manifest,filesystem}.ts`; `digestsOf(tree)` before and after; the manifest reader.
+**Fixture mechanism**: `tests/fixtures/migration/{roots,manifest,filesystem}.ts`; `digestsOf(tree)` before and after; the manifest reader and the record recorder; the `D2` composition carries the delivered audit dependency.
 
 **Preconditions**:
 - `P5` has landed.
-- Three root classes present, no destination conflicts; every source entry has a recorded pre-move digest.
+- Three root classes present, no destination conflicts; every source entry has a recorded pre-move digest; the host state root carries a source-side **derived entry** (`host-index.json`) alongside its non-derived entries.
 - The scratch machine's shell profile carries a delivered managed `PATH` block whose recorded install directory is under the prior root (`~/.delivery-os/bin`), and the profile file's bytes are snapshotted.
 - The backup root is the default (inside the current configuration root) unless a row overrides it.
 
 **Steps**:
 1. Snapshot every source file's digest and each state store's record set.
 2. Run `install migrate`; capture the payload and exit.
-3. Assert every planned entry is `moved`, every moved file's digest equals its pre-move digest, and the source entries are gone.
-4. Assert `<backup>/<stamp>/manifest.json` exists, is `install.migration.manifest.v1`, and its `entries[]` covers **every** moved file with `relativePath`, `size` and `sha256`; assert the per-root subtrees hold byte copies. Assert the machine payload is `install.migration.plan.v1`, that the two documents carry **distinct** ids, and that each validates against its own declared shape (a validator keyed on the manifest id does not accept the payload, and vice versa).
+3. Assert every planned **non-derived** entry is `moved`, every moved file's digest equals its pre-move digest, and the non-derived source entries are gone. Assert the derived entry is **outside the move set**: never moved, never copied to the backup, never counted in the plan's move or byte totals, and never a conflict; it is reported as a **derived residual** that is safe to delete.
+4. Assert `<backup>/<stamp>/manifest.json` exists, is `install.migration.manifest.v1`, and its `entries[]` covers **every** moved file with `relativePath`, `size` and `sha256` and contains **no derived entry**; assert the per-root subtrees hold byte copies. Assert the machine payload is `install.migration.plan.v1`, that the two documents carry **distinct** ids, and that each validates against its own declared shape (a validator keyed on the manifest id does not accept the payload, and vice versa).
 5. Assert every file the manifest lists exists in the backup with the manifest's digest.
-6. Assert every emptied source root that existed at plan time is reported in `retiredRoots[]` and no longer exists; assert a non-emptied root keeps its residual paths in `residuals[]`.
-7. Assert `verdict: migrated`, `exit 0`, and the exact store-write set: **exactly two** audit records (`audit.reservation` then `audit.invocation`) at the **destination** host state root, **zero** migration records, **zero** delivery records, **zero** writes to any prior root including the audit store, and 0 install-record fields written. Assert the audit pair's ordering record places both writes after the plan is composed and before the first move.
+6. Assert every source root that existed at plan time and whose **non-derived** entries are resolved is reported in `retiredRoots[]` and no longer exists; assert a retained derived residual does not prevent that retirement line and is removed with the retired root (it is a rebuildable cache). Assert a non-retired root keeps its non-derived residual paths in `residuals[]` and its derived residual reported as safe to delete.
+7. Assert `verdict: migrated`, `exit 0`, and the exact store-write set: **zero records of any kind** — the delivered `audit.reservation`/`audit.invocation` pair is suppressed for this command (the one declared audit exception), the audit dependency is present in the composition and its recorder saw 0 writes, **zero** migration records, **zero** delivery records, **zero** writes to any prior root, and 0 install-record fields written.
 8. Assert the managed-`PATH` residual: `residuals[]` carries one line naming the recorded block under the prior root with the remedy "re-run the installed artifact's `install`", the profile file's bytes are unchanged, and the write recorder shows **0** writes to the profile; assert a block naming the current install directory produces no residual.
 9. Assert the human run is ≤ 60 lines and ANSI-free.
 10. Repeat the run with `--backup-dir <absolute temp path>` and assert the same verdict with the backup at the override path.
 
 **Expected Outcome**:
-- All entries moved with digest equality; a complete manifest under its own schema id with byte copies; the audit pair (and nothing else) at the destination root; the managed-`PATH` residual reported with its remedy and the profile untouched; retired roots reported; `migrated` at exit 0.
-- A manifest missing an entry, a digest mismatch, a shared schema id across the two documents, a migration record or a delivery record written, an audit write in a source root, a profile edit, or a silently deleted unmoved entry fails by name.
+- Every non-derived entry moved with digest equality; a complete manifest under its own schema id with byte copies and no derived entry; **zero records of any kind** (audit suppressed, dependency present); the derived residual reported as safe to delete and removed with a retired root; the managed-`PATH` residual reported with its remedy and the profile untouched; retired roots reported; `migrated` at exit 0.
+- A manifest missing an entry, a digest mismatch, a shared schema id across the two documents, a derived entry moved/backed up/counted, a record of any kind written, a profile edit, or a silently deleted unmoved entry fails by name.
 
 **Notes / Clarifications**:
-- Mutation controls `M23` (skip the manifest, or label it with the plan payload's schema id), `M24` (move before verifying the copy, or write the command-audit pair into a source root), and `M19`'s no-delete branch where a residual entry is involved.
-- The command-audit pair is the **delivered** record every command writes; it is not a migration record, it is never in the plan's `entries[]`, and `TC-MIGRATE-010` asserts the same destination-side location after the move. A prior-root write of any kind — audit included — is the `F-2`/`API-4` zero-prior-write violation this step exists to catch.
+- Mutation controls `M23` (skip the manifest, or label it with the plan payload's schema id), `M24` (move before verifying the copy, or fail to suppress the delivered audit pair for the applying run), `M21`'s derived branch (move or back up the derived entry), and `M19`'s no-delete branch where a residual entry is involved.
+- The command-audit pair is the delivered record **every other** command writes; the migration is the one declared exception and writes **zero** records, so no pair appears at the destination or in a source root (`DM-7`, API-1). `TC-MIGRATE-010` re-reads the same zero-record fact after the move.
 - The managed-`PATH` residual is detection only: the migration never reads a profile for writing and never edits one (`DM-6`, `§22`); the remedy belongs to the `install` family that owns the block.
-- The manifest's `entries[]` completeness is what makes `NFR-4`'s "backup complete for all *n*" assertable in `TC-MIGRATE-008`.
+- The manifest's `entries[]` completeness is what makes `NFR-4`'s "backup complete for all *n*" assertable in `TC-MIGRATE-008`; the derived entry is outside that count because it is never moved.
 
 #### TC-MIGRATE-005 - A second run moves nothing, creates no backup, reports `already-migrated`, leaves both roots byte-identical, and never retires or reports a root that never existed
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-4, NFR-4
+**Related IDs**: F-3, AC-F3-4, DM-7, NFR-4
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/install-migrate.test.ts` (§4: idempotence)
@@ -837,19 +845,19 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Steps**:
 1. Snapshot every destination file's digest and count the backup directories under the backup root.
 2. Run `install migrate` again.
-3. Assert every **non-derived** source entry is `absent` and every destination entry `already-migrated`; assert the retained derived entry (the source `host-index.json`) again reports `already-migrated` with its derived reason and is still never moved.
+3. Assert every **non-derived** source entry is `absent` and every destination entry `already-migrated`; assert the derived entry is still outside the move set and reports its own closed disposition — `already-migrated` when a destination copy exists, `absent` when it does not — with the source copy, where retained, reported as a derived residual.
 4. Assert 0 files moved, 0 backup directories created (the count is unchanged), and no new `manifest.json`.
 5. Assert `verdict: already-migrated`, `exit 0`.
 6. Assert every destination file's digest is unchanged, so both roots are byte-identical to the post-first-run state.
-7. Assert the payload uses the same closed vocabulary (no `noop`, `skipped`, or free-text token), and that the run's only store write is the delivered command-audit pair at the destination root — no migration record, no install-record field, no prior-root write.
+7. Assert the payload uses the same closed vocabulary (no `noop`, `skipped`, or free-text token), and that the run writes **zero records of any kind** — the delivered audit pair is suppressed (the declared exception, with the audit dependency present and recording), no migration record, no install-record field, no prior-root write.
 8. Run a world in which one root class **never existed** (no prior project configuration root at plan time): assert the run reports `already-migrated`, that the never-existent root is **neither removed nor reported** in `retiredRoots[]` or `residuals[]`, and that retirement applies only to a root that existed at plan time.
 
 **Expected Outcome**:
-- 0 moves, 0 backups, `already-migrated`, exit 0, byte-identical roots; the audit pair is the only write; a never-existent root is neither retired nor reported.
-- A second run that creates a backup, reports `migrated`, rewrites a file, appends a migration record, or "retires" a root that never existed fails by name.
+- 0 moves, 0 backups, `already-migrated`, exit 0, byte-identical roots; **zero records of any kind**; a never-existent root is neither retired nor reported.
+- A second run that creates a backup, reports `migrated`, rewrites a file, writes any record, or "retires" a root that never existed fails by name.
 
 **Notes / Clarifications**:
-- Mutation control `M26` (second run creates a backup and reports `migrated`, or appends a migration-specific record). The never-existent-root row is asserted directly: no mutation distinguishes a root that was never there from one that was emptied, because the defect is a report line, not a destructive write.
+- Mutation control `M26` (second run creates a backup, reports `migrated`, appends a migration-specific record, or lets the audit pair through). The never-existent-root row is asserted directly: no mutation distinguishes a root that was never there from one that was emptied, because the defect is a report line, not a destructive write.
 
 #### TC-MIGRATE-006 - The `DM-6` disposition matrix holds row by row, the verdict follows DM-6's composition rule, and no differing byte is ever deleted or overwritten
 
@@ -874,20 +882,22 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 3. Row 3 — source present, destination absent → `moved`, source gone, destination digest equal.
 4. Row 4 — both present, byte-identical → `duplicate-identical`; assert **both** sides retained and no byte changed.
 5. Row 5 — both present, differing, entry not in the derived set → `conflict`; assert both sides retained with their original digests and the run exits 1.
-6. Row 6 (mixed world) — source-only + duplicate + conflict together → assert the three dispositions, the conflict retention, `verdict: partial` (the maximum is `conflict` **and** at least one planned move completed), exit 1, and a byte-level before/after comparison of **both** trees proving no differing byte was deleted or overwritten. Add a conflicts-only world and assert `verdict: conflict` (nothing moved), exit 1.
+6. Mixed world — source-only + duplicate + conflict together → assert the three dispositions, the conflict retention, `verdict: partial` (the maximum is `conflict` **and** at least one planned move completed), exit 1, and a byte-level before/after comparison of **both** trees proving no differing byte was deleted or overwritten. Add a conflicts-only world and assert `verdict: conflict` (nothing moved), exit 1.
 7. Assert a duplicates-only world yields no conflict, exit 0, and verdict `migrated`: under `DM-6`'s stated composition rule the maximum is `duplicate-identical`, a retained success (§8.2 `A5` records the rule, it does not invent it).
 8. Assert every disposition is drawn from the closed six and every verdict from the closed five.
+9. Add the derived entry to the mixed world: assert it appears in **no move count, no byte total and no backup entry**, takes only `already-migrated` (destination copy present) or `absent`, and never changes the composed verdict — the derived rule is evaluated before the five-row table and is outside the move set.
 
 **Expected Outcome**:
-- Each row's disposition and consequence; the mixed run is `partial` at exit 1 with nothing lost, a conflicts-only run is `conflict` at exit 1, and a duplicates-only run is `migrated` at exit 0.
-- Treating a difference as a duplicate, deleting a conflict, reporting `conflict` when a planned move completed, or exiting 0 on a conflict fails by name.
+- Each row's disposition and consequence; the mixed run is `partial` at exit 1 with nothing lost, a conflicts-only run is `conflict` at exit 1, and a duplicates-only run is `migrated` at exit 0; the derived entry is counted nowhere and conflicts never.
+- Treating a difference as a duplicate, deleting a conflict, reporting `conflict` when a planned move completed, moving/counting/backing up a derived entry, or exiting 0 on a conflict fails by name.
 
 **Notes / Clarifications**:
-- Mutation controls `M19` (delete a differing destination, or follow/move a symlink entry), `M20` (report a conflict as `duplicate-identical` and drop the source), `M25` (delete a `duplicate-identical` entry).
+- Mutation controls `M19` (delete a differing destination, or follow/move a symlink entry), `M20` (report a conflict as `duplicate-identical` and drop the source), `M25` (delete a `duplicate-identical` entry), and `M21`'s derived branch (move or back up a derived entry).
 - `DEC-4` is the reason a whole-root "both present ⇒ skip" rule is not acceptable: on a real machine the destination usually exists, so row-level decisions are what make the primary case migratable.
+- The five-row table is for **non-derived** entries; the derived rule is evaluated before it, which is why `absent` can describe a source-present derived entry without redefining row 1.
 - The verdict composition asserted here is `DM-6`'s single stated rule — `migrated` < `duplicate-identical` < `conflict` < `blocked`, with `absent`/`already-migrated` neutral — not a test-local severity order.
 
-#### TC-MIGRATE-007 - The derived host index takes `already-migrated` (or `absent`): reported with its reason, never rewritten, never in the source-move set, never a conflict
+#### TC-MIGRATE-007 - The derived host index is outside the move set: `already-migrated` (destination copy present) or `absent` (absent), with a source copy reported as a derived residual and no effect on the non-derived retirement line
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
@@ -904,22 +914,24 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - `P5` has landed.
 - The source and destination host state roots each hold a `host-index.json` whose `stateLocation` values differ.
 - A second world has a source `host-index.json` and **no** destination copy.
+- A third world's host state root has all **non-derived** entries resolved and a source `host-index.json` remaining.
 
 **Steps**:
 1. Run `install migrate` over the world.
-2. Assert the derived entry's disposition is `already-migrated`, with the reported derived reason (the destination copy wins); assert it is **never** in the source-move set and **never** `conflict`. In the second world (no destination copy) assert the disposition is `absent`, still never moved.
+2. Assert the derived entry is **outside the move set**: never moved, never copied to the backup, never counted in the plan's move or byte totals, and never a conflict. A destination copy present is `already-migrated` with the reported derived reason; a destination copy absent is `absent` — **including in the second world, where the source `host-index.json` is present** (the derived rule is evaluated before the five-row table), with that source copy retained and reported as a **derived residual** that is safe to delete.
 3. Assert the run's verdict is not `conflict` on account of the derived entry: under `DM-6`'s composition rule `already-migrated` and `absent` are neutral, so the run reports `already-migrated` and exits 0 when nothing else fails.
 4. Assert the destination `host-index.json` bytes are **unchanged** (no rewrite during the move).
-5. Assert the source `host-index.json` is **retained**: the derived entry is never moved and never deleted, so the source root keeps it as a reported residual rather than being retired on its account.
+5. Assert the derived residual's retention and retirement interaction: while its root is not retired, the source `host-index.json` remains in place and is reported as a derived residual that is safe to delete; in the third world, where every **non-derived** entry is resolved, the root is reported as retired and the derived residual is removed with it — a retained derived residual never prevents the non-derived retirement line.
 6. Add a second, non-derived differing entry to the same world and assert it still produces a `conflict`, proving the derived rule is a named set and not a blanket "indexes are ignored".
 
 **Expected Outcome**:
-- The derived entry is `already-migrated` (or `absent` when no destination copy exists), reported with its reason, never moved, never a conflict, and never rewritten; the run verdict treats it as neutral; a non-derived difference still conflicts.
-- Rewriting the index during the move, treating it as a conflict, moving it, or emitting a `destination-wins` disposition token outside the closed six fails by name.
+- The derived entry is `already-migrated` (destination copy present) or `absent` (absent), reported with its reason, never moved, backed up, counted or conflicted, and never rewritten; a source copy is a derived residual that is safe to delete and is removed with a retired root without preventing the retirement line; a non-derived difference still conflicts.
+- Rewriting the index during the move, treating it as a conflict, moving or backing it up, counting it, or letting a derived residual suppress a retirement line fails by name.
 
 **Notes / Clarifications**:
-- Mutation controls `M21` (derived entry reported as a conflict) and `M22` (index rewritten).
+- Mutation controls `M21` (derived entry reported as a conflict, moved, counted, or backed up) and `M22` (index rewritten). Their families are unchanged.
 - `destination-wins` was never a disposition: the closed six are `moved`, `already-migrated`, `duplicate-identical`, `conflict`, `blocked`, `absent`, and "the destination copy wins" is the **reason** reported on an `already-migrated` entry. The case asserts the disposition token, so the implementation cannot invent a seventh.
+- The derived rule is evaluated **before** the five-row table (DM-6), which is why a source-present derived entry can be `absent`; the row-1 meaning of `absent` (source absent, destination absent) still holds for non-derived entries.
 - The declared derived set is data (`host-index.json` today); adding an entry is a reviewed change, which is why the case asserts the *set*.
 
 #### TC-MIGRATE-008 - A failure after *k* of *n* moves leaves the remainder intact and the backup complete, and the re-run completes without duplicating
@@ -1014,16 +1026,16 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 3. Assert the opened-path recorder shows **zero** opens under the prior root.
 4. Assert the index disagreement is reported as the delivered warning and that the warning does not redirect the read (the read still resolves under the new root).
 5. Assert the host index is re-derived from the key rather than trusted, by mutating one `stateLocation` and re-running: the reported location follows the key, not the stale value.
-6. Assert the run's store-write set at the destination root: exactly the delivered command-audit pair (`audit.reservation`, `audit.invocation`), no migration record, zero writes to any prior root including the audit store, and no schema or state-format identifier change.
+6. Assert the **migration invocation's** store-write set is **empty**: **zero records of any kind** — the delivered `audit.reservation`/`audit.invocation` pair is suppressed for this command (the one declared audit exception, with the audit dependency present and recording), no migration record, zero writes to any prior root, and no schema or state-format identifier change. (The later `repos list`/`projects list` reads may re-derive the index; that is not a migration write.)
 
 **Expected Outcome**:
-- All locations under the new root; zero prior opens; the warning present and non-redirecting; the audit pair at the destination root and nothing else.
-- A read that trusts the stale index and opens the prior root fails by name with the path; so does a migration record, a delivery record, or an audit write in a source root.
+- All locations under the new root; zero prior opens; the warning present and non-redirecting; **zero records of any kind** and no store write at either root.
+- A read that trusts the stale index and opens the prior root fails by name with the path; so does any record written by the migration, in either root.
 
 **Notes / Clarifications**:
-- Mutation control `M30` (let the stale index redirect a read), plus `M26`'s record branch for a migration record and `M24`'s audit branch for an audit write in a source root.
+- Mutation control `M30` (let the stale index redirect a read), plus `M26`'s record branch for a migration record and `M24`'s suppression branch for an audit pair written by any migration mode.
 - This is `RSK-6`'s proof: "the index is a derived cache that re-derives every state location from its key and reports a disagreement as a warning that never redirects a read."
-- The audit assertion is the same fact `TC-MIGRATE-004` step 7 asserts at plan/apply time, re-read after the move: the pair is the delivered command record, located at the destination, never a migration record and never in a source root.
+- The zero-record assertion is the same fact `TC-MIGRATE-004` step 7 asserts at plan/apply time, re-read after the move: the migration writes no record at the destination, because the delivered pair is suppressed as the declared exception.
 
 #### TC-SHIM-004 - The alias refuses the migrate verb, carries the deprecation sentence in `--help`, and keeps its payloads and `--version` byte-unchanged
 
@@ -1081,7 +1093,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 4. Assert `tests/fixtures/result/code-corpora/true-positives.json` no longer lists the code (removed, not relaxed: the entry is gone, not marked optional) and that `error-table-sync` is green with the corpus and the table in step.
 5. Assert `tests/structure/cross-repository-contract.test.ts`'s additive-row set no longer names the code and that its baseline comparison is green.
 6. Assert `tests/checks/install-lifecycle-docs.test.ts`'s `GUIDE_REQUIREMENTS` no longer contains the identity **and** that the guide states the migration facts (the verb, `--dry-run`, the backup, the verdicts, the daemon rule, the idempotence, the manual reversal, and the shell-fallback operator remediation); assert the requirement table is not emptied and the retired-claim list still fails a planted retired statement.
-7. Assert `install --migrate` now exits 1 with `fallback.invocation`, a summary naming the retired flag form and the remedy `install migrate`, and no install and no migration.
+7. Assert `install --migrate` now exits 1 with `fallback.invocation`, a summary naming the retired flag form and the remedy `install migrate`, and no install and no migration; assert the refusal is reachable because the parser grammar (`definition.flags`) still declares `--migrate` (a removed grammar flag would answer a generic unknown-flag reason and never reach the remedy).
 8. Assert the identity is not reused anywhere: a planted second reference to the code inside a temp copy of a spec page fails `error-table-sync` by name.
 
 **Expected Outcome**:
@@ -1092,12 +1104,12 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - Mutation controls `M52` (leave the code in the domain list) and `M53` (remove the identity from the guide but leave it in the required-fact set).
 - "Removed, not relaxed" is the operative rule: the pinned corpora lose the entry; no assertion is weakened to accommodate it.
 
-#### TC-MIGRATE-012 - The verb joins the existing family: the prompt-required inventory stays 28, the M4 page carries it, and the help/coverage gate stays green
+#### TC-MIGRATE-012 - The verb joins the existing family: the prompt-required inventory stays 28, the parser grammar keeps `--migrate` recognised while the documented/help set retires it, and the help/coverage gate stays green
 
 **Scenario Type**: Invariant
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: API-1, NFR-9, DM-9
+**Related IDs**: API-1, API-3, NFR-9, DM-9
 **Test Type(s)**: Invariant
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/install-family-surface.test.ts` (extended) + `tests/checks/reference-page-parity.test.ts` (extended) + `scripts/checks/help-guide-coverage.ts` (**verify only — not edited**)
@@ -1111,18 +1123,21 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 
 **Steps**:
 1. Assert `PROMPT_REQUIRED_COMMANDS` has exactly **28** entries with `install` still at its current index and `provider` still last; assert `migrate` is **not** a top-level command.
-2. Assert the `install` family's declared verb set contains `migrate` and its declared flag set contains `--dry-run`, `--backup-dir`, `--stop-daemon`, and no longer contains `--migrate`.
-3. Assert the install reference page (`doc/planning/oss-tooling/milestones/m4/commands/install.md`) contains `--help` and `--version` and carries the verb, the flag table, the verdict table, the backup and reversal workflow, and the retirement note.
+2. Distinguish the two surfaces and assert both:
+   - **Parser grammar:** the install command definition's flag set (`definition.flags`) **retains** `--migrate` as a recognised flag, so `install --migrate` reaches the handler's refusal with the remedy (aligned with `TC-MIGRATE-011` step 7); assert the `tests/structure/install-conformance.test.ts` pin includes the recognised grammar flag.
+   - **Documented/help flag set:** the documented flag list, the rendered `install --help`, and the M4 reference page no longer list `--migrate` as a supported flag; they carry the retirement note and the remedy `install migrate`. The help text changes; the grammar pin does not lose the flag.
+3. Assert the install reference page (`doc/planning/oss-tooling/milestones/m4/commands/install.md`) contains `--help` and `--version` and carries the verb, the flag table (with the retired `--migrate` row replaced by the retirement note and remedy), the verdict table, the backup and reversal workflow, and the retirement note.
 4. Assert `help-guide-coverage.ts`'s `pageFor("install")` still resolves to the M4 page (the M1 snapshot root must never serve it) and that the check exits 0.
 5. Assert `tests/fixtures/help-guide/coverage.json` still lists `install` and the M4 page, and that the reference-page-parity suite's duplicated mapping agrees.
-6. Assert the rendered `install --help` lists `migrate` under the family and does not list `--migrate` as a supported install flag.
+6. Assert the rendered `install --help` lists `migrate` under the family and does not list `--migrate` as a supported install flag, while the parser grammar still recognises it (the help/grammar split is asserted in one run).
 
 **Expected Outcome**:
-- Inventory unchanged at 28; one new verb inside an existing family; the M4 page and the mapping unchanged in shape; `pnpm check:help` green.
-- Adding a 29th top-level command, removing the page obligation, or listing the retired flag fails by name.
+- Inventory unchanged at 28; one new verb inside an existing family; the parser grammar keeps `--migrate` recognised so the remedy is reachable while the documented/help flag set retires it; the M4 page and the mapping unchanged in shape; `pnpm check:help` green.
+- Adding a 29th top-level command, deleting the recognised grammar flag (which would make the remedy unreachable), listing the retired flag as supported in help, or removing the page obligation fails by name.
 
 **Notes / Clarifications**:
 - Mutation control `M54` (append `install migrate` as a new top-level prompt-required command).
+- The `definition.flags` pin and the help/flag-documentation set are **different surfaces**: `TC-MIGRATE-011` step 7 proves the recognised refusal, and this case proves the documented capability is retired while the grammar entry stays. A change that removes `--migrate` from `definition.flags` fails `TC-MIGRATE-011` by name (generic unknown-flag, no remedy).
 - This case is NFR-only on purpose: no `AC-*` states the inventory constraint, but the constraint is binding (it is what keeps the entrypoint's composed program and the M4 ownership split intact).
 
 #### TC-ROOT-001 - Both files present: the current one loads, the prior one is reported not used, and any notice names the current path
@@ -1290,7 +1305,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - **The page/constant comparison is not this case.** The same two lists are published on `doc/quality/test-specs/test-spec-namespace-conformance.md`; a page/constant mismatch is a **documentation-phase** (`P10`) defect verified by the phase-7 reconciliation (§7.7). No permanent delivery case reads the page, and a mismatch is never a `TC-IDENTITY-006` failure.
 - This case is NFR-only: it pins the honesty of the battery's claims (`NFR-1`) and the "proven on a scratch machine, not the operator's" obligation (`DOD-5`).
 
-#### TC-IDENTITY-001 - A clean home creates only current-identity paths on every surface, including the MCP composition with no configured name
+#### TC-IDENTITY-001 - A clean home creates only current-identity paths on every current-identity surface, including the MCP composition with no configured name; the alias's declared prior default is asserted as a separate shim fact
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1306,22 +1321,25 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Preconditions**:
 - `P8` has landed.
 - The scratch home is empty (no `~/.jaiship`, no `~/.jaiship-state`, no prior namespace), and the scratch checkout holds `.jaiship/config.yaml`.
+- The alias arms use their **own** empty scratch homes, so a prior-default fact cannot contaminate the current-identity path assertion.
 
 **Steps**:
-1. For each composed surface (the primary CLI, the alias's non-lifecycle composition, the entrypoint, and the MCP composition with **no** configured working name), run one representative command.
+1. For each **current-identity** composed surface (the primary CLI, the entrypoint's composition, and the MCP composition with **no** configured working name), run one representative command.
 2. Record every created path.
 3. Assert every created path is under `~/.jaiship/` or `~/.jaiship-state/`; assert zero created paths under `~/.delivery-os`, `~/.delivery-os-state`, or any repo-local prior root.
-4. Assert the resolved identity reported by each surface is the current one (`.jaiship`, `.jaiship-state`, `JAISHIP_`, `~/.jaiship/bin/jaiship`).
+4. Assert the resolved identity reported by each current-identity surface is the current one (`.jaiship`, `.jaiship-state`, `JAISHIP_`, `~/.jaiship/bin/jaiship`).
 5. Assert the MCP composition's resolved directories are current-identity directories when nothing is configured.
-6. Assert no prior-namespace directory was created anywhere, and that a second run in the same home creates no new path beyond the first run's set.
+6. Assert no prior-namespace directory was created anywhere by those surfaces, and that a second run in the same home creates no new path beyond the first run's set.
+7. **Alias arm — declared shim fact, not a fresh-install violation:** run the alias's non-lifecycle composition with no configured name and no override in its own empty home; assert it resolves its **declared prior default** (`delivery-os`) and creates the prior-identity paths, and that the case reports this as the alias's declared shim disposition (`DM-9`, §8.5 row 7) rather than failing the current-path assertion.
+8. **Alias under the current override:** with `<environmentPrefix>WORKING_NAME` set in the same alias arm, assert the override wins and the created paths are current-identity paths, so the alias's prior default is reachable only when no higher-precedence channel is set.
 
 **Expected Outcome**:
-- Only current-identity paths on every surface including MCP; zero prior paths; the current identity resolved.
-- An MCP default left at the prior identity — the `RSK-8` regression — fails by name with the created path.
+- Only current-identity paths on every current-identity surface including MCP; zero prior paths on those surfaces; the current identity resolved; the alias's declared prior default asserted as a separate shim fact and its override arm current.
+- An MCP default left at the prior identity — the `RSK-8` regression — fails by name with the created path; treating the alias's declared prior default as a fresh-install violation is a case defect, not a product failure.
 
 **Notes / Clarifications**:
 - Mutation control `M48` (leave the MCP default at `delivery-os`).
-- The case is scoped to **host** path creation (the criterion's `~/.jaiship/` / `~/.jaiship-state/` wording); repo-local writes are covered by `TC-ROOT-004`.
+- The case is scoped to **host** path creation on the current-identity surfaces (the criterion's `~/.jaiship/` / `~/.jaiship-state/` wording); repo-local writes are covered by `TC-ROOT-004`. The alias is **excluded** from the strict claim by `AC-F6-1` and is asserted as its declared shim fact instead.
 
 #### TC-IDENTITY-002 - The identity-derived override wins; the prior literal works with exactly one `override-read`; an invalid override is contained and never falls back
 
@@ -1358,7 +1376,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - Mutation controls `M44` (prior wins) and `M45` (silent fallback from an invalid override).
 - `DEC-8` is the reason the channel must have a successor: after the shim's removal, `<PREFIX>WORKING_NAME` is the only channel, so the derivation cannot be a literal.
 
-#### TC-IDENTITY-003 - The eight owner-named pre-freeze variables are inert, `ADOS_FOO=bar` neither errors nor becomes a value, and `ADOS_WORKING_NAME` is the one declared override mapping
+#### TC-IDENTITY-003 - The eight owner-named pre-freeze variables are inert, `ADOS_FOO=bar` neither errors nor becomes a value, and `ADOS_WORKING_NAME` is the one declared exception at the raw-environment seam
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1369,7 +1387,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Target Layer / Location**: `tests/behaviour/legacy-adapter.test.ts` + `tests/behaviour/config-cli.test.ts` (both extended)
 **Tags**: @backend, @namespace, @config, @legacy, @offline
 **Seam**: `S-legacy` — the catalog-key-bounded mapping rule reading the declared catalog key set
-**Fixture mechanism**: `tests/fixtures/namespace/pre-freeze-env.ts` — the eight owner-named variables (`ADOS_CONFIG_ROOT`, `ADOS_DS_BALANCE_CACHE_FILE`, `ADOS_HOOK_ENV_ALLOWLIST`, `ADOS_OPENAI_QUOTA_CACHE_FILE`, `ADOS_PROFILES_DIR`, `ADOS_PROVIDER_STATE_FILE`, `ADOS_STATE_DIR`, `ADOS_ZAI_QUOTA_CACHE_FILE`) plus `ADOS_FOO=bar` and the declared-exception variable `ADOS_WORKING_NAME`; `tests/fixtures/config/catalog.ts` supplies the declared key set.
+**Fixture mechanism**: `tests/fixtures/namespace/pre-freeze-env.ts` — the eight owner-named variables (`ADOS_CONFIG_ROOT`, `ADOS_DS_BALANCE_CACHE_FILE`, `ADOS_HOOK_ENV_ALLOWLIST`, `ADOS_OPENAI_QUOTA_CACHE_FILE`, `ADOS_PROFILES_DIR`, `ADOS_PROVIDER_STATE_FILE`, `ADOS_STATE_DIR`, `ADOS_ZAI_QUOTA_CACHE_FILE`) plus `ADOS_FOO=bar` and the declared-exception variable `ADOS_WORKING_NAME`; `tests/fixtures/config/catalog.ts` supplies the declared key set; the injected raw environment is the entrypoint/edge seam the override read observes.
 
 **Preconditions**:
 - `P8` has landed.
@@ -1383,16 +1401,16 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 5. Add `ADOS_FOO=bar`; assert the run neither errors nor exposes `bar` as a configuration value (scan the resolved tree and the payload for the marker).
 6. Assert no notice is emitted for an untouched legacy name (an untouched name is not an error, not a value, not a notice).
 7. Assert current-prefix strictness is unchanged: `JAISHIP_NOT_A_KEY` still yields `config.environment.unmapped`.
-8. Row `ADOS_WORKING_NAME`: with no current-prefixed override set, assert the resolved working name is the legacy value through the mapped current override channel `<environmentPrefix>WORKING_NAME`; assert **no** `config.environment.unmapped` error, that no configuration key is added or exposed, and that the value is not treated as an untouched legacy name. Assert this is the **one declared exception** to the catalog-key bound: a control legacy name with the same shape but no successor channel stays untouched, and the exception is read from the declared mapping rule rather than special-cased in the adapter.
+8. Row `ADOS_WORKING_NAME`: with no higher-precedence override set, assert the resolved working name is the legacy value, and assert the mechanism is the **entrypoint/edge raw-environment seam**: the legacy variable is read from the raw process environment **before** the working name (and therefore the prefix) is derived, alongside `DELIVERY_OS_WORKING_NAME`, and **never** through the compatibility adapter's catalog-key mapping. Assert the precedence current → prior (`DELIVERY_OS_WORKING_NAME`) → pre-freeze (`ADOS_WORKING_NAME`) → the declared default: the pre-freeze value is used only when both higher channels are absent or empty, with exactly one `override-read` line for the pre-freeze channel used. Assert the mapped override name `<environmentPrefix>WORKING_NAME` is **excluded from the configuration layer's unknown-name strictness** (it never raises `config.environment.unmapped`), that no configuration key is added or exposed, and that the value is not treated as an untouched legacy name.
 
 **Expected Outcome**:
-- The eight variables inert; exits and trees identical to the control; a known-key mapping still works; `ADOS_FOO` neither errors nor leaks; `ADOS_WORKING_NAME` reaches the current override channel as the one declared exception with no catalog-key error; current-prefix strictness unchanged.
-- An unbounded mapping, a dropped exception, a leaked value, or a weakened current-prefix check fails by name.
+- The eight variables inert; exits and trees identical to the control; a known-key mapping still works; `ADOS_FOO` neither errors nor leaks; `ADOS_WORKING_NAME` is read at the raw-environment seam before brand/prefix derivation, participates in the declared precedence, reaches the current override channel as the one declared exception, is excluded from configuration-layer strictness, and adds no configuration key; current-prefix strictness unchanged.
+- An unbounded mapping, a dropped exception, a pre-freeze value beating a higher channel, an `override-read` not emitted for the pre-freeze channel, an `environment.unmapped` raised for the mapped override name, a leaked value, or a weakened current-prefix check fails by name.
 
 **Notes / Clarifications**:
 - Mutation controls `M46` (map every `ADOS_*` name, or drop the declared `ADOS_WORKING_NAME` exception — the two directions of the bounded rule) and `M47` (publish `ADOS_FOO` as a value).
-- `RSK-9` is answered by step 4 and step 8 together: the rule keeps every mapping whose target is a declared catalog key **and** preserves the operator's pre-freeze override through its declared successor channel; `ADOS_STATE_DIR` never had a working path through the shim because the state-scope rule reads the current prefix only.
-- The exception adds no configuration key and no second channel (`API-5`, `API-6`, `DEC-9`); the `override-read` notice belongs to the **prior** literal `DELIVERY_OS_WORKING_NAME` (`TC-IDENTITY-002`, `TC-SHIM-003`), not to this mapping, so this row asserts no notice is required for it.
+- `RSK-9` is answered by step 4 and step 8 together: the rule keeps every mapping whose target is a declared catalog key **and** preserves the operator's pre-freeze override through its declared successor channel at the seam that actually resolves it; `ADOS_STATE_DIR` never had a working path through the shim because the state-scope rule reads the current prefix only.
+- The exception adds no configuration key and no second channel (`API-5`, `API-6`, `DEC-9`). The `override-read` notice for the pre-freeze channel is the same bounded reason the prior channel uses; the notice belongs to the channel that was read, so this row counts exactly one when `ADOS_WORKING_NAME` is the channel used and none when a higher channel wins.
 
 #### TC-IDENTITY-005 - Exactly the five declared product-surface literal sites exist, the build-side site is unchanged, and the override name is not a committed literal
 
@@ -1440,24 +1458,25 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 **Fixture mechanism**: the prior-identity harness plus `tests/fixtures/migration/filesystem.ts` (write recorder) and `tests/fixtures/namespace/golden/notices.ts` (the five golden notice lines).
 
 **Preconditions**:
-- `P8` has landed, so all three shims (prior config, prior state root, prior working-name override) exist with their notices.
+- `P8` has landed, so the prior config, prior state root and prior working-name shims exist with their notices, and the pre-freeze working-name channel is readable at the same raw-environment seam.
 
 **Steps**:
 1. Row A — prior configuration shim: a checkout with only the prior file → assert one `config-read`, its golden text, and 0 writes under the prior path.
 2. Row B — prior state root shim: a home with only `~/.delivery-os-state` → assert one `state-read` (or the delivered `state-skipped` when both exist), its golden text, and 0 writes under the prior root.
-3. Row C — prior override shim: only `DELIVERY_OS_WORKING_NAME` set → assert one `override-read`, its golden text, and 0 writes anywhere.
-4. For every row, assert the notice is emitted on **stderr** in both human and `--json` modes, is absent from the payload, and changes no exit code.
-5. For every row, assert the notice line is ≤ 200 bytes and contains no environment value, no credential, and no file content (assert against a marker planted in the prior file's body, which must not appear in the notice).
-6. For every row, assert a second invocation inside the same composed program does not emit a second line for the same reason.
-7. Assert every notice text equals the registry's declared `notice` for that shim id — the registry is the authority, so a drift between code and registry fails here.
+3. Row C — prior working-name shim: only `DELIVERY_OS_WORKING_NAME` set (higher channels absent and `ADOS_WORKING_NAME` unset) → assert one `override-read`, its golden text, and 0 writes anywhere.
+4. Row C2 — pre-freeze working-name channel: only `ADOS_WORKING_NAME` set (both higher channels absent/empty) → assert one `override-read` for the pre-freeze channel, the resolved legacy value, its golden text, and 0 writes anywhere; assert the channel is not produced by the adapter's catalog-key mapping.
+5. For every row, assert the notice is emitted on **stderr** in both human and `--json` modes, is absent from the payload, and changes no exit code.
+6. For every row, assert the notice line is ≤ 200 bytes and contains no environment value, no credential, and no file content (assert against a marker planted in the prior file's body, which must not appear in the notice).
+7. For every row, assert a second invocation inside the same composed program does not emit a second line for the same reason.
+8. Assert every notice text equals the registry's declared `notice` for that shim id — the registry is the authority, so a drift between code and registry fails here.
 
 **Expected Outcome**:
-- One bounded notice per shim, per process, per source kind; zero prior writes; no payload entry; no exit change; the text equal to the registry's declaration.
+- One bounded notice per shim or prior channel, per process, per source kind; zero prior writes; no payload entry; no exit change; the text equal to the registry's declaration.
 - A silent read, a duplicate line, a payload-borne notice, or a text drift fails by name.
 
 **Notes / Clarifications**:
 - Mutation control `M35` (emit `config-read` twice in one process).
-- Row C is why this case is owned by `P8`: the `override-read` reason is the one new notice reason, so the case cannot be green before the override channel lands.
+- Rows C and C2 are why this case is owned by `P8`: the `override-read` reason is the one new notice reason, and it covers the prior and pre-freeze channels with one line per channel used.
 
 #### TC-IDENTITY-004 - The enumerated pages and the prompt surface name the current identity, the reference pages agree with `--help`, and the generated projection matches its source
 
@@ -1477,7 +1496,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 - The prompt edit is exactly the one routing-authority sentence plus its regenerated projection.
 
 **Steps**:
-1. For each enumerated page of spec Appendix A that lands in `P6`/`P9` (`local-install.md`, the install-lifecycle/branding-seam/cli-entrypoint/config-layer/projects/project-groups/ceremony-runner/state-layer/mcp-surface/autonomous-delivery/result-contract feature pages, the glossary, the M4 command page and model/schedule/backlog pages, the four guides), assert its declared required facts are present and its declared stale statements absent.
+1. For each enumerated page of spec Appendix A that lands in `P6`/`P9` (`local-install.md`, the install-lifecycle/branding-seam/cli-entrypoint/config-layer/projects/project-groups/ceremony-runner/state-layer/mcp-surface/autonomous-delivery/result-contract feature pages, the glossary, the M4 command page and model/schedule/backlog pages, the four guides, and the three owner-hold pages), assert its declared required facts are present and its declared stale statements absent. Assert the reconciled set covers the **fourteen** `doc/**` files spec §2.1 enumerates; the two M1 snapshot command pages and the dated inception analysis record stay declared corpora (not reconciled), and the three owner-hold pages are both reconciled in phase 7 and remain declared sites (presence-only, outside the registered scan).
 2. Assert `.opencode/agent/toolsmith.md`'s routing-authority sentence names `.jaiship/config.yaml`.
 3. Assert the generated `.ados-claude/agents/toolsmith.md` is byte-identical to the output of the generator run over the source (regenerate into a temp path and compare; never hand-edit).
 4. Assert every other prior-namespace mention on those pages is a declared compatibility mention or a declared corpus entry (the same authority the scan uses), and that no page presents a prior path as the current one.
@@ -1535,15 +1554,15 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 | New file | Contents |
 |----------|----------|
 | `tests/fixtures/migration/roots.ts` | The seeded three-root world builder: host configuration (`config.yaml`, `install.json`, `bin/`), host state (`host-index.json`, `projects/<key>/`, `unbound/`), invoking project configuration (`<checkout>/.jaiship/`), each entry with a known file count and byte count; container directories (`projects/`, `documents.*/`, `quarantine.*/`); and one destination-state composer per `DM-6` row. Never writes outside the passed root. |
-| `tests/fixtures/migration/filesystem.ts` | The recording facts: `writes`, `creations` (directory creations), `opened` (every path read), `reads`, plus `failAtOrdinal(n)` — the injected failure at a fixed move ordinal, and `noFailure()`. |
+| `tests/fixtures/migration/filesystem.ts` | The recording facts: `writes`, `creations` (directory creations), `opened` (every path read), `reads`, `records` (every store/audit record the composed audit dependency attempts), plus `failAtOrdinal(n)` — the injected failure at a fixed move ordinal, and `noFailure()`. |
 | `tests/fixtures/migration/manifest.ts` | The manifest reader/validator (`install.migration.manifest.v1`, distinct from the payload's `install.migration.plan.v1`), `digestsOf(tree)`, and the per-entry digest comparator the byte-preservation case uses. |
 | `tests/fixtures/migration/plan.ts` | The canonicaliser for the double-run comparison (temp-root normalisation plus stable JSON) and the golden human/`--json` plan blocks. |
-| `tests/fixtures/migration/guards.ts` | The ordering recorder that stamps `stop`, `audit` (the two-record pair) and `move <n>` on one monotonic counter, the refusing daemon port, the dev-build and worktree admission fixtures, and the `--backup-dir` validation table. |
+| `tests/fixtures/migration/guards.ts` | The ordering recorder that stamps `stop` and `move <n>` on one monotonic counter (the record recorder separately proves zero audit records), the refusing daemon port, the dev-build and worktree admission fixtures, and the `--backup-dir` validation table. |
 | `tests/fixtures/namespace/shim-registry.ts` | The registry loader plus the six mutant builders (duplicate id, unknown kind/direction, empty sites, absent site, wildcard site, non-increasing window) and the window-order comparator. |
 | `tests/fixtures/namespace/seeds.ts` | The prior-namespace seed corpus and `sow(repo, class, line)` — the per-class mutation sower over a temp-copy repository, used by both arms. |
 | `tests/fixtures/namespace/tree.ts` | The synthetic tracked-set builder (real git index incl. mode `120000` symlinks and a committed blob target) and the rule-world ignore probe runner. |
 | `tests/fixtures/namespace/evidence.ts` | **The permanent `NAMESPACE_PROOF_BOUNDARY`** (eight proven ids, eight not-proven ids, declared order) and the battery row registry with `boundaryViolations()`. The only source of the boundary. |
-| `tests/fixtures/namespace/pre-freeze-env.ts` | The eight owner-named pre-freeze variables, the inert `ADOS_FOO=bar` fixture, the declared-exception `ADOS_WORKING_NAME` variable, and the inertness probe (no error, no value, no notice for untouchable names). |
+| `tests/fixtures/namespace/pre-freeze-env.ts` | The eight owner-named pre-freeze variables, the inert `ADOS_FOO=bar` fixture, the declared-exception `ADOS_WORKING_NAME` variable, and the inertness probe (no error, no value, no notice for untouchable names). It is a **declaration-only** site of the pre-freeze shims (it holds `ADOS_` literals, not `DELIVERY_OS_`), so it is never match-validated. |
 | `tests/fixtures/namespace/golden/notices.ts` | The five golden notice lines (`config-read`, `config-skipped`, `state-read`, `state-skipped`, `override-read`) and the golden migration plan/verdict blocks. Committed, reviewed, regenerated by an explicit command, never by blanket rewrite. |
 
 **No fixture writes, reads, or probes the real home.** Every home a case sees is passed in as a scratch directory under `tmp/tmpdir`; the recording filesystem facts are the only filesystem the migration uses, and the recorder's call counts are asserted so a native fallback would be visible.
@@ -1580,7 +1599,7 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 | `S-shimreg` | the shim registry validator | `TC-SHIM-001`, `TC-SHIM-002` | the shape, window and site validation; the site authority |
 | `S-content` | `scan()` with the registry-plus-shim reconciliation | `TC-SCAN-001`, `TC-SCAN-002`, `TC-SHIM-002`, `TC-SCAN-006` | the matcher, the class selection, the corpora, the site reconciliation |
 | `S-tree` | `namespace-tree.ts` | `TC-SCAN-003`, `-004`, `-005`, `TC-SCAN-006` | the tracked-set read, the symlink resolution, the ignore probes |
-| `S-override` | the override resolution at the edge, the entrypoint and the MCP composition | `TC-IDENTITY-002`, `TC-SHIM-003` row C | the derivation, the precedence, the containment, the notice |
+| `S-override` | the override resolution at the edge, the entrypoint and the MCP composition | `TC-IDENTITY-002`, `TC-IDENTITY-003` (raw-environment seam row), `TC-SHIM-003` rows C/C2 | the derivation, the precedence (current → prior → pre-freeze), the containment, the notice |
 | `S-legacy` | the legacy adapter's catalog-key-bounded mapping | `TC-IDENTITY-003` | the rule, the catalog key set, the one-warning discipline |
 | `S-help` / `S-docs` | the help inventory, the reference-page coverage, the page batteries, the projection generator | `TC-MIGRATE-012`, `TC-SHIM-004`, `TC-IDENTITY-004`, `TC-IDENTITY-005` | the inventory, the mapping, the renderer, the generator |
 
@@ -1588,11 +1607,11 @@ Each case is owned by exactly one delivery phase and is green **in isolation** a
 
 Four complementary observations, one property — "a move that cannot lose a byte".
 
-**(a) The plan is the contract.** `TC-MIGRATE-003` asserts the plan's completeness and its zero-write/zero-creation/zero-daemon consequence, so `AC-F3-2`'s "the plan is not a verdict" and `NFR-1`'s determinism are the same instrument.
+**(a) The plan is the contract.** `TC-MIGRATE-003` asserts the plan's completeness and its zero-write/zero-creation/zero-record/zero-daemon consequence, so `AC-F3-2`'s "the plan is not a verdict" and `NFR-1`'s determinism are the same instrument.
 
-**(b) The manifest is the audit trail.** `TC-MIGRATE-004` asserts the manifest (`install.migration.manifest.v1`) covers every moved file with a matching digest and a byte copy, and that the payload carries its own id (`install.migration.plan.v1`); `TC-MIGRATE-008` asserts it covers **all *n*** planned entries even when only *k* moved. The manifest is therefore the evidence for "nothing lost", not the report's word.
+**(b) The manifest is the audit trail.** `TC-MIGRATE-004` asserts the manifest (`install.migration.manifest.v1`) covers every moved non-derived file with a matching digest and a byte copy, contains no derived entry, and that the payload carries its own id (`install.migration.plan.v1`); `TC-MIGRATE-008` asserts it covers **all *n*** planned entries even when only *k* moved. The manifest is therefore the evidence for "nothing lost", not the report's word. The separate **command-audit** trail is deliberately absent: the migration writes zero records (`DM-7`).
 
-**(c) The decision table is total.** `TC-MIGRATE-006` walks the six ordered rows plus the mixed world and asserts the `DM-6` verdict composition, and `TC-MIGRATE-007` adds the derived set as a named exception whose disposition is `already-migrated` or `absent`, never a seventh token. The before/after tree digest comparison is what proves "no differing byte deleted or overwritten" — a disposition assertion alone would not. `TC-MIGRATE-001` adds the two symlink rows (source `blocked`, destination `conflict`, never followed or moved) and the `unscoped` scope row.
+**(c) The decision table is total.** `TC-MIGRATE-006` walks the five non-derived rows plus the mixed world and asserts the `DM-6` verdict composition, and `TC-MIGRATE-007` adds the derived rule **evaluated before the table** — outside the move set, `already-migrated`/`absent` only, a source copy reported as a derived residual, never a seventh token. The before/after tree digest comparison is what proves "no differing byte deleted or overwritten" — a disposition assertion alone would not. `TC-MIGRATE-001` adds the two symlink rows (source `blocked`, destination `conflict`, never followed or moved) and the `unscoped` scope row.
 
 **(d) The move is byte-preserving and re-versions nothing.** `TC-MIGRATE-009` asserts per-file digest identity, unchanged header format identifiers, an unchanged `install status` verdict, and an unchanged accepted-format constant; `TC-MIGRATE-010` asserts the derived index self-heals through re-derivation and never redirects a read.
 
@@ -1668,7 +1687,7 @@ Each row is a source mutation applied to the implementation; the named case must
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M17 | Create the backup directory during `--dry-run`, or append the delivered command-audit pair during a dry run | `TC-MIGRATE-003` | `directories created expected 0, received 1` / `records appended expected 0, received 2` |
+| M17 | Create the backup directory during `--dry-run`, or fail to suppress the delivered command-audit pair on a dry run | `TC-MIGRATE-003` | `directories created expected 0, received 1` / `records written expected 0, received 2` |
 | M18 | Take the run stamp from ambient time rather than the injected clock | `TC-MIGRATE-003` | `two-run plan comparison differs at line <n> (run stamp)` |
 
 **Apply, precedence and backup (7). Mandatory rows: the conflict no-delete control and the derived-entry control.**
@@ -1677,17 +1696,17 @@ Each row is a source mutation applied to the implementation; the named case must
 |---|----------|-----------|-------------------------|
 | M19 | Delete a differing destination entry to "complete" the move, or follow/move a symlink entry | `TC-MIGRATE-006`, `TC-MIGRATE-001` | `conflict entry expected retained on both sides, received absent at <path>` / `symlink entry expected blocked/conflict and retained, received followed` |
 | M20 | Report a differing duplicate as `duplicate-identical` and drop the source | `TC-MIGRATE-006` | `disposition expected conflict, received duplicate-identical` |
-| M21 | Treat `host-index.json` as a conflict, or give it a disposition outside the closed six | `TC-MIGRATE-007` | `derived entry expected already-migrated (or absent), received conflict` |
+| M21 | Enter the derived `host-index.json` in the move set — treat it as a conflict, move it, back it up, count it, or give it a disposition other than `already-migrated`/`absent` | `TC-MIGRATE-007`, `TC-MIGRATE-006` | `derived entry expected already-migrated (or absent) and outside the move set, received <disposition/move count>` |
 | M22 | Rewrite `host-index.json` state locations during the move | `TC-MIGRATE-007` | `host-index bytes expected unchanged, received rewritten` |
 | M23 | Skip the manifest write for a migrated run, or label the manifest with the plan payload's schema id | `TC-MIGRATE-004` | `manifest expected at <backup>/manifest.json, received absent` / `manifest schemaId expected install.migration.manifest.v1, received install.migration.plan.v1` |
-| M24 | Move an entry before verifying the backup copy's digests, or write the delivered command-audit pair into a source root | `TC-MIGRATE-004` | `verify-before-move order expected, received move before verify` / `audit pair expected at <destination state root>, received <source root>` |
+| M24 | Move an entry before verifying the backup copy's digests, or fail to suppress the delivered command-audit pair for an applying migration run (so it records in any root) | `TC-MIGRATE-004`, `TC-MIGRATE-001`, `TC-MIGRATE-010` | `verify-before-move order expected, received move before verify` / `records written expected 0, received 2` |
 | M25 | Delete a `duplicate-identical` entry | `TC-MIGRATE-006` | `duplicate entry expected retained, received absent at <path>` |
 
 **Idempotence, recovery and byte preservation (4). Mandatory row: the partial-failure no-duplicate control.**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M26 | On the second run, create a backup, report `migrated`, or append a migration-specific record | `TC-MIGRATE-005` | `verdict expected already-migrated, received migrated` / `backup directories expected 0, received 1` / `migration record expected 0, received 1` |
+| M26 | On the second run, create a backup, report `migrated`, append a migration-specific record, or fail to suppress the audit pair | `TC-MIGRATE-005` | `verdict expected already-migrated, received migrated` / `backup directories expected 0, received 1` / `records written expected 0, received 1` |
 | M27 | Re-copy an already-moved entry on the recovery run | `TC-MIGRATE-008` | `duplicate destination entry at <path>` |
 | M28 | Re-serialise ledger headers during the move | `TC-MIGRATE-009` | `header digest expected <sha256>, received <sha256>` |
 | M29 | Let the move change `install status`'s compatibility verdict | `TC-MIGRATE-009` | `install status verdict expected compatible, received <verdict>` |
@@ -1751,9 +1770,9 @@ Each row is a source mutation applied to the implementation; the named case must
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M55 | Hardcode the prior-root prefix set in the tree arm (drop `.delivery-os-state`, or add a literal that no declaration carries) | `TC-SCAN-003` (and `AC-F1-2` alone) | `prior-root prefixes used expected <declared set>, received <hardcoded set>` |
+| M55 | Hardcode the prior-root prefix set in the tree arm (drop `.delivery-os-state`, or add a literal that no declaration carries) | `TC-SCAN-003` — the **AC-F1-2-named declared-prefix assertion only**; the case's `AC-F5-3` assertions stay green | `prior-root prefixes used expected <declared set>, received <hardcoded set>` |
 
-Total: **55 mutations**, M1–M55 contiguous. Allocation by owning phase (`P1`…`P9`): **5+3+5+5+21+3+4+8+1 = 55** — `P4` gains `M55` and `P10` owns none. Every load-bearing invariant named in §1 has at least one row that names the case which must fail; the mandatory families are: the **migrated-host zero-notice** control (`M7`), the **conflict no-delete** control (`M19`, which also carries the never-follow/no-move symlink branch), the **partial-failure no-duplicate** control (`M27`), the **seed-to-shim longest-literal** control (`M31`), the **neutral-scope negative** control (`M39`, which also carries the dropped-neutral-site direction), and the **two tree-arm negative** controls (`M40`, `M41`) — seven mandatory controls, plus the **not-relaxed retirement** control (`M53`) and the **declared-prefix** control (`M55`), the only row whose expected failure is `AC-F1-2` alone. A row may name more than one mutant where the mutants share one invariant (dry-run writes, no-delete/no-follow, audit location, the derived disposition, the two neutral-domain directions); the data-bearing rows without a mutation — the `unscoped` scope, the never-existent-root report, the `ADOS_WORKING_NAME` exception — are asserted directly, and each names its case in §5.2.
+Total: **55 mutations**, M1–M55 contiguous. Allocation by owning phase (`P1`…`P9`): **5+3+5+5+21+3+4+8+1 = 55** — `P4` gains `M55` and `P10` owns none. Every load-bearing invariant named in §1 has at least one row that names the case which must fail; the mandatory families are: the **migrated-host zero-notice** control (`M7`), the **conflict no-delete** control (`M19`, which also carries the never-follow/no-move symlink branch), the **partial-failure no-duplicate** control (`M27`), the **seed-to-shim longest-literal** control (`M31`), the **neutral-scope negative** control (`M39`, which also carries the dropped-neutral-site direction), and the **two tree-arm negative** controls (`M40`, `M41`) — seven mandatory controls, plus the **not-relaxed retirement** control (`M53`) and the **declared-prefix** control (`M55`). **Attribution is per assertion:** `M55` fails the `AC-F1-2`-named declared-prefix assertion inside `TC-SCAN-003` while that case's `AC-F5-3` assertions stay green; the mutation may share an owning case and `DOD-1` credit is read at the assertion, not at the case headline (spec AC-F1-2 v1.5). A row may name more than one mutant where the mutants share one invariant (dry-run writes, no-delete/no-follow, audit suppression, the derived rule, the two neutral-domain directions); the data-bearing rows without a mutation — the `unscoped` scope, the never-existent-root report, the declaration-only site status, the derived residual, the `ADOS_WORKING_NAME` exception — are asserted directly, and each names its case in §5.2.
 
 ### 7.5 Gate battery
 
@@ -1810,7 +1829,7 @@ The documentation-phase gates (`bun test tests/checks/doc-conformance.test.ts`, 
 
 **Conformance coverage (`NFR-5`, `TC-SCAN-001`…`-006`).** Assertions: 7 scope classes with 6 carrying the prior-namespace class; ≥ 1 mutation per carrying class failing by name; the two non-carrying controls; the two negative controls; **0 undeclared occurrences** at the change head (occurrences inside a declared site, a declared corpus or a neutral site are the declared and expected ones); ≤ 60 s; 0 writes.
 
-**Declared-site integrity (`NFR-6`, `TC-SHIM-001`, `-002`).** Assertions: 100% of declared sites present; every match inside a declared site, a declared corpus or a neutral site; 0 outside; every budgeted site at or below budget; 0 wildcards.
+**Declared-site integrity (`NFR-6`, `TC-SHIM-001`, `-002`).** Assertions: 100% of declared sites present in the tree (including the declaration-only sites); every match inside a declared site, a declared corpus or a neutral site; 0 outside; every budgeted site **inside a scanned corpus** at or below budget; a declaration-only site is present, records zero matches and is never reported as matched; 0 wildcards.
 
 **Notice discipline (`NFR-7`, `TC-ROOT-002`, `-003`, `TC-SHIM-003`, `TC-IDENTITY-002`).** Assertions: ≤ 1 notice per reason per composed program; 0 in any payload; 0 exit-code changes; 0 on a migrated host; every line ≤ 200 bytes and free of environment values, credentials and file contents (a planted canary in the prior file's body must not appear).
 
@@ -1834,7 +1853,8 @@ Three complementary facts, one property — the battery's claims are bounded hon
 
 | Risk | Impact | Mitigation in this plan |
 |------|--------|--------------------------|
-| The migration destroys, splits or silently merges operator state (`RSK-1`) | H | `TC-MIGRATE-006` walks the six ordered rows with a byte-level before/after comparison of both trees; `TC-MIGRATE-004`/`-008` assert the manifest covers every planned entry; registers `M19`, `M20`, `M25`, `M27`. |
+| The migration destroys, splits or silently merges operator state (`RSK-1`) | H | `TC-MIGRATE-006` walks the five non-derived rows plus the derived rule with a byte-level before/after comparison of both trees; `TC-MIGRATE-004`/`-008` assert the manifest covers every planned entry; registers `M19`, `M20`, `M21`, `M25`, `M27`. |
+| A derived entry enters the move set or suppresses a retirement line (`S19` residual) | H | `TC-MIGRATE-006` step 9 and `TC-MIGRATE-007` assert the derived rule is evaluated before the five-row table: never moved, backed up, counted or conflicted, a source copy a derived residual, and a retained residual never suppressing a non-derived retirement line; registers `M21`, `M22`. |
 | A prior root stays authoritative because a read is silent (`RSK-2`) | H | `TC-ROOT-001`/`-002`/`-003` assert the loaded path, the zero-notice migrated host in two modes, and the single bounded prior-only notice; `TC-SHIM-003` asserts the notice text equals the registry's declaration; registers `M6`, `M7`. |
 | The declared-site allowlist becomes a rubber stamp (`RSK-3`) | H | `TC-SHIM-001` refuses a wildcard, an absent site and a bad window; `TC-SHIM-002` reconciles both directions with a budget row; `TC-SCAN-001` plants one occurrence per class; registers `M31`–`M37`. |
 | The neutral-scope exclusion smuggles a product identifier past the scan (`RSK-4`) | H | `TC-SCAN-002` keeps both neutral shapes green and requires a product-identifier use and an unscoped package name to fail; registers `M38`, `M39`. |
@@ -1844,7 +1864,7 @@ Three complementary facts, one property — the battery's claims are bounded hon
 | The MCP default change breaks a consumer (`RSK-8`) | M | `TC-IDENTITY-001` asserts per-surface clean-home paths with the MCP composition unconfigured; `TC-SHIM-004` keeps the alias's payloads and `--version` byte-unchanged; register `M48`. |
 | The bounded `ADOS_` mapping drops a used mapping (`RSK-9`) | M | `TC-IDENTITY-003` keeps a known-key mapping green beside the eight inert variables and the inert `ADOS_FOO`, and asserts the one declared `ADOS_WORKING_NAME` exception reaches the current override channel; registers `M46`, `M47`. |
 | A migration races an open store (`RSK-10`) | H | `TC-MIGRATE-002` asserts the refusal without the flag, the zero-write dry-run (including `--dry-run --stop-daemon`), and the stop-before-first-move ordering from a recorder; registers `M15`, `M16`. |
-| The migration's own command-audit write lands in a prior root, re-creating the source it is moving (`S2` residual) | H | `TC-MIGRATE-004` step 7 and `TC-MIGRATE-010` step 6 assert exactly the delivered pair (`audit.reservation`, `audit.invocation`) at the **destination** root, after planning and before the first move, with zero prior-root writes including the audit store and zero migration records; `TC-MIGRATE-003` step 5 asserts a dry run writes none; registers `M17` (dry-run record branch), `M24` (audit-in-source branch), `M26` (migration-record branch). |
+| The delivered command-audit pair is not suppressed and the migration writes records while it moves the store (`S18` residual) | H | `TC-MIGRATE-004` step 7, `TC-MIGRATE-010` step 6, `TC-MIGRATE-003` step 5 and `TC-MIGRATE-001` step 8 assert **zero records of any kind** with the audit dependency composed and recording, in every mode; registers `M17` (dry-run suppression), `M24` (applying-run suppression), `M26` (second-run suppression/migration record). |
 | A symlink entry redirects a move, a read, or a retirement (`DM-6` symlink rule) | H | `TC-MIGRATE-001` steps 10–11 assert a source symlink is `blocked` and a destination symlink `conflict`, both retained, never followed, never moved, with a zero-write recorder under the link target; `TC-SCAN-004` covers the tracked shape at the gate; register `M19` (follow/move branch). |
 | A managed `PATH` block under a prior root survives the migration silently (`S6`) | M | `TC-MIGRATE-004` step 8 asserts the read-only residual line with the `install` remedy and 0 profile writes; `TC-IDENTITY-004` asserts the guide sentence; the block is never edited (`DM-6`, §22). |
 | A new prior identifier in prose passes because the executable token is not scanned in docs (`RSK-11`) | M | The residual is **asserted as a deliberate negative control** (`TC-SCAN-001` row H), so the boundary is visible and over-enforcement cannot break the corpus; the path and environment seeds are what `TC-SCAN-001` proves. |
@@ -1868,7 +1888,7 @@ Three complementary facts, one property — the battery's claims are bounded hon
 9. **`AC-F2-2`'s zero-notice precondition excludes a prior environment input.** `API-4` says a notice is emitted when a prior input exists; `DELIVERY_OS_WORKING_NAME` is such an input, so `TC-ROOT-002`'s precondition explicitly leaves it unset and the override row is asserted by `TC-IDENTITY-002`/`TC-SHIM-003`.
 10. **The prompt-required inventory is 28 today and stays 28.** `install` is one family mounted already and `provider` is last (`GH-350`); the migration adds a verb inside the family, so no repin and no reference-page mapping change is legitimate. `TC-MIGRATE-012` asserts the count and `M54` proves the control.
 11. **The retired error identity's entry is removed from the pinned corpora, not marked optional.** This includes `INSTALL_DOMAIN_CODES`, the `ERROR_TABLE` row, `doc/spec/features/feature-result-contract.md`, `doc/spec/features/feature-install-lifecycle.md`, `doc/guides/local-install.md`, the M4 command/install-model pages, and `tests/fixtures/result/code-corpora/true-positives.json`. `TC-MIGRATE-011` asserts each site; `M53` proves a relaxed (deleted-but-still-required, or relabelled) variant fails.
-12. **The migration never touches the install record or a delivered store's accepted format.** `TC-MIGRATE-009` asserts both; `TC-MIGRATE-004` asserts zero install-record fields, zero migration records, and that the only store write is the delivered command-audit pair at the destination root (`DM-7`), which is not a migration record and never appears in the plan's `entries[]`.
+12. **The migration never touches the install record or a delivered store's accepted format, and it writes no record at all.** `TC-MIGRATE-009` asserts the first two; `TC-MIGRATE-004` asserts zero install-record fields and **zero records of any kind** — the delivered `audit.reservation`/`audit.invocation` pair is suppressed for this command as the one declared audit exception (`DM-7`, API-1). The audit dependency stays composed in the battery so the suppression, not the seam's absence, is what the case proves.
 13. **`tests/structure/inventory.json` registration is a per-phase gate obligation, not a case.** Every new module is registered in the phase that introduces it; the delivered content-inventory check fails an unregistered module by name.
 
 ### 8.3 Open Questions
@@ -1896,6 +1916,8 @@ Three complementary facts, one property — the battery's claims are bounded hon
 | 0.1 | 2026-11-21 | @test-plan-writer | Initial test plan for GH-365 against spec v1.1: **36 cases in 6 groups** (`TC-LAYER` 4, `TC-ROOT` 4, `TC-MIGRATE` 12, `TC-SHIM` 4, `TC-SCAN` 6, `TC-IDENTITY` 6), **31/31 AC traceability** (37 links, 6 extras, 0 unmapped, 0 orphan, 34 AC-linked / 2 NFR-only), the committed-layer move and its two brand-free ignore globs with the fresh-clone drill, the authoritative root with the bounded notice-bearing prior read and the operator-local group document, the `install migrate` verb with every refusal arm, the daemon ordering, the zero-write dry-run, the full move with digest equality and a complete manifest, the six-row `DM-6` matrix plus the derived destination-wins entry, idempotence, injected partial failure and recovery, byte preservation with no re-versioning, post-move locations, the retired flag form and retired error identity removed from the pinned corpora, the shim registry with both-directions reconciliation, the two-arm conformance gate with its per-class mutations, the neutral-scope cases and the two tree-arm negative controls, the CI binding, the per-surface clean-home paths including MCP, the override precedence and containment, the bounded pre-freeze mapping with the eight owner-named variables and the inert `ADOS_FOO`, the enumerated documentation battery with projection currency, the five literal sites, and the permanent eight-proven / eight-not-proven `NAMESPACE_PROOF_BOUNDARY`; the **54-row mutation register** M1–M54 with the seven mandatory controls; the fixture inventory (**21 reused / 7 extended / 11 authored**); the `P1`…`P10` phase map with the self-sufficiency rule and the precondition audit; the gate battery with the `TMPDIR`/`PATH` conventions; and **one open question** (`OQ-TP-1`) with a recommended PM ruling. Spec §19 items (5) and (6) are folded into `P5` so every `F-3` criterion is phrased over a command that exists at its growing phase. |
 | 0.2 | 2026-11-21 | @test-plan-writer | Records the PM ruling on `OQ-TP-1` (revision against spec v1.2, which now states the same split). A failure of a **planned move** inside the apply loop is governed by `AC-F3-6` — exit 1, a data-bearing `blocked` or `partial` verdict, the moved and unmoved sets named, no error identity (`API-2`) — while `state.write.failed` (platform-provider, exit 2) is reserved for a failure **outside** the apply loop (the backup copy or the manifest write). `TC-MIGRATE-008` step 5 now asserts the ruling as decided and its note states the split; §2 references spec v1.2; §8.3 is closed and §8.4 records the status; the §10 log row moves from Open to Resolved. The ruling adds no error identity and changes no projection row: **36 cases in 6 groups, 31/31 AC traceability (37 links), the 54-row mutation register, the fixture inventory (21 reused / 7 extended / 11 authored), and the `P1`…`P10` phase assignments are all unchanged**. |
 | 0.3 | 2026-11-21 | @test-plan-writer | DoR iteration 1 remediation (B1–B5 and the spec v1.4 consequences; **36 cases in 6 groups unchanged, 0 added, 0 removed, 0 renumbered**). **B1:** `TC-MIGRATE-007` asserts the derived entry's closed disposition `already-migrated` (or `absent` when no destination copy exists) with its reported reason — never in the source-move set, never a conflict — and §8.2 `A5` now cites `DM-6`'s stated composition rule instead of an invented severity order. **B2:** `TC-MIGRATE-004` step 7 and `TC-MIGRATE-010` step 6 assert exactly the two delivered audit records (`audit.reservation`, `audit.invocation`) at the **destination** root, with zero migration records, zero delivery records and zero prior-root writes including the audit store. **B3:** `TC-ROOT-004` drops the two `(extended)` claims for `projects-config.test.ts`/`ceremony-mirror-composition.test.ts` and targets `config-cli.test.ts` plus the delivered `projects-groups-list.test.ts` (composition unchanged, `DEC-12`). **B4:** `TC-MIGRATE-002` adds the `--dry-run --stop-daemon` live-daemon row (0 port calls, `daemon: unchecked`). **B5:** `TC-MIGRATE-012` marks `help-guide-coverage.ts` verify-only. **Spec v1.4 consequences, all folded into existing cases:** `TC-SCAN-003` asserts the tree arm's prior-root prefix set is read from the declaration and reported, with **`M55`** (the only failure attributable to `AC-F1-2` alone); `TC-SCAN-001`/`-002` add the `SCOPE_ORG` neutral site, the ADR-0003 DEC-8 allowlist-independence control and the two reworded pages; `TC-MIGRATE-001` adds source-symlink `blocked`, destination-symlink `conflict` and the `unscoped` project scope; `TC-MIGRATE-003` adds the `NFR-2` ≤ 60-line bound with exactly one counted `… N more` line and asserts a dry run appends no record of any kind; `TC-MIGRATE-004` asserts the managed-`PATH` residual, the manifest id `install.migration.manifest.v1` and the payload id `install.migration.plan.v1`; `TC-MIGRATE-005` asserts a never-existent source root is neither retired nor reported; `TC-IDENTITY-003` adds the `ADOS_WORKING_NAME` declared exception; `TC-IDENTITY-004` names the two reworded rows. The register is **55 mutations, M1–M55**, allocation `5+3+5+5+21+3+4+8+1 = 55` (`P4` gains `M55`; `P10` owns none), with the reused rows extended rather than renumbered (`M17`, `M19`, `M21`, `M23`, `M24`, `M26`, `M39`, `M46`). AC mapping unchanged: 31/31, 37 links, 34 AC-linked / 2 NFR-only; fixture inventory unchanged: **21 reused / 7 extended / 11 authored**; the `P1`…`P10` phase map and every case's owning phase unchanged. §2 references spec v1.4 and §7.6's `NFR-5` threshold is **0 undeclared** occurrences. |
+| 0.4 | 2026-11-21 | @test-plan-writer | DoR iteration 2 remediation (B6–B13 and the spec v1.5 consequences; **36 cases in 6 groups unchanged, 0 added, 0 removed, 0 renamed, 0 renumbered; 55 mutations, M1–M55, allocation unchanged**). **B6/S18:** the migration writes **zero records of any kind** in every mode — dry run, refusals, applying run — because the delivered `audit.reservation`/`audit.invocation` pair is suppressed as the one declared exception; `TC-MIGRATE-001` step 8, `TC-MIGRATE-003` step 5, `TC-MIGRATE-004` step 7, `TC-MIGRATE-005` step 7 and `TC-MIGRATE-010` step 6 assert zero records with the audit dependency **composed and recording** (so suppression, not seam absence, is proven); every "exactly two audit records at the destination" and "before the first move" assertion is removed; `M17`/`M24`/`M26` become suppression mutants. **B7/S19:** the derived entry is **outside the move set** — never moved, backed up, counted or conflicted; destination copy `already-migrated`, absent destination `absent` even with a source copy present; a source copy is a **derived residual** (safe to delete, removed with a retired root) that never suppresses the non-derived retirement line; `TC-MIGRATE-007` steps 2/5 and `TC-MIGRATE-006` step 9 assert it, `M21` carries the derived branch and `M22` is unchanged. **B8/S22:** `TC-IDENTITY-001` removes the alias from the strict current-identity path assertion and asserts its declared prior default as a separate shim fact (plus an override arm where the alias is current), matching `AC-F6-1`'s alias exclusion. **B9/S23:** `TC-IDENTITY-003` step 8 asserts `ADOS_WORKING_NAME` is read at the **entrypoint/edge raw-environment seam before brand/prefix derivation**, participates in the current → prior → pre-freeze → default precedence, is excluded from configuration-layer strictness, emits one `override-read` when it is the channel used, and adds no configuration key; `TC-SHIM-003` adds row C2 for that channel and `API-5`/`API-6` restate the seam. **B10/C14:** `TC-MIGRATE-012` step 2 separates the **parser grammar** (`definition.flags` retains `--migrate` so the remedy is reachable, pinned) from the **documented/help flag set** (retired), aligned with `TC-MIGRATE-011` step 7. **B11/S20/S21:** `TC-SHIM-001` and `TC-SHIM-002` assert presence for **all** declared sites and match/budget only for in-corpus sites, naming the declaration-only set (three permanent doc sites, the glossary, the prior-identity harness, the eight-variable fixture) and separating `ADOS_` sites (adapter + fixture) from `DELIVERY_OS_` sites (owner-hold hook/battery/three docs/harness). **B12:** `TC-SCAN-001` step 7 asserts the widened exact shape accepts exactly seven classes and rejects the old five-class registry by name, with the ADR-0003 DEC-8 seed/allowlist exact shape unchanged. **B13/S24:** `TC-SCAN-003` step 8/Notes and `M55` state **per-assertion attribution** — `M55` fails the `AC-F1-2`-named declared-prefix assertion while the case's `AC-F5-3` assertions stay green; the "only row whose expected failure is `AC-F1-2` alone" claim is removed, and no case split was needed. **Other v1.5 alignment:** `TC-IDENTITY-004` asserts the reconciled set covers the fourteen `doc/**` files (the two M1 snapshot pages and inception record stay declared corpora; the three owner-hold pages are reconciled and remain presence-only sites); §3.2/§3.3, §4.1 `D2`, §6.1, §7.2, §7.6 and §8.1/§8.2 carry the audit-suppression, derived-residual and presence/match facts. AC mapping unchanged: 31/31, 37 links, 34 AC-linked / 2 NFR-only; fixture inventory unchanged (**21 reused / 7 extended / 11 authored**); the `P1`…`P10` phase map and every case's owning phase unchanged; §2 references spec v1.5. |
+
 
 ## 10. Test Execution Log
 
