@@ -146,7 +146,7 @@
 #
 # PLAN SHAPE: ten phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. The spec is
-#   complete at v1.2 and the test plan at revision 0.2, so no design work remains
+#   complete at v1.4 and the test plan at revision 0.3, so no design work remains
 #   and a planning phase would declare no scope to compute. The ten delivery-phase
 #   ids are 1..10 and match the test plan's `P1..P10` map exactly; `tier.phases`
 #   lists this plan's phase ids [1..10], and the delivery-phase vs lifecycle-phase
