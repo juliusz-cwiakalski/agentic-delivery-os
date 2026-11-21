@@ -2445,8 +2445,9 @@ const GH374_TRUTH_ROWS: readonly Gh374Row[] = [
   {
     page: "doc/guides/zai-peak-hours-hook.md",
     required: [
-      "the hook is off this repository's delivery path and",
-      "none is installed",
+      "the hook is off this repository's delivery path",
+      "this repository installs no pre-iteration hook and does not source a legacy shell profile",
+      "reached only by the retained shell fallbacks",
       "the window, quota, and ceiling policy is committed configuration",
       "The hook example remains for other adopters who still choose",
       "invoking an opt-in hook is a fallback of the shell entry points",

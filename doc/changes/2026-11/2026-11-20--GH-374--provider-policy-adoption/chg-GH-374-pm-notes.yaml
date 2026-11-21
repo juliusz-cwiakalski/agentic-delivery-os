@@ -385,8 +385,8 @@ notes:
       with the closed placeholder carve-out."
     type: evidence
     date: "2026-11-21"
-  - text: "delivery plan phase 6 (documentation-truth) complete: the phase-6 commit
-      immediately following this note is the branch head at the boundary. Gate:
+  - text: "delivery plan phase 6 (documentation-truth) complete: commit
+      706a751e24ea90e3e5bd1ebadda7063c34be4f0a. Gate:
       `bun test tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the
       delivered GH-242/GH-350 blocks plus a closed GH-374 block: 28 required
       phrase sites, 12 retired claims over an 8-page closed set, marker

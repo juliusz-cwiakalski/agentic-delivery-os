@@ -38,7 +38,7 @@ change:
 
 # CHANGE SPECIFICATION
 
-> **PURPOSE**: Make this repository's delivery stop depending on shell profiles and the pre-iteration hook by committing its provider policy — one mixed base profile over both providers with a paid fallback profile, one ordered chain with paid fallback only per policy, one declared daily peak pause carried by the entry peaks, two spend ceilings that stop a spawn before it overspends, and two watch targets that surface quota and balance — and prove that policy offline through the delivered resolver, the delivered seat binding, and committed replay fixtures, so every native delivery entry point stops failing closed with `provider.profile.absent` while no engine behaviour, credential value, or agent prompt is changed.
+> **PURPOSE**: Make this repository's delivery stop depending on shell profiles and the pre-iteration hook by committing its provider policy — one mixed base profile over both providers with a paid fallback profile, one ordered chain with paid fallback only per policy, one declared daily peak pause carried by the entry peaks, two spend ceilings that stop a spawn before it overspends, and two watch targets that surface quota and balance — and prove that policy offline through the delivered resolver, the delivered seat binding, and committed replay fixtures, so every native delivery entry point stops failing closed with `provider.profile.absent` while no engine behaviour or credential value is changed and the only prompt change removes provider/model identifiers (F-8, DEC-20).
 
 ## 1. SUMMARY
 

@@ -70,9 +70,9 @@
 # other prompt or command is touched (DEC-20, NFR-7).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:            ./chg-GH-374-spec.md v1.4, read with the v1.5 correction to
-#                      AC-F2-2's identifier table (the model-anchored family
-#                      classes, N1) — G-1..G-14; F-1..F-8; DM-1..DM-11;
+#   - Spec:            ./chg-GH-374-spec.md v1.5 (the delivered revision; it
+#                      carries N1's model-anchored family classes in AC-F2-2's
+#                      identifier table) — G-1..G-14; F-1..F-8; DM-1..DM-11;
 #                      NFR-1..NFR-9 (NFR-7 carries the CLOSED file set); DEC-1..DEC-24
 #                      (DEC-16 R1 mixed base, DEC-17 R2 union window, DEC-18 R3
 #                      grace/buffer arithmetic, DEC-19 chain-park shape, DEC-20 the
@@ -86,7 +86,7 @@
 #                      with the "four fully traced / one by declared substitution"
 #                      traceability; §18 delivery order, the OWNER-REVIEW TABLE and
 #                      the commitlint PATH precondition.
-#   - Test plan:       ./chg-GH-374-test-plan.md v1.1 — 55 cases in nine blocks
+#   - Test plan:       ./chg-GH-374-test-plan.md v1.2 — 55 cases in nine blocks
 #                      (CFG-001..010, SEAT-001..006, SIM-001..009, SCAN-001..007,
 #                      DRIFT-001..007, DOC-001..006, NOM-001..004, MIG-001..003,
 #                      SEC-001..003); 15/15 ACs in both directions; §5.2 the
@@ -96,8 +96,8 @@
 #                      plus the extended `doc-conformance`); §7.2 the moved files
 #                      and the UNEDITED controls; §7.3 the case-to-suite map
 #                      (17 + 22 + 4 + 3 + 3 + 6 = 55); §8.3 no open question.
-#                      The plan applies the same N1/N4 corrections the test plan's
-#                      next revision carries (body-scoped containment,
+#                      The plan applies the same N1/N4 corrections test plan v1.2
+#                      carries (body-scoped containment,
 #                      model-anchored classes, in-memory SEC-003 controls); the
 #                      case ids, oracles' subjects and counts are unchanged.
 #   - DoR reviews:     ./readiness-review/readiness-iter-1.md (closed by revision
@@ -379,7 +379,7 @@
 #                 TC-POL-SCAN-005, TC-POL-SEC-001, TC-POL-SEC-002,
 #                 TC-POL-SEC-003
 #   Phase 6 (6):  TC-POL-DOC-001 .. TC-POL-DOC-006 (6)
-#   Count: 0 + 3 + 17 + 22 + 7 + 6 = 55. Every id in test plan v1.1 §5.1 appears
+#   Count: 0 + 3 + 17 + 22 + 7 + 6 = 55. Every id in test plan v1.2 §5.1 appears
 #   exactly once above and no id above is absent from it: no orphan case. The
 #   suite arithmetic reconciles with §7.3: 17 (reference) + 22 (behaviour) +
 #   3 (prompt scan) + 4 (delivery-surface scan) + 3 (canary) + 6 (doc-conformance)
@@ -799,7 +799,7 @@ phases:
   # `.opencode/agent/*.md` at assertion time, pins every DECLARED value, and pins
   # the migrator's owned contract as a tree invariant.
   #
-  # Why the migration cases live here (test plan v1.1 §5.2.8): MIG-001..-003 are
+  # Why the migration cases live here (test plan v1.2 §5.2.8): MIG-001..-003 are
   #   HEAD/tree invariants over a change artifact and pinned files, not runtime
   #   behaviour; they need a read of `migration-output.md`, the migrator module and
   #   `tests/**`, all of which a structure suite already does. Folding them in keeps

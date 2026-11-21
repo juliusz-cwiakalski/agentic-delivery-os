@@ -668,7 +668,7 @@ describe("GH-374 TC-POL-SEAT-001 all 24 roles resolve a base seat and a binding"
     }
   });
 
-  test("a removed seat refuses provider.profile.invalid naming the agent and the declared seats", async () => {
+  test("a removed seat surfaces as a 23-entry record and an unassigned binding", async () => {
     const documents = readDocuments();
     const provider = asRecord(documents.provider);
     const profiles = asRecord(provider.profiles);

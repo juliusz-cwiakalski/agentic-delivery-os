@@ -209,6 +209,9 @@ are visible in review and to CI:
   daily — the gap between the two DeepSeek price-peak windows — given up as a
   stated cost.
 - **Retired dependency.** The shell profile directory and the pre-iteration hook
-  are not on this repository's delivery path: none is installed, and the typed
-  path reads configuration only. The [hook guide](zai-peak-hours-hook.md) keeps
-  the example for other adopters.
+  are not on this repository's delivery path: this repository installs no
+  pre-iteration hook and does not source a legacy shell profile, so the typed
+  delivery path reads configuration only. If an operator's legacy hook or profile
+  directory is present, it is left untouched and is reached only by the retained
+  shell fallbacks (`deliver-ticket.sh`, `ceo-loop.sh`) as an opt-in input. The
+  [hook guide](zai-peak-hours-hook.md) keeps the example for other adopters.

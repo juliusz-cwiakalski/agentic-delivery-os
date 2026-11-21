@@ -31,10 +31,13 @@ may remain on disk; it is inert because no composition reads it.
 **This repository's posture:** the window, quota, and ceiling policy is committed
 configuration (see the [provider conditions and parks
 guide](provider-conditions-and-parks.md)), and the hook is off this repository's
-delivery path and none is installed. The typed delivery path reads configuration
-only. The hook example remains for other adopters who still choose it; invoking an
-opt-in hook is a fallback of the shell entry points (`deliver-ticket.sh`,
-`ceo-loop.sh`), not of the typed path.
+delivery path: this repository installs no pre-iteration hook and does not source
+a legacy shell profile, so the typed delivery path reads configuration only. If an
+operator's legacy hook or profile directory is present, it is left untouched and
+is reached only by the retained shell fallbacks (`deliver-ticket.sh`,
+`ceo-loop.sh`) as an opt-in input. The hook example remains for other adopters who
+still choose it; invoking an opt-in hook is a fallback of the shell entry points,
+not of the typed path.
 
 ### Migrating off the hook: `provider migrate legacy`
 
