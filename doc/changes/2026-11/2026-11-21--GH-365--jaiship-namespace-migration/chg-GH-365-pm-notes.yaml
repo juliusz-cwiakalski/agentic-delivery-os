@@ -628,3 +628,44 @@ notes:
       9f4a0803; P10 ab091f66 (plus the P2/P8 evidence commits)."
     type: info
     date: "2026-11-21"
+  - text: "Review-iteration-1 remediation COMPLETE: commit f453a440 (review record
+      code-review/review-iter-1.yaml included). F-1: planRoot lstat-classifies the
+      source and destination ROOTS before enumerating; a destination-root symlink
+      (including the exact .jaiship -> .delivery-os shape and an external target)
+      is a conflict, a source-root symlink is blocked, both retained with the
+      absolute path and remedy, exit 1, never listed or renamed through; the
+      root case is asserted with a write recorder. F-2: container directories
+      (projects, documents.*, quarantine.*) descend recursively into per-entry
+      decisions, and a file merging into an existing destination directory uses
+      copy-verify-then-remove; disjoint-child container cases assert a
+      pre-existing projects/ no longer blankets a conflict. F-3: audit
+      suppression keys on the parsed command + first positional (plus the
+      --migrate refusal), with a value-flag-aware fallback; install migrate,
+      install --dry-run migrate, install --backup-dir <abs> migrate,
+      install --stop-daemon migrate and install --migrate all record zero with
+      the audit dependency composed. F-4: TC-MIGRATE-009 restores the install
+      status before/after compatibility verdict, two root-level headers and a
+      foreign record, with digest identity and no new header. F-5: the prior
+      override literal is written plainly at packages/core/src/contracts/config.ts
+      and declared as a budgeted prior-working-name-override site; the branding
+      seam gains exactly that one file/name/value exception; the pre-freeze
+      literal stays fragment-assembled because the frozen ADR-0003 DEC-8
+      allowlist is never widened (recorded as the explicit reviewed exception).
+      F-6: --backup-dir is lexically resolved and realpath-canonicalised before
+      the in-source check, with `..` and symlinked-parent refusal rows. F-7:
+      symlink (and differing-entry) conflicts/residuals and the human entry line
+      carry the absolute path and bounded remedy, asserted. F-8: A5 reworded to
+      'No record is written' in API-1/DM-7, the 122->121 ledger figure corrected
+      in the plan C21 note and the delivery-planning note, and A6 recorded here:
+      `.*/projects.yaml` pre-existed at 3f7f4d7b, so P1 1.2 is a no-op and the
+      fresh-clone evidence is a change-head property. Committed-head gate:
+      install-migrate 27; namespace-conformance 21; shim registry 8;
+      namespace-doc-battery 5; doc-conformance 61; retirement 7; lifecycle-path
+      12; lifecycle-docs 7; reference-page-parity 5; family-surface 10;
+      ownership-split 5; cross-repository-contract 21; branding-seam 6;
+      entrypoint-bin 34; content-inventory 12; error-table-sync 108;
+      identity-docs 13; identity-override 9; legacy-adapter 16; content arm
+      7/7 0 violations; tree arm green; pnpm typecheck green; git diff --check
+      clean."
+    type: info
+    date: "2026-11-21"
