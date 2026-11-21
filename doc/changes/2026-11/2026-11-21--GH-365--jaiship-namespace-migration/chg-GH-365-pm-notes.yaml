@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-21T15:14:16.564Z }
   specification: { started: null, completed: 2026-11-21T15:49:14.157Z }
   test_planning: { started: null, completed: 2026-11-21T15:49:29.698Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-21T18:22:03.808Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -74,34 +74,35 @@ decisions:
     date: "2026-11-21"
 notes:
   - text: "RESUME CHECKPOINT (env failure, not a logic failure): the host suspended
-      at ~2026-11-21T15:50Z for 2h19m; the opencode session died and the dispatch
-      classified it failed/vacuous. Resumed 2026-11-21T19:12Z on the SAME branch
-      `feat/GH-365/jaiship-namespace-migration` (5 commits ahead of
+      at ~2026-11-21T15:50Z for 2h19m; the opencode session died and the
+      dispatch classified it failed/vacuous. Resumed 2026-11-21T19:12Z on the
+      SAME branch `feat/GH-365/jaiship-namespace-migration` (5 commits ahead of
       origin/main-tools, behind 0). Verified: 3/11 phases complete
       (clarify_scope, specification, test_planning); no plan file existed. Kept
-      the interrupted session's uncommitted work: the two phase-evidence notes in
-      this file, the TDR-0074 index row/narrative, and the untracked TDR. Because
-      the plan-absent commit scope cannot stage an untracked decision record, the
-      pending work is committed together with the plan (plan-union scope declares
-      the TDR and index in P1). No work discarded; no re-dispatch from scratch."
+      the interrupted session's uncommitted work: the two phase-evidence notes
+      in this file, the TDR-0074 index row/narrative, and the untracked TDR.
+      Because the plan-absent commit scope cannot stage an untracked decision
+      record, the pending work is committed together with the plan (plan-union
+      scope declares the TDR and index in P1). No work discarded; no re-dispatch
+      from scratch."
     type: retro
     date: "2026-11-21"
-  - text: "Specification COMPLETE at v1.2: 31 ACs (F-1 4, F-2 4, F-3 8, F-4 4,
-      F-5 6, F-6 5), DEC-1…DEC-13, both owner comments covered (2026-11-19
-      committed-truth checks; 2026-11-21 D1 arbitrary ADOS_* and D2 authoritative
-      root). DEC-12 is TDR-0074 (Proposed; owner acceptance at the PR review);
-      DEC-13 defers the shell prior-root literals to M4-S8 with the obligation
-      recorded on GH-352 (comment 7064946031). OQ-TP-1 resolved by PM ruling
-      (planned-move failure vs backup/manifest write) and stated in F-3, DM-8,
-      AC-F3-6. Commits: 6ccf7582 (spec v1.0/v1.1), b60825ef (artifact bundle),
-      afc1c610 (specification phase completion)."
+  - text: "Specification COMPLETE at v1.2: 31 ACs (F-1 4, F-2 4, F-3 8, F-4 4, F-5
+      6, F-6 5), DEC-1…DEC-13, both owner comments covered (2026-11-19
+      committed-truth checks; 2026-11-21 D1 arbitrary ADOS_* and D2
+      authoritative root). DEC-12 is TDR-0074 (Proposed; owner acceptance at the
+      PR review); DEC-13 defers the shell prior-root literals to M4-S8 with the
+      obligation recorded on GH-352 (comment 7064946031). OQ-TP-1 resolved by PM
+      ruling (planned-move failure vs backup/manifest write) and stated in F-3,
+      DM-8, AC-F3-6. Commits: 6ccf7582 (spec v1.0/v1.1), b60825ef (artifact
+      bundle), afc1c610 (specification phase completion)."
     type: info
     date: "2026-11-21"
   - text: "Test plan COMPLETE at revision 0.2: 36 cases in six groups (TC-LAYER 4,
       TC-ROOT 4, TC-MIGRATE 12, TC-SHIM 4, TC-SCAN 6, TC-IDENTITY 6), 31/31 ACs
-      mapped with 37 links (0 unmapped, 0 orphan), 54 mutation rows M1-M54,
-      32 fixtures (21 reused / 7 extended / 11 authored), and the P1…P10 phase
-      map with per-case phase ownership and isolation preconditions. Commits:
+      mapped with 37 links (0 unmapped, 0 orphan), 54 mutation rows M1-M54, 32
+      fixtures (21 reused / 7 extended / 11 authored), and the P1…P10 phase map
+      with per-case phase ownership and isolation preconditions. Commits:
       b60825ef (bundle), ad04e6e4 (test_planning phase completion)."
     type: info
     date: "2026-11-21"
