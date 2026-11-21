@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECT-GROUPS
 status: Current
 created: 2026-11-14
-last_updated: 2026-11-15
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
-summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
+summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
 links:
-  related_changes: ["GH-309", "GH-310"]
-  related_decisions: ["ODR-0004", "TDR-0022"]
+  related_changes: ["GH-309", "GH-310", "GH-365"]
+  related_decisions: ["ODR-0004", "TDR-0022", "TDR-0074"]
   contracts:
     - "packages/core/src/contracts/projects.ts"
     - "packages/core/src/domain/project-groups.ts"

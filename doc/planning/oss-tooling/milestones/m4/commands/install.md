@@ -1,6 +1,6 @@
 # `install` — the install lifecycle family
 
-Status: **delivered in GH-346** (M4-S1). Owner of the artifact class: the
+Status: **delivered in GH-346** (M4-S1); the migration verb is delivered by GH-365 (M4-S2). Owner of the artifact class: the
 product binary. Owner of repository artifacts: `scripts/install.sh`.
 
 ## Identity
@@ -22,6 +22,7 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 |---|---|
 | `install` | Install or upgrade from the running compiled artifact: admission, identity gate, daemon guard, compatibility advisory, destination disposition, the seven-step replace, and the record write. An artifact-agreement run stops at step 4 with no staging file, no rename, and no slot swap; the record is reconciled in place when it is not `current`. |
 | `install --dry-run` | Prints the complete plan (running identity and artifact path, destination, the agreement outcome, the disposition, the slot, the record path, the profile file and block when `--add-to-path` is given, the compatibility advisories, and the daemon disposition `unchecked`) and writes nothing. A dry-run never evaluates the daemon guard: it neither reads nor stops the daemon, `install.daemon.running` cannot answer a dry-run, and the plan states `daemon: unchecked — a dry-run neither reads nor stops the daemon; a real run refuses a live holder unless --stop-daemon and otherwise stops it before the swap or removal`. |
+| `install migrate` | Moves the three prior-namespace roots (host configuration, host state, and the invoking project configuration) to the current identity. The plan is printed before any write; an applying run copies and digest-verifies every planned entry into a verified backup manifest before the first move, then moves each non-derived entry without rewriting a byte. `--dry-run` writes nothing and reports `daemon: unchecked`. |
 | `install status` | Read-only report: running identity, installed record, record condition, slot condition, target stability, the state-format verdict, and the managed PATH block. |
 | `install status --json` | The same facts under `install.status.v1`; the only surface that carries `builtAt` and the full commit. |
 | `install rollback` | Two renames in reverse order against the single slot, then the record update. The ordered refusals are `install.slot.absent`, `install.slot.invalid`, and `install.record.unreadable`, evaluated before any write and before any rename and before the daemon stop. `install.record.unreadable` has five causes: four missing-name record conditions (absent, unreadable, `current` naming no `previous` while a slot is present, the post-crash pair) and a separate destination-shape cause — the destination is not a compiled artifact (a launcher, a symlink, or a foreign file). |
@@ -54,7 +55,9 @@ Global flags `--json`, `--verbose`, and `--pretty` behave as on every family.
 
 `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the
 three declared prior-namespace roots — host configuration, host state, and the
-invoking project configuration — to the current identity. `--dry-run` prints one
+invoking project configuration — to the current identity. It reuses the family's
+admission gates (linked worktree, development build, and the non-owning alias)
+and the daemon guard. `--dry-run` prints one
 header per root class, one line per entry with its disposition and file/byte
 counts, the would-be backup path, and `daemon: unchecked`; it writes nothing,
 creates no directory, reads no daemon, and records nothing. An applying run
@@ -101,7 +104,10 @@ input** (an attempt is the delivered `fallback.invocation` grammar refusal).
 | `install.purge.unconfirmed` | `install purge` without `--yes` |
 
 An unknown subcommand or a destination argument is the delivered
-`fallback.invocation` grammar refusal at exit `1`.
+`fallback.invocation` grammar refusal at exit `1`. The install domain carries
+exactly these ten identities; there is no delegation-refusal identity and no
+negative `install migrate` verdict is an error code — a `partial`, `conflict`,
+or `blocked` run reports data-bearing outcome data at exit `1`.
 
 ## Ownership split
 
@@ -127,7 +133,7 @@ keeps its repository-artifact scope and reports a managed install, naming
 - `doc/planning/oss-tooling/milestones/m4/install-model.md`
 - `doc/guides/local-install.md`
 - `doc/spec/features/feature-result-contract.md` (the `install` domain kind and
-  its eleven rows)
+  its ten rows)
 
 ## Self-description
 

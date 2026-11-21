@@ -4,7 +4,7 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/opencode-model-configuration.md
 ados_distribution: redistributable
 links:
-  related_changes: ["GH-374"]
+  related_changes: ["GH-374", "GH-365"]
 ---
 # OpenCode Model Configuration Guide
 

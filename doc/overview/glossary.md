@@ -3,12 +3,12 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-20
+last_updated: 2026-11-21
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-293", "GH-335", "GH-338", "GH-339", "GH-346", "GH-347", "GH-348", "GH-349", "GH-350", "GH-354"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-293", "GH-335", "GH-338", "GH-339", "GH-346", "GH-347", "GH-348", "GH-349", "GH-350", "GH-354", "GH-365"]
   related_decisions: ["ADR-0003", "ADR-0005", "ADR-0012", "ADR-0013", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024", "TDR-0025", "TDR-0036", "TDR-0037", "TDR-0038", "TDR-0039", "TDR-0040", "TDR-0041", "TDR-0042", "TDR-0043", "TDR-0044", "TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048", "TDR-0049", "TDR-0050", "TDR-0051", "TDR-0052", "TDR-0053", "TDR-0054", "TDR-0055", "TDR-0056", "TDR-0057", "TDR-0058", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062", "TDR-0063", "TDR-0064", "PDR-0006", "ODR-0005"]
   summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, adapter-parity, provider-client-seed, provider-profile, provider-budget, watch-freshness, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, milestone-sync, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition and phase-fold, delivery-registry, verify-change, verify-gates, session-database-admin, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy and provider-side landing, dispatch-operator-surface, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, loop-supervision, cross-repository change, harness-adapter, harness-terminate, dispatch-lane, atomic-admission, recorded-attempt-resume, tracker-retry-ladder, corroborated-stall, in-process-restart, arm-aware-corroboration, parity-battery, steer, supervise, delivery-metrics, and install-lifecycle terms used across the repository."
 ---

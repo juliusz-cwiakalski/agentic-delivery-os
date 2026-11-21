@@ -16,7 +16,7 @@ references:
   - "Delivery vehicle: #142"
   - "Related change: GH-146"
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286", "GH-288", "GH-348"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-280", "GH-286", "GH-288", "GH-348", "GH-365"]
   decisions: ["TDR-0002", "TDR-0056", "TDR-0057"]
 ---
 

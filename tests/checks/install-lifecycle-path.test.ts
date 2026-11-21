@@ -386,7 +386,8 @@ describe("TC-INST-075 prior-namespace artifacts are detected and advised, never 
       const outcome = await invoke(runtime, []);
       const advisories = dataOf(outcome).advisories as readonly string[];
       expect(advisories.some((line) => line.includes(prior))).toBe(true);
-      expect(advisories.some((line) => line.includes("documented manual move"))).toBe(true);
+      expect(advisories.some((line) => line.includes("install migrate"))).toBe(true);
+      expect(advisories.some((line) => line.includes("nothing was moved"))).toBe(true);
       expect(readFileSync(join(prior, "config.yaml"), "utf8")).toBe("provider: fixture\n");
       expect(existsSync(join(target.home, ".jaiship"))).toBe(true);
     } finally {

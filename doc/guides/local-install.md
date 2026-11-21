@@ -3,6 +3,8 @@
 # Apache-2.0 License - see LICENSE file for full terms
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/local-install.md
 ados_distribution: redistributable
+links:
+  related_changes: ["GH-365"]
 ---
 # Local Install, Delivery, and Re-Install
 
@@ -95,7 +97,7 @@ The installed artifact declares one **accepted state format** and compares it wi
 
 One owner per artifact class:
 
-- **The lifecycle family owns the binary.** `install`, `install status`, `install rollback`, `install uninstall`, and `install purge` own the artifact, the rollback slot, the install record, and the managed `PATH` block.
+- **The lifecycle family owns the binary.** `install`, `install status`, `install rollback`, `install uninstall`, and `install purge` own the artifact, the rollback slot, the install record, and the managed `PATH` block; `install migrate` owns the byte-preserving move of the three prior-identity roots.
 - **The shell installers own repository artifacts.** `scripts/install.sh` copies the redistributable guides, delivery scripts, delivery tools, templates, the OpenCode/Claude plugin projection with its MCP surface untouched, and keeps its launcher step for the legacy launcher when nothing else sits at the install path. With anything else at that path — the installed artifact, the slot, or any other content, with or without a record — the launcher step refuses, classified, names `install` as the update path, and writes nothing. Detection is by what is at the path, never by the record.
 - **`scripts/uninstall.sh` removes repository artifacts only.** It removes no binary, slot, record, or Jaiship root; it reports a managed install and names `install uninstall` as the owning removal command. When no product binary is reachable it reports no managed install without an error and guesses no path.
 
@@ -103,7 +105,7 @@ The compatibility alias (`delivery-os`) keeps its delivered behaviour with one d
 
 ## The migration verb
 
-`install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the three declared prior-identity roots — host configuration, host state, and the invoking project configuration — to the current Jaiship identity. Start with `install migrate --dry-run`: it prints `install.migration.plan.v1`-shaped data as one header per root class, one line per entry, the would-be backup path, and `daemon: unchecked`, and writes nothing. An applying run copies and digest-verifies every planned entry into `<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the first move, so a move is reversible by hand from the backup. A differing entry is a `conflict` retained on both sides; a byte-identical duplicate is retained; a symlink entry is never followed; `--backup-dir` must be an absolute path outside every source root. The command writes **zero records of any kind** in every mode (the declared audit exception), never edits your shell profile (a managed `PATH` block under a prior root is reported with the remedy "re-run the installed artifact's `install`"), and a second run reports `already-migrated` with no move and no new backup.
+`install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the three declared prior-identity roots — host configuration, host state, and the invoking project configuration — to the current Jaiship identity. It reuses the lifecycle admission gates: a linked worktree, a development build, or the non-owning compatibility alias refuses with nothing moved. Start with `install migrate --dry-run`: it prints `install.migration.plan.v1`-shaped data as one header per root class, one line per entry, the would-be backup path, and `daemon: unchecked`, and writes nothing. An applying run copies and digest-verifies every planned entry into `<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the first move, so a move is reversible by hand from the backup. A differing entry is a `conflict` retained on both sides; a byte-identical duplicate is retained; a symlink entry is never followed; `--backup-dir` must be an absolute path outside every source root. The command writes **zero records of any kind** in every mode (the declared audit exception), never edits your shell profile (a managed `PATH` block under a prior root is reported with the remedy "re-run the installed artifact's `install`"), and a second run reports `already-migrated` with no move and no new backup.
 
 The default backup root is `<current configuration root>/migration-backups/<UTC stamp>/`; `--backup-dir <abs>` relocates it (a relative or in-source path is refused). The plan is decided per entry: a source-only entry is `moved`; a destination-only entry is `already-migrated`; a byte-identical duplicate is `duplicate-identical` and is retained on both sides; a differing entry is `conflict` and is retained on both sides; a source symlink is `blocked` and a destination symlink is `conflict`, and neither is ever followed or moved. The run verdict is `migrated` or `already-migrated` at exit `0`, and `partial`, `conflict`, or `blocked` at exit `1`. A live daemon is refused without `--stop-daemon`; with it the daemon is stopped before the first move and is not restarted, and a dry run never reads the daemon. A second run moves nothing, creates no backup, and reports `already-migrated`. To reverse a move by hand, copy the entries back from the backup directory using its `manifest.json` digests — the tool performs no automatic reversal. The report names a residual line for a prior launcher or prior record left in place and a residual line for a managed `PATH` block whose path is under a prior root, with the remedy "re-run the installed artifact's `install`"; the product never edits your shell profile. The install domain is ten identities: the delegation refusal is retired, and a negative migration verdict is data, not an error code. The loaded-path guarantee applies throughout: the current configuration file is the one read whenever it exists, the prior file is reported not used and never opened, and a migrated checkout and host emit no prior-identity notice.
 
@@ -130,7 +132,7 @@ Nothing is moved, copied, or deleted by any of these reads. Machine-global layer
 
 ## Optional one-step move
 
-If you want the old namespace retired now, stop the product, move the prior configuration directory to the current configuration directory and the prior state root to the current state root, and start again. The moves are yours to perform: this build detects and advises, and its `--migrate` hook refuses rather than half-performing the move.
+If you want the old namespace retired now, stop the product and run `install migrate` — plan it first with `install migrate --dry-run`, then keep the verified backup until you have confirmed the moved checkout and host. The migration verb performs the move and the retired `--migrate` flag performs nothing; it only names `install migrate` as the remedy. A reversal stays a manual copy-back from the backup, as described above.
 
 ## What is not renamed in this slice
 

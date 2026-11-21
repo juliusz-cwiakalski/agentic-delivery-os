@@ -65,9 +65,11 @@ describe("TC-MIGRATE-011 the retired identity and the retired flag form", () => 
       (file) =>
         !file.startsWith("doc/changes/") &&
         !file.startsWith("doc/decisions/") &&
-        // This case names the retired code by definition; it is not a product
-        // or documentation reference.
-        file !== "tests/checks/install-migration-retirement.test.ts",
+        // Declared test corpus: these suites hold the retired literal only as a
+        // stale-list control (never a product, guide, or reference use).
+        file !== "tests/checks/install-migration-retirement.test.ts" &&
+        file !== "tests/checks/doc-conformance.test.ts" &&
+        file !== "tests/checks/namespace-doc-battery.test.ts",
     );
     expect(outside).toEqual([]);
   });

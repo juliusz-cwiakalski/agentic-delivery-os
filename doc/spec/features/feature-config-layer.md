@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
 summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps (including the spend-ceiling budgets branch) and shipped overridable defaults, per-repository provider policy over the five layers that can declare a provider value, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, declared integration mode with its origin, execution kind, store locations reconciled with the harness data directory and its store override, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347", "GH-348", "GH-350"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299", "GH-335", "GH-347", "GH-348", "GH-350", "GH-365"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021", "TDR-0042", "TDR-0050", "TDR-0051", "PDR-0006", "TDR-0056", "TDR-0057", "TDR-0059"]
 ---
 
