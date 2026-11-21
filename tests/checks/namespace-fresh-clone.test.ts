@@ -20,6 +20,8 @@ const git = (cwd: string, args: readonly string[]) =>
   spawnSync("git", [...args], { cwd, encoding: "utf8" });
 
 describe("TC-LAYER-003 fresh-clone drill", () => {
+  // A real `--no-local` clone of the repository can exceed bun's default 5 s
+  // budget on a loaded machine; the assertion, not the clock, is the subject.
   test("a scratch clone with the runtime write set reports zero status lines", () => {
     mkdirSync(CLONE_BASE, { recursive: true });
     const target = join(CLONE_BASE, `clone-${String(process.pid)}-${String(Date.now())}`);
@@ -51,5 +53,5 @@ describe("TC-LAYER-003 fresh-clone drill", () => {
     } finally {
       rmSync(target, { recursive: true, force: true });
     }
-  });
+  }, 30_000);
 });

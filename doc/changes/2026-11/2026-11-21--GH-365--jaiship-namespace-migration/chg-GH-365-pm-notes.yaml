@@ -411,3 +411,21 @@ notes:
       docs and the prior-identity harness are declaration-only."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 2 evidence (final): substantive commits 6426cd4 (changeset,
+      namespace.shims.v1 registry, pre-freeze fixture, registry fixture and suite)
+      and ceb8254f (self-declaration correction). The registry now declares both
+      registry documents themselves as budgeted self-declaration sites (plan
+      2.3(c)); without that a P3 content-arm run would flag the registry's own
+      seed literals. The P2 validator enforces the budget for in-corpus sites but
+      does not require a match, because the forbidden-literal registry is a
+      forward declaration whose seed literals land in P3; the match direction is
+      the content-arm reconciliation. prior-working-name-override is not declared
+      on the forbidden-literal registry (its literal is not one of the five
+      priorNamespace seeds). Final committed-head gate: changesets-group OK;
+      namespace-shims-registry 8 pass; content-inventory 12 pass; pnpm typecheck
+      green; git diff --check clean; P1 regression layer 3, fresh-clone 1,
+      loaded-path 1, ignore suites 10, ignore-rules OK. The fresh-clone drill
+      carries a 30 s per-test budget because a real `--no-local` clone exceeds
+      bun's 5 s default under machine load; its assertions are unchanged."
+    type: info
+    date: "2026-11-21"
