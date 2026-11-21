@@ -30,6 +30,7 @@ created (after plan approval).
   forbidding old identifiers.
 - AC: fresh install creates only Jaiship paths; migration moves existing
   state; scan fails on new old-namespace identifiers.
+- Delivered by GH-365: the committed layer is `<repo>/.jaiship/config.yaml`, `install migrate` moves the three prior roots with a dry-run, verified backup, per-entry precedence, idempotence and recovery, the shim registry declares the one-release compatibility inputs, and the two conformance arms (content and tree) fail on a new old-namespace identifier. The docs, guides and prompt are aligned.
 - Depends on: none.
 - Ticket: GH-365 (milestone M4)
 

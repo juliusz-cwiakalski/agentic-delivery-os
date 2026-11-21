@@ -293,3 +293,7 @@ configuration problem is always one of the rows above.
   carries `projects list`.
 - [ODR-0004 — Flat Record Set Command Rename](../../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md)
 - [TDR-0022 — Multi-Repository Workstation State Scope](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md)
+
+### The operator-local overlay (GH-365)
+
+The membership document is an **operator-local, git-ignored overlay** at `<repo>/<configDirectoryName>/projects.yaml` (`~/.jaiship` by default), authored by the operator; its absolute member `root` values stay on the operator's machine and are never committed. An absent document and a zero-group document are both the ordinary **empty listing**. The ceremony mirror's target set is composed from the invoking checkout's own document only — an absent document is the declared empty target set, a fresh clone has that empty set, and no checkout reads another checkout's document. No tracked template exists in the tree (DEC-12, TDR-0074).

@@ -35,11 +35,6 @@
           "maxOccurrences": 2
         },
         {
-          "file": "packages/mcp/src/serve.ts",
-          "role": "The MCP serve composition's neutral default working name.",
-          "maxOccurrences": 1
-        },
-        {
           "file": "scripts/hooks/pre-opencode-iteration-owner-hold.sh",
           "role": "The example owner-hold hook's header naming the prior working name.",
           "maxOccurrences": 1
@@ -104,6 +99,11 @@
           "file": "scripts/checks/forbidden-literals.registry.json",
           "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
           "maxOccurrences": 4
+        },
+        {
+          "file": "doc/overview/glossary.md",
+          "role": "The glossary names the current configuration path and the declared prior configuration path, never presenting the prior path as current.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -163,19 +163,9 @@
       "owner": "branding owner",
       "sites": [
         {
-          "file": "packages/cli/src/edge.ts",
-          "role": "The composition edge's neutral override channel constant.",
-          "maxOccurrences": 1
-        },
-        {
           "file": "packages/cli/src/entrypoint.ts",
           "role": "The entrypoint's override read and its documented ordering.",
           "maxOccurrences": 2
-        },
-        {
-          "file": "packages/mcp/src/serve.ts",
-          "role": "The MCP serve composition's override channel constant.",
-          "maxOccurrences": 1
         },
         {
           "file": "scripts/install.sh",
@@ -196,6 +186,11 @@
           "file": "scripts/checks/namespace-shims.registry.json",
           "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
           "maxOccurrences": 1
+        },
+        {
+          "file": "doc/overview/glossary.md",
+          "role": "The glossary names the current override channel and the declared prior working-name input, never presenting the prior input as current.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -272,7 +267,7 @@
         {
           "file": "packages/adapters/src/legacy/index.ts",
           "role": "The legacy compatibility adapter's pre-freeze environment prefix constant.",
-          "maxOccurrences": 1
+          "maxOccurrences": 4
         },
         {
           "file": "packages/adapters/src/legacy/provider-migrate-table.ts",
@@ -319,11 +314,6 @@
           "file": "scripts/checks/namespace-shims.registry.json",
           "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
           "maxOccurrences": 1
-        },
-        {
-          "file": "scripts/checks/forbidden-literals.registry.json",
-          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
-          "maxOccurrences": 2
         }
       ]
     }

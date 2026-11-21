@@ -332,3 +332,7 @@ No automatic migration, migration command, or re-attribution exists.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.
 - [Board](feature-board.md) — the fleet read that consumes this host index,
   per-repository state scope, and the `unbound` scope.
+
+### The post-move host index (GH-365)
+
+`install migrate` moves the host state root byte-preservingly to `<home>/<brand.stateDirectoryName>` (`~/.jaiship-state`). `host-index.json` is a derived cache: a store-opening invocation re-derives every `stateLocation` from its key, and a stale `stateLocation` is reported as the delivered warning that never redirects a read — every reported location is under the new root and no read targets the prior root. The per-project group document `<repo>/<configDirectoryName>/projects.yaml` is an operator-local, git-ignored overlay, never a tracked or project-committed artifact.

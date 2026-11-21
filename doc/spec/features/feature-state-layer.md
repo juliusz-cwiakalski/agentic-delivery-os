@@ -558,3 +558,7 @@ verified-empty.
 record without it reads exactly as before. The daemon records the DM-18 redrive
 detection under the existing `command.receipt` kind. The state schema version,
 existing record kinds, and boundary declarations are unchanged.
+
+### The state-root move (GH-365)
+
+`install migrate` moves the host state root from the prior identity's directory to `<home>/<brand.stateDirectoryName>` (`~/.jaiship-state`) as a byte-preserving entry move: every moved file's digest is unchanged, every `header.<workspace>.json` file stays byte-identical, the recorded format identifier and the artifact's accepted state format are unchanged, and no record is re-serialised or re-versioned (TDR-0047). The migration is the one declared command-audit exception: it writes **zero records of any kind** in every mode because it moves the store that would receive the record. The host index is a derived cache re-derived on the next store-opening invocation, and its disagreement warning never redirects a read.

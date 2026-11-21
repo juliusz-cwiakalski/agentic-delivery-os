@@ -204,8 +204,8 @@ Two different waits share the same hook contract:
   because an operator said stop, not because a provider condition will clear.
 
 The hold has two equivalent sources. The environment source is
-`DELIVERY_OS_OWNER_HOLD` (the current default brand's name for the
-brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
+`DELIVERY_OS_OWNER_HOLD` (the example hook's declared `prior-environment-prefix`
+shim; the current name is the brand-derived `<PREFIX>_OWNER_HOLD`); a non-empty value is the operator reason,
 and an empty value is inactive. The marker source is the regular file
 `<host root>/owner-hold`, which is `$HOME/.delivery-os-state/owner-hold` at the
 default host root; its first line is the reason and an empty file is an active
@@ -222,8 +222,8 @@ There is no marker-path override, and no per-project marker narrows the hold:
 the marker follows the store directory the typed engine resolves, and the host
 root carries the one host-wide marker, so one hold stops every project on the
 host. The shipped shell example reads the fixed default path
-`$HOME/.delivery-os-state/owner-hold` for this product and accepts no
-marker-path setting, so a host that sets the override keeps the typed engine
+`$HOME/.delivery-os-state/owner-hold` for this product until the M4-S8 wrapper
+cutover (DEC-13) and accepts no marker-path setting, so a host that sets the override keeps the typed engine
 reading the marker at the override and uses the environment source there (it is
 relocation-safe); adopters who set a different working name edit the example's
 two setting names and that marker default. A missing project state root is
@@ -237,9 +237,8 @@ be private, because the store rejects a non-private state directory with
 example like any hook: copy it to the default path or point
 `ADOS_PRE_ITERATION_HOOK` at it. The owner-hold example
 recognises exactly two settings: `DELIVERY_OS_OWNER_HOLD` and
-`DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (the current default brand's names for the
-brand-derived `<PREFIX>_OWNER_HOLD` and `<PREFIX>_OWNER_HOLD_POLL_SECONDS`;
-default `300`, accepted range `1`–`3600`; an unset, empty, or whitespace-only
+`DELIVERY_OS_OWNER_HOLD_POLL_SECONDS` (the example hook's declared `prior-environment-prefix` shim; the current names
+derive from the resolved `<PREFIX>_`; default `300`, accepted range `1`–`3600`; an unset, empty, or whitespace-only
 value defaults silently, any other invalid value uses `300` with one bounded
 warning). It applies to every agent and model
 because an owner pause is provider-independent, and it has no fixed iteration

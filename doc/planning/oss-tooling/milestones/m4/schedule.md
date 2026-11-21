@@ -24,7 +24,7 @@ remaining-quota tracking, and peak-hour parking driven by Jaiship policy.
 | M4 | F1b Operator surface | GH-354 | next wave |
 | M4 | F5 Agent prompts | GH-351 | after F1-F4 |
 | M4 | F6 Dogfood and thin wrappers | GH-352 | after F1-F5 |
-| M4 | S2 Namespace migration | GH-365 | after flip gate |
+| M4 | S2 Namespace migration | GH-365 | delivered |
 | M4 | S3 Conformance residual | GH-366 | after S9-S11 |
 | M4 | S5 Project queues | GH-367 | after S11, M3-S6 |
 | M4 | S6 History export | GH-368 | after S5 |

@@ -113,5 +113,5 @@ staged-and-renamed, never in place.
 ## Out of scope (this milestone)
 
 Package-manager channels, system-wide installs, auto-update, multi-user hosts,
-release publishing, and the namespace migration itself (M4-S2). Those can
+release publishing, and the namespace migration itself (M4-S2, delivered by GH-365 with `install migrate`). Those can
 follow once the local model is proven.

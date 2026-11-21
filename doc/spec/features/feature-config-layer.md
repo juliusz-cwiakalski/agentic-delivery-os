@@ -520,3 +520,9 @@ policy agree on the scope. See [Resident Dispatch
 Daemon](feature-resident-daemon.md) and [Repositories and the Host
 Overview](feature-projects.md). The owner-hold marker is resolved at the host
 root; its contract is in [Scheduling Engine](feature-scheduling-engine.md).
+
+### The authoritative namespace (GH-365)
+
+This repository's committed project layer is `<repo>/.jaiship/config.yaml` (the brand-derived `<configDirectoryName>/config.yaml`); the prior configuration path is read only through the declared compatibility input. The loaded-path guarantee: whenever the current file exists it is the loaded file, the prior file is reported **not used** (never opened), and every value's origin names the current path; a prior-only world reads the prior file as that same layer and emits exactly one `config-read` notice naming both paths. The prior-identity notice carries five reasons — `config-read`, `config-skipped`, `state-read`, `state-skipped`, and `override-read` — at most one line per reason per composed program, on stderr in every mode, never in a payload, and never changing an exit code; a migrated checkout and host emit none.
+
+The pre-freeze compatibility mapping is bounded: a legacy-prefixed name maps only when its mapped current name is a declared catalog key; every other legacy name is left untouched — not an error, not a value, not a notice. The one declared exception is the pre-freeze working-name override (the variable named by the shim registry), read at the entrypoint/edge raw-environment seam before brand and prefix derivation and applied to the current `<environmentPrefix>WORKING_NAME` channel; it is excluded from the configuration layer's unknown-name strictness and adds no configuration key.

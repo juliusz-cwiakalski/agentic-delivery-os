@@ -97,7 +97,7 @@ remain rejected.
 
 ### Owner-hold hook contract
 
-Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty, when its condition
+Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty (the example hook's declared `prior-environment-prefix` shim, read-only; the current names derive from the resolved `<PREFIX>_`), when its condition
 is evaluated, then it asks for the poll interval and the sleep line names the
 `env` source and the sanitized reason. Given only the fixed default host-root
 marker `$HOME/.delivery-os-state/owner-hold`, then the marker source and its first line

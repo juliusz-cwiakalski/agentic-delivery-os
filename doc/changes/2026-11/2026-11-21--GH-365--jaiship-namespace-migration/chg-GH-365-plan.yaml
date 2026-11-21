@@ -2526,6 +2526,9 @@ phases:
         - scripts/checks/namespace-shims.registry.json
         - tests/checks/namespace-doc-battery.test.ts
         - tests/checks/doc-conformance.test.ts
+        # AUTHORISED DELIVERY-TIME DISCOVERY (P9): adding the glossary as a
+        # declared site moves the P3 pin that asserted it was not one.
+        - tests/checks/namespace-conformance.test.ts
         # VERIFY-ONLY, never declared: `tests/structure/rename-drill-doc.test.ts`
         # (C23) — re-run in the gate, not edited.
     doneArtifacts:

@@ -2628,3 +2628,109 @@ describe("GH-374 documentation truth: this repository's adopted policy", () => {
     expect(gh374Violations(withDelta)).toEqual([]);
   });
 });
+
+/** GH-365 P9 — the reconciled current-truth page set (Appendix A). */
+const GH365_P9_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/guides/local-install.md",
+    stale: ["install.migration.unavailable", "ADOS_"],
+    required: [
+      "install migrate",
+      "--backup-dir",
+      "install.migration.manifest.v1",
+      "zero records of any kind",
+      "scripts/lib/dispatch-authority.sh",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-config-layer.md",
+    stale: [".delivery-os"],
+    required: [".jaiship/config.yaml", "override-read", "not an error"],
+  },
+  {
+    page: "doc/spec/features/feature-projects.md",
+    stale: [".delivery-os"],
+    required: ["~/.jaiship-state", "derived cache", "never redirects a read", "operator-local"],
+  },
+  {
+    page: "doc/spec/features/feature-project-groups.md",
+    stale: ["project-committed `projects.yaml`"],
+    required: ["operator-local, git-ignored overlay", "empty listing", "invoking checkout's own"],
+  },
+  {
+    page: "doc/spec/features/feature-ceremony-runner.md",
+    stale: ["committed `projects.yaml`"],
+    required: ["invoking checkout's own", "declared empty target set"],
+  },
+  {
+    page: "doc/spec/features/feature-state-layer.md",
+    stale: ["the migration re-versions a stored record"],
+    required: ["byte-preserving", "header.<workspace>.json", "zero records of any kind"],
+  },
+  {
+    page: "doc/spec/features/feature-mcp-surface.md",
+    stale: ["neutral default working name `delivery-os`"],
+    required: ["current-identity default working name `jaiship`"],
+  },
+  {
+    page: "doc/spec/features/feature-autonomous-delivery.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/guides/delivery-modes.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/quality/test-specs/test-spec-autonomous-delivery.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/overview/glossary.md",
+    stale: ["the same 170 identities"],
+    required: [
+      "install.migration.plan.v1",
+      "install.migration.manifest.v1",
+      "<environmentPrefix>WORKING_NAME",
+      "DELIVERY_OS_WORKING_NAME",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+    stale: ["install.migration.unavailable"],
+    required: ["install migrate", "--backup-dir", "install.migration.manifest.v1"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/backlog.md",
+    stale: ["M4-S2 owns the move"],
+    required: ["Delivered by GH-365"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/schedule.md",
+    stale: ["after flip gate"],
+    required: ["S2 Namespace migration | GH-365 | delivered"],
+  },
+  {
+    page: "doc/guides/opencode-model-configuration.md",
+    stale: [".delivery-os/config.yaml"],
+    required: [".jaiship/config.yaml"],
+  },
+  {
+    page: "doc/guides/provider-conditions-and-parks.md",
+    stale: [".delivery-os"],
+    required: ["project-committed configuration"],
+  },
+  {
+    page: "doc/guides/ceremony-runner.md",
+    stale: ["committed `projects.yaml`"],
+    required: ["invoking checkout's own", "declared empty target set"],
+  },
+];
+
+describe("GH-365 P9 the reconciled page set", () => {
+  test("every Appendix A page carries its reconciliation and no stale current-as-prior statement", () => {
+    expect(gh350Phase6Violations(GH365_P9_ROWS, (page) => read(page))).toEqual([]);
+  });
+});

@@ -192,13 +192,24 @@ describe("TC-SCAN-001 the prior-namespace content arm", () => {
     });
   });
 
-  test("the two reworded pages present the current path and are not declared sites", () => {
+  test("the reworded pages present the current path; only the glossary is a declared site", () => {
     const live = readRegistry(ROOT);
-    for (const file of ["doc/guides/opencode-model-configuration.md", "doc/overview/glossary.md"]) {
-      const text = readFileSync(join(ROOT, file), "utf8");
-      expect(text).toContain(".jaiship/config.yaml");
-      expect(/\.delivery-os|DELIVERY_OS_|~\/\.delivery-os/.test(text)).toBe(false);
-      expect(live.registered.includes(file)).toBe(false);
+    const opencode = readFileSync(join(ROOT, "doc/guides/opencode-model-configuration.md"), "utf8");
+    expect(opencode).toContain(".jaiship/config.yaml");
+    expect(/\.delivery-os|DELIVERY_OS_|~\/\.delivery-os/.test(opencode)).toBe(false);
+    expect(live.registered.includes("doc/guides/opencode-model-configuration.md")).toBe(false);
+
+    const glossary = readFileSync(join(ROOT, "doc/overview/glossary.md"), "utf8");
+    expect(glossary).toContain(".jaiship/config.yaml");
+    expect(glossary).toContain("DELIVERY_OS_WORKING_NAME");
+    expect(live.registered.includes("doc/overview/glossary.md")).toBe(false);
+    const shims = liveShims(ROOT);
+    for (const id of ["prior-working-name-override", "prior-config-directory"]) {
+      const shim = shims.find((entry) => entry.id === id);
+      expect(
+        shim?.sites.some((site) => site.file === "doc/overview/glossary.md"),
+        id,
+      ).toBe(true);
     }
   });
 });
