@@ -82,6 +82,30 @@ const copyNode = (fs: InstallFilePort, source: string, target: string): boolean 
   return false;
 };
 
+/**
+ * Merge one file into an existing destination directory: copy to a fresh staged
+ * file beside the target, verify the bytes, rename the staged file into place,
+ * and only then remove the source. A missing or differing copy leaves both
+ * sides intact (F-3 step 5: copy-then-verify-then-remove, never a rewrite).
+ */
+const mergeFile = (fs: InstallFilePort, source: string, target: string): boolean => {
+  const stat = fs.stat(source);
+  if (stat === undefined || stat.kind !== "file") return false;
+  const staged = fs.copyStaged(target, source, stat.executable ? 0o755 : 0o644);
+  if (!staged.ok) return false;
+  const sourceDigest = fs.digest(source);
+  const stagedDigest = fs.digest(staged.stagedPath);
+  if (sourceDigest === undefined || stagedDigest === undefined || sourceDigest !== stagedDigest) {
+    fs.remove(staged.stagedPath);
+    return false;
+  }
+  if (!fs.rename(staged.stagedPath, target)) {
+    fs.remove(staged.stagedPath);
+    return false;
+  }
+  return fs.remove(source);
+};
+
 const writeManifest = (
   fs: InstallFilePort,
   path: string,
@@ -151,7 +175,7 @@ const retainedSourceEntries = (root: PlannedRoot, fs: InstallFilePort): readonly
         entry.derived !== true &&
         entry.sourcePath !== undefined &&
         entry.disposition !== "moved" &&
-        fs.exists(entry.sourcePath),
+        fs.stat(entry.sourcePath) !== undefined,
     )
     .map((entry) => entry.sourcePath as string);
 
@@ -165,15 +189,17 @@ const residualsOf = (
     if (root.scope !== "scoped" || root.source === undefined) continue;
     if (retiredRoots.includes(root.source)) continue;
     for (const entry of root.entries) {
-      if (entry.sourcePath === undefined || !fs.exists(entry.sourcePath)) continue;
+      if (entry.sourcePath === undefined || fs.stat(entry.sourcePath) === undefined) continue;
+      const path = entry.path ?? entry.sourcePath;
+      const detail = entry.reason === undefined ? "" : ` — ${entry.reason}`;
       if (entry.derived === true) {
         residuals.push(`derived residual: ${entry.sourcePath} (safe to delete)`);
       } else if (entry.disposition === "conflict") {
-        residuals.push(`conflict retained: ${entry.sourcePath}`);
+        residuals.push(`conflict retained: ${path}${detail}`);
       } else if (entry.disposition === "duplicate-identical") {
-        residuals.push(`duplicate-identical retained: ${entry.sourcePath}`);
+        residuals.push(`duplicate-identical retained: ${path}${detail}`);
       } else if (entry.disposition === "blocked") {
-        residuals.push(`blocked retained: ${entry.sourcePath}`);
+        residuals.push(`blocked retained: ${path}${detail}`);
       }
     }
   }
@@ -290,8 +316,14 @@ export const applyMigrationPlan = (input: {
     const sourcePath = entry.sourcePath;
     const destinationPath = entry.destinationPath;
     if (sourcePath === undefined || destinationPath === undefined) break;
-    if (!input.fs.mkdirp(parentDirectory(destinationPath))) break;
-    if (!input.fs.rename(sourcePath, destinationPath)) break;
+    const parent = parentDirectory(destinationPath);
+    const merges =
+      input.fs.stat(sourcePath)?.kind === "file" && input.fs.stat(parent)?.kind === "directory";
+    if (!input.fs.mkdirp(parent)) break;
+    const completed = merges
+      ? mergeFile(input.fs, sourcePath, destinationPath)
+      : input.fs.rename(sourcePath, destinationPath);
+    if (!completed) break;
     moved += 1;
     movedKeys.add(moveKey(root, entry));
   }

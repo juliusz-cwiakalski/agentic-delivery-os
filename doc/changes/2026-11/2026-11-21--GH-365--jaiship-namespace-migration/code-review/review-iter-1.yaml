@@ -1,0 +1,242 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-365
+branch: feat/GH-365/jaiship-namespace-migration
+status: FAIL
+summary: >-
+  First review iteration. The namespace/identity deliverables are largely sound:
+  the committed layer is byte-identical (`git ls-files .jaiship/config.yaml` is the
+  single tracked path, digest fa1d82b5… equals the base blob, `.delivery-os` is
+  empty), the ignore rules are brand-free and root-anchored, the fresh-clone and
+  loaded-path drills pass, both conformance arms are green and non-vacuous
+  (content arm 7/7 with 0 violations, tree arm reads its prefix set from the
+  registry and reports it), the shim registry is per-shim and both-directions
+  reconciled, the override/MCP/bounded-mapping work is correct (override-read for
+  prior and pre-freeze, ADOS_FOO inert, MCP default `jaiship`), the proof-boundary
+  constant matches the new quality page, and every plan phase has a pm-notes note
+  naming its phase id, commit, and gate result with no out-of-scope files. But the
+  migration's safety core has two blocking defects and one test weakening: a
+  root-level destination symlink is followed (the owner's exact `.jaiship ->
+  .delivery-os` shape silently reports `migrated`, and a link pointing elsewhere is
+  moved through), container directories are not descended (DM-6/F-3 step 2), the
+  audit exception is bypassed when a flag precedes the subcommand, and the
+  delivered TC-MIGRATE-009 drops the AC-F3-7 `install status` before/after proof.
+  Severity mapping for this report: blocker = critical, major = high, minor =
+  medium/low, info = info.
+severity_breakdown:
+  critical: 1
+  high: 3
+  medium: 1
+  low: 2
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    task_severity: blocker
+    confidence: high
+    category: security
+    clause: "DM-6 symlink rule; AC-F3-1 (destination root `conflict`); §22 'a link can never redirect a read, a write, or a retirement'; plan 5.1/5.8; test-plan TC-MIGRATE-001 step 11"
+    location: packages/core/src/domain/install-migration-plan.ts:119-155
+    message: >-
+      `planRoot` never classifies the source/destination ROOT itself as a symlink;
+      it only stat's each child entry. A destination root that is a symlink is
+      therefore followed: with the owner's exact `.jaiship -> .delivery-os` shape the
+      plan reports every entry `duplicate-identical` and the run verdict `migrated`
+      at exit 0 (verified independently), and when the destination root points
+      outside the source the run renames source files through the link into the
+      link target (verified: a source `secrets.txt` was moved into the external
+      target and reported `migrated`, moved=1). This is the motivating case AC-F3-1
+      requires to be `conflict` at exit 1, and it lets a symlink redirect a write.
+    suggestion: >-
+      In `planRoot`, lstat the source and destination roots before enumerating. A
+      destination root that is a symlink is a `conflict` (retained, absolute path +
+      remedy, exit 1) and must never be listed or renamed through; a source-root
+      symlink is `blocked`. Add the destination-ROOT case (not just an entry) to
+      TC-MIGRATE-001 step 11 using the literal `.jaiship -> .delivery-os` shape and a
+      write-recorder assertion that the link target is untouched.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-2
+    severity: high
+    task_severity: major
+    confidence: high
+    category: spec-compliance
+    clause: "DM-6 'container directories descend (projects/, documents.*/, quarantine.*/)'; F-3 step 2; plan 5.1 'entry enumeration with container descent'"
+    location: packages/core/src/domain/install-migration-plan.ts:127-140
+    message: >-
+      Entries are only the immediate children of each root. A subdirectory is
+      treated as one atomic entry and compared/renamed as a whole subtree, so the
+      declared container descent is not implemented; there is no copy-verify-remove
+      merge path either (F-3 step 5). Verified: when the destination host-state root
+      already exists (the artifact-installed case the DEC-4 rationale cites) with an
+      empty `projects/` container, the source `projects/p1/records.jsonl` never
+      moves — the plan reports `projects` `conflict`, movedCount 0, verdict
+      `conflict` exit 1. This reintroduces, at directory granularity, the very
+      whole-root collision DEC-4 was written to avoid.
+    suggestion: >-
+      Descend container directories (at minimum `projects/`, `documents.*/`,
+      `quarantine.*/`, ideally every subdirectory) into per-entry decisions, and
+      implement the copy-then-verify-then-remove merge for an entry that must merge
+      into an existing destination directory. Add a case with a pre-existing
+      destination container holding disjoint child entries and assert each child is
+      `moved`/`duplicate-identical`/`conflict` individually.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-3
+    severity: high
+    task_severity: major
+    confidence: high
+    category: correctness
+    clause: "DM-7 / API-1 / AC-F3-2 / AC-F3-4 'zero records of any kind'; plan 5.7 (pre-parse, every mode)"
+    location: packages/cli/src/index.ts:445-448,633
+    message: >-
+      `isMigrationInvocation` keys on token position (`tokens[1] === "migrate"`), so
+      any invocation that puts a flag before the subcommand runs the migration but
+      is audited. Verified through `runCli`: `install migrate --dry-run` records 0
+      rows, while `install --dry-run migrate` records 1 row (same parsed positionals
+      `["migrate"]`). `install --backup-dir <abs> migrate` and `install --stop-daemon
+      migrate` have the same bypass, and an applying run would write a record into
+      the store it is moving — the one thing DM-7 forbids.
+    suggestion: >-
+      Key the suppression on the parsed command + first positional (`install` and
+      positionals[0] === "migrate"), plus the `--migrate` recognised-refusal form,
+      after `parseInvocation` (a boolean captured inside the try is sufficient), not
+      on `tokens[1]`. Add flag-before-subcommand rows to TC-MIGRATE-001/004 so a
+      regression fails by name.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-4
+    severity: high
+    task_severity: major
+    confidence: high
+    category: testing
+    clause: "AC-F3-7; test-plan TC-MIGRATE-009 steps 1/4/6/8 and Appendix C behaviour half"
+    location: tests/behaviour/install-migrate.test.ts:726-748
+    message: >-
+      The delivered "TC-MIGRATE-009 byte preservation and no re-versioning" case
+      asserts only header/record/config digests. TC-MIGRATE-009 requires reading
+      `install status` BEFORE and AFTER the move and asserting the compatibility
+      verdict is identical (steps 1/6), at least two `header.<workspace>.json` files
+      and one foreign record, and the foreign-record/schema-version assertion
+      (steps 4/8). None of those is delivered, so AC-F3-7's central claim is not
+      proven and a mutation that changes the `install status` verdict (M29) would not
+      fail. This is a weakened assertion, not an updated one.
+    suggestion: >-
+      Restore the plan's case: seed ≥2 headers plus a foreign record, read `install
+      status` before and after, assert identical verdict, and assert every header's
+      format identifier and all bytes unchanged. Keep the accepted-format baseline
+      as the structure half.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-5
+    severity: medium
+    task_severity: minor
+    confidence: medium
+    category: spec-compliance
+    clause: "DM-9 ('the prior literal is carried only at the declared shim sites and in the shim registry'); DEC-6 one authority; RSK-4"
+    location: packages/core/src/contracts/config.ts:131,134
+    message: >-
+      The prior and pre-freeze override literals are constructed to dodge the
+      literal scan — `["DELIVERY","OS","WORKING_NAME"].join("_")` and
+      `["A","DOS","_WORKING_NAME"].join("")` — so `packages/core/src/contracts/config.ts`
+      carries the prior literal at an undeclared site while the scan stays green.
+      The behaviour is correct, but this defeats the declared one-authority property
+      for the one prior literal this change introduces: a new prior identifier can be
+      hidden the same way, which is exactly RSK-4's concern.
+    suggestion: >-
+      Declare `packages/core/src/contracts/config.ts` as a `prior-working-name-override`
+      (and, if desired, a pre-freeze) declared site with a role sentence and an
+      occurrence budget, and write the plain literal; or record the construction as
+      an explicit, reviewed exception in DM-9 and the registry. Do not rely on the
+      obfuscation to keep the arm green.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-6
+    severity: low
+    task_severity: minor
+    confidence: medium
+    category: security
+    clause: "API-1 / F-3 step 4 (--backup-dir refused when relative or inside a source root)"
+    location: packages/cli/src/commands/install.ts:1063-1072,1141-1152
+    message: >-
+      `--backup-dir` validation is a literal string-prefix check (`startsWith("/")`
+      and `normalized === source || startsWith(source + "/")`) with no path
+      normalization. A path such as `<source>/../<source>/backups`, or a path
+      reached through a symlink, is not recognised as in-source and is accepted.
+      Low risk (operator-supplied), but it does not implement the declared refusal.
+    suggestion: >-
+      Canonicalize with the injected filesystem/`path.resolve` and compare resolved
+      (and, where available, real) paths against the resolved source roots before
+      accepting the override.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-7
+    severity: low
+    task_severity: minor
+    confidence: medium
+    category: spec-compliance
+    clause: "F-3 step 6 / AC-F3-1 / API-2 ('both are retained and named with the absolute path and the remedy')"
+    location: packages/core/src/domain/install-migration-apply.ts:158-196 + packages/cli/src/commands/install.ts:1096-1125
+    message: >-
+      Symlink dispositions are reported as `blocked`/`conflict` with an entry
+      `reason`, but neither the payload (`conflicts[]`/`residuals[]`) nor the human
+      renderer carries the required remedy string for a symlink entry, and the human
+      entry line omits the reason and uses the relative path. AC-F3-1 requires the
+      disposition, the absolute path, and the remedy.
+    suggestion: >-
+      Add the bounded remedy (and the absolute path) to the symlink residuals/conflicts
+      and render the entry reason/remedy in the human block, or cite the entry reason
+      as the remedy in the payload contract. Update TC-MIGRATE-001 steps 10/11 to
+      assert it.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+  - id: F-8
+    severity: info
+    task_severity: info
+    confidence: high
+    category: docs
+    clause: "Residual readiness advisories A1/A5/A6"
+    location: doc/changes/2026-11/2026-11-21--GH-365--jaiship-namespace-migration/chg-GH-365-spec.md:251,273; doc/changes/2026-11/2026-11-21--GH-365--jaiship-namespace-migration/chg-GH-365-pm-notes.yaml:212
+    message: >-
+      Three carried advisories are not code defects: (A5) API-1/DM-7 still read
+      "Nothing is written before, during, or after the run, in a source root or a
+      destination root", which literally forbids the backup and the moved bytes —
+      the intent is "no record"; (A6) `.*/projects.yaml` pre-existed at 3f7f4d7b, so
+      P1 1.2 is a no-op and the fresh-clone evidence is a change-head property; (A1)
+      the plan C21 line and pm-notes line 212 still record "122 unique paths" vs the
+      re-derived 121. None changes an AC or a gate.
+    suggestion: >-
+      Optional wording/bookkeeping: reword A5 to "No record is written", note A6 in
+      the phase-1 evidence, and correct the 122→121 ledger figure at the next pm-notes
+      append. Carry in the PR body per readiness-iter-3.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-21T22:23:52Z
+next_step: >-
+  CALL_CODER — remediate in order: (1) F-1 root-level symlink classification
+  (conflict/blocked, never followed/moved) with the exact `.jaiship -> .delivery-os`
+  root case; (2) F-2 container-directory descent and the merge path; (3) F-3
+  audit suppression keyed on parsed command+subcommand (incl. flag-before-argument
+  order); (4) F-4 restore the TC-MIGRATE-009 `install status` before/after proof
+  and the multi-header/foreign-record seed; (5) F-5 declare the override literal
+  site instead of constructing it; (6) F-6 normalise/canonicalise `--backup-dir`;
+  (7) F-7 report the symlink remedy; then re-run the migration battery and both
+  conformance arms and re-review. F-8 is optional bookkeeping.

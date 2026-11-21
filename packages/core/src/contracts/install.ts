@@ -402,6 +402,11 @@ export type MigrationEntryData = {
   readonly disposition: MigrationDisposition;
   readonly files: number;
   readonly bytes: number;
+  /**
+   * The absolute path the disposition names when it is not the relative entry
+   * (a root-level symlink, or a symlink on the destination side).
+   */
+  readonly path?: string;
   readonly reason?: string;
   readonly derived?: boolean;
 };

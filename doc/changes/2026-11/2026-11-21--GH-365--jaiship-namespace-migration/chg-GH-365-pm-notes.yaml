@@ -225,7 +225,7 @@ notes:
     date: "2026-11-21"
   - text: "Delivery planning COMPLETE: chg-GH-365-plan.yaml, 10 delivery phases
       (P1…P10, all kind delivery, tier full, repo main-tools, standard weight),
-      168 declared file entries over 122 unique paths (+1 folder entry);
+      168 declared file entries over 121 unique paths (+1 folder entry);
       ownership 31/31 ACs and 36/36 TCs with 0 orphans and 0 double-owned;
       mutation allocation 5+3+5+4+21+3+4+8+1 = 54 (M1–M54 once each). `plan
       validate` verdict=valid, tier=full, readyForDevelopment=true; `lint plan`

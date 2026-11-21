@@ -209,7 +209,7 @@
 #   C20 the "exactly one changeset" claim becomes mechanically observed: P2's
 #       registry suite asserts one changeset file exists for GH-365 and lists the
 #       five lockstep packages; P10 re-runs it.
-#   C21 the header states 168 file entries / 122 unique paths / 1 folder entry; the
+#   C21 the header states 168 file entries / 121 unique paths / 1 folder entry; the
 #       pm-notes ledger correction is a PM action, not a plan edit.
 #   C22 the duplicated 9.3 block is renumbered (9.3/9.4/9.5/9.6/9.7/9.8).
 #   C23 `tests/behaviour/projects-groups-list.test.ts` and
@@ -2252,6 +2252,10 @@ phases:
     scope:
       files:
         - packages/core/src/contracts/config.ts
+        # REVIEW REMEDIATION (F-5): the override contract's prior literal is
+        # written plainly and declared here as a budgeted
+        # `prior-working-name-override` site, so no split-literal hides a site.
+        - scripts/checks/namespace-shims.registry.json
         # THE KEY-SET AUTHORITY (C7): PRODUCTION_CATALOG, so the bounded mapping's
         # blast radius is computable and a catalog edit is declared, never an
         # undeclared edit.
@@ -2261,6 +2265,10 @@ phases:
         # moves the entrypoint-bin inventory, the identity-docs pin, the alias
         # baseline, and the executable/port inventories.
         - packages/core/src/config/index.ts
+        # REVIEW REMEDIATION (F-5): the declared prior literal is a committed
+        # constant at the override contract, so the branding seam gains its one
+        # narrow, exact exception (one file, one name, one value).
+        - tests/structure/branding-seam.test.ts
         - tests/checks/identity-docs.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json

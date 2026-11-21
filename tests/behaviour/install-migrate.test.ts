@@ -7,12 +7,13 @@
  * absence.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import type { InstallGitRead } from "../../packages/core/src/contracts/install";
+import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/state";
 import { migrationRoots } from "../../packages/core/src/domain/install-migration";
 import {
   validateMigrationManifestPayload,
@@ -89,6 +90,7 @@ const runMigration = async (
     readonly ordering?: ReturnType<typeof createOrderingRecorder>;
     readonly managedPathBlock?: { readonly file: string; readonly marker: string };
     readonly backupRoot?: string;
+    readonly stateRoots?: readonly string[];
   } = {},
 ): Promise<RunResult> => {
   const fs = options.fs ?? createRecordingFs();
@@ -135,6 +137,7 @@ const runMigration = async (
     daemon,
     git,
     migration,
+    ...(options.stateRoots === undefined ? {} : { stateRoots: options.stateRoots }),
   });
   const install = createInstallCommandDefinition(runtime);
   const stdout = bufferSink();
@@ -201,11 +204,19 @@ describe("TC-MIGRATE-001 grammar, admission and the unscoped project scope", () 
     }
   });
 
-  test("relative and in-source --backup-dir values are input.value.rejected", async () => {
+  test("relative, in-source, `..`-normalised and symlinked --backup-dir values are input.value.rejected", async () => {
     const world = WORLD("backup-dir");
     try {
       seedCleanWorld(world);
-      for (const value of ["relative/backups", join(world.priorConfig, "backups")]) {
+      const { symlinkSync } = await import("node:fs");
+      const link = join(world.home, "source-link");
+      symlinkSync(world.priorConfig, link);
+      for (const value of [
+        "relative/backups",
+        join(world.priorConfig, "backups"),
+        join(world.priorConfig, "..", ".delivery-os", "backups"),
+        join(link, "backups"),
+      ]) {
         const run = await runMigration(world, [
           "install",
           "migrate",
@@ -261,7 +272,7 @@ describe("TC-MIGRATE-001 grammar, admission and the unscoped project scope", () 
     }
   });
 
-  test("a source symlink is blocked, a destination symlink is conflict, both retained", async () => {
+  test("a source symlink is blocked, a destination symlink is conflict, both retained with path and remedy", async () => {
     const source = WORLD("source-symlink");
     try {
       seedCleanWorld(source);
@@ -274,13 +285,31 @@ describe("TC-MIGRATE-001 grammar, admission and the unscoped project scope", () 
       const run = await runMigration(source, ["install", "migrate", "--json"]);
       const sourceRoots = run.data?.roots;
       if (!Array.isArray(sourceRoots)) throw new Error("no roots");
-      const root = (sourceRoots as { label: string; entries: { disposition: string }[] }[]).find(
-        (entry) => entry.label === "host-configuration",
-      );
+      const root = (
+        sourceRoots as {
+          label: string;
+          entries: { disposition: string; path?: string; relativePath: string }[];
+        }[]
+      ).find((entry) => entry.label === "host-configuration");
       if (root === undefined) throw new Error("no host-configuration root");
-      expect(root.entries.some((entry) => entry.disposition === "blocked")).toBe(true);
+      const blocked = root.entries.find((entry) => entry.disposition === "blocked");
+      expect(blocked?.path).toBe(link);
       expect(exists(link)).toBe(true);
       expect(run.records).toEqual([]);
+      const sourceData = run.data as { conflicts?: string[]; residuals?: string[] };
+      expect(
+        (sourceData.conflicts ?? []).some(
+          (line) => line.includes(link) && line.includes("re-run install migrate"),
+        ),
+      ).toBe(true);
+      expect(
+        (sourceData.residuals ?? []).some(
+          (line) => line.includes(link) && line.includes("re-run install migrate"),
+        ),
+      ).toBe(true);
+      const human = await runMigration(source, ["install", "migrate"]);
+      expect(human.stdout).toContain(link);
+      expect(human.stdout).toContain("re-run install migrate");
     } finally {
       source.dispose();
     }
@@ -291,21 +320,105 @@ describe("TC-MIGRATE-001 grammar, admission and the unscoped project scope", () 
       const { symlinkSync } = await import("node:fs");
       writeFileAt(join(destination.base, "dest-target"), "dest\n");
       writeFileAt(join(destination.currentConfig, ".keep"), "keep\n");
-      symlinkSync(
-        join(destination.base, "dest-target"),
-        join(destination.currentConfig, "config.yaml"),
-      );
+      const destinationLink = join(destination.currentConfig, "config.yaml");
+      symlinkSync(join(destination.base, "dest-target"), destinationLink);
       const run = await runMigration(destination, ["install", "migrate", "--json"]);
       const sourceRoots = run.data?.roots;
       if (!Array.isArray(sourceRoots)) throw new Error("no roots");
-      const root = (sourceRoots as { label: string; entries: { disposition: string }[] }[]).find(
-        (entry) => entry.label === "host-configuration",
-      );
+      const root = (
+        sourceRoots as {
+          label: string;
+          entries: { disposition: string; path?: string; relativePath: string }[];
+        }[]
+      ).find((entry) => entry.label === "host-configuration");
       if (root === undefined) throw new Error("no host-configuration root");
-      expect(root.entries.some((entry) => entry.disposition === "conflict")).toBe(true);
-      expect(exists(join(destination.currentConfig, "config.yaml"))).toBe(true);
+      const conflict = root.entries.find((entry) => entry.disposition === "conflict");
+      expect(conflict?.path).toBe(destinationLink);
+      expect(exists(destinationLink)).toBe(true);
+      const destinationData = run.data as { conflicts?: string[]; residuals?: string[] };
+      expect(
+        (destinationData.conflicts ?? []).some(
+          (line) => line.includes(destinationLink) && line.includes("re-run install migrate"),
+        ),
+      ).toBe(true);
+      expect(
+        (destinationData.residuals ?? []).some(
+          (line) => line.includes(destinationLink) && line.includes("re-run install migrate"),
+        ),
+      ).toBe(true);
     } finally {
       destination.dispose();
+    }
+  });
+
+  test("a destination ROOT symlink (including .jaiship -> .delivery-os) is conflict and never followed", async () => {
+    const exact = WORLD("root-dest-symlink");
+    try {
+      seedSingleEntry(exact, "config", "config.yaml", "provider: fixture\n");
+      const { symlinkSync } = await import("node:fs");
+      symlinkSync(exact.priorConfig, exact.currentConfig);
+      const run = await runMigration(exact, ["install", "migrate", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(run.data?.verdict).toBe("conflict");
+      const roots = run.data?.roots as {
+        label: string;
+        verdict?: string;
+        entries: { disposition: string; path?: string }[];
+      }[];
+      const root = roots.find((entry) => entry.label === "host-configuration");
+      expect(root?.verdict).toBe("conflict");
+      expect(
+        root?.entries.some(
+          (entry) => entry.disposition === "conflict" && entry.path === exact.currentConfig,
+        ),
+      ).toBe(true);
+      expect(run.fs.writes).toEqual([]);
+      expect(
+        ((run.data?.conflicts as string[] | undefined) ?? []).some(
+          (line) => line.includes(exact.currentConfig) && line.includes("re-run install migrate"),
+        ),
+      ).toBe(true);
+      expect(readFileSync(join(exact.priorConfig, "config.yaml"), "utf8")).toBe(
+        "provider: fixture\n",
+      );
+    } finally {
+      exact.dispose();
+    }
+
+    const external = WORLD("root-dest-external");
+    try {
+      seedSingleEntry(external, "config", "secrets.txt", "secret\n");
+      const { symlinkSync } = await import("node:fs");
+      const target = join(external.base, "external");
+      writeFileAt(join(target, ".keep"), "keep\n");
+      symlinkSync(target, external.currentConfig);
+      const run = await runMigration(external, ["install", "migrate", "--json"]);
+      expect(run.exit).toBe(1);
+      expect(exists(join(target, "secrets.txt"))).toBe(false);
+      expect(exists(join(external.priorConfig, "secrets.txt"))).toBe(true);
+      expect(run.fs.writes.some((path) => path.startsWith(target))).toBe(false);
+    } finally {
+      external.dispose();
+    }
+  });
+
+  test("every flag order before the subcommand records zero with the audit dependency composed", async () => {
+    const world = WORLD("flag-order");
+    try {
+      seedCleanWorld(world);
+      const override = join(world.base, "explicit-backups");
+      for (const argv of [
+        ["install", "migrate", "--dry-run", "--json"],
+        ["install", "--dry-run", "migrate", "--json"],
+        ["install", "--backup-dir", override, "migrate", "--dry-run", "--json"],
+        ["install", "--stop-daemon", "migrate", "--dry-run", "--json"],
+        ["install", "--migrate", "--json"],
+      ]) {
+        const run = await runMigration(world, argv);
+        expect(run.records, argv.join(" ")).toEqual([]);
+      }
+    } finally {
+      world.dispose();
     }
   });
 
@@ -638,6 +751,59 @@ describe("TC-MIGRATE-006 the disposition matrix and verdict composition", () => 
       world.dispose();
     }
   });
+
+  test("a pre-existing destination container descends instead of blanket-conflicting", async () => {
+    const world = WORLD("container-existing");
+    try {
+      seedCleanWorld(world);
+      mkdirSync(join(world.currentState, "projects"), { recursive: true });
+      const run = await runMigration(world, ["install", "migrate", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(run.data?.verdict).toBe("migrated");
+      const roots = run.data?.roots as {
+        label: string;
+        entries: { relativePath: string; disposition: string }[];
+      }[];
+      const entries = roots.find((root) => root.label === "host-state")?.entries ?? [];
+      expect(
+        entries.some(
+          (entry) => entry.relativePath === "projects" && entry.disposition === "conflict",
+        ),
+      ).toBe(false);
+      expect(
+        entries.some(
+          (entry) => entry.relativePath === "projects/p1" && entry.disposition === "moved",
+        ),
+      ).toBe(true);
+      expect(exists(join(world.currentState, "projects", "p1", "records.jsonl"))).toBe(true);
+    } finally {
+      world.dispose();
+    }
+  });
+
+  test("a disjoint child inside an existing container merges by copy-verify-remove", async () => {
+    const world = WORLD("container-merge");
+    try {
+      seedSingleEntry(world, "state", "projects/p1/records.jsonl", '{"n":1}\n');
+      writeFileAt(join(world.currentState, "projects", "p1", "other.jsonl"), '{"other":1}\n');
+      const run = await runMigration(world, ["install", "migrate", "--json"]);
+      expect(run.exit).toBe(0);
+      expect(entryOf(run, "host-state", "projects/p1/records.jsonl")).toBe("moved");
+      expect(entryOf(run, "host-state", "projects/p1/other.jsonl")).toBe("already-migrated");
+      expect(
+        readFileSync(join(world.currentState, "projects", "p1", "records.jsonl"), "utf8"),
+      ).toBe('{"n":1}\n');
+      expect(readFileSync(join(world.currentState, "projects", "p1", "other.jsonl"), "utf8")).toBe(
+        '{"other":1}\n',
+      );
+      expect(exists(join(world.priorState, "projects", "p1", "records.jsonl"))).toBe(false);
+      expect(
+        run.fs.writes.includes(join(world.priorState, "projects", "p1", "records.jsonl")),
+      ).toBe(true);
+    } finally {
+      world.dispose();
+    }
+  });
 });
 
 describe("TC-MIGRATE-007 the derived host index", () => {
@@ -724,24 +890,67 @@ describe("TC-MIGRATE-008 partial failure and recovery", () => {
 });
 
 describe("TC-MIGRATE-009 byte preservation and no re-versioning", () => {
-  test("every moved file digest and every ledger header is byte-identical", async () => {
+  test("every moved file digest, every ledger header and the install status verdict are unchanged", async () => {
     const world = WORLD("bytes");
     try {
       seedCleanWorld(world);
-      const headerBefore = readFileSync(join(world.priorState, "projects", "p1", "header.p1.json"));
+      writeFileAt(
+        join(world.priorState, "header.p1.json"),
+        `${JSON.stringify({ schemaVersion: STATE_SCHEMA_VERSION, workspace: "p1" })}\n`,
+      );
+      writeFileAt(
+        join(world.priorState, "header.p2.json"),
+        `${JSON.stringify({ schemaVersion: STATE_SCHEMA_VERSION, workspace: "p2" })}\n`,
+      );
+      const foreign = join(world.priorState, "projects", "p1", "records.foreign.jsonl");
+      writeFileAt(foreign, '{"unknown":"foreign","schemaVersion":"foreign.v0"}\n');
+
+      const statusBefore = await runMigration(world, ["install", "status", "--json"], {
+        stateRoots: [world.priorState],
+      });
+      const beforeFormat = (statusBefore.data as { stateFormat?: unknown } | undefined)
+        ?.stateFormat as
+        | { accepted: string; roots: { outcome: string; observed: string | null }[] }
+        | undefined;
+      expect(beforeFormat?.roots[0]?.outcome).toBe("accepted");
+      expect(beforeFormat?.roots[0]?.observed).toBe(STATE_SCHEMA_VERSION);
+
+      const headerBefore = readFileSync(join(world.priorState, "header.p1.json"));
+      const headerTwoBefore = readFileSync(join(world.priorState, "header.p2.json"));
+      const foreignBefore = readFileSync(foreign);
       const configBefore = digestsOf(world.priorConfig);
       const stateBefore = digestsOf(world.priorState);
+
       const run = await runMigration(world, ["install", "migrate", "--json"]);
       expect(run.exit).toBe(0);
-      expect(readFileSync(join(world.currentState, "projects", "p1", "header.p1.json"))).toEqual(
-        headerBefore,
-      );
+
+      const statusAfter = await runMigration(world, ["install", "status", "--json"], {
+        stateRoots: [world.currentState],
+      });
+      const afterFormat = (statusAfter.data as { stateFormat?: unknown } | undefined)
+        ?.stateFormat as
+        | { accepted: string; roots: { outcome: string; observed: string | null }[] }
+        | undefined;
+      expect(afterFormat?.accepted).toBe(beforeFormat?.accepted);
+      expect(afterFormat?.roots[0]?.outcome).toBe(beforeFormat?.roots[0]?.outcome);
+      expect(afterFormat?.roots[0]?.observed).toBe(beforeFormat?.roots[0]?.observed);
+
+      expect(readFileSync(join(world.currentState, "header.p1.json"))).toEqual(headerBefore);
+      expect(readFileSync(join(world.currentState, "header.p2.json"))).toEqual(headerTwoBefore);
+      expect(
+        readFileSync(join(world.currentState, "projects", "p1", "records.foreign.jsonl")),
+      ).toEqual(foreignBefore);
       expect(digestsOf(world.currentConfig)["config.yaml"]).toBe(
         configBefore["config.yaml"] as string,
       );
       expect(digestsOf(world.currentState)["projects/p1/records.jsonl"]).toBe(
         stateBefore["projects/p1/records.jsonl"] as string,
       );
+      expect(
+        Object.keys(digestsOf(world.currentState))
+          .filter((key) => key.startsWith("header."))
+          .sort(),
+      ).toEqual(["header.p1.json", "header.p2.json"]);
     } finally {
       world.dispose();
     }

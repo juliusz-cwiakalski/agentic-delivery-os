@@ -11,6 +11,8 @@
  * produced only by the delivered projection module.
  */
 
+import { realpathSync } from "node:fs";
+import { dirname, isAbsolute, resolve as resolvePath } from "node:path";
 import {
   classifyInstallDestination,
   INSTALL_PROBE_BYTES,
@@ -1060,14 +1062,36 @@ const stateRefusal = (code: string, summary: string): Refusal => ({
   error: { kind: "state", code, summary },
 });
 
-const absolutePath = (path: string): boolean => path.startsWith("/");
+const absolutePath = (path: string): boolean => isAbsolute(path);
+
+/**
+ * Canonicalize a path for the in-source check: lexical resolution plus the real
+ * path of the deepest existing ancestor, so `..` and a symlinked parent cannot
+ * disguise an in-source backup root (F-3 step 4, API-1).
+ */
+const canonicalPath = (path: string): string => {
+  const resolved = resolvePath(path);
+  let current = resolved;
+  const suffix: string[] = [];
+  for (;;) {
+    try {
+      const real = realpathSync(current);
+      return suffix.length === 0 ? real : resolvePath(real, ...suffix.reverse());
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return resolved;
+      suffix.push(current.slice(parent.length).replace(/^\/+/u, ""));
+      current = parent;
+    }
+  }
+};
 
 const insideSourceRoot = (path: string, roots: readonly InstallMigrationRoot[]): boolean => {
-  const normalized = path.replace(/\/+$/u, "");
+  const canonical = canonicalPath(path);
   return roots.some((root) => {
     if (root.scope !== "scoped" || root.source === undefined) return false;
-    const source = root.source.replace(/\/+$/u, "");
-    return normalized === source || normalized.startsWith(`${source}/`);
+    const source = canonicalPath(root.source);
+    return canonical === source || canonical.startsWith(`${source}/`);
   });
 };
 
@@ -1105,8 +1129,10 @@ export const renderMigrationHuman = (payload: MigrationPlanPayload): string => {
         (root.verdict === undefined ? "" : ` · ${root.verdict}`),
     );
     for (const entry of root.entries) {
+      const path = entry.path ?? entry.relativePath;
+      const reason = entry.reason === undefined ? "" : ` · ${entry.reason}`;
       lines.push(
-        `  ${entry.disposition} ${entry.relativePath} · ${String(entry.files)} file(s) · ${String(entry.bytes)} byte(s)`,
+        `  ${entry.disposition} ${path} · ${String(entry.files)} file(s) · ${String(entry.bytes)} byte(s)${reason}`,
       );
     }
   }
@@ -1161,7 +1187,8 @@ const runMigration = async (
   });
   if (!admission.ok) return admissionRefusal(admission);
 
-  const backupRoot = options.backupDir ?? migration.backupRoot;
+  const backupRoot =
+    options.backupDir === undefined ? migration.backupRoot : canonicalPath(options.backupDir);
   const runId = migration.runId();
   const createdAt = migration.clock.nowIso();
   const plan = buildMigrationPlan({ roots: migration.roots, fs: runtime.fs });

@@ -168,6 +168,11 @@
           "maxOccurrences": 2
         },
         {
+          "file": "packages/core/src/contracts/config.ts",
+          "role": "The override contract's declared prior working-name input, a lower-precedence compatibility channel.",
+          "maxOccurrences": 1
+        },
+        {
           "file": "scripts/install.sh",
           "role": "The installer's environment scrub when it probes the installed path.",
           "maxOccurrences": 1

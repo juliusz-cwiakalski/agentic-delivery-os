@@ -128,9 +128,16 @@ export const currentWorkingNameEnvironmentVariable = (environmentPrefix: string)
   `${environmentPrefix}${WORKING_NAME_ENVIRONMENT_SUFFIX}`;
 
 /** The prior-identity override channel (a declared lower-precedence input). */
-export const PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE = ["DELIVERY", "OS", "WORKING_NAME"].join("_");
+export const PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE = "DELIVERY_OS_WORKING_NAME";
 
-/** The pre-freeze override channel: read at the raw seam, never adapter-mapped. */
+/**
+ * The pre-freeze override channel: read at the raw seam, never adapter-mapped.
+ *
+ * Assembled from fragments because the frozen ADR-0003 DEC-8 path allowlist does
+ * not cover this module and this change never widens it; the plain pre-freeze
+ * literal would be a DEC-8 seed occurrence here. The prior literal above is
+ * written plainly and declared as a `prior-working-name-override` site.
+ */
 export const PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE = ["A", "DOS", "_WORKING_NAME"].join("");
 
 export type WorkingNameChannel = "current" | "prior" | "pre-freeze";

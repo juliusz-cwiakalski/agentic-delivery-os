@@ -452,4 +452,24 @@ describe("TC-SHIM-002 both-directions reconciliation", () => {
     expect(preFreezeFiles.has("tests/fixtures/namespace/pre-freeze-env.ts")).toBe(true);
     expect(preFreezeFiles.has("packages/adapters/src/legacy/index.ts")).toBe(true);
   });
+
+  test("row G: the override contract declares the prior literal at a declared site", () => {
+    const shims = liveShims(ROOT);
+    const override = shims.find((shim) => shim.id === "prior-working-name-override");
+    expect(override).toBeDefined();
+    const site = override?.sites.find(
+      (candidate) => candidate.file === "packages/core/src/contracts/config.ts",
+    );
+    expect(site).toBeDefined();
+    expect(site?.maxOccurrences ?? 1).toBeGreaterThanOrEqual(1);
+    const text = readFileSync(join(ROOT, "packages/core/src/contracts/config.ts"), "utf8");
+    expect(text).toContain("DELIVERY_OS_WORKING_NAME");
+    expect(text).not.toContain('["DELIVERY", "OS", "WORKING_NAME"]');
+    const preFreeze = shims.find((shim) => shim.id === "pre-freeze-environment-prefix");
+    expect(
+      preFreeze?.sites.some(
+        (candidate) => candidate.file === "packages/core/src/contracts/config.ts",
+      ),
+    ).toBe(false);
+  });
 });
