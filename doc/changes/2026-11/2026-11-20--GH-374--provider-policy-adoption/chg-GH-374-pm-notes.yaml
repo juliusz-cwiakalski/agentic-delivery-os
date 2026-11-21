@@ -21,8 +21,8 @@ phases:
     started: "2026-11-20T11:58:00Z"
     completed: 2026-11-21T06:45:20.933Z
   delivery:
-    started: null
-    completed: null
+    started: "2026-11-21T07:12:00Z"
+    completed: 2026-11-21T07:14:11.634Z
   system_spec_update:
     started: null
     completed: null
@@ -293,11 +293,12 @@ notes:
   - text: "delivery plan phase 1 (policy-declaration) complete: commit
       01b507b9d97d22804f113a3ae48cab5885b6e6cf. Gate 0 `pnpm build` PASS;
       whole-document validator probe PASS (provider policy loads;
-      defaultChain=subscription-first; chains=subscription-first,subscription-only;
-      profiles=delivery,paid; seats=24/24); control suite
+      defaultChain=subscription-first;
+      chains=subscription-first,subscription-only; profiles=delivery,paid;
+      seats=24/24); control suite
       tests/structure/verify-gates-suite-map-reference.test.ts 14 pass / 0 fail.
-      `.delivery-os/config.yaml` gained the `provider` branch; the `verify` block
-      is byte-identical (diff is insertions only)."
+      `.delivery-os/config.yaml` gained the `provider` branch; the `verify`
+      block is byte-identical (diff is insertions only)."
     type: evidence
     date: "2026-11-21"
   - text: "DEVIATION (commit subject): the six plan-phase commits are composed by
@@ -321,47 +322,49 @@ notes:
       classifies that as `commit.atomic-abort` (staging failed). The ignore line
       was commented out for the delivery (git metadata only; not a repository
       file, not committed) so phase 1 could land, and it is restored after the
-      final plan-phase commit." 
+      final plan-phase commit."
     type: info
     date: "2026-11-21"
   - text: "delivery plan phase 2 (prompt-cleanup) complete: commit
-      114a1d34993cfff9739c9adcffda85842b172aa8. The `.opencode/agent/toolsmith.md`
-      edit was DELEGATED to @toolsmith (AGENTS.md): every provider-qualified model
-      identifier and every model-anchored family id became a neutral placeholder
-      (`<provider>/<model>`), the `<model_profiles>` ids became capability-tier ids,
-      and a `<routing_authority>` sentence points at the typed
+      114a1d34993cfff9739c9adcffda85842b172aa8. The
+      `.opencode/agent/toolsmith.md` edit was DELEGATED to @toolsmith
+      (AGENTS.md): every provider-qualified model identifier and every
+      model-anchored family id became a neutral placeholder
+      (`<provider>/<model>`), the `<model_profiles>` ids became capability-tier
+      ids, and a `<routing_authority>` sentence points at the typed
       `.delivery-os/config.yaml` policy. `claude.model: opus` frontmatter kept.
-      `scripts/build-claude-plugin.sh` regenerated `.ados-claude/agents/toolsmith.md`
-      (re-run after the final source edit; only the toolsmith pair changed across
-      the whole `.ados-claude` tree). Gate: `tests/checks/milestone-prompts.test.ts`
-      15 pass / 0 fail; `tests/checks/provider-policy-adoption-prompt-scan.test.ts`
-      12 pass / 0 fail (24/24 prompts, 0 identifiers, 10/10 planted classes,
-      pre-change regression arm reports every recorded literal, generated pair a
-      build no-op)."
+      `scripts/build-claude-plugin.sh` regenerated
+      `.ados-claude/agents/toolsmith.md` (re-run after the final source edit;
+      only the toolsmith pair changed across the whole `.ados-claude` tree).
+      Gate: `tests/checks/milestone-prompts.test.ts` 15 pass / 0 fail;
+      `tests/checks/provider-policy-adoption-prompt-scan.test.ts` 12 pass / 0
+      fail (24/24 prompts, 0 identifiers, 10/10 planted classes, pre-change
+      regression arm reports every recorded literal, generated pair a build
+      no-op)."
     type: evidence
     date: "2026-11-21"
   - text: "delivery plan phase 3 (reference-pins) complete: commit
       6f2cc9df9b1e859f7f671aa3b82623a1dfcafb08. Gate: `bun test
-      tests/structure/provider-policy-adoption-reference.test.ts` 46 pass / 0 fail
-      (17 owned cases, 625 assertions): acquisition reads the prior file once with
-      `.jaiship` absent; both chains validate; grace bound 300/300; six chain
-      mutants plus a budget defect and a profile defect refuse with the exact
-      detail prose; declared entry bodies pinned and the four delivered quota
-      defaults asserted separately at `layer=defaults`; the 24-seat roster equality
-      both directions; eight named drift mutants fail by name; both origins
-      reported; `verify.suite-map` pinned with the control suite's content hash;
-      MIG-001..003 pinned as tree invariants."
+      tests/structure/provider-policy-adoption-reference.test.ts` 46 pass / 0
+      fail (17 owned cases, 625 assertions): acquisition reads the prior file
+      once with `.jaiship` absent; both chains validate; grace bound 300/300;
+      six chain mutants plus a budget defect and a profile defect refuse with
+      the exact detail prose; declared entry bodies pinned and the four
+      delivered quota defaults asserted separately at `layer=defaults`; the
+      24-seat roster equality both directions; eight named drift mutants fail by
+      name; both origins reported; `verify.suite-map` pinned with the control
+      suite's content hash; MIG-001..003 pinned as tree invariants."
     type: evidence
     date: "2026-11-21"
   - text: "delivery plan phase 4 (replay-proof) complete: commit
       ddbe0664e22f5c7f9857036ddb751a1e3a0ac0fa. Gate: `bun test
-      tests/behaviour/provider-policy-adoption.test.ts` 33 pass / 0 fail (22 owned
-      cases, 893 assertions): seeded resolve and prior-identity posture, 24-role
-      seats/env record/binding, named vision arms with the agent-less trap, the
-      watch view with age and bound, six committed replays (spend 25 window park,
-      spend 30 ticket stop), byte-identical repeats and a key-shuffled twin, the
-      hostile-fixture refusal matrix, and nomination with the exact pause strings.
-      Six fixtures committed under
+      tests/behaviour/provider-policy-adoption.test.ts` 33 pass / 0 fail (22
+      owned cases, 893 assertions): seeded resolve and prior-identity posture,
+      24-role seats/env record/binding, named vision arms with the agent-less
+      trap, the watch view with age and bound, six committed replays (spend 25
+      window park, spend 30 ticket stop), byte-identical repeats and a
+      key-shuffled twin, the hostile-fixture refusal matrix, and nomination with
+      the exact pause strings. Six fixtures committed under
       `tests/fixtures/provider/policy-adoption/simulate/`."
     type: evidence
     date: "2026-11-21"
@@ -373,42 +376,44 @@ notes:
       exclusions with reasons, reports 0 findings over the real tree (including
       `scripts/install.sh`), detects three planted source classes while not
       reporting the allowed invocation or the example copy, fails an empty
-      include set, and proves the blueprint is the only executable hook installer
-      in the tree and is unreferenced by the surface. The canary suite injects a
-      runtime-assembled value through the credential port and finds it on no
-      surface; every credential node is `{sourceKey:{style,name}}` with both
-      hostile-key arms (config layer refuses `config.key.unknown` with no
+      include set, and proves the blueprint is the only executable hook
+      installer in the tree and is unreferenced by the surface. The canary suite
+      injects a runtime-assembled value through the credential port and finds it
+      on no surface; every credential node is `{sourceKey:{style,name}}` with
+      both hostile-key arms (config layer refuses `config.key.unknown` with no
       `key`/`layer` member, raw parser ignores) and the SEC-003 in-memory corpus
       with the closed placeholder carve-out."
     type: evidence
     date: "2026-11-21"
-  - text: "delivery plan phase 6 (documentation-truth) complete: the phase-6
-      commit immediately following this note is the branch head at the boundary.
-      Gate: `bun test tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the
+  - text: "delivery plan phase 6 (documentation-truth) complete: the phase-6 commit
+      immediately following this note is the branch head at the boundary. Gate:
+      `bun test tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the
       delivered GH-242/GH-350 blocks plus a closed GH-374 block: 28 required
       phrase sites, 12 retired claims over an 8-page closed set, marker
-      assertions, both-directions arms and a delta carve-out);
-      `bash scripts/.tests/test-doc-distribution.sh` PASS (96 in-scope docs, no
+      assertions, both-directions arms and a delta carve-out); `bash
+      scripts/.tests/test-doc-distribution.sh` PASS (96 in-scope docs, no
       drift). The three guides state the adopted policy, the canonical routing
       path and the retirement; `feature-provider-profiles.md`'s line-38 sentence
-      now states the lane-watch-only role. G4 (all six suites) 166 pass / 0 fail."
+      now states the lane-watch-only role. G4 (all six suites) 166 pass / 0
+      fail."
     type: evidence
     date: "2026-11-21"
   - text: "IMPLEMENTATION RECONCILIATIONS (plan/test-plan prose vs delivered
       behaviour; each was resolved by asserting the DELIVERED fact, never by
-      skipping or weakening an assertion). (1) The plan said `peak-park.json` and
-      `quota-park.json` declare no quota facts; with a declared enabled quota a
-      missing fact becomes a `provider-outage` park (`engine.ts` transport
-      catch), so the conditions would read `[\"peak-window\",\"provider-outage\"]`.
-      The fixtures therefore declare a clear/exhausted delivered envelope.
-      (2) A chain park reports EVERY entry in `data.skipped`
-      (`packages/core/src/provider/chain.ts` resolveProviderChain tail), so the
-      spend-25 case asserts both entries skipped `budget-exhausted`; the
-      paid-escape claim is asserted as `decision.kind === parked` with no
-      selected provider. (3) The paid-fallback replay carries the subscription's
-      own quota park in `data.parks` (no chain park); the case asserts exactly
-      that. (4) The ticket-ceiling refusal summary names the MERGED budget
-      evidence (`window-cost (window, cost 30 of 20)`) because
+      skipping or weakening an assertion). (1) The plan said `peak-park.json`
+      and `quota-park.json` declare no quota facts; with a declared enabled
+      quota a missing fact becomes a `provider-outage` park (`engine.ts`
+      transport catch), so the conditions would read
+      `[\"peak-window\",\"provider-outage\"]`. The fixtures therefore declare a
+      clear/exhausted delivered envelope. (2) A chain park reports EVERY entry
+      in `data.skipped` (`packages/core/src/provider/chain.ts`
+      resolveProviderChain tail), so the spend-25 case asserts both entries
+      skipped `budget-exhausted`; the paid-escape claim is asserted as
+      `decision.kind === parked` with no selected provider. (3) The
+      paid-fallback replay carries the subscription's own quota park in
+      `data.parks` (no chain park); the case asserts exactly that. (4) The
+      ticket-ceiling refusal summary names the MERGED budget evidence
+      (`window-cost (window, cost 30 of 20)`) because
       `combineProviderConditions` merges failed evidence in budget-name order,
       and the simulate surface does not append `[provider.budget.crossed]`; the
       case asserts the refusal envelope plus the announcement identity at the
