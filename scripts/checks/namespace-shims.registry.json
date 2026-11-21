@@ -1,0 +1,245 @@
+{
+  "schemaId": "namespace.shims.v1",
+  "window": {
+    "declaredIn": "0.1.0",
+    "removalRelease": "0.2.0"
+  },
+  "shims": [
+    {
+      "id": "executable-alias",
+      "kind": "executable",
+      "literal": "delivery-os",
+      "direction": "invocation",
+      "lineage": "delivery-os",
+      "noticeId": "shim.executable-alias",
+      "notice": "The prior executable name is a compatibility alias for the current identity; invoke the current executable instead, and the alias is removed in the declared removal release.",
+      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "owner": "cli surface owner",
+      "sites": [
+        {
+          "file": "packages/cli/bin/delivery-os.ts",
+          "role": "The compatibility alias's executable identity selector.",
+          "maxOccurrences": 2
+        },
+        {
+          "file": "packages/cli/bin/jaiship.ts",
+          "role": "The primary bin's declared prior identity for the compatibility alias.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "packages/cli/package.json",
+          "role": "The alias bin's package bin entry and its target path.",
+          "maxOccurrences": 2
+        },
+        {
+          "file": "packages/mcp/src/serve.ts",
+          "role": "The MCP serve composition's neutral default working name.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/hooks/pre-opencode-iteration-owner-hold.sh",
+          "role": "The example owner-hold hook's header naming the prior working name.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/.tests/test-dispatch-bash-fallback.sh",
+          "role": "The fallback battery's fake prior executable fixtures.",
+          "maxOccurrences": 2
+        }
+      ]
+    },
+    {
+      "id": "prior-config-directory",
+      "kind": "path",
+      "literal": ".delivery-os",
+      "direction": "read-only",
+      "lineage": "delivery-os",
+      "noticeId": "shim.prior-config-directory",
+      "notice": "A prior-identity project configuration file was read as a compatibility input; move it to the current configuration directory, and the read is removed in the declared removal release.",
+      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "owner": "configuration owner",
+      "sites": [
+        {
+          "file": "packages/core/src/domain/install-migration.ts",
+          "role": "The install migration declaration naming the prior configuration root.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "packages/adapters/src/file/provider-migrate-source.ts",
+          "role": "The adapter comment documenting the prior configuration directory as a migration source.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/lib/dispatch-authority.sh",
+          "role": "The shell fallback's prior home-default root.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/.tests/test-dispatch-bash-fallback.sh",
+          "role": "The fallback battery's prior home-default root fixtures.",
+          "maxOccurrences": 2
+        }
+      ]
+    },
+    {
+      "id": "prior-state-root",
+      "kind": "path",
+      "literal": ".delivery-os-state",
+      "direction": "read-only",
+      "lineage": "delivery-os",
+      "noticeId": "shim.prior-state-root",
+      "notice": "A prior-identity host state root was read as a compatibility input; run the migration verb to move it, and the read is removed in the declared removal release.",
+      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "owner": "state owner",
+      "sites": [
+        {
+          "file": "packages/core/src/domain/install-migration.ts",
+          "role": "The install migration declaration naming the prior host state root.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/hooks/pre-opencode-iteration-owner-hold.sh",
+          "role": "The example owner-hold hook's prior host-root marker path.",
+          "maxOccurrences": 2
+        },
+        {
+          "file": "scripts/.tests/test-hook-owner-hold-example.sh",
+          "role": "The owner-hold hook battery's prior host-root marker fixtures.",
+          "maxOccurrences": 3
+        }
+      ]
+    },
+    {
+      "id": "prior-working-name-override",
+      "kind": "environment",
+      "literal": "DELIVERY_OS_WORKING_NAME",
+      "direction": "read-only",
+      "lineage": "delivery-os",
+      "noticeId": "shim.prior-working-name-override",
+      "notice": "The prior working-name override channel was read as a compatibility input; set the identity-derived override instead, and the channel is removed in the declared removal release.",
+      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "owner": "branding owner",
+      "sites": [
+        {
+          "file": "packages/cli/src/edge.ts",
+          "role": "The composition edge's neutral override channel constant.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "packages/cli/src/entrypoint.ts",
+          "role": "The entrypoint's override read and its documented ordering.",
+          "maxOccurrences": 2
+        },
+        {
+          "file": "packages/mcp/src/serve.ts",
+          "role": "The MCP serve composition's override channel constant.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/install.sh",
+          "role": "The installer's environment scrub when it probes the installed path.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/uninstall.sh",
+          "role": "The uninstaller's environment scrub when it probes the installed path.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/.tests/test-uninstall.sh",
+          "role": "The uninstall battery's override-channel fixtures.",
+          "maxOccurrences": 2
+        }
+      ]
+    },
+    {
+      "id": "prior-environment-prefix",
+      "kind": "environment-prefix",
+      "literal": "DELIVERY_OS_",
+      "direction": "read-only",
+      "lineage": "delivery-os",
+      "noticeId": "shim.prior-environment-prefix",
+      "notice": "A prior-identity environment prefix was read at a declared compatibility site; use the current prefix, and the read is removed in the declared removal release.",
+      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "owner": "autonomy and prompt-surface owners",
+      "sites": [
+        {
+          "file": "scripts/hooks/pre-opencode-iteration-owner-hold.sh",
+          "role": "The example owner-hold hook's declared environment sources.",
+          "maxOccurrences": 5
+        },
+        {
+          "file": "scripts/.tests/test-hook-owner-hold-example.sh",
+          "role": "The owner-hold hook battery's environment fixtures.",
+          "maxOccurrences": 23
+        },
+        {
+          "file": "doc/spec/features/feature-autonomous-delivery.md",
+          "role": "The autonomous-delivery page's owner-hold compatibility tables.",
+          "maxOccurrences": 4
+        },
+        {
+          "file": "doc/guides/delivery-modes.md",
+          "role": "The delivery-modes guide's owner-hold compatibility tables.",
+          "maxOccurrences": 3
+        },
+        {
+          "file": "doc/quality/test-specs/test-spec-autonomous-delivery.md",
+          "role": "The autonomous-delivery test specification's owner-hold scenarios.",
+          "maxOccurrences": 2
+        },
+        {
+          "file": "tests/fixtures/entrypoint/prior-identity/harness.ts",
+          "role": "The entrypoint prior-identity harness's raw-environment override facts.",
+          "maxOccurrences": 2
+        }
+      ]
+    },
+    {
+      "id": "pre-freeze-environment-prefix",
+      "kind": "environment-prefix",
+      "literal": "ADOS_",
+      "direction": "mapping",
+      "lineage": "pre-freeze",
+      "noticeId": "shim.pre-freeze-environment-prefix",
+      "notice": "A pre-freeze environment prefix is mapped only for declared catalog keys, with the working-name override as the one exception; no configuration key is added and no removal release is scheduled.",
+      "window": { "declaredIn": "0.0.0", "removalRelease": null },
+      "owner": "pre-freeze compatibility owner; no removal release scheduled",
+      "sites": [
+        {
+          "file": "packages/adapters/src/legacy/index.ts",
+          "role": "The legacy compatibility adapter's pre-freeze environment prefix constant.",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "packages/adapters/src/legacy/provider-migrate-table.ts",
+          "role": "The adapter's provider migration table of pre-freeze variable names.",
+          "maxOccurrences": 11
+        },
+        {
+          "file": "tests/fixtures/namespace/pre-freeze-env.ts",
+          "role": "The eight owner-named pre-freeze variables and the inert marker.",
+          "maxOccurrences": 12
+        }
+      ]
+    },
+    {
+      "id": "pre-freeze-config-directory",
+      "kind": "path",
+      "literal": ".ados",
+      "direction": "read-only",
+      "lineage": "pre-freeze",
+      "noticeId": "shim.pre-freeze-config-directory",
+      "notice": "A pre-freeze configuration directory is detected as a compatibility input; the current configuration directory is authoritative and no removal release is scheduled.",
+      "window": { "declaredIn": "0.0.0", "removalRelease": null },
+      "owner": "pre-freeze compatibility owner; no removal release scheduled",
+      "sites": [
+        {
+          "file": "packages/adapters/src/legacy/index.ts",
+          "role": "The legacy compatibility adapter's pre-freeze configuration directory constant.",
+          "maxOccurrences": 1
+        }
+      ]
+    }
+  ]
+}

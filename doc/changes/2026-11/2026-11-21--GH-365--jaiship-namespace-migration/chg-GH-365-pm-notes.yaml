@@ -380,3 +380,18 @@ notes:
       the phase family. Gate evidence must use TMPDIR=$PWD/tmp/tmpdir."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 1 COMPLETE: commit a3ba0672d3f738bd8686e2845f9fdd6dd15c531b
+      (subject from the commit primitive's template for a standalone plan-union
+      commit: 'chore(GH-365): update .delivery-os/config.yaml'; the primitive owns
+      the message and ten delivery-kind phases leave the union summary undefined).
+      Committed-head gate green: git check-ignore .jaiship/config.yaml exits 1;
+      namespace-layer 3 pass; namespace-fresh-clone 1 pass; namespace-loaded-path
+      1 pass; ignore-rules suites 10 pass; scripts/checks/ignore-rules.ts reports
+      five coverage classes; decision-record 11 pass; content-inventory 12 pass;
+      pnpm typecheck green; git diff --check clean; TDR-0074 tracked and
+      doc/decisions clean. The layer moved byte-identically (sha256
+      fa1d82b53afda848bcb1dbea5ecf79939b6f9c7518fc931aca59768ab203fb09, parsed
+      canonical 06bdf687…). The tracked .gitignore already carried the
+      projects.yaml glob (3f7f4d7b); verified, not re-added (advisory A6)."
+    type: info
+    date: "2026-11-21"
