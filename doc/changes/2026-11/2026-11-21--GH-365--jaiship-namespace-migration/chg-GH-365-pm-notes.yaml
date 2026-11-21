@@ -564,3 +564,34 @@ notes:
       remain (an accidental broad biome write was fully restored)."
     type: info
     date: "2026-11-21"
+  - text: "Plan amendment + phase 9 COMPLETE: commit 9f4a0803. The plan declares
+      the P9 discovery that the glossary becoming a declared site moves the P3
+      'not a declared site' pin. Reconciled pages: local-install (migration flags,
+      dry-run, backup root and manual reversal, per-entry precedence and
+      verdicts/exits, daemon rule, idempotence, residual lines, ten-identity
+      domain, loaded-path guarantee, symlink disposition, and the literal-free
+      shell-fallback remediation naming scripts/lib/dispatch-authority.sh and its
+      own header), feature-config-layer (authoritative .jaiship/config.yaml,
+      loaded-path guarantee, five notice reasons, bounded legacy mapping and the
+      override exception), feature-projects (post-move derived host index,
+      warning-never-redirects, operator-local projects.yaml), feature-project-groups
+      (operator-local git-ignored overlay, empty listing, invoking-checkout-only
+      mirror target set, no template), feature-ceremony-runner §9, feature-state-layer
+      (byte-preserving move, header/format invariance, zero records), feature-mcp-surface
+      (current jaiship default), feature-autonomous-delivery + its test spec +
+      delivery-modes (owner-hold names are the declared prior-environment-prefix)
+      shim, not current-brand names), the glossary (the two stale rows plus the
+      disposition/verdict/root-scope/symlink/command-audit/derived rows and both
+      migration schema ids), opencode-model-configuration, provider-conditions-and-parks,
+      ceremony-runner, the M4 install/install-model/backlog/schedule pages (M4-S2
+      delivered), and the decision-register comment. The glossary is now a
+      presence-only declared site of prior-working-name-override and
+      prior-config-directory; the three owner-hold pages remain presence-only
+      declared sites. The registry's stale P8-unmatched sites (serve.ts, edge.ts,
+      the forbidden registry's .ados) were removed and the legacy adapter's
+      pre-freeze budget raised to 4. Committed-head gate: doc battery 5;
+      doc-conformance 60; rename-drill 5 (verify only); shim registry 8;
+      conformance 20; doc-distribution OK; content arm 7/7; help coverage OK;
+      git diff --check clean."
+    type: info
+    date: "2026-11-21"

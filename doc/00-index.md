@@ -97,6 +97,12 @@ ados_distribution: redistributable
 | [zclaude](tools/zclaude.md) | Launch Claude Code with Z.AI GLM Coding Plan |
 | [text-to-image](tools/text-to-image.md) | Generate images from text prompts (7 providers) |
 
+## Quality test specifications
+
+| Document | Description |
+|----------|-------------|
+| [Namespace Conformance](quality/test-specs/test-spec-namespace-conformance.md) | The two conformance arms, the shim-registry reconciliation, the migration battery, the fixtures and the proof boundary |
+
 ## Templates
 
 | Template | Purpose |

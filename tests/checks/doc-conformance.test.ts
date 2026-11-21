@@ -2734,3 +2734,43 @@ describe("GH-365 P9 the reconciled page set", () => {
     expect(gh350Phase6Violations(GH365_P9_ROWS, (page) => read(page))).toEqual([]);
   });
 });
+
+/** GH-365 P10 — the enduring namespace-conformance quality page. */
+const GH365_P10_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/quality/test-specs/test-spec-namespace-conformance.md",
+    stale: ["the boundary is not machine-checked"],
+    required: [
+      "seven scope classes",
+      "priorNamespace",
+      "namespace.shims.v1",
+      "presence is validated for every declared shim site",
+      "longest match",
+      "install.migration.plan.v1",
+      "install.migration.manifest.v1",
+      "zero records of any kind",
+      "committed-layer",
+      "clean-clone",
+      "authoritative-root",
+      "prior-notice",
+      "migration-plan",
+      "migration-move",
+      "shim-reconciliation",
+      "conformance-negative-controls",
+      "real-operator-home",
+      "second-machine-clone",
+      "ci-runner-home",
+      "other-checkouts",
+      "third-party-alias-consumers",
+      "shim-removal-release",
+      "prose-residual",
+      "shell-fallback-post-migration",
+    ],
+  },
+];
+
+describe("GH-365 P10 the namespace-conformance page", () => {
+  test("the enduring page carries its required facts and no stale statement", () => {
+    expect(gh350Phase6Violations(GH365_P10_ROWS, (page) => read(page))).toEqual([]);
+  });
+});
