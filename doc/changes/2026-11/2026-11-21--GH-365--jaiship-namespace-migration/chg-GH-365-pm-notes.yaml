@@ -595,3 +595,27 @@ notes:
       git diff --check clean."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 10 COMPLETE: commit ab091f66. Authored the enduring
+      doc/quality/test-specs/test-spec-namespace-conformance.md (ados_distribution:
+      internal): the two arms and their scope classes/corpora/neutral sites, the
+      shim-registry shape/window/presence reconciliation with the longest-literal
+      resolution, the per-class mutations and the two negative controls, the
+      migration battery and its fixtures/seams, and the proof boundary publishing
+      the same eight proven / eight not-proven ids in the declared order. Indexed
+      the page in doc/00-index.md and registered it in the forbidden-literal
+      registry in the same commit; updated doc-conformance for the page set.
+      Release verification (not re-authoring): exactly one minor changeset for
+      GH-365 covers the five lockstep packages (changesets-group OK), the shim
+      registry's window pair still equals the changeset-derived pair
+      (namespace-shims-registry 8 pass), doc-distribution guard OK, help-guide
+      coverage OK, content arm 7/7, doc-conformance 61 pass, content-inventory 12
+      pass, git diff --check clean. Lifecycle phase-7 checks recorded here: the
+      page's published boundary equals NAMESPACE_PROOF_BOUNDARY (8/8, declared
+      order), and the DOD-9 stale set is clean (the doc battery asserts the
+      reworded rows, no prior path/prefix as current, and projects.yaml never
+      project-committed). ALL TEN DELIVERY PHASES ARE DELIVERED: P1 a3ba0672;
+      P2 6426cd4a/ceb8254f/f578c3a1/5b06ab5c; P3 e9e7c78d; P4 560b1e11;
+      P5 26828570; P6 947b4040/ce14a5a9; P7 203951f0; P8 62ffbaa5; P9 9f4a0803;
+      P10 ab091f66 (plus the P2/P8 evidence commits)."
+    type: info
+    date: "2026-11-21"
