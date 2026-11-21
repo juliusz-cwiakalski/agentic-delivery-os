@@ -319,8 +319,9 @@ notes:
       `.delivery-os/`, so `git add -A -- .delivery-os/config.yaml` exits 1 with
       the ignore hint even for the tracked file, and the commit primitive
       classifies that as `commit.atomic-abort` (staging failed). The ignore line
-      is commented out for the delivery (git metadata only; not a repository
-      file, not committed) so phase 1 can land." 
+      was commented out for the delivery (git metadata only; not a repository
+      file, not committed) so phase 1 could land, and it is restored after the
+      final plan-phase commit." 
     type: info
     date: "2026-11-21"
   - text: "delivery plan phase 2 (prompt-cleanup) complete: commit
@@ -363,4 +364,69 @@ notes:
       Six fixtures committed under
       `tests/fixtures/provider/policy-adoption/simulate/`."
     type: evidence
+    date: "2026-11-21"
+  - text: "delivery plan phase 5 (retirement-proof) complete: commit
+      dd25c785839e2aa7c731a5211847608e02115834. Gate: `bun test
+      tests/checks/provider-legacy-source-scan.test.ts` 10 pass / 0 fail and
+      `bun test tests/checks/provider-policy-credential-canary.test.ts` 6 pass /
+      0 fail. The delivery-surface scan declares its five include roots and six
+      exclusions with reasons, reports 0 findings over the real tree (including
+      `scripts/install.sh`), detects three planted source classes while not
+      reporting the allowed invocation or the example copy, fails an empty
+      include set, and proves the blueprint is the only executable hook installer
+      in the tree and is unreferenced by the surface. The canary suite injects a
+      runtime-assembled value through the credential port and finds it on no
+      surface; every credential node is `{sourceKey:{style,name}}` with both
+      hostile-key arms (config layer refuses `config.key.unknown` with no
+      `key`/`layer` member, raw parser ignores) and the SEC-003 in-memory corpus
+      with the closed placeholder carve-out."
+    type: evidence
+    date: "2026-11-21"
+  - text: "delivery plan phase 6 (documentation-truth) complete: the phase-6
+      commit immediately following this note is the branch head at the boundary.
+      Gate: `bun test tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the
+      delivered GH-242/GH-350 blocks plus a closed GH-374 block: 28 required
+      phrase sites, 12 retired claims over an 8-page closed set, marker
+      assertions, both-directions arms and a delta carve-out);
+      `bash scripts/.tests/test-doc-distribution.sh` PASS (96 in-scope docs, no
+      drift). The three guides state the adopted policy, the canonical routing
+      path and the retirement; `feature-provider-profiles.md`'s line-38 sentence
+      now states the lane-watch-only role. G4 (all six suites) 166 pass / 0 fail."
+    type: evidence
+    date: "2026-11-21"
+  - text: "IMPLEMENTATION RECONCILIATIONS (plan/test-plan prose vs delivered
+      behaviour; each was resolved by asserting the DELIVERED fact, never by
+      skipping or weakening an assertion). (1) The plan said `peak-park.json` and
+      `quota-park.json` declare no quota facts; with a declared enabled quota a
+      missing fact becomes a `provider-outage` park (`engine.ts` transport
+      catch), so the conditions would read `[\"peak-window\",\"provider-outage\"]`.
+      The fixtures therefore declare a clear/exhausted delivered envelope.
+      (2) A chain park reports EVERY entry in `data.skipped`
+      (`packages/core/src/provider/chain.ts` resolveProviderChain tail), so the
+      spend-25 case asserts both entries skipped `budget-exhausted`; the
+      paid-escape claim is asserted as `decision.kind === parked` with no
+      selected provider. (3) The paid-fallback replay carries the subscription's
+      own quota park in `data.parks` (no chain park); the case asserts exactly
+      that. (4) The ticket-ceiling refusal summary names the MERGED budget
+      evidence (`window-cost (window, cost 30 of 20)`) because
+      `combineProviderConditions` merges failed evidence in budget-name order,
+      and the simulate surface does not append `[provider.budget.crossed]`; the
+      case asserts the refusal envelope plus the announcement identity at the
+      `simulateProviderResolution` seam. (5) `formatUtcIso` emits milliseconds,
+      so timestamps assert `.000Z`. (6) `config.key.unknown` carries neither
+      `layer` nor `key`; the case asserts the code plus a differential oracle.
+      (7) The entry `enabled` default is the provider parser's, not a
+      configuration-layer default: it has no origin. (8) `provider watch status`
+      returns `data.providers` only (no announcements key). (9) The shared
+      provider grammar ignores an unknown flag; a flag belonging to another
+      provider subcommand is refused `input.value.rejected` naming the three
+      accepted migrate flags (never `fallback.invocation`). (10) A missing seat
+      surfaces as an `unassigned` binding and a 23-entry env record, not a CLI
+      refusal. (11) SEC-003 scans the declared set over the paths that exist at
+      run time; phase 6's four pages and the extended suite join the same
+      dynamic set automatically. (12) The tree-wide 'only installer' arm counts
+      executable shell installers; guides and golden text describe the command
+      without being installers. (13) The doc-conformance phrase comparison
+      flattens whitespace because prose wraps."
+    type: info
     date: "2026-11-21"

@@ -2384,3 +2384,246 @@ describe("GH-350 documentation truth: the mount pages state 28 families", () => 
     expect(gh350TruthViolations(GH350_TRUTH_ROWS, withDelta)).toEqual([]);
   });
 });
+
+/* ------------------------------------------------------------------------- *
+ * GH-374 — this repository's adopted provider policy.
+ *
+ * A CLOSED block beside the delivered GH-242/GH-350 blocks: required/stale
+ * phrase pairs at every site that states the fact (the three edited guides plus
+ * the named profiles-page sentence), the marker assertions, BOTH-DIRECTIONS
+ * arms over injected copies, and a delta carve-out so a line recording the
+ * change never trips the stale direction.
+ * ------------------------------------------------------------------------- */
+
+type Gh374Row = {
+  readonly page: string;
+  readonly required: readonly string[];
+  readonly stale: readonly string[];
+};
+
+const GH374_TRUTH_ROWS: readonly Gh374Row[] = [
+  {
+    page: "doc/guides/provider-conditions-and-parks.md",
+    required: [
+      "This repository declares its policy in the committed configuration document",
+      "mixed base profile `delivery` serves both providers",
+      "`subscription-first` walks the subscription entry first and allows the declared paid fallback",
+      "`subscription-only` is the never-pay chain",
+      "closes admission **every day** from 01:00 to 10:00 UTC",
+      "the subscription's buffered peak `[04:00, 10:00)` plus the paid rail's `01:00–10:00` union window",
+      "trailing-day cost ceiling of 20 **parks**",
+      "per-ticket cost ceiling of 30 **stops** the delivery with a classified refusal and cannot reopen",
+      "The subscription quota windows and the DeepSeek balance floor",
+      "The synchronous probe reads **no live quota or balance**; live verification belongs to the daemon path.",
+      "only newly closed **time-of-day interval** is exactly 04:00–06:00 UTC",
+      "weekends and the Chinese public holidays",
+    ],
+    stale: [
+      "not declared yet",
+      "pauses only 04:00–10:00",
+      "the hook decides when delivery waits",
+      "a ticket ceiling parks",
+      "weekday-only peak",
+    ],
+  },
+  {
+    page: "doc/guides/opencode-model-configuration.md",
+    required: [
+      "The typed `provider` and `provider.profiles` branches are the canonical routing path for this repository",
+      "this repository's seats and models are committed in `.delivery-os/config.yaml`",
+      "The per-agent table above is harness assignment",
+      "No provider/model identifier belongs in an agent prompt or command definition",
+      "neutral `<provider>/<model>` placeholders",
+      "its generated Claude Code counterpart was rebuilt from that source",
+    ],
+    stale: [
+      "model choice is only an OpenCode-config concern",
+      "a model literal belongs in an agent prompt",
+      "provider policy is undeclared",
+    ],
+  },
+  {
+    page: "doc/guides/zai-peak-hours-hook.md",
+    required: [
+      "the hook is off this repository's delivery path and",
+      "none is installed",
+      "the window, quota, and ceiling policy is committed configuration",
+      "The hook example remains for other adopters who still choose",
+      "invoking an opt-in hook is a fallback of the shell entry points",
+      "They are not this repository's delivery procedure",
+    ],
+    stale: [
+      "the pre-iteration hook decides",
+      "run the install one-liner to enable peak pausing for this repository",
+      "the hook decides when delivery waits",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-provider-profiles.md",
+    required: [
+      "Profile `peakWindows` are daemon lane-watch rule data: they drive the in-flight lane watch and do not participate in profile eligibility or admission; admission is gated by each provider entry's declared peak",
+    ],
+    stale: [
+      "These rules drive both the admission gating below and the daemon's lane-level peak pausing",
+      "profile peakWindows drive the admission gating",
+    ],
+  },
+];
+
+/** The CLOSED page set for the retired-claim scan (DOC-005). */
+const GH374_CLOSED_PAGE_SET = [
+  "doc/guides/provider-conditions-and-parks.md",
+  "doc/guides/opencode-model-configuration.md",
+  "doc/guides/zai-peak-hours-hook.md",
+  "doc/spec/features/feature-provider-profiles.md",
+  "doc/00-index.md",
+  "doc/spec/features/feature-provider-engine.md",
+  "doc/spec/features/feature-peak-pausing.md",
+  "doc/spec/features/feature-config-layer.md",
+] as const;
+
+/** Every retired claim the closed page set must not state. */
+const GH374_RETIRED_CLAIMS = [
+  "not declared yet",
+  "provider policy is undeclared",
+  "the hook decides when delivery waits",
+  "the pre-iteration hook decides",
+  "a ticket ceiling parks",
+  "the ticket ceiling parks",
+  "weekday-only peak",
+  "weekdays only",
+  "profile peakWindows drive the admission gating",
+  "a model literal belongs in an agent prompt",
+  "model choice is only an OpenCode-config concern",
+  "pauses only 04:00–10:00",
+] as const;
+
+/** A line recording the change is a delta, never a stale claim. */
+const GH374_DELTA_MARKERS = [
+  "04:00–10:00 → 01:00–10:00",
+  "04:00–10:00 -> 01:00–10:00",
+  "hook → configuration",
+  "hook -> configuration",
+  "admission gating → lane-watch rule data",
+] as const;
+
+const withoutGh374Deltas = (text: string): string =>
+  text
+    .split("\n")
+    .filter((line) => !GH374_DELTA_MARKERS.some((marker) => line.includes(marker)))
+    .join("\n");
+
+const gh374PageText = (page: string): string | undefined => {
+  try {
+    return read(page);
+  } catch {
+    return undefined;
+  }
+};
+
+/** Prose wraps; a declared phrase is compared over flattened whitespace. */
+const flatten = (text: string): string => text.replace(/\s+/gu, " ");
+
+const gh374Violations = (pageText: (page: string) => string | undefined): readonly string[] => {
+  const failures: string[] = [];
+  for (const row of GH374_TRUTH_ROWS) {
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    const scannable = flatten(withoutGh374Deltas(text));
+    for (const phrase of row.stale) {
+      if (scannable.includes(flatten(phrase))) {
+        failures.push(`${row.page}: stale phrase present: ${phrase}`);
+      }
+    }
+    for (const phrase of row.required) {
+      if (!scannable.includes(flatten(phrase))) {
+        failures.push(`${row.page}: missing required phrase: ${phrase}`);
+      }
+    }
+  }
+  for (const page of GH374_CLOSED_PAGE_SET) {
+    const text = pageText(page);
+    if (text === undefined) {
+      failures.push(`${page}: page does not exist`);
+      continue;
+    }
+    const scannable = flatten(withoutGh374Deltas(text));
+    for (const claim of GH374_RETIRED_CLAIMS) {
+      if (scannable.includes(flatten(claim))) {
+        failures.push(`${page}: retired claim present: ${claim}`);
+      }
+    }
+  }
+  return failures;
+};
+
+/** The `ados_distribution` marker inside the file's one front-matter block. */
+const distributionOf = (page: string): string | undefined => {
+  const text = gh374PageText(page);
+  if (text === undefined) return undefined;
+  const match = /^---\n([\s\S]*?)\n---/u.exec(text);
+  if (match?.[1] === undefined) return undefined;
+  const line = match[1]
+    .split("\n")
+    .find((entry) => entry.trimStart().startsWith("ados_distribution:"));
+  return line?.split(":").slice(1).join(":").trim();
+};
+
+describe("GH-374 documentation truth: this repository's adopted policy", () => {
+  test("the four pages state the required sentences and none of the retired ones", () => {
+    expect(gh374Violations(gh374PageText)).toEqual([]);
+    expect(GH374_TRUTH_ROWS.map((row) => row.page)).toEqual([
+      "doc/guides/provider-conditions-and-parks.md",
+      "doc/guides/opencode-model-configuration.md",
+      "doc/guides/zai-peak-hours-hook.md",
+      "doc/spec/features/feature-provider-profiles.md",
+    ]);
+    expect(GH374_CLOSED_PAGE_SET).toHaveLength(8);
+    expect(GH374_RETIRED_CLAIMS.length).toBeGreaterThanOrEqual(12);
+  });
+
+  test("the marker assertions: three guides redistributable, the spec page internal", () => {
+    expect(distributionOf("doc/guides/provider-conditions-and-parks.md")).toBe("redistributable");
+    expect(distributionOf("doc/guides/opencode-model-configuration.md")).toBe("redistributable");
+    expect(distributionOf("doc/guides/zai-peak-hours-hook.md")).toBe("redistributable");
+    expect(distributionOf("doc/spec/features/feature-provider-profiles.md")).toBe("internal");
+  });
+
+  test("both directions fail by name: a kept stale sentence and a missing required one", () => {
+    const stale = (page: string): string | undefined =>
+      page === "doc/spec/features/feature-provider-profiles.md"
+        ? `${gh374PageText(page) ?? ""}\nThese rules drive both the admission gating below and the daemon's lane-level peak pausing\n`
+        : gh374PageText(page);
+    expect(gh374Violations(stale).join("\n")).toContain(
+      "stale phrase present: These rules drive both the admission gating below",
+    );
+    const missing = (page: string): string | undefined =>
+      page === "doc/guides/opencode-model-configuration.md"
+        ? (gh374PageText(page) ?? "").replace(
+            "No provider/model identifier belongs in an agent prompt or command definition",
+            "Keep model names out of prompts",
+          )
+        : gh374PageText(page);
+    expect(gh374Violations(missing).join("\n")).toContain(
+      "missing required phrase: No provider/model identifier belongs in an agent prompt or command definition",
+    );
+    const retired = (page: string): string | undefined =>
+      page === "doc/00-index.md"
+        ? `${gh374PageText(page) ?? ""}\nThe operator guide's provider policy is undeclared\n`
+        : gh374PageText(page);
+    expect(gh374Violations(retired).join("\n")).toContain(
+      "retired claim present: provider policy is undeclared",
+    );
+  });
+
+  test("a delta line recording the change never trips the stale direction", () => {
+    const withDelta = (page: string): string | undefined =>
+      page === "doc/guides/provider-conditions-and-parks.md"
+        ? `${gh374PageText(page) ?? ""}\n- admission window: 04:00–10:00 → 01:00–10:00 (the union window)\n- routing: hook → configuration\n- profiles page: admission gating → lane-watch rule data\n`
+        : gh374PageText(page);
+    expect(gh374Violations(withDelta)).toEqual([]);
+  });
+});

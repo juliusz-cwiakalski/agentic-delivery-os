@@ -26,6 +26,14 @@ reason and resumes automatically at the computed instant, so a delivery needs
 neither a shell executable nor an environment-variable convention. A hook file
 may remain on disk; it is inert because no composition reads it.
 
+**This repository's posture:** the window, quota, and ceiling policy is committed
+configuration (see the [provider conditions and parks
+guide](provider-conditions-and-parks.md)), and the hook is off this repository's
+delivery path and none is installed. The typed delivery path reads configuration
+only. The hook example remains for other adopters who still choose it; invoking an
+opt-in hook is a fallback of the shell entry points (`deliver-ticket.sh`,
+`ceo-loop.sh`), not of the typed path.
+
 ### Migrating off the hook: `provider migrate legacy`
 
 `provider migrate legacy [--profiles-dir <dir>] [--hook <path>] [--write]` reads
@@ -233,6 +241,9 @@ Example config snippet (`.opencode/opencode.jsonc` or `~/.config/opencode/openco
 ```
 
 ## Install (one-liner)
+
+The instructions in this section are for adopters who still choose the hook. They
+are not this repository's delivery procedure.
 
 From the repository root (where `scripts/hooks/` lives):
 

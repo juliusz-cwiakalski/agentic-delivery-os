@@ -179,3 +179,33 @@ profiles specification (`doc/spec/features/feature-provider-profiles.md`); this
 guide does not duplicate them. The shipped descriptor is overridable, and a
 fresh installation ships no enabled chain, so a resolve fails closed until an
 operator declares one.
+
+### This repository's adopted policy
+
+This repository declares its policy in the committed configuration document
+(`.delivery-os/config.yaml`), so provider selection, seating, and the ceilings
+are visible in review and to CI:
+
+- **Profiles.** A mixed base profile `delivery` serves both providers — the
+  sunk-cost subscription and the pay-per-token rail — with one named seat per
+  agent role; the paid fallback profile `paid` carries the same seats on the paid
+  rail, so a profile switch never costs a role its seat.
+- **Chains.** The default chain `subscription-first` walks the subscription entry
+  first and allows the declared paid fallback; `subscription-only` is the
+  never-pay chain — the subscription entry alone, with paid fallback disallowed.
+- **Admission pause.** Each entry's declared peak closes admission **every day**
+  from 01:00 to 10:00 UTC: the subscription's buffered peak `[04:00, 10:00)` plus
+  the paid rail's `01:00–10:00` union window. Because the window model is daily,
+  weekends and the Chinese public holidays the legacy DeepSeek rule exempted are
+  paused as well.
+- **Ceilings.** A trailing-day cost ceiling of 20 **parks** every governed entry
+  with a computed resume instant; a per-ticket cost ceiling of 30 **stops** the
+  delivery with a classified refusal and cannot reopen.
+- **Watch targets.** The subscription quota windows and the DeepSeek balance floor
+  (2 USD) are declared watch targets, read-only. The synchronous probe reads **no
+  live quota or balance**; live verification belongs to the daemon path.
+- **Declared cost.** The paid entry's single union window is what keeps paid
+  capacity out of both DeepSeek price peaks and out of the subscription's buffered
+  pause. Its only newly closed **time-of-day interval** is exactly 04:00–06:00 UTC
+  daily — the gap between the DeepSeek windows the legacy rule allowed — given up
+  as a stated cost.
