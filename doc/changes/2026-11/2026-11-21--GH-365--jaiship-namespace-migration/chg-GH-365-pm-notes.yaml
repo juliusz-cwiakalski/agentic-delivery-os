@@ -468,3 +468,52 @@ notes:
       --check clean."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 6 COMPLETE: commits 947b4040 (retirements and family/help
+      surface) and ce14a5a9 (retirement-case self-exclusion). `install.migration.unavailable`
+      leaves INSTALL_DOMAIN_CODES (11 -> 10), the error table, the guide's
+      requirement set and the result-code corpus; the install domain is ten and no
+      row was added. `install --migrate` remains in definition.flags and answers
+      fallback.invocation at exit 1 naming the retired form and the remedy
+      `install migrate`; the documented/help flag set omits it. The `install
+      migrate` help entry and the M4 page carry the verb, its flags and the
+      retirement note; the prompt-required inventory stays 28. Committed-head gate
+      green: install-migration-retirement 7 pass; install-lifecycle-docs 7 +
+      install-lifecycle-path 12; error-table-sync 108 + cross-repository-contract
+      21; reference-page-parity 5 + doc-conformance 59; install-conformance 7 +
+      install-family-surface 10; help-guide-coverage OK; content-inventory 12;
+      install-migrate 23 regression; error-table 147; port-contract-inventory 16;
+      supervision 7; dispatch taxonomy 3; pnpm typecheck green; content arm 7/7
+      and tree arm green; git diff --check clean. Out-of-scope but necessary ripple
+      recorded: P5 added the two schema ids to error-table-sync's reserved set; P6
+      moved the identity-total floor (170/169 -> 169/168 and +136 -> +135) through
+      tests/structure/error-table.test.ts, supervision-error-socialization,
+      dispatch-attempts-taxonomy, ceremony-contract, ceremony-nonregression,
+      verify-gates-suite-map-contract, content-inventory, the ports and
+      state-additivity fixtures, feature-metrics and feature-ceremony-runner, and
+      removed the retired code from the changeset body."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 5 COMPLETE: commit 26828570. The migration domain is five
+      modules (plan, table, apply, manifest, digest) plus the extended
+      install-migration declarations; `install migrate` is mounted with
+      `--dry-run`, `--backup-dir <abs>` and `--stop-daemon`. The verb plans
+      before it acts (one header per root class, one line per entry, the would-be
+      backup path, `daemon: unchecked`, <=60 lines with one counted truncation
+      line), copies and digest-verifies every planned entry and writes
+      `install.migration.manifest.v1` BEFORE the first move, then moves the
+      non-derived entries without rewriting a byte. Dispositions are the closed
+      six with the derived rule and the symlink rule evaluated first; the payload
+      is `install.migration.plan.v1`; the run verdict uses DM-6's composition
+      rule. The audit pair is suppressed PRE-PARSE on the invocation tokens in
+      runCli (A8), so every mode including `install migrate --force` records
+      nothing while the audit dependency stays composed and recording.
+      Committed-head gate green: install-migrate 23 pass; install-family-surface
+      11; install-ownership-split 5 + entrypoint-bin 34; install-conformance 7;
+      install-lifecycle-path 12 + error-table-sync 108; content-inventory 12;
+      pnpm typecheck green; git diff --check clean. Out-of-scope but necessary:
+      the two new schema ids joined error-table-sync's reserved record-kind set,
+      tests/fixtures/install/home.ts gained the migration option, and
+      content-inventory's executable allowances gained the new modules. The
+      `--migrate` flag remains documented at this boundary; P6 retires it."
+    type: info
+    date: "2026-11-21"
