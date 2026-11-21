@@ -96,6 +96,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0062](TDR-0062-watch-observation-freshness-and-stale-condition.md) | TDR | Watch Observation Freshness — A Per-Target Bound, a Watch-Only `watch-stale` Condition, and Evidence-Bounded Parks | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0063](TDR-0063-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0064](TDR-0064-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [TDR-0074](TDR-0074-project-groups-document-operator-local-overlay.md) | TDR | The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only | Proposed | 2026-11-21 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -128,3 +129,14 @@ TDR-0058; TDR-0063 mounts the provider family as the twenty-eighth and last
 prompt-required member after GH-348's `loop` (twenty-seventh), and TDR-0064 fixes the
 work-item ref the budget gate measures, so the GH-350 specification must carry all of
 them before readiness re-review.
+
+Decision TDR-0074 is the binding design of change GH-365's OQ-1; its owner acceptance
+is that change's pull-request review, and its status moves from `Proposed` there
+rather than in the delivery commits. The project-groups document
+(`<repo>/<configDirectoryName>/projects.yaml`, `delivery.projects.groups.v1`) is an
+operator-local, git-ignored overlay at its unchanged path and schema, and the ceremony
+mirror's cross-checkout target set is declaration-only: it composes from the invoking
+checkout's own document, an absent document is the declared empty target set, no
+checkout reads another checkout's document, and no tracked template lands in this
+change. The three current-truth pages that call the document project-committed are
+reconciled in the documentation phase.
