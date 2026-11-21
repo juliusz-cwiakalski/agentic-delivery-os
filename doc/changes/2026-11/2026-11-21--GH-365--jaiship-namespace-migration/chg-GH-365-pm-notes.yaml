@@ -1,0 +1,120 @@
+change_id: GH-365
+title: "M4-S2 Jaiship namespace migration (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-21T15:14:16.564Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Scope source is the ticket body plus the owner comment of 2026-11-19 and
+      the M4 blueprint the ticket cites (backlog M4-S2, install-model.md,
+      schedule.md, ranking.md). The owner comment is treated as binding scope:
+      the committed project configuration moves from the prior namespace root to
+      `.jaiship/config.yaml`; no tracked file may remain under the prior root; a
+      fresh clone leaves `git status` clean; the prior-identity fallback must
+      report that it read the new path; and a negative control must prove that a
+      reintroduced symlink or a new file under the prior root fails the scan."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the package scope `@delivery-os` is NOT a
+      product identity and is not renamed by this story. The delivered branding
+      contract declares it a fixed neutral scope ('Neutral scope, not a product
+      name') and five packages stay `private: true` until a publication
+      decision. Renaming the workspace scope is a release/publication act with
+      no ticket authorisation; docs may keep `@delivery-os` only where the
+      neutral package scope is meant. The conformance scan must therefore
+      distinguish product identifiers (must be Jaiship) from declared
+      neutral/compatibility inputs."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the `delivery-os` executable alias and the
+      prior-identity config/state fallback are the one-release compatibility
+      shims the ticket and owner comment authorise. They are declared as CURRENT
+      compatibility inputs in a machine-readable declaration (not silent
+      legacy), each allowed site is enumerated, the deprecation window is
+      exactly the release that ships this change, and removal is scheduled for
+      the following release. A prior-identity read emits the existing
+      deprecation notice; it must never be a silent second literal."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the in-repo project layer becomes
+      `.jaiship/config.yaml` (tracked). `.jaiship/config.local.yaml` stays local
+      and ignored; repo-local state paths stay out of git. The migration moves
+      the existing tracked file within this change and no other tracked file may
+      live under `.delivery-os/`."
+    date: "2026-11-21"
+notes:
+  - text: "State detection (2026-11-21): no GH-365 branch, no change folder, no
+      phase ledger records (`phase list` returned empty phases over an
+      integrity-clean 7206-record registry), and no delivery PR existed; only
+      the merged planning PR #369 mentions the ticket. This is a FRESH lifecycle
+      start, not a resume. Branch `feat/GH-365/jaiship-namespace-migration` was
+      created from `main-tools` at c1dd722c after a fetch/pull --ff-only sync
+      (already up to date). Worktree clean except pre-existing untracked
+      `.zed/`. Milestone M4 is attached to issue #365 (verified before artifact
+      work)."
+    type: info
+    date: "2026-11-21"
+  - text: "Clarify-scope current-state evidence (read on c1dd722c): (1)
+      packages/core/src/branding/index.ts already derives configDirectoryName
+      `.<name>`, stateDirectoryName `.<name>-state`, environmentPrefix
+      `<NAME>_`, installPath `~/.<name>/bin/<name>` from the configured working
+      name; `jaiship` resolves to `~/.jaiship/`, `~/.jaiship-state/`,
+      `JAISHIP_`, so the directory/env-naming work is derivation already in
+      place and the remaining gap is committed truth plus the move. (2)
+      packages/cli/bin/jaiship.ts declares DEFAULT_WORKING_NAME `jaiship` and
+      PRIOR_WORKING_NAME `delivery-os`; bin/delivery-os.ts is the alias. (3) The
+      prior-identity fallback in adapters/src/file/config-source.ts and
+      core/src/app/state-scope.ts reads the prior config file and prior default
+      state root read-only and emits `prior-identity-fallback` notices. (4) The
+      migration hook core/src/domain/install-migration.ts detects `.delivery-os`
+      and `.delivery-os-state` and, with `--migrate`, returns
+      `install.migration.unavailable` naming M4-S2 as owner and moves nothing.
+      (5) `git ls-files .delivery-os .jaiship` on main-tools returns exactly
+      `.delivery-os/config.yaml`; `.jaiship/` exists locally with an ignored
+      `config.local.yaml` and an untracked `projects.yaml`, so the committed
+      project layer is still under the prior root - the exact defect the owner
+      comment describes. There is no tracked symlink."
+    type: info
+    date: "2026-11-21"
+  - text: "Doc-impact risks for phase 7: feature-branding-seam.md (working-name
+      inventory, packageScope row, prior-identity derivation, forbidden-literal
+      scan), feature-cli-entrypoint.md (per-bin defaults and alias prior
+      identity), feature-config-layer.md and feature-projects.md (prior-identity
+      fallback precedence and the state-root policy),
+      feature-install-lifecycle.md and the local-install guide (the `--migrate`
+      refusal and the documented manual move), install-model.md (M4-S2 ownership
+      of the move), plus the new migration command's reference page and the
+      namespace conformance scan's spec. The help/guide-coverage check requires
+      a reference page for every prompt-required command, so the migration
+      surface must land with one."
+    type: risk
+    date: "2026-11-21"
+  - text: "Doc-conformance constraint: AGENTS.md and the guides describe the shell
+      entry points as the fallback; this change does not retire them or rewrite
+      agent prompts. The prompt-identifier task is bounded to removing product
+      identifiers that name the prior program from prompt text, while the
+      compatibility alias and package scope remain declared inputs. No new
+      legacy identifier may be introduced anywhere."
+    type: risk
+    date: "2026-11-21"
+  - text: "Database/state constraint carried from TDR-0047: the migration moves
+      state roots and must NOT re-version stored records; a storage version bump
+      is not part of this change. The move must preserve bytes and be
+      idempotent; a second run must be a no-op with the same verdict, and a
+      partial/interrupted run must be recoverable from the backup."
+    type: risk
+    date: "2026-11-21"
+  - text: "Environment note carried from prior deliveries: node_modules/.bin carries
+      both `jaiship` and `delivery-os`; primitive invocations use
+      TMPDIR=$PWD/tmp/tmpdir and PATH=$PWD/node_modules/.bin:$PATH; lifecycle
+      commits route through the commit primitive and phase state only through
+      the phase family. Gate evidence must use TMPDIR=$PWD/tmp/tmpdir."
+    type: info
+    date: "2026-11-21"
