@@ -9,7 +9,7 @@ branch: fix/GH-366/merge-command-conformance
 phases:
   clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
   specification: { started: null, completed: 2026-11-21T07:07:16.317Z }
-  test_planning: { started: null, completed: 2026-11-20T12:51:51.000Z }
+  test_planning: { started: null, completed: 2026-11-21T07:07:37.520Z }
   delivery_planning: { started: null, completed: 2026-11-20T12:52:10.409Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }

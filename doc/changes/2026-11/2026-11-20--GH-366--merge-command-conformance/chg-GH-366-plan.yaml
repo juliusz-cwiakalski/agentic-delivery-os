@@ -961,7 +961,7 @@ phases:
   #   bun run scripts/checks/error-table-sync.ts
   # ---------------------------------------------------------------------------
   - id: 3
-    title: "Change-branch resolution from the change record read at the request head, the bounded local read seam, and the resolved-head binding across freshness, landing and reporting"
+    title: "Change-branch resolution from the change record read at the request head, the delivered merged-request convergence attempt with its additive match count, the bounded local read seam, and the resolved-head binding across freshness, landing and reporting"
     kind: delivery
     summary: "resolve the change branch at the request head and bind the verified head to the request"
     scope:
