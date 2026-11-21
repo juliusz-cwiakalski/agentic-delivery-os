@@ -183,7 +183,7 @@ operator declares one.
 ### This repository's adopted policy
 
 This repository declares its policy in the committed configuration document
-(`.delivery-os/config.yaml`), so provider selection, seating, and the ceilings
+(the project-committed configuration slot), so provider selection, seating, and the ceilings
 are visible in review and to CI:
 
 - **Profiles.** A mixed base profile `delivery` serves both providers — the

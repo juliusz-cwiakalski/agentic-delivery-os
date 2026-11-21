@@ -29,6 +29,43 @@ export const writeRegistry = (root: string, registry: ForbiddenLiteralRegistry):
   writeFiles(root, { [REGISTRY_PATH]: `${JSON.stringify(registry, null, 2)}\n` });
 };
 
+/** The prior-namespace shim literals the temp shim authority declares. */
+export const SHIM_LITERALS = {
+  "executable-alias": "delivery-os",
+  "prior-config-directory": ".delivery-os",
+  "prior-state-root": ".delivery-os-state",
+  "prior-working-name-override": "DELIVERY_OS_WORKING_NAME",
+  "prior-environment-prefix": "DELIVERY_OS_",
+  "pre-freeze-environment-prefix": "ADOS_",
+  "pre-freeze-config-directory": ".ados",
+} as const;
+
+/**
+ * A minimal `namespace.shims.v1` document for temp repos: seven shims that
+ * self-declare the two registry documents only. A scan over such a repo can
+ * still detect an undeclared occurrence without failing on absent real sites.
+ */
+const minimalShimRegistryText = (): string =>
+  `${JSON.stringify(
+    {
+      schemaId: "namespace.shims.v1",
+      window: { declaredIn: "0.1.0", removalRelease: "0.2.0" },
+      shims: Object.entries(SHIM_LITERALS).map(([id, literal]) => ({
+        id,
+        literal,
+        lineage: id.startsWith("pre-freeze") ? "pre-freeze" : "delivery-os",
+        sites: [
+          { file: "scripts/checks/forbidden-literals.registry.json", maxOccurrences: 12 },
+          { file: "scripts/checks/namespace-shims.registry.json", maxOccurrences: 12 },
+        ],
+      })),
+    },
+    null,
+    2,
+  )}\n`;
+
+export const SHIM_REGISTRY_PATH = "scripts/checks/namespace-shims.registry.json";
+
 export const SCOPE_FILES: Record<string, string> = {
   "package.json": '{\n  "name": "synthetic-fixture",\n  "private": true\n}\n',
   "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
@@ -41,9 +78,11 @@ export const SCOPE_FILES: Record<string, string> = {
   ".bun-version": "1.4.4\n",
   ".changeset/config.json": "{}\n",
   "bunfig.toml": "[test]\n",
-  ".gitignore": "node_modules/\ndist/\npackages/*/dist/\n.ai/local/\n.*/config.local.yaml\n",
+  ".gitignore":
+    "node_modules/\ndist/\npackages/*/dist/\n.ai/local/\n.*/config.local.yaml\n.*/projects.yaml\n",
   "packages/core/src/domain/index.ts": 'export type Placeholder = { readonly module: "domain" };\n',
   "doc/guides/existing.md": "# Existing guide\n\nPre-existing corpus content.\n",
+  "scripts/checks/namespace-shims.registry.json": minimalShimRegistryText(),
 };
 
 export type TempRepo = {

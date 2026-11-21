@@ -20,7 +20,7 @@ This guide is for the operator who runs ceremonies, writes a project declaration
 
 ## Before you start
 
-- Ceremonies write into the delivery state directory of the invoking project, and read one declaration document from the project-committed configuration slot: `<configDirectoryName>/ceremonies.yaml`, where `<configDirectoryName>` is your brand's configuration directory (for example `.delivery-os` or `.jaiship`).
+- Ceremonies write into the delivery state directory of the invoking project, and read one declaration document from the project-committed configuration slot: `<configDirectoryName>/ceremonies.yaml`, where `<configDirectoryName>` is your brand's configuration directory (for example `.jaiship`).
 - No declaration document means the six built-ins and nothing else. Creating the document is how a project adds its own ceremony; it is the only input, and no code change is involved.
 - State scope follows the delivered per-project policy: an invocation inside a work tree uses that project's state root; an invocation outside any work tree uses the declared `unbound` scope with one bounded warning.
 

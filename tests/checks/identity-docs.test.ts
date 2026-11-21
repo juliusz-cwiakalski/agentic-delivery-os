@@ -299,6 +299,8 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
       "rootManifests",
       "rootWorkspaceFiles",
       "ignoreRules",
+      "promptSurface",
+      "scriptSurface",
       "userFacingDocs",
     ]);
     expect(outcome.registeredDocs).toContain(GUIDE);

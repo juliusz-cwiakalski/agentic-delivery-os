@@ -46,6 +46,9 @@ export const NAMESPACE_BATTERY_ROWS: readonly NamespaceBatteryRow[] = [
   { caseId: "TC-LAYER-003", proven: "clean-clone", phase: 1 },
   { caseId: "TC-LAYER-004", proven: "committed-layer", phase: 1 },
   { caseId: "TC-SHIM-001", proven: "shim-reconciliation", phase: 2 },
+  { caseId: "TC-SHIM-002", proven: "shim-reconciliation", phase: 3 },
+  { caseId: "TC-SCAN-001", proven: "conformance-negative-controls", phase: 3 },
+  { caseId: "TC-SCAN-002", proven: "conformance-negative-controls", phase: 3 },
 ];
 
 const provenSet: ReadonlySet<string> = new Set(NAMESPACE_PROOF_BOUNDARY.proven);
