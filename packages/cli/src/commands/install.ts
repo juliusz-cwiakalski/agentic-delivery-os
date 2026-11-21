@@ -33,7 +33,6 @@ import {
   migrationAdvisory,
   migrationBackupPath,
   migrationConflictPaths,
-  migrationUnavailableSummary,
   parseInstallRecord,
   planReplace,
   planRootsData,
@@ -417,8 +416,15 @@ const runInstall = async (
   },
 ): Promise<unknown> => {
   const { runtime } = command;
-  if (options.migrate && !options.dryRun) {
-    return refusal("install.migration.unavailable", migrationUnavailableSummary("M4-S2"));
+  if (options.migrate) {
+    // The retired flag form stays in the parser grammar so the remedy is
+    // reachable (API-3); it performs no install and no migration in any mode.
+    return refusal(
+      "fallback.invocation",
+      "refused: `install --migrate` is retired; run `install migrate` (the declared migration verb) " +
+        "instead — nothing was installed or migrated",
+      "fallback",
+    );
   }
   if (runtime.runningArtifactPath.length === 0) {
     return internalFailure(
@@ -445,9 +451,6 @@ const runInstall = async (
     runtime.priorNamespaceArtifacts.length === 0
       ? []
       : [migrationAdvisory(runtime.priorNamespaceArtifacts)];
-  const migrationPlanLine = options.migrate
-    ? "migration: nothing would be migrated (M4-S2 owns the move; the detection list above is advisory only)"
-    : undefined;
   const advisories = [...advisoriesOf(verdict), ...priorAdvisory];
   const record = readRecord(runtime);
   const recordState = recordStateOf(record, running);
@@ -531,7 +534,6 @@ const runInstall = async (
                 `profile: ${profilePlan.file}`,
                 `block: ${String(profilePlan.blockText).replace(/\n/gu, " / ")}`,
               ]),
-          ...(migrationPlanLine === undefined ? [] : [migrationPlanLine]),
         ],
       } satisfies InstallOutcome,
     };

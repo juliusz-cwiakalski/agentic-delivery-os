@@ -36,10 +36,12 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 - `--shell-profile <path>` selects the profile explicitly and always wins over
   the declared shell mapping (`zsh` → `~/.zshrc`, `bash` → `~/.bashrc`,
   `sh` → `~/.profile`).
-- `--migrate` accepts the migration hook: this build refuses with
-  `install.migration.unavailable`, names M4-S2 as the owner, and moves nothing.
-  Without the flag, prior-namespace artifacts are detected and advised only.
-- `--dry-run` applies to all four write paths and writes nothing. It never
+- `--migrate` is **retired**: the parser still recognises it so the refusal is
+  reachable, and it answers `fallback.invocation` at exit `1` naming the remedy
+  `install migrate`. The documented flag set does not list it as supported.
+- `--backup-dir <abs>` applies to `install migrate`: it places the verified
+  backup at an absolute path outside every source root.
+- `--dry-run` applies to every write path and writes nothing. It never
   evaluates the daemon guard — it neither reads nor stops the daemon — and each
   dry-run reports the daemon disposition as `unchecked`.
 - `--stop-daemon` stops a live daemon through the delivered stop path **before**
@@ -47,6 +49,24 @@ exit `0`, and `--help` and `--print-install-path` stay read-free.
 - `--yes` confirms `install purge`.
 
 Global flags `--json`, `--verbose`, and `--pretty` behave as on every family.
+
+## The migration verb
+
+`install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the
+three declared prior-namespace roots — host configuration, host state, and the
+invoking project configuration — to the current identity. `--dry-run` prints one
+header per root class, one line per entry with its disposition and file/byte
+counts, the would-be backup path, and `daemon: unchecked`; it writes nothing,
+creates no directory, reads no daemon, and records nothing. An applying run
+copies and digest-verifies every planned entry into
+`<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the
+first move, then moves each non-derived entry without rewriting a byte; the
+machine payload is `install.migration.plan.v1`. Differing entries are
+`conflict`s retained on both sides, a source symlink is `blocked` and a
+destination symlink `conflict`, and the declared derived entry
+(`host-index.json`) is outside the move set. The command writes **zero records of
+any kind** in every mode (the declared audit exception), never edits an operator
+profile, and a second run is `already-migrated` with no move and no backup.
 
 ## Admission and exclusions
 
@@ -74,7 +94,6 @@ input** (an attempt is the delivered `fallback.invocation` grammar refusal).
 | `install.state.incompatible` | `install status` judged a state root whose header format the artifact does not accept |
 | `install.identity.not-owning` | A lifecycle entry point ran on an identity that does not own installation |
 | `install.shell-profile.unresolved` | `--add-to-path` without `--shell-profile` and with no identifiable shell |
-| `install.migration.unavailable` | `--migrate` was supplied; M4-S2 owns the move |
 | `install.daemon.running` | A live daemon holds the artifact and `--stop-daemon` was not given |
 | `install.record.unreadable` | Rollback's record precondition is unmet: an absent record, an unreadable record, a `current` naming no `previous` while a slot is present, the post-crash pair, or a destination that is not a compiled artifact (a launcher, a symlink, or a foreign file) |
 | `install.slot.absent` | Rollback found no slot |

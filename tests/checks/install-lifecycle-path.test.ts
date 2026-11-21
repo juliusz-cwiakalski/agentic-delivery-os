@@ -395,8 +395,8 @@ describe("TC-INST-075 prior-namespace artifacts are detected and advised, never 
   });
 });
 
-describe("TC-INST-076 --migrate refuses typedly and a dry-run still detects", () => {
-  test("the refusal names M4-S2 and the dry-run prints the detection list", async () => {
+describe("TC-MIGRATE-011 the retired --migrate form refuses with the remedy", () => {
+  test("the refusal is fallback.invocation naming install migrate, and the grammar keeps the flag", async () => {
     const target = fresh();
     try {
       const prior = join(target.home, ".delivery-os");
@@ -409,14 +409,14 @@ describe("TC-INST-076 --migrate refuses typedly and a dry-run still detects", ()
         priorNamespaceArtifacts: [prior],
       });
       const refused = await invoke(runtime, [], { "--migrate": true });
-      expect(refused.error?.code).toBe("install.migration.unavailable");
-      expect(refused.error?.summary).toContain("M4-S2");
-      expect(refused.error?.summary).toContain("nothing was moved");
+      expect(refused.error?.code).toBe("fallback.invocation");
+      expect(refused.error?.summary).toContain("retired");
+      expect(refused.error?.summary).toContain("install migrate");
       const dry = await invoke(runtime, [], { "--migrate": true, "--dry-run": true });
-      expect(dry.error).toBeUndefined();
-      const joined = (dataOf(dry).plan as readonly string[]).join("\n");
-      expect(joined).toContain(prior);
-      expect(joined).toContain("nothing would be migrated");
+      expect(dry.error?.code).toBe("fallback.invocation");
+      const definition = createInstallCommandDefinition(runtime);
+      expect(definition.flags).toContain("--migrate");
+      expect(definition.requiresValue).toContain("--backup-dir");
     } finally {
       target.dispose();
     }

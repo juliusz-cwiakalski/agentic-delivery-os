@@ -66,6 +66,13 @@ const runAs = async (
     identity: fixtureIdentity(),
     ownsInstallation: options.ownsInstallation ?? declaredWorkingName === "jaiship",
     invokedIdentity: brandOf(declaredWorkingName).binaryName,
+    migration: {
+      roots: [],
+      backupRoot: join(scratch.configRoot, "migration-backups"),
+      runId: () => "run-install-surface",
+      clock: { nowIso: () => "2026-11-18T12:05:00.000Z" },
+      priorPrefixes: [],
+    },
   });
   const install = createInstallCommandDefinition(runtime);
   const stdout = bufferSink();
@@ -101,10 +108,11 @@ const runAs = async (
   return { exit, stdout: stdout.value, stderr: stderr.value, data, error };
 };
 
-describe("TC-INST-001 five lifecycle entry points resolve through both composed programs", () => {
-  test("5/5 resolve to the family handler on the primary identity", async () => {
+describe("TC-INST-001 six lifecycle entry points resolve through both composed programs", () => {
+  test("6/6 resolve to the family handler on the primary identity", async () => {
     const entries: readonly (readonly string[])[] = [
       ["install", "--dry-run", "--json"],
+      ["install", "migrate", "--dry-run", "--json"],
       ["install", "status", "--json"],
       ["install", "rollback", "--json"],
       ["install", "uninstall", "--dry-run", "--json"],
@@ -119,9 +127,10 @@ describe("TC-INST-001 five lifecycle entry points resolve through both composed 
     }
   });
 
-  test("5/5 resolve to the family handler on the alias, as one typed refusal", async () => {
+  test("6/6 resolve to the family handler on the alias, as one typed refusal", async () => {
     const entries: readonly (readonly string[])[] = [
       ["install", "--json"],
+      ["install", "migrate", "--json"],
       ["install", "status", "--json"],
       ["install", "rollback", "--json"],
       ["install", "uninstall", "--json"],
@@ -294,31 +303,5 @@ describe("TC-INST-006 no flag, argument, or environment value redirects the dest
     expect(outcome.data?.destination).toBe(
       brandOf("jaiship").installPath.replace("~", scratch.home),
     );
-  });
-});
-
-describe("GH-365 the migration verb is a family member", () => {
-  test("install migrate --dry-run resolves to the migration plan on the primary identity", async () => {
-    const runtime = createInstallRuntime({
-      scratch,
-      runningArtifactPath: artifact.path,
-      identity: fixtureIdentity(),
-      migration: {
-        roots: [],
-        backupRoot: join(scratch.configRoot, "migration-backups"),
-        runId: () => "run-migration-surface",
-        clock: { nowIso: () => "2026-11-18T12:05:00.000Z" },
-        priorPrefixes: [],
-      },
-    });
-    const install = createInstallCommandDefinition(runtime);
-    const outcome = (await install.handler({
-      command: "install",
-      flags: { "--dry-run": true, "--json": true },
-      argv: ["install", "migrate", "--dry-run"],
-      positionals: ["migrate"],
-      brand: brandOf("jaiship"),
-    } as never)) as { readonly data?: { readonly schemaId?: string } };
-    expect(outcome.data?.schemaId).toBe("install.migration.plan.v1");
   });
 });

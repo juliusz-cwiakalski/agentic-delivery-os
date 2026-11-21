@@ -1947,17 +1947,6 @@ export const ERROR_TABLE = [
     summary: "`--add-to-path` found no identifiable shell and no explicit profile path.",
   },
   {
-    code: "install.migration.unavailable",
-    domainKind: "install",
-    category: "user",
-    retryable: false,
-    consequence: "not_landed",
-    remediationHint:
-      "Perform the documented manual move of the prior-namespace artifacts; migration is owned by M4-S2 and nothing is moved, copied, or deleted here.",
-    projectionClass: "user-validation",
-    summary: "`--migrate` was supplied and migration is not available in this build.",
-  },
-  {
     code: "install.daemon.running",
     domainKind: "install",
     category: "user",

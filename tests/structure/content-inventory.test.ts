@@ -3680,7 +3680,6 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "migrationAdvisory",
     "migrationBackupRoot",
     "migrationRoots",
-    "migrationUnavailableSummary",
     "PRIOR_NAMESPACE_NAMES",
     "priorBinaryName",
     "priorNamespacePaths",

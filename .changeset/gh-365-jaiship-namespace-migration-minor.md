@@ -13,5 +13,5 @@ Every one-release prior-namespace shim is declared in a machine-readable registr
 with its notice and removal release; the forbidden-literal machinery gains a
 prior-namespace seed class and a repository-tree arm; product identifiers across
 docs, guides, and prompts are aligned; and the `--migrate` flag form and the
-`install.migration.unavailable` identity retire. No configuration key, stored
+the delegation refusal identity retire. No configuration key, stored
 record, schema, or state-format identifier changes.

@@ -1157,7 +1157,6 @@ export {
   migrationAdvisory,
   migrationBackupRoot,
   migrationRoots,
-  migrationUnavailableSummary,
   PRIOR_NAMESPACE_NAMES,
   priorNamespacePaths,
 } from "./install-migration.js";

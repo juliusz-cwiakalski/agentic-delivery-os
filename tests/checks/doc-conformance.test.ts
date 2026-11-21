@@ -731,7 +731,7 @@ const GH346_ROWS: readonly PageClaimRow[] = [
     ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 170 machine identities",
+      "The table declares 169 machine identities",
       "allowlist of 68 declared identities",
       "the eleven `install` rows",
       "the thirteen `harness` rows",
@@ -748,7 +748,7 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "65-entry allowlist",
       "66-entry allowlist",
     ],
-    required: ["170 identities", "68-entry allowlist"],
+    required: ["169 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -769,10 +769,10 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "family count (27)",
     ],
     required: [
-      "170 entries",
-      "169 delivered rows",
+      "169 entries",
+      "168 delivered rows",
       "68 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 136",
+      "BASELINE_ROWS.length + 135",
       "family count (28)",
     ],
   },
@@ -895,10 +895,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("170 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("169 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 170 identities",
+      "missing required phrase: 169 identities",
     );
   });
 
@@ -976,10 +976,10 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 133",
     ],
     required: [
-      "170 machine identities",
-      "the same 170 identities",
+      "169 machine identities",
+      "the same 169 identities",
       "delivered-rows metric",
-      "BASELINE_ROWS.length + 136",
+      "BASELINE_ROWS.length + 135",
       "the sixteen `provider` rows",
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
@@ -989,7 +989,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
     stale: ["164 identities", "167 identities", "66-entry allowlist"],
-    required: ["170 identities", "68-entry allowlist"],
+    required: ["169 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -1001,7 +1001,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 130",
       "BASELINE_ROWS.length + 133",
     ],
-    required: ["170 entries", "169 delivered rows", "BASELINE_ROWS.length + 136"],
+    required: ["169 entries", "168 delivered rows", "BASELINE_ROWS.length + 135"],
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
@@ -1010,7 +1010,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "declared table total at 167 machine identities",
       "66 declared identities",
     ],
-    required: ["declared table total at 170 machine identities", "68 declared identities"],
+    required: ["declared table total at 169 machine identities", "68 declared identities"],
   },
   {
     page: "doc/spec/features/feature-provider-engine.md",
@@ -1335,7 +1335,7 @@ describe("GH-350 phase 4 the configuration page states the budgets branch and th
  * the delivery path, the window/quota/budget are declared in configuration, and
  * `provider migrate legacy` is the guided bridge with its refusal posture. The
  * guide names the command as a provider-policy import and keeps it distinct from
- * the M4-S2 namespace migration and the install lifecycle's `--migrate` flag.
+ * the M4-S2 namespace migration and the install lifecycle's `install migrate` verb (the retired `--migrate` form).
  */
 const GH350_PHASE6_ROWS: readonly GH350Row[] = [
   {
@@ -1354,7 +1354,7 @@ const GH350_PHASE6_ROWS: readonly GH350Row[] = [
       "PROVIDER_MIGRATE_MAX_SOURCES = 64",
       "provider-policy",
       "M4-S2 namespace migration",
-      "install lifecycle's `--migrate` flag",
+      "install lifecycle's `install migrate` verb",
       "no hook import is implied",
     ],
   },
@@ -2430,7 +2430,7 @@ const GH374_TRUTH_ROWS: readonly Gh374Row[] = [
     page: "doc/guides/opencode-model-configuration.md",
     required: [
       "The typed `provider` and `provider.profiles` branches are the canonical routing path for this repository",
-      "this repository's seats and models are committed in `.delivery-os/config.yaml`",
+      "this repository's seats and models are committed in `.jaiship/config.yaml`",
       "The per-agent table above is harness assignment",
       "No provider/model identifier belongs in an agent prompt or command definition",
       "neutral `<provider>/<model>` placeholders",

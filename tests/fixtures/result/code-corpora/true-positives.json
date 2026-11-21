@@ -301,12 +301,6 @@
       "resolves": true
     },
     {
-      "id": "install-migration-unavailable",
-      "text": "install.migration.unavailable",
-      "recognized": true,
-      "resolves": true
-    },
-    {
       "id": "install-daemon-running",
       "text": "install.daemon.running",
       "recognized": true,

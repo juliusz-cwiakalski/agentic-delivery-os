@@ -333,7 +333,6 @@ export const INSTALL_DOMAIN_CODES = [
   "install.state.incompatible",
   "install.identity.not-owning",
   "install.shell-profile.unresolved",
-  "install.migration.unavailable",
   "install.daemon.running",
   "install.record.unreadable",
   "install.slot.absent",

@@ -102,9 +102,3 @@ export const detectPriorNamespace = (input: {
 export const migrationAdvisory = (found: readonly string[]): string =>
   `advisory: prior-namespace artifacts exist at ${found.join(", ")}; this build never moves ` +
   "them — perform the documented manual move when you are ready (nothing was moved, copied, or deleted)";
-
-/** The typed delegation refusal's sentence (the row supplies the projection). */
-export const migrationUnavailableSummary = (owner: string): string =>
-  `refused: migration is not available in this build; ${owner} owns the namespace move — ` +
-  "perform the documented manual move of the prior-namespace artifacts; nothing was moved, " +
-  "copied, or deleted";

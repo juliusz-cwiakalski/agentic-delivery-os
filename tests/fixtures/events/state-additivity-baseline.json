@@ -178,6 +178,8 @@
     "telemetry.ts:TELEMETRY_CAPTURE_SCHEMA_ID": "delivery.telemetry.capture.v1",
     "telemetry.ts:TELEMETRY_STEP_KEY_PREFIX": "harness.telemetry.step:",
     "telemetry.ts:TELEMETRY_STEP_RECORD_KIND": "harness.telemetry.step",
-    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1"
+    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1",
+    "install.ts:INSTALL_MIGRATION_MANIFEST_SCHEMA": "install.migration.manifest.v1",
+    "install.ts:INSTALL_MIGRATION_PLAN_SCHEMA": "install.migration.plan.v1"
   }
 }

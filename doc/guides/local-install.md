@@ -101,9 +101,11 @@ One owner per artifact class:
 
 The compatibility alias (`delivery-os`) keeps its delivered behaviour with one declared divergence: it composes the `install` family for parity and refuses every lifecycle entry point with `install.identity.not-owning` — the alias does not own installation; run the lifecycle through the installed product binary.
 
-## The migration hook
+## The migration verb
 
-Without `--migrate`, `install` **detects** prior-identity artifacts and prints one advisory line naming them and the documented manual move; it never moves, copies, or deletes them. With `--migrate`, the build answers one typed refusal (`install.migration.unavailable`) stating that the namespace migration is not available in this build and naming M4-S2 as its owner, with a remedy pointing at the documented manual move; no migration port is composed, so the flag cannot silently no-op. A dry-run with `--migrate` prints the same detection list and states that nothing would be migrated.
+`install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the three declared prior-identity roots — host configuration, host state, and the invoking project configuration — to the current Jaiship identity. Start with `install migrate --dry-run`: it prints `install.migration.plan.v1`-shaped data as one header per root class, one line per entry, the would-be backup path, and `daemon: unchecked`, and writes nothing. An applying run copies and digest-verifies every planned entry into `<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the first move, so a move is reversible by hand from the backup. A differing entry is a `conflict` retained on both sides; a byte-identical duplicate is retained; a symlink entry is never followed; `--backup-dir` must be an absolute path outside every source root. The command writes **zero records of any kind** in every mode (the declared audit exception), never edits your shell profile (a managed `PATH` block under a prior root is reported with the remedy "re-run the installed artifact's `install`"), and a second run reports `already-migrated` with no move and no new backup.
+
+The retired `install --migrate` form is still recognised by the parser so the remedy is reachable: it refuses at exit `1` and names `install migrate`. The documented flag set no longer lists it. Without the flag, `install` keeps the delivered advisory detection line and moves nothing.
 
 ## The legacy launcher step
 

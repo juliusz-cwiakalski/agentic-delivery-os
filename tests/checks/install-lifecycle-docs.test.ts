@@ -43,7 +43,10 @@ export const GUIDE_REQUIREMENTS = [
   "state.schema.mismatch",
   "One owner per artifact class",
   "install.identity.not-owning",
-  "install.migration.unavailable",
+  "install migrate",
+  "install.migration.plan.v1",
+  "--backup-dir",
+  "zero records of any kind",
 ] as const;
 
 /** One page's claim rule: every declared fact present, and the retired claim absent. */
