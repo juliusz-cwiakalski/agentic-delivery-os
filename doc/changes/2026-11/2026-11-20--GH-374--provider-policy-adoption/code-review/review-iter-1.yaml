@@ -298,7 +298,7 @@ findings:
     location: doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/migration-output.md:22
     message: >-
       [info] The evidence artifact commits absolute host paths
-      (`/home/juliusz/.ados/...`) in the captured error envelopes, exposing the
+      (`$HOME/.ados/...`) in the captured error envelopes, exposing the
       operator's username. The spec (§20, A-3) permits source paths and no
       credential value is present, so this is not a NFR-4 breach; a `$HOME`-relative
       form would be more portable.

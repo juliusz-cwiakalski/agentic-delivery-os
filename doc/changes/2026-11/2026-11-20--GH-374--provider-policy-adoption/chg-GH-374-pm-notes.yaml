@@ -30,7 +30,7 @@ phases:
     started: "2026-11-21T07:22:00Z"
     completed: 2026-11-21T07:31:23.626Z
   quality_gates:
-    started: null
+    started: "2026-11-21T07:32:00Z"
     completed: null
   dod_check:
     started: null
@@ -316,7 +316,7 @@ notes:
     type: info
     date: "2026-11-21"
   - text: "DEVIATION (environment): the shared worktree git metadata file
-      `/home/juliusz/git/jaiship/jaiship/.git/info/exclude` excludes
+      `$HOME/git/jaiship/jaiship/.git/info/exclude` excludes
       `.delivery-os/`, so `git add -A -- .delivery-os/config.yaml` exits 1 with
       the ignore hint even for the tracked file, and the commit primitive
       classifies that as `commit.atomic-abort` (staging failed). The ignore line

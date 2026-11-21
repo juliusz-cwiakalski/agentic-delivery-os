@@ -2,7 +2,8 @@
 
 Captured on 2026-11-20 with the installed binary `jaiship 0.0.0 (build e1ebc76)`.
 Every command is read-only: `--write` was never passed, and nothing under `$HOME`
-or the repository was moved, copied, or deleted.
+or the repository was moved, copied, or deleted. Absolute host paths in the
+captured output are shown relative to `$HOME`.
 
 ## What was attempted
 
@@ -30,7 +31,7 @@ Exit `1`:
     "retryable": false,
     "consequence": "not_landed",
     "remediationHint": "Read the named reason, file, and line; hand-author the policy, or correct the source and re-run.",
-    "summary": "provider migrate legacy refused (oversized-source) at /home/juliusz/.ados/hooks/pre-opencode-iteration: is 75215 bytes; PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536"
+    "summary": "provider migrate legacy refused (oversized-source) at $HOME/.ados/hooks/pre-opencode-iteration: is 75215 bytes; PROVIDER_MIGRATE_SOURCE_MAX_BYTES = 65536"
   }
 }
 ```
@@ -53,7 +54,7 @@ Exit `1`:
     "retryable": false,
     "consequence": "not_landed",
     "remediationHint": "Read the named reason, file, and line; hand-author the policy, or correct the source and re-run.",
-    "summary": "provider migrate legacy refused (dynamic-value) at /home/juliusz/.ados/config/profiles/ados-agent-tiers.sh:11: is outside the assignment-only subset; only blank lines, # comments, and NAME=value or export NAME=value are accepted"
+    "summary": "provider migrate legacy refused (dynamic-value) at $HOME/.ados/config/profiles/ados-agent-tiers.sh:11: is outside the assignment-only subset; only blank lines, # comments, and NAME=value or export NAME=value are accepted"
   }
 }
 ```
@@ -65,7 +66,7 @@ The two refusals are independent: clearing one does not clear the other, and
 
 ```
 $ wc -c -l "$HOME/.ados/hooks/pre-opencode-iteration"
- 1672 75215 /home/juliusz/.ados/hooks/pre-opencode-iteration
+ 1672 75215 $HOME/.ados/hooks/pre-opencode-iteration
 
 $ wc -c -l "$HOME/.ados/config/profiles/"*.sh
    54  3233 ados-agent-tiers.sh
