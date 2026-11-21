@@ -685,6 +685,7 @@ describe("GH-172 CI binding", () => {
       "ts-aggregate",
       "ts-commitlint",
       "ts-forbidden-literals",
+      "ts-namespace-tree",
     ]);
     const workflow = parseYaml(readFileSync(join(ROOT, CI_PATH), "utf8")) as {
       jobs?: Record<string, unknown>;
@@ -697,7 +698,7 @@ describe("GH-172 CI binding", () => {
       scripts: Record<string, string>;
     };
     expect(manifest.scripts.check).toBe(
-      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && pnpm check:memory && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
+      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
     );
     expect(manifest.scripts.check).not.toContain("error-table-sync");
     expect(manifest.scripts.check).not.toContain("exit-code-literals");
