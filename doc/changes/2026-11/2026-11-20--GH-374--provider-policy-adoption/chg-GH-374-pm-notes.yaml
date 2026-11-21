@@ -27,8 +27,8 @@ phases:
     started: "2026-11-21T07:18:00Z"
     completed: 2026-11-21T07:18:24.527Z
   review_fix:
-    started: null
-    completed: null
+    started: "2026-11-21T07:22:00Z"
+    completed: 2026-11-21T07:31:23.626Z
   quality_gates:
     started: null
     completed: null
@@ -386,11 +386,11 @@ notes:
     type: evidence
     date: "2026-11-21"
   - text: "delivery plan phase 6 (documentation-truth) complete: commit
-      706a751e24ea90e3e5bd1ebadda7063c34be4f0a. Gate:
-      `bun test tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the
-      delivered GH-242/GH-350 blocks plus a closed GH-374 block: 28 required
-      phrase sites, 12 retired claims over an 8-page closed set, marker
-      assertions, both-directions arms and a delta carve-out); `bash
+      706a751e24ea90e3e5bd1ebadda7063c34be4f0a. Gate: `bun test
+      tests/checks/doc-conformance.test.ts` 59 pass / 0 fail (the delivered
+      GH-242/GH-350 blocks plus a closed GH-374 block: 28 required phrase sites,
+      12 retired claims over an 8-page closed set, marker assertions,
+      both-directions arms and a delta carve-out); `bash
       scripts/.tests/test-doc-distribution.sh` PASS (96 in-scope docs, no
       drift). The three guides state the adopted policy, the canonical routing
       path and the retirement; `feature-provider-profiles.md`'s line-38 sentence
@@ -433,5 +433,18 @@ notes:
       executable shell installers; guides and golden text describe the command
       without being installers. (13) The doc-conformance phrase comparison
       flattens whitespace because prose wraps."
+    type: info
+    date: "2026-11-21"
+  - text: "Review iteration 1: PASS with no blocking defect
+      (code-review/review-iter-1.yaml). One major finding F-1 (the guides
+      claimed the legacy hook and profile directory were absent, false on a host
+      that has them) plus minors F-2 (test title), F-6 (spec PURPOSE
+      contradiction) and F-7 (phase-6 evidence hash); all four fixed in
+      f5dfc900, with the spec §16 rows aligned to the corrected guide wording
+      and the plan's version citations aligned to spec v1.5 / test plan v1.2.
+      Accepted residuals (not fixed, not affecting config correctness, security,
+      hermeticity or locality): F-3 two tautological test arms, F-4 a permanent
+      SHA pin of an unrelated control test file, F-5 a host-state `.jaiship`
+      existence assertion."
     type: info
     date: "2026-11-21"

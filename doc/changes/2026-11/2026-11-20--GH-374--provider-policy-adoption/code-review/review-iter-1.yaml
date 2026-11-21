@@ -1,0 +1,312 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-374
+branch: feat/GH-374/provider-policy-adoption
+status: PASS
+summary: >-
+  The declaration matches spec DM-1..DM-8 exactly: two `sourceKey` credential
+  references, subscription peaking 06:00-10:00Z/7200s and paid peaking
+  01:00-10:00Z/0, both chains with the right `allowPaidFallback`,
+  `defaultChain: subscription-first`, 20/30 ceilings, two profiles with 24
+  identically named seats each (8 glm-5.3 / pm+editor glm-5.3-flash / 14
+  deepseek-flash; paid all-flash; vision only on designer+image-reviewer),
+  grace 300 inside the derived bound 300, the preference chain and both watch
+  targets; `verify.suite-map` is byte-unchanged (insertions-only diff). The
+  toolsmith prompt carries no provider/model identifier except the declared
+  `claude.model: opus` carve-out, and the generated `.ados-claude` counterpart
+  is proven build output (provenance header intact, second build a digest
+  no-op). I ran all six suites: 5 new suites (107 tests) + extended
+  doc-conformance (59) are green, `bash scripts/.tests/test-doc-distribution.sh`
+  is PASS (96 in-scope docs), `plan validate` is valid, `commitlint` over
+  origin/main-tools..HEAD is exit 0, `git diff --check` is clean and the tree
+  is clean after the generator run. The diff touches only the declared set (no
+  packages/**, .ai/**, .jaiship/**, scripts/**, other prompts/commands); no
+  credential value exists anywhere (placeholders only). One major
+  documentation-accuracy residual (F-1: two guides claim "none is installed"
+  while `migration-output.md` and the live host show an installed hook the
+  shell fallbacks still honour) plus several low/info test-hygiene and artifact
+  nits; no blocking correctness, security, config or locality defect.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 6
+  info: 6
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: documentation
+    location: doc/guides/provider-conditions-and-parks.md:212
+    message: >-
+      [major | owner: phase 6 docs] Both edited guides assert the retired
+      dependency is absent: `provider-conditions-and-parks.md:212` ("The shell
+      profile directory and the pre-iteration hook are not on this repository's
+      delivery path: none is installed") and `zai-peak-hours-hook.md:34` ("the
+      hook is off this repository's delivery path and none is installed"). On
+      this host the legacy hook IS installed (`~/.ados/hooks/pre-opencode-iteration`
+      is a live symlink, 2026-11-21) and the legacy profile directory exists
+      (`~/.ados/config/profiles/`), and the change's own `migration-output.md`
+      documents both. `scripts/deliver-ticket.sh:68` and `scripts/ceo-loop.sh:72`
+      still default `PRE_ITERATION_HOOK` to exactly that path and still honour
+      legacy profile variables, so the shell fallbacks invoke the installed hook
+      today. The ADOS "retired" claims (the typed path reads configuration only;
+      the hook is off the typed path) are true; "none is installed" is false
+      about the machine. Spec §16 obligation row (spec.md:488/500) mandates the
+      same phrase, so the defect is inherited from the spec obligation. Treated
+      as a major docs-accuracy residual, not a blocking implementation defect,
+      because the adjacent sentence scopes invocation to the shell fallback and
+      no behaviour claim is wrong.
+    suggestion: >-
+      Reword both guides to a scoped, true statement, e.g. "this repository
+      installs none and the typed delivery path reads configuration only; an
+      operator-installed legacy hook/profiles are still honoured by the shell
+      fallbacks (`deliver-ticket.sh`, `ceo-loop.sh`)". Update the spec §16
+      obligation rows (spec.md:488, 500) and the doc-conformance required phrase
+      in `GH374_TRUTH_ROWS`/`GH374_RETIRED_CLAIMS` together, then re-run
+      `bun test tests/checks/doc-conformance.test.ts` and
+      `bash scripts/.tests/test-doc-distribution.sh`. If the owner intends
+      "none is installed [for this repository]" they should state that scope
+      explicitly rather than rely on the reader's inference.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/provider-policy-adoption.test.ts:671
+    message: >-
+      [minor] The test titled "a removed seat refuses provider.profile.invalid
+      naming the agent and the declared seats" does not assert a refusal: it
+      asserts exit 0, a 23-entry env record, and an `unassigned` binding through
+      the delivered `resolveBinding`. The body is honest (it asserts the
+      delivered fact recorded in the pm-notes reconciliation #10), but the title
+      claims a `provider.profile.invalid` refusal that the exercised CLI path
+      never produces, which can mislead a future reader into thinking the
+      dispatch-path refusal is covered here.
+    suggestion: >-
+      Rename the test to describe what it asserts (e.g. "a removed seat
+      surfaces as a 23-entry record and an `unassigned` binding"), or add a
+      second arm that drives the dispatch per-spawn binding seam that does
+      refuse `provider.profile.invalid` (production.ts:1522-1535) if the refusal
+      is meant to be covered.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/structure/provider-policy-adoption-reference.test.ts:1583
+    message: >-
+      [minor] Two negative-control arms are tautological and assert nothing
+      about the code. `DRIFT-007` "a third top-level key is detected by the pin"
+      mutates a clone and asserts the clone's own keys, never invoking a pin
+      function (the real top-level pin is the preceding `toEqual(["provider",
+      "verify"])` test). `SEC-003` "Set equality: nothing declared is skipped"
+      compares `new Set(existing)` with `new Set(<the same filter expression>)`,
+      i.e. a value with itself. Both read as coverage but add none.
+    suggestion: >-
+      Make the DRIFT-007 arm call the actual top-level assertion (or delete it
+      in favour of the existing positive pin); drop the self-comparison in
+      SEC-003 or replace it with a genuinely independent oracle (e.g. a scanned
+      path list recorded by the scanner and compared with the declared set).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: maintainability
+    location: tests/structure/provider-policy-adoption-reference.test.ts:47
+    message: >-
+      [minor] The permanent reference suite pins the exact SHA-256 of an
+      unrelated control test file (`tests/structure/verify-gates-suite-map-reference.test.ts`,
+      line 1580). That file is expected to evolve (it enumerates the suite map),
+      so any future legitimate edit to it will fail GH-374's suite even though
+      the suite-map value is already pinned semantically by the preceding
+      `verify` deep-equal. This is a brittle cross-file coupling in a permanent
+      suite.
+    suggestion: >-
+      Drop the hash pin (the `verify` deep-equal already pins `suite-map`
+      content) or replace it with a semantic check that the control suite's
+      declared suites equal the document's `verify.suite-map` (which is what the
+      change actually cares about).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/structure/provider-policy-adoption-reference.test.ts:680
+    message: >-
+      [minor] `CFG-001` asserts `existsSync(join(ROOT, ".jaiship"))` is false.
+      That is working-tree ambient state, not a tree invariant: `.jaiship/` is
+      git-excluded and is expected to be creatable on a workstation (the M4-S2
+      brand directory), so a developer with a local `.jaiship` fails a permanent
+      suite. The spec requires `.jaiship` not be *committed*, not that it never
+      exists on disk.
+    suggestion: >-
+      Assert tracked-ness instead (e.g. `git ls-files .jaiship` is empty, or the
+      `acquired.prior` state names `.jaiship` as `currentFile` and `read`), so
+      the guard is about committed state and stays hermetic.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/chg-GH-374-spec.md:41
+    message: >-
+      [minor] The spec PURPOSE paragraph still says the change is proven "while
+      no engine behaviour, credential value, or agent prompt is changed", which
+      contradicts F-8/G-14/DEC-20/AC-F2-2 (the change removes the model
+      identifiers from `.opencode/agent/toolsmith.md` and regenerates the
+      counterpart). The rest of the spec is consistent (NG-5, §7.1, §16,
+      NFR-7), so this is a stale artifact sentence only.
+    suggestion: >-
+      Correct line 41 to "no engine behaviour or credential value is changed,
+      and the only prompt change removes provider/model identifiers" so the
+      summary does not contradict F-8.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/chg-GH-374-pm-notes.yaml:388
+    message: >-
+      [minor | plan gap: EVIDENCE_MISSING for phase 6] Phases 1-5 each carry a
+      pm-notes completion note naming the plan phase and the full commit hash
+      plus the gate result; the phase-6 note (documentation-truth) records the
+      gate result and file list but names no hash ("the phase-6 commit
+      immediately following this note is the branch head"). The commit is
+      identifiable (`706a751e`), so this is an evidence-format gap, not a
+      missing phase.
+    suggestion: >-
+      Append the explicit commit hash (`706a751e`) to the phase-6 evidence note
+      (a pm-notes edit only) so every completed plan phase names its commit, as
+      AGENTS.md's plan-phase evidence rule asks.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/provider-policy-adoption-prompt-scan.test.ts:45
+    message: >-
+      [info] The provider-qualified classes are case-sensitive lowercase
+      (`zai-coding-plan/`, `deepseek/`, `openai/`, `anthropic/`, `gemini/`), so a
+      capitalised provider prefix (for example `OpenAI/gpt-5` or `Anthropic/claude-opus`)
+      would evade the scan. `.opencode/agent/image-generator.md:59` carries
+      "OpenAI/Google" prose and is not reported (correctly, as provider prose,
+      not a model id). This is the declared scope (spec A-12/glossary) rather
+      than a defect, but the "no provider/model identifier" guarantee is bounded
+      by case and by the five-name provider set.
+    suggestion: >-
+      Consider a case-insensitive provider-prefix arm (or an explicit note that
+      the classes are lowercase by declaration) so the residual scope is
+      documented where the scanner lives.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/guides/provider-conditions-and-parks.md:204
+    message: >-
+      [info] The guide says "The synchronous probe reads no live quota or
+      balance", omitting the spec's qualifier "nomination". The chain
+      `provider resolve` DOES read subscription quota through the delivered
+      transport (the behaviour suite asserts one transport call), so the
+      sentence is only true of the synchronous *nomination* probe.
+    suggestion: >-
+      Say "the synchronous nomination probe reads no live quota or balance" to
+      match spec F-5 and avoid implying `provider resolve` is quota-free.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: info
+    confidence: high
+    category: process
+    location: .delivery-os/config.yaml
+    message: >-
+      [info] The six plan-phase commits carry the commit primitive's template
+      subjects (`chore(GH-374): update <path>`) rather than the plan's declared
+      `feat/refactor/test/docs(GH-374): ...` summaries. This is the recorded,
+      code-referenced primitive behaviour (edge.ts currentPhaseId /
+      commit.ts planPhaseForLifecycle; precedent GH-350) and the subjects pass
+      the repository commitlint gate (verified: exit 0 over
+      origin/main-tools..HEAD). Not a quality defect, only a traceability
+      divergence.
+    suggestion: >-
+      No action; the pm-notes deviation record is sufficient. If the owner wants
+      plan summaries in history, that is a commit-primitive change outside this
+      story.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/chg-GH-374-plan.yaml:51
+    message: >-
+      [info] The plan's SOURCES block cites "spec v1.4" and "test plan v1.1"
+      while the delivered artifacts are spec v1.5 and test plan v1.2 (the plan
+      does acknowledge the v1.5 AC-F2-2 correction in-line). Bookkeeping only;
+      the plan was validated `readyForDevelopment=true`.
+    suggestion: >-
+      Update the source-citation line to v1.5 / v1.2 on the next plan touch.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: style
+    location: tests/behaviour/provider-policy-adoption.test.ts:11
+    message: >-
+      [info] `biome check` (the assist/organizeImports action) flags unsorted
+      imports in three new suites (`behaviour/provider-policy-adoption.test.ts:11`,
+      `checks/provider-policy-adoption-prompt-scan.test.ts:17`,
+      `structure/provider-policy-adoption-reference.test.ts:12`). CI runs
+      `pnpm lint` (`biome lint`) and `pnpm format:check` (`biome format`), not
+      `biome check`, so no gate fails; the rest of the test tree happens to be
+      import-organised.
+    suggestion: >-
+      Run `./node_modules/.bin/biome check --write` on the three files (or
+      `biome lint --write --unsafe` for assist) to keep the tree's prevailing
+      import order; harmless if left.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: info
+    confidence: high
+    category: privacy
+    location: doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption/migration-output.md:22
+    message: >-
+      [info] The evidence artifact commits absolute host paths
+      (`/home/juliusz/.ados/...`) in the captured error envelopes, exposing the
+      operator's username. The spec (§20, A-3) permits source paths and no
+      credential value is present, so this is not a NFR-4 breach; a `$HOME`-relative
+      form would be more portable.
+    suggestion: >-
+      Optionally normalise captured paths to `$HOME/...` in the evidence
+      artifact; no functional impact.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-21T09:30:00Z
+next_step: PROCEED
