@@ -395,3 +395,19 @@ notes:
       projects.yaml glob (3f7f4d7b); verified, not re-added (advisory A6)."
     type: info
     date: "2026-11-21"
+  - text: "Plan phase 2 COMPLETE: commit 6426cd4a380720e85ac5388d9ac7aecd9b0c722b
+      (primitive template subject 'chore(GH-365): update
+      .changeset/gh-365-jaiship-namespace-migration-min…'). The single minor
+      changeset was authored first; the registry window derives from it as
+      declaredIn 0.1.0 (0.0.0 + minor) and removalRelease 0.2.0 (next minor).
+      namespace.shims.v1 declares the seven Appendix F families with per-shim
+      sites (A7 applied: shell sites are per-shim). Committed-head gate green:
+      changesets-group OK; namespace-shims-registry 8 pass (presence for every
+      site; match/budget only in-corpus; decl-only sites never matched; seven
+      mutants fail by name; window equals the changeset pair); content-inventory
+      12 pass; pnpm typecheck green; git diff --check clean. Pre-freeze lineage
+      sites are the legacy adapter index.ts and provider-migrate-table plus the
+      eight-variable fixture; the fixture holds ADOS_ only. The three owner-hold
+      docs and the prior-identity harness are declaration-only."
+    type: info
+    date: "2026-11-21"

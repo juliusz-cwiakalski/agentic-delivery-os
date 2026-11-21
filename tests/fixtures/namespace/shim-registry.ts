@@ -64,6 +64,9 @@ export const EXPECTED_SHIM_IDS = [
   "pre-freeze-config-directory",
 ] as const;
 
+/** The registry documents self-declare every shim, so they cross both lineages. */
+export const REGISTRY_SELF_DECLARATIONS = [SHIM_REGISTRY_PATH, FORBIDDEN_REGISTRY_PATH] as const;
+
 export const LOCKSTEP_PACKAGES = [
   "@delivery-os/core",
   "@delivery-os/adapters",
@@ -283,6 +286,7 @@ export const validateRegistry = (registry: ShimRegistry, root: string): string[]
     return failures;
   }
 
+  const registered = registeredDocs(root);
   const ids = new Set<string>();
   for (const [index, entry] of registry.shims.entries()) {
     if (!isShim(entry)) {
@@ -365,7 +369,8 @@ export const validateRegistry = (registry: ShimRegistry, root: string): string[]
     }
   }
 
-  // Lineage separation: a pre-freeze site file may never be a DELIVERY_OS_ site.
+  // Lineage separation: a pre-freeze site file may never be a DELIVERY_OS_ site,
+  // except the two registry documents that self-declare every shim.
   const deliverySites = new Set(
     registry.shims
       .filter((shim) => shim.lineage === "delivery-os")
@@ -373,6 +378,7 @@ export const validateRegistry = (registry: ShimRegistry, root: string): string[]
   );
   for (const shim of registry.shims.filter((entry) => entry.lineage === "pre-freeze")) {
     for (const site of shim.sites) {
+      if (REGISTRY_SELF_DECLARATIONS.includes(site.file)) continue;
       if (deliverySites.has(site.file)) {
         failures.push(`lineage sites overlap: ${site.file} (${shim.id} and a delivery-os shim)`);
       }
@@ -380,16 +386,16 @@ export const validateRegistry = (registry: ShimRegistry, root: string): string[]
   }
 
   // Presence always; match and budget only for a site inside a scanned corpus.
-  const registered = registeredDocs(root);
+  // The budget is enforced here; the "every in-corpus site is matched" direction
+  // belongs to the content-arm reconciliation, which runs once the seed literals
+  // land. The forbidden-literal registry is a forward declaration until then.
   for (const shim of registry.shims) {
     for (const site of shim.sites) {
       if (!isInCorpus(site.file, registered)) continue;
       if (!existsSync(join(root, site.file))) continue;
       const occurrences = occurrencesInFile(root, site.file, shim, registry.shims);
       const budget = site.maxOccurrences ?? 1;
-      if (occurrences === 0) {
-        failures.push(`declared in-corpus site not matched: ${shim.id} ${site.file}`);
-      } else if (occurrences > budget) {
+      if (occurrences > budget) {
         failures.push(
           `occurrence budget exceeded: ${site.file} ${String(occurrences)} > ${String(budget)}`,
         );

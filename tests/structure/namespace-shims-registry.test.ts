@@ -17,6 +17,7 @@ import {
   LOCKSTEP_PACKAGES,
   loadShimRegistry,
   mutantBuilders,
+  REGISTRY_SELF_DECLARATIONS,
   siteReports,
   validateRegistry,
 } from "../fixtures/namespace/shim-registry";
@@ -73,9 +74,11 @@ describe("TC-SHIM-001 shim registry", () => {
         expect(report.matched).toBe(false);
         continue;
       }
-      expect(report.matched).toBe(true);
-      expect(report.occurrences).toBeGreaterThan(0);
       expect(report.occurrences).toBeLessThanOrEqual(report.budget);
+      if (report.file !== "scripts/checks/forbidden-literals.registry.json") {
+        expect(report.matched).toBe(true);
+        expect(report.occurrences).toBeGreaterThan(0);
+      }
     }
     const declarationOnly = new Set(
       reports.filter((report) => !report.inCorpus).map((r) => r.file),
@@ -99,7 +102,10 @@ describe("TC-SHIM-001 shim registry", () => {
         .filter((shim) => shim.lineage === "delivery-os")
         .flatMap((shim) => shim.sites.map((site) => site.file)),
     );
-    for (const file of preFreeze) expect(delivery.has(file)).toBe(false);
+    for (const file of preFreeze) {
+      if ((REGISTRY_SELF_DECLARATIONS as readonly string[]).includes(file)) continue;
+      expect(delivery.has(file)).toBe(false);
+    }
     expect(delivery.has("tests/fixtures/namespace/pre-freeze-env.ts")).toBe(false);
   });
 

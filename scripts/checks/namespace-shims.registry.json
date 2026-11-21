@@ -13,7 +13,10 @@
       "lineage": "delivery-os",
       "noticeId": "shim.executable-alias",
       "notice": "The prior executable name is a compatibility alias for the current identity; invoke the current executable instead, and the alias is removed in the declared removal release.",
-      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "window": {
+        "declaredIn": "0.1.0",
+        "removalRelease": "0.2.0"
+      },
       "owner": "cli surface owner",
       "sites": [
         {
@@ -45,6 +48,16 @@
           "file": "scripts/.tests/test-dispatch-bash-fallback.sh",
           "role": "The fallback battery's fake prior executable fixtures.",
           "maxOccurrences": 2
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 7
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -56,7 +69,10 @@
       "lineage": "delivery-os",
       "noticeId": "shim.prior-config-directory",
       "notice": "A prior-identity project configuration file was read as a compatibility input; move it to the current configuration directory, and the read is removed in the declared removal release.",
-      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "window": {
+        "declaredIn": "0.1.0",
+        "removalRelease": "0.2.0"
+      },
       "owner": "configuration owner",
       "sites": [
         {
@@ -78,6 +94,16 @@
           "file": "scripts/.tests/test-dispatch-bash-fallback.sh",
           "role": "The fallback battery's prior home-default root fixtures.",
           "maxOccurrences": 2
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -89,7 +115,10 @@
       "lineage": "delivery-os",
       "noticeId": "shim.prior-state-root",
       "notice": "A prior-identity host state root was read as a compatibility input; run the migration verb to move it, and the read is removed in the declared removal release.",
-      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "window": {
+        "declaredIn": "0.1.0",
+        "removalRelease": "0.2.0"
+      },
       "owner": "state owner",
       "sites": [
         {
@@ -106,6 +135,16 @@
           "file": "scripts/.tests/test-hook-owner-hold-example.sh",
           "role": "The owner-hold hook battery's prior host-root marker fixtures.",
           "maxOccurrences": 3
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -117,7 +156,10 @@
       "lineage": "delivery-os",
       "noticeId": "shim.prior-working-name-override",
       "notice": "The prior working-name override channel was read as a compatibility input; set the identity-derived override instead, and the channel is removed in the declared removal release.",
-      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "window": {
+        "declaredIn": "0.1.0",
+        "removalRelease": "0.2.0"
+      },
       "owner": "branding owner",
       "sites": [
         {
@@ -149,6 +191,11 @@
           "file": "scripts/.tests/test-uninstall.sh",
           "role": "The uninstall battery's override-channel fixtures.",
           "maxOccurrences": 2
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
         }
       ]
     },
@@ -160,7 +207,10 @@
       "lineage": "delivery-os",
       "noticeId": "shim.prior-environment-prefix",
       "notice": "A prior-identity environment prefix was read at a declared compatibility site; use the current prefix, and the read is removed in the declared removal release.",
-      "window": { "declaredIn": "0.1.0", "removalRelease": "0.2.0" },
+      "window": {
+        "declaredIn": "0.1.0",
+        "removalRelease": "0.2.0"
+      },
       "owner": "autonomy and prompt-surface owners",
       "sites": [
         {
@@ -192,6 +242,16 @@
           "file": "tests/fixtures/entrypoint/prior-identity/harness.ts",
           "role": "The entrypoint prior-identity harness's raw-environment override facts.",
           "maxOccurrences": 2
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 4
         }
       ]
     },
@@ -203,7 +263,10 @@
       "lineage": "pre-freeze",
       "noticeId": "shim.pre-freeze-environment-prefix",
       "notice": "A pre-freeze environment prefix is mapped only for declared catalog keys, with the working-name override as the one exception; no configuration key is added and no removal release is scheduled.",
-      "window": { "declaredIn": "0.0.0", "removalRelease": null },
+      "window": {
+        "declaredIn": "0.0.0",
+        "removalRelease": null
+      },
       "owner": "pre-freeze compatibility owner; no removal release scheduled",
       "sites": [
         {
@@ -220,6 +283,16 @@
           "file": "tests/fixtures/namespace/pre-freeze-env.ts",
           "role": "The eight owner-named pre-freeze variables and the inert marker.",
           "maxOccurrences": 12
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 2
         }
       ]
     },
@@ -231,13 +304,26 @@
       "lineage": "pre-freeze",
       "noticeId": "shim.pre-freeze-config-directory",
       "notice": "A pre-freeze configuration directory is detected as a compatibility input; the current configuration directory is authoritative and no removal release is scheduled.",
-      "window": { "declaredIn": "0.0.0", "removalRelease": null },
+      "window": {
+        "declaredIn": "0.0.0",
+        "removalRelease": null
+      },
       "owner": "pre-freeze compatibility owner; no removal release scheduled",
       "sites": [
         {
           "file": "packages/adapters/src/legacy/index.ts",
           "role": "The legacy compatibility adapter's pre-freeze configuration directory constant.",
           "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/namespace-shims.registry.json",
+          "role": "The shim registry documents its own declared shim ids and literals (self-declaration, budgeted).",
+          "maxOccurrences": 1
+        },
+        {
+          "file": "scripts/checks/forbidden-literals.registry.json",
+          "role": "The forbidden-literal registry declares the prior-namespace seed literals and the shim-registry pointer.",
+          "maxOccurrences": 2
         }
       ]
     }
