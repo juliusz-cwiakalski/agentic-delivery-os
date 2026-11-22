@@ -14,6 +14,12 @@
  * migrates by re-reading: the versioned payload is the source, a reader at a
  * later version re-derives the record from it, and stored bytes are never
  * mutated in place (no record is dropped or reinterpreted).
+ *
+ * Every per-ref telemetry read applies the delivered families rule
+ * (`readTelemetryFamilies`): a well-formed family key naming another ref is
+ * that ref's business — skipped in ledger order with no kind inspection, no
+ * payload inspection, and no evidence — while the bare family prefix and the
+ * requested ref's own damage keep tearing at their position.
  */
 import {
   HARNESS_KINDS,
@@ -399,22 +405,27 @@ export const readTelemetrySteps = (
   const path = verified.value.evidence.storePath;
   const records: TelemetryStepRecord[] = [];
   for (const ledgerRecord of verified.value.records) {
-    if (ledgerRecord.kind !== TELEMETRY_STEP_RECORD_KIND) {
-      // An unknown kind under a telemetry key is damage, never silently skipped.
-      if (ledgerRecord.key.startsWith(TELEMETRY_STEP_KEY_PREFIX)) {
+    if (ledgerRecord.key.startsWith(TELEMETRY_STEP_KEY_PREFIX)) {
+      if (ledgerRecord.key !== key) {
+        // A family key with an empty ref remainder (the bare prefix) is a
+        // record that is itself invalid: it tears at its own position. A
+        // well-formed key naming another ref is that ref's business — skipped
+        // in ledger order with no kind inspection, no payload inspection, and
+        // no evidence, mirroring the delivered families rule.
+        if (ledgerRecord.key === TELEMETRY_STEP_KEY_PREFIX) {
+          return torn({ path, record: ledgerRecord.sequence });
+        }
+        continue;
+      }
+      if (ledgerRecord.kind !== TELEMETRY_STEP_RECORD_KIND) {
+        // An unknown kind under the requested step key is damage, never
+        // silently skipped.
         return torn({ path, record: ledgerRecord.sequence });
       }
-      continue;
+      const parsed = stepFrom(ledgerRecord.payload, { path, record: ledgerRecord.sequence });
+      if (!parsed.ok) return parsed;
+      records.push(parsed.value);
     }
-    if (ledgerRecord.key !== key) {
-      if (ledgerRecord.key.startsWith(TELEMETRY_STEP_KEY_PREFIX)) {
-        return torn({ path, record: ledgerRecord.sequence });
-      }
-      continue;
-    }
-    const parsed = stepFrom(ledgerRecord.payload, { path, record: ledgerRecord.sequence });
-    if (!parsed.ok) return parsed;
-    records.push(parsed.value);
   }
   return ok({
     records,
@@ -423,7 +434,16 @@ export const readTelemetrySteps = (
   });
 };
 
-/** Read one delivery's verified baseline records under the exact baseline key. */
+/**
+ * Read one delivery's verified baseline records under the exact baseline key.
+ *
+ * This read is the composition seam of `appendTelemetryBaseline`'s
+ * fence-scoped idempotency pre-read and post-verified read, so the delivered
+ * families rule lands on the shared path of both: a well-formed baseline key
+ * naming another ref is skipped — no kind inspection, no payload inspection,
+ * no evidence — and the bare baseline prefix tears at its own position, as
+ * delivered for damage.
+ */
 export const readTelemetryBaselines = (
   store: StateStorePort,
   workItemRef: string,
@@ -438,18 +458,23 @@ export const readTelemetryBaselines = (
   const path = verified.value.evidence.storePath;
   const records: TelemetryBaselineRecord[] = [];
   for (const ledgerRecord of verified.value.records) {
-    if (ledgerRecord.key !== key) {
-      if (ledgerRecord.key.startsWith(TELEMETRY_BASELINE_KEY_PREFIX)) {
+    if (ledgerRecord.key.startsWith(TELEMETRY_BASELINE_KEY_PREFIX)) {
+      if (ledgerRecord.key !== key) {
+        // Symmetric with the step family: the bare baseline prefix tears at
+        // its own position; a well-formed foreign baseline key is skipped
+        // without any inspection and contributes nothing.
+        if (ledgerRecord.key === TELEMETRY_BASELINE_KEY_PREFIX) {
+          return torn({ path, record: ledgerRecord.sequence });
+        }
+        continue;
+      }
+      if (ledgerRecord.kind !== TELEMETRY_BASELINE_RECORD_KIND) {
         return torn({ path, record: ledgerRecord.sequence });
       }
-      continue;
+      const parsed = baselineFrom(ledgerRecord.payload, { path, record: ledgerRecord.sequence });
+      if (!parsed.ok) return parsed;
+      records.push(parsed.value);
     }
-    if (ledgerRecord.kind !== TELEMETRY_BASELINE_RECORD_KIND) {
-      return torn({ path, record: ledgerRecord.sequence });
-    }
-    const parsed = baselineFrom(ledgerRecord.payload, { path, record: ledgerRecord.sequence });
-    if (!parsed.ok) return parsed;
-    records.push(parsed.value);
   }
   return ok({
     records,

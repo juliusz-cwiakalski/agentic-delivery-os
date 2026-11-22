@@ -1,0 +1,258 @@
+change_id: GH-384
+title: "M4-S22: Telemetry reads must be multi-ref safe everywhere — window
+  evidence and baseline capture (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: null, completed: 2026-11-22T15:19:08.581Z }
+  specification: { started: null, completed: 2026-11-22T15:29:51.793Z }
+  test_planning: { started: null, completed: 2026-11-22T15:47:43.836Z }
+  delivery_planning: { started: null, completed: 2026-11-22T15:54:12.561Z }
+  dor_check: { started: null, completed: 2026-11-22T16:04:08.994Z }
+  delivery: { started: null, completed: 2026-11-22T16:31:30.404Z }
+  system_spec_update: { started: null, completed: 2026-11-22T16:39:25.577Z }
+  review_fix: { started: null, completed: 2026-11-22T17:10:28.966Z }
+  quality_gates: { started: null, completed: 2026-11-22T17:30:48.971Z }
+  dod_check: { started: null, completed: 2026-11-22T17:31:54.031Z }
+  pr_creation: { started: null, completed: 2026-11-22T17:38:37.437Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake 2026-11-22, explicit user directive. State detection: no branch,
+      no change folder, empty phase ledger (registry verified, 7541 records,
+      phases:{}), no PR — fresh start. main-tools synced 0/0 with origin at
+      0320321f (the GH-381 merge, PR #383 merged 2026-11-22T15:10:55Z). Branch
+      fix/GH-384/telemetry-multi-ref-reads from main-tools. Milestone M4:
+      Jaiship-native delivery attached. Owner comment 2026-11-22 (trusted) binds
+      the implementation: apply readTelemetryFamilies' delivered rule unchanged
+      to (1) readTelemetrySteps (composed by spend --window-evidence) and (2)
+      appendTelemetryBaseline idempotency pre/post-reads; fixtures must call the
+      real helper (GH-381's raw-append two-refs workaround becomes the thing
+      being proven fixed); do not weaken idempotency; no ledger
+      delete/rewrite/salvage; one verified pass over store.readRecords(), no
+      per-record reads; gate evidence TMPDIR=$PWD/tmp/tmpdir; PR targets
+      main-tools; STOP with PR open; forbidden surfaces:
+      .jaiship/config.local.yaml, GH-366 worktree (jaiship-gh-366 @ 5a9d3ab8),
+      #378 scope."
+    type: info
+    date: "2026-11-22"
+  - text: "Spec cross-check (clarify_scope): ticket requirements are consistent with
+      doc/spec/features/feature-telemetry-v2.md §5 (per-ref families read,
+      foreign-key skip without kind/payload inspection, bare-prefix and
+      requested-ref tears) and §5.1 (both declared consumers compose the same
+      per-ref projection). No contradiction: the spec declares the contract; the
+      ticket closes the two remaining code sites so implementation truth matches
+      it. Requirements are complete — five fixture-level ACs, named seam,
+      binding constraints, dependency #381 merged. No human questions required;
+      no STOP."
+    type: info
+    date: "2026-11-22"
+  - text: "Documentation impacts for phase 7: feature-telemetry-v2.md §5/§5.1 (rule
+      scope now covers the steps read and baseline idempotency pre/post-reads)
+      and §7 suite row (new regression cases); feature-spend.md window-evidence
+      sections + suite rows (multi-ref render proof); feature-metrics.md if its
+      consumer wording names the reads; doc/changes artifacts. @doc-syncer
+      resolves in system_spec_update."
+    type: info
+    date: "2026-11-22"
+  - text: "Changeset format (repo invariant, ground truth read today from
+      .changeset/config.json fixed group + landed gh-377/gh-381 files): one
+      changeset declaring all five fixed-group packages
+      @delivery-os/{core,adapters,cli,mcp,opencode} at minor. Filename suffix is
+      cosmetic (gh-381 landed as -patch.md with five minor entries). Spec/plan
+      authors must use this format directly."
+    type: decision
+    date: "2026-11-22"
+  - text: "Retro carried in from GH-381: (1) the spec's version_impact patch guess
+      caused a quality-gate FAIL and rework — this change's artifacts declare
+      the five-package minor changeset from the start; (2) DoR iteration 1
+      failed on a test-case id collision — verify TC ids are unused before
+      authoring; (3) GH-381 fixtures worked around defect (2) by raw-appending
+      two refs' baselines in one fence — GH-384's fixtures must instead exercise
+      the real appendTelemetryBaseline helper so the fix is proven, not the
+      workaround."
+    type: retro
+    date: "2026-11-22"
+  - text: "Decision-id ledger: owner states origin/main-tools max is TDR-0075
+      (runner tail could not confirm from prose — re-verify before authoring any
+      record). No decision record planned: this change continues the delivered
+      GH-381 rule at two remaining sites; no read-contract change."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: first `phase complete clarify_scope` attempt aborted at pre-flight
+      lint (delivery.keys.missing) because pm-notes lacked top-level
+      delivery_mode; pm-instructions describe the field as optional with absent
+      ⇒ interactive, but the harness lint enforces presence. Cost: one runner
+      round-trip before any state write or commit (no damage). Future intakes
+      must set delivery_mode explicitly at pm-notes creation."
+    type: retro
+    date: "2026-11-22"
+  - text: "Spec authored and PM-validated (landed as 52f6c203): canonical 25-section
+      structure, version_impact minor with five-package changeset declared
+      in-spec, no file paths in body, seam named functionally. Eight ACs encoded
+      — AC-F1-1 (window evidence excludes foreign steps), AC-F2-1 (second-ref
+      baseline via real helper + idempotency + byte-identical prior records),
+      AC-F4-1/AC-F4-2 (bare-prefix and kind-mismatch tears preserved), AC-F8-1
+      (golden-before-fix regression named for the GH-381 advisory), AC-F6-1 (one
+      verified pass, no extra reads), AC-F7-1 (single-ref golden equality),
+      AC-NFR2-1 (determinism/hermeticity/vocabulary freeze); ticket AC-1..5 map
+      one-to-one in Appendix B. Deferred boundary recorded in-spec (§7.3 NG-10,
+      OQ-2): the latent third instance (standalone capture-family read) has no
+      consumer and is out of scope. TC-id ceilings verified by spec-writer:
+      TC-TELEMETRY-047 / TC-REF-007 / TC-METRICS-113 / TC-SPEND-034 are maxima —
+      next free 048/008/114/035, re-verify before authoring (GH-381 DoR
+      collision retro)."
+    type: info
+    date: "2026-11-22"
+  - text: "DoR verdict READY at iteration 1 (artifact
+      readiness-review/readiness-iter-1.md; 10/10 facets PASS; 0 critical / 0
+      major / 2 minor / 1 nit; no pause flag). Findings disposition: minor-2
+      (plan phase-1 summary names FX-8/FX-9 dual-ref real-helper seeding that
+      cannot execute pre-fix — that failure IS the defect) routed into the coder
+      delegation as execution knowledge: pre-fix phase-1 capture entries are
+      FX-R1/FX-R2/FX-13 only, dual-ref healthy-baseline seeding is
+      post-fix-only, no plan file edit. minor-1 (spec NFR-5 iff-clause reads
+      universal while the verifiedEmpty settlement is pass-through; plan's 'per
+      owner directive' attribution not in pm-notes) and nit (capture-family read
+      deferral wording: 'no delivered consumer' → 'no delivered production
+      consumer'; two proof suites call it single-ref) are change-artifact polish
+      deferred to post-delivery fold-in / phase 7. Adversarial probes clean: TC
+      ids 048..056/SPEND-035 unused, changeset ground truth verified, owner
+      constraints present as plan fences, AC traceability complete, both defect
+      seams code-verified, TDR-0075 ceiling confirmed."
+    type: info
+    date: "2026-11-22"
+  - text: "DELIVERY COMPLETED_ALL (boundary 0dfd7d44, delivery completed in ledger
+      2026-11-22T16:31:30.404Z). Per-plan-phase evidence for DoD: plan phase 1
+      (fixture family + goldens at branch point) → commit 1f256887 → golden
+      capture entry run twice, drift-free exit 0 (pre-fix halves FX-R1/FX-R2
+      torn @ record 1, FX-13 complete; DoR minor-2 guard honored). Plan phase 2
+      (read-site corrections + extended suite) → commit 7dcb85bf →
+      telemetry-foreign-ref-skip 39 pass / 0 fail (TC-048..056 + delivered
+      040..047), telemetry-storage-damage 5 pass / 0 fail, golden entry re-run
+      exit 0 drift-free with corrected halves (AC-F1-1 exact requested-ref
+      record; AC-F2-1 append seq 2 + no-op repeat). Plan phase 3 (consumer proof
+      + changeset) → commit 64d67af1 → spend-zero-window 10 pass / 0 fail
+      (TC-SPEND-035 ×3 + delivered TC-PAUSE-050..052), combined suites 49 pass /
+      0 fail; changeset gh-384-telemetry-multi-ref-reads-minor.md with all five
+      fixed-group packages at minor. Regression insurance: 97 pass / 0 fail
+      across 16 adjacent telemetry/spend suites. Scope: zero drift vs plan
+      declarations; forbidden surfaces untouched; .zed/ excluded on every
+      commit."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: one in-flight correction pre-green in plan phase 2 — the scale arm
+      initially asserted a ses-gh384-… session prefix, but the delivered
+      parametrized scale builder names sessions ses-gh381-… regardless of the
+      ref argument; the assertion was narrowed to the property under test
+      (workItemRef scoping) before green. Lesson for fixture authors: session
+      ids in shared scale fixtures are a fixed convention, not ref-derived —
+      never assert a prefix the builder does not parameterize."
+    type: retro
+    date: "2026-11-22"
+  - text: "Review verdict FAIL at iteration 1 (artifact
+      code-review/review-iter-1.yaml; 0c / 0h / 1m / 1l / 0i). Every spec/plan
+      compliance dimension re-verified PASS by review: F-4 rule exact at both
+      sites, idempotency preserved with counting-port proof, verifiedEmpty
+      settlement sound, golden-before-fix integrity byte-exact (diff is exactly
+      the two corrected-half hunks), all 8 ACs green (review re-ran 39+10+5 / 0
+      fail), zero plan drift, changeset five-package minor, doc reconciliation
+      accurate, all prior non-gating dispositions verified. Blocking finding F-1
+      [medium]: tests/fixtures/telemetry/multi-ref-reads-golden-run.ts:59,83
+      references Gh381NormalizedTear without importing it — tsc-confirmed two
+      TS2304 errors, gate-invisible (no gate typechecks tests/**; tests/tsconfig
+      includes only *.type-test.ts; biome has no cross-file TS resolution; bun
+      strips types at runtime). F-2 [low]: same class, pre-existing delivered
+      GH-381 code at tests/behaviour/telemetry-foreign-ref-skip.test.ts:258
+      (Gh381RequestedDamageArm) — bundled as optional hygiene since the file is
+      in scope. Reviewer appended plan phase 4 (kind: remediation): both type
+      imports, scope confined to the two files, no production file touched, zero
+      behavior change. Path: @coder executes plan phase 4 → re-review iteration
+      2. Doc-syncer re-run judged unnecessary: remediation is type-only and
+      cannot change behavior or docs; quality gates follow with the full
+      battery."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: review iteration 1 caught a gate-invisible defect class — a
+      missing type import (TS2304) in a new test entry file survives every
+      delivered gate because no gate typechecks tests/** (tests/tsconfig covers
+      only *.type-test.ts), biome does not resolve cross-file TS, and bun strips
+      types at runtime. Cost: one remediation round. Mitigation for authoring
+      agents: probe new test-entry files with tsc (or a targeted typecheck)
+      before handoff. Memory-capture candidate (review catch) for closeout."
+    type: retro
+    date: "2026-11-22"
+  - text: "Retro (tooling): bare commit-primitive invocation outside a plan-phase
+      context fails commitlint deterministically (commit.commitlint-failed,
+      not_landed, twice; simplified fields did not change the verdict). The
+      primitive composes commitlint-valid messages only with plan-phase context.
+      Durable review state therefore rides the review_fix completion checkpoint
+      (GH-381 pattern: change-folder artifacts land with the next phase
+      complete). No hand composition — prohibited. Lesson for future sessions:
+      do not attempt standalone durable-state commits mid-phase; record in
+      pm-notes and let the checkpoint sweep."
+    type: retro
+    date: "2026-11-22"
+  - text: "Plan phase 4 (Code Review Remediation iteration 1, kind remediation) →
+      commit aae56ef7 → verification: golden capture entry drift-free exit 0
+      (committed golden untouched); telemetry-foreign-ref-skip 39 pass / 0 fail
+      (401 expect calls); spend-zero-window 10 pass / 0 fail; targeted strict
+      tsc --noEmit on the two files — pre-fix baseline reproduces exactly
+      F-1/F-2 (3 × TS2304), post-fix clean of both with zero new errors; biome
+      clean. Diff: one import line per file, zero behavior change. Landed with
+      the PM durable state (review record is untracked, rides the review_fix
+      checkpoint); typed blocker q-c5debb12 answered (choice: authorize 4-file
+      commit, docs-type subject, drift disclosed per commit-staging contract).
+      Adjacent finding surfaced (NOT remediated, pre-existing, outside scope):
+      tests type-import TelemetryClaimedIdentity / TelemetryFamiliesRead /
+      TelemetryIngestTally / TelemetrySessionIdentity which
+      packages/core/src/contracts does not export (tests/fixtures/telemetry/
+      index.ts:37-40, tests/behaviour/telemetry-foreign-ref-skip.test.ts:30;
+      TS2305/TS2724, invisible to every gate) — forwarded to re-review for
+      assessment."
+    type: info
+    date: "2026-11-22"
+  - text: "Review verdict PASS at iteration 2 (artifact
+      code-review/review-iter-2.yaml; 0c / 0h / 0m / 1l / 0i). F-1 and F-2
+      closed RESOLVED: remediation commit aae56ef7 verified exactly as claimed
+      (import-line-only edits, generated- golden template byte-untouched, phase
+      4 + pm-notes evidence in the same commit); typecheck claim independently
+      reproduced (0 × TS2304 post-fix); suites 39/0 and 10/0 re-run green;
+      golden drift-free. All iteration-1 PASS dimensions delta-checked clean.
+      New record A-1 [low] DEFERRED with disposition: the four dangling contract
+      type-imports (five sites, TS2305/TS2724) verified verbatim but ruled
+      pre-existing hygiene outside the change's frozen scope — all sites exist
+      at base 0320321f, GH-384 only extended adjacent import blocks; the right
+      fix is a layering decision (repoint imports to state/domain barrels vs add
+      contracts re-exports), not a mechanical remediation edit. Owner
+      disposition to be surfaced at PR time; follow-up ticket is the owner's
+      call per ticket policy."
+    type: info
+    date: "2026-11-22"
+  - text: "Quality gates PASS at iteration 1 (no fixes needed; full log
+      tmp/run-logs-runner/2026-11-22/174244-gh384-quality-gates.log). Aggregate
+      gate TMPDIR=$PWD/tmp/tmpdir pnpm check: 12496 pass / 4 skip / 0 fail
+      (115445 expect calls, 12500 tests, 1503 files, 1064s, exit 0); all stages
+      OK — lint, format:check, build, typecheck, test, check:boundaries (520
+      modules, 0 violations; ambient-globals 261 clean; workspace-entrypoints
+      OK; secret-read-boundary 485 production files clean), check:memory
+      (records=3 areas=8 errors=0 advisories=0), check:forbidden-literals (0
+      violations), check:namespace-tree conforms, prompt-conformance clean (5
+      prompts; help-guide coverage complete), exports-parity 5/5 attw esm-only.
+      Range lint gate: VERDICT PASS — base=main-tools, merge-base 0320321f, head
+      5a155017, 12 commits in range, 0 offending commits, mode none, resolved
+      commitlint binary node_modules/.bin/commitlint, origin repository-local,
+      ref refs/remotes/origin/main-tools."
+    type: info
+    date: "2026-11-22"
+  - text: "PR #385 created and OPEN: https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/385 — main-tools ← fix/GH-384/
+      telemetry-multi-ref-reads @ d6352673 (13 commits over merge-base
+      0320321f). PR body carries the delivered narrative, evidence trail, and
+      the A-1 [low] deferred disposition for the owner's call (follow-up ticket
+      is the owner's). 11/11 lifecycle phases complete; STOP with the PR open
+      for owner review and manual merge — merge authority stays with the human
+      owner."
+    type: info
+    date: "2026-11-22"

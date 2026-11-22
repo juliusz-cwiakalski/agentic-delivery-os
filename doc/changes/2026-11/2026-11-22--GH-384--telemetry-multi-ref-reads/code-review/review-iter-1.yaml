@@ -1,0 +1,85 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-384
+branch: fix/GH-384/telemetry-multi-ref-reads
+status: FAIL
+summary: >
+  The two-site rule application is correct and complete: readTelemetrySteps and
+  readTelemetryBaselines now classify family keys exactly as the delivered
+  readTelemetryFamilies rule source does (ownership first, bare prefix tears at
+  its own position, foreign skip with no kind/payload inspection, requested-ref
+  kind and payload tears preserved with delivered locations), the baseline rule
+  lands on the shared composition path of both idempotency reads, and the
+  versioned composition inherits unchanged. All eight spec ACs are covered by
+  delivered, green suites (39+10+5 pass, 0 fail re-run by review; golden
+  capture entry drift-free), the golden-before-fix integrity holds (branch-point
+  golden 1f256887 carries corrected:null; the post-fix diff only fills the two
+  corrected halves, pre-fix halves and the FX-13 singleRef section are
+  byte-identical), the changeset declares all five fixed-group packages at
+  minor, doc reconciliation in feature-telemetry-v2 §5/§5.1/§7 and
+  feature-spend window-evidence sections is accurate to the delivered code, and
+  plan scope shows zero drift. All four known non-gating items' dispositions
+  verified (DoR minor-1 deferred as recorded; DoR minor-2 guard honored in the
+  capture entry and fixture comments; DoR nit deferred; scale-arm assertion
+  narrowed to workItemRef scoping). The single blocking defect is
+  source-level: the new golden capture entry references an exported type it
+  never imports (TS2304 confirmed by tsc), invisible to every gate because no
+  gate typechecks tests/** and biome does not resolve cross-file TS
+  identifiers; bun strips types so runtime is unaffected.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: tests/fixtures/telemetry/multi-ref-reads-golden-run.ts:59
+    message: >
+      The capture entry annotates fxR1PreFix (line 59) and fxR2PreFix (line 83)
+      with the type Gh381NormalizedTear but never imports it — the only type
+      imported from "./index" is Gh384MultiRefReadsGolden. tsc confirms two
+      TS2304 "Cannot find name" errors (verified: type exported at
+      tests/fixtures/telemetry/index.ts:1069; no ambient declaration; biome
+      lint clean because it does not resolve cross-file TS identifiers; the
+      repo's tests gate tsconfig tests/types/tsconfig.json only includes
+      tests/types/*.type-test.ts; bun strips types at runtime, so the entry
+      still runs and stays drift-free). A new-file source defect from this
+      change that violates the strict-TS convention (.ai/rules/typescript.md
+      applies to tests/) and surfaces as an error the moment any tsc project or
+      configured IDE includes the file.
+    suggestion: >
+      Add Gh381NormalizedTear to the type import from "./index" (verbatimModuleSyntax
+      is in force: `import type { Gh381NormalizedTear, Gh384MultiRefReadsGolden }
+      from "./index";`). Then re-run the capture entry — it must remain
+      drift-free with exit 0 — and re-run the telemetry suites; no behavior
+      change is possible (type-only edit).
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: tests/behaviour/telemetry-foreign-ref-skip.test.ts:258
+    message: >
+      Same un-imported-type class, pre-existing from delivered GH-381 code
+      (line 217 at base 0320321f, not introduced by this change): expectArm
+      annotates its parameter with Gh381RequestedDamageArm (exported at
+      tests/fixtures/telemetry/index.ts:878) without importing it. This change
+      extended the adjacent import block (added the GH-384 imports) without
+      fixing the delivered gap. Not a GH-384 regression and not gating; the
+      file is already in this change's declared plan scope, so the one-line fix
+      can ride the remediation pass or be deferred to a hygiene change.
+    suggestion: >
+      Optional bundle with F-1's remediation: add `type Gh381RequestedDamageArm`
+      to the existing value import from "../fixtures/telemetry/index" (inline
+      type modifier per verbatimModuleSyntax). Otherwise record it for a later
+      hygiene pass; do not expand scope beyond these two files.
+    suppressed: false
+reviewed_at: 2026-11-22T16:48:31Z
+next_step: EXECUTE_REMEDIATION_PHASE

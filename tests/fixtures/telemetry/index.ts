@@ -21,6 +21,7 @@ import {
   type HarnessTelemetryRecord,
   type HarnessTokenClass,
   type HarnessTokenCounts,
+  type StateAppendOutcome,
   type StateJsonValue,
   type StateResult,
   type StateStoreIdentity,
@@ -1107,6 +1108,527 @@ export const normalizeGh381Tear = (
     location: {
       path: normalizeGh381StorePath(identity, read.error.location.path),
       record: read.error.location.record,
+    },
+  };
+};
+
+// ---------------------------------------------------------------------------
+// GH-384 multi-ref read fixtures (TC-TELEMETRY-048..056, TC-SPEND-035;
+// fixture inventory FX-8, FX-8-WE, FX-9, FX-10, FX-11, FX-12, FX-R1, FX-R2,
+// FX-13)
+//
+// The delivered GH-381 builders extended with the two remaining defect-site
+// shapes: the per-ref steps read and the baseline idempotency composition
+// path. The seeding discipline is unchanged (spec Appendix D, DEC-3): every
+// healthy record lands through the delivered append paths, healthy baselines
+// specifically through the real `appendTelemetryBaseline` helper; raw appends
+// stay reserved for the delivered damage builders' shapes.
+//
+// Branch-point guard (readiness finding minor-2, binding): the dual-ref
+// healthy-baseline helper calls inside `seedMultiRefStepsFixture` and the
+// ref-B captures by `seedSecondRefBaselineFixture` consumers are the defect
+// execution itself — against delivered code the second ref's helper call
+// tears. Those paths execute only from the read-branch fix onward (phase 2 of
+// the GH-384 plan); the phase-1 capture entry (`multi-ref-reads-golden-run.ts`)
+// exercises FX-R1, FX-R2, and FX-13 only — all constructible pre-fix — and
+// never the dual-ref healthy-baseline seeding.
+// ---------------------------------------------------------------------------
+
+/** The requested ref of the GH-384 fixtures: the ref every read answers. */
+export const GH384_REF = "GH-384";
+/** The foreign ref of the GH-384 fixtures: the earlier change whose records precede the requested ref's. */
+export const GH384_FOREIGN_REF = "GH-380";
+/** A ref absent from every healthy GH-384 fixture: the absent-ref and third-ref arms. */
+export const GH384_ABSENT_REF = "GH-000";
+
+/** The declared zero-spend evidence window for FX-8-WE (park through window end). */
+export const GH384_WINDOW_FROM = "2026-11-13T16:55:00.000Z";
+/** The declared zero-spend evidence window end (inclusive). */
+export const GH384_WINDOW_THROUGH = "2026-11-13T18:05:00.000Z";
+
+const gh384RunId = (ref: string): string => `run-gh384-${ref}`;
+
+/** One distinct healthy step record of a GH-384 fixture ref (1-based index). */
+export const gh384Step = (ref: string, index: number): TelemetryStepRecord =>
+  makeStepRecord({
+    ref,
+    runId: gh384RunId(ref),
+    sessionId: `ses-gh384-${ref}-s${String(index)}`,
+    tokens: tokens({ input: 10 * index, output: 5 * index }),
+    calls: index,
+    cost: 0.25 * index,
+    capturedAt: T1,
+  });
+
+/** The one healthy baseline record of a GH-384 fixture ref. */
+export const gh384Baseline = (ref: string): TelemetryBaselineRecord =>
+  makeBaselineRecord({
+    ref,
+    runId: gh384RunId(ref),
+    sessionId: `ses-gh384-${ref}-baseline`,
+    tokens: tokens({ input: 100, output: 50 }),
+    calls: 2,
+    cost: 1.5,
+    capturedAt: T2,
+  });
+
+/** The one healthy v1 session record of a GH-384 fixture ref. */
+const gh384V1 = (ref: string): HarnessTelemetryRecord =>
+  makeV1Record({
+    ref,
+    runId: gh384RunId(ref),
+    sessionId: `ses-gh384-${ref}-v1`,
+    tokens: tokens({ input: 40, output: 20 }),
+    calls: 2,
+    cost: 1,
+  });
+
+/** The one healthy capture-outcome record of a GH-384 fixture ref. */
+const gh384Outcome = (ref: string): HarnessCaptureOutcomeRecord => ({
+  schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  workItemRef: ref,
+  runId: gh384RunId(ref),
+  captured: 1,
+  degraded: 0,
+  failed: 0,
+  warnings: [],
+  capturedAt: T3,
+});
+
+/**
+ * FX-8: interleaved two-ref steps plus one baseline per ref through the real
+ * helper — the genuine multi-ref telemetry ledger (a second-ref baseline
+ * seeded beside the first ref's).
+ *
+ * Ledger order: first.s1, second.s1, first.s2, second.s2, first.baseline,
+ * second.baseline — six records; both read directions are covered by swapping
+ * the arguments. Post-fix only: see the branch-point guard above.
+ */
+export const seedMultiRefStepsFixture = (
+  store: StateStorePort,
+  first: string,
+  second: string,
+): void => {
+  seedSteps(store, [
+    gh384Step(first, 1),
+    gh384Step(second, 1),
+    gh384Step(first, 2),
+    gh384Step(second, 2),
+  ]);
+  seedBaselines(store, [gh384Baseline(first)]);
+  seedBaselines(store, [gh384Baseline(second)]);
+};
+
+/**
+ * FX-9's base: interleaved two-ref steps plus ref A's baseline seeded through
+ * the real helper. Ref B's capture — the behavior under test — is the
+ * caller's act (its same-identity repeat and its distinct-session append run
+ * through the same helper with their own fence tokens). Ref A's seed is
+ * constructible pre-fix (no other baseline exists at seed time); the
+ * consumer's ref-B helper calls are post-fix only.
+ */
+export const seedSecondRefBaselineFixture = (
+  store: StateStorePort,
+  refA: string,
+  refB: string,
+): void => {
+  seedSteps(store, [
+    gh384Step(refA, 1),
+    gh384Step(refB, 1),
+    gh384Step(refA, 2),
+    gh384Step(refB, 2),
+  ]);
+  seedBaselines(store, [gh384Baseline(refA)]);
+};
+
+/**
+ * FX-8-WE: the attribution-complete window-evidence variant — two refs' steps
+ * interleaved with the foreign ref's step record first (the observed shape),
+ * every step carrying full attribution (lane equal to its ref, agent role,
+ * model, billable call counts) and instants inside and outside the declared
+ * window, so a per-ref reading's matched and excluded sets are both
+ * populated and a seeded mid-window billable step reads non-zero.
+ *
+ * Ledger order: foreign.pre-park, requested.pre-park, requested.at-park,
+ * foreign.mid-window, requested.mid-window, requested.at-end,
+ * requested.post-window — seven step records, no baselines (the window
+ * reading composes the steps read only).
+ */
+export const seedWindowEvidenceLedger = (
+  store: StateStorePort,
+  requested: string,
+  foreign: string,
+): void => {
+  const at = (ref: string, index: number, instant: string, calls: number): TelemetryStepRecord =>
+    makeStepRecord({
+      ref,
+      runId: gh384RunId(ref),
+      sessionId: `ses-gh384-${ref}-we${String(index)}`,
+      lane: ref,
+      ticket: ref,
+      model: MODEL_A,
+      agentRole: AGENT_ROLE,
+      calls,
+      startedAt: instant,
+      finishedAt: instant,
+      capturedAt: instant,
+    });
+  seedSteps(store, [
+    at(foreign, 1, "2026-11-13T16:50:00.000Z", 3),
+    at(requested, 1, "2026-11-13T16:54:00.000Z", 1),
+    at(requested, 2, GH384_WINDOW_FROM, 2),
+    at(foreign, 2, "2026-11-13T17:30:00.000Z", 4),
+    at(requested, 3, "2026-11-13T17:30:00.000Z", 2),
+    at(requested, 4, GH384_WINDOW_THROUGH, 2),
+    at(requested, 5, "2026-11-13T18:05:01.000Z", 5),
+  ]);
+};
+
+/**
+ * FX-R1: the steps-site regression — the observed foreign-first shape: the
+ * ledger's first telemetry-family records are valid step records of the
+ * earlier foreign ref, appearing before the requested ref's first record,
+ * followed by the requested ref's families (the delivered
+ * `seedForeignFirstRegression` builder shape, with the requested ref's
+ * baseline seeded through the real helper — the only baseline on the ledger,
+ * so the helper call is constructible pre-fix).
+ *
+ * Ledger order: foreign.s1..s3, requested.s1, requested.baseline,
+ * requested.v1, requested.outcome — seven records; the delivered steps read
+ * tears at sequence 1 (the first foreign step).
+ */
+export const seedGh384ForeignFirstRegression = (
+  store: StateStorePort,
+  requested: string,
+  foreign: string,
+): void => {
+  seedSteps(store, [
+    gh384Step(foreign, 1),
+    gh384Step(foreign, 2),
+    gh384Step(foreign, 3),
+    gh384Step(requested, 1),
+  ]);
+  seedBaselines(store, [gh384Baseline(requested)]);
+  seedV1Records(store, [gh384V1(requested)]);
+  seedCaptureOutcomes(store, [gh384Outcome(requested)]);
+};
+
+/** The steps-read result shape the GH-384 golden pins (the delivered result shape). */
+export type Gh384StepsRead = {
+  readonly records: readonly TelemetryStepRecord[];
+  readonly verifiedEmpty: boolean;
+  readonly evidence: { readonly storePath: string };
+};
+
+/** The delivered capture-outcome shape the baseline append helper returns. */
+export type Gh384CaptureOutcome = {
+  readonly appended: boolean;
+  readonly append?: StateAppendOutcome;
+};
+
+/** The normalized steps-read result the golden pins (no absolute paths). */
+export type Gh384NormalizedStepsRead = {
+  readonly records: readonly TelemetryStepRecord[];
+  readonly verifiedEmpty: boolean;
+  readonly evidence: { readonly storePath: string };
+};
+
+/** The normalized append outcome the golden pins (sequence, no path or checksum). */
+export type Gh384NormalizedAppend = {
+  readonly appended: boolean;
+  readonly sequence?: number;
+};
+
+/** The corrected FX-R2 half: the first append's outcome and the repeat's no-op. */
+export type Gh384CorrectedFxR2 = {
+  readonly first: Gh384NormalizedAppend;
+  readonly repeat: Gh384NormalizedAppend;
+};
+
+/** The full committed golden shape: both regression halves plus the FX-13 section. */
+export type Gh384MultiRefReadsGolden = {
+  readonly requestedRef: string;
+  readonly foreignRef: string;
+  readonly absentRef: string;
+  readonly fxR1: {
+    readonly preFix: Gh381NormalizedTear;
+    readonly corrected: Gh384NormalizedStepsRead | null;
+  };
+  readonly fxR2: {
+    readonly preFix: Gh381NormalizedTear;
+    readonly corrected: Gh384CorrectedFxR2 | null;
+  };
+  readonly singleRef: {
+    readonly healthy: {
+      readonly stepsRead: Gh384NormalizedStepsRead;
+      readonly first: Gh384NormalizedAppend;
+      readonly repeat: Gh384NormalizedAppend;
+    };
+    readonly emptyLedger: { readonly stepsRead: Gh384NormalizedStepsRead };
+    readonly tears: {
+      readonly bareStepPrefix: Gh381NormalizedTear;
+      readonly bareBaselinePrefix: Gh381NormalizedTear;
+      readonly stepKindMismatch: Gh381NormalizedTear;
+      readonly baselineKindMismatch: Gh381NormalizedTear;
+      readonly stepMalformedPayload: Gh381NormalizedTear;
+    };
+  };
+};
+
+/** Normalize a successful steps read for golden comparison; throws when it failed. */
+export const normalizeGh384StepsRead = (
+  identity: StateStoreIdentity,
+  read: StateResult<Gh384StepsRead>,
+): Gh384NormalizedStepsRead => {
+  if (!read.ok) throw new Error(`gh384 steps-read arm failed: ${read.error.code}`);
+  return {
+    records: read.value.records,
+    verifiedEmpty: read.value.verifiedEmpty,
+    evidence: {
+      storePath: normalizeGh381StorePath(identity, read.value.evidence.storePath),
+    },
+  };
+};
+
+/** Normalize a torn steps read for golden comparison; throws when it succeeded. */
+export const normalizeGh384StepsTear = (
+  identity: StateStoreIdentity,
+  read: StateResult<Gh384StepsRead>,
+): Gh381NormalizedTear => {
+  if (read.ok) throw new Error("gh384 steps-read tear arm unexpectedly succeeded");
+  if (read.error.location.record === undefined) {
+    throw new Error("gh384 steps-read tear arm carries no record location");
+  }
+  return {
+    kind: read.error.kind,
+    code: read.error.code,
+    consequence: read.error.consequence,
+    location: {
+      path: normalizeGh381StorePath(identity, read.error.location.path),
+      record: read.error.location.record,
+    },
+  };
+};
+
+/** Normalize a successful capture outcome for golden comparison; throws when it failed. */
+export const normalizeGh384AppendOutcome = (
+  result: StateResult<Gh384CaptureOutcome>,
+): Gh384NormalizedAppend => {
+  if (!result.ok) throw new Error(`gh384 capture arm failed: ${result.error.code}`);
+  if (result.value.appended && result.value.append !== undefined) {
+    return { appended: true, sequence: result.value.append.sequence };
+  }
+  return { appended: result.value.appended };
+};
+
+/** Normalize a torn capture for golden comparison; throws when it succeeded. */
+export const normalizeGh384CaptureTear = (
+  identity: StateStoreIdentity,
+  result: StateResult<Gh384CaptureOutcome>,
+): Gh381NormalizedTear => {
+  if (result.ok) throw new Error("gh384 capture tear arm unexpectedly succeeded");
+  if (result.error.location.record === undefined) {
+    throw new Error("gh384 capture tear arm carries no record location");
+  }
+  return {
+    kind: result.error.kind,
+    code: result.error.code,
+    consequence: result.error.consequence,
+    location: {
+      path: normalizeGh381StorePath(identity, result.error.location.path),
+      record: result.error.location.record,
+    },
+  };
+};
+
+/** One FX-R1/FX-R2 regression case: the store identity plus the observed read. */
+export type Gh384RegressionCases = {
+  readonly fxR1: {
+    readonly identity: StateStoreIdentity;
+    readonly read: StateResult<Gh384StepsRead>;
+  };
+  readonly fxR2: {
+    readonly identity: StateStoreIdentity;
+    readonly first: StateResult<Gh384CaptureOutcome>;
+    /** The same-identity repeat, run only when the first capture succeeded. */
+    readonly repeat: StateResult<Gh384CaptureOutcome> | undefined;
+  };
+  /** Remove every temp root the cases created. */
+  readonly dispose: () => void;
+};
+
+/**
+ * Build the FX-R1 and FX-R2 regression cases, each in its own per-test temp
+ * root through the shared builders, so the capture entry and the
+ * TC-TELEMETRY-053 comparison observe byte-identical fixtures.
+ *
+ * FX-R2 seeds ref A's (the earlier change's) baseline through the real helper
+ * — constructible pre-fix, the only baseline on the ledger — and runs ref B's
+ * capture through the same helper: against delivered code this records the
+ * defect tear, from the fix onward the AC-F2-1 success shape.
+ */
+export const buildGh384RegressionCases = (): Gh384RegressionCases => {
+  const roots: string[] = [];
+  const gh384Store = (label: string): { identity: StateStoreIdentity; store: StateStorePort } => {
+    const root = makeTempRoot(`gh384-golden-${label}`);
+    roots.push(root);
+    const identity = makeIdentity(root);
+    return { identity, store: openStore(identity).store };
+  };
+  const fxR1 = gh384Store("fx-r1");
+  seedGh384ForeignFirstRegression(fxR1.store, GH384_REF, GH384_FOREIGN_REF);
+  const fxR1Read = readTelemetrySteps(fxR1.store, GH384_REF);
+  const fxR2 = gh384Store("fx-r2");
+  seedBaselines(fxR2.store, [gh384Baseline(GH384_FOREIGN_REF)]);
+  const fxR2First = appendTelemetryBaseline(
+    fxR2.store,
+    "gh384-fx-r2-first",
+    gh384Baseline(GH384_REF),
+  );
+  const fxR2Repeat =
+    fxR2First.ok === true
+      ? appendTelemetryBaseline(fxR2.store, "gh384-fx-r2-repeat", gh384Baseline(GH384_REF))
+      : undefined;
+  return {
+    fxR1: { identity: fxR1.identity, read: fxR1Read },
+    fxR2: { identity: fxR2.identity, first: fxR2First, repeat: fxR2Repeat },
+    dispose: () => {
+      for (const root of roots.splice(0)) removeRoot(root);
+    },
+  };
+};
+
+/** One FX-13 single-ref case: the store identity plus the observed read or capture. */
+export type Gh384SingleRefCases = {
+  readonly healthy: {
+    readonly identity: StateStoreIdentity;
+    readonly stepsRead: StateResult<Gh384StepsRead>;
+    readonly first: StateResult<Gh384CaptureOutcome>;
+    readonly repeat: StateResult<Gh384CaptureOutcome>;
+  };
+  readonly emptyLedger: {
+    readonly identity: StateStoreIdentity;
+    readonly stepsRead: StateResult<Gh384StepsRead>;
+  };
+  readonly tears: {
+    readonly bareStepPrefix: {
+      readonly identity: StateStoreIdentity;
+      readonly stepsRead: StateResult<Gh384StepsRead>;
+    };
+    readonly bareBaselinePrefix: {
+      readonly identity: StateStoreIdentity;
+      readonly capture: StateResult<Gh384CaptureOutcome>;
+    };
+    readonly stepKindMismatch: {
+      readonly identity: StateStoreIdentity;
+      readonly stepsRead: StateResult<Gh384StepsRead>;
+    };
+    readonly baselineKindMismatch: {
+      readonly identity: StateStoreIdentity;
+      readonly capture: StateResult<Gh384CaptureOutcome>;
+    };
+    readonly stepMalformedPayload: {
+      readonly identity: StateStoreIdentity;
+      readonly stepsRead: StateResult<Gh384StepsRead>;
+    };
+  };
+  /** Remove every temp root the cases created. */
+  readonly dispose: () => void;
+};
+
+/**
+ * Build every FX-13 single-ref arm: the healthy ledger (steps present, the
+ * baseline arriving through the real helper's capture, then its same-identity
+ * no-op repeat), the truly-empty ledger, and each delivered tear case at both
+ * sites — so the capture entry and the TC-TELEMETRY-055 comparison build
+ * byte-identical fixtures.
+ *
+ * The truly-empty arm is the only place delivered behavior for a ref with no
+ * telemetry is identical pre- and post-fix by construction; the multi-ref
+ * shapes belong to the matrix cases, never to this golden.
+ */
+export const buildGh384SingleRefCases = (): Gh384SingleRefCases => {
+  const roots: string[] = [];
+  const gh384Store = (label: string): { identity: StateStoreIdentity; store: StateStorePort } => {
+    const root = makeTempRoot(`gh384-golden-${label}`);
+    roots.push(root);
+    const identity = makeIdentity(root);
+    return { identity, store: openStore(identity).store };
+  };
+  const seededSteps = (store: StateStorePort): void => {
+    seedSteps(store, [gh384Step(GH384_REF, 1), gh384Step(GH384_REF, 2)]);
+  };
+  const healthy = gh384Store("fx13-healthy");
+  seededSteps(healthy.store);
+  const healthyFirst = appendTelemetryBaseline(
+    healthy.store,
+    "gh384-fx13-healthy-first",
+    gh384Baseline(GH384_REF),
+  );
+  const healthyRepeat = appendTelemetryBaseline(
+    healthy.store,
+    "gh384-fx13-healthy-repeat",
+    gh384Baseline(GH384_REF),
+  );
+  const emptyLedger = gh384Store("fx13-empty");
+  const bareStepPrefix = gh384Store("fx13-bare-step");
+  seededSteps(bareStepPrefix.store);
+  seedBarePrefixRecord(bareStepPrefix.store, "step");
+  const bareBaselinePrefix = gh384Store("fx13-bare-baseline");
+  seededSteps(bareBaselinePrefix.store);
+  seedBarePrefixRecord(bareBaselinePrefix.store, "baseline");
+  const stepKindMismatch = gh384Store("fx13-step-kind");
+  seededSteps(stepKindMismatch.store);
+  seedRequestedRefDamage(stepKindMismatch.store, GH384_REF, "stepKindMismatch");
+  const baselineKindMismatch = gh384Store("fx13-baseline-kind");
+  seededSteps(baselineKindMismatch.store);
+  seedRequestedRefDamage(baselineKindMismatch.store, GH384_REF, "baselineKindMismatch");
+  const stepMalformedPayload = gh384Store("fx13-step-payload");
+  seededSteps(stepMalformedPayload.store);
+  seedRequestedRefDamage(stepMalformedPayload.store, GH384_REF, "stepMalformedPayload");
+  return {
+    healthy: {
+      identity: healthy.identity,
+      stepsRead: readTelemetrySteps(healthy.store, GH384_REF),
+      first: healthyFirst,
+      repeat: healthyRepeat,
+    },
+    emptyLedger: {
+      identity: emptyLedger.identity,
+      stepsRead: readTelemetrySteps(emptyLedger.store, GH384_REF),
+    },
+    tears: {
+      bareStepPrefix: {
+        identity: bareStepPrefix.identity,
+        stepsRead: readTelemetrySteps(bareStepPrefix.store, GH384_REF),
+      },
+      bareBaselinePrefix: {
+        identity: bareBaselinePrefix.identity,
+        capture: appendTelemetryBaseline(
+          bareBaselinePrefix.store,
+          "gh384-fx13-tear-capture",
+          gh384Baseline(GH384_REF),
+        ),
+      },
+      stepKindMismatch: {
+        identity: stepKindMismatch.identity,
+        stepsRead: readTelemetrySteps(stepKindMismatch.store, GH384_REF),
+      },
+      baselineKindMismatch: {
+        identity: baselineKindMismatch.identity,
+        capture: appendTelemetryBaseline(
+          baselineKindMismatch.store,
+          "gh384-fx13-tear-capture",
+          gh384Baseline(GH384_REF),
+        ),
+      },
+      stepMalformedPayload: {
+        identity: stepMalformedPayload.identity,
+        stepsRead: readTelemetrySteps(stepMalformedPayload.store, GH384_REF),
+      },
+    },
+    dispose: () => {
+      for (const root of roots.splice(0)) removeRoot(root);
     },
   };
 };

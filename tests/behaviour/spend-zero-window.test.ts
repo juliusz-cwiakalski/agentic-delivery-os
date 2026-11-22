@@ -8,15 +8,36 @@
  * as zero — the two renderings are mutually exclusive and are asserted in
  * both directions within the same run. The reading is a pure pass over the
  * telemetry v2 storage records: it performs no harness-store query of its own.
+ *
+ * TC-SPEND-035 (GH-384) — the same reading renders on a multi-ref ledger:
+ * composed from the per-ref steps read in the delivered order (the
+ * composition the `createProductionDependencies` windowEvidence closure
+ * builds) over the FX-8-WE interleaved fixture, its matched and excluded sets
+ * are computed over exactly the requested ref's steps — skipped foreign steps
+ * are named in neither set and no exclusion reason is invented for them.
  */
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createSpendCommandDefinition } from "../../packages/cli/src/commands/spend";
-import type { TelemetryStepRecord } from "../../packages/core/src/contracts/index";
+import type {
+  StateStoreIdentity,
+  StateStorePort,
+  TelemetryStepRecord,
+} from "../../packages/core/src/contracts/index";
 import {
   SPEND_WINDOW_BASIS,
   SPEND_WINDOW_EXCLUSION_REASONS,
 } from "../../packages/core/src/contracts/spend";
 import { windowSpendEvidence } from "../../packages/core/src/domain/spend";
+import { readQueueParks } from "../../packages/core/src/index";
+import { readTelemetrySteps } from "../../packages/core/src/state/index";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
+import {
+  GH384_FOREIGN_REF,
+  GH384_REF,
+  GH384_WINDOW_FROM,
+  GH384_WINDOW_THROUGH,
+  seedWindowEvidenceLedger,
+} from "../fixtures/telemetry/index";
 
 const PARK = "2026-11-13T16:55:00.000Z";
 const WINDOW_END = "2026-11-13T18:05:00.000Z";
@@ -260,5 +281,199 @@ describe("TC-PAUSE-052 boundary scoping excludes only strictly pre-park calls; t
     expect(evidence.telemetryState).toBe("present");
     expect(evidence.billableCalls).toBe(7);
     expect(evidence.billableCalls).not.toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-SPEND-035 (GH-384) — the window-scoped zero-spend evidence renders on a
+// multi-ref ledger, exactly scoped. The composition is the delivered one (the
+// `createProductionDependencies` windowEvidence closure in
+// packages/cli/src/edge.ts): the per-ref steps read, the delivered peak-window
+// park/profile lookup riding as the pass-through it is, then the pure
+// reading — over the FX-8-WE interleaved fixture on a real temp store, with
+// the foreign ref's step record first (the observed shape). Pre-fix this
+// reading returned `state.store.torn` naming the first foreign step record.
+// ---------------------------------------------------------------------------
+
+const gh384WindowRoots: string[] = [];
+
+afterEach(() => {
+  for (const root of gh384WindowRoots.splice(0)) removeRoot(root);
+});
+
+/** One fresh per-test temp store seeded with FX-8-WE (removed in afterEach). */
+const gh384WindowStore = (): { identity: StateStoreIdentity; store: StateStorePort } => {
+  const root = makeTempRoot("gh384-window-evidence");
+  gh384WindowRoots.push(root);
+  const identity = makeIdentity(root);
+  const { store } = openStore(identity);
+  seedWindowEvidenceLedger(store, GH384_REF, GH384_FOREIGN_REF);
+  return { identity, store };
+};
+
+/**
+ * The delivered windowEvidence composition, exactly as the production closure
+ * builds it: the per-ref steps read, the peak-window park/profile lookup (a
+ * pass-through — FX-8-WE carries no park records, so the profile stays the
+ * delivered empty-string default), then the pure reading.
+ */
+const windowEvidenceOver =
+  (store: StateStorePort) =>
+  (request: { readonly ref: string; readonly from: string; readonly through: string }) => {
+    const read = readTelemetrySteps(store, request.ref);
+    if (!read.ok) {
+      return {
+        ok: false as const,
+        error: {
+          kind: "state",
+          code: read.error.code,
+          consequence: read.error.consequence,
+          location: read.error.location,
+        },
+      };
+    }
+    const parks = readQueueParks(store);
+    const profile = parks.ok
+      ? [...parks.records]
+          .reverse()
+          .find(
+            (record) =>
+              record.ref === request.ref &&
+              record.cause === "peak-window" &&
+              record.providerProfile !== undefined,
+          )?.providerProfile
+      : undefined;
+    return {
+      ok: true as const,
+      data: windowSpendEvidence({
+        steps: read.value.records,
+        ref: request.ref,
+        providerProfile: profile ?? "",
+        from: request.from,
+        through: request.through,
+      }),
+    };
+  };
+
+describe("TC-SPEND-035 the window-scoped zero-spend evidence renders on a multi-ref ledger, exactly scoped", () => {
+  test("the reading renders for the requested ref over the foreign-first ledger, exactly scoped", () => {
+    const { store } = gh384WindowStore();
+    const composed = windowEvidenceOver(store);
+    const outcome = composed({
+      ref: GH384_REF,
+      from: GH384_WINDOW_FROM,
+      through: GH384_WINDOW_THROUGH,
+    });
+    // The reading succeeds — no `state.store.torn` and no other classification.
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    const evidence = outcome.data;
+    // The delivered shape: ref, provider profile, window bounds, present
+    // state, the billable-call count as a number, the delivered basis identity.
+    expect(evidence.ref).toBe(GH384_REF);
+    expect(evidence.providerProfile).toBe("");
+    expect(evidence.from).toBe(GH384_WINDOW_FROM);
+    expect(evidence.through).toBe(GH384_WINDOW_THROUGH);
+    expect(evidence.telemetryState).toBe("present");
+    expect(typeof evidence.billableCalls).toBe("number");
+    expect(evidence.basis).toBe(SPEND_WINDOW_BASIS);
+    // Matched and excluded sets computed over exactly the requested ref's
+    // steps: the park instant, the window end, and both boundary instants
+    // included; a seeded mid-window billable step reads non-zero.
+    expect(evidence.billableCalls).toBe(6);
+    expect(evidence.matchedPositions).toEqual([1, 2, 3]);
+    expect(evidence.excluded).toEqual([
+      { position: 0, reason: "pre-park" },
+      { position: 4, reason: "post-window" },
+    ]);
+    // Cross-check against the seeded ledger: zero requested-ref steps dropped,
+    // zero foreign steps in the projection at all.
+    const read = readTelemetrySteps(store, GH384_REF);
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.value.records).toHaveLength(5);
+    expect(read.value.records.every((step) => step.workItemRef === GH384_REF)).toBe(true);
+    expect(read.value.records.every((step) => step.lane === GH384_REF)).toBe(true);
+    // Every matched position is a requested step inside the window on the
+    // parked lane; every exclusion reason is from the delivered closed
+    // four-value set — no foreign/skipped reason is invented, and skipped
+    // foreign steps are named in neither set.
+    for (const position of evidence.matchedPositions ?? []) {
+      const matched = read.value.records[position];
+      expect(matched).toBeDefined();
+      expect(matched?.lane).toBe(GH384_REF);
+      const at = Date.parse(matched?.finishedAt ?? matched?.startedAt ?? matched?.capturedAt ?? "");
+      expect(at).toBeGreaterThanOrEqual(Date.parse(GH384_WINDOW_FROM));
+      expect(at).toBeLessThanOrEqual(Date.parse(GH384_WINDOW_THROUGH));
+    }
+    for (const entry of evidence.excluded ?? []) {
+      expect([...SPEND_WINDOW_EXCLUSION_REASONS]).toContain(entry.reason);
+    }
+    const foreign = readTelemetrySteps(store, GH384_FOREIGN_REF);
+    expect(foreign.ok).toBe(true);
+    if (foreign.ok) {
+      const foreignSessionIds = new Set(foreign.value.records.map((step) => step.sessionId));
+      for (const step of read.value.records) {
+        expect(foreignSessionIds.has(step.sessionId)).toBe(false);
+      }
+    }
+  });
+
+  test("the same reading for the earlier ref over the same ledger is likewise exactly scoped", () => {
+    const { store } = gh384WindowStore();
+    const composed = windowEvidenceOver(store);
+    const outcome = composed({
+      ref: GH384_FOREIGN_REF,
+      from: GH384_WINDOW_FROM,
+      through: GH384_WINDOW_THROUGH,
+    });
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    const evidence = outcome.data;
+    expect(evidence.ref).toBe(GH384_FOREIGN_REF);
+    expect(evidence.telemetryState).toBe("present");
+    // Exactly the earlier ref's steps in its sets: its own pre-park step
+    // excluded with its boundary reason, its mid-window step matched.
+    expect(evidence.billableCalls).toBe(4);
+    expect(evidence.matchedPositions).toEqual([1]);
+    expect(evidence.excluded).toEqual([{ position: 0, reason: "pre-park" }]);
+    for (const entry of evidence.excluded ?? []) {
+      expect([...SPEND_WINDOW_EXCLUSION_REASONS]).toContain(entry.reason);
+    }
+  });
+
+  test("the delivered CLI definition renders the composed reading without inventing a stronger claim", async () => {
+    const { store } = gh384WindowStore();
+    const composed = windowEvidenceOver(store);
+    const definition = createSpendCommandDefinition({
+      resolveActiveRef: () => ({ ref: GH384_REF }),
+      report: () => {
+        throw new Error("the evidence form must not fold the six-key report");
+      },
+      windowEvidence: (request) => composed(request),
+    });
+    const outcome = await definition.handler({
+      argv: [
+        "spend",
+        "--window-evidence",
+        "--ref",
+        GH384_REF,
+        "--from",
+        GH384_WINDOW_FROM,
+        "--through",
+        GH384_WINDOW_THROUGH,
+      ],
+      flags: {},
+      positionals: [],
+    } as never);
+    const data = (outcome as { readonly data?: Record<string, unknown> }).data;
+    expect(data?.telemetryState).toBe("present");
+    expect(data?.billableCalls).toBe(6);
+    expect(data?.basis).toBe("delivery.telemetry.storage.v1");
+    // The human render states the reading without inventing a stronger claim.
+    const human = definition.humanText?.(data, { binaryName: "delivery-os" } as never);
+    expect(human).toContain("telemetry=present");
+    expect(human).toContain("billableCalls=6");
+    expect(human).toContain("delivery.telemetry.storage.v1");
   });
 });
