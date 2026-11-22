@@ -1,0 +1,127 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-381
+branch: fix/GH-381/telemetry-foreign-ref-skip
+status: PASS
+summary: >
+  The F-2 classification table is implemented exactly as specified inside
+  readTelemetryFamilies (foreign well-formed family keys skipped without kind
+  or payload inspection, bare step/baseline prefixes tearing at their own
+  position, requested-ref kind-mismatch and payload tears delivered-identical),
+  with capture/session branches, spend-reads.ts, and the single verified pass
+  all untouched. All 16 regression cases, both consumer proofs, and the
+  delivered-tear regression were re-run green in this review (16+13+7+5 pass /
+  0 fail), the pre-fix golden ordering is commit-verified, the fixture
+  deviations are test-only and byte-faithful, and doc/typecheck/biome/
+  doc-conformance/doc-distribution/commit-range gates all pass. PASS carries
+  two medium findings for follow-up: the same tear-on-foreign-key defect class
+  persists in the sibling single-family reads (spend --window-evidence still
+  tears on multi-ref ledgers; appendTelemetryBaseline's idempotency pre-read
+  still tears, so second-ref baseline capture fails) — pre-existing delivered
+  behavior deliberately outside the ticket's named seam, but undeclared in the
+  spec's deferred list and overstated by one surface in the changeset.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 1
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/telemetry.ts:411
+    message: >
+      The sibling single-family read readTelemetrySteps still tears
+      state.store.torn on any foreign step key, and it is a delivered spend
+      surface: packages/cli/src/edge.ts:6390 (windowEvidence) composes it, so
+      `spend --window-evidence` on a multi-ref ledger hard-fails with the exact
+      ticket symptom; readTelemetryStepsAtVersion (telemetry.ts:482, the
+      re-read/migration rule) composes the same tearing read. Spec A-4 ("all
+      three spend-side consumers compose the one families read") is factually
+      incomplete, and spec §22's claim that the per-ref skip rule is "now
+      stated twice in delivered code" ignores two same-module per-ref reads
+      that contradict it. The ticket names readTelemetryFamilies as the seam,
+      so the delivered scope is faithful to the ticket's letter — this is a
+      residual of the same class, not a defect in this diff.
+    suggestion: >
+      Do not widen this change (DEC-3/NG-6 freeze the scope). Record the
+      residual in spec §7.3 and file a follow-up defect ticket for the
+      window-evidence/re-read reads so the house rule's documentation claim
+      becomes true; no code action in this change.
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/telemetry.ts:529
+    message: >
+      readTelemetryBaselines still tears on foreign baseline keys, and
+      appendTelemetryBaseline composes it twice — the idempotency pre-read
+      (L529) and the post-append verification (L550). In any project holding
+      another ref's baseline, a second ref's baseline capture fails every time,
+      so the write side of the telemetry family remains single-ref-only. The
+      delivery discovered and proved this (its own fixtures must bypass the
+      helper via seedBaselineBatch, tests/fixtures/telemetry/index.ts:676, and
+      pm-notes phase 1 documents it), but spec NG-3's premise "the capture path
+      ... [is] already ref-scoped and delivered correct" is factually wrong for
+      this pre-read, and neither §7.3 (deferred) nor §22 declares the residual.
+    suggestion: >
+      Same disposition as F-1: declare the write-path residual in spec §7.3,
+      file a follow-up ticket for the baseline idempotency pre-read (a
+      write-side change), and correct NG-3's premise in the phase-7 doc
+      reconciliation follow-through. No code action in this change.
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: documentation
+    location: .changeset/gh-381-telemetry-foreign-ref-skip-patch.md:5
+    message: >
+      The changeset states the fix makes "`spend`, the metrics report, and
+      provider resolution's budget measurement read any ledger that holds two
+      or more changes' telemetry" — overstated by one surface: the default
+      six-key spend report and the dispatch figures do, but the
+      `spend --window-evidence` mode still tears on such ledgers (F-1).
+    suggestion: >
+      Qualify the claim to the spend report/fold surface (or resolve F-1 first
+      and keep the wording). A one-line wording edit can ride the quality-gates
+      boundary commit if the pm accepts it.
+  - id: F-4
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/state/telemetry.ts:716
+    message: >
+      Degenerate edge: with an empty workItemRef, stepKey/baselineKey equal the
+      bare family prefixes, so a bare-prefix record is classified as the
+      requested ref's record (kind check) instead of tearing at its own
+      position — the F-2 table's row order is ambiguous for the degenerate ref
+      (already recorded as a consciously-left DoR nit). Unreachable through
+      delivered command surfaces, which validate refs upstream.
+    suggestion: >
+      Optional future hardening: reject an empty ref at the read boundary.
+      No action required for this change.
+  - id: F-5
+    severity: info
+    confidence: high
+    category: hygiene
+    location: doc/changes/2026-11/2026-11-22--GH-381--telemetry-foreign-ref-skip/chg-GH-381-pm-notes.yaml
+    message: >
+      Working tree at review time carries an uncommitted pm-notes modification
+      (the system_spec_update scopeDrift retro note) and an untracked .zed/
+      directory (pm-notes: must never be committed). Expected mid-pipeline
+      state given the documented commit flow; review range main-tools..HEAD is
+      unaffected.
+    suggestion: >
+      Ensure the retro note rides the next boundary commit (quality_gates
+      evidence) and .zed/ remains untracked.
+reviewed_at: 2026-11-22T13:30:36Z
+next_step: >-
+  PROCEED to quality_gates (phase 9). No remediation phase appended: findings
+  F-1/F-2 are pre-existing residuals outside the ticket's named seam and this
+  change's frozen scope (follow-up ticket recommended), F-3 is an optional
+  wording edit the pm may accept into the boundary commit, F-4/F-5 are
+  informational. Re-review after any remediation commit.

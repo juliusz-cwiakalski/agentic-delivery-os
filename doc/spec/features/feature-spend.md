@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SPEND
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-19
+last_updated: 2026-11-22
 owners: ["engineering"]
 service: delivery-os
 summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the window-scoped zero-spend evidence for peak-pause episodes with its closed four-value exclusion-reason set and classified telemetry absence, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
-  related_changes: ["GH-236", "GH-240", "GH-291", "GH-294", "GH-299", "GH-335"]
+  related_changes: ["GH-236", "GH-240", "GH-291", "GH-294", "GH-299", "GH-335", "GH-381"]
   related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005", "TDR-0040"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
@@ -261,7 +261,7 @@ function createSpendCommandRuntime(options: SpendCompositionOptions): SpendComma
 ### Data architecture
 
 - **Additive record families.** The command consumes the delivered `harness.telemetry` session-group records (`delivery.harness.telemetry.v1` under `harness.telemetry:<workItemRef>`), capture-outcome records (`delivery.harness.telemetry.capture.v1` under `harness-telemetry-capture:<workItemRef>:<runId>`), the v2 per-step records (`harness.telemetry.step` under `harness.telemetry.step:<workItemRef>`), the v2 session baselines (`harness.telemetry.baseline` under `harness.telemetry.baseline:<workItemRef>`), and the ref's `phase.transition` history. The v2 families declare their own storage identity `delivery.telemetry.storage.v1`; the state layer's schema version and every delivered v1 payload are unchanged.
-- **One classified read pass.** The verified reads run in a fixed order with one read per record family (constant in population size) so the failure identity is deterministic. Every failure is the delivered `state.*` result, never a partial or zeroed read.
+- **One classified read pass.** The verified reads run in a fixed order with one read per record family (constant in population size) so the failure identity is deterministic. The families read answers exactly one ref: a well-formed telemetry family key naming another ref is skipped without inspection and never classified as damage; `state.store.torn` stays reserved for malformed family keys and the requested ref's own damage. Every failure is the delivered `state.*` result, never a partial or zeroed read.
 - **Presence tolerance.** An absent store or an absent per-ref record family is explicit verified-empty evidence. When neither telemetry plane holds a record for the ref, the read is `verifiedEmpty` and the fold classifies `spend.telemetry-absent` (or the scoped phase absence). A baseline record alone never fabricates presence.
 - **Evidence.** The read carries the store path and a record count for diagnostics only; output carries aggregates, identity references, and time windows only.
 

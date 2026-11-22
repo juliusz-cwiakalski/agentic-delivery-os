@@ -1,0 +1,330 @@
+change_id: GH-381
+title: "M4-S20: Spend reads must be multi-ref safe — one change's telemetry must
+  never tear another's (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-22T07:43:16.706Z }
+  specification: { started: null, completed: 2026-11-22T07:52:43.621Z }
+  test_planning: { started: null, completed: 2026-11-22T08:24:00.855Z }
+  delivery_planning: { started: null, completed: 2026-11-22T08:25:35.811Z }
+  dor_check: { started: null, completed: 2026-11-22T08:31:01.686Z }
+  delivery: { started: null, completed: 2026-11-22T13:13:29.714Z }
+  system_spec_update: { started: null, completed: 2026-11-22T13:18:40.403Z }
+  review_fix: { started: null, completed: 2026-11-22T13:32:36.768Z }
+  quality_gates: { started: null, completed: 2026-11-22T14:14:45.288Z }
+  dod_check: { started: null, completed: 2026-11-22T14:16:28.452Z }
+  pr_creation: { started: null, completed: 2026-11-22T14:22:25.580Z }
+decisions: []
+open_questions: []
+blockers:
+  - text: "DoR iter-1 NOT_READY: TC-REF-006 assigned to the new provider-resolution
+      case collides with a delivered case —
+      tests/structure/reference-behavior.test.ts already implements
+      TC-REF-001..006 (TC-REF-006 at L613, unrelated). Renumber to TC-REF-007
+      (free) in the test plan; sync the plan phase-3 TC-ownership comment.
+      Remediation targets: test_planning + delivery_planning (reopened
+      2026-11-22)."
+    date: "2026-11-22"
+notes:
+  - text: "State detection 2026-11-22: fresh start — no branch, no change folder,
+      empty phase ledger (registry verified, 7418 records, phases:{}), no PR.
+      Local main-tools 0/0 with origin at 5ace5e98 (the GH-377 PR #380 merge).
+      Branch fix/GH-381/telemetry-foreign-ref-skip created from main-tools;
+      untracked .zed/ carried over and must never be committed."
+    type: info
+    date: "2026-11-22"
+  - text: "clarify_scope cross-check against
+      doc/spec/features/feature-telemetry-v2.md: defect confirmed in source —
+      readTelemetryFamilies (packages/core/src/state/telemetry.ts L692) returns
+      torn() at L709-711 (step prefix) and L718-723 (baseline prefix) on ANY
+      telemetry-family key that is not the requested ref's exact key, including
+      valid foreign-ref records. Delivered per-ref precedent is
+      readEconomicsRecords (packages/core/src/state/economics.ts L212: 'if
+      (record.key !== key) continue;'). Capture branch (capturePrefix) is
+      already ref-scoped and stays. Consumer blast radius: spend-reads.ts only
+      (spend, metrics, provider resolve budget reads). No contradiction between
+      the ticket and the spec: the spec's torn classification covers
+      shape-invalid records and payload validation, not foreign keys; the fix
+      keeps the single verified pass the spec mandates (§4, §5.1). Requirements
+      are complete (observed evidence, traced cause, required behaviour, 5 AC
+      fixtures, constraints) — no blocking questions; ticket assigned to owner
+      is not needed; proceeding to artifacts."
+    type: info
+    date: "2026-11-22"
+  - text: "Owner-comment constraints (binding): no ledger
+      delete/rewrite/truncate/salvage (append-only, not damaged); keep the read
+      one verified pass over store.readRecords() (no new per-record store reads,
+      no harness re-query); fixtures must interleave two refs with the FOREIGN
+      family first (exact record-3786 shape) — a one-ref fixture cannot catch
+      this class; malformed family key (bare prefix, empty ref) still tears with
+      the correct position; requested-ref kind mismatch still tears; gate
+      evidence uses TMPDIR=$PWD/tmp/tmpdir; PR targets main-tools; STOP with the
+      PR open; do not touch .jaiship/config.local.yaml, GH-366's
+      worktree/branch, or #378's scope."
+    type: info
+    date: "2026-11-22"
+  - text: "Decision-id baseline on origin/main-tools: max TDR-0075 (verified via
+      doc/decisions/00-index.md tail at 5ace5e98). No decision record planned —
+      this is a defect correction to an implementation-level tear condition, not
+      a change to the read's declared contract (per-ref skip matches the
+      delivered economics precedent). Escalate only if delivery discovers the
+      contract itself must change."
+    type: info
+    date: "2026-11-22"
+  - text: "Documentation impacts for phase 7 (doc-syncer): feature-telemetry-v2.md
+      reading bases (§5/§5.1) should state the per-ref projection rule (foreign
+      family keys skipped, never classified as damage; torn reserved for
+      malformed family keys and requested-ref kind mismatch); feature-spend.md
+      and feature-metrics.md read-side statements may need the same per-ref
+      sentence; feature-state-layer.md torn taxonomy is unchanged. Known risk if
+      skipped: spec would keep implying any prefix hit outside the requested ref
+      is damage."
+    type: risk
+    date: "2026-11-22"
+  - text: "DoR gate iteration 1: NOT_READY (verdict artifact
+      readiness-review/readiness-iter-1.md). Counts 0 critical / 1 major / 1
+      minor / 3 nit; one blocking root cause — the TC-REF-006 id collision
+      (blocker recorded). Everything else passed adversarial verification: all
+      source-seam claims confirmed, plan validator re-run valid/full, all
+      referenced test files and fixture helpers exist, TC-TELEMETRY (max 039)
+      and TC-METRICS (max 112) claims audited correct, TDR-0075 baseline
+      verified, and all ten binding owner constraints honored across the three
+      artifacts. Non-blocking nits recorded for awareness only (RSK-5 wording
+      slightly overstates doc drift; FX-7 omits capture-outcome records —
+      immaterial since the capture branch is ref-scoped; F-2 table leaves the
+      degenerate empty-workItemRef row order ambiguous). Remediation: renumber
+      to TC-REF-007, then gate re-run at iteration 2."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: the test plan derived its TC numbering from the wrong series model
+      — it treated TC-REF as a per-suite counter (like TC-TELEMETRY/TC-METRICS)
+      but TC-REF is a delivered cross-suite series spanning
+      tests/structure/reference-behavior.test.ts and tests/checks CLI suites,
+      already at 006 with one id (005) duplicated across two suites. The DoR
+      gate caught the collision before delivery. Lesson for future artifact
+      authors: verify each TC-id prefix's series ownership and true maximum
+      against repo truth before assigning the next number — prefix-local maxima
+      are not interchangeable across prefixes."
+    type: retro
+    date: "2026-11-22"
+  - text: "Retro (tooling): phase reopen, unlike phase complete, writes the ledger
+      transition and pm-notes to the working tree but lands NO commit — durable
+      reopen state needs an explicit commit-primitive invocation. And with a
+      plan present, the bare commit primitive stages plan-declared scope plus
+      modified tracked files only: untracked change-folder artifacts (e.g. the
+      readiness-review verdict file) are excluded as untrackedNotStaged and must
+      ride the next phase-complete commit, which unions the change folder. Also
+      observed: the commit template derived its subject from the plan's last
+      phase title, so the DoR-state commit (e5699ca3) carries a phase-7-docs
+      subject — cosmetic mismatch only, content verified correct; no history
+      rewrite. Net flow that worked: reopen (no commit) → commit primitive for
+      pm-notes → verdict artifact rides the next phase complete."
+    type: retro
+    date: "2026-11-22"
+  - text: "DoR gate iteration 2: READY (verdict artifact
+      readiness-review/readiness-iter-2.md). Both iter-1 findings closed and
+      verified hunk-by-hunk: TC-REF-007 renumber complete across all five
+      traceability locations (test plan commit 11ba75a1), plan phase-3 sync
+      exact (commit fb351422), plan re-validated valid/full/
+      readyForDevelopment=true. Zero blocking findings; three non-blocking nits
+      consciously left (RSK-5 wording, FX-7 capture-outcome wording, F-2
+      degenerate-row order) — optional polish, do not gate. Reviewer flagged a
+      false discrepancy: its `jaiship phase list` probe read the INSTALLED
+      user-facing binary's registry (state root ~/.jaiship-state — the product
+      the ticket's reproduction uses), which is empty for this dev checkout by
+      design; the authoritative lifecycle ledger is the delivery-os phase
+      family's registry in this checkout (verified, recordCount 7472, all four
+      artifact phases completed) and it agrees with pm-notes. No engine/capsule
+      divergence exists to fix; no events.jsonl is written by the installed
+      harness version here, and adding capsule events is not in this change's
+      scope. dod_check will read pm-notes + delivery-os phase list evidence."
+    type: info
+    date: "2026-11-22"
+  - text: "system_spec_update landed as e02a2f33 with a non-empty advisory
+      scopeDrift list naming exactly the three edited doc/spec/features files —
+      verified NOT a content error: the plan's phase-4 scope block declares all
+      of them (chg-GH-381-plan.yaml lines 49-51), and feature-state-layer.md is
+      absent because the doc-syncer verified it unchanged. The drift detector
+      evidently computes the commit's expected scope from delivery-kind phases
+      only, so planning-kind (declaration-only) phase scope lands flagged as
+      advisory drift even when exact. Engine treated it as non-blocking
+      (safety.completed, no findings). Lesson: when phase complete reports
+      scopeDrift, diff the flagged paths against the plan's declaration before
+      treating it as real drift — declaration-exact content can still be flagged
+      for planning-kind scope."
+    type: retro
+    date: "2026-11-22"
+  - text: "Review iteration 1: PASS (artifact code-review/review-iter-1.yaml; 0
+      critical / 0 high / 2 medium / 1 low / 2 info; remediation NONE; plan
+      ALL_TASKS_DONE; no coverage gaps). Verified adversarially: F-2 table exact
+      in telemetry.ts:709-739; golden-before-fix commit-verified (golden only in
+      a9a3a029, fix only in c20f4b58); fixture deviations audited byte-faithful
+      and test-only; empirical re-runs green (16/16 regression, 25/25
+      consumer+damage, typecheck, biome, doc-conformance 61/61,
+      doc-distribution, range lint 13 commits). Two MEDIUM findings are residual
+      same-class defects in sibling reads, out of the ticket's declared seam —
+      identified as follow-up material for the owner, not blockers: (F-2)
+      readTelemetrySteps still tears on foreign keys and is composed by spend
+      --window-evidence (packages/cli edge.ts ~L6390), so that spend surface
+      remains unavailable on multi-ref ledgers; (F-3) appendTelemetryBaseline
+      idempotency pre/post-reads (telemetry.ts ~L529, ~L550) still tear on
+      foreign baselines, so second-ref baseline capture fails permanently in
+      multi-ref projects (GH-381's fixtures bypass the helper, proving it). LOW:
+      changeset wording 'spend... read any ledger' overstated by the
+      --window-evidence surface — advisory, to be disclosed in the PR body
+      rather than churned post-PASS. Spec NG-3's premise ('capture path already
+      ref-scoped and delivered correct') is factually incomplete per F-3; left
+      as owner-gated follow-up. Sibling defects surfaced to the owner via a
+      ticket #381 comment (no tickets created — PM proposes, human decides)."
+    type: info
+    date: "2026-11-22"
+  - text: "Quality gates iteration 1: range lint PASS (14 commits in
+      main-tools..HEAD, 0 offending, mode none, binary
+      node_modules/.bin/commitlint, origin repository-local, merge-base
+      5ace5e98); aggregate pnpm check FAIL — 12465 pass / 4 skip / 5 fail across
+      2 suites (tests/checks/privacy-release.test.ts TC-RELEASE-001 x2,
+      tests/structure/changeset-additivity.test.ts TC-SYNC-011 x3), one root
+      cause: .changeset/gh-381-telemetry-foreign-ref-s kip-patch.md declares
+      only '@delivery-os/core: patch' but the repo lockstep invariant requires
+      every changeset to declare exactly the five fixed-group packages (core,
+      adapters, cli, mcp, opencode) all at minor. The spec's version_impact:
+      patch front-matter guess misled the plan's changeset decision; the GH-377
+      precedent (gh-377-provider-profile-parks- minor.md) was the correct
+      five-package minor form. Remediation: @fixer rewrites the changeset
+      content to the five-package minor block (filename kept — cosmetic;
+      disclosed in PR body); gates re-run after the remediation commit.
+      Spec/test-plan version_impact: patch fields are stale relative to the
+      lockstep-minor convention — cosmetic working-file metadata, disclosed in
+      PR body, not gate-relevant. Test-infra noise noted: gate suites
+      create/switch transient branches/worktrees during the run; final repo
+      state re-verified after gates."
+    type: info
+    date: "2026-11-22"
+  - text: "Quality gates iteration 2 (after remediation commit c250c851): ALL PASS.
+      Range lint gate: PASS — 15 commits in main-tools..HEAD, 0 offending
+      commits, mode none (no remediation mode named), commitlint binary
+      node_modules/.bin/commitlint, origin repository-local (ref
+      refs/remotes/origin/main-tools), merge-base 5ace5e98. Aggregate gate
+      TMPDIR=$PWD/tmp/tmpdir pnpm check: PASS end-to-end, exit 0 — all 11 stages
+      ran (lint 0 errors with the pre-existing advisory set, format:check,
+      build, typecheck, test 12470 pass / 4 skip / 0 fail across 1503 files,
+      check:boundaries 520 modules clean, check:memory 0 errors 0 advisories,
+      check:forbidden-literals 0 violations, check:namespace-tree conforms,
+      prompt-conformance 5 clean, help-guide-coverage covered, exports-parity 5
+      publishables pass). The 5 iteration-1 failures are gone (12474 total tests
+      unchanged; delta only in the fixed five). Post-run verification: tree
+      clean except untracked .zed/, branch fix/GH-381/telemetry-foreign-ref-skip
+      unchanged, transient gate-branch churn self-restored."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden), commit
+      a9a3a029. tests/fixtures/telemetry/index.ts gains the GH-381 fixture
+      family (refs GH-381/GH-365/GH-000; FX-1 interleaved both directions, FX-2
+      foreign-first regression, FX-3 bare prefixes, FX-4 requested-ref damage
+      arms, FX-6 observed-scale 4,806 records via the delivered batch fence
+      technique, the FX-5 golden-arm builder, and the TC-044 foreign-damage
+      seeder) plus shared path-normalization helpers;
+      foreign-ref-skip-golden-run.ts is the explicit capture entry and
+      foreign-ref-skip-golden.ts the committed golden (7 arms: healthy
+      single-ref read, verified-empty empty-ledger read, five delivered tear
+      identities+locations all at record 6; store paths normalized to
+      <stateDirectory>). Binding ordering constraint honored: golden captured
+      BEFORE any packages/core/src/state/telemetry.ts edit. Seeding note: two
+      refs' baselines cannot both go through appendTelemetryBaseline (its
+      delivered idempotency pre-read tears on a same-family foreign key — out of
+      scope per DEC-3), so multi-ref baselines are raw-appended in one fence
+      with the delivered writer's exact payload/kind/key (byte-identical stored
+      record) — the delivered scale-batch precedent. Verification: capture entry
+      run twice — byte-identical and biome-check clean; bun test
+      tests/behaviour/telemetry-storage-damage.test.ts 5 pass / 0 fail
+      (delivered tear conventions unchanged); pnpm typecheck and tests types/tsc
+      green. Test result: PASS."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 2 complete (foreign-ref skip in the step and baseline family
+      branches + regression suite green), commit c20f4b58. The F-2 table (spec
+      §5.1, Appendix C) is implemented inside readTelemetryFamilies
+      (packages/core/src/state/telemetry.ts) only: a bare family prefix tears
+      state.store.torn at its own position; a well-formed foreign key is skipped
+      in ledger order with no kind inspection, no payload inspection, and no
+      evidence; the requested ref's kind-mismatch tear and payload validation
+      are unchanged. The capture-outcome branch, the session-record branch, the
+      single-family reads, the capture path, and spend-reads.ts are untouched
+      (DEC-3, NG-4); the single verified pass is preserved (asserted
+      structurally in TC-TELEMETRY-045: exactly one readRecords call, zero other
+      port calls, ledger digest byte-identical at 4,806 records). New suite
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts implements
+      TC-TELEMETRY-040..047 (16 tests). Scale-seeding note: the delivered
+      verified write re-verifies the whole ledger per append, so 4,806-record
+      seeding through store.append is quadratic (~minutes per build, twice per
+      suite run); FX-6's bulk steps therefore land through the delivered ledger
+      core (buildRecord + serializeRecord — the exact calls appendRecord makes)
+      in one pass, byte-identical to delivered writes, with the first record and
+      both refs' families still through the delivered store append; the verified
+      read under test validates every record in one pass regardless. F-6 golden
+      equality proven directly: re-running the capture entry post-fix
+      regenerates tests/fixtures/telemetry/foreign-ref-skip-golden.ts
+      byte-identical to the pre-fix committed golden. Verification: bun test
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts 16 pass / 0 fail
+      (6.07s); targeted regression net over all 109 telemetry/spend/metrics/
+      status/provider-budget/harness-telemetry suites 906 pass / 0 fail / 2
+      skip; delivered TC-TELEMETRY-012 suite 5 pass / 0 fail; pnpm typecheck +
+      tests types/tsc green; biome check clean. Test result: PASS."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 3 complete (multi-ref consumer proofs + lockstep patch
+      changeset), commit 9b6cbb0e. TC-REF-007 lands in
+      tests/behaviour/provider-budget-ref.test.ts: FX-7 seeds two refs' full
+      families (steps, baseline, v1 session, capture outcome; distinct per-ref
+      figures 20 vs 140) through the delivered paths, the measured budget equals
+      exactly the requested ref's own scoped fold figure for BOTH refs (zero
+      foreign contribution), and resolution proceeds to a provider decision
+      (kind selected on the delivered chain) instead of the telemetry tear.
+      TC-METRICS-113 lands in tests/behaviour/metrics-dispatch.test.ts: the
+      two-ref metrics read succeeds where pre-fix it tore, its dispatch block is
+      byte-equal to the single-ref report, the burn-rate evaluation is identical
+      with the alarm measured value exactly the requested ref's 1,200 tokens
+      despite the foreign 99,999-token step, and no foreign dispatch row appears
+      (NG-4 shapes unchanged). No consumer implementation file was edited
+      anywhere (A-4). The lockstep patch changeset
+      .changeset/gh-381-telemetry-foreign-ref-skip-patch.md bumps
+      @delivery-os/core patch (spec A-5/§18). Verification: bun test
+      tests/behaviour/provider-budget-ref.test.ts 13 pass / 0 fail; bun test
+      tests/behaviour/metrics-dispatch.test.ts 7 pass / 0 fail; bun test
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts 16 pass / 0 fail (36
+      pass / 0 fail across the three suites together); pnpm typecheck + tests
+      types/tsc green; biome check clean. Test result: PASS. Note: this entry
+      rides the PM's lifecycle-boundary commit (change-folder artifacts modified
+      between phase commits ride the next commit — observed repo flow)."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 4 complete (documentation reconciliation — kind: planning,
+      doc-syncer scope), commit e02a2f33. feature-telemetry-v2.md §5/§5.1 now
+      state the per-ref projection rule in current-truth form and §7 gained the
+      telemetry-foreign-ref-skip suite row (TC-TELEMETRY-040..047);
+      feature-spend.md and feature-metrics.md each carry the one minimal per-ref
+      sentence; feature-state-layer.md verified unchanged (no contradiction).
+      Residual scan found no other current-truth doc stating the old
+      tear-on-foreign-key behavior. Verification (docs, not tests): bun test
+      tests/checks/doc-conformance.test.ts 61 pass / 0 fail; bash
+      scripts/.tests/test-doc-distribution.sh clean; doc-syncer reported zero
+      residual gaps. Test result: PASS (verification guards)."
+    type: info
+    date: "2026-11-22"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull /383 —
+      fix(GH-381): make spend reads multi-ref safe — skip foreign telemetry
+      family keys; base main-tools, head fix/GH-381/ telemetry-foreign-ref-skip,
+      17 commits (7512f5fd..5959c521), 18 files +3376/-16. Body carries the
+      problem, the F-2 fix, delivery shape, full evidence (review PASS iter-1,
+      DoR READY iter-2, gates PASS 12470/4/0 all stages, range lint PASS 15
+      commits at gate time, doc-conformance 61/61, doc-distribution clean) and
+      the non-blocking advisories (sibling readTelemetrySteps +
+      appendTelemetryBaseline defects with the ticket comment link; changeset
+      -patch filename vs minor×5 content; stale spec/test-plan version_impact
+      metadata; fixture-only deviations). 'Closes #381' fires only on merge.
+      Merge authority is the owner's; the PR stays open for review and the
+      lifecycle STOPS here."
+    type: info
+    date: "2026-11-22"

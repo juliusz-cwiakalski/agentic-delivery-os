@@ -707,7 +707,16 @@ export const readTelemetryFamilies = (
   for (const ledgerRecord of verified.value.records) {
     const location = { path, record: ledgerRecord.sequence };
     if (ledgerRecord.key.startsWith(TELEMETRY_STEP_KEY_PREFIX)) {
-      if (ledgerRecord.key !== stepKey || ledgerRecord.kind !== TELEMETRY_STEP_RECORD_KIND) {
+      if (ledgerRecord.key !== stepKey) {
+        // A family key with an empty ref remainder (the bare prefix) is a
+        // record that is itself invalid: it tears at its own position. A
+        // well-formed key naming another ref is that ref's business — skipped
+        // in ledger order with no kind inspection, no payload inspection, and
+        // no evidence, mirroring the delivered per-ref economics read.
+        if (ledgerRecord.key === TELEMETRY_STEP_KEY_PREFIX) return torn(location);
+        continue;
+      }
+      if (ledgerRecord.kind !== TELEMETRY_STEP_RECORD_KIND) {
         return torn(location);
       }
       const parsed = stepFrom(ledgerRecord.payload, location);
@@ -716,10 +725,14 @@ export const readTelemetryFamilies = (
       continue;
     }
     if (ledgerRecord.key.startsWith(TELEMETRY_BASELINE_KEY_PREFIX)) {
-      if (
-        ledgerRecord.key !== baselineKey ||
-        ledgerRecord.kind !== TELEMETRY_BASELINE_RECORD_KIND
-      ) {
+      if (ledgerRecord.key !== baselineKey) {
+        // Symmetric with the step family: the bare baseline prefix tears at
+        // its own position; a well-formed foreign baseline key is skipped
+        // without any inspection and contributes nothing.
+        if (ledgerRecord.key === TELEMETRY_BASELINE_KEY_PREFIX) return torn(location);
+        continue;
+      }
+      if (ledgerRecord.kind !== TELEMETRY_BASELINE_RECORD_KIND) {
         return torn(location);
       }
       const parsed = baselineFrom(ledgerRecord.payload, location);
