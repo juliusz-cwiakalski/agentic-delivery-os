@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-22T00:48:34.656Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-22T00:54:20.264Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -50,28 +50,29 @@ decisions:
       Re-verified on `origin/main-tools` at intake: the maximum is TDR-0074, so
       the reservation stands. No TDR is authored pre-emptively."
     date: "2026-11-22"
-open_questions:
-  - text: "Watch-stale as an eligibility input: the ticket requires stale watch
-      facts to be named, never silently treated as clear, while TDR-0062
-      declares `watch-stale` a watch-view-only condition that joins no park
-      cause, skip reason, or announcement. The specification must state exactly
-      how a stale watch observation affects profile eligibility (named blocker
-      without inventing a park cause) and whether that is precedent-setting
-      enough to warrant TDR-0075. Escalate to @decision-advisor only if the
-      answer changes a closed vocabulary or a previously declared contract."
+  - text: "OQ-1 RESOLVED (PM, autonomous): a stale watch observation is a named
+      eligibility blocker using the existing `watch-stale` watch-only condition.
+      It adds no park cause, skip reason, announcement, timer, cache, or state
+      write, so TDR-0062's closed sets are preserved. A live read observes at
+      the read instant and is never stale; this is the fail-loud guard for
+      composition-supplied observations and the park-expiry clamp, not a new
+      steady-state ineligibility. The specification states this contract; no TDR
+      is needed."
     date: "2026-11-22"
-  - text: "Seat-level versus profile-level eligibility: a seat model may name a
-      provider outside the profile's declared `providers` list (for example a
-      pacing rung `executionModel` or an `agentOverrides` pin). The
-      specification must define whether profile eligibility alone guarantees a
-      seat's provider is unparked, or whether seat resolution independently
-      re-checks the seat model's provider and substitutes from the next eligible
-      profile. Silence here would let a parked provider reach the env record
-      through a seat."
+  - text: "OQ-2 RESOLVED (PM, autonomous): seat resolution independently re-checks
+      the seat model's provider against the same availability facts. When the
+      selected profile's seat model pins a parked provider, the seat is
+      substituted from the next eligible profile in `preferenceChain` order and
+      that model is emitted; when no eligible profile supplies the seat,
+      resolution refuses `provider.profile.unavailable` naming the seat and the
+      provider. This is the ticket's required behaviour, expressed as a
+      contract; no TDR is needed."
     date: "2026-11-22"
+open_questions: []
 blockers: []
 notes:
-  - text: "Clarify scope complete. Ticket GH-377 is open, labeled `change`, with
+  - text: "Clarify scope complete and landed as d08ab630 (subject `docs(GH-377):
+      update doc/changes/...`). Ticket GH-377 is open, labeled `change`, with
       milestone M4 attached; predecessors M4-S4 (GH-350, e1ebc76c) and M4-S16
       (GH-374, c1dd722c) are merged on `main-tools`. State detection observed a
       fresh start: no local or remote branch, no change capsule, an empty phase
@@ -97,4 +98,16 @@ notes:
       hit, finish the current phase commit and write a clean checkpoint in these
       notes."
     type: info
+    date: "2026-11-22"
+  - text: "Retro (environment defect): the first `phase complete clarify_scope`
+      failed with `commit.commitlint-failed` although the generated message
+      `docs(GH-377): update doc` is valid. Root cause: the commit primitive
+      spawns bare `commitlint` via execFile; it is not on the runner shell PATH,
+      and the ENOENT maps to status 1 with empty output, which the probe reports
+      as 'commitlint rejected the message' instead of 'commitlint could not be
+      executed'. Re-running with `PATH=\"$PWD/node_modules/.bin:$PATH\"`
+      succeeded. Cost ~5 minutes; out of scope to fix here (probe classification
+      belongs to the conformance/repair line), but every subsequent commit from
+      a bare shell must carry the PATH prefix."
+    type: retro
     date: "2026-11-22"
