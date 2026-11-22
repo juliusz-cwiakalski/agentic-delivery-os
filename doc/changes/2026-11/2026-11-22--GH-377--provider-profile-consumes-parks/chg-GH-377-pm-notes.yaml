@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-22T02:10:42.612Z }
   delivery_planning: { started: null, completed: 2026-11-22T01:43:48.473Z }
   dor_check: { started: null, completed: 2026-11-22T01:48:22.246Z }
-  delivery: { started: null, completed: 2026-11-22T02:10:55.809Z }
+  delivery: { started: null, completed: 2026-11-22T02:48:10.981Z }
   system_spec_update: { started: null, completed: 2026-11-22T02:19:22.086Z }
   review_fix: { started: null, completed: 2026-11-22T02:28:47.391Z }
   quality_gates: { started: null, completed: null }
@@ -330,5 +330,18 @@ notes:
       evidence-bounds, profile-contract and golden) => 192 pass, 0 fail. `pnpm
       typecheck` green. Plan phase 5 is declaration-only and is left to the
       `@doc-syncer` in lifecycle phase 7."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 5 complete (declaration-only, doc-syncer-owned): commit
+      5e87653ff21f0acfbe75b1d8c716607406f9b9ea. The phase declared the
+      documentation and decision-ledger scope and authored nothing; the
+      `@doc-syncer` reconciled the profiles, engine, peak-pausing,
+      dispatch-engine, result-contract and parks-guide pages plus the glossary
+      and verified TDR-0075/index. Results: `bun test
+      tests/checks/doc-conformance.test.ts` 61 pass/0 fail; doc-conformance +
+      content-inventory 73/0; `bash scripts/.tests/test-doc-distribution.sh`
+      clean (96 in-scope docs, no drift); decision-record 11/0; namespace
+      battery 26/0; the only error-table-sync failures traced to a source
+      comment, fixed separately in 07dbb806 (255/0)."
     type: info
     date: "2026-11-22"

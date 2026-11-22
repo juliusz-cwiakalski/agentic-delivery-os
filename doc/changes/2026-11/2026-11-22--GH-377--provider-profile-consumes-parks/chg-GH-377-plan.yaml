@@ -10,6 +10,7 @@ phases:
     # TC ownership: TC-PROFILE-059, TC-PROFILE-060, TC-PROFILE-061, TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-064, TC-PROFILE-065, TC-PROFILE-087, TC-PROFILE-088, TC-PROFILE-091, TC-PROFILE-095, TC-PROFILE-096, TC-PROFILE-097
     scope:
       files:
+        - .changeset/gh-377-provider-profile-parks-minor.md
         - packages/cli/src/edge.ts
         - tests/behaviour/provider-profile-probes.test.ts
         - tests/behaviour/provider-profile-edge-wiring.test.ts
