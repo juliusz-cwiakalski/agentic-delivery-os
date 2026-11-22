@@ -34,7 +34,42 @@ export const MULTI_REF_READS_GOLDEN: Gh384MultiRefReadsGolden = {
         record: 1,
       },
     },
-    corrected: null,
+    corrected: {
+      records: [
+        {
+          schemaId: "delivery.harness.telemetry.step.v1",
+          storageVersion: "delivery.telemetry.storage.v1",
+          workItemRef: "GH-384",
+          runId: "run-gh384-GH-384",
+          sessionId: "ses-gh384-GH-384-s1",
+          harnessKind: "opencode",
+          harnessVersion: "2.2.5",
+          treeRoot: "/work/checkout-a",
+          model: "model-alpha",
+          ticket: "GH-384",
+          repository: "/work/checkout-a",
+          lane: "lane-alpha",
+          agentRole: "coder",
+          tokens: {
+            input: 10,
+            output: 5,
+            reasoning: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+          },
+          calls: 1,
+          cost: 0.25,
+          startedAt: null,
+          finishedAt: "2026-11-12T08:10:00.000Z",
+          warnings: [],
+          capturedAt: "2026-11-12T08:10:00.000Z",
+        },
+      ],
+      verifiedEmpty: false,
+      evidence: {
+        storePath: "<stateDirectory>/ledger.workspace-a.jsonl",
+      },
+    },
   },
   fxR2: {
     preFix: {
@@ -46,7 +81,15 @@ export const MULTI_REF_READS_GOLDEN: Gh384MultiRefReadsGolden = {
         record: 1,
       },
     },
-    corrected: null,
+    corrected: {
+      first: {
+        appended: true,
+        sequence: 2,
+      },
+      repeat: {
+        appended: false,
+      },
+    },
   },
   singleRef: {
     healthy: {
