@@ -221,3 +221,22 @@ notes:
       a bare shell must carry the PATH prefix."
     type: retro
     date: "2026-11-22"
+  - text: "Plan phase 1 complete (commit 8f0861eafbf2d85f71b910537f23a9552c1cb03e):
+      park-aware availability facts and probe composition delivered in
+      `createResolvedProviderProbe` — one verified park fold per resolution, the
+      provider-attributable cause classification, the per-declared-target
+      staleness rule, the composition-supplied observation seam, and the
+      fail-closed fold verdict. Targeted suites:
+      `bun test tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-profile-selection.test.ts
+      tests/behaviour/provider-profile-probes.test.ts
+      tests/structure/provider-contract.test.ts
+      tests/structure/provider-profile-contract.test.ts
+      tests/checks/provider-profile-evidence-bounds.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 86 pass, 0 fail.
+      `pnpm typecheck` green. Note: AC-F1-1/TC-PROFILE-059 say `outcome: selected`,
+      but the delivered unchanged lifecycle returns `switched` on the first
+      base->fallback move (spec §8.5 keeps the lifecycle unchanged); the test
+      asserts the selection facts and accepts the delivered lifecycle outcome."
+    type: info
+    date: "2026-11-22"
