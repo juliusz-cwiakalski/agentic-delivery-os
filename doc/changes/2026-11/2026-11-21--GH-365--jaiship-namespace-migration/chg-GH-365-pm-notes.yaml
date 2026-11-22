@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-21T22:15:39.453Z }
   review_fix: { started: null, completed: 2026-11-21T23:52:46.272Z }
   quality_gates: { started: null, completed: 2026-11-22T00:18:26.616Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-22T00:19:41.759Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope source is the ticket body plus the owner comment of 2026-11-19 and
@@ -73,6 +73,19 @@ decisions:
       the current host root; the migration guide records it."
     date: "2026-11-21"
 notes:
+  - text: "DoD CHECK = PASS. Ledger: all phases through quality_gates complete
+      (9/11); every plan phase P1-P10 has a pm-notes COMPLETE record naming its
+      commit and committed-head gate (P1 a3ba0672, P2
+      6426cd4a/ceb8254f/f578c3a1/ 5b06ab5c, P3 e9e7c78d, P4 560b1e11, P5
+      26828570, P6 947b4040/ce14a5a9, P7 203951f0, P8 62ffbaa5, P9 9f4a0803, P10
+      ab091f66). Committed layer: `.jaiship/config.yaml` tracked, `.delivery-os`
+      empty. ACs 31/31 closed by review-iter-3 PASS (20/20 dispositions) and the
+      full `pnpm check` (12402/4/0) + range gate PASS over 40 commits. Docs
+      reconciled by doc-syncer with no residual gap; doc-conformance +
+      namespace-doc-battery 66 pass. Working tree clean except untracked
+      `.zed/`. No phase reopened."
+    type: info
+    date: "2026-11-22"
   - text: "QUALITY GATES (lifecycle phase 9) = PASS at HEAD 3bd3f6b1. Aggregate
       `pnpm check` exit 0: test 12402 pass / 4 skip / 0 fail across 12406 tests
       and 1502 files; boundaries clean (520 modules / 1667 dependencies);
