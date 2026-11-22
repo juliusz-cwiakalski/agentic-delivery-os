@@ -19,10 +19,17 @@ import type {
   QuotaTransport,
   StateStorePort,
 } from "@delivery-os/core/contracts";
-import { PROVIDER_PARK_RECORD_KEY } from "@delivery-os/core/contracts";
+import {
+  PROVIDER_ANNOUNCEMENT_RECORD_KEY,
+  PROVIDER_PARK_RECORD_KEY,
+} from "@delivery-os/core/contracts";
 import { createConfigProgram } from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
-import { createParkRecord, persistProviderResolution } from "../../packages/core/src/provider/parks";
+import {
+  createAnnouncementRecord,
+  createParkRecord,
+  persistProviderResolution,
+} from "../../packages/core/src/provider/parks";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const PEAK_ACTIVE = Date.UTC(2026, 0, 1, 7, 0, 0);
@@ -255,7 +262,9 @@ describe("GH-377 TC-PROFILE-059/060 recorded parks drive the production profile 
     expect(String(blockers[0]?.detail)).toContain("zai-coding-plan");
     expect(eligibility.find((entry) => entry.profile === "paid")?.verdict).toBe("eligible");
 
-    const envRecord = envelope.envRecord as { readonly entries: readonly Record<string, unknown>[] };
+    const envRecord = envelope.envRecord as {
+      readonly entries: readonly Record<string, unknown>[];
+    };
     const values = envRecord.entries.map((entry) => entry.value);
     expect(values).toContain("deepseek/deepseek-flash");
     expect(values.some((value) => String(value).includes("zai-coding-plan"))).toBe(false);
@@ -279,8 +288,12 @@ describe("GH-377 TC-PROFILE-059/060 recorded parks drive the production profile 
       verdict: "shadowed",
       blockers: [],
     });
-    const envRecord = envelope.envRecord as { readonly entries: readonly Record<string, unknown>[] };
-    expect(envRecord.entries.map((entry) => entry.value)).toContain("zai-coding-plan/glm-5.3-flash");
+    const envRecord = envelope.envRecord as {
+      readonly entries: readonly Record<string, unknown>[];
+    };
+    expect(envRecord.entries.map((entry) => entry.value)).toContain(
+      "zai-coding-plan/glm-5.3-flash",
+    );
   });
 });
 
@@ -564,5 +577,64 @@ describe("GH-377 TC-PROFILE-075 advancing past expiry restores the preferred pro
     expect(stable.exitCode).toBe(0);
     const stableEvents = data(stable.stdout).events as readonly Record<string, unknown>[];
     expect(stableEvents.filter((event) => event.code === "profile.reverted")).toHaveLength(0);
+  });
+});
+
+describe("GH-377 TC-PROFILE-079 the read writes no park, announcement or cleared record", () => {
+  test("seeded park and announcement bytes survive healthy and parked resolutions", async () => {
+    const seed = (store: StateStorePort): void => {
+      const park = createParkRecord({
+        subjectKind: "provider",
+        subjectName: "zai-coding-plan",
+        cause: "quota-exhausted",
+        conditions: ["quota-exhausted"],
+        createdAtMs: OUTSIDE_PEAKS - 60_000,
+        expiresAtMs: OUTSIDE_PEAKS + 3_600_000,
+        evidence: {},
+      });
+      const announcement = createAnnouncementRecord({
+        subjectKind: "provider",
+        subjectName: "zai-coding-plan",
+        code: "provider.quota.parked",
+        severity: "warning",
+        createdAtMs: OUTSIDE_PEAKS - 60_000,
+        message: "provider zai-coding-plan parked",
+        park,
+        evidence: { announcementCode: "provider.quota.parked" },
+      });
+      const persisted = persistProviderResolution({
+        store,
+        fenceToken: "seed-zero-write",
+        nowMs: OUTSIDE_PEAKS - 60_000,
+        parks: [park],
+        announcements: [announcement],
+      });
+      if (!persisted.ok) throw new Error("seed failed");
+    };
+    const { run, store, setNow } = harness({ config: COMMITTED_CONFIG, seed });
+    setNow(OUTSIDE_PEAKS);
+    const beforeParks = store.read({ requiredKeys: [PROVIDER_PARK_RECORD_KEY] });
+    const beforeAnnouncements = store.read({
+      requiredKeys: [PROVIDER_ANNOUNCEMENT_RECORD_KEY],
+    });
+    if (!beforeParks.ok || !beforeAnnouncements.ok) throw new Error("seed read failed");
+
+    const parked = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(parked.exitCode).toBe(0);
+    expect(data(parked.stdout).profile).toBe("paid");
+    // A second read at the same instant is stable and writes nothing either.
+    const stable = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(stable.exitCode).toBe(0);
+
+    const afterParks = store.read({ requiredKeys: [PROVIDER_PARK_RECORD_KEY] });
+    const afterAnnouncements = store.read({
+      requiredKeys: [PROVIDER_ANNOUNCEMENT_RECORD_KEY],
+    });
+    expect(afterParks.ok && JSON.stringify(afterParks.value.values)).toBe(
+      JSON.stringify(beforeParks.value.values),
+    );
+    expect(afterAnnouncements.ok && JSON.stringify(afterAnnouncements.value.values)).toBe(
+      JSON.stringify(beforeAnnouncements.value.values),
+    );
   });
 });

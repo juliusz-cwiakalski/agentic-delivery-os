@@ -10,8 +10,8 @@ import {
   evaluateProfileLifecycle,
   selectProfile,
 } from "../../packages/core/src/provider/index";
-import { runGolden } from "../fixtures/provider/profile/golden/run";
 import { eligibility, selectedResult } from "../fixtures/provider/profile/golden/data";
+import { runGolden } from "../fixtures/provider/profile/golden/run";
 import { lifecycleChain } from "../fixtures/provider/profile/lifecycle/fixtures";
 import { available, mixedChain, peak } from "../fixtures/provider/profile/selection/fixtures";
 
@@ -142,13 +142,15 @@ describe("GH-377 TC-PROFILE-089/090 recorded-park and healthy selections", () =>
     const envelope = JSON.parse(result.stdout) as { readonly data: Record<string, unknown> };
     expect(envelope.data.profile).toBe("deepseek");
     expect(eligibility[0]).toMatchObject({ profile: "mixed", verdict: "ineligible" });
-    expect(
-      eligibility[0]?.blockers.some((blocker) => blocker.value === "quota-exhausted"),
-    ).toBe(true);
+    expect(eligibility[0]?.blockers.some((blocker) => blocker.value === "quota-exhausted")).toBe(
+      true,
+    );
     expect(selectedResult().ok && selectedResult().decision.seatModels.pm).toBe(
       "deepseek-reasoner",
     );
-    const envRecord = envelope.data.envRecord as { readonly entries: readonly Record<string, unknown>[] };
+    const envRecord = envelope.data.envRecord as {
+      readonly entries: readonly Record<string, unknown>[];
+    };
     expect(envRecord.entries.map((entry) => entry.value)).toContain("deepseek-reasoner");
   });
 

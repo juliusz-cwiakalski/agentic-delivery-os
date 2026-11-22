@@ -7,6 +7,7 @@ import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import type {
   CredentialPort,
   ProviderWatchTarget,
@@ -23,10 +24,12 @@ import {
   resolveProfileForSpawn,
   selectProfile,
 } from "../../packages/core/src/provider/index";
-import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
+import {
+  createParkRecord,
+  persistProviderResolution,
+} from "../../packages/core/src/provider/parks";
 import { scan } from "../../scripts/checks/ambient-globals";
 import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
-import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 import {
   available,
   exhausted,
@@ -35,6 +38,7 @@ import {
   profile,
   seat,
 } from "../fixtures/provider/profile/selection/fixtures";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
 const NOW = 1_700_000_000_000;
@@ -263,10 +267,7 @@ describe("GH-377 TC-PROFILE-087 one fold read and memoized probes over one hundr
     const counting = countingStore(base);
     const providerNames = Array.from({ length: 100 }, (_value, index) => `p${index}`);
     const entries = Object.fromEntries(
-      providerNames.map((name) => [
-        name,
-        { name, class: "subscription" as const, enabled: true },
-      ]),
+      providerNames.map((name) => [name, { name, class: "subscription" as const, enabled: true }]),
     );
     const profiles = Object.fromEntries(
       providerNames.map((name, index) => [
@@ -324,5 +325,61 @@ describe("GH-377 TC-PROFILE-087 one fold read and memoized probes over one hundr
       (text.match(/createResolvedProviderProbe\(/g) ?? []).length;
     // The definition is `createResolvedProviderProbe = (` and does not match.
     expect(calls(edge) + calls(production)).toBe(3);
+  });
+});
+
+describe("GH-377 TC-PROFILE-086 three runs and two compositions agree with zero live calls", () => {
+  test("identical recorded-park facts produce identical decisions and no fetch", () => {
+    const fetchSpy = spyOn(globalThis, "fetch");
+    try {
+      const composition = (): string[] => {
+        const root = makeTempRoot("profile-determinism");
+        roots.push(root);
+        const { store } = openStore(makeIdentity(root));
+        const park = createParkRecord({
+          subjectKind: "provider",
+          subjectName: "coding-plan",
+          cause: "quota-exhausted",
+          conditions: ["quota-exhausted"],
+          createdAtMs: NOW - 1_000,
+          expiresAtMs: NOW + 3_600_000,
+          evidence: {},
+        });
+        const seeded = persistProviderResolution({
+          store,
+          fenceToken: `seed-determinism-${root}`,
+          nowMs: NOW - 1_000,
+          parks: [park],
+          announcements: [],
+        });
+        if (!seeded.ok) throw new Error("seed failed");
+        const probe = createResolvedProviderProbe(
+          {
+            "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+            deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+          },
+          NOW,
+          undefined,
+          { store },
+        );
+        return Array.from({ length: 3 }, () =>
+          JSON.stringify(
+            resolveProfileForSpawn({
+              profiles: mixedChain(),
+              probe,
+              nowMs: NOW,
+              agent: "pm",
+              namePrefix: "TEST",
+            }),
+          ),
+        );
+      };
+      const first = composition();
+      const second = composition();
+      expect(new Set([...first, ...second]).size).toBe(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });

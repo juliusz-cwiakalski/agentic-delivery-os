@@ -12,6 +12,7 @@
  * or borrows a profile.
  */
 import { describe, expect, test } from "bun:test";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import { runDispatch } from "../../packages/core/src/app/dispatch";
 import { readDispatchAttemptHistory } from "../../packages/core/src/app/dispatch-attempts";
 import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
@@ -32,6 +33,7 @@ import {
   createProfileProbePort,
   nominateProviderProfile,
 } from "../../packages/core/src/provider/engine";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
 import { selectProfile } from "../../packages/core/src/provider/profile";
 import {
   COMPLETED_EVIDENCE,
@@ -49,8 +51,6 @@ import {
   seat,
   substitutionChain,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
-import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
 
 const REPOSITORY = "github.com/owner/repo";
 const NOW = "2026-11-08T10:00:00.000Z";

@@ -2,13 +2,14 @@
  * Deterministic CLI data fixtures for the profile/watch golden and behaviour
  * suites (GH-234 F-9). No clock, path, or vendor body is embedded.
  */
+
+import { createResolvedProviderProbe } from "../../../../../packages/cli/src/edge";
 import type {
   ProfileEligibility,
   ProfileEvent,
   ProfileSelectionDecision,
   ProfileSelectionResult,
 } from "../../../../../packages/core/src/contracts/index";
-import { createResolvedProviderProbe } from "../../../../../packages/cli/src/edge";
 import {
   createProfileTargetRecord,
   evaluateProfileLifecycle,
@@ -86,8 +87,7 @@ export const eligibility: readonly ProfileEligibility[] = selectedSelection.deci
 export const selectedEvent: ProfileEvent = selectedSelection.events[0] as ProfileEvent;
 
 export const switchedEvent: ProfileEvent =
-  recordedPark.lifecycle.events.find((event) => event.code === "profile.switched") ??
-  selectedEvent;
+  recordedPark.lifecycle.events.find((event) => event.code === "profile.switched") ?? selectedEvent;
 
 export const profileDecision = (): ProfileSelectionDecision => selectedSelection.decision;
 

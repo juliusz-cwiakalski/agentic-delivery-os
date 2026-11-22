@@ -368,8 +368,8 @@ import {
   type PhaseTransitionRecord,
   type PlanDiffPort,
   type PlanMemberDeclaration,
-  type ProfileProviderAvailability,
   PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+  type ProfileProviderAvailability,
   type ProviderAnnouncementRecord,
   type ProviderClock,
   type ProviderConfiguration,
@@ -1776,9 +1776,7 @@ export type ProviderComposition = {
    * instant, never persisted, fetched, or written. Absent means no observation,
    * which is the delivered production steady state.
    */
-  readonly availabilityObservations?: Readonly<
-    Record<string, ProviderAvailabilityObservation>
-  >;
+  readonly availabilityObservations?: Readonly<Record<string, ProviderAvailabilityObservation>>;
   /**
    * The zone seam the peak evaluation binds through (GH-350 F-1/F-8, ADR-0013).
    * Absent means the engine's zone-unaware default: a non-UTC window refuses
@@ -3068,8 +3066,7 @@ export const createResolvedProviderProbe = (
     const watchTarget = facts.watch?.[providerName];
     const observation = facts.observations?.[providerName];
     if (watchTarget !== undefined && observation !== undefined) {
-      const maxAgeSeconds =
-        watchTarget.maxAgeSeconds ?? PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS;
+      const maxAgeSeconds = watchTarget.maxAgeSeconds ?? PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS;
       const ageSeconds = watchObservationAgeSeconds({
         nowMs,
         observedAtMs: observation.observedAtMs,

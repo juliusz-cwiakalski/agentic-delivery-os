@@ -4,26 +4,26 @@
  * milestone-seam evaluability note (external evidence not asserted here).
  */
 import { describe, expect, test } from "bun:test";
-import {
-  buildProfileEnvRecord,
-  envRecordNameForSeat,
-  resolveProfileForSpawn,
-  runProfileSpawn,
-} from "../../packages/core/src/provider/index";
-import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import type {
   CredentialPort,
   HarnessExecutionEnvironmentDescriptor,
   ProviderDescriptor,
 } from "../../packages/core/src/contracts/index";
+import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
+import {
+  buildProfileEnvRecord,
+  createProviderFactsProbe,
+  envRecordNameForSeat,
+  resolveProfileForSpawn,
+  runProfileSpawn,
+} from "../../packages/core/src/provider/index";
 import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
-import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import {
   mixedChain,
   noSupplierChain,
   substitutionChain,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { createProviderFactsProbe } from "../../packages/core/src/provider/index";
 
 const NOW = 1_700_000_000_000;
 const NAME_PREFIX = "ADOS";

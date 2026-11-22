@@ -1571,10 +1571,7 @@ export const resolveHarnessAdmissionBinding = (request: {
  * composition calls it with the resolved values and a test drives it directly, so
  * the mount's context half has an oracle instead of only a source-text assertion.
  */
-export type ProfileContextAvailability = Pick<
-  ProviderAvailabilityFacts,
-  "store" | "observations"
->;
+export type ProfileContextAvailability = Pick<ProviderAvailabilityFacts, "store" | "observations">;
 
 export const resolveProfileContextFrom = (
   values: Readonly<Record<string, ConfigValue>>,
@@ -1597,9 +1594,7 @@ export const resolveProfileContextFrom = (
     profiles: profileParsed.config,
     probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs, undefined, {
       ...(availability.store === undefined ? {} : { store: availability.store }),
-      ...(profileParsed.config.watch === undefined
-        ? {}
-        : { watch: profileParsed.config.watch }),
+      ...(profileParsed.config.watch === undefined ? {} : { watch: profileParsed.config.watch }),
       ...(availability.observations === undefined
         ? {}
         : { observations: availability.observations }),

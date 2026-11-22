@@ -256,3 +256,25 @@ notes:
       `pnpm --filter @delivery-os/core typecheck` green."
     type: info
     date: "2026-11-22"
+  - text: "Plan phase 3 complete (commit 6cf2b4b70950b7149b05724036ff5c5c03f570ea):
+      the park-aware facts now flow through the resolved profile-context reader
+      seam (`resolveProfileContextFrom` accepts an injected store/observation
+      seam) and the dispatch nomination predicate; the CLI profile-resolve
+      handler already passed the same store/watch/observations since phase 1.
+      The golden fixture now derives its decision from the pure `selectProfile`
+      over a recorded quota park projected through the delivered lifecycle, so
+      the pinned envelope comes from recorded facts rather than a canned
+      literal; the committed golden bytes did not legitimately change and were
+      not regenerated. Targeted suites:
+      `bun test tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-profile-spawn.test.ts
+      tests/behaviour/provider-profile-park-switch-revert.test.ts
+      tests/behaviour/provider-nomination-admission.test.ts
+      tests/behaviour/harness-profile-composition-mount.test.ts
+      tests/behaviour/harness-profile-per-spawn.test.ts
+      tests/checks/provider-zone-refusal.test.ts
+      tests/golden/provider-profile-resolve.test.ts` => 72 pass, 0 fail.
+      `pnpm --filter @delivery-os/core typecheck` and
+      `pnpm --filter @delivery-os/cli typecheck` green."
+    type: info
+    date: "2026-11-22"

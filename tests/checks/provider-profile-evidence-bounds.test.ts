@@ -3,6 +3,7 @@
  * <= 1024 bytes and <= 20 fields, drawn only from the closed allowlist (NFR-8).
  */
 import { describe, expect, test } from "bun:test";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import {
   PROFILE_EVIDENCE_FIELDS,
   PROFILE_EVIDENCE_MAX_BYTES,
@@ -19,7 +20,6 @@ import {
   selectProfile,
 } from "../../packages/core/src/provider/index";
 import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
-import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import { mixedChain } from "../fixtures/provider/profile/selection/fixtures";
 
 const NOW = 1_700_000_000_000;
@@ -282,9 +282,11 @@ describe("GH-377 TC-PROFILE-091 profile.selected carries the park cause in bound
     expect(event?.code).toBe("profile.selected");
     expect(event?.evidence.reason).toBe("selection");
     expect(event?.evidence.blockers).toContain("condition:quota-exhausted");
-    expect(Object.keys(event?.evidence ?? {}).every((key) =>
-      (PROFILE_EVIDENCE_FIELDS as readonly string[]).includes(key),
-    )).toBe(true);
+    expect(
+      Object.keys(event?.evidence ?? {}).every((key) =>
+        (PROFILE_EVIDENCE_FIELDS as readonly string[]).includes(key),
+      ),
+    ).toBe(true);
     expect(JSON.stringify(event).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_BYTES);
   });
 });

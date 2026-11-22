@@ -3,22 +3,25 @@
  * the NFR-6 evaluation-cost bound (GAP-T6).
  */
 import { describe, expect, test } from "bun:test";
+import {
+  createResolvedProviderProbe,
+  type ProviderAvailabilityFacts,
+} from "../../packages/cli/src/edge";
 import type {
-  ProfileProviderAvailability,
   ProviderDescriptor,
   ProviderProfileConfiguration,
   ProviderWatchTarget,
 } from "../../packages/core/src/contracts/index";
-import { selectProfile, resolveProfileForSpawn } from "../../packages/core/src/provider/index";
+import { resolveProfileForSpawn, selectProfile } from "../../packages/core/src/provider/index";
 import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
-import { createResolvedProviderProbe, type ProviderAvailabilityFacts } from "../../packages/cli/src/edge";
+import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 import {
   available,
   exhausted,
+  mixedChain,
   profile,
   seat,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 
 const NOW = 1_700_000_000_000;
 
@@ -200,9 +203,7 @@ describe("TC-PROFILE-015 evaluation cost of 100 profiles over 100 providers", ()
  * GH-377 — park-aware availability and the watch-observation seam.
  * ------------------------------------------------------------------------- */
 
-const entriesOf = (
-  ...names: readonly string[]
-): Readonly<Record<string, ProviderDescriptor>> =>
+const entriesOf = (...names: readonly string[]): Readonly<Record<string, ProviderDescriptor>> =>
   Object.fromEntries(
     names.map((name) => [name, { name, class: "subscription" as const, enabled: true }]),
   );
@@ -216,7 +217,13 @@ const watchTarget = (maxAgeSeconds?: number): ProviderWatchTarget => ({
 
 const parkedView = (
   providerName: string,
-  cause: "peak-window" | "quota-exhausted" | "budget-exhausted" | "provider-outage" | "credential-missing" | "credential-rejected",
+  cause:
+    | "peak-window"
+    | "quota-exhausted"
+    | "budget-exhausted"
+    | "provider-outage"
+    | "credential-missing"
+    | "credential-rejected",
   nowMs: number,
 ) => {
   const park = createParkRecord({
@@ -362,11 +369,17 @@ describe("GH-377 TC-PROFILE-097 the three excluded freshness readings fail by na
     });
     const names = ["short", "long", "none"];
     const correct = (name: string): boolean => probe.probe(name).available;
-    expect(names.filter((name) => correct(name) !== correct(name))).toEqual([]);
+    expect(names.map((name) => correct(name))).toEqual([false, true, true]);
 
-    const variants: ReadonlyArray<{ readonly id: string; readonly verdict: (name: string) => boolean }> = [
+    const variants: ReadonlyArray<{
+      readonly id: string;
+      readonly verdict: (name: string) => boolean;
+    }> = [
       { id: "global-instant", verdict: () => false },
-      { id: "undeclared-target-stale", verdict: (name) => name !== "none" ? correct(name) : false },
+      {
+        id: "undeclared-target-stale",
+        verdict: (name) => (name !== "none" ? correct(name) : false),
+      },
       { id: "all-providers-stale", verdict: () => false },
     ];
     for (const variant of variants) {
@@ -419,5 +432,118 @@ describe("GH-377 TC-PROFILE-088 a failed fold read is a named unavailable verdic
       parks: { ok: true, value: [] },
     });
     expect(later.probe("p")).toMatchObject({ available: true, condition: "clear" });
+  });
+});
+
+describe("GH-377 TC-PROFILE-081 chain-level causes never block and never clear a provider", () => {
+  const mixedEntries = {
+    "coding-plan": { name: "coding-plan", class: "subscription" as const, enabled: true },
+    deepseek: { name: "deepseek", class: "pay-per-token" as const, enabled: true },
+  };
+  const chainPark = createParkRecord({
+    subjectKind: "chain",
+    subjectName: "default",
+    cause: "chain-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  const loopCapPark = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "reevaluation-cap",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  const quotaPark = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+
+  test("a chain park and a provider-subject loop cap leave every provider available", () => {
+    for (const view of [parkView(chainPark, NOW), parkView(loopCapPark, NOW)]) {
+      const probe = createResolvedProviderProbe(mixedEntries, NOW, undefined, {
+        parks: { ok: true, value: [view] },
+      });
+      expect(probe.probe("coding-plan"), view.cause).toMatchObject({
+        available: true,
+        condition: "clear",
+      });
+      const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+      if (!selection.ok) throw new Error("selection failed");
+      expect(selection.decision.profile).toBe("mixed");
+      expect(
+        selection.decision.eligibility.flatMap((entry) => entry.blockers).map((b) => b.value),
+      ).not.toContain(view.cause);
+    }
+  });
+
+  test("a loop cap neither blocks nor clears the provider's own quota park", () => {
+    const probe = createResolvedProviderProbe(mixedEntries, NOW, undefined, {
+      parks: {
+        ok: true,
+        value: [parkView(loopCapPark, NOW), parkView(quotaPark, NOW)],
+      },
+    });
+    expect(probe.probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "quota-exhausted",
+    });
+    const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("deepseek");
+    const values = selection.decision.eligibility.flatMap((entry) =>
+      entry.blockers.map((blocker) => blocker.value),
+    );
+    expect(values).toContain("quota-exhausted");
+    expect(values).not.toContain("reevaluation-cap");
+    expect(values).not.toContain("chain-exhausted");
+  });
+});
+
+describe("GH-377 TC-PROFILE-082 budget-exhausted window scope is consumed", () => {
+  test("a provider-subject window park blocks, selects the next profile, and emits no parked model", () => {
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "coding-plan",
+      cause: "budget-exhausted",
+      conditions: ["budget-exhausted"],
+      createdAtMs: NOW - 1_000,
+      expiresAtMs: NOW + 3_600_000,
+      evidence: {},
+    });
+    const probe = createResolvedProviderProbe(
+      {
+        "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+        deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+      },
+      NOW,
+      undefined,
+      { parks: { ok: true, value: [parkView(park, NOW)] } },
+    );
+    expect(probe.probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "budget-exhausted",
+    });
+    const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("deepseek");
+    const spawn = resolveProfileForSpawn({
+      profiles: mixedChain(),
+      probe,
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    if (!spawn.ok) throw new Error("spawn resolution failed");
+    expect(Object.values(spawn.variables)).not.toContain("claude-opus");
   });
 });

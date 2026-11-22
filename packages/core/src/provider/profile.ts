@@ -9,6 +9,9 @@
  */
 import {
   type EnvRecord,
+  PROFILE_EVENT_SEVERITIES,
+  PROFILE_EVIDENCE_FIELDS,
+  PROFILE_EVIDENCE_MAX_BYTES,
   type ProfileBlocker,
   type ProfileEligibility,
   type ProfileEvent,
@@ -17,9 +20,6 @@ import {
   type ProfileProviderAvailability,
   type ProfileSelectionDecision,
   type ProfileSelectionResult,
-  PROFILE_EVIDENCE_FIELDS,
-  PROFILE_EVIDENCE_MAX_BYTES,
-  PROFILE_EVENT_SEVERITIES,
   type ProviderEnvRecordPolicy,
   type ProviderProfile,
   type ProviderProfileConfiguration,
@@ -448,7 +448,9 @@ export const selectProfile = (
     const requireVisionForSeat = input.requireVision === true && seatName === targetSeat;
     let substitute: string | undefined;
     for (const candidate of laterProfiles) {
-      const eligible = candidate.providers.every((providerName) => availability(providerName).available);
+      const eligible = candidate.providers.every(
+        (providerName) => availability(providerName).available,
+      );
       if (!eligible) continue;
       const seat = candidate.seats[seatName];
       if (seat === undefined) continue;

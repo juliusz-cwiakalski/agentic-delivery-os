@@ -3,6 +3,11 @@
  * capability gate, eligibility order, selection events, and 100-run replay.
  */
 import { describe, expect, test } from "bun:test";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
+import type {
+  ProviderDescriptor,
+  ProviderWatchTarget,
+} from "../../packages/core/src/contracts/index";
 import {
   createProviderFactsProbe,
   familyDiversityAllowed,
@@ -11,11 +16,6 @@ import {
   selectProfile,
 } from "../../packages/core/src/provider/index";
 import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
-import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
-import type {
-  ProviderDescriptor,
-  ProviderWatchTarget,
-} from "../../packages/core/src/contracts/index";
 import {
   available,
   capabilityChain,
@@ -528,7 +528,12 @@ describe("GH-377 TC-PROFILE-067 an agent override routing to a recorded-unavaila
 describe("GH-377 TC-PROFILE-068 substitution is per-seat routing with an unchanged eligibility list", () => {
   test("only the affected seat changes; profile, tier, rung, overrides and the list do not", () => {
     const profiles = substitutionChain();
-    const healthy = selectProfile({ profiles, probe: parkedProbe("none"), nowMs: NOW, agent: "pm" });
+    const healthy = selectProfile({
+      profiles,
+      probe: parkedProbe("none"),
+      nowMs: NOW,
+      agent: "pm",
+    });
     const parked = selectProfile({ profiles, probe: parkedProbe("park"), nowMs: NOW, agent: "pm" });
     if (!healthy.ok || !parked.ok) throw new Error("selection failed");
     expect(parked.decision.profile).toBe(healthy.decision.profile);
