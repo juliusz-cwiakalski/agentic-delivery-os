@@ -1,0 +1,93 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-384
+tier:
+  name: full
+# ---------------------------------------------------------------------------
+# Plan-level decision — settles the test-plan §8.3 precision note (recorded at
+# delivery planning per owner directive): the delivered ledger-wide
+# `verifiedEmpty` pass-through IS the contract and stays unchanged. The
+# extended suite asserts the delivered pass-through value and pins the two
+# derivations' equality (the ledger-wide pass-through vs the rule source's
+# per-ref derivation) on every fixture shape the ACs name — FX-8 in both
+# leading directions (flag false; each requested ref holds records), FX-13's
+# single-ref and truly-empty arms (both derivations agree there). The FX-8
+# absent-ref arm asserts the delivered pass-through value (false over that
+# non-empty ledger) — no derivation is invented in a test assertion. No
+# read-contract change, no spec reopen; the DEC-4 escalation trigger stays
+# dormant unless delivery discovers the contract itself must change.
+#
+# Decision-record posture (spec NG-7, DEC-4): no decision record is planned
+# for this change — it continues the delivered GH-381 rule at two remaining
+# sites. If delivery finds one necessary, re-verify the origin/main-tools TDR
+# ceiling FIRST (the owner states max TDR-0075) before authoring anything;
+# ids are never renumbered.
+#
+# Plan-wide delivery fences (binding owner implementation-pointer comment,
+# pm-notes 2026-11-22), in force on every phase below:
+#   - no ledger delete/rewrite/truncate/compact/salvage on any path
+#     (G-6, NG-1); the only writes anywhere are the delivered appends;
+#   - no per-record store reads and no additional store reads — each read is
+#     exactly one verified pass over store.readRecords(); the baseline append
+#     keeps its delivered fence-scoped read shape (one pre-read, one
+#     post-verified read) with zero added reads;
+#   - idempotency is never weakened — a same-ref repeat capture stays the
+#     delivered no-op, never a duplicate; the run-and-session dedupe key and
+#     the fence scoping are unchanged;
+#   - fixtures exercise the real `appendTelemetryBaseline` helper for every
+#     healthy baseline (fail-fast seeder); raw append inside a write fence is
+#     reserved for damage shapes production writers never emit (bare
+#     prefixes, wrong kinds, garbage payloads) with valid framing and
+#     checksums so the verified read admits them;
+#   - forbidden surfaces on every phase — .jaiship/config.local.yaml, the
+#     jaiship-gh-366 worktree (5a9d3ab8), and spend-reconciliation #378's
+#     scope;
+#   - gate evidence convention — TMPDIR=$PWD/tmp/tmpdir; `pnpm check` is the
+#     aggregate gate and belongs to the lifecycle quality_gates phase, not a
+#     plan phase.
+#
+# Documentation reconciliation is NOT a plan phase — the phase-7 obligation
+# (spec §22, NG-8) is owned by @doc-syncer in the lifecycle
+# system_spec_update phase; no doc/** file is declared in any scope below.
+# ---------------------------------------------------------------------------
+phases:
+  - id: 1
+    title: GH-384 fixture family and both goldens captured at the branch point
+    kind: delivery
+    summary: build the GH-384 fixture family in the telemetry fixture helpers by extending the delivered GH-381 builders — the interleaved two-ref steps fixture FX-8 in both leading directions with one baseline per ref through the real helper plus the absent-ref arm and the versioned-composition arm, the attribution-complete window-evidence variant FX-8-WE with a foreign step record first and matched and excluded sets both populated, the two-ref baseline fixture FX-9 (ref A seeded through the real appendTelemetryBaseline, ref B's capture — its same-identity repeat and its distinct-session append — through the same helper), bare-prefix FX-10 and requested-ref-damage FX-11 and jurisdiction FX-12 arms reusing the delivered seedBarePrefixRecord / seedRequestedRefDamage / seedForeignFamilyDamage builders, the named regression pair FX-R1/FX-R2 over the delivered seedForeignFirstRegression shape and a real-helper ref-B capture, and the single-ref family FX-13 (healthy arm, truly-empty arm, every delivered tear case at both sites) — and capture both goldens through the new explicit capture entry while the read branches still hold delivered behavior — the TC-TELEMETRY-053 golden-before-fix pre-fix halves (FX-R1 — the steps read tearing on the leading foreign step record — and FX-R2 — ref B's capture tearing in the idempotency pre-read on ref A's baseline record — with the tear identity and the deterministic ledger sequences recorded) and the TC-TELEMETRY-055 FX-13 delivered single-ref golden (records with ordering, the verified-empty flag, the evidence store path, append outcomes, and every tear identity and location) — so the regression pin and the single-ref equality later anchor captured artifacts rather than claims.
+    # TC ownership: no TC lands in this phase; the FX-8 / FX-8-WE / FX-9 / FX-10 / FX-11 / FX-12 / FX-R1 / FX-R2 / FX-13 builders, the golden module and its capture entry are the artifacts, and the TC-TELEMETRY-048..056 cases arrive with phases 2–3 against these builders.
+    # Ordering constraint (binding, test-plan §5.2 TC-TELEMETRY-053 and TC-TELEMETRY-055): the capture entry MUST run at this change's branch point — BEFORE phase 2 edits the read branches in packages/core/src/state/telemetry.ts — so the pre-fix failure halves and the delivered single-ref golden are captured from delivered behavior; the corrected halves are captured after the fix, in phase 2.
+    # Seeding discipline (binding, spec Appendix D, DEC-3): healthy baselines go through the real appendTelemetryBaseline via a fail-fast seeder — it works pre-fix while the ledger holds no other ref's baselines; the GH-381 raw-append two-refs batch seeder is retired for healthy fixtures and survives only for damage shapes production writers never emit.
+    # The delivered state harness (tests/fixtures/state/harness) is consumed as-is, exactly as the delivered GH-381 suite uses it — no harness extension is planned or in scope.
+    # Verify: bun tests/fixtures/telemetry/multi-ref-reads-golden-run.ts (capture entry at the branch point; the entry exits non-zero on drift; record this run as the TC-TELEMETRY-053 step-5 delivery evidence in the test plan §10 log). Gate evidence under TMPDIR=$PWD/tmp/tmpdir.
+    scope:
+      files:
+        - tests/fixtures/telemetry/index.ts
+        - tests/fixtures/telemetry/multi-ref-reads-golden.ts
+        - tests/fixtures/telemetry/multi-ref-reads-golden-run.ts
+  - id: 2
+    title: Multi-ref-safe steps and baseline reads with the extended defect-class suite green
+    kind: delivery
+    summary: apply the normative classification table (spec §5.1 F-4, Appendix C) unchanged and in full at the two remaining reads in packages/core/src/state/telemetry.ts — the per-ref steps read readTelemetrySteps, composed by the window-scoped zero-spend evidence reading and inherited unchanged by the versioned composition readTelemetryStepsAtVersion with no per-consumer edit (A-4), and the per-ref baseline records read readTelemetryBaselines, the composition seam of appendTelemetryBaseline's fence-scoped idempotency pre-read and post-verified read so the rule lands on the shared path of both and no partial fix is possible (OQ-1, DEC-3) — a well-formed family key naming another ref is skipped in ledger order with no kind inspection, no payload inspection and no evidence contribution; the bare step and baseline prefixes tear `state.store.torn` at their own record position (store path + 1-based sequence); requested-ref kind mismatches and payload validation keep the delivered tears, identities and locations; the steps read keeps its unchanged result shape (records, verified-empty flag, evidence) and both sites stay one verified pass over store.readRecords() with the append's delivered pre/post read shape and zero additional store reads — and extend the delivered defect-class suite tests/behaviour/telemetry-foreign-ref-skip.test.ts with the TC-TELEMETRY-048..056 series (exactness over FX-8 in both directions plus the absent-ref and versioned arms; the key-first jurisdiction boundary over FX-12; second-ref capture through the real helper with the no-op repeat and byte-identity of pre-existing records over FX-9; bare-prefix tears at both sites over FX-10; requested-ref damage preserved over FX-11; the golden-before-fix pin asserting the captured pre-fix halves and the corrected halves; the structural single-pass bound at observed scale; FX-13 single-ref golden equality with the negative controls; the three-run determinism and hermeticity matrix) — then capture the golden's corrected halves through the same explicit entry.
+    # TC ownership: TC-TELEMETRY-048, TC-TELEMETRY-049, TC-TELEMETRY-050, TC-TELEMETRY-051, TC-TELEMETRY-052, TC-TELEMETRY-053, TC-TELEMETRY-054, TC-TELEMETRY-055, TC-TELEMETRY-056.
+    # verified-empty contract (plan-level decision recorded above, settling test-plan §8.3): tests assert the delivered ledger-wide pass-through value and pin the two derivations' equality on every AC-named fixture shape; the FX-8 absent-ref arm asserts the delivered pass-through value — no read-contract change, no spec reopen.
+    # Boundaries — the per-ref families projection (the rule source) and the telemetry capture writers are NOT in scope (NG-3); packages/core/src/state/spend-reads.ts, packages/core/src/domain/spend.ts and every consumer report shape are NOT in scope — the consumer composition starts succeeding untouched (NG-4); the standalone capture-family read stays deferred (NG-10, §7.3); no new vocabulary on any path (NG-2, NFR-4); no idempotency weakening; no ledger mutation on any branch; the delivered suite's TC-TELEMETRY-040..047 cases pass unchanged.
+    # Verify: bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts; bun test tests/behaviour/telemetry-storage-damage.test.ts (delivered tear conventions unchanged); bun tests/fixtures/telemetry/multi-ref-reads-golden-run.ts (captures the corrected halves; entry exits non-zero on drift). Gate evidence under TMPDIR=$PWD/tmp/tmpdir.
+    scope:
+      files:
+        - packages/core/src/state/telemetry.ts
+        - tests/behaviour/telemetry-foreign-ref-skip.test.ts
+        - tests/fixtures/telemetry/multi-ref-reads-golden.ts
+        - tests/fixtures/telemetry/multi-ref-reads-golden-run.ts
+  - id: 3
+    title: Window-evidence consumer proof and the lockstep five-package minor changeset
+    kind: delivery
+    summary: prove the site-one observable at its delivered consumer home — TC-SPEND-035 in tests/behaviour/spend-zero-window.test.ts composes readTelemetrySteps and windowSpendEvidence in the delivered order (the composition the createProductionDependencies windowEvidence closure in packages/cli/src/edge.ts builds) over FX-8-WE and asserts the reading renders on the multi-ref ledger where pre-fix it returned `state.store.torn` naming the first foreign step record, with its delivered shape and keys, matched and excluded sets computed over exactly the requested ref's steps — zero foreign steps named in either set, zero requested-ref steps dropped, every exclusion reason from the delivered closed four-value set SPEND_WINDOW_EXCLUSION_REASONS and no foreign/skipped reason invented (NG-4, NFR-4) — for both refs over the same ledger, driven through the delivered CLI definition and human render — and add the lockstep changeset .changeset/gh-384-telemetry-multi-ref-reads-minor.md declaring all five fixed-group packages @delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode at minor (spec §18 and Appendix D ground truth — the entries, not the filename, are the contract); no consumer implementation file is edited anywhere in this change.
+    # TC ownership: TC-SPEND-035.
+    # Placement contingency (test-plan §5.2 TC-SPEND-035 notes, §8.1): if the delivered windowEvidence composition seam resists test import, the identical assertions move into tests/behaviour/telemetry-foreign-ref-skip.test.ts over FX-8 — that file is declared in this phase's scope as the contingency target; AC coverage unchanged. packages/cli/src/edge.ts itself is NOT in scope — no exported seam is added unless review prefers the full-runtime composition per the documented fallback.
+    # Release scope — the changeset is this phase's release artifact (five-package lockstep minor, declared in-spec since A-6/§18 to avoid the GH-381 changeset-format rework retro); the PR, merge authority and tracker transitions belong to the lifecycle phases, not this plan. Documentation reconciliation is owned by @doc-syncer in the lifecycle system_spec_update phase (spec §22, NG-8) — deliberately not declared in this plan.
+    # Verify: bun test tests/behaviour/spend-zero-window.test.ts; bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts. Gate evidence under TMPDIR=$PWD/tmp/tmpdir.
+    scope:
+      files:
+        - tests/behaviour/spend-zero-window.test.ts
+        - tests/behaviour/telemetry-foreign-ref-skip.test.ts
+        - .changeset/gh-384-telemetry-multi-ref-reads-minor.md
