@@ -1,0 +1,109 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-384
+branch: fix/GH-384/telemetry-multi-ref-reads
+status: PASS
+summary: >
+  Remediation verified exactly as claimed: commit aae56ef7 touches only the plan
+  (phase 4 appended), pm-notes, and the two test files, with one import-line edit
+  each — Gh381NormalizedTear added to the type import in
+  multi-ref-reads-golden-run.ts (generated-golden template byte-untouched) and
+  type Gh381RequestedDamageArm added to the behaviour-suite import block; both
+  per verbatimModuleSyntax. Independent spot-verification re-ran everything in
+  the phase-4 verify contract: golden capture entry drift-free exit 0,
+  telemetry-foreign-ref-skip 39/0 (401 expects), spend-zero-window 10/0, biome
+  clean on both files, and targeted strict tsc shows zero TS2304 anywhere (the
+  remediated class is eliminated). All iteration-1 PASS dimensions are untouched
+  by this delta (type-only edits; suites and golden re-run green). One new
+  non-gating finding: the executor's adjacent observation is CONFIRMED
+  verbatim — tests/fixtures/telemetry/index.ts:37-40 and
+  tests/behaviour/telemetry-foreign-ref-skip.test.ts:30 type-import
+  TelemetryClaimedIdentity / TelemetryFamiliesRead / TelemetryIngestTally /
+  TelemetrySessionIdentity from packages/core/src/contracts/index, which does
+  not export them (tsc: one TS2724 + four TS2305 at exactly those lines);
+  pre-existing at base 0320321f, invisible to every gate, runtime-inert.
+  Ruled OUT of this change's scope; deferred with recorded disposition to a
+  hygiene change (see A-1).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: correctness
+    location: tests/fixtures/telemetry/multi-ref-reads-golden-run.ts:36
+    message: >
+      RESOLVED in aae56ef7: import line is now `import type {
+      Gh381NormalizedTear, Gh384MultiRefReadsGolden } from "./index";` — single
+      hunk, template string untouched, exactly the iteration-1 suggestion.
+      Verified: targeted strict tsc post-fix reports zero TS2304; golden
+      capture entry re-run drift-free with exit 0; suites green.
+    suggestion: No further action; finding closed by verified remediation.
+    suppressed: false
+    resolved: true
+  - id: F-2
+    severity: low
+    confidence: high
+    category: correctness
+    location: tests/behaviour/telemetry-foreign-ref-skip.test.ts:64
+    message: >
+      RESOLVED in aae56ef7: `type Gh381RequestedDamageArm,` added to the
+      existing import block from ../fixtures/telemetry/index (inline type
+      modifier, single hunk, no other change). Verified: targeted strict tsc
+      post-fix reports zero TS2304; suite 39/0; biome clean.
+    suggestion: No further action; finding closed by verified remediation.
+    suppressed: false
+    resolved: true
+  - id: A-1
+    severity: low
+    confidence: high
+    category: correctness
+    location: tests/fixtures/telemetry/index.ts:37
+    message: >
+      Adjacent finding, CONFIRMED and ruled pre-existing hygiene OUTSIDE this
+      change's frozen scope. tests/fixtures/telemetry/index.ts:37-40 and
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts:30 type-import
+      TelemetryClaimedIdentity, TelemetryFamiliesRead, TelemetryIngestTally,
+      TelemetrySessionIdentity from packages/core/src/contracts/index; the
+      contracts barrel (and contracts/telemetry.ts itself) exports none of
+      them. Targeted strict tsc: TS2724 at index.ts:37 (did-you-mean
+      RetroClaimedIdentity) and TS2305 at index.ts:38,39,40 and
+      telemetry-foreign-ref-skip.test.ts:30 — exactly the claimed lines and
+      codes. All five import sites exist verbatim at base 0320321f (index.ts
+      36-39, test 19); GH-384 extended adjacent import blocks and appended new
+      fixture code but never touched these lines, and the new GH-384 code does
+      not newly reference the broken imports. Same gate-invisible class as
+      F-1/F-2 (no gate typechecks tests/**; bun strips types; runtime-inert).
+    suggestion: >
+      RULING: option (b) — pre-existing hygiene outside the change's frozen
+      scope. DEFER with recorded disposition to a hygiene change; do NOT widen
+      remediation. Rationale: (1) iteration-1 precedent is binding — F-2, the
+      identical class in the identical file class, was judged low/optional and
+      bundled only because its file was already inside phase 4's declared
+      two-file scope ("do not expand scope beyond these two files");
+      fixtures/telemetry/index.ts was deliberately excluded then. (2) A fix
+      now would require widening a completed remediation phase or appending a
+      phase 5 for a zero-gate-value, runtime-inert, pre-existing issue.
+      (3) The correct fix is not purely mechanical: repointing the five
+      imports (TelemetryFamiliesRead to packages/core/src/state/index;
+      TelemetryClaimedIdentity/TelemetrySessionIdentity/TelemetryIngestTally
+      to packages/core/src/domain/index) versus adding the four re-exports to
+      the contracts barrel is a production API/layering decision (state and
+      domain vocabulary deliberately not re-exported from contracts) that
+      belongs in its own ticket, not a test-file side effect. Disposition
+      recorded: defer to a hygiene change covering all five sites; the
+      executor's pm-notes entry already records the forward. Not gating.
+    suppressed: false
+reviewed_at: 2026-11-22T19:05:00Z
+next_step: >
+  PROCEED — F-1/F-2 closed by verified remediation; A-1 deferred with recorded
+  disposition (hygiene ticket, all five import sites, fix-approach decision
+  included). No remediation phase appended; plan remains 4 phases, all with
+  completion evidence. Quality gates (phase 9) follow.
