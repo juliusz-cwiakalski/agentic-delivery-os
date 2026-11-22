@@ -278,3 +278,25 @@ notes:
       `pnpm --filter @delivery-os/cli typecheck` green."
     type: info
     date: "2026-11-22"
+  - text: "Plan phase 4 complete (commit 3b7e2506120211afdaf50ac3ad3adeb8716e58c2):
+      taxonomy proof, hermetic/determinism evidence, the exact-expiry and
+      cleared-condition equivalences, the zero-write audit, and the unchanged
+      chain resolver. The new data-only fixture
+      `tests/fixtures/provider/profile/parks/cause-taxonomy.ts` pins all eight
+      causes with a subject and effect per cause and both `budget-exhausted`
+      scopes; its drift arms fail by name. `provider resolve` keeps its skip,
+      park, next-eligible time and persisted generation, while the ticket-scope
+      crossing leaves no readable park. Targeted suites:
+      `bun test tests/behaviour/provider-profile-park-switch-revert.test.ts
+      tests/behaviour/provider-profile-probes.test.ts
+      tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-parks.test.ts
+      tests/behaviour/provider-chain-resolution.test.ts
+      tests/structure/provider-contract.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 114 pass, 0 fail;
+      the wider targeted set (13 suites, including selection, spawn,
+      nomination, evidence-bounds, profile-contract and golden) => 192 pass,
+      0 fail. `pnpm typecheck` green. Plan phase 5 is declaration-only and is
+      left to the `@doc-syncer` in lifecycle phase 7."
+    type: info
+    date: "2026-11-22"
