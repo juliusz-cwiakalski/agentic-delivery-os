@@ -71,12 +71,14 @@ phases:
   - id: 5
     title: Documentation and decision-ledger reconciliation (phase-7 scope declaration)
     kind: planning
-    summary: declare the documentation and decision-ledger reconciliation scope for the system-spec-update phase; this phase performs no delivery work and every declared file is reconciled by the doc-syncer.
+    summary: declare the documentation and decision-ledger reconciliation scope for the system-spec-update phase, covering the eligibility and narrowed-boundary rewrites on the provider-profile pages together with the refusal-cause wording on the dispatch-engine and result-contract pages, where the unavailable identity must stop reading as every-candidate-ineligible now that a seat-level refusal makes it reachable while a profile is eligible; this phase performs no delivery work and every declared file is reconciled by the doc-syncer.
     # Declaration only: owned by the doc-syncer in phase 7; delivery does not author these files.
     scope:
       files:
         - doc/spec/features/feature-provider-profiles.md
         - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-result-contract.md
         - doc/spec/features/feature-peak-pausing.md
         - doc/guides/provider-conditions-and-parks.md
         - doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md

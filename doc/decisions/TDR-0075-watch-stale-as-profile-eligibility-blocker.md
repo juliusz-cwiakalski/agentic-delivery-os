@@ -348,7 +348,7 @@ The chosen alternative satisfies C-1 … C-7: it consumes only a supplied observ
 
 ## Implementation Plan
 
-1. Specification: cite TDR-0075 as the authority for the narrowed boundary; state the observation seam, the per-target rule, the no-declared-target case, the live-read age-0 case, and the any-stale-blocks aggregation; retire DEC-7 and NG-8 in favour of the record.
+1. Specification: cite TDR-0075 as the authority for the narrowed boundary; state the observation seam, the per-target rule, the no-declared-target case, the live-read age-0 case, and the any-stale-blocks aggregation; cite this record from DEC-7 and bound the change to one record in NG-8; do not retire either statement.
 2. Probe: the composed profile availability probe applies the delivered staleness predicate to each supplied observation for a declared target and reports the `watch-stale` blocker; it gains no port for acquisition and performs no write.
 3. Tests: the freshness boundary matrix (`bound − 1`, `bound`, `bound + 1`) per target; stale-never-clear; undeclared-watch provider never stale; live read age 0; two targets with different bounds; paired-run determinism; and set equality for every guarded set.
 4. Documentation (phase 7): reconcile the profiles, provider-engine, peak-pausing, and provider-conditions-and-parks pages with D5, stating recorded-state consumption and no live verification.
