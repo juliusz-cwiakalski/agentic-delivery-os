@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-22T01:48:22.246Z }
   delivery: { started: null, completed: 2026-11-22T02:10:55.809Z }
   system_spec_update: { started: null, completed: 2026-11-22T02:19:22.086Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-22T02:28:47.391Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -79,6 +79,24 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "REVIEW ITERATION 1 = PASS (code-review/review-iter-1.yaml + .md). 0
+      critical / 0 high / 0 medium, 7 low, 3 info; spec_compliance PASS,
+      plan_compliance PASS, next_step PROCEED; no blocking remediation. Key
+      confirmations: seat substitution search matches F-3/DEC-8 (selection list
+      unchanged, candidates probed separately); refusal is the data envelope at
+      exit 2 with events [] and no env record; env record and binding share
+      decision.seatModels; one factory at three call sites, one fold read, no
+      fetch/credential/network/sleep/write; policy and operator-local layer
+      untouched; no vocabulary/contract growth; phase-7 docs reconciled.
+      Changed-suite evidence 271 pass (18 files), boundaries 149, fixture
+      coverage 7, typecheck green. Low nits F-1..F-7 (stale plan P2 summary
+      word; TDR-0075 multi-target/DEC-7 wording; glossary page outside the named
+      §22 set; TC-082 ticket-budget proxy; TC-085 vacuous assertions;
+      result-contract row cell all-candidates-only) are non-blocking; F-7 is
+      deliberate because the row mirrors ERROR_TABLE and a clarifier paragraph
+      now states both causes. Info F-8..F-10."
+    type: info
+    date: "2026-11-22"
   - text: "Post-delivery artifact alignment (PM-decided, autonomous): the coder
       surfaced two literal mismatches between the artifacts and delivered
       behaviour, both fixed as spec v1.3 / test plan v1.3 with no scope, AC set,
