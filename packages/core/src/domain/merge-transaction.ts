@@ -728,6 +728,14 @@ const FULL_SHA = /^[0-9a-f]{40}$/u;
  * declaration-cap and value-shape rules are pure, so the resolution classifies
  * from the composition's parsed read.
  */
+const hasControlCharacter = (value: string): boolean => {
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+};
+
 const classifyDeclaration = (input: {
   readonly declaration: string | undefined;
   readonly sourceRef: string;
@@ -738,8 +746,7 @@ const classifyDeclaration = (input: {
   if (
     input.declaration.length > MERGE_BRANCH_DECLARATION_MAX_CHARS ||
     /\s/u.test(input.declaration) ||
-    // eslint-disable-next-line no-control-regex
-    /[\u0000-\u001f\u007f]/u.test(input.declaration)
+    hasControlCharacter(input.declaration)
   ) {
     return "declaration-unusable";
   }

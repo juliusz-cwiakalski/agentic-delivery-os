@@ -33,16 +33,20 @@ call at the head the envelope verified, records the provider's own merged truth,
 and records the outcome. No daemon path fires a merge, no branch mutates the head
 it verified, and no force operation exists in the mutation vocabulary.
 
-The production composition supplies the transaction's reads for real: the tracker
-work-item read, the check-run page, and the request-detail read run through the
-delivered provider adapters and credential seam, and the composition resolves its
-inputs from declared sources only — configuration from the resolved document's
-typed `merge` branch, the branch from the checkout's git facts, the base
-reference from the declared integration base, and the **owner principal** from the
-provider-resolved repository owner: the owner component of the checkout's
-normalized `host/owner/name` identity, resolved through the delivered identity
-policy with no new configuration key. The declared `merge` configuration keys stay
-exactly `gate-freshness`, `gates`, and `deploy-expectations`.
+The production composition supplies the transaction's reads for real: the
+bounded open-request list read, the bounded local change-record reads at
+candidate heads, the tracker work-item read, the CI-workflow read, the check-run
+page on the resolved head, and the delivered single-request mergeability read
+run through the delivered provider adapters, git seam, and credential seam, and
+the composition resolves its inputs from declared sources only — configuration
+from the resolved document's typed `merge` branch, the change branch from the
+change record read at the delivery request's asserted head (the resolved head is
+the request's asserted head), the base reference from the declared integration
+base, and the **owner principal** from the provider-resolved repository owner:
+the owner component of the checkout's normalized `host/owner/name` identity,
+resolved through the delivered identity policy with no new configuration key.
+The declared `merge` configuration keys stay exactly `gate-freshness`,
+`gates`, and `deploy-expectations`.
 
 The configuration document is resolved once per invocation, before the
 transaction reads anything. An absent document keeps the delivered defaults; a
@@ -164,19 +168,58 @@ the recorded gate-set identity equals the effective one. A violation refuses
 observation inline. Absent, torn, unreadable, or schema-incompatible state
 refuses `merge.state-unverified` at exit 2.
 
+## Change-branch resolution and convergence
+
+The change branch comes from the change record read at the delivery request's
+asserted head: one bounded open-request list read, a candidate set capped at
+three under the declared convention, saturation evaluated before the candidate
+count, and a candidate whose head is absent or not a full hex SHA refusing
+without being read. Each candidate's record is read at its own head through a
+bounded local read (at most two fixed-argv git invocations, 262 144 bytes,
+no fetch) with the delivered pm-notes parse applied; acceptance is exact string
+equality between the record's `branch` declaration and its own source ref, the
+resolution source is `declared-at-head`, and no accepted candidate refuses
+`merge.branch-unresolved` with one closed reason
+(`declaration-missing`, `declaration-unusable`, `declaration-disagrees`,
+`record-missing`, `record-invalid`, `record-unreadable`) under the declared
+precedence. Where the open page offers nothing to resolve, one convergence
+attempt reads the delivered merged-request read verbatim and decides from its
+additive matched-request-identities member: exactly one identity replays from
+provider truth at exit 0 (`replayed=true`, zero record reads, lands nothing),
+the empty set refuses `no-open-request` as a decidable zero, more than one
+aborts `merge.transaction-aborted` naming each identity, and a faulted read is
+the distinct declared provider outcome naming
+`operation=github-delivery-request-list` — never folded into zero. Per-path
+delivery-request provider requests peak at three: one for every refusal decided
+before the merge decision, two for an open-page-only run reaching the merge
+decision (the list plus the single-request mergeability read), an empty
+convergence attempt, and a faulted merged read, three for a match-bearing
+attempt (the read's own review-thread query counted, never suppressible).
+Duplicate matching delivery requests — open or merged — are never ranked:
+`merge.transaction-aborted` names each duplicate identity.
+
 ## Post-verification probe
 
-One work-item read, one check-run page on the verified head, and one
-request-detail read. A tracker transition into an owner-attention posture after
-verification refuses `merge.gate.tracker-freshness.failed` with the transition
-and its age. A declared required job that is not green on the verified head —
-queued, running, canceled, skipped, or failed — refuses on the
-`merge.gate.<gate-id>.failed` family with the delivered reason
-(`ci-pending`, `ci-canceled`, `ci-all-skipped`, `ci-failed`). A job the effective
-gate set does not declare is never gate evidence, and a check-run page for
-another SHA is not head evidence. The post-refusal checks posture reads that same
-declared set — every `required-ci-job` entry of the effective gate set, by
-`job ?? id` — so a non-green job the set does not declare produces no refusal and
+One work-item read, one CI-workflow read, one check-run page on the resolved
+head, and the delivered single-request mergeability read. The shipped default
+set makes `ci-green` merge-applicable, so the effective merge projection is two
+entries (`ci-green`, `tracker-freshness`); the required-check set is derived
+once per invocation — every merge-applicable `required-ci-job` entry contributes
+`job ?? id` and the CI gate contributes the repository-declared expected job set
+read through the same delivered read the battery uses, validated by the
+exported `expectedSetValid` rule. A tracker transition into an owner-attention
+posture after verification refuses `merge.gate.tracker-freshness.failed` with
+the transition and its age. A required name that is not green on the resolved
+head — queued, running, canceled, skipped, failed, or missing — refuses on the
+`merge.gate.<gate-id>.failed` family with the delivered reason; a page whose
+SHA is not the resolved head refuses with the delivered head-unresolved reason
+naming both SHAs and never passes; an unreadable or invalid expected job set
+refuses naming the gate and never passes; the declared `battery`-surface
+`ci-green` is the reviewed check-gate opt-out. A job neither declared nor in
+the expected set is never gate evidence. The post-refusal checks posture reads
+that same derived set —
+`job ?? id` for every declared `required-ci-job` entry plus the CI gate's
+expected set — so a non-green name neither entry declares produces no refusal and
 the refusal stays `behind-unconfirmed`. When the freshness envelope is also violated,
 `merge.gates-stale` is primary and the probe observation rides as additional
 evidence.

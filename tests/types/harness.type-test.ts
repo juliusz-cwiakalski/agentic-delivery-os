@@ -19,8 +19,8 @@ import type {
   HarnessTerminateInput,
   HarnessTerminateResult,
 } from "../../packages/core/src/contracts/index";
+import type { spawnTitleFor } from "../../packages/core/src/domain/dispatch-identity";
 import type { HarnessCapabilityInspection } from "../../packages/core/src/domain/harness-capability";
-import { spawnTitleFor } from "../../packages/core/src/domain/dispatch-identity";
 
 const kind: HarnessKind = "opencode";
 const execution: HarnessExecutionKind = "host";
@@ -214,8 +214,8 @@ export {
   portWithoutTerminate,
   portWithTerminate,
   portWithWrongTerminate,
-  spawnWithTitle,
   spawnWithoutTitle,
+  spawnWithTitle,
   terminateReport,
   titleAsString,
 };

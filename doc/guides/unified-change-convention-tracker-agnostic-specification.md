@@ -119,6 +119,25 @@ This file is **mandatory** for every change. It serves as:
 - Traceability via git history
 - Decisions, open questions, and blockers log
 
+### The `branch` declaration
+
+Every change record declares the change branch it is delivered on: a top-level
+`branch: <ref>` key on the pm-notes document, written when the change is opened.
+The declaration is what the `merge` command reads at the delivery request's
+asserted head to resolve the change branch — one declared source, no fallback.
+
+- The value is capped at **256 characters**; a longer value is refused
+  (`declaration-unusable`), never truncated.
+- The value must equal the change branch's own delivery-request source ref
+  exactly; a mismatch refuses (`declaration-disagrees`).
+- A record that declares no usable branch refuses `merge.branch-unresolved`
+  with exactly one closed reason: `declaration-missing`,
+  `declaration-unusable`, `declaration-disagrees`, `record-missing`,
+  `record-invalid`, or `record-unreadable`.
+- The key is opaque to pm-notes lint and preserved by every document-writing
+  branch; an already-merged convergence re-run needs no declaration at all
+  (it decides from provider truth before any record read).
+
 Rules:
 
 - Keep notes change-scoped.

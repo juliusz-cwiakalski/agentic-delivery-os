@@ -105,7 +105,7 @@ Inside the change folder `doc/changes/YYYY-MM/YYYY-MM-DD--<workItemRef>--<slug>/
 | `chg-<workItemRef>-test-plan.md` | Test strategy and traceability to AC | Yes |
 | `chg-<workItemRef>-plan.yaml` | Machine-readable phased implementation plan with declared per-phase scope | Yes |
 | `chg-<workItemRef>-plan.md` | Legacy markdown plan; readable during the transition and classified `plan.format.legacy-markdown` | Only for in-flight legacy changes |
-| `chg-<workItemRef>-pm-notes.yaml` | PM progress tracking, decisions, open questions (git-committed for traceability) | **Yes** |
+| `chg-<workItemRef>-pm-notes.yaml` | PM progress tracking, decisions, open questions (git-committed for traceability). Carries the top-level `branch` declaration — written when the change is opened, capped at 256 characters, read by `merge` at the delivery request's asserted head; a record whose declaration cannot be established refuses `merge.branch-unresolved` with one closed reason (`declaration-missing`, `declaration-unusable`, `declaration-disagrees`, `record-missing`, `record-invalid`, `record-unreadable`), and an already-merged convergence re-run needs no declaration | **Yes** |
 | `chg-<workItemRef>-notes.md` | Free-form notes, experiments, links | No |
 
 **Optional artifacts (produced when warranted):**

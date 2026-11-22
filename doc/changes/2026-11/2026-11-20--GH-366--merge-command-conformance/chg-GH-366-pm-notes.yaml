@@ -87,6 +87,32 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 6 COMPLETE (delivery): the evaluated gate projection, the
+      bounds, the determinism sweep and the golden-set closure landed in commit
+      2f44266463a7650b5b8e3ee9451678272bd86366. Gate green: golden merge, merge-production-composition (with the
+      new TC-MRG-044 cell), merge-dry-run, merge-refusal-surface, merge-contract,
+      content-inventory, golden verify-gates, merge-determinism (TC-MRG-033's
+      delivered twenty-run byte-identity carrier), merge-bounds (TC-MRG-035's
+      delivered bounds carrier) — all fail; typecheck, build, git diff --check
+      clean. Delivered: the merged report renders the EVALUATED merge-applicable
+      projection — one entry per merge-applicable gate (ci-green,
+      tracker-freshness, plus any declared merge-surface required-ci-job) with
+      its verdict and reason — and never echoes the verification record's
+      battery gate list (the record keeps its own five-entry list); the success
+      golden renders gates=2/2 passed with the two projection lines and never
+      gates=5/5; the substituted five-entry battery list fails by name in the
+      TC-MRG-044 cell and the golden mutation control; the dry-run report states
+      the same projection; MergeReport gained the requiredChecks disclosure
+      (both export inventories registered the contract change); the bounds
+      cells moved to projection arithmetic (cap 20 over the evaluated
+      projection, +N marks intact, machine/human bounds intact); the
+      determinism cells moved to the projection order (declaration order, two
+      entries); GOLDEN SUBSET per the declared table — only the success trio
+      regenerated here, the other sixteen goldens read-only and byte-identical,
+      EXPECTED stays 19, byte comparisons stay 17; no record kind, key or event
+      schema added (TC-MRG-041: the shapes moved, nothing new)."
+    type: info
+    date: "2026-11-22"
   - text: "Plan phase 5 COMPLETE (delivery): the runtime family declaration and the
       totality proof landed in commit 673c026ee45ec87c36f2fd755bf376bfd1d17c2d. Gate green: defect-f1-merge-refusal-
       containment, merge-classification-conformance, merge-classification,
