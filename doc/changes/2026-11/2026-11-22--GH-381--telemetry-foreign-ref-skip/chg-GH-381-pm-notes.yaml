@@ -1,0 +1,76 @@
+change_id: GH-381
+title: "M4-S20: Spend reads must be multi-ref safe — one change's telemetry must
+  never tear another's (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-22T07:43:16.706Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection 2026-11-22: fresh start — no branch, no change folder,
+      empty phase ledger (registry verified, 7418 records, phases:{}), no PR.
+      Local main-tools 0/0 with origin at 5ace5e98 (the GH-377 PR #380 merge).
+      Branch fix/GH-381/telemetry-foreign-ref-skip created from main-tools;
+      untracked .zed/ carried over and must never be committed."
+    type: info
+    date: "2026-11-22"
+  - text: "clarify_scope cross-check against
+      doc/spec/features/feature-telemetry-v2.md: defect confirmed in source —
+      readTelemetryFamilies (packages/core/src/state/telemetry.ts L692) returns
+      torn() at L709-711 (step prefix) and L718-723 (baseline prefix) on ANY
+      telemetry-family key that is not the requested ref's exact key, including
+      valid foreign-ref records. Delivered per-ref precedent is
+      readEconomicsRecords (packages/core/src/state/economics.ts L212: 'if
+      (record.key !== key) continue;'). Capture branch (capturePrefix) is
+      already ref-scoped and stays. Consumer blast radius: spend-reads.ts only
+      (spend, metrics, provider resolve budget reads). No contradiction between
+      the ticket and the spec: the spec's torn classification covers
+      shape-invalid records and payload validation, not foreign keys; the fix
+      keeps the single verified pass the spec mandates (§4, §5.1). Requirements
+      are complete (observed evidence, traced cause, required behaviour, 5 AC
+      fixtures, constraints) — no blocking questions; ticket assigned to owner
+      is not needed; proceeding to artifacts."
+    type: info
+    date: "2026-11-22"
+  - text: "Owner-comment constraints (binding): no ledger
+      delete/rewrite/truncate/salvage (append-only, not damaged); keep the read
+      one verified pass over store.readRecords() (no new per-record store reads,
+      no harness re-query); fixtures must interleave two refs with the FOREIGN
+      family first (exact record-3786 shape) — a one-ref fixture cannot catch
+      this class; malformed family key (bare prefix, empty ref) still tears with
+      the correct position; requested-ref kind mismatch still tears; gate
+      evidence uses TMPDIR=$PWD/tmp/tmpdir; PR targets main-tools; STOP with the
+      PR open; do not touch .jaiship/config.local.yaml, GH-366's
+      worktree/branch, or #378's scope."
+    type: info
+    date: "2026-11-22"
+  - text: "Decision-id baseline on origin/main-tools: max TDR-0075 (verified via
+      doc/decisions/00-index.md tail at 5ace5e98). No decision record planned —
+      this is a defect correction to an implementation-level tear condition, not
+      a change to the read's declared contract (per-ref skip matches the
+      delivered economics precedent). Escalate only if delivery discovers the
+      contract itself must change."
+    type: info
+    date: "2026-11-22"
+  - text: "Documentation impacts for phase 7 (doc-syncer): feature-telemetry-v2.md
+      reading bases (§5/§5.1) should state the per-ref projection rule (foreign
+      family keys skipped, never classified as damage; torn reserved for
+      malformed family keys and requested-ref kind mismatch); feature-spend.md
+      and feature-metrics.md read-side statements may need the same per-ref
+      sentence; feature-state-layer.md torn taxonomy is unchanged. Known risk if
+      skipped: spec would keep implying any prefix hit outside the requested ref
+      is damage."
+    type: risk
+    date: "2026-11-22"
