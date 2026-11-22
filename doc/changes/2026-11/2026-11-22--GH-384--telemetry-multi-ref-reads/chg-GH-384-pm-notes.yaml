@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-22T15:54:12.561Z }
   dor_check: { started: null, completed: 2026-11-22T16:04:08.994Z }
   delivery: { started: null, completed: 2026-11-22T16:31:30.404Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-22T16:39:25.577Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -122,4 +122,32 @@ notes:
       constraints present as plan fences, AC traceability complete, both defect
       seams code-verified, TDR-0075 ceiling confirmed."
     type: info
+    date: "2026-11-22"
+  - text: "DELIVERY COMPLETED_ALL (boundary 0dfd7d44, delivery completed in ledger
+      2026-11-22T16:31:30.404Z). Per-plan-phase evidence for DoD: plan phase 1
+      (fixture family + goldens at branch point) → commit 1f256887 → golden
+      capture entry run twice, drift-free exit 0 (pre-fix halves FX-R1/FX-R2
+      torn @ record 1, FX-13 complete; DoR minor-2 guard honored). Plan phase 2
+      (read-site corrections + extended suite) → commit 7dcb85bf →
+      telemetry-foreign-ref-skip 39 pass / 0 fail (TC-048..056 + delivered
+      040..047), telemetry-storage-damage 5 pass / 0 fail, golden entry re-run
+      exit 0 drift-free with corrected halves (AC-F1-1 exact requested-ref
+      record; AC-F2-1 append seq 2 + no-op repeat). Plan phase 3 (consumer proof
+      + changeset) → commit 64d67af1 → spend-zero-window 10 pass / 0 fail
+      (TC-SPEND-035 ×3 + delivered TC-PAUSE-050..052), combined suites 49 pass /
+      0 fail; changeset gh-384-telemetry-multi-ref-reads-minor.md with all five
+      fixed-group packages at minor. Regression insurance: 97 pass / 0 fail
+      across 16 adjacent telemetry/spend suites. Scope: zero drift vs plan
+      declarations; forbidden surfaces untouched; .zed/ excluded on every
+      commit."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: one in-flight correction pre-green in plan phase 2 — the scale arm
+      initially asserted a ses-gh384-… session prefix, but the delivered
+      parametrized scale builder names sessions ses-gh381-… regardless of the
+      ref argument; the assertion was narrowed to the property under test
+      (workItemRef scoping) before green. Lesson for fixture authors: session
+      ids in shared scale fixtures are a fixed convention, not ref-derived —
+      never assert a prefix the builder does not parameterize."
+    type: retro
     date: "2026-11-22"
