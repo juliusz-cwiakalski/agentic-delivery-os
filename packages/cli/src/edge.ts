@@ -2909,7 +2909,7 @@ export type ProviderAvailabilityFacts = {
   readonly parks?: StateResult<readonly ProviderParkView[]>;
   /** Composition-supplied observations keyed by provider name. */
   readonly observations?: Readonly<Record<string, ProviderAvailabilityObservation>>;
-  /** The declared `provider.profiles.watch` targets keyed by provider name. */
+  /** The declared watch targets keyed by provider name. */
   readonly watch?: Readonly<Record<string, ProviderWatchTarget>>;
 };
 
