@@ -7,6 +7,26 @@
 # `tasks` key and no progress log. Progress is a pm-notes `notes:` entry naming
 # the plan phase id, the commit hash and the gate result.
 #
+# REVISION — v16 (2026-11-22). Amends v15 in place; discharges the plan halves
+# of readiness iteration 5 (readiness-review/readiness-iter-5.md). (1) Finding
+# 2 — the persistent plan half of iteration 4's finding 10: the provider-client
+# current-truth page `doc/spec/features/feature-provider-client-seeds.md` is
+# declared moving by the spec's §16 shared-read row and the test plan's §7.4
+# (its operation set and its read-observation discriminator move with the
+# additive matched-identities member in the same change's reconciliation) and
+# is now declared executable: it joins phase 7's `scope.files` and its
+# enumerated documentation obligations, where the observation shape's
+# reconciliation lives. (2) Finding 1, plan half — phase 3's TC-MRG-052 oracle
+# is restated to the test plan's single delivered outcome: every fault input
+# class (transport, auth rejection, payload-invalid) refuses `provider.outage`
+# with `operation=github-delivery-request-list`, per the spec's Appendix B
+# single `provider.outage` row — the delivered read collapses every fault class
+# into one `{observation: "invalid", detail}` shape, so no per-class identity is
+# assertable at this seam — distinguishable from zero, never `no-open-request`,
+# two provider requests. No phase added, removed or moved; phase ids, ordering,
+# scopes, titles and summaries, and the allocation (0 / 9 / 19 / 17 / 3 / 5 / 1
+# = 54) are unchanged.
+#
 # REVISION — v15 (2026-11-22). Amends v14 in place, mirroring spec v2.4 and
 # test plan v1.6. Substance of the owner's 2026-11-22 amendment (its id is
 # recorded in SOURCES below): the shared merged-request read exposes ONE
@@ -837,16 +857,24 @@ phases:
   #          inheriting the delivered selection. This is where the abort row's
   #          duplicate-request cause becomes representable (AC-F1-6,
   #          TC-MRG-043, TC-MRG-049).
-  #        - the member ABSENT — the read itself FAULTED (transport, auth or
-  #          payload): a DISTINCT outcome, never folded into zero. The run
-  #          refuses the declared provider identity (`provider.outage`, or the
-  #          delivered `provider.payload.invalid` mapping for a payload the read
-  #          cannot parse) naming `operation=github-delivery-request-list`, and
-  #          NEVER reports `no-open-request`, `merge.request-unresolved` or
-  #          `merge.transaction-aborted`: an act-not-required provider fault must
-  #          not masquerade as "nothing was open" (spec Flow 7, TC-MRG-052). Per
-  #          path this outcome spends TWO provider requests — the open list and
-  #          the faulted merged read.
+  #        - the member ABSENT — the read itself FAULTED: a DISTINCT outcome,
+  #          never folded into zero. EVERY fault input class — transport, auth
+  #          rejection, payload-invalid — refuses the ONE declared identity
+  #          `provider.outage` naming `operation=github-delivery-request-list`
+  #          (the spec's Appendix B `provider.outage` row carries all three
+  #          classes on that single row): the delivered read collapses every
+  #          fault class into one `{observation: "invalid", detail}` shape, so
+  #          no per-class identity is assertable at this seam, and the
+  #          delivered mapping resolves the payload-invalid arm to
+  #          `provider.outage` here. The outcome stays DISTINGUISHABLE FROM
+  #          ZERO — the member is ABSENT on a fault, present-and-empty on the
+  #          paired healthy-read control (TC-MRG-005's empty-set cell) — and
+  #          the run NEVER reports `no-open-request`, `merge.request-unresolved`
+  #          or `merge.transaction-aborted`: an act-not-required provider fault
+  #          must not masquerade as "nothing was open" (spec Flow 7;
+  #          TC-MRG-052's restated single-outcome oracle). Per path this outcome
+  #          spends TWO provider requests — the open list and the faulted
+  #          merged read.
   #      The read's own delivered sequence — including its bounded review-thread
   #      query for the selected request — is part of the attempt: a match-bearing
   #      attempt costs THREE provider requests (open list, closed scan, thread
@@ -993,11 +1021,14 @@ phases:
   #   the open list, the closed scan and the read's own review-thread query —
   #   and the empty-set cell TWO, with more than one matched identity refusing
   #   `merge.transaction-aborted` naming EACH matched identity rather than
-  #   inheriting the delivered selection), TC-MRG-052 (a transport, auth or
-  #   payload fault of the merged read is the DISTINCT outcome: it refuses the
-  #   declared provider identity naming `operation=github-delivery-request-list`
-  #   and is never `no-open-request`, never `merge.request-unresolved`, never
-  #   `merge.transaction-aborted`, never folded into zero, spending TWO),
+  #   inheriting the delivered selection), TC-MRG-052 (every fault input class
+  #   — transport, auth rejection, payload-invalid — faults the merged read
+  #   into the ONE DISTINCT outcome refusing `provider.outage` naming
+  #   `operation=github-delivery-request-list`; the delivered read collapses
+  #   the classes into one observation, so no per-class identity is asserted;
+  #   never `no-open-request`, never `merge.request-unresolved`, never
+  #   `merge.transaction-aborted`, distinguishable from zero, never folded
+  #   into zero, spending TWO),
   #   TC-MRG-053 (the match-bearing attempt's exact transport multiset counts the
   #   read's own thread query, and NO suppression option exists — the
   #   planted-member scan must find one; NG-8), TC-MRG-054 (closeout consumes
@@ -1734,6 +1765,12 @@ phases:
   #     statement where it restates a merge count. The row is restated on the
   #     merged-truth ruling's per-path counts, not the superseded one-read or
   #     at-most-two claims.
+  #   - `doc/spec/features/feature-provider-client-seeds.md`: the provider-client
+  #     current-truth page states the shared merged-request read's operation set
+  #     and its read-observation discriminator, and BOTH statements move with the
+  #     additive matched-identities member in this phase's reconciliation (spec
+  #     §16 shared-read row; test plan §7.4) — readiness iteration 5, finding 2
+  #     (the persistent plan half of iteration 4's finding 10).
   #   - `doc/guides/change-lifecycle.md`: the `branch` declaration is the new
   #     authoring obligation on a change record; the artifact table gains the key
   #     (its 256-character cap, the closed refusal reasons, read-at-head, and the
@@ -1809,6 +1846,11 @@ phases:
         - doc/quality/test-specs/test-spec-merge-verify-deploy.md
         - doc/planning/oss-tooling/milestones/m1/commands/merge.md
         - doc/spec/nonfunctional.md
+        # The provider-client current-truth page: its operation set and its
+        # read-observation discriminator move with the shared read's additive
+        # member in this reconciliation (spec §16 shared-read row; test plan
+        # §7.4) — readiness iteration 5, finding 2.
+        - doc/spec/features/feature-provider-client-seeds.md
         - doc/guides/change-lifecycle.md
         - doc/guides/unified-change-convention-tracker-agnostic-specification.md
         # The authoring-obligation surfaces (spec §19, RSK-1's mitigation): the

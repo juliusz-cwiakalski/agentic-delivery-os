@@ -87,6 +87,49 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR iteration 5 (post-ruling verification run): NOT_READY — 9 facets PASS
+      / 1 FAIL (cross_artifact_consistency); ruling compliance verified faithful
+      at every decided point. One NEW major blocking finding, not ruled ground:
+      TC-MRG-052 over-specifies the fault outcome as three distinct identities
+      while the delivered merged read collapses every fault class into one
+      `{observation: invalid, detail}` shape (code/httpStatus discarded) and the
+      spec's own Appendix B routes all three classes to the single
+      `provider.outage` row — red by construction in phase 3's gate,
+      unproducible without widening the shared read beyond the ruled ceiling.
+      Plus: iteration-4 finding 10's plan half (the provider-client-seeds doc is
+      named in spec §16 and test plan §7.4 but not in the plan) and a spec
+      parenthetical nit reading as two identities where Appendix B governs.
+      Record: `readiness-review/readiness-iter-5.md`. The gate's escalation
+      statement: the fix is author-level inside the ruled ceiling; no new owner
+      ruling on the merged-truth shape is required."
+    type: blocker
+    date: "2026-11-22"
+  - text: "PM-decided (iteration-5 remediation): one surgical author-level pass —
+      TC-MRG-052 restated to the delivered single-outcome oracle (three fault
+      input classes asserted against Appendix B's single declared provider
+      identity with `operation=github-delivery-request-list`, distinguishable
+      from zero, never `no-open-request`; AC-F1-4's fault clause stays
+      traceable), the plan names the provider-client-seeds doc in its phase-7
+      scope, and the spec parenthetical aligned to Appendix B's single-identity
+      phrasing — then ONE commit carrying the remediation plus the iteration-5
+      verdict record, then exactly ONE verification gate run on this NEW ground.
+      Rationale: the operator's iteration prohibition bars re-running the RULED
+      ground; this finding is new mechanical ground created by the amendment
+      itself, the gate authorizes the mechanical reopen explicitly, and
+      blocking delivery on an oracle that is red by construction would only
+      move the failure into phase 3. Not the prohibited same ground; recorded
+      here as the durable justification."
+    type: decision
+    date: "2026-11-22"
+  - text: "Retro (oracle authoring): the amendment round authored TC-MRG-052 from
+      the desired fault taxonomy instead of the delivered read's actual outcome
+      shape — the same class of error as iteration 4's count signal, one level
+      down. Lesson: an oracle over a delivered surface must be derived from
+      what that surface can return (inspect the delivered shape first), and a
+      taxonomy finer than the surface's own discriminator is unproducible by
+      construction. Cost: one extra gate run."
+    type: retro
+    date: "2026-11-22"
   - text: "Ruling folds two live findings into this ticket (both observed on real
       merges 2026-11-22; acceptance-relevant — the owner's exit criterion is a
       real PR landed by the merge command end to end, not a platform-side
