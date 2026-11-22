@@ -87,6 +87,26 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 5 COMPLETE (delivery): the runtime family declaration and the
+      totality proof landed in commit 673c026ee45ec87c36f2fd755bf376bfd1d17c2d. Gate green: defect-f1-merge-refusal-
+      containment, merge-classification-conformance, merge-classification,
+      merge-production-composition, content-inventory, golden merge — all fail;
+      typecheck, build, and git diff --check clean. Delivered:
+      MERGE_COMPOSITION_GATE_FAMILY — the RUNTIME declaration beside the exact-
+      member list carrying the contract's own prefix, suffix, template and the
+      undeclared slot rule (never widened; adds no row/kind/exit/gate id) — plus
+      the value-based totality proof: the proof ranges over the runtime
+      declaration, the source-text greps of the composition are GONE (a
+      behaviour-preserving refactor passes), the REMOVAL controls are value
+      substitutions — the deleted declaration fails by name (merge composition
+      family declaration missing) and the bare exact-member list fails by name
+      (merge composition family slot rule missing + the named family instances)
+      — and the mismatch control still drives an undeclared/kind-mismatched code
+      to the containment identity, so no assertion passes vacuously. No golden
+      byte moved (the family template is unchanged); both export inventories
+      registered the two new exports."
+    type: info
+    date: "2026-11-22"
   - text: "Plan phase 4 COMPLETE (delivery): required-check enforcement on the
       resolved head landed in commit ebb5739a. Gate green: the full phase-4
       battery (merge-gate-set/-required-job-probe/-production-composition/

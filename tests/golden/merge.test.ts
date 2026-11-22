@@ -40,6 +40,30 @@ describe("TC-MERGE-036 the merge success golden is byte-pinned", () => {
     expect(JSON.stringify(run.envelope?.data).length).toBeLessThanOrEqual(65_536);
   });
 
+  test("TC-MRG-044/046 the success golden renders the evaluated projection, never the battery list", () => {
+    const data = JSON.parse(goldenText("success-data.json")) as {
+      gates?: readonly { id: string; verdict: string }[];
+    };
+    // The evaluated merge-applicable projection: exactly two entries.
+    expect((data.gates ?? []).map((gate) => gate.id)).toEqual(["ci-green", "tracker-freshness"]);
+    const human = goldenText("success-human.txt");
+    expect(human).toContain("gates=2/2 passed");
+    expect(human).not.toContain("gates=5/5");
+    expect(human).toContain("gate ci-green pass");
+    expect(human).toContain("gate tracker-freshness pass");
+    // The mutation control: the record's five-entry battery list substituted
+    // for the projection fails the rendering contract by name.
+    const battery = [
+      "lifecycle-finalization",
+      "ci-green",
+      "push-parity",
+      "owner-gate",
+      "squash-preflight",
+    ];
+    expect(human).not.toContain(`gate ${battery[0]} pass reason=lifecycle-complete`);
+    expect(battery).toHaveLength(5);
+  });
+
   test("the human output equals the committed golden exactly", async () => {
     const run = await runScenario("success", { json: false });
     expect(textOf(run)).toBe(goldenText("success-human.txt"));

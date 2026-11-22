@@ -86,8 +86,13 @@ describe("TC-MERGE-033 output bounds", () => {
       const json = await first.run();
       expect(json.exitCode).toBe(0);
       const data = dataOf(json);
-      expect(((data?.gates ?? []) as readonly unknown[]).length).toBe(MERGE_MAX_REPORT_GATES);
-      expect(data?.gatesOmitted).toBe(set.value.ids.length - MERGE_MAX_REPORT_GATES);
+      // The report renders the evaluated merge-applicable projection (the
+      // mergeEntries the run evaluated), capped at the declared bound.
+      const projectionLength = set.value.mergeEntries.length;
+      expect(((data?.gates ?? []) as readonly unknown[]).length).toBe(
+        Math.min(projectionLength, MERGE_MAX_REPORT_GATES),
+      );
+      expect(data?.gatesOmitted).toBe(Math.max(0, projectionLength - MERGE_MAX_REPORT_GATES));
       expect(Buffer.byteLength(JSON.stringify(data), "utf8")).toBeLessThanOrEqual(
         MERGE_MAX_MACHINE_BYTES,
       );
@@ -98,7 +103,7 @@ describe("TC-MERGE-033 output bounds", () => {
     try {
       const text = await second.run(undefined, { json: false });
       expect(text.stdout).toContain(
-        `gates-omitted=+${set.value.ids.length - MERGE_MAX_REPORT_GATES}`,
+        `gates-omitted=+${Math.max(0, set.value.mergeEntries.length - MERGE_MAX_REPORT_GATES)}`,
       );
       expect(text.stdout.trimEnd().split("\n").length).toBeLessThanOrEqual(MERGE_MAX_HUMAN_LINES);
       expect(Buffer.byteLength(text.stdout, "utf8")).toBeLessThanOrEqual(MERGE_MAX_HUMAN_BYTES);

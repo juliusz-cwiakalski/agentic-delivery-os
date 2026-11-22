@@ -1528,6 +1528,106 @@ export const runMergeTransaction = async (input: {
     return refused(changeRef, failureFor(failures[0] as GateFailure));
   }
 
+  // 6b. The evaluated merge-applicable projection (AC-F2-8, DEC-12): the
+  // merged report renders the projection the run evaluated — one line per
+  // merge-applicable entry with its verdict and reason — and does NOT echo the
+  // verification record's battery gate list; the record keeps its own list.
+  const pageIsProjectionHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
+  // A landing run has no remaining gate failures (the refusal above), so the
+  // evaluated projection here is the passing posture per entry.
+  const evaluatedGates: MergeGateVerdictRecord[] = config.gateSet.mergeEntries.map((entry) => {
+    if (entry.id === "ci-green") {
+      const posture = pageIsProjectionHead
+        ? checksPostureOf({
+            runs: checkRuns.value.items,
+            pageSha: checkRuns.value.sha ?? head,
+            headSha: head,
+            requiredJobs: expectedNames,
+          })
+        : ({ reason: "head-unresolved", jobs: ["ci-green"] } as const);
+      const reason: VerifyGateReason = posture === undefined ? "ci-green" : posture.reason;
+      return {
+        id: entry.id,
+        verdict: posture === undefined ? "pass" : "fail",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: [
+            { name: "expected", value: expectedNames.length },
+            { name: "runs", value: checkRuns.value.pageItemCount },
+          ],
+          names:
+            posture === undefined
+              ? [{ kind: "failed-jobs", values: [], omitted: 0 }]
+              : [{ kind: "failed-jobs", values: posture.jobs, omitted: 0 }],
+          reason,
+        }),
+      };
+    }
+    if (entry.recipe === "required-ci-job") {
+      const job = entry.job ?? entry.id;
+      if (!pageIsProjectionHead) {
+        return {
+          id: entry.id,
+          verdict: "fail",
+          reason: "head-unresolved",
+          citation: citationFor({
+            identity: { changeRef, headSha: head },
+            sources: [{ name: "github-check-runs", outcome: "read" }],
+            counts: [{ name: "expected", value: 1 }],
+            names: [{ kind: "missing-jobs", values: [job], omitted: 0 }],
+            reason: "head-unresolved",
+          }),
+        };
+      }
+      const evaluation = evaluateRequiredJobGate({
+        jobName: job,
+        runs: checkRuns.value.items,
+        pageSha: checkRuns.value.sha ?? head,
+        headSha: head,
+      });
+      return {
+        id: entry.id,
+        verdict: evaluation.verdict,
+        reason: evaluation.reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: evaluation.counts,
+          names: evaluation.names,
+          reason: evaluation.reason,
+        }),
+      };
+    }
+    if (entry.recipe === "tracker-freshness") {
+      const reason: VerifyGateReason = transition.changed
+        ? "owner-gate-present"
+        : "owner-gate-absent";
+      return {
+        id: entry.id,
+        verdict: transition.changed ? "fail" : "pass",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, workItem: changeRef },
+          sources: [{ name: "github-work-item", outcome: "read" }],
+          counts: [
+            { name: "labels", value: posture.labels.length },
+            { name: "ownerLabels", value: posture.ownerLabels.length },
+          ],
+          names: [{ kind: "owner-labels", values: transition.after, omitted: 0 }],
+          reason,
+        }),
+      };
+    }
+    return {
+      id: entry.id,
+      verdict: "unknown",
+      reason: "read-failed",
+      citation: emptyCitation(changeRef),
+    };
+  });
+
   // 7. The mergeability decision rule (F-2, API-2): total over the four
   // normalized states plus absence, at most one post-refusal re-read and at
   // most one unknown-recovery re-read, and no branch mutates the head it
@@ -1591,7 +1691,10 @@ export const runMergeTransaction = async (input: {
     }
     return {
       kind: "merged",
-      report: reportFor(transactionRecord, postLanding, record?.gates ?? [], resolutionFacts),
+      report: reportFor(transactionRecord, postLanding, evaluatedGates, resolutionFacts, {
+        evaluatedCount: requiredSet.length,
+        setSize: requiredSet.length,
+      }),
     };
   };
 
@@ -1783,6 +1886,7 @@ const reportFor = (
   postLanding: readonly MergePostLandingStep[],
   gates: readonly MergeGateVerdictRecord[],
   resolution?: MergeResolutionFacts,
+  requiredChecks?: { readonly evaluatedCount: number; readonly setSize: number },
 ): MergeReport => ({
   result: "merged",
   changeRef: record.changeRef,
@@ -1794,6 +1898,7 @@ const reportFor = (
   postLanding,
   gates: gates.slice(0, MERGE_MAX_REPORT_GATES),
   gatesOmitted: Math.max(0, gates.length - MERGE_MAX_REPORT_GATES),
+  ...(requiredChecks === undefined ? {} : { requiredChecks }),
   ...(resolution === undefined ? {} : { resolution }),
 });
 

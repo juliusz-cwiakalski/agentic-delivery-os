@@ -332,6 +332,15 @@ export type MergeReport = {
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
   /**
+   * The evaluated required-check posture (F-2): the count of required names the
+   * run evaluated and the size of the derived merge-applicable required-check
+   * set, so an authored check posture is visible rather than silent.
+   */
+  readonly requiredChecks?: {
+    readonly evaluatedCount: number;
+    readonly setSize: number;
+  };
+  /**
    * The resolved object the run decided from (DM-2): present on a run that
    * resolved a request at its head; absent on a converged replay, which reports
    * `replayed=true` with the single matched request identity instead.
