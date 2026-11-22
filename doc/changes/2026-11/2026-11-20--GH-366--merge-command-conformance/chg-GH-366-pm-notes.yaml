@@ -53,17 +53,89 @@ decisions:
       stays open — merge authority is the CEO (Mode A) or the human (Mode B).
       This change type is `fix`."
     date: "2026-11-20"
-open_questions:
-  - text: "Owner decision (DoR iteration 4, blocking): what may the shared
-      merged-request read expose — (A) authorise the minimal additive extension so
-      the merge path observes 0/1/many match identities on every outcome with a
-      read fault distinguishable from zero (and count the read's own review-thread
-      query in the budget), closeout behaviour unchanged; or (B) keep the
-      count-only signal and relax AC-F1-6/AC-F3-6/F-3/Flow 6/Appendix B to a count
-      plus the selected identity. Posted on GH-366; awaiting the owner."
-    date: "2026-11-21"
+  - text: "Owner ruling CEO-D-116 (issue #366 comment 2026-11-22T15:13:00Z),
+      outcome (A): authorize the minimal additive extension of the shared
+      merged-request read. The merge path observes 0/1/many matches and names
+      every matched identity — empty identities decide zero, one replays, many
+      aborts `merge.transaction-aborted` naming EACH identity and presenting
+      NONE as *the* request; the count is derived from the identities, no second
+      competing field. A read fault is a distinct outcome refusing
+      `provider.outage` (or the delivered `provider.payload.invalid` mapping)
+      with `operation=github-delivery-request-list`; never
+      `no-open-request`/`merge.request-unresolved`, never folded into zero. The
+      additive optional member may land on the `unavailable` arm of the shared
+      closeout contract type; closeout reads neither count nor identities and
+      its behaviour and output stay unchanged. Budget truth: the read's own
+      review-thread query is counted (2 provider requests when nothing matches,
+      3 on a match-bearing convergence attempt, no extra request on
+      open-page-only paths); no suppression option may be added. DEC-13's
+      'minimum additive change is one optional count signal' claim is withdrawn
+      and the amended shape is recorded in DEC-13 and the two owned TDR
+      amendments. The shape is the ceiling; anything beyond is a new decision."
+    date: "2026-11-22"
+  - text: "PM-decided (verification-precondition remediation; the ruling offered
+      two options): `merge` does NOT compose the gate verification itself —
+      `merge.state-unverified`'s remediation names the exact prior command and
+      target: produce the verification with `verify gates <ref>` for the same
+      work item, then re-run the merge. Rationale: the ruling bounds this
+      ticket to no scope expansion of merge (no new endpoint, credential, or
+      capability), and a verification write inside an already-mutating command
+      would add a write path and provider cost to `merge`, while naming the
+      exact command removes the guesswork the ruling objects to. Change-scoped;
+      recorded in the spec and the refusal golden."
+    date: "2026-11-22"
+open_questions: []
 blockers: []
 notes:
+  - text: "Ruling folds two live findings into this ticket (both observed on real
+      merges 2026-11-22; acceptance-relevant — the owner's exit criterion is a
+      real PR landed by the merge command end to end, not a platform-side
+      fallback): (i) the merge detail read cannot carry mergeability — the list
+      read never returns `mergeable`/`mergeable_state` — so the merge port
+      locates the request on the list page and then reads the single request
+      (the delivered single-request detail read `verify gates` already uses) for
+      mergeability; pinned oracle: a list payload with NO mergeability fields
+      plus a detail payload with `mergeable: true, mergeable_state: clean` must
+      LAND, never refusing `merge.mergeability-unknown`; a kept
+      unknown-recovery re-read re-reads the detail, not the list. Consequence:
+      `github-delivery-request-detail` becomes reachable again in the operation
+      vocabulary (v2.2 dropped it as unreachable) and the pinned identity
+      arithmetic must be recounted. (ii) merge requires a preceding verification
+      record; the refusal's remediation names the exact command and target
+      (pinned above). Evidence trace: issue #366. The PR-commit push defect
+      ticket #386 is referenced only, never absorbed."
+    type: info
+    date: "2026-11-22"
+  - text: "Process directive (operator + ruling): amend specification, then
+      test_planning, then delivery_planning in ONE pass — the ruled shape plus
+      mechanical findings 4-12 from `readiness-review/readiness-iter-4.md` —
+      land ONE commit that also carries the untracked readiness-iter-4 record
+      (known commitlint hazard: that long path alone fails the 100-char
+      subject), then re-run the DoR gate ONCE against the amended artifacts; no
+      further iteration on the same ground. The three artifact phases stay
+      completed in the ledger; no formal reopen is run this round because the
+      operator directive and the ruling's process section supersede the reopen
+      ceremony, and the single gate run is the authority over the amended
+      artifacts."
+    type: info
+    date: "2026-11-22"
+  - text: "Decision-id re-verification (2026-11-22, origin/main-tools 7cc71cd1):
+      max is TDR-0075 (0074/0075 landed via GH-365/GH-377); TDR-0076 is free.
+      The amended shape lands as amendments to this change's still-Proposed
+      owned records — no new record id is planned; 0076 stays free unless
+      authoring proves one genuinely required; never renumber downward."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro (DoR iteration budget): iteration 4 escalated on a design the
+      change itself had authored — DEC-13 declared a bare count signal on a
+      delivered read whose unavailable arm carries no signals and whose
+      selection hides multiplicity. Lesson: before declaring a 'minimal
+      additive change' to a shared read, verify the delivered read's actual
+      carrier surface (which outcome arm can hold members, what the selection
+      discards) — the escalation cost one owner round-trip that a tree-read of
+      the contract type would have avoided."
+    type: retro
+    date: "2026-11-22"
   - text: "DoR iteration 4: NOT_READY — Pause Required: yes. Iteration 3's three
       blockers are CLOSED (verified against the emission sites); findings 4-9 are
       closed with one nit carried. Four NEW blocking findings arise from the
