@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-21T21:57:52.738Z }
   system_spec_update: { started: null, completed: 2026-11-21T22:15:39.453Z }
   review_fix: { started: null, completed: 2026-11-21T23:52:46.272Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-22T00:18:26.616Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -73,6 +73,19 @@ decisions:
       the current host root; the migration guide records it."
     date: "2026-11-21"
 notes:
+  - text: "QUALITY GATES (lifecycle phase 9) = PASS at HEAD 3bd3f6b1. Aggregate
+      `pnpm check` exit 0: test 12402 pass / 4 skip / 0 fail across 12406 tests
+      and 1502 files; boundaries clean (520 modules / 1667 dependencies);
+      ambient-globals, workspace-entrypoints, secret-read-boundary OK;
+      memory-lint 0 errors; forbidden-literals 7/7 classes 0 violations;
+      namespace-tree OK; prompt-conformance clean; help-guide-coverage covered;
+      exports-parity 5 publishables. RANGE GATE: VERDICT PASS — base
+      origin/main-tools, merge-base c1dd722c, head 3bd3f6b1, 40 commits in
+      range, 0 offending commits, 0 distinct rules hit, mode none, resolved
+      commitlint node_modules/.bin/commitlint (repository-local, ref
+      origin/main-tools). Full log tmp/tmpdir/gh365-final-check.log."
+    type: info
+    date: "2026-11-22"
   - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml). All 20
       dispositions CLOSED (F-1..F-8 and N-1..N-12), 0 new findings. Independent
       spot-runs green; captured full `pnpm check` at 814b7095 = 12402 pass / 4
