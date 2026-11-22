@@ -87,6 +87,52 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 4 COMPLETE (delivery): required-check enforcement on the
+      resolved head landed in commit ebb5739a. Gate green: the full phase-4
+      battery (merge-gate-set/-required-job-probe/-production-composition/
+      -dry-run/-landing/-refusal-surface/-refusal-taxonomy/-probe/
+      -verification-record/-convergence + merge-contract/content-inventory/
+      merge-check-path-scan/verify-gates behaviour+structure+goldens + golden
+      merge + the regression set) — 620 tests, 0 fail — and error-table-sync
+      OK. Delivered: ci-green merge-applicable in the shipped default set
+      (surface both; the entry-id sequence and the effective gate-set identity
+      UNCHANGED — the identity string still
+      delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,
+      owner-gate,squash-preflight,tracker-freshness]); the admitted-surface
+      contract data (MERGE_BUILTIN_ADMITTED_SURFACES: battery|both for
+      ci-green, battery alone for the other four) validated in the gate-set
+      resolver with built-in recipe/class immutability (surface free within
+      the admitted set — the declared battery ci-green is the reviewed opt-out);
+      the merge-applicable required-check set derived ONCE per invocation
+      (declared required-ci-job entries contribute job??id; ci-green
+      contributes the repository-declared expected job set through the SAME
+      delivered readCiWorkflowJobNames read the battery uses, validated by the
+      EXPORTED UNCHANGED expectedSetValid — no second predicate); each name
+      evaluated against the resolved head's check-run page through the single
+      delivered evaluateRequiredJobGate; recorded/probe attributions stay the
+      whole vocabulary; the page-not-head case refuses with the delivered
+      head-unresolved reason naming both SHAs and never passes; the CI read
+      fault and an invalid expected set each refuse by name and never pass;
+      THE LANDING DECISION'S MERGEABILITY SOURCE (LF-1): the delivered
+      single-request read of the resolved request via readDeliveryRequest —
+      the pinned oracle (TC-MRG-050) landed: a no-mergeability list entry plus
+      a clean single request LANDS once, the unknown-recovery re-read re-reads
+      the single request never the list, and a fault of that read names
+      operation=github-delivery-request-detail from ERROR_TABLE; the
+      per-invocation budget closed (the open-page-only landing run spends 2);
+      the dry run discloses the evaluated required-check count and set size;
+      the documented mergeability row's amended firing premise moved in the
+      same commit (the summary cell byte-unchanged — the sync check binds it —
+      with the premise in the kind prose); the battery goldens and verify
+      gates output byte-identical (NG-2). Fixture note: the production
+      fixture's configuration sandbox now passes non-config paths through to
+      the node fs so the delivered workflow read sees the real checkout, and
+      the fixture carries the planted workflow whose jobs match the green
+      check page; the healthy reply is stateful across one landing (the
+      mergeability read sees the open request, the post-landing read-back the
+      merged shape)."
+    type: info
+    date: "2026-11-22"
   - text: "Plan phase 3 COMPLETE (delivery): the change-branch resolution, the
       convergence attempt and the resolved-head binding landed in commit
       8620cc4a. Gate green: merge-production-composition (19 cells incl. the

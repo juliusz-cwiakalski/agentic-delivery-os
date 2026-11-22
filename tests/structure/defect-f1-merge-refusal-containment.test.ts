@@ -28,7 +28,11 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyThrown, resolveAppErrorCode } from "../../packages/cli/src/classify";
-import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
+import {
+  isMergeCompositionFamilyInstance,
+  MERGE_COMPOSITION_EMITTABLE_CODES,
+  MERGE_COMPOSITION_GATE_FAMILY,
+} from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import {
   ERROR_TABLE,
@@ -59,11 +63,7 @@ type Declaration = {
 };
 
 /** Whether a code is an instance of the declared gate family (a valid slot). */
-const isFamilyInstance = (code: string): boolean => {
-  if (!code.startsWith(GATE_FAMILY_PREFIX) || !code.endsWith(GATE_FAMILY_SUFFIX)) return false;
-  const slot = code.slice(GATE_FAMILY_PREFIX.length, code.length - GATE_FAMILY_SUFFIX.length);
-  return /^[a-z][a-z0-9-]*$/u.test(slot);
-};
+const isFamilyInstance = (code: string): boolean => isMergeCompositionFamilyInstance(code);
 
 /** Whether a declaration covers one code: exact membership or the family. */
 const covers = (declaration: Declaration, code: string): boolean =>
@@ -105,16 +105,34 @@ const emittedCodes = (): readonly string[] => {
 const uncoveredBy = (declaration: Declaration): readonly string[] =>
   emittedCodes().filter((code) => !covers(declaration, code));
 
-/** The production declaration, read from the composition's own export and source. */
-const productionDeclaration = (): Declaration => {
-  const source = readFileSync(join(ROOT, PRODUCTION), "utf8");
-  // The family is a declared expression; assert the declaration carries it
-  // rather than inferring coverage from the predicate alone.
-  expect(source).toContain("MergeCompositionEmittableFamily");
-  expect(source).toContain("MERGE_GATE_ERROR_PREFIX");
-  expect(source).toContain("MERGE_GATE_ERROR_SUFFIX");
-  return { codes: MERGE_COMPOSITION_EMITTABLE_CODES, family: true };
+/**
+ * The named totality failures of one declaration over the emission set: the
+ * proof follows the VALUE, so a deleted declaration and a bare exact-member
+ * list each fail by name and a behaviour-preserving refactor passes.
+ */
+const totalityFailures = (
+  declaration: Declaration | undefined,
+  emitted: readonly string[],
+): readonly string[] => {
+  if (declaration === undefined) return ["merge composition family declaration missing"];
+  const failures: string[] = [];
+  if (!declaration.family) {
+    failures.push("merge composition family slot rule missing");
+  }
+  const uncovered = emitted.filter((code) => !covers(declaration, code));
+  if (uncovered.length > 0) {
+    failures.push(`declaration leaves emitted codes uncovered: ${uncovered.join(", ")}`);
+  }
+  return failures;
 };
+
+/** The runtime declaration, read from the composition's own exports. */
+const productionDeclaration = (): Declaration => ({
+  codes: MERGE_COMPOSITION_EMITTABLE_CODES,
+  family: isMergeCompositionFamilyInstance(
+    `${MERGE_COMPOSITION_GATE_FAMILY.prefix}ci-green${MERGE_COMPOSITION_GATE_FAMILY.suffix}`,
+  ),
+});
 
 /**
  * THE PRE-FIX DECLARATION, substituted by the control: seven forwarded
@@ -208,6 +226,33 @@ describe("F1 defect-f1-merge-refusal-containment: a declared refusal never reach
     for (const code of ADDITIVE_ROWS) {
       expect(emitted, code).toContain(code);
     }
+  });
+
+  // control: f1.declaration-removed shape=value-substitution
+  test("deleting the runtime declaration fails the totality proof by name", () => {
+    const emitted = emittedCodes();
+    const failures = totalityFailures(undefined, emitted);
+    expect(failures).toEqual(["merge composition family declaration missing"]);
+    // The mismatch control still drives an undeclared code to containment, so
+    // the deleted declaration cannot pass vacuously.
+    const undeclared = "merge.gate.undeclared-gate.failed";
+    expect(resolveAppErrorCode(undeclared).ok).toBe(true);
+    expect(classifyThrown({ kind: "state", code: "merge.gate.ci-green.failed" }).code).toBe(
+      FALLBACK_INTERNAL_CODE,
+    );
+  });
+
+  // control: f1.declaration-flattened shape=value-substitution
+  test("replacing the declaration by the bare exact-member list fails by name", () => {
+    const emitted = emittedCodes();
+    const bareList: Declaration = { codes: MERGE_COMPOSITION_EMITTABLE_CODES, family: false };
+    const failures = totalityFailures(bareList, emitted);
+    expect(failures).toContain("merge composition family slot rule missing");
+    const familyUncovered = emitted.filter(isFamilyInstance);
+    expect(failures.some((failure) => failure.includes(familyUncovered[0] ?? ""))).toBe(true);
+    // The live proof over the real declaration stays clean: the failure is the
+    // substitution's, never the tree's.
+    expect(totalityFailures(productionDeclaration(), emitted)).toEqual([]);
   });
 
   // control: f1.substituted-prefix-declaration shape=substituted-derivation

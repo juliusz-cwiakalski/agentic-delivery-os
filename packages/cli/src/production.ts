@@ -282,8 +282,9 @@ import {
   type InstallRuntime,
   LOCAL_CALLER_PRINCIPAL,
   MERGE_CHANGE_RECORD_MAX_BYTES,
-  type MERGE_GATE_ERROR_PREFIX,
-  type MERGE_GATE_ERROR_SUFFIX,
+  MERGE_GATE_ERROR_PREFIX,
+  MERGE_GATE_ERROR_SUFFIX,
+  MERGE_GATE_ERROR_TEMPLATE,
   type MergeDeliveryRequestInput,
   type MilestoneReadObservation,
   type OwnerHoldFact,
@@ -473,6 +474,36 @@ export const MERGE_COMPOSITION_EMITTABLE_CODES = [
  */
 export type MergeCompositionEmittableFamily =
   `${typeof MERGE_GATE_ERROR_PREFIX}${string}${typeof MERGE_GATE_ERROR_SUFFIX}`;
+
+/**
+ * The RUNTIME family declaration beside the exact-member list (GH-366 F-4,
+ * G-5): the contract's own declared prefix, suffix and template plus the slot
+ * rule, so the composition's vocabulary STATES that a family emission is
+ * admissible and `MERGE_COMPOSITION_EMITTABLE_CODES` plus this declaration are
+ * runtime-exhaustive over every code the refusal branches emit.
+ *
+ * The totality proof ranges over THIS declaration and fails by name when it is
+ * deleted or replaced by the bare exact-member list; no source-text match
+ * remains as the proof, so a behaviour-preserving refactor passes and a lost
+ * declaration fails. The slot pattern is the declared gate-id rule and is never
+ * widened: the slot itself is validated against the effective declared gate set
+ * at emission, and this declaration adds no row, kind, exit, or gate id.
+ */
+export const MERGE_COMPOSITION_GATE_FAMILY = {
+  prefix: MERGE_GATE_ERROR_PREFIX,
+  suffix: MERGE_GATE_ERROR_SUFFIX,
+  template: MERGE_GATE_ERROR_TEMPLATE,
+  /** The declared gate-id slot rule (never widened). */
+  slotPattern: "^[a-z][a-z0-9-]*$",
+} as const;
+
+/** Whether one code is an instance of the runtime-declared gate family. */
+export const isMergeCompositionFamilyInstance = (code: string): boolean => {
+  const declaration = MERGE_COMPOSITION_GATE_FAMILY;
+  if (!code.startsWith(declaration.prefix) || !code.endsWith(declaration.suffix)) return false;
+  const slot = code.slice(declaration.prefix.length, code.length - declaration.suffix.length);
+  return new RegExp(declaration.slotPattern, "u").test(slot);
+};
 
 /**
  * One code the merge composition may emit: a declared member above, or an
