@@ -12,23 +12,34 @@ import { createTelemetryIngestSink } from "../../../packages/cli/src/edge";
 import {
   ECONOMICS_RESTART_SCHEMA_ID,
   type EconomicsRestartRecord,
+  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
   HARNESS_TOKEN_CLASSES,
+  type HarnessCaptureOutcomeRecord,
   type HarnessKind,
   type HarnessTelemetryRecord,
   type HarnessTokenClass,
   type HarnessTokenCounts,
+  type StateJsonValue,
+  type StateResult,
+  type StateStoreIdentity,
   type StateStorePort,
+  TELEMETRY_BASELINE_KEY_PREFIX,
+  TELEMETRY_BASELINE_RECORD_KIND,
   TELEMETRY_BASELINE_SCHEMA_ID,
+  TELEMETRY_STEP_KEY_PREFIX,
+  TELEMETRY_STEP_RECORD_KIND,
   TELEMETRY_STEP_SCHEMA_ID,
   TELEMETRY_STORAGE_SCHEMA_VERSION,
   type TelemetryBaselineRecord,
   type TelemetryClaimedIdentity,
+  type TelemetryFamiliesRead,
   type TelemetryIngestTally,
   type TelemetrySessionIdentity,
   type TelemetryStepRecord,
   type TelemetryWarning,
   type TelemetryWarningReason,
 } from "../../../packages/core/src/contracts/index";
+import { computeSpendReport } from "../../../packages/core/src/domain/spend";
 import type { TelemetryAttributionSubstrates } from "../../../packages/core/src/domain/telemetry-attribution";
 import {
   decodeTelemetryStepFrame,
@@ -36,17 +47,20 @@ import {
   type TelemetryFrameContext,
   tallyFrame,
 } from "../../../packages/core/src/domain/telemetry-ingest";
-import { computeSpendReport } from "../../../packages/core/src/domain/spend";
 import {
   appendEconomicsRestartEvent,
+  appendHarnessCaptureOutcome,
   appendHarnessTelemetry,
   appendPhaseTransition,
   appendTelemetryBaseline,
   appendTelemetryStep,
   readSpendLedger,
   readTelemetryBaselines,
+  readTelemetryFamilies,
   readTelemetrySteps,
   STATE_SCHEMA_VERSION,
+  telemetryBaselineKey,
+  telemetryStepKey,
 } from "../../../packages/core/src/state/index";
 import {
   assembleLiveness,
@@ -62,7 +76,7 @@ import {
   SPAWN_ENV_DESCRIPTOR,
   type StreamScript,
 } from "../harness/harness-io";
-import { makeIdentity, makeTempRoot, openStore } from "../state/harness";
+import { makeIdentity, makeTempRoot, openStore, removeRoot, withinFence } from "../state/harness";
 
 export { makeIdentity, makeTempRoot, openStore, removeRoot } from "../state/harness";
 
@@ -515,4 +529,561 @@ export const foldTelemetryStore = (seed: TelemetryFoldSeed, label = "fold") => {
   const read = readSpendLedger(fixture.store, ref);
   const fold = read.ok ? computeSpendReport(read.value, { workItemRef: ref }) : undefined;
   return { root: fixture.root, store: fixture.store, read, fold };
+};
+
+// ---------------------------------------------------------------------------
+// GH-381 multi-ref fixtures (TC-TELEMETRY-040..047; fixture inventory FX-1..FX-7)
+//
+// Every healthy record is one the production writers could have produced: the
+// seeded shapes are the delivered builders' shapes, and every raw batch append
+// below emits exactly the delivered writer's payload, kind, and key inside one
+// fence — the delivered scale-batch technique
+// (tests/fixtures/supervise/records.ts seedLaneBatch). Only the deliberately
+// broken shapes (bare prefixes, cross-family kinds, garbage payloads) are raw
+// appended, with valid framing and checksums so the verified read admits them
+// and the projection's classification is what is under test.
+// ---------------------------------------------------------------------------
+
+/** The requested ref of the GH-381 fixtures: the ref every read answers. */
+export const GH381_REF = "GH-381";
+/** The foreign ref of the GH-381 fixtures: the earlier change whose valid step record tore the observed read. */
+export const GH381_FOREIGN_REF = "GH-365";
+/** A ref absent from every GH-381 fixture: the verified-empty and any-ref arms. */
+export const GH381_ABSENT_REF = "GH-000";
+
+const gh381RunId = (ref: string): string => `run-gh381-${ref}`;
+
+/** One distinct healthy step record of a GH-381 fixture ref (1-based index). */
+const gh381Step = (ref: string, index: number): TelemetryStepRecord =>
+  makeStepRecord({
+    ref,
+    runId: gh381RunId(ref),
+    sessionId: `ses-gh381-${ref}-s${String(index)}`,
+    tokens: tokens({ input: 10 * index, output: 5 * index }),
+    calls: index,
+    cost: 0.25 * index,
+    capturedAt: T1,
+  });
+
+/** The one healthy baseline record of a GH-381 fixture ref. */
+const gh381Baseline = (ref: string): TelemetryBaselineRecord =>
+  makeBaselineRecord({
+    ref,
+    runId: gh381RunId(ref),
+    sessionId: `ses-gh381-${ref}-baseline`,
+    tokens: tokens({ input: 100, output: 50 }),
+    calls: 2,
+    cost: 1.5,
+    capturedAt: T2,
+  });
+
+/** The one healthy v1 session record of a GH-381 fixture ref. */
+const gh381V1 = (ref: string): HarnessTelemetryRecord =>
+  makeV1Record({
+    ref,
+    runId: gh381RunId(ref),
+    sessionId: `ses-gh381-${ref}-v1`,
+    tokens: tokens({ input: 40, output: 20 }),
+    calls: 2,
+    cost: 1,
+  });
+
+/** The one healthy capture-outcome record of a GH-381 fixture ref. */
+const gh381Outcome = (ref: string): HarnessCaptureOutcomeRecord => ({
+  schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  workItemRef: ref,
+  runId: gh381RunId(ref),
+  captured: 1,
+  degraded: 0,
+  failed: 0,
+  warnings: [],
+  capturedAt: T3,
+});
+
+/** The delivered step payload shape: field-for-field what the delivered writer emits. */
+const gh381StepPayload = (record: TelemetryStepRecord) =>
+  ({
+    schemaId: record.schemaId,
+    storageVersion: record.storageVersion,
+    workItemRef: record.workItemRef,
+    runId: record.runId,
+    sessionId: record.sessionId,
+    harnessKind: record.harnessKind,
+    harnessVersion: record.harnessVersion,
+    treeRoot: record.treeRoot,
+    model: record.model,
+    ticket: record.ticket,
+    repository: record.repository,
+    lane: record.lane,
+    agentRole: record.agentRole,
+    tokens: {
+      input: record.tokens.input,
+      output: record.tokens.output,
+      reasoning: record.tokens.reasoning,
+      cacheRead: record.tokens.cacheRead,
+      cacheWrite: record.tokens.cacheWrite,
+    },
+    calls: record.calls,
+    cost: record.cost,
+    startedAt: record.startedAt,
+    finishedAt: record.finishedAt,
+    warnings: record.warnings.map((warning) => ({ reason: warning.reason, field: warning.field })),
+    capturedAt: record.capturedAt,
+  }) satisfies StateJsonValue;
+
+/** The delivered baseline payload shape: field-for-field what the delivered writer emits. */
+const gh381BaselinePayload = (record: TelemetryBaselineRecord) =>
+  ({
+    schemaId: record.schemaId,
+    storageVersion: record.storageVersion,
+    workItemRef: record.workItemRef,
+    runId: record.runId,
+    sessionId: record.sessionId,
+    tokens: {
+      input: record.tokens.input,
+      output: record.tokens.output,
+      reasoning: record.tokens.reasoning,
+      cacheRead: record.tokens.cacheRead,
+      cacheWrite: record.tokens.cacheWrite,
+    },
+    calls: record.calls,
+    cost: record.cost,
+    capturedAt: record.capturedAt,
+    warnings: record.warnings.map((warning) => ({ reason: warning.reason, field: warning.field })),
+  }) satisfies StateJsonValue;
+
+/**
+ * Batch-append step records in one fence through the delivered record seam.
+ *
+ * `appendTelemetryStep` is itself correct here, but the observed-scale fixture
+ * seeds thousands of records and one fence keeps the fixture to a single fence
+ * cycle at the delivered record shape (the delivered batch technique).
+ */
+export const seedStepBatch = (
+  store: StateStorePort,
+  records: readonly TelemetryStepRecord[],
+): void => {
+  withinFence(store, "gh381-step-batch", (handle) => {
+    for (const record of records) {
+      const appended = store.append(handle, {
+        kind: TELEMETRY_STEP_RECORD_KIND,
+        recordKey: telemetryStepKey(record.workItemRef),
+        payload: gh381StepPayload(record),
+      });
+      if (!appended.ok) throw new Error(`gh381 step batch seed failed: ${appended.error.code}`);
+    }
+  });
+};
+
+/**
+ * Batch-append baseline records in one fence through the delivered record seam.
+ *
+ * The delivered `appendTelemetryBaseline` cannot seed a second ref's baseline
+ * into a multi-ref ledger: its idempotency pre-read is one of the same-family
+ * reads that tear on a foreign baseline key, and that read stays exactly as
+ * delivered (out of scope, spec DEC-3). The raw append emits the delivered
+ * writer's exact payload, kind, and key, so the stored record is byte-identical
+ * to what the delivered helper would have written — only the pre-read is
+ * bypassed, and only where two refs must share one ledger.
+ */
+export const seedBaselineBatch = (
+  store: StateStorePort,
+  records: readonly TelemetryBaselineRecord[],
+): void => {
+  withinFence(store, "gh381-baseline-batch", (handle) => {
+    for (const record of records) {
+      const appended = store.append(handle, {
+        kind: TELEMETRY_BASELINE_RECORD_KIND,
+        recordKey: telemetryBaselineKey(record.workItemRef),
+        payload: gh381BaselinePayload(record),
+      });
+      if (!appended.ok) throw new Error(`gh381 baseline batch seed failed: ${appended.error.code}`);
+    }
+  });
+};
+
+/** Seed capture-outcome records through the delivered append path; failures throw. */
+export const seedCaptureOutcomes = (
+  store: StateStorePort,
+  records: readonly HarnessCaptureOutcomeRecord[],
+): void => {
+  for (const [index, record] of records.entries()) {
+    const appended = appendHarnessCaptureOutcome(store, `gh381-outcome-${String(index)}`, record);
+    if (!appended.ok) throw new Error(`gh381 outcome seed failed: ${appended.error.code}`);
+  }
+};
+
+/** Seed one ref's full telemetry family set: two steps, one baseline, one v1 session, one outcome. */
+export const seedRefFamilies = (store: StateStorePort, ref: string): void => {
+  seedSteps(store, [gh381Step(ref, 1), gh381Step(ref, 2)]);
+  seedBaselineBatch(store, [gh381Baseline(ref)]);
+  seedV1Records(store, [gh381V1(ref)]);
+  seedCaptureOutcomes(store, [gh381Outcome(ref)]);
+};
+
+/**
+ * FX-1: two refs' full family sets interleaved in ledger order, `first` leading.
+ *
+ * Ledger order: first.s1, second.s1, first.s2, second.s2, first.baseline,
+ * second.baseline, first.v1, second.v1, first.outcome, second.outcome — ten
+ * records, every family of every ref present, both read directions covered by
+ * swapping the arguments.
+ */
+export const seedInterleavedFamilies = (
+  store: StateStorePort,
+  first: string,
+  second: string,
+): void => {
+  seedSteps(store, [gh381Step(first, 1), gh381Step(second, 1)]);
+  seedSteps(store, [gh381Step(first, 2), gh381Step(second, 2)]);
+  seedBaselineBatch(store, [gh381Baseline(first), gh381Baseline(second)]);
+  seedV1Records(store, [gh381V1(first), gh381V1(second)]);
+  seedCaptureOutcomes(store, [gh381Outcome(first), gh381Outcome(second)]);
+};
+
+/**
+ * FX-2: the observed record-3786 shape — the ledger's first telemetry-family
+ * records are valid steps of the earlier foreign ref, appearing before the
+ * requested ref's first record, followed by the requested ref's families.
+ */
+export const seedForeignFirstRegression = (
+  store: StateStorePort,
+  requested: string,
+  foreign: string,
+): void => {
+  seedSteps(store, [
+    gh381Step(foreign, 1),
+    gh381Step(foreign, 2),
+    gh381Step(foreign, 3),
+    gh381Step(requested, 1),
+  ]);
+  seedBaselineBatch(store, [gh381Baseline(requested)]);
+  seedV1Records(store, [gh381V1(requested)]);
+  seedCaptureOutcomes(store, [gh381Outcome(requested)]);
+};
+
+/** The observed-scale fixture's requested-ref step count. */
+export const GH381_SCALE_REQUESTED_STEPS = 800;
+/** The observed-scale fixture's foreign steps per requested step (incident-like proportions). */
+export const GH381_SCALE_FOREIGN_PER_REQUESTED = 5;
+/** The observed-scale ledger's total record count (steps interleaved plus both refs' families). */
+export const GH381_SCALE_TOTAL_RECORDS =
+  GH381_SCALE_REQUESTED_STEPS * (1 + GH381_SCALE_FOREIGN_PER_REQUESTED) + 6;
+
+/**
+ * FX-6: the observed ledger scale — ≥ 4,800 records, two refs mixed throughout
+ * in incident-like proportions (a long earlier change's steps interleaved with
+ * the requested ref's records), plus both refs' remaining families.
+ */
+export const seedObservedScaleLedger = (
+  store: StateStorePort,
+  requested: string,
+  foreign: string,
+): void => {
+  const interleaved: TelemetryStepRecord[] = [];
+  for (let index = 1; index <= GH381_SCALE_REQUESTED_STEPS; index += 1) {
+    for (
+      let foreignIndex = 0;
+      foreignIndex < GH381_SCALE_FOREIGN_PER_REQUESTED;
+      foreignIndex += 1
+    ) {
+      interleaved.push(
+        gh381Step(foreign, index * GH381_SCALE_FOREIGN_PER_REQUESTED + foreignIndex),
+      );
+    }
+    interleaved.push(gh381Step(requested, index));
+  }
+  seedStepBatch(store, interleaved);
+  seedBaselineBatch(store, [gh381Baseline(requested), gh381Baseline(foreign)]);
+  seedV1Records(store, [gh381V1(requested), gh381V1(foreign)]);
+  seedCaptureOutcomes(store, [gh381Outcome(requested), gh381Outcome(foreign)]);
+};
+
+/** The telemetry family whose key grammar an arm exercises. */
+export type Gh381FamilyName = "step" | "baseline";
+
+/** The 1-based ledger sequence the next append will land at. */
+const gh381NextSequence = (store: StateStorePort): number => {
+  const read = store.readRecords();
+  if (!read.ok) throw new Error(`gh381 sequence probe failed: ${read.error.code}`);
+  return read.value.records.length + 1;
+};
+
+const gh381AppendRaw = (
+  store: StateStorePort,
+  token: string,
+  request: {
+    readonly kind: string;
+    readonly recordKey: string;
+    readonly payload: StateJsonValue;
+  },
+): void => {
+  withinFence(store, token, (handle) => {
+    const appended = store.append(handle, request);
+    if (!appended.ok) throw new Error(`gh381 raw seed failed: ${appended.error.code}`);
+  });
+};
+
+/**
+ * FX-3: append the bare family prefix — the family prefix with an empty ref
+ * remainder — carrying the family's own record kind (the realistic writer-bug
+ * shape) with valid framing and checksums. Returns the record's 1-based ledger
+ * sequence, the position the delivered tear must name.
+ */
+export const seedBarePrefixRecord = (store: StateStorePort, family: Gh381FamilyName): number => {
+  const sequence = gh381NextSequence(store);
+  gh381AppendRaw(
+    store,
+    `gh381-bare-${family}`,
+    family === "step"
+      ? {
+          kind: TELEMETRY_STEP_RECORD_KIND,
+          recordKey: TELEMETRY_STEP_KEY_PREFIX,
+          payload: gh381StepPayload(gh381Step(GH381_REF, 1)),
+        }
+      : {
+          kind: TELEMETRY_BASELINE_RECORD_KIND,
+          recordKey: TELEMETRY_BASELINE_KEY_PREFIX,
+          payload: gh381BaselinePayload(gh381Baseline(GH381_REF)),
+        },
+  );
+  return sequence;
+};
+
+/** The requested-ref damage arms of FX-4. */
+export type Gh381RequestedDamageArm =
+  | "stepKindMismatch"
+  | "baselineKindMismatch"
+  | "stepMalformedPayload";
+
+/**
+ * FX-4: append one requested-ref damage arm under the ref's own key with valid
+ * framing and checksums, at a known sequence. The malformed-payload arm is the
+ * delivered malformed precedent — a schema-valid frame with a non-integer token
+ * class. Returns the record's 1-based ledger sequence.
+ */
+export const seedRequestedRefDamage = (
+  store: StateStorePort,
+  ref: string,
+  arm: Gh381RequestedDamageArm,
+): number => {
+  const sequence = gh381NextSequence(store);
+  gh381AppendRaw(
+    store,
+    `gh381-damage-${arm}`,
+    arm === "stepKindMismatch"
+      ? {
+          kind: "harness.telemetry.unknown",
+          recordKey: telemetryStepKey(ref),
+          payload: { schemaId: TELEMETRY_STEP_SCHEMA_ID, marker: "canary" },
+        }
+      : arm === "baselineKindMismatch"
+        ? {
+            kind: TELEMETRY_STEP_RECORD_KIND,
+            recordKey: telemetryBaselineKey(ref),
+            payload: { schemaId: TELEMETRY_BASELINE_SCHEMA_ID },
+          }
+        : {
+            kind: TELEMETRY_STEP_RECORD_KIND,
+            recordKey: telemetryStepKey(ref),
+            payload: {
+              ...gh381StepPayload(gh381Step(ref, 1)),
+              tokens: { input: 1.5, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+            },
+          },
+  );
+  return sequence;
+};
+
+/**
+ * TC-TELEMETRY-044: append a foreign family record that deliberately carries
+ * the wrong kind for its family and a garbage payload no family schema would
+ * validate. The ledger stays verifier-clean — framing, sequence, and checksum
+ * are valid — so reading the owning ref tears at the kind inspection while
+ * reading any other ref must skip the record without any inspection.
+ * Returns the record's 1-based ledger sequence.
+ */
+export const seedForeignFamilyDamage = (
+  store: StateStorePort,
+  foreign: string,
+  family: Gh381FamilyName,
+): number => {
+  const sequence = gh381NextSequence(store);
+  gh381AppendRaw(
+    store,
+    `gh381-foreign-damage-${family}`,
+    family === "step"
+      ? {
+          kind: TELEMETRY_BASELINE_RECORD_KIND,
+          recordKey: telemetryStepKey(foreign),
+          payload: { schemaId: TELEMETRY_BASELINE_SCHEMA_ID, garbage: "not-a-valid-payload" },
+        }
+      : {
+          kind: TELEMETRY_STEP_RECORD_KIND,
+          recordKey: telemetryBaselineKey(foreign),
+          payload: { schemaId: TELEMETRY_STEP_SCHEMA_ID, garbage: "not-a-valid-payload" },
+        },
+  );
+  return sequence;
+};
+
+/** One FX-5 golden arm: the store identity plus the families read over it. */
+export type Gh381GoldenCase = {
+  readonly identity: StateStoreIdentity;
+  readonly read: StateResult<TelemetryFamiliesRead>;
+};
+
+export type Gh381GoldenCases = {
+  readonly healthy: Gh381GoldenCase;
+  readonly emptyLedger: Gh381GoldenCase;
+  readonly tears: {
+    readonly bareStepPrefix: Gh381GoldenCase;
+    readonly bareBaselinePrefix: Gh381GoldenCase;
+    readonly stepKindMismatch: Gh381GoldenCase;
+    readonly baselineKindMismatch: Gh381GoldenCase;
+    readonly stepMalformedPayload: Gh381GoldenCase;
+  };
+  /** Remove every temp root the cases created. */
+  readonly dispose: () => void;
+};
+
+/**
+ * Build every FX-5 golden arm: the healthy single-ref ledger, the verified-empty
+ * ledger, and each delivered tear case, each in its own per-test temp root
+ * through the shared builders, so the capture entry and the TC-TELEMETRY-046
+ * comparison build byte-identical fixtures.
+ *
+ * The verified-empty arm is the truly empty ledger: delivered behavior for a
+ * ref with no telemetry is identical pre- and post-fix only there. An absent
+ * ref over a ledger holding another ref's families tears pre-fix — that shape
+ * is the defect itself, so it belongs to the multi-ref matrix (TC-TELEMETRY-040),
+ * never to this golden.
+ */
+export const buildGh381GoldenCases = (): Gh381GoldenCases => {
+  const roots: string[] = [];
+  const caseOf = (
+    label: string,
+    build: (store: StateStorePort) => void,
+    ref: string,
+  ): Gh381GoldenCase => {
+    const root = makeTempRoot(`gh381-golden-${label}`);
+    roots.push(root);
+    const identity = makeIdentity(root);
+    const { store } = openStore(identity);
+    build(store);
+    return { identity, read: readTelemetryFamilies(store, ref) };
+  };
+  const seeded = (store: StateStorePort): void => {
+    seedRefFamilies(store, GH381_REF);
+  };
+  return {
+    healthy: caseOf("healthy", seeded, GH381_REF),
+    emptyLedger: caseOf("empty-ledger", () => undefined, GH381_REF),
+    tears: {
+      bareStepPrefix: caseOf(
+        "bare-step",
+        (store) => {
+          seeded(store);
+          seedBarePrefixRecord(store, "step");
+        },
+        GH381_REF,
+      ),
+      bareBaselinePrefix: caseOf(
+        "bare-baseline",
+        (store) => {
+          seeded(store);
+          seedBarePrefixRecord(store, "baseline");
+        },
+        GH381_REF,
+      ),
+      stepKindMismatch: caseOf(
+        "step-kind",
+        (store) => {
+          seeded(store);
+          seedRequestedRefDamage(store, GH381_REF, "stepKindMismatch");
+        },
+        GH381_REF,
+      ),
+      baselineKindMismatch: caseOf(
+        "baseline-kind",
+        (store) => {
+          seeded(store);
+          seedRequestedRefDamage(store, GH381_REF, "baselineKindMismatch");
+        },
+        GH381_REF,
+      ),
+      stepMalformedPayload: caseOf(
+        "step-payload",
+        (store) => {
+          seeded(store);
+          seedRequestedRefDamage(store, GH381_REF, "stepMalformedPayload");
+        },
+        GH381_REF,
+      ),
+    },
+    dispose: () => {
+      for (const root of roots.splice(0)) removeRoot(root);
+    },
+  };
+};
+
+/** Replace the per-run temp state directory with a stable placeholder (golden normalization). */
+export const normalizeGh381StorePath = (identity: StateStoreIdentity, storePath: string): string =>
+  storePath.split(identity.stateDirectory).join("<stateDirectory>");
+
+/** The normalized single-ref read result the golden pins (no absolute paths). */
+export type Gh381NormalizedRead = {
+  readonly steps: readonly TelemetryStepRecord[];
+  readonly baselines: readonly TelemetryBaselineRecord[];
+  readonly records: readonly HarnessTelemetryRecord[];
+  readonly outcomes: readonly HarnessCaptureOutcomeRecord[];
+  readonly verifiedEmpty: boolean;
+  readonly evidence: { readonly storePath: string; readonly recordCount: number };
+};
+
+/** The normalized tear identity and location the golden pins (no absolute paths). */
+export type Gh381NormalizedTear = {
+  readonly kind: "state";
+  readonly code: "state.store.torn";
+  readonly consequence: "not_landed";
+  readonly location: { readonly path: string; readonly record: number };
+};
+
+/** Normalize a successful families read for golden comparison; throws when it failed. */
+export const normalizeGh381Read = (
+  identity: StateStoreIdentity,
+  read: StateResult<TelemetryFamiliesRead>,
+): Gh381NormalizedRead => {
+  if (!read.ok) throw new Error(`golden read arm failed: ${read.error.code}`);
+  return {
+    steps: read.value.steps,
+    baselines: read.value.baselines,
+    records: read.value.records,
+    outcomes: read.value.outcomes,
+    verifiedEmpty: read.value.verifiedEmpty,
+    evidence: {
+      storePath: normalizeGh381StorePath(identity, read.value.evidence.storePath),
+      recordCount: read.value.evidence.recordCount,
+    },
+  };
+};
+
+/** Normalize a torn families read for golden comparison; throws when it succeeded. */
+export const normalizeGh381Tear = (
+  identity: StateStoreIdentity,
+  read: StateResult<TelemetryFamiliesRead>,
+): Gh381NormalizedTear => {
+  if (read.ok) throw new Error("golden tear arm unexpectedly succeeded");
+  if (read.error.location.record === undefined) {
+    throw new Error("golden tear arm carries no record location");
+  }
+  return {
+    kind: read.error.kind,
+    code: read.error.code,
+    consequence: read.error.consequence,
+    location: {
+      path: normalizeGh381StorePath(identity, read.error.location.path),
+      record: read.error.location.record,
+    },
+  };
 };
