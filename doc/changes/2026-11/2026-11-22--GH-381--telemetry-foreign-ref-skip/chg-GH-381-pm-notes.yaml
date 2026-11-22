@@ -141,3 +141,27 @@ notes:
       scope. dod_check will read pm-notes + delivery-os phase list evidence."
     type: info
     date: "2026-11-22"
+  - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden),
+      commit a9a3a029. tests/fixtures/telemetry/index.ts gains the GH-381
+      fixture family (refs GH-381/GH-365/GH-000; FX-1 interleaved both
+      directions, FX-2 foreign-first regression, FX-3 bare prefixes, FX-4
+      requested-ref damage arms, FX-6 observed-scale 4,806 records via the
+      delivered batch fence technique, the FX-5 golden-arm builder, and the
+      TC-044 foreign-damage seeder) plus shared path-normalization helpers;
+      foreign-ref-skip-golden-run.ts is the explicit capture entry and
+      foreign-ref-skip-golden.ts the committed golden (7 arms: healthy
+      single-ref read, verified-empty empty-ledger read, five delivered tear
+      identities+locations all at record 6; store paths normalized to
+      <stateDirectory>). Binding ordering constraint honored: golden captured
+      BEFORE any packages/core/src/state/telemetry.ts edit. Seeding note:
+      two refs' baselines cannot both go through appendTelemetryBaseline (its
+      delivered idempotency pre-read tears on a same-family foreign key — out
+      of scope per DEC-3), so multi-ref baselines are raw-appended in one
+      fence with the delivered writer's exact payload/kind/key (byte-identical
+      stored record) — the delivered scale-batch precedent. Verification:
+      capture entry run twice — byte-identical and biome-check clean;
+      bun test tests/behaviour/telemetry-storage-damage.test.ts 5 pass / 0
+      fail (delivered tear conventions unchanged); pnpm typecheck and tests
+      types/tsc green. Test result: PASS."
+    type: info
+    date: "2026-11-22"

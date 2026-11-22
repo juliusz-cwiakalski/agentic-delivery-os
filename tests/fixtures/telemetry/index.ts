@@ -7,6 +7,8 @@
  * injected literals; no suite reads the ambient clock, environment, network,
  * or the live tree.
  */
+
+import { appendFileSync } from "node:fs";
 import { createOpencodeSession } from "../../../packages/adapters/src/harness/index";
 import { createTelemetryIngestSink } from "../../../packages/cli/src/edge";
 import {
@@ -62,6 +64,7 @@ import {
   telemetryBaselineKey,
   telemetryStepKey,
 } from "../../../packages/core/src/state/index";
+import { buildRecord, serializeRecord } from "../../../packages/core/src/state/ledger";
 import {
   assembleLiveness,
   classifier,
@@ -76,7 +79,14 @@ import {
   SPAWN_ENV_DESCRIPTOR,
   type StreamScript,
 } from "../harness/harness-io";
-import { makeIdentity, makeTempRoot, openStore, removeRoot, withinFence } from "../state/harness";
+import {
+  ledgerPath,
+  makeIdentity,
+  makeTempRoot,
+  openStore,
+  removeRoot,
+  withinFence,
+} from "../state/harness";
 
 export { makeIdentity, makeTempRoot, openStore, removeRoot } from "../state/harness";
 
@@ -653,29 +663,6 @@ const gh381BaselinePayload = (record: TelemetryBaselineRecord) =>
   }) satisfies StateJsonValue;
 
 /**
- * Batch-append step records in one fence through the delivered record seam.
- *
- * `appendTelemetryStep` is itself correct here, but the observed-scale fixture
- * seeds thousands of records and one fence keeps the fixture to a single fence
- * cycle at the delivered record shape (the delivered batch technique).
- */
-export const seedStepBatch = (
-  store: StateStorePort,
-  records: readonly TelemetryStepRecord[],
-): void => {
-  withinFence(store, "gh381-step-batch", (handle) => {
-    for (const record of records) {
-      const appended = store.append(handle, {
-        kind: TELEMETRY_STEP_RECORD_KIND,
-        recordKey: telemetryStepKey(record.workItemRef),
-        payload: gh381StepPayload(record),
-      });
-      if (!appended.ok) throw new Error(`gh381 step batch seed failed: ${appended.error.code}`);
-    }
-  });
-};
-
-/**
  * Batch-append baseline records in one fence through the delivered record seam.
  *
  * The delivered `appendTelemetryBaseline` cannot seed a second ref's baseline
@@ -774,9 +761,23 @@ export const GH381_SCALE_TOTAL_RECORDS =
  * FX-6: the observed ledger scale — ≥ 4,800 records, two refs mixed throughout
  * in incident-like proportions (a long earlier change's steps interleaved with
  * the requested ref's records), plus both refs' remaining families.
+ *
+ * The bulk steps land through the delivered ledger core — `buildRecord` and
+ * `serializeRecord`, the exact calls the store's own `appendRecord` makes per
+ * write — emitted in one pass: the delivered verified write re-verifies the
+ * whole ledger on every append, so seeding thousands of records through
+ * `store.append` is quadratic (minutes of wall time in every future gate run),
+ * while the direct emission keeps every stored record byte-identical to a
+ * delivered write. The first record and both refs' remaining families go
+ * through the delivered store append, so the root, header, and ledger exist
+ * through the delivered path and each later store append re-verifies the
+ * direct-written records on the spot. The verified read at test time — the
+ * property actually under test — parses, sequences, and checksums every record
+ * in one pass regardless of which write path landed it.
  */
 export const seedObservedScaleLedger = (
   store: StateStorePort,
+  identity: StateStoreIdentity,
   requested: string,
   foreign: string,
 ): void => {
@@ -793,7 +794,29 @@ export const seedObservedScaleLedger = (
     }
     interleaved.push(gh381Step(requested, index));
   }
-  seedStepBatch(store, interleaved);
+  // Bootstrap the root, header, and ledger through the delivered store append.
+  seedSteps(store, interleaved.slice(0, 1));
+  const bootstrap = store.readRecords();
+  if (!bootstrap.ok) throw new Error(`gh381 scale seed failed: ${bootstrap.error.code}`);
+  let sequence = bootstrap.value.records.length;
+  const lines: string[] = [];
+  for (const record of interleaved.slice(1)) {
+    sequence += 1;
+    lines.push(
+      serializeRecord(
+        buildRecord(
+          TELEMETRY_STEP_RECORD_KIND,
+          telemetryStepKey(record.workItemRef),
+          sequence,
+          gh381StepPayload(record),
+          identity.schemaVersion,
+        ),
+      ),
+    );
+  }
+  appendFileSync(ledgerPath(identity), lines.join(""));
+  // Both refs' remaining families through the delivered store append; each of
+  // these six verified writes also re-verifies the bulk records written above.
   seedBaselineBatch(store, [gh381Baseline(requested), gh381Baseline(foreign)]);
   seedV1Records(store, [gh381V1(requested), gh381V1(foreign)]);
   seedCaptureOutcomes(store, [gh381Outcome(requested), gh381Outcome(foreign)]);
