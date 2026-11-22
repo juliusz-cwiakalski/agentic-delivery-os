@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-21T23:52:46.272Z }
   quality_gates: { started: null, completed: 2026-11-22T00:18:26.616Z }
   dod_check: { started: null, completed: 2026-11-22T00:19:41.759Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-22T00:22:33.198Z }
 decisions:
   - text: "Scope source is the ticket body plus the owner comment of 2026-11-19 and
       the M4 blueprint the ticket cites (backlog M4-S2, install-model.md,
@@ -73,6 +73,14 @@ decisions:
       the current host root; the migration guide records it."
     date: "2026-11-21"
 notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/379 —
+      `feat/GH-365/jaiship-namespace-migration` → `main-tools`, 42 commits,
+      open, not merged, merge authority with the owner. PR body carries the
+      delivered scope, gate evidence, TDR-0074/DEC-13, and the residual
+      advisories. Ticket #365 is marked ready for review with the PR link."
+    type: info
+    date: "2026-11-22"
   - text: "DoD CHECK = PASS. Ledger: all phases through quality_gates complete
       (9/11); every plan phase P1-P10 has a pm-notes COMPLETE record naming its
       commit and committed-head gate (P1 a3ba0672, P2
