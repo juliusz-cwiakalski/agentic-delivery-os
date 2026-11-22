@@ -4,8 +4,8 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-22T00:48:34.656Z }
-  specification: { started: null, completed: 2026-11-22T01:43:20.091Z }
-  test_planning: { started: null, completed: 2026-11-22T01:43:34.063Z }
+  specification: { started: null, completed: 2026-11-22T02:10:29.582Z }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-22T01:43:48.473Z }
   dor_check: { started: null, completed: 2026-11-22T01:48:22.246Z }
   delivery: { started: null, completed: null }
@@ -79,6 +79,20 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Post-delivery artifact alignment (PM-decided, autonomous): the coder
+      surfaced two literal mismatches between the artifacts and delivered
+      behaviour, both fixed as spec v1.3 / test plan v1.3 with no scope, AC set,
+      DOD, TDR, or vocabulary change. (1) AC-F1-1/TC-059 now accept the
+      delivered lifecycle `outcome` (`selected` or `switched` on the first
+      base→paid target move) while pinning the selection facts; §8.5 states the
+      criterion asserts the selection facts, not a forced lifecycle outcome. (2)
+      TC-095 now uses three providers (A short bound stale, B long bound fresh,
+      C no target never stale) because the delivered `provider.profiles.watch`
+      shape is one target per provider name. DoR iteration 3 remains READY; per
+      the three-iteration cap no fourth gate run is made, and the alignment
+      changes no facet."
+    type: info
+    date: "2026-11-22"
   - text: "DoR ITERATION 3 = READY (Pause Required: no). All ten facets PASS;
       iteration-2 findings 1-7 all CLOSED (data refusal envelope, two-level
       substitution rule, dispatch-engine/result-contract page scope,
@@ -226,15 +240,15 @@ notes:
       `createResolvedProviderProbe` — one verified park fold per resolution, the
       provider-attributable cause classification, the per-declared-target
       staleness rule, the composition-supplied observation seam, and the
-      fail-closed fold verdict. Targeted suites:
-      `bun test tests/behaviour/provider-profile-edge-wiring.test.ts
+      fail-closed fold verdict. Targeted suites: `bun test
+      tests/behaviour/provider-profile-edge-wiring.test.ts
       tests/behaviour/provider-profile-selection.test.ts
       tests/behaviour/provider-profile-probes.test.ts
       tests/structure/provider-contract.test.ts
       tests/structure/provider-profile-contract.test.ts
       tests/checks/provider-profile-evidence-bounds.test.ts
-      tests/checks/provider-profile-hermetic.test.ts` => 86 pass, 0 fail.
-      `pnpm typecheck` green. Note: AC-F1-1/TC-PROFILE-059 say `outcome: selected`,
+      tests/checks/provider-profile-hermetic.test.ts` => 86 pass, 0 fail. `pnpm
+      typecheck` green. Note: AC-F1-1/TC-PROFILE-059 say `outcome: selected`,
       but the delivered unchanged lifecycle returns `switched` on the first
       base->fallback move (spec §8.5 keeps the lifecycle unchanged); the test
       asserts the selection facts and accepts the delivered lifecycle outcome."
@@ -252,8 +266,8 @@ notes:
       eligibility list carried unchanged and no profile event. Targeted suites:
       `bun test tests/behaviour/provider-profile-selection.test.ts
       tests/checks/provider-profile-evidence-bounds.test.ts
-      tests/checks/provider-profile-hermetic.test.ts` => 49 pass, 0 fail.
-      `pnpm --filter @delivery-os/core typecheck` green."
+      tests/checks/provider-profile-hermetic.test.ts` => 49 pass, 0 fail. `pnpm
+      --filter @delivery-os/core typecheck` green."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 3 complete (commit 6cf2b4b70950b7149b05724036ff5c5c03f570ea):
@@ -265,17 +279,17 @@ notes:
       over a recorded quota park projected through the delivered lifecycle, so
       the pinned envelope comes from recorded facts rather than a canned
       literal; the committed golden bytes did not legitimately change and were
-      not regenerated. Targeted suites:
-      `bun test tests/behaviour/provider-profile-edge-wiring.test.ts
+      not regenerated. Targeted suites: `bun test
+      tests/behaviour/provider-profile-edge-wiring.test.ts
       tests/behaviour/provider-profile-spawn.test.ts
       tests/behaviour/provider-profile-park-switch-revert.test.ts
       tests/behaviour/provider-nomination-admission.test.ts
       tests/behaviour/harness-profile-composition-mount.test.ts
       tests/behaviour/harness-profile-per-spawn.test.ts
       tests/checks/provider-zone-refusal.test.ts
-      tests/golden/provider-profile-resolve.test.ts` => 72 pass, 0 fail.
-      `pnpm --filter @delivery-os/core typecheck` and
-      `pnpm --filter @delivery-os/cli typecheck` green."
+      tests/golden/provider-profile-resolve.test.ts` => 72 pass, 0 fail. `pnpm
+      --filter @delivery-os/core typecheck` and `pnpm --filter @delivery-os/cli
+      typecheck` green."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 4 complete (commit 3b7e2506120211afdaf50ac3ad3adeb8716e58c2):
@@ -286,17 +300,17 @@ notes:
       causes with a subject and effect per cause and both `budget-exhausted`
       scopes; its drift arms fail by name. `provider resolve` keeps its skip,
       park, next-eligible time and persisted generation, while the ticket-scope
-      crossing leaves no readable park. Targeted suites:
-      `bun test tests/behaviour/provider-profile-park-switch-revert.test.ts
+      crossing leaves no readable park. Targeted suites: `bun test
+      tests/behaviour/provider-profile-park-switch-revert.test.ts
       tests/behaviour/provider-profile-probes.test.ts
       tests/behaviour/provider-profile-edge-wiring.test.ts
       tests/behaviour/provider-parks.test.ts
       tests/behaviour/provider-chain-resolution.test.ts
       tests/structure/provider-contract.test.ts
-      tests/checks/provider-profile-hermetic.test.ts` => 114 pass, 0 fail;
-      the wider targeted set (13 suites, including selection, spawn,
-      nomination, evidence-bounds, profile-contract and golden) => 192 pass,
-      0 fail. `pnpm typecheck` green. Plan phase 5 is declaration-only and is
-      left to the `@doc-syncer` in lifecycle phase 7."
+      tests/checks/provider-profile-hermetic.test.ts` => 114 pass, 0 fail; the
+      wider targeted set (13 suites, including selection, spawn, nomination,
+      evidence-bounds, profile-contract and golden) => 192 pass, 0 fail. `pnpm
+      typecheck` green. Plan phase 5 is declaration-only and is left to the
+      `@doc-syncer` in lifecycle phase 7."
     type: info
     date: "2026-11-22"
