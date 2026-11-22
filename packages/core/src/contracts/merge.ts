@@ -366,3 +366,41 @@ export const MERGE_GATE_ERROR_PREFIX = "merge.gate." as const;
 export const MERGE_GATE_ERROR_SUFFIX = ".failed" as const;
 /** The documented family template. */
 export const MERGE_GATE_ERROR_TEMPLATE = "merge.gate.<gate-id>.failed" as const;
+
+/**
+ * The closed refusal `operation` vocabulary (DEC-11, AC-F3-1): nine tokens plus
+ * `-`, rendered as the dedicated `operation=<token>` field beside a refusal's
+ * code, and validated at the rendering site where an out-of-vocabulary value is
+ * a rendering failure and never passed through.
+ *
+ * The set is a declared FILTER over the delivered source-name vocabulary: every
+ * provider read a refusal can cite has its token — `delivery-registry`,
+ * `repository-ci-workflow`, `github-check-runs`, `github-work-item`,
+ * `github-delivery-request-list` (either state filter on a delivery-request
+ * list read: the open list on the resolution path, the closed-state merged read
+ * on the convergence attempt), and `github-delivery-request-detail` (the
+ * delivered single-request read the landing decision makes for mergeability,
+ * and its unknown-recovery re-read). Two delivered members are excluded for
+ * stated reasons: `repository-head` (no checkout-head read exists on this path,
+ * and NFR-6 forbids one) and `pm-notes` (the change record is obtained as a git
+ * object, so the operation that can fail is a local read and the local tokens
+ * name it). The set adds the two local-read tokens the delivered vocabulary
+ * does not name (`local-change-record-read`, `local-git-object-read`), the one
+ * landing-operation token (`github-merge-delivery-request`), and `-` where the
+ * refusal names no operation (a gate refusal, a stale or unverified evidence
+ * set, or a condition about a declaration's value rather than a read). The
+ * battery's own source-name inventory is not widened by this export.
+ */
+export const MERGE_REFUSAL_OPERATIONS = [
+  "github-work-item",
+  "github-check-runs",
+  "github-delivery-request-list",
+  "github-delivery-request-detail",
+  "github-merge-delivery-request",
+  "repository-ci-workflow",
+  "delivery-registry",
+  "local-change-record-read",
+  "local-git-object-read",
+  "-",
+] as const;
+export type MergeRefusalOperation = (typeof MERGE_REFUSAL_OPERATIONS)[number];

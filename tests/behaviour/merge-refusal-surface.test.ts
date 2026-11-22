@@ -230,8 +230,15 @@ describe("TC-MERGE-012 every refusal is legible and safe", () => {
       exit: 1,
       evidence: { gateId: "ci-green", jobs: ["CI / test (18)"] },
     };
-    expect(renderMergeFailure(failure)).toContain("gate=ci-green");
-    expect(renderMergeFailure({ ...failure, evidence: {} })).not.toContain("gate=ci-green");
+    const rendered = (value: MergeFailure): string =>
+      renderMergeFailure(value, { command: "merge", ref: "GH-301" });
+    expect(rendered(failure)).toContain("gate=ci-green");
+    expect(rendered({ ...failure, evidence: {} })).not.toContain("gate=ci-green");
+    // The dedicated fields render beside the condition, from the context and
+    // the closed vocabulary, never from a substring of the summary (AC-F3-1).
+    expect(rendered(failure)).toContain("command=merge");
+    expect(rendered(failure)).toContain("ref=GH-301");
+    expect(rendered(failure)).toContain("operation=-");
   });
 });
 

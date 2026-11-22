@@ -5,6 +5,8 @@
  * rejection is a classified refusal that is never retried.
  */
 import { describe, expect, test } from "bun:test";
+import { projectExitCode } from "../../packages/cli/src/projection";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   baseRequest,
   createFakeGit,
@@ -16,6 +18,12 @@ import {
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
+
+const exitOf = (code: string): number => {
+  const row = ERROR_TABLE.find((entry) => entry.code === code);
+  if (row === undefined) throw new Error(`no declared row for ${code}`);
+  return projectExitCode(row.projectionClass);
+};
 
 const MOVED_HEAD = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
 
@@ -60,16 +68,20 @@ describe("TC-F1-005 a moved head refuses with exactly zero landing calls", () =>
     }
   });
 
-  test("a provider-side head rejection is classified and never retried", async () => {
+  test("a provider-side head rejection reports the declared landing identity and is never retried", async () => {
     const harness = createMergeHarness({
       landing: { ok: false, code: "head-mismatch" },
     });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run();
-      expect(result.exitCode).toBe(1);
-      expect(errorOf(result)?.code).toBe("merge.transaction-aborted");
-      expect(String(errorOf(result)?.summary)).toContain("head-mismatch");
+      // The unclassified port token takes the declared `provider.outage`
+      // default arm (AC-F3-3); the raw token never reaches the envelope.
+      expect(result.exitCode).toBe(exitOf("provider.outage"));
+      expect(errorOf(result)?.code).toBe("provider.outage");
+      const summary = String(errorOf(result)?.summary);
+      expect(summary).toContain("operation=github-merge-delivery-request");
+      expect(summary).not.toContain("head-mismatch");
       // Exactly one attempt: a rejected landing is never re-issued.
       expect(harness.counts.landing).toBe(1);
       expect(harness.transactions()).toHaveLength(0);

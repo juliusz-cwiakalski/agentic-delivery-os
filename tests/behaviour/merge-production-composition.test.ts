@@ -9,7 +9,7 @@
  * transcribed.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
@@ -337,6 +337,101 @@ describe("TC-ENGINE-052 a missing credential is config at exit 1", () => {
   });
 });
 
+describe("GH-366 the diagnostics contract cells (phase 2)", () => {
+  test("TC-MRG-020/021 an absent token names the reference, the environment variable, and the attempted operation, and is never the generic abort", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-credential-naming",
+      reply: healthyReply,
+    });
+    try {
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setCredential("missing");
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("config.credential.missing"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("config.credential.missing");
+      const summary = String(error.summary ?? "");
+      // The declared reference name and the environment variable are named as
+      // dedicated evidence, and the operation that required them is the
+      // dedicated `operation=` field — never the generic abort row.
+      expect(summary).toContain("credential-reference=github-read");
+      expect(summary).toContain("credential-source=GITHUB_TOKEN");
+      expect(summary).toMatch(/operation=github-[a-z-]+/);
+      expect(error.code).not.toBe("merge.transaction-aborted");
+      expect(summary).not.toContain("merge.transaction-aborted");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-022 an unresolvable work item names its own identity, the invocation ref, and the read operation", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-work-item-unresolved",
+      reply: healthyReply,
+    });
+    try {
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setReply((url) => {
+        if (url.includes("/issues/")) return { status: 404, body: {} };
+        return healthyReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.work-item-unresolved"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.work-item-unresolved");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+      expect(summary).toContain("operation=github-work-item");
+      expect(summary).not.toContain("merge.transaction-aborted");
+      expect(summary).not.toContain("fallback.internal");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-051 the unverified-state remediation names the exact prior command and target", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-state-unverified",
+      reply: healthyReply,
+    });
+    try {
+      // No verification record exists: the freshness precondition is unmet.
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.state-unverified"));
+      expect(run.exitCode).toBe(2);
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.state-unverified");
+      const summary = String(error.summary ?? "");
+      // The remediation names the producing command and the target form, and
+      // the read that observed the absence names the delivery registry.
+      expect(summary).toContain("verify gates <ref>");
+      expect(summary).toContain("for the same work item, then re-run");
+      expect(summary).not.toContain("Produce a gate verification with `verify gates` and retry");
+      expect(summary).toContain("operation=delivery-registry");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+      // The documented row carries the same remediation (the sync check binds
+      // it; this pins the LF-2 sentence on the page).
+      expect(readFileSync("doc/spec/features/feature-result-contract.md", "utf8")).toContain(
+        "Produce the verification with `verify gates <ref>` for the same work item, then re-run",
+      );
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+});
+
 describe("TC-ENGINE-053 read and state faults stay classified on every path", () => {
   test("provider, state, and request faults are classified by their declared rows", async () => {
     const guard = createNoNetworkGuard();
@@ -422,8 +517,10 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
           return healthyReply(url);
         });
         const unresolved = await unresolvedHarness.run(["merge", MERGE_PROD_REF, "--json"]);
-        expect(unresolved.exitCode).toBe(exitOf("merge.transaction-aborted"));
-        expect(envelopeOf(unresolved).error?.code).toBe("merge.transaction-aborted");
+        // The pre-resolution placeholder routing (phase 2): the two
+        // request-resolution returns refuse the request row's own identity.
+        expect(unresolved.exitCode).toBe(exitOf("merge.request-unresolved"));
+        expect(envelopeOf(unresolved).error?.code).toBe("merge.request-unresolved");
         expect(String(envelopeOf(unresolved).error?.summary)).not.toContain("fallback.internal");
         expect(
           (MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).includes(

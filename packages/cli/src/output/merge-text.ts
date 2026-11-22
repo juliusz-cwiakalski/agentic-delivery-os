@@ -6,6 +6,8 @@
  * summary is bounded to 24 lines and 4 096 UTF-8 bytes; decisive lines come
  * first and every omitted gate is marked.
  */
+
+import { type MergeFailure, renderMergeFailure } from "@delivery-os/core";
 import {
   type BrandIdentity,
   MERGE_MAX_EVIDENCE_NAME_CHARS,
@@ -53,6 +55,19 @@ const bound = (lines: readonly string[]): string => {
  */
 const shaOnBaseToken = (value: MergeReport["landing"]["shaOnBase"]): string =>
   value === true ? "yes" : value === false ? "no" : "unknown";
+
+/**
+ * Render one merge refusal with its three dedicated fields (DEC-11, AC-F3-1).
+ *
+ * The summary is the human AND the scripted refusal text: the condition line,
+ * then `command=merge`, `ref=<ref>` carrying the invocation's ref, and
+ * `operation=<token>` validated against the closed vocabulary at this rendering
+ * site — an out-of-vocabulary token fails the rendering by name instead of
+ * being passed through. Delegation keeps the evidence and remediation lines in
+ * the one declared renderer.
+ */
+export const renderMergeRefusal = (failure: MergeFailure, ref: string): string =>
+  renderMergeFailure(failure, { command: "merge", ref });
 
 /** Render one merged transaction summary. */
 export const renderMergeHuman = (report: MergeReport, brand: BrandIdentity): string => {

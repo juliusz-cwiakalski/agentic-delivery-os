@@ -1089,6 +1089,7 @@ export {
   loopStopInstruction,
   MERGE_TRANSACTION_RECORD_KIND,
   type MergeCheckRunPage,
+  type MergeCredentialFacts,
   type MergeEffectiveGateSet,
   type MergeFailure,
   type MergeFailureEvidence,

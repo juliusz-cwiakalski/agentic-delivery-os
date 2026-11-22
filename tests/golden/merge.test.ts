@@ -61,6 +61,7 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
     "refusal-tracker",
     "refusal-waiver",
     "refusal-override",
+    "refusal-work-item",
   ] as const;
 
   for (const name of cases) {
@@ -98,14 +99,33 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
     expect(text).toContain("age=1m");
   });
 
+  test("every refusal golden renders the three dedicated fields beside its condition", () => {
+    // The phase-2 rendering contract (DEC-11): the dedicated `command=merge`,
+    // `ref=<ref>` and `operation=<token>` fields follow the condition line in
+    // the human form and inside the scripted summary, drawn from the context
+    // and the closed vocabulary — never from a summary substring.
+    for (const name of cases) {
+      const text = goldenText(`${name}-human.txt`);
+      expect(text, name).toContain("command=merge");
+      expect(text, name).toContain("ref=GH-301");
+      expect(text, name).toMatch(
+        /operation=(github-[a-z-]+|repository-[a-z-]+|delivery-registry|local-[a-z-]+|-)(\n|$)/,
+      );
+      const scripted = goldenText(`${name}-scripted.json`);
+      expect(scripted, name).toContain("command=merge");
+      expect(scripted, name).toContain("ref=GH-301");
+      expect(scripted, name).toContain("operation=");
+    }
+  });
+
   test("a changed evidence field in a mutated golden fails", () => {
     const golden = goldenText("refusal-stale-human.txt");
     expect(golden.replace("verification-age=31m", "verification-age=30m")).not.toBe(golden);
   });
 });
 
-describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly thirteen files", () => {
-  /** The eleven goldens this change must leave byte-identical, plus phase 3's pair. */
+describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly fifteen files", () => {
+  /** The ten refusal goldens the dedicated fields moved, the added work-item pair, and the success trio. */
   const EXPECTED = [
     "refusal-gate-human.txt",
     "refusal-gate-scripted.json",
@@ -117,12 +137,14 @@ describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly thirteen files"
     "refusal-tracker-scripted.json",
     "refusal-waiver-human.txt",
     "refusal-waiver-scripted.json",
+    "refusal-work-item-human.txt",
+    "refusal-work-item-scripted.json",
     "success-data.json",
     "success-human.txt",
     "success-scripted.json",
   ] as const;
 
-  test("the directory holds the thirteen declared files and the retired pair is absent", () => {
+  test("the directory holds the fifteen declared files and the retired pair is absent", () => {
     const present = readdirSync(GOLDEN).sort();
     expect(present).toEqual([...EXPECTED].sort());
     for (const retired of ["refusal-rebase-human.txt", "refusal-rebase-scripted.json"]) {
@@ -130,7 +152,7 @@ describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly thirteen files"
     }
     // The directory is never declared as a folder, so a third moved or retired
     // file is visible here rather than silently regenerated.
-    expect(present).toHaveLength(13);
+    expect(present).toHaveLength(15);
   });
 
   test("no golden carries the retired scenario's identity", () => {

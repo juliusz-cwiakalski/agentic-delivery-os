@@ -178,4 +178,12 @@ export const goldenScenarios = (): Record<string, () => GoldenHarness> => ({
     harness.seedVerification(gatedRecord());
     return { harness, args: [] };
   },
+  "refusal-work-item": () => {
+    // The work-item refusal's emitter (GH-366 AC-F3-4): a tracker object that
+    // does not resolve names its own identity, the invocation ref, and the
+    // read operation, never the generic abort.
+    const harness = createMergeHarness({ workItem: { fault: "merge.work-item-unresolved" } });
+    harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+    return { harness, args: [] };
+  },
 });

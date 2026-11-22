@@ -336,7 +336,7 @@ every row is reachable from its reason.
 
 ## Error identities
 
-The machine table declares a `merge` domain kind with nine concrete rows
+The machine table declares a `merge` domain kind with twelve concrete rows
 (`merge.gates-stale`, `merge.waiver-unauthorized`,
 `merge.owner-gate-override-without-waiver`, `merge.rebase-conflict`,
 `merge.state-unverified`, `merge.landing-unverified`,

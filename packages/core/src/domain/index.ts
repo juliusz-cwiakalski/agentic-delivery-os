@@ -521,6 +521,7 @@ export {
   defaultFreshnessSeconds,
   gateSetFromValues,
   type MergeCheckRunPage,
+  type MergeCredentialFacts,
   type MergeFailure,
   type MergeFailureEvidence,
   type MergeLandResult,

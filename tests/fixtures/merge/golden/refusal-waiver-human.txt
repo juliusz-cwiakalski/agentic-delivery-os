@@ -1,5 +1,8 @@
 example-product: merge.waiver-unauthorized
 summary: result=refused; condition=merge.waiver-unauthorized
+command=merge
+ref=GH-301
+operation=-
 gate=owner-gate
 class=owner-review
 authorizer=someone-else

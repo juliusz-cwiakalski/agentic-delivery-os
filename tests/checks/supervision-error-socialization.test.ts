@@ -57,8 +57,8 @@ describe("TC-SUP-071 the live tree binds the two supervise rows", () => {
   test("the sync check is green and reports the moved counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(169);
-    expect(result.counts.documentedRows).toBe(169);
+    expect(result.counts.sourceEntries).toBe(172);
+    expect(result.counts.documentedRows).toBe(172);
     expect(result.counts.corpusRows).toBe(83);
   });
 });

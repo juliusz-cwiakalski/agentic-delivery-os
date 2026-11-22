@@ -150,6 +150,7 @@ import {
   type LoopSessionFacts,
   legacyStoreWarning,
   logByteLength,
+  type MergeCredentialFacts,
   maintainHostIndex,
   migrationBackupRoot,
   migrationRoots,
@@ -446,6 +447,12 @@ export const MERGE_COMPOSITION_EMITTABLE_CODES = [
   "merge.landing-unverified",
   "merge.sync-required",
   "merge.mergeability-unknown",
+  // GH-366 adds the three refusal identities: the branch refusal, the request
+  // refusal (its closed reasons are authored with the row), and the work-item
+  // refusal whose emitter routes the absent tracker object.
+  "merge.branch-unresolved",
+  "merge.request-unresolved",
+  "merge.work-item-unresolved",
 ] as const;
 
 /**
@@ -2536,7 +2543,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     /**
      * Map one adapter read failure onto the composition's declared identities
      * (GH-293 F-7, OQ-TP-6). Every mapped code is a member of the declaration
-     * above; a read fault never reaches `fallback.internal`.
+     * above; a read fault never reaches `fallback.internal`. The absent-object
+     * mapping is split by the caller: a work item that does not resolve is the
+     * work item's own identity, and a delivery request that cannot be resolved
+     * is the request row's, so neither reaches the abort row (AC-F3-4).
      */
     const mergeReadCodeOf = (read: {
       readonly code: string;
@@ -2550,11 +2560,23 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ? "provider.auth.rejected"
           : "provider.outage";
       }
-      // An absent request or work item cannot be resolved: the transaction
-      // aborts cleanly before any landing mutation, and a re-run with a valid
-      // reference converges (the declared `merge.transaction-aborted` meaning).
-      if (read.code === "provider.not-found") return "merge.transaction-aborted";
       return "provider.outage";
+    };
+
+    /**
+     * The non-secret credential facts a credential-condition refusal names
+     * (AC-F3-2): the declared reference name and the environment variable of
+     * this composition's own credential reference. Absent for every other
+     * fault class and when the instance authenticates without a reference.
+     */
+    const mergeCredentialFacts = (code: string): MergeCredentialFacts | undefined => {
+      if (code !== "config.credential.missing" || truthReadCredential === undefined) {
+        return undefined;
+      }
+      return {
+        reference: truthReadCredential.referenceName,
+        sourceKey: truthReadCredential.sourceKey,
+      };
     };
 
     const mergeWorkItem = async (
@@ -2563,9 +2585,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
     > => {
       const issueNumber = changeRefNumberOf(changeRef);
-      if (issueNumber === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      if (issueNumber === undefined) return { ok: false, code: "merge.work-item-unresolved" };
       const read = await client.readWorkItem(Number(issueNumber));
-      return read.ok ? { ok: true, item: read.value } : { ok: false, code: mergeReadCodeOf(read) };
+      if (read.ok) return { ok: true, item: read.value };
+      // A tracker object that does not resolve is reported by its own identity
+      // naming the object and the read operation, never the generic abort
+      // (AC-F3-4); the rendering site names the ref and `github-work-item`.
+      if (read.code === "provider.not-found")
+        return { ok: false, code: "merge.work-item-unresolved" };
+      const credential = mergeCredentialFacts(read.code);
+      return {
+        ok: false,
+        code: mergeReadCodeOf(read),
+        ...(credential === undefined ? {} : { credential }),
+      };
     };
 
     const mergeCheckRuns = async (
@@ -2580,20 +2613,42 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       | { readonly ok: false; readonly code: string }
     > => {
       const read = await client.readPipelineRun(sha, VERIFY_GATES_CI_RUN_LIMIT);
-      return read.ok
-        ? { ok: true, items: read.value.items, pageItemCount: read.value.pageItemCount, sha }
-        : { ok: false, code: mergeReadCodeOf(read) };
+      if (read.ok) {
+        return {
+          ok: true,
+          items: read.value.items,
+          pageItemCount: read.value.pageItemCount,
+          sha,
+        };
+      }
+      const credential = mergeCredentialFacts(read.code);
+      return {
+        ok: false,
+        code: mergeReadCodeOf(read),
+        ...(credential === undefined ? {} : { credential }),
+      };
     };
 
     const mergeRequestDetail = async (): Promise<
       | { readonly ok: true; readonly request: DeliveryRequest }
       | { readonly ok: false; readonly code: string }
     > => {
-      if (target === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      // The two request-resolution returns route to the request row's identity
+      // with reason `no-open-request` as the pre-resolution placeholder
+      // (AC-F1-4): phase 3 supersedes this routing with the candidate-set
+      // resolution and the convergence attempt.
+      if (target === undefined) return { ok: false, code: "merge.request-unresolved" };
       const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT, {
         includeGateFacts: true,
       });
-      if (!open.ok) return { ok: false, code: mergeReadCodeOf(open) };
+      if (!open.ok) {
+        const credential = mergeCredentialFacts(open.code);
+        return {
+          ok: false,
+          code: mergeReadCodeOf(open),
+          ...(credential === undefined ? {} : { credential }),
+        };
+      }
       const match =
         mergeBranch === undefined
           ? undefined
@@ -2612,7 +2667,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         });
         if (merged.observation === "observed") return { ok: true, request: merged.value };
       }
-      return { ok: false, code: "merge.transaction-aborted" };
+      return { ok: false, code: "merge.request-unresolved" };
     };
 
     /**
@@ -2642,7 +2697,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (landed.code === "provider.payload.invalid" && landed.httpStatus === undefined) {
         return { ok: true as const, requestState: "unknown" };
       }
-      return { ok: false as const, code: mergeReadCodeOf(landed) };
+      const credential = mergeCredentialFacts(landed.code);
+      return {
+        ok: false as const,
+        code: mergeReadCodeOf(landed),
+        ...(credential === undefined ? {} : { credential }),
+      };
     };
 
     const mergeRuntimeBase = createMergeCommandRuntime({

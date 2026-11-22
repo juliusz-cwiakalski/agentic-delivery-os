@@ -11,6 +11,7 @@
  * producing a refusal once the job is declared and labelled with the head.
  */
 import { describe, expect, test } from "bun:test";
+import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import {
   ERROR_TABLE_FAMILIES,
   MERGE_DEFAULT_GATE_ENTRIES,
@@ -440,6 +441,41 @@ describe("TC-F3-005 a check-run page for another head is not head evidence", () 
     } finally {
       harness.cleanup();
     }
+  });
+});
+
+describe("TC-MRG-027 a pending cause converges without an operator act, and the remediation says so", () => {
+  test("a queued required job refuses with the family remediation; a green page re-run converges", async () => {
+    const { raw, set } = declaredWorkspace();
+    const harness = createMergeHarness({ gateSet: raw, checkRuns: pageWith("queued") });
+    try {
+      harness.seedVerification(recordedGreen(set));
+      const { failure, summary } = await refusedOf(harness);
+      expect(failure.code).toBe(`merge.gate.${WORKSPACE_JOB}.failed`);
+      expect(failure.evidence.detail).toBe("ci-pending");
+      // The row's remediation names the producing command and the re-run; it
+      // never instructs clearing an unnamed condition (AC-F3-5).
+      expect(summary).toContain("remediation=Resolve the named merge-applicable gate evidence");
+      expect(summary).toContain("re-run `verify gates`, then retry the merge");
+      // The pending cause needs no operator act: once the check is green on
+      // the same head, a plain re-run converges with one landing.
+      harness.setCheckRuns(pageWith("succeeded"));
+      const outcome = await transactionOf(harness);
+      expect(outcome.kind).toBe("merged");
+      expect(harness.counts.landing).toBe(1);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("control: the family row's single retryable value is false, never a pending-specific true", () => {
+    const family = ERROR_TABLE_FAMILIES.find((entry) => entry.slotPrefix === "merge.gate.");
+    expect(family?.retryable).toBe(false);
+    // A family instance resolves through the family, so its retryable is the
+    // family's single declared value.
+    const resolved = resolveAppErrorCode("merge.gate.workspace-tests.failed");
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) expect(resolved.entry.retryable).toBe(family?.retryable);
   });
 });
 

@@ -1,5 +1,8 @@
 example-product: merge.owner-gate-override-without-waiver
 summary: result=refused; condition=merge.owner-gate-override-without-waiver
+command=merge
+ref=GH-301
+operation=-
 gate=owner-gate
 override=--waive owner-gate --waived-by <principal>
 evidence=owner-gate-present

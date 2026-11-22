@@ -944,6 +944,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "MERGE_POST_LANDING_STATUSES",
     "MERGE_POST_LANDING_STEP_IDS",
     "MERGE_REFUSAL_ATTRIBUTIONS",
+    "MERGE_REFUSAL_OPERATIONS",
     "MERGE_REFRESH_OUTCOMES",
     "MERGE_SYNC_REQUIRED_REASONS",
     "MERGE_TRANSACTION_RECORD_KIND",
@@ -2121,8 +2122,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "recordedFailedJobs",
   ],
   "core/src/domain/merge-transaction.ts": [
+    "assertMergeRefusalOperation",
     "defaultFreshnessSeconds",
     "gateSetFromValues",
+    "landingFaultIdentityOf",
     "mergeBaseRef",
     "mergePostLandingStepIds",
     "policyRowForClass",
@@ -2288,7 +2291,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/verify-deploy.ts": ["createVerifyDeployHandler", "isDeployReport"],
   "cli/src/output/deploy-text.ts": ["renderDeployHuman"],
   "cli/src/commands/merge.ts": ["createMergeCommandDefinition", "isDryRunReport", "isMergeReport"],
-  "cli/src/output/merge-text.ts": ["renderDryRunHuman", "renderMergeHuman"],
+  "cli/src/output/merge-text.ts": ["renderDryRunHuman", "renderMergeHuman", "renderMergeRefusal"],
   "core/src/app/queue.ts": [
     "addQueueDependency",
     "claimDispatchLease",

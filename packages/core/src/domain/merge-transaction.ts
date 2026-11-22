@@ -28,6 +28,7 @@ import {
   MERGE_MAX_REPORT_GATES,
   MERGE_MAX_WAIVER_REFS,
   MERGE_POST_LANDING_STEP_IDS,
+  MERGE_REFUSAL_OPERATIONS,
   MERGE_TRANSACTION_SCHEMA,
   type MergeDeliveryRequestInput,
   type MergeDryRunAuthorization,
@@ -40,6 +41,7 @@ import {
   type MergePostLandingStep,
   type MergeRefreshEvidence,
   type MergeRefusalAttribution,
+  type MergeRefusalOperation,
   type MergeReport,
   type MergeStateRead,
   type MergeStateReadReason,
@@ -70,7 +72,22 @@ import { authorizeMergeWaiver } from "./merge-waiver.js";
 /** A merge read outcome with a declared failure identity on failure. */
 export type MergeRead<T> =
   | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      /** The resolved credential facts when the fault is a credential condition. */
+      readonly credential?: MergeCredentialFacts;
+    };
+
+/**
+ * The non-secret credential facts a credential-condition refusal names
+ * (AC-F3-2): the declared reference name and the environment variable that
+ * carries the material. Values only, never the secret itself.
+ */
+export type MergeCredentialFacts = {
+  readonly reference: string;
+  readonly sourceKey: string;
+};
 
 /** The bounded check-run page consumed by the probe. */
 export type MergeCheckRunPage = {
@@ -82,12 +99,20 @@ export type MergeCheckRunPage = {
 /** The parsed work-item read. */
 export type MergeWorkItemRead =
   | { readonly ok: true; readonly item: WorkItem }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly credential?: MergeCredentialFacts;
+    };
 
 /** The parsed request-detail read. */
 export type MergeRequestDetailRead =
   | { readonly ok: true; readonly request: DeliveryRequest }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly credential?: MergeCredentialFacts;
+    };
 
 /** The single refresh attempt's outcome (the retained git-seam capability). */
 export type MergeRefreshResult =
@@ -111,7 +136,12 @@ export type MergeLandResult =
       readonly requestState: string;
       readonly mergeCommitSha?: string;
     }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      /** The resolved credential facts when the fault is a credential condition. */
+      readonly credential?: MergeCredentialFacts;
+    };
 
 /** Every I/O and time seam the transaction consumes. */
 export type MergeTransactionPorts = {
@@ -180,6 +210,22 @@ export type MergeFailureEvidence = {
   readonly attempts?: number;
   readonly stateReason?: string;
   readonly gateId?: string;
+  /**
+   * The dedicated `operation=<token>` field's value (DEC-11, AC-F3-1): the read,
+   * citation source, or landing operation the refusal is about, drawn from the
+   * closed `MERGE_REFUSAL_OPERATIONS` vocabulary — or absent, which renders the
+   * declared `-` for a refusal that names no operation. The value is validated
+   * at the rendering site; an out-of-vocabulary token is a rendering failure,
+   * never a passed-through value.
+   */
+  readonly operation?: MergeRefusalOperation;
+  /**
+   * The credential facts a credential-condition refusal names (AC-F3-2): the
+   * declared reference name and the environment variable. Non-secret
+   * identifiers only.
+   */
+  readonly credentialReference?: string;
+  readonly credentialSourceKey?: string;
   /**
    * The evidence source of a not-green declared required job (F-3, DM-2,
    * API-2): `recorded` when the persisted gate verdict already reported that
@@ -398,11 +444,21 @@ const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailu
     code: "merge.state-unverified",
     domainKind: domainKindOf(row, "merge"),
     exit: exitOfRow(row),
-    evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
+    // The verification-state read is the local registry read (Appendix B):
+    // the unverified-state refusal names `operation=delivery-registry`.
+    evidence: {
+      operation: "delivery-registry",
+      stateReason: reason,
+      ...(detail === undefined ? {} : { detail }),
+    },
   };
 };
 
-const readFailure = (code: string): MergeFailure => {
+const readFailure = (
+  code: string,
+  operation?: MergeRefusalOperation,
+  credential?: MergeCredentialFacts,
+): MergeFailure => {
   // The classification is read from the resolved error-table row, never
   // hard-coded: a kind/code pair that contradicts the table is exactly the
   // containment (`fallback.internal`, exit 2) this restoration removes.
@@ -411,7 +467,46 @@ const readFailure = (code: string): MergeFailure => {
     code,
     domainKind: domainKindOf(row, "provider"),
     exit: exitOfRow(row),
-    evidence: { detail: code },
+    evidence: {
+      detail: code,
+      ...(operation === undefined ? {} : { operation }),
+      ...(credential === undefined ? {} : { credentialReference: credential.reference }),
+      ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+    },
+  };
+};
+
+/**
+ * The closed, total landing-fault mapping (AC-F3-3, F-3): every landing-port
+ * failure maps to exactly one declared identity, so no raw port code reaches an
+ * envelope. A missing credential is the credential identity; a rejected
+ * credential is the auth identity; a landing that fired without observed merged
+ * truth is `merge.landing-unverified`; every other port failure — transient,
+ * transport, or unclassified — is the declared `provider.outage` default. The
+ * port's `code` is an open string, so the default arm is load-bearing.
+ */
+export const landingFaultIdentityOf = (portCode: string): string => {
+  if (portCode === "config.credential.missing") return "config.credential.missing";
+  if (portCode === "provider.auth.rejected") return "provider.auth.rejected";
+  if (portCode === "merge.landing-unverified") return "merge.landing-unverified";
+  return "provider.outage";
+};
+
+const landingFaultFailure = (portCode: string, credential?: MergeCredentialFacts): MergeFailure => {
+  const identity = landingFaultIdentityOf(portCode);
+  const row = ERROR_TABLE.find((entry) => entry.code === identity);
+  return {
+    code: identity,
+    domainKind: domainKindOf(row, "provider"),
+    exit: exitOfRow(row),
+    // The landing fault names the landing operation; the port's own failure
+    // token never reaches the evidence (AC-F3-3, NFR-7).
+    evidence: {
+      operation: "github-merge-delivery-request",
+      detail: "landing-fault",
+      ...(credential === undefined ? {} : { credentialReference: credential.reference }),
+      ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+    },
   };
 };
 
@@ -543,16 +638,21 @@ export const runMergeTransaction = async (input: {
   // merge commit in the checkout (AC-F1-3, AC-F1-9; test plan §7.6(v)).
   const transactions = ports.readTransactions();
   if (!transactions.ok) {
-    return refused(stateFailure(transactions.reason, transactions.code));
+    return refused(changeRef, stateFailure(transactions.reason, transactions.code));
   }
   const latestTransaction = transactions.records.at(-1);
   if (latestTransaction !== undefined) {
     const recorded = await ports.readRequestDetail();
-    if (!recorded.ok) return refused(readFailure(recorded.code));
+    if (!recorded.ok) {
+      return refused(
+        changeRef,
+        readFailure(recorded.code, "github-delivery-request-list", recorded.credential),
+      );
+    }
     if (recorded.request.reviewState === "merged") {
       return { kind: "merged", report: replayReport(latestTransaction) };
     }
-    return refused({
+    return refused(changeRef, {
       code: "merge.landing-unverified",
       domainKind: "merge",
       exit: 2,
@@ -569,12 +669,12 @@ export const runMergeTransaction = async (input: {
   // 2. The freshness envelope over the newest verification record.
   const verification = ports.readVerification();
   if (!verification.ok) {
-    return refused(stateFailure(verification.reason, verification.code));
+    return refused(changeRef, stateFailure(verification.reason, verification.code));
   }
   const record = verification.records.at(-1);
   const head = await ports.readHead();
   if (head === undefined) {
-    return refused(stateFailure("unreadable", "head-unresolved"));
+    return refused(changeRef, stateFailure("unreadable", "head-unresolved"));
   }
   const envelope = evaluateMergeFreshness({
     record,
@@ -586,17 +686,36 @@ export const runMergeTransaction = async (input: {
     effectiveGateSet: gateSetIdentity,
   });
   if (!envelope.ok && envelope.kind === "state-unverified") {
-    return refused(stateFailure(envelope.reason));
+    return refused(changeRef, stateFailure(envelope.reason));
   }
 
   // 3. One bounded probe: one work-item read, one check-run page, one
   // request-detail read.
   const workItem = await ports.readWorkItem();
-  if (!workItem.ok) return refused(readFailure(workItem.code));
+  if (!workItem.ok) {
+    return refused(changeRef, readFailure(workItem.code, "github-work-item", workItem.credential));
+  }
   const checkRuns = await ports.readCheckRuns(head);
-  if (!checkRuns.ok) return refused(readFailure(checkRuns.code));
+  if (!checkRuns.ok) {
+    return refused(
+      changeRef,
+      readFailure(checkRuns.code, "github-check-runs", checkRuns.credential),
+    );
+  }
   const requestDetail = await ports.readRequestDetail();
-  if (!requestDetail.ok) return refused(readFailure(requestDetail.code));
+  if (!requestDetail.ok) {
+    return refused(
+      changeRef,
+      readFailure(
+        requestDetail.code,
+        // The delivered request read is the bounded list read at this
+        // boundary; the single-request mergeability read is phase 4's
+        // landing-decision edit.
+        "github-delivery-request-list",
+        requestDetail.credential,
+      ),
+    );
+  }
 
   // An already-merged request with no recorded transaction is the record-less
   // convergence case: the provider asserts merged truth, so the outcome is
@@ -659,6 +778,7 @@ export const runMergeTransaction = async (input: {
       })(),
     };
     return refused(
+      changeRef,
       envelope.reason === "age"
         ? {
             code: "merge.gates-stale",
@@ -819,7 +939,7 @@ export const runMergeTransaction = async (input: {
         authorizedAt: nowIso,
       });
       if (!verdict.ok) {
-        return refused({
+        return refused(changeRef, {
           code: "merge.waiver-unauthorized",
           domainKind: "merge",
           exit: 1,
@@ -836,7 +956,7 @@ export const runMergeTransaction = async (input: {
     for (const waiver of authorized) {
       const appended = ports.appendWaiver(waiver);
       if (!appended.ok) {
-        return refused({
+        return refused(changeRef, {
           code: "merge.transaction-aborted",
           domainKind: "merge",
           exit: 1,
@@ -855,7 +975,7 @@ export const runMergeTransaction = async (input: {
   // 6. Precedence: a declared unauthorized override wins; then the override
   // path for an owner-gate failure with no declaration; then the gate rows.
   if (failures.length > 0) {
-    return refused(failureFor(failures[0] as GateFailure));
+    return refused(changeRef, failureFor(failures[0] as GateFailure));
   }
 
   // 7. The mergeability decision rule (F-2, API-2): total over the four
@@ -942,11 +1062,12 @@ export const runMergeTransaction = async (input: {
       recordedAt: nowIso,
     };
     const persisted = ports.appendTransaction(recordValue);
-    return refused({
+    return refused(changeRef, {
       code: "merge.landing-unverified",
       domainKind: "merge",
       exit: 2,
       evidence: {
+        operation: "github-merge-delivery-request",
         ...(landed.mergeCommitSha === undefined ? {} : { recordedSha: landed.mergeCommitSha }),
         requestState: landed.requestState,
         // A failed outcome-record append is declared, not swallowed: the
@@ -963,14 +1084,10 @@ export const runMergeTransaction = async (input: {
   const landAtVerifiedHead = async (request: DeliveryRequest): Promise<MergeTransactionOutcome> => {
     const landed = await ports.land(landingInputOf(request));
     if (!landed.ok) {
-      // A refused landing is returned as a refusal: it is never converted into
-      // a local commit, a fallback landing, or a success by inference.
-      return refused({
-        code: "merge.transaction-aborted",
-        domainKind: "merge",
-        exit: 1,
-        evidence: { detail: landed.code },
-      });
+      // A refused landing maps through the closed, total landing-fault mapping:
+      // it is never converted into a local commit, a fallback landing, a
+      // success by inference, or the abort row (AC-F3-3).
+      return refused(changeRef, landingFaultFailure(landed.code, landed.credential));
     }
     return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
   };
@@ -986,7 +1103,12 @@ export const runMergeTransaction = async (input: {
       return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
     }
     const reRead = await ports.readRequestDetail();
-    if (!reRead.ok) return refused(readFailure(reRead.code));
+    if (!reRead.ok) {
+      return refused(
+        changeRef,
+        readFailure(reRead.code, "github-delivery-request-list", reRead.credential),
+      );
+    }
     const posture = checksPostureOf({
       runs: checkRuns.value.items,
       pageSha: checkRuns.value.sha ?? head,
@@ -994,7 +1116,7 @@ export const runMergeTransaction = async (input: {
       requiredJobs: declaredCiJobsOf(config.gateSet),
     });
     if (posture !== undefined) {
-      return refused({
+      return refused(changeRef, {
         code: failureCode("ci-green"),
         domainKind: "merge",
         exit: 1,
@@ -1005,7 +1127,7 @@ export const runMergeTransaction = async (input: {
         },
       });
     }
-    return refused({
+    return refused(changeRef, {
       code: "merge.sync-required",
       domainKind: "merge",
       exit: 1,
@@ -1021,7 +1143,7 @@ export const runMergeTransaction = async (input: {
       case "conflicting":
         // The sync cause is certain, so no landing call is made. There is no
         // internal rebase and no head mutation (AC-F2-1, F8).
-        return refused({
+        return refused(changeRef, {
           code: "merge.sync-required",
           domainKind: "merge",
           exit: 1,
@@ -1040,10 +1162,15 @@ export const runMergeTransaction = async (input: {
         // `unknown` or absent: exactly one bounded re-read of the same request,
         // compared on the exact head. The command never waits or polls.
         const reRead = await ports.readRequestDetail();
-        if (!reRead.ok) return refused(readFailure(reRead.code));
+        if (!reRead.ok) {
+          return refused(
+            changeRef,
+            readFailure(reRead.code, "github-delivery-request-list", reRead.credential),
+          );
+        }
         const observed = reRead.request;
         if (observed.headSha !== undefined && observed.headSha !== head) {
-          return refused({
+          return refused(changeRef, {
             code: "merge.gates-stale",
             domainKind: "merge",
             exit: 1,
@@ -1051,7 +1178,7 @@ export const runMergeTransaction = async (input: {
           });
         }
         if (observed.mergeableState === undefined || observed.mergeableState === "unknown") {
-          return refused({
+          return refused(changeRef, {
             code: "merge.mergeability-unknown",
             domainKind: "merge",
             exit: 2,
@@ -1068,7 +1195,7 @@ export const runMergeTransaction = async (input: {
   // and no landing attempt is made (AC-F1-7, DM-6).
   const landingGap = ports.readLandingGap();
   if (landingGap !== undefined) {
-    return refused({
+    return refused(changeRef, {
       code: "merge.transaction-aborted",
       domainKind: "merge",
       exit: 1,
@@ -1107,26 +1234,61 @@ const failureFor = (failure: GateFailure): MergeFailure => ({
   evidence: failure.evidence,
 });
 
-const refused = (failure: MergeFailure): MergeTransactionOutcome => ({
+const refused = (ref: string, failure: MergeFailure): MergeTransactionOutcome => ({
   kind: "refused",
   failure,
-  summary: renderMergeFailure(failure),
+  summary: renderMergeFailure(failure, { command: "merge", ref }),
 });
+
+/** The rendering context every merge refusal is rendered with (DEC-11). */
+export type MergeRefusalRenderingContext = {
+  /** The command identity rendered as the dedicated `command=` field. */
+  readonly command: string;
+  /**
+   * The invocation's change ref, rendered as the dedicated `ref=` field. There
+   * is no empty-value branch: every merge refusal path is reached with a usable
+   * ref, so `ref=-` is not a declared state.
+   */
+  readonly ref: string;
+};
+
+/**
+ * Validate one `operation` token against the closed vocabulary at the rendering
+ * site (AC-F3-1, NFR-5): an out-of-vocabulary value is a rendering failure and
+ * never a value passed through into the summary.
+ */
+export const assertMergeRefusalOperation = (token: string | undefined): MergeRefusalOperation => {
+  if (token === undefined) return "-";
+  const member = MERGE_REFUSAL_OPERATIONS.find((candidate) => candidate === token);
+  if (member !== undefined) return member;
+  throw new Error(
+    `merge refusal rendering: operation token "${token}" is outside the closed vocabulary`,
+  );
+};
 
 /**
  * Render one refusal deterministically and within the human bounds.
  *
- * The decisive condition and the named failing gate come first; every list is
- * capped with an explicit `+N`. The remediation hint is the declared row's.
+ * The decisive condition and the named failing gate come first; the three
+ * dedicated fields (`command=`, `ref=`, `operation=`) follow the condition line
+ * (DEC-11); every list is capped with an explicit `+N`. The remediation hint is
+ * the declared row's.
  */
-export const renderMergeFailure = (failure: MergeFailure): string => {
+export const renderMergeFailure = (
+  failure: MergeFailure,
+  context: MergeRefusalRenderingContext,
+): string => {
   const evidence = failure.evidence;
+  const operation = assertMergeRefusalOperation(evidence.operation);
   const lines: string[] = [];
   if (failure.code === "merge.landing-unverified") {
     lines.push("result=unverified; landing=unverified");
   } else {
     lines.push(`result=refused; condition=${failure.code}`);
   }
+  lines.push(`command=${context.command}`);
+  lines.push(`ref=${context.ref}`);
+  lines.push(`operation=${operation}`);
   if (evidence.gateId !== undefined) lines.push(`gate=${evidence.gateId}`);
   if (evidence.stateReason !== undefined) lines.push(`state=${evidence.stateReason}`);
   if (evidence.ageMs !== undefined || evidence.boundMs !== undefined) {
@@ -1163,6 +1325,11 @@ export const renderMergeFailure = (failure: MergeFailure): string => {
   if (evidence.authorizer !== undefined) lines.push(`authorizer=${evidence.authorizer}`);
   if (evidence.overridePath !== undefined) lines.push(`override=${evidence.overridePath}`);
   if (evidence.requestState !== undefined) lines.push(`request-state=${evidence.requestState}`);
+  if (evidence.credentialReference !== undefined) {
+    lines.push(
+      `credential-reference=${evidence.credentialReference} credential-source=${evidence.credentialSourceKey ?? "-"}`,
+    );
+  }
   if (evidence.detail !== undefined) lines.push(`evidence=${evidence.detail}`);
   if (evidence.attribution !== undefined) lines.push(`attribution=${evidence.attribution}`);
   const hint = remediationFor(failure.code);
@@ -1199,12 +1366,19 @@ const runDryRun = async (input: {
   const { changeRef, config, ports } = input;
   const head = await ports.readHead();
   if (head === undefined) {
-    return refused(stateFailure("unreadable", "head-unresolved"));
+    return refused(changeRef, stateFailure("unreadable", "head-unresolved"));
   }
   const workItem = await ports.readWorkItem();
-  if (!workItem.ok) return refused(readFailure(workItem.code));
+  if (!workItem.ok) {
+    return refused(changeRef, readFailure(workItem.code, "github-work-item", workItem.credential));
+  }
   const checkRuns = await ports.readCheckRuns(head);
-  if (!checkRuns.ok) return refused(readFailure(checkRuns.code));
+  if (!checkRuns.ok) {
+    return refused(
+      changeRef,
+      readFailure(checkRuns.code, "github-check-runs", checkRuns.credential),
+    );
+  }
   const posture = postureOf(workItem.item.labels, workItem.item.updatedAt);
   const verification = ports.readVerification();
   const previous = verification.ok ? verification.records.at(-1) : undefined;
@@ -1277,7 +1451,7 @@ const runDryRun = async (input: {
     trackerPosture: { labels: posture.labels, ownerLabels: posture.ownerLabels },
   };
   const appended = ports.appendVerification(record);
-  if (!appended.ok) return refused(stateFailure("unreadable", appended.code));
+  if (!appended.ok) return refused(changeRef, stateFailure("unreadable", appended.code));
 
   const authorizations: MergeDryRunAuthorization[] = [];
   for (const declaration of input.declarations) {
@@ -1303,7 +1477,7 @@ const runDryRun = async (input: {
 
   const firstFailure = gates.find((gate) => gate.verdict !== "pass");
   if (firstFailure !== undefined) {
-    return refused({
+    return refused(changeRef, {
       code: failureCode(firstFailure.id),
       domainKind: "merge",
       exit: 1,

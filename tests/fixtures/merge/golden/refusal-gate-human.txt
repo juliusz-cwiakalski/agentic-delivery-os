@@ -1,5 +1,8 @@
 example-product: merge.gate.workspace-tests.failed
 summary: result=refused; condition=merge.gate.workspace-tests.failed
+command=merge
+ref=GH-301
+operation=-
 gate=workspace-tests
 new-red-jobs=workspace-tests
 evidence=ci-failed
