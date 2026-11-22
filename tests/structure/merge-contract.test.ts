@@ -94,7 +94,7 @@ const compare = (registry: RegistrySnapshot): string[] => {
 
   const expectedEntries: MergeGateEntry[] = [
     { id: "lifecycle-finalization", recipe: "lifecycle-finalization", surface: "battery" },
-    { id: "ci-green", recipe: "ci-green", surface: "battery" },
+    { id: "ci-green", recipe: "ci-green", surface: "both" },
     { id: "push-parity", recipe: "push-parity", surface: "battery" },
     {
       id: "owner-gate",
@@ -250,6 +250,11 @@ describe("TC-MERGE-004 default surface applicability", () => {
     for (const entry of MERGE_DEFAULT_GATE_ENTRIES) {
       if (entry.id === "tracker-freshness") {
         expect(entry.surface).toBe("merge");
+        continue;
+      }
+      if (entry.id === "ci-green") {
+        // The declared phase-4 movement: the CI gate is merge-applicable.
+        expect(entry.surface).toBe("both");
         continue;
       }
       expect(entry.surface).toBe("battery");

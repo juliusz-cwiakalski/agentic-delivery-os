@@ -834,6 +834,7 @@ export {
 export {
   evaluateDeclaredBattery,
   evaluateVerifyGates,
+  expectedSetValid,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
   renderVerifyGatesHuman,

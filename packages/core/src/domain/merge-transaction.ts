@@ -74,6 +74,7 @@ import {
   recordedFailedJobs,
 } from "./merge-probe.js";
 import { authorizeMergeWaiver } from "./merge-waiver.js";
+import { expectedSetValid } from "./verify-gates.js";
 
 /** A merge read outcome with a declared failure identity on failure. */
 export type MergeRead<T> =
@@ -172,6 +173,12 @@ export type MergeRequestDetailRead =
       readonly credential?: MergeCredentialFacts;
     };
 
+/** The delivered CI-workflow read the battery's `ci-green` gate uses (F-2). */
+export type MergeCiWorkflowRead = {
+  readonly outcome: "read" | "failed" | "absent";
+  readonly names: readonly string[];
+};
+
 /** The single refresh attempt's outcome (the retained git-seam capability). */
 export type MergeRefreshResult =
   | { readonly outcome: "conflicted"; readonly paths: readonly string[] }
@@ -219,7 +226,14 @@ export type MergeTransactionPorts = {
   ) => { readonly ok: true } | { readonly ok: false; readonly code: string };
   readonly readWorkItem: () => Promise<MergeWorkItemRead>;
   readonly readCheckRuns: (sha: string) => Promise<MergeRead<MergeCheckRunPage>>;
-  readonly readRequestDetail: () => Promise<MergeRequestDetailRead>;
+  readonly readRequestDetail: (entityId?: string) => Promise<MergeRequestDetailRead>;
+  /**
+   * The delivered CI-workflow read the battery's `ci-green` gate uses (F-2):
+   * the repository-declared expected job set. Wired by the production
+   * composition; the merge path derives its required-check set through this
+   * read and the exported `expectedSetValid` rule, never a second predicate.
+   */
+  readonly readCiWorkflow?: () => Promise<MergeCiWorkflowRead>;
   /**
    * The bounded open-request list read the change-branch resolution performs
    * first (F-1 step 1, GH-366): the delivered open list at the declared
@@ -1250,7 +1264,43 @@ export const runMergeTransaction = async (input: {
     );
   }
 
-  // 4. Gate evaluation: the recorded verdicts plus the fresh probe.
+  // 5. The merge-applicable required-check set, derived ONCE per invocation
+  // (F-2): every merge-applicable `required-ci-job` entry contributes
+  // `job ?? id`, and the merge-applicable `ci-green` entry contributes the
+  // repository-declared expected job set read through the delivered CI
+  // workflow read, validated by the exported battery rule. The page wins on
+  // state; the gate set wins on membership.
+  const ciEntry = config.gateSet.enforcedMergeEntries.find(
+    (candidate) => candidate.id === "ci-green",
+  );
+  let requiredSet: readonly string[] = declaredCiJobsOf(config.gateSet);
+  let expectedNames: readonly string[] = [];
+  if (ciEntry !== undefined) {
+    const workflow = await (ports.readCiWorkflow?.() ??
+      Promise.resolve<MergeCiWorkflowRead>({ outcome: "failed", names: [] }));
+    const valid =
+      workflow.outcome === "read" &&
+      expectedSetValid({ outcome: workflow.outcome, names: workflow.names });
+    if (!valid) {
+      return refused(changeRef, {
+        code: failureCode("ci-green"),
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          gateId: "ci-green",
+          detail:
+            workflow.outcome === "read"
+              ? "invalid-expected-set"
+              : `ci-workflow-${workflow.outcome}`,
+          operation: workflow.outcome === "read" ? "-" : ("repository-ci-workflow" as const),
+        },
+      });
+    }
+    expectedNames = workflow.names;
+    requiredSet = [...requiredSet, ...expectedNames];
+  }
+
+  // 6. Gate evaluation: the recorded verdicts plus the fresh probe.
   const posture = postureOf(workItem.item.labels, workItem.item.updatedAt);
   const transition =
     record === undefined
@@ -1263,7 +1313,9 @@ export const runMergeTransaction = async (input: {
   const failures: GateFailure[] = [];
   const ownerPresent = posture.ownerLabels.length > 0;
   const recordedCi = recordedVerdict(record, "ci-green");
-  if (recordedCi !== undefined && recordedCi.verdict !== "pass") {
+  const recordedCiFailure =
+    recordedCi !== undefined && recordedCi.verdict !== "pass" ? recordedCi : undefined;
+  if (recordedCiFailure !== undefined) {
     const entry = config.gateSet.enforcedMergeEntries.find(
       (candidate) => candidate.id === "ci-green",
     );
@@ -1274,9 +1326,9 @@ export const runMergeTransaction = async (input: {
       failures.push(
         requiredJobFailure({
           entry,
-          detail: recordedCi.reason,
+          detail: recordedCiFailure.reason,
           attribution: "recorded",
-          jobs: recordedNotGreenJobs(recordedCi.citation.names),
+          jobs: recordedNotGreenJobs(recordedCiFailure.citation.names),
         }),
       );
     }
@@ -1328,7 +1380,50 @@ export const runMergeTransaction = async (input: {
     }
   }
   for (const entry of config.gateSet.enforcedMergeEntries) {
-    if (entry.id === "ci-green" || entry.id === "owner-gate" || entry.id === "tracker-freshness") {
+    if (entry.id === "ci-green") {
+      // The merge-surface CI evaluation (GH-366 F-2): the page is head evidence
+      // only for the resolved head, and every name in the derived required set
+      // is evaluated through the single delivered per-job mapping. A page for
+      // another head carries no posture — the delivered head-unresolved
+      // refusal on the family row names both SHAs.
+      if (recordedCiFailure === undefined) {
+        const pageNotHead = checkRuns.value.sha !== undefined && checkRuns.value.sha !== head;
+        if (pageNotHead) {
+          failures.push({
+            entry,
+            code: failureCode("ci-green"),
+            evidence: {
+              gateId: "ci-green",
+              recordedSha: checkRuns.value.sha,
+              currentSha: head,
+              detail: "head-unresolved",
+            },
+          });
+        } else {
+          // The CI gate evaluates ITS OWN contribution — the expected set;
+          // each declared required-ci-job entry evaluates its own job, so a
+          // declared job's specific finding keeps its recorded attribution.
+          const posture = checksPostureOf({
+            runs: checkRuns.value.items,
+            pageSha: checkRuns.value.sha ?? head,
+            headSha: head,
+            requiredJobs: expectedNames,
+          });
+          if (posture !== undefined) {
+            failures.push(
+              requiredJobFailure({
+                entry,
+                detail: posture.reason,
+                attribution: "probe",
+                jobs: posture.jobs,
+              }),
+            );
+          }
+        }
+      }
+      continue;
+    }
+    if (entry.id === "owner-gate" || entry.id === "tracker-freshness") {
       continue;
     }
     const verdict = recordedVerdict(record, entry.id);
@@ -1564,11 +1659,11 @@ export const runMergeTransaction = async (input: {
     if (landed.ok) {
       return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
     }
-    const reRead = await ports.readRequestDetail();
+    const reRead = await ports.readRequestDetail(request.identity.entityId);
     if (!reRead.ok) {
       return refused(
         changeRef,
-        readFailure(reRead.code, "github-delivery-request-list", reRead.credential),
+        readFailure(reRead.code, "github-delivery-request-detail", reRead.credential),
       );
     }
     const posture = checksPostureOf({
@@ -1621,13 +1716,14 @@ export const runMergeTransaction = async (input: {
       case "not-mergeable":
         return classifyNotMergeable(request);
       default: {
-        // `unknown` or absent: exactly one bounded re-read of the same request,
-        // compared on the exact head. The command never waits or polls.
-        const reRead = await ports.readRequestDetail();
+        // `unknown` or absent: exactly one bounded unknown-recovery re-read of
+        // the SINGLE request (never the list), compared on the exact head. The
+        // command never waits or polls.
+        const reRead = await ports.readRequestDetail(request.identity.entityId);
         if (!reRead.ok) {
           return refused(
             changeRef,
-            readFailure(reRead.code, "github-delivery-request-list", reRead.credential),
+            readFailure(reRead.code, "github-delivery-request-detail", reRead.credential),
           );
         }
         const observed = reRead.request;
@@ -1666,7 +1762,20 @@ export const runMergeTransaction = async (input: {
   }
 
   // 9. One landing mechanism, and its provider-asserted verdict.
-  return decide(resolution.request);
+  // 9. The landing decision's mergeability source (F-2, LF-1): the delivered
+  // SINGLE-request read of the request the resolution located — the list
+  // endpoint cannot carry mergeability, so the open-list entry's missing
+  // mergeability fields never refuse `merge.mergeability-unknown`. A fault of
+  // this read names `operation=github-delivery-request-detail`; the
+  // unknown-recovery re-read re-reads the single request, never the list.
+  const requestDetail = await ports.readRequestDetail(resolution.request.identity.entityId);
+  if (!requestDetail.ok) {
+    return refused(
+      changeRef,
+      readFailure(requestDetail.code, "github-delivery-request-detail", requestDetail.credential),
+    );
+  }
+  return decide(requestDetail.request);
 };
 
 const reportFor = (
@@ -1908,7 +2017,88 @@ const runDryRun = async (input: {
           verifiedAt: previous.verifiedAt,
         });
   const gates: MergeGateVerdictRecord[] = [];
+  // The merge-applicable required-check set, derived once (F-2): the same
+  // derivation the live run performs, validated by the exported battery rule.
+  const ciEntry = config.gateSet.mergeEntries.find((candidate) => candidate.id === "ci-green");
+  let dryRequiredSet: readonly string[] = config.gateSet.mergeEntries
+    .filter((entry) => entry.recipe === "required-ci-job")
+    .map((entry) => entry.job ?? entry.id);
+  let dryExpectedNames: readonly string[] = [];
+  if (ciEntry !== undefined) {
+    const workflow = await (ports.readCiWorkflow?.() ??
+      Promise.resolve<MergeCiWorkflowRead>({ outcome: "failed", names: [] }));
+    const valid =
+      workflow.outcome === "read" &&
+      expectedSetValid({ outcome: workflow.outcome, names: workflow.names });
+    if (!valid) {
+      return refused(input.changeRef, {
+        code: failureCode("ci-green"),
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          gateId: "ci-green",
+          detail:
+            workflow.outcome === "read"
+              ? "invalid-expected-set"
+              : `ci-workflow-${workflow.outcome}`,
+          operation: workflow.outcome === "read" ? "-" : ("repository-ci-workflow" as const),
+        },
+      });
+    }
+    dryExpectedNames = workflow.names;
+    dryRequiredSet = [...dryRequiredSet, ...dryExpectedNames];
+  }
+
   for (const entry of config.gateSet.mergeEntries) {
+    if (entry.id === "ci-green") {
+      // The merge-surface CI evaluation over the derived required set (F-2):
+      // a page for another head is never head evidence, and the first
+      // not-green required name carries the delivered reason.
+      const pageIsHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
+      if (!pageIsHead) {
+        // The delivered head-unresolved reason names both SHAs: a page for
+        // another head is never evidence (TC-MRG-013).
+        gates.push({
+          id: entry.id,
+          verdict: "fail",
+          reason: "head-unresolved",
+          citation: citationFor({
+            identity: { changeRef, headSha: head },
+            sources: [{ name: "github-check-runs", outcome: "read" }],
+            counts: [{ name: "expected", value: dryRequiredSet.length }],
+            names: [{ kind: "missing-jobs", values: ["ci-green"], omitted: 0 }],
+            reason: "head-unresolved",
+          }),
+        });
+        continue;
+      }
+      const posture = checksPostureOf({
+        runs: checkRuns.value.items,
+        pageSha: checkRuns.value.sha ?? head,
+        headSha: head,
+        requiredJobs: dryExpectedNames,
+      });
+      const reason: VerifyGateReason = posture === undefined ? "ci-green" : posture.reason;
+      gates.push({
+        id: entry.id,
+        verdict: posture === undefined ? "pass" : "fail",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: [
+            { name: "expected", value: dryRequiredSet.length },
+            { name: "runs", value: checkRuns.value.pageItemCount },
+          ],
+          names:
+            posture === undefined
+              ? [{ kind: "failed-jobs", values: [], omitted: 0 }]
+              : [{ kind: "failed-jobs", values: posture.jobs, omitted: 0 }],
+          reason,
+        }),
+      });
+      continue;
+    }
     if (entry.recipe === "required-ci-job") {
       const evaluationValue = evaluateRequiredJobGate({
         jobName: entry.job ?? entry.id,
@@ -2013,6 +2203,9 @@ const runDryRun = async (input: {
       gates: gates.slice(0, MERGE_MAX_REPORT_GATES),
       gatesOmitted: Math.max(0, gates.length - MERGE_MAX_REPORT_GATES),
       authorizations,
+      // The evaluated required-check posture (F-2): the derivation evaluated
+      // every name in the derived set, whose size is disclosed with it.
+      requiredChecks: { evaluatedCount: dryRequiredSet.length, setSize: dryRequiredSet.length },
       resolution: resolutionFacts,
     },
     authorizations,

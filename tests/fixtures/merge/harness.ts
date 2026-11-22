@@ -184,6 +184,14 @@ export type MergeHarnessOptions = {
     | { readonly observation: "unavailable"; readonly matchedIdentities?: readonly string[] }
     | { readonly observation: "invalid"; readonly detail: string };
   /**
+   * The delivered CI-workflow read the battery's `ci-green` gate uses (F-2).
+   * Default: a healthy read declaring the check-run page's own pipelines, so
+   * the derived required set is green on the default page.
+   */
+  readonly ciWorkflow?:
+    | { readonly outcome: "read"; readonly names: readonly string[] }
+    | { readonly outcome: "failed" | "absent"; readonly names?: undefined };
+  /**
    * The change record the bounded local read observes at a candidate head,
    * keyed by the head SHA (the default answers for any head). `declaration` is
    * the parsed `branch` value; `missing` plants a record-missing head.
@@ -522,6 +530,11 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
       counts.order.push("merged-request");
       return mergedOf();
     },
+    readCiWorkflow: async () =>
+      options.ciWorkflow ?? {
+        outcome: "read" as const,
+        names: baseCheckRuns().items.map((run) => run.pipelineName),
+      },
     readChangeRecordAtHead: async (headSha: string) => {
       counts.recordReads += 1;
       // The bounded local read issues at most two fixed-argv git invocations

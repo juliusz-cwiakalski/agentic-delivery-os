@@ -13,6 +13,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FileSystemFacts } from "../../../packages/adapters/src/file/config";
+import { nodeFileSystemFacts } from "../../../packages/adapters/src/file/index";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../packages/cli/src/production";
 import type {
@@ -128,13 +129,21 @@ const refusingCredentials = (counter: { value: number }): CredentialPort => ({
 
 const shaOf = (value: string): string => value.trim();
 
-/** The healthy reply set: work items, a green check page, and two open requests. */
-const healthyReply =
-  (input: {
-    readonly checkConclusion?: "success" | "failure";
-    readonly branches: readonly { readonly branch: string; readonly headSha: string }[];
-  }): ((url: string) => MergeProviderReply) =>
-  (url) => {
+/**
+ * The healthy reply set: work items, a green check page, and two open requests.
+ *
+ * The request read is stateful across one landing: BEFORE the provider landing
+ * (`PUT .../merge`) the single-request read serves the OPEN request with its
+ * mergeability facts (the landing decision's LF-1 read); AFTER the landing the
+ * read-back serves the merged shape. The delivery request number is the open
+ * list's first entry.
+ */
+const healthyReply = (input: {
+  readonly checkConclusion?: "success" | "failure";
+  readonly branches: readonly { readonly branch: string; readonly headSha: string }[];
+}): ((url: string) => MergeProviderReply) => {
+  let landed = false;
+  return (url) => {
     if (url.includes("/issues/")) {
       const number = Number(url.match(/issues\/(\d+)/u)?.[1] ?? 0);
       return {
@@ -152,14 +161,12 @@ const healthyReply =
       return {
         status: 200,
         body: {
-          check_runs: [
-            {
-              id: 7001,
-              name: "CI / test",
-              status: "completed",
-              conclusion: input.checkConclusion ?? "success",
-            },
-          ],
+          check_runs: ["CI / test", "CI / lint"].map((name, index) => ({
+            id: 7001 + index,
+            name,
+            status: "completed",
+            conclusion: input.checkConclusion ?? "success",
+          })),
         },
       };
     }
@@ -173,33 +180,51 @@ const healthyReply =
           base: { ref: MERGE_PROD_BASE },
           commits: 1,
           changed_files: 1,
-          mergeable: true,
         })),
       };
     }
     if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
-    // The provider landing (PUT .../merge) plus its read-back: the read-back is
-    // the only merged-truth observer, so the fixture serves a merged request.
+    // The provider landing (PUT .../merge) flips the read-back: the only
+    // merged-truth observer is the post-landing read of the single request.
     if (url.endsWith("/merge")) {
+      landed = true;
       return { status: 200, body: { merged: true } };
     }
     if (url.includes("/pulls/")) {
       const branch = input.branches[0] as { readonly branch: string; readonly headSha: string };
+      if (landed) {
+        return {
+          status: 200,
+          body: {
+            number: 301,
+            state: "closed",
+            merged_at: "2026-11-18T09:30:00Z",
+            merged: true,
+            head: { ref: branch.branch, sha: branch.headSha },
+            base: { ref: MERGE_PROD_BASE },
+            merge_commit_sha: "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+          },
+        };
+      }
+      // The landing decision's mergeability read (LF-1): the OPEN request with
+      // its provider-asserted mergeability facts.
       return {
         status: 200,
         body: {
           number: 301,
-          state: "closed",
-          merged_at: "2026-11-18T09:30:00Z",
-          merged: true,
+          state: "open",
           head: { ref: branch.branch, sha: branch.headSha },
           base: { ref: MERGE_PROD_BASE },
-          merge_commit_sha: "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+          commits: 1,
+          changed_files: 1,
+          mergeable: true,
+          mergeable_state: "clean",
         },
       };
     }
     return { status: 404, body: {} };
   };
+};
 
 const DIGIT_PREFIX_BRANCH = "feat/ABC2-12/digit-prefix";
 
@@ -222,6 +247,25 @@ const buildCheckout = (
     "origin",
     `https://github.com/${MERGE_PROD_OWNER}/engine-first-merge.git`,
   ]);
+  // The repository-declared CI workflow the battery's ci-green read consumes
+  // (F-2): the workflow's job names are the expected check set on the fixture
+  // page, and every job is green there.
+  const workflowDirectory = join(root, ".github/workflows");
+  mkdirSync(workflowDirectory, { recursive: true });
+  writeFileSync(
+    join(workflowDirectory, "ci.yml"),
+    [
+      "jobs:",
+      "  'CI / test':",
+      "    steps: [echo]",
+      "  'CI / lint':",
+      "    steps: [echo]",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  git(root, ["add", "-A"]);
+  git(root, ["commit", "-m", "chore: seed the CI workflow"]);
   const recordFor = (ref: string, directory: string, title: string): void => {
     git(root, ["checkout", "-B", ref, MERGE_PROD_BASE]);
     git(root, ["commit", "--allow-empty", "-m", `feat: fixture work (${ref})`]);
@@ -340,9 +384,16 @@ export const createMergeProductionHarness = (
   let reply = options.reply ?? defaultReply;
   let clockIso = options.clockIso ?? (() => "2026-11-18T10:00:00.000Z");
   let credentialMode: "resolved" | "missing" = options.credential ?? "resolved";
+  // The configuration sandbox intercepts only the configuration document;
+  // every other path (the declared CI workflow read included) falls through to
+  // the node filesystem so the delivered read sees the real checkout.
+  const nodeFs = nodeFileSystemFacts();
   const configurationFs: FileSystemFacts = {
-    exists: (path) => options.configYaml !== undefined && path.endsWith("config.yaml"),
-    readText: () => options.configYaml ?? "",
+    exists: (path) =>
+      path.endsWith("config.yaml") ? options.configYaml !== undefined : nodeFs.exists(path),
+    readText: (path) =>
+      path.endsWith("config.yaml") ? (options.configYaml ?? "") : nodeFs.readText(path),
+    ...(nodeFs.listDirectory === undefined ? {} : { listDirectory: nodeFs.listDirectory }),
   };
   const composeProgram = () => {
     const composer = createProductionComposer({

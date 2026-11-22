@@ -66,8 +66,26 @@ export type MergeDeclaredGateSet = {
 };
 
 /**
- * The shipped default set: the five built-ins on the battery surface, in
- * shipped order, plus the merge-only `tracker-freshness` entry (DEC-2).
+ * The admitted surface sets of the five reserved built-ins (F-2, DM-3,
+ * AC-F2-7): a declared built-in entry's surface must lie in its admitted set —
+ * `battery` or `both` for `ci-green` (the reviewed, documented check-gate
+ * opt-out is declaring it `battery`), `battery` alone for the other four. A
+ * built-in's recipe and class are immutable and an omitted class adopts the
+ * shipped one.
+ */
+export const MERGE_BUILTIN_ADMITTED_SURFACES = {
+  "lifecycle-finalization": ["battery"],
+  "ci-green": ["battery", "both"],
+  "push-parity": ["battery"],
+  "owner-gate": ["battery"],
+  "squash-preflight": ["battery"],
+} as const satisfies Record<MergeBuiltinGateId, readonly MergeGateSurface[]>;
+
+/**
+ * The shipped default set makes `ci-green` merge-applicable (GH-366 F-2), so
+ * the effective merge projection is two entries: `ci-green` and
+ * `tracker-freshness`. The entry-id sequence — and therefore the effective
+ * gate-set identity — does not change.
  */
 export const MERGE_DEFAULT_GATE_ENTRIES = [
   {
@@ -75,7 +93,7 @@ export const MERGE_DEFAULT_GATE_ENTRIES = [
     recipe: "lifecycle-finalization",
     surface: "battery",
   },
-  { id: "ci-green", recipe: "ci-green", surface: "battery" },
+  { id: "ci-green", recipe: "ci-green", surface: "both" },
   { id: "push-parity", recipe: "push-parity", surface: "battery" },
   {
     id: "owner-gate",
@@ -338,6 +356,15 @@ export type MergeDryRunReport = {
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
   readonly authorizations: readonly MergeDryRunAuthorization[];
+  /**
+   * The evaluated required-check posture (F-2): the count of required names the
+   * run evaluated and the size of the derived merge-applicable required-check
+   * set, so an authored check posture is visible rather than silent.
+   */
+  readonly requiredChecks?: {
+    readonly evaluatedCount: number;
+    readonly setSize: number;
+  };
   /**
    * The resolved object the dry run describes (F-5, DM-2): the same object the
    * real merge would land. Absent on a converged replay, which reports

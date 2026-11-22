@@ -87,6 +87,37 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 3 COMPLETE (delivery): the change-branch resolution, the
+      convergence attempt and the resolved-head binding landed in commit
+      8620cc4a. Gate green: merge-production-composition (19 cells incl. the
+      convergence matrix), merge-git-seam-capabilities (9), the behaviour
+      block, the provider suites (62), the golden suite (28), the
+      checks/structure block incl. the NEW merge-branch-read-scan ambient-read
+      absence scan (registered in merge-suite-discovery 5 -> 6), and
+      error-table-sync OK. Delivered: the fixed-order reads with saturation
+      precedence, the candidate cap, head-unresolved, the bounded record read
+      at the candidate's own head (new seam member read-change-record), the
+      delivered parse applied by the composition, duplicates before
+      ambiguity, the six closed reasons under the declared precedence; the
+      convergence attempt over findMergedDeliveryRequest VERBATIM with its ONE
+      additive optional member (matched request identities; empty = decidable
+      zero, absent = fault), one identity replaying with zero record reads,
+      many aborting naming EACH, and every fault class refusing provider.outage
+      with operation=github-delivery-request-list; the ambient reads deleted
+      with mandatory failing controls; the resolved head bound across
+      freshness, landing and reporting; the abort row's third cause in the
+      machine row and the documented counterpart in the same commit; exact
+      per-path multisets (1/2/3, the thread query counted, no suppression —
+      NG-8 controls planted); the meta-suite split 9/7 -> 10/6; TC-MRG-054's
+      closeout-consumes-none proof; goldens per the declared subset (success
+      trio + stale pair regenerated, branch/request pairs added, EXPECTED
+      15 -> 19, byte comparisons 13 -> 17); TC-MRG-009's branch-preservation
+      oracle (the no-op branch initially dropped the key — the fixture fix
+      landed before the phase closed); the 256/257 cap boundary proven. edge.ts
+      untouched: the resolution ports are additive OPTIONAL members wired by
+      the production composition's per-ref wrapper."
+    type: info
+    date: "2026-11-22"
   - text: "Plan phase 2 COMPLETE (delivery): refusal identities and the diagnostics
       contract landed in commit 2a0d28c4. Gate (declared phase-2 suites) green:
       bun test over merge-refusal-surface/-taxonomy/-production-composition/

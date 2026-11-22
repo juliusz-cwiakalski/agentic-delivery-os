@@ -41,6 +41,7 @@ import {
   parsePmNotesText,
   preserveCorruptHostIndex,
   projectPmNotesCompleteness,
+  readCiWorkflowJobNames,
   readCommittedConfigDocument,
   readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
@@ -2743,14 +2744,29 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     const mergeRequestDetail = async (
       changeRef: string,
+      entityId?: string,
     ): Promise<
       | { readonly ok: true; readonly request: DeliveryRequest }
       | { readonly ok: false; readonly code: string }
     > => {
-      // The delivered re-read backing: the bounded list read filtered by the
-      // same declared convention the resolution used, so a recovery re-read
-      // re-observes the resolved request and never invents a second source. A
-      // fault routes through the declared identities.
+      // The delivered SINGLE-request read (GH-366 LF-1): the landing decision's
+      // mergeability fact comes from this read — the list endpoint cannot
+      // carry mergeability, so a list entry without mergeability fields never
+      // refuses `merge.mergeability-unknown` for a clean request. A fault
+      // routes through the declared identities; `provider.not-found` takes the
+      // declared provider-outage default, never a request reason or the abort.
+      if (entityId !== undefined && /^\d+$/u.test(entityId)) {
+        const read = await client.readDeliveryRequest(Number(entityId));
+        if (read.ok) return { ok: true, request: read.value };
+        const credential = mergeCredentialFacts(read.code);
+        return {
+          ok: false,
+          code: mergeReadCodeOf(read),
+          ...(credential === undefined ? {} : { credential }),
+        };
+      }
+      // The no-entity form is the delivered convention-filtered re-read
+      // backing; the merge path always supplies the resolved entity id.
       if (target === undefined) return { ok: false, code: "merge.request-unresolved" };
       const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT, {
         includeGateFacts: true,
@@ -2765,12 +2781,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }
       const pattern = branchConvention(changeRef);
       const match = open.value.items.find((item) => pattern.test(item.sourceRef));
-      // The bounded list page is the request-detail read: it carries the
-      // provider-asserted title and, on this read, the mergeability state and
-      // gate facts the taxonomy classifies (GH-349 AC-F1-6, AC-F2-1..4). Both
-      // are provider assertions; nothing is derived.
       if (match !== undefined) return { ok: true, request: match };
       return { ok: false, code: "merge.request-unresolved" };
+    };
+
+    /**
+     * The delivered CI-workflow read the battery's `ci-green` gate uses (F-2):
+     * the same `readCiWorkflowJobNames` read, so the merge path's expected job
+     * set is the repository-declared one and no second read exists.
+     */
+    const mergeCiWorkflow = async () => {
+      const read = readCiWorkflowJobNames({ baseDirectory: cwd, fs: localFs });
+      return { outcome: read.outcome, names: read.names };
     };
 
     /**
@@ -2875,7 +2897,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         readOpenRequests: mergeOpenRequests,
         readMergedRequest: mergeMergedRequest,
         readChangeRecordAtHead: (headSha: string) => mergeRecordAtHead(headSha, changeRef),
-        readRequestDetail: () => mergeRequestDetail(changeRef),
+        readRequestDetail: (entityId?: string) => mergeRequestDetail(changeRef, entityId),
+        readCiWorkflow: mergeCiWorkflow,
       }),
     };
 

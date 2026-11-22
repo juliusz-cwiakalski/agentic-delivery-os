@@ -9,6 +9,7 @@
  * binding datum.
  */
 import {
+  MERGE_BUILTIN_ADMITTED_SURFACES,
   MERGE_BUILTIN_GATE_IDS,
   MERGE_DEFAULT_GATE_SET,
   MERGE_GATE_ENTRY_FIELDS,
@@ -100,13 +101,6 @@ const project = (
 const shippedEntry = (id: MergeBuiltinGateId): MergeGateEntry =>
   MERGE_DEFAULT_GATE_SET.entries.find((entry) => entry.id === id) as MergeGateEntry;
 
-const sameEntry = (left: MergeGateEntry, right: MergeGateEntry): boolean =>
-  left.id === right.id &&
-  left.recipe === right.recipe &&
-  left.surface === right.surface &&
-  left.class === right.class &&
-  left.job === right.job;
-
 type ParsedEntry = { readonly entry: MergeGateEntry } | { readonly failure: MergeGateSetFailure };
 
 const parseEntry = (value: unknown): ParsedEntry => {
@@ -152,11 +146,30 @@ const parseEntry = (value: unknown): ParsedEntry => {
   if (recipe === "required-ci-job" && job === undefined) {
     return { failure: fail(`gate "${id}" requires a job binding`, id) };
   }
+  // The admitted-surface sets (GH-366 F-2, AC-F2-7): a declared built-in's
+  // surface must lie in its admitted set — `battery` or `both` for `ci-green`
+  // (the reviewed check-gate opt-out), `battery` alone for the other four.
+  const surfaceValue = surface as MergeGateSurface;
+  const admitted = (MERGE_BUILTIN_ADMITTED_SURFACES as Record<string, readonly string[]>)[id];
+  if (admitted !== undefined && !(admitted as readonly string[]).includes(surfaceValue)) {
+    return {
+      failure: fail(
+        `gate "${id}" declares the surface "${surfaceValue}" outside its admitted set`,
+        id,
+      ),
+    };
+  }
+  if (id === "ci-green" && recipe !== "ci-green") {
+    return { failure: fail(`gate "${id}" may not change a built-in's recipe`, id) };
+  }
+  if (id === "ci-green" && value.class !== undefined) {
+    return { failure: fail(`gate "${id}" may not change a built-in's class`, id) };
+  }
   return {
     entry: {
       id,
       recipe: recipe as MergeGateRecipe,
-      surface: surface as MergeGateSurface,
+      surface: surfaceValue,
       ...(ownerClass === undefined ? {} : { class: ownerClass }),
       ...(job === undefined ? {} : { job }),
     },
@@ -233,13 +246,15 @@ export const resolveMergeGateSet = (
       };
     }
     const shipped = shippedEntry(id);
-    if (!sameEntry(declared, shipped)) {
+    // A built-in's recipe and class are immutable (AC-F2-7); its SURFACE is
+    // free to move within the built-in's admitted set — the admitted-surface
+    // validation in parseEntry is the only surface authority, so declaring
+    // `ci-green` on `battery` is the reviewed check-gate opt-out.
+    const immutableChanged = declared.recipe !== shipped.recipe || declared.class !== shipped.class;
+    if (immutableChanged) {
       return {
         ok: false,
-        failure: fail(
-          `built-in "${id}" must keep its shipped recipe, surface, and class binding`,
-          id,
-        ),
+        failure: fail(`built-in "${id}" must keep its shipped recipe and class binding`, id),
       };
     }
   }

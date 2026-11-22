@@ -138,21 +138,29 @@ describe("TC-MRG-026 the abort row's retryability is honest over every cause it 
     expect(row.remediationHint).toContain("no convergence is claimed");
     expect(row.consequence).toBe("not_landed");
     // The cause population is read from the transaction's own emission sites,
-    // not restated here: at this boundary the abort row reaches exactly its two
-    // pre-mutation causes — the waiver-append failure and the declared landing
-    // gap. The refused landing is routed through the total landing-fault
-    // mapping and never reaches this row (AC-F3-3, AC-F3-6).
+    // not restated here: the abort row reaches exactly its three act-requiring
+    // causes — the waiver-append failure, the declared landing gap, and
+    // duplicate matching delivery requests (open and merged, each named by
+    // their duplicate identities). The refused landing is routed through the
+    // total landing-fault mapping and never reaches this row (AC-F3-3,
+    // AC-F3-6).
     const transaction = readFileSync(
       join(ROOT, "packages/core/src/domain/merge-transaction.ts"),
       "utf8",
     );
     const emissionSites = [...transaction.matchAll(/code: "merge\.transaction-aborted"/gu)].length;
-    expect(emissionSites).toBe(2);
+    expect(emissionSites).toBe(4);
     // Cause (a): the waiver-append failure, whose evidence names the append
     // fault; cause (b): the declared landing gap, whose evidence names the
-    // operation and its gap reason.
+    // operation and its gap reason; cause (c): the two duplicate-request
+    // aborts, each naming the duplicate identities from the read that
+    // observed them.
     expect(transaction).toContain("evidence: { detail: appended.code }");
     expect(transaction).toContain("`merge-delivery-request:${landingGap}`");
+    expect(transaction).toContain("duplicate-merged-request");
+    expect(transaction).toContain("duplicate-open-request");
+    expect(transaction).toContain("duplicate-merged-request");
+    expect(transaction).toContain("duplicate-open-request");
     // The refused landing takes the mapping, never the abort row.
     expect(transaction).toContain("landingFaultIdentityOf");
     // No row value is assigned by hand anywhere in the transaction: every

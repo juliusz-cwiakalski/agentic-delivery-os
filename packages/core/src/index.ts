@@ -1015,6 +1015,7 @@ export {
   evaluateWatchdogPreflight,
   evaluateWorktreeSafety,
   evidenceCorpus,
+  expectedSetValid,
   extractVerifySuiteMapNode,
   failedJobNames,
   findingClasses,

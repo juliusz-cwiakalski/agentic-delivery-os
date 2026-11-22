@@ -795,6 +795,66 @@ describe("GH-366 the change-branch resolution and convergence (phase 3)", () => 
     }
     guard.restore();
   });
+
+  test("TC-MRG-050 the pinned mergeability oracle: a no-mergeability list entry plus a clean single request LANDS once", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-mergeability" });
+    try {
+      // The fixture's open list carries no mergeability fields (the list
+      // endpoint cannot); the single request reports mergeable and clean. The
+      // landing decision reads mergeability from the single request.
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode, dry.stderr).toBe(0);
+      const live = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(live.exitCode, live.stderr).toBe(0);
+      expect(envelopeOf(live).data?.landing).toMatchObject({ requestState: "merged" });
+      // The transport log: the single-request URL requested after the gate
+      // evaluation, exactly once before the landing; the open-list URL NOT
+      // re-requested.
+      const singles = harness.transportCalls.filter(
+        (url) => url.includes("/pulls/") && !url.endsWith("/merge"),
+      );
+      expect(singles).toHaveLength(1);
+      const openLists = harness.transportCalls.filter((url) => url.includes("state=open"));
+      expect(openLists).toHaveLength(2); // dry run + live run, one each
+      expect(harness.transportCalls.some((url) => url.endsWith("/merge"))).toBe(true);
+      // The refusal never fires for the list entry's missing fields.
+      const serialized = `${live.stdout}\n${live.stderr}`;
+      expect(serialized).not.toContain("merge.mergeability-unknown");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-050 the fault cell: a fault of the single-request read names the detail operation from ERROR_TABLE", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-mergeability-fault" });
+    try {
+      // A fresh verification is recorded first (the freshness precondition),
+      // then the single-request read faults; the open list stays healthy.
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setReply((url) => {
+        if (url.includes("/pulls/") && !url.endsWith("/merge")) {
+          return { status: 503, body: {} };
+        }
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      const row = ERROR_TABLE.find((entry) => entry.code === "provider.outage");
+      expect(row).toBeDefined();
+      expect(run.exitCode).toBe(exitOf("provider.outage"));
+      expect(envelopeOf(run).error?.code).toBe("provider.outage");
+      const summary = String(envelopeOf(run).error?.summary ?? "");
+      expect(summary).toContain("operation=github-delivery-request-detail");
+      expect(summary).not.toContain("no-open-request");
+      expect(summary).not.toContain("merge.transaction-aborted");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
 });
 
 describe("TC-ENGINE-053 read and state faults stay classified on every path", () => {

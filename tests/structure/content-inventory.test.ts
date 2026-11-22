@@ -908,6 +908,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "FALLBACK_INVOCATION_CODE",
   ],
   "core/src/contracts/merge.ts": [
+    "MERGE_BUILTIN_ADMITTED_SURFACES",
     "MERGE_BUILTIN_GATE_IDS",
     "MERGE_DEFAULT_GATE_ENTRIES",
     "MERGE_DEFAULT_GATE_SET",
@@ -2069,6 +2070,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/verify-gates.ts": [
     "evaluateDeclaredBattery",
     "evaluateVerifyGates",
+    "expectedSetValid",
     "isFullHexSha",
     "renderVerifyGatesFailureSummary",
     "renderVerifyGatesHuman",
