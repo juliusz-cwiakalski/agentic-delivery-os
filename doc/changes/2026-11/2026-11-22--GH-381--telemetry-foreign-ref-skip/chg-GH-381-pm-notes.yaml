@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-22T13:32:36.768Z }
   quality_gates: { started: null, completed: 2026-11-22T14:14:45.288Z }
   dod_check: { started: null, completed: 2026-11-22T14:16:28.452Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-22T14:22:25.580Z }
 decisions: []
 open_questions: []
 blockers:
@@ -310,5 +310,21 @@ notes:
       tests/checks/doc-conformance.test.ts 61 pass / 0 fail; bash
       scripts/.tests/test-doc-distribution.sh clean; doc-syncer reported zero
       residual gaps. Test result: PASS (verification guards)."
+    type: info
+    date: "2026-11-22"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull /383 —
+      fix(GH-381): make spend reads multi-ref safe — skip foreign telemetry
+      family keys; base main-tools, head fix/GH-381/ telemetry-foreign-ref-skip,
+      17 commits (7512f5fd..5959c521), 18 files +3376/-16. Body carries the
+      problem, the F-2 fix, delivery shape, full evidence (review PASS iter-1,
+      DoR READY iter-2, gates PASS 12470/4/0 all stages, range lint PASS 15
+      commits at gate time, doc-conformance 61/61, doc-distribution clean) and
+      the non-blocking advisories (sibling readTelemetrySteps +
+      appendTelemetryBaseline defects with the ticket comment link; changeset
+      -patch filename vs minor×5 content; stale spec/test-plan version_impact
+      metadata; fixture-only deviations). 'Closes #381' fires only on merge.
+      Merge authority is the owner's; the PR stays open for review and the
+      lifecycle STOPS here."
     type: info
     date: "2026-11-22"
