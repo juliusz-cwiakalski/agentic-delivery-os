@@ -36,7 +36,7 @@ type DefectSuite = {
   readonly assertions: readonly string[];
   readonly control: {
     readonly id: string;
-    readonly shape: "substituted-derivation";
+    readonly shape: "substituted-derivation" | "value-substitution";
     /** The assertion that makes a control equal to production fail by name. */
     readonly differsSnippet: string;
   };
@@ -57,8 +57,8 @@ const DEFECT_SUITES: readonly DefectSuite[] = [
       "f1.mismatch-control-still-contains",
     ],
     control: {
-      id: "f1.substituted-prefix-declaration",
-      shape: "substituted-derivation",
+      id: "f1.declaration-removed",
+      shape: "value-substitution",
       differsSnippet: "expect(preFix.length).toBeGreaterThan(0);",
     },
     substitutes: "PRE-FIX DECLARATION",
@@ -160,7 +160,10 @@ describe("TC-F7-005 the three named defects each carry a defect-named regression
   test("each control declares its shape and asserts a value that differs from production", () => {
     for (const suite of DEFECT_SUITES) {
       const text = sourceOf(suite.file);
-      expect(controlTag(text)?.shape, suite.defect).toBe("substituted-derivation");
+      // F1's control is GH-366's value substitution (the deleted runtime
+      // declaration fails by name); F4/F8 keep the substituted derivation.
+      const declaredShape = suite.defect === "F1" ? "value-substitution" : "substituted-derivation";
+      expect(controlTag(text)?.shape, suite.defect).toBe(declaredShape);
       // The control-differs assertion is present verbatim, so a control that
       // returns the production value fails by name instead of passing.
       expect(text, suite.defect).toContain(suite.control.differsSnippet);
@@ -198,9 +201,10 @@ describe("TC-F7-005 the three named defects each carry a defect-named regression
 
 describe("TC-F7-005 the two metrics are reported separately and honestly", () => {
   test("3/3 named defects carry a defect-named regression with a declared shape", () => {
-    const shaped = DEFECT_SUITES.filter(
-      (suite) => controlTag(sourceOf(suite.file))?.shape === "substituted-derivation",
-    );
+    const shaped = DEFECT_SUITES.filter((suite) => {
+      const shape = controlTag(sourceOf(suite.file))?.shape;
+      return shape === "substituted-derivation" || shape === "value-substitution";
+    });
     expect(shaped).toHaveLength(3);
     expect(`${shaped.length}/${DEFECT_SUITES.length}`).toBe("3/3");
     for (const suite of DEFECT_SUITES) {

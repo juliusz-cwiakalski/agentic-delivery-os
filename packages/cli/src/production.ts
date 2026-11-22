@@ -2663,7 +2663,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * The resolution reads (GH-366 F-1): the one bounded open-list read, the
      * delivered merged-request read used verbatim, and the bounded local
      * change-record read at a candidate head. No checkout branch read, no
-     * checkout head read, no working-tree record read, no fetch (NFR-6, NG-7).
+     * checkout head read, no working-tree record read, no fetch, per NFR-6 and NG-7.
      */
     const mergeOpenRequests = async (): Promise<
       | {

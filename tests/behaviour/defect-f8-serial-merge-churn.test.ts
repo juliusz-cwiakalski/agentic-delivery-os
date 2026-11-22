@@ -136,11 +136,23 @@ describe("F8 defect-f8-serial-merge-churn: one landing, no head mutation, no reb
     // both consequences are named, at their invocation.
     expect(violations.join("\n")).toContain("head-mutation@merge-2");
     expect(violations.join("\n")).toContain("rebase-attempt@merge-2");
-    expect(violations.join("\n")).toContain("refusal@merge-3: merge.gates-stale");
-    // The control differs from production on the declared observable.
+    // GH-366's resolved-head binding changes the third consequence: the
+    // freshness envelope compares against the REQUEST's asserted head (which
+    // the retired local refresh never moved), so merge-3 is no longer
+    // `merge.gates-stale` — it proceeds on the still-valid verification,
+    // and its conflicting reading triggers the retired refresh AGAIN (a
+    // second head mutation the pre-fix composition could not stop), refusing
+    // sync-required at both invocations without a refusal violation.
+    expect(violations.join("\n")).toContain("head-mutation@merge-3");
+    expect(violations.join("\n")).toContain("rebase-attempt@merge-3");
+    expect(violations.join("\n")).not.toContain("refusal@merge-2");
+    expect(violations.join("\n")).not.toContain("refusal@merge-3");
+    // The control differs from production on the declared observable: the
+    // pre-fix composition mutates the head at EACH conflicting reading (two,
+    // merge-2 and merge-3) because the resolved-head binding never stops it.
     const differs = await serialControlDiffers();
     expect(differs.productionHeadMutations).toBe(0);
-    expect(differs.preFixHeadMutations).toBe(1);
+    expect(differs.preFixHeadMutations).toBe(2);
     expect(differs.preFixHeadMutations).not.toBe(differs.productionHeadMutations);
   });
 

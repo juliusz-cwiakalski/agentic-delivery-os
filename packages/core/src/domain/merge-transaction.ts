@@ -1871,13 +1871,15 @@ export const runMergeTransaction = async (input: {
     });
   }
 
-  // 9. One landing mechanism, and its provider-asserted verdict.
   // 9. The landing decision's mergeability source (F-2, LF-1): the delivered
   // SINGLE-request read of the request the resolution located — the list
   // endpoint cannot carry mergeability, so the open-list entry's missing
   // mergeability fields never refuse `merge.mergeability-unknown`. A fault of
   // this read names `operation=github-delivery-request-detail`; the
   // unknown-recovery re-read re-reads the single request, never the list.
+  // Mergeability comes from this read; every other provider-asserted signal
+  // (the verbatim title included) stays the resolved request's, which the
+  // resolution read from the list with gate facts.
   const requestDetail = await ports.readRequestDetail(resolution.request.identity.entityId);
   if (!requestDetail.ok) {
     return refused(
@@ -1885,7 +1887,12 @@ export const runMergeTransaction = async (input: {
       readFailure(requestDetail.code, "github-delivery-request-detail", requestDetail.credential),
     );
   }
-  return decide(requestDetail.request);
+  const observed = requestDetail.request;
+  return decide(
+    observed.mergeableState === undefined
+      ? { ...resolution.request }
+      : { ...resolution.request, mergeableState: observed.mergeableState },
+  );
 };
 
 const reportFor = (

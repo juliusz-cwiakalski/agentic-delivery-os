@@ -384,6 +384,7 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     string,
     { readonly declaration?: string; readonly path?: string } | { readonly missing: true }
   > = options.recordsAtHead ?? {};
+  let lastOpenPage: readonly DeliveryRequest[] = [];
   const currentRequest = (): DeliveryRequest | { readonly fault: string } =>
     typeof requestFact === "function" ? requestFact() : requestFact;
   const openRequestsOf = (): OpenPage | { readonly fault: string } => {
@@ -523,6 +524,10 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
       if ("fault" in page) {
         return { ok: false as const, code: page.fault };
       }
+      // The record read derives a candidate's default declaration from THIS
+      // page snapshot: the request factory is never re-consumed by a later
+      // read.
+      lastOpenPage = page.items;
       return { ok: true as const, value: page };
     },
     readMergedRequest: async () => {
@@ -548,7 +553,16 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
       }
       const path =
         record?.path ?? `doc/changes/2026-11/2026-11-06--GH-301--fixture/chg-GH-301-pm-notes.yaml`;
-      const declaration = record?.declaration ?? branchDeclaration;
+      // The delivered default: the record at a candidate head declares that
+      // candidate's own source ref (the accept-all delivered fixture), so a
+      // page whose entry carries a different slug still resolves to that
+      // entry. The page snapshot comes from the resolution read (never a
+      // second read of the request factory); a planted record fixture wins;
+      // the static declaration is the last fallback.
+      const declaration =
+        record?.declaration ??
+        lastOpenPage.find((item) => "headSha" in item && item.headSha === headSha)?.sourceRef ??
+        branchDeclaration;
       return declaration === undefined
         ? { ok: true as const, path }
         : { ok: true as const, path, declaration };

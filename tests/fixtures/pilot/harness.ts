@@ -513,6 +513,34 @@ export const createPilot = async (options: PilotOptions = {}): Promise<Pilot> =>
     newFenceToken: nextFence,
   });
 
+  // The merge composition's resolution + required-check reads (GH-366): the
+  // pilot's provider surface is stubbed, so the open list serves the pilot
+  // request, the record read answers the pilot branch at the pilot head, and
+  // the CI workflow read names the green page's jobs.
+  const mergeRuntimeWithResolution: MergeCommandRuntime = {
+    ...mergeRuntime,
+    createPorts: (changeRef: string) => ({
+      ...mergeRuntime.createPorts(changeRef),
+      readOpenRequests: async () => ({
+        ok: true as const,
+        value: { items: [pilotDeliveryRequest(deliveryHead)], saturated: false },
+      }),
+      readMergedRequest: async () => ({
+        observation: "unavailable" as const,
+        matchedIdentities: [],
+      }),
+      readChangeRecordAtHead: async () => ({
+        ok: true as const,
+        path: `${PILOT_CHANGE_FOLDER}/chg-${PILOT_REF}-pm-notes.yaml`,
+        declaration: PILOT_BRANCH,
+      }),
+      readCiWorkflow: async () => ({
+        outcome: "read" as const,
+        names: ["CI / test", "CI / lint"],
+      }),
+    }),
+  };
+
   const program: CommandProgram = {
     commands: {
       status: createStatusCommandDefinition(statusRuntime),
@@ -534,7 +562,7 @@ export const createPilot = async (options: PilotOptions = {}): Promise<Pilot> =>
       verify: createVerifyCommandDefinition(
         createVerifyCommandRuntime({ store, changesDirectory, fs: notesFs }),
       ),
-      merge: createMergeCommandDefinition(mergeRuntime),
+      merge: createMergeCommandDefinition(mergeRuntimeWithResolution),
       closeout: createCloseoutCommandDefinition(createCloseoutCommandRuntime(closeoutComposition)),
       queue: createQueueCommandDefinition(createQueueCommandRuntime(queueComposition)),
       plan: createPlanCommandDefinition(planRuntime),

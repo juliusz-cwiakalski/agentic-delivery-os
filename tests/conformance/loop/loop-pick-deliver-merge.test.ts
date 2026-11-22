@@ -37,9 +37,12 @@ describe("TC-BATTLE-006 the pick-deliver-merge cycle over the real command runti
       // DELIVER: a real dispatch token from the declared vocabulary.
       expect(deliver?.exitCode).toBe(0);
       expect(deliver?.token).toBe("noop-lane-nothing-to-do");
-      // MERGE: the delivered gate identity, not a stub's constant.
-      expect(merge?.exitCode).toBe(2);
-      expect(merge?.errorCode).toBe("merge.state-unverified");
+      // MERGE: the delivered resolution refusal, not a stub's constant — the
+      // ref has no open delivery request and the convergence attempt observes
+      // the empty matched-identity set, refusing before the freshness read
+      // (GH-366 Appendix A steps 1-3 precede step 7).
+      expect(merge?.exitCode).toBe(1);
+      expect(merge?.errorCode).toBe("merge.request-unresolved");
 
       // The deliver leg is `dispatch`, derived from the argv, and `phase complete`
       // was never issued (a lifecycle transition is not a delivery).
