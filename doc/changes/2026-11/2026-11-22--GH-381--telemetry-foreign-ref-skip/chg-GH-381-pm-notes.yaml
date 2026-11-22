@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-22T08:24:00.855Z }
   delivery_planning: { started: null, completed: 2026-11-22T08:25:35.811Z }
   dor_check: { started: null, completed: 2026-11-22T08:31:01.686Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-22T13:13:29.714Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -141,58 +141,84 @@ notes:
       scope. dod_check will read pm-notes + delivery-os phase list evidence."
     type: info
     date: "2026-11-22"
-  - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden),
-      commit a9a3a029. tests/fixtures/telemetry/index.ts gains the GH-381
-      fixture family (refs GH-381/GH-365/GH-000; FX-1 interleaved both
-      directions, FX-2 foreign-first regression, FX-3 bare prefixes, FX-4
-      requested-ref damage arms, FX-6 observed-scale 4,806 records via the
-      delivered batch fence technique, the FX-5 golden-arm builder, and the
-      TC-044 foreign-damage seeder) plus shared path-normalization helpers;
+  - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden), commit
+      a9a3a029. tests/fixtures/telemetry/index.ts gains the GH-381 fixture
+      family (refs GH-381/GH-365/GH-000; FX-1 interleaved both directions, FX-2
+      foreign-first regression, FX-3 bare prefixes, FX-4 requested-ref damage
+      arms, FX-6 observed-scale 4,806 records via the delivered batch fence
+      technique, the FX-5 golden-arm builder, and the TC-044 foreign-damage
+      seeder) plus shared path-normalization helpers;
       foreign-ref-skip-golden-run.ts is the explicit capture entry and
       foreign-ref-skip-golden.ts the committed golden (7 arms: healthy
       single-ref read, verified-empty empty-ledger read, five delivered tear
       identities+locations all at record 6; store paths normalized to
       <stateDirectory>). Binding ordering constraint honored: golden captured
-      BEFORE any packages/core/src/state/telemetry.ts edit. Seeding note:
-      two refs' baselines cannot both go through appendTelemetryBaseline (its
-      delivered idempotency pre-read tears on a same-family foreign key — out
-      of scope per DEC-3), so multi-ref baselines are raw-appended in one
-      fence with the delivered writer's exact payload/kind/key (byte-identical
-      stored record) — the delivered scale-batch precedent. Verification:
-      capture entry run twice — byte-identical and biome-check clean;
-      bun test tests/behaviour/telemetry-storage-damage.test.ts 5 pass / 0
-      fail (delivered tear conventions unchanged); pnpm typecheck and tests
-      types/tsc green. Test result: PASS."
+      BEFORE any packages/core/src/state/telemetry.ts edit. Seeding note: two
+      refs' baselines cannot both go through appendTelemetryBaseline (its
+      delivered idempotency pre-read tears on a same-family foreign key — out of
+      scope per DEC-3), so multi-ref baselines are raw-appended in one fence
+      with the delivered writer's exact payload/kind/key (byte-identical stored
+      record) — the delivered scale-batch precedent. Verification: capture entry
+      run twice — byte-identical and biome-check clean; bun test
+      tests/behaviour/telemetry-storage-damage.test.ts 5 pass / 0 fail
+      (delivered tear conventions unchanged); pnpm typecheck and tests types/tsc
+      green. Test result: PASS."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 2 complete (foreign-ref skip in the step and baseline family
-      branches + regression suite green), commit c20f4b58. The F-2 table
-      (spec §5.1, Appendix C) is implemented inside readTelemetryFamilies
+      branches + regression suite green), commit c20f4b58. The F-2 table (spec
+      §5.1, Appendix C) is implemented inside readTelemetryFamilies
       (packages/core/src/state/telemetry.ts) only: a bare family prefix tears
-      state.store.torn at its own position; a well-formed foreign key is
-      skipped in ledger order with no kind inspection, no payload inspection,
-      and no evidence; the requested ref's kind-mismatch tear and payload
-      validation are unchanged. The capture-outcome branch, the session-record
-      branch, the single-family reads, the capture path, and spend-reads.ts
-      are untouched (DEC-3, NG-4); the single verified pass is preserved
-      (asserted structurally in TC-TELEMETRY-045: exactly one readRecords call,
-      zero other port calls, ledger digest byte-identical at 4,806 records).
-      New suite tests/behaviour/telemetry-foreign-ref-skip.test.ts implements
+      state.store.torn at its own position; a well-formed foreign key is skipped
+      in ledger order with no kind inspection, no payload inspection, and no
+      evidence; the requested ref's kind-mismatch tear and payload validation
+      are unchanged. The capture-outcome branch, the session-record branch, the
+      single-family reads, the capture path, and spend-reads.ts are untouched
+      (DEC-3, NG-4); the single verified pass is preserved (asserted
+      structurally in TC-TELEMETRY-045: exactly one readRecords call, zero other
+      port calls, ledger digest byte-identical at 4,806 records). New suite
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts implements
       TC-TELEMETRY-040..047 (16 tests). Scale-seeding note: the delivered
       verified write re-verifies the whole ledger per append, so 4,806-record
       seeding through store.append is quadratic (~minutes per build, twice per
       suite run); FX-6's bulk steps therefore land through the delivered ledger
       core (buildRecord + serializeRecord — the exact calls appendRecord makes)
-      in one pass, byte-identical to delivered writes, with the first record
-      and both refs' families still through the delivered store append; the
-      verified read under test validates every record in one pass regardless.
-      F-6 golden equality proven directly: re-running the capture entry
-      post-fix regenerates tests/fixtures/telemetry/foreign-ref-skip-golden.ts
+      in one pass, byte-identical to delivered writes, with the first record and
+      both refs' families still through the delivered store append; the verified
+      read under test validates every record in one pass regardless. F-6 golden
+      equality proven directly: re-running the capture entry post-fix
+      regenerates tests/fixtures/telemetry/foreign-ref-skip-golden.ts
       byte-identical to the pre-fix committed golden. Verification: bun test
       tests/behaviour/telemetry-foreign-ref-skip.test.ts 16 pass / 0 fail
       (6.07s); targeted regression net over all 109 telemetry/spend/metrics/
       status/provider-budget/harness-telemetry suites 906 pass / 0 fail / 2
       skip; delivered TC-TELEMETRY-012 suite 5 pass / 0 fail; pnpm typecheck +
       tests types/tsc green; biome check clean. Test result: PASS."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 3 complete (multi-ref consumer proofs + lockstep patch
+      changeset), commit 9b6cbb0e. TC-REF-007 lands in
+      tests/behaviour/provider-budget-ref.test.ts: FX-7 seeds two refs' full
+      families (steps, baseline, v1 session, capture outcome; distinct per-ref
+      figures 20 vs 140) through the delivered paths, the measured budget equals
+      exactly the requested ref's own scoped fold figure for BOTH refs (zero
+      foreign contribution), and resolution proceeds to a provider decision
+      (kind selected on the delivered chain) instead of the telemetry tear.
+      TC-METRICS-113 lands in tests/behaviour/metrics-dispatch.test.ts: the
+      two-ref metrics read succeeds where pre-fix it tore, its dispatch block is
+      byte-equal to the single-ref report, the burn-rate evaluation is identical
+      with the alarm measured value exactly the requested ref's 1,200 tokens
+      despite the foreign 99,999-token step, and no foreign dispatch row appears
+      (NG-4 shapes unchanged). No consumer implementation file was edited
+      anywhere (A-4). The lockstep patch changeset
+      .changeset/gh-381-telemetry-foreign-ref-skip-patch.md bumps
+      @delivery-os/core patch (spec A-5/§18). Verification: bun test
+      tests/behaviour/provider-budget-ref.test.ts 13 pass / 0 fail; bun test
+      tests/behaviour/metrics-dispatch.test.ts 7 pass / 0 fail; bun test
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts 16 pass / 0 fail (36
+      pass / 0 fail across the three suites together); pnpm typecheck + tests
+      types/tsc green; biome check clean. Test result: PASS. Note: this entry
+      rides the PM's lifecycle-boundary commit (change-folder artifacts modified
+      between phase commits ride the next commit — observed repo flow)."
     type: info
     date: "2026-11-22"
