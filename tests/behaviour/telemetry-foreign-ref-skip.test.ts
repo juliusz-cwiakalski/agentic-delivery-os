@@ -61,6 +61,7 @@ import {
   GH384_ABSENT_REF,
   GH384_FOREIGN_REF,
   GH384_REF,
+  type Gh381RequestedDamageArm,
   type Gh384CaptureOutcome,
   type Gh384MultiRefReadsGolden,
   type Gh384StepsRead,

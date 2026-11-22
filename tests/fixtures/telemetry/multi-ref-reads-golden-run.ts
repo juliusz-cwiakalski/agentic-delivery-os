@@ -33,7 +33,7 @@
  */
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { Gh384MultiRefReadsGolden } from "./index";
+import type { Gh381NormalizedTear, Gh384MultiRefReadsGolden } from "./index";
 import {
   buildGh384RegressionCases,
   buildGh384SingleRefCases,

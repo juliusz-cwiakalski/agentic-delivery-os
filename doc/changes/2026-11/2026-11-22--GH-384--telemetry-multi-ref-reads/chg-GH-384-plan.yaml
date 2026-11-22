@@ -91,3 +91,32 @@ phases:
         - tests/behaviour/spend-zero-window.test.ts
         - tests/behaviour/telemetry-foreign-ref-skip.test.ts
         - .changeset/gh-384-telemetry-multi-ref-reads-minor.md
+  # Phase 4 appended by @reviewer at review iteration 1 (2026-11-22; verdict
+  # FAIL, artifact code-review/review-iter-1.yaml): two un-imported-type
+  # findings. F-1 (medium, introduced by this change): the golden capture entry
+  # annotates with Gh381NormalizedTear without importing it — TS2304 at lines
+  # 59 and 83, invisible to every gate (no gate typechecks tests/**; biome does
+  # not resolve cross-file TS identifiers; bun strips types at runtime).
+  # F-2 (low, pre-existing from GH-381, same file class): Gh381RequestedDamageArm
+  # used un-imported at tests/behaviour/telemetry-foreign-ref-skip.test.ts:258.
+  # Both fixes are type-only import additions; no behavior change is possible;
+  # the golden entry must stay drift-free and the suites green after the fix.
+  - id: 4
+    title: "Code Review Remediation (Iteration 1)"
+    kind: remediation
+    # F-1 (mandatory): add Gh381NormalizedTear to the type import from "./index"
+    # in tests/fixtures/telemetry/multi-ref-reads-golden-run.ts (inline type
+    # modifier, verbatimModuleSyntax). F-2 (optional bundle, same footprint):
+    # add `type Gh381RequestedDamageArm` to the existing import from
+    # "../fixtures/telemetry/index" in
+    # tests/behaviour/telemetry-foreign-ref-skip.test.ts.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun
+    # tests/fixtures/telemetry/multi-ref-reads-golden-run.ts (must stay
+    # drift-free, exit 0); bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts
+    # (39 pass / 0 fail); bun test tests/behaviour/spend-zero-window.test.ts
+    # (10 pass / 0 fail); pnpm exec biome lint on both files. No production
+    # file is touched; scope confined to the two files declared below.
+    scope:
+      files:
+        - tests/fixtures/telemetry/multi-ref-reads-golden-run.ts
+        - tests/behaviour/telemetry-foreign-ref-skip.test.ts

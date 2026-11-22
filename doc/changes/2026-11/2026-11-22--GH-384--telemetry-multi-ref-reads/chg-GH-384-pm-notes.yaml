@@ -151,3 +151,46 @@ notes:
       never assert a prefix the builder does not parameterize."
     type: retro
     date: "2026-11-22"
+  - text: "Review verdict FAIL at iteration 1 (artifact code-review/review-iter-1.yaml;
+      0c / 0h / 1m / 1l / 0i). Every spec/plan compliance dimension re-verified
+      PASS by review: F-4 rule exact at both sites, idempotency preserved with
+      counting-port proof, verifiedEmpty settlement sound, golden-before-fix
+      integrity byte-exact (diff is exactly the two corrected-half hunks), all
+      8 ACs green (review re-ran 39+10+5 / 0 fail), zero plan drift, changeset
+      five-package minor, doc reconciliation accurate, all prior non-gating
+      dispositions verified. Blocking finding F-1 [medium]:
+      tests/fixtures/telemetry/multi-ref-reads-golden-run.ts:59,83 references
+      Gh381NormalizedTear without importing it — tsc-confirmed two TS2304
+      errors, gate-invisible (no gate typechecks tests/**; tests/tsconfig
+      includes only *.type-test.ts; biome has no cross-file TS resolution; bun
+      strips types at runtime). F-2 [low]: same class, pre-existing delivered
+      GH-381 code at tests/behaviour/telemetry-foreign-ref-skip.test.ts:258
+      (Gh381RequestedDamageArm) — bundled as optional hygiene since the file is
+      in scope. Reviewer appended plan phase 4 (kind: remediation): both type
+      imports, scope confined to the two files, no production file touched,
+      zero behavior change. Path: @coder executes plan phase 4 → re-review
+      iteration 2. Doc-syncer re-run judged unnecessary: remediation is
+      type-only and cannot change behavior or docs; quality gates follow with
+      the full battery."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: review iteration 1 caught a gate-invisible defect class — a missing
+      type import (TS2304) in a new test entry file survives every delivered
+      gate because no gate typechecks tests/** (tests/tsconfig covers only
+      *.type-test.ts), biome does not resolve cross-file TS, and bun strips
+      types at runtime. Cost: one remediation round. Mitigation for authoring
+      agents: probe new test-entry files with tsc (or a targeted typecheck)
+      before handoff. Memory-capture candidate (review catch) for closeout."
+    type: retro
+    date: "2026-11-22"
+  - text: "Retro (tooling): bare commit-primitive invocation outside a plan-phase
+      context fails commitlint deterministically (commit.commitlint-failed,
+      not_landed, twice; simplified fields did not change the verdict). The
+      primitive composes commitlint-valid messages only with plan-phase
+      context. Durable review state therefore rides the review_fix completion
+      checkpoint (GH-381 pattern: change-folder artifacts land with the next
+      phase complete). No hand composition — prohibited. Lesson for future
+      sessions: do not attempt standalone durable-state commits mid-phase;
+      record in pm-notes and let the checkpoint sweep."
+    type: retro
+    date: "2026-11-22"
