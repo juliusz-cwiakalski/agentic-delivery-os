@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-22T08:31:01.686Z }
   delivery: { started: null, completed: 2026-11-22T13:13:29.714Z }
   system_spec_update: { started: null, completed: 2026-11-22T13:18:40.403Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-22T13:32:36.768Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -139,6 +139,44 @@ notes:
       divergence exists to fix; no events.jsonl is written by the installed
       harness version here, and adding capsule events is not in this change's
       scope. dod_check will read pm-notes + delivery-os phase list evidence."
+    type: info
+    date: "2026-11-22"
+  - text: "system_spec_update landed as e02a2f33 with a non-empty advisory
+      scopeDrift list naming exactly the three edited doc/spec/features files —
+      verified NOT a content error: the plan's phase-4 scope block declares all
+      of them (chg-GH-381-plan.yaml lines 49-51), and feature-state-layer.md is
+      absent because the doc-syncer verified it unchanged. The drift detector
+      evidently computes the commit's expected scope from delivery-kind phases
+      only, so planning-kind (declaration-only) phase scope lands flagged as
+      advisory drift even when exact. Engine treated it as non-blocking
+      (safety.completed, no findings). Lesson: when phase complete reports
+      scopeDrift, diff the flagged paths against the plan's declaration before
+      treating it as real drift — declaration-exact content can still be flagged
+      for planning-kind scope."
+    type: retro
+    date: "2026-11-22"
+  - text: "Review iteration 1: PASS (artifact code-review/review-iter-1.yaml; 0
+      critical / 0 high / 2 medium / 1 low / 2 info; remediation NONE; plan
+      ALL_TASKS_DONE; no coverage gaps). Verified adversarially: F-2 table exact
+      in telemetry.ts:709-739; golden-before-fix commit-verified (golden only in
+      a9a3a029, fix only in c20f4b58); fixture deviations audited byte-faithful
+      and test-only; empirical re-runs green (16/16 regression, 25/25
+      consumer+damage, typecheck, biome, doc-conformance 61/61,
+      doc-distribution, range lint 13 commits). Two MEDIUM findings are residual
+      same-class defects in sibling reads, out of the ticket's declared seam —
+      identified as follow-up material for the owner, not blockers: (F-2)
+      readTelemetrySteps still tears on foreign keys and is composed by spend
+      --window-evidence (packages/cli edge.ts ~L6390), so that spend surface
+      remains unavailable on multi-ref ledgers; (F-3) appendTelemetryBaseline
+      idempotency pre/post-reads (telemetry.ts ~L529, ~L550) still tear on
+      foreign baselines, so second-ref baseline capture fails permanently in
+      multi-ref projects (GH-381's fixtures bypass the helper, proving it). LOW:
+      changeset wording 'spend... read any ledger' overstated by the
+      --window-evidence surface — advisory, to be disclosed in the PR body
+      rather than churned post-PASS. Spec NG-3's premise ('capture path already
+      ref-scoped and delivered correct') is factually incomplete per F-3; left
+      as owner-gated follow-up. Sibling defects surfaced to the owner via a
+      ticket #381 comment (no tickets created — PM proposes, human decides)."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden), commit
