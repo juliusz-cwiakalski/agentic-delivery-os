@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  matchPriorNamespaceLiteral,
   matchSeedLiteral,
   scan,
   validateRegistryShape,
@@ -25,9 +26,18 @@ import {
 const DRILL = "doc/guides/rename-drill.md";
 
 const corpus = (name: string): string[] =>
-  JSON.parse(
-    readFileSync(join(ROOT, `tests/fixtures/forbidden-literals/${name}.json`), "utf8"),
-  ) as string[];
+  (
+    JSON.parse(
+      readFileSync(join(ROOT, `tests/fixtures/forbidden-literals/${name}.json`), "utf8"),
+    ) as { delivered: string[] }
+  ).delivered;
+
+const priorCorpus = (name: string): string[] =>
+  (
+    JSON.parse(
+      readFileSync(join(ROOT, `tests/fixtures/forbidden-literals/${name}.json`), "utf8"),
+    ) as { priorNamespace: string[] }
+  ).priorNamespace;
 
 const seededRegistry = (baseline: string, registered: string[] = []) => ({
   ...liveRegistry(),
@@ -39,7 +49,7 @@ const violationsFor = (outcome: ReturnType<typeof scan>, file: string): string[]
   outcome.violations.filter((violation) => violation.file === file).map((entry) => entry.token);
 
 describe("delivered state", () => {
-  test("5/5 scope classes are scanned with 0 violations", () => {
+  test("7/7 scope classes are scanned with 0 violations", () => {
     const outcome = scan(ROOT);
     expect(outcome.failures).toEqual([]);
     expect(outcome.violations).toEqual([]);
@@ -48,6 +58,8 @@ describe("delivered state", () => {
       "rootManifests",
       "rootWorkspaceFiles",
       "ignoreRules",
+      "promptSurface",
+      "scriptSurface",
       "userFacingDocs",
     ]);
   });
@@ -57,7 +69,7 @@ describe("delivered state", () => {
     expect(validateRegistryShape(registry)).toEqual([]);
     expect(registry.seedLiterals).toEqual(["ados", "ADOS_", "~/.ados"]);
     expect(registry.corpusBaseline).toBe("32784affbb8a1b82a57b6c4578a331b8bd99b4c4");
-    expect(registry.scopeClasses).toHaveLength(5);
+    expect(registry.scopeClasses).toHaveLength(7);
     expect(registry.allowlist).toHaveLength(5);
     if (existsSync(join(ROOT, DRILL))) {
       expect(registry.registered).toContain(DRILL);
@@ -203,6 +215,30 @@ describe("matching semantics", () => {
   });
 });
 
+describe("prior-namespace matching corpora", () => {
+  const block = liveRegistry().priorNamespace;
+  if (block === undefined) throw new Error("the live registry has no priorNamespace block");
+
+  test("true-positive prior rows all match", () => {
+    for (const entry of priorCorpus("true-positives")) {
+      expect(matchPriorNamespaceLiteral(entry, block)).toBeDefined();
+    }
+  });
+
+  test("false-positive prior rows all miss", () => {
+    for (const entry of priorCorpus("false-positives")) {
+      expect(matchPriorNamespaceLiteral(entry, block)).toBeUndefined();
+    }
+  });
+
+  test("the prior corpus is not vacuous", () => {
+    const misses = [...priorCorpus("true-positives"), "shadow"].filter(
+      (entry) => matchPriorNamespaceLiteral(entry, block) === undefined,
+    );
+    expect(misses).toEqual(["shadow"]);
+  });
+});
+
 describe("allowlist exactness", () => {
   test("five allowlisted locations are clean and do not mask a violation", () => {
     const repo = createTempRepo();
@@ -262,6 +298,18 @@ describe("allowlist exactness", () => {
     sixthClass.scopeClasses.push({ id: "extra", root: "extra" });
     expect(
       validateRegistryShape(sixthClass).some((message) => message.includes("scope classes")),
+    ).toBe(true);
+
+    const oldFiveClass = liveRegistry();
+    oldFiveClass.scopeClasses.splice(4, 2);
+    const fiveClassFailures = validateRegistryShape(oldFiveClass).join("\n");
+    expect(fiveClassFailures).toContain("promptSurface");
+    expect(fiveClassFailures).toContain("scriptSurface");
+
+    const missingPrior: Record<string, unknown> = { ...liveRegistry() };
+    delete missingPrior.priorNamespace;
+    expect(
+      validateRegistryShape(missingPrior).some((message) => message.includes("priorNamespace")),
     ).toBe(true);
   });
 });

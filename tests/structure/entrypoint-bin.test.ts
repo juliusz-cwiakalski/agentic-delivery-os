@@ -147,7 +147,7 @@ const DECLARED_INVENTORY: readonly LiteralSite[] = [
   {
     file: "packages/mcp/src/serve.ts",
     constant: "DEFAULT_WORKING_NAME",
-    value: "delivery-os",
+    value: "jaiship",
     exported: false,
   },
   {
@@ -364,7 +364,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
         "packages/cli/bin/jaiship.ts",
         'const DEFAULT_WORKING_NAME = "jaiship";\nconst PRIOR_WORKING_NAME = "delivery-os";\n',
       );
-      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
       seed("packages/core/src/branding/index.ts", 'const SCOPE_ORG = "delivery-os";\n');
       expect(inventoryViolations(literalSites(root))).toEqual([]);
 
@@ -399,7 +399,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
       const seed = (relative: string, content: string) => write(root, relative, content);
       seed("packages/cli/bin/delivery-os.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
       seed("packages/cli/bin/jaiship.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
-      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "jaiship";\n');
       seed("packages/core/src/branding/index.ts", 'const SCOPE_ORG = "delivery-os";\n');
       const baseline = literalSites(root);
       expect(inventoryViolations(baseline).join("\n")).toContain("PRIOR_WORKING_NAME");
@@ -694,5 +694,40 @@ describe("GH-346 TC-INST-107 the identity-literal inventory has two declared sca
     const launcher = readFileSync(join(ROOT, "packages/cli/src/bin-launcher.ts"), "utf8");
     expect(launcher).not.toContain("process.");
     expect(launcher).toContain("resolveReentryEntryPath");
+  });
+});
+
+describe("GH-365 the alias refuses the migration verb before it dispatches", () => {
+  test("the alias returns install.identity.not-owning for install migrate", async () => {
+    const { createInstallCommandDefinition } = await import(
+      "../../packages/cli/src/commands/install"
+    );
+    const { createInstallRuntime, createInstallScratch, fixtureIdentity } = await import(
+      "../fixtures/install/home"
+    );
+    const scratch = createInstallScratch("entrypoint-bin-migrate");
+    try {
+      const definition = createInstallCommandDefinition(
+        createInstallRuntime({
+          scratch,
+          runningArtifactPath: "/nonexistent/artifact",
+          identity: fixtureIdentity(),
+          ownsInstallation: false,
+          invokedIdentity: "delivery-os",
+        }),
+      );
+      const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
+      if (!resolved.ok) throw new Error("brand");
+      const outcome = (await definition.handler({
+        command: "install",
+        flags: { "--json": true },
+        argv: ["install", "migrate"],
+        positionals: ["migrate"],
+        brand: resolved.value,
+      } as never)) as { readonly error?: { readonly code?: string } };
+      expect(outcome.error?.code).toBe("install.identity.not-owning");
+    } finally {
+      scratch.dispose();
+    }
   });
 });

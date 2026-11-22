@@ -58,7 +58,7 @@ ados_distribution: redistributable
 | [Steer](spec/features/feature-steer.md) | The `steer` family and the shared typed message record: filing with drawn defaults and the derived origin block, the batched boundary read point with receipts, `ttl-elapsed` expiry as a classified outcome, the asks batch with the delivered drawn-default join, artifact-ref completion, the three `steering.*` record kinds, the registered-value guard, three exact error identities, and the 23rd prompt-required mount |
 | [Metrics Report and Burn-Rate Alarms](spec/features/feature-metrics.md) | The read-only `metrics` report: native ceremony share and cycle time, the CI-failure-rate proxy, the escaped-defects curated floor, the per-dispatch spend block, burn-rate alarms against the project-committed declaration, the comparison view under the committed protocol, classified absence per section, bounds, and the 24th prompt-required mount |
 | [Supervise](spec/features/feature-supervise.md) | The operator-facing supervisor battery: the `delivery.supervision.v1` report, artifact-evidence tri-state classification with lying-liveness detection and no process input, watchdog and daemon consumption, the any-cause-gated `liveness-stall` park with its non-null re-entry instant and the additive lane `until`, duplicate-supervision refusal against an actively acting authority, restart-policy composition over the delivered economics with a ref-stable exhaustion question, two error identities, and the 25th prompt-required mount |
-| [Installable Artifact and Install Lifecycle](spec/features/feature-install-lifecycle.md) | The self-contained `build:binary` artifact and the build identity behind the one-line `--version` token contract, the compiled process edge, the twenty-sixth prompt-required `install` family (`status`, `rollback`, `uninstall`, `purge`) owned by the primary identity only, the linked-worktree and dev-build admission gates, the atomic seven-step replace with its artifact-agreement no-op, the single rollback slot and its pair-inversion precondition, the advisory-on-write and typed-on-report state-format check, the removal matrix with the always-printed residual set, the four dry-runs, the opt-in `PATH` block, the migration refusal, the daemon guard, and the guarded shell launcher step |
+| [Installable Artifact and Install Lifecycle](spec/features/feature-install-lifecycle.md) | The self-contained `build:binary` artifact and the build identity behind the one-line `--version` token contract, the compiled process edge, the twenty-sixth prompt-required `install` family (`migrate`, `status`, `rollback`, `uninstall`, `purge`) owned by the primary identity only, the linked-worktree and dev-build admission gates, the atomic seven-step replace with its artifact-agreement no-op, the single rollback slot and its pair-inversion precondition, the advisory-on-write and typed-on-report state-format check, the removal matrix with the always-printed residual set, the five dry-runs, the opt-in `PATH` block, the `install migrate` verb with its dry-run, verified backup and manifest, the daemon guard, and the guarded shell launcher step |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 
 ## Changing Behavior?
@@ -96,6 +96,12 @@ ados_distribution: redistributable
 |------|-------------|
 | [zclaude](tools/zclaude.md) | Launch Claude Code with Z.AI GLM Coding Plan |
 | [text-to-image](tools/text-to-image.md) | Generate images from text prompts (7 providers) |
+
+## Quality test specifications
+
+| Document | Description |
+|----------|-------------|
+| [Namespace Conformance](quality/test-specs/test-spec-namespace-conformance.md) | The two conformance arms, the shim-registry reconciliation, the migration battery, the fixtures and the proof boundary |
 
 ## Templates
 

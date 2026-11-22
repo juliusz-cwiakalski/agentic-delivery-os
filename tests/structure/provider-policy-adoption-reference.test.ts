@@ -1,7 +1,7 @@
 /**
  * GH-374 TC-POL-CFG-001/004/006/007/008/009, TC-POL-SEAT-006,
  * TC-POL-DRIFT-001..007, TC-POL-MIG-001..003 — the permanent reference test
- * over the REAL committed provider policy in `.delivery-os/config.yaml`.
+ * over the REAL committed provider policy in `.jaiship/config.yaml`.
  *
  * Every case reads the real document (never a fixture copy) through the
  * delivered validators and the delivered composition. Declared values are
@@ -37,14 +37,14 @@ import { HARNESS_MODEL_EXPRESSION_MAX_CHARS } from "../../packages/core/src/cont
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
-const CONFIG = join(ROOT, ".delivery-os/config.yaml");
+const CONFIG = join(ROOT, ".jaiship/config.yaml");
 const CHANGE_FOLDER = join(
   ROOT,
   "doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption",
 );
 const MIGRATION_EVIDENCE = join(CHANGE_FOLDER, "migration-output.md");
 const SUITE_MAP_CONTROL = "tests/structure/verify-gates-suite-map-reference.test.ts";
-const SUITE_MAP_CONTROL_SHA256 = "407c5ca3b516e81c909a2aa0575ffbd1c25b1318747c60921747953a3d8b093b";
+const SUITE_MAP_CONTROL_SHA256 = "8428820a26d141067f20ee3c8382544ce57e60b10190f3aaec72b7a288934e81";
 
 /* ------------------------------- helpers -------------------------------- */
 
@@ -333,13 +333,10 @@ const composedCheckout = (
   const root = makeTempRoot(`gh374-reference-${label}`);
   const checkout = join(root, "checkout");
   const home = join(root, "home");
-  mkdirSync(join(checkout, ".delivery-os"), { recursive: true });
+  mkdirSync(join(checkout, ".jaiship"), { recursive: true });
   mkdirSync(join(checkout, ".git"), { recursive: true });
   mkdirSync(home, { recursive: true });
-  writeFileSync(
-    join(checkout, ".delivery-os/config.yaml"),
-    options.documentText ?? readDocumentText(),
-  );
+  writeFileSync(join(checkout, ".jaiship/config.yaml"), options.documentText ?? readDocumentText());
   writeFileSync(
     join(checkout, ".ai-local-placeholder"),
     "placeholder so the checkout tree is not empty\n",
@@ -654,7 +651,7 @@ const driftFindings = (
 /* -------------------------------- CFG-001 -------------------------------- */
 
 describe("GH-374 TC-POL-CFG-001 the real committed document loads through the delivered validators", () => {
-  test("acquisition reads the prior-identity file once and the current directory is absent", () => {
+  test("acquisition reads the current committed file and reports no prior read", () => {
     const acquired = acquireFileConfig({
       platform: "linux",
       homeDirectory: "/home/synthetic",
@@ -669,15 +666,8 @@ describe("GH-374 TC-POL-CFG-001 the real committed document loads through the de
     });
     expect(acquired.ok).toBe(true);
     if (!acquired.ok) return;
-    expect(acquired.prior).toEqual([
-      {
-        state: "read",
-        layer: "project-committed",
-        file: CONFIG,
-        currentFile: join(ROOT, ".jaiship/config.yaml"),
-      },
-    ]);
-    expect(existsSync(join(ROOT, ".jaiship"))).toBe(false);
+    expect(acquired.prior).toBeUndefined();
+    expect(existsSync(join(ROOT, ".jaiship/config.yaml"))).toBe(true);
   });
 
   test("both chains validate, the default chain is declared, and the grace bound loads", () => {
@@ -1472,7 +1462,7 @@ describe("GH-374 TC-POL-DRIFT-006 --show-origin names the committed file and the
       expect(data.key).toBe("provider.defaultChain");
       expect(data.value).toBe("subscription-first");
       expect(String(data.origin)).toMatch(
-        /^layer=project-committed file=.*\/\.delivery-os\/config\.yaml line=\d+$/,
+        /^layer=project-committed file=.*\/\.jaiship\/config\.yaml line=\d+$/,
       );
       const debug = await composed.run([
         "config",

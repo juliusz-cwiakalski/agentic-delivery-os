@@ -555,7 +555,7 @@ artifacts: []
 
 <model_and_format_selection>
 <principle>Prompt format must align with the assigned model for optimal performance. Always clarify purpose, recommend a capability tier from model_profiles, confirm with the user, then select format.</principle>
-<routing_authority>Model routing for this repository is declared in the typed provider profile policy in `.delivery-os/config.yaml` (`provider.profiles` seats); a prompt must not declare provider or model identifiers.</routing_authority>
+<routing_authority>Model routing for this repository is declared in the typed provider profile policy in `.jaiship/config.yaml` (`provider.profiles` seats); a prompt must not declare provider or model identifiers.</routing_authority>
 
 <process>
 <step id="1">Clarify artifact purpose: What task type will this agent/command/skill perform? (code generation, reasoning, data extraction, tool calling, creative, chat, multimodal, multi-step verification)</step>

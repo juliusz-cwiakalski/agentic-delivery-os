@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-INSTALL-LIFECYCLE
 status: Current
 created: 2026-11-19
-last_updated: 2026-11-19
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
-summary: "The installable product artifact and its composed `install` lifecycle (M4-S1): one Bun-compiled self-contained executable at `dist/<binary-name>` produced by the additive `build:binary` entry, a build-time-injected identity behind the preserved one-line `--version` contract with four exact tokens, and the compiled process edge that derives the detached re-entry path from the artifact's real path; the twenty-sixth prompt-required family `install` with `status`, `rollback`, `uninstall`, and `purge`, composed in both bins and owned by the primary identity only, with an admission predicate that refuses a linked worktree and a development run, one `install.record.v1` record written atomically, a seven-step atomic replace with an artifact-content agreement no-op and in-place record reconciliation, a single compiled-artifact rollback slot with the pair-inversion precondition and its two declared limits, an advisory-on-write and typed-on-report state-format check, the removal matrix with the always-printed residual set, four zero-write dry-runs that report the daemon `unchecked`, the delimited opt-in PATH block, the migration refusal, the before-swap daemon guard that no dry-run evaluates, the guarded shell launcher step, and eleven `install` error rows."
+summary: "The installable product artifact and its composed `install` lifecycle (M4-S1): one Bun-compiled self-contained executable at `dist/<binary-name>` produced by the additive `build:binary` entry, a build-time-injected identity behind the preserved one-line `--version` contract with four exact tokens, and the compiled process edge that derives the detached re-entry path from the artifact's real path; the twenty-sixth prompt-required family `install` with `migrate`, `status`, `rollback`, `uninstall`, and `purge`, composed in both bins and owned by the primary identity only, with an admission predicate that refuses a linked worktree and a development run, one `install.record.v1` record written atomically, a seven-step atomic replace with an artifact-content agreement no-op and in-place record reconciliation, a single compiled-artifact rollback slot with the pair-inversion precondition and its two declared limits, an advisory-on-write and typed-on-report state-format check, the removal matrix with the always-printed residual set, five zero-write dry-runs that report the daemon `unchecked`, the delimited opt-in PATH block, the migration verb and the retired `--migrate` form, the pre-action daemon guard that no dry-run evaluates, the guarded shell launcher step, and ten `install` error rows."
 links:
-  related_changes: ["GH-346", "GH-320", "GH-242"]
+  related_changes: ["GH-346", "GH-320", "GH-242", "GH-365"]
   related_decisions: ["TDR-0044", "TDR-0045", "TDR-0046", "TDR-0047", "TDR-0048"]
   contracts:
     - "scripts/build-binary.ts"
@@ -32,7 +32,7 @@ links:
 
 # Feature: Installable Artifact and Install Lifecycle
 
-> **Role of this Document:** Source of truth for the delivered product artifact and the `install` command family (M4-S1). It covers the build entry, the injected identity and the `--version` token contract, the compiled process edge, the family's five entry points and flags, the admission and development-build gates, the install record, the atomic replace with its artifact-agreement no-op, rollback and upgrade, the state-format compatibility check, removal and dry-runs, the managed `PATH` block, the migration hook, the daemon guard, the ownership split with the shell installers, and the eleven error rows. Requirements live in the GH-346 change artifacts; this page describes current behavior. The process surface that composes the family is [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md), the error contract is [Result Contract and Error Table](feature-result-contract.md), the compatibility anchor is [State Layer](feature-state-layer.md), and the operator narrative is the [Local Install guide](../../guides/local-install.md).
+> **Role of this Document:** Source of truth for the delivered product artifact and the `install` command family (M4-S1). It covers the build entry, the injected identity and the `--version` token contract, the compiled process edge, the family's six entry points and flags, the admission and development-build gates, the install record, the atomic replace with its artifact-agreement no-op, rollback and upgrade, the state-format compatibility check, removal and dry-runs, the managed `PATH` block, the migration verb, the daemon guard, the ownership split with the shell installers, and the ten error rows. Requirements live in the GH-346 and GH-365 change artifacts; this page describes current behavior. The process surface that composes the family is [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md), the error contract is [Result Contract and Error Table](feature-result-contract.md), the compatibility anchor is [State Layer](feature-state-layer.md), and the operator narrative is the [Local Install guide](../../guides/local-install.md).
 
 ## 1. Overview
 
@@ -66,12 +66,12 @@ Upgrade is not a verb: it is an install of a different compiled artifact, so the
   - Identity truth: the four declared token situations resolve exactly: 4/4.
   - Read-free self-description: 0 state, git, configuration, and network reads and 0 writes on `--version`, `--help`, and `--print-install-path`.
   - Prompt-required families: exactly 28, identical in content and order in both bins.
-  - Lifecycle entry points reachable through the composed program: 5/5.
+  - Lifecycle entry points reachable through the composed program: 6/6 (the family root and its five subcommands).
   - Writes performed by a refused install: 0.
   - Crash points that leave a runnable artifact at a known path: 7/7 replace steps.
   - Bytes rewritten by re-installing the identical artifact: 0 artifact bytes and 0 destination renames.
   - Residual-set equality between `uninstall` and `purge`: exact, path for path.
-  - Dry-runs that write anything: 0 of 4.
+  - Dry-runs that write anything: 0 of 5 (the four artifact-lifecycle paths and the migration verb).
 
 ## 3. Capabilities
 
@@ -108,7 +108,7 @@ A compiled artifact presents the runtime name and a virtual bundle path as its f
 
 ### 3.4 The family, its flags, and the owning role
 
-`install` joins `PROMPT_REQUIRED_COMMANDS` as the twenty-sixth family, appended after `supervise`, and the production composer registers it unconditionally with its runtime: the home directory, the process facts, the file-system port, the clock, the daemon status read and stop path, and the delivered worktree-topology read. Root help lists the family, and each of the five entry points resolves its own help from the static inventory with usage, options, examples, exit codes, and a see-also pointer.
+`install` joins `PROMPT_REQUIRED_COMMANDS` as the twenty-sixth family, appended after `supervise`, and the production composer registers it unconditionally with its runtime: the home directory, the process facts, the file-system port, the clock, the daemon status read and stop path, and the delivered worktree-topology read. Root help lists the family, and each subcommand entry resolves its own help from the static inventory with usage, options, examples, exit codes, and a see-also pointer.
 
 `rollback`, `uninstall`, and `purge` are subcommands rather than flags: a mode flag on a default-destructive verb is one typo from an unintended removal, and each destructive form needs its own help, exit codes, and dry-run.
 
@@ -116,7 +116,8 @@ A compiled artifact presents the runtime name and a virtual bundle path as its f
 |---|---|---|
 | `--add-to-path` | `install` | Append exactly one delimited `PATH` block to one profile and record its file and marker |
 | `--shell-profile <path>` | `install` | Select the profile explicitly; always wins over the declared shell mapping |
-| `--migrate` | `install` | Accept the migration hook and answer the typed delegation refusal; no other entry point accepts it |
+| `--migrate` | `install` | **Retired:** still recognised by the parser so the refusal is reachable; answers `fallback.invocation` at exit `1` naming the remedy `install migrate` and performs nothing |
+| `--backup-dir <abs>` | `install migrate` | Place the verified backup at this absolute path (never relative, never inside a source root) |
 | `--dry-run` | `install`, `install rollback`, `install uninstall`, `install purge` | Print the complete plan and write nothing |
 | `--stop-daemon` | every artifact-replacing or artifact-removing path | Stop a live daemon through the delivered stop path before the swap or removal |
 | `--yes` | `install purge` | The explicit confirmation input |
@@ -241,19 +242,21 @@ By default the product writes no profile file. `--add-to-path` appends exactly o
 
 An identical block is not re-appended; a block with different content at the same markers is replaced in place and never duplicated. The block's file and marker are recorded in the install record, so a later install or removal finds it even if the operator edited the profile, and `install uninstall` and `install purge` remove exactly that block and nothing else. There is no standalone "remove the block but keep the install" verb.
 
-### 3.11 The migration hook
+### 3.11 The migration verb
 
-Without `--migrate`, `install` detects prior-namespace artifacts and prints one advisory line naming them and the operator's documented manual move; it never moves, copies, or deletes them. With `--migrate`, `install` accepts the hook and answers `install.migration.unavailable` at exit `1`, stating that migration is not available in this build, naming M4-S2 as its owner, and giving a remedy that points at the documented manual move. No migration port is composed, so the flag cannot silently no-op. A dry-run with `--migrate` prints the same detection list and states that nothing would be migrated. No other lifecycle entry point accepts the flag.
+The family's fifth verb, `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]`, moves the three prior-namespace roots (host configuration, host state, and the invoking project configuration) to the current identity. It reuses the family's admission predicate: a linked-worktree target is `install.target.worktree`, a development build is `install.dev-build`, and a lifecycle invocation on the compatibility alias is `install.identity.not-owning`, each at exit `1` with nothing moved. It plans before it acts: a dry run prints one header per root class, one line per entry with its disposition and file/byte counts, the would-be backup path, and `daemon: unchecked`, and writes nothing, creates no directory, reads no daemon, and records nothing. An applying run copies and digest-verifies every planned entry into `<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the first move, then moves each non-derived entry without rewriting a byte. Dispositions are the closed six (`moved`, `already-migrated`, `duplicate-identical`, `conflict`, `blocked`, `absent`); a differing entry is a `conflict` retained on both sides, a byte-identical duplicate is retained, a source symlink is `blocked`, a destination symlink is `conflict`, and the declared derived entry (`host-index.json`) is outside the move set (destination `already-migrated` or `absent`; a source copy is a reported derived residual). The run verdict follows the stated composition rule (`partial` when a move and a conflict coexist, `conflict` or `blocked` when nothing moved), and the machine payload is `install.migration.plan.v1`. The command writes **zero records of any kind** in every mode — the declared command-audit exception — and never edits an operator profile: a managed `PATH` block under a prior root is reported with the remedy "re-run the installed artifact's `install`". A second run is `already-migrated` with no move and no backup.
+
+The retired `install --migrate` flag form stays in the parser grammar so the remedy is reachable: it answers `fallback.invocation` at exit `1`, names the retired form and the remedy `install migrate`, and performs no install and no migration. The documented and help flag set no longer lists `--migrate` as supported. Without the flag, `install` keeps the delivered advisory detection line and moves nothing.
 
 ### 3.12 The daemon guard
 
-`install`, `install rollback`, `install uninstall`, and `install purge` each refuse a live daemon holder with `install.daemon.running` at exit `1`, naming the holder and the remedy, and write nothing. With `--stop-daemon`, the daemon is stopped through the delivered stop path **before** the swap or removal, so no delivery path ever observes two builds. A refused rollback performs no daemon action at all, because the ordered refusal set runs before the stop. The guard belongs to the four real runs only: a `--dry-run` of any of the four paths is decided before the guard, so it neither reads nor stops the daemon, never answers `install.daemon.running`, and reports the disposition as `unchecked`.
+`install`, `install rollback`, `install uninstall`, and `install purge` each refuse a live daemon holder with `install.daemon.running` at exit `1`, naming the holder and the remedy, and write nothing; `install migrate` applies the same guard before it moves the state. With `--stop-daemon`, the daemon is stopped through the delivered stop path **before** the swap, removal, or migration, so no delivery path ever observes two builds. A refused rollback performs no daemon action at all, because the ordered refusal set runs before the stop. The guard belongs to the five real runs only: a `--dry-run` of any of the five paths is decided before the guard, so it neither reads nor stops the daemon, never answers `install.daemon.running`, and reports the disposition as `unchecked`.
 
 ### 3.13 The ownership split with the shell installers
 
 One owner per artifact class.
 
-- **The lifecycle family owns the binary.** The artifact, the rollback slot, the install record, and the managed `PATH` block belong to `install`, `install status`, `install rollback`, `install uninstall`, and `install purge`.
+- **The lifecycle family owns the binary.** The artifact, the rollback slot, the install record, and the managed `PATH` block belong to `install`, `install status`, `install rollback`, `install uninstall`, and `install purge`; `install migrate` owns the byte-preserving move of the three prior-identity roots.
 - **The shell installers own repository artifacts.** `scripts/install.sh` copies the redistributable docs, delivery scripts, delivery tools, templates, and the plugin projection, and keeps its launcher step for the legacy launcher. One predicate governs that step: **anything present at the brand install path that is not the delivered launcher — the artifact, the slot, or any other content — is a managed or foreign artifact**, and detection is by what is at the path, never by the install record. With nothing but the delivered launcher (or nothing at all) there, the step behaves exactly as delivered: same target, content-idempotent, the two classified failures, the plan-only dry-run preview, and independence from the tool selection. With anything else there — under a `current` record, a `record-stale` record, or a deleted or damaged record — it refuses, classified, names `install` as the update path, writes no launcher, and leaves the content byte-untouched.
 - **`scripts/uninstall.sh` removes repository artifacts only.** It removes no binary, slot, record, or product root, keeps its own `0/2/3/4/5` exit taxonomy and its dry-run behaviour, and where a managed install is detected it reports it and names `install uninstall` as the owning removal command. Its detection source is the product's read-free `--print-install-path` self-description invoked with the working-name override scrubbed from the child environment; when no binary is reachable it reports no managed install without an error and guesses no path.
 
@@ -261,9 +264,9 @@ Neither surface deletes the other's artifacts, and each names the other when the
 
 ### 3.14 Declared conformance surface and error rows
 
-The family moves the whole conformance surface in one shape: the prompt-required membership at exactly 28 families: `install` is the twenty-sixth, GH-348's `loop` the twenty-seventh, and GH-350's `provider` the twenty-eighth and last, with every pinned family count and family-tail position in the structural and behavioural suites; the root, family, and subcommand help entries; the reference page at `doc/planning/oss-tooling/milestones/m4/commands/install.md` containing both `--help` and `--version`; the help-coverage page-root branch placing that page in the M4 directory, because the default M1 root must not serve a new family; the help-guide coverage inventory in both directions; one `install` error domain kind with its eleven rows, documented on the [result contract](feature-result-contract.md), with the closed two-segment allowlist at 68 declared identities and the declared table total at 170 machine identities; and one declared build-side identity-literal site with the product-surface inventory unchanged at five sites ([Branding Seam](feature-branding-seam.md)).
+The family moves the whole conformance surface in one shape: the prompt-required membership at exactly 28 families: `install` is the twenty-sixth, GH-348's `loop` the twenty-seventh, and GH-350's `provider` the twenty-eighth and last, with every pinned family count and family-tail position in the structural and behavioural suites; the root, family, and subcommand help entries; the reference page at `doc/planning/oss-tooling/milestones/m4/commands/install.md` containing both `--help` and `--version`; the help-coverage page-root branch placing that page in the M4 directory, because the default M1 root must not serve a new family; the help-guide coverage inventory in both directions; one `install` error domain kind with its ten rows, documented on the [result contract](feature-result-contract.md), with the closed two-segment allowlist at 68 declared identities and the declared table total at 169 machine identities; and one declared build-side identity-literal site with the product-surface inventory unchanged at five sites ([Branding Seam](feature-branding-seam.md)).
 
-The eleven rows are all category `user`, non-retryable, consequence `not_landed`, projection `user-validation` (exit `1`):
+The ten rows are all category `user`, non-retryable, consequence `not_landed`, projection `user-validation` (exit `1`):
 
 | Identity | Trigger |
 |---|---|
@@ -272,7 +275,6 @@ The eleven rows are all category `user`, non-retryable, consequence `not_landed`
 | `install.state.incompatible` | `install status` judged a state root whose header identifier is not accepted |
 | `install.identity.not-owning` | A lifecycle entry point ran on an identity that does not own installation |
 | `install.shell-profile.unresolved` | `--add-to-path` without `--shell-profile` and with no identifiable shell |
-| `install.migration.unavailable` | `--migrate` was supplied; migration is not available in this build |
 | `install.daemon.running` | A live daemon holds the artifact and `--stop-daemon` was not given |
 | `install.record.unreadable` | The rollback precondition is unmet: the install record does not name the pair the rollback swap inverts, or the destination is not a compiled artifact |
 | `install.slot.absent` | Rollback found no rollback slot |
@@ -315,7 +317,7 @@ Exit `0` covers each completed operation and each producible plan; `1` covers ev
 
 ## 5. Boundaries
 
-- **No namespace migration.** `--migrate` is accepted and refused typedly; moving, copying, backing up, or converting configuration, state, or artifacts belongs to M4-S2.
+- **The migration is the delivered verb.** `install migrate` performs the move; `--migrate` is a retired grammar-only refusal with the remedy. Nothing outside the three declared roots and the declared backup root is moved, copied, or deleted.
 - **No release channel.** No package registry, release asset naming, checksum manifest, signature verification, download-based upgrade, auto-update, or publishing pipeline.
 - **No network and no build inside the lifecycle.** The artifact requires the pinned toolchain and `git` at build time only; at install time only the delivered git read is used, and a host without `git` is admitted and recorded `unverified`.
 - **No configurable destination.** No flag, argument, or environment override redirects the install path.
@@ -333,7 +335,7 @@ Exit `0` covers each completed operation and each producible plan; `1` covers ev
 | Level | Scope | Suites |
 |---|---|---|
 | Behaviour | The composed family and its refusals, admission and the dev-build gate, the destination dispositions, agreement, upgrade and the involutive rollback, the record's shape and tolerance, the record precondition, the compatibility verdict, the seven-step crash matrix, and the daemon guard | `tests/behaviour/install-family-surface.test.ts`, `install-admission.test.ts`, `install-replace.test.ts`, `install-record.test.ts`, `install-compatibility.test.ts`, `install-crash-matrix.test.ts` |
-| Checks | The four zero-write dry-runs, removal and the residual set, the `PATH` block and the migration hook, the daemon guard on the four real runs and `unchecked` on the four dry-runs, the error domain's source rows, the conformance surface and its mutants, one real-artifact end-to-end arm, and the documentation page | `tests/checks/install-lifecycle-dryrun.test.ts`, `install-lifecycle-removal.test.ts`, `install-lifecycle-path.test.ts`, `install-lifecycle-daemon.test.ts`, `install-lifecycle-e2e.test.ts`, `install-error-domain.test.ts`, `install-conformance-mutants.test.ts`, `install-lifecycle-docs.test.ts` |
+| Checks | The four artifact-lifecycle zero-write dry-runs and the migration dry-run, removal and the residual set, the `PATH` block and the migration verb, the daemon guard on the four artifact paths and the migration guard, `unchecked` on every dry-run, the error domain's source rows, the conformance surface and its mutants, one real-artifact end-to-end arm, and the documentation page | `tests/checks/install-lifecycle-dryrun.test.ts`, `install-lifecycle-removal.test.ts`, `install-lifecycle-path.test.ts`, `install-lifecycle-daemon.test.ts`, `install-lifecycle-e2e.test.ts`, `install-error-domain.test.ts`, `install-conformance-mutants.test.ts`, `install-lifecycle-docs.test.ts`, `tests/behaviour/install-migrate.test.ts` |
 | Artifact | Self-containment, the four identity tokens, the two-build comparison, the argument slice, the re-entry path, and the install-path authority, one cached build per run into a scratch output directory | `tests/checks/artifact-self-containment.test.ts`, `artifact-identity.test.ts`, `artifact-grammar.test.ts` |
 | Structure | The additive build entry and its single declared build-side literal site, the family's composition absence of network and build spawns, the prompt-required membership and every pinned count, the reference page and page-root mapping, and the ownership split | `tests/structure/build-artifact-entry.test.ts`, `install-composition-absence.test.ts`, `install-conformance.test.ts`, `install-launcher.test.ts`, `install-ownership-split.test.ts` |
 | Shell | The installer's preserved launcher behaviour, its classified refusal on the content predicate in three record conditions, and the uninstaller's reporting arm | `scripts/.tests/test-install.sh`, `scripts/.tests/test-uninstall.sh`, `tests/checks/install-launcher-installer.test.ts` |
@@ -364,7 +366,7 @@ The replace is proven by injecting a failure at each of the seven steps: a runna
 ## 9. Related
 
 - [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md) — the composition, the read-free self-description, the family count, and the owning-role fact.
-- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the projection, and the eleven `install` rows.
+- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the projection, and the ten `install` rows.
 - [State Layer](feature-state-layer.md) — the store-format identifier and the ledger header the compatibility check reads.
 - [Branding Seam and Working Name](feature-branding-seam.md) — the identity literals, the product-surface inventory, and the build-side site.
 - [Doc Distribution Marker](feature-doc-distribution-marker.md) — the install set and the conditional launcher step.

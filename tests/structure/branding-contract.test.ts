@@ -399,3 +399,17 @@ describe("telemetry schema reservation", () => {
     }
   });
 });
+
+describe("GH-365 the MCP default and the derived override channel", () => {
+  test("the MCP default is the current identity and the override name derives from the prefix", () => {
+    const serve = readRepo("packages/mcp/src/serve.ts");
+    expect(serve).toContain('const DEFAULT_WORKING_NAME = "jaiship"');
+    expect(serve).not.toContain('"DELIVERY_OS_WORKING_NAME"');
+    expect(serve).toContain("resolveWorkingNameOverride");
+    const edge = readRepo("packages/cli/src/edge.ts");
+    expect(edge).toContain("resolveWorkingNameOverride");
+    expect(edge).not.toContain('"JAISHIP_WORKING_NAME"');
+    const entrypoint = readRepo("packages/cli/src/entrypoint.ts");
+    expect(entrypoint).toContain("resolveWorkingNameOverride");
+  });
+});

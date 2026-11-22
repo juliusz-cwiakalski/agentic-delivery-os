@@ -433,6 +433,48 @@ const outcomeFromResult = (result: unknown): Outcome => {
 
 const GLOBAL_FLAGS: ReadonlySet<string> = new Set(["--json", "--verbose", "--pretty"]);
 
+/**
+ * The migration's declared command-audit exception (GH-365 DM-7, API-1).
+ *
+ * Keyed on the PARSED command and its first positional (`install` + `migrate`),
+ * plus the recognised `--migrate` refusal form, so flag order never bypasses the
+ * suppression: `install migrate`, `install --dry-run migrate`,
+ * `install --backup-dir <abs> migrate`, `install --stop-daemon migrate`, and
+ * `install --migrate` all record zero. A pre-parse fallback covers a grammar
+ * refusal (`install migrate --force`), skipping declared value-taking flags so a
+ * flag value named `migrate` is never mistaken for the subcommand. The audit
+ * dependency stays composed and recording; the recorder observes zero writes,
+ * which distinguishes suppression from an absent seam.
+ */
+const MIGRATION_VALUE_FLAGS: ReadonlySet<string> = new Set(["--backup-dir", "--shell-profile"]);
+
+const isMigrationTokens = (argv: readonly string[]): boolean => {
+  const tokens = argv.filter((token) => !GLOBAL_FLAGS.has(token));
+  if (tokens[0] !== "install") return false;
+  let sawMigrateFlag = false;
+  for (let index = 1; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token === undefined) return false;
+    if (MIGRATION_VALUE_FLAGS.has(token)) {
+      index += 1;
+      continue;
+    }
+    if (token === "--migrate") {
+      sawMigrateFlag = true;
+      continue;
+    }
+    if (token.startsWith("-")) continue;
+    return token === "migrate";
+  }
+  return sawMigrateFlag;
+};
+
+const isParsedMigration = (parsed: ParsedInvocation): boolean =>
+  parsed.ok &&
+  parsed.command === "install" &&
+  (parsed.positionals[0] === "migrate" ||
+    (parsed.flags["--migrate"] === true && parsed.positionals[0] === undefined));
+
 const commandToken = (argv: readonly string[]): string =>
   argv.find((token) => !GLOBAL_FLAGS.has(token)) ?? "";
 
@@ -557,9 +599,11 @@ export async function runCli(
   let humanText: string | undefined;
   let successProjection: ProjectionClass = "success";
   let stream: AsyncIterable<string> | undefined;
+  let migrationInvocation = false;
 
   try {
     const parsed = parseInvocation(argv, deps.program);
+    migrationInvocation = parsed.ok ? isParsedMigration(parsed) : isMigrationTokens(argv);
     if (!parsed.ok) {
       outcome = invocationFailure(parsed.reason);
     } else {
@@ -614,6 +658,9 @@ export async function runCli(
   const auditDiagnostic = (() => {
     const audit = deps.audit;
     if (audit === undefined) return undefined;
+    // The migration is the one declared audit exception (DM-7): zero records of
+    // any kind in every mode, so the delivered pair is never composed for it.
+    if (migrationInvocation) return undefined;
     const identity = audit.identity;
     const facts: AuditInvocationFacts = {
       runId,

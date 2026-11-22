@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-18
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
 summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365"]
   related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031"]
 ---
 
@@ -332,3 +332,7 @@ No automatic migration, migration command, or re-attribution exists.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.
 - [Board](feature-board.md) — the fleet read that consumes this host index,
   per-repository state scope, and the `unbound` scope.
+
+### The post-move host index (GH-365)
+
+`install migrate` moves the host state root byte-preservingly to `<home>/<brand.stateDirectoryName>` (`~/.jaiship-state`). `host-index.json` is a derived cache: a store-opening invocation re-derives every `stateLocation` from its key, and a stale `stateLocation` is reported as the delivered warning that never redirects a read — every reported location is under the new root and no read targets the prior root. The per-project group document `<repo>/<configDirectoryName>/projects.yaml` is an operator-local, git-ignored overlay, never a tracked or project-committed artifact.

@@ -99,6 +99,63 @@ export const countingFs = (): CountingFs => {
   };
 };
 
+/**
+ * A filesystem-fact wrapper that records every opened path in one ordered list
+ * (existence probes and content reads together), so a case can assert that no
+ * path under a prior root was touched. Kept beside `countingFs` so the delivered
+ * per-call counts remain available.
+ */
+export type RecordingFs = FileSystemFacts & {
+  readonly opened: string[];
+  readonly probes: string[];
+  readonly reads: string[];
+};
+
+export const recordingFs = (): RecordingFs => {
+  const base = nodeFileSystemFacts();
+  const opened: string[] = [];
+  const probes: string[] = [];
+  const reads: string[] = [];
+  return {
+    opened,
+    probes,
+    reads,
+    exists: (path) => {
+      probes.push(path);
+      opened.push(path);
+      return base.exists(path);
+    },
+    readText: (path) => {
+      reads.push(path);
+      opened.push(path);
+      return base.readText(path);
+    },
+    size: (path) => base.size?.(path),
+  };
+};
+
+/** One recorded write attempt: the path and the byte length the write carried. */
+export type RecordedWrite = { readonly path: string; readonly bytes: number };
+
+/**
+ * A write recorder for the cases that must assert a read-only surface wrote
+ * nothing. The recorder never touches disk: a write is recorded, never applied.
+ */
+export type WriteRecorder = {
+  readonly writes: RecordedWrite[];
+  readonly write: (path: string, data: string) => void;
+};
+
+export const writeRecorder = (): WriteRecorder => {
+  const writes: RecordedWrite[] = [];
+  return {
+    writes,
+    write: (path, data) => {
+      writes.push({ path, bytes: data.length });
+    },
+  };
+};
+
 const SCRUBBED = [
   "DELIVERY_OS_WORKING_NAME",
   "JAISHIP_STATE_DIR",

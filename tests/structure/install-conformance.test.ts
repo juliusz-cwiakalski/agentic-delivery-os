@@ -96,7 +96,7 @@ describe("TC-INST-101 every lifecycle entry has a full static-inventory help ent
       expect(entry?.examples.length).toBeGreaterThan(0);
       expect(entry?.seeAlso).toEqual([M4_PAGE]);
     }
-    expect(allHelpEntries().filter((entry) => entry.path[0] === "install")).toHaveLength(5);
+    expect(allHelpEntries().filter((entry) => entry.path[0] === "install")).toHaveLength(6);
   });
 
   test("every example parses against its own definition", async () => {
@@ -133,7 +133,7 @@ describe("TC-INST-101 every lifecycle entry has a full static-inventory help ent
         "--stop-daemon",
         "--yes",
       ]);
-      expect(definition.requiresValue).toEqual(["--shell-profile"]);
+      expect(definition.requiresValue).toEqual(["--shell-profile", "--backup-dir"]);
       expect(brand.value.binaryName).toBe("jaiship");
     } finally {
       scratch.dispose();

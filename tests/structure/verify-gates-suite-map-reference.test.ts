@@ -37,7 +37,7 @@ const REFERENCE_SUITES = [
 ] as const;
 
 const brand = (() => {
-  const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
+  const resolved = resolveBrandIdentity({ workingName: "jaiship" });
   if (!resolved.ok) throw new Error("the working name must resolve");
   return resolved.value;
 })();
@@ -212,7 +212,7 @@ const realFacts = () => {
 
 describe("TC-SMAP-004 the reference declaration is pinned literal data", () => {
   test("the document path is derived from the branding seam, never a hardcoded name", () => {
-    expect(brand.configDirectoryName).toBe(".delivery-os");
+    expect(brand.configDirectoryName).toBe(".jaiship");
     expect(readFileSync(join(ROOT, brand.configDirectoryName, "config.yaml"), "utf8")).toContain(
       "verify.suite-map",
     );

@@ -501,13 +501,12 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       "retro.action-incomplete",
       "retro.closure-incomplete",
       "retro.wip-limit-exceeded",
-      // GH-346 appends the eleven install lifecycle rows.
+      // GH-346 appends the install lifecycle rows; GH-365 retires one (eleven -> ten).
       "install.target.worktree",
       "install.dev-build",
       "install.state.incompatible",
       "install.identity.not-owning",
       "install.shell-profile.unresolved",
-      "install.migration.unavailable",
       "install.daemon.running",
       "install.record.unreadable",
       "install.slot.absent",

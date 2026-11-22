@@ -9,7 +9,7 @@ created: 2026-11-16
 owners: ["engineering"]
 summary: "Operator guide to the ceremony runner: the four verbs, the declaration document and its closed vocabularies, a worked project declaration, notes and windows, dry-run and --apply, catch-up, the tier mapping, artifact homes, and the measurement record."
 links:
-  related_changes: ["GH-296", "GH-287", "GH-299"]
+  related_changes: ["GH-296", "GH-287", "GH-299", "GH-365"]
 ---
 
 # Ceremony Runner Guide
@@ -20,7 +20,7 @@ This guide is for the operator who runs ceremonies, writes a project declaration
 
 ## Before you start
 
-- Ceremonies write into the delivery state directory of the invoking project, and read one declaration document from the project-committed configuration slot: `<configDirectoryName>/ceremonies.yaml`, where `<configDirectoryName>` is your brand's configuration directory (for example `.delivery-os` or `.jaiship`).
+- Ceremonies write into the delivery state directory of the invoking project, and read one declaration document from the project-committed configuration slot: `<configDirectoryName>/ceremonies.yaml`, where `<configDirectoryName>` is your brand's configuration directory (for example `.jaiship`).
 - No declaration document means the six built-ins and nothing else. Creating the document is how a project adds its own ceremony; it is the only input, and no code change is involved.
 - State scope follows the delivered per-project policy: an invocation inside a work tree uses that project's state root; an invocation outside any work tree uses the declared `unbound` scope with one bounded warning.
 
@@ -211,7 +211,7 @@ A failed read-back makes the step `unverified` with the reason, stops the agenda
 
 A `sync` step is dry-run by default: it computes the declared write set, checks the target preconditions, and lands nothing. `--apply` is the only way a declared effect lands; the verdict is then `verified` rather than `dry-run`. A target that is absent, dirty, off its declared base, or drifted reports its reason and the step is `unverified`; there is no force path and no write to a repository the declaration does not name.
 
-> **Composed landing.** The shipped mirror sync resolves its target set from the committed `projects.yaml` members (`repoKey`, minus the invoking repository; `root` names the local checkout) and its source set from the invoking repository's `doc/decisions/` register. A dry run is `dry-run` at exit `0` even against fresh targets — the computed write set is the report. With `--apply`, each declared target checkout receives the register's record files byte for byte; a target that still differs in either direction afterwards leaves the run `unverified` naming the target. The records land as files; the target checkout's own mirror commit is composed by the delivery flow there, never by the ceremony.
+> **Composed landing.** The shipped mirror sync resolves its target set from the invoking checkout's own operator-local, git-ignored `projects.yaml` members (`repoKey`, minus the invoking repository; `root` names the local checkout; an absent or empty document is the declared empty target set, and no target checkout's document is read) and its source set from the invoking repository's `doc/decisions/` register. A dry run is `dry-run` at exit `0` even against fresh targets — the computed write set is the report. With `--apply`, each declared target checkout receives the register's record files byte for byte; a target that still differs in either direction afterwards leaves the run `unverified` naming the target. The records land as files; the target checkout's own mirror commit is composed by the delivery flow there, never by the ceremony (DEC-12, TDR-0074).
 
 ## Artifact homes
 

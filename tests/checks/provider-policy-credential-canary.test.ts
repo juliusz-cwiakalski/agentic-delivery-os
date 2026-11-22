@@ -26,7 +26,7 @@ import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/s
 
 const ROOT = process.cwd();
 const CHANGE_FOLDER = "doc/changes/2026-11/2026-11-20--GH-374--provider-policy-adoption";
-const REAL_CONFIG_TEXT = readFileSync(join(ROOT, ".delivery-os/config.yaml"), "utf8");
+const REAL_CONFIG_TEXT = readFileSync(join(ROOT, ".jaiship/config.yaml"), "utf8");
 const FIXTURE_DIRECTORY = "tests/fixtures/provider/policy-adoption/simulate";
 const FIXTURE_NAMES = [
   "peak-park",
@@ -440,7 +440,7 @@ export const scanCredentialShapedText = (
 
 /** This change's declared changed/added file set (spec NFR-7; test plan §7.2). */
 export const DECLARED_CREDENTIAL_SCAN_SET = [
-  ".delivery-os/config.yaml",
+  ".jaiship/config.yaml",
   ...FIXTURE_NAMES.map((name) => `${FIXTURE_DIRECTORY}/${name}.json`),
   "tests/structure/provider-policy-adoption-reference.test.ts",
   "tests/behaviour/provider-policy-adoption.test.ts",

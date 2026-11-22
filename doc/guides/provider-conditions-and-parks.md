@@ -6,7 +6,7 @@ created: 2026-10-31
 owners: ["engineering"]
 summary: "Provider condition and park contract: the declared-zone basis, causes, resume times, budget ceilings, watch freshness, fail-loud announcements, the configuration pointer, and this repository's adopted policy."
 links:
-  related_changes: ["GH-182", "GH-350", "GH-374"]
+  related_changes: ["GH-182", "GH-350", "GH-374", "GH-365"]
 ---
 # Provider Conditions and Parks
 
@@ -183,7 +183,7 @@ operator declares one.
 ### This repository's adopted policy
 
 This repository declares its policy in the committed configuration document
-(`.delivery-os/config.yaml`), so provider selection, seating, and the ceilings
+(the project-committed configuration slot), so provider selection, seating, and the ceilings
 are visible in review and to CI:
 
 - **Profiles.** A mixed base profile `delivery` serves both providers — the

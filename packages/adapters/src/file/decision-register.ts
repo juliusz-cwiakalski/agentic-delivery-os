@@ -3,7 +3,8 @@
  *
  * Reads the invoking repository's committed decision-record set
  * (`doc/decisions/`), resolves the declared affected-repository target set and
- * local checkout roots from the project-committed `projects.yaml` members, and
+ * local checkout roots from the invoking checkout's own operator-local,
+ * git-ignored `projects.yaml` members, and
  * lands the declared write set by copying the named record files into the
  * target checkout's decisions directory. Idempotent, declared targets only,
  * no force path; the landing is a byte copy, never a command or a commit in
@@ -105,7 +106,8 @@ export type AffectedRepositoryTarget = {
 };
 
 /**
- * Narrow the project-committed `projects.yaml` value leniently into the
+ * Narrow the invoking checkout's own operator-local `projects.yaml` value
+ * leniently into the
  * affected-repository target set: every declared member's `repoKey` except the
  * invoking repository itself, with the member's `root` as the local checkout
  * when declared. No group and no member yields the empty target set.

@@ -728,12 +728,13 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "The table declares 164 machine identities",
       "allowlist of 65 declared identities",
       "allowlist of 66 declared identities",
+      "the eleven `install` rows",
     ],
     required: [
       "install | user | false | not_landed | Build and install from the primary checkout",
-      "The table declares 170 machine identities",
+      "The table declares 169 machine identities",
       "allowlist of 68 declared identities",
-      "the eleven `install` rows",
+      "the ten `install` rows",
       "the thirteen `harness` rows",
       "the nine concrete `merge` rows",
     ],
@@ -748,7 +749,7 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "65-entry allowlist",
       "66-entry allowlist",
     ],
-    required: ["170 identities", "68-entry allowlist"],
+    required: ["169 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -769,10 +770,10 @@ const GH346_ROWS: readonly PageClaimRow[] = [
       "family count (27)",
     ],
     required: [
-      "170 entries",
-      "169 delivered rows",
+      "169 entries",
+      "168 delivered rows",
       "68 allowlisted two-segment codes",
-      "BASELINE_ROWS.length + 136",
+      "BASELINE_ROWS.length + 135",
       "family count (28)",
     ],
   },
@@ -895,10 +896,10 @@ describe("GH-346 TC-INST-111/112 the page set states the delivered truth", () =>
     );
     const withoutRequired = (page: string): string | undefined =>
       page === "doc/spec/features/feature-ceremony-runner.md"
-        ? (pageText(page) ?? "").replaceAll("170 identities", "the moved count")
+        ? (pageText(page) ?? "").replaceAll("169 identities", "the moved count")
         : pageText(page);
     expect(pageClaimViolations(GH346_ROWS, withoutRequired).join("\n")).toContain(
-      "missing required phrase: 170 identities",
+      "missing required phrase: 169 identities",
     );
   });
 
@@ -976,10 +977,10 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 133",
     ],
     required: [
-      "170 machine identities",
-      "the same 170 identities",
+      "169 machine identities",
+      "the same 169 identities",
       "delivered-rows metric",
-      "BASELINE_ROWS.length + 136",
+      "BASELINE_ROWS.length + 135",
       "the sixteen `provider` rows",
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
@@ -989,7 +990,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
   {
     page: "doc/spec/features/feature-ceremony-runner.md",
     stale: ["164 identities", "167 identities", "66-entry allowlist"],
-    required: ["170 identities", "68-entry allowlist"],
+    required: ["169 identities", "68-entry allowlist"],
   },
   {
     page: "doc/spec/features/feature-metrics.md",
@@ -1001,7 +1002,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "BASELINE_ROWS.length + 130",
       "BASELINE_ROWS.length + 133",
     ],
-    required: ["170 entries", "169 delivered rows", "BASELINE_ROWS.length + 136"],
+    required: ["169 entries", "168 delivered rows", "BASELINE_ROWS.length + 135"],
   },
   {
     page: "doc/spec/features/feature-install-lifecycle.md",
@@ -1010,7 +1011,7 @@ const GH350_PHASE1_ROWS: readonly GH350Row[] = [
       "declared table total at 167 machine identities",
       "66 declared identities",
     ],
-    required: ["declared table total at 170 machine identities", "68 declared identities"],
+    required: ["declared table total at 169 machine identities", "68 declared identities"],
   },
   {
     page: "doc/spec/features/feature-provider-engine.md",
@@ -1335,7 +1336,7 @@ describe("GH-350 phase 4 the configuration page states the budgets branch and th
  * the delivery path, the window/quota/budget are declared in configuration, and
  * `provider migrate legacy` is the guided bridge with its refusal posture. The
  * guide names the command as a provider-policy import and keeps it distinct from
- * the M4-S2 namespace migration and the install lifecycle's `--migrate` flag.
+ * the M4-S2 namespace migration and the install lifecycle's `install migrate` verb (the retired `--migrate` form).
  */
 const GH350_PHASE6_ROWS: readonly GH350Row[] = [
   {
@@ -1354,7 +1355,7 @@ const GH350_PHASE6_ROWS: readonly GH350Row[] = [
       "PROVIDER_MIGRATE_MAX_SOURCES = 64",
       "provider-policy",
       "M4-S2 namespace migration",
-      "install lifecycle's `--migrate` flag",
+      "install lifecycle's `install migrate` verb",
       "no hook import is implied",
     ],
   },
@@ -2430,7 +2431,7 @@ const GH374_TRUTH_ROWS: readonly Gh374Row[] = [
     page: "doc/guides/opencode-model-configuration.md",
     required: [
       "The typed `provider` and `provider.profiles` branches are the canonical routing path for this repository",
-      "this repository's seats and models are committed in `.delivery-os/config.yaml`",
+      "this repository's seats and models are committed in `.jaiship/config.yaml`",
       "The per-agent table above is harness assignment",
       "No provider/model identifier belongs in an agent prompt or command definition",
       "neutral `<provider>/<model>` placeholders",
@@ -2626,5 +2627,151 @@ describe("GH-374 documentation truth: this repository's adopted policy", () => {
         ? `${gh374PageText(page) ?? ""}\n- admission window: 04:00–10:00 → 01:00–10:00 (the union window)\n- routing: hook → configuration\n- profiles page: admission gating → lane-watch rule data\n`
         : gh374PageText(page);
     expect(gh374Violations(withDelta)).toEqual([]);
+  });
+});
+
+/** GH-365 P9 — the reconciled current-truth page set (Appendix A). */
+const GH365_P9_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/guides/local-install.md",
+    stale: ["install.migration.unavailable", "ADOS_"],
+    required: [
+      "install migrate",
+      "--backup-dir",
+      "install.migration.manifest.v1",
+      "zero records of any kind",
+      "scripts/lib/dispatch-authority.sh",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-config-layer.md",
+    stale: [".delivery-os"],
+    required: [".jaiship/config.yaml", "override-read", "not an error"],
+  },
+  {
+    page: "doc/spec/features/feature-projects.md",
+    stale: [".delivery-os"],
+    required: ["~/.jaiship-state", "derived cache", "never redirects a read", "operator-local"],
+  },
+  {
+    page: "doc/spec/features/feature-project-groups.md",
+    stale: ["project-committed `projects.yaml`"],
+    required: ["operator-local, git-ignored overlay", "empty listing", "invoking checkout's own"],
+  },
+  {
+    page: "doc/spec/features/feature-ceremony-runner.md",
+    stale: ["committed `projects.yaml`"],
+    required: ["invoking checkout's own", "declared empty target set"],
+  },
+  {
+    page: "doc/spec/features/feature-state-layer.md",
+    stale: ["the migration re-versions a stored record"],
+    required: ["byte-preserving", "header.<workspace>.json", "zero records of any kind"],
+  },
+  {
+    page: "doc/spec/features/feature-mcp-surface.md",
+    stale: ["neutral default working name `delivery-os`"],
+    required: ["current-identity default working name `jaiship`"],
+  },
+  {
+    page: "doc/spec/features/feature-autonomous-delivery.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/guides/delivery-modes.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/quality/test-specs/test-spec-autonomous-delivery.md",
+    stale: ["current default brand"],
+    required: ["prior-environment-prefix"],
+  },
+  {
+    page: "doc/overview/glossary.md",
+    stale: ["the same 170 identities"],
+    required: [
+      "install.migration.plan.v1",
+      "install.migration.manifest.v1",
+      "<environmentPrefix>WORKING_NAME",
+      "DELIVERY_OS_WORKING_NAME",
+    ],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/commands/install.md",
+    stale: ["install.migration.unavailable"],
+    required: ["install migrate", "--backup-dir", "install.migration.manifest.v1"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/backlog.md",
+    stale: ["M4-S2 owns the move"],
+    required: ["Delivered by GH-365"],
+  },
+  {
+    page: "doc/planning/oss-tooling/milestones/m4/schedule.md",
+    stale: ["after flip gate"],
+    required: ["S2 Namespace migration | GH-365 | delivered"],
+  },
+  {
+    page: "doc/guides/opencode-model-configuration.md",
+    stale: [".delivery-os/config.yaml"],
+    required: [".jaiship/config.yaml"],
+  },
+  {
+    page: "doc/guides/provider-conditions-and-parks.md",
+    stale: [".delivery-os"],
+    required: ["project-committed configuration"],
+  },
+  {
+    page: "doc/guides/ceremony-runner.md",
+    stale: ["committed `projects.yaml`"],
+    required: ["invoking checkout's own", "declared empty target set"],
+  },
+];
+
+describe("GH-365 P9 the reconciled page set", () => {
+  test("every Appendix A page carries its reconciliation and no stale current-as-prior statement", () => {
+    expect(gh350Phase6Violations(GH365_P9_ROWS, (page) => read(page))).toEqual([]);
+  });
+});
+
+/** GH-365 P10 — the enduring namespace-conformance quality page. */
+const GH365_P10_ROWS: readonly GH350Row[] = [
+  {
+    page: "doc/quality/test-specs/test-spec-namespace-conformance.md",
+    stale: ["the boundary is not machine-checked"],
+    required: [
+      "seven scope classes",
+      "priorNamespace",
+      "namespace.shims.v1",
+      "presence is validated for every declared shim site",
+      "longest match",
+      "install.migration.plan.v1",
+      "install.migration.manifest.v1",
+      "zero records of any kind",
+      "committed-layer",
+      "clean-clone",
+      "authoritative-root",
+      "prior-notice",
+      "migration-plan",
+      "migration-move",
+      "shim-reconciliation",
+      "conformance-negative-controls",
+      "real-operator-home",
+      "second-machine-clone",
+      "ci-runner-home",
+      "other-checkouts",
+      "third-party-alias-consumers",
+      "shim-removal-release",
+      "prose-residual",
+      "shell-fallback-post-migration",
+    ],
+  },
+];
+
+describe("GH-365 P10 the namespace-conformance page", () => {
+  test("the enduring page carries its required facts and no stale statement", () => {
+    expect(gh350Phase6Violations(GH365_P10_ROWS, (page) => read(page))).toEqual([]);
   });
 });

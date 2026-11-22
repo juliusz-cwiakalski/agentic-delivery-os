@@ -28,6 +28,14 @@
       "files": [".gitignore"]
     },
     {
+      "id": "promptSurface",
+      "root": ".opencode"
+    },
+    {
+      "id": "scriptSurface",
+      "roots": ["scripts", "tools"]
+    },
+    {
       "id": "userFacingDocs",
       "roots": ["doc"],
       "excludedPrefixes": ["doc/changes/", "doc/decisions/"]
@@ -195,6 +203,7 @@
     "doc/quality/test-specs/test-spec-coordinator-supervision.md",
     "doc/quality/test-specs/test-spec-dispatch-engine.md",
     "doc/quality/test-specs/test-spec-loop-supervision.md",
+    "doc/quality/test-specs/test-spec-namespace-conformance.md",
     "doc/quality/test-specs/test-spec-merge-verify-deploy.md",
     "doc/quality/test-specs/test-spec-resident-daemon.md",
     "doc/quality/test-specs/test-spec-state-layer.md",
@@ -262,5 +271,91 @@
     "doc/templates/memory-instruction-expectations-template.md",
     "doc/templates/memory-kernel-section-template.md",
     "doc/templates/memory-retro-notes-template.md"
-  ]
+  ],
+  "priorNamespace": {
+    "seeds": [
+      {
+        "id": "prior-config-directory",
+        "literal": ".delivery-os",
+        "match": "delimited"
+      },
+      {
+        "id": "prior-state-directory",
+        "literal": ".delivery-os-state",
+        "match": "delimited"
+      },
+      {
+        "id": "prior-home-config",
+        "literal": "~/.delivery-os",
+        "match": "delimited"
+      },
+      {
+        "id": "prior-environment-prefix",
+        "literal": "DELIVERY_OS_",
+        "match": "delimited"
+      },
+      {
+        "id": "prior-executable",
+        "literal": "delivery-os",
+        "match": "delimited",
+        "excludePrecededBy": ["@"],
+        "excludeWithin": ["agentic-delivery-os"],
+        "scopeClasses": [
+          "packageTree",
+          "rootManifests",
+          "ignoreRules",
+          "promptSurface",
+          "scriptSurface"
+        ]
+      }
+    ],
+    "scopeSelection": {
+      "packageTree": ["seedLiterals", "priorNamespace"],
+      "rootManifests": ["seedLiterals", "priorNamespace"],
+      "rootWorkspaceFiles": ["seedLiterals"],
+      "ignoreRules": ["seedLiterals", "priorNamespace"],
+      "promptSurface": ["priorNamespace"],
+      "scriptSurface": ["priorNamespace"],
+      "userFacingDocs": ["seedLiterals", "priorNamespace"]
+    },
+    "neutralSites": [
+      {
+        "file": "package.json",
+        "reason": "The private root manifest name is not a product identity.",
+        "seed": "prior-executable",
+        "maxOccurrences": 1
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "reason": "The generated lockfile names the workspace packages.",
+        "seed": "prior-executable",
+        "maxOccurrences": 1
+      },
+      {
+        "file": "packages/core/src/branding/index.ts",
+        "reason": "The resolver's scope-org derivation input (SCOPE_ORG).",
+        "seed": "prior-executable",
+        "maxOccurrences": 1
+      }
+    ],
+    "declaredCorpora": [
+      {
+        "prefix": "doc/changes/",
+        "reason": "Historical change artifacts are immutable records."
+      },
+      {
+        "prefix": "doc/decisions/",
+        "reason": "Decision records are immutable history."
+      },
+      {
+        "prefix": "doc/planning/oss-tooling/milestones/m1/commands/",
+        "reason": "The M1 snapshot command pages are an immutable milestone corpus."
+      },
+      {
+        "prefix": "doc/inception/analysis/phase-4-quality-baseline.md",
+        "reason": "One dated inception analysis record quotes the observed identifiers."
+      }
+    ],
+    "shimRegistry": "scripts/checks/namespace-shims.registry.json"
+  }
 }

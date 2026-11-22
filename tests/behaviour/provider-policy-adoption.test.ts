@@ -3,7 +3,7 @@
  * TC-POL-NOM-001..004 — the composed behaviour proof of the adopted policy.
  *
  * Every case seeds a SCRATCH checkout under `tmp/tmpdir` with a byte copy of the
- * real `.delivery-os/config.yaml` (the policy is never a fixture), a scratch
+ * real `.jaiship/config.yaml` (the policy is never a fixture), a scratch
  * home and state root, an injected clock, and injected credential, transport,
  * spend, ref and state seams. No case spawns a child, calls the network, reads a
  * live credential, or touches the operator's home (DEC-13).
@@ -44,7 +44,7 @@ import {
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
-const REAL_CONFIG_TEXT = readFileSync(join(ROOT, ".delivery-os/config.yaml"), "utf8");
+const REAL_CONFIG_TEXT = readFileSync(join(ROOT, ".jaiship/config.yaml"), "utf8");
 const FIXTURE_DIRECTORY = join(ROOT, "tests/fixtures/provider/policy-adoption/simulate");
 const NOON_MS = Date.UTC(2026, 10, 20, 12, 0, 0);
 const RESET_MS = Date.UTC(2026, 10, 20, 18, 0, 0);

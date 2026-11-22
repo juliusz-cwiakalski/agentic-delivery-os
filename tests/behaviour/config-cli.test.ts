@@ -310,6 +310,7 @@ describe("TC-CONFIG-007/016/022 classified failures and warnings", () => {
       {
         environment: baseEnvironment,
         catalog: FIXTURE_CATALOG,
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the literal is the interpolation fixture
         contents: committed('x-test:\n  oldValue: "${SECRET:-default}"\n'),
       },
       "config.interpolation.rejected",
@@ -568,5 +569,73 @@ describe("TC-HDA-022 config get harness.environment --show-origin", () => {
       { contents: {} },
       "input.value.rejected",
     );
+  });
+});
+
+describe("GH-365 TC-ROOT-004 the project-local overlay is read normally and ci-disabled under CI", () => {
+  test("the overlay reads at <repo>/<configDirectoryName>/config.local.yaml and is skipped under CI", async () => {
+    const contents = {
+      [FILES.committed]: "x-test:\n  requiredValue: from-file\n",
+      [FILES.local]: "x-test:\n  nested:\n    second: 9\n",
+    };
+    const normal = await run(["--debug", "--project-root", REPO], {
+      contents,
+      catalog: FIXTURE_CATALOG,
+      environment: baseEnvironment,
+    });
+    expect(normal.exitCode).toBe(0);
+    const normalPayload = JSON.parse(normal.stdout) as {
+      loadedFiles: string[];
+      skippedLayers: Array<{ layer: string; reason: string }>;
+    };
+    expect(normalPayload.loadedFiles).toContain(FILES.local);
+    expect(normalPayload.skippedLayers).not.toContainEqual({
+      layer: "project-local",
+      reason: "ci-disabled",
+    });
+
+    const ci = await run(["--debug", "--project-root", REPO], {
+      contents,
+      catalog: FIXTURE_CATALOG,
+      environment: { ...baseEnvironment, CI: "true" },
+    });
+    expect(ci.exitCode).toBe(0);
+    const ciPayload = JSON.parse(ci.stdout) as {
+      loadedFiles: string[];
+      skippedLayers: Array<{ layer: string; reason: string }>;
+    };
+    expect(ciPayload.loadedFiles).not.toContain(FILES.local);
+    expect(ciPayload.skippedLayers).toContainEqual({
+      layer: "project-local",
+      reason: "ci-disabled",
+    });
+  });
+});
+
+describe("GH-365 TC-IDENTITY-003 the pre-freeze environment is inert and ADOS_WORKING_NAME reaches the override", () => {
+  test("eight owner-named variables and ADOS_FOO neither error nor become values", async () => {
+    const pkg = await import("../fixtures/namespace/pre-freeze-env");
+    const environment: Record<string, string> = { ...baseEnvironment };
+    for (const name of pkg.PRE_FREEZE_VARIABLES) environment[name] = "pre-freeze-fixture";
+    environment.ADOS_FOO = "bar";
+    const result = await run(["--debug", "--project-root", REPO], {
+      environment,
+      catalog: FIXTURE_CATALOG,
+      contents: committed("x-test:\n  requiredValue: from-file\n"),
+    });
+    expect(result.exitCode).toBe(0);
+    const payload = JSON.parse(result.stdout) as { config: Record<string, unknown> };
+    expect(JSON.stringify(payload.config)).not.toContain("pre-freeze-fixture");
+    expect(JSON.stringify(payload.config)).not.toContain("bar");
+  });
+
+  test("ADOS_WORKING_NAME is read at the raw seam and resolves the current identity", () => {
+    const built = build({
+      environment: { ...baseEnvironment, ADOS_WORKING_NAME: "acme" },
+      catalog: FIXTURE_CATALOG,
+      contents: committed("x-test:\n  requiredValue: from-file\n"),
+    });
+    expect(built.brand.binaryName).toBe("acme");
+    expect(built.brand.configDirectoryName).toBe(".acme");
   });
 });

@@ -101,7 +101,6 @@ import {
   type OpencodeSessionIo,
 } from "@delivery-os/adapters/session";
 import { createIntlZonePort } from "@delivery-os/adapters/time-zone";
-import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
   type ActionArtifactVerdict,
   actionArtifactPlaneOpen,
@@ -123,6 +122,7 @@ import {
   type CommitActOutcome,
   type CommitActRequest,
   type CommitTransportPorts,
+  type ConfigCatalog,
   callerAudienceVariableName,
   canonicalChangeRef,
   capsuleGateEventKey,
@@ -146,7 +146,9 @@ import {
   computeSpendReport,
   computeStagingPlan,
   conditionTypeForCause,
+  configEnvironmentNames,
   createSourcedWatchdogSignalSource,
+  type DefaultPositionManifest,
   type DispatchAdmission,
   type DispatchLeaseClaim,
   type DispatchPorts,
@@ -381,6 +383,8 @@ import {
   type QuotaTransport,
   type Result,
   type RetroSpendEvidence,
+  renderPriorIdentityNotice,
+  resolveWorkingNameOverride,
   type SpendDigestSection,
   STATUS_MAX_LANE_PARKS,
   STATUS_OWNER_ATTENTION_LABELS,
@@ -625,8 +629,6 @@ import type {
   CommandFlags,
   CommandProgram,
 } from "./index.js";
-
-const NEUTRAL_OVERRIDE_NAME = "DELIVERY_OS_WORKING_NAME";
 
 /**
  * Resolve the claimed agent identity from injected environment data (DEC-3).
@@ -4265,6 +4267,8 @@ export type ConfigProgramOptions = {
    * composition helper never receives it.
    */
   readonly priorConfigurationDirectoryName?: string;
+  /** A composition-notice sink; lines travel stderr, never a payload. */
+  readonly onNotice?: (line: string) => void;
   readonly platform?: RuntimePlatform;
   readonly catalog?: ConfigCatalog;
   readonly defaultPositions?: DefaultPositionManifest;
@@ -4998,13 +5002,32 @@ const validateProviderMigrateProposal = (
  * filesystem or root discovery.
  */
 export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgramResult => {
-  const override = options.environment[NEUTRAL_OVERRIDE_NAME];
-  const brandInput: ResolverInput =
-    override === undefined
-      ? { workingName: options.workingName }
-      : { workingName: options.workingName, override };
   const resolveBrand = options.resolveBrand ?? resolveBrandIdentity;
-  const branded = resolveBrand(brandInput);
+  // The prefix is derived from the declared working name by the default resolver;
+  // an injected resolver is the one identity call (the frozen-branding spy).
+  const prefixIdentity = resolveBrandIdentity({ workingName: options.workingName });
+  const overrideResolution = prefixIdentity.ok
+    ? resolveWorkingNameOverride({
+        environment: options.environment,
+        environmentPrefix: prefixIdentity.value.environmentPrefix,
+      })
+    : undefined;
+  if (overrideResolution?.channel === "prior" || overrideResolution?.channel === "pre-freeze") {
+    options.onNotice?.(
+      renderPriorIdentityNotice({
+        reason: "override-read",
+        priorLocation:
+          overrideResolution.channel === "prior"
+            ? overrideResolution.priorVariable
+            : overrideResolution.preFreezeVariable,
+        currentLocation: overrideResolution.currentVariable,
+      }),
+    );
+  }
+  const branded =
+    overrideResolution?.override === undefined
+      ? resolveBrand({ workingName: options.workingName })
+      : resolveBrand({ workingName: options.workingName, override: overrideResolution.override });
   if (!branded.ok) return { ok: false, error: branded.error };
   const brand = branded.value;
   const catalog = options.catalog ?? PRODUCTION_CATALOG;
@@ -5018,6 +5041,7 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       environmentPrefix: brand.environmentPrefix,
       configDirectoryName: brand.configDirectoryName,
     },
+    catalogEnvironmentNames: configEnvironmentNames(catalog, brand.environmentPrefix),
     warn: (message) => {
       warnings.push(message);
     },
@@ -5080,11 +5104,26 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       sources: acquired.sources,
       skipped: acquired.skipped,
       environment: neutralEnvironmentFacts(legacyFacts.environment, [
-        NEUTRAL_OVERRIDE_NAME,
+        ...(overrideResolution === undefined
+          ? []
+          : [
+              overrideResolution.currentVariable,
+              overrideResolution.priorVariable,
+              overrideResolution.preFreezeVariable,
+            ]),
         selectorName,
       ]),
       environmentPrefix: brand.environmentPrefix,
-      excludedEnvironmentNames: [NEUTRAL_OVERRIDE_NAME, selectorName],
+      excludedEnvironmentNames: [
+        ...(overrideResolution === undefined
+          ? []
+          : [
+              overrideResolution.currentVariable,
+              overrideResolution.priorVariable,
+              overrideResolution.preFreezeVariable,
+            ]),
+        selectorName,
+      ],
       flags: ordinaryFlags(flags, catalog),
       catalog,
       strict: flags["--strict"] === true,

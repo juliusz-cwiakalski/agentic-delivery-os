@@ -26,7 +26,7 @@ const modules = [
 ] as const;
 
 describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
-  test("the five named checks stay in order and the three scans remain trailing", () => {
+  test("the five named checks, the memory and two scan members, and the three trailing scans stay ordered", () => {
     const check = manifest().scripts?.check ?? "";
     const parts = check.split("&&").map((part) => part.trim());
     expect(
@@ -34,6 +34,10 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
         .slice(0, NAMED_CHECKS.length)
         .map((part, index) => part.includes(NAMED_CHECKS[index] ?? "")),
     ).toEqual(NAMED_CHECKS.map(() => true));
+    const memoryIndex = parts.indexOf("pnpm check:memory");
+    expect(memoryIndex).toBe(NAMED_CHECKS.length);
+    expect(parts[memoryIndex + 1]).toContain("pnpm check:forbidden-literals");
+    expect(parts[memoryIndex + 2]).toContain("pnpm check:namespace-tree");
     for (const scan of [
       "scripts/checks/prompt-conformance.ts",
       "scripts/checks/help-guide-coverage.ts",
@@ -41,9 +45,7 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
     ]) {
       expect(parts.some((part) => part.includes(scan))).toBe(true);
     }
-    const memoryIndex = parts.indexOf("pnpm check:memory");
-    expect(memoryIndex).toBe(NAMED_CHECKS.length);
-    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 3);
+    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 2 + 3);
   });
 
   test("the chain contains no milestone token and no network command", () => {

@@ -2,11 +2,11 @@
 id: TEST-SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-16
-last_updated: 2026-11-10
+last_updated: 2026-11-21
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-146", "PDEV-514", "PDEV-516", "GH-280"]
+  related_changes: ["GH-146", "PDEV-514", "PDEV-516", "GH-280", "GH-365"]
   feature_spec: doc/spec/features/feature-autonomous-delivery.md
   decisions: ["TDR-0002"]
 ---
@@ -97,9 +97,9 @@ remain rejected.
 
 ### Owner-hold hook contract
 
-Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty, when its condition
+Given the owner-hold example with `DELIVERY_OS_OWNER_HOLD` non-empty (the example hook's declared `prior-environment-prefix` shim, read-only; the current names derive from the resolved `<PREFIX>_`), when its condition
 is evaluated, then it asks for the poll interval and the sleep line names the
-`env` source and the sanitized reason. Given only the fixed default host-root
+`env` source and the sanitized reason. Given only the example's declared pre-rename default host-root
 marker `$HOME/.delivery-os-state/owner-hold`, then the marker source and its first line
 are named. Given neither, then the condition asks for `0` and the driver returns
 without sleeping. The driver takes the MAX across conditions, applies no fixed

@@ -78,7 +78,7 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
     expect(baseline.rows).toHaveLength(150);
     // The captured baseline includes GH-335's four harness rows; it predates
-    // GH-299's `metrics` row, the two supervise rows, GH-346's eleven install
+    // GH-299's `metrics` row, the two supervise rows, GH-346's ten install
     // rows, GH-349's three additive rows (the two `merge` rows and the one
     // `lint` row), and GH-350's three provider rows inserted INSIDE the provider
     // block. The comparison excludes those additive identities and compares the
@@ -122,13 +122,13 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
         .map((entry) => entry.code)
         .sort(),
     ).toEqual([...NEW_GH349_CODES].sort());
-    // The tail kinds are positionally unchanged: the last fourteen rows are the
-    // two supervise rows, the one metrics row, and the eleven install rows.
-    expect(entries.slice(-14).map((entry) => entry.domainKind)).toEqual([
+    // The tail kinds are positionally unchanged: the last thirteen rows are the
+    // two supervise rows, the one metrics row, and the ten install rows.
+    expect(entries.slice(-13).map((entry) => entry.domainKind)).toEqual([
       "supervise",
       "supervise",
       "metrics",
-      ...new Array(11).fill("install"),
+      ...new Array(10).fill("install"),
     ]);
   });
 

@@ -10,6 +10,7 @@ export {
   type ConfigCatalog,
   type CoordinatorSettings,
   catalogPaths,
+  configEnvironmentNames,
   DAEMON_BRANCH,
   LANE_BRANCH,
   type LaneSettings,

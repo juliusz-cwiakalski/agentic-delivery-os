@@ -65,9 +65,9 @@ staged-and-renamed, never in place.
      record last.
    - `--add-to-path` appends exactly one delimited block to one profile, only
      when explicitly requested, and records its file and marker.
-   - The migration hook detects prior-namespace artifacts and advises; with
-     `--migrate` it refuses with `install.migration.unavailable` (M4-S2 owns
-     the move) and moves nothing.
+   - The migration verb `install migrate` performs the move with a dry-run, a
+     verified backup, per-entry precedence, idempotence, and recovery; the
+     retired `--migrate` flag form is refused with the remedy `install migrate`.
 4. Verify: `jaiship --version` reports the build identity on one line, and
    `jaiship install status` (or `--json`) reports the running identity, the
    installed record, the record and slot conditions, target stability, the
@@ -113,5 +113,5 @@ staged-and-renamed, never in place.
 ## Out of scope (this milestone)
 
 Package-manager channels, system-wide installs, auto-update, multi-user hosts,
-release publishing, and the namespace migration itself (M4-S2). Those can
+release publishing, and the namespace migration itself (M4-S2, delivered by GH-365 with `install migrate`). Those can
 follow once the local model is proven.

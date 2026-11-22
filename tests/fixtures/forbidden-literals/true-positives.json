@@ -1,15 +1,29 @@
-[
-  "ados",
-  "ADOS",
-  "Ados",
-  "ADOS_",
-  "~/.ados",
-  "ados-cli",
-  "ados_cli",
-  "x/ados/y",
-  ".ados",
-  "adosRuntime",
-  "my-ados",
-  "2ados",
-  "@ados/pkg"
-]
+{
+  "delivered": [
+    "ados",
+    "ADOS",
+    "Ados",
+    "ADOS_",
+    "~/.ados",
+    "ados-cli",
+    "ados_cli",
+    "x/ados/y",
+    ".ados",
+    "adosRuntime",
+    "my-ados",
+    "2ados",
+    "@ados/pkg"
+  ],
+  "priorNamespace": [
+    "run delivery-os migrate",
+    "delivery-os",
+    ".delivery-os/config.yaml",
+    "the state root .delivery-os-state",
+    "~/.delivery-os/config.yaml",
+    "DELIVERY_OS_OWNER_HOLD",
+    "DELIVERY_OS_WORKING_NAME",
+    "DELIVERY_OS_CUSTOM",
+    "./.delivery-os",
+    "\"$HOME/.delivery-os\""
+  ]
+}

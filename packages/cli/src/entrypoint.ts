@@ -17,6 +17,9 @@ import {
   type CommandResult,
   type CredentialReference,
   FALLBACK_INTERNAL_CODE,
+  PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE,
+  PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE,
+  resolveWorkingNameOverride,
 } from "@delivery-os/core/contracts";
 import { type BuildIdentity, buildTokenOf, fallbackVersion } from "./build-identity.js";
 import {
@@ -33,11 +36,18 @@ import {
   runCli,
 } from "./index.js";
 
-/** The non-empty working-name override read from the injected environment. */
-const WORKING_NAME_ENVIRONMENT = "DELIVERY_OS_WORKING_NAME";
+/** The prior-identity working-name override's variable name. */
+const WORKING_NAME_ENVIRONMENT = PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE;
 
-/** The working-name environment variable name, exposed as behavior. */
+/** The prior-identity working-name environment variable name. */
 export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRONMENT;
+
+/** The three declared override variables: current, prior and pre-freeze. */
+export const workingNameEnvironmentVariables = (environmentPrefix: string): readonly string[] => [
+  `${environmentPrefix}WORKING_NAME`,
+  PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE,
+  PRE_FREEZE_WORKING_NAME_ENVIRONMENT_VARIABLE,
+];
 
 export { PROMPT_REQUIRED_COMMANDS, type PromptRequiredCommand };
 
@@ -172,11 +182,30 @@ const entrypointBrandOutcome = (options: {
 }): { readonly ok: true; readonly brand: BrandIdentity } | { readonly ok: false } => {
   const workingName = resolveWorkingName(options);
   if (workingName === undefined) return { ok: false };
-  const override = options.environment[workingNameEnvironmentVariable()];
+  const base = resolveBrandIdentity({ workingName });
+  if (!base.ok) {
+    for (const candidate of [options.declaredWorkingName, options.configuredWorkingName]) {
+      if (candidate === undefined || candidate.length === 0) continue;
+      const resolvedCandidate = resolveBrandIdentity({ workingName: candidate });
+      if (resolvedCandidate.ok) return { ok: true, brand: resolvedCandidate.value };
+    }
+    return { ok: false };
+  }
+  const resolution = resolveWorkingNameOverride({
+    environment: options.environment,
+    environmentPrefix: base.value.environmentPrefix,
+  });
   const branded = resolveBrandIdentity(
-    override === undefined || override.length === 0 ? { workingName } : { workingName, override },
+    resolution.override === undefined
+      ? { workingName }
+      : { workingName, override: resolution.override },
   );
   if (branded.ok) return { ok: true, brand: branded.value };
+  // A present-but-invalid override must not fall back to a lower-precedence
+  // channel. Self-description answers the declared identity (the delivered
+  // behaviour); a configuration-bearing command fails closed because the
+  // composition re-reads the invalid override and returns the containment.
+  if (resolution.override !== undefined) return { ok: true, brand: base.value };
   for (const candidate of [options.declaredWorkingName, options.configuredWorkingName]) {
     if (candidate === undefined || candidate.length === 0) continue;
     const resolvedCandidate = resolveBrandIdentity({ workingName: candidate });

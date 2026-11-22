@@ -1,0 +1,804 @@
+change_id: GH-365
+title: "M4-S2 Jaiship namespace migration (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-21T15:14:16.564Z }
+  specification: { started: null, completed: 2026-11-21T19:36:11.353Z }
+  test_planning: { started: null, completed: 2026-11-21T19:36:24.260Z }
+  delivery_planning: { started: null, completed: 2026-11-21T19:36:36.099Z }
+  dor_check: { started: null, completed: 2026-11-21T19:47:25.912Z }
+  delivery: { started: null, completed: 2026-11-21T21:57:52.738Z }
+  system_spec_update: { started: null, completed: 2026-11-21T22:15:39.453Z }
+  review_fix: { started: null, completed: 2026-11-21T23:52:46.272Z }
+  quality_gates: { started: null, completed: 2026-11-22T00:18:26.616Z }
+  dod_check: { started: null, completed: 2026-11-22T00:19:41.759Z }
+  pr_creation: { started: null, completed: 2026-11-22T00:22:33.198Z }
+decisions:
+  - text: "Scope source is the ticket body plus the owner comment of 2026-11-19 and
+      the M4 blueprint the ticket cites (backlog M4-S2, install-model.md,
+      schedule.md, ranking.md). The owner comment is treated as binding scope:
+      the committed project configuration moves from the prior namespace root to
+      `.jaiship/config.yaml`; no tracked file may remain under the prior root; a
+      fresh clone leaves `git status` clean; the prior-identity fallback must
+      report that it read the new path; and a negative control must prove that a
+      reintroduced symlink or a new file under the prior root fails the scan."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the package scope `@delivery-os` is NOT a
+      product identity and is not renamed by this story. The delivered branding
+      contract declares it a fixed neutral scope ('Neutral scope, not a product
+      name') and five packages stay `private: true` until a publication
+      decision. Renaming the workspace scope is a release/publication act with
+      no ticket authorisation; docs may keep `@delivery-os` only where the
+      neutral package scope is meant. The conformance scan must therefore
+      distinguish product identifiers (must be Jaiship) from declared
+      neutral/compatibility inputs."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the `delivery-os` executable alias and the
+      prior-identity config/state fallback are the one-release compatibility
+      shims the ticket and owner comment authorise. They are declared as CURRENT
+      compatibility inputs in a machine-readable declaration (not silent
+      legacy), each allowed site is enumerated, the deprecation window is
+      exactly the release that ships this change, and removal is scheduled for
+      the following release. A prior-identity read emits the existing
+      deprecation notice; it must never be a silent second literal."
+    date: "2026-11-21"
+  - text: "PM-decided (autonomous): the in-repo project layer becomes
+      `.jaiship/config.yaml` (tracked). `.jaiship/config.local.yaml` stays local
+      and ignored; repo-local state paths stay out of git. The migration moves
+      the existing tracked file within this change and no other tracked file may
+      live under `.delivery-os/`."
+    date: "2026-11-21"
+  - text: "OQ-1 RULED by @decision-advisor and recorded as TDR-0074 (Proposed; human
+      acceptance at the GH-365 PR review): the project-groups document is an
+      operator-local, git-ignored overlay at its unchanged path and schema; the
+      ceremony mirror's cross-checkout target set is declaration-only from the
+      invoking checkout's own document, absent = empty target set, no
+      federation, no tracked template in this change. Evidence: the live
+      document already holds absolute local roots and is already untracked, so a
+      fresh clone's target set is already empty — the ruling corrects the prose,
+      it does not remove a delivered behaviour. The three pages that call it
+      project-committed are reconciled in phase 7."
+    date: "2026-11-21"
+  - text: "OQ-2 RULED by @decision-advisor: DEFER the shell fallback's prior-root
+      defaults to M4-S8 (GH-352). The two literals are different defect kinds —
+      `scripts/lib/dispatch-authority.sh:66` defaults to `${HOME}/.delivery-os`
+      (a config root where the typed host root is the state root) and
+      `scripts/hooks/pre-opencode-iteration-owner-hold.sh:46` reads
+      `${HOME}/.delivery-os-state/owner-hold` (correct before migration, wrong
+      after), so a literal swap would regress unmigrated hosts. M4-S8 implements
+      the delivered current-else-prior selection rule, not a swap. Obligation
+      recorded on GH-352 as issue comment 7064946031. Operator remediation until
+      then: set the fallback's declared override `ADOS_DISPATCH_STATE_ROOT` to
+      the current host root; the migration guide records it."
+    date: "2026-11-21"
+notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/379 —
+      `feat/GH-365/jaiship-namespace-migration` → `main-tools`, 42 commits,
+      open, not merged, merge authority with the owner. PR body carries the
+      delivered scope, gate evidence, TDR-0074/DEC-13, and the residual
+      advisories. Ticket #365 is marked ready for review with the PR link."
+    type: info
+    date: "2026-11-22"
+  - text: "DoD CHECK = PASS. Ledger: all phases through quality_gates complete
+      (9/11); every plan phase P1-P10 has a pm-notes COMPLETE record naming its
+      commit and committed-head gate (P1 a3ba0672, P2
+      6426cd4a/ceb8254f/f578c3a1/ 5b06ab5c, P3 e9e7c78d, P4 560b1e11, P5
+      26828570, P6 947b4040/ce14a5a9, P7 203951f0, P8 62ffbaa5, P9 9f4a0803, P10
+      ab091f66). Committed layer: `.jaiship/config.yaml` tracked, `.delivery-os`
+      empty. ACs 31/31 closed by review-iter-3 PASS (20/20 dispositions) and the
+      full `pnpm check` (12402/4/0) + range gate PASS over 40 commits. Docs
+      reconciled by doc-syncer with no residual gap; doc-conformance +
+      namespace-doc-battery 66 pass. Working tree clean except untracked
+      `.zed/`. No phase reopened."
+    type: info
+    date: "2026-11-22"
+  - text: "QUALITY GATES (lifecycle phase 9) = PASS at HEAD 3bd3f6b1. Aggregate
+      `pnpm check` exit 0: test 12402 pass / 4 skip / 0 fail across 12406 tests
+      and 1502 files; boundaries clean (520 modules / 1667 dependencies);
+      ambient-globals, workspace-entrypoints, secret-read-boundary OK;
+      memory-lint 0 errors; forbidden-literals 7/7 classes 0 violations;
+      namespace-tree OK; prompt-conformance clean; help-guide-coverage covered;
+      exports-parity 5 publishables. RANGE GATE: VERDICT PASS — base
+      origin/main-tools, merge-base c1dd722c, head 3bd3f6b1, 40 commits in
+      range, 0 offending commits, 0 distinct rules hit, mode none, resolved
+      commitlint node_modules/.bin/commitlint (repository-local, ref
+      origin/main-tools). Full log tmp/tmpdir/gh365-final-check.log."
+    type: info
+    date: "2026-11-22"
+  - text: "Review iteration 3 = PASS (code-review/review-iter-3.yaml). All 20
+      dispositions CLOSED (F-1..F-8 and N-1..N-12), 0 new findings. Independent
+      spot-runs green; captured full `pnpm check` at 814b7095 = 12402 pass / 4
+      skip / 0 fail. HEAD a7509e78 differs only by the pm-notes evidence note.
+      No out-of-scope formatting churn; every changed path is in plan scope
+      (only the P10 change-folder artifacts sit outside per-file scope).
+      Residual advisories for the PR body: TDR-0074 Proposed (owner acceptance
+      at PR review); DEC-13 shell defaults until M4-S8; RSK-11 prose residual;
+      the pre-freeze literal stays fragment-assembled; the CFG-001 acquisition
+      sub-case is a non-blocking follow-up; an untracked
+      `.jaiship/config.local.yaml.bridge` operator file is present locally."
+    type: info
+    date: "2026-11-22"
+  - text: "Review iteration 2 broadened sweep = FAIL at 1cae5f4b, then remediated in
+      814b7095 (evidence a7509e78): the eight iteration-1 findings stayed
+      CLOSED; the new findings were all unpropagated ripple — N-1 real-document
+      suites reading the removed `.delivery-os/config.yaml` (40 failures), N-2
+      TC-SUP-070 tail, N-3 legacy literal inventory, N-4/N-5 stale install pins,
+      N-6 provider alias baseline, N-7 two formatting drifts, N-8
+      over-suppression, N-9 API-2 drift, N-11 six CI topology/aggregate/scan
+      pins, N-12 operator contract errorRowCount. All fixed and declared in the
+      plan scope. FULL `pnpm check` at 814b7095 = PASS: lint, format, typecheck,
+      test 12402 pass / 4 skip / 0 fail across 12406 tests and 1502 files,
+      boundaries, memory, forbidden-literals 7/7, namespace-tree,
+      prompt-conformance, help-guide-coverage, exports-parity. Final review
+      iteration 3 in progress."
+    type: info
+    date: "2026-11-22"
+  - text: "Review iteration 2 = FAIL (code-review/review-iter-2.yaml): the eight
+      iteration-1 findings are CLOSED (root symlink, container descent, audit
+      suppression, TC-MIGRATE-009, literal site, backup-dir normalization,
+      remedy, bookkeeping). New blocking findings are aggregate-gate regressions
+      that predate the remediation: N-1 (install-error-domain pin still 11), N-2
+      (INSTALL_HELP_PATHS still 5), N-3 (two inventory fixtures not
+      format-clean), plus N-4 (over-suppression of `install status --migrate`)
+      and N-5 (API-2 path/reason drift). Remediation is one pass: fix the pins
+      and formatting, narrow the --migrate arm to the no-subcommand path, and
+      bump the spec to v1.6 for API-2. Then the final review iteration 3."
+    type: info
+    date: "2026-11-21"
+  - text: "RANGE COMMIT GATE (pre-flight, phase 9 evidence; re-run at the final
+      head): VERDICT PASS — base origin/main-tools, merge-base c1dd722c, head
+      1cae5f4b, 37 commits in range, 0 offending commits, 0 distinct rules hit,
+      mode none, resolved commitlint node_modules/.bin/commitlint
+      (repository-local, ref origin/main-tools)."
+    type: info
+    date: "2026-11-21"
+  - text: "Review iteration 1 = FAIL (code-review/review-iter-1.yaml): F-1 BLOCKER
+      (root-level destination/source symlink followed, not conflict/blocked),
+      F-2 MAJOR (container directories not descended), F-3 MAJOR (audit
+      suppression bypassed by flag-before-subcommand), F-4 MAJOR (TC-MIGRATE-009
+      weakened vs AC-F3-7), F-5/F-6/F-7 minors (split-literal site, --backup-dir
+      normalization, symlink remedy), F-8 info. Remediated in f453a440 (evidence
+      1cae5f4b): root roots are lstat-classified and never followed; containers
+      descend with copy-verify-remove; suppression keys on the parsed command +
+      first positional (all flag orders and --migrate); TC-MIGRATE-009 restored
+      with install-status before/after and multi-header seed; the plain prior
+      literal is a budgeted site; --backup-dir is normalized; remedies are
+      rendered. Plan amendment declares the new paths (P8 registry site,
+      branding-seam test). Re-review iteration 2 in progress."
+    type: info
+    date: "2026-11-21"
+  - text: "DoR iteration 3 = READY (readiness-review/readiness-iter-3.md), all ten
+      facets PASS, Pause Required: no. All iteration-2 blocking findings
+      resolved; C21 partially resolved (bookkeeping only: one header/historical
+      122 vs the re-derived 121). Independently re-derived: 31 ACs, 36 cases, 37
+      links, 55 mutations with the 5+3+5+5+21+3+4+8+1 allocation, 168 file
+      entries / 121 unique / 1 folder, TDR-0074 tracked with its index row, and
+      every scanned-corpus seed coverable by the declared site set. Residual
+      advisories to carry in the PR body: (A8) audit suppression must be keyed
+      PRE-PARSE or `install migrate --force` still records; (A7) shell sites are
+      per-shim not per-file; (A6) `.gitignore` already carries
+      `.*/projects.yaml` (3f7f4d7b), so P1 1.2 is a no-op and the fresh-clone
+      evidence is a change-head property; (A5) 'nothing is written in a
+      source/destination root' means no record."
+    type: info
+    date: "2026-11-21"
+  - text: "Iteration-2 remediation re-close: commits 3f7f4d7b (specification;
+      bundled spec v1.5, plan, test plan r0.4, pm-notes, readiness iter-2, and
+      the tracked `.gitignore` pattern `.*/projects.yaml`), c49ca681
+      (test_planning), and 70bd8e4f (delivery_planning). The local
+      `.git/info/exclude` entries for `.delivery-os/` and `.jaiship/` were
+      removed in the worktree (not committed) so the tracked layer can stage;
+      `git check-ignore` now shows the two runtime files ignored by `.gitignore`
+      and `.delivery-os/config.yaml` unignored. The plan is valid/full/ready and
+      lint-clean."
+    type: info
+    date: "2026-11-21"
+  - text: "DoR iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md), Pause
+      Required: no. 12 iteration-1 findings fully resolved, 11 partially, 0
+      regressed. New blocking set: S18 audit seam not implementable as written;
+      S19 derived-entry rules contradict DM-6 twice; S20 declared sites outside
+      scanned corpora; S21 pre-freeze sites misassigned; S22 AC-F6-1 includes
+      the alias; S23 ADOS_WORKING_NAME cannot reach the override via the
+      adapter; S24 AC-F1-2 'only this criterion' unachievable; C10 P1 staging
+      blocked by the local .git/info/exclude hiding .jaiship/; plus B6-B13 and
+      C11-C25. Iteration 3 is the last permitted; the pass must be
+      consolidated."
+    type: info
+    date: "2026-11-21"
+  - text: "PM RULINGS for DoR iteration 2 (binding; iteration 3 is the last):
+      (R10/S18) SUPPRESS the delivered command-audit pair for `install migrate`
+      in every run (dry-run and applying). The migration is the one declared
+      exception because it moves the state store that would receive the record;
+      no record is written before, during, or after. API-1/DM-7/AC-F3-1/2/3/4
+      and §8.5/§10 say 'zero records of any kind' and name the exception; the
+      test plan reverts B2 to zero records and the plan P5 drops the audit-seam
+      dependency and index.ts scope. (R11/S19) derived entries are OUT of the
+      move set: never moved, counted, or conflicted; a source copy is retained
+      and reported as a derived residual (safe to delete), a destination copy is
+      `already-migrated` if present and `absent` if not; derived entries do not
+      prevent the non-derived retirement line. Update F-3 step 7, DM-6,
+      glossary, TC-MIGRATE-005/007, P5. (R12/S20) a declared site is validated
+      for PRESENCE always, and for a MATCH only when it lies in a scanned
+      corpus; AC-F4-2 scopes 'matched' to scanned sites. (R13/S21) the
+      pre-freeze shim's sites are the legacy adapter
+      (`packages/adapters/src/legacy/index.ts`) and the eight-variable fixture
+      (which holds `ADOS_`); the `DELIVERY_OS_` shim's sites are the owner-hold
+      hook, its battery, the three docs, and the entrypoint prior-identity
+      harness. Separate the two fixtures. (R14/S22) AC-F6-1 is scoped to the
+      primary identity and the MCP composition; the alias is a declared shim
+      (its default is prior by design) and is excluded from the clean-home
+      prior-path claim. (R15/S23) the `ADOS_WORKING_NAME` exception is
+      implemented at the entrypoint/edge raw-environment read (map the legacy
+      name to the current override channel there), never in the adapter mapping.
+      Update DEC-9/API-5 and plan P8. (R16/S24) reword AC-F1-2: the mutation
+      fails the AC-F1-2-named assertion and the real-tree checks stay green;
+      drop 'only this criterion' (a shared owning case is acceptable). (R17/C10)
+      P1 adds an operational prerequisite: remove the local `.git/info/exclude`
+      entries for `.delivery-os/` and `.jaiship/` and add the `.*/projects.yaml`
+      ignore pattern before staging. PM performed this in the worktree on
+      2026-11-21; the plan must state it for a fresh lane."
+    type: decision
+    date: "2026-11-21"
+  - text: "Artifact re-completion after remediation: commit 07056adb closed
+      specification (bundled spec v1.4, plan, test plan r0.3, pm-notes,
+      readiness iter-1); 94eb690f closed test_planning (after a transient
+      state.lock.busy abort; retry landed), and bb0d3911 closed
+      delivery_planning. The ledger now shows all four artifact phases complete
+      (clarify_scope, specification, test_planning, delivery_planning). `plan
+      validate` is valid/full/ readyForDevelopment=true and `lint plan` valid.
+      Two bookkeeping corrections were folded in: the plan header now cites spec
+      v1.4 / test plan r0.3, and the test plan revision log carries
+      0.1/0.2/0.3."
+    type: info
+    date: "2026-11-21"
+  - text: "DoR-iteration-1 remediation applied in one consolidated pass:
+      specification v1.4 closes S1-S17 (scan neutral sites and allowlist
+      independence; audit pair at the destination; derived disposition and
+      composition; two schema ids; symlink dispositions; PATH residual; unscoped
+      scope; ADR-0003 DEC-8 qualification; AC-F1-2 declared-prefix property with
+      M55; NFR-5 undeclared occurrences; AC-F3-2 bound; ADOS_WORKING_NAME
+      exception; F-5 fifth tree check; DM-6 plan-time root). Test plan r0.3
+      closes B1-B5 and the spec consequences at 36 cases and 55 mutations
+      (allocation 5+3+5+5+21+3+4+8+1). Plan remediation C1-C9 follows: P3
+      alignment set and SCOPE_ORG neutral site, changeset in P2, pre-freeze
+      fixture in P2, literal-free guide remediation, three permanent doc sites,
+      P7 real batteries, catalog module in P8, count fix, P1 gate ordering."
+    type: info
+    date: "2026-11-21"
+  - text: "DoR iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md), Pause
+      Required: no. 19 findings grouped by owner: specification S1-S9 (S1
+      critical: the content arm cannot be green on a clean tree — `SCOPE_ORG =
+      \"delivery-os\"` and two docs are unscoped; S2 critical: API-1 says both
+      zero state records and an audit ledger record, and the audit store
+      resolves to the prior root on an unmigrated host; S3-S9 major:
+      derived-entry disposition/composition, one schema id for two documents,
+      symlink handling, managed PATH block, `unscoped` scope, glossary wording,
+      and the TDR/decision-record question). Test plan B1-B5 and plan C1-C9 are
+      consequences. Counts are mechanically correct (31/31 ACs, 36/36 TCs, 54
+      mutations, TDR/index tracked); the failures are semantic and
+      cross-artifact. Remediation order: specification → test_planning →
+      delivery_planning, then iteration 2."
+    type: info
+    date: "2026-11-21"
+  - text: "PM RULINGS for the DoR-iteration-1 remediation (binding on the three
+      authors; each is a correctness ruling, not new scope): (R1/S2) the
+      migration appends NO migration-specific state record. The delivered audit
+      ledger's invocation record is written at the CURRENT host state root
+      (destination side) before the move and is not a source entry; it does not
+      count as a migration state write. API-1/AC-F3-4 distinguish 'no migration
+      record' from 'the delivered audit invocation record'. (R2/S3) the derived
+      entry takes the disposition `already-migrated` when a destination copy
+      exists and `absent` when it does not; it is never in the source-move set
+      and never conflicts. Run verdict = max severity over dispositions with
+      order `migrated` < `duplicate-identical` < `conflict` < `blocked`;
+      `absent` is neutral. (R3/S4) two schema ids: `install.migration.plan.v1`
+      (CLI payload) and `install.migration.manifest.v1` (backup manifest). No
+      new error identity. (R4/S5) any symlink entry, on the source or
+      destination side, is never followed and never moved: a source symlink is
+      `blocked`, a destination symlink is `conflict`; both are retained,
+      reported with the path and remedy, and the run exits 1. The owner's
+      `.jaiship -> .delivery-os` link is the motivating case. (R5/S6) the
+      migration does NOT edit the operator's profile. It detects a delivered
+      managed PATH block whose path is under a prior root and reports it as a
+      residual with the remedy: re-run the installed artifact's `install` (the
+      family that owns the block). The migration report carries the line.
+      (R6/S7) the project root class reports scope `unscoped` when the
+      invocation is outside a work tree; the two host classes still migrate.
+      `unscoped` is a scope value, not a disposition. (R7/S9) DEC-3 and DEC-6
+      remain change-local; no additional decision record is authored for them.
+      TDR-0074 remains the only new record. (R8/S1) add the `SCOPE_ORG` literal,
+      `doc/guides/opencode-model-configuration.md` and the two glossary lines as
+      declared neutral sites/sites for the prior-executable seed; state
+      explicitly that the frozen DEC-8 path allowlist does NOT suppress the
+      prior-namespace class (the two allowlists are independent, and the shim
+      registry is the site authority). (R9) no AC is added, removed, or
+      renumbered (still 31); the S5-S7 clauses extend existing criteria
+      (AC-F3-1, AC-F3-3, AC-F3-5, AC-F3-6) and the affected cases are extended,
+      not added."
+    type: decision
+    date: "2026-11-21"
+  - text: "Delivery planning COMPLETE: chg-GH-365-plan.yaml, 10 delivery phases
+      (P1…P10, all kind delivery, tier full, repo main-tools, standard weight),
+      168 declared file entries over 121 unique paths (+1 folder entry);
+      ownership 31/31 ACs and 36/36 TCs with 0 orphans and 0 double-owned;
+      mutation allocation 5+3+5+4+21+3+4+8+1 = 54 (M1–M54 once each). `plan
+      validate` verdict=valid, tier=full, readyForDevelopment=true; `lint plan`
+      valid with 0 errors. P1 declares the committed-layer move
+      (`.delivery-os/config.yaml` deletion, `.jaiship/config.yaml` addition),
+      the brand-free ignore rules, the fresh-clone/loaded-path suites, and the
+      staged TDR-0074 pair with the mechanical `git ls-files --error-unmatch`
+      done criterion. Pipeline note: commit c24cce13 landed the plan plus the
+      pending pm-notes/TDR/index work (plan-union scope), and 92b9acde completed
+      the phase. The interrupted plan-writer session produced no partial plan;
+      this is a clean re-author."
+    type: info
+    date: "2026-11-21"
+  - text: "RESUME CHECKPOINT (env failure, not a logic failure): the host suspended
+      at ~2026-11-21T15:50Z for 2h19m; the opencode session died and the
+      dispatch classified it failed/vacuous. Resumed 2026-11-21T19:12Z on the
+      SAME branch `feat/GH-365/jaiship-namespace-migration` (5 commits ahead of
+      origin/main-tools, behind 0). Verified: 3/11 phases complete
+      (clarify_scope, specification, test_planning); no plan file existed. Kept
+      the interrupted session's uncommitted work: the two phase-evidence notes
+      in this file, the TDR-0074 index row/narrative, and the untracked TDR.
+      Because the plan-absent commit scope cannot stage an untracked decision
+      record, the pending work is committed together with the plan (plan-union
+      scope declares the TDR and index in P1). No work discarded; no re-dispatch
+      from scratch."
+    type: retro
+    date: "2026-11-21"
+  - text: "Specification COMPLETE at v1.2: 31 ACs (F-1 4, F-2 4, F-3 8, F-4 4, F-5
+      6, F-6 5), DEC-1…DEC-13, both owner comments covered (2026-11-19
+      committed-truth checks; 2026-11-21 D1 arbitrary ADOS_* and D2
+      authoritative root). DEC-12 is TDR-0074 (Proposed; owner acceptance at the
+      PR review); DEC-13 defers the shell prior-root literals to M4-S8 with the
+      obligation recorded on GH-352 (comment 7064946031). OQ-TP-1 resolved by PM
+      ruling (planned-move failure vs backup/manifest write) and stated in F-3,
+      DM-8, AC-F3-6. Commits: 6ccf7582 (spec v1.0/v1.1), b60825ef (artifact
+      bundle), afc1c610 (specification phase completion)."
+    type: info
+    date: "2026-11-21"
+  - text: "Test plan COMPLETE at revision 0.2: 36 cases in six groups (TC-LAYER 4,
+      TC-ROOT 4, TC-MIGRATE 12, TC-SHIM 4, TC-SCAN 6, TC-IDENTITY 6), 31/31 ACs
+      mapped with 37 links (0 unmapped, 0 orphan), 54 mutation rows M1-M54, 32
+      fixtures (21 reused / 7 extended / 11 authored), and the P1…P10 phase map
+      with per-case phase ownership and isolation preconditions. Commits:
+      b60825ef (bundle), ad04e6e4 (test_planning phase completion)."
+    type: info
+    date: "2026-11-21"
+  - text: "OQ-TP-1 RULED (PM, correctness interpretation — not new scope): a failure
+      of a PLANNED MOVE inside the apply loop is governed by AC-F3-6 — exit 1, a
+      data-bearing `blocked` or `partial` verdict, the moved/unmoved sets named,
+      and no error identity (API-2: a data-bearing negative verdict carries no
+      error code), with the backup complete for all planned entries.
+      `state.write.failed` (platform-provider, exit 2) governs failures OUTSIDE
+      the apply loop — writing the backup copy or the manifest — where no
+      partial move state machine exists. No identity, projection row, case
+      count, AC link, or phase assignment changes; TC-MIGRATE-008 step 5 already
+      reflects the ruling. The spec is revised to state this split so DM-8 and
+      AC-F3-6 are not read as contradictory."
+    type: decision
+    date: "2026-11-21"
+  - text: "STAGING CONSTRAINT for TDR-0074: the plan-absent commit scope is the
+      change folder only, so an untracked decision record under doc/decisions is
+      excluded as a stray while the tracked doc/decisions/00-index.md row would
+      still be staged (scopeDrift). To avoid an index row pointing at an
+      untracked record, the index row was restored out before the specification
+      commit. The delivery plan MUST declare BOTH
+      `doc/decisions/TDR-0074-project-groups-document-operator-local-overlay.md`
+      and `doc/decisions/00-index.md` in an early delivery phase scope, and the
+      index row must be re-added at that point (decision-advisor owns the row).
+      DoD must confirm no index row points at an untracked record."
+    type: risk
+    date: "2026-11-21"
+  - text: "OWNER SCOPE UPDATE (comment 7064717722, 2026-11-21T15:14:30Z): the first
+      native `jaiship dispatch` exposed two namespace defects and the owner
+      requires both in scope. D1: with the legacy environment loaded, arbitrary
+      `ADOS_*` variables (eight reproduced) make every config-resolving command
+      fail `config.environment.unmapped`; the legacy shim must map only declared
+      catalog keys and leave every other `ADOS_*` untouched, with a fixture
+      pinning `ADOS_FOO=bar` proving no error and no config value. D2: the
+      current-identity config root must be the single authoritative location;
+      the prior root is a bounded one-time compatibility read with no notice on
+      a migrated host; operator-local `config.local.yaml` and `projects.yaml`
+      get a declared git-ignored home. Evidence to carry: the eight-variable
+      reproduction and the provider resolve before/after. The authored spec
+      already covers these as AC-F6-3 and AC-F2-1..4."
+    type: info
+    date: "2026-11-21"
+  - text: "State detection (2026-11-21): no GH-365 branch, no change folder, no
+      phase ledger records (`phase list` returned empty phases over an
+      integrity-clean 7206-record registry), and no delivery PR existed; only
+      the merged planning PR #369 mentions the ticket. This is a FRESH lifecycle
+      start, not a resume. Branch `feat/GH-365/jaiship-namespace-migration` was
+      created from `main-tools` at c1dd722c after a fetch/pull --ff-only sync
+      (already up to date). Worktree clean except pre-existing untracked
+      `.zed/`. Milestone M4 is attached to issue #365 (verified before artifact
+      work)."
+    type: info
+    date: "2026-11-21"
+  - text: "Clarify-scope current-state evidence (read on c1dd722c): (1)
+      packages/core/src/branding/index.ts already derives configDirectoryName
+      `.<name>`, stateDirectoryName `.<name>-state`, environmentPrefix
+      `<NAME>_`, installPath `~/.<name>/bin/<name>` from the configured working
+      name; `jaiship` resolves to `~/.jaiship/`, `~/.jaiship-state/`,
+      `JAISHIP_`, so the directory/env-naming work is derivation already in
+      place and the remaining gap is committed truth plus the move. (2)
+      packages/cli/bin/jaiship.ts declares DEFAULT_WORKING_NAME `jaiship` and
+      PRIOR_WORKING_NAME `delivery-os`; bin/delivery-os.ts is the alias. (3) The
+      prior-identity fallback in adapters/src/file/config-source.ts and
+      core/src/app/state-scope.ts reads the prior config file and prior default
+      state root read-only and emits `prior-identity-fallback` notices. (4) The
+      migration hook core/src/domain/install-migration.ts detects `.delivery-os`
+      and `.delivery-os-state` and, with `--migrate`, returns
+      `install.migration.unavailable` naming M4-S2 as owner and moves nothing.
+      (5) `git ls-files .delivery-os .jaiship` on main-tools returns exactly
+      `.delivery-os/config.yaml`; `.jaiship/` exists locally with an ignored
+      `config.local.yaml` and an untracked `projects.yaml`, so the committed
+      project layer is still under the prior root - the exact defect the owner
+      comment describes. There is no tracked symlink."
+    type: info
+    date: "2026-11-21"
+  - text: "Doc-impact risks for phase 7: feature-branding-seam.md (working-name
+      inventory, packageScope row, prior-identity derivation, forbidden-literal
+      scan), feature-cli-entrypoint.md (per-bin defaults and alias prior
+      identity), feature-config-layer.md and feature-projects.md (prior-identity
+      fallback precedence and the state-root policy),
+      feature-install-lifecycle.md and the local-install guide (the `--migrate`
+      refusal and the documented manual move), install-model.md (M4-S2 ownership
+      of the move), plus the new migration command's reference page and the
+      namespace conformance scan's spec. The help/guide-coverage check requires
+      a reference page for every prompt-required command, so the migration
+      surface must land with one."
+    type: risk
+    date: "2026-11-21"
+  - text: "Doc-conformance constraint: AGENTS.md and the guides describe the shell
+      entry points as the fallback; this change does not retire them or rewrite
+      agent prompts. The prompt-identifier task is bounded to removing product
+      identifiers that name the prior program from prompt text, while the
+      compatibility alias and package scope remain declared inputs. No new
+      legacy identifier may be introduced anywhere."
+    type: risk
+    date: "2026-11-21"
+  - text: "Database/state constraint carried from TDR-0047: the migration moves
+      state roots and must NOT re-version stored records; a storage version bump
+      is not part of this change. The move must preserve bytes and be
+      idempotent; a second run must be a no-op with the same verdict, and a
+      partial/interrupted run must be recoverable from the backup."
+    type: risk
+    date: "2026-11-21"
+  - text: "Environment note carried from prior deliveries: node_modules/.bin carries
+      both `jaiship` and `delivery-os`; primitive invocations use
+      TMPDIR=$PWD/tmp/tmpdir and PATH=$PWD/node_modules/.bin:$PATH; lifecycle
+      commits route through the commit primitive and phase state only through
+      the phase family. Gate evidence must use TMPDIR=$PWD/tmp/tmpdir."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 1 COMPLETE: commit a3ba0672d3f738bd8686e2845f9fdd6dd15c531b
+      (subject from the commit primitive's template for a standalone plan-union
+      commit: 'chore(GH-365): update .delivery-os/config.yaml'; the primitive
+      owns the message and ten delivery-kind phases leave the union summary
+      undefined). Committed-head gate green: git check-ignore
+      .jaiship/config.yaml exits 1; namespace-layer 3 pass;
+      namespace-fresh-clone 1 pass; namespace-loaded-path 1 pass; ignore-rules
+      suites 10 pass; scripts/checks/ignore-rules.ts reports five coverage
+      classes; decision-record 11 pass; content-inventory 12 pass; pnpm
+      typecheck green; git diff --check clean; TDR-0074 tracked and
+      doc/decisions clean. The layer moved byte-identically (sha256
+      fa1d82b53afda848bcb1dbea5ecf79939b6f9c7518fc931aca59768ab203fb09, parsed
+      canonical 06bdf687…). The tracked .gitignore already carried the
+      projects.yaml glob (3f7f4d7b); verified, not re-added (advisory A6)."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 2 COMPLETE: commit 6426cd4a380720e85ac5388d9ac7aecd9b0c722b
+      (primitive template subject 'chore(GH-365): update
+      .changeset/gh-365-jaiship-namespace-migration-min…'). The single minor
+      changeset was authored first; the registry window derives from it as
+      declaredIn 0.1.0 (0.0.0 + minor) and removalRelease 0.2.0 (next minor).
+      namespace.shims.v1 declares the seven Appendix F families with per-shim
+      sites (A7 applied: shell sites are per-shim). Committed-head gate green:
+      changesets-group OK; namespace-shims-registry 8 pass (presence for every
+      site; match/budget only in-corpus; decl-only sites never matched; seven
+      mutants fail by name; window equals the changeset pair); content-inventory
+      12 pass; pnpm typecheck green; git diff --check clean. Pre-freeze lineage
+      sites are the legacy adapter index.ts and provider-migrate-table plus the
+      eight-variable fixture; the fixture holds ADOS_ only. The three owner-hold
+      docs and the prior-identity harness are declaration-only."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 2 evidence (final): substantive commits 6426cd4 (changeset,
+      namespace.shims.v1 registry, pre-freeze fixture, registry fixture and
+      suite) and ceb8254f (self-declaration correction). The registry now
+      declares both registry documents themselves as budgeted self-declaration
+      sites (plan 2.3(c)); without that a P3 content-arm run would flag the
+      registry's own seed literals. The P2 validator enforces the budget for
+      in-corpus sites but does not require a match, because the
+      forbidden-literal registry is a forward declaration whose seed literals
+      land in P3; the match direction is the content-arm reconciliation.
+      prior-working-name-override is not declared on the forbidden-literal
+      registry (its literal is not one of the five priorNamespace seeds). Final
+      committed-head gate: changesets-group OK; namespace-shims-registry 8 pass;
+      content-inventory 12 pass; pnpm typecheck green; git diff --check clean;
+      P1 regression layer 3, fresh-clone 1, loaded-path 1, ignore suites 10,
+      ignore-rules OK. The fresh-clone drill carries a 30 s per-test budget
+      because a real `--no-local` clone exceeds bun's 5 s default under machine
+      load; its assertions are unchanged."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 3 COMPLETE: commit e9e7c78d. The content arm now scans seven
+      classes; six carry the priorNamespace seed class and rootWorkspaceFiles
+      carries the delivered seed class only. The five seeds, the explicit
+      scopeSelection, the three neutral sites (root private name, lockfile,
+      SCOPE_ORG bounded at one) and the four declared corpora are in the
+      registry; the shim registry remains the sole site authority and the DEC-8
+      path allowlist does not filter the new class. The nine-file identifier
+      restatement is committed and the toolsmith projection was regenerated by
+      scripts/build-claude-plugin.sh. Delimiter rule: '-' is a token character
+      (so delivery-os-milestone-check is not a standalone token, matching the
+      SCAN-FIRST grep) and an environment prefix is left-delimited only (so
+      DELIVERY_OS_* resolves). Pre-freeze-lineage sites are presence-only for
+      this arm because ADOS_ is not one of the five priorNamespace seeds.
+      Committed-head gate green: forbidden-literals 7/7 with 0 violations;
+      namespace-conformance 20 pass; forbidden-literals.test 30 pass;
+      identity-docs 13 pass; namespace-shims-registry 8 pass; content-inventory
+      12 pass; pnpm typecheck green; git diff --check clean."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 4 COMPLETE: commit 560b1e11. The tree arm reads the prior-root
+      prefix set from the shim registry's prior-config-directory and
+      prior-state-root literals cross-checked with the forbidden registry's
+      home-form seed (reported .delivery-os/, .delivery-os-state/,
+      ~/.delivery-os/), asserts zero tracked prior paths, zero tracked symlinks
+      into one, the committed layer present, the runtime project files ignored
+      in a rule-world, and no tracked runtime file. The two negative controls
+      and the tracked-runtime-file case fail by name. M55 is exercised through a
+      declared test seam (`priorRootPrefixes`): the narrowed set fails only the
+      AC-F1-2-named reported-set assertion while the real-tree checks stay green
+      (per-assertion attribution). `ts-namespace-tree` is a non-advisory CI job
+      with permissions.contents read, full history, the recorded baseline fetch,
+      and the arm command; both arms are now in the aggregate `check` chain and
+      the TS_JOBS pin is updated. Committed-head gate green: tree arm exit 0;
+      ci-topology OK (17 TS jobs); ci-bindingness OK; namespace-tree 8 pass;
+      namespace-gate-binding 5 pass; ci-checks 43 pass; content arm 7/7 with 0
+      violations; content-inventory 12 pass; pnpm typecheck green; git diff
+      --check clean."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 6 COMPLETE: commits 947b4040 (retirements and family/help
+      surface) and ce14a5a9 (retirement-case self-exclusion).
+      `install.migration.unavailable` leaves INSTALL_DOMAIN_CODES (11 -> 10),
+      the error table, the guide's requirement set and the result-code corpus;
+      the install domain is ten and no row was added. `install --migrate`
+      remains in definition.flags and answers fallback.invocation at exit 1
+      naming the retired form and the remedy `install migrate`; the
+      documented/help flag set omits it. The `install migrate` help entry and
+      the M4 page carry the verb, its flags and the retirement note; the
+      prompt-required inventory stays 28. Committed-head gate green:
+      install-migration-retirement 7 pass; install-lifecycle-docs 7 +
+      install-lifecycle-path 12; error-table-sync 108 +
+      cross-repository-contract 21; reference-page-parity 5 + doc-conformance
+      59; install-conformance 7 + install-family-surface 10; help-guide-coverage
+      OK; content-inventory 12; install-migrate 23 regression; error-table 147;
+      port-contract-inventory 16; supervision 7; dispatch taxonomy 3; pnpm
+      typecheck green; content arm 7/7 and tree arm green; git diff --check
+      clean. Out-of-scope but necessary ripple recorded: P5 added the two schema
+      ids to error-table-sync's reserved set; P6 moved the identity-total floor
+      (170/169 -> 169/168 and +136 -> +135) through
+      tests/structure/error-table.test.ts, supervision-error-socialization,
+      dispatch-attempts-taxonomy, ceremony-contract, ceremony-nonregression,
+      verify-gates-suite-map-contract, content-inventory, the ports and
+      state-additivity fixtures, feature-metrics and feature-ceremony-runner,
+      and removed the retired code from the changeset body."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 5 COMPLETE: commit 26828570. The migration domain is five
+      modules (plan, table, apply, manifest, digest) plus the extended
+      install-migration declarations; `install migrate` is mounted with
+      `--dry-run`, `--backup-dir <abs>` and `--stop-daemon`. The verb plans
+      before it acts (one header per root class, one line per entry, the
+      would-be backup path, `daemon: unchecked`, <=60 lines with one counted
+      truncation line), copies and digest-verifies every planned entry and
+      writes `install.migration.manifest.v1` BEFORE the first move, then moves
+      the non-derived entries without rewriting a byte. Dispositions are the
+      closed six with the derived rule and the symlink rule evaluated first; the
+      payload is `install.migration.plan.v1`; the run verdict uses DM-6's
+      composition rule. The audit pair is suppressed PRE-PARSE on the invocation
+      tokens in runCli (A8), so every mode including `install migrate --force`
+      records nothing while the audit dependency stays composed and recording.
+      Committed-head gate green: install-migrate 23 pass; install-family-surface
+      11; install-ownership-split 5 + entrypoint-bin 34; install-conformance 7;
+      install-lifecycle-path 12 + error-table-sync 108; content-inventory 12;
+      pnpm typecheck green; git diff --check clean. Out-of-scope but necessary:
+      the two new schema ids joined error-table-sync's reserved record-kind set,
+      tests/fixtures/install/home.ts gained the migration option, and
+      content-inventory's executable allowances gained the new modules. The
+      `--migrate` flag remains documented at this boundary; P6 retires it."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan amendment + phase 7 COMPLETE: commit 203951f0. The plan now declares
+      the delivery-time discoveries for review (P5: error-table-sync,
+      fixtures/install/home, content-inventory; P6: the identity-total
+      floor-ripple files, the two count pages, the ports/state-additivity
+      fixtures and the changeset body; P7: the alias baseline and its two-bins
+      suite) under a one-line AUTHORISED DELIVERY-TIME DISCOVERY comment each;
+      `plan validate` reports valid/full/ready and `lint plan` is valid. The
+      delivered notice machinery already satisfies the loaded-path guarantee, so
+      production.ts needed no change: the current file wins, the shadowed prior
+      is reported not used with both paths in the one config-skipped line, a
+      prior-only world emits exactly one config-read naming both paths with zero
+      prior writes, and a migrated checkout/host emits nothing in human and
+      --json mode. The project-local overlay reads at .jaiship/config.local.yaml
+      and is ci-disabled under CI; the group document remains the delivered
+      projects-groups-list regression control (not edited). The four golden
+      notice lines are committed and compared to the declaration; the permanent
+      NAMESPACE_PROOF_BOUNDARY now covers all eight proven ids with five planted
+      controls. Committed-head gate: prior-identity-config-fallback 18 pass;
+      prior-identity-notice 15; config-cli 19; projects-groups-list 9 (verify
+      only); state-scope 10; conformance/namespace 7; prior-identity-hermetic 5;
+      content-inventory 12; pnpm typecheck green; git diff --check clean."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan amendment + phase 8 COMPLETE: commit 62ffbaa5. The plan now also
+      declares the P8 delivery-time discoveries (config/index.ts selector
+      export, identity-docs pin, content-inventory/ports inventories, alias
+      baseline) under the AUTHORISED DELIVERY-TIME DISCOVERY comment.
+      `<PREFIX>WORKING_NAME` is the current override channel;
+      `DELIVERY_OS_WORKING_NAME` is the prior channel and `ADOS_WORKING_NAME`
+      the pre-freeze channel, read at the raw entrypoint/edge seam before brand
+      derivation with precedence current -> prior -> pre-freeze -> default; one
+      `override-read` notice is emitted per prior channel used (the fifth golden
+      line). A present-but-invalid override keeps self-description on the
+      declared identity and fails a configuration-bearing command through the
+      delivered `fallback.internal` containment with no lower-channel fallback.
+      The MCP default is the current identity with a derived override; the
+      legacy adapter maps a pre-freeze name only when the mapped current name is
+      a declared catalog key (the selector is
+      `configEnvironmentNames(PRODUCTION_CATALOG, prefix)`), `ADOS_WORKING_NAME`
+      is never adapter-mapped, and `ADOS_FOO` is inert. Committed-head gate:
+      identity-override 9; legacy-adapter 16; namespace-identity-surfaces 4;
+      branding-contract 9; prior-identity-state 11 + config 18; config-cli 21;
+      prior-identity-notice 15; content-inventory 12; port-contract-inventory
+      16; entrypoint-bin 34; identity-docs 13; conformance/namespace 7;
+      prior-identity-hermetic 5; content arm 7/7; pnpm typecheck green; git diff
+      --check clean. The accidental broad biome write was reverted except two
+      formatting-only fixture hunks (`tests/structure/inventory.json`,
+      `tests/fixtures/ports/v1-contract-inventory.json`), which
+      review-iteration-2 N-3 reformatted to the biome baseline."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan amendment + phase 9 COMPLETE: commit 9f4a0803. The plan declares the
+      P9 discovery that the glossary becoming a declared site moves the P3 'not
+      a declared site' pin. Reconciled pages: local-install (migration flags,
+      dry-run, backup root and manual reversal, per-entry precedence and
+      verdicts/exits, daemon rule, idempotence, residual lines, ten-identity
+      domain, loaded-path guarantee, symlink disposition, and the literal-free
+      shell-fallback remediation naming scripts/lib/dispatch-authority.sh and
+      its own header), feature-config-layer (authoritative .jaiship/config.yaml,
+      loaded-path guarantee, five notice reasons, bounded legacy mapping and the
+      override exception), feature-projects (post-move derived host index,
+      warning-never-redirects, operator-local projects.yaml),
+      feature-project-groups (operator-local git-ignored overlay, empty listing,
+      invoking-checkout-only mirror target set, no template),
+      feature-ceremony-runner §9, feature-state-layer (byte-preserving move,
+      header/format invariance, zero records), feature-mcp-surface (current
+      jaiship default), feature-autonomous-delivery + its test spec +
+      delivery-modes (owner-hold names are the declared
+      prior-environment-prefix) shim, not current-brand names), the glossary
+      (the two stale rows plus the
+      disposition/verdict/root-scope/symlink/command-audit/derived rows and both
+      migration schema ids), opencode-model-configuration,
+      provider-conditions-and-parks, ceremony-runner, the M4
+      install/install-model/backlog/schedule pages (M4-S2 delivered), and the
+      decision-register comment. The glossary is now a presence-only declared
+      site of prior-working-name-override and prior-config-directory; the three
+      owner-hold pages remain presence-only declared sites. The registry's stale
+      P8-unmatched sites (serve.ts, edge.ts, the forbidden registry's .ados)
+      were removed and the legacy adapter's pre-freeze budget raised to 4.
+      Committed-head gate: doc battery 5; doc-conformance 60; rename-drill 5
+      (verify only); shim registry 8; conformance 20; doc-distribution OK;
+      content arm 7/7; help coverage OK; git diff --check clean."
+    type: info
+    date: "2026-11-21"
+  - text: "Plan phase 10 COMPLETE: commit ab091f66. Authored the enduring
+      doc/quality/test-specs/test-spec-namespace-conformance.md
+      (ados_distribution: internal): the two arms and their scope
+      classes/corpora/neutral sites, the shim-registry shape/window/presence
+      reconciliation with the longest-literal resolution, the per-class
+      mutations and the two negative controls, the migration battery and its
+      fixtures/seams, and the proof boundary publishing the same eight proven /
+      eight not-proven ids in the declared order. Indexed the page in
+      doc/00-index.md and registered it in the forbidden-literal registry in the
+      same commit; updated doc-conformance for the page set. Release
+      verification (not re-authoring): exactly one minor changeset for GH-365
+      covers the five lockstep packages (changesets-group OK), the shim
+      registry's window pair still equals the changeset-derived pair
+      (namespace-shims-registry 8 pass), doc-distribution guard OK, help-guide
+      coverage OK, content arm 7/7, doc-conformance 61 pass, content-inventory
+      12 pass, git diff --check clean. Lifecycle phase-7 checks recorded here:
+      the page's published boundary equals NAMESPACE_PROOF_BOUNDARY (8/8,
+      declared order), and the DOD-9 stale set is clean (the doc battery asserts
+      the reworded rows, no prior path/prefix as current, and projects.yaml
+      never project-committed). ALL TEN DELIVERY PHASES ARE DELIVERED: P1
+      a3ba0672; P2 6426cd4a/ceb8254f/f578c3a1/5b06ab5c; P3 e9e7c78d; P4
+      560b1e11; P5 26828570; P6 947b4040/ce14a5a9; P7 203951f0; P8 62ffbaa5; P9
+      9f4a0803; P10 ab091f66 (plus the P2/P8 evidence commits)."
+    type: info
+    date: "2026-11-21"
+  - text: "Review-iteration-1 remediation COMPLETE: commit f453a440 (review record
+      code-review/review-iter-1.yaml included). F-1: planRoot lstat-classifies
+      the source and destination ROOTS before enumerating; a destination-root
+      symlink (including the exact .jaiship -> .delivery-os shape and an
+      external target) is a conflict, a source-root symlink is blocked, both
+      retained with the absolute path and remedy, exit 1, never listed or
+      renamed through; the root case is asserted with a write recorder. F-2:
+      container directories (projects, documents.*, quarantine.*) descend
+      recursively into per-entry decisions, and a file merging into an existing
+      destination directory uses copy-verify-then-remove; disjoint-child
+      container cases assert a pre-existing projects/ no longer blankets a
+      conflict. F-3: audit suppression keys on the parsed command + first
+      positional (plus the --migrate refusal), with a value-flag-aware fallback;
+      install migrate, install --dry-run migrate, install --backup-dir <abs>
+      migrate, install --stop-daemon migrate and install --migrate all record
+      zero with the audit dependency composed. F-4: TC-MIGRATE-009 restores the
+      install status before/after compatibility verdict, two root-level headers
+      and a foreign record, with digest identity and no new header. F-5: the
+      prior override literal is written plainly at
+      packages/core/src/contracts/config.ts and declared as a budgeted
+      prior-working-name-override site; the branding seam gains exactly that one
+      file/name/value exception; the pre-freeze literal stays fragment-assembled
+      because the frozen ADR-0003 DEC-8 allowlist is never widened (recorded as
+      the explicit reviewed exception). F-6: --backup-dir is lexically resolved
+      and realpath-canonicalised before the in-source check, with `..` and
+      symlinked-parent refusal rows. F-7: symlink (and differing-entry)
+      conflicts/residuals and the human entry line carry the absolute path and
+      bounded remedy, asserted. F-8: A5 reworded to 'No record is written' in
+      API-1/DM-7, the 122->121 ledger figure corrected in the plan C21 note and
+      the delivery-planning note, and A6 recorded here: `.*/projects.yaml`
+      pre-existed at 3f7f4d7b, so P1 1.2 is a no-op and the fresh-clone evidence
+      is a change-head property. Committed-head gate: install-migrate 27;
+      namespace-conformance 21; shim registry 8; namespace-doc-battery 5;
+      doc-conformance 61; retirement 7; lifecycle-path 12; lifecycle-docs 7;
+      reference-page-parity 5; family-surface 10; ownership-split 5;
+      cross-repository-contract 21; branding-seam 6; entrypoint-bin 34;
+      content-inventory 12; error-table-sync 108; identity-docs 13;
+      identity-override 9; legacy-adapter 16; content arm 7/7 0 violations; tree
+      arm green; pnpm typecheck green; git diff --check clean."
+    type: info
+    date: "2026-11-21"
+  - text: "Review-iteration-2 remediation COMPLETE: commit 814b7095 (review record
+      code-review/review-iter-2.yaml included). N-1: the four real-document
+      provider-policy/reference suites read the moved committed layer at
+      `.jaiship/config.yaml`; the CFG-001 prior-read premise is inverted to the
+      current file with no prior read, the `--show-origin` regex names the
+      current path, the verify-gates reference resolves `jaiship`, the
+      credential canary and suite-map control hash follow, and the synthetic
+      prior-fallback checkouts stay prior-only. N-2: TC-SUP-070's tail is
+      thirteen rows (ten install). N-3: `WORKING_NAME` joins the reviewed legacy
+      literal inventory. N-4: the install error domain pins ten identities with
+      a nine-row closed-set mutant. N-5: INSTALL_HELP_PATHS carries `install
+      migrate` (six) and the rollback-removal expectation is `5 != 6`. N-6: the
+      provider alias baseline delta accounts for the delivered deprecation
+      sentence on the install row. N-7: the two inventory fixtures are
+      format-clean and the P8 'fully restored' claim now names the two corrected
+      hunks. N-8: the `--migrate` arm requires no positional, so ordinary
+      `install status`/`install --dry-run`/ `install status --migrate` each
+      record exactly one. N-9: API-2 documents the optional `path`/`reason`
+      entry fields and the human ` · <reason>` suffix; spec revision 1.6. N-11:
+      the six CI-topology/aggregate/scan pins carry the `ts-namespace-tree` job,
+      the two aggregate scan members, the 11-part order, and the 7/7 class
+      summary. N-12: the operator contract baseline's errorRowCount is 169.
+      Additional delivery-time ripple pins: the bounded mapping leaves a legacy
+      provider-shaped variable inert (not an error), and the migration-note
+      registry assertion follows the seven-class set. All changed test/fixture
+      paths are declared in P1/P4/P5/P6/P8 scope. FULL `pnpm check` at 814b7095:
+      PASS — lint, format:check, typecheck, test, boundaries, memory,
+      forbidden-literals 7/7, namespace-tree, prompt conformance, help-guide
+      coverage, exports parity; tests 12402 pass, 4 skip, 0 fail (12406 across
+      1502 files). The earlier full run's eight failures were the then-present
+      ignored `.opencode/agent/naming-*.md` files (six provider roster/scan
+      cases) plus the two real ripple pins fixed here; the ignored naming files
+      are now absent from the worktree, and the clean rerun passes."
+    type: info
+    date: "2026-11-22"

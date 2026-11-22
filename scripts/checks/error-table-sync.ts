@@ -279,6 +279,10 @@ const RESERVED_RECORD_KIND_LITERALS = new Set([
   // identifiers, not failure identities.
   "install.record.v1",
   "install.status.v1",
+  // GH-365: the migration's CLI payload and backup manifest are two distinct
+  // schema identifiers, not failure identities.
+  "install.migration.plan.v1",
+  "install.migration.manifest.v1",
 ]);
 const CODE_FORMAT = /^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*){2,}$/;
 const TABLE_ANNOUNCEMENT_VOCABULARY = "packages/core/src/contracts/provider.ts";

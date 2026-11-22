@@ -4,7 +4,7 @@
 source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tools/doc/guides/opencode-model-configuration.md
 ados_distribution: redistributable
 links:
-  related_changes: ["GH-374"]
+  related_changes: ["GH-374", "GH-365"]
 ---
 # OpenCode Model Configuration Guide
 
@@ -236,7 +236,7 @@ ADOS agents have different complexity levels. Match model capability to task:
 The typed `provider` and `provider.profiles` branches are the canonical routing
 path for this repository. The typed profile branch is the canonical path for
 routing: `provider profile resolve` answers which model a seat receives, and this
-repository's seats and models are committed in `.delivery-os/config.yaml`. The
+repository's seats and models are committed in `.jaiship/config.yaml`. The
 per-agent table above is harness assignment — the OpenCode configuration remains
 the assignment authority for a spawn — while routing policy (provider
 eligibility, cost class, declared-zone peak windows, subscription quota, spend

@@ -1,12 +1,15 @@
 /**
- * The migration hook (F-13; NG-1).
+ * The prior-namespace migration declaration (GH-365 F-3; F-13; NG-1).
  *
- * Without `--migrate`, prior-namespace artifacts are DETECTED and one advisory
- * line names them and the operator's documented manual move; nothing is ever
- * moved, copied, or deleted. With `--migrate`, the hook is accepted and answers
- * one typed refusal naming the M4-S2 story as owner; no migration port is
- * composed, so the flag cannot silently no-op.
+ * Prior-namespace artifacts are DETECTED and one advisory line names them and
+ * the delivered `install migrate` verb; nothing is moved, copied, or deleted by
+ * `install` itself. The migration is the `install migrate` verb, which plans,
+ * copies, verifies and backs up before it moves. The old `--migrate` flag form
+ * is retired: the parser still recognises it and the command refuses it with the
+ * remedy `install migrate`, so the remedy stays reachable.
  */
+import type { InstallMigrationRoot } from "#contracts";
+import { MIGRATION_DERIVED_ENTRIES } from "#contracts";
 import { expandHome } from "./install-path-block.js";
 
 /**
@@ -19,6 +22,65 @@ export const PRIOR_NAMESPACE_NAMES = {
   config: ".delivery-os",
   state: ".delivery-os-state",
 } as const;
+
+/** The three brand-derived migration root classes (GH-365 F-3, DM-6). */
+export const MIGRATION_ROOT_CLASSES = [
+  { label: "host-configuration", priorName: PRIOR_NAMESPACE_NAMES.config, derived: [] },
+  {
+    label: "host-state",
+    priorName: PRIOR_NAMESPACE_NAMES.state,
+    derived: [...MIGRATION_DERIVED_ENTRIES],
+  },
+  {
+    label: "project-configuration",
+    priorName: PRIOR_NAMESPACE_NAMES.config,
+    derived: [],
+  },
+] as const;
+
+/** The default backup root: inside the destination configuration root (DM-5). */
+export const migrationBackupRoot = (currentConfigRoot: string): string =>
+  `${currentConfigRoot.replace(/\/+$/u, "")}/migration-backups`;
+
+/**
+ * Compose the three migration roots from the resolved identities. The project
+ * root is absent outside a work tree, which makes the project class `unscoped`.
+ */
+export const migrationRoots = (input: {
+  readonly homeDirectory: string;
+  readonly projectRoot?: string;
+  readonly currentConfigDirectoryName: string;
+  readonly currentStateDirectoryName: string;
+}): readonly InstallMigrationRoot[] => {
+  const hostConfigSource = `${input.homeDirectory}/${PRIOR_NAMESPACE_NAMES.config}`;
+  const hostStateSource = `${input.homeDirectory}/${PRIOR_NAMESPACE_NAMES.state}`;
+  const hostConfigDestination = `${input.homeDirectory}/${input.currentConfigDirectoryName}`;
+  const hostStateDestination = `${input.homeDirectory}/${input.currentStateDirectoryName}`;
+  const project = input.projectRoot;
+  return [
+    {
+      label: "host-configuration",
+      scope: "scoped",
+      source: hostConfigSource,
+      destination: hostConfigDestination,
+    },
+    {
+      label: "host-state",
+      scope: "scoped",
+      source: hostStateSource,
+      destination: hostStateDestination,
+      derivedEntries: [...MIGRATION_DERIVED_ENTRIES],
+    },
+    project === undefined
+      ? { label: "project-configuration", scope: "unscoped" }
+      : {
+          label: "project-configuration",
+          scope: "scoped",
+          source: `${project}/${PRIOR_NAMESPACE_NAMES.config}`,
+          destination: `${project}/${input.currentConfigDirectoryName}`,
+        },
+  ];
+};
 
 /** The prior identity's executable name, derived from its directory name. */
 export const priorBinaryName = (): string => PRIOR_NAMESPACE_NAMES.config.replace(/^\./u, "");
@@ -37,13 +99,8 @@ export const detectPriorNamespace = (input: {
 }): readonly string[] =>
   priorNamespacePaths(input.homeDirectory).filter((path) => input.exists(path));
 
-/** The one advisory line: what was found and the documented manual move. */
+/** The one advisory line: what was found and the delivered migration verb. */
 export const migrationAdvisory = (found: readonly string[]): string =>
-  `advisory: prior-namespace artifacts exist at ${found.join(", ")}; this build never moves ` +
-  "them — perform the documented manual move when you are ready (nothing was moved, copied, or deleted)";
-
-/** The typed delegation refusal's sentence (the row supplies the projection). */
-export const migrationUnavailableSummary = (owner: string): string =>
-  `refused: migration is not available in this build; ${owner} owns the namespace move — ` +
-  "perform the documented manual move of the prior-namespace artifacts; nothing was moved, " +
-  "copied, or deleted";
+  `advisory: prior-namespace artifacts exist at ${found.join(", ")}; run ` +
+  "`install migrate --dry-run` to preview the move, then `install migrate` to perform it " +
+  "(nothing was moved, copied, or deleted)";

@@ -168,28 +168,38 @@ describe("TC-MOUNT-008 the alias baseline delta is exactly one provider line", (
     expect(working.cells.help.stderr).toBe(captured().cells.help.stderr);
   });
 
-  test("the Commands list gained loop then exactly one provider line after it", () => {
+  test("the Commands list gained loop then provider, and the install row carries the deprecation", () => {
     const before = splitHelp(captured().cells.help.stdout);
     const loopBaseline = splitHelp(gh348().cells.help.stdout);
     const after = splitHelp(working.cells.help.stdout);
+    const withoutInstall = (rows: readonly string[]): readonly string[] =>
+      rows.filter((row) => !row.startsWith("  install  "));
+    const beforeOther = withoutInstall(before.rows);
+    const loopOther = withoutInstall(loopBaseline.rows);
+    const afterOther = withoutInstall(after.rows);
     // Relative to the recorded GH-346 baseline, the merged set appends GH-348's
-    // `loop` and this branch's `provider`, in that order.
+    // `loop` and this branch's `provider`, in that order; the install row is the
+    // one changed row (the GH-365 alias deprecation sentence).
     expect(after.prefix).toBe(before.prefix);
-    expect(after.rows).toHaveLength(before.rows.length + 2);
-    expect(after.rows.slice(0, before.rows.length)).toEqual([...before.rows]);
+    expect(afterOther).toHaveLength(beforeOther.length + 2);
+    expect(afterOther.slice(0, beforeOther.length)).toEqual([...beforeOther]);
+    const installRow = after.rows.find((row) => row.startsWith("  install  "));
+    expect(installRow).toContain("declared compatibility shim removed in release 0.2.0");
     const loopSummary = helpEntryFor(["loop"])?.summary;
     const providerSummary = helpEntryFor(["provider"])?.summary;
     expect(loopSummary).toBeDefined();
     expect(providerSummary).toBeDefined();
-    expect(after.rows.at(-2)).toBe(`  loop  ${loopSummary ?? ""}`);
-    expect(after.rows.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(afterOther.at(-2)).toBe(`  loop  ${loopSummary ?? ""}`);
+    expect(afterOther.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
     // Relative to the GH-348 tip (which already carries `loop`), this branch
-    // appends exactly one provider line and changes nothing else.
-    expect(loopBaseline.rows).toHaveLength(27);
-    expect(after.rows).toHaveLength(28);
-    expect(after.rows.slice(0, loopBaseline.rows.length)).toEqual([...loopBaseline.rows]);
-    expect(after.rows.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    // appends exactly one provider line; every other non-install row is unchanged.
+    expect(loopOther).toHaveLength(26);
+    expect(afterOther).toHaveLength(27);
+    expect(afterOther.slice(0, loopOther.length)).toEqual([...loopOther]);
+    expect(afterOther.at(-1)).toBe(`  provider  ${providerSummary ?? ""}`);
+    expect(beforeOther).toHaveLength(25);
     expect(before.rows).toHaveLength(26);
+    expect(after.rows).toHaveLength(28);
   });
 
   test("the provenance note gained exactly the GH-350 clause", () => {

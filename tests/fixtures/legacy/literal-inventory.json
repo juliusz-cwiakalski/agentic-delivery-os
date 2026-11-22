@@ -1,5 +1,5 @@
 {
-  "legacyLiterals": ["ADOS_", ".ados"],
+  "legacyLiterals": ["ADOS_", ".ados", "WORKING_NAME"],
   "diagnosticLiterals": [
     "legacy compatibility: ",
     "legacy environment variables with prefix ",

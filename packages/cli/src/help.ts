@@ -1066,9 +1066,9 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
 
   m4PageEntry("install")(
     ["install"],
-    "Install, upgrade, inspect, roll back, and remove the installed product; installation is owned by the primary identity, so the compatibility alias advertises the family and refuses it — run the lifecycle through the installed product binary as the reference page and the local install guide document",
+    "Install, upgrade, inspect, roll back, and remove the installed product; installation is owned by the primary identity, so the compatibility alias advertises the family and refuses it — the alias is a declared compatibility shim removed in release 0.2.0, so run the lifecycle through the installed product binary as the reference page and the local install guide document",
     [
-      "<binary> install [--add-to-path] [--shell-profile <path>] [--migrate] [--dry-run] [--stop-daemon]",
+      "<binary> install [--add-to-path] [--shell-profile <path>] [--dry-run] [--stop-daemon]",
       "<binary> install status [--json]",
       "<binary> install rollback [--dry-run] [--stop-daemon]",
       "<binary> install uninstall [--dry-run] [--stop-daemon]",
@@ -1080,7 +1080,6 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
         "--shell-profile <path>",
         "The profile file to manage; overrides the declared shell mapping",
       ],
-      ["--migrate", "Accept the migration hook; this build declares it unavailable"],
       ["--dry-run", "Print the complete plan and write nothing"],
       [
         "--stop-daemon",
@@ -1095,6 +1094,17 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
       "<binary> install uninstall --dry-run",
       "<binary> install purge --yes",
     ],
+  ),
+  m4PageEntry("install")(
+    ["install", "migrate"],
+    "Move the three prior-namespace roots (host configuration, host state, invoking project configuration) to the current identity with a dry-run, a verified backup, per-entry precedence, idempotence, and recovery; the retired `install --migrate` form is refused and points at this verb",
+    ["<binary> install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]"],
+    [
+      ["--dry-run", "Print the complete plan and write nothing"],
+      ["--backup-dir <abs>", "Place the verified backup at this absolute path"],
+      ["--stop-daemon", "Stop a live daemon through the delivered stop path before the first move"],
+    ],
+    ["<binary> install migrate --dry-run", "<binary> install migrate"],
   ),
   m4PageEntry("install")(
     ["install", "status"],

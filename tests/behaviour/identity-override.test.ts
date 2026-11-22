@@ -8,7 +8,7 @@
  * pre-composition touch left exactly as delivered (never asserted absent).
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import {
@@ -17,6 +17,7 @@ import {
   scratchCheckout,
   scratchHome,
 } from "../fixtures/entrypoint/prior-identity/harness";
+import { goldenNotice } from "../fixtures/namespace/golden/notices";
 
 const PRIOR_ROOT = ".delivery-os-state";
 const CURRENT_ROOT = ".jaiship-state";
@@ -114,6 +115,11 @@ describe("TC-BIN-010 the override governs both bins end to end", () => {
           extra: { DELIVERY_OS_WORKING_NAME: "acme" },
         });
         expect(status.exitCode).toBe(0);
+        if (bin === "jaiship") {
+          expect(status.notices.find((line) => line.includes("override-read"))?.trimEnd()).toBe(
+            goldenNotice("override-read", "DELIVERY_OS_WORKING_NAME", "JAISHIP_WORKING_NAME"),
+          );
+        }
         // The identity's own configuration is the one in effect.
         expect(status.fs.readCalls).toContain(join(checkout.root, ".acme", "config.yaml"));
         expect(status.fs.readCalls).not.toContain(
@@ -287,9 +293,11 @@ describe("TC-BIN-012 an invalid override keeps self-description and the delivere
       expect(payload.error?.summary).toBe(
         'command "status" is not part of the composed prompt-required set',
       );
-      // The prior configuration read really happens on this path, so AC-F5-6
-      // requires exactly one notice per source kind and the run delivers it.
-      expect(run.notices).toHaveLength(1);
+      // The prior configuration read happens on this path (one config-read) and
+      // the prior override channel was used (one override-read), each once.
+      expect(run.notices).toHaveLength(2);
+      expect(run.notices.filter((line) => line.includes("override-read"))).toHaveLength(1);
+      expect(run.notices.filter((line) => line.includes("config-read"))).toHaveLength(1);
       expect(run.notices[0]).toContain("prior-identity-fallback: config-read");
       expect(run.notices[0]).toContain(join(checkout.root, ".delivery-os", "config.yaml"));
       // The notice is on stderr only: the payload stays clean and the exit code

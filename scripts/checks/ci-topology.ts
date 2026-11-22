@@ -34,10 +34,13 @@ export const TS_JOBS = [
   "ts-aggregate",
   "ts-commitlint",
   "ts-forbidden-literals",
+  "ts-namespace-tree",
 ];
 
 export const SCAN_JOB_ID = "ts-forbidden-literals";
 export const SCAN_COMMAND = "bun run scripts/checks/forbidden-literals.ts";
+export const TREE_JOB_ID = "ts-namespace-tree";
+export const TREE_COMMAND = "bun run scripts/checks/namespace-tree.ts";
 
 type WorkflowStep = {
   name?: string;
@@ -55,22 +58,35 @@ type WorkflowJob = {
 export const scanJobFailures = (
   root: string,
   workflow: { jobs?: Record<string, unknown> },
+): string[] => gateJobFailures(root, workflow, SCAN_JOB_ID, SCAN_COMMAND);
+
+/** The tree arm's CI binding: the same non-advisory posture and baseline fetch. */
+export const treeJobFailures = (
+  root: string,
+  workflow: { jobs?: Record<string, unknown> },
+): string[] => gateJobFailures(root, workflow, TREE_JOB_ID, TREE_COMMAND);
+
+const gateJobFailures = (
+  root: string,
+  workflow: { jobs?: Record<string, unknown> },
+  jobId: string,
+  command: string,
 ): string[] => {
   const jobs = (workflow.jobs ?? {}) as Record<string, WorkflowJob>;
-  const job = jobs[SCAN_JOB_ID];
+  const job = jobs[jobId];
   if (job === undefined) return [];
 
   const failures: string[] = [];
   if (job["continue-on-error"] !== undefined) {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} must not be advisory (continue-on-error)`);
+    failures.push(`ci.yml: ${jobId} must not be advisory (continue-on-error)`);
   }
   if (job.permissions?.contents !== "read") {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} must declare permissions.contents: read`);
+    failures.push(`ci.yml: ${jobId} must declare permissions.contents: read`);
   }
   const steps = job.steps ?? [];
   const checkout = steps.find((step) => step.uses?.startsWith("actions/checkout@"));
   if (checkout === undefined || String(checkout.with?.["fetch-depth"]) !== "0") {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} must check out full history (fetch-depth: 0)`);
+    failures.push(`ci.yml: ${jobId} must check out full history (fetch-depth: 0)`);
   }
 
   let baseline = "";
@@ -82,21 +98,21 @@ export const scanJobFailures = (
         ) as { corpusBaseline?: string }
       ).corpusBaseline ?? "";
   } catch {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} cannot resolve the registry corpusBaseline`);
+    failures.push(`ci.yml: ${jobId} cannot resolve the registry corpusBaseline`);
   }
   if (!/^[0-9a-f]{40}$/.test(baseline)) {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} registry corpusBaseline is not a full commit SHA`);
+    failures.push(`ci.yml: ${jobId} registry corpusBaseline is not a full commit SHA`);
   } else {
     const fetchStep = steps.find((step) => (step.run ?? "").includes("git fetch"));
     if (fetchStep === undefined || !(fetchStep.run ?? "").includes(baseline)) {
       failures.push(
-        `ci.yml: ${SCAN_JOB_ID} must fetch the recorded corpusBaseline commit (missing baseline fetch)`,
+        `ci.yml: ${jobId} must fetch the recorded corpusBaseline commit (missing baseline fetch)`,
       );
     }
   }
 
-  if (!steps.some((step) => (step.run ?? "").includes(SCAN_COMMAND))) {
-    failures.push(`ci.yml: ${SCAN_JOB_ID} must run ${SCAN_COMMAND}`);
+  if (!steps.some((step) => (step.run ?? "").includes(command))) {
+    failures.push(`ci.yml: ${jobId} must run ${command}`);
   }
   return failures;
 };
@@ -286,6 +302,7 @@ export const validate = (root: string): string[] => {
   }
 
   failures.push(...scanJobFailures(root, workflow));
+  failures.push(...treeJobFailures(root, workflow));
 
   const branches = workflow.on?.pull_request?.branches ?? [];
   if (!branches.includes("main-tools")) {

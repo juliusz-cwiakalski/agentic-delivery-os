@@ -26,6 +26,12 @@ const runIgnoreRules = (cwd: string): RunResult => {
 
 const gitignore = (root: string): string => readFileSync(join(root, ".gitignore"), "utf8");
 
+const liveGitignore = (): string => readFileSync(join(ROOT, ".gitignore"), "utf8");
+
+/** A temp repo whose ignore rules are the repository's own committed rules. */
+const tempRepo = (): ReturnType<typeof createTempRepo> =>
+  createTempRepo({ ".gitignore": liveGitignore() });
+
 const withoutLine = (text: string, pattern: string): string =>
   text
     .split("\n")
@@ -33,19 +39,25 @@ const withoutLine = (text: string, pattern: string): string =>
     .join("\n");
 
 describe("hygiene check after subsumption", () => {
-  test("live tree passes with the four coverage classes and rename probes", () => {
+  test("live tree passes with the five coverage classes and rename probes", () => {
     const result = runIgnoreRules(ROOT);
     expect(result.status).toBe(0);
-    expect(result.output).toContain("OK ignore-rules");
+    expect(result.output).toContain("five coverage classes");
   });
 
   test("temp tree passes and each coverage class stays load-bearing", () => {
-    const repo = createTempRepo();
+    const repo = tempRepo();
     try {
       const baseline = runIgnoreRules(repo.root);
       expect(baseline.status).toBe(0);
 
-      for (const pattern of ["node_modules/", "dist/", ".ai/local/", ".*/config.local.yaml"]) {
+      for (const pattern of [
+        "node_modules/",
+        "dist/",
+        ".ai/local/",
+        ".*/config.local.yaml",
+        ".*/projects.yaml",
+      ]) {
         const original = gitignore(repo.root);
         writeFiles(repo.root, { ".gitignore": withoutLine(original, pattern) });
         const mutated = runIgnoreRules(repo.root);
@@ -59,7 +71,7 @@ describe("hygiene check after subsumption", () => {
   });
 
   test("rename survival fails when the config glob becomes a literal name", () => {
-    const repo = createTempRepo();
+    const repo = tempRepo();
     try {
       const original = gitignore(repo.root);
       writeFiles(repo.root, {
@@ -77,7 +89,7 @@ describe("hygiene check after subsumption", () => {
   });
 
   test("a .gitignore seed literal still fails the full-scope scan", () => {
-    const repo = createTempRepo();
+    const repo = tempRepo();
     try {
       writeRegistry(repo.root, {
         ...liveRegistry(),

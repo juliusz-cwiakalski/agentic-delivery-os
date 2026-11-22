@@ -1,7 +1,7 @@
 /**
  * GH-346 TC-INST-105 — the source table declares the `install` kind and its
- * eleven rows, each bound to a registered identity, with the kind closed at
- * eleven and no family or wildcard. The documented and corpus halves live in the
+ * ten rows, each bound to a registered identity, with the kind closed at ten
+ * and no family or wildcard. The documented and corpus halves live in the
  * extended delivered sync suites.
  */
 import { describe, expect, test } from "bun:test";
@@ -26,15 +26,15 @@ const installRows = (ERROR_TABLE as readonly { domainKind: string; code: string 
   readonly summary?: string;
 }[];
 
-describe("TC-INST-105 the source table declares the install kind and eleven rows", () => {
+describe("TC-INST-105 the source table declares the install kind and ten rows", () => {
   test("install is the last domain kind and requires an exact code", () => {
     expect(DOMAIN_KINDS.at(-1)).toBe("install");
     expect((EXACT_CODE_DOMAIN_KINDS as readonly string[]).includes("install")).toBe(true);
   });
 
-  test("exactly the eleven declared identities, in declaration order", () => {
+  test("exactly the ten declared identities, in declaration order", () => {
     expect(installRows.map((row) => row.code)).toEqual([...INSTALL_DOMAIN_CODES]);
-    expect(installRows).toHaveLength(11);
+    expect(installRows).toHaveLength(10);
   });
 
   test("every row is user, non-retryable, not_landed, and user-validation", () => {
@@ -81,15 +81,15 @@ describe("TC-INST-105 the source table declares the install kind and eleven rows
     );
   });
 
-  test("the kind is closed: a twelfth row or a family widening fails the exact-set comparison", () => {
+  test("the kind is closed: an eleventh row or a family widening fails the exact-set comparison", () => {
     const compare = (codes: readonly string[]): string[] =>
       codes.length === INSTALL_DOMAIN_CODES.length &&
       codes.every((code, index) => code === INSTALL_DOMAIN_CODES[index])
         ? []
-        : ["the install kind is not exactly the eleven declared rows"];
+        : ["the install kind is not exactly the ten declared rows"];
     expect(compare(installRows.map((row) => row.code))).toEqual([]);
     expect(compare([...INSTALL_DOMAIN_CODES, "install.extra"])).not.toEqual([]);
-    expect(compare([...INSTALL_DOMAIN_CODES].slice(0, 10))).not.toEqual([]);
+    expect(compare([...INSTALL_DOMAIN_CODES].slice(0, 9))).not.toEqual([]);
     expect(INSTALL_DOMAIN_CODES.some((code) => code.includes("*"))).toBe(false);
   });
 });

@@ -84,6 +84,32 @@ const exportedStringConstants = (source: ts.SourceFile): string[] => {
   return names;
 };
 
+/**
+ * GH-365 F-5/DM-9's one declared prior-literal exception: the override contract
+ * commits the prior working-name input as a budgeted shim value. The exception
+ * is exact — one file, one constant name, one value — and never covers a
+ * current working-name literal.
+ */
+const DECLARED_PRIOR_OVERRIDE_FILE = "packages/core/src/contracts/config.ts";
+const DECLARED_PRIOR_OVERRIDE_NAME = "PRIOR_WORKING_NAME_ENVIRONMENT_VARIABLE";
+
+const isDeclaredPriorOverride = (file: string, source: ts.SourceFile, name: string): boolean => {
+  if (file !== DECLARED_PRIOR_OVERRIDE_FILE || name !== DECLARED_PRIOR_OVERRIDE_NAME) return false;
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === name &&
+        declaration.initializer?.getText(source) === `"${OVERRIDE_VARIABLE}"`
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 const fieldLiterals = (source: ts.SourceFile): string[] => {
   const findings: string[] = [];
   const visit = (node: ts.Node): void => {
@@ -174,6 +200,7 @@ export const validateSeam = (root: string): string[] => {
   for (const file of listTypeScriptFiles(root)) {
     const source = parseFile(root, file);
     for (const constant of exportedStringConstants(source)) {
+      if (isDeclaredPriorOverride(file, source, constant)) continue;
       failures.push(`${file}: exported module-level string constant ${constant} is not permitted`);
     }
     if (!file.startsWith(BRANDING_DIR)) {

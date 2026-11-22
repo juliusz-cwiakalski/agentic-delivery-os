@@ -78,7 +78,8 @@ before committing it.
 
 This command is a **provider-policy** import: it moves no name, path, state root,
 or artifact. It is not the M4-S2 namespace migration, and it does not delegate to
-the install lifecycle's `--migrate` flag.
+the install lifecycle's `install migrate` verb (the older `--migrate` flag form is
+retired and refused with that remedy).
 
 ## Z.AI peak hours and quota rates
 

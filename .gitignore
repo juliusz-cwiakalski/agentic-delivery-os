@@ -21,4 +21,5 @@ coverage/
 
 # Project-local configuration (brand-free: the dot-directory is not named)
 .*/config.local.yaml
+.*/projects.yaml
 

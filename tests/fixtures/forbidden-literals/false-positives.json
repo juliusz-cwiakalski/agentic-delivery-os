@@ -1,1 +1,13 @@
-["avocados", "mikados", "paradosis", "colorados", "shadow", "agentic-delivery-os"]
+{
+  "delivered": ["avocados", "mikados", "paradosis", "colorados", "shadow", "agentic-delivery-os"],
+  "priorNamespace": [
+    "@delivery-os/core",
+    "see the agentic-delivery-os repository",
+    "delivery-osx",
+    "@delivery-os",
+    "delivery-os-milestone-check",
+    "my-delivery-os",
+    "ADOS_OWNER_HOLD",
+    ".delivery-osx"
+  ]
+}
