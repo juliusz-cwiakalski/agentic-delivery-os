@@ -6,7 +6,7 @@ delivery_mode: interactive
 phases:
   clarify_scope: { started: null, completed: 2026-11-22T15:19:08.581Z }
   specification: { started: null, completed: 2026-11-22T15:29:51.793Z }
-  test_planning: { started: null, completed: null }
+  test_planning: { started: null, completed: 2026-11-22T15:47:43.836Z }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -87,4 +87,21 @@ notes:
       round-trip before any state write or commit (no damage). Future intakes
       must set delivery_mode explicitly at pm-notes creation."
     type: retro
+    date: "2026-11-22"
+  - text: "Spec authored and PM-validated (landed as 52f6c203): canonical 25-section
+      structure, version_impact minor with five-package changeset declared
+      in-spec, no file paths in body, seam named functionally. Eight ACs encoded
+      — AC-F1-1 (window evidence excludes foreign steps), AC-F2-1 (second-ref
+      baseline via real helper + idempotency + byte-identical prior records),
+      AC-F4-1/AC-F4-2 (bare-prefix and kind-mismatch tears preserved), AC-F8-1
+      (golden-before-fix regression named for the GH-381 advisory), AC-F6-1 (one
+      verified pass, no extra reads), AC-F7-1 (single-ref golden equality),
+      AC-NFR2-1 (determinism/hermeticity/vocabulary freeze); ticket AC-1..5 map
+      one-to-one in Appendix B. Deferred boundary recorded in-spec (§7.3 NG-10,
+      OQ-2): the latent third instance (standalone capture-family read) has no
+      consumer and is out of scope. TC-id ceilings verified by spec-writer:
+      TC-TELEMETRY-047 / TC-REF-007 / TC-METRICS-113 / TC-SPEND-034 are maxima —
+      next free 048/008/114/035, re-verify before authoring (GH-381 DoR
+      collision retro)."
+    type: info
     date: "2026-11-22"
