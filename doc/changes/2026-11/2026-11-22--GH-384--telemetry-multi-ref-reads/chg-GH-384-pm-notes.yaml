@@ -1,0 +1,90 @@
+change_id: GH-384
+title: "M4-S22: Telemetry reads must be multi-ref safe everywhere — window
+  evidence and baseline capture (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: null, completed: 2026-11-22T15:19:08.581Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake 2026-11-22, explicit user directive. State detection: no branch,
+      no change folder, empty phase ledger (registry verified, 7541 records,
+      phases:{}), no PR — fresh start. main-tools synced 0/0 with origin at
+      0320321f (the GH-381 merge, PR #383 merged 2026-11-22T15:10:55Z). Branch
+      fix/GH-384/telemetry-multi-ref-reads from main-tools. Milestone M4:
+      Jaiship-native delivery attached. Owner comment 2026-11-22 (trusted) binds
+      the implementation: apply readTelemetryFamilies' delivered rule unchanged
+      to (1) readTelemetrySteps (composed by spend --window-evidence) and (2)
+      appendTelemetryBaseline idempotency pre/post-reads; fixtures must call the
+      real helper (GH-381's raw-append two-refs workaround becomes the thing
+      being proven fixed); do not weaken idempotency; no ledger
+      delete/rewrite/salvage; one verified pass over store.readRecords(), no
+      per-record reads; gate evidence TMPDIR=$PWD/tmp/tmpdir; PR targets
+      main-tools; STOP with PR open; forbidden surfaces:
+      .jaiship/config.local.yaml, GH-366 worktree (jaiship-gh-366 @ 5a9d3ab8),
+      #378 scope."
+    type: info
+    date: "2026-11-22"
+  - text: "Spec cross-check (clarify_scope): ticket requirements are consistent with
+      doc/spec/features/feature-telemetry-v2.md §5 (per-ref families read,
+      foreign-key skip without kind/payload inspection, bare-prefix and
+      requested-ref tears) and §5.1 (both declared consumers compose the same
+      per-ref projection). No contradiction: the spec declares the contract; the
+      ticket closes the two remaining code sites so implementation truth matches
+      it. Requirements are complete — five fixture-level ACs, named seam,
+      binding constraints, dependency #381 merged. No human questions required;
+      no STOP."
+    type: info
+    date: "2026-11-22"
+  - text: "Documentation impacts for phase 7: feature-telemetry-v2.md §5/§5.1 (rule
+      scope now covers the steps read and baseline idempotency pre/post-reads)
+      and §7 suite row (new regression cases); feature-spend.md window-evidence
+      sections + suite rows (multi-ref render proof); feature-metrics.md if its
+      consumer wording names the reads; doc/changes artifacts. @doc-syncer
+      resolves in system_spec_update."
+    type: info
+    date: "2026-11-22"
+  - text: "Changeset format (repo invariant, ground truth read today from
+      .changeset/config.json fixed group + landed gh-377/gh-381 files): one
+      changeset declaring all five fixed-group packages
+      @delivery-os/{core,adapters,cli,mcp,opencode} at minor. Filename suffix is
+      cosmetic (gh-381 landed as -patch.md with five minor entries). Spec/plan
+      authors must use this format directly."
+    type: decision
+    date: "2026-11-22"
+  - text: "Retro carried in from GH-381: (1) the spec's version_impact patch guess
+      caused a quality-gate FAIL and rework — this change's artifacts declare
+      the five-package minor changeset from the start; (2) DoR iteration 1
+      failed on a test-case id collision — verify TC ids are unused before
+      authoring; (3) GH-381 fixtures worked around defect (2) by raw-appending
+      two refs' baselines in one fence — GH-384's fixtures must instead exercise
+      the real appendTelemetryBaseline helper so the fix is proven, not the
+      workaround."
+    type: retro
+    date: "2026-11-22"
+  - text: "Decision-id ledger: owner states origin/main-tools max is TDR-0075
+      (runner tail could not confirm from prose — re-verify before authoring any
+      record). No decision record planned: this change continues the delivered
+      GH-381 rule at two remaining sites; no read-contract change."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro: first `phase complete clarify_scope` attempt aborted at pre-flight
+      lint (delivery.keys.missing) because pm-notes lacked top-level
+      delivery_mode; pm-instructions describe the field as optional with absent
+      ⇒ interactive, but the harness lint enforces presence. Cost: one runner
+      round-trip before any state write or commit (no damage). Future intakes
+      must set delivery_mode explicitly at pm-notes creation."
+    type: retro
+    date: "2026-11-22"
