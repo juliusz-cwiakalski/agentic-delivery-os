@@ -38,6 +38,7 @@ import {
   nodeFileSystemFacts,
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
+  parsePmNotesText,
   preserveCorruptHostIndex,
   projectPmNotesCompleteness,
   readCommittedConfigDocument,
@@ -111,6 +112,7 @@ import {
   assembleHarnessLiveness,
   bindingEnvironmentRecords,
   bindingInvocationArgs,
+  branchConvention,
   buildHarnessSpawnEnvironment,
   buildLifecyclePrompt,
   type CoordinatorSettings,
@@ -151,6 +153,7 @@ import {
   legacyStoreWarning,
   logByteLength,
   type MergeCredentialFacts,
+  type MergeRecordAtHeadRead,
   maintainHostIndex,
   migrationBackupRoot,
   migrationRoots,
@@ -277,6 +280,7 @@ import {
   type InstallDaemonPort,
   type InstallRuntime,
   LOCAL_CALLER_PRINCIPAL,
+  MERGE_CHANGE_RECORD_MAX_BYTES,
   type MERGE_GATE_ERROR_PREFIX,
   type MERGE_GATE_ERROR_SUFFIX,
   type MergeDeliveryRequestInput,
@@ -495,10 +499,6 @@ const CHANGE_REF_GRAMMAR = new RegExp(QUEUE_REF_PATTERN, "u");
 /** The work-item number a ref carries, or `undefined` when it is not a ref. */
 const changeRefNumberOf = (ref: string): string | undefined =>
   CHANGE_REF_GRAMMAR.test(ref) ? ref.slice(ref.lastIndexOf("-") + 1) : undefined;
-
-/** The change ref a branch name carries: the first path segment that is a ref. */
-const changeRefInBranch = (branch: string): string | undefined =>
-  branch.split("/").find((segment) => CHANGE_REF_GRAMMAR.test(segment));
 
 /** The bounded provider page the truth read addresses. */
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
@@ -2495,8 +2495,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       facts.dispatchBaseBranch !== undefined && facts.dispatchBaseBranch.length > 0
         ? facts.dispatchBaseBranch
         : CLOSEOUT_INTEGRATION_BASE;
-    /** The checkout's own current branch, read from its git facts. */
-    const mergeBranch = resolvedRepositoryFacts.head.branch;
 
     /**
      * The provider-resolved repository owner (GH-293 DEC-13, TDR-0031 D8): the
@@ -2629,14 +2627,130 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
-    const mergeRequestDetail = async (): Promise<
+    /**
+     * The resolution reads (GH-366 F-1): the one bounded open-list read, the
+     * delivered merged-request read used verbatim, and the bounded local
+     * change-record read at a candidate head. No checkout branch read, no
+     * checkout head read, no working-tree record read, no fetch (NFR-6, NG-7).
+     */
+    const mergeOpenRequests = async (): Promise<
+      | {
+          readonly ok: true;
+          readonly value: {
+            readonly items: readonly DeliveryRequest[];
+            readonly saturated: boolean;
+          };
+        }
+      | { readonly ok: false; readonly code: string }
+    > => {
+      const read = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT, {
+        includeGateFacts: true,
+      });
+      if (!read.ok) {
+        const credential = mergeCredentialFacts(read.code);
+        return {
+          ok: false,
+          code: mergeReadCodeOf(read),
+          ...(credential === undefined ? {} : { credential }),
+        };
+      }
+      return {
+        ok: true,
+        value: {
+          items: read.value.items,
+          // A page that filled its declared bound is saturated: a truncated
+          // page cannot establish any uniqueness claim, so the resolution
+          // refuses fail-closed before the candidate count is taken.
+          saturated: read.value.pageItemCount >= TRUTH_PROVIDER_LIMIT,
+        },
+      };
+    };
+
+    const mergeMergedRequest = async (workItemRef: string) => {
+      // The delivered read, used verbatim: its own work-item-ref filter and its
+      // own deterministic selection; this composition supplies no filter of its
+      // own and no suppression option for the read's own review-thread query
+      // (NG-8). Its ONE additive member — the matched request identities — is
+      // carried through untouched.
+      const merged = await client.findMergedDeliveryRequest({
+        workItemRef,
+        limit: TRUTH_PROVIDER_LIMIT,
+      });
+      if (merged.observation === "observed") {
+        return {
+          observation: "observed" as const,
+          request: merged.value,
+          matchedIdentities: merged.matchedIdentities ?? [],
+        };
+      }
+      if (merged.observation === "unavailable") {
+        return {
+          observation: "unavailable" as const,
+          ...(merged.matchedIdentities === undefined
+            ? {}
+            : { matchedIdentities: merged.matchedIdentities }),
+        };
+      }
+      if (merged.observation === "invalid") {
+        return { observation: "invalid" as const, detail: merged.detail };
+      }
+      // The delivered read's remaining declared arm never occurs for a merged
+      // scan (a missing page is a fault, not a found-entity miss); treat it as
+      // the member-absent fault it is.
+      return { observation: "unavailable" as const };
+    };
+
+    const mergeRecordAtHead = async (
+      headSha: string,
+      workItemRef: string,
+    ): Promise<MergeRecordAtHeadRead> => {
+      const read = await mergeGit.readChangeRecord({
+        headSha,
+        workItemRef,
+        maxBytes: MERGE_CHANGE_RECORD_MAX_BYTES,
+      });
+      if (!read.ok) {
+        return read.reason === "record-missing"
+          ? { ok: false, reason: "record-missing" }
+          : {
+              ok: false,
+              reason: "record-unreadable",
+              ...(read.detail === undefined ? {} : { detail: read.detail }),
+            };
+      }
+      // The delivered pm-notes parse is applied to the text obtained from the
+      // head (the declared no-edit reuse boundary); a record that does not
+      // parse or is not a mapping is `record-invalid`, never a fallback read.
+      const parsed = parsePmNotesText(read.text, read.path);
+      if (!parsed.ok) {
+        return {
+          ok: false,
+          reason: "record-invalid",
+          detail: parsed.parseFailure.class ?? "record-parse-failed",
+        };
+      }
+      const value = parsed.value;
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
+        return { ok: false, reason: "record-invalid", detail: "record-not-a-mapping" };
+      }
+      const declaration = (value as Record<string, unknown>).branch;
+      return {
+        ok: true,
+        path: read.path,
+        ...(typeof declaration === "string" ? { declaration } : {}),
+      };
+    };
+
+    const mergeRequestDetail = async (
+      changeRef: string,
+    ): Promise<
       | { readonly ok: true; readonly request: DeliveryRequest }
       | { readonly ok: false; readonly code: string }
     > => {
-      // The two request-resolution returns route to the request row's identity
-      // with reason `no-open-request` as the pre-resolution placeholder
-      // (AC-F1-4): phase 3 supersedes this routing with the candidate-set
-      // resolution and the convergence attempt.
+      // The delivered re-read backing: the bounded list read filtered by the
+      // same declared convention the resolution used, so a recovery re-read
+      // re-observes the resolved request and never invents a second source. A
+      // fault routes through the declared identities.
       if (target === undefined) return { ok: false, code: "merge.request-unresolved" };
       const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT, {
         includeGateFacts: true,
@@ -2649,24 +2763,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           ...(credential === undefined ? {} : { credential }),
         };
       }
-      const match =
-        mergeBranch === undefined
-          ? undefined
-          : open.value.items.find((item) => item.sourceRef === mergeBranch);
+      const pattern = branchConvention(changeRef);
+      const match = open.value.items.find((item) => pattern.test(item.sourceRef));
       // The bounded list page is the request-detail read: it carries the
       // provider-asserted title and, on this read, the mergeability state and
       // gate facts the taxonomy classifies (GH-349 AC-F1-6, AC-F2-1..4). Both
       // are provider assertions; nothing is derived.
       if (match !== undefined) return { ok: true, request: match };
-      // The convergence case: an already-merged request for the branch's ref.
-      const changeRef = mergeBranch === undefined ? undefined : changeRefInBranch(mergeBranch);
-      if (changeRef !== undefined) {
-        const merged = await client.findMergedDeliveryRequest({
-          workItemRef: changeRef,
-          limit: TRUTH_PROVIDER_LIMIT,
-        });
-        if (merged.observation === "observed") return { ok: true, request: merged.value };
-      }
       return { ok: false, code: "merge.request-unresolved" };
     };
 
@@ -2705,9 +2808,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    // The merge git seam is built once so the resolution's bounded record read
+    // and the transaction's mutation seam share the one injected child runner.
+    const mergeGit = createGitMergeSeam({ cwd });
+
     const mergeRuntimeBase = createMergeCommandRuntime({
       store,
-      git: createGitMergeSeam({ cwd }),
+      git: mergeGit,
       land: mergeLanding,
       landingGap: () => {
         const declared = GITHUB_ADAPTER_CONTRACT.capabilities;
@@ -2729,14 +2836,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       readWorkItem: mergeWorkItem,
       readCheckRuns: mergeCheckRuns,
-      readRequestDetail: mergeRequestDetail,
+      // The runtime's declared member shape takes no ref; the per-ref wrapper
+      // below overrides it with the convention-filtered re-read, so this
+      // member is never composed.
+      readRequestDetail: () =>
+        Promise.resolve({ ok: false as const, code: "merge.request-unresolved" }),
       // Resolved lazily from the checkout's identity policy: the owner component
       // of the normalized `host/owner/name`, never a configuration key.
       get ownerPrincipal() {
         return mergeOwnerPrincipalOf();
       },
       baseRef: mergeBaseRef,
-      ...(mergeBranch === undefined ? {} : { branch: mergeBranch }),
       nowIso,
       nowMs,
       newFenceToken,
@@ -2744,6 +2854,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     // The configuration document is resolved once per invocation, so its own
     // classified failure is forwarded before the transaction reads anything.
+    // The resolution ports are wired here (GH-366 F-1): the bounded open-list
+    // read, the delivered merged-request read used verbatim, the bounded local
+    // change-record read at a candidate head, and the convention-filtered
+    // re-read backing. No ambient checkout branch or head participates.
     const merge = {
       readConfig: (changeRef: string) => {
         const configuration = mergeConfiguration();
@@ -2756,7 +2870,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }
         return mergeRuntimeBase.readConfig(changeRef);
       },
-      createPorts: mergeRuntimeBase.createPorts,
+      createPorts: (changeRef: string) => ({
+        ...mergeRuntimeBase.createPorts(changeRef),
+        readOpenRequests: mergeOpenRequests,
+        readMergedRequest: mergeMergedRequest,
+        readChangeRecordAtHead: (headSha: string) => mergeRecordAtHead(headSha, changeRef),
+        readRequestDetail: () => mergeRequestDetail(changeRef),
+      }),
     };
 
     const closeoutBase = createCloseoutComposition({

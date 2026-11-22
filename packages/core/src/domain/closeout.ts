@@ -310,7 +310,15 @@ export const isProtectedRef = (ref: string, extras: readonly string[] = []): boo
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const branchConvention = (workItemRef: string): RegExp =>
+/**
+ * The repository's declared branch convention for a work-item ref (F-1 step 2).
+ *
+ * The delivered closeout predicate, exported unchanged so the merge
+ * composition's candidate set reuses the same grammar instead of copying it:
+ * the convention narrows WHICH candidate heads are read and never supplies a
+ * value to any provider filter.
+ */
+export const branchConvention = (workItemRef: string): RegExp =>
   new RegExp(`^[a-z][a-z0-9-]*/${escapeRegExp(workItemRef)}/.+$`);
 
 /** Select the local branch matching the branch convention and merged head (F-10). */

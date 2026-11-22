@@ -116,5 +116,12 @@
       }
     }
   ],
-  "gatesOmitted": 0
+  "gatesOmitted": 0,
+  "resolution": {
+    "source": "declared-at-head",
+    "branch": "feat/GH-301/merge",
+    "requestIdentity": "#99",
+    "candidateCount": 1,
+    "headSha": "9f21c0e1a2b3c4d5e6f708192a3b4c5d6e7f8091"
+  }
 }

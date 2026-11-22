@@ -139,7 +139,7 @@ describe("TC-FLOOR-005 determinism and byte pins across the merge and closeout s
 
     const present = readdirSync(GOLDEN_DIR).sort();
     for (const moved of MOVED) expect(present).toContain(moved);
-    expect(present).toHaveLength(15);
+    expect(present).toHaveLength(19);
 
     for (const file of present) {
       if ((MOVED as readonly string[]).includes(file)) continue;

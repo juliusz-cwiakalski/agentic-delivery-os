@@ -92,6 +92,9 @@ export const phaseNotesText = (
     "change_id: GH-310",
     'title: "phase mirror fixture"',
     "delivery_mode: interactive",
+    // The declared change branch (GH-366 DM-1): lint-opaque, preserved by every
+    // document-writing branch, and asserted value-faithfully after each write.
+    "branch: fix/GH-310/phase-mirror-fixture",
     "phases:",
     ...phaseLines,
     "decisions: []",
@@ -101,6 +104,9 @@ export const phaseNotesText = (
     "",
   ].join("\n");
 };
+
+/** The change record's declared branch, read from the written document. */
+export const phaseNotesBranch = "fix/GH-310/phase-mirror-fixture";
 
 /**
  * A full-variant pm-notes document value carrying the given per-phase entries;

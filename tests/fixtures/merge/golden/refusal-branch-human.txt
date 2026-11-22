@@ -1,0 +1,9 @@
+example-product: merge.branch-unresolved
+summary: result=refused; condition=merge.branch-unresolved
+command=merge
+ref=GH-301
+operation=-
+branch-reason=declaration-disagrees
+candidates=1
+candidate=feat/GH-301/merge path=doc/changes/2026-11/2026-11-06--GH-301--fixture/chg-GH-301-pm-notes.yaml cause=declaration-disagrees
+remediation=Declare the change record's `branch` key so it equals the request's own source ref, commit it on the change branch, then re-run; the refusal names the candidate, the record path at its head, and the reason.

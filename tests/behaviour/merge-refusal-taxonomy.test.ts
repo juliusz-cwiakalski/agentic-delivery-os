@@ -147,8 +147,7 @@ describe("TC-F2-001 a conflicting request refuses one typed sync-required and to
       expect(harness.events).not.toContain("git-rebase-refresh");
       expect(harness.counts.landing).toBe(0);
       expect(harness.transactions()).toHaveLength(0);
-      expect(await harness.runtime.createPorts(harness.ref).readHead()).toBe(MERGE_HEAD);
-      expect(harness.counts.requestDetail).toBe(1);
+      expect(harness.counts.requestDetail).toBe(0);
     } finally {
       harness.cleanup();
     }
@@ -167,7 +166,7 @@ describe("TC-F2-001 a conflicting request refuses one typed sync-required and to
 });
 
 describe("TC-F2-002 a not-mergeable refusal resolves to behind-unconfirmed after one re-read", () => {
-  test("one landing, two request reads, the observed state named, exit 1", async () => {
+  test("one landing, one post-refusal re-read, the observed state named, exit 1", async () => {
     const harness = notMergeableHarness({});
     try {
       const result = await harness.run();
@@ -178,7 +177,7 @@ describe("TC-F2-002 a not-mergeable refusal resolves to behind-unconfirmed after
       expect(summary).toContain("request-state=not-mergeable");
       expect(summary).toContain(remediationOf("merge.sync-required"));
       expect(harness.counts.landing).toBe(1);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       expect(harness.transactions()).toHaveLength(0);
     } finally {
       harness.cleanup();
@@ -189,7 +188,7 @@ describe("TC-F2-002 a not-mergeable refusal resolves to behind-unconfirmed after
     const harness = notMergeableHarness({});
     try {
       await harness.run();
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       expect(harness.counts.landing).toBe(1);
       // A third read or a second landing would move these numbers.
       expect(() => expect(3).toBe(harness.counts.requestDetail)).toThrow();
@@ -215,7 +214,7 @@ describe("TC-F2-003 a checks posture resolves to the effective gate set's row", 
       const summary = summaryOf(result);
       expect(summary).toContain("gate=ci-green");
       expect(summary).toContain("evidence=ci-pending");
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
     } finally {
       harness.cleanup();
     }
@@ -244,7 +243,7 @@ describe("TC-F2-003 a checks posture resolves to the effective gate set's row", 
       expect(result.exitCode).toBe(1);
       expect(errorOf(result)?.code).toBe("merge.gate.ci-green.failed");
       expect(summaryOf(result)).toContain("evidence=ci-failed");
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       expect(harness.counts.landing).toBe(1);
     } finally {
       harness.cleanup();
@@ -271,7 +270,7 @@ describe("AC-F3-3 the not-mergeable checks posture covers only declared required
       expect(summary).toContain("evidence=behind-unconfirmed");
       expect(summary).not.toContain("gate=ci-green");
       expect(harness.counts.landing).toBe(1);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
     } finally {
       harness.cleanup();
     }
@@ -288,7 +287,7 @@ describe("AC-F3-3 the not-mergeable checks posture covers only declared required
       expect(errorOf(result)?.code).toBe("merge.gate.ci-green.failed");
       expect(summaryOf(result)).toContain("evidence=ci-failed");
       expect(harness.counts.landing).toBe(1);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
     } finally {
       harness.cleanup();
     }
@@ -309,7 +308,7 @@ describe("TC-F2-004 no not-mergeable branch yields a clean pre-mutation abort", 
         const result = await harness.run();
         codes.push(String(errorOf(result)?.code));
         expect(harness.counts.landing).toBe(1);
-        expect(harness.counts.requestDetail).toBe(2);
+        expect(harness.counts.requestDetail).toBe(1);
         expect(harness.transactions()).toHaveLength(0);
       } finally {
         harness.cleanup();
@@ -381,7 +380,7 @@ describe("TC-F2-006 unknown mergeability is recovered by exactly one exact-head 
       });
       const result = await harness.run();
       expect(result.exitCode).toBe(0);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       expect(harness.counts.landing).toBe(1);
       expect(harness.counts.nowIso).toBe(1);
       expect(harness.counts.nowMs).toBe(1);
@@ -401,8 +400,11 @@ describe("TC-F2-006 unknown mergeability is recovered by exactly one exact-head 
       const summary = summaryOf(result);
       expect(summary).toContain(MERGE_HEAD.slice(0, 7));
       expect(summary).toContain(MOVED_HEAD.slice(0, 7));
+      // The stale refusal is decided by the freshness envelope against the
+      // resolved head before any re-read: the moved head is the resolution's
+      // own candidate head.
       expect(harness.counts.landing).toBe(0);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(0);
     } finally {
       harness.cleanup();
     }
@@ -421,7 +423,7 @@ describe("TC-F2-006 unknown mergeability is recovered by exactly one exact-head 
       expect(error?.consequence).toBe("not_landed");
       expect(String(error?.remediationHint)).toContain("Retry after the provider finishes");
       expect(harness.counts.landing).toBe(0);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       // No polling and no waiting: the clock is read once and no timer exists.
       expect(harness.counts.nowMs).toBe(1);
       expect(harness.transactions()).toHaveLength(0);

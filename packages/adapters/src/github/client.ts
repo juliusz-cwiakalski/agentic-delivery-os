@@ -495,8 +495,16 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
       const matching = normalized.value.filter((request) =>
         matchesWorkItemRef(request.sourceRef, input.workItemRef),
       );
+      // GH-366: the ONE additive member — the matched request identities —
+      // computed BEFORE the delivered deterministic selection and carried on
+      // every match outcome: beside the delivered signals on a match, and on
+      // the shared unavailable outcome EMPTY when the closed page was read and
+      // matched nothing (ABSENT when the page could not be read). Any count is
+      // derived from the identities; no second, competing count field exists,
+      // and closeout consumes neither the member nor any count derived from it.
+      const matchedIdentities = matching.map((request) => request.identity.entityId);
       const selected = selectMerged(matching);
-      if (selected === undefined) return { observation: "unavailable" };
+      if (selected === undefined) return { observation: "unavailable", matchedIdentities };
       // The REST pull-request list has no review threads, so the selected PR is
       // re-read through GraphQL. A failed thread read keeps the request observed
       // but marks the thread signal unavailable, never an observed empty set.
@@ -506,6 +514,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           observation: "observed",
           value: { ...selected, threads: [] },
           signals: { threads: "unavailable" },
+          matchedIdentities,
         };
       }
       const threadsResponse = await send("POST", "/graphql", {
@@ -521,6 +530,7 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           observation: "observed",
           value: { ...selected, threads: [] },
           signals: { threads: "unavailable" },
+          matchedIdentities,
         };
       }
       const threads = normalizeReviewThreads(threadsResponse.value);
@@ -529,11 +539,13 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
             observation: "observed",
             value: { ...selected, threads: threads.value },
             signals: { threads: "observed" },
+            matchedIdentities,
           }
         : {
             observation: "observed",
             value: { ...selected, threads: [] },
             signals: { threads: "unavailable" },
+            matchedIdentities,
           };
     },
     listBlockedByDependents: async (input) => {

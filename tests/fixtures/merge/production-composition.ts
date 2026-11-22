@@ -8,8 +8,13 @@
  * state-store wrapper for append faults. Every provider read is real code; the
  * bytes are synthetic.
  */
-import { readFileSync } from "node:fs";
+
 import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import type { FileSystemFacts } from "../../../packages/adapters/src/file/config";
+import { type CliStreams, runCli } from "../../../packages/cli/src/index";
+import { createProductionComposer } from "../../../packages/cli/src/production";
 import type {
   BrandIdentity,
   CredentialPort,
@@ -22,16 +27,13 @@ import {
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
-import { projectScopeFor } from "../projects/state-scope";
-import { type CliStreams, runCli } from "../../../packages/cli/src/index";
-import { createProductionComposer } from "../../../packages/cli/src/production";
-import type { FileSystemFacts } from "../../../packages/adapters/src/file/config";
 import { streamStarterFromRunner } from "../harness/stream";
 import {
   brandOf,
   createHostFixture,
-  stateOverrideVariable,
   type HostFixture,
+  projectScopeFor,
+  stateOverrideVariable,
 } from "../projects/state-scope";
 import { createRepository, git, removeDirectory } from "../projects/temp-repos";
 
@@ -80,6 +82,11 @@ export type MergeProductionHarness = {
   readonly ref: string;
   readonly branch: string;
   readonly headSha: string;
+  /** A second local head whose record declares the same branch (duplicate cells). */
+  readonly duplicateHeadSha: string;
+  /** The declaration-cap boundary heads: exactly 256 (accepted) and 257 (refused). */
+  readonly cap256: { readonly ref: string; readonly headSha: string };
+  readonly cap257: { readonly ref: string; readonly headSha: string };
   readonly stateLocation: string;
   readonly store: StateStorePort;
   readonly transportCalls: readonly string[];
@@ -88,6 +95,8 @@ export type MergeProductionHarness = {
   readonly credentialReads: () => number;
   /** Replace the provider reply between invocations (one fixture, two phases). */
   setReply: (reply: (url: string) => MergeProviderReply) => void;
+  /** The composed healthy reply the fixture started from (for fault composition). */
+  readonly defaultReply: (url: string) => MergeProviderReply;
   /** Replace the credential port's outcome between invocations. */
   setCredential: (credential: "resolved" | "missing") => void;
   setClock: (clock: () => string) => void;
@@ -119,18 +128,24 @@ const refusingCredentials = (counter: { value: number }): CredentialPort => ({
 
 const shaOf = (value: string): string => value.trim();
 
-/** The healthy reply set: a work item, a green check page, and one open request. */
+/** The healthy reply set: work items, a green check page, and two open requests. */
 const healthyReply =
   (input: {
-    readonly headSha: string;
-    readonly branch: string;
     readonly checkConclusion?: "success" | "failure";
+    readonly branches: readonly { readonly branch: string; readonly headSha: string }[];
   }): ((url: string) => MergeProviderReply) =>
   (url) => {
     if (url.includes("/issues/")) {
+      const number = Number(url.match(/issues\/(\d+)/u)?.[1] ?? 0);
       return {
         status: 200,
-        body: { number: 293, title: "Engine-first operations", state: "open", labels: [] },
+        body: {
+          number,
+          title: number === 12 ? "Digit prefix" : "Engine-first operations",
+          state: "open",
+          labels: [],
+          updated_at: "2026-11-18T09:59:00Z",
+        },
       };
     }
     if (url.includes("/check-runs")) {
@@ -151,25 +166,54 @@ const healthyReply =
     if (url.includes("/pulls?")) {
       return {
         status: 200,
-        body: [
-          {
-            number: 301,
-            state: "open",
-            head: { ref: input.branch, sha: input.headSha },
-            base: { ref: MERGE_PROD_BASE },
-            commits: 1,
-            changed_files: 1,
-            mergeable: true,
-          },
-        ],
+        body: input.branches.map((branch, index) => ({
+          number: 301 + index,
+          state: "open",
+          head: { ref: branch.branch, sha: branch.headSha },
+          base: { ref: MERGE_PROD_BASE },
+          commits: 1,
+          changed_files: 1,
+          mergeable: true,
+        })),
       };
     }
     if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
+    // The provider landing (PUT .../merge) plus its read-back: the read-back is
+    // the only merged-truth observer, so the fixture serves a merged request.
+    if (url.endsWith("/merge")) {
+      return { status: 200, body: { merged: true } };
+    }
+    if (url.includes("/pulls/")) {
+      const branch = input.branches[0] as { readonly branch: string; readonly headSha: string };
+      return {
+        status: 200,
+        body: {
+          number: 301,
+          state: "closed",
+          merged_at: "2026-11-18T09:30:00Z",
+          merged: true,
+          head: { ref: branch.branch, sha: branch.headSha },
+          base: { ref: MERGE_PROD_BASE },
+          merge_commit_sha: "b1b2c3d4e5f60718293a4b5c6d7e8f9012345678",
+        },
+      };
+    }
     return { status: 404, body: {} };
   };
 
-/** Build one real checkout with `main-tools` and a one-commit feature branch. */
-const buildCheckout = (base: string): { readonly root: string; readonly headSha: string } => {
+const DIGIT_PREFIX_BRANCH = "feat/ABC2-12/digit-prefix";
+
+/** Build one real checkout with `main-tools` and two change branches, each carrying its own change record. */
+const buildCheckout = (
+  base: string,
+): {
+  readonly root: string;
+  readonly headSha: string;
+  readonly duplicateHeadSha: string;
+  readonly cap256: { readonly ref: string; readonly headSha: string };
+  readonly cap257: { readonly ref: string; readonly headSha: string };
+  readonly branches: readonly { readonly branch: string; readonly headSha: string }[];
+} => {
   const root = createRepository(base, "checkout");
   git(root, ["checkout", "-b", MERGE_PROD_BASE]);
   git(root, [
@@ -178,12 +222,83 @@ const buildCheckout = (base: string): { readonly root: string; readonly headSha:
     "origin",
     `https://github.com/${MERGE_PROD_OWNER}/engine-first-merge.git`,
   ]);
-  git(root, ["checkout", "-b", MERGE_PROD_BRANCH]);
-  // A second commit on the feature branch, so the branch is ahead of the base.
-  git(root, ["commit", "--allow-empty", "-m", "feat: fixture work"]);
+  const recordFor = (ref: string, directory: string, title: string): void => {
+    git(root, ["checkout", "-B", ref, MERGE_PROD_BASE]);
+    git(root, ["commit", "--allow-empty", "-m", `feat: fixture work (${ref})`]);
+    // The change record is committed ON THE FEATURE BRANCH (GH-366 F-1): the
+    // resolution reads it at the request head through the bounded local read,
+    // never from the working tree.
+    const recordDirectory = join(root, directory);
+    mkdirSync(recordDirectory, { recursive: true });
+    writeFileSync(
+      join(recordDirectory, `chg-${ref.split("/")[1]}-pm-notes.yaml`),
+      [
+        `change_id: ${ref.split("/")[1]}`,
+        `title: "${title}"`,
+        `branch: ${ref}`,
+        "phases:",
+        "  clarify_scope: { started: 2026-11-18T06:00:00.000Z, completed: 2026-11-18T06:00:00.000Z }",
+        "notes: []",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    git(root, ["add", "doc/changes"]);
+    git(root, ["commit", "-m", `docs(${ref.split("/")[1]}): declare the change branch`]);
+  };
+  recordFor(
+    MERGE_PROD_BRANCH,
+    "doc/changes/2026-11/2026-11-18--GH-293--engine-first-operations",
+    "Engine-first operations",
+  );
   const headSha = shaOf(git(root, ["rev-parse", "HEAD"]));
-  git(root, ["branch", "-f", MERGE_PROD_BASE, "HEAD~1"]);
-  return { root, headSha };
+  // A second local head carrying the same record (an empty commit on a second
+  // GH-293 branch): the duplicate-open cells need two READABLE heads whose
+  // records both declare the same branch.
+  git(root, ["checkout", "-b", "fix/GH-293/duplicate"]);
+  git(root, ["commit", "--allow-empty", "-m", "duplicate head"]);
+  const duplicateHeadSha = shaOf(git(root, ["rev-parse", "HEAD"]));
+  recordFor(
+    DIGIT_PREFIX_BRANCH,
+    "doc/changes/2026-11/2026-11-18--ABC2-12--digit-prefix",
+    "Digit prefix",
+  );
+  const digitHeadSha = shaOf(git(root, ["rev-parse", "HEAD"]));
+  // The declaration-cap boundary heads (TC-MRG-004): detached commits whose
+  // records declare exactly 256- and 257-character branch values, addressable
+  // by the resolution through provider-served source refs of the same length.
+  const capBranchOf = (total: number): string => {
+    const prefix = "feat/GH-293/";
+    return prefix + "c".repeat(total - prefix.length);
+  };
+  const capCommit = (value: string): string => {
+    git(root, ["checkout", "--detach", MERGE_PROD_BRANCH]);
+    const capDirectory = `doc/changes/2026-11/2026-11-18--GH-293--cap-${String(value.length)}`;
+    mkdirSync(join(root, capDirectory), { recursive: true });
+    writeFileSync(
+      join(root, capDirectory, "chg-GH-293-pm-notes.yaml"),
+      `change_id: GH-293\ntitle: "Cap boundary"\nbranch: ${value}\nnotes: []\n`,
+      "utf8",
+    );
+    git(root, ["add", "doc/changes"]);
+    git(root, ["commit", "-m", `cap-${String(value.length)} record`]);
+    return shaOf(git(root, ["rev-parse", "HEAD"]));
+  };
+  const cap256 = { ref: capBranchOf(256), headSha: capCommit(capBranchOf(256)) };
+  const cap257 = { ref: capBranchOf(257), headSha: capCommit(capBranchOf(257)) };
+  git(root, ["checkout", MERGE_PROD_BRANCH]);
+  git(root, ["branch", "-f", MERGE_PROD_BASE, "HEAD~2"]);
+  return {
+    root,
+    headSha,
+    duplicateHeadSha,
+    cap256,
+    cap257,
+    branches: [
+      { branch: MERGE_PROD_BRANCH, headSha },
+      { branch: DIGIT_PREFIX_BRANCH, headSha: digitHeadSha },
+    ],
+  };
 };
 
 export const createMergeProductionHarness = (
@@ -221,12 +336,8 @@ export const createMergeProductionHarness = (
     { driver: "jsonl", edge: createNodeStateEdge() },
   );
   const store = options.stateStoreWrap?.(opened) ?? opened;
-  let reply =
-    options.reply ??
-    healthyReply({
-      headSha: checkout.headSha,
-      branch: MERGE_PROD_BRANCH,
-    });
+  const defaultReply = healthyReply({ branches: checkout.branches });
+  let reply = options.reply ?? defaultReply;
   let clockIso = options.clockIso ?? (() => "2026-11-18T10:00:00.000Z");
   let credentialMode: "resolved" | "missing" = options.credential ?? "resolved";
   const configurationFs: FileSystemFacts = {
@@ -306,11 +417,15 @@ export const createMergeProductionHarness = (
     ref: MERGE_PROD_REF,
     branch: MERGE_PROD_BRANCH,
     headSha: checkout.headSha,
+    duplicateHeadSha: checkout.duplicateHeadSha,
+    cap256: checkout.cap256,
+    cap257: checkout.cap257,
     stateLocation,
     store,
     transportCalls,
     transportRequests,
     credentialReads: () => counter.value,
+    defaultReply,
     setReply: (next) => {
       reply = next;
     },

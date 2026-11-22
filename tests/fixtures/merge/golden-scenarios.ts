@@ -19,6 +19,10 @@ import {
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
 
+/** A base-tip record head, genuinely different from the request's asserted head. */
+const STALE_RECORD_HEAD = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const WRONG_BRANCH_DECLARATION = "feat/GH-301/somewhere-else";
+
 const gated = () => ({
   workItem: baseWorkItem({ labels: ["change", "hand-back"], updatedAt: isoAt(-3 * MINUTE) }),
   ownerPrincipal: "owner-principal",
@@ -152,7 +156,11 @@ export const goldenScenarios = (): Record<string, () => GoldenHarness> => ({
   },
   "refusal-stale": () => {
     const harness = createMergeHarness({ checkRuns: redCheckRuns() });
-    harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-31 * MINUTE) }));
+    // The record's head is the base tip and the resolved request head differs:
+    // recorded-sha and current-sha are genuinely different objects (AC-F1-5).
+    harness.seedVerification(
+      verificationRecord({ verifiedAt: isoAt(-31 * MINUTE), headSha: STALE_RECORD_HEAD }),
+    );
     return { harness, args: [] };
   },
   "refusal-gate": () => requiredJobScenario("pass"),
@@ -183,6 +191,24 @@ export const goldenScenarios = (): Record<string, () => GoldenHarness> => ({
     // does not resolve names its own identity, the invocation ref, and the
     // read operation, never the generic abort.
     const harness = createMergeHarness({ workItem: { fault: "merge.work-item-unresolved" } });
+    harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+    return { harness, args: [] };
+  },
+  "refusal-branch": () => {
+    // The branch resolution's refusal emitter (GH-366 AC-F1-3): a candidate
+    // whose record declares a branch that disagrees with its own source ref
+    // refuses with the chosen closed reason and the attempted tree path.
+    const harness = createMergeHarness({
+      recordsAtHead: { [MERGE_HEAD]: { declaration: WRONG_BRANCH_DECLARATION } },
+    });
+    harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
+    return { harness, args: [] };
+  },
+  "refusal-request": () => {
+    // The request refusal's emitter (GH-366 AC-F1-4): an empty open page whose
+    // convergence attempt observes the EMPTY matched-identity set refuses
+    // `no-open-request` as a decidable zero.
+    const harness = createMergeHarness({ openRequests: { items: [], saturated: false } });
     harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
     return { harness, args: [] };
   },

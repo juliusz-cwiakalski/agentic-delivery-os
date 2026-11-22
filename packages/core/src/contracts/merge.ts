@@ -181,6 +181,7 @@ export const MERGE_GIT_OPERATIONS = [
   "read-head",
   "read-base-containment",
   "resolve-ref",
+  "read-change-record",
   "rebase-refresh",
   "squash-land",
   "delete-branch",
@@ -312,6 +313,12 @@ export type MergeReport = {
   readonly postLanding: readonly MergePostLandingStep[];
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
+  /**
+   * The resolved object the run decided from (DM-2): present on a run that
+   * resolved a request at its head; absent on a converged replay, which reports
+   * `replayed=true` with the single matched request identity instead.
+   */
+  readonly resolution?: MergeResolutionFacts;
 };
 
 /** One declared override's dry-run authorization report (GAP-12). */
@@ -331,6 +338,17 @@ export type MergeDryRunReport = {
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
   readonly authorizations: readonly MergeDryRunAuthorization[];
+  /**
+   * The resolved object the dry run describes (F-5, DM-2): the same object the
+   * real merge would land. Absent on a converged replay, which reports
+   * `replayed=true` with the single matched request identity instead, performs
+   * zero mutations, lands nothing, and reports no post-landing steps.
+   */
+  readonly resolution?: MergeResolutionFacts;
+  /** `true` on the converged-replay dry run (DM-2); never a merge verdict. */
+  readonly replayed?: boolean;
+  /** The single matched request's identity on a converged-replay dry run. */
+  readonly requestIdentity?: string;
 };
 
 /** Machine `data` UTF-8 byte cap (NFR-4). */
@@ -404,3 +422,73 @@ export const MERGE_REFUSAL_OPERATIONS = [
   "-",
 ] as const;
 export type MergeRefusalOperation = (typeof MERGE_REFUSAL_OPERATIONS)[number];
+
+/**
+ * The pinned resolution constants (F-1 step 7, TC-MRG-004): contract constants,
+ * not configuration. The declaration cap is measured in characters and a longer
+ * value is refused, never truncated; a 256-character value is accepted and a
+ * 257-character one is refused.
+ */
+export const MERGE_BRANCH_DECLARATION_MAX_CHARS = 256 as const;
+/** The candidate-set cap for the change-branch resolution. */
+export const MERGE_BRANCH_CANDIDATE_MAX = 3 as const;
+/** The per-record byte cap for the bounded local change-record read. */
+export const MERGE_CHANGE_RECORD_MAX_BYTES = 262_144 as const;
+
+/**
+ * The closed six-reason vocabulary of the one `merge.branch-unresolved` refusal
+ * (F-1 step 7) and its declared precedence (Appendix A step 5).
+ */
+export const MERGE_BRANCH_REFUSAL_REASONS = [
+  "declaration-missing",
+  "declaration-unusable",
+  "declaration-disagrees",
+  "record-missing",
+  "record-invalid",
+  "record-unreadable",
+] as const;
+export type MergeBranchRefusalReason = (typeof MERGE_BRANCH_REFUSAL_REASONS)[number];
+
+/**
+ * The declared precedence the resolution chooses one reason by (Appendix A
+ * step 5): the most diagnostic cause wins, so one run names the repair.
+ */
+export const MERGE_BRANCH_REASON_PRECEDENCE: readonly MergeBranchRefusalReason[] = [
+  "declaration-disagrees",
+  "record-invalid",
+  "record-unreadable",
+  "record-missing",
+  "declaration-missing",
+  "declaration-unusable",
+];
+
+/**
+ * The closed three-reason vocabulary of `merge.request-unresolved` (F-1):
+ * `ambiguous-open-request` and `head-unresolved` are read from the open page;
+ * `no-open-request` comes from the convergence attempt.
+ */
+export const MERGE_REQUEST_REFUSAL_REASONS = [
+  "no-open-request",
+  "ambiguous-open-request",
+  "head-unresolved",
+] as const;
+export type MergeRequestRefusalReason = (typeof MERGE_REQUEST_REFUSAL_REASONS)[number];
+
+/** The one declared resolution source (F-1 step 5). */
+export const MERGE_RESOLUTION_SOURCES = ["declared-at-head"] as const;
+export type MergeResolutionSource = (typeof MERGE_RESOLUTION_SOURCES)[number];
+
+/**
+ * The resolved change context both reports carry (DM-2): the resolved branch,
+ * the declared-at-head source, the matched request identity, the observed
+ * candidate count, the observed matched request identities on a convergence
+ * attempt, and the resolved head. Never persisted as a record.
+ */
+export type MergeResolutionFacts = {
+  readonly source: MergeResolutionSource;
+  readonly branch: string;
+  readonly requestIdentity: string;
+  readonly candidateCount: number;
+  readonly matchedIdentities?: readonly string[];
+  readonly headSha: string;
+};

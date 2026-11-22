@@ -62,6 +62,8 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
     "refusal-waiver",
     "refusal-override",
     "refusal-work-item",
+    "refusal-branch",
+    "refusal-request",
   ] as const;
 
   for (const name of cases) {
@@ -124,8 +126,8 @@ describe("TC-MERGE-037 every refusal golden is pinned in text, scripted, and tri
   });
 });
 
-describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly fifteen files", () => {
-  /** The ten refusal goldens the dedicated fields moved, the added work-item pair, and the success trio. */
+describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly nineteen files", () => {
+  /** The refusal set (ten moved, six added) and the success trio. */
   const EXPECTED = [
     "refusal-gate-human.txt",
     "refusal-gate-scripted.json",
@@ -139,12 +141,16 @@ describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly fifteen files",
     "refusal-waiver-scripted.json",
     "refusal-work-item-human.txt",
     "refusal-work-item-scripted.json",
+    "refusal-branch-human.txt",
+    "refusal-branch-scripted.json",
+    "refusal-request-human.txt",
+    "refusal-request-scripted.json",
     "success-data.json",
     "success-human.txt",
     "success-scripted.json",
   ] as const;
 
-  test("the directory holds the fifteen declared files and the retired pair is absent", () => {
+  test("the directory holds the nineteen declared files and the retired pair is absent", () => {
     const present = readdirSync(GOLDEN).sort();
     expect(present).toEqual([...EXPECTED].sort());
     for (const retired of ["refusal-rebase-human.txt", "refusal-rebase-scripted.json"]) {
@@ -152,7 +158,7 @@ describe("TC-F1-014/TC-FLOOR-005 the merge golden set is exactly fifteen files",
     }
     // The directory is never declared as a folder, so a third moved or retired
     // file is visible here rather than silently regenerated.
-    expect(present).toHaveLength(15);
+    expect(present).toHaveLength(19);
   });
 
   test("no golden carries the retired scenario's identity", () => {

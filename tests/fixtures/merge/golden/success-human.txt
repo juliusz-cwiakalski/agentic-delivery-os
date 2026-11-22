@@ -6,6 +6,7 @@ landing=sha-on-base:yes request-state=merged
 refresh=attempts=0 outcome=not-attempted
 waivers=-
 post-landing=branch-deletion:ok,closeout-ready:ok
+resolution=declared-at-head branch=feat/GH-301/merge request=#99 candidates=1 head=9f21c0e
 gates=5/5 passed
 gate lifecycle-finalization pass reason=lifecycle-complete
 gate ci-green pass reason=ci-green

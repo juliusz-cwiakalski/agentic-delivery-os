@@ -277,6 +277,7 @@ describe("TC-MERGE-004 default surface applicability", () => {
       "read-head",
       "read-base-containment",
       "resolve-ref",
+      "read-change-record",
       "rebase-refresh",
       "squash-land",
       "delete-branch",
@@ -284,6 +285,51 @@ describe("TC-MERGE-004 default surface applicability", () => {
     for (const operation of MERGE_GIT_OPERATIONS) {
       expect(operation).not.toMatch(/force|push|reset|hard|delete-remote/u);
     }
+  });
+});
+
+describe("GH-366 the resolution contract pins (TC-MRG-042/053)", () => {
+  test("the three resolution constants are contract constants with the declared values", async () => {
+    const contracts = await import("../../packages/core/src/contracts/index");
+    expect(contracts.MERGE_BRANCH_DECLARATION_MAX_CHARS).toBe(256);
+    expect(contracts.MERGE_BRANCH_CANDIDATE_MAX).toBe(3);
+    expect(contracts.MERGE_CHANGE_RECORD_MAX_BYTES).toBe(262_144);
+    expect(contracts.MERGE_BRANCH_REFUSAL_REASONS).toEqual([
+      "declaration-missing",
+      "declaration-unusable",
+      "declaration-disagrees",
+      "record-missing",
+      "record-invalid",
+      "record-unreadable",
+    ]);
+    expect(contracts.MERGE_BRANCH_REASON_PRECEDENCE).toEqual([
+      "declaration-disagrees",
+      "record-invalid",
+      "record-unreadable",
+      "record-missing",
+      "declaration-missing",
+      "declaration-unusable",
+    ]);
+    expect(contracts.MERGE_REQUEST_REFUSAL_REASONS).toEqual([
+      "no-open-request",
+      "ambiguous-open-request",
+      "head-unresolved",
+    ]);
+    expect(contracts.MERGE_RESOLUTION_SOURCES).toEqual(["declared-at-head"]);
+  });
+
+  test("the transaction's options surface declares no read-budget suppression option (NG-8)", async () => {
+    // The no-suppression control: the composition's option surface names no
+    // parameter, flag, or caller knob that skips or narrows the merged read's
+    // own review-thread query for the merge caller. The multiset oracle lives
+    // in the production composition; the scan names any planted member.
+    const transaction = readFileSync(
+      join(ROOT, "packages/core/src/domain/merge-transaction.ts"),
+      "utf8",
+    );
+    expect(transaction).not.toMatch(/suppress\w*Threads|skipThreadQuery|includeThreads\??:/u);
+    const composition = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    expect(composition).not.toMatch(/suppress\w*Threads|skipThreadQuery/u);
   });
 });
 

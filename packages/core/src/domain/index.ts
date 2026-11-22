@@ -70,6 +70,7 @@ export {
 } from "./capsule-candidates.js";
 export {
   boundCloseoutData,
+  branchConvention,
   buildCloseoutPlan,
   type CloseoutBranchSafetyInput,
   type CloseoutBranchSafetyVerdict,
@@ -526,6 +527,7 @@ export {
   type MergeFailureEvidence,
   type MergeLandResult,
   type MergeRead,
+  type MergeRecordAtHeadRead,
   type MergeRefreshResult,
   type MergeRequestDetailRead,
   type MergeTransactionConfig,

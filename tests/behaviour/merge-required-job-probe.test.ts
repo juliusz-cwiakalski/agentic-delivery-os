@@ -497,7 +497,7 @@ describe("TC-F3-006 a provider-required refusal is classified, never retried or 
       expect(failure.evidence.detail).toBe("ci-pending");
       // One guarded attempt, one post-refusal re-read: never a retry.
       expect(harness.counts.landing).toBe(1);
-      expect(harness.counts.requestDetail).toBe(2);
+      expect(harness.counts.requestDetail).toBe(1);
       // The refusal is the declared family instance, never a new identity.
       expect(
         `${MERGE_GATE_ERROR_PREFIX}${failure.evidence.gateId ?? ""}${MERGE_GATE_ERROR_SUFFIX}`,

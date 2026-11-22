@@ -87,6 +87,51 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 2 COMPLETE (delivery): refusal identities and the diagnostics
+      contract landed in commit 2a0d28c4. Gate (declared phase-2 suites) green:
+      bun test over merge-refusal-surface/-taxonomy/-production-composition/
+      -required-job-probe/-privacy/-convergence/-head-guard/
+      -coordinator-boundary/-waivers (90 tests), tests/golden/merge.test.ts (24),
+      merge-refusal-rows/error-table/supervision-error-socialization/
+      doc-conformance/ceremony-contract/dispatch-attempts-taxonomy/
+      ceremony-nonregression/verify-gates-suite-map-contract/content-inventory
+      (392 tests), `bun run scripts/checks/error-table-sync.ts` OK, `pnpm
+      typecheck` clean, `pnpm build` green. Delivered: the three additive rows
+      (branch-unresolved/request-unresolved/work-item-unresolved, all user,
+      false, not_landed, user-validation); the abort row narrowed to
+      retryable:false with the no-convergence remediation and the two
+      pre-mutation causes documented (the third cause lands with phase 3's
+      resolution); the landing-fault mapping (total, closed, provider.outage
+      default, operation=github-merge-delivery-request) replacing the
+      transaction-aborted wrapping, with the convergence/head-guard cells
+      re-pointed; the closed ten-member operation vocabulary
+      (MERGE_REFUSAL_OPERATIONS) validated at the rendering site; the dedicated
+      command=/ref=/operation= rendering fields on every refusal (both forms);
+      credential refusals naming reference github-read, source GITHUB_TOKEN and
+      the attempted operation (trustedRefusal marker); work-item and request
+      placeholder routing (provider.not-found split; the two request-resolution
+      returns now refuse merge.request-unresolved); the state-unverified
+      remediation naming `verify gates <ref>` for the same work item
+      (AC-F3-7/LF-2); EXPECTED 13 -> 15 with the work-item pair added and the
+      ten refusal goldens regenerated in-phase; RESERVED_TWO_SEGMENT_CODES and
+      its mirror widened to 71; the emittable set gains exactly the three codes.
+      DECLARED DEVIATION (plan-vs-tree arithmetic, recorded for review): the
+      plan's identity move declares 170 -> 173 / 169 -> 172 delivered / 68 ->
+      71 / +136 -> +139 authored against base e1ebc76c, but the branch is
+      rebased on 7cc71cd1 where GH-365 removed `install.migration.unavailable`,
+      so the live base was 169 / 168 / 68 / +135. Adding exactly the plan's
+      three rows lands 172 / 171 / 71 / +138 with the merge kind at 12 — the
+      plan's own end-state allowlist (71) and merge-kind (12) values, with every
+      pin site, pinned page and the phrase table moved in the same commit per
+      the plan's binding invariant (stale totals banned; the `+ 135` arithmetic
+      and the outgoing 169/168 forms joined the legacy scan; the `138` bare
+      token retired from the token list because it is now the live arithmetic
+      tail, its total-wording forms kept banned). Evidence: `bun run
+      scripts/checks/error-table-sync.ts` = entries=172 documented=172 OK; the
+      plan's declared literals 173/172-delivered/+139 are unreachable on this
+      base without improvising a fourth row, which the plan forbids."
+    type: info
+    date: "2026-11-22"
   - text: "DoR iteration 6 (verification run): **READY** — 10/10 facets PASS;
       cross_artifact_consistency flipped; all three authorized fixes verified
       directly against artifacts and tooling (TC-MRG-052 single-outcome oracle;
