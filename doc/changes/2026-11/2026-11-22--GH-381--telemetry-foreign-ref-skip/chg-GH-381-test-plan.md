@@ -54,7 +54,7 @@ This is a verification map, not an execution claim: nothing here was run against
 
 ## 3. Coverage Overview
 
-Every AC maps to at least one named case; no AC is TODO. Case IDs continue the delivered per-suite series: `TC-TELEMETRY` stands at 039, `TC-REF` at 005, `TC-METRICS` at 112 as of authoring.
+Every AC maps to at least one named case; no AC is TODO. Case IDs continue the delivered series: `TC-TELEMETRY` stands at 039 (a per-suite series; this change's single new suite continues it), `TC-REF` at 006 — a delivered **cross-suite** series (`tests/structure/reference-behavior.test.ts` implements TC-REF-001..006, with TC-REF-001/003/004 also appearing in the `tests/checks` CLI suites), so the new provider-resolution case takes `TC-REF-007` — and `TC-METRICS` at 112 as of authoring.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
@@ -64,7 +64,7 @@ Every AC maps to at least one named case; no AC is TODO. Case IDs continue the d
 | AC-F2-1 | Bare step prefix and bare baseline prefix tear `state.store.torn` at their own position; skipped-malformed or dropped-location fails the proof | TC-TELEMETRY-042 | Covered |
 | AC-F3-1 | Requested-ref kind mismatch (step and baseline) tears as delivered; payload validation unchanged | TC-TELEMETRY-043 | Covered |
 | AC-F4-1 | Named regression case: foreign step record first (observed shape), read succeeds; spend fold over the same ledger returns the scoped report | TC-TELEMETRY-041 | Covered |
-| AC-F4-2 | Provider resolution on a two-ref ledger: budget measurement succeeds, resolution proceeds to a provider decision, no telemetry tear on any path | TC-REF-006 | Covered |
+| AC-F4-2 | Provider resolution on a two-ref ledger: budget measurement succeeds, resolution proceeds to a provider decision, no telemetry tear on any path | TC-REF-007 | Covered |
 | AC-F5-1 | Exactly one verified pass; 0 additional store reads / re-reads / harness queries; bound unchanged with foreign records interleaved throughout | TC-TELEMETRY-045 | Covered |
 | AC-F6-1 | Single-ref ledger: records, ordering, verified-empty, evidence, all tear cases golden-equal to delivered; verified-empty identical | TC-TELEMETRY-046 | Covered |
 | AC-NFR2-1 | Three-run determinism with zero network / ambient-store / real-clock; delivered vocabulary sets exactly equal, 0 additions | TC-TELEMETRY-047 (+ delivered structure suites for the vocabulary clause) | Covered |
@@ -76,7 +76,7 @@ Functional capability roll-up:
 | F-1 | Foreign well-formed family keys skipped, never damage | TC-TELEMETRY-040, TC-TELEMETRY-041, TC-TELEMETRY-044 |
 | F-2 | Well-formed/malformed distinction; malformed still tears | TC-TELEMETRY-042, TC-TELEMETRY-044, TC-TELEMETRY-040 |
 | F-3 | Requested-ref damage preserved (kind, payload, location) | TC-TELEMETRY-043, TC-TELEMETRY-046 |
-| F-4 | Multi-ref consumer success, exactly scoped | TC-TELEMETRY-040, TC-TELEMETRY-041, TC-REF-006, TC-METRICS-113 |
+| F-4 | Multi-ref consumer success, exactly scoped | TC-TELEMETRY-040, TC-TELEMETRY-041, TC-REF-007, TC-METRICS-113 |
 | F-5 | One verified pass preserved | TC-TELEMETRY-045 |
 | F-6 | Single-ref behavior identical | TC-TELEMETRY-046 |
 
@@ -88,7 +88,7 @@ Ticket acceptance-criteria traceability (via spec Appendix B):
 | Ticket AC-2 (bare prefix still tears, correct position) | AC-F2-1 | TC-TELEMETRY-042 |
 | Ticket AC-3 (requested-ref kind mismatch still tears) | AC-F3-1 | TC-TELEMETRY-043 |
 | Ticket AC-4 (named regression case, foreign family first) | AC-F4-1 | TC-TELEMETRY-041 |
-| Ticket AC-5 (provider resolve proceeds to a provider decision) | AC-F4-2 | TC-REF-006 |
+| Ticket AC-5 (provider resolve proceeds to a provider decision) | AC-F4-2 | TC-REF-007 |
 | Required behavior 5 (single verified pass) + single-ref invariant | AC-F5-1, AC-F6-1, AC-NFR2-1 | TC-TELEMETRY-045, TC-TELEMETRY-046, TC-TELEMETRY-047 |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
@@ -110,7 +110,7 @@ No HTTP endpoints and no events exist on any path before or after this change (s
 | NFR-2 | Determinism and hermeticity | TC-TELEMETRY-047 (three-run matrix equality, offline posture) |
 | NFR-3 | Tear fidelity: store path + 1-based sequence, 0 drift across malformed / kind / payload cases | TC-TELEMETRY-042, TC-TELEMETRY-043 (explicit location assertions) |
 | NFR-4 | Closed-vocabulary invariance: 0 additions to any delivered set | Covered by delivered structure suites (error table, telemetry contract constants, envelope and exit-code contracts) — Existing – No Change; this plan additionally asserts the change's paths emit only delivered identities (TC-TELEMETRY-042/043). AC-NFR2-1's vocabulary clause rests on these. |
-| NFR-5 | Projection exactness: 0 foreign in, 0 requested dropped; verified-empty iff ref holds nothing; both directions | TC-TELEMETRY-040, TC-TELEMETRY-041, TC-TELEMETRY-044, TC-REF-006 |
+| NFR-5 | Projection exactness: 0 foreign in, 0 requested dropped; verified-empty iff ref holds nothing; both directions | TC-TELEMETRY-040, TC-TELEMETRY-041, TC-TELEMETRY-044, TC-REF-007 |
 | NFR-6 | Single-ref golden equality | TC-TELEMETRY-046 |
 
 ## 4. Test Types and Layers
@@ -136,7 +136,7 @@ No HTTP endpoints and no events exist on any path before or after this change (s
 | TC-TELEMETRY-045 | The read stays one verified pass at observed ledger scale | Corner Case | suite | High | AC-F5-1 |
 | TC-TELEMETRY-046 | Single-ref golden equality with delivered behavior | Regression | suite | High | AC-F6-1 |
 | TC-TELEMETRY-047 | Determinism and hermeticity of the proof matrix | Corner Case | suite | Medium | AC-NFR2-1 |
-| TC-REF-006 | Provider resolution proceeds to a provider decision on a two-ref ledger | Happy Path | suite | High | AC-F4-2 |
+| TC-REF-007 | Provider resolution proceeds to a provider decision on a two-ref ledger | Happy Path | suite | High | AC-F4-2 |
 | TC-METRICS-113 | Metrics report reads a two-ref ledger with exactly the requested ref's dispatch | Happy Path | suite | Medium | AC-F1-1 (consumer clause; F-4) |
 
 ### 5.2 Scenario Details
@@ -441,7 +441,7 @@ No HTTP endpoints and no events exist on any path before or after this change (s
 
 - Fixture state is committed hermetic state — simulated committed ledger shapes, never the live incident ledger (binding constraint 7).
 
-#### TC-REF-006 - Provider resolution proceeds to a provider decision on a two-ref ledger
+#### TC-REF-007 - Provider resolution proceeds to a provider decision on a two-ref ledger
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -541,7 +541,7 @@ No HTTP endpoints and no events exist on any path before or after this change (s
 | TC-TELEMETRY-045 | same suite | To Implement | same | Counting wrapper over the store port (readRecords calls, other-method calls); ledger byte capture |
 | TC-TELEMETRY-046 | same suite + committed golden fixture under `tests/fixtures/` | To Implement (golden capture from delivered behavior in the same change) | same | Golden regeneration by explicit command; snapshot updated deliberately in review |
 | TC-TELEMETRY-047 | same suite | To Implement | same | Three-run matrix harness; relies on the delivered hermeticity posture |
-| TC-REF-006 | `tests/behaviour/provider-budget-ref.test.ts` (existing) | Existing – Update | `bun test tests/behaviour/provider-budget-ref.test.ts` | Delivered fake clock/credential/transport; FX-7 seeding via `appendHarnessTelemetry`-family helpers |
+| TC-REF-007 | `tests/behaviour/provider-budget-ref.test.ts` (existing) | Existing – Update | `bun test tests/behaviour/provider-budget-ref.test.ts` | Delivered fake clock/credential/transport; FX-7 seeding via `appendHarnessTelemetry`-family helpers |
 | TC-METRICS-113 | `tests/behaviour/metrics-dispatch.test.ts` (existing) | Existing – Update | `bun test tests/behaviour/metrics-dispatch.test.ts` | Second-ref seeding on the metrics fixture store via the delivered append helpers |
 | Aggregate gate | — | Existing – No Change | `pnpm check` | Gate evidence under the declared scratch-directory override |
 
