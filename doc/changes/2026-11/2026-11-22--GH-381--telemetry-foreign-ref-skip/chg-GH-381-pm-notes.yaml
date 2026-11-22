@@ -179,6 +179,28 @@ notes:
       ticket #381 comment (no tickets created — PM proposes, human decides)."
     type: info
     date: "2026-11-22"
+  - text: "Quality gates iteration 1: range lint PASS (14 commits in
+      main-tools..HEAD, 0 offending, mode none, binary
+      node_modules/.bin/commitlint, origin repository-local,
+      merge-base 5ace5e98); aggregate pnpm check FAIL — 12465 pass / 4 skip /
+      5 fail across 2 suites (tests/checks/privacy-release.test.ts
+      TC-RELEASE-001 x2, tests/structure/changeset-additivity.test.ts
+      TC-SYNC-011 x3), one root cause: .changeset/gh-381-telemetry-foreign-ref-s
+      kip-patch.md declares only '@delivery-os/core: patch' but the repo
+      lockstep invariant requires every changeset to declare exactly the five
+      fixed-group packages (core, adapters, cli, mcp, opencode) all at minor.
+      The spec's version_impact: patch front-matter guess misled the plan's
+      changeset decision; the GH-377 precedent (gh-377-provider-profile-parks-
+      minor.md) was the correct five-package minor form. Remediation: @fixer
+      rewrites the changeset content to the five-package minor block (filename
+      kept — cosmetic; disclosed in PR body); gates re-run after the remediation
+      commit. Spec/test-plan version_impact: patch fields are stale relative to
+      the lockstep-minor convention — cosmetic working-file metadata, disclosed
+      in PR body, not gate-relevant. Test-infra noise noted: gate suites
+      create/switch transient branches/worktrees during the run; final repo
+      state re-verified after gates."
+    type: info
+    date: "2026-11-22"
   - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden), commit
       a9a3a029. tests/fixtures/telemetry/index.ts gains the GH-381 fixture
       family (refs GH-381/GH-365/GH-000; FX-1 interleaved both directions, FX-2

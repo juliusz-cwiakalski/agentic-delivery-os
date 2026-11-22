@@ -1,17 +1,15 @@
 ---
-"@delivery-os/core": patch
+"@delivery-os/core": minor
+"@delivery-os/adapters": minor
+"@delivery-os/cli": minor
+"@delivery-os/mcp": minor
+"@delivery-os/opencode": minor
 ---
 
-Make the per-ref telemetry families read skip well-formed foreign-ref family
-keys instead of tearing them as `state.store.torn`, so `spend`, the metrics
-report, and provider resolution's budget measurement read any ledger that
-holds two or more changes' telemetry. Within the step and baseline family
-branches, a key with an empty ref remainder (the bare prefix) still tears at
-its own position, the requested ref's kind-mismatch tear and payload
-validation are unchanged, and a well-formed key naming another ref is skipped
-in ledger order with no kind inspection, no payload inspection, and no
-evidence contribution — the delivered per-ref economics read's rule. The read
-stays one verified pass over the ledger with no new reads, no ledger
-mutation, and no new vocabulary; single-ref behavior is unchanged
-(golden-equal), and consumer report shapes are unchanged — the only
-difference is failing → succeeding on multi-ref ledgers.
+Make the per-ref telemetry families projection skip well-formed telemetry
+family keys naming another change ref instead of tearing them as
+`state.store.torn`, so `spend`, the metrics report, and provider resolution
+read ledgers that hold two or more changes' telemetry. Malformed family keys
+and the requested ref's own damage keep tearing. The read stays one verified
+pass over the ledger with no new reads, no ledger mutation, and no new
+vocabulary; single-ref behavior and consumer report shapes are unchanged.
