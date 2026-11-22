@@ -9,6 +9,9 @@ import {
   scoreProfileTask,
   selectProfile,
 } from "../../packages/core/src/provider/index";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
+import type { ProviderDescriptor } from "../../packages/core/src/contracts/index";
 import {
   available,
   capabilityChain,
@@ -316,5 +319,63 @@ describe("TC-PROFILE-053 100-run deterministic replay", () => {
       identities.add(result.events[0]?.identity ?? "");
     }
     expect(identities.size).toBe(1);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — recorded parks are eligibility inputs.
+ * ------------------------------------------------------------------------- */
+
+const parkedEntries: Readonly<Record<string, ProviderDescriptor>> = {
+  "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+  deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+};
+
+const selectionOverPark = (cause: "peak-window" | "quota-exhausted") => {
+  const park = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause,
+    conditions: [cause],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  return selectProfile({
+    profiles: mixedChain(),
+    probe: createResolvedProviderProbe(parkedEntries, NOW, undefined, {
+      parks: { ok: true, value: [parkView(park, NOW)] },
+    }),
+    nowMs: NOW,
+  });
+};
+
+describe("GH-377 TC-PROFILE-061 a peak park and a quota park are one eligibility rule", () => {
+  test("the cause changes only the blocker value", () => {
+    const peak = selectionOverPark("peak-window");
+    const quota = selectionOverPark("quota-exhausted");
+    if (!peak.ok || !quota.ok) throw new Error("selection failed");
+    expect(peak.decision.profile).toBe("deepseek");
+    expect(quota.decision.profile).toBe("deepseek");
+    expect(peak.decision.seatModels).toEqual(quota.decision.seatModels);
+    expect(peak.decision.seatModels.pm).toBe("deepseek-reasoner");
+    expect(peak.decision.eligibility.map((entry) => entry.profile)).toEqual(
+      quota.decision.eligibility.map((entry) => entry.profile),
+    );
+    expect(peak.decision.eligibility[0]?.verdict).toBe("ineligible");
+    expect(peak.decision.eligibility[0]?.blockers[0]).toMatchObject({
+      kind: "condition",
+      value: "peak-window",
+    });
+    expect(quota.decision.eligibility[0]?.blockers[0]).toMatchObject({
+      kind: "condition",
+      value: "quota-exhausted",
+    });
+    const peakEvidence = { ...peak.events[0]?.evidence };
+    const quotaEvidence = { ...quota.events[0]?.evidence };
+    expect({ ...peakEvidence, blockers: undefined }).toEqual({
+      ...quotaEvidence,
+      blockers: undefined,
+    });
   });
 });

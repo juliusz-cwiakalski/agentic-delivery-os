@@ -10,6 +10,9 @@
  * probe (enabled + UTC peak) and an injected clock/state store.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type {
   CredentialPort,
   ProviderClock,
@@ -18,10 +21,13 @@ import type {
 } from "@delivery-os/core/contracts";
 import { createConfigProgram } from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { createParkRecord, persistProviderResolution } from "../../packages/core/src/provider/parks";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const PEAK_ACTIVE = Date.UTC(2026, 0, 1, 7, 0, 0);
 const PEAK_CLEAR = Date.UTC(2026, 0, 1, 12, 0, 0);
+const OUTSIDE_PEAKS = Date.UTC(2026, 0, 1, 18, 0, 0);
+const COMMITTED_CONFIG = readFileSync(join(process.cwd(), ".jaiship/config.yaml"), "utf8");
 
 const CONFIG = `provider:
   defaultChain: default
@@ -110,14 +116,25 @@ type Harness = {
   readonly store: StateStorePort;
   readonly root: string;
   readonly setNow: (value: number) => void;
+  readonly contentReads: string[];
+  readonly existenceProbes: string[];
 };
 
-const harness = (): Harness => {
+type HarnessOptions = {
+  readonly config?: string;
+  readonly seed?: (store: StateStorePort) => void;
+};
+
+const harness = (options: HarnessOptions = {}): Harness => {
   const root = makeTempRoot("provider-profile-edge");
   roots.push(root);
   const store = openStore(makeIdentity(root)).store;
+  const configText = options.config ?? CONFIG;
+  options.seed?.(store);
   let now = PEAK_CLEAR;
   const clock: ProviderClock = { nowMs: () => now };
+  const contentReads: string[] = [];
+  const existenceProbes: string[] = [];
   let counter = 0;
   const credentialPort: CredentialPort = {
     resolve: () => ({ ok: true, material: { value: "CANARY-SECRET" } }),
@@ -135,10 +152,14 @@ const harness = (): Harness => {
     homeDirectory: "/home/synthetic",
     platform: "linux",
     fs: {
-      exists: (path) => path === "/repo/.synthetic/config.yaml",
+      exists: (path) => {
+        existenceProbes.push(path);
+        return path === "/repo/.synthetic/config.yaml";
+      },
       readText: (path) => {
+        contentReads.push(path);
         if (path !== "/repo/.synthetic/config.yaml") throw new Error("missing file");
-        return CONFIG;
+        return configText;
       },
     },
     repositoryIo: {
@@ -171,13 +192,96 @@ const harness = (): Harness => {
     const exitCode = await runCli(["provider", ...args], { stdout, stderr }, deps);
     return { exitCode, stdout: stdout.value, stderr: stderr.value };
   };
-  return { run, store, root, setNow: (value) => (now = value) };
+  return {
+    run,
+    store,
+    root,
+    setNow: (value) => {
+      now = value;
+    },
+    contentReads,
+    existenceProbes,
+  };
 };
 
 const data = (stdout: string): Record<string, unknown> =>
   (JSON.parse(stdout) as { data: Record<string, unknown> }).data;
 const error = (stdout: string): Record<string, unknown> =>
   (JSON.parse(stdout) as { error: Record<string, unknown> }).error;
+
+describe("GH-377 TC-PROFILE-059/060 recorded parks drive the production profile resolve", () => {
+  const seedZaiQuotaPark = (store: StateStorePort): void => {
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "zai-coding-plan",
+      cause: "quota-exhausted",
+      conditions: ["quota-exhausted"],
+      createdAtMs: OUTSIDE_PEAKS - 60_000,
+      expiresAtMs: OUTSIDE_PEAKS + 3_600_000,
+      evidence: {},
+    });
+    const persisted = persistProviderResolution({
+      store,
+      fenceToken: "seed-zai-quota",
+      nowMs: OUTSIDE_PEAKS - 60_000,
+      parks: [park],
+      announcements: [],
+    });
+    if (!persisted.ok) throw new Error("park seed failed");
+  };
+
+  test("TC-PROFILE-059 a quota park selects paid without a local override", async () => {
+    const before = createHash("sha256").update(COMMITTED_CONFIG).digest("hex");
+    const { run, setNow, contentReads } = harness({
+      config: COMMITTED_CONFIG,
+      seed: seedZaiQuotaPark,
+    });
+    setNow(OUTSIDE_PEAKS);
+    const result = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(result.exitCode).toBe(0);
+    const envelope = data(result.stdout);
+    // The delivered lifecycle returns `switched` on the first base→fallback
+    // move and `selected` once the target is stable; the selection facts are
+    // the contract (spec §8.5 keeps the lifecycle unchanged).
+    expect(["selected", "switched"]).toContain(String(envelope.outcome));
+    expect(envelope.profile).toBe("paid");
+    const eligibility = envelope.eligibility as readonly Record<string, unknown>[];
+    const delivery = eligibility.find((entry) => entry.profile === "delivery");
+    expect(delivery?.verdict).toBe("ineligible");
+    const blockers = (delivery?.blockers ?? []) as readonly Record<string, unknown>[];
+    expect(blockers).toHaveLength(1);
+    expect(blockers[0]).toMatchObject({ kind: "condition", value: "quota-exhausted" });
+    expect(String(blockers[0]?.detail)).toContain("zai-coding-plan");
+    expect(eligibility.find((entry) => entry.profile === "paid")?.verdict).toBe("eligible");
+
+    const envRecord = envelope.envRecord as { readonly entries: readonly Record<string, unknown>[] };
+    const values = envRecord.entries.map((entry) => entry.value);
+    expect(values).toContain("deepseek/deepseek-flash");
+    expect(values.some((value) => String(value).includes("zai-coding-plan"))).toBe(false);
+    expect(contentReads.filter((path) => path.includes("config.local.yaml"))).toEqual([]);
+    expect(createHash("sha256").update(COMMITTED_CONFIG).digest("hex")).toBe(before);
+  });
+
+  test("TC-PROFILE-060 healthy facts select delivery and shadow paid", async () => {
+    const { run, setNow } = harness({ config: COMMITTED_CONFIG });
+    setNow(OUTSIDE_PEAKS);
+    const result = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(result.exitCode).toBe(0);
+    const envelope = data(result.stdout);
+    expect(envelope.outcome).toBe("selected");
+    expect(envelope.profile).toBe("delivery");
+    const eligibility = envelope.eligibility as readonly Record<string, unknown>[];
+    expect(eligibility.find((entry) => entry.profile === "delivery")).toMatchObject({
+      verdict: "eligible",
+    });
+    expect(eligibility.find((entry) => entry.profile === "paid")).toMatchObject({
+      verdict: "shadowed",
+      blockers: [],
+    });
+    const envRecord = envelope.envRecord as { readonly entries: readonly Record<string, unknown>[] };
+    expect(envRecord.entries.map((entry) => entry.value)).toContain("zai-coding-plan/glm-5.3-flash");
+  });
+});
 
 describe("TC-PROFILE-043 `provider resolve --profile` production wiring", () => {
   test("a known profile scopes candidates to its providers", async () => {

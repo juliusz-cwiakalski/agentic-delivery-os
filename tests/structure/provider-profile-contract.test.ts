@@ -19,6 +19,7 @@ import {
   ENV_RECORD_NAME_PATTERN,
   PACING_CLASSES,
   PACING_GOAL_PRIORITIES,
+  PARK_CAUSES,
   PROFILE_BLOCKER_KINDS,
   PROFILE_CAPABILITIES,
   PROFILE_ELIGIBILITY_VERDICTS,
@@ -30,7 +31,10 @@ import {
   PROFILE_TARGET_REASONS,
   PROFILE_TARGET_RECORD_KEY,
   PROFILE_TARGET_SCHEMA_ID,
+  PROVIDER_CONDITION_KINDS,
   PROVIDER_RECORD_KINDS,
+  PROVIDER_SKIP_REASONS,
+  PROVIDER_WATCH_CONDITIONS,
   PROVIDER_WATCH_MAPPING_KINDS,
 } from "../../packages/core/src/contracts/index";
 
@@ -221,5 +225,26 @@ describe("TC-PROFILE-055 contract modules are data-only", () => {
         ts.isStringLiteral(statement.moduleSpecifier) ? statement.moduleSpecifier.text : "",
       );
     for (const specifier of specifiers) expect(specifier).toMatch(/^\.\/[a-z-]+\.js$/);
+  });
+});
+
+describe("GH-377 TC-PROFILE-065 the closed vocabularies are unchanged", () => {
+  test("watch-stale stays watch-only and never joins a cause, condition kind, skip reason, or record kind", () => {
+    expect(PROVIDER_WATCH_CONDITIONS).toContain("watch-stale");
+    for (const set of [
+      PARK_CAUSES,
+      PROVIDER_CONDITION_KINDS,
+      PROVIDER_SKIP_REASONS,
+      ANNOUNCEMENT_CODES,
+      PROVIDER_RECORD_KINDS,
+      PROFILE_EVENT_CODES,
+    ]) {
+      expect(set).not.toContain("watch-stale");
+    }
+    expect([...PROVIDER_RECORD_KINDS]).toEqual(["provider.park", "provider.announcement"]);
+    expect(PROVIDER_CONDITION_KINDS).toHaveLength(6);
+    expect(PARK_CAUSES).toHaveLength(8);
+    expect(PROVIDER_SKIP_REASONS).toHaveLength(9);
+    expect(PROFILE_EVENT_CODES).toHaveLength(5);
   });
 });
