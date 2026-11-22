@@ -1,0 +1,52 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-381
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Hermetic two-ref fixtures and the delivered-behavior single-ref golden
+    kind: delivery
+    summary: build the committed hermetic fixture family in the telemetry fixture helpers — the interleaved two-ref ledger in both leading directions with three families per ref plus the absent-ref arm (FX-1), the foreign-step-record-first regression shape of the observed record-3786 incident (FX-2), bare step and baseline prefixes committed with valid framing and checksums through the raw append within a write fence (FX-3), requested-ref kind-mismatch and malformed-payload arms (FX-4), the single-ref golden source with every delivered tear case representable (FX-5), the ≥4,800-record observed-scale ledger with two refs mixed throughout (FX-6) and the two-ref provider fixture with full families per ref (FX-7) — and capture the FX-5 golden of delivered single-ref results (record collections with ordering, verified-empty flag, evidence pair and every delivered tear identity and location) through the explicit capture entry while the projection branches still hold delivered behavior, so single-ref golden equality later anchors a captured artifact rather than a claim (test-plan §8.2); all healthy records are seeded through the delivered append path, timestamps stay injected literals and every fixture is committed state, never the live incident ledger.
+    # TC ownership: no TC lands in this phase; the fixture family FX-1..FX-7 and the captured FX-5 golden are its artifacts, and TC-TELEMETRY-046's comparison suite arrives with phase 2 against this captured golden.
+    # Ordering constraint (binding, test-plan §8.2): the FX-5 golden capture MUST run against delivered behavior BEFORE phase 2 edits the step/baseline family branches in packages/core/src/state/telemetry.ts.
+    # Verify: bun tests/fixtures/telemetry/foreign-ref-skip-golden-run.ts (capture entry, pre-fix); bun test tests/behaviour/telemetry-storage-damage.test.ts (delivered tear conventions unchanged).
+    scope:
+      files:
+        - tests/fixtures/telemetry/index.ts
+        - tests/fixtures/telemetry/foreign-ref-skip-golden.ts
+        - tests/fixtures/telemetry/foreign-ref-skip-golden-run.ts
+  - id: 2
+    title: Foreign-ref skip in the step and baseline family branches, regression suite green
+    kind: delivery
+    summary: implement the normative classification table (spec §5.1 F-2, Appendix C) inside the step-family and baseline-family branches of the per-ref telemetry families read — a bare family prefix (empty ref remainder) tears `state.store.torn` at its own record position, the requested ref's key keeps the delivered kind-mismatch tear and unchanged payload validation, and a well-formed key under the prefix whose non-empty remainder names another ref is skipped in ledger order with no kind inspection, no payload inspection and no evidence contribution, mirroring the delivered per-ref economics read — while the capture-outcome branch, the session-record branch and the whole capture path stay exactly as delivered (spec DEC-3) and the single verified pass over store.readRecords() is preserved with zero new reads; the new defect-named behaviour suite proves the whole matrix green, including the foreign-first regression with the spend fold returning a scoped report over the same ledger and golden equality against the phase-1 captured golden, which is deliberately outside this phase's scope so single-ref drift cannot hide behind a golden rewrite.
+    # TC ownership: TC-TELEMETRY-040, TC-TELEMETRY-041, TC-TELEMETRY-042, TC-TELEMETRY-043, TC-TELEMETRY-044, TC-TELEMETRY-045, TC-TELEMETRY-046, TC-TELEMETRY-047
+    # Boundaries: no ledger mutation on any path; no new vocabulary (NG-2); packages/core/src/state/spend-reads.ts is intentionally NOT in scope — the consumer composition changes nothing and starts succeeding untouched (spec NG-4, A-4).
+    # Verify: bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts; bun test tests/behaviour/telemetry-storage-damage.test.ts (no delivered-tear drift). Gate evidence uses TMPDIR=$PWD/tmp/tmpdir; pnpm check is the aggregate gate and belongs to the quality_gates phase, not a plan phase.
+    scope:
+      files:
+        - packages/core/src/state/telemetry.ts
+        - tests/behaviour/telemetry-foreign-ref-skip.test.ts
+        - tests/fixtures/telemetry/index.ts
+  - id: 3
+    title: Multi-ref consumer proofs and the lockstep patch changeset
+    kind: delivery
+    summary: prove the consumers inherit the corrected projection with no edit of their own — provider resolution proceeds to a provider decision on the two-ref fixture with the measured budget equal to exactly the requested ref's own scoped totals and no telemetry tear on any path (TC-REF-006), and the metrics report reads the two-ref ledger with exactly the requested ref's dispatch, unchanged shape and tolerances (TC-METRICS-113, with the test plan's documented fallback of moving identical assertions into the new suite over FX-1 if the metrics harness resists hosting a second ref, AC coverage unchanged) — and add the lockstep patch changeset for @delivery-os/core per spec A-5/§18; no consumer implementation file is edited anywhere in this change.
+    # TC ownership: TC-REF-006, TC-METRICS-113
+    # Verify: bun test tests/behaviour/provider-budget-ref.test.ts; bun test tests/behaviour/metrics-dispatch.test.ts; bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts
+    scope:
+      files:
+        - tests/behaviour/provider-budget-ref.test.ts
+        - tests/behaviour/metrics-dispatch.test.ts
+        - tests/behaviour/telemetry-foreign-ref-skip.test.ts
+        - .changeset/gh-381-telemetry-foreign-ref-skip-patch.md
+  - id: 4
+    title: Documentation reconciliation (phase-7 scope declaration)
+    kind: planning
+    summary: declare the phase-7 documentation reconciliation scope the spec names (§22) — the telemetry reading bases (§5/§5.1) must state the per-ref projection rule (foreign family keys are skipped and never classified as damage; `state.store.torn` is reserved for malformed family keys and requested-ref damage) and gain the new suite's row in its suite map, the spend and metrics read-side statements take the same per-ref sentence, and the state-layer torn taxonomy is verified unchanged with no contradiction — this phase performs no delivery work and every declared file is reconciled by the doc-syncer, since NG-8 keeps documentation edits out of the delivery phases.
+    # Declaration only: owned by the doc-syncer in phase 7; delivery does not author these files.
+    scope:
+      files:
+        - doc/spec/features/feature-telemetry-v2.md
+        - doc/spec/features/feature-spend.md
+        - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-state-layer.md
