@@ -19,6 +19,7 @@ import type {
   QuotaTransport,
   StateStorePort,
 } from "@delivery-os/core/contracts";
+import { PROVIDER_PARK_RECORD_KEY } from "@delivery-os/core/contracts";
 import { createConfigProgram } from "../../packages/cli/src/edge";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import { createParkRecord, persistProviderResolution } from "../../packages/core/src/provider/parks";
@@ -423,5 +424,145 @@ describe("TC-PROFILE-045/046 `provider watch status --provider` production wirin
     const result = await run(["watch", "status", "--provider", "ghost", "--json"]);
     expect(result.exitCode).toBe(1);
     expect(error(result.stdout).code).toBe("input.value.rejected");
+  });
+});
+
+const SEAT_REFUSAL_CONFIG = `provider:
+  defaultChain: default
+  entries:
+    a:
+      class: subscription
+    b:
+      class: subscription
+    parked:
+      class: pay-per-token
+  chains:
+    default:
+      entries: [a]
+      allowPaidFallback: false
+  profiles:
+    tiers:
+      t: {}
+    profiles:
+      primary:
+        tier: t
+        providers: [a]
+        seats:
+          pm:
+            model: parked/parked-model
+            pacingClass: judgment
+            capability: text-only
+      narrow:
+        tier: t
+        providers: [b]
+        seats:
+          coder:
+            model: b/coder-model
+            pacingClass: execution
+            capability: text-only
+    preferenceChain:
+      base: primary
+      fallbacks: [narrow]
+`;
+
+describe("GH-377 TC-PROFILE-071 the seat-level refusal projects the delivered data envelope", () => {
+  test("exit 2 with data present, the unchanged list, no profile event, and no writes", async () => {
+    const seedParked = (store: StateStorePort): void => {
+      const park = createParkRecord({
+        subjectKind: "provider",
+        subjectName: "parked",
+        cause: "quota-exhausted",
+        conditions: ["quota-exhausted"],
+        createdAtMs: OUTSIDE_PEAKS - 60_000,
+        expiresAtMs: OUTSIDE_PEAKS + 3_600_000,
+        evidence: {},
+      });
+      const persisted = persistProviderResolution({
+        store,
+        fenceToken: "seed-seat-refusal",
+        nowMs: OUTSIDE_PEAKS - 60_000,
+        parks: [park],
+        announcements: [],
+      });
+      if (!persisted.ok) throw new Error("park seed failed");
+    };
+    const { run, store, setNow } = harness({ config: SEAT_REFUSAL_CONFIG, seed: seedParked });
+    setNow(OUTSIDE_PEAKS);
+    const before = store.read({ requiredKeys: [] });
+    if (!before.ok) throw new Error("store read failed");
+    const beforeKeys = Object.keys(before.value.values).sort();
+    const result = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(result.exitCode).toBe(2);
+    const envelope = JSON.parse(result.stdout) as {
+      readonly data?: Record<string, unknown>;
+      readonly error?: Record<string, unknown>;
+    };
+    expect(envelope.error).toBeUndefined();
+    const data = envelope.data;
+    if (data === undefined) throw new Error("data absent");
+    expect(data.outcome).toBe("refused");
+    expect(data.code).toBe("provider.profile.unavailable");
+    expect(String(data.summary)).toContain("pm");
+    expect(String(data.summary)).toContain("parked");
+    expect(data.eligibility).toEqual([
+      { profile: "primary", verdict: "eligible", blockers: [] },
+      { profile: "narrow", verdict: "shadowed", blockers: [] },
+    ]);
+    expect(data.events).toEqual([]);
+    expect(data.envRecord).toBeUndefined();
+    const after = store.read({ requiredKeys: [] });
+    if (!after.ok) throw new Error("store read failed");
+    expect(Object.keys(after.value.values).sort()).toEqual(beforeKeys);
+  });
+});
+
+describe("GH-377 TC-PROFILE-075 advancing past expiry restores the preferred profile", () => {
+  test("a recorded quota park switches to paid and reverts once after its expiry", async () => {
+    const expiry = OUTSIDE_PEAKS + 3_600_000;
+    const seedParked = (store: StateStorePort): void => {
+      const park = createParkRecord({
+        subjectKind: "provider",
+        subjectName: "zai-coding-plan",
+        cause: "quota-exhausted",
+        conditions: ["quota-exhausted"],
+        createdAtMs: OUTSIDE_PEAKS - 60_000,
+        expiresAtMs: expiry,
+        evidence: {},
+      });
+      const persisted = persistProviderResolution({
+        store,
+        fenceToken: "seed-expiry",
+        nowMs: OUTSIDE_PEAKS - 60_000,
+        parks: [park],
+        announcements: [],
+      });
+      if (!persisted.ok) throw new Error("park seed failed");
+    };
+    const { run, store, setNow } = harness({ config: COMMITTED_CONFIG, seed: seedParked });
+    setNow(expiry - 1_000);
+    const parked = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(parked.exitCode).toBe(0);
+    const parkedEnvelope = data(parked.stdout);
+    expect(parkedEnvelope.profile).toBe("paid");
+
+    const before = store.read({ requiredKeys: [PROVIDER_PARK_RECORD_KEY] });
+    if (!before.ok) throw new Error("park read failed");
+    setNow(expiry + 1_000);
+    const recovered = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(recovered.exitCode).toBe(0);
+    const recoveredEnvelope = data(recovered.stdout);
+    expect(recoveredEnvelope.profile).toBe("delivery");
+    expect(recoveredEnvelope.outcome).toBe("reverted");
+    const events = recoveredEnvelope.events as readonly Record<string, unknown>[];
+    expect(events.filter((event) => event.code === "profile.reverted")).toHaveLength(1);
+    const after = store.read({ requiredKeys: [PROVIDER_PARK_RECORD_KEY] });
+    expect(after.ok && JSON.stringify(after.value.values)).toBe(
+      before.ok ? JSON.stringify(before.value.values) : "",
+    );
+
+    const stable = await run(["profile", "resolve", "--agent", "pm", "--for-spawn", "--json"]);
+    expect(stable.exitCode).toBe(0);
+    const stableEvents = data(stable.stdout).events as readonly Record<string, unknown>[];
+    expect(stableEvents.filter((event) => event.code === "profile.reverted")).toHaveLength(0);
   });
 });

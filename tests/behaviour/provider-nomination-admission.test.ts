@@ -43,10 +43,14 @@ import {
 import {
   available,
   exhausted,
+  noSupplierChain,
   peak,
   profile,
   seat,
+  substitutionChain,
 } from "../fixtures/provider/profile/selection/fixtures";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
 
 const REPOSITORY = "github.com/owner/repo";
 const NOW = "2026-11-08T10:00:00.000Z";
@@ -694,5 +698,75 @@ describe("TC-PAUSE-006 no surface defaults, guesses, or borrows a nomination", (
     } finally {
       state.dispose();
     }
+  });
+});
+
+describe("GH-377 TC-PROFILE-074 nomination agrees with the CLI verdict over a seat-level fixture", () => {
+  const parkedProbe = (kind: "park" | "none") => {
+    const entries = {
+      a: { name: "a", class: "subscription" as const, enabled: true },
+      b: { name: "b", class: "subscription" as const, enabled: true },
+      parked: { name: "parked", class: "pay-per-token" as const, enabled: true },
+    };
+    if (kind === "none") {
+      return createResolvedProviderProbe(entries, Date.parse(NOW), undefined, {
+        parks: { ok: true, value: [] },
+      });
+    }
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "parked",
+      cause: "quota-exhausted",
+      conditions: ["quota-exhausted"],
+      createdAtMs: Date.parse(NOW) - 1_000,
+      expiresAtMs: Date.parse(NOW) + 3_600_000,
+      evidence: {},
+    });
+    return createResolvedProviderProbe(entries, Date.parse(NOW), undefined, {
+      parks: { ok: true, value: [parkView(park, Date.parse(NOW))] },
+    });
+  };
+
+  test("selection parity holds for healthy and parked facts", () => {
+    for (const kind of ["none", "park"] as const) {
+      const profiles = substitutionChain();
+      const probe = parkedProbe(kind);
+      const cli = selectProfile({ profiles, probe, nowMs: Date.parse(NOW), agent: "pm" });
+      const nomination = nominateProviderProfile({
+        profiles,
+        probe,
+        nowMs: Date.parse(NOW),
+        agent: "pm",
+      });
+      if (!cli.ok) throw new Error("CLI selection failed");
+      expect(nomination.ok, kind).toBe(true);
+      if (!nomination.ok) return;
+      expect(nomination.profile, kind).toBe(cli.decision.profile);
+    }
+  });
+
+  test("refusal parity holds over the seat-level fixture", () => {
+    const profiles = noSupplierChain();
+    const probe = parkedProbe("park");
+    const cli = selectProfile({ profiles, probe, nowMs: Date.parse(NOW), agent: "pm" });
+    const nomination = nominateProviderProfile({
+      profiles,
+      probe,
+      nowMs: Date.parse(NOW),
+      agent: "pm",
+    });
+    expect(cli.ok).toBe(false);
+    if (cli.ok) return;
+    expect(nomination.ok).toBe(false);
+    if (nomination.ok) return;
+    expect(nomination.refusal.code).toBe("provider.profile.unavailable");
+    expect(nomination.refusal.summary).toContain("pm");
+    expect(nomination.refusal.summary).toContain("parked");
+    expect(nomination.refusal.eligibility).toEqual(
+      cli.eligibility.map(
+        (entry) =>
+          `${entry.profile}:${entry.verdict}${entry.blockers.length > 0 ? `:${entry.blockers.map((blocker) => blocker.kind).join("+")}` : ""}`,
+      ),
+    );
   });
 });

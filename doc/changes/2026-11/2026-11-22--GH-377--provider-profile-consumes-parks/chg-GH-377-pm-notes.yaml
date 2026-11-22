@@ -240,3 +240,19 @@ notes:
       asserts the selection facts and accepts the delivered lifecycle outcome."
     type: info
     date: "2026-11-22"
+  - text: "Plan phase 2 complete (commit a89042d3ca03a5f5d23647237c1accde7944bb37):
+      seat-level re-check, substitution, and the named refusal delivered in
+      `packages/core/src/provider/profile.ts`. The selection pass is unchanged
+      (later profiles stay `shadowed` and are not probed); every effective seat
+      model is re-checked against recorded unavailability only; later profiles
+      are inspected as substitution candidates through the same memoized probe
+      in declared order; a candidate is valid only when eligible, declaring the
+      seat, and declaring it on a recorded-available capability-adequate model;
+      no valid supplier refuses `provider.profile.unavailable` with the
+      eligibility list carried unchanged and no profile event. Targeted suites:
+      `bun test tests/behaviour/provider-profile-selection.test.ts
+      tests/checks/provider-profile-evidence-bounds.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 49 pass, 0 fail.
+      `pnpm --filter @delivery-os/core typecheck` green."
+    type: info
+    date: "2026-11-22"

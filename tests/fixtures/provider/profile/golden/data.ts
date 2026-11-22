@@ -8,74 +8,90 @@ import type {
   ProfileSelectionDecision,
   ProfileSelectionResult,
 } from "../../../../../packages/core/src/contracts/index";
+import { createResolvedProviderProbe } from "../../../../../packages/cli/src/edge";
+import {
+  createProfileTargetRecord,
+  evaluateProfileLifecycle,
+  selectProfile,
+} from "../../../../../packages/core/src/provider/index";
+import { createParkRecord, parkView } from "../../../../../packages/core/src/provider/parks";
+import { mixedChain } from "../selection/fixtures";
 
 const NOW = 1_700_000_000_000;
 
-export const eligibility: readonly ProfileEligibility[] = [
-  {
-    profile: "mixed",
-    verdict: "ineligible",
-    blockers: [
-      {
-        kind: "condition",
-        value: "quota-exhausted",
-        detail: "coding-plan: weekly window at threshold",
-      },
-    ],
-  },
-  { profile: "deepseek", verdict: "eligible", blockers: [] },
-];
-
-export const selectedEvent: ProfileEvent = {
-  code: "profile.selected",
-  severity: "info",
-  identity: "profile.selected:deepseek:powerful:rung-conserve:selection:",
-  createdAt: "2023-11-14T22:13:20.000Z",
-  createdAtMs: NOW,
-  message: "selected profile deepseek",
-  evidence: { profileName: "deepseek", tier: "powerful", rung: "conserve", reason: "selection" },
+/**
+ * The committed recorded-park fixture: coding-plan carries an active
+ * `quota-exhausted` park, deepseek is clear. The golden decision is the pure
+ * selection over that fixture, projected through the delivered lifecycle so the
+ * pinned switched envelope is reachable from recorded facts rather than a
+ * canned literal (GH-377 TC-PROFILE-089/090).
+ */
+const recordedParkSelection = () => {
+  const base = mixedChain();
+  const deepseek = base.profiles.deepseek;
+  if (deepseek === undefined) throw new Error("golden deepseek profile missing");
+  const profiles = {
+    ...base,
+    profiles: {
+      ...base.profiles,
+      deepseek: { ...deepseek, agentOverrides: { reviewer: "coder" } },
+    },
+  };
+  const park = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  const selection = selectProfile(
+    {
+      profiles,
+      probe: createResolvedProviderProbe(
+        {
+          "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+          deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+        },
+        NOW,
+        undefined,
+        { parks: { ok: true, value: [parkView(park, NOW)] } },
+      ),
+      nowMs: NOW,
+    },
+    { rung: "conserve" },
+  );
+  if (!selection.ok) throw new Error("recorded-park golden selection failed");
+  const lifecycle = evaluateProfileLifecycle({
+    profiles,
+    selection,
+    persisted: createProfileTargetRecord({
+      targetProfile: "mixed",
+      reason: "selection",
+      nowMs: NOW,
+    }),
+    nowMs: NOW,
+    providerName: "coding-plan",
+  });
+  return { selection, lifecycle };
 };
 
-export const switchedEvent: ProfileEvent = {
-  ...selectedEvent,
-  code: "profile.switched",
-  identity: "profile.switched:deepseek:mixed:deepseek::switch:quota-exhausted:",
-  message: "profile target switched from mixed to deepseek",
-  evidence: {
-    profileName: "deepseek",
-    previousProfile: "mixed",
-    newProfile: "deepseek",
-    reason: "switch",
-    revertCondition: "quota-exhausted",
-  },
-};
+const recordedPark = recordedParkSelection();
+const selectedSelection = recordedPark.selection;
+if (!selectedSelection.ok) throw new Error("recorded-park golden selection failed");
 
-export const profileDecision = (): ProfileSelectionDecision => ({
-  profile: "deepseek",
-  tier: "powerful",
-  rung: "conserve",
-  agentOverrides: { reviewer: "coder" },
-  eligibility,
-  events: [switchedEvent],
-  seatModels: { pm: "deepseek-reasoner", coder: "deepseek-chat" },
-});
+export const eligibility: readonly ProfileEligibility[] = selectedSelection.decision.eligibility;
 
-export const selectedResult = (): ProfileSelectionResult => ({
-  ok: true,
-  outcome: "switched",
-  decision: profileDecision(),
-  target: {
-    schemaVersion: "delivery.provider.profile-target.v1",
-    targetProfile: "deepseek",
-    reason: "switch",
-    previousProfile: "mixed",
-    revertCondition: "quota-exhausted",
-    createdAt: "2023-11-14T22:13:20.000Z",
-    createdAtMs: NOW,
-    evidence: { profileName: "deepseek", reason: "switch" },
-  },
-  events: [switchedEvent],
-});
+export const selectedEvent: ProfileEvent = selectedSelection.events[0] as ProfileEvent;
+
+export const switchedEvent: ProfileEvent =
+  recordedPark.lifecycle.events.find((event) => event.code === "profile.switched") ??
+  selectedEvent;
+
+export const profileDecision = (): ProfileSelectionDecision => selectedSelection.decision;
+
+export const selectedResult = (): ProfileSelectionResult => recordedPark.lifecycle.selection;
 
 export const refusedResult = (): ProfileSelectionResult => ({
   ok: false,
