@@ -1,14 +1,14 @@
 ---
 id: chg-GH-377-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-22
 last_updated: 2026-11-22
 owners: ["Juliusz Ćwiąkalski"]
 service: "provider profile selection and spawn admission (CLI resolver composition)"
 labels: [provider, profiles, parks, eligibility, spawn, defect, m4]
 version_impact: none
-summary: "Pin the GH-377 correction as comparisons a test runs: recorded provider parks and recorded watch freshness become profile-eligibility inputs at the resolver/composition seam, a seat whose effective model pins a parked provider is substituted from the next eligible profile or refused by name, the `--for-spawn` env record and the spawn binding agree per seat, recovery is a pure read-time function of the clock, the eight-cause taxonomy is pinned with an explicit subject per cause, and `provider resolve` is proven untouched — with zero vocabulary growth, zero policy edit and zero live fetch."
+summary: "Pin the GH-377 correction as comparisons a test runs: recorded provider parks and recorded watch freshness become profile-eligibility inputs at the resolver/composition seam; staleness is evaluated per declared watch target under spec §8.6; a seat whose effective model pins a recorded-unavailable provider is substituted from the next eligible, capability-adequate profile or refused `provider.profile.unavailable` naming seat and provider with the eligibility list unchanged; a seat on an undeclared, disabled or peak-parked provider keeps delivered behaviour (AC-F3-3); the `--for-spawn` env record and the spawn binding agree per seat; recovery is a pure read-time function of the clock; the eight-cause taxonomy is pinned with an explicit subject per cause; `provider resolve` is proven untouched — with zero vocabulary growth, zero policy edit and zero live fetch."
 links:
   change_spec: ./chg-GH-377-spec.md
   implementation_plan: ./chg-GH-377-plan.yaml   # phase-4 artifact; not present when this plan was written
@@ -23,13 +23,16 @@ The defect is a disagreement, not a missing command: `provider parks list` repor
 
 The highest-risk failure modes are silent, so each gets an adversarial arm rather than a prose claim: a park-fold failure read as *clear* (`TC-PROFILE-088`), an over-broad attribution that blocks a healthy provider through a chain-level cause (`TC-PROFILE-081`), a seat routed past the profile's provider list through a rung or an override (`TC-PROFILE-066`, `TC-PROFILE-067`), an env record that names a parked provider (`TC-PROFILE-072`), a substitution that silently buys availability by dropping a required capability (`TC-PROFILE-069`), and a taxonomy that "pins" eight causes without classifying any of them (`TC-PROFILE-080`, `TC-PROFILE-083`).
 
-This is a verification map, not an execution claim: nothing here was run against a new implementation at authoring time, and phase ownership belongs to `chg-GH-377-plan.yaml`, authored in phase 4 after this plan. All 11 acceptance criteria are covered by at least one named case; there are no TODO rows, no orphan cases and no open questions. The plan is deliberately proportionate: it extends the delivered provider-profile, parks, chain-resolution, structure, checks and golden suites, adds one data-only classification fixture, and invents no framework and no new suite family.
+This is a verification map, not an execution claim: nothing here was run against a new implementation at authoring time, and phase ownership belongs to `chg-GH-377-plan.yaml`, authored in phase 4 after this plan. All 12 acceptance criteria — including the AC-F3-3 boundary that proves the seat gate was not widened — are covered by at least one named case; there are no TODO rows, no orphan cases and no open questions. The plan is deliberately proportionate: it extends the delivered provider-profile, parks, chain-resolution, structure, checks and golden suites, adds one data-only classification fixture, and invents no framework and no new suite family.
+
+This revision answers DoR iteration 1 on the test plan: the capability-inadequate-substitute arm now yields the refused `provider.profile.unavailable` (not `capability-denied`), the refusal's evidence position is pinned (eligibility list unchanged, bounded `summary` naming seat and provider), the watch-observation seam is pinned exactly to spec §8.6 with its three excluded readings tested as failing arms, the seat gate is bounded to recorded unavailability and AC-F3-3 is added as its regression boundary, and the two fixture and label defects are corrected. Section 3.4 maps every Definition-of-Done item in spec §26 to the case or gate that observes it.
 
 ### 1.1 In Scope
 
 - Recorded provider-attributable parks as profile-eligibility inputs at read time, with `expiresAt > now` activity and the verified fold as the only park source (F-1; `AC-F1-1`, `AC-F1-2`, `AC-F1-3`; NFR-1, NFR-5, NFR-7; DM-1).
-- Recorded watch condition and freshness as an eligibility input, expressed only through the delivered `watch-stale` value, at the exact `ageSeconds >= maxAgeSeconds` predicate (F-2; `AC-F2-1`; NFR-3, NFR-5).
-- Seat-level re-check of the effective seat model's provider, substitution from the next eligible profile in `preferenceChain` order, the preserved capability gate, and the `provider.profile.unavailable` refusal naming seat and provider (F-3; `AC-F3-1`, `AC-F3-2`; DM-2, DM-3).
+- Recorded watch condition and freshness as an eligibility input, expressed only through the delivered `watch-stale` value, evaluated per declared `provider.profiles.watch.<name>` target at the exact `ageSeconds = floor((nowMs − observedAtMs)/1000) >= maxAgeSeconds` predicate, with a provider that declares no watch target never stale and the three excluded readings (one global instant, staleness without a declared target, all-providers-stale on a global old instant) tested as failing arms (F-2; `AC-F2-1`; NFR-3, NFR-5; §8.6, TDR-0075).
+- Seat-level re-check of the effective seat model's provider against **recorded unavailability only** — an active provider-attributable park or a stale observation — substitution from the next eligible, seat-declaring, capability-adequate profile in `preferenceChain` order, the preserved capability gate, and the `provider.profile.unavailable` refusal naming seat and provider in the bounded `summary` with the eligibility list carried unchanged (F-3; `AC-F3-1`, `AC-F3-2`; DM-2, DM-3).
+- The seat-gate boundary: an effective seat model on an undeclared, disabled, or peak-parked provider keeps exactly the delivered behaviour with zero parks and zero observations, proving the gate was not widened (F-3; `AC-F3-3`; NFR-7).
 - Truthful `--for-spawn`: per-seat agreement between the `data-v1` env record and the per-spawn binding, no emitted value on a parked or stale provider, all-or-nothing emission, and dispatch-nomination parity over the same probe (F-4; `AC-F4-1`; DM-3, DM-5; NFR-1).
 - Read-time recovery on expiry or condition clear, the exact-expiry boundary, the never-parked equivalence, and the zero-write property of the read (F-5; `AC-F5-1`; NFR-2, NFR-5).
 - The eight-cause taxonomy fixture with an explicit subject and effect per cause, including the `window` versus `ticket` `budget-exhausted` distinction (F-6; `AC-F6-1`; Appendix A).
@@ -40,7 +43,7 @@ This is a verification map, not an execution claim: nothing here was run against
 ### 1.2 Out of Scope & Known Gaps
 
 - [OUT] Any live call: a z.ai or DeepSeek request, a balance read, a watch transport invocation, a credential read, a real sleep. No case may pass by reaching one; the spies fail instead (spec §7.2, NG-1).
-- [OUT] Editing `.jaiship/config.yaml`, the operator-local slot, the seat matrix or any decision record. Acceptance fixtures *read* the committed document through the injected file system and assert its hash unchanged; they never write it (NG-3, NG-8).
+- [OUT] Editing `.jaiship/config.yaml`, the operator-local slot, the seat matrix or any decision record. Acceptance fixtures *read* the committed document (or an injected fixture policy, `GAP-T4`) through the injected file system and assert its hash unchanged; they never write it (NG-3, NG-8).
 - [OUT] A new park cause, condition kind, watch condition, skip reason, announcement code, error identity, event code, state record kind, schema identifier or envelope key. `TC-PROFILE-065` asserts the closure rather than leaving it to review (NG-2).
 - [OUT] Budget evaluation or a work-item-ref read on the profile path; the `ticket`-scope crossing is exercised only as "no park was persisted, therefore nothing is readable" (NG-6).
 - [OUT] Park creation, clearing, expiry writes, a daemon, a timer or a cache: `TC-PROFILE-079` asserts the write set, and no case starts a background process (NG-4).
@@ -48,13 +51,16 @@ This is a verification map, not an execution claim: nothing here was run against
 - [OUT] Performance re-baselining. `AC-NFR1-1` carries the 100-provider cost arm, but this plan asserts read counts (`TC-PROFILE-087`) and leaves the delivered wall-clock bound to its existing case `TC-PROFILE-015` as an unedited control (NFR-4).
 - [GAP-T1 — phase ownership] Phase boundaries, task ownership and per-phase test obligations live in `chg-GH-377-plan.yaml`; this plan declares what must be proven, not who runs it.
 - [GAP-T2 — a diff-shaped clause is converted to a tree invariant] `AC-F7-1` says the persisted park generation is "the same as before this change". A permanent suite may not assert a diff against a moving base (`.ai/rules/testing-strategy.md`), so `TC-PROFILE-084` asserts the invariant instead: the persisted record's identity and generation are reproduced deterministically from the same inputs, with no new record and no new kind.
-- [GAP-T3 — the operator-local arm is proven by a read count, not by absence alone] A missing local file could be silent. `TC-PROFILE-059` asserts both the absence and that the injected file system was asked for the local path zero times, so "not required" is not confused with "not consulted".
+- [GAP-T3 — the operator-local arm is proven by content reads, not by absence alone] A missing local file could be silent. `TC-PROFILE-059` asserts both the absence and **zero `readText` (content) reads of any `config.local.yaml` path**, and that no local layer contributed a source or value. The delivered acquisition's existence probe (`fs.exists`) is acquisition behaviour, not "consulting" the override, so it is deliberately not counted (`GAP-T3`, finding 9).
+- [GAP-T4 — the seat-level acceptance uses an injected fixture policy document] The committed `.jaiship/config.yaml` cannot reach the seat-level refusal: all `delivery` seats name its two declared providers, so parking either makes the whole profile ineligible at provider level. `TC-PROFILE-071` and `TC-PROFILE-074` therefore drive an injected fixture policy document whose selected profile is `eligible` on its `providers` while a seat model names a parked provider outside that list. The committed document is retained only for AC-F1-1/AC-F1-2 (`TC-PROFILE-059`, `TC-PROFILE-060`, `TC-PROFILE-089`, `TC-PROFILE-090`) (finding 6, finding 11).
+- [GAP-T5 — new identifiers for plan ownership] This revision adds `TC-PROFILE-094` (AC-F3-3 seat-gate boundary) and `TC-PROFILE-095`..`TC-PROFILE-097` (the §8.6 watch-observation seam and its excluded readings). Proposed phase ownership for `chg-GH-377-plan.yaml`: `TC-PROFILE-094` → phase 2 (seat-level re-check); `TC-PROFILE-095`, `TC-PROFILE-096`, `TC-PROFILE-097` → phase 1 (park-aware probe and freshness). The plan is revised after this document; this note exists so every identifier is owned exactly once.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-377-spec.md`](./chg-GH-377-spec.md) **v1.0** | Binding source: **F-1..F-7**, **NFR-1..NFR-7**, **DM-1..DM-5**, **EVT-1..EVT-3**, **11 ACs** (`AC-F1-1`..`AC-F7-1`, `AC-NFR1-1`), **RSK-1..RSK-10**, **DEC-1..DEC-7**, **A-1..A-9**, §6 flows 1–6, §7.3 deferred items, §8.5 backward compatibility, **Appendix A** (cause taxonomy), **Appendix D** (proof matrix), **Appendix E** (vocabulary closure). |
+| [`chg-GH-377-spec.md`](./chg-GH-377-spec.md) **v1.1** | Binding source: **F-1..F-7**, **NFR-1..NFR-7**, **DM-1..DM-7**, **EVT-1..EVT-3**, **12 ACs** (`AC-F1-1`..`AC-F7-1`, `AC-F3-3`, `AC-NFR1-1`), **RSK-1..RSK-10**, **DEC-1..DEC-8**, **A-1..A-11**, §6 flows 1–6, §7.3 deferred items, §8.5 backward compatibility, **§8.6** (the park fold and watch-observation seam), **Appendix A** (cause taxonomy), **Appendix D** (proof matrix), **Appendix E** (vocabulary closure), **§26 DOD-1..DOD-8**. |
+| [`doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md`](../../../../doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md) | Authority for the narrowed boundary: TDR-0062 D2 is narrowed for profile eligibility only; a stale **declared** watch target is a named blocker, never a clear reading, at zero acquisition cost. Fixes the per-target predicate, the undeclared-target case, the live-read age-0 case, and the "no production composition supplies a stale observation today" honesty limit that `TC-PROFILE-062`..`TC-PROFILE-065` and `TC-PROFILE-095`..`TC-PROFILE-097` pin. |
 | [`chg-GH-377-pm-notes.yaml`](./chg-GH-377-pm-notes.yaml) | Context only: the binding implementation pointer (`createResolvedProviderProbe`), the no-live-fetch decision, the chain-level attribution decision, and the two resolved questions OQ-1/OQ-2. The specification is the source of truth. |
 | `./chg-GH-377-plan.yaml` | Phase ownership and per-phase test obligations; owned there and not asserted here (`GAP-T1`). |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; layers `tests/{structure,behaviour,checks,golden,boundaries}`; permanent suites assert the current tree or HEAD and never a diff against a moving base; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate; a rule without a failing fixture is a gap. |
@@ -63,7 +69,7 @@ This is a verification map, not an execution claim: nothing here was run against
 | [`chg-GH-350-test-plan.md`](../2026-11-19--GH-350--provider-policy/chg-GH-350-test-plan.md) | Format precedent: verification-map framing, exact-set-equality discipline, declared assertion bases, per-case negative controls, and the `TMPDIR=$PWD/tmp/tmpdir` gate-environment note. It also owns the delivered cases this plan treats as unchanged controls (`TC-WFRESH-002`, `TC-PROFILE-012..015`, `TC-PROV-001`, `TC-PROV-041`). |
 | [`chg-GH-374--provider-policy-adoption`](../2026-11-20--GH-374--provider-policy-adoption/) | Delivered policy-adoption proof: the committed `delivery` → `paid` chain, the 24-seat matrix and the pinned policy values the acceptance cases reproduce (`TC-POL-CFG-001`, `TC-POL-DRIFT-004`). |
 | **Delivered suites this change extends** | `tests/behaviour/provider-profile-probes.test.ts`, `tests/behaviour/provider-profile-selection.test.ts`, `tests/behaviour/provider-profile-edge-wiring.test.ts`, `tests/behaviour/provider-profile-park-switch-revert.test.ts`, `tests/behaviour/provider-profile-spawn.test.ts`, `tests/behaviour/provider-parks.test.ts`, `tests/behaviour/provider-chain-resolution.test.ts`, `tests/behaviour/provider-nomination-admission.test.ts`, `tests/structure/provider-contract.test.ts`, `tests/structure/provider-profile-contract.test.ts`, `tests/checks/provider-profile-hermetic.test.ts`, `tests/checks/provider-profile-evidence-bounds.test.ts`, `tests/golden/provider-profile-resolve.test.ts`. |
-| **Delivered suites consumed as unedited controls** | `tests/behaviour/provider-profile-spawn.test.ts` `TC-PROFILE-033/034` (spawn-before/refusal and `data-v1` grammar), `tests/behaviour/provider-cli.test.ts` `TC-PROV-041` (resolve payload keys), `tests/behaviour/provider-chain-resolution.test.ts` `TC-PROV-007..010` (closed skip precedence), `tests/behaviour/provider-announcements.test.ts` `TC-PROV-034/035`, `tests/checks/provider-profile-hermetic.test.ts` `TC-PROFILE-054`, `tests/structure/provider-profile-contract.test.ts` `TC-PROFILE-039/055`. A case that relies on one of these labels it a control and does not rename it. |
+| **Delivered suites consumed as unedited controls** | `tests/behaviour/provider-profile-spawn.test.ts` `TC-PROFILE-033/034` (spawn-before/refusal and `data-v1` grammar), `tests/behaviour/provider-cli.test.ts` `TC-PROV-041` (resolve payload keys), `tests/behaviour/provider-chain-resolution.test.ts` `TC-PROV-007..010` (closed skip precedence), `tests/behaviour/provider-announcements.test.ts` `TC-PROV-034/035`, `tests/behaviour/provider-profile-selection.test.ts` `TC-PROFILE-010` (the selected profile's own capability-inadequate seat still yields the delivered `provider.profile.capability-denied`), `tests/behaviour/provider-nomination-admission.test.ts` `TC-PAUSE-002` (refusal identity and exit parity), `tests/checks/provider-profile-hermetic.test.ts` `TC-PROFILE-054`, `tests/structure/provider-profile-contract.test.ts` `TC-PROFILE-039/055`. A case that relies on one of these labels it a control and does not rename it. |
 | **Delivered seams consumed under test** | `createResolvedProviderProbe` and the `profile.resolve` handler (`packages/cli/src/edge.ts`), `createConfigProgram` / `runCli` (`packages/cli/src/edge.ts`, `packages/cli/src/index.ts`), `selectProfile` / `resolveProfileForSpawn` / `targetSeatName` (`packages/core/src/provider/profile.ts`), `evaluatePacing` / `activeRung` (`packages/core/src/provider/profile-pacing.ts`), `buildProfileEnvRecord` / `envRecordNameForSeat` (`packages/core/src/provider/profile-env-record.ts`), `foldParks` / `readProviderParkViews` / `createParkRecord` / `clearParkRecord` (`packages/core/src/provider/parks.ts`), `resolveProviderChain` (`packages/core/src/provider/chain.ts`), `buildHarnessSpawnEnvironment` (`packages/core/src/domain/harness-spawn-env.ts`), the `DispatchNominatePort` gate in `runDispatch` (`packages/core/src/app/dispatch.ts`), `PARK_CAUSES` / `PROVIDER_CONDITION_KINDS` / `PROVIDER_WATCH_CONDITIONS` / `PROVIDER_SKIP_REASONS` / `ANNOUNCEMENT_CODES` / `PROVIDER_RECORD_KINDS` (`packages/core/src/contracts/provider.ts`), `PROFILE_EVENT_CODES` / `PROFILE_BLOCKER_KINDS` / `ProfileProviderAvailability` (`packages/core/src/contracts/provider-profile.ts`), `ERROR_TABLE` (`packages/core/src/contracts/error-table.ts`). |
 | **Test harness and fixtures** | `tests/fixtures/state/harness.ts` (`makeIdentity`, `makeTempRoot`, `openStore`, `removeRoot`), `tests/fixtures/provider/profile/selection/fixtures.ts`, `tests/fixtures/provider/profile/probes/fixtures.ts`, `tests/fixtures/provider/profile/lifecycle/fixtures.ts`, `tests/fixtures/provider/profile/golden/{run.ts,data.ts,profile-resolve.json,profile-resolve.txt}`, `tests/fixtures/provider/profile/contract-inventory.json`, `tests/fixtures/provider/contract-inventory.json`, `tests/fixtures/dispatch/harness.ts`; new data-only `tests/fixtures/provider/profile/parks/cause-taxonomy.ts`. |
 | **Gate environment precedent** | `TMPDIR=$PWD/tmp/tmpdir` for every recorded gate command (GH-346/GH-350 precedent). |
@@ -72,9 +78,9 @@ This is a verification map, not an execution claim: nothing here was run against
 
 ## 3. Coverage Overview
 
-All 11 acceptance criteria map to at least one named case and no case is an orphan. The plan carries **35 cases** in one namespace, `TC-PROFILE-059`..`TC-PROFILE-093`, continuing the delivered profile family above its confirmed maximum of `TC-PROFILE-058` (`rg -o "TC-PROFILE-[0-9]+" tests | sort -u` at authoring time).
+All 12 acceptance criteria map to at least one named case and no case is an orphan. The plan carries **39 cases** in one namespace, `TC-PROFILE-059`..`TC-PROFILE-097`, continuing the delivered profile family above its confirmed maximum of `TC-PROFILE-058` (`rg -o "TC-PROFILE-[0-9]+" tests | sort -u` at authoring time). `TC-PROFILE-094`..`TC-PROFILE-097` are added by this revision.
 
-Coverage is deliberately uneven where the criterion spans independent observables: `AC-F1-1` by three (`TC-PROFILE-059`, `TC-PROFILE-089`, `TC-PROFILE-091`), `AC-F2-1` by five (`TC-PROFILE-062`..`TC-PROFILE-065`, `TC-PROFILE-092`), `AC-F3-1` by five (`TC-PROFILE-066`..`TC-PROFILE-069`, `TC-PROFILE-092`), `AC-F4-1` by four (`TC-PROFILE-072`..`TC-PROFILE-074`, `TC-PROFILE-059`), `AC-F5-1` by five (`TC-PROFILE-075`..`TC-PROFILE-079`), `AC-F6-1` by five (`TC-PROFILE-080`..`TC-PROFILE-083`, `TC-PROFILE-061`) and `AC-NFR1-1` by three (`TC-PROFILE-086`..`TC-PROFILE-088`); `AC-F1-3` and `AC-F7-1` by two each, and `AC-F3-2` by three.
+Coverage is deliberately uneven where the criterion spans independent observables: `AC-F1-1` by three (`TC-PROFILE-059`, `TC-PROFILE-089`, `TC-PROFILE-091`), `AC-F1-2` by two (`TC-PROFILE-060`, `TC-PROFILE-090`), `AC-F1-3` by one (`TC-PROFILE-061`), `AC-F2-1` by nine (`TC-PROFILE-062`..`TC-PROFILE-065`, `TC-PROFILE-092`, `TC-PROFILE-095`..`TC-PROFILE-097`), `AC-F3-1` by five (`TC-PROFILE-066`..`TC-PROFILE-069`, `TC-PROFILE-092`), `AC-F3-2` by four (`TC-PROFILE-069`..`TC-PROFILE-071`, `TC-PROFILE-093`), `AC-F3-3` by one (`TC-PROFILE-094`), `AC-F4-1` by four (`TC-PROFILE-072`..`TC-PROFILE-074`, `TC-PROFILE-059`), `AC-F5-1` by five (`TC-PROFILE-075`..`TC-PROFILE-079`), `AC-F6-1` by five (`TC-PROFILE-080`..`TC-PROFILE-083`, `TC-PROFILE-061`), `AC-F7-1` by two (`TC-PROFILE-084`, `TC-PROFILE-085`) and `AC-NFR1-1` by three (`TC-PROFILE-086`..`TC-PROFILE-088`).
 
 **Identifier scoping (declared).** Every new case stays inside the existing `TC-PROFILE-###` namespace, so no new prefix is introduced. New `describe` titles are prefixed `GH-377` and existing titles are never renamed. No case reuses a delivered number.
 
@@ -87,9 +93,10 @@ Coverage is deliberately uneven where the criterion spans independent observable
 | AC-F1-1 | With the committed policy, z.ai carrying an active `quota-exhausted` park and DeepSeek clear, outside both declared entry peaks, `provider profile resolve --agent pm --for-spawn` exits 0, selects `paid`, reports `delivery` `ineligible` with a `condition` blocker valued `quota-exhausted` naming z.ai, reports `paid` `eligible`, emits `deepseek/deepseek-flash` for PM, names z.ai in no env-record entry, and needs no operator-local override | TC-PROFILE-059, TC-PROFILE-089, TC-PROFILE-091 | Covered |
 | AC-F1-2 | With no park and no observation, outside both declared entry peaks, `delivery` is selected, `delivery` `eligible`, `paid` `shadowed`, and the PM env-record entry is `zai-coding-plan/glm-5.3-flash` | TC-PROFILE-060, TC-PROFILE-090 | Covered |
 | AC-F1-3 | An active `peak-window` park outside the declared entry peaks selects `paid` with a `peak-window` blocker, and the identical facts carrying `quota-exhausted` yield the identical decision, verdicts and model with only the blocker value differing | TC-PROFILE-061 | Covered |
-| AC-F2-1 | An observation with `ageSeconds` exactly `maxAgeSeconds` is `ineligible` with a `watch-stale` blocker and no env-record entry on that provider; one second younger is available; a live read reports age 0 and never produces `watch-stale`; the closed sets are exactly equal to the delivered ones | TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-064, TC-PROFILE-065, TC-PROFILE-092 | Covered |
-| AC-F3-1 | A seat whose effective model is pinned by a rung `executionModel` or an `agentOverrides` path to a parked provider is taken from the next eligible profile, the emitted and bound value is that profile's declared seat model on an available provider, profile/tier/rung/overrides are otherwise unchanged, and a capability-inadequate substitute is never used | TC-PROFILE-066, TC-PROFILE-067, TC-PROFILE-068, TC-PROFILE-069, TC-PROFILE-092 | Covered |
-| AC-F3-2 | With no later eligible profile supplying the seat, resolution refuses `provider.profile.unavailable` at exit 2 with the full eligibility list, emits no env record and no binding, invents no fallback model, and names both the seat and the parked provider | TC-PROFILE-070, TC-PROFILE-071, TC-PROFILE-093 | Covered |
+| AC-F2-1 | A provider that declares a `provider.profiles.watch.<name>` target with its own `maxAgeSeconds`, carries no active park, and is supplied a clear observation whose `ageSeconds` is exactly `maxAgeSeconds` is `ineligible` with a `watch-stale` blocker and no env-record entry on that provider; one second younger is available; a provider that declares no watch target is never stale even with an old global instant; a live read reports age 0 and never produces `watch-stale`; the closed sets are exactly equal to the delivered ones | TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-064, TC-PROFILE-065, TC-PROFILE-092, TC-PROFILE-095, TC-PROFILE-096, TC-PROFILE-097 | Covered |
+| AC-F3-1 | A seat whose effective model — declared, rung-derived, or override-targeted — is recorded-unavailable (an active park or a stale observation) is taken from the next eligible profile that declares the seat on a provider that is not recorded-unavailable and satisfies the required capability, the emitted and bound value is that profile's declared seat model, profile/tier/rung/overrides are otherwise unchanged, the eligibility list is unchanged, and a capability-inadequate substitute is never used as a source | TC-PROFILE-066, TC-PROFILE-067, TC-PROFILE-068, TC-PROFILE-069 (adequate-substitute arm), TC-PROFILE-092 | Covered |
+| AC-F3-2 | With no valid substitute — every later profile is ineligible, does not declare the seat, or declares it only on a capability-inadequate model — resolution refuses `provider.profile.unavailable` at exit 2, emits no env record and no binding, invents no fallback model, and names both the seat and the parked provider in the bounded `summary`; the eligibility list is carried unchanged (selected profile `eligible`, later profiles `shadowed` and unprobed, no blocker appended, no verdict flip) | TC-PROFILE-069 (inadequate-substitute and delivered-control arms), TC-PROFILE-070, TC-PROFILE-071, TC-PROFILE-093 | Covered |
+| AC-F3-3 | With zero park records and zero supplied observations, an effective seat model naming a provider that is undeclared, disabled, or inside its declared peak window yields exactly the delivered behaviour: the seat is neither substituted nor refused, the emitted value is the delivered one, eligibility verdicts and exit code are unchanged, and no `watch-stale` or park blocker appears — proving the seat gate was not widened | TC-PROFILE-094 | Covered |
 | AC-F4-1 | For every declared seat the env-record value equals the binding value, no emitted value names a provider with an active park or a stale observation, an unsatisfiable seat emits no record at all (never partial or placeholder), and the dispatch nomination verdict matches the CLI verdict over the same facts | TC-PROFILE-072, TC-PROFILE-073, TC-PROFILE-074, TC-PROFILE-059 | Covered |
 | AC-F5-1 | Advancing the clock past the recorded expiry (or clearing the condition) restores `delivery` and its z.ai seats with no config edit, timer, daemon or write; exactly at `expiresAt` the park is inactive; a never-parked state yields the identical decision; the resolution appends zero park/announcement/cleared records and the delivered target persistence is the only write | TC-PROFILE-075, TC-PROFILE-076, TC-PROFILE-077, TC-PROFILE-078, TC-PROFILE-079 | Covered |
 | AC-F6-1 | A committed fixture pins all eight causes: six make their named provider unavailable with the cause as the blocker value; `chain-exhausted` and `reevaluation-cap` make no provider unavailable and clear none; `window`-scope `budget-exhausted` is consumed while the `ticket`-scope crossing persists no readable park; and an added, removed, unclassified, silently ignored or silently clearing cause fails naming the cause | TC-PROFILE-080, TC-PROFILE-081, TC-PROFILE-082, TC-PROFILE-083, TC-PROFILE-061 | Covered |
@@ -103,11 +110,13 @@ Coverage is deliberately uneven where the criterion spans independent observable
 | EVT-1 | `profile.selected` keeps its code, severity, evidence keys and identity derivation; park-derived blockers appear in the bounded `blockers` evidence using existing values | TC-PROFILE-091, TC-PROFILE-086 | Covered |
 | EVT-2 | `profile.ineligible` keeps its code and shape and now names park causes and `watch-stale`, with `reason: capability-gate` only when every blocker is a capability blocker | TC-PROFILE-092, TC-PROFILE-065 | Covered |
 | EVT-3 | `profile.switched` / `profile.reverted` are unchanged and are driven by read-time expiry, with no new code, condition or evidence key | TC-PROFILE-075, TC-PROFILE-077 | Covered |
-| DM-1 | The park-derived eligibility fact: verdict from descriptor, enablement, declared peak, active park and recorded observation freshness; activity `expiresAt > now`; nothing persisted | TC-PROFILE-059, TC-PROFILE-061, TC-PROFILE-076 | Covered |
-| DM-2 | The parked-provider blocker in the delivered shape (`kind: condition`, `value` = cause or `watch-stale`, bounded `detail`) with no new blocker kind or identity | TC-PROFILE-062, TC-PROFILE-065, TC-PROFILE-091, TC-PROFILE-093 | Covered |
+| DM-1 | The park-derived eligibility fact: verdict from descriptor, enablement, declared peak, active park and recorded observation freshness; activity `expiresAt > now`; nothing persisted | TC-PROFILE-059, TC-PROFILE-061, TC-PROFILE-076, TC-PROFILE-062, TC-PROFILE-095 | Covered |
+| DM-2 | The parked-provider blocker in the delivered shape (`kind: condition`, `value` = cause or `watch-stale`, bounded `detail`) with no new blocker kind or identity; the seat-level refusal adds no evidence position — the eligibility list is carried unchanged and the bounded refusal `summary` names both seat and provider | TC-PROFILE-062, TC-PROFILE-065, TC-PROFILE-091, TC-PROFILE-093, TC-PROFILE-070, TC-PROFILE-071, TC-PROFILE-096 | Covered |
 | DM-3 | The substituted seat model written into the existing per-seat model map that both the env record and the binding read, with no new field | TC-PROFILE-066, TC-PROFILE-068, TC-PROFILE-072 | Covered |
 | DM-4 | Durable vocabulary unchanged: no new record kind, payload schema, store key, park field or event evidence key; existing records are read and never written | TC-PROFILE-065, TC-PROFILE-079 | Covered |
 | DM-5 | The `data-v1` env record keeps its grammar, header, allowlist, limits and set/unset shape; only substituted values differ and they validate identically | TC-PROFILE-072, TC-PROFILE-073 | Covered (delivered grammar control `TC-PROFILE-034`) |
+| DM-6 | The park input to the probe: the verified fold keyed by `provider:<name>` and `chain:<name>`, closed cause and absolute expiry, one read per resolution, activity `expiresAtMs > nowMs`, no persistence or write | TC-PROFILE-084, TC-PROFILE-087, TC-PROFILE-079 | Covered |
+| DM-7 | The observation input to the probe: composition-supplied, per provider, keyed by provider name, shape `{ condition, observedAtMs }`, consumed at the read instant with no persistence, fetch or write; only freshness is consumed | TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-064, TC-PROFILE-095, TC-PROFILE-096, TC-PROFILE-097 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -115,11 +124,26 @@ Coverage is deliberately uneven where the criterion spans independent observable
 |---|---|---|---|
 | NFR-1 | Determinism and hermeticity: identical facts produce identical decisions, verdicts, records, identities and codes across repeated runs and independent compositions, with zero network, credential read, sleep or ambient clock read | TC-PROFILE-086, TC-PROFILE-074 | Covered |
 | NFR-2 | Read-only consumption: zero park/announcement/cleared records written, at most one verified fold read per resolution, and only the delivered target persistence on change | TC-PROFILE-079, TC-PROFILE-087 | Covered |
-| NFR-3 | Closed-vocabulary invariance: 8 causes, 6 condition kinds, 6 watch conditions, 9 skip reasons, the delivered announcement set, and 0 new error identities, event codes, state kinds, schema ids or envelope keys | TC-PROFILE-065, TC-PROFILE-090, TC-PROFILE-085 | Covered |
+| NFR-3 | Closed-vocabulary invariance: 8 causes, 6 condition kinds, 6 watch conditions, 9 skip reasons, the delivered announcement set, and 0 new error identities, event codes, state kinds, schema ids or envelope keys; `watch-stale` stays watch-only and the excluded freshness readings add no member | TC-PROFILE-065, TC-PROFILE-090, TC-PROFILE-085, TC-PROFILE-097 | Covered |
 | NFR-4 | Evaluation cost: one probe per distinct provider per pass (memoized), one fold read per resolution, no per-seat re-read, and the delivered 50 ms reference bound retained | TC-PROFILE-087 | Covered (`GAP`-free: timing stays with the delivered `TC-PROFILE-015` control) |
-| NFR-5 | Boundary correctness: active iff `expiresAt > now`, inactive at exactly `expiresAt`; stale iff `ageSeconds >= maxAgeSeconds`, with the bound stale and the preceding second not | TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-076 | Covered |
-| NFR-6 | Bounded, secret-free evidence: profile caps (≤ 20 fields, ≤ 1024 bytes, ≤ 128-byte strings, ≤ 8 items, ≤ 96-byte items) and no credential, authorization header, userinfo or raw body on any surface | TC-PROFILE-093, TC-PROFILE-071, TC-PROFILE-091 | Covered |
-| NFR-7 | Compatibility with absent facts: the zero-park, zero-observation decision, eligibility, env record and exit are identical to the delivered behaviour by golden comparison, and a fold failure is never clear | TC-PROFILE-060, TC-PROFILE-078, TC-PROFILE-088, TC-PROFILE-090 | Covered |
+| NFR-5 | Boundary correctness: active iff `expiresAt > now`, inactive at exactly `expiresAt`; per declared watch target stale iff `ageSeconds >= maxAgeSeconds`, with the bound stale and the preceding second not; a provider with no declared watch target is never stale | TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-076, TC-PROFILE-095, TC-PROFILE-097 | Covered |
+| NFR-6 | Bounded, secret-free evidence: profile caps (≤ 20 fields, ≤ 1024 bytes, ≤ 128-byte strings, ≤ 8 items, ≤ 96-byte items) and no credential, authorization header, userinfo or raw body on any surface | TC-PROFILE-093, TC-PROFILE-071, TC-PROFILE-091, TC-PROFILE-070 | Covered |
+| NFR-7 | Compatibility with absent facts: the zero-park, zero-observation decision, eligibility, env record and exit are identical to the delivered behaviour by golden comparison — including a seat model on an undeclared, disabled or peak-parked provider — and a fold failure is never clear | TC-PROFILE-060, TC-PROFILE-078, TC-PROFILE-088, TC-PROFILE-090, TC-PROFILE-094 | Covered |
+
+### 3.4 Definition of Done Coverage (spec §26)
+
+Every item in spec §26 is observed by a named case or by a declared gate command; **DOD-6, DOD-7 and DOD-8 are gate evidence, not test cases** — they describe delivery hygiene, ledger state and post-change documentation, none of which a `tests/**` suite can assert about itself.
+
+| DOD | Item (condensed) | Evidence | Kind |
+|---|---|---|---|
+| DOD-1 | Every functional and NFR acceptance criterion is green. | The §3.1 matrix maps all 12 criteria to named cases; `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 with every owning case green, none skipped, disabled or vacuous. | Cases + aggregate gate |
+| DOD-2 | The committed policy and any operator-local file are untouched. | `TC-PROFILE-059` and `TC-PROFILE-060` capture the committed `config.yaml` SHA-256 before and after and assert it unchanged, and `TC-PROFILE-059` asserts zero `readText` content reads of any `config.local.yaml` path with no local layer contributing a source/value (`GAP-T3`). The change diff contains no policy edit and no new configuration key (`git diff --name-only` review). | Cases + diff review |
+| DOD-3 | The vocabulary and the decision boundary are intact. | `TC-PROFILE-065`, `TC-PROFILE-085` and `TC-PROFILE-090` prove set equality and zero new envelope keys; `TC-PROFILE-080` pins the eight-cause classification. TDR-0075 is present, TDR-0062 is not superseded and TDR-0076 is unused (structure/content review of `doc/decisions/**` and its index). | Cases + structure/content review |
+| DOD-4 | One probe factory, three call sites, one fold read. | `TC-PROFILE-087` counts exactly one verified fold read per resolution and one probe per distinct provider, and its source census asserts the probe is constructed through one factory at exactly three sites — the profile-resolve edge handler, the spawn-context helper (`resolveProfileContextFrom`) and the dispatch nomination predicate — with no fourth site and no second availability derivation. | Case (source census) + review |
+| DOD-5 | The read-only contract is observed, not claimed. | `TC-PROFILE-086` records zero fetch, zero credential read, zero network call and zero sleep; `TC-PROFILE-079` records zero park, announcement or cleared writes, with the delivered target persistence the only write; `TC-PROFILE-093` proves the evidence is bounded and secret-free. | Cases |
+| DOD-6 | Delivery hygiene and platform state are as declared. | Every commit created through the `commit` primitive; the PR open against `main-tools` and unmerged; the decision-ledger maximum re-verified at delivery time and TDR-0076 unused (§18). | **Gate evidence only** |
+| DOD-7 | The delivery ledger and the gates support the claim. | Every declared plan phase complete with a per-phase pm-notes `notes:` entry naming the plan phase id, commit hash and test result; review `PASS`; quality gates green; `./scripts/lint-commit-range.sh --base main-tools` reports `PASS` and is recorded as a pm-notes `notes:` entry. | **Gate evidence only** |
+| DOD-8 | Current-truth documentation carries no residual gap. | `@doc-syncer` reconciles the four pages named in §22 plus the decision ledger, and a residual-gap sweep finds zero statements presenting the three-check probe or the absolute `watch-stale` exclusion as current. | **Gate evidence only (phase 7 doc-sync)** |
 
 ## 4. Test Types and Layers
 
@@ -146,19 +170,19 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 | TC-PROFILE-059 | Production acceptance: a quota park selects `paid` without a local override | Integration | Edge wiring | High | AC-F1-1, AC-F4-1 |
 | TC-PROFILE-060 | Healthy facts select `delivery` and shadow `paid` | Integration | Edge wiring | High | AC-F1-2 |
 | TC-PROFILE-061 | A peak park and a quota park are one eligibility rule | Behaviour | Pure domain | High | AC-F1-3, AC-F6-1 |
-| TC-PROFILE-062 | A stale observation at the bound blocks and is named `watch-stale` | Behaviour | Pure domain | High | AC-F2-1, NFR-5 |
-| TC-PROFILE-063 | A fresh observation one second below the bound is available | Behaviour | Pure domain | High | AC-F2-1, NFR-5 |
-| TC-PROFILE-064 | A live read has age 0 and is never stale | Behaviour | Pure domain | Medium | AC-F2-1 |
+| TC-PROFILE-062 | For a declared watch target, an observation at the bound blocks as `watch-stale` | Behaviour | Pure domain | High | AC-F2-1, NFR-5, DM-7 |
+| TC-PROFILE-063 | One second below the declared bound is available | Behaviour | Pure domain | High | AC-F2-1, NFR-5 |
+| TC-PROFILE-064 | A live read has age 0; an absent observation is not stale | Behaviour | Pure domain | Medium | AC-F2-1 |
 | TC-PROFILE-065 | The closed vocabularies and envelope keys are unchanged | Contract | Structure | Critical | AC-F2-1, NFR-3 |
-| TC-PROFILE-066 | A rung execution model on a parked provider is substituted | Behaviour | Pure domain | Critical | AC-F3-1 |
-| TC-PROFILE-067 | An agent override routing to a parked-provider seat is substituted | Behaviour | Pure domain | Critical | AC-F3-1 |
-| TC-PROFILE-068 | Substitution is per-seat routing, not a profile switch | Behaviour | Pure domain | High | AC-F3-1, DM-3 |
-| TC-PROFILE-069 | Substitution never relaxes the capability gate | Behaviour | Pure domain | Critical | AC-F3-1 |
-| TC-PROFILE-070 | No eligible supplier refuses naming seat and provider | Behaviour | Pure domain | Critical | AC-F3-2 |
-| TC-PROFILE-071 | The refusal projects exit 2 with no env record | Integration | Edge wiring | High | AC-F3-2, NFR-6 |
+| TC-PROFILE-066 | A rung execution model on a recorded-unavailable provider is substituted | Behaviour | Pure domain | Critical | AC-F3-1 |
+| TC-PROFILE-067 | An agent override routing to a recorded-unavailable-provider seat is substituted | Behaviour | Pure domain | Critical | AC-F3-1 |
+| TC-PROFILE-068 | Substitution is per-seat routing with an unchanged eligibility list | Behaviour | Pure domain | High | AC-F3-1, DM-2, DM-3 |
+| TC-PROFILE-069 | A capability-inadequate substitute is not used; the capability gate holds | Behaviour | Pure domain | Critical | AC-F3-1, AC-F3-2 |
+| TC-PROFILE-070 | No valid substitute refuses `unavailable`, naming seat and provider, list unchanged | Behaviour | Pure domain | Critical | AC-F3-2, DM-2, NFR-6 |
+| TC-PROFILE-071 | The seat-level refusal projects exit 2 with no env record and an unchanged list | Integration | Edge wiring | High | AC-F3-2, NFR-6 |
 | TC-PROFILE-072 | The env record and the spawn binding agree for every seat | Behaviour | Pure domain | Critical | AC-F4-1, DM-3, DM-5 |
 | TC-PROFILE-073 | Emission is all-or-nothing | Behaviour | Pure domain | High | AC-F4-1, DM-5 |
-| TC-PROFILE-074 | Dispatch nomination agrees with the CLI verdict | Integration | Pure domain | High | AC-F4-1, NFR-1 |
+| TC-PROFILE-074 | Dispatch nomination agrees with the CLI verdict over a seat-level fixture | Integration | Behaviour | High | AC-F4-1, NFR-1 |
 | TC-PROFILE-075 | Advancing past expiry restores the preferred profile | Integration | Edge wiring | Critical | AC-F5-1, EVT-3 |
 | TC-PROFILE-076 | The park is inactive at exactly its expiry | Behaviour | Pure domain | High | AC-F5-1, NFR-5 |
 | TC-PROFILE-077 | A cleared condition restores the profile before expiry | Behaviour | Pure domain | High | AC-F5-1, EVT-3 |
@@ -178,6 +202,10 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 | TC-PROFILE-091 | `profile.selected` carries the park cause in bounded evidence | Contract | Behaviour | Medium | EVT-1, AC-F1-1, NFR-6 |
 | TC-PROFILE-092 | `profile.ineligible` names park causes and `watch-stale`; capability precedence holds | Contract | Behaviour | High | EVT-2, AC-F2-1, AC-F3-1 |
 | TC-PROFILE-093 | New blocker and refusal evidence is bounded and secret-free | Contract | Checks | High | NFR-6, DM-2 |
+| TC-PROFILE-094 | The seat gate is not widened: undeclared, disabled or peak-parked seat provider keeps delivered behaviour | Behaviour | Pure domain | Critical | AC-F3-3, NFR-7 |
+| TC-PROFILE-095 | Staleness is per declared target; a provider with no declared target is never stale | Behaviour | Pure domain | High | AC-F2-1, NFR-5, DM-7 |
+| TC-PROFILE-096 | Only freshness is consumed: a condition that derived a park is that park | Behaviour | Pure domain | High | AC-F2-1, DM-2, DM-7 |
+| TC-PROFILE-097 | The three excluded freshness readings fail by name | Contract | Behaviour | High | AC-F2-1, NFR-3, NFR-5 |
 
 ### 5.2 Scenario Details
 
@@ -193,21 +221,22 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Tags**: @backend, @integration, @provider
 
 **Preconditions**:
-- The committed `.jaiship/config.yaml` is read as text at test start and served through the injected `fs.readText` double at the path the composer asks for; the file is never written. A SHA-256 of the text is captured before the run.
+- The committed `.jaiship/config.yaml` is read as text at test start and served through the injected `fs.readText` double at the path the composer asks for; the file is never written. A SHA-256 of the text is captured before the run and re-checked after it.
 - A temp state store from `makeTempRoot` / `openStore` / `removeRoot` holds one active `provider.park` record for `provider:zai-coding-plan`, subject `zai-coding-plan`, cause `quota-exhausted`, `expiresAtMs > nowMs`, plus the recorded reset instant in its evidence.
 - The injected clock sits at an instant where `evaluatePeakWindow` returns non-parked for both declared entry peaks and both declared profile windows.
-- No `config.local.yaml` is present in the injected file system.
+- No `config.local.yaml` is present. The injected file system records separately every `exists` probe and every `readText` content read; the delivered acquisition's existence probe is acquisition behaviour, not "consulting" the override (`GAP-T3`).
 
 **Steps**:
 1. Run `provider profile resolve --agent pm --for-spawn --json` through `createConfigProgram` + `runCli`.
 2. Parse `data` from stdout and read `outcome`, `profile`, `eligibility`, `envRecord`.
-3. Read the file-system double's recorded paths and the post-run SHA-256 of the committed policy text.
+3. Read the file-system double's recorded `exists` probes and `readText` reads, inspect the composed configuration's contributing layers, and re-check the committed policy SHA-256.
 
 **Expected Outcome**:
 - Exit code 0; `outcome === "selected"`; `profile === "paid"`.
 - `eligibility` contains `{profile: "delivery", verdict: "ineligible"}` with exactly one `condition` blocker whose `value === "quota-exhausted"` and whose `detail` names `zai-coding-plan`, and `{profile: "paid", verdict: "eligible"}`.
 - The PM entry of the env record is a `set` operation with `value === "deepseek/deepseek-flash"`; no env-record entry value contains `zai-coding-plan`.
-- The file-system double recorded zero reads of any `config.local.yaml` path and zero writes anywhere; the committed policy hash is unchanged.
+- The file-system double recorded **zero `readText` content reads of any `config.local.yaml` path** and no local layer contributed a source or value; zero writes occurred anywhere. The existence probe may have run and is not treated as a content read.
+- The committed policy hash is unchanged.
 
 **Notes / Clarifications**:
 - This is the reproduced 2026-11-21 state from recorded facts alone (spec Appendix B); the live vendor state is never consulted (RSK-9).
@@ -264,75 +293,81 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Notes / Clarifications**:
 - The pair is table-driven from one fixture so a second eligibility implementation cannot satisfy one arm and fail the other silently.
 
-#### TC-PROFILE-062 - A stale observation at the bound blocks and is named `watch-stale`
+#### TC-PROFILE-062 - For a declared watch target, an observation at the bound blocks as `watch-stale`
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-2, AC-F2-1, NFR-5, DM-2, OQ-1
+**Related IDs**: F-2, AC-F2-1, NFR-5, DM-2, DM-7, §8.6, TDR-0075, OQ-1
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A composition-supplied observation for a declared, enabled, peak-free provider: condition `clear`, `observedAtMs = nowMs - maxAgeSeconds * 1000`, declared `maxAgeSeconds ≥ 1`, no park record for that provider.
+- A fixture provider declares exactly one `provider.profiles.watch.<name>` target with its own `maxAgeSeconds ≥ 1`; the provider is declared, enabled and peak-free, and carries no park record.
+- The composition supplies an observation **keyed by provider name**, shape `{ condition, observedAtMs }` (DM-7, A-11), with `condition: "clear"` and `observedAtMs = nowMs - maxAgeSeconds * 1000`, so `ageSeconds = floor((nowMs − observedAtMs)/1000) === maxAgeSeconds` for **that declared target**.
+- **Honesty note**: no production composition supplies a stale observation today (spec §8.6, A-10); the observation is injected at the probe seam to exercise the fail-loud guard. No state is persisted, fetched or written.
 
 **Steps**:
-1. Build the probe with the observation and the injected clock at `nowMs`.
+1. Build the probe with the injected observation and the injected clock at `nowMs`.
 2. Probe the provider and run `selectProfile` over the chain that uses it.
 3. Run `resolveProfileForSpawn` for the `--for-spawn` record.
 
 **Expected Outcome**:
-- The probe verdict is `available: false` with `condition === "watch-stale"` and a `condition` blocker whose `value === "watch-stale"` and whose `detail` names the provider.
+- The probe verdict is `available: false` with `condition === "watch-stale"` and a `condition` blocker whose `value === "watch-stale"` and whose bounded `detail` names the provider, the declared target, the observed age and the bound.
 - The profile using that provider is `ineligible` with that blocker (not `shadowed`), and the next eligible profile is selected.
 - No env-record entry names a model on the stale provider.
-- Equal to exactly the bound: `ageSeconds === maxAgeSeconds` is stale (no off-by-one).
+- The rule is per declared target and the boundary value is stale: `ageSeconds === maxAgeSeconds` for that target is stale (no off-by-one).
 
-#### TC-PROFILE-063 - A fresh observation one second below the bound is available
+#### TC-PROFILE-063 - One second below the declared bound is available
 
 **Scenario Type**: Edge Case
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-2, AC-F2-1, NFR-5
+**Related IDs**: F-2, AC-F2-1, NFR-5, DM-7
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- The same observation as `TC-PROFILE-062` with `observedAtMs = nowMs - (maxAgeSeconds - 1) * 1000`, so `ageSeconds === maxAgeSeconds - 1` under the delivered `floor`.
+- The same provider, declared watch target and injected `{ condition, observedAtMs }` observation as `TC-PROFILE-062`, with `observedAtMs = nowMs - (maxAgeSeconds - 1) * 1000`, so `ageSeconds === maxAgeSeconds - 1` under the delivered `floor`.
+- **Honesty note**: as in `TC-PROFILE-062`, the observation is injected at the seam; no production composition supplies it.
 
 **Steps**:
 1. Probe the provider.
 2. Run the selection and the `--for-spawn` resolution over the same configuration.
 
 **Expected Outcome**:
-- The verdict is available with `condition === "clear"` and zero blockers; `watch-stale` is never produced.
+- The verdict is available with `condition === "clear"` and zero blockers; `watch-stale` is never produced for this `ageSeconds` against this target's bound.
 - The preferred profile is selected and the env record names that provider's seat model.
 
-#### TC-PROFILE-064 - A live read has age 0 and is never stale
+#### TC-PROFILE-064 - A live read has age 0; an absent observation is not stale
 
 **Scenario Type**: Corner Case
 **Impact Level**: Medium
 **Priority**: Medium
-**Related IDs**: F-2, AC-F2-1, A-6
+**Related IDs**: F-2, AC-F2-1, A-6, A-10, DM-7
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A composed live read whose observation is stamped at the read instant (`observedAtMs === nowMs`), for a provider with no park, at several declared `maxAgeSeconds` values including the smallest validated positive bound.
+- A composed live read whose observation is stamped at the read instant (`observedAtMs === nowMs`), for a provider that declares a watch target, carries no park, at several declared `maxAgeSeconds` values including the smallest validated positive bound.
+- A second arm in which the composition supplies **no observation** for the provider (the delivered steady state, A-10).
 
 **Steps**:
 1. Perform the live read with the injected clock at `nowMs`.
 2. Compute `ageSeconds` with the delivered predicate and probe the composed availability.
 3. Repeat across the declared bounds.
+4. Probe the no-observation arm.
 
 **Expected Outcome**:
-- `ageSeconds === 0` in every arm.
+- `ageSeconds === 0` in every live-read arm.
 - The probe verdict is available and `watch-stale` never appears, because `0 >= maxAgeSeconds` is false for every validated bound.
+- The absent-observation arm is available and contributes nothing, exactly as delivered (it is not stale).
 - The read performs no transport call and no state write.
 
 **Notes / Clarifications**:
@@ -361,11 +396,12 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 
 **Expected Outcome**:
 - Every set equality holds; `watch-stale` remains watch-only and appears in no cause, condition-kind or skip-reason set.
+- `PROVIDER_RECORD_KINDS` remains exactly `provider.park | provider.announcement` — an observation is never a record kind (DM-7).
 - The inventories show zero differences in both directions.
 - The envelope key list matches exactly (order included) and the mutation arm fails by name.
-- Zero new error identities, event codes, state record kinds, schema identifiers or envelope keys.
+- Zero new error identities, event codes, state record kinds, schema identifiers or envelope keys; the excluded freshness readings of `TC-PROFILE-097` add no member either.
 
-#### TC-PROFILE-066 - A rung execution model on a parked provider is substituted
+#### TC-PROFILE-066 - A rung execution model on a recorded-unavailable provider is substituted
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -377,8 +413,9 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A fixture configuration where the selected profile's declared `providers` list excludes the parked provider, while a pacing rung's `executionModel` carries a `provider/model` expression on that parked provider (an execution-class seat), the profile itself is eligible on its declared providers, and the next profile in `preferenceChain` is eligible and declares the same seat on an available provider.
-- The `seatModels` map is supplied exactly as `evaluatePacing` produces it for the active rung; the parked provider is parked for `quota-exhausted` with a future expiry.
+- A fixture configuration where the selected profile's declared `providers` list excludes the parked provider, while a pacing rung's `executionModel` carries a `provider/model` expression on that provider (an execution-class seat), the profile itself is eligible on its declared providers, and the next profile in `preferenceChain` is eligible and declares the same seat on an available provider.
+- The seat provider is **recorded-unavailable**: an active provider-attributable park with a future expiry in the primary arm, and (second arm over the same fixture) a stale declared watch observation under `TC-PROFILE-062`'s rule. Declaration, enablement and declared peak are deliberately **outside** this case's scope; they are `TC-PROFILE-094`'s boundary.
+- The `seatModels` map is supplied exactly as `evaluatePacing` produces it for the active rung.
 
 **Steps**:
 1. Resolve `--for-spawn` for the agent that targets the execution seat, with the rung-derived `seatModels`.
@@ -386,11 +423,12 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 
 **Expected Outcome**:
 - `outcome === "selected"`; `profile` is the originally selected profile name; `rung` and `tier` are unchanged; `agentOverrides` is unchanged.
-- The execution seat's value in `decision.seatModels` is the substitute profile's declared seat model, whose provider is available at the instant; it is not the parked provider's model.
+- The execution seat's value in `decision.seatModels` is the substitute profile's declared seat model, whose provider is available at the instant; it is not the recorded-unavailable provider's model.
 - The env-record entry for that seat carries the same substituted value.
-- No emitted value names the parked provider.
+- No emitted value names the recorded-unavailable provider.
+- The full `eligibility` list is unchanged by the substitution (selected profile `eligible`, later profiles `shadowed`, no blocker appended, no verdict flip), per `TC-PROFILE-068`.
 
-#### TC-PROFILE-067 - An agent override routing to a parked-provider seat is substituted
+#### TC-PROFILE-067 - An agent override routing to a recorded-unavailable-provider seat is substituted
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -402,7 +440,8 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A fixture where `agentOverrides` maps the resolved agent to a seat whose model pins a provider outside the profile's declared `providers` list, that provider carries an active park, and the next eligible profile declares that seat on an available provider.
+- A fixture where `agentOverrides` maps the resolved agent to a seat whose model pins a provider outside the profile's declared `providers` list, that provider is **recorded-unavailable** (an active park, or a stale declared watch observation), and the next eligible profile declares that seat on an available provider.
+- Declaration, enablement and declared peak of the seat provider are deliberately outside this case; a seat on an undeclared, disabled or peak-parked provider is `TC-PROFILE-094`.
 
 **Steps**:
 1. Resolve `--for-spawn` for the overridden agent.
@@ -412,92 +451,103 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 - The substituted model is emitted for that seat and is the substitute profile's declared model on an available provider.
 - The override mapping itself is unchanged in `decision.agentOverrides`.
 - The env-record entry and the binding value for the agent are the same string.
+- The eligibility list is unchanged (no blocker appended, no verdict flip).
 
-#### TC-PROFILE-068 - Substitution is per-seat routing, not a profile switch
+#### TC-PROFILE-068 - Substitution is per-seat routing with an unchanged eligibility list
 
 **Scenario Type**: Corner Case
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-3, DEC-4, RSK-4
+**Related IDs**: F-3, AC-F3-1, DM-2, DM-3, DEC-4, DEC-8, RSK-4
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-selection.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- The configuration of `TC-PROFILE-066`, with at least two other seats whose models are on available providers and are unaffected by the parked one.
+- The configuration of `TC-PROFILE-066`, with at least two other seats whose models are on available providers and are unaffected by the recorded-unavailable one.
 
 **Steps**:
 1. Resolve the selection and the `--for-spawn` record.
-2. Compare `eligibility`, `profile`, `rung`, `tier`, `agentOverrides` and every unaffected seat with the same resolution run without the parked provider.
+2. Compare `eligibility`, `profile`, `rung`, `tier`, `agentOverrides` and every unaffected seat with the same resolution run without the recorded-unavailable provider.
 
 **Expected Outcome**:
-- `profile`, `rung`, `tier`, `agentOverrides` and the full `eligibility` list are identical to the pre-park resolution.
+- `profile`, `rung`, `tier`, `agentOverrides` and the **full `eligibility` list** are byte-identical to the pre-park resolution: the selected profile stays `eligible`, later profiles stay `shadowed`, **no blocker is appended to any entry and no verdict flips**.
 - Only the affected seat's value in `decision.seatModels` differs; every other seat keeps the selected profile's declared model.
 - No `profile.switched`, `profile.reverted` or `profile.rung-changed` event is produced by the substitution, and the target record is not written because the substitution changed.
+- A later profile inspected as a substitution candidate stays `shadowed`; substitute eligibility is not readable from the list (DM-2, DEC-8).
 
-#### TC-PROFILE-069 - Substitution never relaxes the capability gate
+#### TC-PROFILE-069 - A capability-inadequate substitute is not used; the capability gate holds
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-1, DEC-4, RSK-4
+**Related IDs**: F-3, AC-F3-1, AC-F3-2, DEC-4, DEC-8, RSK-4
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-selection.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A resolution requiring a capability (`requireVision`) whose selected profile's seat is capability-adequate but pinned to a parked provider; the only later profile that declares the seat declares it capability-inadequate.
+- A resolution requiring a capability (`requireVision`) whose selected profile's own seat is capability-adequate but whose effective seat model is on a recorded-unavailable provider; the only later profile that declares the seat declares it capability-inadequate.
 - A second arm where the later profile's seat is capability-adequate.
+- A third, delivered-control arm where the **selected profile's own** seat is capability-inadequate and no park or stale fact is involved.
 
 **Steps**:
 1. Resolve in the inadequate-substitute arm.
 2. Resolve in the adequate-substitute arm.
+3. Resolve in the selected-profile's-own-seat arm and compare it with the delivered control `TC-PROFILE-010` (unedited, not renumbered).
 
 **Expected Outcome**:
-- Inadequate arm: the substitute profile is not used as a source; the resolution returns the delivered `provider.profile.capability-denied` classification with the capability blocker, and no model from the inadequate seat is emitted.
-- Adequate arm: the substitution proceeds and the emitted model satisfies the required capability.
-- In both arms the capability blocker `kind` and precedence are the delivered ones and no park cause changes the classification.
+- **Inadequate-substitute arm**: the substitute profile is **not used as a source at all**; the capability gate is preserved by the substitute simply not being used (no model from the inadequate seat is emitted, and no capability classification is emitted for the substitute). Because no valid substitute exists, the resolution refuses `provider.profile.unavailable` (exit-2 identity), naming the seat and the recorded-unavailable provider in the bounded `summary` — this arm is governed by `AC-F3-2`, not `AC-F3-1`.
+- **Adequate-substitute arm**: the substitution proceeds and the emitted model satisfies the required capability (`AC-F3-1`).
+- **Delivered-control arm**: the selected profile's **own** capability-inadequate seat still yields the delivered `provider.profile.capability-denied` with the capability blocker and the delivered precedence — identical to `TC-PROFILE-010`, which remains the authority for that identity.
+- In every arm the capability blocker `kind` and precedence are the delivered ones and no park cause changes the reason.
 
-#### TC-PROFILE-070 - No eligible supplier refuses naming seat and provider
+**Notes / Clarifications**:
+- This split removes the DoR finding-1 overlap: `AC-F3-1` covers the successful substitution with a capability-adequate substitute; `AC-F3-2` covers the no-valid-substitute refusal, whether the disqualifier is ineligibility, an undeclared seat, or a capability-inadequate model. `capability-denied` is reserved for the selected profile's own seat.
+
+#### TC-PROFILE-070 - No valid substitute refuses `unavailable`, naming seat and provider, list unchanged
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, AC-F3-2, NFR-6
+**Related IDs**: F-3, AC-F3-2, DM-2, NFR-6, DEC-8
 **Test Type(s)**: Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-selection.test.ts`
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- The selected profile's seat pins a parked provider; every later profile is either ineligible or does not declare that seat.
+- An injected fixture policy document (not the committed `.jaiship/config.yaml`, `GAP-T4`) whose **selected profile is `eligible` on its declared `providers`** while one effective seat model names a parked provider **outside** that list; every later profile either is ineligible, does not declare that seat, or declares it only on a capability-inadequate model.
+- The refusal under test is the **seat-level** one, not the all-profiles-ineligible one: the selected profile's declared providers are all available.
 
 **Steps**:
 1. Call `resolveProfileForSpawn` (and `runProfileSpawn` with a recording port).
-2. Inspect the refusal code, summary, eligibility and whether any record was built.
+2. Inspect the refusal code, the bounded `summary`, the eligibility list and whether any record was built.
 
 **Expected Outcome**:
 - `ok === false`, `code === "provider.profile.unavailable"`.
-- The summary and the eligibility evidence name **both** the seat and the parked provider.
-- The full `eligibility` list is present; `decision`/`envRecord` is absent; no fallback model is invented for the unsatisfiable seat.
+- The bounded `summary` names **both** the seat and the parked provider.
+- The delivered `eligibility` list is **carried unchanged**: the selected profile remains `eligible`, every later profile remains `shadowed` and is not probed, **no blocker is appended to any entry and no verdict flips**. A later profile inspected as a substitution candidate is likewise reported `shadowed`; substitute eligibility is not readable from the list.
+- `decision`/`envRecord` is absent; no fallback model is invented for the unsatisfiable seat.
 - The spawn port is never called.
 
-#### TC-PROFILE-071 - The refusal projects exit 2 with no env record
+#### TC-PROFILE-071 - The seat-level refusal projects exit 2 with no env record and an unchanged list
 
 **Scenario Type**: Negative
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-3, AC-F3-2, NFR-6
+**Related IDs**: F-3, AC-F3-2, NFR-6, DM-2, DEC-8, GAP-T4
 **Test Type(s)**: Integration, E2E
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-profile-edge-wiring.test.ts`
 **Tags**: @backend, @integration, @provider
 
 **Preconditions**:
-- Committed-policy text served through the injected file system, a temp state store, and recorded facts in which both declared providers are parked (or the substitute profile is ineligible), so no profile supplies the seat.
-- The injected clock outside every declared peak.
+- An **injected fixture policy document** (not the committed `.jaiship/config.yaml`) served through the injected `fs.readText` double, whose selected profile is **`eligible` on its `providers`** while one effective seat model names a parked provider **outside** that list, and no later profile declares that seat on an available provider. Same fixture family as `TC-PROFILE-070`.
+- The refusal under test is the **seat-level** one, not the all-profiles-ineligible one. The committed document is kept for `AC-F1-1`/`AC-F1-2` only (`TC-PROFILE-059`, `TC-PROFILE-060`, `TC-PROFILE-089`) and cannot express this state.
+- A temp state store, and an injected clock outside every declared peak.
 
 **Steps**:
 1. Run `provider profile resolve --agent pm --for-spawn --json`.
@@ -507,7 +557,7 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Expected Outcome**:
 - Exit code 2; `error.code === "provider.profile.unavailable"` with the mapped exit read from `ERROR_TABLE`.
 - `data` is absent and no serialized `data-v1` record appears on any stream.
-- `error` carries the eligibility list naming the seat and the provider, within the profile evidence caps.
+- `error` carries the **unchanged** eligibility list — selected profile `eligible`, later profiles `shadowed`, no blocker appended, no verdict flip — plus a bounded `summary` naming the seat and the parked provider, within the profile evidence caps.
 - No park, announcement or target record was written by the refusal.
 
 #### TC-PROFILE-072 - The env record and the spawn binding agree for every seat
@@ -522,7 +572,7 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A fact matrix over the committed policy: healthy, z.ai quota park, stale-observation arm, and the substitution fixture of `TC-PROFILE-066`.
+- A fact matrix: the committed policy for the healthy and z.ai quota-park arms, and the injected fixture policies for the stale-observation arm and the substitution fixture of `TC-PROFILE-066` (`GAP-T4`).
 - For each fact set, the same composed probe and clock are used for the env record and the binding.
 
 **Steps**:
@@ -548,7 +598,7 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 **Tags**: @backend, @provider
 
 **Preconditions**:
-- A configuration where every seat but one is satisfiable and the last seat cannot be supplied by any profile.
+- An injected fixture policy (`GAP-T4`) in which every seat but one is satisfiable and the last seat cannot be supplied by any profile.
 
 **Steps**:
 1. Resolve `--for-spawn` and run `runProfileSpawn` with a recording port.
@@ -559,30 +609,35 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 - The recording port received zero environments — no partial record, no placeholder value and no inherited parent value.
 - The refusal names the unsatisfiable seat and its provider.
 
-#### TC-PROFILE-074 - Dispatch nomination agrees with the CLI verdict
+#### TC-PROFILE-074 - Dispatch nomination agrees with the CLI verdict over a seat-level fixture
 
 **Scenario Type**: Regression
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-4, AC-F4-1, NFR-1, RSK-6
+**Related IDs**: F-4, AC-F4-1, NFR-1, RSK-6, GAP-T4
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/provider-nomination-admission.test.ts`
 **Tags**: @backend, @integration, @provider
 
 **Preconditions**:
-- A `DispatchNominatePort` composed from `selectProfile` over the same probe, configuration, park facts and clock as the CLI resolution — not a second probe.
+- A `DispatchNominatePort` composed from the same probe factory, configuration, park facts, observation facts and clock as the CLI resolution — not a second probe.
 - A dispatch harness from `tests/fixtures/dispatch/harness.ts` with its temp store.
+- Two fixture families: the committed-policy facts for the **selection** parity arms (healthy, z.ai quota park, stale observation), and the **injected fixture policy of `TC-PROFILE-070`** — selected profile `eligible` while one seat model names a parked provider outside its list — for the **refusal** parity arm. The committed document cannot express the seat-level refusal (`GAP-T4`).
 
 **Steps**:
-1. For the quota-park, healthy, stale and unsatisfiable fact sets, run the CLI resolution and capture `profile` and any refusal code.
+1. For the healthy, quota-park and stale fact sets, run the CLI resolution and capture `profile`; for the seat-level fixture, capture the refusal code and the unchanged eligibility list.
 2. Drive `runDispatch` with the nomination port over the same facts.
-3. Compare the nominated profile (or refusal) with the CLI verdict.
+3. Compare the nominated profile (or refusal identity and eligibility) with the CLI verdict.
+4. Cross-check the delivered identity parity against the unedited control `TC-PAUSE-002`.
 
 **Expected Outcome**:
-- The nominated profile equals the CLI `profile` for every resolving fact set.
-- The nomination refusal code and eligibility equal the CLI refusal's code and eligibility for the unsatisfiable set.
+- **Selection parity arm**: the nominated profile equals the CLI `profile` for every resolving fact set.
+- **Refusal parity arm**: the nomination refusal code is `provider.profile.unavailable` and its eligibility equals the CLI refusal's **unchanged** eligibility (selected `eligible`, later `shadowed`, no blocker appended, no verdict flip); the seat and provider are named in the bounded summary.
 - Both consumers report the same provider availability; the run appends no park or announcement record.
+
+**Notes / Clarifications**:
+- The parity arm under test is **both** the selection (resolving fact sets) and the refusal (the seat-level fixture); the case is labelled Integration because it drives the dispatch admission path, not a pure-domain predicate.
 
 #### TC-PROFILE-075 - Advancing past expiry restores the preferred profile
 
@@ -897,10 +952,12 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 1. Run one selection pass and one `--for-spawn` resolution.
 2. Count fold reads per resolution and probe calls per distinct provider.
 3. Add seats targeting already-probed providers and re-run, asserting no extra fold read.
+4. Run the construction census: locate every `createResolvedProviderProbe` construction and assert exactly three — the profile-resolve edge handler, the spawn-context helper (`resolveProfileContextFrom`) and the dispatch nomination predicate — with no fourth site and no second availability derivation.
 
 **Expected Outcome**:
 - Exactly one verified fold read per resolution, independent of provider, profile and seat count.
-- At most one probe per distinct provider per pass; no per-seat park re-read.
+- At most one probe per distinct provider per pass; no per-seat park read.
+- The construction census finds one factory at exactly three call sites, with no fourth site and no second availability derivation (DOD-4, RSK-6).
 - The delivered `TC-PROFILE-015` wall-clock bound remains the timing control and is not re-baselined.
 
 #### TC-PROFILE-088 - A failed fold read is a named unavailable verdict
@@ -1046,14 +1103,126 @@ Test types used: **Contract** (structure and checks), **Integration** (edge wiri
 - No canary, header, userinfo or raw body appears on any surface; the canary scanner is itself driven over a planted string so it cannot pass vacuously.
 - The ambient-globals and source scans are clean with a non-zero source floor.
 
+#### TC-PROFILE-094 - The seat gate is not widened: undeclared, disabled or peak-parked seat provider keeps delivered behaviour
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-3, AC-F3-3, NFR-7, §8.5, §7.2
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-profile-selection.test.ts`
+**Tags**: @backend, @provider
+
+**Preconditions**:
+- Zero park records and zero supplied observations.
+- An injected fixture policy whose selected profile is eligible on its declared `providers`, while one effective seat model names a provider **outside** that list in three arms: (a) the provider is undeclared; (b) it is declared but disabled; (c) it is inside its declared peak window.
+- Because the seat provider is outside the profile's `providers`, the profile-level eligibility is unaffected; this is exactly the boundary the seat gate must not cross.
+
+**Steps**:
+1. Resolve `--for-spawn` for the agent that targets the seat in each arm.
+2. Read `outcome`, `profile`, `eligibility`, `decision.seatModels`, the env record and the exit code.
+3. Compare each arm with the delivered baseline resolution in which the seat provider is declared, enabled and out of peak.
+
+**Expected Outcome**:
+- Exit 0 and `outcome === "selected"` in every arm; the seat is **neither substituted nor refused**.
+- The emitted and bound value is the delivered effective seat model, unchanged.
+- The eligibility verdicts equal the delivered profile-level verdicts (selected profile `eligible`, later profiles `shadowed`); no `watch-stale` and no park blocker appears.
+- No `provider.profile.unavailable` refusal and no new refusal identity; the seat gate is proven not widened beyond recorded unavailability.
+
+**Notes / Clarifications**:
+- This is the regression boundary for `AC-F3-3`: it fails if a seat re-check consults declaration, enablement or the declared peak window. It is deliberately not a park or stale arm (those are `TC-PROFILE-066`/`TC-PROFILE-067`).
+
+#### TC-PROFILE-095 - Staleness is per declared target; a provider with no declared target is never stale
+
+**Scenario Type**: Edge Case
+**Impact Level**: High
+**Priority**: High
+**Related IDs**: F-2, AC-F2-1, NFR-5, DM-7, §8.6, TDR-0075 C-7
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
+**Tags**: @backend, @provider
+
+**Preconditions**:
+- Provider A declares **two** `provider.profiles.watch.<name>` targets with different `maxAgeSeconds` (for example a short bound and a long bound); provider B declares **no** watch target.
+- One composition-supplied observation instant is keyed by provider name (DM-7). At `nowMs`, A's age sits at or above the short target's bound but below the long target's bound (for example age 120 s against bounds 60 s and 900 s), so the two targets must reach different per-target verdicts at the same instant; B, if the same old instant were wrongly applied globally, would look far beyond any bound.
+- **Honesty note**: no production composition supplies a stale observation today (spec §8.6, A-10); the observation is injected.
+
+**Steps**:
+1. Probe A and read the per-target staleness readings and the provider verdict.
+2. Probe B with the same observation instant.
+3. Choose an observation instant whose age is one second below both of A's bounds and probe A again.
+
+**Expected Outcome**:
+- At instant `nowMs`, A's short target reads stale and its long target reads fresh; because any stale declared target blocks, A is unavailable with a `watch-stale` blocker (detail names the stale target and its bound), while the long target alone would not have blocked.
+- B is available with no `watch-stale` blocker, because it declares no watch target — an old global instant never makes an undeclared-target provider stale.
+- One second below both bounds, A becomes available; the per-target predicate has no off-by-one.
+
+**Notes / Clarifications**:
+- This case pins §8.6's "per declared target, that target's own bound" and "no declared watch target ⇒ never stale" in one fixture, so a single global instant or a single global bound fails here.
+
+#### TC-PROFILE-096 - Only freshness is consumed: a condition that derived a park is that park
+
+**Scenario Type**: Corner Case
+**Impact Level**: High
+**Priority**: High
+**Related IDs**: F-2, AC-F2-1, DM-2, DM-7, §8.6, TDR-0075 D1
+**Test Type(s)**: Unit
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
+**Tags**: @backend, @provider
+
+**Preconditions**:
+- Arm A: a provider declares a watch target and carries an active provider-attributable park whose cause the recorded condition produced; the composition supplies a **fresh** observation `{ condition: <that same condition>, observedAtMs: nowMs }` (age 0) keyed by provider.
+- Arm B: the same provider with **no** park and a **fresh** observation whose `condition` is not `clear` (a condition value that persisted no park).
+
+**Steps**:
+1. Probe the provider and run the selection in arm A; count blockers and read the blocker value.
+2. Probe in arm B; read the verdict and blockers.
+3. Compare arm A with a run where the observation is absent.
+
+**Expected Outcome**:
+- Arm A: exactly **one** `condition` blocker, whose value is the park cause; the observation's condition value is not re-derived into a second `watch-stale` blocker, and the provider verdict equals the park-only verdict. The condition that derived a park is consumed as that park.
+- Arm B: the provider is available with zero blockers; a fresh observation contributes only freshness and its non-`clear` condition value mints no blocker (no invented outage, no invented stale).
+- In both arms the observation contributes no state write, no fetch and no second blocker.
+
+#### TC-PROFILE-097 - The three excluded freshness readings fail by name
+
+**Scenario Type**: Negative
+**Impact Level**: High
+**Priority**: High
+**Related IDs**: F-2, AC-F2-1, NFR-3, NFR-5, §8.6, TDR-0075 C-7
+**Test Type(s)**: Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/provider-profile-probes.test.ts`
+**Tags**: @backend, @provider
+
+**Preconditions**:
+- The per-target staleness predicate and a comparator harness over deliberately wrong variants (the delivered mutation pattern of `TC-PROFILE-083`).
+- Three excluded variants, each materially different from §8.6: **V1** one global observation instant applied to every provider as if each had the same bound; **V2** a staleness verdict for a provider that declares no watch target; **V3** "all providers are stale when a global observation is old".
+- A fixture where the correct per-target verdict differs from each variant, so no arm can pass vacuously.
+
+**Steps**:
+1. Drive the comparator over V1, V2 and V3 in turn.
+2. Assert each variant is rejected with a message naming that reading.
+3. Run the unmutated per-target rule and assert it passes.
+
+**Expected Outcome**:
+- Each excluded reading fails by name — a distinct identifier such as `global-instant`, `undeclared-target-stale` and `all-providers-stale` appears in the failure, so the three cannot be confused with one another.
+- No arm passes by returning an empty diff; the correct rule passes, proving the comparator is non-vacuous in both directions.
+- No excluded reading adds a vocabulary member; `TC-PROFILE-065` remains the closure authority.
+
 ## 6. Environments and Test Data
 
 - **Runtime**: Bun with `bun:test`; Node-compatible APIs only where the delivered suites already use them. No new dependency.
 - **Platform matrix**: one Linux runner; no OS-specific assertion is introduced. Peak evaluation uses `UTC` zone facts or the injected `ProviderZoneFacts`, never host zone data.
 - **State isolation**: every store-backed case builds a temp root with `makeTempRoot(...)`, opens it with `openStore(makeIdentity(root))`, and removes it in `afterEach`. No case touches the developer's real state directory or the repository's `.jaiship` state.
-- **Committed policy**: read once per suite from `.jaiship/config.yaml` as text and served through the injected `fs.readText` double; a SHA-256 is asserted unchanged after every run. The file is never opened for writing, and no case asserts against an edited copy.
-- **Operator-local slot**: no fixture creates `config.local.yaml`; the file-system double records every path asked for, and `TC-PROFILE-059` asserts zero local-path reads.
-- **Park and observation fixtures**: built with `createParkRecord` / `clearParkRecord` and a literal observation record; expiry and observation instants are absolute milliseconds from the injected clock, never from the wall clock.
+- **Committed policy**: read once per suite from `.jaiship/config.yaml` as text and served through the injected `fs.readText` double; a SHA-256 is asserted unchanged after every run. The file is never opened for writing, and no case asserts against an edited copy. The committed document is the fixture for `AC-F1-1`/`AC-F1-2` only (`TC-PROFILE-059`, `TC-PROFILE-060`, `TC-PROFILE-089`, `TC-PROFILE-090`).
+- **Fixtures for the seat-level criteria**: `AC-F3-1`..`AC-F3-3` use injected fixture policy documents (data modules under `tests/fixtures/provider/profile/selection/`) served through the same `fs.readText` double, because the committed policy cannot express a seat whose provider is outside the selected profile's list. The document's selected profile is `eligible` on its `providers`; only a seat model is recorded-unavailable (`GAP-T4`).
+- **Operator-local slot**: no fixture creates `config.local.yaml`; the file-system double records `exists` probes and `readText` content reads separately. `TC-PROFILE-059` asserts **zero `readText` (content) reads of any `config.local.yaml` path** and that no local layer contributed a source or value. The delivered existence probe is acquisition behaviour, not "consulting" the override (`GAP-T3`).
+- **Park and observation fixtures**: parks are built with `createParkRecord` / `clearParkRecord`; observations are a composition-supplied map **keyed by provider name** with shape `{ condition, observedAtMs }` (DM-7). Expiry and observation instants are absolute milliseconds from the injected clock, never from the wall clock. No observation is persisted or written.
+- **Honesty about the stale path**: no production composition supplies a stale observation today (spec §8.6, A-10). The staleness arms inject the observation directly at the probe seam and say so in their preconditions; they never claim a steady-state production input.
 - **Clock**: always injected. Every evaluation instant is chosen to be outside the declared entry and profile peak windows, and the fact is asserted with `evaluatePeakWindow` rather than assumed.
 - **Hermeticity**: `fetch` spied, credential port replaced by a counter or throwing fake, sleep port throwing, transport throwing, and a canary string planted for the redaction arms. No live z.ai or DeepSeek call, no real credential read, no real sleep.
 - **Sleep**: the suite makes zero real sleeps; the only sleep seam present is the delivered `ProviderSleep` fake.
@@ -1079,7 +1248,7 @@ Execution commands assume the repo root. `TMPDIR=$PWD/tmp/tmpdir` is applied to 
 | TC-PROFILE-068 | `tests/behaviour/provider-profile-selection.test.ts` | Existing – Update | same |
 | TC-PROFILE-069 | `tests/behaviour/provider-profile-selection.test.ts` | Existing – Update | same |
 | TC-PROFILE-070 | `tests/behaviour/provider-profile-selection.test.ts` | Existing – Update | same |
-| TC-PROFILE-071 | `tests/behaviour/provider-profile-edge-wiring.test.ts` | Existing – Update | as `TC-PROFILE-059` |
+| TC-PROFILE-071 | `tests/behaviour/provider-profile-edge-wiring.test.ts` + injected fixture policy `tests/fixtures/provider/profile/selection/fixtures.ts` | Existing – Update | as `TC-PROFILE-059` |
 | TC-PROFILE-072 | `tests/behaviour/provider-profile-spawn.test.ts` | Existing – Update | `bun test tests/behaviour/provider-profile-spawn.test.ts` |
 | TC-PROFILE-073 | `tests/behaviour/provider-profile-spawn.test.ts` | Existing – Update | same |
 | TC-PROFILE-074 | `tests/behaviour/provider-nomination-admission.test.ts` | Existing – Update | `bun test tests/behaviour/provider-nomination-admission.test.ts` |
@@ -1095,22 +1264,26 @@ Execution commands assume the repo root. `TMPDIR=$PWD/tmp/tmpdir` is applied to 
 | TC-PROFILE-084 | `tests/behaviour/provider-parks.test.ts`; control `tests/behaviour/provider-cli.test.ts` | Existing – Update | `bun test tests/behaviour/provider-parks.test.ts tests/behaviour/provider-cli.test.ts` |
 | TC-PROFILE-085 | `tests/behaviour/provider-chain-resolution.test.ts` | Existing – No Change (control) + one set-equality assertion | `bun test tests/behaviour/provider-chain-resolution.test.ts` |
 | TC-PROFILE-086 | `tests/checks/provider-profile-hermetic.test.ts`, `tests/behaviour/provider-profile-edge-wiring.test.ts` | Existing – Update | `bun test tests/checks/provider-profile-hermetic.test.ts tests/behaviour/provider-profile-edge-wiring.test.ts` |
-| TC-PROFILE-087 | `tests/checks/provider-profile-hermetic.test.ts`, `tests/behaviour/provider-profile-probes.test.ts` | Existing – Update | as `TC-PROFILE-086` plus `…-probes.test.ts` |
+| TC-PROFILE-087 | `tests/checks/provider-profile-hermetic.test.ts`, `tests/behaviour/provider-profile-probes.test.ts` | Existing – Update (adds the one-factory/three-call-site census) | as `TC-PROFILE-086` plus `…-probes.test.ts` |
 | TC-PROFILE-088 | `tests/behaviour/provider-profile-probes.test.ts` | Existing – Update | as `TC-PROFILE-062` |
 | TC-PROFILE-089 | `tests/golden/provider-profile-resolve.test.ts` + `tests/fixtures/provider/profile/golden/` | Existing – Update | `bun test tests/golden/provider-profile-resolve.test.ts` |
 | TC-PROFILE-090 | `tests/golden/provider-profile-resolve.test.ts` | Existing – No Change (control) | same |
 | TC-PROFILE-091 | `tests/behaviour/provider-profile-selection.test.ts`, `tests/checks/provider-profile-evidence-bounds.test.ts` | Existing – Update | `bun test tests/behaviour/provider-profile-selection.test.ts tests/checks/provider-profile-evidence-bounds.test.ts` |
 | TC-PROFILE-092 | `tests/behaviour/provider-profile-selection.test.ts` | Existing – Update | as `TC-PROFILE-061` |
 | TC-PROFILE-093 | `tests/checks/provider-profile-evidence-bounds.test.ts`, `tests/checks/provider-profile-hermetic.test.ts` | Existing – Update | `bun test tests/checks/provider-profile-evidence-bounds.test.ts tests/checks/provider-profile-hermetic.test.ts` |
+| TC-PROFILE-094 | `tests/behaviour/provider-profile-selection.test.ts` + injected fixture `tests/fixtures/provider/profile/selection/fixtures.ts` | Existing – Update (new case in existing file) | as `TC-PROFILE-061` |
+| TC-PROFILE-095 | `tests/behaviour/provider-profile-probes.test.ts` + `tests/fixtures/provider/profile/probes/fixtures.ts` | Existing – Update (new case in existing file) | as `TC-PROFILE-062` |
+| TC-PROFILE-096 | `tests/behaviour/provider-profile-probes.test.ts` + `tests/fixtures/provider/profile/probes/fixtures.ts` | Existing – Update (new case in existing file) | as `TC-PROFILE-062` |
+| TC-PROFILE-097 | `tests/behaviour/provider-profile-probes.test.ts` + `tests/fixtures/provider/profile/probes/fixtures.ts` | Existing – Update (new case in existing file) | as `TC-PROFILE-062` |
 | — (gate) | aggregate | — | `TMPDIR=$PWD/tmp/tmpdir pnpm check` |
 
-**Mocking requirements (all cases)**: injected clock, injected state store, injected file system for the committed policy, injected zone facts, recording or throwing ports for fold/probe/credential/transport/sleep. No `mock.module`, no process spawn, no network, no real sleep.
+**Mocking requirements (all cases)**: injected clock, injected state store, injected file system for the committed policy **and the seat-level fixture policy**, injected zone facts, injected `{ condition, observedAtMs }` observation map keyed by provider, recording or throwing ports for fold/probe/credential/transport/sleep. No `mock.module`, no process spawn, no network, no real sleep.
 
 **Assertion bases (declared)**:
-- **Direct assertion**: 31 cases observe the property on the surface that owns it.
+- **Direct assertion**: 36 cases observe the property on the surface that owns it.
 - **Golden comparison**: `TC-PROFILE-089`, `TC-PROFILE-090` (normalized envelope).
 - **Deterministic re-derivation**: `TC-PROFILE-084` (park identity/generation reproduced from inputs, per `GAP-T2`).
-- **Delivered control**: `TC-PROFILE-085` (chain resolution unedited), `TC-PROFILE-090` (delivered golden unedited), `TC-PROFILE-072` (delivered `data-v1` grammar `TC-PROFILE-034`), `TC-PROFILE-087` (delivered 50 ms bound `TC-PROFILE-015`).
+- **Delivered control**: `TC-PROFILE-085` (chain resolution unedited), `TC-PROFILE-090` (delivered golden unedited), `TC-PROFILE-072` (delivered `data-v1` grammar `TC-PROFILE-034`), `TC-PROFILE-087` (delivered 50 ms bound `TC-PROFILE-015`), `TC-PROFILE-069` (delivered `TC-PROFILE-010` capability-denied control), `TC-PROFILE-074` (delivered `TC-PAUSE-002` refusal-identity parity).
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1123,30 +1296,35 @@ Execution commands assume the repo root. `TMPDIR=$PWD/tmp/tmpdir` is applied to 
 | RSK-T3 | The 100-provider cost arm becomes environment-sensitive | L | `TC-PROFILE-087` asserts read counts; the wall-clock bound stays with the delivered `TC-PROFILE-015` and is not re-baselined. |
 | RSK-T4 | An over-broad attribution blocks a healthy provider and the fixtures never notice | M | `TC-PROFILE-081` includes a provider-subject `reevaluation-cap` arm and a coexistence arm, so classification by cause rather than by park-name prefix is proven. |
 | RSK-T5 | Two "independent" compositions share module-level state, making the determinism arm vacuous | M | Each composition is constructed fresh with its own program, store and clock; a module-level cache would surface as a divergence in runs 2–3. |
-| RSK-T6 | "No local override required" passes because the local path was never consulted | L | `TC-PROFILE-059` asserts both the outcome and zero reads of any `config.local.yaml` path (`GAP-T3`). |
-| RSK-T7 | Seat-substitution fixtures drift from the committed policy's shape | M | Substitution fixtures live in `selection/fixtures.ts` beside the delivered chains and reuse the seat/profile constructors; acceptance cases use the committed document where the real `delivery` → `paid` order matters. |
+| RSK-T6 | "No local override required" passes because only the content read was asserted, not the layer's contribution | L | `TC-PROFILE-059` asserts the outcome, zero `readText` content reads of any `config.local.yaml` path, and that no local layer contributed a source or value; the existence probe is explicitly excluded as acquisition behaviour (`GAP-T3`). |
+| RSK-T7 | Seat-substitution fixtures drift from the committed policy's shape | M | Substitution fixtures live in `selection/fixtures.ts` beside the delivered chains and reuse the seat/profile constructors; the committed document is used only where the real `delivery` → `paid` order matters, and the seat-level criteria use the injected fixture policy (`GAP-T4`). |
 | RSK-T8 | A read-only case passes while the read wrote through an unobserved path | L | `TC-PROFILE-079` compares bytes and `mtimeNs` for every key and counts writes per record kind, rather than checking named keys only. |
-| RSK-T9 | The four refusal identities drift while every positive case stays green | M | `TC-PROFILE-092` exercises the capability-only, park-only and mixed arms, and `TC-PROFILE-065` pins the event codes. |
+| RSK-T9 | The refusal identities drift while every positive case stays green | M | `TC-PROFILE-092` exercises the capability-only, park-only and mixed arms; `TC-PROFILE-069` separates the capability-inadequate-substitute refusal (`unavailable`) from the selected profile's own-seat control (`capability-denied`, `TC-PROFILE-010`); `TC-PROFILE-065` pins the event codes. |
+| RSK-T10 | A single global observation instant silently re-enters through a helper and the per-target arms never notice | M | `TC-PROFILE-095` uses two declared targets with different bounds in one fixture, and `TC-PROFILE-097` rejects the global-instant, undeclared-target and all-providers readings by name. |
+| RSK-T11 | The AC-F3-3 boundary is asserted only as prose, so a widened gate passes | M | `TC-PROFILE-094` resolves three arms (undeclared, disabled, peak-parked) with zero parks and zero observations and compares each with the delivered baseline; any substitution, refusal or new blocker fails it. |
 
 ### 8.2 Assumptions
 
 - **A-T1**: `PARK_CAUSES`, `PROVIDER_CONDITION_KINDS`, `PROVIDER_WATCH_CONDITIONS`, `PROVIDER_SKIP_REASONS`, `ANNOUNCEMENT_CODES` and `PROVIDER_RECORD_KINDS` are delivered and unchanged by this change (asserted by `TC-PROFILE-065`).
 - **A-T2**: `ProfileProviderAvailability.condition` is an open string value position, so `watch-stale` needs no contract change (spec DM-2). If the implementation must add a union member, `TC-PROFILE-065` fails and the spec, not the test, must change.
-- **A-T3**: The committed policy text can be served through the injected `fs.readText` double at the composer's expected path, so acceptance needs no real repository write and no second configuration format.
+- **A-T3**: The committed policy text and the injected fixture policy documents can both be served through the injected `fs.readText` double at the composer's expected path, so acceptance needs no real repository write and no second configuration format. The committed document is the fixture for `AC-F1-1`/`AC-F1-2` only (`GAP-T4`).
 - **A-T4**: `decision.seatModels` remains the single per-seat map both the env record and the binding read (spec DM-3); `TC-PROFILE-072` would fail if a second derivation appeared.
 - **A-T5**: The delivered lifecycle persists the target record on switch/revert; that write is the only permitted one and is excluded from the zero-write assertion by key, not by running a different path.
-- **A-T6**: A composed live read observes at the read instant (spec A-6), so `TC-PROFILE-064` can assert age 0 without a transport call.
+- **A-T6**: A composed live read observes at the read instant (spec A-6), so `TC-PROFILE-064` can assert age 0 without a transport call; the observation seam is a per-provider map of `{ condition, observedAtMs }` (spec A-11, DM-7).
 - **A-T7**: `createParkRecord` accepts any closed cause with either subject kind, so the provider-subject `reevaluation-cap` arm of `TC-PROFILE-081` is constructible without a production change.
+- **A-T8**: The per-target staleness rule can be exercised by injecting an observation map into the probe without a production composition supplying one, which is the honesty limit stated in `TC-PROFILE-062` and `TC-PROFILE-095` (spec §8.6, A-10).
+- **A-T9**: A fixture policy may place a seat model on a provider outside the selected profile's `providers` list, which is the shape `AC-F3-1`, `AC-F3-2` and `AC-F3-3` require; the delivered profile constructors accept it without a production change.
 
 ### 8.3 Open Questions
 
-None open. No acceptance criterion was found untestable as written; the two clauses that needed translation rather than narrowing are recorded as declared bases, not gaps: `AC-F7-1`'s "same as before this change" became a tree invariant (`GAP-T2`, `TC-PROFILE-084`), and `AC-F1-1`'s "no operator-local override present" became an absence plus a zero-read assertion (`GAP-T3`, `TC-PROFILE-059`).
+None open. No acceptance criterion was found untestable as written. Three clauses that needed translation rather than narrowing are recorded as declared bases, not gaps: `AC-F7-1`'s "same as before this change" became a tree invariant (`GAP-T2`, `TC-PROFILE-084`); `AC-F1-1`'s "no operator-local override present" became an absence plus a zero-content-read assertion (`GAP-T3`, `TC-PROFILE-059`); and the seat-level criteria use an injected fixture policy where the committed policy cannot express the state (`GAP-T4`, `TC-PROFILE-071`, `TC-PROFILE-074`). The three DoR-iteration-1 ambiguities are resolved by the spec v1.1 and pinned here, not deferred: the capability-inadequate substitute yields `provider.profile.unavailable` (`TC-PROFILE-069`), the seat-level refusal carries the eligibility list unchanged with seat and provider in the bounded `summary` (`TC-PROFILE-070`, `TC-PROFILE-071`), and staleness is per declared target with the three excluded readings failing by name (`TC-PROFILE-095`..`TC-PROFILE-097`).
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | 2026-11-22 | @test-plan-writer | Initial plan for GH-377: 35 cases (`TC-PROFILE-059`..`TC-PROFILE-093`) covering 11 acceptance criteria across structure/contract, behaviour, edge wiring, checks and golden layers; the eight-cause classification fixture with an explicit subject per cause and the `window`/`ticket` `budget-exhausted` split; exact park-expiry and observation-freshness boundaries; seat substitution through the rung and override paths with the capability gate preserved; per-seat env-record/binding agreement and dispatch-nomination parity; read-time recovery and the zero-write audit; the unchanged `provider resolve` regression; and declared assertion bases with no TODO rows and no open questions. |
+| 1.1 | 2026-11-22 | @test-plan-writer | DoR-iteration-1 remediation against spec v1.1: (1) `TC-PROFILE-069` now refuses `provider.profile.unavailable` for a capability-inadequate substitute, with `TC-PROFILE-010` as the delivered `capability-denied` control, so `AC-F3-1`/`AC-F3-2` no longer overlap; (2) `TC-PROFILE-068`, `TC-PROFILE-070` and `TC-PROFILE-071` pin the refusal's evidence position — eligibility list unchanged, no blocker appended, no verdict flip, bounded `summary` naming seat and provider; (3) `TC-PROFILE-062`..`TC-PROFILE-065` and new `TC-PROFILE-095`..`TC-PROFILE-097` pin spec §8.6 per declared watch target, the undeclared-target case, the live-read age-0 case, the freshness-only seam, the production-honesty note and the three excluded readings; (4) `TC-PROFILE-066`/`TC-PROFILE-067` stay on recorded unavailability and new `TC-PROFILE-094` adds the AC-F3-3 seat-gate boundary (undeclared, disabled, peak-parked); (5) `TC-PROFILE-071` and `TC-PROFILE-074` use an injected fixture policy because the committed policy cannot express the seat-level refusal; (6) `GAP-T3`/`TC-PROFILE-059` assert zero `readText` content reads rather than zero existence probes; (7) `TC-PROFILE-074` is labelled Integration on `tests/behaviour/provider-nomination-admission.test.ts` with its fixture and parity arm named; and (8) a Definition-of-Done coverage table (§3.4) maps DOD-1..DOD-8, marking DOD-6..DOD-8 as gate evidence. New identifiers `TC-PROFILE-094`..`TC-PROFILE-097` are noted in `GAP-T5` for plan-phase ownership; `created` and every existing identifier are preserved. |
 
 ## 10. Test Execution Log
 

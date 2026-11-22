@@ -6,7 +6,7 @@ phases:
   - id: 1
     title: Park-aware availability facts and probe composition
     kind: delivery
-    summary: Compose provider availability from declaration, enablement, declared peak, active provider-attributable parks and supplied observations in one memoized probe, feed the profile-resolve handler's state store into it, and prove the probe, edge, closure and freshness-bound cases (TC-PROFILE-059, 060, 061, 062, 063, 064, 065, 087, 088, 091); one verified park fold per resolution, per-provider memoization, fail-closed on a failed read, and no network, credential, timer or write.
+    summary: Compose provider availability from declaration, enablement, declared peak, active provider-attributable parks and the per-target observation seam (composition-supplied per provider; a provider is stale exactly when a declared watch target's own `maxAgeSeconds` is reached by `ageSeconds = floor((nowMs - observedAtMs) / 1000)` with the boundary stale, a provider with no declared target is never stale, a live read observes at age 0, an absent observation is inert, and only freshness is consumed), in one memoized probe per distinct provider fed by the profile-resolve handler's state store, with one verified park fold per resolution and a named unavailable verdict when that fold read fails, and prove the probe, edge, closure, freshness-bound, per-target, excluded-reading, fold-failure and fold-count cases (TC-PROFILE-059, 060, 061, 062, 063, 064, 065, 087, 088, 091, 095, 096, 097) with no network, credential, timer or write.
     scope:
       files:
         - packages/cli/src/edge.ts
@@ -20,10 +20,12 @@ phases:
         - tests/structure/content-inventory.test.ts
         - tests/structure/provider-policy-adoption-reference.test.ts
         - tests/fixtures/provider/profile/probes/fixtures.ts
+        - doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md
+        - doc/decisions/00-index.md
   - id: 2
     title: Seat-level re-check, substitution, and the named refusal
     kind: delivery
-    summary: Re-check every effective seat model's provider against the same memoized availability facts, substitute the seat from the next eligible profile in preferenceChain order with the capability gate preserved, and refuse provider.profile.unavailable naming seat and provider when no profile supplies it (TC-PROFILE-066, 067, 068, 069, 070, 092, 093); the selected profile, tier, rung and agent overrides are otherwise unchanged.
+    summary: Narrow the seat guarantee to recorded unavailability only (an active provider-attributable park or a stale observation), re-check every effective seat model's provider against the same memoized availability facts, substitute the seat from the next eligible profile in preferenceChain order on a provider that is not recorded-unavailable and satisfies the required capability with the capability gate preserved, and refuse the owner-mandated `provider.profile.unavailable` at exit 2 naming both the seat and the provider when no later eligible profile supplies that seat even on a capability-inadequate model, carrying the eligibility list unchanged with the selected profile still `eligible`, later profiles still `shadowed` and unprobed, no blocker appended and no verdict flip (TC-PROFILE-066, 067, 068, 069, 070, 092, 093, 094); the selected profile, tier, rung and agent overrides are otherwise unchanged, and a seat model on an undeclared, disabled or peak-parked provider stays outside this gate.
     scope:
       files:
         - packages/core/src/provider/profile.ts
@@ -34,7 +36,7 @@ phases:
   - id: 3
     title: Dispatch, spawn, and golden composition wiring
     kind: delivery
-    summary: Pass the same park-aware facts through resolveProfileContextFrom's injected reader and the dispatch nomination predicate, and prove refusal projection, per-seat env-record/binding agreement, all-or-nothing emission, nomination parity, recovery through the edge and the refreshed goldens (TC-PROFILE-071, 072, 073, 074, 075, 089, 090); the CLI profile-resolve wiring landed in phase 1.
+    summary: Pass the same park-aware facts through resolveProfileContextFrom's injected reader and the dispatch nomination predicate, and prove refusal projection, per-seat env-record/binding agreement, all-or-nothing emission, nomination parity, recovery through the edge and the refreshed goldens (TC-PROFILE-071, 072, 073, 074, 075, 089, 090); the seat-level refusal fixture is the injected policy family delivered in phase 2, in which the selected profile is eligible on its `providers` while a seat model names a parked provider outside that list, and the case carries the unchanged-list evidence (selected profile `eligible`, later profiles `shadowed`, no blocker appended, no verdict flip), so the exit-2 arm under test is the seat-level refusal rather than the all-profiles-ineligible one; the CLI profile-resolve wiring landed in phase 1.
     scope:
       files:
         - packages/cli/src/production.ts
@@ -53,7 +55,7 @@ phases:
   - id: 4
     title: Taxonomy proof, hermetic evidence, chain regression, and the declared doc-sync obligation
     kind: delivery
-    summary: Pin the eight-cause classification fixture with a subject and effect per cause and its drift arms, prove the exact-expiry, cleared-condition and never-parked equivalences and the zero-write audit, prove determinism and memoization over one hundred providers, and prove the unchanged chain resolver (TC-PROFILE-076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086); the declared documentation paths are the phase-7 reconciliation scope owned by @doc-syncer, and delivery does not author them — the declaration exists only so the final diff stays within plan scope.
+    summary: Pin the eight-cause classification fixture with a subject and effect per cause and its drift arms, prove the exact-expiry, cleared-condition and never-parked equivalences and the zero-write audit, prove determinism and memoization over one hundred providers, and prove the unchanged chain resolver (TC-PROFILE-076, 077, 078, 079, 080, 081, 082, 083, 084, 085, 086); the four documentation paths are declared for final-diff coverage only, are excluded from this phase's commit, and are reconciled by `@doc-syncer` in phase 7; delivery authors none of them.
     scope:
       files:
         - tests/behaviour/provider-profile-park-switch-revert.test.ts
