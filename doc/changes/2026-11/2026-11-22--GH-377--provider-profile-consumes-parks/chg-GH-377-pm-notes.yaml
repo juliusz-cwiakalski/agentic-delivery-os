@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-22T02:28:47.391Z }
   quality_gates: { started: null, completed: 2026-11-22T03:07:32.281Z }
   dod_check: { started: null, completed: 2026-11-22T03:08:05.222Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-22T03:09:52.208Z }
 decisions:
   - text: "Scope source is the ticket body plus the owner-authored
       implementation-pointer comment of 2026-11-22. The comment is binding: the
@@ -79,6 +79,19 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/380 —
+      `fix/GH-377/provider-profile-consumes-parks` → `main-tools`, 27 commits,
+      open, ready for review, not merged; merge authority with the owner. Range
+      gate re-run at the PR head bfc410c2: VERDICT PASS, 27 commits, 0
+      offending. TDR-0075 is Proposed with owner acceptance at this PR review.
+      Residual non-blocking review nits (plan P2 summary word, TDR multi-target
+      phrasing, glossary beyond the named §22 set, TC-082/TC-085 test-quality
+      nits, result-contract row cell) are recorded in the change folder.
+      `.zed/settings.json` remains untracked and unrelated. Ticket #377 is
+      marked ready for review with the PR link."
+    type: info
+    date: "2026-11-22"
   - text: "DoD CHECK = PASS. Ledger 10/11 phases complete through quality_gates.
       Plan phases P1-P5 evidenced with commit and test result: P1 8f0861ea, P2
       a89042d3, P3 6cf2b4b7, P4 3b7e2506, P5 5e87653f (declaration-only
