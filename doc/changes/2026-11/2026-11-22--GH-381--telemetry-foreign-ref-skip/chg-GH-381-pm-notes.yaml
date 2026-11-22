@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-22T13:13:29.714Z }
   system_spec_update: { started: null, completed: 2026-11-22T13:18:40.403Z }
   review_fix: { started: null, completed: 2026-11-22T13:32:36.768Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-22T14:14:45.288Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions: []
@@ -181,24 +181,41 @@ notes:
     date: "2026-11-22"
   - text: "Quality gates iteration 1: range lint PASS (14 commits in
       main-tools..HEAD, 0 offending, mode none, binary
-      node_modules/.bin/commitlint, origin repository-local,
-      merge-base 5ace5e98); aggregate pnpm check FAIL — 12465 pass / 4 skip /
-      5 fail across 2 suites (tests/checks/privacy-release.test.ts
-      TC-RELEASE-001 x2, tests/structure/changeset-additivity.test.ts
-      TC-SYNC-011 x3), one root cause: .changeset/gh-381-telemetry-foreign-ref-s
-      kip-patch.md declares only '@delivery-os/core: patch' but the repo
-      lockstep invariant requires every changeset to declare exactly the five
-      fixed-group packages (core, adapters, cli, mcp, opencode) all at minor.
-      The spec's version_impact: patch front-matter guess misled the plan's
-      changeset decision; the GH-377 precedent (gh-377-provider-profile-parks-
-      minor.md) was the correct five-package minor form. Remediation: @fixer
-      rewrites the changeset content to the five-package minor block (filename
-      kept — cosmetic; disclosed in PR body); gates re-run after the remediation
-      commit. Spec/test-plan version_impact: patch fields are stale relative to
-      the lockstep-minor convention — cosmetic working-file metadata, disclosed
-      in PR body, not gate-relevant. Test-infra noise noted: gate suites
+      node_modules/.bin/commitlint, origin repository-local, merge-base
+      5ace5e98); aggregate pnpm check FAIL — 12465 pass / 4 skip / 5 fail across
+      2 suites (tests/checks/privacy-release.test.ts TC-RELEASE-001 x2,
+      tests/structure/changeset-additivity.test.ts TC-SYNC-011 x3), one root
+      cause: .changeset/gh-381-telemetry-foreign-ref-s kip-patch.md declares
+      only '@delivery-os/core: patch' but the repo lockstep invariant requires
+      every changeset to declare exactly the five fixed-group packages (core,
+      adapters, cli, mcp, opencode) all at minor. The spec's version_impact:
+      patch front-matter guess misled the plan's changeset decision; the GH-377
+      precedent (gh-377-provider-profile-parks- minor.md) was the correct
+      five-package minor form. Remediation: @fixer rewrites the changeset
+      content to the five-package minor block (filename kept — cosmetic;
+      disclosed in PR body); gates re-run after the remediation commit.
+      Spec/test-plan version_impact: patch fields are stale relative to the
+      lockstep-minor convention — cosmetic working-file metadata, disclosed in
+      PR body, not gate-relevant. Test-infra noise noted: gate suites
       create/switch transient branches/worktrees during the run; final repo
       state re-verified after gates."
+    type: info
+    date: "2026-11-22"
+  - text: "Quality gates iteration 2 (after remediation commit c250c851): ALL PASS.
+      Range lint gate: PASS — 15 commits in main-tools..HEAD, 0 offending
+      commits, mode none (no remediation mode named), commitlint binary
+      node_modules/.bin/commitlint, origin repository-local (ref
+      refs/remotes/origin/main-tools), merge-base 5ace5e98. Aggregate gate
+      TMPDIR=$PWD/tmp/tmpdir pnpm check: PASS end-to-end, exit 0 — all 11 stages
+      ran (lint 0 errors with the pre-existing advisory set, format:check,
+      build, typecheck, test 12470 pass / 4 skip / 0 fail across 1503 files,
+      check:boundaries 520 modules clean, check:memory 0 errors 0 advisories,
+      check:forbidden-literals 0 violations, check:namespace-tree conforms,
+      prompt-conformance 5 clean, help-guide-coverage covered, exports-parity 5
+      publishables pass). The 5 iteration-1 failures are gone (12474 total tests
+      unchanged; delta only in the fixed five). Post-run verification: tree
+      clean except untracked .zed/, branch fix/GH-381/telemetry-foreign-ref-skip
+      unchanged, transient gate-branch churn self-restored."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 1 complete (fixtures + delivered-behavior FX-5 golden), commit
