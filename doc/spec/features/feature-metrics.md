@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-METRICS
 status: Current
 created: 2026-11-17
-last_updated: 2026-11-19
+last_updated: 2026-11-22
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivery metrics and alarm family: the read-only `metrics [--ref <ref>] [--from <iso>] [--through <iso>] [--json]` report under `delivery.metrics.v1`, carrying the four vocabulary entries (native ceremony share from the runner fold, native cycle time from the transition history with right-censoring, the CI-failure-rate proxy recomputed under the committed definition, and the escaped-defects curated floor with its closed three-class set), the per-dispatch tokens/cost/restarts block composed from the delivered spend fold with the attributable-scoped roll-up disclosure, the burn-rate alarm evaluated against the project-committed `metrics.burn-rate` declaration node (schema `delivery.metrics.burn-rate.v1`, one alarm per crossing, `crossedAt` the read instant), the live comparison view under the committed protocol (`sampleMinimum: 5`, `insufficient-sample` below it, the proxy-vs-native caveat exactly on cross-kind rows), the per-section classified-absence posture with the single `metrics.baseline-unreadable` platform row, the deterministic bounded machine and human output with tail-ordered counted drops and a never-dropped alarm set, and the mount as the twenty-fourth prompt-required family."
 links:
-  related_changes: ["GH-299", "GH-346"]
+  related_changes: ["GH-299", "GH-346", "GH-381"]
   related_decisions: ["ODR-0002", "ADR-0003"]
   contracts:
     - "packages/core/src/contracts/metrics.ts"
@@ -184,7 +184,7 @@ The entry's value is the counted total, the sample carries `postGateReview`, `la
 
 ### Dispatch block (spend parity)
 
-The `dispatch` block carries the delivered spend fold's figures for the same selection, computed over the same verified read: `tokensByClass` (the five delivered classes), `costTotals` (total and per-model in harness-reported units with `sparse`), `restarts`, `perAgent[]` (role, model, calls, tokens), the role and model `breakdowns`, and the delivered reconciliation disclosure cited by reference (`basis` and `verdict` names only, never recomputed). When telemetry is present the block's figures equal `spend --ref` for the same selection; when it is absent the block names the delivered condition (`spend.telemetry-absent`) in `absenceReason` and renders no figures.
+The `dispatch` block carries the delivered spend fold's figures for the same selection, computed over the same verified read: `tokensByClass` (the five delivered classes), `costTotals` (total and per-model in harness-reported units with `sparse`), `restarts`, `perAgent[]` (role, model, calls, tokens), the role and model `breakdowns`, and the delivered reconciliation disclosure cited by reference (`basis` and `verdict` names only, never recomputed). The verified read answers exactly one ref: a well-formed telemetry family key naming another ref is skipped without inspection and never classified as damage, so the dispatch figures and the burn-rate evaluation derive solely from the requested ref's records. When telemetry is present the block's figures equal `spend --ref` for the same selection; when it is absent the block names the delivered condition (`spend.telemetry-absent`) in `absenceReason` and renders no figures.
 
 The delivered roll-up discipline is consumed unchanged. `perAgent` skips records whose role or model is `null`, while the breakdowns keep the `null` value row so their token sums equal the full total on every selection. When unattributable steps exist, the block discloses the gap in `unattributable` (`steps`, `tokens`) and invents no row; over a fully attributable selection the `perAgent` sum equals its totals exactly.
 

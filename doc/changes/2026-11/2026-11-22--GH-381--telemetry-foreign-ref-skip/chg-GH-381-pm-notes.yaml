@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-22T08:25:35.811Z }
   dor_check: { started: null, completed: 2026-11-22T08:31:01.686Z }
   delivery: { started: null, completed: 2026-11-22T13:13:29.714Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-22T13:18:40.403Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
