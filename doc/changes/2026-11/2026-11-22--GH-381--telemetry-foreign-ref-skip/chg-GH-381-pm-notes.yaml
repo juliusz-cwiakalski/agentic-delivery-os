@@ -165,3 +165,34 @@ notes:
       types/tsc green. Test result: PASS."
     type: info
     date: "2026-11-22"
+  - text: "Plan phase 2 complete (foreign-ref skip in the step and baseline family
+      branches + regression suite green), commit c20f4b58. The F-2 table
+      (spec §5.1, Appendix C) is implemented inside readTelemetryFamilies
+      (packages/core/src/state/telemetry.ts) only: a bare family prefix tears
+      state.store.torn at its own position; a well-formed foreign key is
+      skipped in ledger order with no kind inspection, no payload inspection,
+      and no evidence; the requested ref's kind-mismatch tear and payload
+      validation are unchanged. The capture-outcome branch, the session-record
+      branch, the single-family reads, the capture path, and spend-reads.ts
+      are untouched (DEC-3, NG-4); the single verified pass is preserved
+      (asserted structurally in TC-TELEMETRY-045: exactly one readRecords call,
+      zero other port calls, ledger digest byte-identical at 4,806 records).
+      New suite tests/behaviour/telemetry-foreign-ref-skip.test.ts implements
+      TC-TELEMETRY-040..047 (16 tests). Scale-seeding note: the delivered
+      verified write re-verifies the whole ledger per append, so 4,806-record
+      seeding through store.append is quadratic (~minutes per build, twice per
+      suite run); FX-6's bulk steps therefore land through the delivered ledger
+      core (buildRecord + serializeRecord — the exact calls appendRecord makes)
+      in one pass, byte-identical to delivered writes, with the first record
+      and both refs' families still through the delivered store append; the
+      verified read under test validates every record in one pass regardless.
+      F-6 golden equality proven directly: re-running the capture entry
+      post-fix regenerates tests/fixtures/telemetry/foreign-ref-skip-golden.ts
+      byte-identical to the pre-fix committed golden. Verification: bun test
+      tests/behaviour/telemetry-foreign-ref-skip.test.ts 16 pass / 0 fail
+      (6.07s); targeted regression net over all 109 telemetry/spend/metrics/
+      status/provider-budget/harness-telemetry suites 906 pass / 0 fail / 2
+      skip; delivered TC-TELEMETRY-012 suite 5 pass / 0 fail; pnpm typecheck +
+      tests types/tsc green; biome check clean. Test result: PASS."
+    type: info
+    date: "2026-11-22"

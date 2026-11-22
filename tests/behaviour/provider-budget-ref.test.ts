@@ -13,6 +13,8 @@ import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import { createProviderSpendTotalsPort } from "../../packages/cli/src/edge";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import {
+  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  type HarnessCaptureOutcomeRecord,
   PARK_EVIDENCE_FIELDS,
   PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
   type ProviderBudgetDeclaration,
@@ -32,6 +34,15 @@ import { parseProviderConfiguration } from "../../packages/core/src/provider/val
 import { appendHarnessTelemetry, readSpendLedger } from "../../packages/core/src/state/index";
 import { makeSessionRecord } from "../fixtures/spend/harness";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
+import {
+  makeBaselineRecord,
+  makeStepRecord,
+  makeV1Record,
+  seedBaselineBatch,
+  seedCaptureOutcomes,
+  seedSteps,
+  seedV1Records,
+} from "../fixtures/telemetry";
 
 const NOW = Date.UTC(2026, 0, 1, 12, 0, 0);
 const CONTEXT_PATH = "/repo/.ai/local/pm-context.yaml";
@@ -332,6 +343,121 @@ describe("TC-REF-005 the three-tier precedence measures the same ledger spend re
       const refused = await refusing.resolve({ config: configWith(ticketBudget), persist: false });
       expect(refused.ok).toBe(false);
       if (!refused.ok) expect(refused.errorCode).toBe("input.value.rejected");
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("TC-REF-007 the budget measurement reads a two-ref telemetry ledger and resolution reaches a provider decision", () => {
+  test("the measured budget is exactly the requested ref's own fold figure and resolution selects per the delivered facts", async () => {
+    const root = makeTempRoot("provider-budget-ref-two-families");
+    try {
+      const identity = makeIdentity(root);
+      const { store } = openStore(identity);
+      // FX-7: both refs hold full telemetry families — two steps, one
+      // baseline, one v1 session record, one capture outcome each — with
+      // deliberately distinct per-ref figures, seeded through the delivered
+      // paths (the two-ref baseline lands through the delivered record shape
+      // in one fence; the delivered baseline helper's own pre-read stays as
+      // delivered).
+      const families = (ref: string, stepCosts: readonly number[], v1Cost: number): void => {
+        seedSteps(
+          store,
+          stepCosts.map((cost, index) =>
+            makeStepRecord({
+              ref,
+              runId: `run-${ref}`,
+              sessionId: `ses-${ref}-s${String(index + 1)}`,
+              tokens: { input: 10, output: 5, reasoning: 0, cacheRead: 0, cacheWrite: 0 },
+              calls: index + 1,
+              cost,
+              capturedAt: new Date(NOW - 3600 * 1000).toISOString(),
+            }),
+          ),
+        );
+        seedBaselineBatch(store, [
+          makeBaselineRecord({
+            ref,
+            runId: `run-${ref}`,
+            sessionId: `ses-${ref}-baseline`,
+            cost: v1Cost,
+            capturedAt: new Date(NOW - 3600 * 1000).toISOString(),
+          }),
+        ]);
+        seedV1Records(store, [
+          makeV1Record({
+            ref,
+            runId: `run-${ref}`,
+            sessionId: `ses-${ref}-v1`,
+            cost: v1Cost,
+            capturedAt: new Date(NOW - 3600 * 1000).toISOString(),
+          }),
+        ]);
+        const outcome: HarnessCaptureOutcomeRecord = {
+          schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+          workItemRef: ref,
+          runId: `run-${ref}`,
+          captured: 1,
+          degraded: 0,
+          failed: 0,
+          warnings: [],
+          capturedAt: new Date(NOW - 3600 * 1000).toISOString(),
+        };
+        seedCaptureOutcomes(store, [outcome]);
+      };
+      families("GH-700", [6, 4], 10);
+      families("GH-701", [40, 30], 70);
+
+      const foldTotalFor = (ref: string): number => {
+        const read = readSpendLedger(store, ref);
+        if (!read.ok) throw new Error(`fold read failed: ${read.error.code}`);
+        const folded = computeSpendReport(read.value, { workItemRef: ref });
+        if (!folded.ok) throw new Error("fold refused");
+        return folded.data.costTotals.total ?? 0;
+      };
+      const fold700 = foldTotalFor("GH-700");
+      const fold701 = foldTotalFor("GH-701");
+      expect(fold700).toBe(20);
+      expect(fold701).toBe(140);
+
+      const port = createProviderSpendTotalsPort(store);
+      const scopes = [{ scopeKey: "ticketCap", fromMs: 0 }];
+      const measured700 = await port.read({ workItemRef: "GH-700", scopes });
+      expect(measured700.status).toBe("measured");
+      if (measured700.status === "measured") {
+        // Zero foreign contribution: the measured budget is exactly the
+        // requested ref's own scoped fold figure.
+        expect(measured700.totals[0]?.cost).toBe(fold700);
+        expect(measured700.totals[0]?.cost).not.toBe(fold701);
+      }
+      const measured701 = await port.read({ workItemRef: "GH-701", scopes });
+      expect(measured701.status).toBe("measured");
+      if (measured701.status === "measured") {
+        expect(measured701.totals[0]?.cost).toBe(fold701);
+      }
+
+      // Resolution proceeds to a provider decision per the delivered provider
+      // facts — never the telemetry tear.
+      const engine = createProviderEngine({
+        clock: { nowMs: () => NOW },
+        credentialPort: { resolve: () => undefined },
+        transport: { send: async () => ({ status: 200, bodyText: "{}" }) },
+        sleep: { sleep: async () => undefined },
+        spendTotals: port,
+        resolveWorkItemRef: () => ({ status: "resolved", workItemRef: "GH-700" }),
+        workItemContextPath: CONTEXT_PATH,
+      });
+      const result = await engine.resolve({
+        config: configWith(ticketBudget),
+        persist: false,
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.decision.kind).toBe("selected");
+      if (result.decision.kind === "selected") {
+        expect(result.decision.chainName).toBe("default");
+      }
     } finally {
       removeRoot(root);
     }

@@ -10,6 +10,11 @@ import { join } from "node:path";
 import { createSpendCommandDefinition } from "../../packages/cli/src/commands/spend";
 import { createSpendCommandRuntime } from "../../packages/cli/src/edge";
 import { runCli } from "../../packages/cli/src/index";
+import {
+  HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+  type HarnessCaptureOutcomeRecord,
+} from "../../packages/core/src/contracts/index";
+import { appendHarnessCaptureOutcome } from "../../packages/core/src/state/index";
 import { fullBaseline } from "../fixtures/metrics/baseline";
 import { burnRateConfig } from "../fixtures/metrics/config";
 import {
@@ -17,6 +22,7 @@ import {
   METRICS_REF,
   type MetricsFixture,
   makeMetricsFixture,
+  OTHER_REF,
   reportOf,
   runMetrics,
 } from "../fixtures/metrics/harness";
@@ -28,6 +34,12 @@ import {
   tokens,
 } from "../fixtures/metrics/telemetry";
 import { completeHistory, seedHistory } from "../fixtures/metrics/transitions";
+import {
+  makeBaselineRecord,
+  makeV1Record,
+  seedBaselines,
+  seedV1Records,
+} from "../fixtures/telemetry";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -257,5 +269,90 @@ describe("TC-METRICS-042 ordering, null attribution, and the disclosed remainder
       metrics.dispatch as { breakdowns: { role: readonly { value: string | null }[] } }
     ).breakdowns.role;
     expect(roles.map((row) => row.value)).toEqual(["alpha", "beta", "zeta", null]);
+  });
+});
+
+describe("TC-METRICS-113 the metrics report reads a two-ref ledger with exactly the requested ref's dispatch", () => {
+  /** Seed the foreign ref's full telemetry families onto an existing fixture store. */
+  const seedForeignFamilies = (fixture: MetricsFixture): void => {
+    seedTelemetry(fixture.store, [
+      stepOf({
+        ref: OTHER_REF,
+        runId: "run-metrics-foreign",
+        agentRole: "foreign-role",
+        model: "model-foreign",
+        tokens: tokens({ input: 99999 }),
+        calls: 99,
+        cost: 999,
+        capturedAt: new Date(METRICS_NOW_MS - 86_400_000).toISOString(),
+      }),
+    ]);
+    seedBaselines(fixture.store, [
+      makeBaselineRecord({
+        ref: OTHER_REF,
+        runId: "run-metrics-foreign",
+        sessionId: "ses-metrics-foreign-baseline",
+        cost: 12,
+        capturedAt: new Date(METRICS_NOW_MS - 86_400_000).toISOString(),
+      }),
+    ]);
+    seedV1Records(fixture.store, [
+      makeV1Record({
+        ref: OTHER_REF,
+        runId: "run-metrics-foreign",
+        sessionId: "ses-metrics-foreign-v1",
+      }),
+    ]);
+    const outcome: HarnessCaptureOutcomeRecord = {
+      schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
+      workItemRef: OTHER_REF,
+      runId: "run-metrics-foreign",
+      captured: 1,
+      degraded: 0,
+      failed: 0,
+      warnings: [],
+      capturedAt: new Date(METRICS_NOW_MS - 86_400_000).toISOString(),
+    };
+    const outcomeSeeded = appendHarnessCaptureOutcome(
+      fixture.store,
+      "metrics-foreign-outcome",
+      outcome,
+    );
+    expect(outcomeSeeded.ok).toBe(true);
+  };
+
+  test("the dispatch block, per-dispatch rows, and burn-rate evaluation equal the single-ref report", async () => {
+    const capturedAt = new Date(METRICS_NOW_MS - 2 * 86_400_000).toISOString();
+    const single = seedCase(
+      "two-ref-single",
+      fullyAttributableSteps({ ref: METRICS_REF, capturedAt }),
+    );
+    const twoRef = seedCase(
+      "two-ref-foreign",
+      fullyAttributableSteps({ ref: METRICS_REF, capturedAt }),
+    );
+    seedForeignFamilies(twoRef);
+
+    const singleMetrics = reportOf(await runMetrics(single, ["metrics", "--json"]));
+    const twoRefMetrics = reportOf(await runMetrics(twoRef, ["metrics", "--json"]));
+    const singleDispatch = singleMetrics.dispatch as Record<string, unknown>;
+    const foreignDispatch = twoRefMetrics.dispatch as Record<string, unknown>;
+    // The report succeeds — no state.store.torn — and its dispatch block is
+    // byte-equal to the single-ref report: zero foreign rows, zero requested
+    // rows dropped, shape and tolerances unchanged (NG-4).
+    expect(JSON.stringify(foreignDispatch)).toBe(JSON.stringify(singleDispatch));
+    // The burn-rate evaluation reads the same scoped families: the alarm
+    // evaluation is identical despite the foreign ref's 99,999-token step,
+    // and the measured value is exactly the requested ref's 1,200 tokens.
+    expect(JSON.stringify(twoRefMetrics.alarmEvaluation)).toBe(
+      JSON.stringify(singleMetrics.alarmEvaluation),
+    );
+    expect(JSON.stringify(twoRefMetrics.alarms)).toBe(JSON.stringify(singleMetrics.alarms));
+    const alarms = twoRefMetrics.alarms as readonly { measured: number }[];
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]?.measured).toBe(1200);
+    // The dispatch sums remain the requested ref's seeded identities.
+    const total = sumTokens(foreignDispatch.tokensByClass as Record<string, number>);
+    expect(total).toBe(1200);
   });
 });
