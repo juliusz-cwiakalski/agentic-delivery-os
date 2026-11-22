@@ -30,8 +30,8 @@ phases:
   - id: 3
     title: Multi-ref consumer proofs and the lockstep patch changeset
     kind: delivery
-    summary: prove the consumers inherit the corrected projection with no edit of their own — provider resolution proceeds to a provider decision on the two-ref fixture with the measured budget equal to exactly the requested ref's own scoped totals and no telemetry tear on any path (TC-REF-006), and the metrics report reads the two-ref ledger with exactly the requested ref's dispatch, unchanged shape and tolerances (TC-METRICS-113, with the test plan's documented fallback of moving identical assertions into the new suite over FX-1 if the metrics harness resists hosting a second ref, AC coverage unchanged) — and add the lockstep patch changeset for @delivery-os/core per spec A-5/§18; no consumer implementation file is edited anywhere in this change.
-    # TC ownership: TC-REF-006, TC-METRICS-113
+    summary: prove the consumers inherit the corrected projection with no edit of their own — provider resolution proceeds to a provider decision on the two-ref fixture with the measured budget equal to exactly the requested ref's own scoped totals and no telemetry tear on any path (TC-REF-007), and the metrics report reads the two-ref ledger with exactly the requested ref's dispatch, unchanged shape and tolerances (TC-METRICS-113, with the test plan's documented fallback of moving identical assertions into the new suite over FX-1 if the metrics harness resists hosting a second ref, AC coverage unchanged) — and add the lockstep patch changeset for @delivery-os/core per spec A-5/§18; no consumer implementation file is edited anywhere in this change.
+    # TC ownership: TC-REF-007, TC-METRICS-113
     # Verify: bun test tests/behaviour/provider-budget-ref.test.ts; bun test tests/behaviour/metrics-dispatch.test.ts; bun test tests/behaviour/telemetry-foreign-ref-skip.test.ts
     scope:
       files:
