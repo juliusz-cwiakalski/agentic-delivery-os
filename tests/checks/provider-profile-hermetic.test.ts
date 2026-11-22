@@ -3,15 +3,17 @@
  * hermetic, the new policy is runtime-neutral, and secret canaries never cross
  * an observable surface.
  */
-import { describe, expect, spyOn, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import type {
   CredentialPort,
   ProviderWatchTarget,
   QuotaTransport,
   QuotaTransportRequest,
+  StateStorePort,
 } from "../../packages/core/src/contracts/index";
 import {
   createProfileEvent,
@@ -22,6 +24,10 @@ import {
   resolveProfileForSpawn,
   selectProfile,
 } from "../../packages/core/src/provider/index";
+import {
+  createParkRecord,
+  persistProviderResolution,
+} from "../../packages/core/src/provider/parks";
 import { scan } from "../../scripts/checks/ambient-globals";
 import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
 import {
@@ -29,11 +35,20 @@ import {
   exhausted,
   mixedChain,
   peak,
+  profile,
+  seat,
 } from "../fixtures/provider/profile/selection/fixtures";
+import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
 const NOW = 1_700_000_000_000;
 const CANARY = "CANARY-PROFILE-SECRET";
+const roots: string[] = [];
+
+afterEach(() => {
+  for (const root of roots) removeRoot(root);
+  roots.length = 0;
+});
 
 const profileSources = [
   "packages/core/src/contracts/provider-profile.ts",
@@ -229,5 +244,142 @@ describe("TC-PROFILE-056 secret-safety canaries", () => {
     });
     if (!result.ok) throw new Error("selection failed");
     expect(JSON.stringify(result)).not.toContain(CANARY);
+  });
+});
+
+describe("GH-377 TC-PROFILE-087 one fold read and memoized probes over one hundred providers", () => {
+  const countingStore = (store: StateStorePort) => {
+    let foldReads = 0;
+    const wrapped: StateStorePort = {
+      ...store,
+      read: (input) => {
+        if (input.requiredKeys.length === 0) foldReads += 1;
+        return store.read(input);
+      },
+    };
+    return { store: wrapped, foldReads: () => foldReads };
+  };
+
+  test("one verified fold read per resolution and one probe per distinct provider", () => {
+    const root = makeTempRoot("profile-hermetic");
+    roots.push(root);
+    const base = openStore(makeIdentity(root)).store;
+    const counting = countingStore(base);
+    const providerNames = Array.from({ length: 100 }, (_value, index) => `p${index}`);
+    const entries = Object.fromEntries(
+      providerNames.map((name) => [name, { name, class: "subscription" as const, enabled: true }]),
+    );
+    const profiles = Object.fromEntries(
+      providerNames.map((name, index) => [
+        `profile-${index}`,
+        profile({
+          name: `profile-${index}`,
+          tier: "t",
+          providers: index === 0 ? providerNames : [name],
+          seats: { pm: seat(`${name}-model`, "judgment", "text-only") },
+        }),
+      ]),
+    );
+    const chain = {
+      tiers: { t: { name: "t" } },
+      profiles,
+      preferenceChain: {
+        base: "profile-0",
+        fallbacks: providerNames.slice(1).map((_name, index) => `profile-${index + 1}`),
+        order: providerNames.map((_name, index) => `profile-${index}`),
+      },
+    };
+    const inner = createResolvedProviderProbe(entries, NOW, undefined, { store: counting.store });
+    let probeCalls = 0;
+    const probe = {
+      probe: (providerName: string) => {
+        probeCalls += 1;
+        return inner.probe(providerName);
+      },
+    };
+    const selection = selectProfile({ profiles: chain, probe, nowMs: NOW });
+    expect(selection.ok).toBe(true);
+    if (!selection.ok) return;
+    expect(selection.decision.profile).toBe("profile-0");
+    expect(counting.foldReads()).toBe(1);
+    expect(probeCalls).toBe(100);
+
+    const before = probeCalls;
+    resolveProfileForSpawn({
+      profiles: chain,
+      probe,
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    // The same probe instance serves the spawn resolution; the fold is not
+    // re-read, and each pass memoizes one probe per distinct provider.
+    expect(counting.foldReads()).toBe(1);
+    expect(probeCalls - before).toBe(100);
+  });
+
+  test("the construction census finds one factory at exactly three call sites", () => {
+    const edge = read("packages/cli/src/edge.ts");
+    const production = read("packages/cli/src/production.ts");
+    const calls = (text: string): number =>
+      (text.match(/createResolvedProviderProbe\(/g) ?? []).length;
+    // The definition is `createResolvedProviderProbe = (` and does not match.
+    expect(calls(edge) + calls(production)).toBe(3);
+  });
+});
+
+describe("GH-377 TC-PROFILE-086 three runs and two compositions agree with zero live calls", () => {
+  test("identical recorded-park facts produce identical decisions and no fetch", () => {
+    const fetchSpy = spyOn(globalThis, "fetch");
+    try {
+      const composition = (): string[] => {
+        const root = makeTempRoot("profile-determinism");
+        roots.push(root);
+        const { store } = openStore(makeIdentity(root));
+        const park = createParkRecord({
+          subjectKind: "provider",
+          subjectName: "coding-plan",
+          cause: "quota-exhausted",
+          conditions: ["quota-exhausted"],
+          createdAtMs: NOW - 1_000,
+          expiresAtMs: NOW + 3_600_000,
+          evidence: {},
+        });
+        const seeded = persistProviderResolution({
+          store,
+          fenceToken: `seed-determinism-${root}`,
+          nowMs: NOW - 1_000,
+          parks: [park],
+          announcements: [],
+        });
+        if (!seeded.ok) throw new Error("seed failed");
+        const probe = createResolvedProviderProbe(
+          {
+            "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+            deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+          },
+          NOW,
+          undefined,
+          { store },
+        );
+        return Array.from({ length: 3 }, () =>
+          JSON.stringify(
+            resolveProfileForSpawn({
+              profiles: mixedChain(),
+              probe,
+              nowMs: NOW,
+              agent: "pm",
+              namePrefix: "TEST",
+            }),
+          ),
+        );
+      };
+      const first = composition();
+      const second = composition();
+      expect(new Set([...first, ...second]).size).toBe(1);
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });

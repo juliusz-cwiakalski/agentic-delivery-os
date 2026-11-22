@@ -9,6 +9,9 @@
  */
 import {
   type EnvRecord,
+  PROFILE_EVENT_SEVERITIES,
+  PROFILE_EVIDENCE_FIELDS,
+  PROFILE_EVIDENCE_MAX_BYTES,
   type ProfileBlocker,
   type ProfileEligibility,
   type ProfileEvent,
@@ -17,9 +20,6 @@ import {
   type ProfileProviderAvailability,
   type ProfileSelectionDecision,
   type ProfileSelectionResult,
-  PROFILE_EVIDENCE_FIELDS,
-  PROFILE_EVIDENCE_MAX_BYTES,
-  PROFILE_EVENT_SEVERITIES,
   type ProviderEnvRecordPolicy,
   type ProviderProfile,
   type ProviderProfileConfiguration,
@@ -118,6 +118,26 @@ const unavailable = (providerName: string): ProfileProviderAvailability => ({
   ],
   source: `provider ${providerName}: probe failed`,
 });
+
+/**
+ * The recorded-unavailability marker the park-aware probe carries (GH-377 F-3).
+ * It is internal to the availability seam and is deliberately not a contract
+ * field: only recorded state (an active provider-attributable park, a stale
+ * declared watch target, or an unreadable park fold) sets it, so the seat gate
+ * never widens to declaration, enablement, or the declared peak window.
+ */
+type RecordedAvailabilityVerdict = ProfileProviderAvailability & {
+  readonly recordedUnavailable?: boolean;
+};
+
+const isRecordedUnavailable = (verdict: ProfileProviderAvailability): boolean =>
+  (verdict as RecordedAvailabilityVerdict).recordedUnavailable === true;
+
+/** The provider a `provider/model[#variant]` expression names, if any. */
+const modelProvider = (model: string): string | undefined => {
+  const slash = model.indexOf("/");
+  return slash <= 0 ? undefined : model.slice(0, slash);
+};
 
 /** The seat a resolution targets: the agent override, the agent seat, or the first seat. */
 export const targetSeatName = (profile: ProviderProfile, agent?: string): string | undefined => {
@@ -406,6 +426,63 @@ export const selectProfile = (
     : Object.fromEntries(
         Object.entries(selected.seats).map(([seatName, seat]) => [seatName, seat.model]),
       );
+
+  // Seat-level re-check (GH-377 F-3, DEC-4/DEC-8). The selection pass above has
+  // already reported its verdicts; later profiles stay `shadowed` and are not
+  // re-verdicted. Only recorded unavailability is consumed here, so a seat
+  // model on an undeclared, disabled, or peak-parked provider keeps its
+  // delivered behaviour. The same memoized `availability` seam probes the
+  // substitution candidates; candidate verdicts are never written into the list.
+  const selectedIndex = chain.order.indexOf(selected.name);
+  const laterProfiles = chain.order
+    .slice(selectedIndex < 0 ? chain.order.length : selectedIndex + 1)
+    .map((profileName) => input.profiles.profiles[profileName])
+    .filter((profile): profile is ProviderProfile => profile !== undefined);
+  const targetSeat = targetSeatName(selected, input.agent);
+
+  for (const [seatName, model] of Object.entries(seatModels)) {
+    const seatProvider = modelProvider(model);
+    if (seatProvider === undefined || !isRecordedUnavailable(availability(seatProvider))) {
+      continue;
+    }
+    const requireVisionForSeat = input.requireVision === true && seatName === targetSeat;
+    let substitute: string | undefined;
+    for (const candidate of laterProfiles) {
+      const eligible = candidate.providers.every(
+        (providerName) => availability(providerName).available,
+      );
+      if (!eligible) continue;
+      const seat = candidate.seats[seatName];
+      if (seat === undefined) continue;
+      if (requireVisionForSeat && seat.capability !== "vision-capable") continue;
+      const candidateProvider = modelProvider(seat.model);
+      if (
+        candidateProvider !== undefined &&
+        isRecordedUnavailable(availability(candidateProvider))
+      ) {
+        continue;
+      }
+      substitute = seat.model;
+      break;
+    }
+    if (substitute === undefined) {
+      // The delivered `data` refusal at exit 2: the eligibility list is carried
+      // unchanged and no profile event of any kind is emitted, because no
+      // profile-level ineligibility occurred and the selected profile stays
+      // eligible. The bounded summary names both the seat and the provider.
+      return {
+        ok: false,
+        code: "provider.profile.unavailable",
+        summary:
+          `seat ${seatName} on provider ${seatProvider} is recorded unavailable; ` +
+          `no later profile supplies a recorded-available seat`,
+        eligibility,
+        events: [],
+      };
+    }
+    seatModels[seatName] = substitute;
+  }
+
   const refusedTop = eligibility.find((entry) => entry.verdict === "ineligible");
   const selectionEvent = createProfileEvent({
     code: "profile.selected",

@@ -38,6 +38,10 @@ import {
   PROVIDER_WATCH_MAPPING_KINDS,
   PROVIDER_ZONE_NAME_MAX_LENGTH,
 } from "../../packages/core/src/contracts/provider";
+import {
+  PARK_CAUSE_TAXONOMY,
+  type ParkCauseClassification,
+} from "../fixtures/provider/profile/parks/cause-taxonomy";
 
 const ROOT = process.cwd();
 const PROVIDER = "packages/core/src/contracts/provider.ts";
@@ -274,5 +278,106 @@ describe("GH-350 TC-ZONE-010 the provider tier holds no ambient zone read", () =
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — the eight-cause taxonomy proof.
+ * ------------------------------------------------------------------------- */
+
+const taxonomyFailures = (
+  taxonomy: Readonly<Record<string, ParkCauseClassification>>,
+): string[] => {
+  const failures: string[] = [];
+  for (const cause of PARK_CAUSES) {
+    const row = taxonomy[cause];
+    if (row === undefined) {
+      failures.push(`taxonomy: missing ${cause}`);
+      continue;
+    }
+    if (row.subject.trim().length === 0 || row.effect.trim().length === 0) {
+      failures.push(`taxonomy: empty row ${cause}`);
+    }
+    if (row.clearsProvider === true) failures.push(`taxonomy: ${cause} clears a provider`);
+    if (row.attributable && row.subject !== "provider") {
+      failures.push(`taxonomy: ${cause} is attributable but not provider-subject`);
+    }
+    if (!row.attributable && row.subject === "provider") {
+      failures.push(`taxonomy: ${cause} is provider-subject but not attributable`);
+    }
+  }
+  for (const cause of Object.keys(taxonomy)) {
+    if (!(PARK_CAUSES as readonly string[]).includes(cause)) {
+      failures.push(`taxonomy: unexpected ${cause}`);
+    }
+  }
+  const attributable = PARK_CAUSES.filter((cause) => taxonomy[cause]?.attributable === true);
+  if (attributable.length !== 6) {
+    failures.push(`taxonomy: attributable count ${attributable.length}`);
+  }
+  if (taxonomy["chain-exhausted"]?.subject !== "chain") {
+    failures.push("taxonomy: chain-exhausted is not chain-subject");
+  }
+  if (taxonomy["reevaluation-cap"]?.subject !== "provider-loop") {
+    failures.push("taxonomy: reevaluation-cap is not provider-loop-subject");
+  }
+  const budget = taxonomy["budget-exhausted"]?.scopeEffects;
+  if (
+    budget?.window !== "consumed-as-eligibility-input" ||
+    budget.ticket !== "no-park-not-readable"
+  ) {
+    failures.push("taxonomy: budget-exhausted scope effects are not pinned");
+  }
+  return failures;
+};
+
+describe("GH-377 TC-PROFILE-080/083 the eight-cause table pins every cause and its subject", () => {
+  test("set equality, six attributable, two chain-level, and both budget scopes", () => {
+    expect(Object.keys(PARK_CAUSE_TAXONOMY).sort()).toEqual([...PARK_CAUSES].sort());
+    expect(taxonomyFailures(PARK_CAUSE_TAXONOMY)).toEqual([]);
+    expect(PARK_CAUSES.filter((cause) => PARK_CAUSE_TAXONOMY[cause].attributable)).toHaveLength(6);
+    expect(PARK_CAUSE_TAXONOMY["chain-exhausted"]?.subject).toBe("chain");
+    expect(PARK_CAUSE_TAXONOMY["reevaluation-cap"]?.subject).toBe("provider-loop");
+  });
+
+  test("a missing row, extra row, reclassification, ignored cause, and clearing cause fail by name", () => {
+    const missing = { ...PARK_CAUSE_TAXONOMY } as Record<string, ParkCauseClassification>;
+    delete missing["quota-exhausted"];
+    expect(taxonomyFailures(missing)).toContain("taxonomy: missing quota-exhausted");
+
+    const extra = {
+      ...PARK_CAUSE_TAXONOMY,
+      "not-a-cause": {
+        subject: "provider",
+        attributable: true,
+        effect: "invented",
+      },
+    } as Record<string, ParkCauseClassification>;
+    expect(taxonomyFailures(extra)).toContain("taxonomy: unexpected not-a-cause");
+
+    const reclassified: Record<string, ParkCauseClassification> = {
+      ...PARK_CAUSE_TAXONOMY,
+      "chain-exhausted": {
+        ...PARK_CAUSE_TAXONOMY["chain-exhausted"],
+        attributable: true,
+      },
+    };
+    expect(taxonomyFailures(reclassified)).toContain(
+      "taxonomy: chain-exhausted is attributable but not provider-subject",
+    );
+
+    const ignored: Record<string, ParkCauseClassification> = {
+      ...PARK_CAUSE_TAXONOMY,
+      "peak-window": { ...PARK_CAUSE_TAXONOMY["peak-window"], attributable: false },
+    };
+    expect(taxonomyFailures(ignored)).toContain(
+      "taxonomy: peak-window is provider-subject but not attributable",
+    );
+
+    const clearing: Record<string, ParkCauseClassification> = {
+      ...PARK_CAUSE_TAXONOMY,
+      "provider-outage": { ...PARK_CAUSE_TAXONOMY["provider-outage"], clearsProvider: true },
+    };
+    expect(taxonomyFailures(clearing)).toContain("taxonomy: provider-outage clears a provider");
   });
 });

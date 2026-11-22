@@ -373,6 +373,7 @@ import {
   type DispatchCommandRuntime,
   type DispatchComposition,
   type LoopComposition,
+  type ProviderAvailabilityFacts,
   type ProviderComposition,
   type QueueComposition,
   resolveAgentIdentity,
@@ -1570,9 +1571,12 @@ export const resolveHarnessAdmissionBinding = (request: {
  * composition calls it with the resolved values and a test drives it directly, so
  * the mount's context half has an oracle instead of only a source-text assertion.
  */
+export type ProfileContextAvailability = Pick<ProviderAvailabilityFacts, "store" | "observations">;
+
 export const resolveProfileContextFrom = (
   values: Readonly<Record<string, ConfigValue>>,
   nowMs: number,
+  availability: ProfileContextAvailability = {},
 ): HarnessProfileContext | undefined => {
   const providerParsed = parseAndValidateProviderConfiguration(values);
   if (!providerParsed.ok) return undefined;
@@ -1588,7 +1592,13 @@ export const resolveProfileContextFrom = (
   if (unknownZone !== undefined) return undefined;
   const selection = selectProfile({
     profiles: profileParsed.config,
-    probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs),
+    probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs, undefined, {
+      ...(availability.store === undefined ? {} : { store: availability.store }),
+      ...(profileParsed.config.watch === undefined ? {} : { watch: profileParsed.config.watch }),
+      ...(availability.observations === undefined
+        ? {}
+        : { observations: availability.observations }),
+    }),
     nowMs,
   });
   if (!selection.ok) return undefined;
@@ -3454,7 +3464,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (!acquired.ok) return undefined;
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return undefined;
-      dispatchProfileContext = resolveProfileContextFrom(resolved.value.values, nowMs());
+      dispatchProfileContext = resolveProfileContextFrom(resolved.value.values, nowMs(), {
+        store,
+      });
       return dispatchProfileContext;
     };
 
@@ -3505,7 +3517,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }
       return nominateProviderProfile({
         profiles: profileParsed.config,
-        probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs()),
+        probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs(), undefined, {
+          store,
+          ...(profileParsed.config.watch === undefined
+            ? {}
+            : { watch: profileParsed.config.watch }),
+        }),
         nowMs: nowMs(),
       });
     };

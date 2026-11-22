@@ -3,6 +3,7 @@
  * <= 1024 bytes and <= 20 fields, drawn only from the closed allowlist (NFR-8).
  */
 import { describe, expect, test } from "bun:test";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import {
   PROFILE_EVIDENCE_FIELDS,
   PROFILE_EVIDENCE_MAX_BYTES,
@@ -15,8 +16,11 @@ import {
   createProfileTargetRecord,
   createProviderFactsProbe,
   projectProfileEvidence,
+  resolveProfileForSpawn,
   selectProfile,
 } from "../../packages/core/src/provider/index";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
+import { mixedChain } from "../fixtures/provider/profile/selection/fixtures";
 
 const NOW = 1_700_000_000_000;
 
@@ -246,5 +250,118 @@ describe("TC-WFRESH-010 a stale watch view is bounded and secret-free", () => {
     expect(serialized).not.toContain(CANARY);
     expect(serialized).not.toMatch(/authorization|bearer/iu);
     expect(view.source).toBe("observed at 2023-11-14T21:53:20.000Z; max age 900s");
+  });
+});
+
+describe("GH-377 TC-PROFILE-091 profile.selected carries the park cause in bounded evidence", () => {
+  test("the event names condition:quota-exhausted and stays within the profile caps", () => {
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "coding-plan",
+      cause: "quota-exhausted",
+      conditions: ["quota-exhausted"],
+      createdAtMs: NOW - 1_000,
+      expiresAtMs: NOW + 3_600_000,
+      evidence: {},
+    });
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createResolvedProviderProbe(
+        {
+          "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+          deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+        },
+        NOW,
+        undefined,
+        { parks: { ok: true, value: [parkView(park, NOW)] } },
+      ),
+      nowMs: NOW,
+    });
+    if (!result.ok) throw new Error("selection failed");
+    const event = result.events[0];
+    expect(event?.code).toBe("profile.selected");
+    expect(event?.evidence.reason).toBe("selection");
+    expect(event?.evidence.blockers).toContain("condition:quota-exhausted");
+    expect(
+      Object.keys(event?.evidence ?? {}).every((key) =>
+        (PROFILE_EVIDENCE_FIELDS as readonly string[]).includes(key),
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(event).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_BYTES);
+  });
+});
+
+describe("GH-377 TC-PROFILE-093 the seat-level refusal is bounded and secret-free", () => {
+  const CANARY = "CANARY-SEAT-REFUSAL-SECRET";
+  test("the refusal names seat and provider within the caps and leaks no secret", () => {
+    const profiles = {
+      tiers: { t: { name: "t" } },
+      profiles: {
+        primary: {
+          name: "primary",
+          tier: "t",
+          providers: ["a"],
+          seats: {
+            pm: {
+              model: "parked/parked-model",
+              pacingClass: "judgment" as const,
+              capability: "text-only" as const,
+            },
+          },
+          agentOverrides: {},
+        },
+        alt: {
+          name: "alt",
+          tier: "t",
+          providers: ["b"],
+          seats: {
+            coder: {
+              model: "b/coder-model",
+              pacingClass: "execution" as const,
+              capability: "text-only" as const,
+            },
+          },
+          agentOverrides: {},
+        },
+      },
+      preferenceChain: { base: "primary", fallbacks: ["alt"], order: ["primary", "alt"] },
+    };
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "parked",
+      cause: "quota-exhausted",
+      conditions: ["quota-exhausted"],
+      createdAtMs: NOW - 1_000,
+      expiresAtMs: NOW + 3_600_000,
+      evidence: {},
+    });
+    const outcome = resolveProfileForSpawn({
+      profiles,
+      probe: createResolvedProviderProbe(
+        {
+          a: { name: "a", class: "subscription", enabled: true },
+          b: { name: "b", class: "subscription", enabled: true },
+          parked: { name: "parked", class: "pay-per-token", enabled: true },
+        },
+        NOW,
+        undefined,
+        { parks: { ok: true, value: [parkView(park, NOW)] } },
+      ),
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.summary).toContain("pm");
+    expect(outcome.summary).toContain("parked");
+    expect(outcome.summary.length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_BYTES);
+    const serialized = JSON.stringify(outcome);
+    expect(serialized).not.toContain(CANARY);
+    expect(serialized).not.toMatch(/authorization|bearer|userinfo/iu);
+    for (const entry of outcome.eligibility) {
+      expect(Object.keys(entry).length).toBeLessThanOrEqual(PROFILE_EVIDENCE_MAX_FIELDS);
+      expect(entry.blockers.length).toBeLessThanOrEqual(8);
+    }
   });
 });

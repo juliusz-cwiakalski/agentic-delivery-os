@@ -1,0 +1,391 @@
+change_id: GH-377
+title: "M4-S18 Provider profile selection must consume recorded parks (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-22T00:48:34.656Z }
+  specification: { started: null, completed: 2026-11-22T02:10:29.582Z }
+  test_planning: { started: null, completed: 2026-11-22T02:10:42.612Z }
+  delivery_planning: { started: null, completed: 2026-11-22T01:43:48.473Z }
+  dor_check: { started: null, completed: 2026-11-22T01:48:22.246Z }
+  delivery: { started: null, completed: 2026-11-22T02:48:10.981Z }
+  system_spec_update: { started: null, completed: 2026-11-22T02:19:22.086Z }
+  review_fix: { started: null, completed: 2026-11-22T02:28:47.391Z }
+  quality_gates: { started: null, completed: 2026-11-22T03:07:32.281Z }
+  dod_check: { started: null, completed: 2026-11-22T03:08:05.222Z }
+  pr_creation: { started: null, completed: 2026-11-22T03:09:52.208Z }
+decisions:
+  - text: "Scope source is the ticket body plus the owner-authored
+      implementation-pointer comment of 2026-11-22. The comment is binding: the
+      defect is the synchronous profile probe in `createResolvedProviderProbe`
+      (`packages/cli/src/edge.ts`), seat substitution is required, the committed
+      `provider.profiles` policy must not be edited, the operator-local
+      `config.local.yaml` workaround must not be required, GH-366's
+      branch/worktree is out of scope, and the PR stays open against
+      `main-tools`."
+    date: "2026-11-22"
+  - text: "PM-decided (autonomous): the profile probe reads the same verified
+      provider-park fold the `provider parks list` surface reads. It performs no
+      live quota fetch and no watch transport call; the delivered contract that
+      the synchronous CLI probe never fetches quota is preserved. Recorded parks
+      and read-time expiry are the eligibility input; recovering a provider
+      requires no timer, no write, and no configuration edit."
+    date: "2026-11-22"
+  - text: "PM-decided (autonomous): the fix stays in the resolver/composition seam,
+      not in policy data. The committed `provider.profiles` base `delivery`
+      profile and its `paid` fallback remain unchanged. Acceptance evidence
+      comes from fixtures over recorded park state plus the delivered CLI
+      surfaces; the live z.ai quota state is corroborating evidence, never a
+      test dependency."
+    date: "2026-11-22"
+  - text: "PM-decided (autonomous): chain-level park causes (`chain-exhausted`,
+      `reevaluation-cap`) are not provider-attributable and must not be read as
+      a provider's own unavailability. The clause that every declared park cause
+      is pinned is satisfied by a fixture over the full eight-value
+      `PARK_CAUSES` taxonomy that classifies each cause's subject and proves no
+      cause silently clears a parked provider."
+    date: "2026-11-22"
+  - text: "PM-decided (autonomous): decision ids TDR-0075..0076 remain reserved for
+      this change only if a genuinely precedent-setting choice emerges.
+      Re-verified on `origin/main-tools` at intake: the maximum is TDR-0074, so
+      the reservation stands. No TDR is authored pre-emptively."
+    date: "2026-11-22"
+  - text: "OQ-1 RESOLVED (PM, autonomous): a stale watch observation is a named
+      eligibility blocker using the existing `watch-stale` watch-only condition.
+      It adds no park cause, skip reason, announcement, timer, cache, or state
+      write, so TDR-0062's closed sets are preserved. A live read observes at
+      the read instant and is never stale; this is the fail-loud guard for
+      composition-supplied observations and the park-expiry clamp, not a new
+      steady-state ineligibility. The specification states this contract; no TDR
+      is needed."
+    date: "2026-11-22"
+  - text: "OQ-2 RESOLVED (PM, autonomous): seat resolution independently re-checks
+      the seat model's provider against the same availability facts. When the
+      selected profile's seat model pins a parked provider, the seat is
+      substituted from the next eligible profile in `preferenceChain` order and
+      that model is emitted; when no eligible profile supplies the seat,
+      resolution refuses `provider.profile.unavailable` naming the seat and the
+      provider. This is the ticket's required behaviour, expressed as a
+      contract; no TDR is needed."
+    date: "2026-11-22"
+  - text: "OQ-1 REVISED (DoR iteration 1, finding 5): making a stale watch
+      observation an eligibility blocker narrows TDR-0062 D2's absolute
+      statement that `watch-stale` never enters profile eligibility. That is
+      precedent-setting, so the earlier 'no TDR needed' statement for OQ-1 is
+      superseded: `@decision-advisor` authors TDR-0075 to record the boundary
+      and its justification, and the specification cites it. TDR-0076 stays
+      unused unless a second genuine decision emerges."
+    date: "2026-11-22"
+open_questions: []
+blockers: []
+notes:
+  - text: "PR CREATED:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/380 —
+      `fix/GH-377/provider-profile-consumes-parks` → `main-tools`, 27 commits,
+      open, ready for review, not merged; merge authority with the owner. Range
+      gate re-run at the PR head bfc410c2: VERDICT PASS, 27 commits, 0
+      offending. TDR-0075 is Proposed with owner acceptance at this PR review.
+      Residual non-blocking review nits (plan P2 summary word, TDR multi-target
+      phrasing, glossary beyond the named §22 set, TC-082/TC-085 test-quality
+      nits, result-contract row cell) are recorded in the change folder.
+      `.zed/settings.json` remains untracked and unrelated. Ticket #377 is
+      marked ready for review with the PR link."
+    type: info
+    date: "2026-11-22"
+  - text: "DoD CHECK = PASS. Ledger 10/11 phases complete through quality_gates.
+      Plan phases P1-P5 evidenced with commit and test result: P1 8f0861ea, P2
+      a89042d3, P3 6cf2b4b7, P4 3b7e2506, P5 5e87653f (declaration-only
+      docs/decision scope, doc-syncer-owned). Release metadata 7d89aafc
+      (lockstep changeset + plan/notes). All 12 acceptance criteria are closed
+      by review-iter-1 PASS (spec_compliance PASS, plan_compliance PASS) and the
+      aggregate gate 12452 pass / 4 skip / 0 fail; docs reconciled by
+      @doc-syncer with no residual gap (doc-conformance 61/0, doc distribution
+      clean); committed policy and any operator-local layer untouched; no
+      vocabulary or contract growth; range gate PASS over 25 commits. Working
+      tree clean except untracked .zed/. No phase reopened."
+    type: info
+    date: "2026-11-22"
+  - text: "QUALITY GATES = PASS at HEAD 7d89aafc. `git diff --check` clean.
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0: lint/format/typecheck/build
+      green; test 12452 pass / 4 skip / 0 fail across 12456 tests and 1502
+      files; boundaries 520 modules / 1667 dependencies, no violations;
+      memory-lint 0 errors / 0 advisories; forbidden-literals 7/7 classes, 0
+      violations; namespace-tree OK; prompt-conformance 5 prompts clean;
+      help-guide-coverage all covered; exports-parity 5 publishables. RANGE
+      GATE: VERDICT PASS — base main-tools, merge-base 3b330250, head 7d89aafc,
+      25 commits in range, 0 offending commits, 0 distinct rules, mode none,
+      resolved commitlint node_modules/.bin/commitlint (repository-local, ref
+      origin/main-tools). Doc distribution clean: 96 in-scope docs, no drift.
+      First run failed only on the required lockstep changeset; added
+      `.changeset/gh-377-provider-profile-parks-minor.md` (five publishable
+      packages, minor), privacy-release 7/7 green, then the full re-run above
+      passed. Logs: tmp/gates/gh377-pnpm-check-2.log,
+      tmp/gates/gh377-range-lint-2.log, tmp/gates/gh377-doc-distribution.log."
+    type: info
+    date: "2026-11-22"
+  - text: "REVIEW ITERATION 1 = PASS (code-review/review-iter-1.yaml + .md). 0
+      critical / 0 high / 0 medium, 7 low, 3 info; spec_compliance PASS,
+      plan_compliance PASS, next_step PROCEED; no blocking remediation. Key
+      confirmations: seat substitution search matches F-3/DEC-8 (selection list
+      unchanged, candidates probed separately); refusal is the data envelope at
+      exit 2 with events [] and no env record; env record and binding share
+      decision.seatModels; one factory at three call sites, one fold read, no
+      fetch/credential/network/sleep/write; policy and operator-local layer
+      untouched; no vocabulary/contract growth; phase-7 docs reconciled.
+      Changed-suite evidence 271 pass (18 files), boundaries 149, fixture
+      coverage 7, typecheck green. Low nits F-1..F-7 (stale plan P2 summary
+      word; TDR-0075 multi-target/DEC-7 wording; glossary page outside the named
+      §22 set; TC-082 ticket-budget proxy; TC-085 vacuous assertions;
+      result-contract row cell all-candidates-only) are non-blocking; F-7 is
+      deliberate because the row mirrors ERROR_TABLE and a clarifier paragraph
+      now states both causes. Info F-8..F-10."
+    type: info
+    date: "2026-11-22"
+  - text: "Post-delivery artifact alignment (PM-decided, autonomous): the coder
+      surfaced two literal mismatches between the artifacts and delivered
+      behaviour, both fixed as spec v1.3 / test plan v1.3 with no scope, AC set,
+      DOD, TDR, or vocabulary change. (1) AC-F1-1/TC-059 now accept the
+      delivered lifecycle `outcome` (`selected` or `switched` on the first
+      base→paid target move) while pinning the selection facts; §8.5 states the
+      criterion asserts the selection facts, not a forced lifecycle outcome. (2)
+      TC-095 now uses three providers (A short bound stale, B long bound fresh,
+      C no target never stale) because the delivered `provider.profiles.watch`
+      shape is one target per provider name. DoR iteration 3 remains READY; per
+      the three-iteration cap no fourth gate run is made, and the alignment
+      changes no facet."
+    type: info
+    date: "2026-11-22"
+  - text: "DoR ITERATION 3 = READY (Pause Required: no). All ten facets PASS;
+      iteration-2 findings 1-7 all CLOSED (data refusal envelope, two-level
+      substitution rule, dispatch-engine/result-contract page scope,
+      declared-seat arm, no-event refusal, TDR wording, TC-090 list). Residual
+      non-blocking advisories: (a) the plan phase-2 summary still contains the
+      stale word 'unprobed'; the normative rule is spec F-3/AC-F3-2 — the
+      selection pass does not probe later profiles, while the substitution
+      search inspects candidates through the same memoized probe and writes no
+      candidate verdict into the list; do not implement an absolute no-probe at
+      the seat check. (b) TC-071's zero-target-write arm holds because the
+      fixture selects the chain base and the delivered handler persists the
+      profile target before the seat check; the governing rule is NFR-2 — the
+      delivered target persistence remains the only write on the surface. No
+      further DoR iteration."
+    type: info
+    date: "2026-11-22"
+  - text: "DoR ITERATION 2 = NOT_READY (Pause Required: no). Iteration-1 findings
+      F-1..F-7 and minors 9, 10, 11, nit 12 CLOSED; minor 8 PARTIAL (spec side
+      fixed, no declared-seat substitution case). New blocking findings: (1)
+      major test_traceability — TC-071 pins the seat refusal as an `error`
+      envelope with `data` absent, while the delivered projection is a `data`
+      envelope (`outcome: refused`, code, summary, eligibility) at exit 2
+      (delivered control TC-POL-NOM-002); (2) major
+      cross_artifact_consistency/ac_quality — F-3 and AC-F3-2 require the next
+      *eligible* profile, while DM-2/§10/AC-F3-2/DEC-8/TC-070 say later profiles
+      'are not probed'; both cannot hold, so the substitution search must probe
+      candidates without re-verdicting the selection-time list; (3) major
+      plan_doc_update_coverage — `doc/spec/features/feature-dispatch-engine.md`
+      defines `provider.profile.unavailable` as 'every candidate is ineligible',
+      which the seat-level refusal falsifies; the page is in no phase scope and
+      DOD-8's sweep would miss it. Minors: no declared-seat substitution arm;
+      seat-level refusal event set unspecified. Nits: TDR-0075 says 'retire
+      DEC-7 and NG-8' while the spec repurposes them; TC-071's committed-policy
+      id list omits TC-090. Remediation: reopen specification (2, 5, 6),
+      test_planning (1, 4, 7), delivery_planning (3)."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro (DoR iteration 2): the second gate caught a projection-shape error
+      that would have made the only edge test for the seat refusal
+      unimplementable, plus a real ambiguity between candidate substitution
+      searching and the unprobed selection-time list. Root causes: the spec
+      stated the delivered list's 'not probed' property as an absolute without
+      distinguishing the later substitution search, and the test plan asserted
+      the refusal envelope from memory rather than from the delivered
+      projection. Improvement: whenever a new refusal path is specified, name
+      the delivered envelope shape and event set in the same sentence, and
+      distinguish selection-time verdicts from post-selection searches."
+    type: retro
+    date: "2026-11-22"
+  - text: "Retro (commit primitive, second environment defect): two more commits
+      were refused by the tracker-reference and subject-case guards. Root
+      causes: (a) deterministic phase summaries embedded TC ids that the
+      tracker-ref regex reads as invented references, and a standalone commit's
+      first staged path was the `TDR-0075` filename; (b) every phase summary
+      began with a capital verb, so the rendered Conventional Commit description
+      was sentence-case. Fixed by moving TC ownership to YAML comments, adding a
+      lowercase safe-summary declaration-only planning phase for the decision
+      and documentation scope, and committing the TDR through that phase. Cost
+      ~15 minutes across three attempts. Improvement: plan phase summaries must
+      be lowercase, free of `<PREFIX>-<number>` tokens, and a decision record
+      must never be the only pending path of a standalone commit."
+    type: retro
+    date: "2026-11-22"
+  - text: "DoR ITERATION 1 = NOT_READY (Pause Required: no). Findings: F-1 critical
+      cross_artifact_consistency — AC-F3-1/TC-069 pin
+      `provider.profile.capability-denied` for a capability-inadequate
+      substitute while AC-F3-2 and the owner comment require
+      `provider.profile.unavailable` for no supplier (different identity, exit,
+      retryability, remediation). F-2 major spec_completeness — AC-F3-2 requires
+      the eligibility list to name seat+provider, but the selected profile is
+      eligible and later profiles stay shadowed/unprobed, so satisfying it would
+      force a verdict flip. F-3 major spec_completeness — no watch-observation
+      seam is specified; no observation is persisted and the only seam is
+      `watchObservedAtMs` (instant, no condition), so three different
+      implementations satisfy AC-F2-1. F-4 major cross_artifact_consistency —
+      the seat re-check over all availability facts changes zero-park behaviour
+      for undeclared/disabled/peak-parked seat providers, contradicting §8.5 and
+      NFR-7. F-5 major decision_capture — TDR-0062 D2 says `watch-stale` never
+      enters profile eligibility; the boundary change needs a decision record,
+      and phase 7 cannot amend `doc/decisions/**`. F-6 major test_traceability —
+      TC-071, the only edge case for AC-F3-2, uses the committed policy, so
+      parking either provider yields the pre-existing provider-level refusal and
+      the seat path is never reached. F-7 major dod_defined — no Definition of
+      Done in the spec. Minors: synthetic pacing-rung reachability, GAP-T3's
+      `exists`-probe count, the 'one probe / two consumers' misstatement (three
+      call sites), TC-074 layer/type, doc paths declared inside a delivery
+      phase. Remediation: reopen specification (F-1..F-5, F-7, minors),
+      test_planning (F-6), delivery_planning (TC ownership and doc-phase shape).
+      TDR-0075 to be authored before the spec revision."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro (DoR iteration 1): the gate caught a real under-specification of
+      the watch-staleness seam and two genuine cross-artifact contradictions.
+      The root cause was resolving the two intake questions as contract
+      statements without a decision record even though one narrowed a closed
+      boundary (TDR-0062 D2); the readiness reviewer correctly routed it to a
+      decision record. Cost: one DoR iteration and a three-artifact revision.
+      Improvement: when a requirement changes a previously recorded closed
+      boundary, route to `@decision-advisor` at clarification time, not at the
+      DoR gate."
+    type: retro
+    date: "2026-11-22"
+  - text: "Clarify scope complete and landed as d08ab630 (subject `docs(GH-377):
+      update doc/changes/...`). Ticket GH-377 is open, labeled `change`, with
+      milestone M4 attached; predecessors M4-S4 (GH-350, e1ebc76c) and M4-S16
+      (GH-374, c1dd722c) are merged on `main-tools`. State detection observed a
+      fresh start: no local or remote branch, no change capsule, an empty phase
+      ledger (`phases: {}`, verified registry with 7206 records), and no pull
+      request. `main-tools` was clean and level with origin at 3b330250 before
+      the branch was created."
+    type: info
+    date: "2026-11-22"
+  - text: "Spec contradiction to reconcile in phase 7:
+      `feature-provider-profiles.md` currently states that the production probe
+      checks only declared, enabled, and peak window, and that quota conditions
+      reach the seam through the daemon, never the CLI probe. The delivered
+      change makes recorded parks a synchronous eligibility input while keeping
+      the no-live-fetch rule, so that page (and any peak-pausing/parks-guide
+      text that repeats the old boundary) must be updated. The same page's
+      overview already says an unavailable condition switches the target, so the
+      implementation is the gap, not the intent."
+    type: risk
+    date: "2026-11-22"
+  - text: "Token-budget constraint recorded from the owner comment: DeepSeek is the
+      only live rail with roughly $5 remaining and the key is shared. Keep the
+      plan small and checkpoint each plan phase commit; if the provider floor is
+      hit, finish the current phase commit and write a clean checkpoint in these
+      notes."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro (environment defect): the first `phase complete clarify_scope`
+      failed with `commit.commitlint-failed` although the generated message
+      `docs(GH-377): update doc` is valid. Root cause: the commit primitive
+      spawns bare `commitlint` via execFile; it is not on the runner shell PATH,
+      and the ENOENT maps to status 1 with empty output, which the probe reports
+      as 'commitlint rejected the message' instead of 'commitlint could not be
+      executed'. Re-running with `PATH=\"$PWD/node_modules/.bin:$PATH\"`
+      succeeded. Cost ~5 minutes; out of scope to fix here (probe classification
+      belongs to the conformance/repair line), but every subsequent commit from
+      a bare shell must carry the PATH prefix."
+    type: retro
+    date: "2026-11-22"
+  - text: "Plan phase 1 complete (commit 8f0861eafbf2d85f71b910537f23a9552c1cb03e):
+      park-aware availability facts and probe composition delivered in
+      `createResolvedProviderProbe` — one verified park fold per resolution, the
+      provider-attributable cause classification, the per-declared-target
+      staleness rule, the composition-supplied observation seam, and the
+      fail-closed fold verdict. Targeted suites: `bun test
+      tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-profile-selection.test.ts
+      tests/behaviour/provider-profile-probes.test.ts
+      tests/structure/provider-contract.test.ts
+      tests/structure/provider-profile-contract.test.ts
+      tests/checks/provider-profile-evidence-bounds.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 86 pass, 0 fail. `pnpm
+      typecheck` green. Note: AC-F1-1/TC-PROFILE-059 say `outcome: selected`,
+      but the delivered unchanged lifecycle returns `switched` on the first
+      base->fallback move (spec §8.5 keeps the lifecycle unchanged); the test
+      asserts the selection facts and accepts the delivered lifecycle outcome."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 2 complete (commit a89042d3ca03a5f5d23647237c1accde7944bb37):
+      seat-level re-check, substitution, and the named refusal delivered in
+      `packages/core/src/provider/profile.ts`. The selection pass is unchanged
+      (later profiles stay `shadowed` and are not probed); every effective seat
+      model is re-checked against recorded unavailability only; later profiles
+      are inspected as substitution candidates through the same memoized probe
+      in declared order; a candidate is valid only when eligible, declaring the
+      seat, and declaring it on a recorded-available capability-adequate model;
+      no valid supplier refuses `provider.profile.unavailable` with the
+      eligibility list carried unchanged and no profile event. Targeted suites:
+      `bun test tests/behaviour/provider-profile-selection.test.ts
+      tests/checks/provider-profile-evidence-bounds.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 49 pass, 0 fail. `pnpm
+      --filter @delivery-os/core typecheck` green."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 3 complete (commit 6cf2b4b70950b7149b05724036ff5c5c03f570ea):
+      the park-aware facts now flow through the resolved profile-context reader
+      seam (`resolveProfileContextFrom` accepts an injected store/observation
+      seam) and the dispatch nomination predicate; the CLI profile-resolve
+      handler already passed the same store/watch/observations since phase 1.
+      The golden fixture now derives its decision from the pure `selectProfile`
+      over a recorded quota park projected through the delivered lifecycle, so
+      the pinned envelope comes from recorded facts rather than a canned
+      literal; the committed golden bytes did not legitimately change and were
+      not regenerated. Targeted suites: `bun test
+      tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-profile-spawn.test.ts
+      tests/behaviour/provider-profile-park-switch-revert.test.ts
+      tests/behaviour/provider-nomination-admission.test.ts
+      tests/behaviour/harness-profile-composition-mount.test.ts
+      tests/behaviour/harness-profile-per-spawn.test.ts
+      tests/checks/provider-zone-refusal.test.ts
+      tests/golden/provider-profile-resolve.test.ts` => 72 pass, 0 fail. `pnpm
+      --filter @delivery-os/core typecheck` and `pnpm --filter @delivery-os/cli
+      typecheck` green."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 4 complete (commit 3b7e2506120211afdaf50ac3ad3adeb8716e58c2):
+      taxonomy proof, hermetic/determinism evidence, the exact-expiry and
+      cleared-condition equivalences, the zero-write audit, and the unchanged
+      chain resolver. The new data-only fixture
+      `tests/fixtures/provider/profile/parks/cause-taxonomy.ts` pins all eight
+      causes with a subject and effect per cause and both `budget-exhausted`
+      scopes; its drift arms fail by name. `provider resolve` keeps its skip,
+      park, next-eligible time and persisted generation, while the ticket-scope
+      crossing leaves no readable park. Targeted suites: `bun test
+      tests/behaviour/provider-profile-park-switch-revert.test.ts
+      tests/behaviour/provider-profile-probes.test.ts
+      tests/behaviour/provider-profile-edge-wiring.test.ts
+      tests/behaviour/provider-parks.test.ts
+      tests/behaviour/provider-chain-resolution.test.ts
+      tests/structure/provider-contract.test.ts
+      tests/checks/provider-profile-hermetic.test.ts` => 114 pass, 0 fail; the
+      wider targeted set (13 suites, including selection, spawn, nomination,
+      evidence-bounds, profile-contract and golden) => 192 pass, 0 fail. `pnpm
+      typecheck` green. Plan phase 5 is declaration-only and is left to the
+      `@doc-syncer` in lifecycle phase 7."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 5 complete (declaration-only, doc-syncer-owned): commit
+      5e87653ff21f0acfbe75b1d8c716607406f9b9ea. The phase declared the
+      documentation and decision-ledger scope and authored nothing; the
+      `@doc-syncer` reconciled the profiles, engine, peak-pausing,
+      dispatch-engine, result-contract and parks-guide pages plus the glossary
+      and verified TDR-0075/index. Results: `bun test
+      tests/checks/doc-conformance.test.ts` 61 pass/0 fail; doc-conformance +
+      content-inventory 73/0; `bash scripts/.tests/test-doc-distribution.sh`
+      clean (96 in-scope docs, no drift); decision-record 11/0; namespace
+      battery 26/0; the only error-table-sync failures traced to a source
+      comment, fixed separately in 07dbb806 (255/0)."
+    type: info
+    date: "2026-11-22"

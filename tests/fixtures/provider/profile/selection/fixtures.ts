@@ -159,3 +159,78 @@ export const policyB = (): ProfileHeuristicPolicy => ({
   ...policyA(),
   reasoningDepthWeight: 2,
 });
+
+/**
+ * GH-377 seat-level substitution chains: the selected profile is eligible on its
+ * declared `providers` while a seat model names a provider outside that list.
+ * `parked` is the provider a recorded park or stale observation makes
+ * unavailable; `secondary` and `capable` are later suppliers.
+ */
+export const substitutionChain = (): ProviderProfileConfiguration => ({
+  tiers: { regular: { name: "regular" }, fallback: { name: "fallback" } },
+  profiles: {
+    primary: profile({
+      name: "primary",
+      tier: "regular",
+      providers: ["a"],
+      seats: {
+        pm: seat("parked/parked-model", "judgment", "vision-capable"),
+        coder: seat("a/coder-model", "execution", "text-only"),
+        reviewer: seat("a/reviewer-model", "judgment", "text-only"),
+      },
+      agentOverrides: { reviewer: "pm" },
+    }),
+    secondary: profile({
+      name: "secondary",
+      tier: "fallback",
+      providers: ["b"],
+      seats: {
+        pm: seat("b/secondary-model", "judgment", "text-only"),
+        coder: seat("b/coder-model", "execution", "text-only"),
+      },
+    }),
+    narrow: profile({
+      name: "narrow",
+      tier: "fallback",
+      providers: ["b"],
+      seats: { coder: seat("b/narrow-coder-model", "execution", "text-only") },
+    }),
+  },
+  preferenceChain: {
+    base: "primary",
+    fallbacks: ["secondary", "narrow"],
+    order: ["primary", "secondary", "narrow"],
+  },
+});
+
+/** The same shape with a capability-adequate later supplier after an inadequate one. */
+export const capabilitySubstitutionChain = (): ProviderProfileConfiguration => {
+  const chain = substitutionChain();
+  return {
+    ...chain,
+    tiers: { ...chain.tiers, capable: { name: "capable" } },
+    profiles: {
+      ...chain.profiles,
+      capable: profile({
+        name: "capable",
+        tier: "capable",
+        providers: ["b"],
+        seats: { pm: seat("b/capable-model", "judgment", "vision-capable") },
+      }),
+    },
+    preferenceChain: {
+      base: "primary",
+      fallbacks: ["secondary", "capable"],
+      order: ["primary", "secondary", "capable"],
+    },
+  };
+};
+
+/** A chain with no later profile that declares the parked seat. */
+export const noSupplierChain = (): ProviderProfileConfiguration => {
+  const chain = substitutionChain();
+  return {
+    ...chain,
+    preferenceChain: { base: "primary", fallbacks: ["narrow"], order: ["primary", "narrow"] },
+  };
+};

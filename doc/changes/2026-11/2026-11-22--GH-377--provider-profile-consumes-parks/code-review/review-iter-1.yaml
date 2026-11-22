@@ -1,0 +1,247 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-377
+branch: fix/GH-377/provider-profile-consumes-parks
+status: PASS
+summary: >-
+  The GH-377 delivery is faithful to spec v1.3. The composed profile availability
+  probe now folds the verified provider-park ledger once per resolution and treats
+  an active provider-attributable park (six causes; `chain-exhausted` and
+  `reevaluation-cap` excluded) and a per-declared-target stale observation as
+  eligibility inputs, preserving declaration/enablement/declared-peak and adding no
+  live fetch, credential read, network call, sleep, or state write. Seat-level
+  re-check consumes recorded unavailability only, substitutes from the first valid
+  later profile through the same memoized probe without re-verdicting the eligibility
+  list, and refuses `provider.profile.unavailable` as the delivered `data` envelope
+  at exit 2 naming seat and provider, with the list carried unchanged, no profile
+  event, and no env record. The substituted model travels in the existing per-seat
+  map so the env record and the per-spawn binding agree by construction, and the
+  dispatch nomination predicate uses the same factory (three call sites, one fold
+  read). Every AC (AC-F1-1..AC-NFR1-1) maps to a meaningful owning case; the
+  changed suites (271 targeted tests across 18 files), `pnpm typecheck`, the
+  boundaries and fixture-coverage meta-checks all pass; the committed policy and any
+  operator-local file are untouched; no closed vocabulary, envelope key, error
+  identity, event code, record kind, or contract-subpath member is added; and the
+  phase-7 reconciliation of the profiles, engine, peak-pausing, dispatch-engine,
+  result-contract and parks-guide pages is present with no residual three-check or
+  absolute-`watch-stale` contradiction. Remaining findings are non-blocking
+  documentation/test-quality nits: the plan phase-2 summary still says "unprobed",
+  TDR-0075 keeps a multi-target "any stale target" phrasing and a "DEC-7 superseded"
+  sentence that the revised spec no longer supports, the glossary was reconciled
+  outside declared phase scope, one ticket-scope and one no-park chain regression
+  case assert proxies rather than the behaviour, and the result-contract error-table
+  cell still reads all-candidates-only although an adjacent paragraph clarifies both
+  refusal causes.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 7
+  info: 3
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-22--GH-377--provider-profile-consumes-parks/chg-GH-377-plan.yaml:27
+    message: >-
+      Plan phase 2's summary still says "later profiles still shadowed and unprobed".
+      That absolute wording is the exact ambiguity DoR iteration 2 resolved: the
+      selection pass does not probe later profiles, but the seat substitution search
+      does probe candidate declared providers through the same memoized probe. The
+      normative statement (spec F-3, DM-2, AC-F3-2, DEC-8) is correct; only this plan
+      summary retains the stale word, and it sits in the phase that implements the
+      search. Non-blocking because the same sentence also requires substitution "from
+      the next eligible profile", which forces candidate evaluation.
+    suggestion: >-
+      Reword to "later profiles still shadowed and not re-verdicted in the list" (the
+      remediation DoR iteration 3 already named) on the next plan touch.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: medium
+    category: decision-consistency
+    location: doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md:204
+    message: >-
+      TDR-0075 D1 (line 289) and its evidence table (line 204) describe staleness as
+      "a provider with at least one stale declared target is unavailable" and name
+      "any stale target blocks" as an open Medium-confidence aggregation assumption.
+      The delivered configuration shape is one watch target per provider name
+      (`provider.profiles.watch.<name>`), which spec v1.3 §8.6/F-2 record explicitly
+      ("replacing the 'at least one stale declared target' phrasing"), and the shipped
+      probe reads exactly that single target. The two are behaviourally identical
+      today, but the decision still carries the superseded multi-target framing.
+    suggestion: >-
+      Align TDR-0075 D1/evidence/negative-outcomes with the delivered single-target
+      shape ("a provider whose declared watch target is stale is unavailable"), or
+      state explicitly that the aggregation sentence is forward-looking for a future
+      multi-target contract — not a description of the shipped shape.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: decision-consistency
+    location: doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md:317
+    message: >-
+      TDR-0075 D5 says "GH-377's DEC-7 ("no decision record is authored") is superseded
+      by this record". Spec DEC-7 no longer says that; v1.2 repurposed it to cite
+      TDR-0075 as the governing record, and both DEC-7 and NG-8 now state "both
+      statements stay in force" / "bounded to that one record". The TDR's own
+      Implementation Plan step 1 says "do not retire either statement". D5 therefore
+      contradicts the shipped spec and the TDR's own plan and re-raises the DoR
+      iteration-2 nit that was reported closed via the Implementation Plan edit.
+    suggestion: >-
+      Reword D5 to "the earlier DEC-7 statement that no record is authored is
+      superseded; the current DEC-7 cites this record and stays in force", matching
+      spec DEC-7/NG-8 and Implementation Plan step 1.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/overview/glossary.md:33
+    message: >-
+      `doc/overview/glossary.md` is changed (Seat-substitution term, reworked
+      Eligibility/probe row, `related_changes` GH-377) but is not in any declared plan
+      phase scope and is not in spec §22's phase-7 page set (the five spec pages, the
+      parks guide, TDR-0075 and `doc/decisions/00-index.md`). It is a genuinely related,
+      correct current-truth update, but it is an undeclared scope addition
+      (SCOPE_DEVIATION), and DOD-8's residual-gap sweep page list does not include it.
+    suggestion: >-
+      Either add `doc/overview/glossary.md` to plan phase 5 / §22 / DOD-8 so the sweep
+      covers it, or record it as an intentional related doc touch in the pm-notes.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: medium
+    category: test-quality
+    location: tests/behaviour/provider-parks.test.ts:646
+    message: >-
+      TC-PROFILE-082's second arm is titled "the ticket-scope crossing persists no
+      readable park" but never triggers a `ticket`-scope budget crossing: it opens an
+      empty store, asserts the ledger has no parks, and asserts the probe reads
+      `entry` clear. That proves "empty store -> clear", not "a `ticket`-scope crossing
+      persists no park". AC-F6-1's ticket-scope claim is therefore pinned in this change
+      only by fixture data (`PARK_CAUSE_TAXONOMY.scopeEffects.ticket = "no-park-not-readable"`,
+      itself authored by the change) plus the unchanged delivered GH-350 behaviour.
+    suggestion: >-
+      Either drive a real `ticket`-scope budget resolve (persist false/true) and assert
+      the ledger carries no park for the entry, or relabel the arm as the empty-store
+      readability control it is and cite the delivered GH-350 case that owns the
+      crossing, so AC-F6-1's ticket-scope clause has an owning behavioural proof.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/provider-chain-resolution.test.ts:588
+    message: >-
+      TC-PROFILE-085's "chain resolution with no parks ... unchanged" test runs
+      `selectProfile` (the pure profile engine) and asserts `"skipped" in result` is
+      false and `"parks" in result` is false. On a `ProfileSelectionResult` those
+      properties cannot exist (the type has no such members), so both assertions are
+      vacuous by construction. The meaningful half is the exact set-equality assertion
+      on `PROVIDER_SKIP_REASONS`/`PARK_CAUSES`. AC-F7-1's "no park exists for any entry
+      -> chain resolution unchanged" arm is left to delivered controls, not to this
+      case.
+    suggestion: >-
+      Replace the two `in` assertions with an actual park-free `provider resolve`
+      through the engine and compare decision/skip/payload to the delivered expectation,
+      or retitle the case as the closed-set check and name the delivered chain-resolve
+      control that owns the park-free arm.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: medium
+    category: documentation
+    location: doc/spec/features/feature-result-contract.md:156
+    message: >-
+      The `provider.profile.unavailable` error-table row Description still reads "No
+      provider profile is eligible under the current conditions" — the all-candidates
+      reading that spec §22/§16 and DOD-8 require phase 7 to eliminate. The change does
+      add a clarifying paragraph immediately after the table stating the row covers both
+      the all-candidates refusal and the seat-level refusal, so the page is not silent;
+      but the row cell itself remains unqualified, which is the one statement DOD-8's
+      sweep says must not present as current.
+    suggestion: >-
+      Qualify the row cell, e.g. "No provider profile is eligible, or no profile
+      supplies a recorded-unavailable seat", so the table and the clarifying paragraph
+      say the same thing.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/provider-profile-probes.test.ts:382
+    message: >-
+      TC-PROFILE-097's "three excluded freshness readings fail by name" exercises the
+      production probe once (`names.map(correct)` equals `[false, true, true]`); the
+      three "variants" are hand-written lambdas compared against that oracle, so they
+      assert that the test author's wrong implementations disagree with the right one,
+      not that the shipped probe would reject a wrong implementation. The behavioural
+      coverage of the rule is real in TC-062/063/095; this arm is a documentation
+      assertion dressed as a control.
+    suggestion: >-
+      Either drop the variant loop as redundant with TC-062/063/095, or make it a
+      mutation-style check over the delivered predicate inputs.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: info
+    confidence: high
+    category: maintainability
+    location: packages/core/src/provider/profile.ts:129
+    message: >-
+      The recorded-unavailability marker is an implicit cross-module contract with
+      duplicated local types: `ProviderAvailabilityVerdict` in `packages/cli/src/edge.ts:2924`
+      and `RecordedAvailabilityVerdict` in `packages/core/src/provider/profile.ts:129`,
+      read through an `as` cast. It is deliberately not on `ProfileProviderAvailability`
+      (per the spec's "not a contract field" note), which is reasonable, but a rename or
+      drop on either side compiles cleanly and would silently disable the seat gate; only
+      the behaviour tests (TC-066/069/070/094) would catch it.
+    suggestion: >-
+      Export one shared marker-bearing verdict type/guard from a single module (or a
+      small `recordedUnavailable` predicate in core) so the two sides cannot drift,
+      keeping the marker out of the public contract.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: info
+    confidence: medium
+    category: test-quality
+    location: packages/core/src/provider/profile.ts:424
+    message: >-
+      The "rung-derived" seat substitution arm is reachable only through an injected
+      `options.seatModels` map; no production caller passes `evaluatePacing` output into
+      `selectProfile` today. This is consistent with the spec's AC-F3-1 wording ("set by
+      a pacing rung from supplied pacing output") and with the DoR note about synthetic
+      rung reachability, but the rung path is not production-reachable end to end, so the
+      guarantee is proven at the unit seam only.
+    suggestion: >-
+      Leave as-is if pacing-into-selection wiring is a separate delivery; record in the
+      pm-notes that the rung arm is unit-level until that wiring lands so the coverage
+      claim is not over-read.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-22T02:27:22Z
+next_step: PROCEED

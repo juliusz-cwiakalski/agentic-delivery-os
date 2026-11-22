@@ -10,11 +10,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
 import type { ConfigValue } from "../../packages/core/src/contracts/config";
+import { PARK_CAUSES, PROVIDER_SKIP_REASONS } from "../../packages/core/src/contracts/provider";
 import { resolveConfig } from "../../packages/core/src/index";
+import { createProviderFactsProbe, selectProfile } from "../../packages/core/src/provider/index";
 import {
   parseAndValidateProviderConfiguration,
   parseProviderConfiguration,
 } from "../../packages/core/src/provider/validate";
+import { available, mixedChain } from "../fixtures/provider/profile/selection/fixtures";
 
 const ROOT = process.cwd();
 const fixture = (name: string): unknown =>
@@ -576,5 +579,45 @@ describe("GH-350 TC-BUD-012 the chain park unions budget-exhausted with the earl
     expect(park.evidence.timezone).toBe("UTC");
     expect(park.evidence.budgetName).toBe("daily");
     expect(park.evidence.budgetMeasured).toBe(40);
+  });
+});
+
+describe("GH-377 TC-PROFILE-085 chain resolution with no parks and the closed skip set are unchanged", () => {
+  test("a park-free profile resolution adds no skip reason and no park object", () => {
+    const result = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({
+        "coding-plan": available(),
+        deepseek: available(),
+      }),
+      nowMs: 1_700_000_000_000,
+    });
+    expect(result.ok).toBe(true);
+    expect("skipped" in result).toBe(false);
+    expect("parks" in result).toBe(false);
+  });
+
+  test("the closed skip-reason and park-cause sets are exactly the delivered sets", () => {
+    expect([...PROVIDER_SKIP_REASONS]).toEqual([
+      "disabled",
+      "peak-window",
+      "quota-exhausted",
+      "budget-exhausted",
+      "provider-outage",
+      "credential-missing",
+      "credential-rejected",
+      "paid-fallback-not-allowed",
+      "shadowed",
+    ]);
+    expect([...PARK_CAUSES]).toEqual([
+      "peak-window",
+      "quota-exhausted",
+      "budget-exhausted",
+      "provider-outage",
+      "credential-missing",
+      "credential-rejected",
+      "chain-exhausted",
+      "reevaluation-cap",
+    ]);
   });
 });

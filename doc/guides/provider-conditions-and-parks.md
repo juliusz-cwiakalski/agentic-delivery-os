@@ -4,9 +4,9 @@ id: GUIDE-PROVIDER-CONDITIONS-AND-PARKS
 status: Draft
 created: 2026-10-31
 owners: ["engineering"]
-summary: "Provider condition and park contract: the declared-zone basis, causes, resume times, budget ceilings, watch freshness, fail-loud announcements, the configuration pointer, and this repository's adopted policy."
+summary: "Provider condition and park contract: the declared-zone basis, causes, resume times, budget ceilings, watch freshness, profile eligibility over recorded parks and freshness, fail-loud announcements, the configuration pointer, and this repository's adopted policy."
 links:
-  related_changes: ["GH-182", "GH-350", "GH-374", "GH-365"]
+  related_changes: ["GH-182", "GH-350", "GH-374", "GH-365", "GH-377"]
 ---
 # Provider Conditions and Parks
 
@@ -112,6 +112,41 @@ strictly in the future no park is created and the observation reports
 it never reports `watch-stale`; staleness is demonstrated only by
 composition-supplied observations and by the clamp.
 
+## Profile eligibility and parks
+
+`provider profile resolve` treats recorded park state and recorded freshness as
+eligibility inputs. A provider with an active provider-attributable park is
+unavailable to profile selection and reports the park cause as its blocker. A
+provider whose declared watch target is stale — the composition supplied an
+observation for it and `ageSeconds >= maxAgeSeconds` — is unavailable and reports
+`watch-stale` as its blocker even though a stale observation creates no park; a
+provider with no declared watch target is never stale. Chain-level causes
+(`chain-exhausted` and `reevaluation-cap`) never make an individual provider
+unavailable.
+
+Profile resolution reads the same verified park fold that `provider parks list`
+reports, once per resolution, at one clock instant. A provider the parks listing
+shows as actively parked is therefore the provider profile resolution treats as
+unavailable at that instant, and the two surfaces cannot disagree. The fold is
+read-only on this path: profile resolution creates, clears, and expires no park,
+writes no announcement, and starts no timer. Recovery stays automatic — the
+recorded expiry passes, the park becomes inactive at read time, and the next
+resolution selects the preferred profile again with no timer, daemon, or
+configuration edit.
+
+The freshness rule for profile eligibility is recorded in
+[TDR-0075](../../decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md),
+which narrows TDR-0062 D2 for profile eligibility only. TDR-0062's watch surface,
+age predicate, park clamp, and closed-set attestation stand, and chain resolution
+is unchanged.
+
+Seat resolution applies the same recorded-unavailability test to each seat's
+effective model, which may name a provider outside the selected profile's
+declared provider list. A recorded-unavailable seat is taken from the next valid
+profile in preference-chain order; when no profile supplies it, resolution
+refuses `provider.profile.unavailable` at exit `2` and names the seat and the
+provider in the refusal summary.
+
 ## Offline verification and migration
 
 `provider simulate --fixture <path>` replays one bounded fixture through the
@@ -201,8 +236,12 @@ are visible in review and to CI:
   with a computed resume instant; a per-ticket cost ceiling of 30 **stops** the
   delivery with a classified refusal and cannot reopen.
 - **Watch targets.** The subscription quota windows and the DeepSeek balance floor
-  (2 USD) are declared watch targets, read-only. The synchronous probe reads **no
-  live quota or balance**; live verification belongs to the daemon path.
+  (2 USD) are declared watch targets, read-only. `provider profile resolve`
+  consumes recorded park state synchronously, so a provider the parks listing
+  already shows as parked is also ineligible for profile selection before any
+  spawn. The synchronous probe reads **no live quota or balance**; live verification belongs to the daemon path.
+  Recorded parks are facts, not fetches: resolution performs no quota call, no
+  watch transport call, no credential read, and no state write.
 - **Declared cost.** The paid entry's single union window is what keeps paid
   capacity out of both DeepSeek price peaks and out of the subscription's buffered
   pause. Its only newly closed **time-of-day interval** is exactly 04:00–06:00 UTC

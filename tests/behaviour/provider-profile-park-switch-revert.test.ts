@@ -4,6 +4,8 @@
  * honest parked decisions, dedupe, and 100-run lifecycle replay.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
+import type { ProfileSelectionResult } from "../../packages/core/src/contracts/index";
 import {
   createProfileTargetRecord,
   createProviderFactsProbe,
@@ -12,16 +14,19 @@ import {
   readProfileTarget,
   selectProfile,
 } from "../../packages/core/src/provider/index";
-import { createParkRecord } from "../../packages/core/src/provider/parks";
+import {
+  clearParkRecord,
+  createParkRecord,
+  parkView,
+} from "../../packages/core/src/provider/parks";
 import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
-import type { ProfileSelectionResult } from "../../packages/core/src/contracts/index";
+import { lifecycleChain, peakWindow } from "../fixtures/provider/profile/lifecycle/fixtures";
 import {
   available,
   exhausted,
   mixedChain,
   peak,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { lifecycleChain, peakWindow } from "../fixtures/provider/profile/lifecycle/fixtures";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = 1_700_000_000_000;
@@ -310,5 +315,94 @@ describe("TC-PROFILE-053 lifecycle replay", () => {
       );
     const expected = run();
     for (let index = 0; index < 100; index += 1) expect(run()).toBe(expected);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — exact expiry, cleared condition, and never-parked equivalence.
+ * ------------------------------------------------------------------------- */
+
+const parkEntries = {
+  "coding-plan": { name: "coding-plan", class: "subscription" as const, enabled: true },
+  deepseek: { name: "deepseek", class: "pay-per-token" as const, enabled: true },
+};
+
+const quotaPark = (expiresAtMs: number) =>
+  createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs,
+    evidence: {},
+  });
+
+describe("GH-377 TC-PROFILE-076 the park is inactive at exactly its expiry", () => {
+  test("T-1 active, T expired, T+1 expired; the decision follows the read-time rule", () => {
+    const expiresAt = NOW;
+    const record = quotaPark(expiresAt);
+    const verdictAt = (instant: number) =>
+      createResolvedProviderProbe(parkEntries, instant, undefined, {
+        parks: { ok: true, value: [parkView(record, instant)] },
+      });
+    expect(verdictAt(expiresAt - 1).probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "quota-exhausted",
+    });
+    expect(verdictAt(expiresAt).probe("coding-plan")).toMatchObject({
+      available: true,
+      condition: "clear",
+    });
+    expect(verdictAt(expiresAt + 1).probe("coding-plan")).toMatchObject({
+      available: true,
+      condition: "clear",
+    });
+
+    const expired = selectProfile({
+      profiles: mixedChain(),
+      probe: verdictAt(expiresAt),
+      nowMs: expiresAt,
+    });
+    if (!expired.ok) throw new Error("expired selection failed");
+    expect(expired.decision.profile).toBe("mixed");
+    expect(expired.decision.seatModels.pm).toBe("claude-opus");
+  });
+});
+
+describe("GH-377 TC-PROFILE-077 a cleared condition restores the profile before expiry", () => {
+  test("the cleared generation wins while its expiry is still in the future", () => {
+    const active = quotaPark(NOW + 3_600_000);
+    const before = createResolvedProviderProbe(parkEntries, NOW, undefined, {
+      parks: { ok: true, value: [parkView(active, NOW)] },
+    });
+    expect(before.probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "quota-exhausted",
+    });
+
+    const cleared = clearParkRecord(active, NOW);
+    const after = createResolvedProviderProbe(parkEntries, NOW, undefined, {
+      parks: { ok: true, value: [parkView(cleared, NOW)] },
+    });
+    expect(after.probe("coding-plan")).toMatchObject({ available: true, condition: "clear" });
+    const selection = selectProfile({ profiles: mixedChain(), probe: after, nowMs: NOW });
+    if (!selection.ok) throw new Error("cleared selection failed");
+    expect(selection.decision.profile).toBe("mixed");
+    expect(selection.decision.seatModels.pm).toBe("claude-opus");
+  });
+});
+
+describe("GH-377 TC-PROFILE-078 a never-parked state yields the identical decision", () => {
+  test("an expired park and an absent park produce the same selection", () => {
+    const expired = createResolvedProviderProbe(parkEntries, NOW, undefined, {
+      parks: { ok: true, value: [parkView(quotaPark(NOW), NOW)] },
+    });
+    const never = createResolvedProviderProbe(parkEntries, NOW, undefined, {
+      parks: { ok: true, value: [] },
+    });
+    const expiredSelection = selectProfile({ profiles: mixedChain(), probe: expired, nowMs: NOW });
+    const neverSelection = selectProfile({ profiles: mixedChain(), probe: never, nowMs: NOW });
+    expect(JSON.stringify(expiredSelection)).toBe(JSON.stringify(neverSelection));
   });
 });

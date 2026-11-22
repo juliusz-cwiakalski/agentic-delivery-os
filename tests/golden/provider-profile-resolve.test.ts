@@ -10,9 +10,10 @@ import {
   evaluateProfileLifecycle,
   selectProfile,
 } from "../../packages/core/src/provider/index";
+import { eligibility, selectedResult } from "../fixtures/provider/profile/golden/data";
 import { runGolden } from "../fixtures/provider/profile/golden/run";
 import { lifecycleChain } from "../fixtures/provider/profile/lifecycle/fixtures";
-import { available, peak } from "../fixtures/provider/profile/selection/fixtures";
+import { available, mixedChain, peak } from "../fixtures/provider/profile/selection/fixtures";
 
 const ENGINE_NOW = 1_700_000_000_000;
 
@@ -131,5 +132,40 @@ describe("TC-PROFILE-024..028 engine-path switch/revert golden", () => {
       revertCondition: "peak-window",
     });
     expect(reverted.events.filter((event) => event.code === "profile.reverted")).toHaveLength(1);
+  });
+});
+
+describe("GH-377 TC-PROFILE-089/090 recorded-park and healthy selections", () => {
+  test("TC-PROFILE-089 the golden decision is the recorded-park selection", async () => {
+    const result = await runGolden(["profile", "resolve", "--for-spawn", "--json"]);
+    expect(result.exitCode).toBe(0);
+    const envelope = JSON.parse(result.stdout) as { readonly data: Record<string, unknown> };
+    expect(envelope.data.profile).toBe("deepseek");
+    expect(eligibility[0]).toMatchObject({ profile: "mixed", verdict: "ineligible" });
+    expect(eligibility[0]?.blockers.some((blocker) => blocker.value === "quota-exhausted")).toBe(
+      true,
+    );
+    expect(selectedResult().ok && selectedResult().decision.seatModels.pm).toBe(
+      "deepseek-reasoner",
+    );
+    const envRecord = envelope.data.envRecord as {
+      readonly entries: readonly Record<string, unknown>[];
+    };
+    expect(envRecord.entries.map((entry) => entry.value)).toContain("deepseek-reasoner");
+  });
+
+  test("TC-PROFILE-090 healthy facts select the preferred profile and its declared seats", () => {
+    const healthy = selectProfile({
+      profiles: mixedChain(),
+      probe: createProviderFactsProbe({
+        "coding-plan": available(),
+        deepseek: available(),
+      }),
+      nowMs: ENGINE_NOW,
+    });
+    if (!healthy.ok) throw new Error("healthy selection failed");
+    expect(healthy.decision.profile).toBe("mixed");
+    expect(healthy.decision.seatModels.pm).toBe("claude-opus");
+    expect(golden("profile-resolve.json").profile).toBe("deepseek");
   });
 });

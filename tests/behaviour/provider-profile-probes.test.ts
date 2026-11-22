@@ -3,15 +3,25 @@
  * the NFR-6 evaluation-cost bound (GAP-T6).
  */
 import { describe, expect, test } from "bun:test";
-import type { ProviderProfileConfiguration } from "../../packages/core/src/contracts/index";
-import { selectProfile } from "../../packages/core/src/provider/index";
+import {
+  createResolvedProviderProbe,
+  type ProviderAvailabilityFacts,
+} from "../../packages/cli/src/edge";
+import type {
+  ProviderDescriptor,
+  ProviderProfileConfiguration,
+  ProviderWatchTarget,
+} from "../../packages/core/src/contracts/index";
+import { resolveProfileForSpawn, selectProfile } from "../../packages/core/src/provider/index";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
+import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 import {
   available,
   exhausted,
+  mixedChain,
   profile,
   seat,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 
 const NOW = 1_700_000_000_000;
 
@@ -186,5 +196,354 @@ describe("TC-PROFILE-015 evaluation cost of 100 profiles over 100 providers", ()
     expect(probe.calls.length).toBe(100);
     expect(probe.counts.p0).toBe(1);
     expect(elapsed).toBeLessThanOrEqual(50);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — park-aware availability and the watch-observation seam.
+ * ------------------------------------------------------------------------- */
+
+const entriesOf = (...names: readonly string[]): Readonly<Record<string, ProviderDescriptor>> =>
+  Object.fromEntries(
+    names.map((name) => [name, { name, class: "subscription" as const, enabled: true }]),
+  );
+
+const watchTarget = (maxAgeSeconds?: number): ProviderWatchTarget => ({
+  mapping: "deepseek-balance",
+  endpoint: "https://watch.example/balance",
+  credentialRef: "watch",
+  ...(maxAgeSeconds === undefined ? {} : { maxAgeSeconds }),
+});
+
+const parkedView = (
+  providerName: string,
+  cause:
+    | "peak-window"
+    | "quota-exhausted"
+    | "budget-exhausted"
+    | "provider-outage"
+    | "credential-missing"
+    | "credential-rejected",
+  nowMs: number,
+) => {
+  const park = createParkRecord({
+    subjectKind: "provider",
+    subjectName: providerName,
+    cause,
+    conditions: [cause],
+    createdAtMs: nowMs - 1_000,
+    expiresAtMs: nowMs + 3_600_000,
+    evidence: {},
+  });
+  return parkView(park, nowMs);
+};
+
+describe("GH-377 TC-PROFILE-062/063 watch freshness is per declared target", () => {
+  const chain = () =>
+    chainOf([
+      { name: "a", providers: ["p"] },
+      { name: "b", providers: ["q"] },
+    ]);
+
+  test("TC-PROFILE-062 an observation at the bound blocks as watch-stale", () => {
+    const probe = createResolvedProviderProbe(entriesOf("p", "q"), NOW, undefined, {
+      watch: { p: watchTarget(60) },
+      observations: { p: { condition: "clear", observedAtMs: NOW - 60_000 } },
+    });
+    const verdict = probe.probe("p");
+    expect(verdict.available).toBe(false);
+    expect(verdict.condition).toBe("watch-stale");
+    expect(verdict.blockers).toHaveLength(1);
+    expect(verdict.blockers[0]).toMatchObject({ kind: "condition", value: "watch-stale" });
+    expect(String(verdict.blockers[0]?.detail)).toContain("p");
+    expect(String(verdict.blockers[0]?.detail)).toContain("60");
+
+    const selection = selectProfile({ profiles: chain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("b");
+    expect(
+      selection.decision.eligibility.find((entry) => entry.profile === "a")?.blockers[0]?.value,
+    ).toBe("watch-stale");
+
+    const spawn = resolveProfileForSpawn({
+      profiles: chain(),
+      probe,
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    if (!spawn.ok) throw new Error("spawn resolution failed");
+    expect(Object.values(spawn.variables).some((value) => value.includes("/p/"))).toBe(false);
+  });
+
+  test("TC-PROFILE-063 one second below the bound is available", () => {
+    const probe = createResolvedProviderProbe(entriesOf("p", "q"), NOW, undefined, {
+      watch: { p: watchTarget(60) },
+      observations: { p: { condition: "clear", observedAtMs: NOW - 59_000 } },
+    });
+    expect(probe.probe("p")).toMatchObject({ available: true, condition: "clear", blockers: [] });
+    const selection = selectProfile({ profiles: chain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("a");
+  });
+});
+
+describe("GH-377 TC-PROFILE-064 a live read is age zero; an absent observation is not stale", () => {
+  test("every live observation is fresh at every validated bound", () => {
+    for (const bound of [1, 60, 900]) {
+      const probe = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, {
+        watch: { p: watchTarget(bound) },
+        observations: { p: { condition: "clear", observedAtMs: NOW } },
+      });
+      expect(probe.probe("p"), `bound ${bound}`).toMatchObject({
+        available: true,
+        condition: "clear",
+      });
+    }
+  });
+
+  test("an absent observation contributes nothing", () => {
+    const probe = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, {
+      watch: { p: watchTarget(1) },
+    });
+    expect(probe.probe("p")).toMatchObject({ available: true, condition: "clear", blockers: [] });
+  });
+});
+
+describe("GH-377 TC-PROFILE-095 staleness is per declared target; no target is never stale", () => {
+  test("a short bound blocks, a long bound stays fresh, and an undeclared target never blocks", () => {
+    const probe = createResolvedProviderProbe(entriesOf("short", "long", "none"), NOW, undefined, {
+      watch: { short: watchTarget(60), long: watchTarget(900) },
+      observations: {
+        short: { condition: "clear", observedAtMs: NOW - 120_000 },
+        long: { condition: "clear", observedAtMs: NOW - 120_000 },
+        none: { condition: "clear", observedAtMs: NOW - 120_000 },
+      },
+    });
+    expect(probe.probe("short")).toMatchObject({ available: false, condition: "watch-stale" });
+    expect(String(probe.probe("short").blockers[0]?.detail)).toContain("short");
+    expect(probe.probe("long")).toMatchObject({ available: true, condition: "clear" });
+    expect(probe.probe("none")).toMatchObject({ available: true, condition: "clear" });
+
+    const below = createResolvedProviderProbe(entriesOf("short"), NOW, undefined, {
+      watch: { short: watchTarget(60) },
+      observations: { short: { condition: "clear", observedAtMs: NOW - 59_000 } },
+    });
+    expect(below.probe("short")).toMatchObject({ available: true, condition: "clear" });
+  });
+});
+
+describe("GH-377 TC-PROFILE-096 only freshness is consumed", () => {
+  test("a condition that derived a park is consumed as that park, once", () => {
+    const facts = (withPark: boolean): ProviderAvailabilityFacts => ({
+      watch: { p: watchTarget(60) },
+      observations: { p: { condition: "quota-exhausted", observedAtMs: NOW } },
+      ...(withPark
+        ? { parks: { ok: true as const, value: [parkedView("p", "quota-exhausted", NOW)] } }
+        : {}),
+    });
+    const withPark = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, facts(true));
+    const parkOnly = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, {
+      parks: { ok: true as const, value: [parkedView("p", "quota-exhausted", NOW)] },
+    });
+    const verdict = withPark.probe("p");
+    expect(verdict.available).toBe(false);
+    expect(verdict.blockers).toHaveLength(1);
+    expect(verdict.blockers[0]?.value).toBe("quota-exhausted");
+    expect(verdict.condition).toBe(parkOnly.probe("p").condition);
+
+    const fresh = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, facts(false));
+    expect(fresh.probe("p")).toMatchObject({ available: true, condition: "clear", blockers: [] });
+  });
+});
+
+describe("GH-377 TC-PROFILE-097 the three excluded freshness readings fail by name", () => {
+  test("global instant, undeclared-target staleness, and all-providers staleness are rejected", () => {
+    const probe = createResolvedProviderProbe(entriesOf("short", "long", "none"), NOW, undefined, {
+      watch: { short: watchTarget(60), long: watchTarget(900) },
+      observations: {
+        short: { condition: "clear", observedAtMs: NOW - 120_000 },
+        long: { condition: "clear", observedAtMs: NOW - 120_000 },
+        none: { condition: "clear", observedAtMs: NOW - 120_000 },
+      },
+    });
+    const names = ["short", "long", "none"];
+    const correct = (name: string): boolean => probe.probe(name).available;
+    expect(names.map((name) => correct(name))).toEqual([false, true, true]);
+
+    const variants: ReadonlyArray<{
+      readonly id: string;
+      readonly verdict: (name: string) => boolean;
+    }> = [
+      { id: "global-instant", verdict: () => false },
+      {
+        id: "undeclared-target-stale",
+        verdict: (name) => (name !== "none" ? correct(name) : false),
+      },
+      { id: "all-providers-stale", verdict: () => false },
+    ];
+    for (const variant of variants) {
+      const failures = names
+        .filter((name) => variant.verdict(name) !== correct(name))
+        .map(() => variant.id);
+      expect(failures, variant.id).toContain(variant.id);
+    }
+  });
+});
+
+describe("GH-377 TC-PROFILE-088 a failed fold read is a named unavailable verdict", () => {
+  test("the failure is unavailable, never clear, and not cached into a later resolution", () => {
+    const failed = createResolvedProviderProbe(entriesOf("p", "q"), NOW, undefined, {
+      parks: {
+        ok: false,
+        error: {
+          kind: "state",
+          code: "state.store.torn",
+          consequence: "not_landed",
+          location: { path: "provider.park" },
+        },
+      },
+    });
+    const verdict = failed.probe("p");
+    expect(verdict.available).toBe(false);
+    expect(verdict.condition).toBe("provider-outage");
+    expect(verdict.blockers[0]).toMatchObject({ kind: "condition", value: "provider-outage" });
+
+    const chain = chainOf([
+      { name: "a", providers: ["p"] },
+      { name: "b", providers: ["q"] },
+    ]);
+    const selection = selectProfile({ profiles: chain, probe: failed, nowMs: NOW });
+    expect(selection.ok).toBe(false);
+    if (selection.ok) return;
+    expect(selection.code).toBe("provider.profile.unavailable");
+    const refused = resolveProfileForSpawn({
+      profiles: chainOf([{ name: "a", providers: ["p"] }]),
+      probe: failed,
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    expect(refused.ok).toBe(false);
+    if (refused.ok) return;
+    expect(refused.code).toBe("provider.profile.unavailable");
+
+    const later = createResolvedProviderProbe(entriesOf("p"), NOW, undefined, {
+      parks: { ok: true, value: [] },
+    });
+    expect(later.probe("p")).toMatchObject({ available: true, condition: "clear" });
+  });
+});
+
+describe("GH-377 TC-PROFILE-081 chain-level causes never block and never clear a provider", () => {
+  const mixedEntries = {
+    "coding-plan": { name: "coding-plan", class: "subscription" as const, enabled: true },
+    deepseek: { name: "deepseek", class: "pay-per-token" as const, enabled: true },
+  };
+  const chainPark = createParkRecord({
+    subjectKind: "chain",
+    subjectName: "default",
+    cause: "chain-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  const loopCapPark = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "reevaluation-cap",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  const quotaPark = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "coding-plan",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+
+  test("a chain park and a provider-subject loop cap leave every provider available", () => {
+    for (const view of [parkView(chainPark, NOW), parkView(loopCapPark, NOW)]) {
+      const probe = createResolvedProviderProbe(mixedEntries, NOW, undefined, {
+        parks: { ok: true, value: [view] },
+      });
+      expect(probe.probe("coding-plan"), view.cause).toMatchObject({
+        available: true,
+        condition: "clear",
+      });
+      const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+      if (!selection.ok) throw new Error("selection failed");
+      expect(selection.decision.profile).toBe("mixed");
+      expect(
+        selection.decision.eligibility.flatMap((entry) => entry.blockers).map((b) => b.value),
+      ).not.toContain(view.cause);
+    }
+  });
+
+  test("a loop cap neither blocks nor clears the provider's own quota park", () => {
+    const probe = createResolvedProviderProbe(mixedEntries, NOW, undefined, {
+      parks: {
+        ok: true,
+        value: [parkView(loopCapPark, NOW), parkView(quotaPark, NOW)],
+      },
+    });
+    expect(probe.probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "quota-exhausted",
+    });
+    const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("deepseek");
+    const values = selection.decision.eligibility.flatMap((entry) =>
+      entry.blockers.map((blocker) => blocker.value),
+    );
+    expect(values).toContain("quota-exhausted");
+    expect(values).not.toContain("reevaluation-cap");
+    expect(values).not.toContain("chain-exhausted");
+  });
+});
+
+describe("GH-377 TC-PROFILE-082 budget-exhausted window scope is consumed", () => {
+  test("a provider-subject window park blocks, selects the next profile, and emits no parked model", () => {
+    const park = createParkRecord({
+      subjectKind: "provider",
+      subjectName: "coding-plan",
+      cause: "budget-exhausted",
+      conditions: ["budget-exhausted"],
+      createdAtMs: NOW - 1_000,
+      expiresAtMs: NOW + 3_600_000,
+      evidence: {},
+    });
+    const probe = createResolvedProviderProbe(
+      {
+        "coding-plan": { name: "coding-plan", class: "subscription", enabled: true },
+        deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+      },
+      NOW,
+      undefined,
+      { parks: { ok: true, value: [parkView(park, NOW)] } },
+    );
+    expect(probe.probe("coding-plan")).toMatchObject({
+      available: false,
+      condition: "budget-exhausted",
+    });
+    const selection = selectProfile({ profiles: mixedChain(), probe, nowMs: NOW });
+    if (!selection.ok) throw new Error("selection failed");
+    expect(selection.decision.profile).toBe("deepseek");
+    const spawn = resolveProfileForSpawn({
+      profiles: mixedChain(),
+      probe,
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: "TEST",
+    });
+    if (!spawn.ok) throw new Error("spawn resolution failed");
+    expect(Object.values(spawn.variables)).not.toContain("claude-opus");
   });
 });

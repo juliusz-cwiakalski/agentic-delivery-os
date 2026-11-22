@@ -97,6 +97,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0063](TDR-0063-provider-family-mounting-27th-prompt-required.md) | TDR | Provider Family Mounting — The Twenty-Eighth and Last Prompt-Required Family, Appended After `loop` | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0064](TDR-0064-provider-budget-work-item-ref-source.md) | TDR | Provider Budget Work-Item Ref — A Fact From the Local Delivery Context, Never a Flag, Never a Silent Clear | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
 | [TDR-0074](TDR-0074-project-groups-document-operator-local-overlay.md) | TDR | The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only | Proposed | 2026-11-21 | Juliusz Ćwiąkalski |
+| [TDR-0075](TDR-0075-watch-stale-as-profile-eligibility-blocker.md) | TDR | A Stale Watch Observation Is a Profile-Eligibility Blocker — A Narrowed `watch-stale` Boundary at Zero Acquisition Cost | Proposed | 2026-11-22 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -140,3 +141,13 @@ checkout's own document, an absent document is the declared empty target set, no
 checkout reads another checkout's document, and no tracked template lands in this
 change. The three current-truth pages that call the document project-committed are
 reconciled in the documentation phase.
+
+Decision TDR-0075 is the binding design of change GH-377's watch-staleness boundary;
+its owner acceptance is that change's pull-request review, and its status moves from
+`Proposed` there rather than in the delivery commits. It narrows TDR-0062 D2 for
+profile selection only: a provider with a declared watch target whose supplied
+observation is at or beyond `maxAgeSeconds` is unavailable to profile selection with
+the existing watch-only `watch-stale` condition as the blocker, while chain
+resolution, the watch read path, the park invariant, and every closed set stay as
+delivered, and no fetch, credential read, retained snapshot, cache, timer, or state
+write is added.

@@ -188,6 +188,7 @@ import type {
 } from "../../packages/core/src/contracts/index";
 import { createProviderEngine } from "../../packages/core/src/provider/engine";
 import {
+  parkGeneration,
   providerParksProjection,
   readProviderLedger,
   readProviderParkViews,
@@ -576,5 +577,92 @@ describe("GH-350 m2 TC-ZONE-009 the waitSeconds arithmetic and the gap-crossing 
     expect(condition.expiresAtMs).toBe(Date.parse("2026-03-29T01:00:00.000Z"));
     expect(condition.waitSeconds).toBe(1_800);
     expect(condition.waitSeconds).not.toBe(9_000 - 5_400);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — chain-resolver regression and the ticket-scope non-readability.
+ * ------------------------------------------------------------------------- */
+
+const zaiResolveConfig = (): ProviderConfiguration => ({
+  defaultChain: "default",
+  credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
+  entries: {
+    "zai-coding-plan": {
+      name: "zai-coding-plan",
+      class: "subscription",
+      enabled: true,
+      quota: {
+        enabled: true,
+        endpoint: "https://zai.test/quota",
+        credentialRef: "zai",
+        timeoutMs: 1000,
+        thresholdPercent: 100,
+        maxSleepLoops: 24,
+        outageParkTtlSeconds: 300,
+        credentialParkTtlSeconds: 900,
+        capParkTtlSeconds: 300,
+      },
+    },
+    deepseek: { name: "deepseek", class: "pay-per-token", enabled: true },
+  },
+  chains: {
+    default: { name: "default", entries: ["zai-coding-plan", "deepseek"], allowPaidFallback: true },
+  },
+});
+
+describe("GH-377 TC-PROFILE-084 provider resolve keeps its skip, park, next-eligible time and generation", () => {
+  test("zai is skipped quota-exhausted with the reset instant and deepseek is selected", async () => {
+    const reset = NOW + 3_600 * 1000;
+    const { root, store, engine } = withStore(quotaBody(reset));
+    try {
+      const resolved = await engine.resolve({ config: zaiResolveConfig(), persist: true });
+      if (!resolved.ok) throw new Error("resolve failed");
+      expect(resolved.decision).toMatchObject({
+        kind: "selected",
+        providerName: "deepseek",
+      });
+      expect(resolved.skipped).toContainEqual(
+        expect.objectContaining({ providerName: "zai-coding-plan", reason: "quota-exhausted" }),
+      );
+      const park = resolved.parks.find((entry) => entry.subjectName === "zai-coding-plan");
+      expect(park?.cause).toBe("quota-exhausted");
+      expect(park?.expiresAtMs).toBe(reset);
+
+      const ledger = readProviderLedger(store);
+      if (!ledger.ok) throw new Error("ledger read failed");
+      const persisted = ledger.value.parks.find(
+        (entry) => entry.name === "provider:zai-coding-plan" && entry.state === "active",
+      );
+      if (persisted === undefined) throw new Error("persisted park missing");
+      expect(persisted.expiresAtMs).toBe(reset);
+      expect(parkGeneration(persisted)).toBe(`quota-exhausted:${reset}`);
+    } finally {
+      removeRoot(root);
+    }
+  });
+});
+
+describe("GH-377 TC-PROFILE-082 the ticket-scope crossing persists no readable park", () => {
+  test("an empty store carries no park for the entry and the probe reads clear", async () => {
+    const { createResolvedProviderProbe } = await import("../../packages/cli/src/edge");
+    const root = makeTempRoot("provider-ticket-scope");
+    try {
+      const { store } = openStore(makeIdentity(root));
+      const ledger = readProviderLedger(store);
+      if (!ledger.ok) throw new Error("ledger read failed");
+      expect(ledger.value.parks).toEqual([]);
+      const probe = createResolvedProviderProbe(
+        {
+          entry: { name: "entry", class: "pay-per-token", enabled: true },
+        },
+        NOW,
+        undefined,
+        { store },
+      );
+      expect(probe.probe("entry")).toMatchObject({ available: true, condition: "clear" });
+    } finally {
+      removeRoot(root);
+    }
   });
 });

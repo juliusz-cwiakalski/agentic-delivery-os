@@ -1,0 +1,86 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-377
+tier:
+  name: full
+phases:
+  - id: 1
+    title: Park-aware availability facts and probe composition
+    kind: delivery
+    summary: compose provider availability from declaration, enablement, declared peak, active provider-attributable parks and the per-target observation seam, in one memoized probe per distinct provider fed by the profile-resolve handler's state store, with one verified park fold per resolution and a named unavailable verdict when that fold read fails; the boundary-stale freshness rule, the never-stale provider with no declared target, the inert absent observation and the no-network, credential, timer or write evidence cases are all proved here.
+    # TC ownership: TC-PROFILE-059, TC-PROFILE-060, TC-PROFILE-061, TC-PROFILE-062, TC-PROFILE-063, TC-PROFILE-064, TC-PROFILE-065, TC-PROFILE-087, TC-PROFILE-088, TC-PROFILE-091, TC-PROFILE-095, TC-PROFILE-096, TC-PROFILE-097
+    scope:
+      files:
+        - .changeset/gh-377-provider-profile-parks-minor.md
+        - packages/cli/src/edge.ts
+        - tests/behaviour/provider-profile-probes.test.ts
+        - tests/behaviour/provider-profile-edge-wiring.test.ts
+        - tests/behaviour/provider-profile-selection.test.ts
+        - tests/checks/provider-profile-hermetic.test.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - tests/structure/provider-contract.test.ts
+        - tests/structure/provider-profile-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/provider-policy-adoption-reference.test.ts
+        - tests/fixtures/provider/profile/probes/fixtures.ts
+  - id: 2
+    title: Seat-level re-check, substitution, and the named refusal
+    kind: delivery
+    summary: narrow the seat guarantee to recorded unavailability only, re-check every effective seat model's provider against the same memoized availability facts, substitute the seat from the next eligible profile in preferenceChain order when a provider is not recorded-unavailable and satisfies the required capability with the capability gate preserved, and refuse with the owner-mandated unavailable error at exit 2 naming both the seat and the provider when no later eligible profile supplies that seat; the eligibility list is carried through unchanged, with the selected profile still eligible, later profiles still shadowed and unprobed, no blocker appended and no verdict flip, while a seat model on an undeclared, disabled or peak-parked provider stays outside this gate.
+    # TC ownership: TC-PROFILE-066, TC-PROFILE-067, TC-PROFILE-068, TC-PROFILE-069, TC-PROFILE-070, TC-PROFILE-092, TC-PROFILE-093, TC-PROFILE-094
+    scope:
+      files:
+        - packages/core/src/provider/profile.ts
+        - tests/behaviour/provider-profile-selection.test.ts
+        - tests/checks/provider-profile-evidence-bounds.test.ts
+        - tests/checks/provider-profile-hermetic.test.ts
+        - tests/fixtures/provider/profile/selection/fixtures.ts
+  - id: 3
+    title: Dispatch, spawn, and golden composition wiring
+    kind: delivery
+    summary: pass the same park-aware facts through the resolved profile-context reader seam and the dispatch nomination predicate, and prove refusal projection, per-seat env-record and binding agreement, all-or-nothing emission, nomination parity, recovery through the edge and the refreshed goldens; the seat-level refusal fixture is the injected policy family delivered in phase 2, in which the selected profile is eligible on its `providers` while a seat model names a parked provider outside that list, and the case carries the unchanged-list evidence, so the exit-2 arm under test is the seat-level refusal rather than the all-profiles-ineligible one; the CLI profile-resolve wiring landed in phase 1.
+    # TC ownership: TC-PROFILE-071, TC-PROFILE-072, TC-PROFILE-073, TC-PROFILE-074, TC-PROFILE-075, TC-PROFILE-089, TC-PROFILE-090
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - tests/behaviour/provider-profile-edge-wiring.test.ts
+        - tests/behaviour/provider-profile-spawn.test.ts
+        - tests/behaviour/provider-profile-park-switch-revert.test.ts
+        - tests/behaviour/provider-nomination-admission.test.ts
+        - tests/behaviour/harness-profile-composition-mount.test.ts
+        - tests/behaviour/harness-profile-per-spawn.test.ts
+        - tests/checks/provider-zone-refusal.test.ts
+        - tests/golden/provider-profile-resolve.test.ts
+        - tests/fixtures/provider/profile/golden/data.ts
+        - tests/fixtures/provider/profile/golden/run.ts
+        - tests/fixtures/provider/profile/golden/profile-resolve.json
+        - tests/fixtures/provider/profile/golden/profile-resolve.txt
+  - id: 4
+    title: Taxonomy proof, hermetic evidence, chain regression, and the declared doc-sync obligation
+    kind: delivery
+    summary: pin the eight-cause classification fixture with a subject and effect per cause and its drift arms, prove the exact-expiry, cleared-condition and never-parked equivalences with the zero-write audit, prove determinism and memoization over one hundred providers, and prove the unchanged chain resolver.
+    # TC ownership: TC-PROFILE-076, TC-PROFILE-077, TC-PROFILE-078, TC-PROFILE-079, TC-PROFILE-080, TC-PROFILE-081, TC-PROFILE-082, TC-PROFILE-083, TC-PROFILE-084, TC-PROFILE-085, TC-PROFILE-086
+    scope:
+      files:
+        - tests/behaviour/provider-profile-park-switch-revert.test.ts
+        - tests/behaviour/provider-profile-probes.test.ts
+        - tests/behaviour/provider-profile-edge-wiring.test.ts
+        - tests/behaviour/provider-parks.test.ts
+        - tests/behaviour/provider-chain-resolution.test.ts
+        - tests/structure/provider-contract.test.ts
+        - tests/checks/provider-profile-hermetic.test.ts
+        - tests/fixtures/provider/profile/parks/cause-taxonomy.ts
+  - id: 5
+    title: Documentation and decision-ledger reconciliation (phase-7 scope declaration)
+    kind: planning
+    summary: declare the documentation and decision-ledger reconciliation scope for the system-spec-update phase, covering the eligibility and narrowed-boundary rewrites on the provider-profile pages together with the refusal-cause wording on the dispatch-engine and result-contract pages, where the unavailable identity must stop reading as every-candidate-ineligible now that a seat-level refusal makes it reachable while a profile is eligible; this phase performs no delivery work and every declared file is reconciled by the doc-syncer.
+    # Declaration only: owned by the doc-syncer in phase 7; delivery does not author these files.
+    scope:
+      files:
+        - doc/spec/features/feature-provider-profiles.md
+        - doc/spec/features/feature-provider-engine.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-peak-pausing.md
+        - doc/guides/provider-conditions-and-parks.md
+        - doc/decisions/TDR-0075-watch-stale-as-profile-eligibility-blocker.md
+        - doc/decisions/00-index.md

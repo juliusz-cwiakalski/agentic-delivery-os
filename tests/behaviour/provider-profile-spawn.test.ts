@@ -4,18 +4,26 @@
  * milestone-seam evaluability note (external evidence not asserted here).
  */
 import { describe, expect, test } from "bun:test";
-import {
-  buildProfileEnvRecord,
-  resolveProfileForSpawn,
-  runProfileSpawn,
-} from "../../packages/core/src/provider/index";
-import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
+import { createResolvedProviderProbe } from "../../packages/cli/src/edge";
 import type {
   CredentialPort,
   HarnessExecutionEnvironmentDescriptor,
+  ProviderDescriptor,
 } from "../../packages/core/src/contracts/index";
-import { mixedChain } from "../fixtures/provider/profile/selection/fixtures";
-import { createProviderFactsProbe } from "../../packages/core/src/provider/index";
+import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
+import {
+  buildProfileEnvRecord,
+  createProviderFactsProbe,
+  envRecordNameForSeat,
+  resolveProfileForSpawn,
+  runProfileSpawn,
+} from "../../packages/core/src/provider/index";
+import { createParkRecord, parkView } from "../../packages/core/src/provider/parks";
+import {
+  mixedChain,
+  noSupplierChain,
+  substitutionChain,
+} from "../fixtures/provider/profile/selection/fixtures";
 
 const NOW = 1_700_000_000_000;
 const NAME_PREFIX = "ADOS";
@@ -211,5 +219,119 @@ describe("TC-PROFILE-058 milestone seam evaluability", () => {
     // AC-F8-8's zero-manual-override evidence arrives via M1-S9 (GH-239) and
     // M1-S22 (GH-223); it is deliberately not asserted by this suite.
     expect(outcome.envRecord.serialized.includes("MANUAL_OVERRIDE")).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------------- *
+ * GH-377 — truthful --for-spawn: per-seat agreement and all-or-nothing.
+ * ------------------------------------------------------------------------- */
+
+const seatEntries: Readonly<Record<string, ProviderDescriptor>> = {
+  a: { name: "a", class: "subscription", enabled: true },
+  b: { name: "b", class: "subscription", enabled: true },
+  parked: { name: "parked", class: "pay-per-token", enabled: true },
+};
+
+const parkedProbe = (kind: "park" | "none") => {
+  if (kind === "none") {
+    return createResolvedProviderProbe(seatEntries, NOW, undefined, {
+      parks: { ok: true, value: [] },
+    });
+  }
+  const park = createParkRecord({
+    subjectKind: "provider",
+    subjectName: "parked",
+    cause: "quota-exhausted",
+    conditions: ["quota-exhausted"],
+    createdAtMs: NOW - 1_000,
+    expiresAtMs: NOW + 3_600_000,
+    evidence: {},
+  });
+  return createResolvedProviderProbe(seatEntries, NOW, undefined, {
+    parks: { ok: true, value: [parkView(park, NOW)] },
+  });
+};
+
+describe("GH-377 TC-PROFILE-072 the env record and the spawn binding agree for every seat", () => {
+  test("one string serves the seat map, the record, and the binding; no parked provider is named", () => {
+    const credentials: CredentialPort = {
+      resolve: () => ({
+        ok: false,
+        code: "config.credential.missing",
+        domainKind: "config",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      }),
+    };
+    for (const kind of ["none", "park"] as const) {
+      const profiles = substitutionChain();
+      const probe = parkedProbe(kind);
+      const outcome = resolveProfileForSpawn({
+        profiles,
+        probe,
+        nowMs: NOW,
+        agent: "pm",
+        namePrefix: NAME_PREFIX,
+      });
+      if (!outcome.ok) throw new Error(`resolution failed for ${kind}`);
+      const profile = profiles.profiles[outcome.selection.decision.profile];
+      if (profile === undefined) throw new Error("selected profile missing");
+      for (const [seatName, seat] of Object.entries(profile.seats)) {
+        const expected = outcome.selection.decision.seatModels[seatName];
+        if (expected === undefined) throw new Error(`seat ${seatName} missing`);
+        const name = envRecordNameForSeat(seatName, seat, NAME_PREFIX);
+        const entry = outcome.envRecord.entries.find(
+          (candidate) => candidate.operation === "set" && candidate.name === name,
+        );
+        expect(entry?.operation === "set" ? entry.value : undefined, `${kind}/${seatName}`).toBe(
+          expected,
+        );
+        const provider = expected.includes("/") ? expected.split("/")[0] : undefined;
+        if (provider !== undefined) {
+          expect(probe.probe(provider).available, `${kind}/${provider}`).toBe(true);
+        }
+      }
+
+      const descriptor: HarnessExecutionEnvironmentDescriptor = {
+        kind: "opencode",
+        workDirectory: "/work",
+        environment: Object.keys(outcome.variables).map((name) => ({
+          kind: "variable" as const,
+          name,
+        })),
+      };
+      const built = buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: {},
+        credentials,
+        record: outcome.variables,
+      });
+      expect(built.ok, kind).toBe(true);
+      if (!built.ok) return;
+      expect(built.value, kind).toEqual(outcome.variables);
+    }
+  });
+});
+
+describe("GH-377 TC-PROFILE-073 emission is all-or-nothing", () => {
+  test("an unsatisfiable seat emits no record, no variables, and calls no spawn port", () => {
+    const recorder = recordingSpawnPort();
+    const outcome = runProfileSpawn({
+      profiles: noSupplierChain(),
+      probe: parkedProbe("park"),
+      nowMs: NOW,
+      agent: "pm",
+      namePrefix: NAME_PREFIX,
+      spawnPort: recorder.port,
+    });
+    expect(outcome.ok).toBe(false);
+    expect(recorder.environments).toHaveLength(0);
+    if (outcome.ok) return;
+    expect(outcome.code).toBe("provider.profile.unavailable");
+    expect(outcome.summary).toContain("pm");
+    expect(outcome.summary).toContain("parked");
+    expect("envRecord" in outcome).toBe(false);
   });
 });

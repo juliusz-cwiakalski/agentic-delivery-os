@@ -369,13 +369,16 @@ import {
   type PlanDiffPort,
   type PlanMemberDeclaration,
   PROVIDER_SIMULATE_FIXTURE_MAX_BYTES,
+  type ProfileProviderAvailability,
   type ProviderAnnouncementRecord,
   type ProviderClock,
   type ProviderConfiguration,
   type ProviderParkRecord,
+  type ProviderParkView,
   type ProviderSleep,
   type ProviderSpendTotalsPort,
   type ProviderSpendTotalsRead,
+  type ProviderWatchTarget,
   type ProviderWorkItemRefResolver,
   QUEUE_BATTERY_ONLY_PARK_CAUSES,
   type QueueDegradationReason,
@@ -421,8 +424,10 @@ import {
   createProviderWatchStatus,
   evaluatePeakWindow,
   evaluateProfileLifecycle,
+  isWatchObservationStale,
   normaliseZoneName,
   PROVIDER_MIGRATE_TARGET_NAME,
+  PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS,
   type ProviderMigrateAssignment,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
@@ -438,6 +443,7 @@ import {
   selectProfile,
   simulateProviderResolution,
   UTC_ZONE_FACTS,
+  watchObservationAgeSeconds,
 } from "@delivery-os/core/provider";
 import {
   appendAuditInvocation,
@@ -1765,6 +1771,13 @@ export type ProviderComposition = {
    */
   readonly watchObservedAtMs?: () => number;
   /**
+   * Composition-supplied per-provider observations for the profile availability
+   * seam (GH-377 DM-7, §8.6). Keyed by provider name, consumed at the read
+   * instant, never persisted, fetched, or written. Absent means no observation,
+   * which is the delivered production steady state.
+   */
+  readonly availabilityObservations?: Readonly<Record<string, ProviderAvailabilityObservation>>;
+  /**
    * The zone seam the peak evaluation binds through (GH-350 F-1/F-8, ADR-0013).
    * Absent means the engine's zone-unaware default: a non-UTC window refuses
    * `provider.peak.zone-unknown` at the edge. The production composition supplies
@@ -2877,12 +2890,91 @@ export const createProviderSpendTotalsPort = (store: StateStorePort): ProviderSp
   },
 });
 
+/** A composition-supplied per-provider watch observation (GH-377 DM-7). */
+export type ProviderAvailabilityObservation = {
+  readonly condition: string;
+  readonly observedAtMs: number;
+};
+
+/**
+ * The optional park/observation facts the composed availability probe consumes
+ * (GH-377 DM-6/DM-7, §8.6). The verified park fold is read once, here, and the
+ * returned verdict is memoized by the selection pass, so no per-seat re-read
+ * occurs. Absent facts preserve the delivered three-check probe exactly.
+ */
+export type ProviderAvailabilityFacts = {
+  /** The store the verified park fold is read through, once per resolution. */
+  readonly store?: StateStorePort;
+  /** An already-read park fold (tests and injected compositions); wins when set. */
+  readonly parks?: StateResult<readonly ProviderParkView[]>;
+  /** Composition-supplied observations keyed by provider name. */
+  readonly observations?: Readonly<Record<string, ProviderAvailabilityObservation>>;
+  /** The declared watch targets keyed by provider name. */
+  readonly watch?: Readonly<Record<string, ProviderWatchTarget>>;
+};
+
+/**
+ * The probe verdict plus the recorded-unavailability marker (GH-377 F-3). The
+ * marker is internal to the availability seam: it says the provider is blocked
+ * by recorded state (an active provider-attributable park, a stale declared
+ * watch target, or an unreadable park fold), never by declaration, enablement,
+ * or the declared peak window. The seat-level re-check consumes only this
+ * marker, so the seat gate is not widened.
+ */
+type ProviderAvailabilityVerdict = ProfileProviderAvailability & {
+  readonly recordedUnavailable?: boolean;
+};
+
+/** `chain-exhausted` and `reevaluation-cap` describe the chain or loop, not a provider. */
+const CHAIN_LEVEL_PARK_CAUSES: ReadonlySet<string> = new Set([
+  "chain-exhausted",
+  "reevaluation-cap",
+]);
+
 export const createResolvedProviderProbe = (
   entries: ProviderConfiguration["entries"],
   nowMs: number,
   zoneFactsFor: (zone: string) => ProviderZoneFacts | undefined = providerZoneFactsFor,
-): ReturnType<typeof createProfileProbePort> =>
-  createProfileProbePort((providerName) => {
+  facts: ProviderAvailabilityFacts = {},
+): ReturnType<typeof createProfileProbePort> => {
+  // One verified park-fold read per resolution (GH-377 DM-6, NFR-2/NFR-4).
+  const parkFold: StateResult<readonly ProviderParkView[]> =
+    facts.parks ??
+    (facts.store === undefined
+      ? { ok: true, value: [] }
+      : readProviderParkViews(facts.store, nowMs, { all: true }));
+  const recordedParkFailure = parkFold.ok ? undefined : parkFold.error.code;
+  const activeProviderParks = new Map<string, ProviderParkView>();
+  if (parkFold.ok) {
+    for (const view of parkFold.value) {
+      if (
+        view.subjectKind === "provider" &&
+        view.state === "active" &&
+        !CHAIN_LEVEL_PARK_CAUSES.has(view.cause)
+      ) {
+        activeProviderParks.set(view.subjectName, view);
+      }
+    }
+  }
+
+  return createProfileProbePort((providerName): ProviderAvailabilityVerdict => {
+    if (recordedParkFailure !== undefined) {
+      // A fold read failure is never availability and never a crash: it is the
+      // delivered probe-failure shape with a delivered condition value.
+      return {
+        available: false,
+        condition: "provider-outage",
+        blockers: [
+          {
+            kind: "condition",
+            value: "provider-outage",
+            detail: `provider ${providerName}: park state unreadable (${recordedParkFailure})`,
+          },
+        ],
+        source: `provider ${providerName}: park state unreadable`,
+        recordedUnavailable: true,
+      };
+    }
     const descriptor = entries[providerName];
     if (descriptor === undefined) {
       return {
@@ -2912,9 +3004,28 @@ export const createResolvedProviderProbe = (
         source: `provider ${providerName}: disabled`,
       };
     }
+    // Recorded provider truth outranks the declared peak window (RSK-10): a
+    // recorded peak-window park and a declared peak produce the same blocker
+    // value, but only the recorded one is seat-level unavailability.
+    const recordedPark = activeProviderParks.get(providerName);
+    if (recordedPark !== undefined) {
+      return {
+        available: false,
+        condition: recordedPark.cause,
+        blockers: [
+          {
+            kind: "condition",
+            value: recordedPark.cause,
+            detail: `provider ${providerName}: recorded ${recordedPark.cause} park`,
+          },
+        ],
+        source: `provider ${providerName}: recorded ${recordedPark.cause} park`,
+        recordedUnavailable: true,
+      };
+    }
     if (descriptor.peak !== undefined) {
-      const facts = zoneFactsFor(descriptor.peak.timezone);
-      if (facts === undefined) {
+      const zoneFacts = zoneFactsFor(descriptor.peak.timezone);
+      if (zoneFacts === undefined) {
         // Never read an unresolvable zone as UTC: the provider is unavailable
         // for a reason that names the zone, and the command surfaces refuse
         // `provider.peak.zone-unknown` before they call this probe.
@@ -2933,7 +3044,7 @@ export const createResolvedProviderProbe = (
           source: `provider ${providerName}: peak zone ${descriptor.peak.timezone} unresolved`,
         };
       }
-      const peak = evaluatePeakWindow(descriptor.peak, nowMs, facts);
+      const peak = evaluatePeakWindow(descriptor.peak, nowMs, zoneFacts);
       if (peak.status === "parked") {
         return {
           available: false,
@@ -2949,6 +3060,35 @@ export const createResolvedProviderProbe = (
         };
       }
     }
+    // Only freshness is consumed at the observation seam (§8.6): a fresh
+    // observation contributes nothing, whatever condition it carries, and a
+    // provider with no declared watch target is never stale.
+    const watchTarget = facts.watch?.[providerName];
+    const observation = facts.observations?.[providerName];
+    if (watchTarget !== undefined && observation !== undefined) {
+      const maxAgeSeconds = watchTarget.maxAgeSeconds ?? PROVIDER_WATCH_DEFAULT_MAX_AGE_SECONDS;
+      const ageSeconds = watchObservationAgeSeconds({
+        nowMs,
+        observedAtMs: observation.observedAtMs,
+      });
+      if (isWatchObservationStale({ ageSeconds, maxAgeSeconds })) {
+        return {
+          available: false,
+          condition: "watch-stale",
+          blockers: [
+            {
+              kind: "condition",
+              value: "watch-stale",
+              detail:
+                `provider ${providerName}: watch target ${providerName} observed ` +
+                `${ageSeconds}s ago (max ${maxAgeSeconds}s)`,
+            },
+          ],
+          source: `provider ${providerName}: watch target ${providerName} stale`,
+          recordedUnavailable: true,
+        };
+      }
+    }
     return {
       available: true,
       condition: "clear",
@@ -2956,6 +3096,7 @@ export const createResolvedProviderProbe = (
       source: `provider ${providerName}: clear`,
     };
   });
+};
 
 /** Compose the status runtime, enforcing the credential-reference guard first. */
 export const createStatusCommandRuntime = (
@@ -5288,6 +5429,15 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
           providerParsed.config.entries,
           nowMs,
           provider.zoneFactsFor ?? providerZoneFactsFor,
+          {
+            store: provider.stateStore,
+            ...(profileParsed.config.watch === undefined
+              ? {}
+              : { watch: profileParsed.config.watch }),
+            ...(provider.availabilityObservations === undefined
+              ? {}
+              : { observations: provider.availabilityObservations }),
+          },
         );
         const selection = selectProfile({
           profiles: profileParsed.config,
