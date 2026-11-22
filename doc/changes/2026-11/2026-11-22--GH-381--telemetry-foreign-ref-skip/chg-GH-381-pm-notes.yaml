@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-22T13:18:40.403Z }
   review_fix: { started: null, completed: 2026-11-22T13:32:36.768Z }
   quality_gates: { started: null, completed: 2026-11-22T14:14:45.288Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-22T14:16:28.452Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -297,5 +297,18 @@ notes:
       types/tsc green; biome check clean. Test result: PASS. Note: this entry
       rides the PM's lifecycle-boundary commit (change-folder artifacts modified
       between phase commits ride the next commit — observed repo flow)."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 4 complete (documentation reconciliation — kind: planning,
+      doc-syncer scope), commit e02a2f33. feature-telemetry-v2.md §5/§5.1 now
+      state the per-ref projection rule in current-truth form and §7 gained the
+      telemetry-foreign-ref-skip suite row (TC-TELEMETRY-040..047);
+      feature-spend.md and feature-metrics.md each carry the one minimal per-ref
+      sentence; feature-state-layer.md verified unchanged (no contradiction).
+      Residual scan found no other current-truth doc stating the old
+      tear-on-foreign-key behavior. Verification (docs, not tests): bun test
+      tests/checks/doc-conformance.test.ts 61 pass / 0 fail; bash
+      scripts/.tests/test-doc-distribution.sh clean; doc-syncer reported zero
+      residual gaps. Test result: PASS (verification guards)."
     type: info
     date: "2026-11-22"
