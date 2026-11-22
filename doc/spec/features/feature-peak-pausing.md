@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-19
+last_updated: 2026-11-22
 owners: ["engineering"]
 service: delivery-os
 summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, declared-zone grammar), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293", "GH-350"]
+  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293", "GH-350", "GH-377"]
   related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030", "ADR-0013"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -35,7 +35,7 @@ Every admitted delivery records its nominated provider profile as the additive `
 
 **Known limitation (lanes read).** `QueueLane` carries no `providerProfile` member and the `lanes` read projects none, so a `lanes list` reader cannot attribute a running lane to a provider profile from that read alone; the declared surfaces above are the ones that carry it. This is a declared limitation of the lanes projection, not a capability the read claims.
 
-A delivery that cannot nominate is refused at dispatch admission as a classified **pre-session refusal** — no lease, attempt, lane, or queue record and no event — carrying the provider-profile resolve identity for its shape: `provider.profile.absent` (empty or chain-less branch), `provider.profile.invalid` (invalid explicit nomination), or `provider.profile.capability-denied` at exit `1`, and `provider.profile.unavailable` (all candidates ineligible) at exit `2` with the eligibility list. No `dispatch.*` identity is added. The nomination gate runs immediately after input validation and before the credential preflight, the owner-hold gate, and the lease/single-flight predicates. There is no dispatch-default nomination: the preference chain's base profile remains the declared default through the normal resolve seam. Resumes never re-nominate — a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable (TDR-0028).
+A delivery that cannot nominate is refused at dispatch admission as a classified **pre-session refusal** — no lease, attempt, lane, or queue record and no event — carrying the provider-profile resolve identity for its shape: `provider.profile.absent` (empty or chain-less branch), `provider.profile.invalid` (invalid explicit nomination), or `provider.profile.capability-denied` at exit `1`, and `provider.profile.unavailable` at exit `2` with the eligibility list. That exit-`2` refusal has two causes: every candidate profile is ineligible, or the refusal is seat-level — the selected profile is eligible but its effective seat model names a recorded-unavailable provider and no later profile supplies the seat. No `dispatch.*` identity is added. The nomination gate runs immediately after input validation and before the credential preflight, the owner-hold gate, and the lease/single-flight predicates. There is no dispatch-default nomination: the preference chain's base profile remains the declared default through the normal resolve seam. Resumes never re-nominate — a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable (TDR-0028).
 
 ## 3. Peak-window rules as per-profile data
 
