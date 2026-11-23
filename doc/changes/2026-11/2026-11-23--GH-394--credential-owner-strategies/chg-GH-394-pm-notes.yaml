@@ -1,0 +1,126 @@
+change_id: GH-394
+title: "M4-S28: Credential strategies — resolve from the credential's owner (gh
+  CLI, harness store), never a copied env (M4)"
+branch: feat/GH-394/credential-owner-strategies
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+phases:
+  clarify_scope: { started: "2026-11-23T23:32:00Z", completed: 2026-11-23T22:33:31.628Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Authority chain fixed at intake: the ticket BODY is superseded by the
+      owner's six comments. Read order per owner comment 4 (2026-11-23T21:50Z):
+      (1) settled design D1-D11 (19:25Z), (2) two corrections — symlink RESOLVED
+      and accepted (regular executable target required, unresolvable chain is
+      program-unavailable), remedy table keyed by (reason, style); (3) READ
+      ORDER note — C-10 binding-supplied slot exception stated but INERT in this
+      change (no binding, no credentials catalog branch; #396 owns it), tripwire
+      enumerates declared integrations.<kind>.host coordinates from
+      configuration itself and must not fail on their absence; plus
+      remedy-wording comments (22:05Z, 22:15Z). Comment 1 (18:40Z) is superseded
+      by comment 2 where they differ."
+    date: "2026-11-23"
+  - text: "ADR-0014 rev-8 local draft
+      (.ai/local/ceo/decisions/ADR-draft-credential-strategies.md — never
+      committed) is the canonical design artifact for all artifact phases. It
+      lands in this change as
+      doc/decisions/ADR-0014-credential-strategies-store-ownership.md with
+      status: Proposed and decision_date: null — Draft Handling section and
+      revision log removed, 00-index.md + 00-register.md rows added. Owner
+      accepts or rejects at PR review; no agent marks it Accepted."
+    date: "2026-11-23"
+  - text: "Vocabulary keeps the shipped style names literal and environment-prefixed
+      (owner correction 5): renaming touches
+      defaults/catalog/validate/migrate/fixtures for zero behaviour. New styles
+      are additive: command (closed allowlist: gh -> auth token [--hostname
+      <host>]; opencode -> auth export [--standalone] <integrationID>) and
+      harness-store. No harness-oauth style ever (rule OAuth-1: export hands
+      over refresh; an active entry can report no expiry — a second refresher
+      invalidates the owner's session)."
+    date: "2026-11-23"
+  - text: "Scope boundary (owner READ ORDER note): ships the ONE-SHOT CLI
+      composition (dispatch, merge, status, commit, verify, queue). The shipped
+      resident daemon is supervise-only with no credential consumer — no daemon
+      benefit may be claimed or built here; the resident composition is
+      specified forward for #395 only. Out of scope: store style, jaiship auth,
+      profiles, binding, layers (#396/#397/#399), doctor requirement derivation
+      (#398), glab/Jira strategies."
+    date: "2026-11-23"
+  - text: "Failure model: ONE new identity-free mechanism —
+      config.credential.missing stays the only code; the failure variant gains
+      additive optional source/reason/remedy. reason from the closed ten-member
+      set (program-unavailable, timeout, non-zero-exit, empty-output,
+      shape-drift, ambiguous-account, oauth-excluded, source-not-supported,
+      variable-absent, resolution-pending — the last reserved, unobservable by
+      shipped callers). remedy strings come from a table keyed by (reason,
+      style) and selected per allowlist entry: host-aware text only for entries
+      with a binding-supplied or declared host slot; neutral text otherwise;
+      both texts fixture-pinned."
+    date: "2026-11-23"
+open_questions:
+  - text: "NON-BLOCKING (owner-designated delivery-time confirmations, handled by
+      typed classified outcomes): (a) does opencode auth export work from a
+      lingered systemd --user unit with no session, or does the service-less
+      default path hang — a TO-CONFIRM outcome noted as outside the reason set,
+      revisit trigger recorded in ADR; (b) does gh auth token exit non-zero or
+      block on a locked keyring (closed stdin + bounded cap make both safe; only
+      the reason differs); (c) confirm the three registerEdgeSecrets sites
+      (edge.ts:683-692, :1731, :5203) get the live-registry treatment with the
+      malformed-child-output-never-rendered test."
+    date: "2026-11-23"
+blockers: []
+notes:
+  - text: "Intake verified 2026-11-23: phase ledger empty (phases:{} over 7850
+      records, verified read), no local branch, no PR, no prior change folder.
+      main-tools == origin/main-tools at 4f1a7ddc (GH-386 squash merge landed —
+      GH-386 moved to recently_delivered, PR #403). Milestone M4: Jaiship-native
+      delivery attached (verified via MCP) — no milestone stop required.
+      Untracked .zed/ and three pre-existing stashes are unrelated; never stage
+      .zed/."
+    type: info
+    date: "2026-11-23"
+  - text: "Spec/code cross-check complete. Code truth matches the ticket:
+      contracts/credentials.ts has exactly two styles (literal,
+      environment-prefixed), one resolve op, one failure code reified from the
+      error-table row; adapters/credentials is the single environment-backed
+      implementation with the only ambient read. The 37 enumerated
+      config.credential.missing sites across 16 files (ADR Context) justify the
+      one-code decision. Lane spawn env is model-only for SHIPPED settings
+      (profile-env-record.ts:258-269) but the descriptor supports credential
+      entries (harness.ts:144-146) — C-8 needs a checked proof, not an assertion
+      (owner correction 9)."
+    type: info
+    date: "2026-11-23"
+  - text: "Doc impacts recorded for phase 7 (@doc-syncer):
+      doc/spec/features/feature-adapter-ports.md:155 and
+      doc/guides/tracker-credential-provisioning.md currently state 'only an
+      environment source is supported' / 'the product never runs gh auth token'
+      — the owner-directed command style deliberately reverses this stance
+      in-change; both must be reconciled together with feature-config-layer.md,
+      feature-provider-engine.md, feature-doctor.md (per ADR-0014 spec links;
+      feature-resident-daemon.md and feature-harness-adapters.md only as the
+      forward-looking/construct-input sections require).
+      feature-dispatch-engine.md preflight section ('only an environment source
+      is supported') also carries the stale absoluteness once the tracker
+      reference becomes declarable. ADR-0014 index+register rows required
+      (doc-distribution marker not needed for decisions/, but check
+      00-index/00-register formats)."
+    type: risk
+    date: "2026-11-23"
+  - text: "Retro: the ticket body was filed with nine factual/design errors the
+      owner then corrected across six comments (including excluding
+      harness-oauth entirely and reversing the symlink refusal). Lesson for
+      intake: when a ticket carries a drafted ADR reference, treat the comment
+      thread + local draft as the authority and check for a READ ORDER comment
+      before analyzing the body."
+    type: retro
+    date: "2026-11-23"
