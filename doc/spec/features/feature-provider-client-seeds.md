@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PROVIDER-CLIENT-SEEDS
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-18
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered provider clients behind the primitive ports: GitLab, Jira, and GitHub clients in the adapters package's per-provider subpaths, with normalized primitive views, honest capability/gap declarations, GitHub as the complete reference adapter (ten supported operations, no gaps) with a CLI-first transport over gh and a declared API fallback selected by a bounded probe, the provider-side squash landing, verbatim pipeline-job timings, bounded adapter-local log-excerpt and review-thread-discussion evidence reads, an injected seeded GitHub Issues transition map, the GitHub and Jira closeout write slices, GitHub review-thread root-author normalization, GitLab merged-head reads with writes still gapped, offline trap catalogs proven against sanitized hand-authored synthetic fixtures with conformance-level trap-family wiring and a frozen catalog pin, credential-port-exclusive auth, declared custom-field and merge-status mappings, uniform absence semantics, bounded collection and reverse-dependent reads, the optional structured httpStatus on adapter-local read failures, and the reviewed runtime-API confinement admission."
 links:
-  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178", "GH-224", "GH-231", "GH-240", "GH-279", "GH-338", "GH-339"]
+  related_changes: ["GH-188", "GH-175", "GH-176", "GH-183", "GH-189", "GH-178", "GH-224", "GH-231", "GH-240", "GH-279", "GH-338", "GH-339", "GH-366"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "TDR-0008", "TDR-0019", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035", "TDR-0036", "TDR-0037"]
 ---
 

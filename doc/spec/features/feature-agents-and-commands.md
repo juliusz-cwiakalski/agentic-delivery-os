@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290", "GH-313", "GH-297", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-346", "GH-350"]
+  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290", "GH-313", "GH-297", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-346", "GH-350", "GH-366"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---

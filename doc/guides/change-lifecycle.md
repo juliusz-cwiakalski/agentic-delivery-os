@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313", "GH-300", "GH-366"]
 ---
 
 # Change Lifecycle

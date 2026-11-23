@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/merge.ts"

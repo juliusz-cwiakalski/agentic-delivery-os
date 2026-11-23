@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339, GH-346]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339, GH-346, GH-366]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 

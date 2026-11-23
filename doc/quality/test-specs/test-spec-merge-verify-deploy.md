@@ -3,12 +3,12 @@ ados_distribution: internal
 id: TEST-SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "Nonfunctional test specification for the merge and verify-deploy engine: freshness and probe determinism, the declared and probed not-green required-job contract with its recorded-or-probe attribution, the crafted landing metadata and exact-head guard, the total mergeability refusal taxonomy, read budgets, output bounds, state-write discipline, error-identity stability, idempotency, no-head-mutation and coordinator-only invariants, privacy, the byte-pinned verify-gates non-regression, and the production composition's reachability and classification fidelity."
 links:
-  related_changes: ["GH-225", "GH-238", "GH-300", "GH-293", "GH-349"]
+  related_changes: ["GH-225", "GH-238", "GH-300", "GH-293", "GH-349", "GH-366"]
 ---
 
 # Test Specification: Merge and Verify Deploy

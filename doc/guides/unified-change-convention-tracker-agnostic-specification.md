@@ -5,6 +5,8 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ados_distribution: redistributable
 
 id: CHANGE-CONVENTIONS
+links:
+  related_changes: ["GH-366"]
 ---
 
 # Unified Change Convention (Tracker-Agnostic) — Specification v1

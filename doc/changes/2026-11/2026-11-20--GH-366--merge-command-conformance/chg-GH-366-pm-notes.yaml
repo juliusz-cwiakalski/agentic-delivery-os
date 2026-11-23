@@ -87,6 +87,36 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Doc-sync (system_spec_update): no unresolved documentation gaps. The
+      reconciled current-truth pages state the delivered anchors exactly
+      (172 machine / 172 documented / 171 delivered / 71 allowlist /
+      BASELINE_ROWS.length + 138 / merge kind 12; legacy scans ban the outgoing
+      pair; +138 published live, +136 legacy). Catch: TDR-0072/0073 standing
+      text still asserted the authored 173/173/172/71/+139 as the delivered
+      outcome — corrected to the delivered anchors with dated amendment rows
+      (history preserved, status Proposed untouched). Nine reconciled pages
+      gained GH-366 traceability; the merge reference page's Status line gains
+      the delivery clause. Nuance recorded by doc-sync: the delivered scan bans
+      +135 (not +136) as the outgoing GH-366 arithmetic because GH-365's
+      migration absorbed one baseline row between e1ebc76c and this change's
+      base — spec v2.6's +136 → +138 narration spans both moves consistently.
+      Doc-sync's post-edit validation: 974 checks green across every suite
+      scanning the touched files + error-table-sync (172/172) + memory-lint 0."
+    type: info
+    date: "2026-11-23"
+  - text: "Retro (composer path-token fallback): with staged scope spanning
+      multiple plan phases, the commit primitive's fallback composition anchors
+      the subject on the FIRST staged path — when that path carries a
+      hyphenated non-GH id (doc/decisions/TDR-0072-…), commitlint correctly
+      rejects the invented tracker reference (commit.commitlint-failed). The
+      phase-summary composition (single-phase scope) and any change-folder-first
+      ordering compose clean subjects. Mitigation used here: real change-folder
+      notes recorded first so the anchor path is the GH-366 change folder — the
+      same family as the operator's documented subject-length hazard. A
+      composer fix (sanitize path-derived tokens in fallback subjects) is
+      product work for a future ticket, not this change."
+    type: retro
+    date: "2026-11-23"
   - text: "Aggregate gate (plan phase 7 release obligation) — verified after the
       suspension. Sequence: (1) the 2026-11-22T23:08Z full run
       (`tmp/pnpm-check-final.log`, preserved for provenance) failed with 21

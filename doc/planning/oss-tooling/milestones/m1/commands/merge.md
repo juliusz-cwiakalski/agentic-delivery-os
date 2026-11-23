@@ -3,8 +3,10 @@
 Status: Delivered M1-S4 (GH-225); the production composition, the dry-run
 report, and the declared emittable failure set are delivered by M2-S16
 (GH-293); the provider-side landing path, the mergeability refusal taxonomy,
-and the not-green required-job attribution are delivered by M4-S11 (GH-349).
-Implemented contract; scenarios SC-M1-01..04.
+and the not-green required-job attribution are delivered by M4-S11 (GH-349);
+the change-branch resolution, the merged-request convergence read, the refusal
+diagnostics contract, and the single-request mergeability source are delivered
+by GH-366. Implemented contract; scenarios SC-M1-01..04.
 
 ## NAME
 
