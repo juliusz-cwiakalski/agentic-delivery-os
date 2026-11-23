@@ -6,6 +6,8 @@
  * provider landing call.
  */
 import { describe, expect, test } from "bun:test";
+import { projectExitCode } from "../../packages/cli/src/projection";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   baseRequest,
   baseWorkItem,
@@ -20,6 +22,12 @@ import {
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
+
+const exitOf = (code: string): number => {
+  const row = ERROR_TABLE.find((entry) => entry.code === code);
+  if (row === undefined) throw new Error(`no declared row for ${code}`);
+  return projectExitCode(row.projectionClass);
+};
 
 const errorOf = (run: { envelope?: Record<string, unknown> }) =>
   run.envelope?.error as Record<string, unknown> | undefined;
@@ -53,7 +61,7 @@ const gatedRecord = () =>
 const mergedRequest = () => baseRequest({ reviewState: "merged", headSha: MERGE_LANDING_SHA });
 
 describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
-  test("a state failure before the landing aborts retryably with nothing landed", async () => {
+  test("a state failure before the landing aborts with the row's own non-retryable value", async () => {
     const harness = createMergeHarness({
       workItem: gatedWorkItem(),
       ownerPrincipal: "owner-principal",
@@ -70,7 +78,10 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
       ]);
       expect(result.exitCode).toBe(1);
       expect(errorOf(result)?.code).toBe("merge.transaction-aborted");
-      expect(errorOf(result)?.retryable).toBe(true);
+      // `retryable` is always the emitted code's declared row value (AC-F3-5):
+      // the abort row declares `false` over its act-requiring causes, so the
+      // waiver-append cause inherits the row's value, never a per-instance one.
+      expect(errorOf(result)?.retryable).toBe(false);
       expect(errorOf(result)?.consequence).toBe("not_landed");
       expect(harness.counts.landing).toBe(0);
       expect(harness.transactions()).toHaveLength(0);
@@ -81,7 +92,7 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
     }
   });
 
-  test("a provider refusal before any mutation aborts retryably and converges on re-run", async () => {
+  test("a provider refusal before any mutation reports the declared landing identity and converges on re-run", async () => {
     let refuse = true;
     const harness = createMergeHarness({
       landing: () =>
@@ -92,8 +103,18 @@ describe("TC-MERGE-026 a clean pre-mutation abort converges", () => {
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const aborted = await harness.run();
-      expect(aborted.exitCode).toBe(1);
-      expect(errorOf(aborted)?.code).toBe("merge.transaction-aborted");
+      // The refused landing maps through the closed, total landing-fault
+      // mapping: an arbitrary port token is unclassified by definition and
+      // reports the declared `provider.outage` identity (AC-F3-3) — never the
+      // abort row and never its own token.
+      expect(aborted.exitCode).toBe(exitOf("provider.outage"));
+      expect(errorOf(aborted)?.code).toBe("provider.outage");
+      expect(errorOf(aborted)?.retryable).toBe(true);
+      expect(errorOf(aborted)?.consequence).toBe("not_landed");
+      expect(String(errorOf(aborted)?.summary)).toContain(
+        "operation=github-merge-delivery-request",
+      );
+      expect(String(errorOf(aborted)?.summary)).not.toContain("protection-rule");
       expect(harness.transactions()).toHaveLength(0);
       expect(harness.counts.landing).toBe(1);
       refuse = false;

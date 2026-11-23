@@ -99,6 +99,7 @@ phases:
 export const COMMIT_NOTES_YAML = `change_id: GH-310
 title: "commit fixture"
 delivery_mode: interactive
+branch: fix/GH-310/phase-mirror-fixture
 phases:
   clarify_scope: { started: "2026-11-05T01:00:00Z", completed: "2026-11-05T01:10:00Z" }
   specification: { started: "2026-11-05T01:11:00Z", completed: "2026-11-05T01:20:00Z" }

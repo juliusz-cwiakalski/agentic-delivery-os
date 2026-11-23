@@ -974,7 +974,7 @@ export const ERROR_TABLE = [
     retryable: false,
     consequence: "not_landed",
     remediationHint:
-      "Produce a gate verification with `verify gates` and retry; the verification state is absent, torn, or incompatible.",
+      "Produce the verification with `verify gates <ref>` for the same work item, then re-run; the verification state is absent, torn, or incompatible.",
     projectionClass: "platform-provider",
     summary: "No consumable gate-verification state exists for the change.",
   },
@@ -993,10 +993,10 @@ export const ERROR_TABLE = [
     code: "merge.transaction-aborted",
     domainKind: "merge",
     category: "user",
-    retryable: true,
+    retryable: false,
     consequence: "not_landed",
     remediationHint:
-      "Clear the named pre-mutation condition and retry; nothing landed and a re-run converges.",
+      "Repair the named aborted pre-mutation condition — nothing landed, no convergence is claimed — and then re-run.",
     projectionClass: "user-validation",
     summary: "The transaction aborted cleanly before any landing mutation.",
   },
@@ -1021,6 +1021,39 @@ export const ERROR_TABLE = [
       "Retry after the provider finishes computing the request's mergeability; the command never waits or forces the merge.",
     projectionClass: "platform-provider",
     summary: "The provider did not resolve the request's mergeability.",
+  },
+  {
+    code: "merge.branch-unresolved",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Declare the change record's `branch` key so it equals the request's own source ref, commit it on the change branch, then re-run; the refusal names the candidate, the record path at its head, and the reason.",
+    projectionClass: "user-validation",
+    summary: "The change branch could not be resolved from the change record at the request head.",
+  },
+  {
+    code: "merge.request-unresolved",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named open-request condition for the change — open a conforming request, resolve the named ambiguity, or push the request's full-SHA head — then re-run; the refusal names the change ref, the observed counts, and the reason.",
+    projectionClass: "user-validation",
+    summary: "No single open delivery request could be resolved for the change.",
+  },
+  {
+    code: "merge.work-item-unresolved",
+    domainKind: "merge",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named work item reference or the tracker, then re-run; the refusal names the work item and the read operation that could not resolve it.",
+    projectionClass: "user-validation",
+    summary: "The tracker work item for the change could not be resolved.",
   },
   {
     code: "verify.deploy.trace-missing",

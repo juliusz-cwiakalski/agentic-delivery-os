@@ -70,6 +70,7 @@ export {
 } from "./capsule-candidates.js";
 export {
   boundCloseoutData,
+  branchConvention,
   buildCloseoutPlan,
   type CloseoutBranchSafetyInput,
   type CloseoutBranchSafetyVerdict,
@@ -521,10 +522,12 @@ export {
   defaultFreshnessSeconds,
   gateSetFromValues,
   type MergeCheckRunPage,
+  type MergeCredentialFacts,
   type MergeFailure,
   type MergeFailureEvidence,
   type MergeLandResult,
   type MergeRead,
+  type MergeRecordAtHeadRead,
   type MergeRefreshResult,
   type MergeRequestDetailRead,
   type MergeTransactionConfig,
@@ -831,6 +834,7 @@ export {
 export {
   evaluateDeclaredBattery,
   evaluateVerifyGates,
+  expectedSetValid,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
   renderVerifyGatesHuman,

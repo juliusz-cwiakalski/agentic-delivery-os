@@ -24,6 +24,19 @@ titles use `M<n>: <outcome phrase>`; the prefix matches the story-code root
 (`M<n>-S<m>`). Resolve a milestone only from this existing set — never create
 one.
 
+## Change Record Branch Declaration
+
+When a change is opened, its change record **declares the change branch**: a
+top-level `branch: <ref>` key on `chg-<workItemRef>-pm-notes.yaml`, set to the
+change branch the PM ensured at intake. The value is capped at 256 characters
+and must equal the branch's delivery-request source ref exactly; the `merge`
+command reads the declaration at the delivery request's asserted head and
+refuses `merge.branch-unresolved` with one closed reason
+(`declaration-missing`, `declaration-unusable`, `declaration-disagrees`,
+`record-missing`, `record-invalid`, `record-unreadable`) when it cannot be
+established. The key is opaque to pm-notes lint and preserved by every
+document-writing branch.
+
 ## Workflow States Mapping
 
 Map change lifecycle to GitHub issue states and labels:

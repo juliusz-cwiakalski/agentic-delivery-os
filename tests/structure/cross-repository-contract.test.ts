@@ -516,6 +516,10 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       "provider.peak.zone-unknown",
       "provider.budget.exceeded",
       "provider.migrate.refused",
+      // GH-366 adds the three refusal-identity rows.
+      "merge.branch-unresolved",
+      "merge.request-unresolved",
+      "merge.work-item-unresolved",
     ]);
     const delivered = entries.filter((entry) => !additive.has(entry.code));
     expect(delivered).toHaveLength(preChange.length);

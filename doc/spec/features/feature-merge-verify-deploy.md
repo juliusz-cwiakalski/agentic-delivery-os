@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -33,16 +33,20 @@ call at the head the envelope verified, records the provider's own merged truth,
 and records the outcome. No daemon path fires a merge, no branch mutates the head
 it verified, and no force operation exists in the mutation vocabulary.
 
-The production composition supplies the transaction's reads for real: the tracker
-work-item read, the check-run page, and the request-detail read run through the
-delivered provider adapters and credential seam, and the composition resolves its
-inputs from declared sources only — configuration from the resolved document's
-typed `merge` branch, the branch from the checkout's git facts, the base
-reference from the declared integration base, and the **owner principal** from the
-provider-resolved repository owner: the owner component of the checkout's
-normalized `host/owner/name` identity, resolved through the delivered identity
-policy with no new configuration key. The declared `merge` configuration keys stay
-exactly `gate-freshness`, `gates`, and `deploy-expectations`.
+The production composition supplies the transaction's reads for real: the
+bounded open-request list read, the bounded local change-record reads at
+candidate heads, the tracker work-item read, the CI-workflow read, the check-run
+page on the resolved head, and the delivered single-request mergeability read
+run through the delivered provider adapters, git seam, and credential seam, and
+the composition resolves its inputs from declared sources only — configuration
+from the resolved document's typed `merge` branch, the change branch from the
+change record read at the delivery request's asserted head (the resolved head is
+the request's asserted head), the base reference from the declared integration
+base, and the **owner principal** from the provider-resolved repository owner:
+the owner component of the checkout's normalized `host/owner/name` identity,
+resolved through the delivered identity policy with no new configuration key.
+The declared `merge` configuration keys stay exactly `gate-freshness`,
+`gates`, and `deploy-expectations`.
 
 The configuration document is resolved once per invocation, before the
 transaction reads anything. An absent document keeps the delivered defaults; a
@@ -164,19 +168,58 @@ the recorded gate-set identity equals the effective one. A violation refuses
 observation inline. Absent, torn, unreadable, or schema-incompatible state
 refuses `merge.state-unverified` at exit 2.
 
+## Change-branch resolution and convergence
+
+The change branch comes from the change record read at the delivery request's
+asserted head: one bounded open-request list read, a candidate set capped at
+three under the declared convention, saturation evaluated before the candidate
+count, and a candidate whose head is absent or not a full hex SHA refusing
+without being read. Each candidate's record is read at its own head through a
+bounded local read (at most two fixed-argv git invocations, 262 144 bytes,
+no fetch) with the delivered pm-notes parse applied; acceptance is exact string
+equality between the record's `branch` declaration and its own source ref, the
+resolution source is `declared-at-head`, and no accepted candidate refuses
+`merge.branch-unresolved` with one closed reason
+(`declaration-missing`, `declaration-unusable`, `declaration-disagrees`,
+`record-missing`, `record-invalid`, `record-unreadable`) under the declared
+precedence. Where the open page offers nothing to resolve, one convergence
+attempt reads the delivered merged-request read verbatim and decides from its
+additive matched-request-identities member: exactly one identity replays from
+provider truth at exit 0 (`replayed=true`, zero record reads, lands nothing),
+the empty set refuses `no-open-request` as a decidable zero, more than one
+aborts `merge.transaction-aborted` naming each identity, and a faulted read is
+the distinct declared provider outcome naming
+`operation=github-delivery-request-list` — never folded into zero. Per-path
+delivery-request provider requests peak at three: one for every refusal decided
+before the merge decision, two for an open-page-only run reaching the merge
+decision (the list plus the single-request mergeability read), an empty
+convergence attempt, and a faulted merged read, three for a match-bearing
+attempt (the read's own review-thread query counted, never suppressible).
+Duplicate matching delivery requests — open or merged — are never ranked:
+`merge.transaction-aborted` names each duplicate identity.
+
 ## Post-verification probe
 
-One work-item read, one check-run page on the verified head, and one
-request-detail read. A tracker transition into an owner-attention posture after
-verification refuses `merge.gate.tracker-freshness.failed` with the transition
-and its age. A declared required job that is not green on the verified head —
-queued, running, canceled, skipped, or failed — refuses on the
-`merge.gate.<gate-id>.failed` family with the delivered reason
-(`ci-pending`, `ci-canceled`, `ci-all-skipped`, `ci-failed`). A job the effective
-gate set does not declare is never gate evidence, and a check-run page for
-another SHA is not head evidence. The post-refusal checks posture reads that same
-declared set — every `required-ci-job` entry of the effective gate set, by
-`job ?? id` — so a non-green job the set does not declare produces no refusal and
+One work-item read, one CI-workflow read, one check-run page on the resolved
+head, and the delivered single-request mergeability read. The shipped default
+set makes `ci-green` merge-applicable, so the effective merge projection is two
+entries (`ci-green`, `tracker-freshness`); the required-check set is derived
+once per invocation — every merge-applicable `required-ci-job` entry contributes
+`job ?? id` and the CI gate contributes the repository-declared expected job set
+read through the same delivered read the battery uses, validated by the
+exported `expectedSetValid` rule. A tracker transition into an owner-attention
+posture after verification refuses `merge.gate.tracker-freshness.failed` with
+the transition and its age. A required name that is not green on the resolved
+head — queued, running, canceled, skipped, failed, or missing — refuses on the
+`merge.gate.<gate-id>.failed` family with the delivered reason; a page whose
+SHA is not the resolved head refuses with the delivered head-unresolved reason
+naming both SHAs and never passes; an unreadable or invalid expected job set
+refuses naming the gate and never passes; the declared `battery`-surface
+`ci-green` is the reviewed check-gate opt-out. A job neither declared nor in
+the expected set is never gate evidence. The post-refusal checks posture reads
+that same derived set —
+`job ?? id` for every declared `required-ci-job` entry plus the CI gate's
+expected set — so a non-green name neither entry declares produces no refusal and
 the refusal stays `behind-unconfirmed`. When the freshness envelope is also violated,
 `merge.gates-stale` is primary and the probe observation rides as additional
 evidence.
@@ -216,8 +259,15 @@ taxonomy, so a code the taxonomy does not declare cannot reach the declaration,
 and they are members of the emittable set like every other branch. A read fault
 the table already declares is expressed through that declared identity: a
 rejected credential is `provider.auth.rejected` at exit `1`, an unreachable or
-malformed provider answer is `provider.outage` at exit `2`, and a request or work
-item that does not resolve aborts as `merge.transaction-aborted` at exit `1`.
+malformed provider answer is `provider.outage` at exit `2`, and a request or
+work item that does not resolve reports its own dedicated identity — a
+non-resolving open request refuses `merge.request-unresolved` at exit `1` with
+reason `no-open-request`, `ambiguous-open-request`, or `head-unresolved`, a
+non-resolving work item refuses `merge.work-item-unresolved` at exit `1`, and
+a change branch that does not resolve from the change record at the request
+head refuses `merge.branch-unresolved` at exit `1` with one of its six closed
+reasons. No reference-resolution outcome reaches
+`merge.transaction-aborted`.
 
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and
@@ -297,8 +347,18 @@ verdict is the provider's merged assertion plus the merge-commit identity.
 A fired landing whose provider truth is not observed refuses
 `merge.landing-unverified` at exit 2 with consequence `unknown`; a re-run
 re-verifies and never re-lands. A clean pre-mutation abort refuses
-`merge.transaction-aborted` at exit 1 with retryable `true` and consequence
-`not_landed`. A post-landing cleanup failure never flips a verified landing and
+`merge.transaction-aborted` at exit 1 with consequence `not_landed`.
+`retryable` is always the emitted code's declared row value and never a
+per-instance value, and a declared row may not carry `retryable: true` while
+any cause reachable for that row requires an operator act before a re-run can
+converge. `merge.transaction-aborted` therefore declares `retryable: false`
+with a remediation that names the aborted pre-mutation condition and promises
+no convergence — true of all three causes it reaches. A failing and a pending
+required check share the `merge.gate.<gate-id>.failed` family row, whose single
+`retryable: false` stays honest for every gate cause including the act-free
+pending one: convergence that needs no act — a pending check — is carried by
+the refusal's named reason and an accurate remediation, not by a different
+`retryable`. A post-landing cleanup failure never flips a verified landing and
 is never silent. A recorded landing replays `merged` at exit 0 with the recorded
 identity, zero landing calls, and no duplicate record.
 
@@ -336,13 +396,14 @@ every row is reachable from its reason.
 
 ## Error identities
 
-The machine table declares a `merge` domain kind with nine concrete rows
+The machine table declares a `merge` domain kind with twelve concrete rows
 (`merge.gates-stale`, `merge.waiver-unauthorized`,
 `merge.owner-gate-override-without-waiver`, `merge.rebase-conflict`,
 `merge.state-unverified`, `merge.landing-unverified`,
 `merge.transaction-aborted`, `merge.sync-required`,
-`merge.mergeability-unknown`) and the one open-slot family
-`merge.gate.<gate-id>.failed`; the `verify` kind carries
+`merge.mergeability-unknown`, `merge.branch-unresolved`,
+`merge.request-unresolved`, `merge.work-item-unresolved`) and the one open-slot
+family `merge.gate.<gate-id>.failed`; the `verify` kind carries
 `verify.deploy.trace-missing`, `verify.deploy.status-stale`, and
 `verify.deploy.trace-failed`. Every row is documented and machine-declared
 together; the family slot is validated against the effective declared gate set,

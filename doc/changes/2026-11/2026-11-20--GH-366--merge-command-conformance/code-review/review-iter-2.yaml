@@ -1,0 +1,230 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-366
+branch: fix/GH-366/merge-command-conformance
+status: PASS
+summary: >
+  Remediation certification over HEAD 462878e4. F-1 (major) CLOSED and
+  verified in code and tests: the duplicate-open grouping is repointed to the
+  candidate set (`duplicateCandidateGroups` at
+  packages/core/src/domain/merge-transaction.ts:785, step-5 loop at :1064-1073
+  intersecting same-ref groups with the accepted sourceRef, shared
+  `duplicateOpenAbort` at :801 naming EVERY member), and a page-decided
+  pre-check (:896-904) aborts a same-ref group holding an unreadable head
+  BEFORE the head-guard can mask it — the exact sub-case where AC-F1-6's mixed
+  state would otherwise be unreachable. TC-MRG-055
+  (tests/behaviour/merge-production-composition.test.ts:701) pins the mixed
+  pair (one accepted + one refused member, same source ref) refusing
+  merge.transaction-aborted naming BOTH identities, with the mask explicitly
+  negated (not head-unresolved / not request-unresolved / not declared-at-head),
+  budget exactly 1 provider request with 0 closed reads, nothing landed, the
+  act-requiring refusal repeating on a plain re-run, plus the paired
+  distinct-ref control still resolving declared-at-head through its accepted
+  member; the both-accepted cells and the TC-MRG-007 lone-unreadable
+  head-unresolved cell are unchanged and green, so the repoint subsumes rather
+  than perturbs the pinned states. F-2 (minor) CLOSED: plan v17 corrects all
+  four stale anchor sites (end-state tuple :384, arithmetic block :686-688,
+  phase-2 title/summary "172-identity move" :775-777, TC-MRG-038 allocation
+  :1874-1879) to 172 / 172 / 171 / 71 / +138 with a dated supersession header,
+  and `jaiship plan validate GH-366` returns verdict=valid
+  readyForDevelopment=true. Cross-artifact anchors AGREE: plan v17 = test plan
+  v1.9 (v1.8's live-pin corrections; front-matter, NFR-8, TC-MRG-038 sections)
+  = spec v2.6 (revision row 1814, §18 row 1388) = the delivered tree
+  (error-table-sync 172/172, error-table structure suite green with the LEGACY
+  bans, merge kind 12); historical revision narration retains authored numbers
+  as declared. DOD-1: 27/27 ACs Covered in §3.1 with TC-MRG-055 folded into
+  AC-F1-6's row; allocation 0/9/20/17/3/5/1 = 55; all merge AC carrier suites
+  independently green (composition 22, convergence+golden+containment+closeout
+  73, structure merge family 180), typecheck clean. F-3 (nit) ACCEPTED
+  RESIDUAL: verified the declared reason — the `unavailable` arm of
+  MergeMergedRequestRead (merge-transaction.ts:143-146) type-legally carries
+  optional `matchedIdentities`, so after the member-absent guard and the
+  0/>1 splits a single-identity unavailable shape reaches the fallback arm and
+  deletion would break narrowing at the replay return (:1007-1011 guards the
+  `request` access at :1015); the proper fix is a contract-type discrimination
+  refactor across the contract and adapter, no test drives the arm, and no
+  delivered adapter state reaches it — within the accepted-nit path, no
+  remediation demanded. F-4 (info) closed, no action, per its own record. The
+  scope since the reviewed state is exactly the five declared files (plan,
+  pm-notes, test plan, merge-transaction.ts, composition suite) — no scope
+  deviation. One checks-family failure observed
+  (tests/checks/ci-baseline-parity.test.ts) is conclusively environmental: the
+  test's hermetic `git clone --local` hardlinks the object store across a
+  tmpfs/root-fs boundary and dies before any assertion, content-independent
+  and not a merge AC carrier. Two new info-grade observations recorded below,
+  neither blocking. Severity vocabulary mapping for the orchestrator:
+  critical=critical, major=high, minor=medium, nit=low.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-5
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/merge-transaction.ts:896
+    message: >
+      The page-decided pre-check aborts ANY same-ref candidate group holding
+      an unreadable member, including sub-states where the group's ref never
+      becomes the resolved branch (zero accepted members, or acceptance
+      landing elsewhere). In those unpinned overlap states the run refuses
+      merge.transaction-aborted where spec §5.1 F-1 step 2's letter names
+      head-unresolved. Both outcomes refuse and neither silently selects; the
+      abort names both identities and spends the same one provider read;
+      AC-F1-4's own tail sentence ("a duplicate match … aborts rather than
+      refusing a request reason") supplies spec-internal authority; and
+      AC-F1-6's mixed state (TC-MRG-055) is unreachable without the pre-check,
+      so the delivered resolution of the spec's internal step-2/step-5 tension
+      favours the owner AC. Every pinned oracle is untouched (TC-MRG-007
+      lone-unreadable still refuses head-unresolved; TC-MRG-055 refuses the
+      abort).
+    suggestion: >
+      No action required for this change. If the spec is touched later, state
+      the duplicate-group exception in §5.1 F-1 step 2 so the letter matches
+      the delivered pre-check ordering.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: test-honesty
+    location: tests/behaviour/merge-production-composition.test.ts:701
+    message: >
+      TC-MRG-055's test-plan oracle declares a zero local record-read counter
+      and an empty child-runner log ("reading no candidate's change record"),
+      but the delivered cell observes the page-decided property through the
+      provider budget (exactly 1 transport request, 0 closed reads) and the
+      output surface (no declared-at-head, no replayed) rather than the local
+      counter. The zero-record-read property itself is verified true of the
+      delivered code — the abort returns before step 4's record loop — and the
+      anti-masking ORDERING is observed: any regression that lets the
+      head-guard fire first flips the refusal identity and fails the cell's
+      not-head-unresolved assertion. Only a hypothetical "read records first,
+      then still abort" regression would keep the cell green while violating
+      the plan's zero-record-read sentence.
+    suggestion: >
+      No action required. If touched later, assert the harness's local
+      record-read counter (as TC-MRG-049 does for the replay path) so the
+      plan's oracle member is observed directly.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-23T03:53:05Z
+next_step: PROCEED
+review_evidence:
+  prior_findings_disposition:
+    F-1: >
+      CLOSED — fixed in 462878e4 exactly along the suggested shape: grouping
+      repointed accepted -> candidate set, abort naming every same-ref
+      identity, decision page-decided (budget unchanged at 1 provider
+      request), the mixed composition cell landed as TC-MRG-055 with the
+      paired distinct-ref control, and the :1055 defect-marker comment now
+      states the candidate-set population with the spec citation (no
+      "population is the accepted set" text remains in packages). The
+      delivered fix additionally adds the pre-check for the unreadable-member
+      sub-case — required, not optional: with the old ordering the head-guard
+      fires before acceptance and TC-MRG-055's mixed state could never abort.
+    F-2: >
+      CLOSED — fixed in 2e01eed5: all four stale anchor sites corrected to
+      172 / 172 / 171 / 71 / +138 (machine 169 -> 172, delivered 168 -> 171,
+      +136 -> +138) with a dated supersession header; `jaiship plan validate
+      GH-366` verdict=valid readyForDevelopment=true (tier=full,
+      artifact=yaml:chg-GH-366-plan.yaml). Anchor sets agree across plan v17 /
+      test plan v1.9 / spec v2.6 / delivered tree.
+    F-3: >
+      ACCEPTED RESIDUAL (nit path) — the declared reason verified from the
+      type and the code: the unavailable arm legally carries optional
+      matchedIdentities, the fallback arm (:1007-1011) is the narrowing step
+      protecting the replay return's `request` access, deletion breaks
+      compilation, and the honest fix is a contract-type discrimination
+      refactor across contracts + adapter with no test driving the arm and no
+      delivered adapter state reaching it.
+    F-4: >
+      CLOSED — no action, per its own record; nothing new observed.
+  independent_test_runs:
+    - "bun test tests/behaviour/merge-production-composition.test.ts -> 22 pass / 0 fail (TC-MRG-055 + control, both-accepted cells, TC-MRG-007 lone head-unresolved all included)"
+    - "bun test tests/behaviour/merge-convergence.test.ts tests/golden/merge.test.ts tests/structure/defect-f1-merge-refusal-containment.test.ts tests/behaviour/providers/github-closeout.test.ts -> 73 pass / 0 fail"
+    - "bun test tests/structure/merge-contract.test.ts tests/structure/merge-refusal-rows.test.ts tests/structure/error-table.test.ts tests/structure/merge-branch-read-scan.test.ts tests/structure/merge-landing-retirement.test.ts -> 180 pass / 0 fail"
+    - "bun test tests/checks/ -> 1621 pass / 1 fail; the single failure (ci-baseline-parity hermetic partial clone) is environmental: `git clone --local` hardlink across the tmpfs(/tmp) vs root-fs(/home) device boundary fails before any assertion (Invalid cross-device link), content- and commit-independent, not a merge AC carrier, not introduced by the remediation commits; TMPDIR=/tmp/opencode reproduces (same tmpfs)"
+    - "pnpm typecheck -> clean (core, adapters, cli, mcp, opencode, testkit + tests project)"
+  checks_run:
+    - "bun run scripts/checks/error-table-sync.ts -> entries=172 documented=172 OK (corpus=83)"
+    - "jaiship plan validate GH-366 -> verdict=valid artifact=yaml:chg-GH-366-plan.yaml tier=full readyForDevelopment=true"
+    - "doc-conformance green inside the tests/checks run"
+  anchor_and_ac_verification:
+    numeric_anchors: >
+      Plan v17: :384 end-state tuple 172 / 172 / 171 / 71 / +138, :686-688
+      arithmetic (169 -> 172 machine, 169 -> 172 documented, 168 -> 171
+      delivered, 68 -> 71 allowlist, +136 -> +138), :775-777 phase-2
+      "172-identity move", :1874-1879 TC-MRG-038 (169 -> 172 … 172 / 172 /
+      171 / 71 / +138, kind 12), supersession header :16-24. Test plan v1.9:
+      front-matter summary "169 -> 172 recounted under CEO-D-116", NFR-8 row
+      (169 → 172 / 168 → 171 / 68 → 71 / +136 → +138 / kind 9 → 12) citing
+      the outgoing-totals record and LEGACY bans, TC-MRG-038 sections
+      (172 / 171 / 71 / +138), allocation 0 + 9 + 20 + 17 + 3 + 5 + 1 = 55.
+      Spec v2.6: revision row 1814 and §18 row 1388 state the identical
+      reconciliation. Delivered tree: error-table-sync 172/172 OK;
+      error-table structure suite green with LEGACY_ENTRY_169_FORMS /
+      LEGACY_ENTRY_168_FORMS; merge kind 12. All four surfaces agree; only
+      historical revision narration retains authored numbers, as each
+      artifact declares.
+    ac_f1_6_duplicate_clause: >
+      Certified over the fixed state in all three member states: both-accepted
+      (pinned cells unchanged, green — abort wins over ambiguity per step 5's
+      ordering), mixed one-accepted-one-refused (TC-MRG-055: abort naming
+      #301,#300, neither presented as the request, not head-unresolved, budget
+      1, nothing landed, re-run refuses again; distinct-ref control resolves
+      declared-at-head with candidateCount 2), and the merged-read side
+      (identities > 1 abort at merge-transaction.ts:986-1005 unchanged).
+      DOD-1: 27 "| Covered |" rows in §3.1, zero GAP/Not-Covered/Partial,
+      TC-MRG-055 mapped into AC-F1-6 with TC-MRG-049/043/053; §7.1 automation
+      row present (55 rows); allocation arithmetic verified.
+    scope_audit: >
+      git diff 2ce4fbdc..HEAD = exactly the five declared files: plan
+      (+149/−…), pm-notes (+31), test plan (+106/−…), merge-transaction.ts
+      (+110/−28 lines net +82), composition suite (+115) — no other product,
+      test, doc, or config surface moved since the iteration-1 reviewed state.
+      This certification was performed against the committed state at HEAD
+      462878e4. During the review window four doc/spec-family files acquired
+      UNCOMMITTED modifications authored by a concurrent process (not by this
+      review, which wrote only this record): doc/planning/oss-tooling/
+      milestones/m1/commands/merge.md, doc/spec/features/
+      feature-merge-verify-deploy.md, doc/spec/features/
+      feature-result-contract.md, doc/quality/test-specs/
+      test-spec-merge-verify-deploy.md. All sampled hunks are doc-sync
+      corrections moving those pages TOWARD the delivered truth (the abort row
+      narrowed to its three act-requiring causes with retryable: false; the
+      three resolution identities with their closed reasons restored; the
+      duplicate rule stated over the candidate set including the mixed-member
+      pair and its precedence over the head guard) — phase-7-style
+      reconciliation deltas, consistent with this change and outside this
+      certification's three targets; the reviewer did not author, revert, or
+      commit them, and the owning sync phase should land them. The committed
+      versions of these four pages still carry pre-change paragraphs (e.g. the
+      two-cause abort sentence in feature-result-contract.md), which is sync
+      residue for the owning phase, not a certification gap: the three
+      certification targets (AC-F1-6, DOD-1, plan v17 / test plan v1.9 /
+      spec v2.6 consistency) are all satisfied on committed artifacts, and
+      the doc-conformance gate is green at HEAD.
+    plan_audit: >
+      Plan v17 declares the remediation in its revision header (F-2 anchor
+      sites; F-1's TC-MRG-055 joining phase 3 with allocation 54 -> 55, phase
+      3 at 20) riding the existing COMPLETE phase 3 — no new phase, no scope
+      change; pm-notes records the remediation note naming commit 462878e4,
+      the gate results (composition+convergence 31/0, containment+golden
+      38/0, typecheck clean) and the F-3 residual routing; plan validate
+      verdict=valid. Idempotency: no remediation phase was appended in
+      iteration 1 and none is appended now (the plan's in-place amendment is
+      the remediation carrier); a re-run of this review would reproduce the
+      same record.

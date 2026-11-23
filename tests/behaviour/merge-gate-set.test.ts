@@ -290,7 +290,10 @@ describe("TC-MERGE-004 surface applicability", () => {
     expect(ids).toContain("docs-links");
     expect(ids).toContain("workspace-tests");
     expect(ids).not.toContain("tracker-freshness");
+    // The shipped CI gate is merge-applicable (the declared phase-4 movement),
+    // so the merge projection carries it alongside tracker-freshness.
     expect(resolved.value.mergeEntries.map((entry) => entry.id)).toEqual([
+      "ci-green",
       "tracker-freshness",
       "workspace-tests",
     ]);
@@ -359,7 +362,11 @@ describe("TC-MERGE-004 surface applicability", () => {
       "owner-gate",
       "squash-preflight",
     ]);
-    expect(resolved.value.mergeEntries.map((entry) => entry.id)).toEqual(["tracker-freshness"]);
+    // The CI gate is merge-applicable: the merge projection is two entries.
+    expect(resolved.value.mergeEntries.map((entry) => entry.id)).toEqual([
+      "ci-green",
+      "tracker-freshness",
+    ]);
   });
 
   test("moving tracker-freshness to both makes it battery-visible", () => {

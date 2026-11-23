@@ -94,6 +94,13 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
       "merge.mergeability-unknown",
       "merge.sync-required",
     ]);
+    // GH-366 adds the three refusal-identity rows (excluded like the other
+    // additive sets, so the positional comparison stays against the capture).
+    const NEW_GH366_CODES = new Set([
+      "merge.branch-unresolved",
+      "merge.request-unresolved",
+      "merge.work-item-unresolved",
+    ]);
     const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) =>
@@ -101,7 +108,8 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
         entry.domainKind !== "metrics" &&
         entry.domainKind !== "install" &&
         !NEW_PROVIDER_CODES.has(entry.code) &&
-        !NEW_GH349_CODES.has(entry.code),
+        !NEW_GH349_CODES.has(entry.code) &&
+        !NEW_GH366_CODES.has(entry.code),
     );
     expect(live).toHaveLength(150);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));

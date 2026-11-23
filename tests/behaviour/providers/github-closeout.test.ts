@@ -4,6 +4,8 @@
  * GraphQL thread resolution — all over committed fixtures.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { normalizeMergedDeliveryRequestList } from "../../../packages/adapters/src/github/normalize";
 import {
   blockersUrl,
@@ -17,6 +19,9 @@ import {
   pullsUrl,
 } from "../../fixtures/closeout/github-client";
 import { methodAwareMismatch } from "./github-closeout-support";
+
+const ROOT = process.cwd();
+
 import { readJson } from "./support";
 
 const parsed = (body: string | undefined): Record<string, unknown> => {
@@ -129,6 +134,81 @@ describe("TC-CLOSE-057 merged-request selection", () => {
       expect(result.value.headSha).toBe("2222222222222222222222222222222222222222");
     }
     expect(transport.requests.some((request) => request.url === pullsUrl(20))).toBe(true);
+  });
+});
+
+describe("GH-366 the additive matched-identities member (TC-MRG-054)", () => {
+  test("a match carries EVERY matched identity beside the delivered signals, computed before the selection", async () => {
+    // The multi-identity page is built inline (no committed fixture file): two
+    // matching merged requests. The member names BOTH; the delivered ranked
+    // selection is untouched and still picks the highest number.
+    const body = [
+      {
+        number: 502,
+        state: "closed",
+        merged_at: "2026-01-02T00:00:00Z",
+        merged: true,
+        head: { ref: "feat/GH-183/one", sha: "1111111111111111111111111111111111111111" },
+        base: { ref: "main-tools" },
+      },
+      {
+        number: 504,
+        state: "closed",
+        merged_at: "2026-01-03T00:00:00Z",
+        merged: true,
+        head: { ref: "feat/GH-183/two", sha: "2222222222222222222222222222222222222222" },
+        base: { ref: "main-tools" },
+      },
+    ];
+    const { client } = makeGithubClient([{ method: "GET", url: pullsUrl(20), body }]);
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+    expect(result.observation).toBe("observed");
+    if (result.observation === "observed") {
+      expect([...result.matchedIdentities].sort()).toEqual(["502", "504"]);
+      // The delivered selection is unchanged: closeout's ranking keeps its
+      // highest-numeric-wins answer.
+      expect(result.value.identity.entityId).toBe("504");
+    }
+  });
+
+  test("a read page matching nothing carries the EMPTY set on the unavailable outcome", async () => {
+    const { client } = makeGithubClient([{ method: "GET", url: pullsUrl(20), body: [] }]);
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-999", limit: 20 });
+    // The member is present and EMPTY: a decidable zero, never an assumed one.
+    expect(result).toEqual({ observation: "unavailable", matchedIdentities: [] });
+  });
+
+  test("a faulted read keeps the member ABSENT on the delivered invalid shape", async () => {
+    // The delivered read collapses every fault input class into one
+    // `{observation: "invalid", detail}` shape (HTTP 502 included): the member
+    // is absent, and the domain resolves this arm — and the credential arm's
+    // member-absent unavailable — to the one declared provider identity
+    // (TC-MRG-052).
+    const { client } = makeGithubClient([
+      { method: "GET", url: pullsUrl(20), status: 502, body: {} },
+    ]);
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+    expect(result).toEqual({ observation: "invalid", detail: "GitHub returned HTTP 502" });
+    expect(Object.hasOwn(result, "matchedIdentities")).toBe(false);
+  });
+
+  test("a payload-invalid fault stays invalid with the member absent", async () => {
+    const { client } = makeGithubClient([
+      { method: "GET", url: pullsUrl(20), status: 200, body: "not-an-array" },
+    ]);
+    const result = await client.findMergedDeliveryRequest({ workItemRef: "GH-183", limit: 20 });
+    expect(result.observation).toBe("invalid");
+    expect(Object.hasOwn(result, "matchedIdentities")).toBe(false);
+  });
+
+  test("closeout consumes neither the member nor any count derived from it", async () => {
+    // The structural consumption proof: the closeout domain and its edge
+    // wiring never reference the additive member, so the shared read's other
+    // consumer is unchanged by construction (TC-MRG-054).
+    const domain = readFileSync(join(ROOT, "packages/core/src/domain/closeout.ts"), "utf8");
+    const edge = readFileSync(join(ROOT, "packages/cli/src/edge.ts"), "utf8");
+    expect(domain).not.toContain("matchedIdentities");
+    expect(edge).not.toContain("matchedIdentities");
   });
 });
 

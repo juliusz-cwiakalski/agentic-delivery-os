@@ -11,7 +11,6 @@ import {
   type MergeFailure,
   type MergeTransactionConfig,
   type MergeTransactionPorts,
-  renderMergeFailure,
   runMergeTransaction,
 } from "@delivery-os/core";
 import {
@@ -22,7 +21,7 @@ import {
   QUEUE_REF_PATTERN,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandHandler } from "../index.js";
-import { renderDryRunHuman, renderMergeHuman } from "../output/merge-text.js";
+import { renderDryRunHuman, renderMergeHuman, renderMergeRefusal } from "../output/merge-text.js";
 
 /**
  * The one declared work-item-ref grammar this surface accepts.
@@ -77,12 +76,17 @@ const configFailure = (read: {
   },
 });
 
-const failureEnvelope = (failure: MergeFailure): MergeFailureEnvelope => ({
+const failureEnvelope = (failure: MergeFailure, ref: string): MergeFailureEnvelope => ({
   ok: false,
   error: {
     kind: failure.domainKind,
     code: failure.code,
-    summary: renderMergeFailure(failure),
+    summary: renderMergeRefusal(failure, ref),
+    // The merge credential refusal's prose is identifier-only (the reference
+    // name, the environment variable, the operation), so the narrow
+    // trusted-refusal marker lets the summary through the config-shaped
+    // suppression instead of reducing it to the row's own summary (AC-F3-2).
+    ...(failure.code === "config.credential.missing" ? { trustedRefusal: true } : {}),
   },
 });
 
@@ -146,7 +150,7 @@ export const createMergeCommandDefinition = (runtime: MergeCommandRuntime): Comm
     if (outcome.kind === "dry-run") {
       return { ok: true, data: outcome.report } satisfies MergeSuccess;
     }
-    return failureEnvelope(outcome.failure);
+    return failureEnvelope(outcome.failure, ref);
   };
   return {
     flags: ["--dry-run", "--waive-reason"],

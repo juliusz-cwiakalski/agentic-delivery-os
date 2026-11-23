@@ -1,0 +1,7 @@
+example-product: merge.work-item-unresolved
+summary: result=refused; condition=merge.work-item-unresolved
+command=merge
+ref=GH-301
+operation=github-work-item
+evidence=merge.work-item-unresolved
+remediation=Repair the named work item reference or the tracker, then re-run; the refusal names the work item and the read operation that could not resolve it.

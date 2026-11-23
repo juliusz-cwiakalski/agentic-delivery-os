@@ -20,6 +20,7 @@ import {
 import {
   documentCompletedOf,
   documentStartedOf,
+  phaseNotesBranch,
   phaseNotesText,
   preFixCompletionLookup,
   T1,
@@ -59,6 +60,18 @@ const documentCompleted = (harness: CommitHarness, phaseId = PHASE): string | nu
   const parsed = parsePmNotesText(harness.targetText(), NOTES);
   if (!parsed.ok) throw new Error("the written document is not parseable");
   return documentCompletedOf(parsed.value, phaseId);
+};
+
+/**
+ * The written document's `branch` declaration, re-read after the write
+ * (TC-MRG-009, DM-1): the key is lint-opaque and must survive every
+ * document-writing branch value-faithfully.
+ */
+const documentBranch = (harness: CommitHarness): string | undefined => {
+  const parsed = parsePmNotesText(harness.targetText(), NOTES);
+  if (!parsed.ok) throw new Error("the written document is not parseable");
+  const value = parsed.value as Record<string, unknown>;
+  return typeof value.branch === "string" ? value.branch : undefined;
 };
 
 /** The `phase list` payload (the derived projection) for the fixture change. */
@@ -180,6 +193,8 @@ describe("TC-F5-001 every document-writing branch writes the fold's completion",
         expect(foldCompleted(harness)).toBe(completion);
         expect(documentCompleted(harness)).toBe(completion);
         expect(documentCompleted(harness)).not.toBe(T1);
+        // The branch declaration survives the already-landed write.
+        expect(documentBranch(harness)).toBe(phaseNotesBranch);
       },
       { seedFiles: SEED },
     );
@@ -208,6 +223,8 @@ describe("TC-F5-001 every document-writing branch writes the fold's completion",
         expect(completion).not.toBeNull();
         expect(completion).not.toBe(T1);
         expect(documentCompleted(harness)).toBe(completion);
+        // The branch declaration survives the commit-without-record write.
+        expect(documentBranch(harness)).toBe(phaseNotesBranch);
         expect(transitionPayloads(harness)).toHaveLength(1);
       },
       { seedFiles: SEED },
@@ -228,6 +245,8 @@ describe("TC-F5-001 every document-writing branch writes the fold's completion",
         expect(documentCompleted(harness)).toBe(completion);
         // The branch writes the fold's value, never its own clock value.
         expect(documentCompleted(harness)).not.toBe(dataOf(run).timestamp as string);
+        // The branch declaration survives the atomic-record write.
+        expect(documentBranch(harness)).toBe(phaseNotesBranch);
         expect(transitionPayloads(harness)).toHaveLength(1);
         expect(await listCompleted(harness)).toBe(completion);
       },
@@ -252,6 +271,9 @@ describe("TC-F5-001 every document-writing branch writes the fold's completion",
         expect(rerunData.commitSkipped).toBe("config-disabled");
         expect(noOpEvidenceCompletedAt(rerun)).toBe(completion);
         expect(documentCompleted(harness)).toBe(completion);
+        // The branch declaration survives the no-op write path too: every
+        // document-writing branch preserves it value-faithfully.
+        expect(documentBranch(harness)).toBe(phaseNotesBranch);
       },
       { seedFiles: SEED, phaseCommit: false },
     );

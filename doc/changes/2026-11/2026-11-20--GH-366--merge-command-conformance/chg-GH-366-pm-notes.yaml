@@ -1,0 +1,956 @@
+change_id: GH-366
+title: "M4-S3 Delivery command conformance (residual) — merge slice (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+# The declared change branch this change introduces (DM-1): the merge path
+# resolves the change branch from this key and refuses `merge.branch-unresolved`
+# when it is absent. Authored here so this change is mergeable by its own contract.
+branch: fix/GH-366/merge-command-conformance
+phases:
+  clarify_scope: { started: 2026-11-20T10:47:14.870Z, completed: 2026-11-20T10:47:14.870Z }
+  specification: { started: null, completed: 2026-11-21T07:07:16.317Z }
+  test_planning: { started: null, completed: 2026-11-21T07:07:37.520Z }
+  delivery_planning: { started: null, completed: 2026-11-21T07:08:38.124Z }
+  dor_check: { started: null, completed: 2026-11-22T20:00:52.044Z }
+  delivery: { started: null, completed: 2026-11-23T02:08:39.651Z }
+  system_spec_update: { started: null, completed: 2026-11-23T02:37:23.699Z }
+  review_fix: { started: null, completed: 2026-11-23T03:57:46.167Z }
+  quality_gates: { started: null, completed: 2026-11-23T04:57:15.965Z }
+  dod_check: { started: null, completed: 2026-11-23T04:57:41.104Z }
+  pr_creation: { started: null, completed: 2026-11-23T05:04:53.484Z }
+decisions:
+  - text: "PM-decided (scope, authoritative source): the owner's issue comment of
+      2026-11-20T10:42:14Z defines the delivery scope as the merge slice — three
+      named deterministic defects D1 (change branch read from the ambient
+      checkout), D2 (required checks never consulted; the merge surface
+      evaluates one gate), D3 (refusals do not name the breached contract or the
+      credential reference) — with four acceptance criteria and three named
+      regressions, plus the diagnostics requirements recorded in the three
+      earlier owner comments (a credential condition is never reported as
+      `merge.transaction-aborted`; required checks are read on the resolved head
+      and failing/pending checks each fail closed and are named; the waiver path
+      stays explicit). That comment post-dates the ticket body and scopes itself
+      'for this story's merge slice', and the change branch
+      `fix/GH-366/merge-command-conformance` names the same slice."
+    date: "2026-11-20"
+  - text: "PM-decided (residual explicitly not claimed): the ticket body's wider ask
+      — one battery over the whole command family (`dispatch`, `loop`, `merge`,
+      `closeout`, `queue`, `phase`, `verify`, `blockers`, `board`, `brief`,
+      `metrics`, `spend`, `provider`) on the installed binary — is not claimed
+      green by this change. This change ships the merge-family slice of that
+      battery plus the diagnostics contract it proves. Declared here and in the
+      PR body so the owner can rule on the remainder at review; no follow-up
+      ticket is created (PM never creates tickets autonomously)."
+    date: "2026-11-20"
+  - text: "PM-decided (decision-id reservation, owner-specified): this change
+      reserves TDR-0071..TDR-0073. Re-verify the max on `origin/main-tools`
+      before authoring and never renumber downward. At intake the observed max
+      is TDR-0058 (GH-354); GH-350 (open PR #372) reserves 0059..0064, GH-351
+      0065..0067, GH-336 0068..0070."
+    date: "2026-11-20"
+  - text: "Branch/PR conventions: branch `fix/GH-366/merge-command-conformance` from
+      `main-tools`; PR targets `main-tools` (never the default `main`); the PR
+      stays open — merge authority is the CEO (Mode A) or the human (Mode B).
+      This change type is `fix`."
+    date: "2026-11-20"
+  - text: "Owner ruling CEO-D-116 (issue #366 comment 2026-11-22T15:13:00Z), outcome
+      (A): authorize the minimal additive extension of the shared merged-request
+      read. The merge path observes 0/1/many matches and names every matched
+      identity — empty identities decide zero, one replays, many aborts
+      `merge.transaction-aborted` naming EACH identity and presenting NONE as
+      *the* request; the count is derived from the identities, no second
+      competing field. A read fault is a distinct outcome refusing
+      `provider.outage` (or the delivered `provider.payload.invalid` mapping)
+      with `operation=github-delivery-request-list`; never
+      `no-open-request`/`merge.request-unresolved`, never folded into zero. The
+      additive optional member may land on the `unavailable` arm of the shared
+      closeout contract type; closeout reads neither count nor identities and
+      its behaviour and output stay unchanged. Budget truth: the read's own
+      review-thread query is counted (2 provider requests when nothing matches,
+      3 on a match-bearing convergence attempt, no extra request on
+      open-page-only paths); no suppression option may be added. DEC-13's
+      'minimum additive change is one optional count signal' claim is withdrawn
+      and the amended shape is recorded in DEC-13 and the two owned TDR
+      amendments. The shape is the ceiling; anything beyond is a new decision."
+    date: "2026-11-22"
+  - text: "PM-decided (verification-precondition remediation; the ruling offered two
+      options): `merge` does NOT compose the gate verification itself —
+      `merge.state-unverified`'s remediation names the exact prior command and
+      target: produce the verification with `verify gates <ref>` for the same
+      work item, then re-run the merge. Rationale: the ruling bounds this ticket
+      to no scope expansion of merge (no new endpoint, credential, or
+      capability), and a verification write inside an already-mutating command
+      would add a write path and provider cost to `merge`, while naming the
+      exact command removes the guesswork the ruling objects to. Change-scoped;
+      recorded in the spec and the refusal golden."
+    date: "2026-11-22"
+open_questions: []
+blockers: []
+notes:
+  - text: "PR created (phase 11):
+      **https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/387** —
+      base `main-tools`, head `fix/GH-366/merge-command-conformance` @
+      `905bdf0e` (46 commits over merge-base 7cc71cd1). The #386-defect remedy
+      executed: pushed BEFORE/AFTER creation with the remote-head assertion —
+      remote == local MATCH verified via `git ls-remote` (the remote branch had
+      been 46 commits stale at 9432bbd8, so the push was load-bearing); the push
+      being rejected would have refused the pr-open report. Ticket #366: labels
+      now `[change, review]` (stale `blocked`/`human-input-needed`/ `spec-ready`
+      removed per the review-state convention), assigned juliusz-cwiakalski, one
+      comment with the PR link + verification summary (aggregate gate 12 544/0 ·
+      range lint 44/0 · re-review PASS after the iteration-1 remediation).
+      Lifecycle STOP: PR open, merge authority is the CEO's; the three TDRs stay
+      `Proposed` for owner acceptance at review. Environment note for the next
+      session: github-mcp reads work but writes fail with \"Requires
+      authentication\" — ticket writes used the `gh` CLI fallback; fix the MCP
+      token scope before relying on MCP writes."
+    type: info
+    date: "2026-11-23"
+  - text: "Quality gates (phase 9) — verdicts. **Range lint: PASS** —
+      `./scripts/lint-commit-range.sh --base main-tools`: base resolved
+      merge-base 7cc71cd1 (origin/main-tools), head 22a5f628, **44 commits in
+      range, 0 offending, 0 rules hit, mode none**; binary
+      node_modules/.bin/commitlint, origin repository-local. **Aggregate gate:
+      GATE_EXIT=0** on the final tree (`tmp/pnpm-check-gates-2.log`: 12 544
+      tests / 1 504 files, 0 fail lines, every check executed — lint, format,
+      typecheck, boundaries, memory, forbidden-literals, namespace-tree,
+      prompt-conformance, help-guide-coverage, exports-parity). Provenance: the
+      first gates run (tmp/pnpm-check-gates.log, GATE_EXIT=1) had exactly one
+      failure — TC-PROJ-021 (projects-state placement), a 5000ms timeout that
+      ran 6750ms under the parallel battery, NOT an assertion failure and not a
+      merge-surface test; it passed in isolation in 2.01s and the immediate full
+      re-run was green — recorded as ambient-load environment-flake (the same
+      class the delivery already disclosed), with the green re-run as the
+      authoritative verdict."
+    type: info
+    date: "2026-11-23"
+  - text: "DoD verification (phase 10) — PM check before the checkpoint: (1) all
+      preceding phases recorded complete via `phase list` (8/9 at review_fix
+      landing; registry verified each time); (2) plan-phase evidence: pm-notes
+      notes name every plan phase 1-7 with its landing commit (phase 2 2a0d28c4,
+      3 8620cc4a, 4 ebb5739a, 5 673c026e, 6 2f442664, 7 2a666383, phase 1's
+      records via the 9432bbd8/164a0927 lineage) and per-phase gate results,
+      plus the review-remediation commit 462878e4 (TC-MRG-055, candidate-set
+      grouping) with its suite results; the reviewer certified ALL_TASKS_DONE
+      over plan v17; (3) ACs: 27/27 covered and green — review iteration 2 PASS
+      certified DOD-1 over the fixed state; (4) current-truth docs: doc-sync's
+      final re-run reports no unresolved documentation gaps (all seven residual
+      sub-gaps reconciled, validation suites green); (5) quality gates green as
+      recorded above. No gaps found; no phase reopen."
+    type: info
+    date: "2026-11-23"
+  - text: "Re-review iteration 2: **PASS** — 0c/0maj/0min; 2 info no-action (F-5:
+      the duplicate pre-check also fires in unpinned same-ref/unreadable overlap
+      states where F-1 step 2's letter names head-unresolved — spec-internal
+      authority exists in AC-F1-4's abort-over-request-reason tail, a future
+      spec touch could state the exception; F-6: TC-MRG-055's zero-record-read
+      oracle observed via provider budget + output surface, the anti-masking
+      ordering itself observed). F-1 certified closed (code + TC-MRG-055 incl.
+      masking negation, both-accepted and lone-unreadable cells unchanged and
+      green); F-2 closed (anchors agree across plan v17 / test plan v1.9 / spec
+      v2.6 / tree — error-table-sync 172/172, kind 12); F-3 accepted residual
+      (verified justification); 27/27 covered, allocation 55, carrier suites
+      independently green (22+73+180), typecheck clean. One environmental
+      non-merge failure noted (ci-baseline-parity, tmpfs cross-device git clone
+      --local, content-independent). Record: code-review/review-iter-2.yaml.
+      Doc-sync re-run (full authority): all seven residual sub-gaps reconciled —
+      merge.md's abort row now non-retryable with the three request identities
+      added, feature spec's row-level honesty rule and twelve-row list
+      completed, test-spec classification row restated to the dedicated
+      identities; validation green (error-table-sync 172/172, doc-conformance
+      61/0, merge-refusal-rows 13/0, reference-page-parity 5/0,
+      engine-first-doc-reconciliation 16/0, forbidden-literals +
+      exit-code-literals OK). No unresolved documentation gaps."
+    type: info
+    date: "2026-11-23"
+  - text: "Review remediation landed (commit `462878e4`, 2 files +197/−28): the
+      duplicate-open abort's population repointed accepted → candidate set
+      (`duplicateCandidateGroups` helper; the :991 defect-marker comment now
+      states the candidate-set population with the spec citation), plus a
+      page-decided pre-check so a same-ref group holding an unreadable head
+      aborts as a duplicate before the head-guard can mask it. TC-MRG-055 landed
+      in the production-composition suite: the mixed pair (#301 accepted + #300
+      refused, same source ref) aborts `merge.transaction-aborted` naming BOTH
+      identities, 1 provider request, zero record reads; the pre-fix runtime
+      observation (the mask the review predicted:
+      `merge.request-unresolved`/`head-unresolved` naming only #300) is quoted
+      in the cell as the regression evidence; the plan-v17 paired control
+      (distinct-ref disagreement still resolves) rides the same commit. Suites:
+      production-composition + convergence 31/0, refusal containment + golden
+      38/0, typecheck clean, commitlint accepted. F-3 declared residual (not
+      trivially dead: removal requires a contract-type discrimination refactor
+      across contracts + adapter; no test drives the arm) — routed to the
+      re-review's accepted-nit path."
+    type: info
+    date: "2026-11-23"
+  - text: "Review iteration 1: FAIL — 0 critical / 1 major / 1 minor / 1 nit / 1
+      info. Record: code-review/review-iter-1.yaml. The ruled shape verified
+      clean and independently reproduced (1,055 tests green across the
+      merge/golden/structure surface; the numeric-anchor reconciliation VERIFIED
+      from first principles: e1ebc76c = 170/+136 authored, GH-365 absorbed one
+      baseline row → base 7cc71cd1 = 169/168/+135, +3 merge rows →
+      172/171/71/kind-12/+138). The major (F-1): the duplicate-open abort groups
+      the ACCEPTED set (packages/core/src/domain/merge-transaction.ts:994,
+      comment :991 says accepted) while spec §5.1 F-1 step 5 declares the
+      CANDIDATE set — a same-ref pair with exactly one accepted entry silently
+      resolves and lands; AC-F1-6's given-clause unmet in that member state; the
+      pinned cell is both-accepted only. F-2 (minor): the plan YAML retains 4
+      stale anchor sites (173/172-delivered/+139) — the reconciliation corrected
+      spec/test-plan only. F-3 (nit): unreachable evidence-free replay fallback
+      arm (merge-transaction.ts:941-947). F-4 (info): closeout consumption proof
+      is textual — acceptable, no action. Remediation: F-1 repoint to candidate
+      set + mixed duplicate cell (one accepted + one refused, same source ref →
+      abort naming both, never landing); F-2 plan v17 anchors + remediation
+      declaration; F-3 remove if trivially dead else document."
+    type: blocker
+    date: "2026-11-23"
+  - text: "Retro (AC given-clause member states): F-1 slipped through every
+      per-phase gate because the pinned duplicate cell covered only the
+      both-accepted member state — the AC's given-clause names the candidate
+      set, whose member states include mixed accepted/refused pairs, and no
+      carrier observed them. Lesson: each distinct member state of an AC's
+      given-clause set needs its own named carrier in the test plan; a single
+      representative cell certifies only the state it drives."
+    type: retro
+    date: "2026-11-23"
+  - text: "Doc-sync (system_spec_update): no unresolved documentation gaps. The
+      reconciled current-truth pages state the delivered anchors exactly (172
+      machine / 172 documented / 171 delivered / 71 allowlist /
+      BASELINE_ROWS.length + 138 / merge kind 12; legacy scans ban the outgoing
+      pair; +138 published live, +136 legacy). Catch: TDR-0072/0073 standing
+      text still asserted the authored 173/173/172/71/+139 as the delivered
+      outcome — corrected to the delivered anchors with dated amendment rows
+      (history preserved, status Proposed untouched). Nine reconciled pages
+      gained GH-366 traceability; the merge reference page's Status line gains
+      the delivery clause. Nuance recorded by doc-sync: the delivered scan bans
+      +135 (not +136) as the outgoing GH-366 arithmetic because GH-365's
+      migration absorbed one baseline row between e1ebc76c and this change's
+      base — spec v2.6's +136 → +138 narration spans both moves consistently.
+      Doc-sync's post-edit validation: 974 checks green across every suite
+      scanning the touched files + error-table-sync (172/172) + memory-lint 0."
+    type: info
+    date: "2026-11-23"
+  - text: "Retro (composer path-token fallback): with staged scope spanning multiple
+      plan phases, the commit primitive's fallback composition anchors the
+      subject on the FIRST staged path — when that path carries a hyphenated
+      non-GH id (doc/decisions/TDR-0072-…), commitlint correctly rejects the
+      invented tracker reference (commit.commitlint-failed). The phase-summary
+      composition (single-phase scope) and any change-folder-first ordering
+      compose clean subjects. Mitigation used here: real change-folder notes
+      recorded first so the anchor path is the GH-366 change folder — the same
+      family as the operator's documented subject-length hazard. A composer fix
+      (sanitize path-derived tokens in fallback subjects) is product work for a
+      future ticket, not this change."
+    type: retro
+    date: "2026-11-23"
+  - text: "Aggregate gate (plan phase 7 release obligation) — verified after the
+      suspension. Sequence: (1) the 2026-11-22T23:08Z full run
+      (`tmp/pnpm-check-final.log`, preserved for provenance) failed with 21
+      fails while remediation was mid-flight on a dirty tree — the fail set
+      (baseline/pin/inventory suites, TC-F1-006/007/009, TC-F7-005, TC-XCTR-007,
+      TC-SUP-070, TC-PORT-001, the F8 serial-merge-churn block,
+      TC-PILOT-002/003/006, TC-BATTLE-006) passed 116/0 in isolation AFTER the
+      remediation commits (`189ea558` merge-landing-retirement pin, `3fd8c3e5`
+      fixture-repo, plus the baseline/inventory fixes), so those fails were
+      remediation dirt and parallel-run interference, not delivered defects; (2)
+      the coder's original EXIT-0 claim had no surviving full-run evidence (its
+      final run died with the provider limit) and was rewritten by the PM into
+      this verified note; (3) the authoritative run: `tmp/pnpm-check-resume.log`
+      — **GATE_EXIT=0, 12 539 pass / 0 fail / 4 skip across 1 504 files** (~24.2
+      min, lint + format + typecheck + test + boundaries + memory +
+      forbidden-literals + namespace-tree + prompt-conformance +
+      help-guide-coverage + exports-parity, zero fail lines). The five
+      privacy/namespace scanner suites that time out under the 12k-test parallel
+      load pass in isolation — disclosed as environment-flake, not correctness.
+      The inventory-JSON formatting drift (biome collapse) rides this
+      checkpoint."
+    type: info
+    date: "2026-11-23"
+  - text: "PM-decided (numeric-anchor reconciliation, post-DoR): the delivery
+      CONTRADICTED the spec/test-plan identity anchors — the artifacts pinned
+      170→173 machine / 169→172 delivered / +139 while the delivered tree moves
+      169/168 → 172/171 with arithmetic `BASELINE_ROWS.length + 138` (the tree's
+      own outgoing-totals comment, green error-table-sync at 172/172, the
+      error-table-sync suite's 172/171/+138/71 pins, and doc-conformance's
+      required doc strings all agree; the full gate is green on exactly that
+      state). Resolution: spec v2.6 and test plan v1.8 correct the anchors to
+      the delivered truth — the +3 row move (merge kind 9→12) and the allowlist
+      68→71 were always right; the absolute base was measured one too high at
+      authoring time, and the arithmetic moves +2 on a +3 table because the
+      baseline snapshot absorbed one row (the GH-349 precedent: +130→+135 on a
+      +6 table). No acceptance criterion, shape, or ruling outcome changed, so
+      the closed DoR is not re-run; the correction is disclosed to the phase-8
+      reviewer with this evidence chain. The pre-DoR gate verdict (iteration 6)
+      audited the CHANGE DESIGN's consistency; this correction reconciles
+      absolute constants to the delivered tree."
+    type: decision
+    date: "2026-11-23"
+  - text: "Retro (stale base, twice): the change has now mis-anchored absolute
+      totals twice — iteration 4's count-signal (authored against a read surface
+      that could not carry it) and the v2.4/v2.5 'confirmed by recount' that
+      anchored 170/169/+139 on a stale pre-change base (the real outgoing totals
+      were 169/168/+136, as the delivery's own test-authored outgoing-totals
+      comment records). Lesson: when an artifact pins absolute constants, derive
+      them from the delivery branch's own outgoing/incoming-totals records and
+      the sync checks at AUTHORING time — a doc survey or a remembered count
+      drifts as soon as another change lands on the base."
+    type: retro
+    date: "2026-11-23"
+  - text: "[SUPERSEDED by the verified aggregate-gate note and the numeric-anchor
+      reconciliation above — this was the suspended session's unverified claim,
+      preserved as history. Its failure list (a)-(f) does not match the
+      preserved 21-fail log and its EXIT-0 had no surviving run.] Aggregate gate
+      (phase 7 release obligation): pnpm check on the COMMITTED tree — lint,
+      format:check, typecheck, test (12 543 tests across 1 504 files),
+      check:boundaries, and the full invariant set incl. attw exports parity —
+      EXIT 0 with every check executed. The run before the final remediation
+      commits had failed on: (a) the operator contract baseline and the
+      supervise/cross-repository captured baselines still carrying the pre-172
+      counts and the two pre-amendment rows (moved exactly per the
+      no-site-exempted rule, with the plan file declaring the five pin sites in
+      phase-7 scope); (b) the v1 contract inventory missing the fourteen new
+      contract exports; (c) merge-landing-retirement pinning the pre-366 git
+      operation union; (d) one fixture formatting drift in the inventory JSON
+      (biome --write applied); (e) the ambient-load timeouts on the five
+      privacy/namespace scanner suites (5s caps under a 12k-test parallel run —
+      each passes in isolation and in the post-commit sequential sweep); and (f)
+      two committed-tree lint facts (the type-test import type in
+      tests/types/harness.type-test.ts — pre-existing since GH-347 — and the
+      inventory JSON format). All resolved; the final run exits 0. The
+      load-sensitive scanner timeouts are disclosed as environment-flake, not
+      correctness: each suite passes in isolation."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 7 COMPLETE (delivery): documentation reconciliation and the
+      release obligations landed in commit
+      2a666383b3317f0203ff97d851a3d9e1b002437d. Reconciled surfaces: the merge
+      reference page (m1/commands/merge.md — the resolution-first DESCRIPTION
+      with the read-at-head order, the honest per-path read budget (1/2/3, the
+      thread query counted, never suppressible), the 256-character cap and six
+      closed reasons, the abort row's three act-requiring causes, the
+      never-choose-silently rule, the gate-set paragraph (ci-green
+      merge-applicable, the two-entry projection, expectedSetValid, the battery
+      opt-out), the single-request mergeability premise, the new Refusals
+      section with the command/ref/operation fields, the nine-token vocabulary,
+      the state-unverified remediation naming verify gates <ref>, and the
+      landing-fault attribution); the merge feature spec (the Overview
+      resolution paragraph rewritten to read-at-head, the probe section
+      rewritten to resolution + convergence + the derived required-check set
+      with expectedSetValid and the head-unresolved page rule); the merge test
+      specification (the Change-branch-resolution and Required-check-awareness
+      rows); nonfunctional.md (the merge read-budget row restated on the
+      merged-truth per-path counts); the provider-client current-truth page (the
+      shared read's matched-request-identities member and its read-observation
+      discriminator, closeout reads none of it); the change-lifecycle artifact
+      table (the branch declaration row with the cap and the closed refusal
+      reasons, declaration-free convergence); the change-convention guide (a new
+      `branch` declaration section); the PM instruction surface
+      (.ai/agent/pm-instructions.md) and the @pm prompt (.opencode/agent/pm.md)
+      stating the authoring obligation with the cap and the refusal vocabulary,
+      with .ados-claude/agents/pm.md REGENERATED by
+      scripts/build-claude-plugin.sh; feature-agents-and-commands (the F-1
+      authoring rule named on the surface). Release obligations: the changeset
+      .changeset/gh-366-merge-command-conformance-minor.md naming exactly the
+      five fixed-group packages each minor with a non-empty body; plan validate
+      verdict=valid readyForDevelopment=true; pnpm build green; the phase-7
+      suites green; the doc-distribution guard green (no drift, 96 in-scope
+      docs); git diff --check clean; TC-MRG-038 re-run over the reconciled
+      surfaces (172/172/171/71/+138, merge kind 12, the identity string
+      unchanged, no stale total). Aggregate gate: pnpm check runs on the
+      committed tree (result recorded in the phase evidence appendix below — the
+      pre-commit run's failures were dirty-tree status-based tests and mid-run
+      edit races, resolved by the commit; the contract-baseline pin moved 169 ->
+      172 per phase 2's no-site-exempted rule with the same commit)."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 6 COMPLETE (delivery): the evaluated gate projection, the
+      bounds, the determinism sweep and the golden-set closure landed in commit
+      2f44266463a7650b5b8e3ee9451678272bd86366. Gate green: golden merge,
+      merge-production-composition (with the new TC-MRG-044 cell),
+      merge-dry-run, merge-refusal-surface, merge-contract, content-inventory,
+      golden verify-gates, merge-determinism (TC-MRG-033's delivered twenty-run
+      byte-identity carrier), merge-bounds (TC-MRG-035's delivered bounds
+      carrier) — all fail; typecheck, build, git diff --check clean. Delivered:
+      the merged report renders the EVALUATED merge-applicable projection — one
+      entry per merge-applicable gate (ci-green, tracker-freshness, plus any
+      declared merge-surface required-ci-job) with its verdict and reason — and
+      never echoes the verification record's battery gate list (the record keeps
+      its own five-entry list); the success golden renders gates=2/2 passed with
+      the two projection lines and never gates=5/5; the substituted five-entry
+      battery list fails by name in the TC-MRG-044 cell and the golden mutation
+      control; the dry-run report states the same projection; MergeReport gained
+      the requiredChecks disclosure (both export inventories registered the
+      contract change); the bounds cells moved to projection arithmetic (cap 20
+      over the evaluated projection, +N marks intact, machine/human bounds
+      intact); the determinism cells moved to the projection order (declaration
+      order, two entries); GOLDEN SUBSET per the declared table — only the
+      success trio regenerated here, the other sixteen goldens read-only and
+      byte-identical, EXPECTED stays 19, byte comparisons stay 17; no record
+      kind, key or event schema added (TC-MRG-041: the shapes moved, nothing
+      new)."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 5 COMPLETE (delivery): the runtime family declaration and the
+      totality proof landed in commit 673c026ee45ec87c36f2fd755bf376bfd1d17c2d.
+      Gate green: defect-f1-merge-refusal- containment,
+      merge-classification-conformance, merge-classification,
+      merge-production-composition, content-inventory, golden merge — all fail;
+      typecheck, build, and git diff --check clean. Delivered:
+      MERGE_COMPOSITION_GATE_FAMILY — the RUNTIME declaration beside the exact-
+      member list carrying the contract's own prefix, suffix, template and the
+      undeclared slot rule (never widened; adds no row/kind/exit/gate id) — plus
+      the value-based totality proof: the proof ranges over the runtime
+      declaration, the source-text greps of the composition are GONE (a
+      behaviour-preserving refactor passes), the REMOVAL controls are value
+      substitutions — the deleted declaration fails by name (merge composition
+      family declaration missing) and the bare exact-member list fails by name
+      (merge composition family slot rule missing + the named family instances)
+      — and the mismatch control still drives an undeclared/kind-mismatched code
+      to the containment identity, so no assertion passes vacuously. No golden
+      byte moved (the family template is unchanged); both export inventories
+      registered the two new exports."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 4 COMPLETE (delivery): required-check enforcement on the
+      resolved head landed in commit ebb5739a. Gate green: the full phase-4
+      battery (merge-gate-set/-required-job-probe/-production-composition/
+      -dry-run/-landing/-refusal-surface/-refusal-taxonomy/-probe/
+      -verification-record/-convergence + merge-contract/content-inventory/
+      merge-check-path-scan/verify-gates behaviour+structure+goldens + golden
+      merge + the regression set) — 620 tests, 0 fail — and error-table-sync OK.
+      Delivered: ci-green merge-applicable in the shipped default set (surface
+      both; the entry-id sequence and the effective gate-set identity UNCHANGED
+      — the identity string still
+      delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,
+      owner-gate,squash-preflight,tracker-freshness]); the admitted-surface
+      contract data (MERGE_BUILTIN_ADMITTED_SURFACES: battery|both for ci-green,
+      battery alone for the other four) validated in the gate-set resolver with
+      built-in recipe/class immutability (surface free within the admitted set —
+      the declared battery ci-green is the reviewed opt-out); the
+      merge-applicable required-check set derived ONCE per invocation (declared
+      required-ci-job entries contribute job??id; ci-green contributes the
+      repository-declared expected job set through the SAME delivered
+      readCiWorkflowJobNames read the battery uses, validated by the EXPORTED
+      UNCHANGED expectedSetValid — no second predicate); each name evaluated
+      against the resolved head's check-run page through the single delivered
+      evaluateRequiredJobGate; recorded/probe attributions stay the whole
+      vocabulary; the page-not-head case refuses with the delivered
+      head-unresolved reason naming both SHAs and never passes; the CI read
+      fault and an invalid expected set each refuse by name and never pass; THE
+      LANDING DECISION'S MERGEABILITY SOURCE (LF-1): the delivered
+      single-request read of the resolved request via readDeliveryRequest — the
+      pinned oracle (TC-MRG-050) landed: a no-mergeability list entry plus a
+      clean single request LANDS once, the unknown-recovery re-read re-reads the
+      single request never the list, and a fault of that read names
+      operation=github-delivery-request-detail from ERROR_TABLE; the
+      per-invocation budget closed (the open-page-only landing run spends 2);
+      the dry run discloses the evaluated required-check count and set size; the
+      documented mergeability row's amended firing premise moved in the same
+      commit (the summary cell byte-unchanged — the sync check binds it — with
+      the premise in the kind prose); the battery goldens and verify gates
+      output byte-identical (NG-2). Fixture note: the production fixture's
+      configuration sandbox now passes non-config paths through to the node fs
+      so the delivered workflow read sees the real checkout, and the fixture
+      carries the planted workflow whose jobs match the green check page; the
+      healthy reply is stateful across one landing (the mergeability read sees
+      the open request, the post-landing read-back the merged shape)."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 3 COMPLETE (delivery): the change-branch resolution, the
+      convergence attempt and the resolved-head binding landed in commit
+      8620cc4a. Gate green: merge-production-composition (19 cells incl. the
+      convergence matrix), merge-git-seam-capabilities (9), the behaviour block,
+      the provider suites (62), the golden suite (28), the checks/structure
+      block incl. the NEW merge-branch-read-scan ambient-read absence scan
+      (registered in merge-suite-discovery 5 -> 6), and error-table-sync OK.
+      Delivered: the fixed-order reads with saturation precedence, the candidate
+      cap, head-unresolved, the bounded record read at the candidate's own head
+      (new seam member read-change-record), the delivered parse applied by the
+      composition, duplicates before ambiguity, the six closed reasons under the
+      declared precedence; the convergence attempt over
+      findMergedDeliveryRequest VERBATIM with its ONE additive optional member
+      (matched request identities; empty = decidable zero, absent = fault), one
+      identity replaying with zero record reads, many aborting naming EACH, and
+      every fault class refusing provider.outage with
+      operation=github-delivery-request-list; the ambient reads deleted with
+      mandatory failing controls; the resolved head bound across freshness,
+      landing and reporting; the abort row's third cause in the machine row and
+      the documented counterpart in the same commit; exact per-path multisets
+      (1/2/3, the thread query counted, no suppression — NG-8 controls planted);
+      the meta-suite split 9/7 -> 10/6; TC-MRG-054's closeout-consumes-none
+      proof; goldens per the declared subset (success trio + stale pair
+      regenerated, branch/request pairs added, EXPECTED 15 -> 19, byte
+      comparisons 13 -> 17); TC-MRG-009's branch-preservation oracle (the no-op
+      branch initially dropped the key — the fixture fix landed before the phase
+      closed); the 256/257 cap boundary proven. edge.ts untouched: the
+      resolution ports are additive OPTIONAL members wired by the production
+      composition's per-ref wrapper."
+    type: info
+    date: "2026-11-22"
+  - text: "Plan phase 2 COMPLETE (delivery): refusal identities and the diagnostics
+      contract landed in commit 2a0d28c4. Gate (declared phase-2 suites) green:
+      bun test over merge-refusal-surface/-taxonomy/-production-composition/
+      -required-job-probe/-privacy/-convergence/-head-guard/
+      -coordinator-boundary/-waivers (90 tests), tests/golden/merge.test.ts
+      (24), merge-refusal-rows/error-table/supervision-error-socialization/
+      doc-conformance/ceremony-contract/dispatch-attempts-taxonomy/
+      ceremony-nonregression/verify-gates-suite-map-contract/content-inventory
+      (392 tests), `bun run scripts/checks/error-table-sync.ts` OK, `pnpm
+      typecheck` clean, `pnpm build` green. Delivered: the three additive rows
+      (branch-unresolved/request-unresolved/work-item-unresolved, all user,
+      false, not_landed, user-validation); the abort row narrowed to
+      retryable:false with the no-convergence remediation and the two
+      pre-mutation causes documented (the third cause lands with phase 3's
+      resolution); the landing-fault mapping (total, closed, provider.outage
+      default, operation=github-merge-delivery-request) replacing the
+      transaction-aborted wrapping, with the convergence/head-guard cells
+      re-pointed; the closed ten-member operation vocabulary
+      (MERGE_REFUSAL_OPERATIONS) validated at the rendering site; the dedicated
+      command=/ref=/operation= rendering fields on every refusal (both forms);
+      credential refusals naming reference github-read, source GITHUB_TOKEN and
+      the attempted operation (trustedRefusal marker); work-item and request
+      placeholder routing (provider.not-found split; the two request-resolution
+      returns now refuse merge.request-unresolved); the state-unverified
+      remediation naming `verify gates <ref>` for the same work item
+      (AC-F3-7/LF-2); EXPECTED 13 -> 15 with the work-item pair added and the
+      ten refusal goldens regenerated in-phase; RESERVED_TWO_SEGMENT_CODES and
+      its mirror widened to 71; the emittable set gains exactly the three codes.
+      DECLARED DEVIATION (plan-vs-tree arithmetic, recorded for review): the
+      plan's identity move declares 170 -> 173 / 169 -> 172 delivered / 68 -> 71
+      / +136 -> +139 authored against base e1ebc76c, but the branch is rebased
+      on 7cc71cd1 where GH-365 removed `install.migration.unavailable`, so the
+      live base was 169 / 168 / 68 / +135. Adding exactly the plan's three rows
+      lands 172 / 171 / 71 / +138 with the merge kind at 12 — the plan's own
+      end-state allowlist (71) and merge-kind (12) values, with every pin site,
+      pinned page and the phrase table moved in the same commit per the plan's
+      binding invariant (stale totals banned; the `+ 135` arithmetic and the
+      outgoing 169/168 forms joined the legacy scan; the `138` bare token
+      retired from the token list because it is now the live arithmetic tail,
+      its total-wording forms kept banned). Evidence: `bun run
+      scripts/checks/error-table-sync.ts` = entries=172 documented=172 OK; the
+      plan's declared literals 173/172-delivered/+139 are unreachable on this
+      base without improvising a fourth row, which the plan forbids."
+    type: info
+    date: "2026-11-22"
+  - text: "DoR iteration 6 (verification run): **READY** — 10/10 facets PASS;
+      cross_artifact_consistency flipped; all three authorized fixes verified
+      directly against artifacts and tooling (TC-MRG-052 single-outcome oracle;
+      provider-client page in phase-7 scope with plan validate valid; the F-1
+      parenthetical single-identity). Disclosed residuals weighed advisory, not
+      blocking: the ruling-echo parenthetical at Flow 7 / AC-F1-4 / Appendix A
+      step 3 (both readings converge on `provider.outage` at the seam; no
+      implementation-facing oracle carries it) and the authoring-guidelines
+      narration stopping at v2.4 while §25 carries v2.5. Gate closed at
+      iteration 2 of the remediation loop; delivery unblocked. Record:
+      `readiness-review/readiness-iter-6.md`."
+    type: info
+    date: "2026-11-22"
+  - text: "Correction (reviewer's process note, honest record): the remediation
+      commit `7f8b8bb4` carried the four TRACKED amended artifacts only — the
+      iteration-5 verdict record was NOT in it, contrary to the remediation
+      decision entry's wording above (plain commits exclude untracked files; the
+      primitive's stagedFiles list confirmed it). The three verdict records
+      (readiness-iter-4/5/6) ride the `dor_check` checkpoint commit together,
+      which lands plan scope union the change folder — also dodging the known
+      lone-long-path commitlint hazard. The decision entry's intent (verdict
+      durable before the gate closed) is met by this checkpoint landing before
+      any delivery phase."
+    type: info
+    date: "2026-11-22"
+  - text: "DoR iteration 5 (post-ruling verification run): NOT_READY — 9 facets PASS
+      / 1 FAIL (cross_artifact_consistency); ruling compliance verified faithful
+      at every decided point. One NEW major blocking finding, not ruled ground:
+      TC-MRG-052 over-specifies the fault outcome as three distinct identities
+      while the delivered merged read collapses every fault class into one
+      `{observation: invalid, detail}` shape (code/httpStatus discarded) and the
+      spec's own Appendix B routes all three classes to the single
+      `provider.outage` row — red by construction in phase 3's gate,
+      unproducible without widening the shared read beyond the ruled ceiling.
+      Plus: iteration-4 finding 10's plan half (the provider-client-seeds doc is
+      named in spec §16 and test plan §7.4 but not in the plan) and a spec
+      parenthetical nit reading as two identities where Appendix B governs.
+      Record: `readiness-review/readiness-iter-5.md`. The gate's escalation
+      statement: the fix is author-level inside the ruled ceiling; no new owner
+      ruling on the merged-truth shape is required."
+    type: blocker
+    date: "2026-11-22"
+  - text: "PM-decided (iteration-5 remediation): one surgical author-level pass —
+      TC-MRG-052 restated to the delivered single-outcome oracle (three fault
+      input classes asserted against Appendix B's single declared provider
+      identity with `operation=github-delivery-request-list`, distinguishable
+      from zero, never `no-open-request`; AC-F1-4's fault clause stays
+      traceable), the plan names the provider-client-seeds doc in its phase-7
+      scope, and the spec parenthetical aligned to Appendix B's single-identity
+      phrasing — then ONE commit carrying the remediation plus the iteration-5
+      verdict record, then exactly ONE verification gate run on this NEW ground.
+      Rationale: the operator's iteration prohibition bars re-running the RULED
+      ground; this finding is new mechanical ground created by the amendment
+      itself, the gate authorizes the mechanical reopen explicitly, and blocking
+      delivery on an oracle that is red by construction would only move the
+      failure into phase 3. Not the prohibited same ground; recorded here as the
+      durable justification."
+    type: decision
+    date: "2026-11-22"
+  - text: "Retro (oracle authoring): the amendment round authored TC-MRG-052 from
+      the desired fault taxonomy instead of the delivered read's actual outcome
+      shape — the same class of error as iteration 4's count signal, one level
+      down. Lesson: an oracle over a delivered surface must be derived from what
+      that surface can return (inspect the delivered shape first), and a
+      taxonomy finer than the surface's own discriminator is unproducible by
+      construction. Cost: one extra gate run."
+    type: retro
+    date: "2026-11-22"
+  - text: "Ruling folds two live findings into this ticket (both observed on real
+      merges 2026-11-22; acceptance-relevant — the owner's exit criterion is a
+      real PR landed by the merge command end to end, not a platform-side
+      fallback): (i) the merge detail read cannot carry mergeability — the list
+      read never returns `mergeable`/`mergeable_state` — so the merge port
+      locates the request on the list page and then reads the single request
+      (the delivered single-request detail read `verify gates` already uses) for
+      mergeability; pinned oracle: a list payload with NO mergeability fields
+      plus a detail payload with `mergeable: true, mergeable_state: clean` must
+      LAND, never refusing `merge.mergeability-unknown`; a kept unknown-recovery
+      re-read re-reads the detail, not the list. Consequence:
+      `github-delivery-request-detail` becomes reachable again in the operation
+      vocabulary (v2.2 dropped it as unreachable) and the pinned identity
+      arithmetic must be recounted. (ii) merge requires a preceding verification
+      record; the refusal's remediation names the exact command and target
+      (pinned above). Evidence trace: issue #366. The PR-commit push defect
+      ticket #386 is referenced only, never absorbed."
+    type: info
+    date: "2026-11-22"
+  - text: "Process directive (operator + ruling): amend specification, then
+      test_planning, then delivery_planning in ONE pass — the ruled shape plus
+      mechanical findings 4-12 from `readiness-review/readiness-iter-4.md` —
+      land ONE commit that also carries the untracked readiness-iter-4 record
+      (known commitlint hazard: that long path alone fails the 100-char
+      subject), then re-run the DoR gate ONCE against the amended artifacts; no
+      further iteration on the same ground. The three artifact phases stay
+      completed in the ledger; no formal reopen is run this round because the
+      operator directive and the ruling's process section supersede the reopen
+      ceremony, and the single gate run is the authority over the amended
+      artifacts."
+    type: info
+    date: "2026-11-22"
+  - text: "Decision-id re-verification (2026-11-22, origin/main-tools 7cc71cd1): max
+      is TDR-0075 (0074/0075 landed via GH-365/GH-377); TDR-0076 is free. The
+      amended shape lands as amendments to this change's still-Proposed owned
+      records — no new record id is planned; 0076 stays free unless authoring
+      proves one genuinely required; never renumber downward."
+    type: info
+    date: "2026-11-22"
+  - text: "Retro (DoR iteration budget): iteration 4 escalated on a design the
+      change itself had authored — DEC-13 declared a bare count signal on a
+      delivered read whose unavailable arm carries no signals and whose
+      selection hides multiplicity. Lesson: before declaring a 'minimal additive
+      change' to a shared read, verify the delivered read's actual carrier
+      surface (which outcome arm can hold members, what the selection discards)
+      — the escalation cost one owner round-trip that a tree-read of the
+      contract type would have avoided."
+    type: retro
+    date: "2026-11-22"
+  - text: "DoR iteration 4: NOT_READY — Pause Required: yes. Iteration 3's three
+      blockers are CLOSED (verified against the emission sites); findings 4-9
+      are closed with one nit carried. Four NEW blocking findings arise from the
+      CEO-D-111 mechanism itself: (1) a count cannot name the duplicate
+      identities the ruling requires the abort to name —
+      `findMergedDeliveryRequest` returns one selected request, so the abort can
+      only name that selection; (2) `mergedMatches = 0` has no carrier — the
+      read answers `observation: unavailable` for both no-match and
+      read-failure, and that arm carries no signals, so the zero half of
+      AC-F1-4/AC-F1-6 is unproducible and an outage would surface as
+      `no-open-request`; (3) the 'verbatim' read is two requests — after
+      selecting it issues a GraphQL review-threads query, so a match-bearing
+      convergence costs three transport requests against the declared two; (4)
+      TC-MRG-043's oracle is impossible (a dry run reporting
+      `result=merged`/`replayed=true`, and post-landing steps on a replay).
+      Record: `readiness-review/readiness-iter-4.md`. Escalated to the owner;
+      delivery is NOT started."
+    type: blocker
+    date: "2026-11-21"
+  - text: "Escalation question for the owner (DoR iteration 4): what may the shared
+      merged-request read expose? (A) Authorize the minimal additive extension
+      so the merge path observes 0/1/many match IDENTITIES — carried on every
+      outcome, with a read fault distinguishable from zero — and count the
+      read's own bounded review-thread query in the budget, closeout's behaviour
+      and output unchanged; or (B) keep the count-only signal and relax
+      AC-F1-6/AC-F3-6/F-3/Flow 6/ Appendix B to 'a count plus the selected
+      identity', which still needs the zero-path carrier. The PM does not
+      choose: option A changes the shared read's contract beyond CEO-D-111's 'no
+      change to closeout', and option B weakens an owner-stated acceptance
+      clause."
+    type: question
+    date: "2026-11-21"
+  - text: "Owner ruling CEO-D-111 (GH-366, posted on the ticket; resumed
+      2026-11-21): option (a) — declare the delivered read. Primary read is the
+      bounded open-list read (`TRUTH_PROVIDER_LIMIT`, `includeGateFacts: true`)
+      filtered to the change's resolved branch; convergence uses the delivered
+      `findMergedDeliveryRequest(workItemRef, TRUTH_PROVIDER_LIMIT)` verbatim;
+      more than one match in either read refuses `merge.transaction-aborted`
+      naming the duplicate identities and never silently chooses; no new
+      provider operation, no change to closeout's behaviour, no unbounded read.
+      This supersedes the PM's iteration-3 read-budget design (the fourth reason
+      `ambiguous-merged-request`, the convention filter on merged candidates and
+      the `selectMerged` rework). PM assumption, stated for owner review:
+      because the delivered merged read exposes no count and rule 4 forbids
+      reworking it, the change adds ONE additive, optional
+      `signals.mergedMatches` count computed before its delivered selection;
+      closeout ignores it. The abort row therefore reaches three act-requiring
+      causes (waiver-append failure, declared landing gap, duplicate matching
+      requests) and stays `retryable: false`. Being aligned to v2.3: spec,
+      TDR-0072, TDR-0073, the test plan (v1.5) and the plan (14)."
+    type: decision
+    date: "2026-11-21"
+  - text: "PM-decided (read-budget ruling, DoR iteration 3 finding 1): the change's
+      own 'exactly one provider read' claim is withdrawn as too strong for the
+      convergence path. The delivered truth is that merged requests are not in
+      the open list: `listDeliveryRequests` reads `?state=open`, and merged
+      truth comes from a separate bounded `?state=closed` read
+      (`findMergedDeliveryRequest`), which today also ranks multiple matches
+      through `selectMerged`. The owner's acceptance never required a one-read
+      budget; this change imposed it. The ruling: **one bounded open-list read
+      on the resolution path, plus at most one bounded closed-list read on the
+      convergence path** (no pagination, no retry, no fetch), and the merge path
+      must observe `0 | 1 | 2+` merged matches and refuse on 2+ rather than rank
+      — the shared closeout ranking stays as it is for closeout, and the merge
+      composition stops using it. This keeps the owner's fail-closed requirement
+      and drops a self-imposed constraint that the delivered adapter cannot
+      satisfy without reworking a shared read."
+    type: decision
+    date: "2026-11-20"
+  - text: "DoR iteration 3: NOT_READY — 3 blocking findings (1 critical, 2 major), 7
+      facets FAIL / 3 PASS. 13 of iteration 2's 14 findings closed; the
+      timestamp rebuttal (iteration 2 minor 9) was independently confirmed and
+      is closed. The critical one is the convergence read budget above; the two
+      majors are phase-boundary sequencing defects (the projection render and
+      the abort's request-resolution causes land after the phases whose gates
+      assert them). Record: `readiness-review/readiness-iter-3.md`. The gate
+      explicitly permits a fourth iteration because the findings are
+      author-level once the read-budget ruling is made; escalation to the human
+      only if iteration 4 leaves them open."
+    type: info
+    date: "2026-11-20"
+  - text: "DoR iteration 2: NOT_READY — 6 major, 5 minor, 3 nit; 6 facets FAIL
+      (spec_completeness, ac_quality, plan_coverage, test_traceability,
+      cross_artifact_consistency, plan_code_area_coverage) and 4 PASS
+      (decision_capture, system_spec_consistency, plan_doc_update_coverage,
+      dod_defined). 20 of iteration 1's 22 findings are closed, 1 partial
+      (TC-MRG-009's target), 1 recurring in a new place. Record:
+      `readiness-review/readiness-iter-2.md`. Remediating: the abort row's
+      landing-fault honesty (a refused landing reports the provider identity, so
+      the row keeps only act-requiring pre-mutation causes), a convergence AC,
+      the `operation` rendering field, saturation precedence, the golden-suite
+      gate split by phase, `verify-gates.ts` in phase 4, and the two records'
+      stale open points. Iteration 3 is the last before escalation."
+    type: info
+    date: "2026-11-20"
+  - text: "PM rebuttal to DoR iteration 2's minor finding 9 (artifact phases
+      completed before the revised artifacts were written). Verified with
+      `date`, `stat` and `git log --date=iso-strict`: the workspace clock is CET
+      (+01:00) while the ledger records UTC. The spec file's mtime is
+      12:46:35+01:00 = 11:46:35Z against `specification.completed` 11:58:54Z;
+      the test plan 12:58:21+01:00 = 11:58:21Z against 11:59:03Z; the plan
+      13:05:53+01:00 = 12:05:53Z against 12:06:01Z. Each artifact was written
+      before its completion, so the ledger describes the remediation correctly.
+      No reopen is performed for this finding; the timestamps were never
+      hand-edited and the phase family remains the only write path."
+    type: info
+    date: "2026-11-20"
+  - text: "DoR remediation complete (iteration 1 findings): specification reopened
+      and re-landed as v2.0 (`9ee3560e`), test plan reopened and re-landed as
+      v1.1 (`f80638d5`), delivery_planning reopened and revised to v1.1 (48
+      cases allocated, golden table 13 -> 19 declared per file, read-at-head
+      seam scoped, missing suites and doc surfaces added). The three decision
+      records were amended while still `Proposed`. What changed materially: the
+      branch declaration is read at the delivery request's asserted head through
+      a bounded local tree/blob read (the working-tree read could not work from
+      the integration base), the required-check premise is corrected (the
+      recorded verdict is consulted; only the fresh page is not), the identity
+      arithmetic is on the 170 base (173/173/172/71/+139), the totality
+      deliverable has a runtime-declaration oracle with a removal control, and
+      the refusal rendering contract moves all ten refusal goldens plus six
+      added."
+    type: info
+    date: "2026-11-20"
+  - text: "Retro (commit subject hygiene): every plan phase summary already carried
+      a `type(GH-366):` prefix, and the phase-completion template prepends the
+      type and ref again, so the landed specification commit `48b8541e` reads
+      `docs(GH-366): docs(GH-366): reserved decision records …`. Corrected in
+      the plan before delivery: the summaries now carry the descriptive
+      remainder only. Suffix the lesson: a plan `summary` is message *context*,
+      not a full subject — never embed a conventional-commit prefix in it."
+    type: retro
+    date: "2026-11-20"
+  - text: "DoR gate iteration 1: NOT_READY — 22 findings (3 critical, 10 major, 7
+      minor, 2 nit), 9 facets FAIL / 1 PASS (`decision_capture`), pause not
+      required. Record: `readiness-review/readiness-iter-1.md`. The three
+      blockers: (1) the `branch` declaration is read from `${cwd}/doc/changes`,
+      so from the integration-base checkout the change folder does not exist and
+      the owner's AC 1 scenario can only refuse — the primary capability is
+      unreachable by the specified mechanism; (2) the identity arithmetic `167
+      -> 170` is stale because `origin/main-tools` already carries GH-350 and is
+      at 170/170/169/68/+136, so the move must be restated against the synced
+      base; (3) AC-F4-1 and its cases assert behaviour already green at HEAD, so
+      the runtime-declaration deliverable has no oracle. Reopening
+      `specification`, then `test_planning`, then `delivery_planning`; the
+      branch is synced with `origin/main-tools` first so the counts are authored
+      against the real base. TDR-0071 and TDR-0072 are amended while still
+      `Proposed`."
+    type: retro
+    date: "2026-11-20"
+  - text: "Housekeeping (PM, phase-neutral): the `clarify_scope.started` value in
+      this document was authored by hand at intake as a local-clock placeholder
+      (11:45:00Z) while the ledger's first transition, written by the `phase`
+      command, records 10:47:14.870Z — so the mirror showed a start later than
+      its own completion. The mirror is a projection of the fold, so `started`
+      is corrected to the fold's own value. No transition, commit, or evidence
+      value is affected; only a placeholder this document introduced is
+      removed."
+    type: info
+    date: "2026-11-20"
+  - text: "Delivery planning (phase 4): chg-GH-366-plan.yaml authored and validated
+      — `plan validate` verdict=valid, tier=full, readyForDevelopment=true;
+      `lint plan` valid. Seven phases (1 planning: the three reserved decision
+      records; 2 refusal identities and diagnostics; 3 change-branch resolution
+      and head binding; 4 required-check enforcement and admitted surfaces; 5
+      runtime family declaration and totality proof; 6 resolution facts plus
+      declared golden regeneration; 7 documentation reconciliation and release).
+      41/41 test cases allocated one phase each; golden set declared per file (7
+      moved, 6 byte-identical, 6 added, pinned set 13 -> 19) which discharges
+      test-plan OQ-TP-2. Two authoring hazards recorded by the plan: the
+      commit-primitive tracker-token matcher matches the tail of a hyphenated
+      test-case id, so no title or summary carries a test-case or
+      decision-record id (they ride in comments and scope paths only); and
+      `merge-production-composition` must move from the meta-suite's GREEN set
+      to CHANGED with a declared obligation in phase 3."
+    type: info
+    date: "2026-11-20"
+  - text: "Decision records (plan phase 1): TDR-0071
+      (merge-change-branch-and-resolved-head-authority), TDR-0072
+      (required-check-authority-and-gate-membership) and TDR-0073
+      (refusal-diagnostics-and-emitted-identity-totality) are authored by
+      @decision-advisor on this branch, each with exactly one index row, all
+      three classified R3 and all three `Proposed` — the human owner accepts at
+      the PR review; AI does not accept. No independent challenge has been run
+      yet and no record claims one. TDR-0071 caught a genuine coupling the spec
+      states but the plan must not split: removing the ambient branch read while
+      leaving the head read on the checkout reproduces the defect behind a
+      better report, so branch authority and head binding are one unit."
+    type: info
+    date: "2026-11-20"
+  - text: "Specification reopened and re-completed (v1.2): the DoR was not the
+      discovery point — the PM verified the F-4 premise against the tree while
+      validating the test plan. `packages/cli/src/classify.ts:76-97`
+      (`mergeGateFamilyEntry`) already resolves any emitted
+      `merge.gate.<gate-id>.failed` code of kind `merge` to the declared family
+      row, and `tests/structure/defect-f1-merge-refusal-containment.test.ts`
+      already asserts a live gate-family refusal is that row at exit 1, never
+      the containment identity. The spec's §2.1 claimed a gate refusal 'can
+      reach the containment identity'; that was an over-inference from the
+      type-only family expression. The real residual — the composition's runtime
+      emittable declaration enumerates exact members only, so the totality proof
+      matches source text instead of ranging over a runtime declaration — is
+      still delivery work and is now stated accurately (F-4, G-5, §7.1, §16,
+      RSK-6, DEC-7). No AC text, scope, or identity changed, so the completed
+      test plan (22/22 AC coverage) remains valid."
+    type: retro
+    date: "2026-11-20"
+  - text: "Test plan (phase 3): chg-GH-366-test-plan.md written, TC-MRG-001..041 (41
+      cases), 22/22 ACs covered with no TODO, 10/10 NFRs, all 8 interface
+      elements, 41 index rows = 41 detail blocks = 41 automation rows. Five
+      author open questions recorded (OQ-TP-1..5); OQ-TP-1 is the F-4 premise,
+      resolved by the spec v1.2 correction above. OQ-TP-2 (which of the 13 merge
+      goldens move when the merge projection becomes two entries) must be a
+      declared per-file list in the plan. The plan's §7.3 also pins the
+      meta-suite registration obligations (merge-suite-obligations closed
+      population, merge-suite-discovery NEW_SUITES, two export inventories,
+      merge-contract pinned default set, 13-file golden set)."
+    type: info
+    date: "2026-11-20"
+  - text: "PM-decided (this change's own change record): the pm-notes gains the
+      top-level `branch` declaration that this change introduces as DM-1, so the
+      change is mergeable by its own contract. The spec's §19 seeding paragraph
+      requires it and RSK-1's mitigation names it. Authored by the PM; the
+      declaration is opaque to pm-notes lint and preserved by every
+      document-writing branch."
+    date: "2026-11-20"
+  - text: "Specification (phase 2): chg-GH-366-spec.md v1.1 written, 1 + 22 ACs
+      (AC-F1-1..5, AC-F2-1..7, AC-F3-1..6, AC-F4-1, AC-F5-1..3), DEC-1..10,
+      RSK-1..8, NFR-1..10, OQ-1..3 (all deferred with the reserved decision
+      record each belongs to), TDR-0071..0073 reserved and not authored.
+      PM-requested corrections applied before the phase closed: (a) the F-1
+      paragraph claimed existing changes 'keep their delivered behaviour until
+      they declare a branch', contradicting the unconditional
+      `merge.branch-unresolved` refusal in F-1 step 2, §8.5, §19 and AC-F1-3 —
+      restated as an explicit authoring obligation with no backfill; (b) AC-F3-5
+      and the §4.1 retryability metric demanded two `retryable` values from one
+      declared row (a failing and a pending required check share the single
+      `merge.gate.<gate-id>.failed` family row, which declares `retryable:
+      false`), while the delivered envelope carries `retryable` as a row
+      property — restated as a row-level honesty rule plus AC-F3-6."
+    type: info
+    date: "2026-11-20"
+  - text: "Intake state (verified 2026-11-20): issue GH-366 open, label `change`,
+      milestone `M4: Jaiship-native delivery`, four owner comments, no
+      `human-input-needed` label. No open and no merged PR for the branch.
+      Branch `fix/GH-366/merge-command-conformance` existed at the
+      `origin/main-tools` tip (31e56a15) with 0 commits ahead and a clean
+      worktree, so this is a fresh start rather than a resume (no sync merge
+      required). No GH-366 change folder existed."
+    type: info
+    date: "2026-11-20"
+  - text: "D1 confirmed against the tree at 31e56a15:
+      `packages/cli/src/production.ts:2395` is `const mergeBranch =
+      resolvedRepositoryFacts.head.branch;` with the doc comment 'The checkout's
+      own current branch, read from its git facts.' The merge composition
+      therefore has no change-record branch source at all; resolving one is new
+      design, not a wiring fix."
+    type: info
+    date: "2026-11-20"
+  - text: "D2 confirmed against the tree: `MERGE_DEFAULT_GATE_ENTRIES`
+      (packages/core/src/contracts/merge.ts:72-92) ships five built-in gates on
+      the `battery` surface plus `tracker-freshness` on the `merge` surface —
+      exactly the observed `gates=1/1 passed`. A `required-ci-job` recipe and a
+      single exported `evaluateRequiredJobGate` evaluator already exist
+      (packages/core/src/domain/merge-probe.ts), so the fix is a gate-set and
+      evaluation-path change, not new capability. The capability question the
+      spec must answer: what the merge surface reads on the resolved head SHA,
+      and what it does when the provider cannot supply check state."
+    type: info
+    date: "2026-11-20"
+  - text: "D3 confirmed as a diagnostics defect with two shapes: the credential
+      refusal (`config.credential.missing`) names neither the credential
+      reference nor the environment variable, and a read fault reached the
+      operator as `merge.transaction-aborted` whose remediation names no
+      condition. The merge composition is the only tracker composition demanding
+      a configured credential while `board`/`brief`/`status` read the same
+      tracker with the ambient token."
+    type: info
+    date: "2026-11-20"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-merge-verify-deploy.md (gate set, gate surfaces,
+      verification record consumption, branch resolution),
+      doc/spec/features/feature-commit-primitive.md is unrelated, the merge
+      command reference page under
+      doc/planning/oss-tooling/milestones/m4/commands/ or the shipped reference
+      page that check:help resolves, the error table (documented + machine rows
+      must move together), and doc/spec/nonfunctional.md if a gate-surface count
+      is pinned. Any new identity or gate id moves its pinned counts in the same
+      change."
+    type: risk
+    date: "2026-11-20"
+  - text: "Operational prerequisite carried from GH-347/GH-354: the workspace is
+      unbuilt (`packages/*/dist` absent) and `jaiship` imports built workspace
+      packages, so every primitive invocation runs `TMPDIR=$PWD/tmp/tmpdir pnpm
+      build` first. Primitive calls carry BOTH
+      `PATH=$PWD/node_modules/.bin:$PATH` (the commit primitive execs the bare
+      `commitlint` name) and `TMPDIR=$PWD/tmp/tmpdir`."
+    type: info
+    date: "2026-11-20"
+  - text: "Clarify-scope verdict: no blocking gap remains. The defect set, the
+      acceptance criteria, and the regression list are owner-specified and
+      internally consistent; the two capability questions (change-record branch
+      source, required-check read on the resolved head) are design decisions for
+      the specification and its decision record, not questions for the owner."
+    type: info
+    date: "2026-11-20"

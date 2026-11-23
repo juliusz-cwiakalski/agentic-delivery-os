@@ -9,7 +9,7 @@
  * transcribed.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
@@ -61,63 +61,14 @@ const seedVerification = (harness: MergeProductionHarness): void => {
   if (!appended.ok) throw new Error(`stale seed failed: ${appended.error.code}`);
 };
 
-const failingCheckRuns: (url: string) => MergeProviderReply = (url) => {
-  if (url.includes("/check-runs")) {
-    return {
-      status: 200,
-      body: {
-        check_runs: [{ id: 1, name: "CI / test", status: "completed", conclusion: "failure" }],
-      },
-    };
-  }
-  return healthyReply(url);
-};
-
-const healthyReply = (url: string): MergeProviderReply => {
-  if (url.includes("/issues/")) {
-    return {
-      status: 200,
-      body: {
-        number: 293,
-        title: "Engine-first operations",
-        state: "open",
-        labels: [],
-        updated_at: "2026-11-18T09:59:00Z",
-      },
-    };
-  }
-  if (url.includes("/check-runs")) {
-    return {
-      status: 200,
-      body: {
-        check_runs: [{ id: 7001, name: "CI / test", status: "completed", conclusion: "success" }],
-      },
-    };
-  }
-  if (url.includes("/pulls?")) {
-    return {
-      status: 200,
-      body: [
-        {
-          number: 301,
-          state: "open",
-          head: { ref: MERGE_PROD_BRANCH, sha: "0".repeat(40) },
-          base: { ref: "main-tools" },
-          commits: 1,
-          changed_files: 1,
-          mergeable: true,
-        },
-      ],
-    };
-  }
-  if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
-  return { status: 404, body: {} };
-};
+// The healthy provider reply is the fixture's own composed default: its open
+// list carries the real branch tips the checkout holds, so the resolution's
+// bounded record read observes the records the fixture committed (GH-366).
 
 describe("TC-ENGINE-050 the production dry run is real, declared, and honest", () => {
   test("exit 0 with the delivered report, one verification record, and real reads", async () => {
     const guard = createNoNetworkGuard();
-    const harness = createMergeProductionHarness({ label: "gh293-prod-dry", reply: healthyReply });
+    const harness = createMergeProductionHarness({ label: "gh293-prod-dry" });
     try {
       const run = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
       expect(run.exitCode, run.stderr).toBe(0);
@@ -155,7 +106,6 @@ describe("TC-ENGINE-050 the production dry run is real, declared, and honest", (
   test("the owner principal is the checkout's repository owner, observable through the waiver effect", async () => {
     const harness = createMergeProductionHarness({
       label: "gh293-prod-principal",
-      reply: healthyReply,
       configYaml: `merge:\n  gate-freshness: 900\n  deploy-expectations:\n    steps: [smoke]\n`,
     });
     try {
@@ -230,7 +180,6 @@ describe("TC-ENGINE-050 the production dry run is real, declared, and honest", (
     // unresolvable: the tracker read addresses issue 12.
     const harness = createMergeProductionHarness({
       label: "gh293-prod-digit-prefix",
-      reply: healthyReply,
     });
     try {
       const run = await harness.run(["merge", "ABC2-12", "--dry-run", "--json"]);
@@ -251,10 +200,21 @@ describe("TC-ENGINE-051 a failing gate is a classified refusal at exit 1", () =>
     const guard = createNoNetworkGuard();
     const harness = createMergeProductionHarness({
       label: "gh293-prod-gate",
-      reply: failingCheckRuns,
       configYaml: `merge:\n  gates:\n    schemaVersion: delivery.merge.gates.v1\n    entries:\n      - {id: lifecycle-finalization, recipe: lifecycle-finalization, surface: battery}\n      - {id: ci-green, recipe: ci-green, surface: battery}\n      - {id: push-parity, recipe: push-parity, surface: battery}\n      - {id: owner-gate, recipe: owner-gate, surface: battery, class: owner-review}\n      - {id: squash-preflight, recipe: squash-preflight, surface: battery}\n      - {id: tracker-freshness, recipe: tracker-freshness, surface: merge}\n      - {id: ci-required, recipe: required-ci-job, surface: merge, job: "CI / test"}\n`,
     });
     try {
+      harness.setReply((url) =>
+        url.includes("/check-runs")
+          ? {
+              status: 200,
+              body: {
+                check_runs: [
+                  { id: 1, name: "CI / test", status: "completed", conclusion: "failure" },
+                ],
+              },
+            }
+          : harness.defaultReply(url),
+      );
       const run = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
       expect(run.exitCode).toBe(1);
       const code = String(envelopeOf(run).error?.code);
@@ -280,7 +240,6 @@ describe("TC-ENGINE-052 a missing credential is config at exit 1", () => {
   test("every invocation cell refuses config.credential.missing and never contains the defect", async () => {
     const harness = createMergeProductionHarness({
       label: "gh293-prod-credential",
-      reply: healthyReply,
     });
     try {
       // The landing path refuses the state read before any provider read, so a
@@ -337,6 +296,682 @@ describe("TC-ENGINE-052 a missing credential is config at exit 1", () => {
   });
 });
 
+describe("GH-366 the diagnostics contract cells (phase 2)", () => {
+  test("TC-MRG-020/021 an absent token names the reference, the environment variable, and the attempted operation, and is never the generic abort", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-credential-naming",
+    });
+    try {
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setCredential("missing");
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("config.credential.missing"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("config.credential.missing");
+      const summary = String(error.summary ?? "");
+      // The declared reference name and the environment variable are named as
+      // dedicated evidence, and the operation that required them is the
+      // dedicated `operation=` field — never the generic abort row.
+      expect(summary).toContain("credential-reference=github-read");
+      expect(summary).toContain("credential-source=GITHUB_TOKEN");
+      expect(summary).toMatch(/operation=github-[a-z-]+/);
+      expect(error.code).not.toBe("merge.transaction-aborted");
+      expect(summary).not.toContain("merge.transaction-aborted");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-022 an unresolvable work item names its own identity, the invocation ref, and the read operation", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-work-item-unresolved",
+    });
+    try {
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setReply((url) => {
+        if (url.includes("/issues/")) return { status: 404, body: {} };
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.work-item-unresolved"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.work-item-unresolved");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+      expect(summary).toContain("operation=github-work-item");
+      expect(summary).not.toContain("merge.transaction-aborted");
+      expect(summary).not.toContain("fallback.internal");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-051 the unverified-state remediation names the exact prior command and target", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({
+      label: "gh366-prod-state-unverified",
+    });
+    try {
+      // No verification record exists: the freshness precondition is unmet.
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.state-unverified"));
+      expect(run.exitCode).toBe(2);
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.state-unverified");
+      const summary = String(error.summary ?? "");
+      // The remediation names the producing command and the target form, and
+      // the read that observed the absence names the delivery registry.
+      expect(summary).toContain("verify gates <ref>");
+      expect(summary).toContain("for the same work item, then re-run");
+      expect(summary).not.toContain("Produce a gate verification with `verify gates` and retry");
+      expect(summary).toContain("operation=delivery-registry");
+      expect(summary).toContain("command=merge");
+      expect(summary).toContain(`ref=${MERGE_PROD_REF}`);
+      // The documented row carries the same remediation (the sync check binds
+      // it; this pins the LF-2 sentence on the page).
+      expect(readFileSync("doc/spec/features/feature-result-contract.md", "utf8")).toContain(
+        "Produce the verification with `verify gates <ref>` for the same work item, then re-run",
+      );
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+});
+
+describe("GH-366 the change-branch resolution and convergence (phase 3)", () => {
+  /** A merged closed-page entry for the fixture branch. */
+  const mergedEntry = (input: {
+    readonly number: number;
+    readonly branch: string;
+    readonly sha: string;
+  }) => ({
+    number: input.number,
+    state: "closed",
+    merged_at: "2026-11-18T09:00:00Z",
+    merged: true,
+    head: { ref: input.branch, sha: input.sha },
+    base: { ref: "main-tools" },
+  });
+
+  test("TC-MRG-049/043 a converged re-run replays from provider truth with zero record reads and lands nothing", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-converged-replay" });
+    try {
+      // The open page offers nothing to resolve; the closed scan exposes exactly
+      // one matched identity for the ref.
+      harness.setReply((url) => {
+        if (url.includes("state=open")) return { status: 200, body: [] };
+        if (url.includes("state=closed")) {
+          return {
+            status: 200,
+            body: [
+              mergedEntry({
+                number: 301,
+                branch: MERGE_PROD_BRANCH,
+                sha: harness.headSha,
+              }),
+            ],
+          };
+        }
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode, run.stderr).toBe(0);
+      const data = envelopeOf(run).data;
+      expect(data?.replayed).toBe(true);
+      expect(String(data?.squashSha)).toBe(harness.headSha);
+      // Zero record reads and zero record-read git invocations: the head object
+      // is absent from the checkout for the replay (the convergence attempt
+      // decides before any record read), so a run that read would refuse.
+      const calls = harness.transportCalls;
+      // Per-path multiset: the open list once, the closed scan once, and the
+      // read's own delivered review-thread query once — three in all (TC-MRG-053).
+      expect(calls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+      expect(calls.filter((url) => url.includes("state=closed"))).toHaveLength(1);
+      expect(calls.filter((url) => url.includes("/graphql"))).toHaveLength(1);
+      expect(calls).not.toContain("/issues/293");
+      // The record-less replay's own record-keeping: one replayed transaction
+      // with an empty post-landing list, zero landings.
+      const transactions = readMergeTransactions(harness.store, MERGE_PROD_REF);
+      expect(transactions.ok && transactions.records).toHaveLength(1);
+      const record = transactions.ok ? (transactions.records.at(-1) ?? {}) : {};
+      expect(record.replayed).toBe(true);
+      expect(record.postLanding).toEqual([]);
+      // Zero landings: the three reads are the whole exchange — the only POST
+      // is the merged read's own delivered review-thread query, and no landing
+      // request is issued.
+      expect(harness.transportRequests).toHaveLength(3);
+      expect(
+        harness.transportRequests.filter((request) => request.url.endsWith("/merge")),
+      ).toHaveLength(0);
+      const serialized = `${run.stdout}\n${run.stderr}`;
+      expect(serialized).not.toContain("merge.branch-unresolved");
+      expect(serialized).not.toContain("declared-at-head");
+      expect(serialized).not.toContain("protection-rule");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-049 cell (i) more than one matched identity aborts naming EACH and presenting none as the request", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-duplicate-merged" });
+    try {
+      harness.setReply((url) => {
+        if (url.includes("state=open")) return { status: 200, body: [] };
+        if (url.includes("state=closed")) {
+          return {
+            status: 200,
+            body: [
+              mergedEntry({ number: 301, branch: MERGE_PROD_BRANCH, sha: harness.headSha }),
+              mergedEntry({ number: 300, branch: "fix/GH-293/earlier", sha: "b".repeat(40) }),
+            ],
+          };
+        }
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.transaction-aborted"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.transaction-aborted");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("matched-identities=#301,#300");
+      expect(summary).toContain("operation=github-delivery-request-list");
+      expect(envelopeOf(run).data?.replayed).toBeUndefined();
+      // The act-requiring duplicate cause refuses again on a plain re-run.
+      const again = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(again.exitCode).toBe(exitOf("merge.transaction-aborted"));
+      expect(envelopeOf(again).error?.code).toBe("merge.transaction-aborted");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-005/049 cell (ii) the empty matched-identity set refuses no-open-request as a decidable zero", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-empty-set" });
+    try {
+      harness.setReply((url) => {
+        if (url.includes("state=open")) return { status: 200, body: [] };
+        if (url.includes("state=closed")) return { status: 200, body: [] };
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.request-unresolved"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.request-unresolved");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("request-reason=no-open-request");
+      // The observed empty set is named: the zero is decided, not assumed.
+      expect(summary).toContain("matched-identities=none");
+      expect(summary).toContain("open=0");
+      // Per-path: the open list once and the closed scan once; the thread
+      // query is not issued without a selected match.
+      expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+      expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(1);
+      expect(harness.transportCalls.filter((url) => url.includes("/graphql"))).toHaveLength(0);
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-052 every fault input class of the merged read refuses the ONE declared provider identity", async () => {
+    const guard = createNoNetworkGuard();
+    for (const [label, status, body] of [
+      ["transport", 502, {}],
+      ["payload", 200, "not-an-array"],
+      ["auth-rejection", 401, {}],
+    ] as const) {
+      const harness = createMergeProductionHarness({ label: `gh366-prod-fault-${label}` });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) return { status: 200, body: [] };
+          if (url.includes("state=closed")) return { status, body };
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        // The single delivered outcome for every fault class at this seam:
+        // `provider.outage` naming the list operation — never
+        // `no-open-request`, never the abort row, never folded into zero.
+        expect(run.exitCode, label).toBe(exitOf("provider.outage"));
+        const error = envelopeOf(run).error ?? {};
+        expect(error.code, label).toBe("provider.outage");
+        const summary = String(error.summary ?? "");
+        expect(summary, label).toContain("operation=github-delivery-request-list");
+        expect(summary, label).not.toContain("no-open-request");
+        expect(summary, label).not.toContain("merge.request-unresolved");
+        expect(summary, label).not.toContain("merge.transaction-aborted");
+        // Per-path: the fault spends TWO — the open list and the faulted read.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          1,
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+    guard.restore();
+  });
+
+  test("TC-MRG-006 a saturated bounded page refuses ambiguous-open-request before the candidate count, even with zero matches", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-saturated" });
+    try {
+      const page = Array.from({ length: 120 }, (_, index) => ({
+        number: 10_000 + index,
+        state: "open",
+        head: { ref: `feat/other/${String(index)}`, sha: "c".repeat(40) },
+        base: { ref: "main-tools" },
+      }));
+      harness.setReply((url) => {
+        if (url.includes("state=open")) return { status: 200, body: page };
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(run.exitCode).toBe(exitOf("merge.request-unresolved"));
+      const error = envelopeOf(run).error ?? {};
+      expect(error.code).toBe("merge.request-unresolved");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("request-reason=ambiguous-open-request");
+      expect(summary).toContain("open=120");
+      // Zero convention-matching entries, and no convergence read was taken:
+      // the saturation refusal spends exactly one provider request.
+      expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+      expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(0);
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-006/007/042 the open-page refusal cells: over-cap, non-full-SHA head, and the duplicate-open abort", async () => {
+    const guard = createNoNetworkGuard();
+    const entry = (input: {
+      readonly branch: string;
+      readonly sha?: string;
+      readonly number: number;
+    }) => ({
+      number: input.number,
+      state: "open",
+      head: { ref: input.branch, ...(input.sha === undefined ? {} : { sha: input.sha }) },
+      base: { ref: "main-tools" },
+    });
+
+    // Over-cap: more than three convention-matching candidates.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-over-cap" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [1, 2, 3, 4].map((index) =>
+                entry({
+                  branch: `fix/GH-293/candidate-${String(index)}`,
+                  sha: "d".repeat(40),
+                  number: 400 + index,
+                }),
+              ),
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.request-unresolved"));
+        expect(String(envelopeOf(run).error?.summary)).toContain(
+          "request-reason=ambiguous-open-request",
+        );
+        expect(String(envelopeOf(run).error?.summary)).toContain("candidates=4");
+      } finally {
+        harness.dispose();
+      }
+    }
+
+    // A candidate whose asserted head is not a full hex SHA refuses and is never read.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-short-sha" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [entry({ branch: MERGE_PROD_BRANCH, sha: "abc123", number: 301 })],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.request-unresolved"));
+        const summary = String(envelopeOf(run).error?.summary);
+        expect(summary).toContain("request-reason=head-unresolved");
+        expect(summary).toContain(MERGE_PROD_BRANCH);
+        // The unusable candidate is never read: the work-item read never ran.
+        expect(harness.transportCalls.filter((url) => url.includes("/issues/"))).toHaveLength(0);
+      } finally {
+        harness.dispose();
+      }
+    }
+
+    // The duplicate-open abort: more than one open entry whose source ref equals
+    // the resolved branch refuses the abort row naming each identity.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-duplicate-open" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.headSha, number: 301 }),
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.duplicateHeadSha, number: 300 }),
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.transaction-aborted"));
+        const summary = String(envelopeOf(run).error?.summary);
+        expect(summary).toContain("matched-identities=#301,#300");
+        // The duplicate-open abort spends exactly one provider request.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          0,
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+    guard.restore();
+  });
+
+  test("TC-MRG-055 a mixed duplicate pair — one accepted, one refused member — aborts naming both identities", async () => {
+    const guard = createNoNetworkGuard();
+    const entry = (input: {
+      readonly branch: string;
+      readonly sha?: string;
+      readonly number: number;
+    }) => ({
+      number: input.number,
+      state: "open",
+      head: { ref: input.branch, ...(input.sha === undefined ? {} : { sha: input.sha }) },
+      base: { ref: "main-tools" },
+    });
+
+    // The mixed duplicate pair: both source refs equal the resolved branch, one
+    // member accepted (declared branch, full-SHA head) and one refused (a head
+    // that is not a full hex SHA, the TC-MRG-007 input shape). The duplicate
+    // rule ranges over the candidate set (spec §5.1 F-1 step 5), so the pair
+    // aborts naming BOTH identities instead of silently resolving through its
+    // accepted member — and the refused member's head-unresolved reason never
+    // masks the abort.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-duplicate-mixed" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.headSha, number: 301 }),
+                entry({ branch: MERGE_PROD_BRANCH, sha: "abc123", number: 300 }),
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.transaction-aborted"));
+        const error = envelopeOf(run).error ?? {};
+        expect(error.code).toBe("merge.transaction-aborted");
+        const summary = String(error.summary ?? "");
+        expect(summary).toContain("matched-identities=#301,#300");
+        expect(summary).toContain("operation=github-delivery-request-list");
+        expect(summary).toContain("request-reason=duplicate-open-request");
+        // The refused member's own reason does not surface: the duplicate abort
+        // governs the mixed pair rather than the head guard firing first.
+        expect(summary).not.toContain("head-unresolved");
+        expect(summary).not.toContain("merge.request-unresolved");
+        // Never resolved through the accepted member.
+        const serialized = `${run.stdout}\n${run.stderr}`;
+        expect(serialized).not.toContain("declared-at-head");
+        expect(envelopeOf(run).data?.replayed).toBeUndefined();
+        // The page-decided duplicate decision precedes every record read and
+        // spends exactly one provider request: the bounded open-request list.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          0,
+        );
+        expect(harness.transportRequests).toHaveLength(1);
+        // Nothing landed: zero appended transactions.
+        const transactions = readMergeTransactions(harness.store, MERGE_PROD_REF);
+        expect(transactions.ok && transactions.records).toHaveLength(0);
+        // The act-requiring duplicate cause refuses again on a plain re-run.
+        const again = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(again.exitCode).toBe(exitOf("merge.transaction-aborted"));
+        expect(envelopeOf(again).error?.code).toBe("merge.transaction-aborted");
+        expect(String(envelopeOf(again).error?.summary ?? "")).toContain(
+          "matched-identities=#301,#300",
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+
+    // Paired control (plan v17): a distinct-ref disagreement still resolves
+    // through its accepted member — the duplicate rule is keyed on the resolved
+    // branch's source ref, not on any refusal elsewhere in the candidate set.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-distinct-disagrees" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.headSha, number: 301 }),
+                entry({
+                  branch: "fix/GH-293/duplicate",
+                  sha: harness.duplicateHeadSha,
+                  number: 300,
+                }),
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+        expect(dry.exitCode, dry.stderr).toBe(0);
+        expect(envelopeOf(dry).data?.resolution).toMatchObject({
+          source: "declared-at-head",
+          branch: MERGE_PROD_BRANCH,
+          requestIdentity: "#301",
+          candidateCount: 2,
+        });
+        // Per-path on a resolved dry run: exactly one provider request.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          0,
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+    guard.restore();
+  });
+
+  test("TC-MRG-001/003 a base-checkout invocation resolves the request head and the declaration is read at that head", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-resolution-facts" });
+    try {
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode, dry.stderr).toBe(0);
+      const data = envelopeOf(dry).data;
+      // The dry run describes the same resolved object the real merge would land.
+      expect(data?.resolution).toMatchObject({
+        source: "declared-at-head",
+        branch: MERGE_PROD_BRANCH,
+        requestIdentity: "#301",
+        candidateCount: 1,
+        headSha: harness.headSha,
+      });
+      expect(data?.headSha).toBe(harness.headSha);
+      // Per-path on a resolved dry run: exactly one delivery-request provider
+      // request (the open list); no merged read, no mergeability read.
+      expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+      expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(0);
+      // The real merge agrees (the healthy landing lands once at the resolved head).
+      const live = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(live.exitCode, live.stderr).toBe(0);
+      expect(envelopeOf(live).data?.landing).toMatchObject({ requestState: "merged" });
+      expect(envelopeOf(live).data?.resolution).toMatchObject({ branch: MERGE_PROD_BRANCH });
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-004 the declaration cap boundary: 256 characters are accepted and 257 are refused", async () => {
+    const guard = createNoNetworkGuard();
+    // Exactly 256 characters: the record's declaration equals its own source
+    // ref and is accepted.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-cap-256" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                {
+                  number: 302,
+                  state: "open",
+                  head: { ref: harness.cap256.ref, sha: harness.cap256.headSha },
+                  base: { ref: "main-tools" },
+                },
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+        expect(run.exitCode, run.stderr).toBe(0);
+        expect(envelopeOf(run).data?.resolution).toMatchObject({
+          branch: harness.cap256.ref,
+          candidateCount: 1,
+        });
+        expect(harness.cap256.ref).toHaveLength(256);
+      } finally {
+        harness.dispose();
+      }
+    }
+    // 257 characters: the value is over the declared cap and is refused,
+    // never truncated.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-cap-257" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                {
+                  number: 303,
+                  state: "open",
+                  head: { ref: harness.cap257.ref, sha: harness.cap257.headSha },
+                  base: { ref: "main-tools" },
+                },
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.branch-unresolved"));
+        const summary = String(envelopeOf(run).error?.summary);
+        expect(summary).toContain("branch-reason=declaration-unusable");
+        expect(harness.cap257.ref).toHaveLength(257);
+      } finally {
+        harness.dispose();
+      }
+    }
+    guard.restore();
+  });
+
+  test("TC-MRG-050 the pinned mergeability oracle: a no-mergeability list entry plus a clean single request LANDS once", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-mergeability" });
+    try {
+      // The fixture's open list carries no mergeability fields (the list
+      // endpoint cannot); the single request reports mergeable and clean. The
+      // landing decision reads mergeability from the single request.
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode, dry.stderr).toBe(0);
+      const live = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      expect(live.exitCode, live.stderr).toBe(0);
+      expect(envelopeOf(live).data?.landing).toMatchObject({ requestState: "merged" });
+      // The transport log: the single-request URL requested after the gate
+      // evaluation, exactly once before the landing; the open-list URL NOT
+      // re-requested.
+      const singles = harness.transportCalls.filter(
+        (url) => url.includes("/pulls/") && !url.endsWith("/merge"),
+      );
+      expect(singles).toHaveLength(1);
+      const openLists = harness.transportCalls.filter((url) => url.includes("state=open"));
+      expect(openLists).toHaveLength(2); // dry run + live run, one each
+      expect(harness.transportCalls.some((url) => url.endsWith("/merge"))).toBe(true);
+      // The refusal never fires for the list entry's missing fields.
+      const serialized = `${live.stdout}\n${live.stderr}`;
+      expect(serialized).not.toContain("merge.mergeability-unknown");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+
+  test("TC-MRG-050 the fault cell: a fault of the single-request read names the detail operation from ERROR_TABLE", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createMergeProductionHarness({ label: "gh366-prod-mergeability-fault" });
+    try {
+      // A fresh verification is recorded first (the freshness precondition),
+      // then the single-request read faults; the open list stays healthy.
+      const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+      expect(dry.exitCode).toBe(0);
+      harness.setReply((url) => {
+        if (url.includes("/pulls/") && !url.endsWith("/merge")) {
+          return { status: 503, body: {} };
+        }
+        return harness.defaultReply(url);
+      });
+      const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+      const row = ERROR_TABLE.find((entry) => entry.code === "provider.outage");
+      expect(row).toBeDefined();
+      expect(run.exitCode).toBe(exitOf("provider.outage"));
+      expect(envelopeOf(run).error?.code).toBe("provider.outage");
+      const summary = String(envelopeOf(run).error?.summary ?? "");
+      expect(summary).toContain("operation=github-delivery-request-detail");
+      expect(summary).not.toContain("no-open-request");
+      expect(summary).not.toContain("merge.transaction-aborted");
+    } finally {
+      harness.dispose();
+      guard.restore();
+    }
+  });
+});
+
 describe("TC-ENGINE-053 read and state faults stay classified on every path", () => {
   test("provider, state, and request faults are classified by their declared rows", async () => {
     const guard = createNoNetworkGuard();
@@ -374,7 +1009,6 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
       });
       const stateHarness = createMergeProductionHarness({
         label: "gh293-prod-state",
-        reply: healthyReply,
         stateStoreWrap: failingAppend,
       });
       try {
@@ -393,7 +1027,6 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
 
       const staleHarness = createMergeProductionHarness({
         label: "gh293-prod-stale",
-        reply: healthyReply,
       });
       try {
         const dry = await staleHarness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
@@ -411,7 +1044,6 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
 
       const unresolvedHarness = createMergeProductionHarness({
         label: "gh293-prod-unresolved",
-        reply: healthyReply,
       });
       try {
         const dry = await unresolvedHarness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
@@ -419,11 +1051,13 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
         unresolvedHarness.setReply((url) => {
           if (url.includes("/pulls?")) return { status: 200, body: [] };
           if (url.includes("/pulls/")) return { status: 404, body: {} };
-          return healthyReply(url);
+          return harness.defaultReply(url);
         });
         const unresolved = await unresolvedHarness.run(["merge", MERGE_PROD_REF, "--json"]);
-        expect(unresolved.exitCode).toBe(exitOf("merge.transaction-aborted"));
-        expect(envelopeOf(unresolved).error?.code).toBe("merge.transaction-aborted");
+        // The pre-resolution placeholder routing (phase 2): the two
+        // request-resolution returns refuse the request row's own identity.
+        expect(unresolved.exitCode).toBe(exitOf("merge.request-unresolved"));
+        expect(envelopeOf(unresolved).error?.code).toBe("merge.request-unresolved");
         expect(String(envelopeOf(unresolved).error?.summary)).not.toContain("fallback.internal");
         expect(
           (MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).includes(
@@ -478,7 +1112,6 @@ describe("TC-ENGINE-054 the configuration-read branch is classified, never conta
       for (const cell of cells) {
         const harness = createMergeProductionHarness({
           label: `gh293-prod-config-${cell.label}`,
-          reply: healthyReply,
           configYaml: cell.configYaml,
         });
         try {

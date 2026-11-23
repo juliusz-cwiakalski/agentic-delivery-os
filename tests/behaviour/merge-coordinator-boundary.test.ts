@@ -135,8 +135,9 @@ describe("TC-F1-008 a declared landing gap refuses without an attempt", () => {
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       await harness.run();
-      // Only the head read happened: no landing call and no local mutation.
-      expect(harness.events).toEqual(["git-read-head"]);
+      // Only the resolution's bounded record read happened: no landing call,
+      // no local mutation, and no checkout head read (NFR-6).
+      expect(harness.events).toEqual(["git-read-change-record:9f21c0e"]);
       expect(harness.counts.landing).toBe(0);
       // A third identity would move the declared merge row count, so the refusal
       // cannot be a new `merge.landing-gap` row.

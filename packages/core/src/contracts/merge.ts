@@ -66,8 +66,26 @@ export type MergeDeclaredGateSet = {
 };
 
 /**
- * The shipped default set: the five built-ins on the battery surface, in
- * shipped order, plus the merge-only `tracker-freshness` entry (DEC-2).
+ * The admitted surface sets of the five reserved built-ins (F-2, DM-3,
+ * AC-F2-7): a declared built-in entry's surface must lie in its admitted set —
+ * `battery` or `both` for `ci-green` (the reviewed, documented check-gate
+ * opt-out is declaring it `battery`), `battery` alone for the other four. A
+ * built-in's recipe and class are immutable and an omitted class adopts the
+ * shipped one.
+ */
+export const MERGE_BUILTIN_ADMITTED_SURFACES = {
+  "lifecycle-finalization": ["battery"],
+  "ci-green": ["battery", "both"],
+  "push-parity": ["battery"],
+  "owner-gate": ["battery"],
+  "squash-preflight": ["battery"],
+} as const satisfies Record<MergeBuiltinGateId, readonly MergeGateSurface[]>;
+
+/**
+ * The shipped default set makes `ci-green` merge-applicable (GH-366 F-2), so
+ * the effective merge projection is two entries: `ci-green` and
+ * `tracker-freshness`. The entry-id sequence — and therefore the effective
+ * gate-set identity — does not change.
  */
 export const MERGE_DEFAULT_GATE_ENTRIES = [
   {
@@ -75,7 +93,7 @@ export const MERGE_DEFAULT_GATE_ENTRIES = [
     recipe: "lifecycle-finalization",
     surface: "battery",
   },
-  { id: "ci-green", recipe: "ci-green", surface: "battery" },
+  { id: "ci-green", recipe: "ci-green", surface: "both" },
   { id: "push-parity", recipe: "push-parity", surface: "battery" },
   {
     id: "owner-gate",
@@ -181,6 +199,7 @@ export const MERGE_GIT_OPERATIONS = [
   "read-head",
   "read-base-containment",
   "resolve-ref",
+  "read-change-record",
   "rebase-refresh",
   "squash-land",
   "delete-branch",
@@ -312,6 +331,21 @@ export type MergeReport = {
   readonly postLanding: readonly MergePostLandingStep[];
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
+  /**
+   * The evaluated required-check posture (F-2): the count of required names the
+   * run evaluated and the size of the derived merge-applicable required-check
+   * set, so an authored check posture is visible rather than silent.
+   */
+  readonly requiredChecks?: {
+    readonly evaluatedCount: number;
+    readonly setSize: number;
+  };
+  /**
+   * The resolved object the run decided from (DM-2): present on a run that
+   * resolved a request at its head; absent on a converged replay, which reports
+   * `replayed=true` with the single matched request identity instead.
+   */
+  readonly resolution?: MergeResolutionFacts;
 };
 
 /** One declared override's dry-run authorization report (GAP-12). */
@@ -331,6 +365,26 @@ export type MergeDryRunReport = {
   readonly gates: readonly MergeGateVerdictRecord[];
   readonly gatesOmitted: number;
   readonly authorizations: readonly MergeDryRunAuthorization[];
+  /**
+   * The evaluated required-check posture (F-2): the count of required names the
+   * run evaluated and the size of the derived merge-applicable required-check
+   * set, so an authored check posture is visible rather than silent.
+   */
+  readonly requiredChecks?: {
+    readonly evaluatedCount: number;
+    readonly setSize: number;
+  };
+  /**
+   * The resolved object the dry run describes (F-5, DM-2): the same object the
+   * real merge would land. Absent on a converged replay, which reports
+   * `replayed=true` with the single matched request identity instead, performs
+   * zero mutations, lands nothing, and reports no post-landing steps.
+   */
+  readonly resolution?: MergeResolutionFacts;
+  /** `true` on the converged-replay dry run (DM-2); never a merge verdict. */
+  readonly replayed?: boolean;
+  /** The single matched request's identity on a converged-replay dry run. */
+  readonly requestIdentity?: string;
 };
 
 /** Machine `data` UTF-8 byte cap (NFR-4). */
@@ -366,3 +420,111 @@ export const MERGE_GATE_ERROR_PREFIX = "merge.gate." as const;
 export const MERGE_GATE_ERROR_SUFFIX = ".failed" as const;
 /** The documented family template. */
 export const MERGE_GATE_ERROR_TEMPLATE = "merge.gate.<gate-id>.failed" as const;
+
+/**
+ * The closed refusal `operation` vocabulary (DEC-11, AC-F3-1): nine tokens plus
+ * `-`, rendered as the dedicated `operation=<token>` field beside a refusal's
+ * code, and validated at the rendering site where an out-of-vocabulary value is
+ * a rendering failure and never passed through.
+ *
+ * The set is a declared FILTER over the delivered source-name vocabulary: every
+ * provider read a refusal can cite has its token — `delivery-registry`,
+ * `repository-ci-workflow`, `github-check-runs`, `github-work-item`,
+ * `github-delivery-request-list` (either state filter on a delivery-request
+ * list read: the open list on the resolution path, the closed-state merged read
+ * on the convergence attempt), and `github-delivery-request-detail` (the
+ * delivered single-request read the landing decision makes for mergeability,
+ * and its unknown-recovery re-read). Two delivered members are excluded for
+ * stated reasons: `repository-head` (no checkout-head read exists on this path,
+ * and NFR-6 forbids one) and `pm-notes` (the change record is obtained as a git
+ * object, so the operation that can fail is a local read and the local tokens
+ * name it). The set adds the two local-read tokens the delivered vocabulary
+ * does not name (`local-change-record-read`, `local-git-object-read`), the one
+ * landing-operation token (`github-merge-delivery-request`), and `-` where the
+ * refusal names no operation (a gate refusal, a stale or unverified evidence
+ * set, or a condition about a declaration's value rather than a read). The
+ * battery's own source-name inventory is not widened by this export.
+ */
+export const MERGE_REFUSAL_OPERATIONS = [
+  "github-work-item",
+  "github-check-runs",
+  "github-delivery-request-list",
+  "github-delivery-request-detail",
+  "github-merge-delivery-request",
+  "repository-ci-workflow",
+  "delivery-registry",
+  "local-change-record-read",
+  "local-git-object-read",
+  "-",
+] as const;
+export type MergeRefusalOperation = (typeof MERGE_REFUSAL_OPERATIONS)[number];
+
+/**
+ * The pinned resolution constants (F-1 step 7, TC-MRG-004): contract constants,
+ * not configuration. The declaration cap is measured in characters and a longer
+ * value is refused, never truncated; a 256-character value is accepted and a
+ * 257-character one is refused.
+ */
+export const MERGE_BRANCH_DECLARATION_MAX_CHARS = 256 as const;
+/** The candidate-set cap for the change-branch resolution. */
+export const MERGE_BRANCH_CANDIDATE_MAX = 3 as const;
+/** The per-record byte cap for the bounded local change-record read. */
+export const MERGE_CHANGE_RECORD_MAX_BYTES = 262_144 as const;
+
+/**
+ * The closed six-reason vocabulary of the one `merge.branch-unresolved` refusal
+ * (F-1 step 7) and its declared precedence (Appendix A step 5).
+ */
+export const MERGE_BRANCH_REFUSAL_REASONS = [
+  "declaration-missing",
+  "declaration-unusable",
+  "declaration-disagrees",
+  "record-missing",
+  "record-invalid",
+  "record-unreadable",
+] as const;
+export type MergeBranchRefusalReason = (typeof MERGE_BRANCH_REFUSAL_REASONS)[number];
+
+/**
+ * The declared precedence the resolution chooses one reason by (Appendix A
+ * step 5): the most diagnostic cause wins, so one run names the repair.
+ */
+export const MERGE_BRANCH_REASON_PRECEDENCE: readonly MergeBranchRefusalReason[] = [
+  "declaration-disagrees",
+  "record-invalid",
+  "record-unreadable",
+  "record-missing",
+  "declaration-missing",
+  "declaration-unusable",
+];
+
+/**
+ * The closed three-reason vocabulary of `merge.request-unresolved` (F-1):
+ * `ambiguous-open-request` and `head-unresolved` are read from the open page;
+ * `no-open-request` comes from the convergence attempt.
+ */
+export const MERGE_REQUEST_REFUSAL_REASONS = [
+  "no-open-request",
+  "ambiguous-open-request",
+  "head-unresolved",
+] as const;
+export type MergeRequestRefusalReason = (typeof MERGE_REQUEST_REFUSAL_REASONS)[number];
+
+/** The one declared resolution source (F-1 step 5). */
+export const MERGE_RESOLUTION_SOURCES = ["declared-at-head"] as const;
+export type MergeResolutionSource = (typeof MERGE_RESOLUTION_SOURCES)[number];
+
+/**
+ * The resolved change context both reports carry (DM-2): the resolved branch,
+ * the declared-at-head source, the matched request identity, the observed
+ * candidate count, the observed matched request identities on a convergence
+ * attempt, and the resolved head. Never persisted as a record.
+ */
+export type MergeResolutionFacts = {
+  readonly source: MergeResolutionSource;
+  readonly branch: string;
+  readonly requestIdentity: string;
+  readonly candidateCount: number;
+  readonly matchedIdentities?: readonly string[];
+  readonly headSha: string;
+};

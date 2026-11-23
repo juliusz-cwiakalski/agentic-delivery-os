@@ -13,6 +13,7 @@ import {
   type MergeConfigRead,
 } from "../../../packages/cli/src/commands/merge";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
+import type { MergeDeliveryRequestInput } from "../../../packages/core/src/contracts/index";
 import {
   type DeliveryRequest,
   MERGE_GATE_VERIFICATION_SCHEMA,
@@ -33,7 +34,6 @@ import type {
   MergeLandResult,
   MergeTransactionPorts,
 } from "../../../packages/core/src/domain/merge-transaction";
-import type { MergeDeliveryRequestInput } from "../../../packages/core/src/contracts/index";
 import {
   appendMergeGateVerification,
   appendMergeTransaction,
@@ -162,6 +162,44 @@ export type MergeHarnessOptions = {
   readonly workItem?: WorkItem | { readonly fault: string };
   readonly checkRuns?: CheckRunPage | { readonly fault: string };
   readonly request?: DeliveryRequest | { readonly fault: string };
+  /**
+   * The bounded open-request list page the change-branch resolution reads
+   * first (GH-366 F-1). Default: one open page carrying the request fixture,
+   * unsaturated.
+   */
+  readonly openRequests?:
+    | { readonly items: readonly DeliveryRequest[]; readonly saturated?: boolean }
+    | { readonly fault: string };
+  /**
+   * The delivered merged-request read outcome for the convergence attempt,
+   * with its additive matched-identities member. Default: the empty
+   * matched-identity set (the page was read and matched nothing).
+   */
+  readonly mergedRequest?:
+    | {
+        readonly observation: "observed";
+        readonly request: DeliveryRequest;
+        readonly matchedIdentities?: readonly string[];
+      }
+    | { readonly observation: "unavailable"; readonly matchedIdentities?: readonly string[] }
+    | { readonly observation: "invalid"; readonly detail: string };
+  /**
+   * The delivered CI-workflow read the battery's `ci-green` gate uses (F-2).
+   * Default: a healthy read declaring the check-run page's own pipelines, so
+   * the derived required set is green on the default page.
+   */
+  readonly ciWorkflow?:
+    | { readonly outcome: "read"; readonly names: readonly string[] }
+    | { readonly outcome: "failed" | "absent"; readonly names?: undefined };
+  /**
+   * The change record the bounded local read observes at a candidate head,
+   * keyed by the head SHA (the default answers for any head). `declaration` is
+   * the parsed `branch` value; `missing` plants a record-missing head.
+   */
+  readonly recordsAtHead?: Record<
+    string,
+    { readonly declaration?: string; readonly path?: string } | { readonly missing: true }
+  >;
   readonly git?: MergeGitFacts;
   /** The adapter's declared landing gap (`undefined` = supported). */
   readonly landingGap?: "adapter-not-implemented" | "provider-unsupported" | "plan-restriction";
@@ -197,6 +235,14 @@ export type MergeHarness = {
     landing: number;
     nowIso: number;
     nowMs: number;
+    /** The bounded open-list read the resolution performs first. */
+    openRequests: number;
+    /** The delivered merged-request read on a convergence attempt. */
+    mergedRequest: number;
+    /** The bounded local record reads at candidate heads. */
+    recordReads: number;
+    /** The fixed-argv git invocations the record reads issue (≤ 2 per read). */
+    recordGitInvocations: number;
     order: string[];
   };
   readonly events: string[];
@@ -210,6 +256,23 @@ export type MergeHarness = {
       | DeliveryRequest
       | { readonly fault: string }
       | (() => DeliveryRequest | { readonly fault: string }),
+  ): void;
+  /** Replace the open-list page (the resolution's primary read). */
+  setOpenRequests(
+    value:
+      | { readonly items: readonly DeliveryRequest[]; readonly saturated?: boolean }
+      | { readonly fault: string },
+  ): void;
+  /** Replace the merged-request read outcome (the convergence attempt). */
+  setMergedRequest(value: {
+    readonly observation: "observed";
+    readonly request: DeliveryRequest;
+    readonly matchedIdentities?: readonly string[];
+  }): void;
+  /** Plant (or clear) a record fixture at one head. */
+  setRecordAtHead(
+    headSha: string,
+    value: { readonly declaration?: string; readonly path?: string } | { readonly missing: true },
   ): void;
   setAppendWaiverFault(code: string | undefined): void;
   setAppendTransactionFault(code: string | undefined): void;
@@ -255,6 +318,10 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     landing: 0,
     nowIso: 0,
     nowMs: 0,
+    openRequests: 0,
+    mergedRequest: 0,
+    recordReads: 0,
+    recordGitInvocations: 0,
     order: [] as string[],
   };
   const events: string[] = [];
@@ -295,6 +362,53 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     | (() => DeliveryRequest | { readonly fault: string }) = options.request ?? baseRequest();
   let appendWaiverFault = options.appendWaiverFault;
   let appendTransactionFault = options.appendTransactionFault;
+  // The resolution facts (GH-366 F-1). The defaults keep the delivered suite
+  // semantics: the request fixture is the single open page entry (a merged
+  // request fact moves to the merged read instead — an open page never carries
+  // one), the record read answers for any head with the declared branch, and
+  // the merged read observes the empty set unless a merged request is served.
+  const branchDeclaration = options.branch ?? "feat/GH-301/merge";
+  type OpenPage = { readonly items: readonly DeliveryRequest[]; readonly saturated: boolean };
+  type MergedFact =
+    | {
+        readonly observation: "observed";
+        readonly request: DeliveryRequest;
+        readonly matchedIdentities: readonly string[];
+      }
+    | { readonly observation: "unavailable"; readonly matchedIdentities?: readonly string[] }
+    | { readonly observation: "invalid"; readonly detail: string };
+  const emptyMerged = (): MergedFact => ({ observation: "unavailable", matchedIdentities: [] });
+  let openPageOverride: OpenPage | { readonly fault: string } | undefined;
+  let mergedFact: MergedFact | undefined = options.mergedRequest;
+  let recordsFact: Record<
+    string,
+    { readonly declaration?: string; readonly path?: string } | { readonly missing: true }
+  > = options.recordsAtHead ?? {};
+  let lastOpenPage: readonly DeliveryRequest[] = [];
+  const currentRequest = (): DeliveryRequest | { readonly fault: string } =>
+    typeof requestFact === "function" ? requestFact() : requestFact;
+  const openRequestsOf = (): OpenPage | { readonly fault: string } => {
+    if (openPageOverride !== undefined) return openPageOverride;
+    if (options.openRequests !== undefined) return options.openRequests;
+    const fact = currentRequest();
+    if ("fault" in fact) return { fault: fact.fault };
+    return {
+      items: fact.reviewState === "merged" ? [] : [fact],
+      saturated: false,
+    };
+  };
+  const mergedOf = (): MergedFact => {
+    if (mergedFact !== undefined) return mergedFact;
+    const fact = currentRequest();
+    if (!("fault" in fact) && fact.reviewState === "merged") {
+      return {
+        observation: "observed",
+        request: fact,
+        matchedIdentities: [fact.identity.entityId],
+      };
+    }
+    return emptyMerged();
+  };
 
   const resolvedSet =
     options.gateSetOverride ??
@@ -402,6 +516,56 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
         return { ok: false as const, code: fact.fault };
       }
       return { ok: true as const, request: fact };
+    },
+    readOpenRequests: async () => {
+      counts.openRequests += 1;
+      counts.order.push("open-requests");
+      const page = openRequestsOf();
+      if ("fault" in page) {
+        return { ok: false as const, code: page.fault };
+      }
+      // The record read derives a candidate's default declaration from THIS
+      // page snapshot: the request factory is never re-consumed by a later
+      // read.
+      lastOpenPage = page.items;
+      return { ok: true as const, value: page };
+    },
+    readMergedRequest: async () => {
+      counts.mergedRequest += 1;
+      counts.order.push("merged-request");
+      return mergedOf();
+    },
+    readCiWorkflow: async () =>
+      options.ciWorkflow ?? {
+        outcome: "read" as const,
+        names: baseCheckRuns().items.map((run) => run.pipelineName),
+      },
+    readChangeRecordAtHead: async (headSha: string) => {
+      counts.recordReads += 1;
+      // The bounded local read issues at most two fixed-argv git invocations
+      // (the ls-tree locate, then one blob read).
+      counts.recordGitInvocations += 2;
+      counts.order.push("record-at-head");
+      events.push(`git-read-change-record:${headSha.slice(0, 7)}`);
+      const record = recordsFact[headSha];
+      if (record !== undefined && "missing" in record) {
+        return { ok: false as const, reason: "record-missing" };
+      }
+      const path =
+        record?.path ?? `doc/changes/2026-11/2026-11-06--GH-301--fixture/chg-GH-301-pm-notes.yaml`;
+      // The delivered default: the record at a candidate head declares that
+      // candidate's own source ref (the accept-all delivered fixture), so a
+      // page whose entry carries a different slug still resolves to that
+      // entry. The page snapshot comes from the resolution read (never a
+      // second read of the request factory); a planted record fixture wins;
+      // the static declaration is the last fallback.
+      const declaration =
+        record?.declaration ??
+        lastOpenPage.find((item) => "headSha" in item && item.headSha === headSha)?.sourceRef ??
+        branchDeclaration;
+      return declaration === undefined
+        ? { ok: true as const, path }
+        : { ok: true as const, path, declaration };
     },
     readHead: () => recordingGit.head(),
     readBaseContainment: (sha) => recordingGit.isContained(sha, options.baseRef ?? MERGE_BASE),
@@ -515,6 +679,15 @@ export const createMergeHarness = (options: MergeHarnessOptions = {}): MergeHarn
     },
     setRequest: (value) => {
       requestFact = value;
+    },
+    setOpenRequests: (value) => {
+      openPageOverride = value;
+    },
+    setMergedRequest: (value) => {
+      mergedFact = value;
+    },
+    setRecordAtHead: (headSha, value) => {
+      recordsFact = { ...recordsFact, [headSha]: value };
     },
     setAppendWaiverFault: (code) => {
       appendWaiverFault = code;

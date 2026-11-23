@@ -11,6 +11,7 @@
  * producing a refusal once the job is declared and labelled with the head.
  */
 import { describe, expect, test } from "bun:test";
+import { resolveAppErrorCode } from "../../packages/cli/src/classify";
 import {
   ERROR_TABLE_FAMILIES,
   MERGE_DEFAULT_GATE_ENTRIES,
@@ -393,18 +394,30 @@ describe("TC-F3-004 an undeclared job is not gate evidence, proven by a declared
 });
 
 describe("TC-F3-005 a check-run page for another head is not head evidence", () => {
-  test("the other-head page neither refuses nor names the job", async () => {
+  test("the other-head page is not evidence for the declared job, and the CI gate refuses naming both SHAs", async () => {
     const { raw, set } = declaredWorkspace();
-    const harness = createMergeHarness({ gateSet: raw, checkRuns: pageWith("failed", OTHER_HEAD) });
+    const harness = createMergeHarness({
+      gateSet: raw,
+      checkRuns: pageWith("failed", OTHER_HEAD),
+      // The CI gate's expected set declares only the green pipelines, so the
+      // red job is not CI-gate evidence either; the foreign-SHA page itself is
+      // the declared refusal (AC-F2-4).
+      ciWorkflow: { outcome: "read", names: ["CI / lint"] },
+    });
     try {
       harness.seedVerification(recordedGreen(set));
       const outcome = await transactionOf(harness);
-      expect(outcome.kind).toBe("merged");
-      // The report replays the recorded verdicts; the *failure* evidence is
-      // what must not exist, and no attribution is produced.
-      expect(Object.hasOwn(outcome, "failure")).toBe(false);
+      expect(outcome.kind).toBe("refused");
+      if (outcome.kind === "refused") {
+        expect(outcome.failure.code).toBe("merge.gate.ci-green.failed");
+        expect(outcome.failure.evidence.detail).toBe("head-unresolved");
+        expect(outcome.failure.evidence.recordedSha).toBe(OTHER_HEAD);
+        expect(outcome.failure.evidence.currentSha).toBe(MERGE_HEAD);
+      }
+      // The declared job is never named from the foreign page: no attribution
+      // and no declared-entry finding exist on the outcome.
       expect(JSON.stringify(outcome)).not.toContain("attribution");
-      expect(harness.counts.landing).toBe(1);
+      expect(harness.counts.landing).toBe(0);
     } finally {
       harness.cleanup();
     }
@@ -423,13 +436,17 @@ describe("TC-F3-005 a check-run page for another head is not head evidence", () 
     }
   });
 
-  test("control M38: accepting the other-head page as evidence fails naming both SHAs", async () => {
+  test("control M38: the other-head page drives the CI gate refusal naming both SHAs", async () => {
     const { raw, set } = declaredWorkspace();
-    const harness = createMergeHarness({ gateSet: raw, checkRuns: pageWith("failed", OTHER_HEAD) });
+    const harness = createMergeHarness({
+      gateSet: raw,
+      checkRuns: pageWith("failed", OTHER_HEAD),
+      ciWorkflow: { outcome: "read", names: ["CI / lint"] },
+    });
     try {
       harness.seedVerification(recordedGreen(set));
       const outcome = await transactionOf(harness);
-      expect(outcome.kind).toBe("merged");
+      expect(outcome.kind).toBe("refused");
       expect(MERGE_HEAD).not.toBe(OTHER_HEAD);
       // The evaluator answers `unknown` for the other head, so a caller that
       // treated "not pass" as evidence would name the job from a foreign page.
@@ -443,6 +460,41 @@ describe("TC-F3-005 a check-run page for another head is not head evidence", () 
   });
 });
 
+describe("TC-MRG-027 a pending cause converges without an operator act, and the remediation says so", () => {
+  test("a queued required job refuses with the family remediation; a green page re-run converges", async () => {
+    const { raw, set } = declaredWorkspace();
+    const harness = createMergeHarness({ gateSet: raw, checkRuns: pageWith("queued") });
+    try {
+      harness.seedVerification(recordedGreen(set));
+      const { failure, summary } = await refusedOf(harness);
+      expect(failure.code).toBe(`merge.gate.${WORKSPACE_JOB}.failed`);
+      expect(failure.evidence.detail).toBe("ci-pending");
+      // The row's remediation names the producing command and the re-run; it
+      // never instructs clearing an unnamed condition (AC-F3-5).
+      expect(summary).toContain("remediation=Resolve the named merge-applicable gate evidence");
+      expect(summary).toContain("re-run `verify gates`, then retry the merge");
+      // The pending cause needs no operator act: once the check is green on
+      // the same head, a plain re-run converges with one landing.
+      harness.setCheckRuns(pageWith("succeeded"));
+      const outcome = await transactionOf(harness);
+      expect(outcome.kind).toBe("merged");
+      expect(harness.counts.landing).toBe(1);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("control: the family row's single retryable value is false, never a pending-specific true", () => {
+    const family = ERROR_TABLE_FAMILIES.find((entry) => entry.slotPrefix === "merge.gate.");
+    expect(family?.retryable).toBe(false);
+    // A family instance resolves through the family, so its retryable is the
+    // family's single declared value.
+    const resolved = resolveAppErrorCode("merge.gate.workspace-tests.failed");
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok) expect(resolved.entry.retryable).toBe(family?.retryable);
+  });
+});
+
 describe("TC-F3-006 a provider-required refusal is classified, never retried or bypassed", () => {
   test("the guarded landing is refused once and the checks posture classifies it", async () => {
     const { raw, set } = postureWorkspace();
@@ -451,6 +503,9 @@ describe("TC-F3-006 a provider-required refusal is classified, never retried or 
       request: baseRequest({ mergeableState: "not-mergeable" }),
       landing: { ok: false, code: "provider.outage" },
       checkRuns: pageWith("queued"),
+      // The CI gate's expected set declares only the green pipelines, so the
+      // queued declared job reaches the post-landing posture classification.
+      ciWorkflow: { outcome: "read", names: ["CI / lint"] },
     });
     try {
       harness.seedVerification(verificationFor(set, { verifiedAt: VERIFIED_AT }));
@@ -459,7 +514,8 @@ describe("TC-F3-006 a provider-required refusal is classified, never retried or 
       expect(failure.domainKind).toBe("merge");
       expect(failure.exit).toBe(1);
       expect(failure.evidence.detail).toBe("ci-pending");
-      // One guarded attempt, one post-refusal re-read: never a retry.
+      // One guarded attempt, one post-refusal re-read, and the landing
+      // decision's own single-request read: never a retry.
       expect(harness.counts.landing).toBe(1);
       expect(harness.counts.requestDetail).toBe(2);
       // The refusal is the declared family instance, never a new identity.

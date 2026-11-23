@@ -22,6 +22,7 @@ import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type { DeliveryRequest } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 import {
+  baseCheckRuns,
   baseRequest,
   createMergeHarness,
   MERGE_CLOCK_MS,
@@ -208,17 +209,38 @@ export const runSerialThree = async (
         restoreCheckout: () => git.restoreCheckout(),
       },
       request: serialRequest({ mergeableState: "mergeable" }),
+      // The check page is bound to the fixture's tracked head: the CI gate's
+      // head evidence is the resolved head (5a5a...), not the fixture default.
+      checkRuns: { ...baseCheckRuns(), sha: SERIAL_BASE_HEAD },
     });
     try {
       harness.seedVerification(verificationRecord({ changeRef, headSha: SERIAL_BASE_HEAD }));
       let readIndex = 0;
+      // Each invocation merges its own change: the served request carries the
+      // invocation's own conforming source ref (the resolution candidate
+      // filter matches the invocation ref's convention, not a shared branch).
       harness.setRequest(() => {
         const readingIndex = Math.min(readIndex, invocation.readings.length - 1);
         readIndex += 1;
-        return invocation.readings[readingIndex] as DeliveryRequest;
+        const reading = invocation.readings[readingIndex] as DeliveryRequest;
+        return { ...reading, sourceRef: `feat/${changeRef}/serial` };
       });
+      // The declared CI workflow (F-2): a healthy read naming the check page's
+      // green jobs, so the merge-applicable CI gate evaluates green and the
+      // serial sequence exercises the landing/sync paths it owns.
       const runtime =
-        mode === "pre-fix-substituted" ? withPreFixRefresh(harness.runtime, git) : harness.runtime;
+        mode === "pre-fix-substituted"
+          ? withPreFixRefresh(harness.runtime, git)
+          : {
+              ...harness.runtime,
+              createPorts: (changeRef: string) => ({
+                ...harness.runtime.createPorts(changeRef),
+                readCiWorkflow: async () => ({
+                  outcome: "read" as const,
+                  names: ["CI / test (18)", "CI / lint"],
+                }),
+              }),
+            };
       const definition = createMergeCommandDefinition(runtime);
       const headBefore = (await git.head()) as string;
       const landingsBefore = harness.counts.landing;

@@ -44,6 +44,8 @@ const CHANGED = [
   "merge-bounds",
   "merge-determinism",
   "merge-probe",
+  // GH-366 moves the production composition to the resolution reads (F-1).
+  "merge-production-composition",
 ] as const;
 
 const GREEN = [
@@ -52,7 +54,6 @@ const GREEN = [
   "merge-freshness",
   "merge-gate-set",
   "merge-privacy",
-  "merge-production-composition",
   "merge-verification-record",
 ] as const;
 
@@ -81,16 +82,24 @@ const OBLIGATIONS: Record<(typeof CHANGED)[number], readonly string[]> = {
     "AC-F3-3",
     "expect(errorOf(result)).toBeUndefined()",
   ],
+  // GH-366: the composition cells run the resolution reads — the open-list
+  // read, the bounded local record read at the request head, and the declared
+  // refusal identities they emit.
+  "merge-production-composition": [
+    "harness.defaultReply",
+    "merge.request-unresolved",
+    "merge.work-item-unresolved",
+    "TC-MRG-051",
+  ],
 };
 
-/** The seven green suites' delivered assertion inventories. */
+/** The six green suites' delivered assertion inventories. */
 const GREEN_INVENTORY: Record<(typeof GREEN)[number], readonly string[]> = {
   "merge-classification": ["TC-MERGE-017"],
   "merge-dry-run": ["TC-MERGE-028"],
   "merge-freshness": ["TC-MERGE-007"],
   "merge-gate-set": ["TC-MERGE-002", "TC-MERGE-003", "TC-MERGE-004"],
   "merge-privacy": ["TC-MERGE-034"],
-  "merge-production-composition": ["TC-ENGINE-050", "TC-ENGINE-051", "TC-ENGINE-052"],
   "merge-verification-record": ["TC-MERGE-005", "TC-MERGE-006"],
 };
 
@@ -123,12 +132,12 @@ describe("TC-F1-014 the delivered population is sixteen suites", () => {
     }
     expect([...CHANGED, ...GREEN].sort()).toEqual([...DELIVERED].sort());
     expect(new Set([...CHANGED, ...GREEN]).size).toBe(16);
-    expect(CHANGED).toHaveLength(9);
-    expect(GREEN).toHaveLength(7);
+    expect(CHANGED).toHaveLength(10);
+    expect(GREEN).toHaveLength(6);
   });
 });
 
-describe("TC-F1-014 the nine changed suites carry their post-change obligation", () => {
+describe("TC-F1-014 the ten changed suites carry their post-change obligation", () => {
   for (const suite of CHANGED) {
     test(`${suite}: carries its declared obligation`, () => {
       const text = sourceOf(suite);
@@ -162,7 +171,7 @@ describe("TC-F1-014 the nine changed suites carry their post-change obligation",
   });
 });
 
-describe("TC-F1-014 the seven green suites stay green unedited", () => {
+describe("TC-F1-014 the six green suites stay green unedited", () => {
   for (const suite of GREEN) {
     test(`${suite}: keeps its delivered assertion inventory`, () => {
       const text = sourceOf(suite);

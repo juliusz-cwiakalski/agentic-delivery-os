@@ -89,6 +89,8 @@ describe("TC-F1-009 zero composed callers of the local landing and refresh", () 
       "read-head",
       "read-base-containment",
       "resolve-ref",
+      // GH-366 adds the bounded change-record read at candidate heads.
+      "read-change-record",
       "rebase-refresh",
       "squash-land",
       "delete-branch",

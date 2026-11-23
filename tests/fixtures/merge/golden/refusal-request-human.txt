@@ -1,0 +1,10 @@
+example-product: merge.request-unresolved
+summary: result=refused; condition=merge.request-unresolved
+command=merge
+ref=GH-301
+operation=-
+request-reason=no-open-request
+open=0
+candidates=0
+matched-identities=none
+remediation=Repair the named open-request condition for the change — open a conforming request, resolve the named ambiguity, or push the request's full-SHA head — then re-run; the refusal names the change ref, the observed counts, and the reason.

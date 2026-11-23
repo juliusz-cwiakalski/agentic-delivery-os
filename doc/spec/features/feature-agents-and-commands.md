@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-19
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290", "GH-313", "GH-297", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-346", "GH-350"]
+  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290", "GH-313", "GH-297", "GH-296", "GH-287", "GH-298", "GH-299", "GH-295", "GH-346", "GH-350", "GH-366"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---
@@ -46,7 +46,7 @@ The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/comm
 - **Frontmatter (F-3):** Each `.md` carries frontmatter (`description`, `mode`, and an optional `claude:` block). See the model-configuration mechanism below.
 - **Authoring/tuning discipline (F-4):** Creating or modifying agents/commands is delegated to `@toolsmith` (by reference — see `.opencode/agent/toolsmith.md`), which specializes in prompt engineering and model-format-aware design. Hand-editing is discouraged; related tools are tuned together because agents hand off to each other.
 - **Delivery-integration invariants (F-9):** Lifecycle commits route through the `commit` primitive or the thin `@committer`; phase state is written only through the `phase` family; the PR URL is a pm-notes `notes:` entry.
-- **Milestone rules in the prompts (F-10):** The `@pm` prompt requires a milestone, resolved from the project's existing milestone set, on every created ticket and verifies the attachment at intake before artifact phases; agents never create a milestone autonomously. The `@spec-writer` prompt requires `change.milestone` in change-spec front matter. The `@bootstrapper` prompt's tracker-instruction guidance generates a Milestone Attachment section (convention, attachment at creation from the existing set, no autonomous creation, intake verification, capture exemption) so a bootstrapped project inherits the rule. The project-specific milestone set, resolution rule, label vocabulary, and intake verification live in `.ai/agent/pm-instructions.md`. The operating rule is documented in [Milestone Governance](feature-milestone-governance.md).
+- **Milestone rules in the prompts (F-10):** The `@pm` prompt requires a milestone, resolved from the project's existing milestone set, on every created ticket and verifies the attachment at intake before artifact phases; agents never create a milestone autonomously. The `@spec-writer` prompt requires `change.milestone` in change-spec front matter. The `@bootstrapper` prompt's tracker-instruction guidance generates a Milestone Attachment section (convention, attachment at creation from the existing set, no autonomous creation, intake verification, capture exemption) so a bootstrapped project inherits the rule. The project-specific milestone set, resolution rule, label vocabulary, and intake verification live in `.ai/agent/pm-instructions.md`. The `@pm` surface also carries the change-record `branch` declaration obligation (F-1's authoring rule): a change record declares its branch — a top-level key on the pm-notes document, capped at 256 characters, equal to the branch's delivery-request source ref — when the change is opened, and `.ai/agent/pm-instructions.md` states the obligation with the cap and the closed refusal vocabulary. The operating rule is documented in [Milestone Governance](feature-milestone-governance.md).
 
 ### The Two-Layer Model-Configuration Mechanism (F-5) — must be understood precisely
 

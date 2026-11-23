@@ -55,6 +55,21 @@ export type MergeGitLandResult =
     }
   | { readonly ok: false; readonly code: string };
 
+/**
+ * One bounded local change-record read at a head (F-1 step 4, GH-366): at most
+ * two fixed-argv git invocations — a `ls-tree -r --name-only` locate, then one
+ * blob read — honouring the record byte cap, with no shell, no retry, no
+ * network and no fetch. A head object the checkout does not hold is
+ * `record-unreadable`, and no fetch runs on this path (NG-7).
+ */
+export type MergeGitRecordRead =
+  | { readonly ok: true; readonly path: string; readonly text: string }
+  | {
+      readonly ok: false;
+      readonly reason: "record-missing" | "record-unreadable";
+      readonly detail?: string;
+    };
+
 /** The bounded git merge seam. */
 export type GitMergeSeam = {
   readonly head: () => Promise<string | undefined>;
@@ -64,6 +79,18 @@ export type GitMergeSeam = {
   readonly commitCount: (ref: string) => Promise<number | undefined>;
   readonly parentOf: (sha: string) => Promise<string | undefined>;
   readonly treeOf: (sha: string) => Promise<string | undefined>;
+  /**
+   * The bounded change-record read at a candidate's asserted head (GH-366 F-1
+   * step 4): locates the change record under the change-artifact root at that
+   * head, then reads one bounded blob. At most two fixed-argv invocations, no
+   * shell, no retry and no fetch: a missing record is `record-missing` and a head
+   * object the checkout does not hold is `record-unreadable`.
+   */
+  readonly readChangeRecord: (input: {
+    readonly headSha: string;
+    readonly workItemRef: string;
+    readonly maxBytes: number;
+  }) => Promise<MergeGitRecordRead>;
   readonly refresh: (input: {
     readonly branch: string;
     readonly baseRef: string;
@@ -244,6 +271,46 @@ export const createGitMergeSeam = (options: GitMergeSeamOptions = {}): GitMergeS
       const result = await git(["rev-parse", `${sha}^{tree}`]);
       const tree = trim(result.stdout);
       return result.status === 0 && tree.length > 0 ? tree : undefined;
+    },
+    readChangeRecord: async (input) => {
+      if (!isSafeSha(input.headSha) || !isSafeRef(input.workItemRef)) {
+        return { ok: false, reason: "record-unreadable", detail: "unsafe-head-or-ref" };
+      }
+      // Invocation 1 of 2: locate the change record for the ref at this head.
+      // The tree walk is scoped to the change-artifact root and the name filter
+      // is the delivered change convention; no shell and no glob expansion.
+      const listing = await git(["ls-tree", "-r", "--name-only", input.headSha, "doc/changes"]);
+      if (listing.status !== 0) {
+        return {
+          ok: false,
+          reason: "record-unreadable",
+          detail: `ls-tree-exit-${String(listing.status)}`,
+        };
+      }
+      const suffix = `chg-${input.workItemRef}-pm-notes.yaml`;
+      const path = listing.stdout
+        .split("\n")
+        .map((entry) => trim(entry))
+        .find((entry) => entry.endsWith(suffix) && entry.includes(`--${input.workItemRef}--`));
+      if (path === undefined) return { ok: false, reason: "record-missing" };
+      // Invocation 2 of 2: one bounded blob read; the byte cap is honoured by
+      // refusing the record, never by truncating it.
+      const blob = await git(["cat-file", "blob", `${input.headSha}:${path}`]);
+      if (blob.status !== 0) {
+        return {
+          ok: false,
+          reason: "record-unreadable",
+          detail: `cat-file-exit-${String(blob.status)}`,
+        };
+      }
+      if (blob.stdout.length > input.maxBytes) {
+        return {
+          ok: false,
+          reason: "record-unreadable",
+          detail: "record-exceeds-declared-byte-cap",
+        };
+      }
+      return { ok: true, path, text: blob.stdout };
     },
     refresh,
     squashLand,

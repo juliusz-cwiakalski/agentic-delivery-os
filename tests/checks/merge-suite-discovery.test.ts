@@ -30,6 +30,8 @@ const NEW_SUITES = [
   "tests/behaviour/defect-f4-phase-mirror.test.ts",
   "tests/behaviour/defect-f8-serial-merge-churn.test.ts",
   "tests/checks/merge-suite-discovery.test.ts",
+  // GH-366 adds the offline ambient-read absence scan for the resolution.
+  "tests/checks/merge-branch-read-scan.test.ts",
 ] as const;
 
 /** The fixture the serial defect suite reads is data, never a discovered suite. */
@@ -101,7 +103,7 @@ const egressFindings = (file: string): readonly string[] => {
 
 describe("TC-F7-006 the new suites are discovered by the existing test job", () => {
   test("every new suite is an admitted *.test.ts file and none sits under an ignored tree", () => {
-    expect(NEW_SUITES).toHaveLength(5);
+    expect(NEW_SUITES).toHaveLength(6);
     for (const file of NEW_SUITES) {
       expect(discovered(file), file).toBe(true);
     }

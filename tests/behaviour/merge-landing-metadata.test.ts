@@ -6,6 +6,8 @@
  * so the bytes are proven on the real path and not only in the harness.
  */
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createMergeCommandDefinition } from "../../packages/cli/src/commands/merge";
 import {
   baseRequest,
@@ -57,6 +59,10 @@ describe("TC-F1-006 the crafted title is verbatim and the message is the fixed t
       ref: "GH-777",
       request: baseRequest({
         identity: { systemName: "github", entityId: "777" },
+        // The request follows the invocation's ref convention (the resolution
+        // candidate filter); the delivered fixture encoded the defect where
+        // the ref was never checked against the request.
+        sourceRef: "feat/GH-777/merge",
         title: "another subject",
       }),
     });
@@ -195,16 +201,29 @@ describe("TC-F1-006/007 the production composition transmits the same crafted by
       return {
         status: 200,
         body: {
-          check_runs: [{ id: 7001, name: "CI / test", status: "completed", conclusion: "success" }],
+          check_runs: [
+            { id: 7001, name: "CI / test", status: "completed", conclusion: "success" },
+            { id: 7002, name: "CI / lint", status: "completed", conclusion: "success" },
+          ],
         },
       };
     }
     if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
     return { status: 404, body: {} };
   };
+  /** The declared CI workflow (F-2) for one harness checkout: the expected
+   * job set names the two green check jobs, so the CI gate evaluates green. */
+  const plantCiWorkflow = (checkout: string): void => {
+    mkdirSync(join(checkout, ".github", "workflows"), { recursive: true });
+    writeFileSync(
+      join(checkout, ".github", "workflows", "ci.yml"),
+      "jobs:\n  'CI / test':\n    steps: [echo]\n  'CI / lint':\n    steps: [echo]\n",
+    );
+  };
 
   test("one provider landing carries the provider title, the fixed message, and the verified head", async () => {
     const harness = createMergeProductionHarness({ label: "gh349-metadata" });
+    plantCiWorkflow(harness.checkout);
     try {
       harness.setReply((url) =>
         landingReply(url, harness.headSha, "feat(GH-293): provider-asserted title"),
@@ -245,6 +264,7 @@ describe("TC-F1-006/007 the production composition transmits the same crafted by
 
   test("an absent provider title falls back to the declared deterministic subject", async () => {
     const harness = createMergeProductionHarness({ label: "gh349-metadata-absent" });
+    plantCiWorkflow(harness.checkout);
     try {
       harness.setReply((url) => landingReply(url, harness.headSha, undefined));
       const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);

@@ -70,7 +70,11 @@ describe("TC-MERGE-015 a post-verification tracker transition is refused with it
       expect(harness.counts.workItem).toBe(1);
       expect(harness.transactions()).toHaveLength(0);
       expect(harness.waivers()).toHaveLength(0);
-      expect(harness.events.filter((event) => event.startsWith("git-"))).toEqual(["git-read-head"]);
+      // The resolution's bounded record read is the only git read on this
+      // path: no checkout head read exists (NFR-6).
+      expect(harness.events.filter((event) => event.startsWith("git-"))).toEqual([
+        "git-read-change-record:9f21c0e",
+      ]);
     } finally {
       harness.cleanup();
     }
@@ -113,7 +117,12 @@ describe("TC-MERGE-015 a post-verification tracker transition is refused with it
 
 describe("TC-MERGE-016 a CI regression on the verified head is gate evidence only when declared", () => {
   test("a red job the gate set does not declare is not gate evidence and the merge proceeds", async () => {
-    const harness = createMergeHarness({ checkRuns: redJobPage() });
+    const harness = createMergeHarness({
+      checkRuns: redJobPage(),
+      // The CI gate's expected set declares only the green pipelines: the red
+      // job is neither declared nor expected, so it is not gate evidence.
+      ciWorkflow: { outcome: "read", names: ["CI / lint"] },
+    });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run();
@@ -127,14 +136,22 @@ describe("TC-MERGE-016 a CI regression on the verified head is gate evidence onl
     }
   });
 
-  test("a red job on a different SHA is not head evidence and the merge proceeds", async () => {
+  test("a red job on a different SHA is not head evidence for the declared job, and the CI gate refuses naming both SHAs", async () => {
     const harness = createMergeHarness({
       checkRuns: redJobPage("a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"),
+      ciWorkflow: { outcome: "read", names: ["CI / lint"] },
     });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       const result = await harness.run();
-      expect(result.exitCode).toBe(0);
+      // AC-F2-4: the merge-surface CI gate never reports a pass from a page
+      // whose SHA is not the resolved head; the family row names both SHAs.
+      expect(result.exitCode).toBe(1);
+      expect(errorOf(result)?.code).toBe("merge.gate.ci-green.failed");
+      const summary = String(errorOf(result)?.summary);
+      expect(summary).toContain("recorded-sha=a1b2c3d");
+      expect(summary).toContain(`current-sha=${MERGE_HEAD.slice(0, 7)}`);
+      expect(summary).toContain("evidence=head-unresolved");
     } finally {
       harness.cleanup();
     }
@@ -164,15 +181,23 @@ describe("TC-MERGE-016 a CI regression on the verified head is gate evidence onl
 });
 
 describe("TC-MERGE-032 the read budget is exact", () => {
-  test("a clean landing reads one verification, one work item, one page, and one request", async () => {
+  test("a clean landing reads the open list, the record, one verification, the work item, the page, and the single request", async () => {
     const git = createFakeGit();
     const harness = createMergeHarness({ git });
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       expect((await harness.run()).exitCode).toBe(0);
+      // The resolution (GH-366): the open-list read and the bounded local
+      // record read at the request head, then the freshness and probe reads.
+      // No checkout head read and no request-detail read on this path.
+      expect(harness.counts.openRequests).toBe(1);
+      expect(harness.counts.recordReads).toBe(1);
       expect(harness.counts.verification).toBe(1);
       expect(harness.counts.workItem).toBe(1);
       expect(harness.counts.checkRuns).toBe(1);
+      // The landing decision's mergeability read (LF-1): the delivered
+      // single-request read of the resolved request — the list endpoint
+      // cannot carry mergeability.
       expect(harness.counts.requestDetail).toBe(1);
       expect(git.operations.filter((operation) => operation.startsWith("rebase"))).toHaveLength(0);
     } finally {
@@ -192,9 +217,10 @@ describe("TC-MERGE-032 the read budget is exact", () => {
     try {
       harness.seedVerification(verificationRecord({ verifiedAt: isoAt(-2 * MINUTE) }));
       await harness.run();
+      expect(harness.counts.openRequests).toBe(1);
       expect(harness.counts.workItem).toBe(1);
       expect(harness.counts.checkRuns).toBe(1);
-      expect(harness.counts.requestDetail).toBe(1);
+      expect(harness.counts.requestDetail).toBe(0);
       expect(git.operations).not.toContain("squash-land:feat/GH-301/merge");
     } finally {
       harness.cleanup();

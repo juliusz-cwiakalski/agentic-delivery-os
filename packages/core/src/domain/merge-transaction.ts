@@ -18,6 +18,9 @@ import {
   ERROR_TABLE,
   ERROR_TABLE_FAMILIES,
   type ErrorTableEntry,
+  MERGE_BRANCH_CANDIDATE_MAX,
+  MERGE_BRANCH_DECLARATION_MAX_CHARS,
+  MERGE_BRANCH_REASON_PRECEDENCE,
   MERGE_GATE_FRESHNESS_DEFAULT_SECONDS,
   MERGE_GATE_VERIFICATION_SCHEMA,
   MERGE_MAX_CONFLICT_PATHS,
@@ -25,9 +28,11 @@ import {
   MERGE_MAX_EVIDENCE_NAMES,
   MERGE_MAX_HUMAN_BYTES,
   MERGE_MAX_HUMAN_LINES,
+  MERGE_MAX_REF_CHARS,
   MERGE_MAX_REPORT_GATES,
   MERGE_MAX_WAIVER_REFS,
   MERGE_POST_LANDING_STEP_IDS,
+  MERGE_REFUSAL_OPERATIONS,
   MERGE_TRANSACTION_SCHEMA,
   type MergeDeliveryRequestInput,
   type MergeDryRunAuthorization,
@@ -40,7 +45,9 @@ import {
   type MergePostLandingStep,
   type MergeRefreshEvidence,
   type MergeRefusalAttribution,
+  type MergeRefusalOperation,
   type MergeReport,
+  type MergeResolutionFacts,
   type MergeStateRead,
   type MergeStateReadReason,
   type MergeTransactionRecord,
@@ -55,6 +62,7 @@ import {
   type VerifyGateReason,
   type WorkItem,
 } from "#contracts";
+import { branchConvention } from "./closeout.js";
 import { evaluateMergeFreshness } from "./merge-freshness.js";
 import type { MergeEffectiveGateSet } from "./merge-gate-set.js";
 import { resolveMergeGateSet } from "./merge-gate-set.js";
@@ -66,11 +74,27 @@ import {
   recordedFailedJobs,
 } from "./merge-probe.js";
 import { authorizeMergeWaiver } from "./merge-waiver.js";
+import { expectedSetValid } from "./verify-gates.js";
 
 /** A merge read outcome with a declared failure identity on failure. */
 export type MergeRead<T> =
   | { readonly ok: true; readonly value: T }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      /** The resolved credential facts when the fault is a credential condition. */
+      readonly credential?: MergeCredentialFacts;
+    };
+
+/**
+ * The non-secret credential facts a credential-condition refusal names
+ * (AC-F3-2): the declared reference name and the environment variable that
+ * carries the material. Values only, never the secret itself.
+ */
+export type MergeCredentialFacts = {
+  readonly reference: string;
+  readonly sourceKey: string;
+};
 
 /** The bounded check-run page consumed by the probe. */
 export type MergeCheckRunPage = {
@@ -82,12 +106,78 @@ export type MergeCheckRunPage = {
 /** The parsed work-item read. */
 export type MergeWorkItemRead =
   | { readonly ok: true; readonly item: WorkItem }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly credential?: MergeCredentialFacts;
+    };
+
+/**
+ * One bounded open-request list page (F-1 step 1): the delivered
+ * `listDeliveryRequests` read at the declared provider limit, carrying the open
+ * entries and whether the bounded page saturated. The page carries the open
+ * state filter, so it never carries a merged request and cannot establish
+ * merged truth; the list endpoint returns no mergeability fields, so the
+ * landing decision's mergeability fact comes from the request read, not from
+ * this page.
+ */
+export type MergeOpenRequestPage = {
+  readonly items: readonly DeliveryRequest[];
+  readonly saturated: boolean;
+};
+
+/**
+ * The delivered merged-request read, used verbatim (F-1 step 3): its own
+ * work-item-ref filter and its own deterministic selection, with the ONE
+ * additive member — the matched request identities — computed before that
+ * selection. On the shared unavailable outcome the member is EMPTY when the
+ * closed page was read and matched nothing, and ABSENT when the page could not
+ * be read (a fault — a distinct outcome, never folded into zero).
+ */
+export type MergeMergedRequestRead =
+  | {
+      readonly observation: "observed";
+      readonly request: DeliveryRequest;
+      readonly matchedIdentities: readonly string[];
+    }
+  | {
+      readonly observation: "unavailable";
+      readonly matchedIdentities?: readonly string[];
+    }
+  | { readonly observation: "invalid"; readonly detail: string };
+
+/**
+ * One bounded local change-record read at a candidate head (F-1 step 4): the
+ * parse is applied by the composition (the delivered pm-notes parse), so the
+ * domain classifies from the read's declared reason and the parsed declaration.
+ */
+export type MergeRecordAtHeadRead =
+  | {
+      readonly ok: true;
+      readonly path: string;
+      /** The record's parsed `branch` declaration; absent when it declares none. */
+      readonly declaration?: string;
+    }
+  | {
+      readonly ok: false;
+      readonly reason: "record-missing" | "record-unreadable" | "record-invalid";
+      readonly detail?: string;
+    };
 
 /** The parsed request-detail read. */
 export type MergeRequestDetailRead =
   | { readonly ok: true; readonly request: DeliveryRequest }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      readonly credential?: MergeCredentialFacts;
+    };
+
+/** The delivered CI-workflow read the battery's `ci-green` gate uses (F-2). */
+export type MergeCiWorkflowRead = {
+  readonly outcome: "read" | "failed" | "absent";
+  readonly names: readonly string[];
+};
 
 /** The single refresh attempt's outcome (the retained git-seam capability). */
 export type MergeRefreshResult =
@@ -111,7 +201,12 @@ export type MergeLandResult =
       readonly requestState: string;
       readonly mergeCommitSha?: string;
     }
-  | { readonly ok: false; readonly code: string };
+  | {
+      readonly ok: false;
+      readonly code: string;
+      /** The resolved credential facts when the fault is a credential condition. */
+      readonly credential?: MergeCredentialFacts;
+    };
 
 /** Every I/O and time seam the transaction consumes. */
 export type MergeTransactionPorts = {
@@ -131,7 +226,35 @@ export type MergeTransactionPorts = {
   ) => { readonly ok: true } | { readonly ok: false; readonly code: string };
   readonly readWorkItem: () => Promise<MergeWorkItemRead>;
   readonly readCheckRuns: (sha: string) => Promise<MergeRead<MergeCheckRunPage>>;
-  readonly readRequestDetail: () => Promise<MergeRequestDetailRead>;
+  readonly readRequestDetail: (entityId?: string) => Promise<MergeRequestDetailRead>;
+  /**
+   * The delivered CI-workflow read the battery's `ci-green` gate uses (F-2):
+   * the repository-declared expected job set. Wired by the production
+   * composition; the merge path derives its required-check set through this
+   * read and the exported `expectedSetValid` rule, never a second predicate.
+   */
+  readonly readCiWorkflow?: () => Promise<MergeCiWorkflowRead>;
+  /**
+   * The bounded open-request list read the change-branch resolution performs
+   * first (F-1 step 1, GH-366): the delivered open list at the declared
+   * provider limit with gate facts, which also supplies the located request
+   * row. Wired by the production composition; the transaction treats absence
+   * as an unwired composition and refuses fail-closed.
+   */
+  readonly readOpenRequests?: () => Promise<MergeRead<MergeOpenRequestPage>>;
+  /**
+   * The delivered merged-request read, used verbatim (F-1 step 3): invoked only
+   * on a convergence attempt — no open entry matches the resolved branch on an
+   * unsaturated page — with the read's own filter and selection, and its ONE
+   * additive matched-identities member.
+   */
+  readonly readMergedRequest?: (workItemRef: string) => Promise<MergeMergedRequestRead>;
+  /**
+   * The bounded local change-record read at a candidate head (F-1 step 4):
+   * at most two fixed-argv git invocations per candidate, honouring the record
+   * byte cap, with the delivered pm-notes parse applied by the composition.
+   */
+  readonly readChangeRecordAtHead?: (headSha: string) => Promise<MergeRecordAtHeadRead>;
   readonly readHead: () => Promise<string | undefined>;
   readonly readBaseContainment: (sha: string) => Promise<boolean | "failed">;
   /**
@@ -162,6 +285,13 @@ export type MergeTransactionConfig = {
   readonly branch?: string;
 };
 
+/** One read candidate's own cause and attempted tree path (F-1 step 7). */
+export type MergeCandidateFinding = {
+  readonly ref: string;
+  readonly path: string;
+  readonly cause: string;
+};
+
 /** Structured refusal evidence (delivery-bound rendering). */
 export type MergeFailureEvidence = {
   readonly ageMs?: number;
@@ -180,6 +310,38 @@ export type MergeFailureEvidence = {
   readonly attempts?: number;
   readonly stateReason?: string;
   readonly gateId?: string;
+  /**
+   * The dedicated `operation=<token>` field's value (DEC-11, AC-F3-1): the read,
+   * citation source, or landing operation the refusal is about, drawn from the
+   * closed `MERGE_REFUSAL_OPERATIONS` vocabulary — or absent, which renders the
+   * declared `-` for a refusal that names no operation. The value is validated
+   * at the rendering site; an out-of-vocabulary token is a rendering failure,
+   * never a passed-through value.
+   */
+  readonly operation?: MergeRefusalOperation;
+  /**
+   * The credential facts a credential-condition refusal names (AC-F3-2): the
+   * declared reference name and the environment variable. Non-secret
+   * identifiers only.
+   */
+  readonly credentialReference?: string;
+  readonly credentialSourceKey?: string;
+  /** The chosen closed reason of a `merge.branch-unresolved` refusal (F-1 step 7). */
+  readonly branchReason?: string;
+  /** Each read candidate's own cause and attempted tree path, capped at three. */
+  readonly candidateFindings?: readonly MergeCandidateFinding[];
+  /** The chosen closed reason of a `merge.request-unresolved` refusal (F-1). */
+  readonly requestReason?: string;
+  /** The observed open count on the bounded page (a request refusal names it). */
+  readonly openCount?: number;
+  /** The observed candidate count (a request refusal names it). */
+  readonly candidateCount?: number;
+  /**
+   * The observed matched request identities on a convergence attempt (F-1
+   * step 3): each duplicate abort names EVERY identity and presents none as
+   * *the* request; the empty set refusal names the observed empty set.
+   */
+  readonly matchedIdentities?: readonly string[];
   /**
    * The evidence source of a not-green declared required job (F-3, DM-2,
    * API-2): `recorded` when the persisted gate verdict already reported that
@@ -398,11 +560,21 @@ const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailu
     code: "merge.state-unverified",
     domainKind: domainKindOf(row, "merge"),
     exit: exitOfRow(row),
-    evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
+    // The verification-state read is the local registry read (Appendix B):
+    // the unverified-state refusal names `operation=delivery-registry`.
+    evidence: {
+      operation: "delivery-registry",
+      stateReason: reason,
+      ...(detail === undefined ? {} : { detail }),
+    },
   };
 };
 
-const readFailure = (code: string): MergeFailure => {
+const readFailure = (
+  code: string,
+  operation?: MergeRefusalOperation,
+  credential?: MergeCredentialFacts,
+): MergeFailure => {
   // The classification is read from the resolved error-table row, never
   // hard-coded: a kind/code pair that contradicts the table is exactly the
   // containment (`fallback.internal`, exit 2) this restoration removes.
@@ -411,7 +583,46 @@ const readFailure = (code: string): MergeFailure => {
     code,
     domainKind: domainKindOf(row, "provider"),
     exit: exitOfRow(row),
-    evidence: { detail: code },
+    evidence: {
+      detail: code,
+      ...(operation === undefined ? {} : { operation }),
+      ...(credential === undefined ? {} : { credentialReference: credential.reference }),
+      ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+    },
+  };
+};
+
+/**
+ * The closed, total landing-fault mapping (AC-F3-3, F-3): every landing-port
+ * failure maps to exactly one declared identity, so no raw port code reaches an
+ * envelope. A missing credential is the credential identity; a rejected
+ * credential is the auth identity; a landing that fired without observed merged
+ * truth is `merge.landing-unverified`; every other port failure — transient,
+ * transport, or unclassified — is the declared `provider.outage` default. The
+ * port's `code` is an open string, so the default arm is load-bearing.
+ */
+export const landingFaultIdentityOf = (portCode: string): string => {
+  if (portCode === "config.credential.missing") return "config.credential.missing";
+  if (portCode === "provider.auth.rejected") return "provider.auth.rejected";
+  if (portCode === "merge.landing-unverified") return "merge.landing-unverified";
+  return "provider.outage";
+};
+
+const landingFaultFailure = (portCode: string, credential?: MergeCredentialFacts): MergeFailure => {
+  const identity = landingFaultIdentityOf(portCode);
+  const row = ERROR_TABLE.find((entry) => entry.code === identity);
+  return {
+    code: identity,
+    domainKind: domainKindOf(row, "provider"),
+    exit: exitOfRow(row),
+    // The landing fault names the landing operation; the port's own failure
+    // token never reaches the evidence (AC-F3-3, NFR-7).
+    evidence: {
+      operation: "github-merge-delivery-request",
+      detail: "landing-fault",
+      ...(credential === undefined ? {} : { credentialReference: credential.reference }),
+      ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+    },
   };
 };
 
@@ -504,6 +715,408 @@ const checksPostureOf = (input: {
 };
 
 /**
+ * The identity token the resolution reports and the duplicate aborts name
+ * (DM-2): deterministic, bounded, and derived from nothing but the
+ * provider-asserted identity.
+ */
+export const mergeIdentityToken = (entityId: string): string => `#${entityId}`;
+
+const FULL_SHA = /^[0-9a-f]{40}$/u;
+
+/**
+ * The classified declaration of one candidate's record (F-1 step 4-7): the
+ * declaration-cap and value-shape rules are pure, so the resolution classifies
+ * from the composition's parsed read.
+ */
+const hasControlCharacter = (value: string): boolean => {
+  for (const character of value) {
+    const code = character.codePointAt(0) ?? 0;
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+};
+
+const classifyDeclaration = (input: {
+  readonly declaration: string | undefined;
+  readonly sourceRef: string;
+}): "declaration-missing" | "declaration-unusable" | "declaration-disagrees" | "accepted" => {
+  if (input.declaration === undefined || input.declaration.length === 0) {
+    return "declaration-missing";
+  }
+  if (
+    input.declaration.length > MERGE_BRANCH_DECLARATION_MAX_CHARS ||
+    /\s/u.test(input.declaration) ||
+    hasControlCharacter(input.declaration)
+  ) {
+    return "declaration-unusable";
+  }
+  return input.declaration === input.sourceRef ? "accepted" : "declaration-disagrees";
+};
+
+/** The outcome of the change-branch resolution (F-1, Appendix A steps 1-6). */
+export type MergeResolution =
+  | {
+      readonly kind: "resolved";
+      readonly request: DeliveryRequest;
+      readonly branch: string;
+      readonly recordPath: string;
+      readonly candidateCount: number;
+    }
+  | {
+      readonly kind: "replay";
+      readonly request: DeliveryRequest;
+      readonly identity: string;
+      readonly matchedIdentities: readonly string[];
+    }
+  | { readonly kind: "refused"; readonly failure: MergeFailure };
+
+/**
+ * A candidate whose asserted head is present and a full hex SHA — the
+ * readable-head guard of F-1 step 2. An unreadable candidate is never read.
+ */
+const hasReadableHead = (candidate: DeliveryRequest): boolean =>
+  candidate.headSha !== undefined && FULL_SHA.test(candidate.headSha);
+
+/**
+ * The candidate set grouped by provider-asserted source ref, keeping only the
+ * same-ref groups of two or more members, each group in candidate order — the
+ * duplicate rule's population (spec §5.1 F-1 step 5).
+ */
+const duplicateCandidateGroups = (
+  candidates: readonly DeliveryRequest[],
+): readonly (readonly DeliveryRequest[])[] => {
+  const byRef = new Map<string, readonly DeliveryRequest[]>();
+  for (const candidate of candidates) {
+    const members = byRef.get(candidate.sourceRef);
+    byRef.set(candidate.sourceRef, members === undefined ? [candidate] : [...members, candidate]);
+  }
+  return [...byRef.values()].filter((members) => members.length > 1);
+};
+
+/**
+ * The duplicate-open abort (AC-F1-6): names EVERY duplicate identity and
+ * presents none of them as *the* request. The decision is page-decided, so the
+ * abort spends exactly the one bounded open-request list read.
+ */
+const duplicateOpenAbort = (input: {
+  readonly openCount: number;
+  readonly candidateCount: number;
+  readonly members: readonly DeliveryRequest[];
+}): MergeResolution => ({
+  kind: "refused",
+  failure: {
+    code: "merge.transaction-aborted",
+    domainKind: "merge",
+    exit: 1,
+    evidence: {
+      operation: "github-delivery-request-list",
+      requestReason: "duplicate-open-request",
+      openCount: input.openCount,
+      candidateCount: input.candidateCount,
+      matchedIdentities: input.members.map((candidate) =>
+        mergeIdentityToken(candidate.identity.entityId),
+      ),
+    },
+  },
+});
+
+/**
+ * The change-branch resolution (F-1, Appendix A steps 1-6): the one bounded
+ * open-list read, the candidate set under the declared caps and precedence, the
+ * convergence attempt over the delivered merged read's matched identities, and
+ * the per-candidate record reads at their own asserted heads. No checkout
+ * branch or head is read, no working-tree record is read, and no fetch occurs.
+ */
+const resolveChangeBranch = async (input: {
+  readonly changeRef: string;
+  readonly ports: MergeTransactionPorts;
+}): Promise<MergeResolution> => {
+  const { changeRef, ports } = input;
+  const credentialOf = (read: {
+    readonly credential?: MergeCredentialFacts;
+  }): MergeCredentialFacts | undefined => read.credential;
+
+  // Step 1: the one bounded open-request list read. Every refusal decided on
+  // this page spends exactly this one provider request.
+  const openRead = await (ports.readOpenRequests?.() ??
+    Promise.resolve<MergeRead<MergeOpenRequestPage>>({
+      ok: false,
+      code: "merge.request-unresolved",
+    }));
+  if (!openRead.ok) {
+    return {
+      kind: "refused",
+      failure: readFailure(openRead.code, "github-delivery-request-list", credentialOf(openRead)),
+    };
+  }
+  const page = openRead.value;
+  const openCount = page.items.length;
+  const pattern = branchConvention(changeRef);
+  const candidates = page.items.filter((entry) => pattern.test(entry.sourceRef));
+
+  // Step 2: saturation precedes the candidate count — a truncated page cannot
+  // establish any uniqueness claim, even with zero convention-matching entries.
+  if (page.saturated) {
+    return {
+      kind: "refused",
+      failure: {
+        code: "merge.request-unresolved",
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          requestReason: "ambiguous-open-request",
+          openCount,
+          candidateCount: candidates.length,
+          detail: "page-saturated",
+        },
+      },
+    };
+  }
+  if (candidates.length > MERGE_BRANCH_CANDIDATE_MAX) {
+    return {
+      kind: "refused",
+      failure: {
+        code: "merge.request-unresolved",
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          requestReason: "ambiguous-open-request",
+          openCount,
+          candidateCount: candidates.length,
+        },
+      },
+    };
+  }
+  // A same-ref group holding an unreadable head aborts from the page alone
+  // (TC-MRG-055): the unreadable member can never be ruled out as a duplicate,
+  // so the group can never establish uniqueness, and the head-unresolved
+  // refusal must not fire first and mask the duplicate. Same-ref groups with
+  // readable heads are decided at step 5, where acceptance establishes the
+  // resolved branch.
+  for (const group of duplicateCandidateGroups(candidates)) {
+    if (group.some((candidate) => !hasReadableHead(candidate))) {
+      return duplicateOpenAbort({
+        openCount,
+        candidateCount: candidates.length,
+        members: group,
+      });
+    }
+  }
+  // A candidate whose asserted head is absent or not a full hex SHA refuses the
+  // run and is never read: an unreadable member cannot establish uniqueness.
+  for (const candidate of candidates) {
+    if (candidate.headSha === undefined || !FULL_SHA.test(candidate.headSha)) {
+      return {
+        kind: "refused",
+        failure: {
+          code: "merge.request-unresolved",
+          domainKind: "merge",
+          exit: 1,
+          evidence: {
+            requestReason: "head-unresolved",
+            openCount,
+            candidateCount: candidates.length,
+            matchedIdentities: [mergeIdentityToken(candidate.identity.entityId)],
+            detail: candidate.sourceRef,
+          },
+        },
+      };
+    }
+  }
+
+  // Step 3: the convergence attempt — reached only where the open page offers
+  // nothing to resolve on an unsaturated page. Decided BEFORE any record read,
+  // from the read's additive matched-identities member.
+  if (candidates.length === 0) {
+    const mergedRead = await (ports.readMergedRequest?.(changeRef) ??
+      Promise.resolve<MergeMergedRequestRead>({ observation: "unavailable" }));
+    if (mergedRead.observation === "invalid") {
+      // The delivered read collapses every fault class into one observation:
+      // the payload-invalid arm resolves to the declared provider identity at
+      // this seam (Appendix B's provider.outage row).
+      return {
+        kind: "refused",
+        failure: {
+          code: "provider.outage",
+          domainKind: "provider",
+          exit: 2,
+          evidence: {
+            operation: "github-delivery-request-list",
+            detail: "merged-read-fault",
+          },
+        },
+      };
+    }
+    if (mergedRead.observation === "unavailable" && mergedRead.matchedIdentities === undefined) {
+      // The member is ABSENT: the read itself faulted (transport or auth). A
+      // distinct declared outcome, never folded into zero and never
+      // `no-open-request` (TC-MRG-052).
+      return {
+        kind: "refused",
+        failure: {
+          code: "provider.outage",
+          domainKind: "provider",
+          exit: 2,
+          evidence: {
+            operation: "github-delivery-request-list",
+            detail: "merged-read-fault",
+          },
+        },
+      };
+    }
+    const identities = mergedRead.matchedIdentities ?? [];
+    if (identities.length === 0) {
+      // The member is present and empty: the page was read and matched
+      // nothing — a decidable zero (TC-MRG-005's empty-set cell).
+      return {
+        kind: "refused",
+        failure: {
+          code: "merge.request-unresolved",
+          domainKind: "merge",
+          exit: 1,
+          evidence: {
+            requestReason: "no-open-request",
+            openCount,
+            candidateCount: 0,
+            matchedIdentities: [],
+          },
+        },
+      };
+    }
+    if (identities.length > 1) {
+      // More than one matched identity: the run aborts naming EACH identity
+      // and presenting NONE of them as *the* request — never the delivered
+      // selection (AC-F1-6, TC-MRG-049).
+      return {
+        kind: "refused",
+        failure: {
+          code: "merge.transaction-aborted",
+          domainKind: "merge",
+          exit: 1,
+          evidence: {
+            operation: "github-delivery-request-list",
+            requestReason: "duplicate-merged-request",
+            openCount,
+            candidateCount: 0,
+            matchedIdentities: identities.map((identity) => mergeIdentityToken(identity)),
+          },
+        },
+      };
+    }
+    const replayed = mergedRead;
+    if (replayed.observation !== "observed") {
+      return {
+        kind: "refused",
+        failure: readFailure("merge.request-unresolved", "github-delivery-request-list"),
+      };
+    }
+    return {
+      kind: "replay",
+      request: replayed.request,
+      identity: mergeIdentityToken(replayed.request.identity.entityId),
+      matchedIdentities: replayed.matchedIdentities.map((identity) => mergeIdentityToken(identity)),
+    };
+  }
+
+  // Step 4: each candidate's record is read at that candidate's own asserted
+  // head through the bounded local read (at most three candidates).
+  const findings: MergeCandidateFinding[] = [];
+  const accepted: { readonly request: DeliveryRequest; readonly path: string }[] = [];
+  for (const candidate of candidates) {
+    const headSha = candidate.headSha as string;
+    const read = await (ports.readChangeRecordAtHead?.(headSha) ??
+      Promise.resolve<MergeRecordAtHeadRead>({ ok: false, reason: "record-unreadable" }));
+    const finding = (cause: string, path: string): MergeCandidateFinding => ({
+      ref: candidate.sourceRef,
+      path,
+      cause,
+    });
+    if (!read.ok) {
+      const cause =
+        read.reason === "record-missing"
+          ? "record-missing"
+          : read.reason === "record-invalid"
+            ? "record-invalid"
+            : "record-unreadable";
+      findings.push(finding(cause, read.reason === "record-missing" ? "-" : candidate.sourceRef));
+      continue;
+    }
+    const verdict = classifyDeclaration({
+      declaration: read.declaration,
+      sourceRef: candidate.sourceRef,
+    });
+    if (verdict === "accepted") {
+      accepted.push({ request: candidate, path: read.path });
+      continue;
+    }
+    findings.push(finding(verdict, read.path));
+  }
+
+  // Step 5: exactly one accepted candidate is the delivery request. The
+  // duplicate check runs before the distinct-refs ambiguity check, and its
+  // population is the candidate set (spec §5.1 F-1 step 5): more than one
+  // candidate whose provider-asserted source ref equals the resolved branch —
+  // the exact string equality acceptance establishes — names each duplicate
+  // identity and never selects one, so a same-ref pair with exactly one
+  // accepted entry aborts instead of silently resolving through that entry. A
+  // same-ref group holding an unreadable head never reaches this point: it
+  // aborts from the page alone above (TC-MRG-055).
+  const resolvedBranches = new Set(accepted.map((entry) => entry.request.sourceRef));
+  for (const group of duplicateCandidateGroups(candidates)) {
+    if (group.some((candidate) => resolvedBranches.has(candidate.sourceRef))) {
+      return duplicateOpenAbort({
+        openCount,
+        candidateCount: candidates.length,
+        members: group,
+      });
+    }
+  }
+  if (accepted.length > 1) {
+    return {
+      kind: "refused",
+      failure: {
+        code: "merge.request-unresolved",
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          requestReason: "ambiguous-open-request",
+          openCount,
+          candidateCount: candidates.length,
+        },
+      },
+    };
+  }
+  if (accepted.length === 0) {
+    // Exactly one closed reason, chosen by the declared precedence, naming
+    // every read candidate's own cause and attempted tree path.
+    const reason = MERGE_BRANCH_REASON_PRECEDENCE.find((candidate) =>
+      findings.some((finding) => finding.cause === candidate),
+    );
+    return {
+      kind: "refused",
+      failure: {
+        code: "merge.branch-unresolved",
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          branchReason: reason ?? "record-unreadable",
+          candidateCount: candidates.length,
+          candidateFindings: findings.slice(0, MERGE_BRANCH_CANDIDATE_MAX),
+        },
+      },
+    };
+  }
+  const acceptedEntry = accepted[0] as { readonly request: DeliveryRequest; readonly path: string };
+  return {
+    kind: "resolved",
+    request: acceptedEntry.request,
+    branch: acceptedEntry.request.sourceRef,
+    recordPath: acceptedEntry.path,
+    candidateCount: candidates.length,
+  };
+};
+
+/**
  * Run the merge transaction (or its dry-run form).
  *
  * Every returned refusal is classified; the caller maps `domainKind` and `exit`
@@ -536,74 +1149,31 @@ export const runMergeTransaction = async (input: {
     });
   }
 
-  // 1. Idempotent replay decides from provider truth: a recorded landing
-  // replays only while the provider still asserts the request merged, and a
-  // provider that does not assert it re-verifies rather than re-landing. Local
-  // containment stops being merged truth, because no fetch puts the provider's
-  // merge commit in the checkout (AC-F1-3, AC-F1-9; test plan §7.6(v)).
-  const transactions = ports.readTransactions();
-  if (!transactions.ok) {
-    return refused(stateFailure(transactions.reason, transactions.code));
+  // 0. The change-branch resolution (F-1, Appendix A steps 1-6): the one
+  // bounded open-list read, the candidate set, the convergence attempt, and the
+  // per-candidate record reads at their own asserted heads. Convergence is
+  // decided here, BEFORE any change-record read, so a converged re-run performs
+  // zero record reads and zero record-read git invocations.
+  const resolution = await resolveChangeBranch({ changeRef, ports });
+  if (resolution.kind === "refused") {
+    return refused(changeRef, resolution.failure);
   }
-  const latestTransaction = transactions.records.at(-1);
-  if (latestTransaction !== undefined) {
-    const recorded = await ports.readRequestDetail();
-    if (!recorded.ok) return refused(readFailure(recorded.code));
-    if (recorded.request.reviewState === "merged") {
-      return { kind: "merged", report: replayReport(latestTransaction) };
+
+  if (resolution.kind === "replay") {
+    // Convergence replay from provider truth: exactly one matched identity, the
+    // delivered selection used only to name it. Zero change-record reads, zero
+    // record-read git invocations, zero landings, no declaration needed.
+    const replayTransactions = ports.readTransactions();
+    if (!replayTransactions.ok) {
+      return refused(changeRef, stateFailure(replayTransactions.reason, replayTransactions.code));
     }
-    return refused({
-      code: "merge.landing-unverified",
-      domainKind: "merge",
-      exit: 2,
-      evidence: {
-        ...(latestTransaction.squashSha === undefined
-          ? {}
-          : { recordedSha: latestTransaction.squashSha }),
-        requestState: recorded.request.reviewState,
-        detail: "provider-not-merged",
-      },
-    });
-  }
-
-  // 2. The freshness envelope over the newest verification record.
-  const verification = ports.readVerification();
-  if (!verification.ok) {
-    return refused(stateFailure(verification.reason, verification.code));
-  }
-  const record = verification.records.at(-1);
-  const head = await ports.readHead();
-  if (head === undefined) {
-    return refused(stateFailure("unreadable", "head-unresolved"));
-  }
-  const envelope = evaluateMergeFreshness({
-    record,
-    ...(record === undefined ? {} : {}),
-    nowMs,
-    boundSeconds: config.freshnessBoundSeconds,
-    comparator: config.comparator,
-    currentHeadSha: head,
-    effectiveGateSet: gateSetIdentity,
-  });
-  if (!envelope.ok && envelope.kind === "state-unverified") {
-    return refused(stateFailure(envelope.reason));
-  }
-
-  // 3. One bounded probe: one work-item read, one check-run page, one
-  // request-detail read.
-  const workItem = await ports.readWorkItem();
-  if (!workItem.ok) return refused(readFailure(workItem.code));
-  const checkRuns = await ports.readCheckRuns(head);
-  if (!checkRuns.ok) return refused(readFailure(checkRuns.code));
-  const requestDetail = await ports.readRequestDetail();
-  if (!requestDetail.ok) return refused(readFailure(requestDetail.code));
-
-  // An already-merged request with no recorded transaction is the record-less
-  // convergence case: the provider asserts merged truth, so the outcome is
-  // recorded and replayed with zero landing calls. The recorded containment is
-  // the local read's honest answer, never the verdict (AC-F1-2, AC-F1-9).
-  if (requestDetail.request.reviewState === "merged") {
-    const mergedHead = requestDetail.request.headSha;
+    const replayedTransaction = replayTransactions.records.at(-1);
+    if (replayedTransaction !== undefined) {
+      // The provider already asserted merged truth on the convergence attempt;
+      // the recorded landing replays with no second record and no landing.
+      return { kind: "merged", report: replayReport(replayedTransaction) };
+    }
+    const mergedHead = resolution.request.headSha;
     const replay: MergeTransactionRecord = {
       schema: MERGE_TRANSACTION_SCHEMA,
       changeRef,
@@ -639,6 +1209,85 @@ export const runMergeTransaction = async (input: {
     return { kind: "merged", report: replayReport(replay) };
   }
 
+  // 1. The resolved request's asserted full-SHA head IS the resolved head
+  // (F-1 step 6, DEC-2): the freshness envelope compares against it, the
+  // landing's expected head is it, the check-run page is read on it, and the
+  // reported head is it. No checkout branch or head is read on this path
+  // (NFR-6), and the resolution's own facts name the object every verdict
+  // describes (DM-2).
+  const head = resolution.request.headSha as string;
+  const resolutionFacts: MergeResolutionFacts = {
+    source: "declared-at-head",
+    branch: resolution.branch,
+    requestIdentity: mergeIdentityToken(resolution.request.identity.entityId),
+    candidateCount: resolution.candidateCount,
+    headSha: head,
+  };
+
+  // 2. A recorded transaction on a run whose request is still open is the
+  // unverified-landing state: the provider does not assert merged truth on this
+  // resolution, so the verdict re-verifies rather than re-landing and never
+  // lands a second time.
+  const transactions = ports.readTransactions();
+  if (!transactions.ok) {
+    return refused(changeRef, stateFailure(transactions.reason, transactions.code));
+  }
+  const latestTransaction = transactions.records.at(-1);
+  if (latestTransaction !== undefined) {
+    return refused(changeRef, {
+      code: "merge.landing-unverified",
+      domainKind: "merge",
+      exit: 2,
+      evidence: {
+        operation: "github-merge-delivery-request",
+        ...(latestTransaction.squashSha === undefined
+          ? {}
+          : { recordedSha: latestTransaction.squashSha }),
+        requestState: resolution.request.reviewState,
+        detail: "provider-not-merged",
+      },
+    });
+  }
+
+  // 3. The freshness envelope over the newest verification record, bound to the
+  // resolved head.
+  const verification = ports.readVerification();
+  if (!verification.ok) {
+    return refused(changeRef, stateFailure(verification.reason, verification.code));
+  }
+  const record = verification.records.at(-1);
+  const envelope = evaluateMergeFreshness({
+    record,
+    ...(record === undefined ? {} : {}),
+    nowMs,
+    boundSeconds: config.freshnessBoundSeconds,
+    comparator: config.comparator,
+    currentHeadSha: head,
+    effectiveGateSet: gateSetIdentity,
+  });
+  if (!envelope.ok && envelope.kind === "state-unverified") {
+    return refused(changeRef, stateFailure(envelope.reason));
+  }
+
+  // 4. One bounded probe: one work-item read and one check-run page on the
+  // resolved head. The request row is the resolution's own accepted candidate,
+  // not a second provider read.
+  const workItem = await ports.readWorkItem();
+  if (!workItem.ok) {
+    return refused(changeRef, readFailure(workItem.code, "github-work-item", workItem.credential));
+  }
+  const checkRuns = await ports.readCheckRuns(head);
+  if (!checkRuns.ok) {
+    return refused(
+      changeRef,
+      readFailure(checkRuns.code, "github-check-runs", checkRuns.credential),
+    );
+  }
+
+  // An already-merged request cannot appear here: the open page carries the
+  // open state filter, so merged truth arrives only through the convergence
+  // attempt above (F-1 step 3), which has already returned.
+
   if (!envelope.ok) {
     const evidence: MergeFailureEvidence = {
       ageMs: envelope.ageMs,
@@ -659,6 +1308,7 @@ export const runMergeTransaction = async (input: {
       })(),
     };
     return refused(
+      changeRef,
       envelope.reason === "age"
         ? {
             code: "merge.gates-stale",
@@ -675,7 +1325,43 @@ export const runMergeTransaction = async (input: {
     );
   }
 
-  // 4. Gate evaluation: the recorded verdicts plus the fresh probe.
+  // 5. The merge-applicable required-check set, derived ONCE per invocation
+  // (F-2): every merge-applicable `required-ci-job` entry contributes
+  // `job ?? id`, and the merge-applicable `ci-green` entry contributes the
+  // repository-declared expected job set read through the delivered CI
+  // workflow read, validated by the exported battery rule. The page wins on
+  // state; the gate set wins on membership.
+  const ciEntry = config.gateSet.enforcedMergeEntries.find(
+    (candidate) => candidate.id === "ci-green",
+  );
+  let requiredSet: readonly string[] = declaredCiJobsOf(config.gateSet);
+  let expectedNames: readonly string[] = [];
+  if (ciEntry !== undefined) {
+    const workflow = await (ports.readCiWorkflow?.() ??
+      Promise.resolve<MergeCiWorkflowRead>({ outcome: "failed", names: [] }));
+    const valid =
+      workflow.outcome === "read" &&
+      expectedSetValid({ outcome: workflow.outcome, names: workflow.names });
+    if (!valid) {
+      return refused(changeRef, {
+        code: failureCode("ci-green"),
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          gateId: "ci-green",
+          detail:
+            workflow.outcome === "read"
+              ? "invalid-expected-set"
+              : `ci-workflow-${workflow.outcome}`,
+          operation: workflow.outcome === "read" ? "-" : ("repository-ci-workflow" as const),
+        },
+      });
+    }
+    expectedNames = workflow.names;
+    requiredSet = [...requiredSet, ...expectedNames];
+  }
+
+  // 6. Gate evaluation: the recorded verdicts plus the fresh probe.
   const posture = postureOf(workItem.item.labels, workItem.item.updatedAt);
   const transition =
     record === undefined
@@ -688,7 +1374,9 @@ export const runMergeTransaction = async (input: {
   const failures: GateFailure[] = [];
   const ownerPresent = posture.ownerLabels.length > 0;
   const recordedCi = recordedVerdict(record, "ci-green");
-  if (recordedCi !== undefined && recordedCi.verdict !== "pass") {
+  const recordedCiFailure =
+    recordedCi !== undefined && recordedCi.verdict !== "pass" ? recordedCi : undefined;
+  if (recordedCiFailure !== undefined) {
     const entry = config.gateSet.enforcedMergeEntries.find(
       (candidate) => candidate.id === "ci-green",
     );
@@ -699,9 +1387,9 @@ export const runMergeTransaction = async (input: {
       failures.push(
         requiredJobFailure({
           entry,
-          detail: recordedCi.reason,
+          detail: recordedCiFailure.reason,
           attribution: "recorded",
-          jobs: recordedNotGreenJobs(recordedCi.citation.names),
+          jobs: recordedNotGreenJobs(recordedCiFailure.citation.names),
         }),
       );
     }
@@ -753,7 +1441,50 @@ export const runMergeTransaction = async (input: {
     }
   }
   for (const entry of config.gateSet.enforcedMergeEntries) {
-    if (entry.id === "ci-green" || entry.id === "owner-gate" || entry.id === "tracker-freshness") {
+    if (entry.id === "ci-green") {
+      // The merge-surface CI evaluation (GH-366 F-2): the page is head evidence
+      // only for the resolved head, and every name in the derived required set
+      // is evaluated through the single delivered per-job mapping. A page for
+      // another head carries no posture — the delivered head-unresolved
+      // refusal on the family row names both SHAs.
+      if (recordedCiFailure === undefined) {
+        const pageNotHead = checkRuns.value.sha !== undefined && checkRuns.value.sha !== head;
+        if (pageNotHead) {
+          failures.push({
+            entry,
+            code: failureCode("ci-green"),
+            evidence: {
+              gateId: "ci-green",
+              recordedSha: checkRuns.value.sha,
+              currentSha: head,
+              detail: "head-unresolved",
+            },
+          });
+        } else {
+          // The CI gate evaluates ITS OWN contribution — the expected set;
+          // each declared required-ci-job entry evaluates its own job, so a
+          // declared job's specific finding keeps its recorded attribution.
+          const posture = checksPostureOf({
+            runs: checkRuns.value.items,
+            pageSha: checkRuns.value.sha ?? head,
+            headSha: head,
+            requiredJobs: expectedNames,
+          });
+          if (posture !== undefined) {
+            failures.push(
+              requiredJobFailure({
+                entry,
+                detail: posture.reason,
+                attribution: "probe",
+                jobs: posture.jobs,
+              }),
+            );
+          }
+        }
+      }
+      continue;
+    }
+    if (entry.id === "owner-gate" || entry.id === "tracker-freshness") {
       continue;
     }
     const verdict = recordedVerdict(record, entry.id);
@@ -819,7 +1550,7 @@ export const runMergeTransaction = async (input: {
         authorizedAt: nowIso,
       });
       if (!verdict.ok) {
-        return refused({
+        return refused(changeRef, {
           code: "merge.waiver-unauthorized",
           domainKind: "merge",
           exit: 1,
@@ -836,7 +1567,7 @@ export const runMergeTransaction = async (input: {
     for (const waiver of authorized) {
       const appended = ports.appendWaiver(waiver);
       if (!appended.ok) {
-        return refused({
+        return refused(changeRef, {
           code: "merge.transaction-aborted",
           domainKind: "merge",
           exit: 1,
@@ -855,8 +1586,108 @@ export const runMergeTransaction = async (input: {
   // 6. Precedence: a declared unauthorized override wins; then the override
   // path for an owner-gate failure with no declaration; then the gate rows.
   if (failures.length > 0) {
-    return refused(failureFor(failures[0] as GateFailure));
+    return refused(changeRef, failureFor(failures[0] as GateFailure));
   }
+
+  // 6b. The evaluated merge-applicable projection (AC-F2-8, DEC-12): the
+  // merged report renders the projection the run evaluated — one line per
+  // merge-applicable entry with its verdict and reason — and does NOT echo the
+  // verification record's battery gate list; the record keeps its own list.
+  const pageIsProjectionHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
+  // A landing run has no remaining gate failures (the refusal above), so the
+  // evaluated projection here is the passing posture per entry.
+  const evaluatedGates: MergeGateVerdictRecord[] = config.gateSet.mergeEntries.map((entry) => {
+    if (entry.id === "ci-green") {
+      const posture = pageIsProjectionHead
+        ? checksPostureOf({
+            runs: checkRuns.value.items,
+            pageSha: checkRuns.value.sha ?? head,
+            headSha: head,
+            requiredJobs: expectedNames,
+          })
+        : ({ reason: "head-unresolved", jobs: ["ci-green"] } as const);
+      const reason: VerifyGateReason = posture === undefined ? "ci-green" : posture.reason;
+      return {
+        id: entry.id,
+        verdict: posture === undefined ? "pass" : "fail",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: [
+            { name: "expected", value: expectedNames.length },
+            { name: "runs", value: checkRuns.value.pageItemCount },
+          ],
+          names:
+            posture === undefined
+              ? [{ kind: "failed-jobs", values: [], omitted: 0 }]
+              : [{ kind: "failed-jobs", values: posture.jobs, omitted: 0 }],
+          reason,
+        }),
+      };
+    }
+    if (entry.recipe === "required-ci-job") {
+      const job = entry.job ?? entry.id;
+      if (!pageIsProjectionHead) {
+        return {
+          id: entry.id,
+          verdict: "fail",
+          reason: "head-unresolved",
+          citation: citationFor({
+            identity: { changeRef, headSha: head },
+            sources: [{ name: "github-check-runs", outcome: "read" }],
+            counts: [{ name: "expected", value: 1 }],
+            names: [{ kind: "missing-jobs", values: [job], omitted: 0 }],
+            reason: "head-unresolved",
+          }),
+        };
+      }
+      const evaluation = evaluateRequiredJobGate({
+        jobName: job,
+        runs: checkRuns.value.items,
+        pageSha: checkRuns.value.sha ?? head,
+        headSha: head,
+      });
+      return {
+        id: entry.id,
+        verdict: evaluation.verdict,
+        reason: evaluation.reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: evaluation.counts,
+          names: evaluation.names,
+          reason: evaluation.reason,
+        }),
+      };
+    }
+    if (entry.recipe === "tracker-freshness") {
+      const reason: VerifyGateReason = transition.changed
+        ? "owner-gate-present"
+        : "owner-gate-absent";
+      return {
+        id: entry.id,
+        verdict: transition.changed ? "fail" : "pass",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, workItem: changeRef },
+          sources: [{ name: "github-work-item", outcome: "read" }],
+          counts: [
+            { name: "labels", value: posture.labels.length },
+            { name: "ownerLabels", value: posture.ownerLabels.length },
+          ],
+          names: [{ kind: "owner-labels", values: transition.after, omitted: 0 }],
+          reason,
+        }),
+      };
+    }
+    return {
+      id: entry.id,
+      verdict: "unknown",
+      reason: "read-failed",
+      citation: emptyCitation(changeRef),
+    };
+  });
 
   // 7. The mergeability decision rule (F-2, API-2): total over the four
   // normalized states plus absence, at most one post-refusal re-read and at
@@ -882,7 +1713,9 @@ export const runMergeTransaction = async (input: {
         : await containmentAnswer(ports, landed.mergeCommitSha);
     const postLanding: MergePostLandingStep[] = [];
     const deleted = await ports.deleteBranch({
-      ...(config.branch === undefined ? {} : { branch: config.branch }),
+      // The deleted branch is the RESOLVED change branch (the request's
+      // provider-asserted source ref), never an ambient checkout branch.
+      branch: resolution.branch,
     });
     postLanding.push({ id: "branch-deletion", status: deleted === "ok" ? "ok" : "failed" });
     postLanding.push({ id: "closeout-ready", status: "ok" });
@@ -909,12 +1742,20 @@ export const runMergeTransaction = async (input: {
       );
       return {
         kind: "merged",
-        report: reportFor(transactionRecord, declaredStatuses, record?.gates ?? []),
+        report: reportFor(
+          transactionRecord,
+          declaredStatuses,
+          record?.gates ?? [],
+          resolutionFacts,
+        ),
       };
     }
     return {
       kind: "merged",
-      report: reportFor(transactionRecord, postLanding, record?.gates ?? []),
+      report: reportFor(transactionRecord, postLanding, evaluatedGates, resolutionFacts, {
+        evaluatedCount: requiredSet.length,
+        setSize: requiredSet.length,
+      }),
     };
   };
 
@@ -942,11 +1783,12 @@ export const runMergeTransaction = async (input: {
       recordedAt: nowIso,
     };
     const persisted = ports.appendTransaction(recordValue);
-    return refused({
+    return refused(changeRef, {
       code: "merge.landing-unverified",
       domainKind: "merge",
       exit: 2,
       evidence: {
+        operation: "github-merge-delivery-request",
         ...(landed.mergeCommitSha === undefined ? {} : { recordedSha: landed.mergeCommitSha }),
         requestState: landed.requestState,
         // A failed outcome-record append is declared, not swallowed: the
@@ -963,14 +1805,10 @@ export const runMergeTransaction = async (input: {
   const landAtVerifiedHead = async (request: DeliveryRequest): Promise<MergeTransactionOutcome> => {
     const landed = await ports.land(landingInputOf(request));
     if (!landed.ok) {
-      // A refused landing is returned as a refusal: it is never converted into
-      // a local commit, a fallback landing, or a success by inference.
-      return refused({
-        code: "merge.transaction-aborted",
-        domainKind: "merge",
-        exit: 1,
-        evidence: { detail: landed.code },
-      });
+      // A refused landing maps through the closed, total landing-fault mapping:
+      // it is never converted into a local commit, a fallback landing, a
+      // success by inference, or the abort row (AC-F3-3).
+      return refused(changeRef, landingFaultFailure(landed.code, landed.credential));
     }
     return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
   };
@@ -985,8 +1823,13 @@ export const runMergeTransaction = async (input: {
     if (landed.ok) {
       return landed.requestState === "merged" ? mergedFrom(landed) : unverifiedFrom(landed);
     }
-    const reRead = await ports.readRequestDetail();
-    if (!reRead.ok) return refused(readFailure(reRead.code));
+    const reRead = await ports.readRequestDetail(request.identity.entityId);
+    if (!reRead.ok) {
+      return refused(
+        changeRef,
+        readFailure(reRead.code, "github-delivery-request-detail", reRead.credential),
+      );
+    }
     const posture = checksPostureOf({
       runs: checkRuns.value.items,
       pageSha: checkRuns.value.sha ?? head,
@@ -994,7 +1837,7 @@ export const runMergeTransaction = async (input: {
       requiredJobs: declaredCiJobsOf(config.gateSet),
     });
     if (posture !== undefined) {
-      return refused({
+      return refused(changeRef, {
         code: failureCode("ci-green"),
         domainKind: "merge",
         exit: 1,
@@ -1005,7 +1848,7 @@ export const runMergeTransaction = async (input: {
         },
       });
     }
-    return refused({
+    return refused(changeRef, {
       code: "merge.sync-required",
       domainKind: "merge",
       exit: 1,
@@ -1021,7 +1864,7 @@ export const runMergeTransaction = async (input: {
       case "conflicting":
         // The sync cause is certain, so no landing call is made. There is no
         // internal rebase and no head mutation (AC-F2-1, F8).
-        return refused({
+        return refused(changeRef, {
           code: "merge.sync-required",
           domainKind: "merge",
           exit: 1,
@@ -1037,13 +1880,19 @@ export const runMergeTransaction = async (input: {
       case "not-mergeable":
         return classifyNotMergeable(request);
       default: {
-        // `unknown` or absent: exactly one bounded re-read of the same request,
-        // compared on the exact head. The command never waits or polls.
-        const reRead = await ports.readRequestDetail();
-        if (!reRead.ok) return refused(readFailure(reRead.code));
+        // `unknown` or absent: exactly one bounded unknown-recovery re-read of
+        // the SINGLE request (never the list), compared on the exact head. The
+        // command never waits or polls.
+        const reRead = await ports.readRequestDetail(request.identity.entityId);
+        if (!reRead.ok) {
+          return refused(
+            changeRef,
+            readFailure(reRead.code, "github-delivery-request-detail", reRead.credential),
+          );
+        }
         const observed = reRead.request;
         if (observed.headSha !== undefined && observed.headSha !== head) {
-          return refused({
+          return refused(changeRef, {
             code: "merge.gates-stale",
             domainKind: "merge",
             exit: 1,
@@ -1051,7 +1900,7 @@ export const runMergeTransaction = async (input: {
           });
         }
         if (observed.mergeableState === undefined || observed.mergeableState === "unknown") {
-          return refused({
+          return refused(changeRef, {
             code: "merge.mergeability-unknown",
             domainKind: "merge",
             exit: 2,
@@ -1068,7 +1917,7 @@ export const runMergeTransaction = async (input: {
   // and no landing attempt is made (AC-F1-7, DM-6).
   const landingGap = ports.readLandingGap();
   if (landingGap !== undefined) {
-    return refused({
+    return refused(changeRef, {
       code: "merge.transaction-aborted",
       domainKind: "merge",
       exit: 1,
@@ -1076,14 +1925,36 @@ export const runMergeTransaction = async (input: {
     });
   }
 
-  // 9. One landing mechanism, and its provider-asserted verdict.
-  return decide(requestDetail.request);
+  // 9. The landing decision's mergeability source (F-2, LF-1): the delivered
+  // SINGLE-request read of the request the resolution located — the list
+  // endpoint cannot carry mergeability, so the open-list entry's missing
+  // mergeability fields never refuse `merge.mergeability-unknown`. A fault of
+  // this read names `operation=github-delivery-request-detail`; the
+  // unknown-recovery re-read re-reads the single request, never the list.
+  // Mergeability comes from this read; every other provider-asserted signal
+  // (the verbatim title included) stays the resolved request's, which the
+  // resolution read from the list with gate facts.
+  const requestDetail = await ports.readRequestDetail(resolution.request.identity.entityId);
+  if (!requestDetail.ok) {
+    return refused(
+      changeRef,
+      readFailure(requestDetail.code, "github-delivery-request-detail", requestDetail.credential),
+    );
+  }
+  const observed = requestDetail.request;
+  return decide(
+    observed.mergeableState === undefined
+      ? { ...resolution.request }
+      : { ...resolution.request, mergeableState: observed.mergeableState },
+  );
 };
 
 const reportFor = (
   record: MergeTransactionRecord,
   postLanding: readonly MergePostLandingStep[],
   gates: readonly MergeGateVerdictRecord[],
+  resolution?: MergeResolutionFacts,
+  requiredChecks?: { readonly evaluatedCount: number; readonly setSize: number },
 ): MergeReport => ({
   result: "merged",
   changeRef: record.changeRef,
@@ -1095,6 +1966,8 @@ const reportFor = (
   postLanding,
   gates: gates.slice(0, MERGE_MAX_REPORT_GATES),
   gatesOmitted: Math.max(0, gates.length - MERGE_MAX_REPORT_GATES),
+  ...(requiredChecks === undefined ? {} : { requiredChecks }),
+  ...(resolution === undefined ? {} : { resolution }),
 });
 
 const replayReport = (record: MergeTransactionRecord): MergeReport =>
@@ -1107,26 +1980,61 @@ const failureFor = (failure: GateFailure): MergeFailure => ({
   evidence: failure.evidence,
 });
 
-const refused = (failure: MergeFailure): MergeTransactionOutcome => ({
+const refused = (ref: string, failure: MergeFailure): MergeTransactionOutcome => ({
   kind: "refused",
   failure,
-  summary: renderMergeFailure(failure),
+  summary: renderMergeFailure(failure, { command: "merge", ref }),
 });
+
+/** The rendering context every merge refusal is rendered with (DEC-11). */
+export type MergeRefusalRenderingContext = {
+  /** The command identity rendered as the dedicated `command=` field. */
+  readonly command: string;
+  /**
+   * The invocation's change ref, rendered as the dedicated `ref=` field. There
+   * is no empty-value branch: every merge refusal path is reached with a usable
+   * ref, so `ref=-` is not a declared state.
+   */
+  readonly ref: string;
+};
+
+/**
+ * Validate one `operation` token against the closed vocabulary at the rendering
+ * site (AC-F3-1, NFR-5): an out-of-vocabulary value is a rendering failure and
+ * never a value passed through into the summary.
+ */
+export const assertMergeRefusalOperation = (token: string | undefined): MergeRefusalOperation => {
+  if (token === undefined) return "-";
+  const member = MERGE_REFUSAL_OPERATIONS.find((candidate) => candidate === token);
+  if (member !== undefined) return member;
+  throw new Error(
+    `merge refusal rendering: operation token "${token}" is outside the closed vocabulary`,
+  );
+};
 
 /**
  * Render one refusal deterministically and within the human bounds.
  *
- * The decisive condition and the named failing gate come first; every list is
- * capped with an explicit `+N`. The remediation hint is the declared row's.
+ * The decisive condition and the named failing gate come first; the three
+ * dedicated fields (`command=`, `ref=`, `operation=`) follow the condition line
+ * (DEC-11); every list is capped with an explicit `+N`. The remediation hint is
+ * the declared row's.
  */
-export const renderMergeFailure = (failure: MergeFailure): string => {
+export const renderMergeFailure = (
+  failure: MergeFailure,
+  context: MergeRefusalRenderingContext,
+): string => {
   const evidence = failure.evidence;
+  const operation = assertMergeRefusalOperation(evidence.operation);
   const lines: string[] = [];
   if (failure.code === "merge.landing-unverified") {
     lines.push("result=unverified; landing=unverified");
   } else {
     lines.push(`result=refused; condition=${failure.code}`);
   }
+  lines.push(`command=${context.command}`);
+  lines.push(`ref=${context.ref}`);
+  lines.push(`operation=${operation}`);
   if (evidence.gateId !== undefined) lines.push(`gate=${evidence.gateId}`);
   if (evidence.stateReason !== undefined) lines.push(`state=${evidence.stateReason}`);
   if (evidence.ageMs !== undefined || evidence.boundMs !== undefined) {
@@ -1163,6 +2071,29 @@ export const renderMergeFailure = (failure: MergeFailure): string => {
   if (evidence.authorizer !== undefined) lines.push(`authorizer=${evidence.authorizer}`);
   if (evidence.overridePath !== undefined) lines.push(`override=${evidence.overridePath}`);
   if (evidence.requestState !== undefined) lines.push(`request-state=${evidence.requestState}`);
+  if (evidence.branchReason !== undefined) lines.push(`branch-reason=${evidence.branchReason}`);
+  if (evidence.requestReason !== undefined) lines.push(`request-reason=${evidence.requestReason}`);
+  if (evidence.openCount !== undefined) lines.push(`open=${String(evidence.openCount)}`);
+  if (evidence.candidateCount !== undefined) {
+    lines.push(`candidates=${String(evidence.candidateCount)}`);
+  }
+  if (evidence.matchedIdentities !== undefined) {
+    lines.push(
+      `matched-identities=${evidence.matchedIdentities.length === 0 ? "none" : listText(evidence.matchedIdentities)}`,
+    );
+  }
+  if (evidence.candidateFindings !== undefined) {
+    for (const finding of evidence.candidateFindings.slice(0, MERGE_BRANCH_CANDIDATE_MAX)) {
+      lines.push(
+        `candidate=${clamp(finding.ref, MERGE_MAX_REF_CHARS)} path=${finding.path} cause=${finding.cause}`,
+      );
+    }
+  }
+  if (evidence.credentialReference !== undefined) {
+    lines.push(
+      `credential-reference=${evidence.credentialReference} credential-source=${evidence.credentialSourceKey ?? "-"}`,
+    );
+  }
   if (evidence.detail !== undefined) lines.push(`evidence=${evidence.detail}`);
   if (evidence.attribution !== undefined) lines.push(`attribution=${evidence.attribution}`);
   const hint = remediationFor(failure.code);
@@ -1197,14 +2128,56 @@ const runDryRun = async (input: {
   readonly declarations: readonly MergeWaiverDeclaration[];
 }): Promise<MergeTransactionOutcome> => {
   const { changeRef, config, ports } = input;
-  const head = await ports.readHead();
-  if (head === undefined) {
-    return refused(stateFailure("unreadable", "head-unresolved"));
+  // The dry run shares exactly the real merge's resolution (F-5): the same
+  // open-list read, candidate set, convergence attempt and per-path provider
+  // counts, reaching no landing decision and taking no mergeability read.
+  const resolution = await resolveChangeBranch({ changeRef, ports });
+  if (resolution.kind === "refused") {
+    return refused(changeRef, resolution.failure);
   }
+  if (resolution.kind === "replay") {
+    // The converged-replay dry run reports the resolved replay object
+    // (TC-MRG-043's restated oracle): `replayed=true` with the single matched
+    // request's identity, zero mutations, zero landing calls, never
+    // `result=merged`, never `squash=`, and no post-landing steps. Whether it
+    // appends a verification record is pinned in neither direction, so it
+    // performs no write at all.
+    return {
+      kind: "dry-run",
+      report: {
+        result: "verified",
+        changeRef,
+        headSha: resolution.request.headSha ?? "",
+        gates: [],
+        gatesOmitted: 0,
+        authorizations: [],
+        replayed: true,
+        requestIdentity: resolution.identity,
+      },
+      authorizations: [],
+    };
+  }
+  // The resolved request's asserted full-SHA head is the resolved head; the
+  // appended verification record's head is the resolved head (AC-F5-2).
+  const head = resolution.request.headSha as string;
+  const resolutionFacts: MergeResolutionFacts = {
+    source: "declared-at-head",
+    branch: resolution.branch,
+    requestIdentity: mergeIdentityToken(resolution.request.identity.entityId),
+    candidateCount: resolution.candidateCount,
+    headSha: head,
+  };
   const workItem = await ports.readWorkItem();
-  if (!workItem.ok) return refused(readFailure(workItem.code));
+  if (!workItem.ok) {
+    return refused(changeRef, readFailure(workItem.code, "github-work-item", workItem.credential));
+  }
   const checkRuns = await ports.readCheckRuns(head);
-  if (!checkRuns.ok) return refused(readFailure(checkRuns.code));
+  if (!checkRuns.ok) {
+    return refused(
+      changeRef,
+      readFailure(checkRuns.code, "github-check-runs", checkRuns.credential),
+    );
+  }
   const posture = postureOf(workItem.item.labels, workItem.item.updatedAt);
   const verification = ports.readVerification();
   const previous = verification.ok ? verification.records.at(-1) : undefined;
@@ -1217,7 +2190,88 @@ const runDryRun = async (input: {
           verifiedAt: previous.verifiedAt,
         });
   const gates: MergeGateVerdictRecord[] = [];
+  // The merge-applicable required-check set, derived once (F-2): the same
+  // derivation the live run performs, validated by the exported battery rule.
+  const ciEntry = config.gateSet.mergeEntries.find((candidate) => candidate.id === "ci-green");
+  let dryRequiredSet: readonly string[] = config.gateSet.mergeEntries
+    .filter((entry) => entry.recipe === "required-ci-job")
+    .map((entry) => entry.job ?? entry.id);
+  let dryExpectedNames: readonly string[] = [];
+  if (ciEntry !== undefined) {
+    const workflow = await (ports.readCiWorkflow?.() ??
+      Promise.resolve<MergeCiWorkflowRead>({ outcome: "failed", names: [] }));
+    const valid =
+      workflow.outcome === "read" &&
+      expectedSetValid({ outcome: workflow.outcome, names: workflow.names });
+    if (!valid) {
+      return refused(input.changeRef, {
+        code: failureCode("ci-green"),
+        domainKind: "merge",
+        exit: 1,
+        evidence: {
+          gateId: "ci-green",
+          detail:
+            workflow.outcome === "read"
+              ? "invalid-expected-set"
+              : `ci-workflow-${workflow.outcome}`,
+          operation: workflow.outcome === "read" ? "-" : ("repository-ci-workflow" as const),
+        },
+      });
+    }
+    dryExpectedNames = workflow.names;
+    dryRequiredSet = [...dryRequiredSet, ...dryExpectedNames];
+  }
+
   for (const entry of config.gateSet.mergeEntries) {
+    if (entry.id === "ci-green") {
+      // The merge-surface CI evaluation over the derived required set (F-2):
+      // a page for another head is never head evidence, and the first
+      // not-green required name carries the delivered reason.
+      const pageIsHead = checkRuns.value.sha === undefined || checkRuns.value.sha === head;
+      if (!pageIsHead) {
+        // The delivered head-unresolved reason names both SHAs: a page for
+        // another head is never evidence (TC-MRG-013).
+        gates.push({
+          id: entry.id,
+          verdict: "fail",
+          reason: "head-unresolved",
+          citation: citationFor({
+            identity: { changeRef, headSha: head },
+            sources: [{ name: "github-check-runs", outcome: "read" }],
+            counts: [{ name: "expected", value: dryRequiredSet.length }],
+            names: [{ kind: "missing-jobs", values: ["ci-green"], omitted: 0 }],
+            reason: "head-unresolved",
+          }),
+        });
+        continue;
+      }
+      const posture = checksPostureOf({
+        runs: checkRuns.value.items,
+        pageSha: checkRuns.value.sha ?? head,
+        headSha: head,
+        requiredJobs: dryExpectedNames,
+      });
+      const reason: VerifyGateReason = posture === undefined ? "ci-green" : posture.reason;
+      gates.push({
+        id: entry.id,
+        verdict: posture === undefined ? "pass" : "fail",
+        reason,
+        citation: citationFor({
+          identity: { changeRef, headSha: head },
+          sources: [{ name: "github-check-runs", outcome: "read" }],
+          counts: [
+            { name: "expected", value: dryRequiredSet.length },
+            { name: "runs", value: checkRuns.value.pageItemCount },
+          ],
+          names:
+            posture === undefined
+              ? [{ kind: "failed-jobs", values: [], omitted: 0 }]
+              : [{ kind: "failed-jobs", values: posture.jobs, omitted: 0 }],
+          reason,
+        }),
+      });
+      continue;
+    }
     if (entry.recipe === "required-ci-job") {
       const evaluationValue = evaluateRequiredJobGate({
         jobName: entry.job ?? entry.id,
@@ -1277,7 +2331,7 @@ const runDryRun = async (input: {
     trackerPosture: { labels: posture.labels, ownerLabels: posture.ownerLabels },
   };
   const appended = ports.appendVerification(record);
-  if (!appended.ok) return refused(stateFailure("unreadable", appended.code));
+  if (!appended.ok) return refused(changeRef, stateFailure("unreadable", appended.code));
 
   const authorizations: MergeDryRunAuthorization[] = [];
   for (const declaration of input.declarations) {
@@ -1303,7 +2357,7 @@ const runDryRun = async (input: {
 
   const firstFailure = gates.find((gate) => gate.verdict !== "pass");
   if (firstFailure !== undefined) {
-    return refused({
+    return refused(changeRef, {
       code: failureCode(firstFailure.id),
       domainKind: "merge",
       exit: 1,
@@ -1322,6 +2376,10 @@ const runDryRun = async (input: {
       gates: gates.slice(0, MERGE_MAX_REPORT_GATES),
       gatesOmitted: Math.max(0, gates.length - MERGE_MAX_REPORT_GATES),
       authorizations,
+      // The evaluated required-check posture (F-2): the derivation evaluated
+      // every name in the derived set, whose size is disclosed with it.
+      requiredChecks: { evaluatedCount: dryRequiredSet.length, setSize: dryRequiredSet.length },
+      resolution: resolutionFacts,
     },
     authorizations,
   };

@@ -12,8 +12,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync as read, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyThrown, resolveAppErrorCode } from "../../packages/cli/src/classify";
-import { projectExitCode } from "../../packages/cli/src/projection";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import {
   DOMAIN_KINDS,
   ERROR_TABLE,
@@ -91,7 +91,7 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect(counts.get("config")).toBe(10);
     expect(counts.get("state")).toBe(9);
     expect(counts.get("provider")).toBe(16);
-    expect(counts.get("merge")).toBe(9);
+    expect(counts.get("merge")).toBe(12);
     expect([...DOMAIN_KINDS]).toContain("config");
     expect([...DOMAIN_KINDS]).not.toContain("handover");
     for (const row of ERROR_TABLE) {
@@ -120,9 +120,12 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     for (const code of emitted) {
       expect(members, `refusal site ${code} is outside the declaration`).toContain(code);
     }
-    // The scan is non-vacuous: the credential and request branches are present.
+    // The scan is non-vacuous: the credential and the two request-resolution
+    // placeholder branches are present (the abort row's own emitters moved to
+    // the transaction's waiver-append and landing-gap causes).
     expect(emitted).toContain("config.credential.missing");
-    expect(emitted).toContain("merge.transaction-aborted");
+    expect(emitted).toContain("merge.request-unresolved");
+    expect(emitted).toContain("merge.work-item-unresolved");
     expect(members.length).toBeGreaterThanOrEqual(emitted.length);
     expect(
       readFileSync(join(ROOT, "packages/core/src/domain/merge-transaction.ts"), "utf8"),

@@ -390,9 +390,25 @@ export type CloseoutReadObservation<T> =
       readonly observation: "observed";
       readonly value: T;
       readonly signals?: CloseoutObservedSignals;
+      /**
+       * The matched request identities the read computed before its delivered
+       * selection (GH-366): carried beside the delivered signals on a match.
+       * Any count is derived from the identities; the read's other consumer
+       * (closeout) reads neither the member nor any count derived from it, so
+       * its ranked behaviour and output are unchanged.
+       */
+      readonly matchedIdentities?: readonly string[];
     }
   | { readonly observation: "not-found" }
-  | { readonly observation: "unavailable" }
+  | {
+      readonly observation: "unavailable";
+      /**
+       * EMPTY when the page was read and matched nothing (a decidable zero);
+       * ABSENT when the page could not be read (a fault — a distinct outcome,
+       * never folded into zero).
+       */
+      readonly matchedIdentities?: readonly string[];
+    }
   | {
       readonly observation: "invalid";
       readonly detail: string;

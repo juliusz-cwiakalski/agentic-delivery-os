@@ -179,6 +179,11 @@ export const RESERVED_TWO_SEGMENT_CODES = new Set([
   // two-segment codes, so they join the exact allowlist with no wildcard.
   "merge.sync-required",
   "merge.mergeability-unknown",
+  // GH-366 adds the three refusal-identity rows; they are kind-first
+  // two-segment codes, so they join the exact allowlist with no wildcard.
+  "merge.branch-unresolved",
+  "merge.request-unresolved",
+  "merge.work-item-unresolved",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
   "spend.telemetry-absent",
   // GH-237 pins the four two-segment queue identities exactly.

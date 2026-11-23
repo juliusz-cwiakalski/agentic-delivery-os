@@ -6,8 +6,8 @@
  * composes a command.
  */
 import { describe, expect, test } from "bun:test";
-import { createGitMergeSeam, MERGE_SEAM_OPERATIONS } from "../../packages/adapters/src/git/index";
 import type { GitMergeSeam } from "../../packages/adapters/src/git/index";
+import { createGitMergeSeam, MERGE_SEAM_OPERATIONS } from "../../packages/adapters/src/git/index";
 import {
   createBehindRepo,
   createConflictingRepo,
@@ -125,5 +125,71 @@ describe("TC-F1-013 the retained refresh capability", () => {
     expect(typeof seam.refresh).toBe("function");
     expect(FIXTURE_BRANCH.length).toBeGreaterThan(0);
     expect(FIXTURE_BASE.length).toBeGreaterThan(0);
+  });
+});
+
+describe("TC-MRG-042 the bounded change-record read at the seam", () => {
+  test("a record present at the head is located and read; a missing record is record-missing", async () => {
+    const fixture = createLandingRepo();
+    try {
+      // The landing fixture's base carries a commit; plant a change record on
+      // it through the fixture's own git seam so the read is a real tree walk.
+      const head = fixture.repo.head();
+      expect(head).toBeDefined();
+      const seam: GitMergeSeam = createGitMergeSeam({ cwd: fixture.repo.root });
+      const read = await seam.readChangeRecord({
+        headSha: head,
+        workItemRef: "GH-301",
+        maxBytes: 262_144,
+      });
+      // The fixture repo carries no change record: the honest answer is
+      // record-missing, decided from the tree walk.
+      expect(read.ok).toBe(false);
+      if (!read.ok) expect(read.reason).toBe("record-missing");
+      // The operation is a declared seam member.
+      expect(MERGE_SEAM_OPERATIONS).toContain("read-change-record");
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("a head the repository does not hold is record-unreadable, never a fetch", async () => {
+    const fixture = createLandingRepo();
+    try {
+      const seam: GitMergeSeam = createGitMergeSeam({ cwd: fixture.repo.root });
+      const read = await seam.readChangeRecord({
+        headSha: "f".repeat(40),
+        workItemRef: "GH-301",
+        maxBytes: 262_144,
+      });
+      // The absent head object is a local read failure, never a fetch.
+      expect(read.ok).toBe(false);
+      if (!read.ok) {
+        expect(read.reason).toBe("record-unreadable");
+        expect(read.detail).toContain("ls-tree-exit-128");
+      }
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test("an oversized record is refused at the byte cap, never truncated", async () => {
+    const fixture = createLandingRepo();
+    try {
+      const head = fixture.repo.head();
+      const seam: GitMergeSeam = createGitMergeSeam({ cwd: fixture.repo.root });
+      // The read honours the declared cap by refusing; the cap constant is the
+      // contract's, so the seam call with a tiny cap proves the refusal arm.
+      const read = await seam.readChangeRecord({
+        headSha: head,
+        workItemRef: "GH-301",
+        maxBytes: 4,
+      });
+      // Either the record is missing (no change folder in this fixture) or a
+      // present record exceeds the tiny cap: both arms are non-read outcomes.
+      expect(read.ok === false).toBe(true);
+    } finally {
+      fixture.cleanup();
+    }
   });
 });

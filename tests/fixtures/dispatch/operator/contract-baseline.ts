@@ -6,6 +6,10 @@
  * compares it against these pins, so a diff is a failure rather than a
  * self-fulfilling capture.
  */
+
+import { CLAUDE_CAPABILITIES } from "../../../../packages/adapters/src/harness/claude";
+import { OPENCODE_CAPABILITIES } from "../../../../packages/adapters/src/harness/opencode";
+import { catalogPaths, PRODUCTION_CATALOG } from "../../../../packages/core/src/config/catalog";
 import {
   DELIVERY_RESULT_TAXONOMY,
   DOMAIN_KINDS,
@@ -15,9 +19,6 @@ import {
   HARNESS_LIFECYCLE_CAPABILITIES,
   HARNESS_OPERATIONS,
 } from "../../../../packages/core/src/contracts/index";
-import { catalogPaths, PRODUCTION_CATALOG } from "../../../../packages/core/src/config/catalog";
-import { CLAUDE_CAPABILITIES } from "../../../../packages/adapters/src/harness/claude";
-import { OPENCODE_CAPABILITIES } from "../../../../packages/adapters/src/harness/opencode";
 
 export type AdapterDeclaration = {
   readonly supportedOperations: readonly string[];
@@ -96,7 +97,7 @@ export const CONTRACT_BASELINE: ContractBaseline = {
     "headless-mode-limitation",
   ],
   harnessKinds: ["opencode", "claude-code"],
-  errorRowCount: 169,
+  errorRowCount: 172,
   tokens: [
     ["merged", "success"],
     ["blocked", "success"],

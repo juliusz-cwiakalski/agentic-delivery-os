@@ -228,7 +228,12 @@ export const resolveOpenPr = (input: {
     : { outcome: "branch-mismatch", branch, openCount: input.items.length, matchCount: 0 };
 };
 
-const expectedSetValid = (facts: VerifyGatesWorkflowFacts): boolean => {
+/**
+ * The declared expected-set validity rule (TDR-0072 DR-1): exported UNCHANGED
+ * so the merge path reuses the battery's rule — the body is not edited, the
+ * single battery call site is kept, and no second validity predicate exists.
+ */
+export const expectedSetValid = (facts: VerifyGatesWorkflowFacts): boolean => {
   if (facts.outcome !== "read") return false;
   if (facts.names.length === 0 || facts.names.length > VERIFY_GATES_MAX_EXPECTED_JOBS) return false;
   const seen = new Set<string>();

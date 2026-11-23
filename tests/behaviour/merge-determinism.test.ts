@@ -110,13 +110,9 @@ describe("TC-MERGE-035 determinism under fixed facts", () => {
     expect(again.stdout).toBe(forward.stdout);
     const data = await runFreshOnce("success", "json");
     const gates = (data.envelope?.data as { gates?: readonly { id: string }[] } | undefined)?.gates;
-    expect(gates?.map((gate) => gate.id).slice(0, 5)).toEqual([
-      "lifecycle-finalization",
-      "ci-green",
-      "push-parity",
-      "owner-gate",
-      "squash-preflight",
-    ]);
+    // The merged report renders the evaluated merge-applicable projection in
+    // declaration order (GH-366 AC-F2-8).
+    expect(gates?.map((gate) => gate.id)).toEqual(["ci-green", "tracker-freshness"]);
   });
 });
 
@@ -139,7 +135,7 @@ describe("TC-FLOOR-005 determinism and byte pins across the merge and closeout s
 
     const present = readdirSync(GOLDEN_DIR).sort();
     for (const moved of MOVED) expect(present).toContain(moved);
-    expect(present).toHaveLength(13);
+    expect(present).toHaveLength(19);
 
     for (const file of present) {
       if ((MOVED as readonly string[]).includes(file)) continue;

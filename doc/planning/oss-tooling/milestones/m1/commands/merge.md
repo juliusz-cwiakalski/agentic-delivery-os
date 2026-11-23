@@ -3,8 +3,10 @@
 Status: Delivered M1-S4 (GH-225); the production composition, the dry-run
 report, and the declared emittable failure set are delivered by M2-S16
 (GH-293); the provider-side landing path, the mergeability refusal taxonomy,
-and the not-green required-job attribution are delivered by M4-S11 (GH-349).
-Implemented contract; scenarios SC-M1-01..04.
+and the not-green required-job attribution are delivered by M4-S11 (GH-349);
+the change-branch resolution, the merged-request convergence read, the refusal
+diagnostics contract, and the single-request mergeability source are delivered
+by GH-366. Implemented contract; scenarios SC-M1-01..04.
 
 ## NAME
 
@@ -20,12 +22,47 @@ Implemented contract; scenarios SC-M1-01..04.
 
 ## DESCRIPTION
 
-Reads the newest recorded gate verification and enforces the freshness
-envelope over it: the record is readable, its age is below the declared bound
-(default 1800 seconds, comparator `>=`, so at-bound is stale), its head SHA
-equals the current head, and its gate-set identity equals the effective one.
-Then one bounded post-verification probe re-reads the work item, one check-run
-page on the head, and the request detail.
+Resolves the change branch first: one bounded open-request list read builds the
+candidate set (capped at three; a saturated page refuses
+`ambiguous-open-request` even with zero matches), and each candidate's change
+record is read at its own asserted head through a bounded local git read
+(at most two fixed-argv invocations, 262 144 bytes, no fetch) and its `branch`
+declaration compared exactly to the candidate's own source ref — the resolution
+source is `declared-at-head`, and no accepted candidate refuses
+`merge.branch-unresolved` with one closed reason (`declaration-missing`,
+`declaration-unusable`, `declaration-disagrees`, `record-missing`,
+`record-invalid`, `record-unreadable`) naming each read candidate's cause and
+attempted tree path. Duplicate matching delivery requests — open or merged —
+are never ranked: `merge.transaction-aborted` names each duplicate identity.
+Where the open page offers nothing to resolve, one convergence attempt reads
+the delivered merged-request read verbatim and decides from its additive
+matched-request-identities member: exactly one identity replays at exit 0
+(`replayed=true`, zero record reads and zero record-read git invocations, lands
+nothing), the empty set refuses `merge.request-unresolved` with
+`no-open-request` as a decidable zero, and a faulted read is the distinct
+declared provider outcome naming `operation=github-delivery-request-list` —
+never folded into zero. The matched request's asserted full-SHA head IS the
+resolved head.
+
+The read budget per path peaks at three delivery-request provider requests:
+one for every refusal decided before the merge decision (the open list), two
+for an open-page-only run reaching the merge decision (the list plus the
+single-request mergeability read), an empty convergence attempt, and a faulted
+merged read, three for a match-bearing attempt (the read's own review-thread
+query counted and never suppressible — no option suppresses it), plus at most
+three bounded local record reads, one work-item read, one CI-workflow read, one
+check-run page on the resolved head, one verification read, and at most one
+post-refusal and one unknown-recovery re-read; no fetch, no pagination, no
+retry.
+
+Then the freshness envelope: the newest recorded verification is readable, its
+age is below the declared bound (default 1800 seconds, comparator `>=`, so
+at-bound is stale), its head SHA equals the resolved head, and its gate-set
+identity equals the effective one. One bounded post-verification probe re-reads
+the work item, one CI-workflow read, one check-run page on the resolved head,
+and the delivered single-request mergeability read — the landing decision reads
+mergeability from that single request, never the list; an unknown-recovery
+re-read re-reads the single request.
 
 With fresh evidence the transaction authorizes any declared waiver, applies
 the declared-gate verdicts plus the probe, resolves the request's mergeability
@@ -39,9 +76,10 @@ identity.
 
 A recorded landing replays `result=merged` at exit 0 with the same identity, no
 landing call, and no duplicate record. A clean pre-mutation abort never mutates
-and reports retryable `merge.transaction-aborted`; a fired landing whose provider
-truth was not observed refuses `merge.landing-unverified` with consequence
-`unknown` and is never re-landed by a re-run.
+and reports non-retryable `merge.transaction-aborted`, whose remediation names
+the aborted pre-mutation condition and promises no convergence; a fired landing
+whose provider truth was not observed refuses `merge.landing-unverified` with
+consequence `unknown` and is never re-landed by a re-run.
 
 The refusal decision is total over the observed mergeability plus absence. A
 conflicting request refuses `merge.sync-required` with reason `dirty` and issues
@@ -62,11 +100,39 @@ normal production answer after a provider landing, because the merge does not
 fetch.
 
 The effective gate set is configuration data (`merge.gates`, versioned, with
-every built-in retained); the freshness bound is `merge.gate-freshness`. Owner
-gate classification is policy-as-data and overrides are recorded waivers. The
-base is the request's declared target (default `main-tools`) and the branch is
-the checkout's head: neither is a flag. An explicit coordinator action: the
-daemon can prepare and queue but never fire a merge.
+every built-in retained; the shipped default makes `ci-green` merge-applicable,
+so the evaluated merge projection is two entries — `ci-green` and
+`tracker-freshness` — and the merged report renders that projection, never the
+record's battery list). The required-check set derives once per invocation:
+every merge-applicable `required-ci-job` entry contributes `job ?? id` and the
+CI gate contributes the repository-declared expected job set read through the
+same delivered read the battery uses, validated by the exported
+`expectedSetValid` rule; declaring `ci-green` on the `battery` surface is the
+reviewed check-gate opt-out, and the check gate gains no waivability. The
+freshness bound is `merge.gate-freshness`. Owner gate classification is
+policy-as-data and overrides are recorded waivers. The base is the request's
+declared target (default `main-tools`); the change branch and the resolved head
+come from the resolution — neither is a flag, and no ambient checkout branch or
+head is read. An explicit coordinator action: the daemon can prepare and queue
+but never fire a merge.
+
+### Refusals
+
+Every merge refusal renders dedicated `command=merge`, `ref=<ref>` (always the
+invocation's ref), and `operation=<token>` fields beside its code;
+`operation` draws from the closed nine-token vocabulary
+(`github-work-item`, `github-check-runs`, `github-delivery-request-list`,
+`github-delivery-request-detail`, `github-merge-delivery-request`,
+`repository-ci-workflow`, `delivery-registry`, `local-change-record-read`,
+`local-git-object-read`) or `-` when the refusal names no operation, validated
+at the rendering site. `merge.state-unverified` (exit 2) names the exact prior
+command and target in its remediation: produce the verification with
+`verify gates <ref>` for the same work item, then re-run. Every landing fault
+reports exactly one of four closed declared identities —
+`config.credential.missing` (naming the credential reference and environment
+variable), `provider.auth.rejected`, `provider.outage`, or
+`merge.landing-unverified` — with `operation=github-merge-delivery-request`,
+never the abort row and never a raw port code.
 
 ## OPTIONS
 
@@ -218,7 +284,10 @@ carries the resolved row's `code`, `category`, `retryable`, `consequence`, and
 | `merge.owner-gate-override-without-waiver` | user | no | not_landed | user-validation | 1 |
 | `merge.rebase-conflict` | user | no | not_landed | user-validation | 1 |
 | `merge.sync-required` | user | no | not_landed | user-validation | 1 |
-| `merge.transaction-aborted` | user | yes | not_landed | user-validation | 1 |
+| `merge.transaction-aborted` | user | no | not_landed | user-validation | 1 |
+| `merge.branch-unresolved` | user | no | not_landed | user-validation | 1 |
+| `merge.request-unresolved` | user | no | not_landed | user-validation | 1 |
+| `merge.work-item-unresolved` | user | no | not_landed | user-validation | 1 |
 | `merge.state-unverified` | platform | no | not_landed | platform-provider | 2 |
 | `merge.landing-unverified` | platform | no | unknown | platform-provider | 2 |
 | `merge.mergeability-unknown` | platform | yes | not_landed | platform-provider | 2 |
@@ -235,7 +304,23 @@ internal rebase. `merge.mergeability-unknown` reports that the provider has not
 decided after one exact-head re-read and is retryable. `merge.owner-gate-override-without-waiver`
 names the gate and the declared override path. `merge.rebase-conflict` stays
 declared and reserved: no delivered command path emits it, and no force variant
-exists.
+exists. `merge.branch-unresolved` reports the change branch that could not be
+resolved from the change record at the request head and carries one closed
+reason (`declaration-missing`, `declaration-unusable`, `declaration-disagrees`,
+`record-missing`, `record-invalid`, `record-unreadable`), chosen by the declared
+precedence, naming the candidate, the record path at its head, and the reason.
+`merge.request-unresolved` reports that no single open delivery request could be
+resolved and carries one closed reason (`no-open-request`,
+`ambiguous-open-request`, `head-unresolved`), naming the change ref and the
+observed open and candidate counts. `merge.work-item-unresolved` reports the
+tracker work item that could not be resolved, naming the work item and the read
+operation that failed. All three refuse at exit 1.
+`merge.transaction-aborted` is non-retryable and reaches exactly three
+act-requiring causes — a waiver-append failure, a declared landing gap, and
+duplicate matching delivery requests (open or merged, named by each duplicate
+identity) — and its remediation names the aborted pre-mutation condition and
+promises no convergence; a refused landing never reaches it, and a
+non-resolving request, work item, or branch never reaches it.
 
 The composition's emittable set is published as
 `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive over its refusal branches and
@@ -271,9 +356,16 @@ through its declared identity: a rejected credential is
 `provider.auth.rejected` at exit 1, an unreachable or malformed provider answer
 is `provider.outage` at exit 2 (`provider.payload.invalid` classifies as
 `provider.auth.rejected` on HTTP 401 or 403 and as `provider.outage`
-otherwise, and any other read fault is `provider.outage`), and a request or
-work item that does not resolve aborts as `merge.transaction-aborted` at exit 1
-so a re-run with a valid reference converges.
+otherwise, and any other read fault is `provider.outage`). A request or work
+item that does not resolve never aborts: a non-resolving open request refuses
+`merge.request-unresolved` at exit 1 with reason `no-open-request`,
+`ambiguous-open-request`, or `head-unresolved`; a non-resolving work item
+refuses `merge.work-item-unresolved` at exit 1; a change branch that does not
+resolve from the change record at the request head refuses
+`merge.branch-unresolved` at exit 1 with one of its six closed reasons.
+`merge.transaction-aborted` is reserved for its three act-requiring causes —
+the waiver-append failure, the declared landing gap, and duplicate matching
+delivery requests — and no reference-resolution outcome reaches it.
 
 ## SEE ALSO
 
