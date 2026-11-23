@@ -1,0 +1,107 @@
+# chg-GH-388-pm-notes.yaml — PM durable memory for this change (committed to git).
+# Live coordination + retrospective record. Phase state is written ONLY via the phase
+# command family; never hand-edit timestamps or the PR-URL field.
+change_id: GH-388
+title: "M4-S24: verify gates must persist the verification merge consumes (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+branch: fix/GH-388/verify-gates-persist-merge-verification
+change_folder: doc/changes/2026-11/2026-11-23--GH-388--verify-gates-persist-merge-verification
+tracker:
+  url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/388
+  labels_observed_at_intake: [ "change" ]
+phases:
+  clarify_scope: { started: null, completed: 2026-11-23T10:47:01.513Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Mechanism choice delegated by the ticket ('choose one, declare it'). PM
+      indication: option (A) — verify gates persists the merge.gate-verification
+      record it computed and merge consumes it. Drivers: (i) both current-truth
+      specs already declare A-shaped truth ('verify gates records the battery
+      entries … merge consumes the record'), so A converges runtime to spec;
+      (ii) the record is verify gates' own output — a printed-but-unrecorded
+      verification is not evidence (ticket's own framing); (iii) it makes the
+      merge.state-unverified remediation truthful ('verify gates <ref>' then
+      'merge <ref>') without a hidden --dry-run pre-step. Formal declaration of
+      A and the identity-reconciliation semantics happens in the spec. Option
+      (B) (merge composes when no record exists) rejected: it keeps verify gates
+      non-evidencing and doubles the verification composition on the landing
+      path."
+    date: "2026-11-23"
+open_questions: [] # none blocking owner input at intake
+blockers: []
+notes:
+  - text: "Intake observed state (2026-11-23): fresh start — phase ledger empty for
+      GH-388 (verified registry, 7646 records), no local/remote branch, no
+      change folder, no PR, zero open PRs repo-wide. main-tools ==
+      origin/main-tools at f5dc7a34 (0/0 post-fetch). Ticket open, label change,
+      milestone M4: Jaiship-native delivery attached (intake milestone
+      verification PASSED — no stop), no comments, no assignees. Branch
+      fix/GH-388/verify-gates-persist-merge-verification cut from main-tools
+      f5dc7a34; worktree carried only untracked .zed/ (not ours). Dependency
+      GH-366 satisfied on-base: PR #387 merged as f531c057 (present in
+      main-tools history under GH-389's f5dc7a34)."
+    type: info
+    date: "2026-11-23"
+  - text: "Clarify-scope cross-check vs system spec. DIVERGENCE:
+      feature-verify-gates.md and feature-merge-verify-deploy.md (Current,
+      last_updated 2026-11-18/2026-11-23) both state verify gates appends
+      exactly one fenced post-append-verified EVT-1 merge.gate-verification
+      record per full battery evaluation not refused for narrowed suite breadth;
+      the ticket's observed session (installed 7cc71cd, branch 7f283e8) shows NO
+      merge.gate-verification:GH-366 record after two verify gates runs — the
+      record appears only after merge --dry-run. Either the shipped verify-gates
+      composition lacks the state-append wiring merge reads, or the record lands
+      under an identity merge's read does not resolve. The delivery must
+      converge runtime to the declared contract; the spec-writer must pin code
+      truth first."
+    type: risk
+    date: "2026-11-23"
+  - text: "Identity seam for the spec to declare: merge enforces 'the recorded
+      gate-set identity equals the effective one' against its merge-applicable
+      set (default: ci-green + tracker-freshness), while verify gates records
+      the battery identity (5 built-ins). A battery-surface record under naive
+      equality refusal would flip state-unverified into gates-stale with a set
+      delta. Option A must reconcile the merge read (superset acceptance over
+      merge-applicable entries, a projected identity, or equivalent) while
+      keeping merge --dry-run's merge-applicable record semantics and the five
+      built-in ids reserved. Ticket AC pins the persisted record's identity
+      (changeRef + headSha) against the merge read."
+    type: info
+    date: "2026-11-23"
+  - text: "Requirements judged complete and consistent for artifact generation: ACs
+      are testable (A/B-conditional landing, remediation-names-working-sequence
+      pinned by test, record-identity fixture, verify gates bounded/secret-free
+      with no regression of its 5 gates); dependencies satisfied (GH-366
+      merged); mechanism choice explicitly delegated by the ticket author. No
+      owner questions required at intake."
+    type: info
+    date: "2026-11-23"
+  - text: "Documentation impacts anticipated for phase 7: feature-verify-gates.md
+      (record persistence/consumption language, read budget if unchanged),
+      feature-merge-verify-deploy.md (freshness envelope consumption +
+      state-unverified remediation text), doc/guides/engine-first-operations.md
+      (native merge sequence — the ticket names this documentation as blocked by
+      GH-388), quality/test-specs/test-spec-merge-verify-deploy.md (coverage
+      rows for the new persistence/consumption tests). No new error-table rows
+      expected: merge.state-unverified exists; only its remediation content is
+      pinned by test."
+    type: info
+    date: "2026-11-23"
+  - text: "Operational conventions carried into delivery: harness binary is
+      delivery-os (PATH=\"$PWD/node_modules/.bin:$PATH\" prefix in runner
+      shells); gate evidence uses TMPDIR=$PWD/tmp/tmpdir; commits via the commit
+      primitive; PR targets main-tools; STOP with the PR open; changeset format
+      precedent is five fixed-group packages minor (GH-377/GH-381) — verify
+      against scope before authoring."
+    type: info
+    date: "2026-11-23"
