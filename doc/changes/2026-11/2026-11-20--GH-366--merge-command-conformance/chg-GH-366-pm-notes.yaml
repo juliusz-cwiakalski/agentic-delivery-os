@@ -14,7 +14,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-22T20:00:52.044Z }
   delivery: { started: null, completed: 2026-11-23T02:08:39.651Z }
   system_spec_update: { started: null, completed: 2026-11-23T02:37:23.699Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-23T03:57:46.167Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -88,26 +88,25 @@ open_questions: []
 blockers: []
 notes:
   - text: "Re-review iteration 2: **PASS** — 0c/0maj/0min; 2 info no-action (F-5:
-      the duplicate pre-check also fires in unpinned same-ref/unreadable
-      overlap states where F-1 step 2's letter names head-unresolved —
-      spec-internal authority exists in AC-F1-4's abort-over-request-reason
-      tail, a future spec touch could state the exception; F-6: TC-MRG-055's
-      zero-record-read oracle observed via provider budget + output surface,
-      the anti-masking ordering itself observed). F-1 certified closed (code +
-      TC-MRG-055 incl. masking negation, both-accepted and lone-unreadable
-      cells unchanged and green); F-2 closed (anchors agree across plan v17 /
-      test plan v1.9 / spec v2.6 / tree — error-table-sync 172/172, kind 12);
-      F-3 accepted residual (verified justification); 27/27 covered,
-      allocation 55, carrier suites independently green (22+73+180),
-      typecheck clean. One environmental non-merge failure noted (ci-baseline-parity,
-      tmpfs cross-device git clone --local, content-independent). Record:
-      code-review/review-iter-2.yaml. Doc-sync re-run (full authority): all
-      seven residual sub-gaps reconciled — merge.md's abort row now
-      non-retryable with the three request identities added, feature spec's
-      row-level honesty rule and twelve-row list completed, test-spec
-      classification row restated to the dedicated identities; validation
-      green (error-table-sync 172/172, doc-conformance 61/0,
-      merge-refusal-rows 13/0, reference-page-parity 5/0,
+      the duplicate pre-check also fires in unpinned same-ref/unreadable overlap
+      states where F-1 step 2's letter names head-unresolved — spec-internal
+      authority exists in AC-F1-4's abort-over-request-reason tail, a future
+      spec touch could state the exception; F-6: TC-MRG-055's zero-record-read
+      oracle observed via provider budget + output surface, the anti-masking
+      ordering itself observed). F-1 certified closed (code + TC-MRG-055 incl.
+      masking negation, both-accepted and lone-unreadable cells unchanged and
+      green); F-2 closed (anchors agree across plan v17 / test plan v1.9 / spec
+      v2.6 / tree — error-table-sync 172/172, kind 12); F-3 accepted residual
+      (verified justification); 27/27 covered, allocation 55, carrier suites
+      independently green (22+73+180), typecheck clean. One environmental
+      non-merge failure noted (ci-baseline-parity, tmpfs cross-device git clone
+      --local, content-independent). Record: code-review/review-iter-2.yaml.
+      Doc-sync re-run (full authority): all seven residual sub-gaps reconciled —
+      merge.md's abort row now non-retryable with the three request identities
+      added, feature spec's row-level honesty rule and twelve-row list
+      completed, test-spec classification row restated to the dedicated
+      identities; validation green (error-table-sync 172/172, doc-conformance
+      61/0, merge-refusal-rows 13/0, reference-page-parity 5/0,
       engine-first-doc-reconciliation 16/0, forbidden-literals +
       exit-code-literals OK). No unresolved documentation gaps."
     type: info
@@ -117,41 +116,40 @@ notes:
       (`duplicateCandidateGroups` helper; the :991 defect-marker comment now
       states the candidate-set population with the spec citation), plus a
       page-decided pre-check so a same-ref group holding an unreadable head
-      aborts as a duplicate before the head-guard can mask it. TC-MRG-055
-      landed in the production-composition suite: the mixed pair (#301
-      accepted + #300 refused, same source ref) aborts
-      `merge.transaction-aborted` naming BOTH identities, 1 provider request,
-      zero record reads; the pre-fix runtime observation (the mask the review
-      predicted: `merge.request-unresolved`/`head-unresolved` naming only
-      #300) is quoted in the cell as the regression evidence; the plan-v17
-      paired control (distinct-ref disagreement still resolves) rides the same
-      commit. Suites: production-composition + convergence 31/0, refusal
-      containment + golden 38/0, typecheck clean, commitlint accepted. F-3
-      declared residual (not trivially dead: removal requires a contract-type
-      discrimination refactor across contracts + adapter; no test drives the
-      arm) — routed to the re-review's accepted-nit path."
+      aborts as a duplicate before the head-guard can mask it. TC-MRG-055 landed
+      in the production-composition suite: the mixed pair (#301 accepted + #300
+      refused, same source ref) aborts `merge.transaction-aborted` naming BOTH
+      identities, 1 provider request, zero record reads; the pre-fix runtime
+      observation (the mask the review predicted:
+      `merge.request-unresolved`/`head-unresolved` naming only #300) is quoted
+      in the cell as the regression evidence; the plan-v17 paired control
+      (distinct-ref disagreement still resolves) rides the same commit. Suites:
+      production-composition + convergence 31/0, refusal containment + golden
+      38/0, typecheck clean, commitlint accepted. F-3 declared residual (not
+      trivially dead: removal requires a contract-type discrimination refactor
+      across contracts + adapter; no test drives the arm) — routed to the
+      re-review's accepted-nit path."
     type: info
     date: "2026-11-23"
-  - text: "Review iteration 1: FAIL — 0 critical / 1 major / 1 minor / 1 nit /
-      1 info. Record: code-review/review-iter-1.yaml. The ruled shape verified
+  - text: "Review iteration 1: FAIL — 0 critical / 1 major / 1 minor / 1 nit / 1
+      info. Record: code-review/review-iter-1.yaml. The ruled shape verified
       clean and independently reproduced (1,055 tests green across the
-      merge/golden/structure surface; the numeric-anchor reconciliation
-      VERIFIED from first principles: e1ebc76c = 170/+136 authored, GH-365
-      absorbed one baseline row → base 7cc71cd1 = 169/168/+135, +3 merge rows →
-      172/171/71/kind-12/+138). The major (F-1): the duplicate-open abort
-      groups the ACCEPTED set (packages/core/src/domain/merge-transaction.ts:994,
+      merge/golden/structure surface; the numeric-anchor reconciliation VERIFIED
+      from first principles: e1ebc76c = 170/+136 authored, GH-365 absorbed one
+      baseline row → base 7cc71cd1 = 169/168/+135, +3 merge rows →
+      172/171/71/kind-12/+138). The major (F-1): the duplicate-open abort groups
+      the ACCEPTED set (packages/core/src/domain/merge-transaction.ts:994,
       comment :991 says accepted) while spec §5.1 F-1 step 5 declares the
       CANDIDATE set — a same-ref pair with exactly one accepted entry silently
-      resolves and lands; AC-F1-6's given-clause unmet in that member state;
-      the pinned cell is both-accepted only. F-2 (minor): the plan YAML retains
-      4 stale anchor sites (173/172-delivered/+139) — the reconciliation
-      corrected spec/test-plan only. F-3 (nit): unreachable evidence-free
-      replay fallback arm (merge-transaction.ts:941-947). F-4 (info): closeout
-      consumption proof is textual — acceptable, no action. Remediation: F-1
-      repoint to candidate set + mixed duplicate cell (one accepted + one
-      refused, same source ref → abort naming both, never landing); F-2 plan
-      v17 anchors + remediation declaration; F-3 remove if trivially dead else
-      document."
+      resolves and lands; AC-F1-6's given-clause unmet in that member state; the
+      pinned cell is both-accepted only. F-2 (minor): the plan YAML retains 4
+      stale anchor sites (173/172-delivered/+139) — the reconciliation corrected
+      spec/test-plan only. F-3 (nit): unreachable evidence-free replay fallback
+      arm (merge-transaction.ts:941-947). F-4 (info): closeout consumption proof
+      is textual — acceptable, no action. Remediation: F-1 repoint to candidate
+      set + mixed duplicate cell (one accepted + one refused, same source ref →
+      abort naming both, never landing); F-2 plan v17 anchors + remediation
+      declaration; F-3 remove if trivially dead else document."
     type: blocker
     date: "2026-11-23"
   - text: "Retro (AC given-clause member states): F-1 slipped through every

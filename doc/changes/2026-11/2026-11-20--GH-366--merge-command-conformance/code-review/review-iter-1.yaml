@@ -1,0 +1,201 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-366
+branch: fix/GH-366/merge-command-conformance
+status: FAIL
+summary: >
+  The ruled shape (CEO-D-116) is delivered with unusual rigor and almost every
+  contract claim was independently reproduced by this review: 1 055 tests green
+  across the merge/golden/structure surface (composition 76, contract/refusal
+  rows/error-table/doc-conformance 358, behaviour family 143, checks/structure
+  family 140, goldens 338), error-table-sync green at 172/172, doc-distribution
+  guard green (96 docs). The numeric-anchor reconciliation is VERIFIED from
+  first principles: e1ebc76c carried 170 machine / +136 (the authored anchors);
+  GH-365 absorbed one baseline row, so the branch base 7cc71cd1 carried
+  169/168/+135; the change adds exactly +3 merge rows to land 172 machine /
+  171 delivered / 71 allowlist / merge kind 12 / BASELINE_ROWS.length + 138,
+  with every pin site moved (sync-suite arithmetic, legacy-scan bans on
+  169/168/+139/+135, doc pages, doc-conformance strings). Spec v2.6 and test
+  plan v1.8 state the delivered truth; DOD-5 holds. Plan phases 1-7 are all
+  COMPLETE with per-phase commits and gate evidence; the production diff is
+  confined to the declared merge path (16 files) plus declared tests, docs,
+  changeset and the regenerated mirror — no scope deviation. Two findings block
+  PASS: (F-1, major) the duplicate-open abort's population is the accepted set
+  while spec §5.1 F-1 step 5 declares the candidate set, so a same-ref
+  candidate pair with exactly one accepted entry silently resolves instead of
+  aborting — contradicting AC-F1-6's given-clause and the never-choose-
+  silently rule the row exists to enforce; (F-2, minor) the plan YAML still
+  carries the stale 173/172-delivered/+139 anchors after the PM reconciliation
+  corrected only the spec and test plan. Severity vocabulary mapping for the
+  orchestrator: critical=critical, major=high, minor=medium, nit=low.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 1
+  info: 1
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/merge-transaction.ts:994
+    message: >
+      The duplicate-open abort groups only the ACCEPTED set (byRef is built
+      from `accepted` at lines 994-998; the step-5 comment at 990-993 even
+      states "its population is the accepted set"), but spec §5.1 F-1 step 5
+      declares "its population is the candidate set" and refuses
+      merge.transaction-aborted when "more than one open entry whose
+      provider-asserted source ref equals the resolved branch exactly". In the
+      mixed sub-case — two open candidates sharing the source ref where
+      exactly one is accepted (the other record-missing, record-invalid or
+      declaration-disagrees) — the delivered code resolves to the single
+      accepted candidate and lands, silently selecting between two duplicate
+      open requests, while the AC-F1-6 given-clause ("more than one open
+      request whose provider-asserted source ref equals the resolved branch")
+      demands the abort. The pinned cell (TC-MRG-006/007/042 duplicate-open,
+      tests/behaviour/merge-production-composition.test.ts:668-697) exercises
+      only the both-accepted population (duplicateHeadSha is fixture-documented
+      as "a second local head whose record declares the same branch"), so no
+      test observes the divergence. Reachable provider state: two open
+      requests with one head branch, one carrying a broken/missing
+      declaration. Consequence: the exact silent-selection failure mode
+      (spec P-8) the abort row was added to remove. The zero-accepted mixed
+      case behaves consistently (branch-unresolved); the both-accepted case
+      conforms (aborts, names each identity, wins over ambiguity).
+    suggestion: >
+      Repoint the duplicate grouping to the candidate set: once the resolved
+      branch is known (after acceptance), refuse
+      merge.transaction-aborted (requestReason duplicate-open-request) when
+      candidates.filter(c => c.sourceRef === resolvedBranch).length > 1,
+      naming every such candidate's identity — this subsumes the current
+      accepted-set check (both-accepted stays aborting; the abort still wins
+      over distinct-refs ambiguity; the budget is unchanged at 1 provider
+      request since the decision remains page-decided after bounded local
+      reads). Add the mixed composition cell (one accepted + one
+      declaration-disagrees, same source ref) asserting the abort naming both
+      identities, and a control asserting a distinct-ref disagreement still
+      resolves/branch-unresolved. Alternative (less faithful): amend the spec
+      — rejected because the mixed case is precisely a silent choose between
+      duplicates.
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-20--GH-366--merge-command-conformance/chg-GH-366-plan.yaml:339
+    message: >
+      The numeric-anchor reconciliation corrected spec (v2.6) and test plan
+      (v1.8) to the delivered anchors (172/171/71/+138), but the plan YAML
+      still declares the stale authored anchors in at least four sites: line
+      339 ("end state is 173 / 173 / 172 / 71 / + 139"), lines 641-642
+      ("170 -> 173 machine … 169 -> 172 delivered"), lines 730-741 (phase-2
+      title/summary "the 173-identity move" and scope comment "170 -> 173"),
+      and lines 1799-1804 (TC-MRG-038 allocation "identities move 170 -> 173
+      … 173 / 173 / 172 / 71 / + 139"). A reader executing the plan text
+      alone would treat the delivered 172-state as a defect; the correction
+      currently lives only in pm-notes, not in the artifact it corrects.
+      Disclosed by the PM (phase-2 DECLARED DEVIATION note and the
+      numeric-anchor decision note), so this is artifact hygiene, not a
+      phase or scope gap — phases 1-7 otherwise conform with commits and
+      gate evidence.
+    suggestion: >
+      Amend the four plan sites to the reconciled anchors (or prepend a dated
+      supersession line at the arithmetic declaration pointing at the
+      pm-notes reconciliation and spec v2.6 §18/DOD-5), in the same
+      remediation commit as F-1. No product surface is affected.
+  - id: F-3
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:941
+    message: >
+      The replay path's defensive arm (lines 941-947) refuses
+      merge.request-unresolved via a bare readFailure with NO evidence when a
+      single matched identity arrives on a non-observed outcome. With the
+      delivered adapter this is unreachable (unavailable + member-present
+      occurs only with zero matches; single-match attempts are always
+      observed), but if a future adapter ever produced that shape the refusal
+      would render without operation/openCount/matched identities — a
+      degraded diagnostics shape on a path AC-F3-1 covers.
+    suggestion: >
+      Either delete the arm (the type system plus the adapter contract make
+      it unreachable) or populate the failure evidence (operation
+      github-delivery-request-list, the observed identity) so the rendered
+      refusal stays within the declared diagnostics contract. Optional — may
+      ride the F-1 remediation commit or a later cleanup.
+  - id: F-4
+    severity: info
+    confidence: high
+    category: test-honesty
+    location: tests/behaviour/providers/github-closeout.test.ts:207
+    message: >
+      The closeout-unchanged consumption proof (TC-MRG-054's final cell) is a
+      source-text scan (not.toContain("matchedIdentities") over
+      domain/closeout.ts and edge.ts). Unlike AC-F4-1's totality proof — where
+      source-text matching is banned and the delivered proof is correctly
+      value-based — a structural absence scan is a reasonable instrument
+      here, and it is backed by exact-shape assertions (toEqual on the
+      unavailable arm, Object.hasOwn absence proofs) and the unchanged
+      delivered-ranking cell. No action required; a type-level absence
+      assertion would be marginally stronger.
+    suggestion: >
+      None required. If touched later, prefer a compile-time consume-check
+      (e.g. an exhaustive-destructuring type test) over the textual scan.
+reviewed_at: 2026-11-23T02:54:21Z
+next_step: CALL_CODER
+review_evidence:
+  independent_test_runs: >
+    bun test over tests/behaviour/merge-production-composition.test.ts +
+    tests/golden/merge.test.ts + tests/behaviour/providers/github-closeout.test.ts
+    (76 pass), tests/structure/{merge-contract,merge-refusal-rows,
+    defect-f1-merge-refusal-containment,error-table}.test.ts +
+    tests/checks/{error-table-sync,doc-conformance}.test.ts (358 pass), the
+    merge behaviour family (143 pass), the checks/structure family incl.
+    merge-branch-read-scan + merge-landing-retirement (140 pass),
+    tests/golden/ recursively incl. verify-gates goldens (338 pass) — 1 055
+    green, 0 fail.
+  checks_run:
+    - "bun run scripts/checks/error-table-sync.ts -> entries=172 documented=172 OK"
+    - "bash scripts/.tests/test-doc-distribution.sh -> no drift, 96 in-scope docs"
+  numeric_anchor_reproduction: >
+    ERROR_TABLE parsed at HEAD: 172 entries, merge kind 12 (bun -e import).
+    git show main-tools:packages/core/src/contracts/error-table.ts: 169 rows;
+    e1ebc76c: 170 rows and sync arithmetic BASELINE_ROWS.length + 136;
+    main-tools sync arithmetic +135 (GH-365 absorbed one baseline row);
+    HEAD sync arithmetic +138 with LEGACY_ENTRY_169_FORMS banning the
+    outgoing pair — the reconciliation's every numeric claim reproduced.
+  audit_highlights: >
+    Ruled shape verified in code and tests: additive optional member with
+    empty/absent discrimination on the unavailable arm
+    (packages/adapters/src/github/client.ts:498-507,
+    packages/core/src/contracts/closeout.ts:390-410); one identity replays
+    with zero record reads and three-request multiset (composition:406-465);
+    many abort naming EACH (composition:467-500); every fault class ->
+    provider.outage naming github-delivery-request-list, budget 2, never
+    folded into zero (composition:534-577); saturation precedes candidate
+    count incl. the zero-match saturated cell (composition:580-611, merge-transaction.ts:807-824);
+    non-full-SHA head never read (merge-transaction.ts:840-860); budget
+    ceiling 3 with the thread query counted and the NG-8 no-suppression
+    negative (tests/structure/merge-contract.test.ts:326-338); LF-1 oracle
+    TC-MRG-050 lands from the single-request read with the open list not
+    re-requested and the fault naming github-delivery-request-detail
+    (composition:799-845); LF-2 remediation names verify gates <ref> with the
+    bare-remediation negative (composition:358-385,
+    error-table.ts:977); nine operation tokens + - with restored
+    github-delivery-request-detail validated at the rendering site
+    (contracts/merge.ts:448-460, merge-transaction.ts:1952-1959); value-based
+    totality proof failing by name on deletion/bare-list substitution with no
+    source-text coverage assertion
+    (production.ts:492-508, defect-f1-merge-refusal-containment.test.ts:104-135);
+    ambient-read absence scan with planted firing controls
+    (merge-branch-read-scan.test.ts:62-94); goldens byte-compared with
+    EXPECTED 19 and the retired pair banned (tests/golden/merge.test.ts:153-207);
+    closeout consumes neither member nor count (github-closeout.test.ts:140-213);
+    declaration cap 256/257 boundary proven (composition:732-790);
+    doc surfaces state the delivered anchors (feature-result-contract.md:320);
+    TDR-0072/0073 remain Proposed with dated amendment rows; changeset names
+    the five fixed-group packages at minor; .ados-claude/agents/pm.md carries
+    the regenerated authoring obligation.
