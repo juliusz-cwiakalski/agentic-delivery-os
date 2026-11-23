@@ -10,7 +10,10 @@
 import { describe, expect, test } from "bun:test";
 import type { VerifyGatesCommandRuntime } from "../../packages/cli/src/commands/verify-gates";
 import type { CrossRepositoryVerifyGatesReport } from "../../packages/core/src/contracts/index";
-import { readChangeTransitionsTolerant } from "../../packages/core/src/state/index";
+import {
+  readChangeTransitionsTolerant,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import { API_MEMBER, CHANGE_REF, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 import {
   declaredMember,
@@ -29,10 +32,15 @@ import {
 } from "../fixtures/verify-gates/cases/harness";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
+  createVerifyGatesProductionHarness,
+  VG_PROD_REF,
+} from "../fixtures/verify-gates/production-composition";
+import {
   appendLanding,
   createVerifyRecorder,
   createVerifyState,
   guardStore,
+  type VerifyCallRecorder,
 } from "./verify-support";
 
 type RecordedRead = { readonly name: string; readonly args: readonly unknown[] };
@@ -437,5 +445,147 @@ describe("TC-SPAR-004 the map adds no source read and exactly one resolution att
     expect(narrowed.exitCode).toBe(1);
     expect(budget.reads.map((entry) => entry.name)).toEqual(control);
     expect(budget.reads).toHaveLength(control.length);
+  });
+});
+
+describe("TC-VGATES-074 the production budget holds with the append wired", () => {
+  /** Per-provider-source counts over one recorded transport (structural bounds, never wall-clock). */
+  const sourceCounts = (urls: readonly string[]) => ({
+    list: urls.filter((url) => url.includes("/pulls?")).length,
+    detail: urls.filter((url) => url.includes("/pulls/") && !url.endsWith("/merge")).length,
+    checks: urls.filter((url) => url.includes("/check-runs")).length,
+    workItem: urls.filter((url) => url.includes("/issues/")).length,
+    landing: urls.filter((url) => url.endsWith("/merge")).length,
+  });
+
+  test("the shipped verify gates pass cell performs exactly the delivered provider reads", async () => {
+    const networkGuard = createNoNetworkGuard();
+    const harness = createVerifyGatesProductionHarness({ label: "gh388-budget-pass" });
+    try {
+      const result = await harness.run(["--json", "verify", "gates", VG_PROD_REF]);
+      expect(result.exitCode).toBe(0);
+      const counts = sourceCounts(harness.transportCalls);
+      // At most one page or item per provider source, no pagination.
+      expect(counts.list).toBe(1);
+      expect(counts.detail).toBe(1);
+      expect(counts.checks).toBe(1);
+      expect(counts.workItem).toBe(1);
+      expect(counts.landing).toBe(0);
+      // No pagination: every outbound URL is unique.
+      expect(new Set(harness.transportCalls).size).toBe(harness.transportCalls.length);
+      expect(networkGuard.calls).toEqual([]);
+    } finally {
+      networkGuard.restore();
+      harness.dispose();
+    }
+  });
+
+  test("the fail and credential-unavailable cells add no provider reads", async () => {
+    const networkGuard = createNoNetworkGuard();
+    try {
+      // The fail cell: the battery still reads each source once, then fails.
+      const failHarness = createVerifyGatesProductionHarness({
+        label: "gh388-budget-fail",
+      });
+      failHarness.setReply((url) => {
+        if (url.includes("/check-runs")) {
+          return {
+            status: 200,
+            body: {
+              check_runs: ["CI / test", "CI / lint"].map((name, index) => ({
+                id: 9001 + index,
+                name,
+                status: "completed",
+                conclusion: "failure",
+              })),
+            },
+          };
+        }
+        return failHarness.defaultReply(url);
+      });
+      try {
+        const fail = await failHarness.run(["--json", "verify", "gates", VG_PROD_REF]);
+        expect(fail.exitCode).toBe(1);
+        const failCounts = sourceCounts(failHarness.transportCalls);
+        expect(failCounts.list).toBe(1);
+        expect(failCounts.detail).toBe(1);
+        expect(failCounts.checks).toBe(1);
+        expect(failCounts.workItem).toBe(1);
+        expect(failCounts.landing).toBe(0);
+      } finally {
+        failHarness.dispose();
+      }
+      // The credential-unavailable refusal: no provider transport at all.
+      const credentialHarness = createVerifyGatesProductionHarness({
+        label: "gh388-budget-credential",
+        credential: "missing",
+      });
+      try {
+        const credential = await credentialHarness.run(["--json", "verify", "gates", VG_PROD_REF]);
+        expect(credential.exitCode).toBe(1);
+        expect(
+          credentialHarness.transportCalls.filter((url) => url.includes("api.github")),
+        ).toEqual([]);
+      } finally {
+        credentialHarness.dispose();
+      }
+      expect(networkGuard.calls).toEqual([]);
+    } finally {
+      networkGuard.restore();
+    }
+  });
+
+  test("the merge consumption path keeps the delivered budget over a shipped record", async () => {
+    const networkGuard = createNoNetworkGuard();
+    const harness = createVerifyGatesProductionHarness({ label: "gh388-budget-merge" });
+    try {
+      const verify = await harness.run(["--json", "verify", "gates", VG_PROD_REF]);
+      expect(verify.exitCode).toBe(0);
+      const merge = await harness.run(["--json", "merge", VG_PROD_REF]);
+      expect(merge.exitCode).toBe(0);
+      const counts = sourceCounts(harness.transportCalls);
+      // Per source across the native sequence: the verify battery's one read
+      // plus the merge's one read (resolution, tracker, probe, LF-1), and
+      // exactly one landing call.
+      expect(counts.list).toBe(2);
+      expect(counts.detail).toBe(2);
+      expect(counts.checks).toBe(2);
+      expect(counts.workItem).toBe(2);
+      expect(counts.landing).toBe(1);
+      expect(networkGuard.calls).toEqual([]);
+    } finally {
+      networkGuard.restore();
+      harness.dispose();
+    }
+  });
+
+  test("the append contract's state reads are the append's own shape, never provider reads", async () => {
+    const networkGuard = createNoNetworkGuard();
+    const recorder: VerifyCallRecorder = { calls: [] };
+    const harness = createVerifyGatesProductionHarness({
+      label: "gh388-budget-append-shape",
+      stateStoreWrap: (inner) => guardStore(inner, recorder, { throwOnMutation: false }).store,
+    });
+    try {
+      const result = await harness.run(["--json", "verify", "gates", VG_PROD_REF]);
+      expect(result.exitCode).toBe(0);
+      // The delivered fenced append contract per append: read-before,
+      // acquireFence, append, read-after, releaseFence — counted and asserted
+      // against the append's own shape, never conflated with provider or
+      // configuration reads.
+      const appends = recorder.calls.filter((call) => call === "append");
+      expect(appends).toHaveLength(1);
+      expect(recorder.calls.filter((call) => call === "acquireFence")).toHaveLength(1);
+      expect(recorder.calls.filter((call) => call === "releaseFence")).toHaveLength(1);
+      expect(recorder.calls.filter((call) => call === "readRecords")).toHaveLength(2);
+      expect(recorder.calls.filter((call) => call === "replaceDocument")).toHaveLength(0);
+      // The ledger gained exactly the one record.
+      const read = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(read.ok && read.records).toHaveLength(1);
+      expect(networkGuard.calls).toEqual([]);
+    } finally {
+      networkGuard.restore();
+      harness.dispose();
+    }
   });
 });

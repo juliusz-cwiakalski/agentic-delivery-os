@@ -295,3 +295,35 @@ notes:
       0 fail; capture entry byte-identical; biome clean."
     type: info
     date: "2026-11-23"
+  - text: "Plan phase 4 complete (identity + recorded-verdict consumption cells
+      over shipped-produced records). Commit
+      69b0bdd113381773f6229d77227bbe472511c1a5 (commit primitive; staged the
+      three declared suites + the pm-notes tracked drift). Seeding pattern:
+      the shipped verify-gates handler over the merge harness's store via the
+      delivered real append (facts overridden to the merge ref/branch/head and
+      provider parity posture) — never the TC-MERGE-007 hand-built builder.
+      TC-MERGE-043: the shipped record resolved by persisted identity (ledger
+      key, changeRef, headSha) and accepted under total identity equality
+      (schema version + six-id sequence, exact array equality); the landing
+      proceeded. TC-MERGE-044: head H' (provider-asserted request head, not
+      the git seam) refuses naming both SHAs; at-bound and over-bound refuse
+      with age and bound; a one-id drop on the newest record (delivered
+      append) refuses gates-stale with the set delta naming the dropped id;
+      every arm zero consumption. TC-MERGE-045: recorded not-green ci-green
+      refuses with exactly one recorded attribution against a green probe
+      page; DISCLOSED reconciliation: the battery-only built-in arm uses the
+      owner-gate-present shape (the lifecycle-finalization fail shape is not
+      expressible through the delivered fixture runtime's hardcoded complete
+      document + empty transitions without a fixture-harness change outside
+      the declared scope) and pins the delivered recorded-evidence contract —
+      the family refusal carries {gateId, detail} exactly, no attribution
+      member (attribution is the declared required-job contract, pinned by the
+      ci-green arm), no probe member, no timestamp. TC-MERGE-046: the
+      tracker-freshness transition refusal with transition + age inline over
+      the recorded posture, and the clean recorded landing at the delivered
+      probe budget (one work-item read, one check-run page). Test result:
+      merge-freshness 19 pass, merge-required-job-probe 23 pass, merge-probe
+      20 pass (4-suite battery with merge-verification-record: 70 pass /
+      0 fail); biome clean."
+    type: info
+    date: "2026-11-23"
