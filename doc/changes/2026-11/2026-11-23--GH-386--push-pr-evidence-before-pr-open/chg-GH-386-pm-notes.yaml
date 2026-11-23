@@ -14,7 +14,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-23T15:36:21.458Z }
   delivery: { started: null, completed: 2026-11-23T20:27:04.416Z }
   system_spec_update: { started: null, completed: 2026-11-23T20:45:12.435Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-23T21:08:28.036Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -60,33 +60,45 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Review iter-2 verdict: PASS (2026-11-23, code-review/review-iter-2.yaml).
+      Remediation commit 23aadeb6 (spec-only, 7+/3−) resolved F-1/F-2 exactly as
+      prescribed and verified against code truth (daemon lane derives with no
+      pushParity; readOpenRequestHeadSha fresh bounded reads, fail-closed). F-3
+      resolved at baseline 3afb8db3; F-4/F-5 no-action info. Zero findings;
+      spec_compliance PASS, plan_compliance PASS, next step PROCEED. Record-only
+      optional minors (no action): §7.1 + glossary universal phrasing and
+      test-plan AC-F1-1 restatement could carry the composition qualifier at
+      next artifact touch. Review loop closed in one remediation iteration; both
+      review yamls + spec remediation land with the review_fix phase commit."
+    type: info
+    date: 2026-11-23
   - text: "Review iter-1 verdict: FAIL (2026-11-23, code-review/review-iter-1.yaml).
       0 code defects; 5 findings (2m/1l/1i shape; reviewer count line says 5,
       letters F-1..F-4). F-1 (medium): canonical spec lacks the daemon-lane
       capability exemption — F-1 claims the precondition 'binds every
       classification reaching arm 8' and AC-F1-1 is unqualified, while
-      code/port-contract/feature-page scope it to compositions supplying
-      parity facts; remediation = composition-scoping clause mirroring the
-      feature-page sentence + scoped AC-F1-1 + daemon-lane residual recorded in
-      §7.3/§11. F-2 (medium): §8.1 'provider reads unchanged in count and kind'
-      vs implementation's fresh bounded list reads (fail-closed, same
+      code/port-contract/feature-page scope it to compositions supplying parity
+      facts; remediation = composition-scoping clause mirroring the feature-page
+      sentence + scoped AC-F1-1 + daemon-lane residual recorded in §7.3/§11. F-2
+      (medium): §8.1 'provider reads unchanged in count and kind' vs
+      implementation's fresh bounded list reads (fail-closed, same
       class/resolution as readPullTruth); remediation = declare the parity read
-      pair. F-3 (low): pm-notes delivery-deviation note (c) mischaracterized
-      the identity rename — git truth: provider.head.unresolved exists in NO
-      commit reachable from base; rename IS the compliance path (provider is a
+      pair. F-3 (low): pm-notes delivery-deviation note (c) mischaracterized the
+      identity rename — git truth: provider.head.unresolved exists in NO commit
+      reachable from base; rename IS the compliance path (provider is a
       DOMAIN_KIND, so keeping it would force a forbidden error-table row;
-      ERROR_TABLE diff empty; delivered state-unverified untouched) —
-      corrective note appended below. F-4 (info): golden TC-FAIL-002 home is
-      the test plan's own named suite; opportunistic fixture-file migration
-      later. Remediation is documentation-only; owning artifact = SPEC;
-      reviewer next step = CALL_CODER for doc-artifact edits then re-review
-      iteration 2. Reopen state: NO phase reopen — remediation is verbatim
-      review-prescribed change-folder doc surgery inside the review_fix loop,
-      so the FAIL record rides its own commit and the spec edits ride the
-      remediation commit. All flagged items ruled compliant otherwise (golden
-      adaptation honest; companion fixtures accurate and non-weakening; spec
-      clause exactly as prescribed; intermediate window acceptable; daemon
-      declaration matches code)."
+      ERROR_TABLE diff empty; delivered state-unverified untouched) — corrective
+      note appended below. F-4 (info): golden TC-FAIL-002 home is the test
+      plan's own named suite; opportunistic fixture-file migration later.
+      Remediation is documentation-only; owning artifact = SPEC; reviewer next
+      step = CALL_CODER for doc-artifact edits then re-review iteration 2.
+      Reopen state: NO phase reopen — remediation is verbatim review-prescribed
+      change-folder doc surgery inside the review_fix loop, so the FAIL record
+      rides its own commit and the spec edits ride the remediation commit. All
+      flagged items ruled compliant otherwise (golden adaptation honest;
+      companion fixtures accurate and non-weakening; spec clause exactly as
+      prescribed; intermediate window acceptable; daemon declaration matches
+      code)."
     type: info
     date: 2026-11-23
   - text: "Corrective note (F-3): the delivery-deviations note's item (c) above was
@@ -99,16 +111,16 @@ notes:
     type: resolved
     date: 2026-11-23
   - text: "Retro (review iter-1): two medium findings were both SPEC-accuracy
-      defects the artifact chain let through — §8.1's 'reads unchanged in
-      count and kind' was written without verifying the implementation's read
+      defects the artifact chain let through — §8.1's 'reads unchanged in count
+      and kind' was written without verifying the implementation's read
       behavior, and the daemon-lane exemption lived in code + feature page but
       not the canonical spec. Lesson for future changes: when a spec declares
       I/O counts/kinds or universal binding ('every classification'), the
       spec-writer must verify those claims against code truth the same way it
-      verifies mechanisms; DoR did not catch it because both sides (spec
-      prose vs port contract) were never diffed. Cost: one remediation
-      iteration (~re-review cycle). Consider a DoR checklist item:
-      cross-diff universal claims against the port contract."
+      verifies mechanisms; DoR did not catch it because both sides (spec prose
+      vs port contract) were never diffed. Cost: one remediation iteration
+      (~re-review cycle). Consider a DoR checklist item: cross-diff universal
+      claims against the port contract."
     type: retro
     date: 2026-11-23
   - text: "Phase 7 doc reconciliation complete (doc-syncer report 2026-11-23): 8

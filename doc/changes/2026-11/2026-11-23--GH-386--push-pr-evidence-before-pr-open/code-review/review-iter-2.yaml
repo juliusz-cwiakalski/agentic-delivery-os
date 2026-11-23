@@ -1,0 +1,38 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-386
+branch: fix/GH-386/push-pr-evidence-before-pr-open
+status: PASS
+summary: >
+  Remediation commit 23aadeb6 (spec-only, 7+/3-) resolves both medium
+  spec-compliance findings exactly as prescribed: F-1 via the §5.1
+  composition-scoping bullet, scoped AC-F1-1, §7.3 residual and §11 RSK-7,
+  each verified against code truth (daemon lane derives with no pushParity;
+  the precondition binds only compositions supplying the port); F-2 via the
+  §8.1 parity-read-pair declaration, verified against readOpenRequestHeadSha's
+  fresh bounded list reads and fail-closed resolution. No new inconsistencies:
+  RSK-7 is consistent with §11's rows, AC-F1-2/TC-PUSH-013 totality is
+  untouched (typed-lane-scoped), §8.1 matches the code, and the checklist
+  range matches the risk table. Git confirms zero code/test/spec-page changes
+  since the iteration-1 code pass. F-3 was resolved at the baseline commit;
+  F-4/F-5 remain no-action info notes.
+severity_breakdown: {critical: 0, high: 0, medium: 0, low: 0, info: 0}
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []   # optional minors are record-only, below finding bar
+remediation_of_prior:
+  F-1: RESOLVED
+  F-2: RESOLVED
+  F-3: RESOLVED   # baseline commit 3afb8db3 corrective note
+  F-4: info, no action
+  F-5: info, no action
+optional_minors_record_only:
+  - "§7.1 in-scope row ('binding every pr-open classification') and the glossary 'Parity precondition' definition retain universal phrasing now scoped by §5.1/AC-F1-1/§7.3/RSK-7 — carry the qualifier at next artifact touch"
+  - "test plan AC-F1-1 restatement (~line 80) could carry the same composition qualifier at next touch"
+reviewed_at: 2026-11-23T00:00:00Z
+next_step: PROCEED
+next_step_detail: >
+  No remediation phase required. Proceed to quality_gates (phase 9) and
+  dod_check (phase 10); the spec's history row and the pm-notes trail already
+  document the review_fix closure.
