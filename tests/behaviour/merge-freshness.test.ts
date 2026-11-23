@@ -9,11 +9,17 @@ import { chmodSync, writeFileSync } from "node:fs";
 import {
   MERGE_GATE_VERIFICATION_RECORD_KIND,
   MERGE_GATE_VERIFICATION_SCHEMA,
+  type MergeGateVerificationRecord,
   OWNER_GATE_SLA_POLICY,
 } from "../../packages/core/src/contracts/index";
 import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
 import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
+import {
   baseCheckRuns,
+  baseRequest,
   createMergeHarness,
   MERGE_CLOCK_ISO,
   MERGE_CLOCK_MS,
@@ -22,9 +28,62 @@ import {
   verificationRecord,
 } from "../fixtures/merge/harness";
 import { ledgerText, removeRoot } from "../fixtures/state/harness";
+import { baseFacts, clone, request } from "../fixtures/verify-gates/cases/facts";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
+const OTHER_HEAD = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
+const MERGE_BRANCH = "feat/GH-301/merge";
+
+/**
+ * Seed one SHIPPED-produced record: the verify-gates handler constructs it
+ * (facts overridden to the merge harness's ref, branch, head H, and provider
+ * parity posture) and the delivered real append lands it over the harness's
+ * store — never the fixture record builder TC-MERGE-007 seeds with.
+ */
+const seedShippedVerification = async (
+  harness: MergeHarness,
+  mutate?: (facts: ReturnType<typeof baseFacts>) => void,
+): Promise<MergeGateVerificationRecord> => {
+  const facts = clone(baseFacts());
+  facts.repository = {
+    binding: "resolved",
+    head: { branch: MERGE_BRANCH, sha: MERGE_HEAD, detached: false },
+  };
+  // The provider parity posture matches the overridden head: the same full
+  // SHA on the same branch, open and mergeable, so the shipped battery passes
+  // and the record carries five green verdicts unless a mutate arm reddens one.
+  const mergeRequest = request({
+    sourceRef: MERGE_BRANCH,
+    sourceHeadSha: MERGE_HEAD,
+    targetRef: "main-tools",
+  });
+  facts.deliveryRequestDetail = { ok: true, value: { request: mergeRequest } };
+  facts.openPullRequests = { ok: true, value: { items: [mergeRequest], pageItemCount: 1 } };
+  mutate?.(facts);
+  const runtime = combinedRuntime({
+    facts,
+    appendVerification: (record) => {
+      const appended = appendMergeGateVerification(harness.store, {
+        record,
+        fenceToken: "fixture-shipped-verification",
+      });
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    },
+  });
+  const result = await runVerify(runtime, ["gates", harness.ref]);
+  if (result.exitCode !== 0) {
+    throw new Error(`the seeding verify run refused: ${String(result.exitCode)}`);
+  }
+  const read = readMergeGateVerifications(harness.store, harness.ref);
+  if (!read.ok || read.records.length !== 1) {
+    throw new Error("the shipped seed did not land exactly one record");
+  }
+  const record = read.records[0];
+  if (record === undefined) throw new Error("no seeded record");
+  return record;
+};
 
 const withFreshRecord = (
   offsetMs: number,
@@ -312,4 +371,114 @@ describe("TC-MERGE-011 missing or unreadable state is exit-2 state-unverified", 
       }
     },
   );
+});
+
+describe("TC-MERGE-043 the shipped record is resolved by its persisted identity and accepted", () => {
+  test("the verify-gates-produced record passes the envelope under total identity equality and lands", async () => {
+    const harness = createMergeHarness();
+    try {
+      const record = await seedShippedVerification(harness);
+      // Resolved by its persisted identity: the ledger key and the payload
+      // identity members (EVT-1; ticket AC-4's fixture half).
+      expect(ledgerText(harness.identity)).toContain(`merge.gate-verification:${harness.ref}`);
+      expect(record.schema).toBe(MERGE_GATE_VERIFICATION_SCHEMA);
+      expect(record.changeRef).toBe(harness.ref);
+      expect(record.headSha).toBe(MERGE_HEAD);
+      // Total identity equality: schema version plus the full shipped-default
+      // id sequence, order included — array equality, never set equality.
+      const set = resolveMergeGateSet(undefined);
+      if (!set.ok) throw new Error("default set invalid");
+      expect(record.gateSet).toEqual({
+        schemaVersion: set.value.schemaVersion,
+        ids: [...set.value.ids],
+      });
+      // The envelope accepted and the landing proceeded at H.
+      const result = await harness.run();
+      expect(result.exitCode).toBe(0);
+      expect(errorCode(result)).toBeUndefined();
+      expect(harness.counts.verification).toBe(1);
+      expect(harness.transactions()).toHaveLength(1);
+      expect(harness.counts.landing).toBe(1);
+      const landing = harness.landings[0];
+      if (landing !== undefined && "expectedHeadSha" in landing) {
+        expect(landing.expectedHeadSha).toBe(MERGE_HEAD);
+      }
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
+
+describe("TC-MERGE-044 the three refusal mutations refuse and never consume the shipped record", () => {
+  test("arm (a) a different resolved head refuses naming both SHAs", async () => {
+    // The envelope binds the record to the provider-asserted request head: the
+    // resolution resolves H' from the open page and the request detail.
+    const otherRequest = baseRequest({ headSha: OTHER_HEAD, sourceHeadSha: OTHER_HEAD });
+    const harness = createMergeHarness({ request: otherRequest });
+    try {
+      const record = await seedShippedVerification(harness);
+      expect(record.headSha).toBe(MERGE_HEAD);
+      const result = await harness.run(undefined, { json: false });
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("condition=merge.gates-stale");
+      expect(result.stderr).toContain(MERGE_HEAD.slice(0, 7));
+      expect(result.stderr).toContain(OTHER_HEAD.slice(0, 7));
+      expect(harness.counts.landing).toBe(0);
+      expect(harness.transactions()).toHaveLength(0);
+      expect(harness.waivers()).toHaveLength(0);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("arm (b) the at-bound and over-bound ages refuse with the age and the bound", async () => {
+    for (const offset of [30 * MINUTE, 31 * MINUTE]) {
+      const harness = createMergeHarness({ nowMs: () => MERGE_CLOCK_MS + offset });
+      try {
+        await seedShippedVerification(harness);
+        const result = await harness.run();
+        expect(result.exitCode).toBe(1);
+        expect(errorCode(result)).toBe("merge.gates-stale");
+        expect(errorSummary(result)).toContain(`${String(offset / MINUTE)}m`);
+        // Zero consumption on both sides of the boundary.
+        expect(harness.counts.landing).toBe(0);
+        expect(harness.transactions()).toHaveLength(0);
+        expect(harness.waivers()).toHaveLength(0);
+      } finally {
+        harness.cleanup();
+      }
+    }
+  });
+
+  test("arm (c) a one-id identity delta on the newest record refuses with the set delta inline", async () => {
+    const harness = createMergeHarness();
+    try {
+      const record = await seedShippedVerification(harness);
+      // The minimal identity delta: one built-in id dropped from the sequence,
+      // appended through the delivered append so the mutated record is newest.
+      const mutated: MergeGateVerificationRecord = {
+        ...record,
+        verifiedAt: isoAt(-4 * MINUTE),
+        gateSet: {
+          schemaVersion: record.gateSet.schemaVersion,
+          ids: record.gateSet.ids.filter((id) => id !== "push-parity"),
+        },
+      };
+      const appended = appendMergeGateVerification(harness.store, {
+        record: mutated,
+        fenceToken: "fixture-identity-delta",
+      });
+      expect(appended.ok).toBe(true);
+      const result = await harness.run();
+      expect(result.exitCode).toBe(1);
+      expect(errorCode(result)).toBe("merge.gates-stale");
+      expect(errorSummary(result)).toContain("gate-set-delta");
+      expect(errorSummary(result)).toContain("push-parity");
+      expect(harness.counts.landing).toBe(0);
+      expect(harness.transactions()).toHaveLength(0);
+      expect(harness.waivers()).toHaveLength(0);
+    } finally {
+      harness.cleanup();
+    }
+  });
 });

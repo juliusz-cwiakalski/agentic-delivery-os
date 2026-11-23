@@ -267,3 +267,31 @@ notes:
       integrity — never an output byte."
     type: info
     date: "2026-11-23"
+  - text: "Plan phase 3 complete (merge consumption cells + remediation byte-pin).
+      Commit 45404001f2eea0b7d3b91f5d74a60e41b45b564c (commit primitive;
+      staged tests/behaviour/merge-production-composition.test.ts,
+      tests/structure/merge-refusal-rows.test.ts, the shared fixture, and the
+      pm-notes tracked drift). TC-MERGE-040: the native sequence verify gates
+      then plain merge through the one shipped composer lands result=merged
+      with the provider squash SHA; argv recording proves no --dry-run; the
+      verification count stays exactly one; the transaction exists once; one
+      landing call at the expected head. TC-MERGE-041: the absence refusal is
+      exit 2 merge.state-unverified with state=absent and
+      operation=delivery-registry as delivered; option (B) asserted absent
+      (zero verification appends, zero check-run reads, zero landing calls,
+      zero transaction/waiver records, no landing-decision read composed); the
+      remediation sequence converges and lands. TC-MERGE-042: the
+      merge.state-unverified remediationHint pinned byte-exactly (equality +
+      structural guards + mutation sensitivity + no --dry-run), both error-
+      table baselines byte-true (events rows parsed; supervise column 5), the
+      documented row asserted read-only. DISCLOSED fixture amendment: the
+      phase-1 production fixture's provider landing reply gains the sha member
+      (the adapter reads the squash SHA from the PUT body's sha; the reply
+      vocabulary was incomplete, exposed by TC-MERGE-040's declared provider-
+      squash-SHA assertion; the success cell never lands so captured output
+      bytes are unchanged — capture entry verify mode byte-identical post-
+      amendment). Test result: merge-production-composition +
+      merge-refusal-rows 41 pass / 0 fail; verify-gates-persistence 6 pass /
+      0 fail; capture entry byte-identical; biome clean."
+    type: info
+    date: "2026-11-23"
