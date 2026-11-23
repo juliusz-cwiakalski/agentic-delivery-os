@@ -101,6 +101,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0073](TDR-0073-refusal-diagnostics-and-emitted-identity-totality.md) | TDR | Refusal Diagnostics and Emitted-Identity Totality — Named Causes, Three Additive Rows, Row-Level `retryable`, and a Runtime Family Declaration | Proposed | 2026-11-20 | Juliusz Ćwiąkalski |
 | [TDR-0074](TDR-0074-project-groups-document-operator-local-overlay.md) | TDR | The Project-Groups Document Is an Operator-Local Overlay — The Ceremony Mirror's Cross-Checkout Target Set Is Declaration-Only | Proposed | 2026-11-21 | Juliusz Ćwiąkalski |
 | [TDR-0075](TDR-0075-watch-stale-as-profile-eligibility-blocker.md) | TDR | A Stale Watch Observation Is a Profile-Eligibility Blocker — A Narrowed `watch-stale` Boundary at Zero Acquisition Cost | Proposed | 2026-11-22 | Juliusz Ćwiąkalski |
+| [TDR-0076](TDR-0076-engine-ensure-push-first-remote-write.md) | TDR | The Engine-Side Ensure-Push Is the Dispatch Engine's First Remote-Write Act — One Bounded Fast-Forward Push of the Change Branch Before `pr-open` Derives | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
 
 Decisions TDR-0044 … TDR-0048 are the binding design of change GH-346; their owner
 acceptance is that change's pull-request review, and their status moves from
@@ -154,3 +155,18 @@ the existing watch-only `watch-stale` condition as the blocker, while chain
 resolution, the watch read path, the park invariant, and every closed set stay as
 delivered, and no fetch, credential read, retained snapshot, cache, timer, or state
 write is added.
+
+Decision TDR-0076 is the binding design of change GH-386's DEC-1 (the engine-side
+ensure-push); its owner acceptance is that change's pull-request review, and its
+status moves from `Proposed` there rather than in the delivery commits. It authorizes
+the typed stack's first remote-write operation: at the `pr-open` derivation arm the
+engine evaluates the verify-gates parity definition (local checkout head SHA vs the
+open delivery request's head SHA, full-hex equality) and, when the local head is
+ahead, performs one bounded fast-forward-only push of the change branch to its
+configured upstream — fixed argv, literal non-shell child, 60 000 ms injectable
+timeout, single attempt, no force variant — before the token derives; a rejected,
+failing, or still-unmet push is a typed non-`pr-open` failure through one new
+failure-token-mapping row that retains the PR URL, parity evidence rides the bounded
+`push:<verdict>` references and an additive optional envelope block, text mode stays
+byte-identical, and session-side conventions, the closed vocabularies, and the shell
+fallback's behavior are unchanged.
