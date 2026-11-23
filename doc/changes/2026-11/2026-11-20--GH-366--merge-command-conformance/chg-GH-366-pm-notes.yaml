@@ -16,7 +16,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-23T02:37:23.699Z }
   review_fix: { started: null, completed: 2026-11-23T03:57:46.167Z }
   quality_gates: { started: null, completed: 2026-11-23T04:57:15.965Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-23T04:57:41.104Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "PM-decided (scope, authoritative source): the owner's issue comment of
