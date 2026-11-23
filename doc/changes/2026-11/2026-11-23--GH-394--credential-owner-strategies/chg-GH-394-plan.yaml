@@ -3,10 +3,37 @@ workItemRef: GH-394
 tier:
   name: full
   escalationTriggers:
-    - "a failure-reconstruction site inside a change-forbidden file (packages/cli/src/daemon-compose.ts, packages/core/src/provider/engine.ts) blocks source/reason/remedy forwarding required by F-4: STOP, report to the owner — reopening the constraint is an owner act, never a delivery workaround"
+    - "the provider engine's pending-park semantics in the park construction (packages/core/src/provider/engine.ts park-construction region, :285-306 as of HEAD 0ca7fe4d) and any packages/cli/src/daemon-compose.ts change remain forbidden — and a failure-reconstruction site DISCOVERED during delivery that is absent from the committed forwarding-site map below is a STOP-and-report to the owner via PM (a map omission, never a constraint violation)"
     - "the harness export shape or supported version window is observed to differ from the suite-pinned constant on any host: stop, classify as shape-drift, re-pin deliberately through a reviewed fixture update — never silent re-pinning"
 # ---------------------------------------------------------------------------
-# Plan-level decision record (spec §15 DEC-1..DEC-13; ADR-0014, landing as
+# Plan revision log
+#   rev 1 — 2026-11-23: initial plan (7 phases, delivery.plan.v1); constants
+#           fixed; golden-capture branch point in phase 1; escalation trigger
+#           predicted a STOP on engine.ts reconstruction (superseded below).
+#   rev 2 — 2026-11-24: DoR iteration-1 remediation (findings 2, 3, 6, 7;
+#           verdict readiness-review/readiness-iter-1.md, NOT_READY). Consumed
+#           spec rev 1.1 (DEC-14 fence correction) and test plan rev 1.1.
+#           F2: forwarding scope extended to the provider-engine
+#           reconstruction sites, the announcement derivation, and the
+#           merge-chain refusal reconstruction (phase 4); committed
+#           forwarding-site map added below (current-HEAD enumeration, each
+#           site mapped to exactly one phase scope or named untouched with its
+#           reason); the engine-ban escalation trigger rewritten to the
+#           accurate fence (pending-park reserved; unmapped-site discovery is
+#           a map omission, reported, not a constraint violation). F3: the
+#           provisioning-guide reversal and its pinning check paired as a
+#           CODER micro-task in the ONE phase-6 commit (doc-syncer cannot edit
+#           source code; the pair lands together so no commit boundary ever
+#           observes a red pinning check). F6: doc-reconciliation scope
+#           aligned to spec §18 rev 1.1 exactly — the merge-landing name-only
+#           evidence note (doc/spec/features/feature-merge-verify-deploy.md)
+#           added; the two pm-named conditional targets explicitly excluded
+#           with reasons. F7: seam wording aligned to the governing record's
+#           four construction inputs (active harness identity, child runner,
+#           environment record, store facts) per test plan rev 1.1 TA-1.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Plan-level decision record (spec §15 DEC-1..DEC-14; ADR-0014, landing as
 # status Proposed): store-ownership resolution behind the unchanged credential
 # port. One operation; one success variant; one failure variant growing by
 # exactly three additive optional projection fields (source, reason, remedy)
@@ -18,8 +45,9 @@ tier:
 # with register-before-parse-and-throw; one-shot resolution synchronous on
 # first use with a per-process memo.
 #
-# Constants fixed by this plan (spec OQ-4 / test plan §8.3 OQ-T1..OQ-T4) —
-# named constants in the implementation, asserted by the suites:
+# Constants fixed by this plan (spec OQ-4 / test plan §8.3 OQ-T1..OQ-T4,
+# resolved by test plan rev 1.1) — named constants in the implementation,
+# asserted by the suites:
 #   - host slot bound:        max length 253 (min 1) — RFC 1035 FQDN upper
 #                             bound; charset [A-Za-z0-9.-]+, no leading dash
 #                             (already contractual)
@@ -46,32 +74,47 @@ tier:
 #                             not re-derived; a capped run classifies timeout)
 #
 # Plan-wide delivery fences (binding), in force on every phase below:
-#   - NO changes to: packages/cli/src/daemon-compose.ts,
-#     packages/core/src/provider/engine.ts (its park mapping stays
-#     untouched), the error-table row set, the park-record shape, announcement
-#     codes, delivery-result tokens, the exit taxonomy {0,1,2}, or the daemon
-#     unit shape. No binding, no credentials catalog branch, no store style,
-#     no jaiship auth command, no profiles, no configuration layers. The
-#     binding-supplied slot exception is stated in the allowlist schema and
-#     ships INERT (spec NG-8, DEC-13).
-#   - Forwarding fence: every site that RECONSTRUCTS the credential failure
-#     must forward source/reason/remedy (F-4; 37 enumerated sites per the
-#     governing record's context). The change-forbidden files above are out of
-#     scope by constraint; TC-REMEDY-003's park/log-line arm is the proof that
-#     the fields survive without editing them. If delivery finds a
-#     reconstruction inside a forbidden file, that is the first escalation
-#     trigger above — STOP and reopen with the owner, never a workaround.
+#   - NO changes to: packages/cli/src/daemon-compose.ts, the error-table row
+#     set, the park-record shape (no field added), park causes, the
+#     announcement CODE set (provider.credential.missing unchanged — its line
+#     TEXT derives from the code plus the reason token per DEC-14), delivery
+#     result tokens, the exit taxonomy {0,1,2}, or the daemon unit shape. No
+#     binding, no credentials catalog branch, no store style, no jaiship auth
+#     command, no profiles, no configuration layers. The binding-supplied slot
+#     exception is stated in the allowlist schema and ships INERT (spec NG-8,
+#     DEC-13).
+#   - Forwarding fence (spec rev 1.1 DEC-14, F-4, §7.1, §8.2, NG-9): forwarding
+#     source/reason/remedy at the enumerated reconstruction sites IS in scope —
+#     the provider engine's park-evidence build and failure reconstruction, the
+#     announcement derivation, and the merge-chain refusal reconstruction (the
+#     merge command envelope, the merge transaction failure/evidence
+#     construction with its landing-fault mapping, the merge refusal text
+#     renderer). Forwarding contract: the fields travel as projection data on
+#     the reified failure — never collapse the failure to the
+#     failure-class-plus-reference evidence shape without carrying the three
+#     fields alongside — and announcement lines derive from the code plus the
+#     reason token. The reason appears ONLY on the rendered refusal and the log
+#     line, never as a park-record field (no park-record shape change). The
+#     ONLY provider-engine behaviour reserved for #395 is the pending-park
+#     semantics in the park construction (no resolution-pending parking in this
+#     change); the resident daemon composition changes not at all. The
+#     committed forwarding-site map below enumerates every site; each site
+#     appears in exactly one phase scope or is named untouched with its reason.
 #   - Hermeticity fence (NFR-4, TC-HERM-001): the suite never invokes a real
 #     owner CLI, store, or keyring; every strategy is constructed over the
-#     four injected seams (child runner, environment record, harness identity,
-#     allowlist table); the guard in tests/preload.ts is behaviour-based
-#     (intercepts spawn attempts by name), so it holds on runners that ship a
-#     real gh; CI requires no credential.
+#     governing record's FOUR injected construction-input seams (active
+#     harness identity, child runner, environment record, store facts — spec
+#     rev 1.1 C-2/F-8 wording); the allowlist table is shipped closed data
+#     exercised through its module, not a seam; the guard in tests/preload.ts
+#     is behaviour-based (intercepts spawn attempts by name), so it holds on
+#     runners that ship a real gh; CI requires no credential.
 #   - Redaction fence (F-5): register-on-materialize — the resolver registers
 #     material before parsing and before any throw; the entrypoint keeps
 #     static registration for the two environment styles and NEVER resolves;
-#     the proof oracle is the register-after-compose canary (TC-REDACT-001);
-#     a register-before-compose shape is not an acceptable proof.
+#     the proof oracle is the register-after-compose canary (TC-REDACT-001,
+#     whose swept set includes the merge-chain refusal renderings per test
+#     plan rev 1.1); a register-before-compose shape is not an acceptable
+#     proof.
 #   - Secret-read boundary fence (NFR-7): strategy implementations live only
 #     in packages/adapters/src/credentials/ (the single credential-material
 #     directory); zero new ambient environment reads.
@@ -92,27 +135,117 @@ tier:
 #     and revision-log content are removed on landing; no committed file
 #     references any local working-draft path. The owner accepts or rejects
 #     the posture change at the PR review.
+#   - Guide-pairing fence (DoR iter-1 F3): the provisioning-guide reversal and
+#     its pinning check are a CODER-owned pair landing in the ONE phase-6
+#     commit — doc-syncer's contract forbids source-code edits, so the test
+#     re-pin is never assigned to doc-syncer; the pair shares one commit so no
+#     commit boundary ever observes the old test against the new guide or the
+#     new test against the old guide.
 #   - Content fence: no committed plan, code comment, fixture, or test carries
 #     credential material, argv examples beyond the two allowlisted pairs
 #     (tracker CLI token read; harness CLI export with its optional standalone
 #     flag and integration-id positional), or any credential-shaped value;
 #     fixture doubles carry obviously-fake sentinels so the privacy-literals
 #     invariant stays green.
-#   - Documentation reconciliation fence: the phase-7 doc scope below is
-#     DECLARATION ONLY — the doc edits are executed by doc-syncer in the
+#   - Documentation reconciliation fence: the final phase's doc scope below is
+#     DECLARATION ONLY — those doc edits are executed by doc-syncer in the
 #     lifecycle system_spec_update phase; no coder task exists for them; no
-#     doc edit may leak into any delivery phase commit.
+#     doc edit outside a declared phase scope may leak into any commit (the
+#     phase-6 ADR/guide pair and this final phase's declared files are the
+#     only doc-touching scopes in this plan).
 #   - Each phase below is ONE commit through the commit primitive; gate
 #     evidence convention TMPDIR=$PWD/tmp/tmpdir; pnpm check, the doc
 #     distribution guard, the decision-record content check, and the PR /
 #     tracker transitions belong to the lifecycle phases, not this plan.
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# COMMITTED FORWARDING-SITE MAP (DoR iter-1 F2) — the enumeration behind
+# "every site that reconstructs/collapses the failure must forward".
+# Verified against current code truth at HEAD 0ca7fe4d (2026-11-24); line
+# anchors are as-of-HEAD. The governing record's context enumerates 37 sites
+# across 16 files at its analysis snapshot; this map is the current-truth
+# re-enumeration — 46 literal sites across 19 source files, plus two
+# derivation/render-only files that carry no literal — and it is the fence
+# delivery and review verify against. Each OWNS row maps to exactly one phase
+# scope; untouched rows are named with their reason.
+#
+# OWNS — phase 1 (definition sites: the three fields are DEFINED here):
+#   packages/core/src/contracts/credentials.ts — 2 literal sites: the failure
+#     variant reified from the error-table row; the variant gains the three
+#     optional projection fields here.
+#   packages/core/src/contracts/doctor.ts — 1 literal site: the credential
+#     presence-variant contract gains the same three optional fields here.
+# OWNS — phase 2 (creation sites: the fields are BORN here):
+#   packages/adapters/src/credentials/index.ts — 2 literal sites: the port
+#     implementation constructing the classified failure; the resolver rework
+#     creates every failure with its source/reason/remedy attached.
+# OWNS — phase 4 (consumer/reconstruction/derivation sites: forwarding edits):
+#   packages/cli/src/edge.ts — 11 literal sites (reconstruction/collapse sites
+#     across the edge-composed command paths; the three registerEdgeSecrets
+#     sites also join the live registry here).
+#   packages/cli/src/production.ts — 5 literal sites.
+#   packages/mcp/src/serve.ts — 4 literal sites (serve state placeholders gain
+#     the reason so the renderer never guesses).
+#   packages/core/src/provider/engine.ts — 3 literal sites: :291 and :306 (the
+#     park-evidence builds that today reduce the resolve outcome to the
+#     failure-class-plus-credential-reference evidence pair) and :799 (the
+#     failure reconstruction from a parked credential-missing condition).
+#     FORWARDING ONLY per DEC-14: the fields are carried alongside as
+#     projection data and onto the announcement line; the pending-park
+#     semantics in the park construction (:285-306 region) are untouched and
+#     reserved for #395; the park-record shape gains no field.
+#   packages/core/src/provider/announcements.ts — derivation-only (no
+#     literal): announcementCodeForCondition's credential-missing arm and the
+#     message builder — announcement lines derive from the code plus the
+#     reason token; the announcement CODE set is unchanged.
+#   packages/core/src/domain/harness-spawn-env.ts — 2 literal sites.
+#   packages/adapters/src/inference/index.ts — 1 literal site (failure-field
+#     forwarding only; request behaviour otherwise unchanged, NG-9).
+#   packages/cli/src/commands/merge.ts — 1 literal site (:89: the
+#     trustedRefusal envelope arm) — the failure envelope carries the fields
+#     beside the marker.
+#   packages/core/src/domain/merge-transaction.ts — MergeFailureEvidence and
+#     MergeFailure closed types (:296 area, :362-374), the landing-fault
+#     mapping (:604-620; mapping arm at :605), and renderMergeFailure (:2023).
+#     The delivered name-only-evidence site (:595-609) is PRESERVED: the
+#     fields are forwarded as name-shaped data (identifier-only source, closed
+#     reason token, fixed remedy text), so the rule's substance stands (spec
+#     §18/§20/§21 rev 1.1).
+#   packages/cli/src/output/merge-text.ts — renderMergeRefusal delegation
+#     (:80): the refusal text renderer passes the pinned fields through
+#     unmodified (TC-REMEDY-001 renderer pass-through step).
+#   packages/cli/src/commands/dispatch.ts — 1 literal site (:69: the
+#     trusted-refusal marker) — the marker shape admits the fields beside it.
+#   packages/core/src/app/dispatch.ts — 2 literal sites (:153 prose gate,
+#     :385 marker type) — the app-layer refusal shape and its bounded-credential
+#     prose gate carry the fields through.
+#   packages/core/src/provider/simulate.ts — 1 literal site (:438): the
+#     simulated credential failure constant gains the classified fields.
+#   packages/cli/src/index.ts — 2 literal sites: the renderer (live-registry
+#     consult, config-summary suppression exemption for credential refusals
+#     only, field rendering).
+# NOT TOUCHED — named with reason:
+#   packages/core/src/contracts/harness.ts — 3 literal sites (:362, :374,
+#     :381): the harness contract's failure-cause union is a definition site —
+#     it already carries the delivered code as its cause member, reconstructs
+#     nothing, and DEC-14 does not enumerate it; the spawn-path forwarding
+#     happens in packages/core/src/domain/harness-spawn-env.ts (phase 4).
+#   packages/core/src/contracts/provider.ts — 1 literal site: contract
+#     definition only; no consumer collapse occurs there.
+#   packages/core/src/contracts/error-table.ts — 1 literal site: the row
+#     itself; the row set is unchanged by constraint (NFR-6) and the fields
+#     are projection data on the variant, never columns on the row.
+#   packages/testkit/src/conformance/tracker-error-taxonomy.ts — 1 literal
+#     site: the tracker error-taxonomy conformance double (provider
+#     auth-rejected taxonomy, not the credential failure variant).
+# ---------------------------------------------------------------------------
 phases:
   - id: 1
     title: Port contracts, doctor presence variant, conformance double, pre-change goldens
     kind: delivery
-    summary: "widen the credential port contract additively in packages/core/src/contracts/credentials.ts — the closed four-style source vocabulary (literal, environment-prefixed, command, harness-store) with per-style explicit source keys, the failure variant gaining exactly three optional projection fields (source, reason, remedy) over the unchanged single code, the closed ten-member reason union with resolution-pending reserved, resolution context entering as construction inputs (harness identity, child runner, environment record, store facts) never as new members, operation and union shape unchanged — and packages/core/src/contracts/doctor.ts where the delivered presence variant carries the same three optional fields; update the testkit conformance double packages/testkit/src/conformance/mock-tenant.ts to the four-style union so tests/structure/conformance-coverage stays green; extend tests/behaviour/credential-port.test.ts for the additive fields and the declared reserved member while the error-table row-binding drift test stays green; then capture the pre-change validation-and-resolution goldens at the branch point through the explicit capture entry (a fixture module, never a blanket rewrite) so TC-COMPAT-001's byte-identity oracle is the delivered behaviour"
+    summary: "widen the credential port contract additively in packages/core/src/contracts/credentials.ts — the closed four-style source vocabulary (literal, environment-prefixed, command, harness-store) with per-style explicit source keys, the failure variant gaining exactly three optional projection fields (source, reason, remedy) over the unchanged single code, the closed ten-member reason union with resolution-pending reserved, resolution context entering as construction inputs never as new members, operation and union shape unchanged — and packages/core/src/contracts/doctor.ts where the delivered presence variant carries the same three optional fields; update the testkit conformance double packages/testkit/src/conformance/mock-tenant.ts to the four-style union so tests/structure/conformance-coverage stays green; extend tests/behaviour/credential-port.test.ts for the additive fields and the declared reserved member while the error-table row-binding drift test stays green; then capture the pre-change validation-and-resolution goldens at the branch point through the explicit capture entry (a fixture module, never a blanket rewrite) so TC-COMPAT-001's byte-identity oracle is the delivered behaviour"
     # TC ownership: no TC lands here; this phase builds the contracts the later TCs consume and the TC-COMPAT-001 oracle (port-level goldens, read-only from here on).
+    # Site map: the contracts files are the map's two phase-1 definition sites — the fields exist from this commit on.
     # Ordering: contracts first (owner constraint) — every later phase consumes this union; the golden capture MUST precede phases 2-4 (test plan TA-6).
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/credential-port.test.ts tests/structure/conformance-coverage.test.ts; git status confirms only the six declared paths changed.
     scope:
@@ -133,8 +266,9 @@ phases:
   - id: 2
     title: Credential strategies — allowlist table, command and harness-store strategies, memoized resolver
     kind: delivery
-    summary: "implement the strategies inside the single credential-material directory packages/adapters/src/credentials/: the new closed allowlist module (the two shipped entries — the tracker CLI token read and the harness CLI export with its optional standalone flag and integration-id positional; pinned subcommand prefixes; permitted parameters; grammar-closed slots bounded by the plan's named constants; per-entry remedy selection keyed by reason and style with the host-aware/neutral split; the binding-supplied slot exception stated inertly), the new command strategy (symlink resolution to a regular executable target with program-unavailable otherwise, argv constructed with the -- terminator before the positional in every shape, no shell or interpolation, closed stdin, stdout captured to the fixed bound, stderr size and exit status only, the reduced child environment with exactly the declared session-bus facts, the per-execution cap, the one-line stdout material rule with interior-newline and empty refusals), the new harness-store strategy (target-selector export of the declared integration only, in-process single-entry selection as defense in depth, raw export never retained, exactly one active entry or ambiguous-account, no-stored-entry is empty-output with zero fall-through, key entries only, shape-drift classification naming harness and field, oauth-excluded, declared-harness match or source-not-supported, read-only posture), and the resolver rework over the construction inputs with the per-process memo of exactly one execution per reference and register-before-parse-and-throw materialization"
+    summary: "implement the strategies inside the single credential-material directory packages/adapters/src/credentials/: the new closed allowlist module (the two shipped entries — the tracker CLI token read and the harness CLI export with its optional standalone flag and integration-id positional; pinned subcommand prefixes; permitted parameters; grammar-closed slots bounded by the plan's named constants; per-entry remedy selection keyed by reason and style with the host-aware/neutral split; the binding-supplied slot exception stated inertly), the new command strategy (symlink resolution to a regular executable target with program-unavailable otherwise, argv constructed with the -- terminator before the positional in every shape, no shell or interpolation, closed stdin, stdout captured to the fixed bound, stderr size and exit status only, the reduced child environment with exactly the declared session-bus facts, the per-execution cap, the one-line stdout material rule with interior-newline and empty refusals), the new harness-store strategy (target-selector export of the declared integration only, in-process single-entry selection as defense in depth, raw export never retained, exactly one active entry or ambiguous-account, no-stored-entry is empty-output with zero fall-through, key entries only, shape-drift classification naming harness and field, oauth-excluded, declared-harness match or source-not-supported, read-only posture), and the resolver rework over the governing record's four construction-input seams (active harness identity, child runner, environment record, store facts) with the per-process memo of exactly one execution per reference and register-before-parse-and-throw materialization"
     # TC ownership: none here — TC-ALLOW-001..006, TC-HARNESS-001..007, TC-MEMO-001, TC-EXEC-001/002, TC-REASON-001/002, TC-REMEDY-001/002, TC-REDACT-002/003 prove this code in phase 5 (owner ordering: tests land with the tripwire).
+    # Site map: adapters/src/credentials/index.ts is the map's phase-2 creation site — every failure this phase constructs carries its source/reason/remedy from birth.
     # Boundaries: NFR-7 — everything credential-material-shaped stays in this directory; the existing createProcessCredentialPort ambient wrapper keeps its single allowlist entry; no new ambient read.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/credential-port.test.ts (existing suites stay green — additive change); pnpm typecheck.
     scope:
@@ -162,13 +296,13 @@ phases:
         - packages/core/src/provider/validate.ts
         - packages/core/src/config/defaults.ts
   - id: 4
-    title: CLI composition wiring, live redaction registry, failure-field forwarding, doctor display
+    title: CLI composition wiring, live redaction registry, failure-field forwarding (engine, announcements, merge chain), doctor display
     kind: delivery
-    summary: "wire the one-shot CLI composition (dispatch, merge, status, commit, verify, queue) to the strategies — packages/cli/src/production.ts supplies the resolver construction inputs (harness identity, child runner, environment record, store facts) and replaces the hard-coded tracker reference with the declared value, default unchanged — turn the entrypoint's construction-time frozen secrets snapshot into the live register/values redaction registry consulted at render time (packages/cli/src/entrypoint.ts keeps static registration for the two environment styles and never resolves; packages/cli/src/index.ts makes the seam mutable and the renderer consults the registry with the config-summary suppression exemption for credential refusals only; the three registerEdgeSecrets sites in packages/cli/src/edge.ts join the same registry), and forward source/reason/remedy at every reconstruction site in the enumerated consumer files — packages/cli/src/edge.ts, packages/core/src/domain/harness-spawn-env.ts, packages/adapters/src/inference/index.ts (request behaviour otherwise unchanged), packages/mcp/src/serve.ts (serve state placeholders gain the reason so the renderer never guesses), packages/cli/src/commands/doctor.ts (display shows the source identity for all four styles, the variable name only for the two environment styles; NO requirement derivation) — while the provider engine park mapping, daemon composition, error-table row set, park-record shape, announcement codes, result tokens, and exit taxonomy stay untouched"
-    # TC ownership: none here — TC-COMP-001..003, TC-REDACT-001/004, TC-REMEDY-003, TC-MEMO-002 prove the wiring in phase 5; TC-REASON-003's daemon-inventory assertions run over the untouched composition.
+    summary: "wire the one-shot CLI composition (dispatch, merge, status, commit, verify, queue) to the strategies — packages/cli/src/production.ts supplies the resolver construction inputs and replaces the hard-coded tracker reference with the declared value, default unchanged — turn the entrypoint's construction-time frozen secrets snapshot into the live register/values redaction registry consulted at render time (packages/cli/src/entrypoint.ts keeps static registration for the two environment styles and never resolves; packages/cli/src/index.ts makes the seam mutable, the renderer consults the registry with the config-summary suppression exemption for credential refusals only; the three registerEdgeSecrets sites in packages/cli/src/edge.ts join the same registry), and forward source/reason/remedy at EVERY reconstruction site in the committed forwarding-site map — the CLI consumer files (packages/cli/src/edge.ts, packages/core/src/domain/harness-spawn-env.ts, packages/adapters/src/inference/index.ts with request behaviour otherwise unchanged, packages/mcp/src/serve.ts whose serve state placeholders gain the reason so the renderer never guesses, packages/cli/src/commands/doctor.ts showing the source identity for all four styles and the variable name only for the two environment styles with NO requirement derivation), the provider-engine forwarding scope per spec rev 1.1 DEC-14 (packages/core/src/provider/engine.ts carries the three fields as projection data at the park-evidence builds and the failure reconstruction — never a shape collapse without them alongside — with the pending-park semantics in the park construction untouched and reserved for #395 and no park-record field; packages/core/src/provider/announcements.ts derives announcement lines from the code plus the reason token, the announcement code set unchanged), and the merge-chain refusal reconstruction (packages/cli/src/commands/merge.ts failure envelope beside its trustedRefusal marker, packages/core/src/domain/merge-transaction.ts failure/evidence construction and landing-fault mapping with the delivered name-only-evidence site preserved and the fields forwarded as name-shaped data, packages/cli/src/output/merge-text.ts renderer passing the pinned strings through unmodified, the trusted-refusal marker shapes in packages/cli/src/commands/dispatch.ts and packages/core/src/app/dispatch.ts with its bounded-credential prose gate, and packages/core/src/provider/simulate.ts) — while the daemon composition, error-table row set, park-record shape, announcement codes, result tokens, and exit taxonomy stay untouched"
+    # TC ownership: none here — TC-COMP-001..003, TC-REDACT-001/004, TC-REMEDY-001 (renderer pass-through step 4), TC-REMEDY-003 (restated arm: forwarding at the provider-engine reconstruction sites is in scope per DEC-14; the park/log line is reached THROUGH those edits), TC-MEMO-002, TC-REASON-003 prove the wiring in phase 5.
     # Ordering: depends on phases 1-3 (union, strategies, declarable reference).
     # Golden discipline: tests/behaviour/provider-credentials.test.ts and tests/behaviour/status-credential-prerequisite.test.ts are the deliberate companion refreshes for the richer rendered credential failures (the only operator-visible change, spec §8.5) — explicit regeneration, never a blanket rewrite; the phase-1 port-level goldens stay read-only.
-    # Fences in force: forwarding in the change-forbidden files is the STOP escalation trigger (header); inference changes are failure-field forwarding only (NG-9); the entrypoint never resolves (DEC-10).
+    # Fences in force: forwarding-only at the provider engine (pending-park semantics in the park construction reserved, #395); announcements change line TEXT derivation only, no new code; the merge name-only-evidence site is preserved (name-shaped forwarding); packages/cli/src/daemon-compose.ts untouched (constraint); a discovered reconstruction site absent from the committed map is the STOP-and-report escalation trigger (header).
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/provider-credentials.test.ts tests/behaviour/status-credential-prerequisite.test.ts tests/behaviour/harness-spawn-credential.test.ts (existing suites green after the companion refresh); pnpm typecheck.
     scope:
       files:
@@ -180,6 +314,14 @@ phases:
         - packages/core/src/domain/harness-spawn-env.ts
         - packages/adapters/src/inference/index.ts
         - packages/mcp/src/serve.ts
+        - packages/core/src/provider/engine.ts
+        - packages/core/src/provider/announcements.ts
+        - packages/cli/src/commands/merge.ts
+        - packages/core/src/domain/merge-transaction.ts
+        - packages/cli/src/output/merge-text.ts
+        - packages/cli/src/commands/dispatch.ts
+        - packages/core/src/app/dispatch.ts
+        - packages/core/src/provider/simulate.ts
         - tests/behaviour/provider-credentials.test.ts
         - tests/behaviour/status-credential-prerequisite.test.ts
     interactions:
@@ -189,10 +331,10 @@ phases:
   - id: 5
     title: Allowlist tripwire and the hermetic proof battery
     kind: delivery
-    summary: "land the CI allowlist tripwire as the new invariant check scripts/checks/allowlist-tripwire.ts — diffs the allowlist table, every committed command argv, and the effective argv derived from committed configuration against the closed table, enumerates declared tracker-host coordinates from configuration itself and passes on their absence, names the drift on failure, and joins the pnpm check aggregate via package.json — with its mutation suite tests/checks/allowlist-tripwire.test.ts driving fixture change-sets (tree-invariant shape, never base-branch diffs); and land the full hermetic proof battery over the four injected seams: tests/behaviour/credential-composition-proof.test.ts (real production composition, declared argv reaches the seam, zero-spawn default), credential-redaction-live-registry.test.ts (register-after-compose canary swept across human output, JSON envelope, status, doctor, park/log line, ledger record, capsule event, with the sensitivity control; register-before-parse-and-throw; stderr canary never rendered; the three edge-composed sites), credential-strategies-command.test.ts (allowlist acceptance/refusal, slot grammars against the named constants, -- terminator, symlink resolution, memo, cap and child posture), credential-strategies-harness-store.test.ts (target selector, ambiguity, empty store, oauth exclusion with the write-path double, shape-drift corpus, identity, pinned shape and version window), credential-strategies-reasons.test.ts (one case per reason, timeout distinct from the reserved token, no shipped caller observes it), credential-strategies-remedies.test.ts (byte-exact fixture pinning, per-entry selection, propagation across every site and surface), credential-compatibility.test.ts (goldens byte-identical, defaults equal), credential-lane-model-only-proof.test.ts (inventory-style checked proof, model-name set equality, declared-entry control), credential-hermeticity-guard.test.ts with the behaviour-based guard in tests/preload.ts, tests/structure/credential-vocabulary-invariants.test.ts (no new failure identity; park-record, token, announcement, exit snapshots), the secret-read-boundary extension to the new strategy modules, the boundary negative fixtures, and the fixture corpora under tests/fixtures/credentials (remedy texts byte-exact, export-shape doubles and drift corpus, harness identity doubles, version-window constant, declared short per-execution timeout corpora — sentinel values only)"
-    # TC ownership: TC-TRIP-001, TC-COMP-001..003, TC-REDACT-001..004, TC-REASON-001..003, TC-REMEDY-001..003, TC-ALLOW-001..006, TC-HARNESS-001..007, TC-MEMO-001/002, TC-EXEC-001/002, TC-COMPAT-001, TC-LANE-001, TC-STRUCT-001/002, TC-HERM-001 (TC-COMP-004 is the named manual/post-merge demonstration, never a gate).
+    summary: "land the CI allowlist tripwire as the new invariant check scripts/checks/allowlist-tripwire.ts — diffs the allowlist table, every committed command argv, and the effective argv derived from committed configuration against the closed table, enumerates declared tracker-host coordinates from configuration itself and passes on their absence, names the drift on failure, and joins the pnpm check aggregate via package.json — with its mutation suite tests/checks/allowlist-tripwire.test.ts driving fixture change-sets (tree-invariant shape, never base-branch diffs); and land the full hermetic proof battery over the governing record's four injected construction-input seams: tests/behaviour/credential-composition-proof.test.ts (real production composition, declared argv reaches the seam, zero-spawn default), credential-redaction-live-registry.test.ts (register-after-compose canary swept across human output, JSON envelope, status, doctor, park/log line, the merge-chain refusal renderings, ledger record, capsule event, with the sensitivity control; register-before-parse-and-throw; stderr canary never rendered; the three edge-composed sites), credential-strategies-command.test.ts (allowlist acceptance/refusal, slot grammars against the named constants, -- terminator, symlink resolution, memo, cap and child posture), credential-strategies-harness-store.test.ts (target selector, ambiguity, empty store, oauth exclusion with the write-path double, shape-drift corpus, identity, pinned shape and version window), credential-strategies-reasons.test.ts (one case per reason, timeout distinct from the reserved token, no shipped caller observes it), credential-strategies-remedies.test.ts (byte-exact fixture pinning, per-entry selection, renderer pass-through of the merge-chain renderings, propagation across every site and surface), credential-compatibility.test.ts (goldens byte-identical, defaults equal), credential-lane-model-only-proof.test.ts (inventory-style checked proof, model-name set equality, declared-entry control), credential-hermeticity-guard.test.ts with the behaviour-based guard in tests/preload.ts, tests/structure/credential-vocabulary-invariants.test.ts (no new failure identity; park-record, token, announcement, exit snapshots), the secret-read-boundary extension to the new strategy modules, the boundary negative fixtures, and the fixture corpora under tests/fixtures/credentials (remedy texts byte-exact, export-shape doubles and drift corpus, harness identity doubles, version-window constant, declared short per-execution timeout corpora — sentinel values only)"
+    # TC ownership: TC-TRIP-001, TC-COMP-001..003, TC-REDACT-001..004, TC-REASON-001..003, TC-REMEDY-001..003, TC-ALLOW-001..006, TC-HARNESS-001..007, TC-MEMO-001/002, TC-EXEC-001/002, TC-COMPAT-001, TC-LANE-001, TC-STRUCT-001/002, TC-HERM-001 (TC-COMP-004 is the named manual/post-merge demonstration, never a gate). Test plan rev 1.1 folded the merge-chain surfaces into TC-REMEDY-001/003 and TC-REDACT-001's swept set — existing TC IDs kept, none added; the suites proving them are the files declared above.
     # Companion updates: tests/behaviour/harness-spawn-credential.test.ts (declared-entry control), tests/checks/error-table-sync.test.ts and tests/checks/exit-code-literals.test.ts (vocabulary-invariant extensions with their mutation arms).
-    # Fences in force: the suite touches no real owner CLI, store, or keyring; no 15 s wall-clock waits (cap tests use declared short timeouts within the 30 s bound plus constant-pinning assertions); the tripwire passes with no committed tracker-host coordinates (this change ships none).
+    # Fences in force: the suite touches no real owner CLI, store, or keyring; no 15 s wall-clock waits (cap tests use declared short timeouts within the 30 s bound plus constant-pinning assertions); the tripwire passes with no committed tracker-host coordinates (this change ships none); the park-record-shape snapshot (TC-STRUCT-001) holds against phase 4's forwarding — no field added, reason on refusal and log line only.
     # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/credential-composition-proof.test.ts tests/behaviour/credential-redaction-live-registry.test.ts tests/behaviour/credential-strategies-command.test.ts tests/behaviour/credential-strategies-harness-store.test.ts tests/behaviour/credential-strategies-reasons.test.ts tests/behaviour/credential-strategies-remedies.test.ts tests/behaviour/credential-compatibility.test.ts tests/behaviour/credential-lane-model-only-proof.test.ts tests/behaviour/credential-hermeticity-guard.test.ts; bun test tests/structure/credential-vocabulary-invariants.test.ts tests/checks/allowlist-tripwire.test.ts; bun run scripts/checks/allowlist-tripwire.ts; bun run scripts/checks/secret-read-boundary.ts.
     scope:
       files:
@@ -218,26 +360,28 @@ phases:
         - tests/fixtures/credentials
         - tests/boundaries
   - id: 6
-    title: ADR-0014 landing — decision record, index row, register binding
+    title: ADR-0014 landing and the provisioning-guide reversal pair (coder-owned, one commit)
     kind: delivery
-    summary: "land the governing record as doc/decisions/ADR-0014-credential-strategies-store-ownership.md with status Proposed and decision_date null — never Accepted, acceptance is the owner's act at the PR review — carrying the governing record's substance with the DRAFT blockquote, the draft-handling section, and the revision log removed and the front matter otherwise intact; add its row to doc/decisions/00-index.md and the register binding to doc/decisions/00-register.md per the decision-records-management conventions; no committed file references any local working-draft path, and the record's link block names only committed contracts and specs"
-    # TC ownership: no TC; the decision-record content check (test plan gate battery item 5) and bash scripts/.tests/test-doc-distribution.sh (triggered by the 00-index.md edit) are the verification.
-    # Ordering: after the tripwire+tests phase per the owner's ordering; before the release/reconciliation phase.
-    # Fences in force: ADR fence (header) — Proposed, decision_date null, never Accepted by an agent; the content fence bars any working-draft path reference.
-    # Verify: bash scripts/.tests/test-doc-distribution.sh; the decision-record content check (ADR-0014 present with index row and register binding, status Proposed, decision_date unset); git diff --check.
+    summary: "land the governing record as doc/decisions/ADR-0014-credential-strategies-store-ownership.md with status Proposed and decision_date null — never Accepted, acceptance is the owner's act at the PR review — carrying the governing record's substance with the DRAFT blockquote, the draft-handling section, and the revision log removed and the front matter otherwise intact, plus its row in doc/decisions/00-index.md and the register binding in doc/decisions/00-register.md per the decision-records-management conventions; and land the provisioning-guide reversal pair in the SAME commit — doc/guides/tracker-credential-provisioning.md's only-an-environment-source and never-runs-the-token-read absoluteness deliberately reversed (spec §18/§22), with tests/checks/tracker-credential-provisioning-guide.test.ts re-pinned to the reversed wording (TC-DOCS-001/003) — the pair and the record travel as ONE coder-owned commit: doc-syncer's contract forbids source-code edits, so the test re-pin is a coder micro-task, and the shared commit means no commit boundary ever observes the old pinning check against the reversed guide or the re-pinned check against the unreversed guide (no red window for phases 8-9)"
+    # Pairing ownership (DoR iter-1 F3, binding): coder executes this phase; the guide edit and the test re-pin are inseparable — splitting them across owners or commits is a defect.
+    # Site anchors (as of HEAD 0ca7fe4d): the pinning check pins the guide's sentences at guide :19 (only-an-environment-source) and :33 (never-runs-gh-auth-token twin); the re-pin asserts the reversed posture (the declared command source is sanctioned; the environment bridge remains documented as the knowingly-duplicated fallback) while keeping the guide's redistributable marker, key/reference names, shell-history hygiene, least-privilege, rotation/revocation, and 404-scope content (the remaining pinned assertions stay true).
+    # Ordering: after phase 5 (the capability exists — the reversal is then true) and before the doc-syncer reconciliation scope (phase 7); no committed file references any local working-draft path.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/tracker-credential-provisioning-guide.test.ts; bash scripts/.tests/test-doc-distribution.sh (triggered by the 00-index.md edit); the decision-record content check (ADR-0014 present with index row and register binding, status Proposed, decision_date unset); git diff --check.
     scope:
       files:
         - doc/decisions/ADR-0014-credential-strategies-store-ownership.md
         - doc/decisions/00-index.md
         - doc/decisions/00-register.md
+        - doc/guides/tracker-credential-provisioning.md
+        - tests/checks/tracker-credential-provisioning-guide.test.ts
   - id: 7
-    title: Release changeset and phase-7 documentation reconciliation scope
+    title: Release changeset and system-spec reconciliation scope (doc-syncer, lifecycle system_spec_update)
     kind: delivery
-    summary: "declare the release and the reconciliation scope — one lockstep changeset .changeset/gh-394-credential-owner-strategies-minor.md declaring the five fixed-group packages at minor (spec front matter version_impact: minor; the landed lockstep precedent), and the phase-7 documentation reconciliation scope over doc/spec/features/feature-adapter-ports.md, feature-config-layer.md, feature-provider-engine.md, and feature-doctor.md, the preflight section of doc/spec/features/feature-dispatch-engine.md, and doc/guides/tracker-credential-provisioning.md whose only-an-environment-source and never-runs-the-token-read absoluteness is deliberately reversed in-change together with the companion update to its content-pinning check tests/checks/tracker-credential-provisioning-guide.test.ts so the guide check stays green with the reversal"
-    # Execution ownership (binding): the changeset file is this phase's release artifact committed through the commit primitive; the six doc/test companion edits are EXECUTED BY doc-syncer in the lifecycle system_spec_update phase — no coder task exists for them, and no doc edit may leak into any earlier phase's commit. This phase declares their scope so the reconciliation lands inside the declared boundary.
-    # Why the companion test file is in scope: tests/checks/tracker-credential-provisioning-guide.test.ts pins the guide's current absoluteness (it asserts the only-environment-source sentence byte-inclusively) — reversing the absoluteness without updating that check in the same pass turns pnpm test red; the update is part of the reconciliation, not new verification design (TC-DOCS-001/003 re-pinned to the reversed wording).
+    summary: "declare the release and the reconciliation scope — one lockstep changeset .changeset/gh-394-credential-owner-strategies-minor.md declaring the five fixed-group packages at minor (spec front matter version_impact: minor; the landed lockstep precedent), and the system-spec reconciliation scope over doc/spec/features/feature-adapter-ports.md, feature-config-layer.md, feature-provider-engine.md, and feature-doctor.md, the preflight section of doc/spec/features/feature-dispatch-engine.md, and the merge-landing name-only evidence note in doc/spec/features/feature-merge-verify-deploy.md (its classification/landing-fault identity section — the three failure fields are name-shaped evidence, so the delivered name-only rule's substance is preserved and only its statement gains the credential-refusal clarification, spec §18/§20/§21 rev 1.1)"
+    # Execution ownership (binding): the changeset file is this phase's release artifact committed through the commit primitive; the five doc-spec edits are EXECUTED BY doc-syncer in the lifecycle system_spec_update phase — no coder task exists for them, and no doc edit outside the declared phase scopes may leak into any delivery phase commit. This phase declares their scope so the reconciliation lands inside the declared boundary.
+    # Doc scope alignment (DoR iter-1 F6): these six files are exactly spec §18 rev 1.1's reconciliation set. EXPLICIT EXCLUSIONS with reasons: doc/spec/features/feature-resident-daemon.md (named conditional in pm-notes) — the shipped daemon composition changes not at all in this change (supervise-only, pending-park semantics reserved for #395, DEC-14), so it carries no changed statement to reconcile; doc/spec/features/feature-harness-adapters.md (named conditional in pm-notes) — the harness adapter capability/gap posture gains no new truth (the harness-store strategy consumes the delivered identity contract as a construction input, ADR-0008 unchanged), so it likewise carries nothing to reconcile. Reconciling either would edit outside the declared boundary.
     # Release scope: the changeset entries, not the filename, are the contract; the PR targeting main-tools, merge authority, and tracker transitions belong to the lifecycle phases, not this plan.
-    # Verify: the changeset file parses as YAML front matter plus prose declaring the five packages at minor; after the doc-syncer pass: bun test tests/checks/tracker-credential-provisioning-guide.test.ts and bash scripts/.tests/test-doc-distribution.sh stay green.
+    # Verify: the changeset file parses as YAML front matter plus prose declaring the five packages at minor; after the doc-syncer pass: bun test tests/checks/tracker-credential-provisioning-guide.test.ts (phase 6's re-pinned check stays green), bash scripts/.tests/test-doc-distribution.sh, and bun test tests/checks/doc-conformance.test.ts stay green.
     scope:
       files:
         - .changeset/gh-394-credential-owner-strategies-minor.md
@@ -246,5 +390,4 @@ phases:
         - doc/spec/features/feature-provider-engine.md
         - doc/spec/features/feature-doctor.md
         - doc/spec/features/feature-dispatch-engine.md
-        - doc/guides/tracker-credential-provisioning.md
-        - tests/checks/tracker-credential-provisioning-guide.test.ts
+        - doc/spec/features/feature-merge-verify-deploy.md
