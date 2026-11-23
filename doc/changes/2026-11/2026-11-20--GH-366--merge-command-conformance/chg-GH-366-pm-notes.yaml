@@ -17,7 +17,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-23T03:57:46.167Z }
   quality_gates: { started: null, completed: 2026-11-23T04:57:15.965Z }
   dod_check: { started: null, completed: 2026-11-23T04:57:41.104Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-23T05:04:53.484Z }
 decisions:
   - text: "PM-decided (scope, authoritative source): the owner's issue comment of
       2026-11-20T10:42:14Z defines the delivery scope as the merge slice — three
@@ -87,6 +87,25 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR created (phase 11):
+      **https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/387** —
+      base `main-tools`, head `fix/GH-366/merge-command-conformance` @
+      `905bdf0e` (46 commits over merge-base 7cc71cd1). The #386-defect remedy
+      executed: pushed BEFORE/AFTER creation with the remote-head assertion —
+      remote == local MATCH verified via `git ls-remote` (the remote branch had
+      been 46 commits stale at 9432bbd8, so the push was load-bearing); the push
+      being rejected would have refused the pr-open report. Ticket #366: labels
+      now `[change, review]` (stale `blocked`/`human-input-needed`/ `spec-ready`
+      removed per the review-state convention), assigned juliusz-cwiakalski, one
+      comment with the PR link + verification summary (aggregate gate 12 544/0 ·
+      range lint 44/0 · re-review PASS after the iteration-1 remediation).
+      Lifecycle STOP: PR open, merge authority is the CEO's; the three TDRs stay
+      `Proposed` for owner acceptance at review. Environment note for the next
+      session: github-mcp reads work but writes fail with \"Requires
+      authentication\" — ticket writes used the `gh` CLI fallback; fix the MCP
+      token scope before relying on MCP writes."
+    type: info
+    date: "2026-11-23"
   - text: "Quality gates (phase 9) — verdicts. **Range lint: PASS** —
       `./scripts/lint-commit-range.sh --base main-tools`: base resolved
       merge-base 7cc71cd1 (origin/main-tools), head 22a5f628, **44 commits in
