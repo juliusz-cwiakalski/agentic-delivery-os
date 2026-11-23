@@ -12,7 +12,10 @@
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
+import type {
+  GitChildRunner,
+  GitPushRunnerResult,
+} from "../../../../packages/adapters/src/git/index";
 import { type EntrypointComposer, runEntrypoint } from "../../../../packages/cli/src/entrypoint";
 import { type CliStreams, runCli } from "../../../../packages/cli/src/index";
 import {
@@ -51,7 +54,7 @@ import {
 import { projectScopeFor } from "../../projects/state-scope";
 import { makeCheckout } from "../../queue/production/harness";
 import { createDispatchClock, DISPATCH_NOW } from "../harness";
-import { createGuardedRunner, type GuardedInvocation, type GuardedRunner } from "./process-runner";
+import { createGuardedRunner } from "./process-runner";
 
 const ROOT = process.cwd();
 const BASE = join(ROOT, "tmp", "tmpdir");
@@ -217,6 +220,33 @@ export type ParityHarnessOptions = {
    * changing the state location. Absent leaves the store exactly as opened.
    */
   readonly storeWrap?: (store: StateStorePort) => StateStorePort;
+  /**
+   * The full-hex local head the default git script declares (GH-386 DM-1): the
+   * local parity fact. Absent keeps the delivered fixture head literal, which
+   * every scripted open pull also carries — so every delivered pr-open scenario
+   * resolves equal heads mechanically and the ensure-push act never fires.
+   */
+  readonly localHead?: string;
+  /**
+   * The scripted push outcome for the default guarded runner (GH-386 F-1). The
+   * declared classes: fast-forward-accepted, non-fast-forward-rejected,
+   * protected-branch-rejected, credential-rejected, timed-out, spawn-failed.
+   * Absent keeps the loud unexpected-push refusal.
+   */
+  readonly push?: (invocation: GuardedInvocation) => GitPushRunnerResult;
+  /**
+   * The open-request head fact per `/pulls?state=open` read, in call order (the
+   * last entry repeats): a full-hex SHA, or `unreadable` for a failing read.
+   * Call 1 is the truth read; call 2 is the parity read; call 3 is the re-read
+   * after an accepted push. Absent passes the transport through untouched.
+   */
+  readonly pullHeadCalls?: readonly (string | "unreadable")[];
+  /**
+   * The injected ensure-push act budget (GH-386 NFR-1): a small test value
+   * proving the seam timeout is injectable with no new configuration key. The
+   * delivered default is the seam's 60 000 ms.
+   */
+  readonly pushTimeoutMs?: number;
 };
 
 export type ParityHarness = {
@@ -392,8 +422,40 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     if (!seeded.ok) throw new Error(`queue seeding failed: ${JSON.stringify(seeded)}`);
   }
 
-  const guarded = options.guarded ?? createGuardedRunner();
-  const transport = options.transport ?? readableParityTransport();
+  const guarded =
+    options.guarded ??
+    createGuardedRunner({
+      ...(options.localHead === undefined ? {} : { head: options.localHead }),
+      ...(options.push === undefined ? {} : { push: options.push }),
+    });
+  const baseTransport = options.transport ?? readableParityTransport();
+  // The open-request head-fact wrap (GH-386 DM-1): call 1 is the truth read,
+  // call 2 the parity read, call 3 the post-push re-read; the last entry
+  // repeats. A `unreadable` fact fails that read, never an earlier one.
+  const sequence = options.pullHeadCalls;
+  let openPullCalls = 0;
+  const transport: ParityTransport =
+    sequence === undefined
+      ? baseTransport
+      : {
+          send: async (request) => {
+            if (!request.url.includes("/pulls?state=open")) return baseTransport.send(request);
+            const call = openPullCalls;
+            openPullCalls += 1;
+            const fact = call < sequence.length ? sequence[call] : sequence.at(-1);
+            if (fact === "unreadable") {
+              return { status: 500, body: { message: "synthetic parity-read outage" } };
+            }
+            const response = await baseTransport.send(request);
+            if (!Array.isArray(response.body)) return response;
+            const body = response.body.map((item) => {
+              const entry = item as Record<string, unknown>;
+              const head = entry.head as Record<string, unknown> | undefined;
+              return { ...entry, head: { ...(head ?? {}), sha: fact } };
+            });
+            return { status: response.status, body };
+          },
+        };
   const credentialPort: CredentialPort = {
     resolve: () => ({ ok: true, material: { value: PARITY_CANARY } }),
   };
@@ -420,6 +482,10 @@ export const createParityHarness = (options: ParityHarnessOptions = {}): ParityH
     credentials: credentialPort,
     githubTransport: transport,
     gitChildRunner: guarded.gitRunner as GitChildRunner,
+    gitPushRunner: guarded.pushRunner,
+    ...(options.pushTimeoutMs === undefined
+      ? {}
+      : { dispatchPushTimeoutMs: options.pushTimeoutMs }),
     processId: options.processId ?? 4242,
     dispatchDelay: delay,
     clock: { nowMs: clock.nowMs, nowIso: clock.nowIso },

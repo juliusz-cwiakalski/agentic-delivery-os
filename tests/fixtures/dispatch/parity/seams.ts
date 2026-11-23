@@ -56,6 +56,14 @@ export const SEAM_MANIFEST: readonly SeamManifestEntry[] = [
     mountedIn: "packages/cli/src/production.ts",
   },
   {
+    // GH-386: the push seam is the typed stack's first remote-write act; its
+    // membership is proven by import identity over the one adapters module.
+    seam: "push",
+    symbol: "createGitPushSeam",
+    module: "packages/adapters/src/git/push",
+    mountedIn: "packages/cli/src/production.ts",
+  },
+  {
     seam: "derive",
     symbol: "deriveDispatchResult",
     module: "packages/core/src/domain/dispatch-result",
