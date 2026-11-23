@@ -3637,7 +3637,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }
       const remoteHead = await readOpenRequestHeadSha(branchName);
       if (remoteHead === undefined) {
-        return { ok: false, reason: "unreadable", identity: "provider.head.unresolved" };
+        return { ok: false, reason: "unreadable", identity: "pr.head-unresolved" };
       }
       if (localHead === remoteHead) {
         // Parity already holds: no push act is performed (the clean direction).

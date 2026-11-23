@@ -82,7 +82,7 @@ Because the dispatch engine classifies `pr-open` from pull-request truth alone �
 ### 4.2 Non-Goals
 
 - **NG-1**: No merge capability: dispatch keeps no merge port and no merge code path; a push is not a merge, and the coordinator's merge decision is unchanged.
-- **NG-2**: No vocabulary growth: no new result token, no new error-table row, no new domain kind, no new derivation arm.
+- **NG-2**: No vocabulary growth: no new result token, no new error-table row, no new domain kind, no new derivation arm. Interpretive clause (DoR iteration-1 finding 1): the closure forbids new result tokens, error identities, error-table rows, record kinds, derivation arms, and corroboration sources, while exactly one failure-class mapping row and one comparison-reason literal are added as declared in Appendix B — the failure-classification table is the declaredly growing structure, and kind = record/evidence kinds, never the failure-class union.
 - **NG-3**: No change to session-side conventions: the delivery lifecycle's push behavior and the PR-creation workflow's retained git writes are unchanged; the engine's ensure-push is a reconciliation backstop, not a replacement instruction.
 - **NG-4**: No change to the shell fallback's behavior: `deliver-ticket.sh` and the other bash entry points keep their current push behavior.
 - **NG-5**: No force-capable remote mutation: the push act is fast-forward-only, targets only the change branch's configured upstream, and never the base branch or any other ref.
@@ -208,7 +208,7 @@ N/A. No new event or record kind. The attempt, lane, divergence, and handover re
 |----|---------|-------------|
 | DM-1 | `push:<verdict>` attempt evidence references | Bounded identifiers in the delivered evidence-reference family, verdicts `clean`, `pushed`, `failed`; join the reserved-ahead-of-slice set; within the delivered 16-reference budget; identifiers only |
 | DM-2 | Additive optional machine-envelope `push` block | Present together-or-absent-together exactly when the parity precondition evaluated; members `verdict`, `localHead`, `remoteHead`, `parity`; bounded single-line, whole block within the delivered 256-character dispatch bound |
-| DM-3 | Failure-token-mapping row and comparison-reason literal | One new failure class (lifecycle push failure) mapped to `failed` / `failed` / exit 1 / exactly one attempt record / comparison not-applicable with the new declared reason literal `push-parity-unmet`; no identity, token, or kind added |
+| DM-3 | Failure-token-mapping row and comparison-reason literal | One new failure class (lifecycle push failure) mapped to `failed` / `failed` / exit 1 / exactly one attempt record / comparison not-applicable with the new declared reason literal `push-parity-unmet`; no identity, token, or kind added. Interpretive clause (DoR iteration-1 finding 1): kind = record/evidence kinds — the failure-classification table is the declaredly growing structure, and this row is exactly the one mapping row the closure's forbidden lists never counted |
 
 ### 8.4 External Integrations
 
