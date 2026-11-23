@@ -18,7 +18,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-23T11:34:09.196Z }
   delivery: { started: null, completed: 2026-11-23T13:06:30.407Z }
   system_spec_update: { started: null, completed: 2026-11-23T13:14:27.250Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-23T13:24:52.871Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -470,5 +470,38 @@ notes:
       Doc edits in working tree riding this phase transition.
       spec_coverage_gaps: none (both areas had Current specs — reconciliation,
       not authoring)."
+    type: decision
+    date: "2026-11-23"
+  - text: "CLARIFICATION (requested by review minor #1): TC-VGATES-071's primary arm
+      asserts capsule gate.outcome ABSENCE at the production layer because the
+      shipped composer wires no capsule producer port (truthful, NG-5-
+      conformant — the capsule append is non-gating and absent-without-port by
+      delivered design); capsule-ONCE with record-before-capsule ordering is
+      pinned at the handler layer by TC-VGATES-072's member arm. The plan's
+      phase-2 step-5 wording ('appended once on the delivered path') is
+      satisfied by that split: once-where-a-port-exists. No code change."
+    type: resolved
+    date: "2026-11-23"
+  - text: "Review outcome (review_fix): PASS at iteration 1, zero remediation
+      iteration required. Reviewer independently re-verified goldens (capture
+      entry verify mode byte-identical, 53 cells + production cell), suites (47
+      + 82 + 9 pass), the +14 production diff against the edge.ts:1562 pattern
+      and the handler seam contract, all four disclosed deviations as
+      requirement-class-preserving, constitutional constraints in code truth
+      (only production.ts changed in packages/**; edge.ts untouched; no
+      option-B; no new rows/schema/reads; no secrets; goldens exist only in
+      f2116939), and commit boundaries (docs rode only 9ee43bfa). Verdict:
+      Status PASS, Plan ALL_TASKS_DONE, remediation NONE (minors optional). 4
+      minors NOT remediated in-change (reviewer-graded optional; GH-377
+      precedent): (1) 071 capsule-absence vs plan step-5 wording — clarified in
+      pm-notes above; (2) merge-refusal-rows mutation assertions operate on the
+      local DECLARED_HINT constant rather than the resolved row (real protection
+      intact); (3) redundant toBeLessThanOrEqual(1) before toHaveLength(1) in
+      merge-production-composition; (4) pmNotesForRef replace of change_id:
+      GH-177 lacks a replacement-occurred assert. Minors 2-4 will be surfaced in
+      the PR body for owner visibility. Advisories: rebuildCell/capture-entry
+      duplication (fail-visible), .zed/ stray (never stage), pre-existing dual
+      TC-VGATES-070 labels, cross-consumer safety confirmed, plan fences
+      independently verified, docs current-truth conformant."
     type: decision
     date: "2026-11-23"
