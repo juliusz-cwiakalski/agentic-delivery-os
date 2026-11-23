@@ -356,3 +356,24 @@ notes:
       byte-identical; pnpm typecheck green; biome clean."
     type: info
     date: "2026-11-23"
+  - text: "Plan phase 6 complete (lockstep five-package minor changeset — the
+      final plan phase). Commit
+      c9e0af7310ef61371c235592f15a4a6c14d90b0d (commit primitive; staged
+      .changeset/gh-388-verify-gates-persist-merge-verification-minor.md + the
+      pm-notes tracked drift + tests/behaviour/merge-freshness.test.ts).
+      DISCLOSED: the merge-freshness correction rode this commit — the
+      delivered TC-F1-014 population obligation (merge-suite-obligations)
+      forbids the counts.landing recorder token in the green suite, so the
+      phase-4 zero-consumption/accept landing assertions now read the recorded
+      harness.landings array (same evidence, same semantics; tests/structure
+      2022 pass / 0 fail after the fix). The changeset declares exactly the
+      five fixed-group packages at minor (programmatic parse assert: five
+      keys, all minor, prose present). Version bump and CHANGELOG tasks:
+      changesets owns versioning — no manual bump, no CHANGELOG edit (the
+      changelog is generated at release); validated against AGENTS.md. Test
+      result for the phase: bun test tests/structure 2022 pass / 0 fail;
+      tests/checks/error-table-sync.test.ts 108 pass / 0 fail; biome clean.
+      Aggregate gate: see the delivery report — pnpm check run on the clean
+      tree post-phase-6 (the lifecycle quality_gates phase runs its own)."
+    type: info
+    date: "2026-11-23"

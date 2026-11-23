@@ -227,20 +227,6 @@ const cleanPrReply = (input: {
           mergeable_state: "clean",
         },
       };
-      return {
-        status: 200,
-        body: {
-          number: 388,
-          state: "open",
-          draft: false,
-          head: { ref: input.branch, sha: input.headSha },
-          base: { ref: VG_PROD_BASE },
-          commits: 1,
-          changed_files: 1,
-          mergeable: true,
-          mergeable_state: "clean",
-        },
-      };
     }
     return { status: 404, body: {} };
   };
