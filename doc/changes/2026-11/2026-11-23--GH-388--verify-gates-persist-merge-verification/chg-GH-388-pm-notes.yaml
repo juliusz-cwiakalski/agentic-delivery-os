@@ -233,3 +233,37 @@ notes:
       convention."
     type: info
     date: "2026-11-23"
+  - text: "Plan phase 2 complete (the production composition fix + the
+      composition-level persistence suite). Commit
+      586352acd7dbe01266432566ea7704e16a7a111a (commit primitive; staged
+      packages/cli/src/production.ts +
+      tests/behaviour/verify-gates-persistence.test.ts + the pm-notes carrying
+      the phase-1 note as disclosed tracked drift). The fix: the verify-gates
+      runtime call site now supplies appendVerification =
+      appendMergeGateVerification(store, { record, fenceToken: newFenceToken() })
+      mapped to the seam's ok/code result, mirroring edge.ts's merge ports
+      wiring; no handler/report/envelope/gate-rule change; no read added.
+      TC-VGATES-071 primary arm: byte-identical machine+human bytes vs the
+      phase-1 captured production goldens, exactly one record per evaluation
+      with schema/key/changeRef/headSha/identity (schema version + 6-id
+      sequence, order included)/5 battery verdicts with bounded citations/
+      tracker posture asserted, fence acquire->append->post-append
+      read->release observed through a recording store wrapper, no capsule
+      disclosure as delivered. Append-fault negative control on a FRESH STORE
+      ROOT (new harness instance, zero-records pre-assertion — DoR minor
+      finding honored): state.write.failed at exit 2, never consumable, the
+      follow-on merge refuses merge.state-unverified. TC-VGATES-072: repeat
+      production runs 1 then 2 records; member arm exactly one member-projected
+      record (gates carry exactly id/verdict/reason/citation) with the capsule
+      event appended once AFTER the record; narrowed and config refusals append
+      neither. Test result: 6 pass / 0 fail; capture entry verify mode post-fix
+      byte-identical (53 cells + production cell — the 0-byte delta proof with
+      persistence live); merge-verification-record + golden verify-gates +
+      parity-suite-map 22 pass / 0 fail; pnpm typecheck green; biome clean.
+      Reconciliation recorded: the fixed-verification-instant clause rides the
+      fixture-runtime arms (fixed injected clock); the production composition
+      reads the system clock by delivered design (clock fact production-
+      omitted), so the production arm asserts the observed instant's
+      integrity — never an output byte."
+    type: info
+    date: "2026-11-23"

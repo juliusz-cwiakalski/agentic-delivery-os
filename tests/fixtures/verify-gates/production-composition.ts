@@ -189,7 +189,12 @@ const cleanPrReply = (input: {
     if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
     if (url.endsWith("/merge")) {
       landed = true;
-      return { status: 200, body: { merged: true } };
+      // The provider landing reply carries the squash SHA (the adapter reads
+      // `sha` from the PUT body; the read-back is the already-merged path).
+      return {
+        status: 200,
+        body: { merged: true, sha: "c1d2e3f4a5b60718293a4b5c6d7e8f9012345678" },
+      };
     }
     if (url.includes("/pulls/")) {
       if (landed) {
@@ -206,6 +211,22 @@ const cleanPrReply = (input: {
           },
         };
       }
+      // The landing decision's mergeability read (LF-1): the OPEN request with
+      // its provider-asserted mergeability facts.
+      return {
+        status: 200,
+        body: {
+          number: 388,
+          state: "open",
+          draft: false,
+          head: { ref: input.branch, sha: input.headSha },
+          base: { ref: VG_PROD_BASE },
+          commits: 1,
+          changed_files: 1,
+          mergeable: true,
+          mergeable_state: "clean",
+        },
+      };
       return {
         status: 200,
         body: {

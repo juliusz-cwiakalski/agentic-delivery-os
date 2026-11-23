@@ -246,3 +246,51 @@ describe("TC-F2-007 the reserved identity stays declared and unreachable", () =>
     expect(planted).toContain('"merge.rebase-conflict"');
   });
 });
+
+describe("TC-MERGE-042 the merge.state-unverified remediation is pinned byte-exactly", () => {
+  /** The delivered hint bytes (spec DEC-4: the shipped text already names the working sequence). */
+  const DECLARED_HINT =
+    "Produce the verification with `verify gates <ref>` for the same work item, then re-run; the verification state is absent, torn, or incompatible.";
+
+  test("the machine row's remediationHint equals the declared bytes (equality, not containment)", () => {
+    expect(rowOf("merge.state-unverified").remediationHint).toBe(DECLARED_HINT);
+  });
+
+  test("the pinned bytes name the working sequence and never a non-working step", () => {
+    // The producing command with the same-work-item target, and the consuming
+    // re-run, are named; no --dry-run and no other step can appear.
+    expect(DECLARED_HINT).toContain("verify gates <ref>");
+    expect(DECLARED_HINT).toContain("for the same work item");
+    expect(DECLARED_HINT).toContain("then re-run");
+    expect(DECLARED_HINT).not.toContain("--dry-run");
+    // The pin's mutation sensitivity: dropping the producing command, dropping
+    // the re-run, or inserting a non-working step each breaks the equality.
+    expect(DECLARED_HINT.replace("verify gates <ref>", "verify gates")).not.toBe(DECLARED_HINT);
+    expect(DECLARED_HINT.replace("then re-run", "")).not.toBe(DECLARED_HINT);
+    expect(`${DECLARED_HINT} Run merge --dry-run first.`).not.toBe(DECLARED_HINT);
+  });
+
+  test("both committed error-table baselines carry the same bytes in both directions", () => {
+    const events = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/events/error-table-baseline.json"), "utf8"),
+    ) as { rows: readonly string[] };
+    const eventRow = events.rows
+      .map((line) => JSON.parse(line) as { code: string; remediationHint: string })
+      .find((row) => row.code === "merge.state-unverified");
+    expect(eventRow?.remediationHint).toBe(DECLARED_HINT);
+    const supervise = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/supervise/error-table-baseline.json"), "utf8"),
+    ) as { rows: readonly (readonly string[])[] };
+    const superviseRow = supervise.rows.find((row) => row[0] === "merge.state-unverified");
+    // The supervise baseline's fixed column order: hint at index 5.
+    expect(superviseRow?.[5]).toBe(DECLARED_HINT);
+  });
+
+  test("the documented row carries the same sentence (read-only over committed content)", () => {
+    const documented = readFileSync(
+      join(ROOT, "doc/spec/features/feature-result-contract.md"),
+      "utf8",
+    );
+    expect(documented).toContain(DECLARED_HINT);
+  });
+});
