@@ -10,7 +10,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-23T14:44:16.147Z }
   specification: { started: null, completed: 2026-11-23T14:59:39.990Z }
   test_planning: { started: null, completed: 2026-11-23T15:12:02.888Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-23T15:27:17.435Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -56,6 +56,16 @@ notes:
       review. Both files are untracked by design and land via plan scope at the
       delivery_planning phase commit."
     type: info
+    date: 2026-11-23
+  - text: "Retro: the test_planning phase commit swept the TRACKED
+      doc/decisions/00-index.md (drift-flagged, landed as scopeDrift) while the
+      UNTRACKED TDR-0076 record file was excluded — the branch briefly carries
+      an index row whose record is not yet committed. Accepted transient: the
+      record lands in the delivery_planning phase commit via declared plan scope
+      (the plan MUST declare both paths). Lesson: author decision records before
+      the phase that lands their index, or expect one phase of index/record
+      skew."
+    type: retro
     date: 2026-11-23
   - text: "Process (retro): clarify-scope owner question (AC-3 logistics) could not
       be asked — non-interactive run, question tool cancelled. PM decided
