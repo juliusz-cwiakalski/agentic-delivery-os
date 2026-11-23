@@ -70,6 +70,10 @@ export const DISPATCH_FLOW_SURFACE = [
   "packages/core/src/domain/loop-prompt.ts",
   "packages/core/src/state/loop.ts",
   "packages/cli/src/commands/loop.ts",
+  // GH-386: the push seam joins the declared surface, so the typed stack's
+  // first remote-write act is under the same static no-shell regime as every
+  // other dispatch-flow spawn surface (NFR-3).
+  "packages/adapters/src/git/push.ts",
 ] as const;
 
 /**

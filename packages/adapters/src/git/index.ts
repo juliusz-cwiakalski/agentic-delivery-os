@@ -462,3 +462,12 @@ export {
   type WatchdogGitSeam,
   type WatchdogGitSeamOptions,
 } from "./watchdog.js";
+export {
+  createGitPushSeam,
+  type GitPushChildRunner,
+  type GitPushOutcome,
+  PUSH_DEFAULT_TIMEOUT_MS,
+  type GitPushRunnerResult,
+  type GitPushSeam,
+  type GitPushSeamOptions,
+} from "./push.js";
