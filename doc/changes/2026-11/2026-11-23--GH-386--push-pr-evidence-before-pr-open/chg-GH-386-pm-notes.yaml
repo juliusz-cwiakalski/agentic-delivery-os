@@ -13,7 +13,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-23T15:27:17.435Z }
   dor_check: { started: null, completed: 2026-11-23T15:36:21.458Z }
   delivery: { started: null, completed: 2026-11-23T20:27:04.416Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-23T20:45:12.435Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -60,6 +60,22 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Phase 7 doc reconciliation complete (doc-syncer report 2026-11-23): 8
+      files edited / 0 created / residual gaps EMPTY / tests-checks 1628-0 /
+      doc-distribution guard green. Primary page got the 9-proven boundary fix,
+      post-merge live-verification clause, no-shell surface entry, 60000ms
+      bounds row, TDR-0076 linkage, GH-386 change record. Notable catches:
+      feature-adapter-ports + monorepo-scaffold-toolchain carried blanket
+      'contacts no network' / 'local-only' git-seam claims made false by the
+      first remote-write act — both now scoped (merge mutations stay
+      no-network/no-remotes; push is the family's one remote-write).
+      feature-closeout scoped (push exported but never exercised there).
+      Identity rename confirmed absent from current-truth docs. Edits land via
+      the plan-scoped system_spec_update phase commit (some pages are
+      tracked-drift sweeps outside the declared file list — expected, reasons in
+      the doc-sync report)."
+    type: info
+    date: 2026-11-23
   - text: "Delivery complete (COMPLETED_ALL, @coder report 2026-11-23).
       Per-plan-phase evidence for DoD: phase 1 (planning, TDR-0076 reconciled)
       commit 2182e05e verified pre-existing, doc/decisions clean; phase 2

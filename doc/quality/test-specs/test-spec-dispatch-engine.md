@@ -3,7 +3,7 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-20
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 links:

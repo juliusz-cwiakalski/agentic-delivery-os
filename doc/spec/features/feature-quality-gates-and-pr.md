@@ -6,7 +6,7 @@ ados_distribution: internal
 id: SPEC-QUALITY-GATES-AND-PR
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-11
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The verification-and-release neighborhood of the lifecycle: quality gates (/check, /check-fix), the pre-PR branch-range commit-message lint (scripts/lint-commit-range.sh) with the committer/PM message contract, the one-Conventional-Commit workflow through the commit primitive (@committer), and the PR/MR workflow (@pr-manager), with a platform/project configuration layer."

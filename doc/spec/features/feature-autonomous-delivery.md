@@ -6,7 +6,7 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-11-20
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Mode A has two equivalent operator surfaces: the typed `jaiship loop start|stop|status|log|reset` family, a composition profile over the delivered supervision engine, and the retained `scripts/ceo-loop.sh` fallback. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery, while the typed loop reads the delivered dispatch/daemon lane records as its corroborator. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
