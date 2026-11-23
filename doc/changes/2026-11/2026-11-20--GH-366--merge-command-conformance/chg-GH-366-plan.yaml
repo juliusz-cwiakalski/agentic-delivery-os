@@ -1866,6 +1866,19 @@ phases:
         # moves; declared so the alignment stages here rather than in a
         # hand-edited check outside the plan.
         - tests/checks/doc-conformance.test.ts
+        # Aggregate-gate pin sites the committed checks named for the moved
+        # identity total (172): the operator contract baseline's error-row
+        # count, the supervise captured baseline (two amended rows at their
+        # delivered values plus the additive exclusion), the cross-repository
+        # additive set, the v1 contract inventory, and the two port/contract
+        # suites that pin the inventory in both directions — moved exactly, no
+        # site exempted or widened.
+        - tests/fixtures/dispatch/operator/contract-baseline.ts
+        - tests/fixtures/supervise/error-table-baseline.json
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/structure/supervision-error-family.test.ts
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
     interactions:
       - kind: generated-code
         target: .opencode/agent/pm.md

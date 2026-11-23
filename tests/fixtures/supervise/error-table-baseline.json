@@ -747,7 +747,7 @@
       "platform",
       false,
       "not_landed",
-      "Produce a gate verification with `verify gates` and retry; the verification state is absent, torn, or incompatible.",
+      "Produce the verification with `verify gates <ref>` for the same work item, then re-run; the verification state is absent, torn, or incompatible.",
       "platform-provider",
       "No consumable gate-verification state exists for the change."
     ],
@@ -765,9 +765,9 @@
       "merge.transaction-aborted",
       "merge",
       "user",
-      true,
+      false,
       "not_landed",
-      "Clear the named pre-mutation condition and retry; nothing landed and a re-run converges.",
+      "Repair the named aborted pre-mutation condition \u2014 nothing landed, no convergence is claimed \u2014 and then re-run.",
       "user-validation",
       "The transaction aborted cleanly before any landing mutation."
     ],
@@ -987,7 +987,7 @@
       "user",
       false,
       "not_landed",
-      "Supply the named contract member — a named agent-role or human owner, a verb from add/remove/change/test/deploy, a measurable outcome, a real tracker entry, a due date, a verification artifact, an outcome-verifier window, and a rollback condition — within its declared bound, then re-file; nothing landed.",
+      "Supply the named contract member \u2014 a named agent-role or human owner, a verb from add/remove/change/test/deploy, a measurable outcome, a real tracker entry, a due date, a verification artifact, an outcome-verifier window, and a rollback condition \u2014 within its declared bound, then re-file; nothing landed.",
       "user-validation",
       "An action filing is incomplete or violates its contract rule."
     ],
@@ -997,7 +997,7 @@
       "user",
       false,
       "not_landed",
-      "Supply the named missing closure member — an explicit decision plus an artifact (done), a reason (deprioritized), a successor (superseded), or in-window verifier evidence (outcome) — or target a plane that is still open; nothing landed.",
+      "Supply the named missing closure member \u2014 an explicit decision plus an artifact (done), a reason (deprioritized), a successor (superseded), or in-window verifier evidence (outcome) \u2014 or target a plane that is still open; nothing landed.",
       "user-validation",
       "A closure decision is incomplete or targets an already-closed plane."
     ],
@@ -1257,7 +1257,7 @@
       "user",
       false,
       "not_landed",
-      "Use the running coordinator supervisor or stop it before starting another; a live holder is refused regardless of lease age, and a busy shared state fence may belong to another writer — retry once it releases.",
+      "Use the running coordinator supervisor or stop it before starting another; a live holder is refused regardless of lease age, and a busy shared state fence may belong to another writer \u2014 retry once it releases.",
       "platform-provider",
       "A live coordinator instance holds the state-dir instance lease."
     ],
