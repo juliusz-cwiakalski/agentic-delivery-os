@@ -1,0 +1,105 @@
+# PM notes for GH-386 — durable change memory (committed).
+# Phase timestamps are written only by the phase family; never hand-edit them.
+change_id: GH-386
+title: "M4-S23: The PR-creation evidence commit must be pushed before the lane
+  closes (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+branch: fix/GH-386/push-pr-evidence-before-pr-open
+phases:
+  clarify_scope: { started: null, completed: 2026-11-23T14:44:16.147Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "AC-3 live-proof logistics decided PM-autonomous (non-interactive run —
+      question tool cancelled; owner override point is the open-PR review):
+      post-merge live observation. AC-1/AC-2 fixtures gate the merge in-PR; the
+      first two consecutive natural dispatches after merge must end
+      local==remote at pr-open and are recorded as the live verification by the
+      CEO/owner lane. Drivers: in-change live dispatches would commit the owner
+      to two full unsolicited deliveries (needs owner-designated tickets —
+      cost-bearing scope is owner-stated); one-delivery-at-a-time discipline
+      preserved; requirement 3 makes a divergent pr-open a typed failure, so the
+      post-merge proof cannot pass silently and matches exactly the
+      twice-observed failure pattern. The spec must declare this AC-3
+      satisfaction contract explicitly so the DoD gate can evaluate it."
+    date: 2026-11-23
+open_questions: []
+blockers: []
+notes:
+  - text: "Process (retro): clarify-scope owner question (AC-3 logistics) could not
+      be asked — non-interactive run, question tool cancelled. PM decided
+      autonomously per the run's fallback instruction and disclosed the decision
+      in pm-notes, ticket comment, and (later) the PR body; override point is
+      the open-PR human review."
+    type: retro
+    date: 2026-11-23
+  - text: "Intake 2026-11-23 (manual PM invocation, interactive). Observed state:
+      phase ledger empty (verified class, 7733 records), no branch/folder/PR for
+      GH-386; main-tools synced to origin at 8f557cfd. Ticket evidence: observed
+      twice on consecutive native deliveries (GH-381/PR #383, GH-384/PR #385) —
+      the branch's final commit (pr_creation completed + PR URL) existed only
+      locally at dispatch exit pr-open; the CEO pushed manually before merging,
+      invalidating CI on the PR head and costing a second CI cycle. Required
+      behaviour: (1) push final commit(s) before pr-open classification; (2)
+      terminal evidence names the pushed head and asserts local==remote parity
+      (the parity verify gates already checks); (3) push failure is a typed
+      non-pr-open result retaining the PR URL; (4) pr-open with local ahead of
+      PR head is a defect pinned by fixture. Milestone M4 attached at intake —
+      verified, no owner question needed."
+    type: info
+    date: 2026-11-23
+  - text: "Spec cross-check (doc/spec/features/feature-dispatch-engine.md): the
+      eleven-token vocabulary is closed — a failed push must map into an
+      existing token (PM indication: a new failure-class row mapping to failed,
+      outcome failed, exit 1, in the pinned failure-token mapping, adding no
+      token); derivation arm 8 (open PR -> pr-open) gains a parity precondition;
+      the pr-open corroboration requirement (currently tracker-only) may need
+      the parity evidence reference; machine envelope may gain additive optional
+      parity/pushed-head fields (precedent: detail.harness,
+      DISPATCH_MAX_ERROR_DETAIL_CHARS bounding). Mechanism choice (engine-side
+      push vs lifecycle-prompt push with dispatch-side verification) is the
+      spec-writer's to declare from code truth; PM indication: engine-side
+      deterministic push reusing the verify-gates parity seam (paved road,
+      deterministic, satisfies behaviours 1-4 without prompt reliance). Dispatch
+      explicitly has no merge port — push is not merge, so no contradiction, but
+      a push is new write I/O for the engine: if spec-writer confirms
+      engine-side, route the precedent-setting extension through
+      @decision-advisor for a decision record."
+    type: info
+    date: 2026-11-23
+  - text: "Open spec questions for @spec-writer: (1) shell fallback parity — the
+      typed lane is parity-complete with the shell's supervision semantics; does
+      push+parity extend to the still-executable deliver-ticket.sh fallback, or
+      is the divergence declared with the fallback's documented-fallback status?
+      (2) edge cases: push when remote is already at head (idempotent),
+      non-fast-forward rejection, push interaction with pr-open-unverified (no
+      URL resolved), resume of a recorded pr-open lane (is parity re-checked on
+      resume?), bounded attempt evidence reference naming (e.g. push:<verdict>),
+      and whether pr-open corroboration gains a parity requirement. (3) AC-3
+      wording is the owner question above. Doc impacts:
+      feature-dispatch-engine.md, feature-quality-gates-and-pr.md,
+      feature-verify-gates.md (shared parity seam),
+      feature-autonomous-delivery.md (fallback rows), engine-first operations
+      guide, doc/quality/test-specs/test-spec-dispatch-engine.md coverage map;
+      possible lifecycle-prompt wording change if a session-side push is chosen
+      (prompt conformance scans apply)."
+    type: info
+    date: 2026-11-23
+  - text: "Delivery conventions (from ticket): full 11-phase lifecycle; commits via
+      the commit primitive; gate evidence uses TMPDIR=$PWD/tmp/tmpdir; PR
+      targets main-tools; STOP with the PR open. Environment: harness binary is
+      delivery-os (PATH=$PWD/node_modules/.bin prefix in runner shells);
+      github-mcp writes fail (read-scoped token) so tracker/PR writes go through
+      gh CLI via @runner; changeset format follows the standing lockstep
+      invariant: five fixed-group packages, all minor."
+    type: info
+    date: 2026-11-23
