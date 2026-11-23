@@ -4,6 +4,8 @@
  * Pure data validation and an injected transport. No filesystem access, no
  * ambient environment, no network, and no time or randomness live here.
  */
+
+import type { CredentialSourceKey } from "@delivery-os/core/contracts";
 import type {
   ConformanceDecodeResult,
   ConformanceTransport,
@@ -471,19 +473,35 @@ export const decodeMockTenant = (value: unknown): ConformanceDecodeResult<MockTe
   };
 };
 
-const decodeSourceKey = (
-  value: unknown,
-):
-  | { style: "literal"; name: string }
-  | { style: "environment-prefixed"; suffix: string }
-  | undefined => {
+const decodeSourceKey = (value: unknown): CredentialSourceKey | undefined => {
   if (!isRecord(value)) return undefined;
   const style = value.style;
-  const name = value.name;
-  const suffix = value.suffix;
-  if (style === "literal" && typeof name === "string") return { style: "literal", name };
-  if (style === "environment-prefixed" && typeof suffix === "string") {
-    return { style: "environment-prefixed", suffix };
+  if (style === "literal" && typeof value.name === "string") {
+    return { style: "literal", name: value.name };
+  }
+  if (style === "environment-prefixed" && typeof value.suffix === "string") {
+    return { style: "environment-prefixed", suffix: value.suffix };
+  }
+  if (style === "command") {
+    if (typeof value.program !== "string") return undefined;
+    if (!Array.isArray(value.args)) return undefined;
+    const args: string[] = [];
+    for (const arg of value.args) {
+      if (typeof arg !== "string") return undefined;
+      args.push(arg);
+    }
+    if (value.timeoutMs === undefined) {
+      return { style: "command", program: value.program, args };
+    }
+    if (typeof value.timeoutMs !== "number" || !Number.isFinite(value.timeoutMs)) return undefined;
+    return { style: "command", program: value.program, args, timeoutMs: value.timeoutMs };
+  }
+  if (
+    style === "harness-store" &&
+    typeof value.harness === "string" &&
+    typeof value.integrationId === "string"
+  ) {
+    return { style: "harness-store", harness: value.harness, integrationId: value.integrationId };
   }
   return undefined;
 };
