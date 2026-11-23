@@ -11,10 +11,13 @@
 import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
+  DISPATCH_PUSH_VERDICTS,
   HARNESS_OUTCOMES,
   type DeliveryResultToken,
   type DispatchCorroborationArm,
+  type DispatchEnvelopePushBlock,
   type DispatchHandoverState,
+  type DispatchPushParityReading,
   type HarnessOutcome,
   type PmNotesCompleteness,
   type ProjectionClass,
@@ -110,6 +113,13 @@ export type DispatchTruthInput = {
   /** A spawn attempt that failed before a session existed. */
   readonly spawnFailure?: boolean;
   readonly resumeAdmission?: DispatchResumeAdmission;
+  /**
+   * The terminal parity fact the ensure-push capability produced (GH-386 F-1).
+   * Present exactly when the composed capability evaluated the precondition;
+   * absent keeps the delivered classification for a composition that declared
+   * no act (the daemon lane and pre-change compositions).
+   */
+  readonly pushParity?: DispatchPushParityReading;
 };
 
 /**
@@ -167,12 +177,98 @@ export type DispatchDerivation = {
    * sites. Absent for every other token, whose requirement is token-keyed.
    */
   readonly corroborationArm?: DispatchCorroborationArm;
+  /**
+   * The terminal parity disclosure (GH-386 DM-1/DM-2), present exactly on the
+   * two precondition-evaluating verdicts: the `pr-open` success (`clean` or
+   * `pushed`, parity true) and the typed push failure (`failed`, parity false,
+   * PR URL retained). It names the envelope block, the reserved evidence
+   * reference, and the not-applicable comparison reason.
+   */
+  readonly push?: DispatchEnvelopePushBlock;
 };
 
 const projectionOf = (value: DeliveryResultToken): ProjectionClass => {
   const row = DELIVERY_RESULT_TAXONOMY.find((entry) => entry.token === value);
   if (row === undefined) throw new Error(`delivery-result token has no taxonomy row`);
   return row.projectionClass;
+};
+
+/** The closed push-verdict union, destructured once (no literal in this module). */
+const [PUSH_VERDICT_CLEAN, PUSH_VERDICT_PUSHED, PUSH_VERDICT_FAILED] =
+  DISPATCH_PUSH_VERDICTS;
+
+/**
+ * The arm-8 (open pull request, URL resolved) parity precondition (GH-386 F-1,
+ * DEC-5; OQ-1).
+ *
+ * `pr-open` derives only from a readable equality with a non-failed act
+ * verdict. An unreadable parity read is the delivered undecidable-truth
+ * semantics (`state-unverified` at exit 2) and never lands in the push-failure
+ * row; a readable inequality and every non-successful act outcome — rejected,
+ * failed, timed out, or a spawn-level act failure — classify the one new
+ * failure row with the PR URL retained. Absent parity facts keep the delivered
+ * classification: a composition that supplies none has declared no act (the
+ * daemon lane and pre-change compositions; `pr-open-unverified` never reaches
+ * this arm at all — no precondition, no evidence, no envelope block).
+ */
+const deriveOpenPrWithParity = (
+  input: DispatchTruthInput,
+  url: string,
+): DispatchDerivation => {
+  const parity = input.pushParity;
+  if (parity === undefined) {
+    return base(input, {
+      token: po,
+      outcome: input.harness.ok ? input.harness.value.outcome : O_FAILED,
+      prUrl: url,
+      urlResolved: true,
+      lastMessage: "the pull request is open and awaits the coordinator's merge decision",
+      armId: "open-pr",
+    });
+  }
+  if (!parity.ok) {
+    return base(input, {
+      token: su,
+      outcome: O_FAILED,
+      prUrl: url,
+      urlResolved: true,
+      lastMessage: `push parity read unreadable (${parity.identity ?? "parity-read"})`,
+      armId: "open-pr",
+      errorCode: "dispatch.state-unverified",
+      readFailure: "state",
+    });
+  }
+  const facts = parity.facts;
+  if (facts.verdict !== PUSH_VERDICT_FAILED && facts.parity) {
+    return base(input, {
+      token: po,
+      outcome: input.harness.ok ? input.harness.value.outcome : O_FAILED,
+      prUrl: url,
+      urlResolved: true,
+      lastMessage: "the pull request is open and awaits the coordinator's merge decision",
+      armId: "open-pr",
+      push: {
+        verdict: facts.verdict === PUSH_VERDICT_CLEAN ? PUSH_VERDICT_CLEAN : PUSH_VERDICT_PUSHED,
+        localHead: facts.localHead,
+        remoteHead: facts.remoteHead,
+        parity: true,
+      },
+    });
+  }
+  return base(input, {
+    token: f,
+    outcome: O_FAILED,
+    prUrl: url,
+    urlResolved: true,
+    lastMessage: "the ensure-push act could not establish branch parity",
+    armId: "open-pr",
+    push: {
+      verdict: PUSH_VERDICT_FAILED,
+      localHead: facts.localHead,
+      remoteHead: facts.remoteHead,
+      parity: false,
+    },
+  });
 };
 
 const base = (
@@ -188,6 +284,7 @@ const base = (
     readonly errorCode?: string;
     readonly readFailure?: DispatchReadFailure;
     readonly corroborationArm?: DispatchCorroborationArm;
+    readonly push?: DispatchEnvelopePushBlock;
   },
 ): DispatchDerivation => ({
   token: fields.token,
@@ -202,6 +299,7 @@ const base = (
   ...(fields.errorCode === undefined ? {} : { errorCode: fields.errorCode }),
   ...(fields.readFailure === undefined ? {} : { readFailure: fields.readFailure }),
   ...(fields.corroborationArm === undefined ? {} : { corroborationArm: fields.corroborationArm }),
+  ...(fields.push === undefined ? {} : { push: fields.push }),
 });
 
 /**
@@ -332,15 +430,16 @@ export const deriveDispatchResult = (input: DispatchTruthInput): DispatchDerivat
     }
     if (pr.state === "open") {
       const resolved = pr.url !== null && pr.url.length > 0;
+      if (resolved) {
+        return deriveOpenPrWithParity(input, pr.url);
+      }
       return base(input, {
-        token: resolved ? po : pou,
+        token: pou,
         outcome: harness.outcome,
-        prUrl: resolved ? (pr.url as string) : "",
-        urlResolved: resolved,
-        lastMessage: resolved
-          ? "the pull request is open and awaits the coordinator's merge decision"
-          : "the pull request is open; its URL could not be resolved",
-        armId: resolved ? "open-pr" : "open-pr-unverified",
+        prUrl: "",
+        urlResolved: false,
+        lastMessage: "the pull request is open; its URL could not be resolved",
+        armId: "open-pr-unverified",
       });
     }
     if (pr.state === "already-merged") {
@@ -444,6 +543,7 @@ export const DISPATCH_FAILURE_KINDS = [
   "state-unreadable",
   "restart-budget-exceeded",
   "resume-uneconomical",
+  "lifecycle-push-failure",
 ] as const;
 
 export type DispatchFailureKind = (typeof DISPATCH_FAILURE_KINDS)[number];
@@ -451,16 +551,26 @@ export type DispatchFailureKind = (typeof DISPATCH_FAILURE_KINDS)[number];
 /** One classified attempt-stage failure (Appendix G). */
 export type DispatchFailureClassification = {
   readonly kind: DispatchFailureKind;
+  /**
+   * The envelope error identity the row carries. Every delivered row names a
+   * registry-synced identity; the lifecycle push failure is the one
+   * identity-less row — its envelope is the delivered data-bearing shape with
+   * no top-level `error` (GH-386 F-3/DM-3: no error identity is added).
+   */
   readonly code:
     | "dispatch.session.spawn-failed"
     | "dispatch.state-unverified"
     | "dispatch.restart-budget-exceeded"
-    | "dispatch.resume-uneconomical";
+    | "dispatch.resume-uneconomical"
+    | null;
   readonly token: DispatchToken;
   readonly outcome: HarnessOutcome;
   readonly projectionClass: ProjectionClass;
   readonly attemptRecords: 1;
-  readonly comparisonReason: "dispatch-session-family" | "comparison-source-unavailable";
+  readonly comparisonReason:
+    | "dispatch-session-family"
+    | "comparison-source-unavailable"
+    | "push-parity-unmet";
 };
 
 /**
@@ -515,6 +625,20 @@ export const classifyDispatchFailure = (input: {
         projectionClass: projectionOf(f),
         attemptRecords: 1,
         comparisonReason: "comparison-source-unavailable",
+      };
+    case "lifecycle-push-failure":
+      // GH-386 Appendix B, verbatim: the one new row — failed / failed / exit 1
+      // (the delivered user-validation projection) / exactly one attempt record
+      // / comparison not applicable, token null, reason push-parity-unmet. No
+      // error identity, no token, no domain kind, and no error-table row.
+      return {
+        kind: input.kind,
+        code: null,
+        token: f,
+        outcome: O_FAILED,
+        projectionClass: projectionOf(f),
+        attemptRecords: 1,
+        comparisonReason: "push-parity-unmet",
       };
   }
 };

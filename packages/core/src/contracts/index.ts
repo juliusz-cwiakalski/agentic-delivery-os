@@ -1097,6 +1097,7 @@ export {
   DISPATCH_MAX_MACHINE_BYTES,
   DISPATCH_MAX_NOTE_CHARS,
   DISPATCH_MAX_SPAWN_TITLE_CHARS,
+  DISPATCH_PUSH_VERDICTS,
   DISPATCH_RESTART_BUDGET_KEY,
   DISPATCH_RESUME_MODES,
   DISPATCH_SPAWN_TITLE_PATTERN,
@@ -1139,6 +1140,11 @@ export {
   type DispatchLaneState,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
+  type DispatchPushParityFacts,
+  type DispatchPushParityPort,
+  type DispatchPushParityReading,
+  type DispatchPushVerdict,
+  type DispatchEnvelopePushBlock,
   type DispatchResolveData,
   type DispatchResumeMode,
   type DispatchSummaryData,
@@ -1148,6 +1154,7 @@ export {
   dispatchDivergenceRecordKey,
   dispatchHandoverRecordKey,
   dispatchLaneRecordKey,
+  dispatchPushEvidenceRef,
 } from "./dispatch.js";
 // The typed dispatch operator surface (GH-354 F-1..F-7, API-1..API-12,
 // DM-1..DM-7): the four query discriminators, the closed probe/marker/reason

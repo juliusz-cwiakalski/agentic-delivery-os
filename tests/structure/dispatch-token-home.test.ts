@@ -22,6 +22,7 @@ import {
   DELIVERY_RESULT_PROJECTION_CLASSES,
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
+  DISPATCH_PUSH_VERDICTS,
 } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
@@ -134,5 +135,31 @@ describe("GH-347 the lane record shares the one token vocabulary", () => {
     // no second token union and no token literal list.
     expect(source).toContain("readonly lastToken?: DispatchToken;");
     expect(source).not.toContain('["merged",');
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-386 — the push-verdict union has exactly one home beside the tokens,    */
+/* and no dispatch production module declares a second one.                   */
+/* ------------------------------------------------------------------------- */
+
+const VERDICT_LIST_DECLARATION = /DISPATCH_PUSH_VERDICTS\s*=\s*\[/u;
+
+describe("GH-386 the push-verdict home is the contracts module", () => {
+  test("the contracts module declares the closed verdict union once", () => {
+    expect([...DISPATCH_PUSH_VERDICTS]).toEqual(["clean", "pushed", "failed"]);
+    const source = readFileSync(join(ROOT, "packages/core/src/contracts/dispatch.ts"), "utf8");
+    expect(source.match(new RegExp(VERDICT_LIST_DECLARATION.source, "gu")) ?? []).toHaveLength(1);
+  });
+
+  test("no dispatch production module declares a second verdict list", () => {
+    const violations: string[] = [];
+    for (const file of dispatchProductionSources(ROOT)) {
+      const source = readFileSync(join(ROOT, file), "utf8");
+      if (VERDICT_LIST_DECLARATION.test(source)) {
+        violations.push(`${file}: second push-verdict list`);
+      }
+    }
+    expect(violations).toEqual([]);
   });
 });

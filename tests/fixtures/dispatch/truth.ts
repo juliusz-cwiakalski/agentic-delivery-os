@@ -17,6 +17,7 @@ import type {
   DispatchTruthInput,
 } from "../../../packages/core/src/domain/dispatch-result";
 import type {
+  DispatchPushParityReading,
   HarnessEvidence,
   PmNotesCompleteness,
 } from "../../../packages/core/src/contracts/index";
@@ -106,6 +107,56 @@ export const restarts = (input: Partial<DispatchRestartFacts> = {}): DispatchRes
   ...input,
 });
 
+/* ------------------------------------------------------------------------- */
+/* GH-386 — the injected parity facts (the arm-8 precondition's mechanical    */
+/* default: every delivered arm-8 expectation holds over equal heads).        */
+/* ------------------------------------------------------------------------- */
+
+/** The deterministic full-hex local head the parity fixtures compare. */
+export const PARITY_LOCAL_HEAD = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0";
+/** The deterministic full-hex remote head for the readable-inequality cells. */
+export const PARITY_REMOTE_HEAD = "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1";
+
+/** Equal heads, no act: the delivered arm-8 default. */
+export const pushParityClean = (): DispatchPushParityReading => ({
+  ok: true,
+  facts: {
+    localHead: PARITY_LOCAL_HEAD,
+    remoteHead: PARITY_LOCAL_HEAD,
+    verdict: "clean",
+    parity: true,
+  },
+});
+
+/** One accepted push, re-read equal. */
+export const pushParityPushed = (): DispatchPushParityReading => ({
+  ok: true,
+  facts: {
+    localHead: PARITY_LOCAL_HEAD,
+    remoteHead: PARITY_LOCAL_HEAD,
+    verdict: "pushed",
+    parity: true,
+  },
+});
+
+/** A readable inequality or a non-successful act: the typed push failure. */
+export const pushParityFailed = (): DispatchPushParityReading => ({
+  ok: true,
+  facts: {
+    localHead: PARITY_LOCAL_HEAD,
+    remoteHead: PARITY_REMOTE_HEAD,
+    verdict: "failed",
+    parity: false,
+  },
+});
+
+/** The unreadable parity read: the delivered undecidable-truth semantics. */
+export const pushParityUnreadable = (): DispatchPushParityReading => ({
+  ok: false,
+  reason: "unreadable",
+  identity: "push-parity.read-unreadable",
+});
+
 /** The default: an open PR with commits and an advancing ledger. */
 export const truthInput = (input: Partial<DispatchTruthInput> = {}): DispatchTruthInput => ({
   harness: readOk(harnessFacts(COMPLETED_EVIDENCE)),
@@ -114,6 +165,7 @@ export const truthInput = (input: Partial<DispatchTruthInput> = {}): DispatchTru
   tracker: readOk(tracker()),
   restarts: restarts(),
   handoverState: "dual-run",
+  pushParity: pushParityClean(),
   ...input,
 });
 

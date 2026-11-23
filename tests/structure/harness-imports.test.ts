@@ -30,6 +30,7 @@ const DECLARED_CHILD_PROCESS_SITES = [
   "packages/adapters/src/git/commit.ts",
   "packages/adapters/src/git/index.ts",
   "packages/adapters/src/git/merge.ts",
+  "packages/adapters/src/git/push.ts",
   "packages/adapters/src/git/watchdog.ts",
   "packages/adapters/src/github/cli-transport.ts",
   "packages/adapters/src/host/index.ts",

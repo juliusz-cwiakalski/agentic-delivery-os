@@ -20,6 +20,7 @@ import {
 } from "../../packages/core/src/contracts/index";
 import {
   type DispatchTruthInput,
+  classifyDispatchFailure,
   deriveDispatchResult,
 } from "../../packages/core/src/domain/dispatch-result";
 import {
@@ -42,8 +43,14 @@ import {
   mergedInput,
   missingTrackerFactInput,
   noArtifactInput,
+  PARITY_LOCAL_HEAD,
+  PARITY_REMOTE_HEAD,
   prNone,
   prOpen,
+  pushParityClean,
+  pushParityFailed,
+  pushParityPushed,
+  pushParityUnreadable,
   readFail,
   readOk,
   restarts,
@@ -694,5 +701,134 @@ describe("TC-TRACKER-004 the ladder constants, the wait table, and the injected 
     for (const marker of ["setTimeout", "setInterval", "node:timers", "Bun.sleep"]) {
       expect(source).not.toContain(marker);
     }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-386 — the total arm-8 matrix over injected parity facts (TC-PUSH-013's  */
+/* domain half; AC-F1-1, AC-F1-2, AC-F3-1's derivation cells, TC-PUSH-009's   */
+/* boundary, DEC-5's exclusion).                                              */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-386 the arm-8 parity precondition is total over the injected facts", () => {
+  test("clean parity derives pr-open with the clean disclosure and no act claim", () => {
+    const result = deriveDispatchResult(
+      truthInput({ pushParity: pushParityClean() }),
+    );
+    expect(result.token).toBe("pr-open");
+    expect(result.projectionClass).toBe("success");
+    expect(result.prUrl).toContain("pull/1");
+    expect(result.push).toEqual({
+      verdict: "clean",
+      localHead: PARITY_LOCAL_HEAD,
+      remoteHead: PARITY_LOCAL_HEAD,
+      parity: true,
+    });
+    expect(result.errorCode).toBeUndefined();
+  });
+
+  test("a pushed act then equal re-read derives pr-open with the pushed disclosure", () => {
+    const result = deriveDispatchResult(truthInput({ pushParity: pushParityPushed() }));
+    expect(result.token).toBe("pr-open");
+    expect(result.push).toEqual({
+      verdict: "pushed",
+      localHead: PARITY_LOCAL_HEAD,
+      remoteHead: PARITY_LOCAL_HEAD,
+      parity: true,
+    });
+  });
+
+  test("a readable inequality after the act is the typed push failure with the PR URL retained", () => {
+    const result = deriveDispatchResult(truthInput({ pushParity: pushParityFailed() }));
+    expect(result.token).toBe("failed");
+    expect(result.outcome).toBe("failed");
+    expect(result.projectionClass).toBe("user-validation");
+    expect(result.prUrl).toContain("pull/1");
+    expect(result.urlResolved).toBe(true);
+    expect(result.push).toEqual({
+      verdict: "failed",
+      localHead: PARITY_LOCAL_HEAD,
+      remoteHead: PARITY_REMOTE_HEAD,
+      parity: false,
+    });
+    // No error identity: the envelope is the delivered data-bearing shape.
+    expect(result.errorCode).toBeUndefined();
+    expect(result.readFailure).toBeUndefined();
+  });
+
+  test("an unreadable parity read stays state-unverified at the platform projection", () => {
+    const result = deriveDispatchResult(truthInput({ pushParity: pushParityUnreadable() }));
+    expect(result.token).toBe("state-unverified");
+    expect(result.outcome).toBe("failed");
+    expect(result.projectionClass).toBe("platform-provider");
+    expect(result.errorCode).toBe("dispatch.state-unverified");
+    expect(result.readFailure).toBe("state");
+    // No push disclosure and no fabricated parity facts on the unreadable path.
+    expect(result.push).toBeUndefined();
+    expect(result.prUrl).toContain("pull/1");
+  });
+
+  test("the exclusion holds: pr-open-unverified never evaluates the precondition", () => {
+    const result = deriveDispatchResult(
+      truthInput({
+        artifacts: readOk(artifacts({ branchCommits: 2, pr: prOpen(null) })),
+        pushParity: pushParityPushed(),
+      }),
+    );
+    expect(result.token).toBe("pr-open-unverified");
+    expect(result.urlResolved).toBe(false);
+    expect(result.push).toBeUndefined();
+  });
+
+  test("absent parity facts keep the delivered classification for a composition with no act", () => {
+    const withDefault = deriveDispatchResult(truthInput());
+    const withoutFacts = deriveDispatchResult(truthInput({ pushParity: undefined }));
+    expect(withoutFacts.token).toBe("pr-open");
+    expect(withoutFacts.token).toBe(withDefault.token);
+    expect(withoutFacts.push).toBeUndefined();
+    expect(withoutFacts.armId).toBe("open-pr");
+  });
+
+  test("the matrix is total: every injected cell yields exactly the declared token", () => {
+    const cells: readonly {
+      readonly name: string;
+      readonly reading: DispatchTruthInput["pushParity"];
+      readonly expected: string;
+    }[] = [
+      { name: "clean", reading: pushParityClean(), expected: "pr-open" },
+      { name: "pushed", reading: pushParityPushed(), expected: "pr-open" },
+      { name: "failed", reading: pushParityFailed(), expected: "failed" },
+      { name: "unreadable", reading: pushParityUnreadable(), expected: "state-unverified" },
+      { name: "absent", reading: undefined, expected: "pr-open" },
+    ];
+    for (const cell of cells) {
+      const result = deriveDispatchResult(truthInput({ pushParity: cell.reading }));
+      expect(result.token, cell.name).toBe(cell.expected);
+      // The defining property (AC-F1-2): an evaluating pr-open always carries a
+      // parity-true disclosure, and only the failure carries the failed verdict.
+      // The absent cell is the no-act composition: no disclosure at all.
+      if (result.token === "pr-open") {
+        if (cell.reading === undefined) {
+          expect(result.push, cell.name).toBeUndefined();
+        } else {
+          expect(result.push?.parity, cell.name).toBe(true);
+          expect(result.push?.verdict === "failed", cell.name).toBe(false);
+        }
+      }
+      if (result.token === "failed") {
+        expect(result.push?.verdict, cell.name).toBe("failed");
+        expect(result.push?.parity, cell.name).toBe(false);
+      }
+    }
+  });
+
+  test("the new failure row is the one identity-less classification with its reason", () => {
+    const row = classifyDispatchFailure({ kind: "lifecycle-push-failure" });
+    expect(row.code).toBeNull();
+    expect(row.token).toBe("failed");
+    expect(row.outcome).toBe("failed");
+    expect(row.projectionClass).toBe("user-validation");
+    expect(row.attemptRecords).toBe(1);
+    expect(row.comparisonReason).toBe("push-parity-unmet");
   });
 });

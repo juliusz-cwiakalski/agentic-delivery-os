@@ -341,6 +341,7 @@
     "src/git/commit.ts",
     "src/git/index.ts",
     "src/git/merge.ts",
+    "src/git/push.ts",
     "src/git/watchdog.ts",
     "src/github/capabilities.ts",
     "src/github/cli-transport.ts",
@@ -473,7 +474,11 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
+  "opencode": [
+    "src/commands/index.ts",
+    "src/index.ts",
+    "src/output/index.ts"
+  ],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",
