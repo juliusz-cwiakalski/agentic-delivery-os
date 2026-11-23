@@ -16,7 +16,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-23T20:45:12.435Z }
   review_fix: { started: null, completed: 2026-11-23T21:08:28.036Z }
   quality_gates: { started: null, completed: 2026-11-23T21:37:56.225Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-23T21:39:05.483Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "AC-3 live-proof logistics decided PM-autonomous (non-interactive run —
@@ -60,6 +60,25 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoD check PASS (2026-11-23, @pm-owned phase 10). Verified: pm-notes
+      exists, committed, lint conforms; all 10 prior phases completed in the
+      verified ledger (phase list, registry 7836 records). Plan completion:
+      every declared plan phase (1-6 + format polish) has a notes entry with
+      phase id, commit hash (2182e05e, 2255dfae, 3de8779b, aa39ec45, b00fef32,
+      a9121ba4, f9f8d44f) and test result. ACs: AC-F1-1 (TC-PUSH-001..013
+      green), AC-F1-2 (defect pin, totality matrix), AC-F2-1 (evidence refs +
+      envelope + byte-stable text mode), AC-F3-1 (TC-FAIL-001..003 + golden
+      pin), AC-F4-1 evaluated as the DECLARED CONTRACT per spec F-4/DEC-2 —
+      in-merge gates are the fixtures + defect pin; the live observation (two
+      consecutive post-merge dispatches, local==remote at pr-open, parity
+      evidence on both attempts) is executed by the CEO/owner lane after merge
+      and recorded in the notes trail — declared residual until then (RSK-7
+      daemon lane remains the known open surface), AC-F5-1 (fallback divergence
+      declared at four doc sites). Current-truth docs: doc-syncer residual gaps
+      EMPTY, tests/checks 1628-0. Review: PASS iter-2. Gates: pnpm check 12640-0
+      + range lint PASS 16/0. No gaps found; no phase reopen needed."
+    type: info
+    date: 2026-11-23
   - text: "Quality gates PASS (2026-11-23, run tmp/run-logs-runner/2026-11-23/
       220947-gh386-pnpm-check.log). Range lint gate verdict: PASS — 16 commits
       in range (merge-base 8f557cfd = origin/main-tools, head 1c01dff2),
