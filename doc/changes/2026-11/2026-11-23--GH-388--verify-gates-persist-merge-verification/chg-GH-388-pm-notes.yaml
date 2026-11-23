@@ -13,7 +13,7 @@ tracker:
 phases:
   clarify_scope: { started: null, completed: 2026-11-23T10:47:01.513Z }
   specification: { started: null, completed: 2026-11-23T11:02:35.617Z }
-  test_planning: { started: null, completed: null }
+  test_planning: { started: null, completed: 2026-11-23T11:17:49.235Z }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -139,5 +139,28 @@ notes:
       recorded-fail consumption; alternative-branch AC-2 resolved via declared
       fail-closed path, not dropped). version_impact minor; changeset declared
       as five fixed-group packages minor. No gaps — no phase reopen needed."
+    type: decision
+    date: "2026-11-23"
+  - text: "Test-planning phase outcome: chg-GH-388-test-plan.md v1.0 authored and
+      PM-validated (681 lines, 12 cases). Bidirectional traceability complete:
+      every AC (AC-T1-1..AC-T5-1) covered by ≥1 named case, every case traces to
+      exactly one AC; ticket ACs traced through spec Appendix B. ID series
+      re-verified in the delivered tree immediately before authoring: maxima
+      TC-VGATES-070 / TC-MERGE-039, plan consumes TC-VGATES-071..075 and
+      TC-MERGE-040..046 (TC-MRG sub-series deliberately untouched — GH-366's).
+      Key adversarial arms: TC-VGATES-071 is the composition-level regression
+      that fails on the shipped-default no-op append (the test that would have
+      caught GH-388); TC-MERGE-041 asserts option-B absence (zero appends, zero
+      gate evaluations, no landing); TC-MERGE-042 byte-exact remediation
+      equality pin (upgrades delivered containment pins); TC-MERGE-043/044
+      re-express envelope accept + three mutations over a shipped-produced
+      record. Golden procedure pinned: pre-change capture FIRST at branch point
+      via fixture module (never *.test.ts), byte-identity enforced, regeneration
+      forbidden (DEC-3 declares no output change). Six coverage gaps in
+      delivered suites named and closed (shipped-composition layer,
+      recording-seam counting, envelope over shipped records, recorded battery
+      verdicts, remediation equality, shipped-record privacy). No untestable AC
+      — no spec reopen. Plan flags §8.1 regeneration temptation as top risk;
+      delivery must not regenerate goldens."
     type: decision
     date: "2026-11-23"
