@@ -398,7 +398,7 @@ describe("TC-MERGE-043 the shipped record is resolved by its persisted identity 
       expect(errorCode(result)).toBeUndefined();
       expect(harness.counts.verification).toBe(1);
       expect(harness.transactions()).toHaveLength(1);
-      expect(harness.counts.landing).toBe(1);
+      expect(harness.landings).toHaveLength(1);
       const landing = harness.landings[0];
       if (landing !== undefined && "expectedHeadSha" in landing) {
         expect(landing.expectedHeadSha).toBe(MERGE_HEAD);
@@ -423,7 +423,7 @@ describe("TC-MERGE-044 the three refusal mutations refuse and never consume the 
       expect(result.stderr).toContain("condition=merge.gates-stale");
       expect(result.stderr).toContain(MERGE_HEAD.slice(0, 7));
       expect(result.stderr).toContain(OTHER_HEAD.slice(0, 7));
-      expect(harness.counts.landing).toBe(0);
+      expect(harness.landings).toHaveLength(0);
       expect(harness.transactions()).toHaveLength(0);
       expect(harness.waivers()).toHaveLength(0);
     } finally {
@@ -441,7 +441,7 @@ describe("TC-MERGE-044 the three refusal mutations refuse and never consume the 
         expect(errorCode(result)).toBe("merge.gates-stale");
         expect(errorSummary(result)).toContain(`${String(offset / MINUTE)}m`);
         // Zero consumption on both sides of the boundary.
-        expect(harness.counts.landing).toBe(0);
+        expect(harness.landings).toHaveLength(0);
         expect(harness.transactions()).toHaveLength(0);
         expect(harness.waivers()).toHaveLength(0);
       } finally {
@@ -474,7 +474,7 @@ describe("TC-MERGE-044 the three refusal mutations refuse and never consume the 
       expect(errorCode(result)).toBe("merge.gates-stale");
       expect(errorSummary(result)).toContain("gate-set-delta");
       expect(errorSummary(result)).toContain("push-parity");
-      expect(harness.counts.landing).toBe(0);
+      expect(harness.landings).toHaveLength(0);
       expect(harness.transactions()).toHaveLength(0);
       expect(harness.waivers()).toHaveLength(0);
     } finally {

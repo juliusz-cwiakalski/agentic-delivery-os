@@ -327,3 +327,32 @@ notes:
       0 fail); biome clean."
     type: info
     date: "2026-11-23"
+  - text: "Plan phase 5 complete (non-regression with persistence live). Commit
+      dcec786d210dd330f6ef8f855e495161e354b261 (commit primitive; staged the
+      three declared suites + the pm-notes tracked drift). TC-VGATES-073:
+      every one of the 53 phase-1 captured matrix cells rebuilt with the
+      delivered real append over a fixture store reproduces byte-identical
+      stdout/stderr/exit in both modes (0-byte delta acceptance bar,
+      regeneration forbidden); the committed success-data/human-success/
+      failure-summary goldens hold with the append wired; the member cell's
+      envelope data equals the committed member-form golden; replay
+      byte-equality on pass and fail cells. TC-VGATES-074: the production
+      budget proof — the pass cell exactly one read per provider source, no
+      pagination; fail cell same shape then fails; credential-unavailable
+      composes zero provider transport; the merge consumption path over a
+      shipped record keeps the per-source budget with one landing call; the
+      append contract's state reads counted as the append's own shape
+      (read-before/acquireFence/append/read-after/releaseFence, one each per
+      append), never provider or configuration reads. TC-VGATES-075: planted
+      canary facts over shipped-produced records (pass/fail single-target and
+      member-projected) plus all outputs scan zero canary hits; the delivered
+      allowlist unchanged; live mutation control; the five-gate regression
+      suites stay green unchanged via the aggregate gate. §8.1 contingency
+      checked: TC-VGATES-051's zero-writes guard stays green unchanged (the
+      fixture runtime's append default is injection-only, untouched by the
+      fix) — no reconciliation needed. Test result: golden verify-gates 9
+      pass, read-budget 12 pass, merge-privacy 8 pass (3-suite battery 29
+      pass / 0 fail); authority suites 29 pass / 0 fail; capture entry
+      byte-identical; pnpm typecheck green; biome clean."
+    type: info
+    date: "2026-11-23"
