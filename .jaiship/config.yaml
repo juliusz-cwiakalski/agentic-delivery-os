@@ -86,30 +86,30 @@ provider:
         tier: delivery
         providers: [zai-coding-plan, deepseek]
         seats:
-          bootstrapper: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
-          ceo: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          bootstrapper: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
+          ceo: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
           coder: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           committer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
-          decision-advisor: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
-          decision-critic: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
-          designer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          decision-advisor: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
+          decision-critic: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
+          designer: { model: zai-coding-plan/glm-5.4, pacingClass: execution, capability: vision-capable }
           doc-syncer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           editor: { model: zai-coding-plan/glm-5.3-flash, pacingClass: execution, capability: text-only }
           external-researcher: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           fixer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           image-generator: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
-          image-reviewer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: vision-capable }
+          image-reviewer: { model: zai-coding-plan/glm-5.4, pacingClass: execution, capability: vision-capable }
           meeting-organizer: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
-          plan-writer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          plan-writer: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
           pm: { model: zai-coding-plan/glm-5.3-flash, pacingClass: judgment, capability: text-only }
           pr-manager: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
-          readiness-reviewer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          readiness-reviewer: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
           review-feedback-applier: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
-          reviewer: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          reviewer: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
           runner: { model: deepseek/deepseek-flash, pacingClass: execution, capability: text-only }
           spec-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
           test-plan-writer: { model: deepseek/deepseek-flash, pacingClass: judgment, capability: text-only }
-          toolsmith: { model: zai-coding-plan/glm-5.3, pacingClass: judgment, capability: text-only }
+          toolsmith: { model: zai-coding-plan/glm-5.4, pacingClass: judgment, capability: text-only }
         peakWindows:
           graceSeconds: 300
           windows:

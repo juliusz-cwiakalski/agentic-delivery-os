@@ -822,17 +822,19 @@ describe("GH-374 TC-POL-SEAT-004 both visual seats are vision-capable and the vi
     const paid = profiles.profiles.paid;
     if (delivery === undefined || paid === undefined) throw new Error("expected both profiles");
     for (const seat of ["designer", "image-reviewer"]) {
-      expect([seat, delivery.seats[seat]?.model]).toEqual([seat, "deepseek/deepseek-flash"]);
+      expect([seat, delivery.seats[seat]?.model]).toEqual([seat, "zai-coding-plan/glm-5.4"]);
       expect([seat, delivery.seats[seat]?.capability]).toEqual([seat, "vision-capable"]);
       expect([seat, paid.seats[seat]?.capability]).toEqual([seat, "vision-capable"]);
     }
     expect(delivery.seats["image-generator"]?.capability).toBe("text-only");
     for (const [seat, declaration] of Object.entries(delivery.seats)) {
-      if (declaration.model.startsWith("zai-coding-plan/")) {
+      if (declaration.model === "zai-coding-plan/glm-5.3-flash") {
         expect([seat, declaration.capability]).toEqual([seat, "text-only"]);
       }
       if (declaration.capability === "vision-capable") {
-        expect([seat, declaration.model]).toEqual([seat, "deepseek/deepseek-flash"]);
+        expect(
+          ["zai-coding-plan/glm-5.4", "deepseek/deepseek-flash"].includes(declaration.model),
+        ).toBe(true);
       }
       expect([seat, declaration.capability]).toEqual([seat, paid.seats[seat]?.capability]);
     }
@@ -848,7 +850,7 @@ describe("GH-374 TC-POL-SEAT-004 both visual seats are vision-capable and the vi
     expect(base.ok).toBe(true);
     if (base.ok) {
       expect(base.decision.profile).toBe("delivery");
-      expect(base.decision.seatModels.designer).toBe("deepseek/deepseek-flash");
+      expect(base.decision.seatModels.designer).toBe("zai-coding-plan/glm-5.4");
     }
     const imageReviewer = selectProfile({
       profiles,
@@ -870,13 +872,13 @@ describe("GH-374 TC-POL-SEAT-004 both visual seats are vision-capable and the vi
 /* -------------------------------- SEAT-005 ------------------------------- */
 
 describe("GH-374 TC-POL-SEAT-005 the per-seat model and pacing map is the recorded legacy intent", () => {
-  test("the base 8/2/14 split, the paid all-flash map and the 14/10 pacing split", () => {
+  test("the base 10/2/12 split, the paid all-flash map and the 14/10 pacing split", () => {
     const profiles = declaredProfileConfig();
     const delivery = profiles.profiles.delivery;
     const paid = profiles.profiles.paid;
     if (delivery === undefined || paid === undefined) throw new Error("expected both profiles");
     const full = Object.entries(delivery.seats)
-      .filter(([, seat]) => seat.model === "zai-coding-plan/glm-5.3")
+      .filter(([, seat]) => seat.model === "zai-coding-plan/glm-5.4")
       .map(([seat]) => seat)
       .sort();
     const flash = Object.entries(delivery.seats)
@@ -892,13 +894,15 @@ describe("GH-374 TC-POL-SEAT-005 the per-seat model and pacing map is the record
       "ceo",
       "decision-advisor",
       "decision-critic",
+      "designer",
+      "image-reviewer",
       "plan-writer",
       "readiness-reviewer",
       "reviewer",
       "toolsmith",
     ]);
     expect(flash).toEqual(["editor", "pm"]);
-    expect(paidModels).toHaveLength(14);
+    expect(paidModels).toHaveLength(12);
     const judgment = Object.entries(delivery.seats)
       .filter(([, seat]) => seat.pacingClass === "judgment")
       .map(([seat]) => seat)

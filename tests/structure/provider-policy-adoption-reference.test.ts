@@ -93,15 +93,14 @@ const BASE_FULL = [
   "toolsmith",
 ] as const;
 const BASE_FLASH = ["pm", "editor"] as const;
+const BASE_VISION = ["designer", "image-reviewer"] as const;
 const BASE_PAID = [
   "coder",
   "committer",
-  "designer",
   "doc-syncer",
   "external-researcher",
   "fixer",
   "image-generator",
-  "image-reviewer",
   "meeting-organizer",
   "pr-manager",
   "review-feedback-applier",
@@ -127,11 +126,12 @@ const JUDGMENT = [
 ] as const;
 const VISION = ["designer", "image-reviewer"] as const;
 
-const ALL_SEATS = [...BASE_FULL, ...BASE_FLASH, ...BASE_PAID].sort();
+const ALL_SEATS = [...BASE_FULL, ...BASE_FLASH, ...BASE_VISION, ...BASE_PAID].sort();
 
 const baseModelFor = (seat: string): string => {
-  if ((BASE_FULL as readonly string[]).includes(seat)) return "zai-coding-plan/glm-5.3";
+  if ((BASE_FULL as readonly string[]).includes(seat)) return "zai-coding-plan/glm-5.4";
   if ((BASE_FLASH as readonly string[]).includes(seat)) return "zai-coding-plan/glm-5.3-flash";
+  if ((BASE_VISION as readonly string[]).includes(seat)) return "zai-coding-plan/glm-5.4";
   return "deepseek/deepseek-flash";
 };
 const pacingFor = (seat: string): "judgment" | "execution" =>
@@ -616,10 +616,14 @@ const driftFindings = (
         });
       }
       const record = asRecord(body);
-      if (record.capability === "vision-capable" && !String(record.model).startsWith("deepseek/")) {
+      const model = String(record.model);
+      if (
+        record.capability === "vision-capable" &&
+        !(model.startsWith("deepseek/") || model === "zai-coding-plan/glm-5.4")
+      ) {
         findings.push({
           id: `vision-on-text-only:${name}:${seat}`,
-          message: `seat ${name}:${seat} claims vision-capable on ${String(record.model)}`,
+          message: `seat ${name}:${seat} claims vision-capable on ${model}`,
         });
       }
     }
@@ -1118,8 +1122,8 @@ describe("GH-374 TC-POL-SEAT-006 every declared seat model is expressible", () =
     expect(models).toHaveLength(48);
     expect([...new Set(models)].sort()).toEqual([
       "deepseek/deepseek-flash",
-      "zai-coding-plan/glm-5.3",
       "zai-coding-plan/glm-5.3-flash",
+      "zai-coding-plan/glm-5.4",
     ]);
   });
 
