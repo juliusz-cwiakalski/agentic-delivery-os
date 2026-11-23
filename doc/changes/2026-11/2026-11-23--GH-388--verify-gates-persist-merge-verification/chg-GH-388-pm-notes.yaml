@@ -21,7 +21,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-23T13:24:52.871Z }
   quality_gates: { started: null, completed: 2026-11-23T13:57:41.754Z }
   dod_check: { started: null, completed: 2026-11-23T13:59:59.945Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-23T14:09:40.434Z }
 decisions:
   - text: "Mechanism choice delegated by the ticket ('choose one, declare it'). PM
       indication: option (A) — verify gates persists the merge.gate-verification
@@ -539,4 +539,25 @@ notes:
       optional minors: disclosed in pm-notes and to be surfaced in the PR body;
       none rise to a DoD gap. Ready for pr_creation."
     type: decision
+    date: "2026-11-23"
+  - text: "PR created (pr_creation phase): https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/392 — OPEN, non-draft, head
+      fix/GH-388/verify-gates-persist-merge-verification → base main-tools, 17
+      commits (merge-base f5dc7a34..head 77e03983), branch pushed to origin.
+      Body carries the problem, declared option A + total identity rule, AC
+      traceability, gate evidence, the four disclosed deviations and the four
+      optional review minors for reviewer visibility, and 'Closes #388'. Tracker
+      synced: labels change+review (in-progress removed), owner assigned,
+      PR-link comment (issue comment 7103514844). Range lint RE-RUN at the PR
+      head (the phase-time verdict covered 15 commits; the two later lifecycle
+      doc/changes-only commits arrived after): VERDICT PASS — 17 commits in
+      range, 0 offending, mode none, binary node_modules/.bin/commitlint origin
+      repository-local (log tmp/run-logs-runner/2026-11-23/
+      150846-lint-commit-range-main-tools.log). Merge authority stays with the
+      owner; STOP with the PR open. Anomaly for the record: github-mcp write
+      path (create_pull_request/update_issue) fails 'Requires Authentication'
+      (token appears read-scoped); all tracker/PR writes went through the gh CLI
+      via @runner per pr-instructions — MCP token scopes should be fixed before
+      the next pr_creation run."
+    type: info
     date: "2026-11-23"
