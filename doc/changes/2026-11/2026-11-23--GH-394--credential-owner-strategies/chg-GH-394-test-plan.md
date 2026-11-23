@@ -1,8 +1,8 @@
 ---
 id: chg-GH-394-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-23
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 owners: ["Juliusz Ćwiąkalski"]
 service: credential port and one-shot CLI credential provisioning (strategy vocabulary, store-ownership resolution)
 labels: [change, m4, credentials, security, cli, config]
@@ -10,7 +10,7 @@ version_impact: minor
 summary: "Verification design for GH-394 credential owner strategies: hermetic, seam-injected proofs of the four-style vocabulary, closed allowlist, live redaction registry, classified failures with pinned remedies, memo/cap execution semantics, compatibility, and structure invariants — 20 of 20 ACs covered, real-store proof named manual/post-merge only."
 links:
   change_spec: ./chg-GH-394-spec.md
-  implementation_plan: ./chg-GH-394-plan.yaml  # pending — authored in phase 4 (delivery_planning); slot-length bounds and other named constants land there
+  implementation_plan: ./chg-GH-394-plan.yaml  # landed — delivery_planning complete; constants header fixes the named constants (plan phases 1–7)
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
@@ -18,7 +18,7 @@ links:
 
 ## 1. Scope and Objectives
 
-This plan verifies that a one-shot CLI command resolves a declared credential from its owner's store through the unchanged credential port: a closed four-style vocabulary (`literal`, `environment-prefixed`, `command`, `harness-store`), a closed execution allowlist with grammar-closed slots, a live redaction registry with register-on-materialize, a closed ten-member reason set with fixed `(reason, style)`-keyed remedies, a per-process memo and per-execution cap, and byte-identical behaviour for everything that already ships. The security-critical properties under proof are: the suite never touches a real owner CLI, store, or keyring (every proof runs over injected seams — child runner, environment record, harness identity, allowlist table); redaction sees material the instant it materializes, before any emit path; and no declared argv can widen beyond the shipped allowlist without a loud CI tripwire failure. The regressions motivating this plan are the construction-time redaction snapshot (which would render later-obtained material unredacted) and the generic "declared command" shape (an exfiltration primitive), both closed by this change and locked by the tests below.
+This plan verifies that a one-shot CLI command resolves a declared credential from its owner's store through the unchanged credential port: a closed four-style vocabulary (`literal`, `environment-prefixed`, `command`, `harness-store`), a closed execution allowlist with grammar-closed slots, a live redaction registry with register-on-materialize, a closed ten-member reason set with fixed `(reason, style)`-keyed remedies, a per-process memo and per-execution cap, and byte-identical behaviour for everything that already ships. The security-critical properties under proof are: the suite never touches a real owner CLI, store, or keyring (every proof runs over the four injected seams of the governing record's C-2 construction inputs — active harness identity, child runner, environment record, store facts); redaction sees material the instant it materializes, before any emit path; and no declared argv can widen beyond the shipped allowlist without a loud CI tripwire failure. The regressions motivating this plan are the construction-time redaction snapshot (which would render later-obtained material unredacted) and the generic "declared command" shape (an exfiltration primitive), both closed by this change and locked by the tests below.
 
 ### 1.1 In Scope
 
@@ -26,7 +26,7 @@ This plan verifies that a one-shot CLI command resolves a declared credential fr
 - Compatibility: existing `literal` / `environment-prefixed` declarations, every shipped provider-config fixture, and all shipped defaults validate and resolve byte-identically (AC-F1-2).
 - Allowlist load-time enforcement, slot grammars, the `--` terminator, symlink-to-regular-executable resolution, and the CI tripwire over table / committed argv / effective argv (AC-F2-1, AC-F2-2, AC-F7-1).
 - All `harness-store` semantics: target-selector export, exactly-one-active-or-refuse, no-stored-entry, key-only, shape drift, harness identity, OAuth exclusion (AC-F3-1 .. AC-F3-5).
-- Failure classification: one case per reason across all ten members, `timeout` distinct from the reserved `resolution-pending`, no shipped caller observes the reserved token (AC-F4-1); remedy fixture pinning (byte-exact for the three owner-pinned texts), per-allowlist-entry selection, and field survival on every propagation site and rendered surface (AC-F4-2); never-empty material, cap-bounded blocking, unchanged park vocabulary and exit taxonomy (AC-F4-3).
+- Failure classification: one case per reason across all ten members, `timeout` distinct from the reserved `resolution-pending`, no shipped caller observes the reserved token (AC-F4-1); remedy fixture pinning (byte-exact for the three owner-pinned texts), per-allowlist-entry selection, and field survival on every propagation site and rendered surface — expressly including the provider-engine reconstruction sites and the merge-chain refusal renderings per spec rev 1.1 DEC-14 (AC-F4-2); never-empty material, cap-bounded blocking, unchanged park vocabulary and exit taxonomy (AC-F4-3).
 - Live redaction registry proofs: register-after-compose canary on every diagnostic surface, malformed-output-never-rendered, stderr canary never rendered, the three edge-composed registration sites (AC-F5-1, AC-F5-2).
 - Execution semantics: per-process memo and declared spawn-count profile (AC-F6-1), cap / closed stdin / bounded stdout / reduced recorded child environment (AC-F6-2), the lane-environment model-only checked proof (AC-F6-3).
 - Structure invariants: no new error identity, park field, announcement code, result token, or exit; secret-read boundary intact (AC-F8-1, NFR-6, NFR-7); suite-level hermeticity guard (AC-F8-2, NFR-4).
@@ -39,14 +39,15 @@ This plan verifies that a one-shot CLI command resolves a declared credential fr
 - `harness-oauth` (never a style — OAuth-1), `store` style, `jaiship auth`, profiles, binding, configuration layers (NG-3); doctor requirement derivation (NG-4); allowlist entries beyond the two shipped pairs (NG-5).
 - A real-store demonstration as a CI gate (OUT): TC-COMP-004 is manual/post-merge only.
 - Latency measurement against real owner CLIs (NFR-3 threshold values 103–229 ms / 4.4–6.0 s): observed numbers are recorded by the manual demonstration, not measured in CI; CI pins the declared shapes and constants instead.
-- Concrete numeric constants left to the implementation plan by the spec (slot length bounds per OQ-4; stdout-capture bound and session-bus variable set — see §8.3): boundary tests are expressed against the named constants so the values land without test redesign.
+- The pending-park semantics of the park construction (reserved for #395 per DEC-14): no `resolution-pending` parking is verified here beyond its unobservability by shipped callers (TC-REASON-003); the resident daemon composition is unchanged.
+- The concrete numeric constants are no longer open: the landed plan fixes them all (slot bounds, stdout-capture bound, session-bus facts, version window — see §6 and §8.3, all resolved).
 
 ## 2. References
 
-- Change specification: `./chg-GH-394-spec.md` (ACs AC-F1-1 .. AC-F8-2; Appendix A measured surfaces; Appendix B reason set and remedy texts; Appendix C owner-restated AC mapping; OQ-1..OQ-4).
-- Implementation plan: `./chg-GH-394-plan.yaml` (pending, phase 4 — owner of the named constants: slot length bounds, stdout-capture bound, session-bus variable set, export supported-version window).
+- Change specification: `./chg-GH-394-spec.md`, consumed revision **1.1** (2026-11-24 — DoR iteration-1 fixes: forwarding fence corrected per DEC-14; §17.1 Definition of Done added; name-only-evidence reconciliation in §18/§20/§21; seam wording aligned to C-2's four construction inputs in F-8/AC-F8-2. No AC IDs renumbered; Appendix C unchanged.) Content: ACs AC-F1-1 .. AC-F8-2; Appendix A measured surfaces; Appendix B reason set and remedy texts; Appendix C owner-restated AC mapping; OQ-1..OQ-4.
+- Implementation plan: `./chg-GH-394-plan.yaml` — landed (phases 1–7). Its constants header fixes the named constants this plan asserts: host slot max 253 / min 1; integration id max 64 / min 1; stdout capture 256 KiB (262144 bytes); session-bus facts exactly `DBUS_SESSION_BUS_ADDRESS` + `XDG_RUNTIME_DIR` (forwarded only when present); harness CLI supported window opencode >= 2.3.2, < 3.0.0; per-execution caps 15 s default / 30 s hard bound. Phase 5 owns the automated proof battery; phase 6 lands ADR-0014.
 - Repository testing strategy: `.ai/rules/testing-strategy.md` (layers, module-to-test mapping, invariant-test authoring rules, quality gates).
-- Governing decision record: ADR-0014 (credential strategies — store ownership behind an unchanged port), landing with this change as `Proposed`; index row in `doc/decisions/00-index.md` and register binding.
+- Governing decision record: ADR-0014 (credential strategies — store ownership behind an unchanged port), landing with this change as `Proposed` as `doc/decisions/ADR-0014-credential-strategies-store-ownership.md` with its `doc/decisions/00-index.md` row and `doc/decisions/00-register.md` binding (plan phase 6; `decision_date` null — no agent marks it Accepted). Spec rev 1.1 DEC-14 corrects the forwarding fence: the provider-engine reconstruction sites (park-evidence build, failure reconstruction, announcement derivation) and the merge-chain refusal reconstruction are in forwarding scope; only the pending-park semantics stay reserved for #395.
 - Precedent records: ADR-0007 (credential port and parks), ADR-0008 (harness adapter contract), TDR-0012 (name-only diagnostics), TDR-0019 (dispatch admission preflight), TDR-0023 (daemon environment), TDR-0005 (CLI exit taxonomy), TDR-0025/0029/0030 (event taxonomy).
 - TypeScript and workspace rules: `.ai/rules/typescript.md`; boundaries: `.dependency-cruiser.cjs`; aggregate gate: `pnpm check`.
 - Existing invariant checks this plan extends or consumes: `scripts/checks/secret-read-boundary.ts`, `scripts/checks/error-table-sync.ts`, `scripts/checks/exit-code-literals.ts`, `scripts/checks/ambient-globals.ts`, `scripts/checks/privacy-literals.ts`, `scripts/checks/memory-lint.ts`, `scripts/checks/prompt-conformance.ts`.
@@ -69,7 +70,7 @@ All 20 acceptance criteria are covered by at least one test case; none is TODO. 
 | AC-F3-4 | OAuth entry refused `oauth-excluded`; no consume/refresh/write-back anywhere | TC-HARNESS-004 | Covered |
 | AC-F3-5 | Shape drift classified `shape-drift` naming harness and field; `key` extracts; `oauth` refused | TC-HARNESS-005, TC-HARNESS-007 | Covered |
 | AC-F4-1 | One case per reason — all ten; `timeout` distinct from reserved `resolution-pending`; no shipped caller observes the reserved token | TC-REASON-001, TC-REASON-002, TC-REASON-003 | Covered |
-| AC-F4-2 | Fields survive every propagation site and render on every surface; suppression exemption only for credential refusals; remedy table `(reason, style)` keyed, selected per allowlist entry, three texts byte-exact pinned | TC-REMEDY-001, TC-REMEDY-002, TC-REMEDY-003 | Covered |
+| AC-F4-2 | Fields survive every propagation site and render on every surface — human output, JSON envelope, `status`, `doctor`, park/log line (via forwarding at the provider-engine reconstruction sites, DEC-14), and the merge-chain refusal renderings; suppression exemption only for credential refusals; remedy table `(reason, style)` keyed, selected per allowlist entry, three texts byte-exact pinned | TC-REMEDY-001, TC-REMEDY-002, TC-REMEDY-003 | Covered |
 | AC-F4-3 | Never empty material; never blocks past the cap; delivered park condition kept with no park-record field; exit taxonomy `{0,1,2}`; no daemon unit involved | TC-REASON-001, TC-REASON-003, TC-EXEC-001, TC-STRUCT-001 | Covered |
 | AC-F5-1 | Canary materialized AFTER composition is redacted on every diagnostic surface (human output, JSON envelope, `status`, `doctor`, park/log line, ledger record, capsule event); register-before-compose is not an acceptable proof | TC-REDACT-001 | Covered |
 | AC-F5-2 | Malformed child output: registered before parsing and before any throw, throws classified, never rendered raw; fake child's stderr canary never rendered; three edge-composed sites covered (OQ-3) | TC-REDACT-002, TC-REDACT-003, TC-REDACT-004 | Covered |
@@ -112,9 +113,9 @@ No HTTP surface exists in this change (spec §8.1: N/A); event vocabulary adds n
 
 Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite guard convention `TMPDIR=$PWD/tmp/tmpdir` for any evidence that writes.
 
-- **Unit / behaviour tests** — `tests/behaviour/*.test.ts`, `bun:test`. Strategy behaviour over injected seams (child runner, environment record, harness identity, allowlist table). Existing credential suites to extend live here (`credential-port.test.ts`, `provider-credentials.test.ts`, `harness-spawn-credential.test.ts`, `status-credential-prerequisite.test.ts`).
+- **Unit / behaviour tests** — `tests/behaviour/*.test.ts`, `bun:test`. Strategy behaviour over the four C-2 construction-input seams (active harness identity, child runner, environment record, store facts). Existing credential suites to extend live here (`credential-port.test.ts`, `provider-credentials.test.ts`, `harness-spawn-credential.test.ts`, `status-credential-prerequisite.test.ts`).
 - **Composition / integration tests** — same runner and layer; the "real production composition + injected seam" proofs (C-1 shape) build the production composition with seams substituted and run one-shot commands against temporary workspaces.
-- **Structure invariants** — `tests/structure/*.test.ts` and `scripts/checks/*.ts` with their mutation suites in `tests/checks/*.test.ts`. The new allowlist tripwire lands under `scripts/checks/` (exact filename fixed in the implementation plan per the owner's file list) and joins the invariant battery (`pnpm check`).
+- **Structure invariants** — `tests/structure/*.test.ts` and `scripts/checks/*.ts` with their mutation suites in `tests/checks/*.test.ts`. The allowlist tripwire lands as `scripts/checks/allowlist-tripwire.ts` (plan phase 5) and joins the invariant battery (`pnpm check`).
 - **Boundary tests** — `tests/boundaries/` against the production `.dependency-cruiser.cjs` and the ambient-globals AST guard; secret-read boundary extension adds negative fixtures (the fixture-coverage meta-check enforces every rule keeps a failing fixture).
 - **Conformance** — the testkit credential double (`packages/testkit/src/conformance/**`) gains the four-style union representation; covered by `tests/structure/conformance-coverage.test.ts` and `bun test tests/conformance`.
 - **Goldens / fixtures** — `tests/fixtures/**` and `tests/golden/**` for byte-identical resolution and pinned remedy/shape data. Fixture doubles always carry obviously-fake sentinel values (never real-shaped credentials) so the `privacy-literals` invariant stays green.
@@ -295,8 +296,8 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Steps**:
 
 1. Build the real composition with injected seams; complete composition construction.
-2. Arm the child double to emit a fresh sentinel canary as its material; run a credential-consuming command that fails downstream (so diagnostics render).
-3. Sweep every diagnostic surface for the canary and for a value-derived digest of it: human output, JSON envelope, `status` output, `doctor` output, the park/log line, the ledger record, and the capsule event file.
+2. Arm the child double to emit a fresh sentinel canary as its material; run a credential-consuming command that fails downstream (so diagnostics render), and a merge-command failure run so the merge-chain refusal renderings sit inside the swept set.
+3. Sweep every diagnostic surface for the canary and for a value-derived digest of it: human output, JSON envelope, `status` output, `doctor` output, the park/log line (carrying the forwarded reason per DEC-14), the merge-chain refusal renderings (merge command failure envelope, merge transaction landing-fault rendering, merge refusal text), the ledger record, and the capsule event file.
 4. Run the sensitivity control: a sibling case using the pre-change snapshot semantics (registration before composition) and assert the sweep DOES catch the canary there — proving the sweep has teeth.
 
 **Expected Outcome**:
@@ -486,10 +487,11 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 1. Assert the `command` / `program-unavailable` remedy equals, byte-exact: "declare the program path as installed".
 2. Assert the `command` / `non-zero-exit` host-aware remedy equals, byte-exact, the Appendix B host-aware text (including the parenthetical with the host-scoped login form and the `<host>` slot placeholder), and names no concrete host.
 3. Assert the `command` / `non-zero-exit` neutral remedy equals, byte-exact, the Appendix B neutral text.
+4. Renderer pass-through: assert the merge-chain refusal renderings — the merge command failure envelope, the merge transaction failure/evidence rendering with its landing-fault mapping, and the merge refusal text renderer — emit the pinned strings verbatim on human output and the JSON envelope (no interpolation, no truncation, no rewriting).
 
 **Expected Outcome**:
 
-- All three texts match the fixtures byte-exact; any future edit to these strings fails this suite and forces a deliberate, reviewed fixture update (per §22 shipped-data rule).
+- All three texts match the fixtures byte-exact; any future edit to these strings fails this suite and forces a deliberate, reviewed fixture update (per §22 shipped-data rule); the merge-chain renderers pass the pinned texts through unmodified.
 
 #### TC-REMEDY-002 - Host-aware vs neutral remedy selection per allowlist entry; never interpolated
 
@@ -521,10 +523,10 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Scenario Type**: Integration
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-4, AC-F4-2, AC-F4-3, DM-2, DM-6
+**Related IDs**: F-4, AC-F4-2, AC-F4-3, DM-2, DM-6, DEC-14 (spec rev 1.1)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/credential-strategies-remedies.test.ts`; the 37 enumerated consumer sites and rendering surfaces (human output, JSON envelope, `status`, `doctor`, park/log line, MCP serve state placeholders)
+**Target Layer / Location**: `tests/behaviour/credential-strategies-remedies.test.ts`; the 37 enumerated consumer sites and rendering surfaces (human output, JSON envelope, `status`, `doctor`, park/log line, MCP serve state placeholders), the provider-engine reconstruction sites (park-evidence build, failure reconstruction, announcement derivation), and the merge-chain refusal reconstruction (merge command failure envelope, merge transaction failure/evidence construction with landing-fault mapping and rendering, merge refusal text renderer)
 **Tags**: @backend, @security
 
 **Preconditions**:
@@ -534,13 +536,18 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Steps**:
 
 1. Force one classified failure per style (`command`, `harness-store`, `literal`, `environment-prefixed`) and propagate it through the composition.
-2. Assert `source`, `reason`, and `remedy` survive on every surface: human output, JSON envelope, `status`, `doctor` display (source identity shown for all four styles; the variable name only for the two environment styles), the park/log line, and the MCP serve state placeholders (which carry the reason so the renderer never guesses) — including the sites that today reconstruct the failure.
+2. Assert `source`, `reason`, and `remedy` survive on every surface: human output, JSON envelope, `status`, `doctor` display (source identity shown for all four styles; the variable name only for the two environment styles), the park/log line — reached by forwarding at the provider-engine reconstruction sites, whose park-evidence build and failure reconstruction now forward the three fields as projection data and whose announcement line derives from the code plus the reason token — the merge-chain refusal renderings (merge command failure envelope, merge transaction failure/evidence rendering with landing-fault mapping, merge refusal text renderer), and the MCP serve state placeholders (which carry the reason so the renderer never guesses) — including the sites that today reconstruct the failure; assert no forwarding site collapses the failure to the failure-class-plus-reference evidence shape without carrying the three fields alongside.
 3. Assert the config-summary suppression exemption applies to credential refusals only: a credential-shaped refusal renders its fields while every other config-shaped summary stays suppressed.
 4. Assert the doctor presence variant (DM-6) carries the three optional fields when a failure is present and the delivered display otherwise.
+5. Assert the name-only evidence rule on the merge/landing path stays intact (§20 reconciliation): the rendered fields are name-shaped evidence — source identity, one closed-vocabulary reason token, fixed shipped table remedy — never credential material, and the landing-fault mapping carries the fields alongside the mapped code without widening the rule's scope.
 
 **Expected Outcome**:
 
-- No propagation site drops a field; no rendered surface omits source/reason/remedy for credential refusals; suppression behaviour is otherwise unchanged.
+- No propagation site drops a field — including the provider-engine and merge-chain reconstruction sites (DEC-14 forwarding scope); no rendered surface omits source/reason/remedy for credential refusals; the park-record shape gains no field and the reason appears only on the rendered refusal and the log line; suppression behaviour is otherwise unchanged.
+
+**Notes / Clarifications**:
+
+- Fence note (spec rev 1.1, DEC-14): forwarding edits at the provider-engine reconstruction sites are in scope for this change; the only provider-engine behaviour reserved for #395 is the pending-park semantics in the park construction — no `resolution-pending` parking exists here, and the resident daemon composition is unchanged. The earlier "proven without engine edits" posture is superseded.
 
 #### TC-ALLOW-001 - In-table declarations accepted with exactly their permitted parameters
 
@@ -626,7 +633,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 
 **Preconditions**:
 
-- Slot bounds exist as named constants fixed by the implementation plan (spec OQ-4 delegated the values; this suite expresses boundaries against the constants).
+- Slot bounds are the plan's fixed named constants — host slot max 253 (min 1), integration id max 64 (min 1), per the chg-GH-394-plan.yaml constants header (spec OQ-4 closed) — asserted in code via the named constants, never hard-coded in the suite.
 
 **Steps**:
 
@@ -838,7 +845,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Steps**:
 
 1. Pin the observed shape as committed fixture doubles consumed by the parser suite — never live calls.
-2. Pin the supported version window as a declared suite constant; concrete version values are fixed during delivery from the measured hosts (spec §8.4 pins the requirement, the plan/delivery records the numbers).
+2. Pin the supported version window as a declared suite constant with the plan's fixed values — opencode >= 2.3.2, < 3.0.0 (chg-GH-394-plan.yaml constants header) — re-pinned only deliberately per §22; TC-COMP-004 records host observations against the window.
 3. Assert the parser accepts exactly the pinned shape and the TC-HARNESS-005 drift cases remain the refusal path for departures — another product's release that drifts the shape is a red test and a classified refusal until re-pinned.
 
 **Expected Outcome**:
@@ -927,13 +934,13 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 
 **Preconditions**:
 
-- Parent environment planted with sentinel secret-bearing variables; recording seam captures stdin state, stdout handling, stderr handling, and the exact recorded child environment; the reduced-set variable names are declared constants from the implementation plan (see §8.3).
+- Parent environment planted with sentinel secret-bearing variables; recording seam captures stdin state, stdout handling, stderr handling, and the exact recorded child environment; the session-bus facts of the reduced set are exactly `DBUS_SESSION_BUS_ADDRESS` and `XDG_RUNTIME_DIR`, each forwarded only when present in the parent (chg-GH-394-plan.yaml constants header).
 
 **Steps**:
 
 1. Closed stdin: assert the child's stdin is closed immediately (a prompt-style double fails fast on the closed stream rather than blocking).
 2. Bounded stdout: a double emitting beyond the declared capture bound yields a refused shape — never partial material, never an unbounded buffer.
-3. Reduced environment: assert the recorded child environment equals exactly the declared reduced set — path, home directory, session-bus facts where a keyring-backed store requires them, and declared non-secret variables — and that no sentinel secret-bearing variable from the parent appears in it.
+3. Reduced environment: assert the recorded child environment equals exactly the declared reduced set — path, home directory, the session-bus facts (`DBUS_SESSION_BUS_ADDRESS` and `XDG_RUNTIME_DIR`, each only when present), and declared non-secret variables — and that no sentinel secret-bearing variable from the parent appears in it.
 4. Direct execution: assert no shell is spawned, no metacharacter interpretation occurs, and no runtime interpolation touches the argv.
 
 **Expected Outcome**:
@@ -1041,7 +1048,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Related IDs**: F-7, DEC-13, AC-F7-1, DM-4, RSK-1
 **Test Type(s)**: CI check
 **Automation Level**: Automated
-**Target Layer / Location**: new invariant check under `scripts/checks/` (exact filename per the owner's file list, fixed in the implementation plan; joins the `pnpm check` battery) with mutation suite `tests/checks/allowlist-tripwire.test.ts`
+**Target Layer / Location**: `scripts/checks/allowlist-tripwire.ts` (landed plan, phase 5; joins the `pnpm check` battery) with mutation suite `tests/checks/allowlist-tripwire.test.ts`
 **Tags**: @ci, @security, @regression
 
 **Preconditions**:
@@ -1079,7 +1086,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 **Steps**:
 
 1. Install a test-run guard (preload) that intercepts any attempt by test code to spawn the owner CLI binary names, to reach a real store path, or to touch a keyring service, failing the suite and naming the offending test.
-2. Assert every credential strategy in the suite is constructed over the four injected seams (child runner, environment record, harness identity, allowlist table) — the guard plus suite conventions make the real path unreachable.
+2. Assert every credential strategy in the suite is constructed over the four C-2 construction-input seams (active harness identity, child runner, environment record, store facts) — the guard plus suite conventions make the real path unreachable.
 3. Assert the suite passes with no credential present in the environment (the CI posture): no test reads a token variable, keyring, or store.
 4. Mutation control: a deliberately misbehaving probe (a test-shaped fixture that attempts a real spawn) is caught by the guard — proving the guard has teeth.
 
@@ -1096,7 +1103,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
   - Export-shape fixture doubles: the pinned JSON array shape (`id`, `integrationID`, `label`, `active`, `value`; `value.type` ∈ key | oauth) plus the drift corpus of TC-HARNESS-005. All values are obviously-fake sentinels (never real-shaped credentials) so the `privacy-literals` invariant stays green.
   - Harness identity doubles and allowlist-table doubles (the shipped table plus temporary-directory program fixtures for symlink cases).
   - Recording registry seam to prove register-before-parse-and-throw ordering.
-- **Named constants owned by the implementation plan** (tests reference the constants, never hard-code the values): slot length bounds (OQ-4), stdout-capture bound, session-bus variable set for the reduced child environment, export supported-version window values, cap defaults (15 s / 30 s — pinned by the spec itself).
+- **Named constants fixed by the landed plan** (chg-GH-394-plan.yaml constants header; tests reference the named constants in code, never hard-code the values): host slot max 253 / min 1; integration id max 64 / min 1; stdout capture 256 KiB (262144 bytes); session-bus facts exactly `DBUS_SESSION_BUS_ADDRESS` + `XDG_RUNTIME_DIR`, forwarded only when present; harness CLI supported window opencode >= 2.3.2, < 3.0.0; per-execution caps 15 s default / 30 s hard bound (pinned by the spec itself, DEC-11).
 - **Isolation**: every suite hermetic by construction; no test may spawn, read a store, or require a credential (TC-HERM-001 enforces); goldens are regenerated deliberately with an explicit command, never blanket-rewritten (testing-strategy rule).
 
 ## 7. Automation Plan and Implementation Mapping
@@ -1107,7 +1114,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 | TC-COMP-002 | `tests/behaviour/credential-composition-proof.test.ts` | `bun test tests/behaviour/credential-composition-proof.test.ts` | Injected export seam (pinned-shape fixture) | To Implement |
 | TC-COMP-003 | `tests/behaviour/credential-composition-proof.test.ts` | `bun test tests/behaviour/credential-composition-proof.test.ts` | Environment record double; zero-spawn assertion | To Implement |
 | TC-COMP-004 | Manual demonstration script/steps recorded in pm-notes | Manual, post-merge, authenticated host | Real owner stores; no mocks; no material recorded | Manual Only |
-| TC-REDACT-001 | `tests/behaviour/credential-redaction-live-registry.test.ts` (new) | `bun test tests/behaviour/credential-redaction-live-registry.test.ts` | Post-composition-armed canary double; seven-surface sweep; sensitivity control | To Implement |
+| TC-REDACT-001 | `tests/behaviour/credential-redaction-live-registry.test.ts` (new) | `bun test tests/behaviour/credential-redaction-live-registry.test.ts` | Post-composition-armed canary double; surface sweep incl. merge-chain refusal renderings; sensitivity control | To Implement |
 | TC-REDACT-002 | `tests/behaviour/credential-redaction-live-registry.test.ts` | `bun test tests/behaviour/credential-redaction-live-registry.test.ts` | Recording registry seam ordering registration vs parse/throw | To Implement |
 | TC-REDACT-003 | `tests/behaviour/credential-redaction-live-registry.test.ts` | `bun test tests/behaviour/credential-redaction-live-registry.test.ts` | stderr-canary double; surface sweep | To Implement |
 | TC-REDACT-004 | `tests/behaviour/credential-redaction-live-registry.test.ts` | `bun test tests/behaviour/credential-redaction-live-registry.test.ts` | Per-site drivers for `registerEdgeSecrets` helper + its two call sites | To Implement |
@@ -1116,7 +1123,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 | TC-REASON-003 | `tests/behaviour/credential-strategies-reasons.test.ts` | `bun test tests/behaviour/credential-strategies-reasons.test.ts` | Daemon composition inventory; token sweep | To Implement |
 | TC-REMEDY-001 | `tests/behaviour/credential-strategies-remedies.test.ts` (new) + `tests/fixtures/` remedy fixtures | `bun test tests/behaviour/credential-strategies-remedies.test.ts` | Byte-exact fixture data (Appendix B) | To Implement |
 | TC-REMEDY-002 | `tests/behaviour/credential-strategies-remedies.test.ts` | `bun test tests/behaviour/credential-strategies-remedies.test.ts` | Per-entry remedy-selection assertions; hostile-config probe | To Implement |
-| TC-REMEDY-003 | `tests/behaviour/credential-strategies-remedies.test.ts` | `bun test tests/behaviour/credential-strategies-remedies.test.ts` | Per-site propagation drivers; surface capture | To Implement |
+| TC-REMEDY-003 | `tests/behaviour/credential-strategies-remedies.test.ts` | `bun test tests/behaviour/credential-strategies-remedies.test.ts` | Per-site propagation drivers (provider-engine and merge-chain reconstruction sites included, per DEC-14); surface capture | To Implement |
 | TC-ALLOW-001 | `tests/behaviour/credential-strategies-command.test.ts` (new) | `bun test tests/behaviour/credential-strategies-command.test.ts` | Allowlist-table double; declaration corpus | To Implement |
 | TC-ALLOW-002 | `tests/behaviour/credential-strategies-command.test.ts` | `bun test tests/behaviour/credential-strategies-command.test.ts` | Out-of-table/interpreter/network-client declaration corpus | To Implement |
 | TC-ALLOW-003 | `tests/behaviour/credential-strategies-command.test.ts` | `bun test tests/behaviour/credential-strategies-command.test.ts` | Unpermitted-parameter and unknown-field corpus | To Implement |
@@ -1138,7 +1145,7 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 | TC-STRUCT-001 | `tests/structure/credential-vocabulary-invariants.test.ts` (new); update `tests/checks/error-table-sync.test.ts`, `tests/checks/exit-code-literals.test.ts` | `bun test tests/structure/credential-vocabulary-invariants.test.ts` && `bun test tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts` | Park-record shape snapshot; result-token/announcement-code snapshots | Existing – Update |
 | TC-STRUCT-002 | Extend `scripts/checks/secret-read-boundary.ts` coverage + `tests/boundaries/` fixtures + `tests/checks/` mutation tests | `bun run scripts/checks/secret-read-boundary.ts` && `bun test tests/boundaries` | Negative fixtures per new rule (fixture-coverage meta-check) | Existing – Update |
 | TC-LANE-001 | `tests/behaviour/credential-lane-model-only-proof.test.ts` (new); update `tests/behaviour/harness-spawn-credential.test.ts` | `bun test tests/behaviour/credential-lane-model-only-proof.test.ts` | Real builders; model-name set constants; declared-entry control | To Implement (control: Existing – Update) |
-| TC-TRIP-001 | New invariant check under `scripts/checks/` (filename per owner's file list) + `tests/checks/allowlist-tripwire.test.ts` (new) | The tripwire runs inside `pnpm check` via `bun run scripts/checks/...` once its filename lands; its mutation suite: `bun test tests/checks/allowlist-tripwire.test.ts` | Fixture change-sets; host-coordinate enumeration cases | To Implement |
+| TC-TRIP-001 | `scripts/checks/allowlist-tripwire.ts` (new, plan phase 5) + `tests/checks/allowlist-tripwire.test.ts` (new) | `bun run scripts/checks/allowlist-tripwire.ts` within `pnpm check` && `bun test tests/checks/allowlist-tripwire.test.ts` | Fixture change-sets; host-coordinate enumeration cases | To Implement |
 | TC-HERM-001 | `tests/preload.ts` (update: hermetic spawn guard) + `tests/behaviour/credential-hermeticity-guard.test.ts` (new) | `bun test tests/behaviour/credential-hermeticity-guard.test.ts` (guard active on every `bun test` run via preload) | Spawn interception; misbehaving-probe mutation control | Existing – Update (preload) / To Implement (suite) |
 
 **Existing suites to update for additive coverage** (companion to the TCs above): `tests/behaviour/credential-port.test.ts` (failure variant gains the three optional fields; reserved union member declared), `tests/behaviour/provider-credentials.test.ts` (compat golden refresh), `tests/behaviour/status-credential-prerequisite.test.ts` (status spawn profile), the testkit credential conformance double (`packages/testkit/src/conformance/**` — four-style union representation) covered by `bun test tests/structure/conformance-coverage.test.ts` and `bun test tests/conformance`.
@@ -1147,9 +1154,9 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 
 1. `bun test` / `pnpm test` — full behaviour/structure/boundary/conformance suites including everything above.
 2. `pnpm check` — aggregate gate (lint → format:check → typecheck → test → check:boundaries; includes the secret-read boundary, privacy-literals, memory-lint, and prompt-conformance invariants; the new allowlist tripwire joins this battery).
-3. `bun run scripts/checks/allowlist-tripwire` — the new tripwire, per the owner's file list (exact filename fixed in the implementation plan).
+3. `bun run scripts/checks/allowlist-tripwire.ts` — the new tripwire (plan phase 5), carried by the `pnpm check` battery.
 4. `bash scripts/.tests/test-doc-distribution.sh` — required because this change touches `doc/decisions/00-index.md` (a standalone doc in the marker-required set) and adds a decisions register row.
-5. Decision-record content check (manual/static): ADR-0014 present with index row and register binding, status `Proposed`, decision date unset; no agent marks it Accepted.
+5. Decision-record content check (manual/static): ADR-0014 (`doc/decisions/ADR-0014-credential-strategies-store-ownership.md`) present with its `doc/decisions/00-index.md` row and `doc/decisions/00-register.md` binding, status `Proposed`, `decision_date` unset; no agent marks it Accepted (spec §17.1 DoD predicate).
 6. `git diff --check` — whitespace/conflict-marker guard.
 
 ## 8. Risks, Assumptions, and Open Questions
@@ -1167,34 +1174,35 @@ Per `.ai/rules/testing-strategy.md`; runner is `bun test` (`pnpm test`), suite g
 
 ### 8.2 Assumptions
 
-- TA-1: The four injected seams (child runner, environment record, harness identity, allowlist table) exist as construction inputs per F-8/F-3, so strategies are constructible with substitutes in every suite.
+- TA-1: The four injected seams of the governing record's C-2 construction inputs (active harness identity, child runner, environment record, store facts) exist per F-8/AC-F8-2 (rev 1.1 wording), so strategies are constructible with substitutes in every suite; the allowlist table is shipped closed data exercised through its module (with fixture doubles for refusal probes), not a seam.
 - TA-2: The per-declaration per-execution timeout (DM-1) can be set short in tests, within the 30 s bound, without touching shipped defaults.
 - TA-3: Capsule events, ledger records, and status/doctor surfaces are observable by running the one-shot compositions against temporary workspaces.
 - TA-4: Fixture sentinel values shaped obviously-fake keep the `privacy-literals` invariant green; real-shaped literals in fixtures would fail the aggregate gate.
 - TA-5: `pnpm check` includes the named invariants (secret-read boundary, privacy-literals, memory-lint, prompt-conformance) so the gate battery needs no separate invocation for them.
-- TA-6: Goldens for TC-COMPAT-001 are captured from the delivered behaviour before the change lands and regenerated only deliberately.
+- TA-6: Port-level validation-and-resolution goldens for TC-COMPAT-001 are captured at the branch point (plan phase 1, explicit capture entry) and stay read-only thereafter; rendered-failure goldens that legitimately change (the three new fields are the only operator-visible change, spec §8.5) are refreshed deliberately per suite (plan phase 4 companion refreshes), never blanket-rewritten.
 
 ### 8.3 Open Questions
 
 | ID | Question | Status / Owner |
 |----|----------|----------------|
-| OQ-T1 (mirrors spec OQ-4) | Concrete slot length bounds for `<host>` and `<integrationID>` — the plan must fix them as named constants; TC-ALLOW-004 expresses boundaries against the constants | Non-blocking; fixed in phase 4 (implementation plan); any reasonable bound satisfies the grammar |
-| OQ-T2 | The concrete stdout-capture bound is not stated in the spec (only "bounded stdout capture") and is not covered by OQ-4. Recommend the plan fixes it as a named constant alongside the OQ-4 bounds; TC-EXEC-002 expresses the boundary against the constant | Non-blocking; surfaced explicitly — same class as OQ-4 (declared, reviewed constant per §22), no specification reopen judged necessary |
-| OQ-T3 | The exact session-bus variable names ("session-bus facts where a keyring-backed store requires them") for the reduced child environment — TC-EXEC-002 asserts recorded env equals the declared reduced set and needs the exact set | Non-blocking; fixed as a named constant in the plan |
-| OQ-T4 | Concrete supported-version-window values for the harness CLI export — the spec pins the requirement to pin, not the numbers | Non-blocking; fixed during delivery from the measured hosts (TC-HARNESS-007 constant; TC-COMP-004 records observations) |
+| OQ-T1 (mirrors spec OQ-4) | Concrete slot length bounds for `<host>` and `<integrationID>` | **Resolved** — fixed by the landed plan's constants header: host slot max 253 (min 1); integration id max 64 (min 1). TC-ALLOW-004 asserts the bounds via the named constants |
+| OQ-T2 | The concrete stdout-capture bound (was unstated in the spec — surfaced explicitly at plan rev 1.0 as the same declared-constant class as OQ-4, no specification reopen) | **Resolved** — fixed by the plan at 256 KiB (262144 bytes). TC-EXEC-002 asserts the boundary via the named constant |
+| OQ-T3 | The exact session-bus variable names for the reduced child environment | **Resolved** — fixed by the plan: exactly `DBUS_SESSION_BUS_ADDRESS` + `XDG_RUNTIME_DIR`, each forwarded only when present. TC-EXEC-002 asserts the recorded set equals the declared reduced set |
+| OQ-T4 | Concrete supported-version-window values for the harness CLI export | **Resolved** — pinned by the plan as opencode >= 2.3.2, < 3.0.0 (re-pinned only deliberately, §22). TC-HARNESS-007 asserts the declared constant; TC-COMP-004 records host observations |
 | OQ-T5 (mirrors spec OQ-3) | Confirm the three edge-composed registration sites receive the live-registry treatment with the malformed-output coverage at each — answered by TC-REDACT-004 at delivery | Non-blocking; delivery-time confirmation |
-| OQ-T6 | AC-F4-2's surface parenthetical lists five surfaces (human output, JSON envelope, `status`, `doctor`, park/log line) while F-4 additionally names the MCP serve state placeholders; TC-REMEDY-003 covers the MCP placeholders under F-4. Confirm this reading — no AC is uncovered either way | Non-blocking clarification for the DoR gate |
-| OQ-T7 | Spec Appendix B pins three remedy texts byte-exact; all other `(reason, style)` cells are contract-only ("bounded text naming the one operator act"). TC-REMEDY-002 asserts the content contract for those cells. If the owner wants every cell byte-pinned, that is a spec revision, not a test change | Non-blocking; owner preference |
+| OQ-T6 | AC-F4-2's surface parenthetical lists five surfaces (human output, JSON envelope, `status`, `doctor`, park/log line) while F-4 additionally names the MCP serve state placeholders; TC-REMEDY-003 covers the MCP placeholders under F-4. Confirm this reading — no AC is uncovered either way | **Accepted by DoR iteration 1** (PM ruling: the parenthetical reads as inclusive; TC-REMEDY-003 step 2 names the placeholders explicitly — no finding) |
+| OQ-T7 | Spec Appendix B pins three remedy texts byte-exact; all other `(reason, style)` cells are contract-only ("bounded text naming the one operator act"). TC-REMEDY-002 asserts the content contract for those cells. If the owner wants every cell byte-pinned, that is a spec revision, not a test change | **Parked to PR review** per DoR iteration 1 ruling (owner preference; no finding) |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-23 | @test-plan-writer | Initial test plan from completed spec chg-GH-394-spec.md: 37 test cases covering all 20 ACs, hermeticity and register-after-compose oracles per owner constraints, allowlist tripwire battery, manual real-store demonstration named post-merge |
+| 1.1 | 2026-11-24 | @test-plan-writer | Reopened after DoR iteration 1 (NOT_READY, Finding 8); consumed spec rev 1.1 and the landed chg-GH-394-plan.yaml. Finding 8: all plan-pending pointers replaced with the landed plan phases and its fixed constants (slot bounds 253/64, stdout 256 KiB, session-bus facts DBUS_SESSION_BUS_ADDRESS + XDG_RUNTIME_DIR, window >=2.3.2 <3.0.0, tripwire filename scripts/checks/allowlist-tripwire.ts, ADR paths). Merge-chain refusal renderings (merge command envelope, merge transaction failure/evidence construction with landing-fault mapping and rendering, merge refusal text renderer) added to the surface coverage of TC-REMEDY-003, TC-REMEDY-001 (renderer pass-through step), and TC-REDACT-001 (swept set) per DEC-14 — existing TC IDs kept, none added. TC-REMEDY-003 park/log-line arm restated on the corrected fence: forwarding edits at the provider-engine reconstruction sites are in scope; no park-record field; reason on rendered refusal + log line only; pending-park semantics stay #395. Seam wording aligned to C-2's four construction inputs (store facts replaces allowlist table as the fourth seam; TA-1, TC-HERM-001, §1, §4). Execution log aligned to spec §17.1 Definition of Done. OQ-T1..T4 resolved against the plan constants. TC count unchanged at 37; all 20 ACs remain Covered |
 
 ## 10. Test Execution Log
 
-Populated during execution (phases 6–9). Gate evidence convention: `TMPDIR=$PWD/tmp/tmpdir`; runners `bun test` / `pnpm test` / `pnpm check`.
+Populated during execution (phases 6–9). Gate evidence convention: `TMPDIR=$PWD/tmp/tmpdir`; runners `bun test` / `pnpm test` / `pnpm check`. Evidence recorded here satisfies the matching predicates of spec §17.1 (Definition of Done): all 20 ACs verified by their mapped test cases with traceable passing evidence (§3.1); `pnpm check` green — including the allowlist tripwire it carries — and `bash scripts/.tests/test-doc-distribution.sh` green; ADR-0014 landed `Proposed` / `decision_date` null with index + register rows; OQ-1..OQ-3 recorded as typed outcomes; the real-store demonstration completed as the named manual/post-merge step (TC-COMP-004), never a CI gate.
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
