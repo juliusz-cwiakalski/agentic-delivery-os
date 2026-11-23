@@ -96,6 +96,10 @@ export const createTempRepo = (files: Record<string, string> = {}): TempRepo => 
   const root = mkdtempSync(join(tmpdir(), "forbidden-fixture-"));
   writeFiles(root, { ...SCOPE_FILES, ...files });
   git(root, ["init", "-q"]);
+  // Deterministic temp-repo commits: the global `commit.gpgsign` setting must
+  // not make a fixture commit depend on a signing key (same config every
+  // other temp-repo fixture applies).
+  git(root, ["config", "commit.gpgsign", "false"]);
   git(root, ["config", "user.email", "fixture@example.invalid"]);
   git(root, ["config", "user.name", "Synthetic Fixture"]);
   const run = (args: string[]): string => git(root, args);
