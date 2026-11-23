@@ -209,3 +209,27 @@ notes:
       harmless to 071+ consumption; not remediated in this change."
     type: decision
     date: "2026-11-23"
+  - text: "Plan phase 1 complete (fixture family + PRE-CHANGE golden capture at
+      branch point). Commit f21169398516e4198b47ac2311e2b6b06a4681f0 (commit
+      primitive; staged exactly the 4 declared fixture paths; .zed/ disclosed
+      stray). Artifacts: tests/fixtures/verify-gates/production-composition.ts
+      (real createProductionComposer verify-gates arms: temp checkout base +
+      change branch at full-SHA head, complete pm-notes materialized for the
+      fixture ref, CI workflow, clean-PR replies, injected config-fs/spawn/
+      credential seams, stateStoreWrap seam, argv recording, byte
+      normalization); tests/fixtures/verify-gates/golden/matrix-golden-run.ts
+      (explicit capture entry, capture-when-absent / verify-on-drift, never a
+      *.test.ts module); captured goldens matrix-cells.json (53 cells = 48
+      corpus + narrowed-scope + suite-map-unmirrored + 2 config refusals +
+      member-green, both modes, real append wired over a fixture store) and
+      production-success.json (production success cell, normalized), captured
+      at branch point ac9a62e5 BEFORE any production.ts edit. Test result:
+      capture entry verify mode byte-identical (exit 0); 5 adjacent delivered
+      suites (golden verify-gates, parity-suite-map, narrowed-scope,
+      merge-verification-record, cross-repository-members) 41 pass / 0 fail;
+      biome clean. Note: corpus expectedExit values are evaluator-level (the
+      handler recomputes lifecycle from the fixture document); handler-level
+      truth rides the captured bytes, matching the delivered parity-baseline
+      convention."
+    type: info
+    date: "2026-11-23"

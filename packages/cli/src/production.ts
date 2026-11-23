@@ -332,6 +332,7 @@ import {
 import {
   appendBlockerQuestion,
   appendEconomicsRestartEvent,
+  appendMergeGateVerification,
   createDaemonLockPort,
   createNodeStateEdge,
   createStateStore,
@@ -2513,6 +2514,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       github: { instance, credentials, transport },
       nowMs,
       readSuiteMap,
+      // GH-388 (DEC-1, F-1): the shipped composition supplies the delivered
+      // fenced, post-append-verified merge-ledger append as the verify-gates
+      // runtime's append seam, so the record the handler computes is the
+      // record `merge` consumes. The wiring mirrors the merge composition's
+      // ports pattern over the same store and fence factory; the append is
+      // silent, changes no output, and adds no read on any path (NG-2, NFR-1).
+      appendVerification: (record) => {
+        const result = appendMergeGateVerification(store, {
+          record,
+          fenceToken: newFenceToken(),
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
     });
 
     /** The declared integration base the checkout's base reference resolves to. */
