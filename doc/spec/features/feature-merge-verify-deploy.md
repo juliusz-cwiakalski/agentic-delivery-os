@@ -259,8 +259,15 @@ taxonomy, so a code the taxonomy does not declare cannot reach the declaration,
 and they are members of the emittable set like every other branch. A read fault
 the table already declares is expressed through that declared identity: a
 rejected credential is `provider.auth.rejected` at exit `1`, an unreachable or
-malformed provider answer is `provider.outage` at exit `2`, and a request or work
-item that does not resolve aborts as `merge.transaction-aborted` at exit `1`.
+malformed provider answer is `provider.outage` at exit `2`, and a request or
+work item that does not resolve reports its own dedicated identity — a
+non-resolving open request refuses `merge.request-unresolved` at exit `1` with
+reason `no-open-request`, `ambiguous-open-request`, or `head-unresolved`, a
+non-resolving work item refuses `merge.work-item-unresolved` at exit `1`, and
+a change branch that does not resolve from the change record at the request
+head refuses `merge.branch-unresolved` at exit `1` with one of its six closed
+reasons. No reference-resolution outcome reaches
+`merge.transaction-aborted`.
 
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and
@@ -340,8 +347,18 @@ verdict is the provider's merged assertion plus the merge-commit identity.
 A fired landing whose provider truth is not observed refuses
 `merge.landing-unverified` at exit 2 with consequence `unknown`; a re-run
 re-verifies and never re-lands. A clean pre-mutation abort refuses
-`merge.transaction-aborted` at exit 1 with retryable `true` and consequence
-`not_landed`. A post-landing cleanup failure never flips a verified landing and
+`merge.transaction-aborted` at exit 1 with consequence `not_landed`.
+`retryable` is always the emitted code's declared row value and never a
+per-instance value, and a declared row may not carry `retryable: true` while
+any cause reachable for that row requires an operator act before a re-run can
+converge. `merge.transaction-aborted` therefore declares `retryable: false`
+with a remediation that names the aborted pre-mutation condition and promises
+no convergence — true of all three causes it reaches. A failing and a pending
+required check share the `merge.gate.<gate-id>.failed` family row, whose single
+`retryable: false` stays honest for every gate cause including the act-free
+pending one: convergence that needs no act — a pending check — is carried by
+the refusal's named reason and an accurate remediation, not by a different
+`retryable`. A post-landing cleanup failure never flips a verified landing and
 is never silent. A recorded landing replays `merged` at exit 0 with the recorded
 identity, zero landing calls, and no duplicate record.
 
@@ -384,8 +401,9 @@ The machine table declares a `merge` domain kind with twelve concrete rows
 `merge.owner-gate-override-without-waiver`, `merge.rebase-conflict`,
 `merge.state-unverified`, `merge.landing-unverified`,
 `merge.transaction-aborted`, `merge.sync-required`,
-`merge.mergeability-unknown`) and the one open-slot family
-`merge.gate.<gate-id>.failed`; the `verify` kind carries
+`merge.mergeability-unknown`, `merge.branch-unresolved`,
+`merge.request-unresolved`, `merge.work-item-unresolved`) and the one open-slot
+family `merge.gate.<gate-id>.failed`; the `verify` kind carries
 `verify.deploy.trace-missing`, `verify.deploy.status-stale`, and
 `verify.deploy.trace-failed`. Every row is documented and machine-declared
 together; the family slot is validated against the effective declared gate set,

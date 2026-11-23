@@ -76,9 +76,10 @@ identity.
 
 A recorded landing replays `result=merged` at exit 0 with the same identity, no
 landing call, and no duplicate record. A clean pre-mutation abort never mutates
-and reports retryable `merge.transaction-aborted`; a fired landing whose provider
-truth was not observed refuses `merge.landing-unverified` with consequence
-`unknown` and is never re-landed by a re-run.
+and reports non-retryable `merge.transaction-aborted`, whose remediation names
+the aborted pre-mutation condition and promises no convergence; a fired landing
+whose provider truth was not observed refuses `merge.landing-unverified` with
+consequence `unknown` and is never re-landed by a re-run.
 
 The refusal decision is total over the observed mergeability plus absence. A
 conflicting request refuses `merge.sync-required` with reason `dirty` and issues
@@ -283,7 +284,10 @@ carries the resolved row's `code`, `category`, `retryable`, `consequence`, and
 | `merge.owner-gate-override-without-waiver` | user | no | not_landed | user-validation | 1 |
 | `merge.rebase-conflict` | user | no | not_landed | user-validation | 1 |
 | `merge.sync-required` | user | no | not_landed | user-validation | 1 |
-| `merge.transaction-aborted` | user | yes | not_landed | user-validation | 1 |
+| `merge.transaction-aborted` | user | no | not_landed | user-validation | 1 |
+| `merge.branch-unresolved` | user | no | not_landed | user-validation | 1 |
+| `merge.request-unresolved` | user | no | not_landed | user-validation | 1 |
+| `merge.work-item-unresolved` | user | no | not_landed | user-validation | 1 |
 | `merge.state-unverified` | platform | no | not_landed | platform-provider | 2 |
 | `merge.landing-unverified` | platform | no | unknown | platform-provider | 2 |
 | `merge.mergeability-unknown` | platform | yes | not_landed | platform-provider | 2 |
@@ -300,7 +304,23 @@ internal rebase. `merge.mergeability-unknown` reports that the provider has not
 decided after one exact-head re-read and is retryable. `merge.owner-gate-override-without-waiver`
 names the gate and the declared override path. `merge.rebase-conflict` stays
 declared and reserved: no delivered command path emits it, and no force variant
-exists.
+exists. `merge.branch-unresolved` reports the change branch that could not be
+resolved from the change record at the request head and carries one closed
+reason (`declaration-missing`, `declaration-unusable`, `declaration-disagrees`,
+`record-missing`, `record-invalid`, `record-unreadable`), chosen by the declared
+precedence, naming the candidate, the record path at its head, and the reason.
+`merge.request-unresolved` reports that no single open delivery request could be
+resolved and carries one closed reason (`no-open-request`,
+`ambiguous-open-request`, `head-unresolved`), naming the change ref and the
+observed open and candidate counts. `merge.work-item-unresolved` reports the
+tracker work item that could not be resolved, naming the work item and the read
+operation that failed. All three refuse at exit 1.
+`merge.transaction-aborted` is non-retryable and reaches exactly three
+act-requiring causes — a waiver-append failure, a declared landing gap, and
+duplicate matching delivery requests (open or merged, named by each duplicate
+identity) — and its remediation names the aborted pre-mutation condition and
+promises no convergence; a refused landing never reaches it, and a
+non-resolving request, work item, or branch never reaches it.
 
 The composition's emittable set is published as
 `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive over its refusal branches and
@@ -336,9 +356,16 @@ through its declared identity: a rejected credential is
 `provider.auth.rejected` at exit 1, an unreachable or malformed provider answer
 is `provider.outage` at exit 2 (`provider.payload.invalid` classifies as
 `provider.auth.rejected` on HTTP 401 or 403 and as `provider.outage`
-otherwise, and any other read fault is `provider.outage`), and a request or
-work item that does not resolve aborts as `merge.transaction-aborted` at exit 1
-so a re-run with a valid reference converges.
+otherwise, and any other read fault is `provider.outage`). A request or work
+item that does not resolve never aborts: a non-resolving open request refuses
+`merge.request-unresolved` at exit 1 with reason `no-open-request`,
+`ambiguous-open-request`, or `head-unresolved`; a non-resolving work item
+refuses `merge.work-item-unresolved` at exit 1; a change branch that does not
+resolve from the change record at the request head refuses
+`merge.branch-unresolved` at exit 1 with one of its six closed reasons.
+`merge.transaction-aborted` is reserved for its three act-requiring causes —
+the waiver-append failure, the declared landing gap, and duplicate matching
+delivery requests — and no reference-resolution outcome reaches it.
 
 ## SEE ALSO
 

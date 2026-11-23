@@ -87,6 +87,51 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Re-review iteration 2: **PASS** — 0c/0maj/0min; 2 info no-action (F-5:
+      the duplicate pre-check also fires in unpinned same-ref/unreadable
+      overlap states where F-1 step 2's letter names head-unresolved —
+      spec-internal authority exists in AC-F1-4's abort-over-request-reason
+      tail, a future spec touch could state the exception; F-6: TC-MRG-055's
+      zero-record-read oracle observed via provider budget + output surface,
+      the anti-masking ordering itself observed). F-1 certified closed (code +
+      TC-MRG-055 incl. masking negation, both-accepted and lone-unreadable
+      cells unchanged and green); F-2 closed (anchors agree across plan v17 /
+      test plan v1.9 / spec v2.6 / tree — error-table-sync 172/172, kind 12);
+      F-3 accepted residual (verified justification); 27/27 covered,
+      allocation 55, carrier suites independently green (22+73+180),
+      typecheck clean. One environmental non-merge failure noted (ci-baseline-parity,
+      tmpfs cross-device git clone --local, content-independent). Record:
+      code-review/review-iter-2.yaml. Doc-sync re-run (full authority): all
+      seven residual sub-gaps reconciled — merge.md's abort row now
+      non-retryable with the three request identities added, feature spec's
+      row-level honesty rule and twelve-row list completed, test-spec
+      classification row restated to the dedicated identities; validation
+      green (error-table-sync 172/172, doc-conformance 61/0,
+      merge-refusal-rows 13/0, reference-page-parity 5/0,
+      engine-first-doc-reconciliation 16/0, forbidden-literals +
+      exit-code-literals OK). No unresolved documentation gaps."
+    type: info
+    date: "2026-11-23"
+  - text: "Review remediation landed (commit `462878e4`, 2 files +197/−28): the
+      duplicate-open abort's population repointed accepted → candidate set
+      (`duplicateCandidateGroups` helper; the :991 defect-marker comment now
+      states the candidate-set population with the spec citation), plus a
+      page-decided pre-check so a same-ref group holding an unreadable head
+      aborts as a duplicate before the head-guard can mask it. TC-MRG-055
+      landed in the production-composition suite: the mixed pair (#301
+      accepted + #300 refused, same source ref) aborts
+      `merge.transaction-aborted` naming BOTH identities, 1 provider request,
+      zero record reads; the pre-fix runtime observation (the mask the review
+      predicted: `merge.request-unresolved`/`head-unresolved` naming only
+      #300) is quoted in the cell as the regression evidence; the plan-v17
+      paired control (distinct-ref disagreement still resolves) rides the same
+      commit. Suites: production-composition + convergence 31/0, refusal
+      containment + golden 38/0, typecheck clean, commitlint accepted. F-3
+      declared residual (not trivially dead: removal requires a contract-type
+      discrimination refactor across contracts + adapter; no test drives the
+      arm) — routed to the re-review's accepted-nit path."
+    type: info
+    date: "2026-11-23"
   - text: "Review iteration 1: FAIL — 0 critical / 1 major / 1 minor / 1 nit /
       1 info. Record: code-review/review-iter-1.yaml. The ruled shape verified
       clean and independently reproduced (1,055 tests green across the
