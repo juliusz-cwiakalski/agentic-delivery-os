@@ -136,6 +136,44 @@ const pushFailureRuntime = (): DispatchCommandRuntime => {
   });
 };
 
+/**
+ * The typed push failure's golden envelope (TC-FAIL-002's golden cell), pinned
+ * once as committed code. The bytes are the captured first output at the branch
+ * point; updates happen only by explicit regeneration for a declared change,
+ * never a blanket rewrite. The delivered fixture-file golden home needs a
+ * declared plan path this change's plan does not declare, so the pin rides the
+ * in-scope suite as a committed constant — same byte discipline, same review.
+ */
+const PUSH_PARITY_UNMET_GOLDEN = `{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-push-error",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "result": "failed",
+    "prUrl": "https://example.test/owner/repo/pull/1",
+    "phaseLedger": {
+      "completed": 3,
+      "total": 9,
+      "variant": "full"
+    },
+    "restarts": 0,
+    "resumeAmplification": "none",
+    "harness": "opencode",
+    "handoverState": "dual-run",
+    "outcome": "failed",
+    "lastMessage": "the ensure-push act could not establish branch parity",
+    "push": {
+      "verdict": "failed",
+      "localHead": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      "remoteHead": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+      "parity": false
+    }
+  }
+}`;
+
 describe("GH-386 the typed push failure golden", () => {
   test("the data-bearing failure envelope is byte-identical to its golden", async () => {
     const out: string[] = [];
@@ -160,6 +198,6 @@ describe("GH-386 the typed push failure golden", () => {
     };
     // No top-level error identity: the delivered data-bearing shape.
     expect(envelope.data?.error).toBeUndefined();
-    expect(stdout.trim()).toBe(readFileSync(join(GOLDEN, "push-parity-unmet.json"), "utf8").trim());
+    expect(stdout.trim()).toBe(PUSH_PARITY_UNMET_GOLDEN.trim());
   });
 });

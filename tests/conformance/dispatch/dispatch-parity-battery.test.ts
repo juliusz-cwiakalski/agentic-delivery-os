@@ -149,7 +149,7 @@ describe("TC-PARITY-003 two consecutive runs are identical with zero live I/O", 
     const second = await runAllParityCases();
     expect(first).toHaveLength(PARITY_CASES.length);
     expect(second).toHaveLength(PARITY_CASES.length);
-    expect(PARITY_CASES).toHaveLength(29);
+    expect(PARITY_CASES).toHaveLength(43);
 
     /**
      * The determinism projection (GH-347 AC-F9-3, NFR-1): the FULL canonical
@@ -200,8 +200,8 @@ describe("TC-PARITY-003 two consecutive runs are identical with zero live I/O", 
 });
 
 describe("TC-PARITY-004 the proved / not-proved boundary is permanent and self-consistent", () => {
-  test("the live constant has eight proven and six not-proven ids in order", () => {
-    expect(PARITY_PROOF_BOUNDARY.proven).toHaveLength(8);
+  test("the live constant has nine proven and six not-proven ids in order", () => {
+    expect(PARITY_PROOF_BOUNDARY.proven).toHaveLength(9);
     expect(PARITY_PROOF_BOUNDARY.notProven).toHaveLength(6);
     expect(boundaryViolations(PARITY_PROOF_BOUNDARY, PARITY_CASES)).toEqual([]);
   });
@@ -213,14 +213,14 @@ describe("TC-PARITY-004 the proved / not-proved boundary is permanent and self-c
       notProven: [...PARITY_PROOF_BOUNDARY.notProven],
     };
     expect(boundaryViolations(appended, rows)).toContain(
-      "proof boundary drift: proven expected 8 ids, received 9",
+      "proof boundary drift: proven expected 9 ids, received 10",
     );
     const removed = {
       proven: PARITY_PROOF_BOUNDARY.proven.slice(0, 7),
       notProven: [...PARITY_PROOF_BOUNDARY.notProven],
     };
     expect(boundaryViolations(removed, rows)).toContain(
-      "proof boundary drift: proven expected 8 ids, received 7",
+      "proof boundary drift: proven expected 9 ids, received 7",
     );
     const swapped = {
       proven: [

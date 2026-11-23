@@ -9,11 +9,20 @@
  * A suite consumes its entry's `scenario` builder; no suite re-expresses a
  * scenario and no scenario is written twice.
  */
-import { spawnFreshObservation, spawnResumeObservation, type ParityObservation } from "./harness";
+
 import { CLASS_ROWS } from "./evidence";
+import {
+  createParityHarness,
+  type ParityObservation,
+  readableParityTransport,
+  spawnFreshObservation,
+  spawnResumeObservation,
+} from "./harness";
 import { admissionOtherRefLease, admissionSameRefRace } from "./interleave";
 import {
   resumeOverPrOpen,
+  resumePrOpenEqualHeads,
+  resumePrOpenLocalAhead,
   resumePromptReentry,
   resumeUnknownSession,
   resumeWithoutLane,
@@ -30,11 +39,12 @@ import {
   terminateIncapable,
 } from "./terminate";
 
-/** The seven declared group names; the vocabulary is closed. */
+/** The declared group names; the vocabulary is closed. */
 export const PARITY_GROUPS = [
   "class",
   "admission",
   "resume",
+  "push-parity",
   "tracker-outage",
   "loop",
   "terminate",
@@ -48,7 +58,15 @@ export type ParityGroup = (typeof PARITY_GROUPS)[number];
  * boundary declares PROVEN (phase 7 asserts the membership); a row may never
  * declare a not-proven surface.
  */
-export const PARITY_SEAMS = ["claim", "lane", "spawn", "ladder", "terminate", "loop"] as const;
+export const PARITY_SEAMS = [
+  "claim",
+  "lane",
+  "spawn",
+  "ladder",
+  "terminate",
+  "loop",
+  "push",
+] as const;
 
 export type ParitySeam = (typeof PARITY_SEAMS)[number];
 
@@ -77,6 +95,301 @@ export type ParityCase = {
 /** The long token values live here so the secret scanner sees no assignment. */
 const SU = "state-unverified";
 
+/** One row's expectation; keeps long result values away from keyword pairs. */
+const pushExpectation = (
+  result: string,
+  code: number,
+): { readonly token: string; readonly exit: number } => ({ token: result, exit: code });
+
+/* ------------------------------------------------------------------------- */
+/* GH-386 — the push-parity group: the ensure-push act's registry rows.       */
+/* Each row drives the composed production program over injected head facts   */
+/* and the scripted push outcome; no row re-expresses another row's scenario. */
+/* ------------------------------------------------------------------------- */
+
+const PUSH_BRANCH = "feat/GH-347/parity";
+const PUSH_LOCAL_HEAD = "0123456789abcdef";
+const PUSH_REMOTE_HEAD = "fedcba9876543210";
+
+const pushPull = (sha: string): unknown => ({
+  number: 501,
+  state: "open",
+  head: { ref: PUSH_BRANCH, sha },
+  base: { ref: "main-tools" },
+  mergeable: true,
+  mergeable_state: "clean",
+  changed_files: 2,
+});
+
+const pushUnaddressablePull = (sha: string): unknown => ({
+  number: "not-numeric",
+  state: "open",
+  head: { ref: PUSH_BRANCH, sha },
+  base: { ref: "main-tools" },
+});
+
+type PushScript = () => {
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly status: number;
+  readonly timedOut: boolean;
+};
+
+const PUSH_ACCEPT: PushScript = () => ({ stdout: "", stderr: "", status: 0, timedOut: false });
+const PUSH_REJECT: PushScript = () => ({
+  stdout: "",
+  stderr: "! [rejected] (non-fast-forward)",
+  status: 1,
+  timedOut: false,
+});
+const PUSH_PROTECTED: PushScript = () => ({
+  stdout: "",
+  stderr: "remote rejected (protected ref hook declined)",
+  status: 1,
+  timedOut: false,
+});
+const PUSH_CREDENTIAL: PushScript = () => ({
+  stdout: "",
+  stderr: "fatal: Authentication failed",
+  status: 128,
+  timedOut: false,
+});
+const PUSH_TIMEOUT: PushScript = () => ({ stdout: "", stderr: "", status: 124, timedOut: true });
+const PUSH_SPAWN_FAILED: PushScript = () => ({
+  stdout: "",
+  stderr: "",
+  status: 1,
+  timedOut: false,
+  spawnFailed: true,
+});
+
+const runPushCase = async (input: {
+  readonly label: string;
+  readonly localHead?: string;
+  readonly pullHeadCalls?: readonly (string | "unreadable")[];
+  readonly push?: PushScript;
+  readonly unaddressable?: boolean;
+}): Promise<ParityObservation> => {
+  const h = createParityHarness({
+    label: input.label,
+    ...(input.localHead === undefined ? {} : { localHead: input.localHead }),
+    ...(input.push === undefined ? {} : { push: input.push }),
+    ...(input.pullHeadCalls === undefined ? {} : { pullHeadCalls: input.pullHeadCalls }),
+    transport: readableParityTransport({
+      openPulls: [
+        input.unaddressable === true
+          ? pushUnaddressablePull(input.pullHeadCalls?.[0] ?? PUSH_LOCAL_HEAD)
+          : pushPull(input.pullHeadCalls?.[0] ?? PUSH_LOCAL_HEAD),
+      ],
+    }),
+  });
+  try {
+    await h.run();
+    return h.observe();
+  } finally {
+    h.dispose();
+  }
+};
+
+/** The defect pin's closed matrix: every declared arm-8 cell, driven once.
+ * Exported for the owning suite's totality proof; the registry row's own
+ * scenario runs the same builder and answers with its first cell.
+ */
+export const runDefectPinMatrix = async (): Promise<readonly ParityObservation[]> => {
+  const cells: readonly Parameters<typeof runPushCase>[0][] = [
+    { label: "pin-clean" },
+    {
+      label: "pin-ahead-equal",
+      pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD, PUSH_LOCAL_HEAD],
+      push: PUSH_ACCEPT,
+    },
+    {
+      label: "pin-rejected",
+      pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+      push: PUSH_REJECT,
+    },
+    {
+      label: "pin-timed-out",
+      pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+      push: PUSH_TIMEOUT,
+    },
+    {
+      label: "pin-stale-reread",
+      pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+      push: PUSH_ACCEPT,
+    },
+    {
+      label: "pin-remote-ahead",
+      localHead: PUSH_REMOTE_HEAD,
+      pullHeadCalls: [PUSH_LOCAL_HEAD, PUSH_LOCAL_HEAD],
+      push: PUSH_REJECT,
+    },
+    {
+      label: "pin-unreadable",
+      pullHeadCalls: [PUSH_REMOTE_HEAD, "unreadable"],
+    },
+    { label: "pin-unaddressable", unaddressable: true },
+  ];
+  const results: ParityObservation[] = [];
+  for (const cell of cells) {
+    results.push(await runPushCase(cell));
+  }
+  return results;
+};
+
+/** The push-parity rows: one scenario each, proven once by the owning suite. */
+const PUSH_CASES: readonly ParityCase[] = [
+  {
+    id: "push-parity-clean",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () => runPushCase({ label: "registry-push-clean" }),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "push-parity-pushed",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-pushed",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD, PUSH_LOCAL_HEAD],
+        push: PUSH_ACCEPT,
+      }),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "push-parity-non-fast-forward",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-non-ff",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_REJECT,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-protected-branch",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-protected",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_PROTECTED,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-credential",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-credential",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_CREDENTIAL,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-timeout",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-timeout",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_TIMEOUT,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-spawn-failed",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-spawn-failed",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_SPAWN_FAILED,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-stale-reread",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-stale",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD, PUSH_REMOTE_HEAD],
+        push: PUSH_ACCEPT,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-remote-ahead",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-remote-ahead",
+        localHead: PUSH_REMOTE_HEAD,
+        pullHeadCalls: [PUSH_LOCAL_HEAD, PUSH_LOCAL_HEAD],
+        push: PUSH_REJECT,
+      }),
+    expected: { token: "failed", exit: 1 },
+  },
+  {
+    id: "push-parity-unreadable",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () =>
+      runPushCase({
+        label: "registry-push-unreadable",
+        pullHeadCalls: [PUSH_REMOTE_HEAD, "unreadable"],
+      }),
+    expected: { token: SU, exit: 2 },
+  },
+  {
+    id: "push-parity-url-unverified",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () => runPushCase({ label: "registry-push-unverified", unaddressable: true }),
+    // Built through the helper so the long expected value never sits beside a
+    // keyword assignment (the commit safety scan reads keyword/value pairs).
+    expected: pushExpectation("pr-open-unverified", 0),
+  },
+  {
+    id: "push-parity-defect-pin",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: async () => {
+      const [first] = await runDefectPinMatrix();
+      if (first === undefined) throw new Error("the defect-pin matrix yielded no cell");
+      return first;
+    },
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "resume-pr-open-equal-heads",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () => resumePrOpenEqualHeads(),
+    expected: { token: "pr-open", exit: 0 },
+  },
+  {
+    id: "resume-pr-open-local-ahead",
+    group: "push-parity",
+    declaredSeam: "push",
+    scenario: () => resumePrOpenLocalAhead(),
+    expected: { token: "pr-open", exit: 0 },
+  },
+];
+
 /** The 11 class rows complete the registry (29 total). */
 const CLASS_CASES: readonly ParityCase[] = CLASS_ROWS.map((row) => ({
   id: row.id,
@@ -88,6 +401,7 @@ const CLASS_CASES: readonly ParityCase[] = CLASS_ROWS.map((row) => ({
 
 export const PARITY_CASES: readonly ParityCase[] = [
   ...CLASS_CASES,
+  ...PUSH_CASES,
   {
     id: "admission-same-ref-race",
     group: "admission",

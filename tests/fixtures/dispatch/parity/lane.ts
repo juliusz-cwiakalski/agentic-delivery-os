@@ -25,7 +25,12 @@ import {
   type StateStorePort,
 } from "../../../../packages/core/src/contracts/index";
 import { readEconomicsRecords } from "../../../../packages/core/src/state/index";
-import { createParityHarness, type ParityEnvelope, type ParityObservation } from "./harness";
+import {
+  createParityHarness,
+  type ParityEnvelope,
+  type ParityObservation,
+  readableParityTransport,
+} from "./harness";
 import { createGuardedRunner } from "./process-runner";
 
 export const LANE_NOW = "2026-11-19T00:00:00.000Z";
@@ -186,6 +191,71 @@ export const resumeOverPrOpen = async (): Promise<ParityObservation> => {
     h.dispose();
   }
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-386 (TC-PUSH-011) — the resume family's parity variants: the recorded   */
+/* pr-open lane re-enters arm 8, so the precondition binds the resumed        */
+/* classification too — idempotent on an equal branch, one push when ahead.   */
+/* ------------------------------------------------------------------------- */
+
+const RESUME_BRANCH = "feat/GH-347/parity";
+const RESUME_LOCAL_HEAD = "0123456789abcdef";
+const RESUME_REMOTE_HEAD = "fedcba9876543210";
+
+const resumePull = (sha: string): unknown => ({
+  number: 501,
+  state: "open",
+  head: { ref: RESUME_BRANCH, sha },
+  base: { ref: "main-tools" },
+  mergeable: true,
+  mergeable_state: "clean",
+  changed_files: 2,
+});
+
+const resumeVariant = async (input: {
+  readonly label: string;
+  readonly pullHeadCalls?: readonly (string | "unreadable")[];
+  readonly push?: () => {
+    readonly stdout: string;
+    readonly stderr: string;
+    readonly status: number;
+    readonly timedOut: boolean;
+  };
+}): Promise<ParityObservation> => {
+  const h = createParityHarness({
+    label: input.label,
+    ...(input.push === undefined ? {} : { push: input.push }),
+    ...(input.pullHeadCalls === undefined ? {} : { pullHeadCalls: input.pullHeadCalls }),
+    transport: readableParityTransport({
+      openPulls: [resumePull(input.pullHeadCalls?.[0] ?? RESUME_LOCAL_HEAD)],
+    }),
+  });
+  try {
+    seedDispatchLane(h.store, {
+      ref: "GH-347",
+      sessionId: "ses-347",
+      state: "terminal",
+      lastToken: "pr-open",
+      lastOutcome: "completed",
+    });
+    await h.run(["dispatch", "GH-347", "--resume-prompt", "continue the merge", "--json"]);
+    return h.observe();
+  } finally {
+    h.dispose();
+  }
+};
+
+/** Equal heads since the recording: the act is idempotent with zero pushes. */
+export const resumePrOpenEqualHeads = (): Promise<ParityObservation> =>
+  resumeVariant({ label: "resume-pr-open-equal-heads" });
+
+/** Local ahead since the recording: exactly one push reconciles, then pr-open. */
+export const resumePrOpenLocalAhead = (): Promise<ParityObservation> =>
+  resumeVariant({
+    label: "resume-pr-open-local-ahead",
+    pullHeadCalls: [RESUME_REMOTE_HEAD, RESUME_REMOTE_HEAD, RESUME_LOCAL_HEAD],
+    push: () => ({ stdout: "", stderr: "", status: 0, timedOut: false }),
+  });
 
 /** No recorded lane: an explicit fresh spawn carrying the operator's text. */
 export const resumeWithoutLane = async (): Promise<ParityObservation> => {

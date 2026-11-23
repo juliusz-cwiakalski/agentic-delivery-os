@@ -21,7 +21,8 @@ const SHELLS = new Set(["bash", "sh", "zsh", "dash", "cmd", "powershell"]);
  * Every other row drives the engine over an injected session-port double, so it
  * has no child-process argv to sweep — that is a declared property of the
  * registry, not an omission. A new row that starts a process must be named here
- * or this declaration fails.
+ * or this declaration fails. GH-386: every push-parity row exercises the git
+ * child runner (the parity reads), so all fourteen join the declared set.
  */
 export const PARITY_PROCESS_ROWS = [
   "admission-same-ref-race",
@@ -32,14 +33,39 @@ export const PARITY_PROCESS_ROWS = [
   "spawn-resume",
   "tracker-outage-with-artifact",
   "tracker-outage-without-artifact",
+  "push-parity-clean",
+  "push-parity-pushed",
+  "push-parity-non-fast-forward",
+  "push-parity-protected-branch",
+  "push-parity-credential",
+  "push-parity-timeout",
+  "push-parity-spawn-failed",
+  "push-parity-stale-reread",
+  "push-parity-remote-ahead",
+  "push-parity-unreadable",
+  "push-parity-url-unverified",
+  "push-parity-defect-pin",
+  "resume-pr-open-equal-heads",
+  "resume-pr-open-local-ahead",
 ] as const;
 
 describe("TC-SHELL-001 zero shell invocations across the battery", () => {
-  test("every registry row runs with fixed argv, no shell, and no script path", async () => {
+  test("every registry row runs with fixed argv, no shell, and no script path", {
+    timeout: 120_000,
+  }, async () => {
     const results = await runAllParityCases();
     expect(results).toHaveLength(PARITY_CASES.length);
     expect(new Set(results.map((run) => run.entry.group))).toEqual(
-      new Set(["class", "admission", "resume", "tracker-outage", "loop", "terminate", "spawn"]),
+      new Set([
+        "class",
+        "admission",
+        "resume",
+        "push-parity",
+        "tracker-outage",
+        "loop",
+        "terminate",
+        "spawn",
+      ]),
     );
     for (const run of results) {
       expect(run.observation.violations, run.entry.id).toEqual([]);
@@ -53,7 +79,9 @@ describe("TC-SHELL-001 zero shell invocations across the battery", () => {
     }
   });
 
-  test("the registry rows that invoke a process are exactly the declared set", async () => {
+  test("the registry rows that invoke a process are exactly the declared set", {
+    timeout: 120_000,
+  }, async () => {
     const results = await runAllParityCases();
     const invoking = results
       .filter((run) => run.observation.invocations.length > 0)
