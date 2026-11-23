@@ -111,6 +111,7 @@ Because the dispatch engine classifies `pr-open` from pull-request truth alone �
 - **Remote head ahead of local** (a state a fast-forward push cannot resolve): the typed failure of F-3.
 - **`pr-open-unverified`** (open pull request, URL unresolved): the precondition is inapplicable — there is no pull-request head fact to compare — and the token's delivered semantics are unchanged (DEC-5). The residual risk is declared in RSK-3.
 - **Resume**: the precondition binds every classification that reaches arm 8, including the terminal classification of a resumed recorded `pr-open` lane; the act is idempotent on an already-parity branch.
+- **Composition scoping**: the precondition binds classifications in compositions that supply the parity/ensure-push capability; a composition that supplies no parity facts (the daemon lane) is outside the precondition's bind — the daemon lane composes no ensure-push capability and keeps the delivered arm-8 classification, its delivered arm-8 semantics standing until it composes the port.
 - **Session posture**: the act is post-session and pre-classification. It never spawns, resumes, or restarts a session, consumes no restart ordinal, and starts no second session. The stall ladder is unchanged: its artifact-derived verdicts are restart-decision facts, not classifications, and the precondition binds the derivation only.
 - **Act contract**: fixed argv, literal non-shell child process, bounded child timeout of 60 000 ms (the delivered git-mutation-seam budget, injectable, no new configuration key), one attempt per classification with no retry ladder — the next dispatch or an operator resume resolves a failed act. Credentials are the checkout's ambient git credential chain; no credential is resolved, read, or stored by the engine beyond what the checkout already uses.
 
@@ -191,12 +192,13 @@ Flow 5: Resume of a recorded pr-open lane
 - Extending parity enforcement to the bash fallback, at or before its retirement.
 - Richer push-rejection cause disclosure (for example, distinguishing authentication rejection from non-fast-forward) if operator evidence shows the single `push:failed` verdict is insufficient.
 - Re-evaluating the `pr-open-unverified` residual once URL resolution improves.
+- Closing the daemon-lane residual: the twice-observed defect pattern remains possible on the daemon lane until it composes the parity/ensure-push port (RSK-7).
 
 ## 8. INTERFACES & INTEGRATION CONTRACTS
 
 ### 8.1 REST / HTTP Endpoints
 
-N/A. No HTTP surface changes. The engine's provider reads are unchanged in count and kind; the parity comparison consumes the delivery-request detail read the derivation already performs at arm 8.
+N/A. No HTTP surface changes. The parity evaluation performs its own bounded provider reads: the precondition evaluation performs one fresh bounded open-request list read (fail-closed, the same read class and resolution semantics as the derivation's pull-truth read), and, after a performed push, one fresh local+remote read pair for the parity re-read; an unreadable parity read resolves `state-unverified` (never a false `pr-open`).
 
 ### 8.2 Events / Messages
 
@@ -250,6 +252,7 @@ N/A. No new event or record kind. The attempt, lane, divergence, and handover re
 | RSK-4 | Provider head-read staleness immediately after a push misclassifies a good delivery | M | L | The parity read is the delivered bounded read shape; a readable inequality type-fails honestly and is resolved by the next dispatch; an unreadable parity read resolves `state-unverified`, never a false `pr-open` | L |
 | RSK-5 | Typed lane and bash fallback drift further apart | L | M | The divergence is declared in the feature specifications' fallback rows and the operations guide (F-5); the fallback's documented status and retirement path are unchanged | L — documented, never silent |
 | RSK-6 | Concurrent pushes to the same branch interleave | L | L | A rejected interleaved push is the typed failure; git's own fast-forward rejection is the arbiter; the next dispatch reconciles | L |
+| RSK-7 | The daemon lane composes no parity/ensure-push capability, so the twice-observed unpushed-evidence defect pattern remains possible there until it composes the port | M | M | The exemption is declared, not silent: this spec (F-1 composition scoping, AC-F1-1, §7.3) and the feature page scope the precondition to compositions that supply the capability; the daemon lane's composition is the follow-up surface that closes the residual | M — declared, not closed: the pattern remains possible on the daemon lane until it composes the parity/ensure-push port |
 
 ## 12. ASSUMPTIONS
 
@@ -308,7 +311,7 @@ None. The two judgment calls the ticket left open are declared here with their b
 
 | ID | Criterion | Linked |
 |----|-----------|--------|
-| AC-F1-1 | **Given** a change whose session records the `pr_creation` phase and commits the PR URL, **when** the dispatch reaches terminal classification with an open pull request whose URL is resolved, **then** the branch's local head equals the pull request's head before the `pr-open` token derives — a local-ahead state is reconciled by one bounded fast-forward push and a parity re-read, and an already-equal state performs no push act | F-1, NFR-1 |
+| AC-F1-1 | **Given** a change whose session records the `pr_creation` phase and commits the PR URL, **when** the dispatch reaches terminal classification with an open pull request whose URL is resolved, **then**, for classifications in compositions that supply the parity facts, the branch's local head equals the pull request's head before the `pr-open` token derives — a local-ahead state is reconciled by one bounded fast-forward push and a parity re-read, and an already-equal state performs no push act — while compositions without the capability keep the delivered classification | F-1, NFR-1 |
 | AC-F1-2 | **Given** the typed lane, **when** any dispatch would classify `pr-open` while the local head is ahead of the pull request's head, **then** that outcome is impossible by construction — the fixture pins the divergent `pr-open` classification as a defect: either the push reconciles parity first or the result is the typed failure, never a divergent `pr-open` | F-1, DM-1 |
 | AC-F2-1 | **Given** a classification that evaluated the parity precondition, **when** the attempt record and machine envelope are rendered, **then** the attempt carries the `push:<verdict>` evidence reference reserved ahead of the evidence slice and the envelope carries the additive optional `push` block naming `verdict`, `localHead`, `remoteHead`, and `parity`, while text mode stays the four-key contract | F-2, DM-1, DM-2, NFR-4, NFR-5 |
 | AC-F3-1 | **Given** parity unmet and a push that is rejected, fails, times out, or leaves parity unmet, **when** the dispatch classifies, **then** the result is `failed` with outcome `failed` at exit 1 — never `pr-open` — with exactly one attempt record, comparison not-applicable with reason `push-parity-unmet`, the PR URL retained in both output modes, and no new token, error identity, or domain kind | F-3, DM-3, NFR-1 |
@@ -408,6 +411,7 @@ Bounded single-line members; whole block within the delivered 256-character disp
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-23 | @spec-writer (GLM-5.3-Flash) | Initial specification |
+| 1.1 | 2026-11-23 | @coder (GLM-5.3-Flash) | Review iteration-1 remediation: F-1 daemon-lane composition scoping (§5.1 declared behavior, §17 AC-F1-1, §7.3 residual, §11 RSK-7) + F-2 parity-read declaration (§8.1) |
 
 ---
 
@@ -425,7 +429,7 @@ Bounded single-line members; whole block within the delivered 256-character disp
 - [x] `owners` has at least one entry
 - [x] `status` is "Proposed"
 - [x] All sections present in order (1-25 + guidelines + checklist)
-- [x] ID prefixes consistent and unique (F-1..F-5, DM-1..DM-3, NFR-1..NFR-5, RSK-1..RSK-6, DEC-1..DEC-6, AC-F*-*, G-1..G-5, NG-1..NG-8)
+- [x] ID prefixes consistent and unique (F-1..F-5, DM-1..DM-3, NFR-1..NFR-5, RSK-1..RSK-7, DEC-1..DEC-6, AC-F*-*, G-1..G-5, NG-1..NG-8)
 - [x] Acceptance criteria reference at least one F-/DM-/NFR- ID and use Given/When/Then
 - [x] NFRs include measurable values
 - [x] Risks include Impact & Probability
