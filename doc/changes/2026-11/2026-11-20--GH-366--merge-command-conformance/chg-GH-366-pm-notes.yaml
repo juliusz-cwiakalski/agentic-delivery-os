@@ -13,7 +13,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-21T07:08:38.124Z }
   dor_check: { started: null, completed: 2026-11-22T20:00:52.044Z }
   delivery: { started: null, completed: 2026-11-23T02:08:39.651Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-23T02:37:23.699Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -88,8 +88,8 @@ open_questions: []
 blockers: []
 notes:
   - text: "Doc-sync (system_spec_update): no unresolved documentation gaps. The
-      reconciled current-truth pages state the delivered anchors exactly
-      (172 machine / 172 documented / 171 delivered / 71 allowlist /
+      reconciled current-truth pages state the delivered anchors exactly (172
+      machine / 172 documented / 171 delivered / 71 allowlist /
       BASELINE_ROWS.length + 138 / merge kind 12; legacy scans ban the outgoing
       pair; +138 published live, +136 legacy). Catch: TDR-0072/0073 standing
       text still asserted the authored 173/173/172/71/+139 as the delivered
@@ -104,17 +104,17 @@ notes:
       scanning the touched files + error-table-sync (172/172) + memory-lint 0."
     type: info
     date: "2026-11-23"
-  - text: "Retro (composer path-token fallback): with staged scope spanning
-      multiple plan phases, the commit primitive's fallback composition anchors
-      the subject on the FIRST staged path — when that path carries a
-      hyphenated non-GH id (doc/decisions/TDR-0072-…), commitlint correctly
-      rejects the invented tracker reference (commit.commitlint-failed). The
-      phase-summary composition (single-phase scope) and any change-folder-first
-      ordering compose clean subjects. Mitigation used here: real change-folder
-      notes recorded first so the anchor path is the GH-366 change folder — the
-      same family as the operator's documented subject-length hazard. A
-      composer fix (sanitize path-derived tokens in fallback subjects) is
-      product work for a future ticket, not this change."
+  - text: "Retro (composer path-token fallback): with staged scope spanning multiple
+      plan phases, the commit primitive's fallback composition anchors the
+      subject on the FIRST staged path — when that path carries a hyphenated
+      non-GH id (doc/decisions/TDR-0072-…), commitlint correctly rejects the
+      invented tracker reference (commit.commitlint-failed). The phase-summary
+      composition (single-phase scope) and any change-folder-first ordering
+      compose clean subjects. Mitigation used here: real change-folder notes
+      recorded first so the anchor path is the GH-366 change folder — the same
+      family as the operator's documented subject-length hazard. A composer fix
+      (sanitize path-derived tokens in fallback subjects) is product work for a
+      future ticket, not this change."
     type: retro
     date: "2026-11-23"
   - text: "Aggregate gate (plan phase 7 release obligation) — verified after the
