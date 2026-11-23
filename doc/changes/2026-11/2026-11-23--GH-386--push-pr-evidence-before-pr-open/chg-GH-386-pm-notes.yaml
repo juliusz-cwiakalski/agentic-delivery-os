@@ -12,7 +12,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-23T15:12:02.888Z }
   delivery_planning: { started: null, completed: 2026-11-23T15:27:17.435Z }
   dor_check: { started: null, completed: 2026-11-23T15:36:21.458Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-23T20:27:04.416Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -60,6 +60,41 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Delivery complete (COMPLETED_ALL, @coder report 2026-11-23).
+      Per-plan-phase evidence for DoD: phase 1 (planning, TDR-0076 reconciled)
+      commit 2182e05e verified pre-existing, doc/decisions clean; phase 2
+      (adapters push seam) commit 2255dfae, no-shell 14/0 + behaviour 7935/0;
+      phase 3 (contracts, arm-8 precondition, failure row, closure pins) commit
+      3de8779b, truth-derivation 35/0 + contract-invariance 15/0 + token-home
+      7/0 + type probes clean + consumers 49/0; phase 4 (ensure-push act,
+      evidence, envelope) commit aa39ec45, new suites 17/0 + 8/0 + 4/0 + goldens
+      8/0, behaviour 7971/0, conformance 161/0; phase 5 (registry + real-path
+      sweep) commit b00fef32, dispatch-parity-push 19/0, conformance 182/0,
+      sweep 13/0; phase 6 (changeset + docs) commit a9121ba4, changeset checks
+      7/0, structure+checks 3656/0; gate-driven format polish commit f9f8d44f
+      (format-only, 4 files). Aggregate: pnpm check exit 0 on final tree —
+      12,640 pass / 0 fail across 1,509 files. TC-RELEASE-001 red in phases 2-5
+      by plan ordering, green from phase 6 (final tree green)."
+    type: info
+    date: 2026-11-23
+  - text: "Delivery deviations, disclosed and accepted: (a) TC-FAIL-002 golden pin
+      landed as a committed inline constant inside in-scope
+      tests/golden/dispatch-errors.test.ts instead of a new
+      tests/fixtures/dispatch/golden/errors/ file — commit staging refuses
+      untracked out-of-scope files; same byte discipline; rode phase-5 commit;
+      flagged for @reviewer awareness. (b) Companion invariant fixtures per repo
+      standards: content-inventory (+inventory.json), harness-imports
+      (node:child_process site), closeout-contracts-git re-anchor,
+      v1-contract-inventory.json. (c) FLAG FOR REVIEW: scanner-driven identity
+      rename provider.head.unresolved -> pr.head-unresolved (error-table-sync S1
+      rule; error-table-sync green, 172 entries) — touches a delivered error
+      identity name; spec says 'adds no error identity'; a rename is not an
+      addition but @reviewer must rule on it. (d) phase-3 barrel registration in
+      contracts/index.ts (mechanical export requirement, disclosed scopeDrift).
+      (e) DoR finding 1 clause added to spec NG-2/DM-3 + dispatch-engine page
+      (PM-directed, outside declared file list)."
+    type: info
+    date: 2026-11-23
   - text: "Companion decision record authored:
       doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md (id
       verified free — highest was TDR-0075; index row added to
