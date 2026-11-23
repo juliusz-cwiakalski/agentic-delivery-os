@@ -15,7 +15,7 @@ phases:
   delivery: { started: null, completed: 2026-11-23T02:08:39.651Z }
   system_spec_update: { started: null, completed: 2026-11-23T02:37:23.699Z }
   review_fix: { started: null, completed: 2026-11-23T03:57:46.167Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-23T04:57:15.965Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -87,6 +87,39 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Quality gates (phase 9) — verdicts. **Range lint: PASS** —
+      `./scripts/lint-commit-range.sh --base main-tools`: base resolved
+      merge-base 7cc71cd1 (origin/main-tools), head 22a5f628, **44 commits in
+      range, 0 offending, 0 rules hit, mode none**; binary
+      node_modules/.bin/commitlint, origin repository-local. **Aggregate gate:
+      GATE_EXIT=0** on the final tree (`tmp/pnpm-check-gates-2.log`: 12 544
+      tests / 1 504 files, 0 fail lines, every check executed — lint, format,
+      typecheck, boundaries, memory, forbidden-literals, namespace-tree,
+      prompt-conformance, help-guide-coverage, exports-parity). Provenance: the
+      first gates run (tmp/pnpm-check-gates.log, GATE_EXIT=1) had exactly one
+      failure — TC-PROJ-021 (projects-state placement), a 5000ms timeout that
+      ran 6750ms under the parallel battery, NOT an assertion failure and not a
+      merge-surface test; it passed in isolation in 2.01s and the immediate full
+      re-run was green — recorded as ambient-load environment-flake (the same
+      class the delivery already disclosed), with the green re-run as the
+      authoritative verdict."
+    type: info
+    date: "2026-11-23"
+  - text: "DoD verification (phase 10) — PM check before the checkpoint: (1) all
+      preceding phases recorded complete via `phase list` (8/9 at review_fix
+      landing; registry verified each time); (2) plan-phase evidence: pm-notes
+      notes name every plan phase 1-7 with its landing commit (phase 2 2a0d28c4,
+      3 8620cc4a, 4 ebb5739a, 5 673c026e, 6 2f442664, 7 2a666383, phase 1's
+      records via the 9432bbd8/164a0927 lineage) and per-phase gate results,
+      plus the review-remediation commit 462878e4 (TC-MRG-055, candidate-set
+      grouping) with its suite results; the reviewer certified ALL_TASKS_DONE
+      over plan v17; (3) ACs: 27/27 covered and green — review iteration 2 PASS
+      certified DOD-1 over the fixed state; (4) current-truth docs: doc-sync's
+      final re-run reports no unresolved documentation gaps (all seven residual
+      sub-gaps reconciled, validation suites green); (5) quality gates green as
+      recorded above. No gaps found; no phase reopen."
+    type: info
+    date: "2026-11-23"
   - text: "Re-review iteration 2: **PASS** — 0c/0maj/0min; 2 info no-action (F-5:
       the duplicate pre-check also fires in unpinned same-ref/unreadable overlap
       states where F-1 step 2's letter names head-unresolved — spec-internal
