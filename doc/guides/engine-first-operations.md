@@ -3,11 +3,11 @@ ados_distribution: redistributable
 id: GUIDE-ENGINE-FIRST-OPERATIONS
 status: Current
 created: 2026-11-18
-last_updated: 2026-11-20
+last_updated: 2026-11-23
 owners: ["engineering"]
 summary: "Operating guide for engine-first delivery: the daily routine, the four per-reference inspection queries, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293", "GH-348", "GH-354"]
+  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388"]
   related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058"]
 ---
 
@@ -26,10 +26,15 @@ The regular path is the engine:
 
 ```
 dispatch <ref>                 # one attempt: admit, spawn or resume, classify, record
-verify gates <ref>             # the merge-applicable battery for the head
-merge <ref> --dry-run          # evaluate and record the verification, land nothing
+verify gates <ref>             # evaluate the battery and persist its verification record
 merge <ref>                    # land one verified squash commit
 ```
+
+`verify gates <ref>` followed by `merge <ref>` is the native merge sequence: a
+clean PR lands with no intermediate step, because the verification `verify
+gates` prints is the record `merge` consumes. `merge --dry-run` is an
+evaluation-only surface — it appends a verification record and lands nothing —
+and it is never a required pre-step.
 
 `dispatch <ref>` appends exactly one real `pilot` attempt record per delivery with
 its outcome and corroboration. The lifecycle merge and closeout run through those

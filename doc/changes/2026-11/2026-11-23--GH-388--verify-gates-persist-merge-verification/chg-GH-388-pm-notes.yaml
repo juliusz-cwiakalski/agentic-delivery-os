@@ -17,7 +17,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-23T11:26:16.010Z }
   dor_check: { started: null, completed: 2026-11-23T11:34:09.196Z }
   delivery: { started: null, completed: 2026-11-23T13:06:30.407Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-23T13:14:27.250Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -448,4 +448,27 @@ notes:
       change needing a lifecycle-fail arm must extend the fixture harness
       explicitly in its plan."
     type: info
+    date: "2026-11-23"
+  - text: "System-spec-update phase outcome: @doc-syncer reconciled ALL FOUR
+      declared targets in-change, zero residual gaps. (1)
+      feature-verify-gates.md — shipped-run producer set, identity rule
+      (projections never bind identity), zero-read append, shipped-default
+      boundary for declared merge.gates (fail-closed, deferred parity); (2)
+      feature-merge-verify-deploy.md — two-producer envelope under total
+      full-declared-sequence identity, recorded battery verdicts live (recorded
+      attribution / per-gate family / tracker-freshness), native sequence
+      verify-gates → merge with no intermediate step, remediation test-pinned;
+      (3) engine-first-operations.md — THE ticket-named blocked doc: daily
+      routine is now dispatch → verify gates → merge, dry-run removed from the
+      routine and declared evaluation-only (repo-wide grep confirms no
+      current-truth doc still presents dry-run as required); (4)
+      test-spec-merge-verify-deploy.md — four new GH-388 coverage rows
+      (persistence, native landing, identity/recorded verdicts, non-regression).
+      Validation: distribution guard PASS (96 docs, no drift; guide keeps
+      ados_distribution: redistributable), doc-conformance 61/0, banned-phrase
+      scan clean, both feature specs' frontmatter gain GH-388 + last_updated.
+      Doc edits in working tree riding this phase transition.
+      spec_coverage_gaps: none (both areas had Current specs — reconciliation,
+      not authoring)."
+    type: decision
     date: "2026-11-23"

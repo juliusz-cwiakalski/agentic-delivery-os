@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-18
+last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
-summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the shipped run's fenced, post-append-verified persistence of the EVT-1 gate-verification record with byte-identical verdicts and the full-declared-sequence gate-set identity that binds its consumption, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338", "GH-388"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
@@ -41,6 +41,12 @@ document is absent, performed with or without a declaration and adding no read o
 any other configuration layer. It appends exactly one fenced gate-verification
 record per full battery evaluation that is not refused for narrowed suite
 breadth; a refused run appends neither the record nor the capsule event. The
+shipped production composition supplies the delivered fenced,
+post-append-verified merge-ledger append as the runtime's append seam, so a
+shipped `verify gates` run persists exactly one gate-verification record per
+full battery evaluation that is not refused for narrowed suite breadth. The
+append is silent — no human line, no machine field, and no exit-code change —
+and adds no provider or configuration read. The
 report schema is `delivery.verify-gates.v1`; the envelope schema remains
 `delivery.result.v1`. Both emitted report types carry two additive
 optional root fields, present together or absent together: `suiteBreadth` (the
@@ -226,7 +232,8 @@ CI-workflow read, at most one bounded open-PR page, one resolved detail read,
 one check-run page, and one work-item read per invocation. There are no
 retries and no pagination. The only write is one appended gate-verification
 record per full battery evaluation that is not refused for narrowed suite
-breadth; a refused run writes nothing. The map's one bounded resolution attempt
+breadth; a refused run writes nothing, and the append itself adds zero
+provider and zero configuration reads on every path. The map's one bounded resolution attempt
 is the added access; on the single-target path a declaration that reaches the
 battery reads the same seven enumerable sources as an undeclared run, a
 structural declaration refuses before any gates source read, an unmirrored or
@@ -478,7 +485,18 @@ evidence element shape), `verify-gates-members-bounds.test.ts` (eight-member
 bound, byte bound, untruncated blockers), `verify-gates-review-flow.test.ts`
 (run identity, one verdict per member, duplicate observation), and
 `verify-gates-read-budget.test.ts` (per-member read counts, no retry, no
-pagination). Contract and export facts are pinned by
+pagination). The shipped production composition's record persistence is proven
+by `tests/behaviour/verify-gates-persistence.test.ts`: the shipped `verify
+gates` run over injected transports and a real state store appends exactly one
+fenced, post-append-verified record per full battery evaluation on the
+single-target and member-projected paths, a narrowed-scope or configuration
+refusal appends neither record nor capsule event, an append fault fails the run
+as a classified state failure, and the golden, read-budget, and privacy
+extensions in `tests/golden/verify-gates.test.ts`,
+`tests/behaviour/verify-gates-read-budget.test.ts`, and
+`tests/behaviour/merge-privacy.test.ts` hold the surface byte-identical,
+budget-identical, and secret-free with the append wired. Contract and export
+facts are pinned by
 `tests/structure/cross-repository-contract.test.ts` and the report union by
 `tests/types/cross-repository-report.type-test.ts`; the two-member report
 goldens live under `tests/fixtures/cross-repository/goldens/`, and parity,
@@ -496,7 +514,12 @@ feature: suite breadth is declared in `verify.suite-map`, cited on a report as
 when the local declaration is narrower than the mirrored CI job, while the CI
 gate itself stays job-presence only.
 Review approval, unresolved threads, branch protection, and worktree
-cleanliness remain outside this surface. Merge execution is the merge
+cleanliness remain outside this surface. The verify-gates surface resolves the
+shipped default gate set: a repository-declared custom `merge.gates` set is a
+`merge`-side resolution, so a record produced by `verify gates` carries the
+shipped-default identity and the merge freshness envelope fail-closes
+`merge.gates-stale` with the set delta under a custom declared set.
+Merge execution is the merge
 transaction's surface, specified in
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
@@ -530,7 +553,7 @@ After the gate-verification state append, a full battery evaluation that is not 
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0006 — Work-Item Custom Fields and Comment-Omission Representation](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`; `doc/changes/2026-11/2026-11-23--GH-388--verify-gates-persist-merge-verification/`.
 
 ## Config-declared gate set and verification record
 
@@ -542,13 +565,28 @@ entry is evaluated and cited exactly like a built-in; `merge`-only entries never
 appear on the battery. The five built-in ids stay reserved and mandatory in any
 declared set.
 
+The verify-gates surface resolves the shipped default set. A repository that
+declares a custom `merge.gates` set is a `merge`-side resolution: a record
+produced by `verify gates` carries the shipped-default identity, and under a
+custom declared set the merge freshness envelope fail-closes
+`merge.gates-stale` with the set delta rather than consuming the record.
+
 Every full battery evaluation that is not refused for narrowed suite breadth
 appends exactly one fenced, post-append-verified EVT-1 gate-verification record
 (`merge.gate-verification`) carrying the change ref, head SHA, verification
 time, declared gate-set identity, per-gate verdicts with citations, and the
-tracker posture. Verdicts, citations, ordering, and
+tracker posture. The gate-set identity is the schema version plus the full
+declared entry-id sequence (the shipped-default sequence when undeclared),
+resolved by the one gate-set resolver shared with `merge`; a surface projection
+selects which entries a surface evaluates and which verdict records the
+payload carries, and never the identity the record binds. Because both record
+producers resolve through that one resolver, a verify-gates record and a
+`merge --dry-run` record carry identical identities under the shipped default.
+Verdicts, citations, ordering, and
 human bytes are pinned byte-identically by goldens; the append is the only
 output effect for every non-refused evaluation, and a narrowed refusal appends
 none. An append failure is a classified state failure, never a verdict
-change. `merge` consumes the record. See
+change, and never consumable evidence; the append adds zero provider and
+zero configuration reads. `merge` consumes the newest record through its
+freshness envelope under total equality of that identity. See
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
