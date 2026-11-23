@@ -14,7 +14,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-23T10:47:01.513Z }
   specification: { started: null, completed: 2026-11-23T11:02:35.617Z }
   test_planning: { started: null, completed: 2026-11-23T11:17:49.235Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-23T11:26:16.010Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -162,5 +162,27 @@ notes:
       verdicts, remediation equality, shipped-record privacy). No untestable AC
       — no spec reopen. Plan flags §8.1 regeneration temptation as top risk;
       delivery must not regenerate goldens."
+    type: decision
+    date: "2026-11-23"
+  - text: "Delivery-planning phase outcome: chg-GH-388-plan.yaml authored
+      (delivery.plan.v1, tier full, 6 phases), PM to run plan validate before
+      phase complete. Phase shape: (1) fixture family + PRE-CHANGE golden
+      capture at branch point (binding ordering: capture before composition
+      change); (2) the ONE production fix — production.ts supplies
+      appendVerification wired to appendMergeGateVerification with the delivered
+      fence factory, mirroring the merge composition's ports wiring (code-truth
+      anchors: production.ts:2507 no-op default, edge.ts:1438 seam default,
+      edge.ts:1562 pattern, fence factory production.ts:2006) — committed with
+      the new persistence suite TC-VGATES-071/072; (3) merge consumption +
+      remediation byte-pin (TC-MERGE-040/041/042); (4) identity +
+      recorded-verdict cells (TC-MERGE-043..046); (5) non-regression with
+      persistence live (TC-VGATES-073/074/075); (6) lockstep changeset five
+      fixed-group packages MINOR. Declared total scope: one production file
+      (packages/cli/src/production.ts), 1 new fixture module + capture entry +
+      captured goldens, 1 new suite + 8 delivered suites extended, 1 changeset.
+      Consistency check: no spec/test-plan inconsistency; doc edits excluded
+      (phase-7 @doc-syncer obligation per DEC-6); golden regeneration excluded
+      (byte mismatch is a change defect). edge.ts and the handler declared OUT
+      of scope; no new vocabulary/schema/reads; no option (B)."
     type: decision
     date: "2026-11-23"
