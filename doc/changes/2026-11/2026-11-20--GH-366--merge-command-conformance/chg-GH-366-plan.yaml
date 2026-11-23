@@ -7,6 +7,39 @@
 # `tasks` key and no progress log. Progress is a pm-notes `notes:` entry naming
 # the plan phase id, the commit hash and the gate result.
 #
+# REVISION — v17 (2026-11-23). Amends v16 in place; rides review iteration 1
+# (code-review/review-iter-1.yaml — findings F-1 major and F-2 minor, both
+# remediated on this plan version). No phase added, removed or moved; phase ids,
+# ordering, scopes, interactions and guard rails are otherwise unchanged.
+# (1) F-2 (minor) — the plan retained the authored identity anchors after the PM
+#     reconciliation corrected the spec and test plan: the live anchor sites are
+#     corrected to the delivered truth, exactly mirroring spec v2.6 / test plan
+#     v1.8 — machine 169 -> 172 (not 170 -> 173), delivered 168 -> 171 (not
+#     169 -> 172), arithmetic `BASELINE_ROWS.length + 138` (`+136` -> `+138`,
+#     not `+139`), allowlist 68 -> 71 and `merge` kind 9 -> 12 unchanged —
+#     covering the base facts (169 machine / 169 documented / 168 delivered at
+#     the same `e1ebc76c` anchor), the end-state tuple, the phrase-table rotation
+#     (`+138` published live, a live `169` total banned alongside the banned
+#     `167`), the phase-2 point-7 move, the pinned-count page comment, the
+#     phase-2 title/summary identity-move count (172) and the phase-7 allocation
+#     block. Historical revision notes stay as authored; the v16 note cites no
+#     identity numbers.
+# (2) F-1 (major) — the duplicate-open abort must group the CANDIDATE set (spec
+#     §5.1 F-1 step 5), not the accepted set: a same-ref pair with exactly one
+#     accepted entry must abort `merge.transaction-aborted` naming BOTH
+#     identities, never resolve, never land. The remediation is DECLARED here so
+#     the work is plan-traceable: remediation case TC-MRG-055 (the mixed
+#     duplicate pair — one accepted candidate + one refused candidate, e.g. a
+#     non-full-SHA head, sharing the resolved branch's source ref ⇒ the abort
+#     naming BOTH identities) joins phase 3, whose gate owns the duplicate-abort
+#     cells; the code remediation point is
+#     `packages/core/src/domain/merge-transaction.ts`'s duplicate grouping
+#     repointed from the accepted set to the candidate set (the ~:991 comment
+#     stating "its population is the accepted set" is the defect marker); the
+#     allocation moves 54 -> 55 cases with phase 3 at 20. Review iteration 1's
+#     F-1 and F-2 ride plan v17; the re-review certifies AC-F1-6 and DOD-1 over
+#     the fixed state.
+#
 # REVISION — v16 (2026-11-22). Amends v15 in place; discharges the plan halves
 # of readiness iteration 5 (readiness-review/readiness-iter-5.md). (1) Finding
 # 2 — the persistent plan half of iteration 4's finding 10: the provider-client
@@ -47,8 +80,11 @@
 # unchanged: seven phases, ids and ordering preserved.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:   ./chg-GH-366-spec.md (v2.4 — the merged-truth ruling as fixed by
-#             CEO-D-111 and amended by CEO-D-116 (2026-11-22): one bounded
+#   - Spec:   ./chg-GH-366-spec.md (v2.6 — the merged-truth ruling as fixed by
+#             CEO-D-111 and amended by CEO-D-116 (2026-11-22), with v2.6's
+#             numeric-anchor reconciliation (2026-11-23) restating the identity
+#             arithmetic on the delivered tree's own outgoing-totals record
+#             (169/168 -> 172/171, `+136` -> `+138`): one bounded
 #             open-list read; the delivered merged-request read used verbatim
 #             with ONE additive optional member — the matched request
 #             identities — computed before its delivered selection and carried
@@ -73,11 +109,15 @@
 #             Appendix A the normative resolution order, Appendix B the refusal
 #             matrix and its act-required column, Appendix C the reserved
 #             decision records.)
-#   - Tests:  ./chg-GH-366-test-plan.md (54 cases in one stable TC-MRG family,
-#             54/54 cases allocated, 27/27 ACs covered, 10/10 NFRs, 8/8
+#   - Tests:  ./chg-GH-366-test-plan.md (v1.8: 54 cases in one stable TC-MRG
+#             family; this plan allocates 55 — the test plan's 54 plus the
+#             plan-v17 remediation case TC-MRG-055, declared with review
+#             iteration 1 finding F-1 and traceable to AC-F1-6 — so 55/55 cases
+#             allocated, 27/27 ACs covered, 10/10 NFRs, 8/8
 #             interface elements; §5.1 states the plan-phase allocation this plan
 #             adopts verbatim and every §5.2 detail restates it on a `Plan
-#             Phase(s)` line; §6 the five fixture families and the "no fixture
+#             Phase(s)` line, TC-MRG-055 the one plan-declared addition; §6 the
+#             five fixture families and the "no fixture
 #             writes a change record into a base checkout" rule; §7.1 the
 #             scenario-to-file map; §7.3 the meta-suite registration obligations;
 #             §7.4 the documentation surfaces; §8.3 OQ-TP-3 closed by §5.1. The
@@ -180,23 +220,25 @@
 # Per-phase test-case allocation is therefore declared in the comment block above
 # each phase, keyed by plan phase id.
 #
-# TC ALLOCATION INDEX — 54 of 54 cases, each with exactly one owning phase; the
+# TC ALLOCATION INDEX — 55 of 55 cases, each with exactly one owning phase; the
 # per-phase allocation is restated in each phase's comment block and matches
-# test plan §5.1 verbatim:
+# test plan §5.1 verbatim, with the one plan-declared addition TC-MRG-055 (plan
+# v17, review iteration 1 finding F-1's remediation case) owned by phase 3:
 #   phase 1 — none (planning; satisfied once the records are authored)
 #   phase 2 — 9 cases:  020, 021, 022, 026, 027, 039, 047, 048, 051
-#   phase 3 — 19 cases: 001, 002, 003, 004, 005, 006, 007, 008, 009, 030, 031,
-#                       036, 037, 042, 043, 049, 052, 053, 054
+#   phase 3 — 20 cases: 001, 002, 003, 004, 005, 006, 007, 008, 009, 030, 031,
+#                       036, 037, 042, 043, 049, 052, 053, 054, 055
 #   phase 4 — 17 cases: 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 023,
 #                       024, 025, 032, 034, 040, 050
 #   phase 5 — 3 cases:  028, 029, 045
 #   phase 6 — 5 cases:  033, 035, 041, 044, 046
 #   phase 7 — 1 case:   038
-# 9 + 19 + 17 + 3 + 5 + 1 = 54. Disjoint, no orphan, no case owned twice. Every
+# 9 + 20 + 17 + 3 + 5 + 1 = 55. Disjoint, no orphan, no case owned twice. Every
 # id above is a case in the change's single test-case family; the numeric
 # suffixes are the case numbers. Five cases joined at test plan v1.6 (051 to
 # phase 2; 052, 053 and 054 to phase 3; 050 to phase 4) and no surviving case
-# moved phase.
+# moved phase. TC-MRG-055 joins at plan v17 (review iteration 1 finding F-1's
+# remediation case, phase 3).
 #
 # GOLDEN MOVEMENT BY PHASE — discharges readiness iteration 2 finding 1 and test
 # plan OQ-TP-2. `tests/golden/merge.test.ts` byte-compares every committed
@@ -273,7 +315,9 @@
 # plan v1.6). Test plan v1.6 mirrors spec v2.4 / CEO-D-116 and moves NO
 # surviving case between phases: the allocation in the index above is
 # 0 / 9 / 19 / 17 / 3 / 5 / 1 = 54 (phase 1 carries none), five cases joined,
-# and no surviving case id, AC mapping or NFR mapping moved. The convergence
+# and no surviving case id, AC mapping or NFR mapping moved. (Historical, as at
+# test plan v1.6; plan v17 adds TC-MRG-055 to phase 3, so the live index reads
+# 0 / 9 / 20 / 17 / 3 / 5 / 1 = 55.) The convergence
 # carriers use the delivered read verbatim and decide from its ONE additive
 # optional matched-identities member (exactly one identity replays, the empty
 # set refuses `no-open-request` as a decidable zero, more than one aborts
@@ -330,22 +374,23 @@
 #     `phase complete` write in `tests/behaviour/phase-completion-convergence.test.ts`
 #     plus its support fixtures.
 #
-# IDENTITIES AND COUNTS (NFR-8, spec v2.4 — recounted UNCHANGED under the
-# owner's 2026-11-22 amendment, which adds no error identity). The
+# IDENTITIES AND COUNTS (NFR-8, spec v2.6 — the numeric-anchor reconciliation:
+# the base is stated from the delivered tree's own outgoing-totals record; the
+# recount adds no error identity). The
 # base is `origin/main-tools` at
-# `e1ebc76c` (GH-350 merged): **170** machine entries / **170** documented rows /
-# **169** delivered rows / **68** two-segment allowlist members / arithmetic
+# `e1ebc76c` (GH-350 merged): **169** machine entries / **169** documented rows /
+# **168** delivered rows / **68** two-segment allowlist members / arithmetic
 # `BASELINE_ROWS.length + 136`, with the `merge` kind at **9** concrete rows. This
-# change's end state is **173 / 173 / 172 / 71 / `+ 139`**, with the `merge` kind
+# change's end state is **172 / 172 / 171 / 71 / `+ 138`**, with the `merge` kind
 # at **12**. The acceptance inventory the target phases are verified against is
 # **27** ids (22 carried forward, AC-F2-8 and AC-F4-2 added in spec v2.0, AC-F1-6
 # added in v2.1, AC-F1-7 and AC-F3-7 added in v2.4); the identity arithmetic is
 # unaffected by that count. `167` is a
 # BANNED stale total (a legacy form), and the phrase table rotates: the outgoing
-# base `+ 136` joins the legacy forms and `+ 139` is published as the live
+# base `+ 136` joins the legacy forms and `+ 138` is published as the live
 # arithmetic. Every one of those numbers moves in one commit at the phase
 # boundary described below — a page that restates either pre-change total (167 or
-# 170) as a live one would assert a superseded value and must fail the scan. The
+# 169) as a live one would assert a superseded value and must fail the scan. The
 # effective gate-set identity is UNCHANGED:
 #   delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,owner-gate,squash-preflight,tracker-freshness]
 # The `ci-green` entry's surface moves; the entry-id sequence does not.
@@ -638,16 +683,16 @@ phases:
   #      codes (the exact-member list stays exact; the runtime family declaration
   #      is phase 5), so the containment proof does not regress at this boundary.
   #   7. The identity arithmetic move, ONE atomic commit: machine table and
-  #      documented table together on the synced base — 170 -> 173 machine
-  #      entries, 170 -> 173 documented rows, 169 -> 172 delivered rows, 68 -> 71
-  #      two-segment allowlist members, `BASELINE_ROWS.length + 136` -> `+ 139`,
+  #      documented table together on the synced base — 169 -> 172 machine
+  #      entries, 169 -> 172 documented rows, 168 -> 171 delivered rows, 68 -> 71
+  #      two-segment allowlist members, `BASELINE_ROWS.length + 136` -> `+ 138`,
   #      the `merge` kind 9 -> 12 — with the seven identity pin sites, the
   #      pinned-count pages and the phrase-table rotation (`+ 136` joins the
-  #      legacy forms, `+ 139` is published as live; `167` stays a banned stale
+  #      legacy forms, `+ 138` is published as live; `167` stays a banned stale
   #      total). The two-table sync check and the phrase-table check cannot be
   #      green with a split.
   #
-  # TC allocation (9 of 54): TC-MRG-020 (absent token names reference, variable
+  # TC allocation (9 of 55): TC-MRG-020 (absent token names reference, variable
   #   and operation), TC-MRG-021 (a credential condition is never the generic
   #   abort), TC-MRG-022 (an unresolvable work item names its own identity, ref
   #   and read operation), TC-MRG-026 (no row claims retryable over an
@@ -727,9 +772,9 @@ phases:
   #   bun run scripts/checks/error-table-sync.ts
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Refusal identities and the diagnostics contract: three additive rows, the narrowed non-retryable abort row with the landing faults routed to their own identities, named causes, the three rendered fields and the 173-identity move"
+    title: "Refusal identities and the diagnostics contract: three additive rows, the narrowed non-retryable abort row with the landing faults routed to their own identities, named causes, the three rendered fields and the 172-identity move"
     kind: delivery
-    summary: "refusal identities, named causes and the 173-identity move"
+    summary: "refusal identities, named causes and the 172-identity move"
     scope:
       files:
         # --- contract: the error table, its documented counterpart and the row
@@ -738,8 +783,8 @@ phases:
         - packages/core/src/contracts/merge.ts
         - packages/core/src/contracts/index.ts
         - doc/spec/features/feature-result-contract.md
-        # The pinned-count pages whose totals this move restates (170 -> 173,
-        # the merge row count 9 -> 12, `+ 136` -> `+ 139`).
+        # The pinned-count pages whose totals this move restates (169 -> 172,
+        # the merge row count 9 -> 12, `+ 136` -> `+ 138`).
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
         - doc/spec/features/feature-install-lifecycle.md
@@ -993,7 +1038,33 @@ phases:
   #      register any new export (seam member, constant, resolved-input type) in
   #      THIS phase.
   #
-  # TC allocation (19 of 54): TC-MRG-001 (base-checkout invocation reports and
+  # REVIEW ITERATION 1 REMEDIATION (code-review/review-iter-1.yaml, F-1, major;
+  #   rides plan v17; declared here so the work is plan-traceable). The
+  #   duplicate-open abort groups the CANDIDATE set (spec §5.1 F-1 step 5), not
+  #   the accepted set: a same-ref pair with exactly one accepted entry must
+  #   abort `merge.transaction-aborted` naming BOTH identities, never resolve,
+  #   never land. The delivered grouping in
+  #   `packages/core/src/domain/merge-transaction.ts` (in scope below) is built
+  #   from the accepted set instead — the defect marker is the step-5 code
+  #   comment at ~:991 stating "its population is the accepted set" — so this
+  #   phase repoints the duplicate grouping from the accepted set to the
+  #   candidate set once the resolved branch is known: more than one candidate
+  #   whose provider-asserted source ref equals the resolved branch refuses the
+  #   abort naming EVERY such candidate's identity. The accepted-set check is
+  #   subsumed (a both-accepted pair still aborts, the abort still wins over
+  #   distinct-refs ambiguity, and the per-path budget is unchanged: exactly one
+  #   provider request, the open list, page-decided after the bounded local
+  #   reads). Remediation case TC-MRG-055 joins THIS phase's allocation (its
+  #   gate owns the duplicate-abort cells): the mixed duplicate pair — one
+  #   accepted candidate + one refused candidate (e.g., a non-full-SHA head)
+  #   sharing the resolved branch's source ref ⇒ `merge.transaction-aborted`
+  #   naming BOTH identities, never resolving, never landing — with the paired
+  #   control that a distinct-ref disagreement still resolves. The oracle cells
+  #   live beside the delivered duplicate-open cells in
+  #   `tests/behaviour/merge-production-composition.test.ts`, already in scope.
+  #   No other phase, scope or guard rail moves with this remediation.
+  #
+  # TC allocation (20 of 55): TC-MRG-001 (base-checkout invocation reports and
   #   verifies the request head), TC-MRG-002 (control: the pre-fix branch source
   #   reproduces the base-tip verdict), TC-MRG-003 (change-branch checkout at the
   #   request head lands once there), TC-MRG-004 (no usable declaration; the
@@ -1034,7 +1105,11 @@ phases:
   #   planted-member scan must find one; NG-8), TC-MRG-054 (closeout consumes
   #   neither the additive member nor any count derived from it over the empty,
   #   singleton, multi and member-absent shapes — ranked behaviour and output
-  #   byte-identical).
+  #   byte-identical), TC-MRG-055 (the F-1 remediation case: the mixed duplicate
+  #   pair — one accepted candidate + one refused candidate, e.g. a non-full-SHA
+  #   head — sharing the resolved branch's source ref refuses
+  #   `merge.transaction-aborted` naming BOTH identities, never resolving,
+  #   never landing).
   #
   # TC-MRG-009's second half is DM-1's load-bearing claim and gets a real oracle:
   #   `tests/behaviour/phase-completion-convergence.test.ts` writes the pm-notes
@@ -1370,7 +1445,7 @@ phases:
   #      open-page-only run that reaches the merge decision spends TWO provider
   #      requests — the open list plus this single-request mergeability read.
   #
-  # TC allocation (17 of 54): TC-MRG-010 (one failing required check names check,
+  # TC allocation (17 of 55): TC-MRG-010 (one failing required check names check,
   #   gate and reason), TC-MRG-011 (all-green dry run verifies and the merge
   #   lands once, distinct from red), TC-MRG-012 (queued/running refuses with the
   #   pending reason), TC-MRG-013 (a page for another SHA is never head
@@ -1553,7 +1628,7 @@ phases:
   #   - a mismatch control still drives an undeclared code to the containment
   #     identity, so the assertion cannot pass vacuously (AC-F4-1, AC-F4-2).
   #
-  # TC allocation (3 of 54): TC-MRG-028 (a gate refusal resolves to the declared
+  # TC allocation (3 of 55): TC-MRG-028 (a gate refusal resolves to the declared
   #   family row with the gate id preserved), TC-MRG-029 (a live mismatch control
   #   still reaches containment; no slot widening), TC-MRG-045 (deleting or
   #   flattening the runtime declaration fails the totality proof by name, with no
@@ -1624,7 +1699,7 @@ phases:
   #   `tests/fixtures/ports/v1-contract-inventory.json`), and
   #   `packages/core/src/contracts/index.ts` is scoped for the barrel re-export.
   #
-  # TC allocation (5 of 54): TC-MRG-033 (twenty runs byte-identical across one
+  # TC allocation (5 of 55): TC-MRG-033 (twenty runs byte-identical across one
   #   success and six refusals, changed-fact control differs), TC-MRG-035
   #   (machine and human output stay inside the declared bounds, omission marks
   #   asserted), TC-MRG-041 (no new record kind, key or event schema; shapes
@@ -1793,18 +1868,18 @@ phases:
   #     here in the same commit; no page is exempted.
   #   - The phrase table in `tests/checks/doc-conformance.test.ts` rotates with the
   #     pages: `167` stays a banned stale total, the outgoing `+ 136` joins the
-  #     legacy forms and `+ 139` is published as the live arithmetic; the other
+  #     legacy forms and `+ 138` is published as the live arithmetic; the other
   #     pinned-count carriers already declared move here too.
   #
-  # TC allocation (1 of 54): TC-MRG-038 (identities move 170 -> 173 with the
+  # TC allocation (1 of 55): TC-MRG-038 (identities move 169 -> 172 with the
   #   gate-set identity unchanged). 038 is OWNED BY THIS PHASE ONLY: its
   #   machine-table, documented-table, pin-site and phrase-table VALUES are
   #   authored in phase 2, and this phase re-runs 038 over the RECONCILED doc
   #   surfaces (reference page, feature spec, test specification, documented
-  #   table) for the same total (173 / 173 / 172 / 71 / `+ 139`, kind 12), the same
+  #   table) for the same total (172 / 172 / 171 / 71 / `+ 138`, kind 12), the same
   #   family, the unchanged identity string
   #   `delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,owner-gate,squash-preflight,tracker-freshness]`,
-  #   no survivor total (167, 164, 156) and no live `170` or `+ 136` claim. This
+  #   no survivor total (167, 164, 156) and no live `169` or `+ 136` claim. This
   #   phase edits no machine table; phase 2 edits no contract prose.
   #
   # Release obligations (declared as scope, not prose):

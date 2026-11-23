@@ -87,6 +87,37 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Review iteration 1: FAIL — 0 critical / 1 major / 1 minor / 1 nit /
+      1 info. Record: code-review/review-iter-1.yaml. The ruled shape verified
+      clean and independently reproduced (1,055 tests green across the
+      merge/golden/structure surface; the numeric-anchor reconciliation
+      VERIFIED from first principles: e1ebc76c = 170/+136 authored, GH-365
+      absorbed one baseline row → base 7cc71cd1 = 169/168/+135, +3 merge rows →
+      172/171/71/kind-12/+138). The major (F-1): the duplicate-open abort
+      groups the ACCEPTED set (packages/core/src/domain/merge-transaction.ts:994,
+      comment :991 says accepted) while spec §5.1 F-1 step 5 declares the
+      CANDIDATE set — a same-ref pair with exactly one accepted entry silently
+      resolves and lands; AC-F1-6's given-clause unmet in that member state;
+      the pinned cell is both-accepted only. F-2 (minor): the plan YAML retains
+      4 stale anchor sites (173/172-delivered/+139) — the reconciliation
+      corrected spec/test-plan only. F-3 (nit): unreachable evidence-free
+      replay fallback arm (merge-transaction.ts:941-947). F-4 (info): closeout
+      consumption proof is textual — acceptable, no action. Remediation: F-1
+      repoint to candidate set + mixed duplicate cell (one accepted + one
+      refused, same source ref → abort naming both, never landing); F-2 plan
+      v17 anchors + remediation declaration; F-3 remove if trivially dead else
+      document."
+    type: blocker
+    date: "2026-11-23"
+  - text: "Retro (AC given-clause member states): F-1 slipped through every
+      per-phase gate because the pinned duplicate cell covered only the
+      both-accepted member state — the AC's given-clause names the candidate
+      set, whose member states include mixed accepted/refused pairs, and no
+      carrier observed them. Lesson: each distinct member state of an AC's
+      given-clause set needs its own named carrier in the test plan; a single
+      representative cell certifies only the state it drives."
+    type: retro
+    date: "2026-11-23"
   - text: "Doc-sync (system_spec_update): no unresolved documentation gaps. The
       reconciled current-truth pages state the delivered anchors exactly (172
       machine / 172 documented / 171 delivered / 71 allowlist /

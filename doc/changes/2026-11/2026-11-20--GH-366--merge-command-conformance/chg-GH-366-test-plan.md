@@ -2,7 +2,7 @@
 id: chg-GH-366-test-plan
 status: Updated
 created: 2026-11-20T12:10:00Z
-last_updated: 2026-11-23T02:03:58Z
+last_updated: 2026-11-23T03:05:12Z
 owners: ["engineering"]
 service: delivery-os
 labels: [merge, conformance, m4-s3, diagnostics, error-table]
@@ -416,13 +416,15 @@ No criterion is TODO: each has a carrier in the delivered field or observable
 named in its scenario. §3.2 and §3.3 record interface and non-functional
 coverage separately so a reader can see which dimension of each AC is proven.
 
-Arithmetic of this revision: 54 scenarios (`TC-MRG-001` … `TC-MRG-054`) cover
+Arithmetic of this revision: 55 scenarios (`TC-MRG-001` … `TC-MRG-055`) cover
 27/27 functional criteria, 10/10 NFRs and 8/8 interface elements; 49 scenarios
 carry forward from v1.5, five are added in v1.6 (`TC-MRG-050`, the `AC-F1-7`
 carrier; `TC-MRG-051`, the `AC-F3-7` carrier; `TC-MRG-052`, the faulted-merged-
 read outcome carrier; `TC-MRG-053`, the counted-thread-query and
 no-suppression-option carrier; `TC-MRG-054`, the closeout-unchanged shared-read
-regression), and no existing case id is renumbered. Revision 1.6 restates
+regression), one is added in v1.9 (`TC-MRG-055`, the mixed-member duplicate-open
+cell — code review iteration 1, finding F-1), and no existing case id is
+renumbered. Revision 1.6 restates
 `TC-MRG-043` in place (its v1.5 oracle was untestable — readiness iteration 4,
 finding 4) and moves no surviving case to another phase.
 
@@ -435,7 +437,7 @@ finding 4) and moves no surviving case to another phase.
 | AC-F1-3 | No candidate can establish a declaration refuses `merge.branch-unresolved` at exit 1 with exactly one closed reason (`declaration-missing`, `declaration-unusable`, `declaration-disagrees`, `record-missing`, `record-invalid`, `record-unreadable`) by declared precedence, naming the candidate source ref, tree path and key, having spent the bounded open-request list read (its candidate is on the page, so no merged-request read is spent) and no other provider read, with zero landing calls | TC-MRG-004, TC-MRG-042 | Covered |
 | AC-F1-4 | More than three convention-matching open candidates, a saturated bounded page — evaluated **before** the candidate count, including a saturated page with zero convention-matching entries — two or more accepted candidates with distinct source refs, a candidate head that is absent or not a full hex SHA, or a primary open read with no match and a convergence attempt observing the **empty** matched-identity set (the additive member present and empty — a decidable zero), refuses `merge.request-unresolved` at exit 1 with `no-open-request`, `ambiguous-open-request` or `head-unresolved` accordingly, naming the change ref, the observed open count, the candidate count and, on the convergence path, the observed empty matched-identity set; a non-full-SHA head is never read. A convergence attempt whose read **faults** (transport, auth, payload) is a distinct outcome refusing the declared provider identity naming `operation=github-delivery-request-list`, never `no-open-request` / `merge.request-unresolved`, never folded into zero (carried by TC-MRG-052). A duplicate match is not a request reason: it refuses `merge.transaction-aborted` under `AC-F1-6` | TC-MRG-005, TC-MRG-006, TC-MRG-007, TC-MRG-052 | Covered |
 | AC-F1-5 | A record whose head is the base tip refuses `merge.gates-stale` at exit 1 recording both SHAs with zero landing calls | TC-MRG-008 | Covered |
-| AC-F1-6 | A primary open read with **no** match for the change's resolved branch and a convergence attempt over the delivered `findMergedDeliveryRequest({ workItemRef, limit: TRUTH_PROVIDER_LIMIT })`, used verbatim, exposing **exactly one** matched request identity with no readable change record anywhere, replays from provider truth at exit 0 with `replayed=true`, spending the open list and the one bounded merged-request read — three provider requests in all, counting the read's own delivered review-thread query — and **zero** change-record reads and zero record-read git invocations, reporting neither `declared-at-head` nor `merge.branch-unresolved`, and lands nothing; a convergence attempt exposing **more than one** matched identity, or more than one open request whose provider-asserted source ref equals the resolved branch, refuses `merge.transaction-aborted` at exit 1, `not_landed`, `retryable: false`, naming **each** matched identity and presenting **none** of them as *the* request, never silently choosing one; the **empty** set refuses `merge.request-unresolved` / `no-open-request` as a decidable zero *(owner AC 1, as amended by CEO-D-116)* | TC-MRG-049, TC-MRG-043, TC-MRG-053 | Covered |
+| AC-F1-6 | A primary open read with **no** match for the change's resolved branch and a convergence attempt over the delivered `findMergedDeliveryRequest({ workItemRef, limit: TRUTH_PROVIDER_LIMIT })`, used verbatim, exposing **exactly one** matched request identity with no readable change record anywhere, replays from provider truth at exit 0 with `replayed=true`, spending the open list and the one bounded merged-request read — three provider requests in all, counting the read's own delivered review-thread query — and **zero** change-record reads and zero record-read git invocations, reporting neither `declared-at-head` nor `merge.branch-unresolved`, and lands nothing; a convergence attempt exposing **more than one** matched identity, or more than one open request whose provider-asserted source ref equals the resolved branch, refuses `merge.transaction-aborted` at exit 1, `not_landed`, `retryable: false`, naming **each** matched identity and presenting **none** of them as *the* request, never silently choosing one; the **empty** set refuses `merge.request-unresolved` / `no-open-request` as a decidable zero *(owner AC 1, as amended by CEO-D-116)* | TC-MRG-049, TC-MRG-043, TC-MRG-053, TC-MRG-055 | Covered |
 | AC-F1-7 | A resolved request whose open-list entry carries **no** mergeability fields and whose delivered single-request read reports the request mergeable with a clean mergeable state — every required check green, tracker gate fresh — lands once at the resolved head: the landing decision obtains mergeability from the **single-request read** of the request it located on the open-list page, and `merge.mergeability-unknown` is never refused for the list entry's missing fields; an unknown-recovery re-read re-reads the **single request**, never the list; a fault of the single-request read resolves to the declared provider identity naming `operation=github-delivery-request-detail` *(CEO-D-116, folded finding LF-1)* | TC-MRG-050 | Covered |
 | AC-F2-1 | One failing required check refuses `merge.gate.<gate-id>.failed` at exit 1 naming the check, the gate and the reason, zero landing calls *(owner AC 2, regression (b))* | TC-MRG-010 | Covered |
 | AC-F2-2 | One queued or running required check refuses on the same family naming the check with the pending reason *(owner AC 2)* | TC-MRG-012, TC-MRG-027 | Covered |
@@ -459,7 +461,7 @@ finding 4) and moves no surviving case to another phase.
 | AC-F5-3 | The new regression suites perform zero network calls and spawn no real child process; existing no-live-call guards stay green *(owner AC 4)* | TC-MRG-036 | Covered |
 
 **Counts.** 27 criteria, 27 with at least one carrier, 0 TODO. F-1 — 7
-criteria, carried by TC-MRG-001…008, 042, 043, 049, 050, 052, 053. F-2 — 8 criteria, carried by
+criteria, carried by TC-MRG-001…008, 042, 043, 049, 050, 052, 053, 055. F-2 — 8 criteria, carried by
 TC-MRG-010…019 and 044. F-3 — 7 criteria, carried by TC-MRG-020…027, 046, 047, 051.
 F-4 — 2 criteria, carried by TC-MRG-028, 029, 045. F-5 — 3 criteria, carried by
 TC-MRG-001, 030, 031, 036, 044. Non-functional — 10 NFRs, carried by TC-MRG-023,
@@ -596,15 +598,16 @@ string `merge` inside a code or the ref inside unrelated prose.
 | TC-MRG-052 | A faulted merged read refuses the provider identity and is never folded into zero | Negative | Integration | Behaviour (production composition) | High | AC-F1-4, AC-F3-5, API-3, NFR-2 |
 | TC-MRG-053 | The match-bearing attempt spends the read's own thread query and no suppression option exists | Corner Case | Integration, Contract | Behaviour (production composition) + Checks (source scan) | High | AC-F1-6, NFR-2, NFR-10, NG-8 |
 | TC-MRG-054 | Closeout ignores the additive member: ranked behaviour and output byte-identical | Regression | Integration, Contract | Behaviour (providers closeout) | High | RSK-12 (§16/§18/§19 shared read), NFR-2 |
+| TC-MRG-055 | A duplicate pair with one accepted and one refused member refuses the abort, naming both identities | Negative | Integration | Behaviour (production composition) | High | AC-F1-6, API-3, NFR-2 |
 
 **Plan-phase allocation (OQ-TP-3 closed).** Every case is allocated to exactly one
 `chg-GH-366-plan.yaml` phase, and each scenario detail restates it on a
 `Plan Phase(s)` line. Phase 1 (planning) carries no case. Phase 2 — TC-MRG-020,
 021, 022, 026, 027, 039, 047, 048, 051 (9). Phase 3 — TC-MRG-001, 002, 003, 004, 005,
-006, 007, 008, 009, 030, 031, 036, 037, 042, 043, 049, 052, 053, 054 (19). Phase 4 — TC-MRG-010,
+006, 007, 008, 009, 030, 031, 036, 037, 042, 043, 049, 052, 053, 054, 055 (20). Phase 4 — TC-MRG-010,
 011, 012, 013, 014, 015, 016, 017, 018, 019, 023, 024, 025, 032, 034, 040, 050 (17).
 Phase 5 — TC-MRG-028, 029, 045 (3). Phase 6 — TC-MRG-033, 035, 041, 044, 046 (5).
-Phase 7 — TC-MRG-038 (1). Total **54**, disjoint: 0 + 9 + 19 + 17 + 3 + 5 + 1 = 54.
+Phase 7 — TC-MRG-038 (1). Total **55**, disjoint: 0 + 9 + 20 + 17 + 3 + 5 + 1 = 55.
 Allocation follows the plan's own index where it exists; the cases added after
 v1.0 are allocated to the phase whose scope lands their last dependency
 (042/043/049 to the resolution phase — the plan's phase 3 already scopes the
@@ -612,7 +615,8 @@ convergence behaviour and the local record read — 044/046 to the
 report-and-golden phase, 045 to the declaration phase, 047/048 to the diagnostics
 phase; 051 to the diagnostics phase, whose rows carry the refusal remediations;
 052/053/054 to the resolution phase, whose scope carries the shared read, its
-fault outcome and the closeout fixture; 050 to the required-check phase, whose
+fault outcome and the closeout fixture; 055 to the resolution phase, alongside
+the other duplicate/convergence cells; 050 to the required-check phase, whose
 scope carries the landing decision). The plan revision that carries this
 test-plan revision restates the declared per-phase allocations to match; the
 case ids, not the plan's
@@ -3761,6 +3765,90 @@ exactly the expected code:
   provider-client current-truth page (`doc/spec/features/feature-provider-client-seeds.md`)
   is reconciled with the member in the same change (finding 10).
 
+#### TC-MRG-055 - A duplicate pair with one accepted and one refused member still aborts, naming both identities
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Plan Phase(s)**: 3
+**Related IDs**: F-1, AC-F1-6, API-3, NFR-2
+**Test Type(s)**: Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/merge-production-composition.test.ts` (new cell in the same production-composition duplicate family as the both-accepted duplicate-open sub-run)
+**Tags**: @backend, @api, @merge
+
+**Preconditions**:
+
+- The base-checkout fixture (worktree with no change folder, `HEAD` at the base
+  tip), the recording transport, the recording child-runner seam and an empty
+  state ledger — the same fixture family as the other duplicate cells.
+- **Two open delivery requests whose provider-asserted source refs both equal
+  the change's resolved branch** — the duplicate candidate pair — in a mixed
+  member state:
+  (i) an **accepted** member — declared branch equal to its source ref, a
+  full-SHA asserted head holding a genuinely readable record (the TC-MRG-001
+  fixture shape), so the pair's accepted half is a complete, resolvable
+  candidate;
+  (ii) a **refused** member — an asserted head that is **not a full hex SHA**,
+  constructed per the delivered head-guard fixture pattern (the TC-MRG-007
+  cell's input shape).
+- The page is unsaturated and holds exactly these two convention-matching
+  entries, so the duplicate rule — declared over the **candidate set** (spec
+  §5.1 F-1 step 5), not over the accepted subset — is the only rule in play:
+  no saturation refusal and no convergence attempt is reachable.
+
+**Steps**:
+
+1. Run `merge <ref> --json`.
+2. Read the exit code, `error.code`, `consequence` and `retryable`, and the
+   rendered `command`/`ref` fields.
+3. Scan the summary and evidence members for the two duplicate identities (both
+   same-ref source refs) and for any member presented as *the* request.
+4. Read the transport request log, the local record-read counter, the
+   child-runner invocation log, the state ledger and the landing count.
+
+**Expected Outcome**:
+
+- Exit 1 with `error.code === "merge.transaction-aborted"`,
+  `consequence=not_landed`, `retryable === false` read from `ERROR_TABLE`
+  (never transcribed), landing nothing: zero landing calls and zero appended
+  waiver and transaction records.
+- The summary names **both** duplicate identities (both same-ref source refs)
+  and presents **neither** as *the* request. The mixed pair never silently
+  resolves through its accepted member: no output member reports
+  `declared-at-head`, a request identity, a resolved head, or a candidate
+  count of `1` drawn from the accepted half.
+- **Zero change-record reads — no candidate's record is read, the accepted
+  member's included**: the record-read counter is exactly `0` and the
+  child-runner log contains no `ls-tree` and no blob invocation, because the
+  duplicate decision precedes every record read (the candidate-set rule of
+  spec §5.1 F-1 step 5).
+- **Exactly one provider request** — the bounded open-request list — per the
+  declared per-path budget for a duplicate-open abort (NFR-2): no
+  single-request mergeability read, no merged-request read, no fetch, no
+  pull.
+- The refused member's own reason does **not** surface: `head-unresolved` and
+  every `merge.request-unresolved` reason are absent from the output — the
+  duplicate abort governs the mixed pair rather than the head guard firing
+  first and masking the duplicate.
+- A plain re-run with unaltered provider state refuses again identically: the
+  duplicate cause is act-requiring, so the pinned `retryable: false` stays
+  honest.
+
+**Notes / Clarifications**:
+
+- Remediation of **code review iteration 1, finding F-1** (major; record
+  `code-review/review-iter-1.yaml`): the duplicate-open abort's pinned cell
+  covered only the **both-accepted** member state, while the spec declares the
+  duplicate rule over the candidate set — whose member states include mixed
+  accepted/refused pairs — so a same-ref pair with exactly one accepted
+  candidate could silently resolve and land through that member. This cell
+  pins the mixed member state.
+- The accepted member's record stays genuinely readable in the fixture, so the
+  zero record-read counter is a decided ordering observation in the TP-R-14
+  discipline: a run that resolved through the accepted member would have read
+  it before refusing.
+
 ## 6. Environments and Test Data
 
 **Environments.** One: the developer/CI Linux container running `bun test` (or
@@ -3939,6 +4027,7 @@ is live.
 | TC-MRG-052 | `tests/behaviour/merge-production-composition.test.ts` (parameterized fault cells) | New | row 1 command |
 | TC-MRG-053 | `tests/behaviour/merge-production-composition.test.ts` (transport-log multiset) + `tests/checks/merge-branch-read-scan.test.ts` (no-suppression scan) + `tests/structure/merge-contract.test.ts` (options surface) | New | row 1 command + `bun test tests/checks/merge-branch-read-scan.test.ts tests/structure/merge-contract.test.ts` |
 | TC-MRG-054 | `tests/behaviour/providers/github-closeout.test.ts` (extended pins) + `tests/fixtures/merge/production-composition.ts` | New | `bun test tests/behaviour/providers/github-closeout.test.ts` |
+| TC-MRG-055 | `tests/behaviour/merge-production-composition.test.ts` (duplicate cell, mixed member state: one accepted candidate, one refused per the delivered head-guard fixture pattern) | New | row 1 command |
 
 ### 7.2 Mocking and seam requirements
 
@@ -4196,6 +4285,7 @@ no new open question is raised.
 | 1.6 | 2026-11-22 | test-plan-writer | Mirrors **spec v2.4 / CEO-D-116** (2026-11-22, amending CEO-D-111); **54 cases, 27/27 ACs**, no existing id renumbered. (1) **Identity language** replaces the `signals.mergedMatches` count everywhere (front matter, §1.1, §2, §3.1 `AC-F1-4`/`AC-F1-6`, §3.2 `API-1`/`API-2`/`DM-2`, §3.3 `NFR-2`/`NFR-10`, `TC-MRG-005`/`006`/`043`/`047`/`049`, §6, §7, TP-R-14/15, §8.2): the convergence attempt is decided from the delivered read's one additive optional member — the **matched request identities**, carried on every match outcome and on the shared closeout contract type's unavailable outcome (empty when the page matched nothing, absent when the page could not be read), any count derived from the identities, no second count field; empty ⇒ decidable zero refusing `no-open-request`, exactly one ⇒ replay, two or more ⇒ `merge.transaction-aborted` naming **each** matched identity and presenting none as *the* request. (2) **Fault is not zero**: new `TC-MRG-052` (phase 3) — a transport, auth or payload fault of the merged read is a distinct outcome refusing the declared provider identity naming `operation=github-delivery-request-list`, never `no-open-request` / `merge.request-unresolved` / `merge.transaction-aborted`, never folded into zero, spending 2. (3) **Budget truth**: every provider-read statement restated per path (1 for refusals decided before the merge decision; 2 for an open-page-only run reaching the landing decision — open list + delivered single-request mergeability read — for an empty convergence attempt and for a faulted merged read; 3 for a match-bearing attempt, counting the read's own review-thread query; ceiling 3). New `TC-MRG-053` (phase 3) asserts the match-bearing multiset including the thread query and, negatively, that **no suppression option exists** (spec NG-8 — no flag, no parameter, no caller knob, planted-control scan). `TC-MRG-047`'s duplicate-merged sub-run moves two → three; `TC-MRG-034`/`TC-MRG-040` restated per path. (4) **`TC-MRG-043` restated in place** (readiness iteration 4, finding 4): the dry-run replay asserts the testable oracle — the resolved replay object with `replayed=true`, zero mutations, lands nothing, never `result=merged`/`squash=`, no post-landing steps (`postLanding` empty, the delivered step ids asserted as **not** reported) — and the live replay asserts its delivered contract (one `replayed: true` transaction, empty `postLanding`, zero landing calls); `TC-MRG-049`'s zero-transaction phrase corrected to the same delivered behaviour and its dry-run note superseded by the now-pinned `API-2`/`DM-2`/§10 replay object. (5) **`AC-F1-7`** added with new `TC-MRG-050` (phase 4): no-mergeability-fields list entry + clean single request ⇒ lands once, never `merge.mergeability-unknown`; the unknown-recovery re-read re-reads the single request (asserted on the transport log, never the list); a fault of that read names `operation=github-delivery-request-detail`. **`AC-F3-7`** added with new `TC-MRG-051` (phase 2): `merge.state-unverified` exit 2 with the remediation naming `verify gates <ref>` for the same work item, then re-run — the bare "produce a verification" is a named failure; matrix cell 13 restated to the same remediation and to `operation=delivery-registry` (spec F-3/Appendix B; the earlier "- for the state read" reading corrected). (6) **Closeout-unchanged regression**: new `TC-MRG-054` (phase 3) — closeout consumes neither the identities member nor any count over empty / singleton / multi / absent shapes, ranked behaviour and output byte-identical (spec RSK-12, §16/§18/§19). (7) **Operation vocabulary**: nine tokens plus `-` everywhere (§1.1, §2, §3.1 `AC-F3-1`, §3.3 `NFR-5`, `TC-MRG-024`'s fixture constant, OQ-TP-4); matrix cell 17's `duplicate-merged` sub-run token corrected `github-merge-delivery-request` → `github-delivery-request-list` (readiness iteration 4, finding 7). (8) **Mechanical sweep** of the remaining iter-4 findings: the object-form call citation `findMergedDeliveryRequest({ workItemRef, limit: TRUTH_PROVIDER_LIMIT })` replaces the positional form (nit 11); `AC-F1-2`'s "governs" wording restated to "not read at all" in §3.1, `TC-MRG-003` and its index row (nit 12); the provider-client current-truth page (`feature-provider-client-seeds.md`) and the non-functional spec's read-budget row join §1.1/§7.4's reconciliation surfaces (finding 10); findings 8/9 had no test-plan carrier (their remediation targets are delivery_planning) — no test-plan claim was found asserting the phase-2 truth of `AC-F3-6` or citing NG-5 for the closeout boundary. (9) Identity arithmetic unchanged (173 / 173 / 172 / 71 / `+139`, `merge` kind 12), recounted unchanged under CEO-D-116; no golden movement added — the declared per-phase golden table and `EXPECTED` 13 → 15 → 19 arithmetic stand as v1.5 declares them. Allocation now 0 / 9 / 19 / 17 / 3 / 5 / 1 = 54; OQ-TP items 1/2/3/5/7 stay closed, 4 re-closed against v2.4, 6 stays open and non-blocking.
 | 1.7 | 2026-11-22 | test-plan-writer | Remediation of **readiness iteration 5, finding 1** (major, blocking): `TC-MRG-052`'s v1.6 oracle asserted three distinct fault identities (`provider.outage` for the transport and unclassified cells, `provider.auth.rejected` for the auth cell, the delivered payload-invalid mapping for the payload cell) through a delivered boundary that cannot produce them and that the spec's own refusal matrix contradicts — `findMergedDeliveryRequest` collapses every fault class into the one `{ observation: "invalid", detail }` outcome, discarding the `code`/`httpStatus` the 401/403 routing would need, and Appendix B places all three fault classes on the single `provider.outage` row. The case is restated in place to the **one delivered outcome for every cell**: the three fault classes stay as input fixtures (coverage of the collapse, never asserted identities), and every cell asserts `provider.outage` with `operation=github-delivery-request-list` (Appendix B's single row governs; the delivered `provider.payload.invalid` mapping resolving to `provider.outage` at this seam is the rationale the payload cell lands on the same row), distinguishable from zero matches via the paired healthy-read/empty-set control with `TC-MRG-005`, never `no-open-request` / `merge.request-unresolved` / `merge.transaction-aborted`, never folded into the empty-identities outcome, spending **2** provider requests. `AC-F1-4`'s fault clause stays traceable unchanged (a fault is a distinct outcome from zero). The §5.1 index row, the §7.1 automation row and the per-phase allocation line never named the per-class mapping — checked, no sync needed; no case id, case count or phase allocation moves: 54 cases (`TC-MRG-001`…`TC-MRG-054`), 27/27 ACs, allocation 0 / 9 / 19 / 17 / 3 / 5 / 1 = 54 unchanged. Iteration 5's finding 2 (plan phase scope) and finding 3 (spec parenthetical) target `chg-GH-366-plan.yaml` / the specification, not this file; no new open question raised. §10 remains empty: no execution yet. |
 | 1.8 | 2026-11-23 | test-plan-writer | Mechanical numeric-anchor correction: the identity-stability base was authored one too high. Live pins move **170 → 173 ⇒ 169 → 172** machine, **169 → 172 ⇒ 168 → 171** delivered, **`+136` → `+139` ⇒ `+136` → `+138`** (allowlist **68 → 71** and `merge` kind **9 → 12** unchanged) in the front-matter summary, §1.1, §2 (identity-table reference and base facts), §3.3 NFR-8, §5.1/§5.2 `TC-MRG-038` (index row, heading, synced-base preconditions, expected outcome, banned-total sentence, phrase-table rotation) and §7.3/§7.4. The NFR-8 recount sentence now states the corrected base and its evidence: the delivered tree's outgoing-totals record (`tests/structure/error-table.test.ts` — "GH-366 moved 169/168 → 172/171", with `LEGACY_ENTRY_169_FORMS`/`LEGACY_ENTRY_168_FORMS` banning the outgoing totals) plus the green error-table-sync and doc-conformance pins at 172 entries / 171 delivered / `BASELINE_ROWS.length + 138`; the baseline snapshot absorbed one row, so the arithmetic moves +2 on a +3 table. CEO-D-116's content is unchanged (the ruling adds no error identity); historical revision-log narration stays as authored; the 27-AC coverage, case ids, phase allocations and invariants are untouched. |
+| 1.9 | 2026-11-23 | test-plan-writer | Remediation of **code review iteration 1, finding F-1** (major; record `code-review/review-iter-1.yaml`): the duplicate-open abort's pinned cell covered only the **both-accepted** member state, while spec §5.1 F-1 step 5 declares the duplicate rule over the **candidate set**, leaving a same-ref pair with exactly one accepted candidate unobserved. New **`TC-MRG-055`** (plan phase 3, alongside the other duplicate/convergence cells): two open delivery requests whose provider-asserted source refs both equal the change's resolved branch — one an accepted candidate (declared branch, full-SHA asserted head), one a refused candidate (an asserted head that is not a full hex SHA, constructed per the delivered head-guard fixture pattern) — must refuse `merge.transaction-aborted` at exit 1, `not_landed`, `retryable: false`, naming **both** duplicate identities, presenting neither as *the* request, landing nothing and reading **no** candidate's change record; the mixed pair never silently resolves through its accepted member. Adds the §5.1 index row (55 rows), the §5.2 detail block and the §7.1 automation row (55 rows; same suite file — §7.3's suite-file set unchanged), maps into `AC-F1-6`'s existing §3.1 row (27/27 ACs stand), and moves the per-phase allocation to 0 / 9 / **20** / 17 / 3 / 5 / 1 = **55** (phase 3: 19 → 20). No other case changes; historical revision rows untouched. |
 
 ## 10. Test Execution Log
 
