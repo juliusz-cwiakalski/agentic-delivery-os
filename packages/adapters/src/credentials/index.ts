@@ -1,23 +1,80 @@
 /**
- * `@delivery-os/adapters/credentials` — the environment-backed credential port
- * implementation (F-3, DEC-2).
+ * `@delivery-os/adapters/credentials` — the credential port implementation
+ * (F-3, DEC-2) and the strategy resolver over the governing record's four
+ * construction-input seams (C-2): the active harness identity, the child
+ * runner, the environment record, and the store facts.
  *
- * This is the single runtime-aware implementation of the runtime-neutral
- * `CredentialPort` contract. The ambient environment is read only by the
- * production wrapper below; the resolution itself accepts an injected
- * environment record, so tests never depend on the host environment.
+ * This is the single runtime-aware implementation directory of the
+ * runtime-neutral `CredentialPort` contract (NFR-7): the only ambient
+ * environment read is the production wrapper below; every resolution accepts
+ * injected inputs, so tests never depend on the host environment.
  *
- * Secret material is returned exactly once through the port result. The port
- * exposes no diagnostic channel and no implementation-mode surface; the future
- * credential sidecar becomes a second implementation behind the same interface.
+ * Secret material is returned exactly once through the port result and is
+ * registered for redaction at the moment it is obtained — before parsing and
+ * before any throw. The port exposes no diagnostic channel; the anticipated
+ * credential sidecar becomes a second implementation behind the same
+ * interface.
  */
 import type {
   BrandIdentity,
+  CredentialFailureReason,
   CredentialPort,
   CredentialReference,
   CredentialResolution,
   CredentialResolutionFailure,
+  CredentialSourceKey,
+  HarnessKind,
 } from "@delivery-os/core/contracts";
+import { remedyText } from "#credentials/allowlist";
+import { type ChildRunner, resolveCommandSource } from "#credentials/command-strategy";
+import {
+  classifyHarnessStoreSource,
+  type HarnessStoreFacts,
+} from "#credentials/harness-store-strategy";
+
+export {
+  type AllowlistEntry,
+  type AllowlistSlotGrammar,
+  COMMAND_ALLOWLIST,
+  COMMAND_STDOUT_MAX_BYTES,
+  COMMAND_TIMEOUT_DEFAULT_MS,
+  COMMAND_TIMEOUT_MAX_MS,
+  type CommandRemedyCells,
+  type CommandRemedyReason,
+  commandRemedyText,
+  constructArgv,
+  type DeclarationMatch,
+  environmentRemedyText,
+  HOST_SLOT_MAX_LENGTH,
+  harnessStoreRemedyText,
+  INTEGRATION_ID_MAX_LENGTH,
+  matchCommandDeclaration,
+  type ParsedParameters,
+  remedyText,
+  type SlotValidation,
+  validateHostSlot,
+  validateIntegrationIdSlot,
+} from "#credentials/allowlist";
+export {
+  type ChildRunner,
+  type ChildRunOutcome,
+  type ChildRunRequest,
+  type CommandSourceInput,
+  createSpawnChildRunner,
+  type HarnessExportRun,
+  reducedChildEnvironment,
+  resolveCommandSource,
+  runHarnessExport,
+} from "#credentials/command-strategy";
+export {
+  classifyHarnessStoreSource,
+  HARNESS_CLI_VERSION_WINDOW,
+  type HarnessStoreClassification,
+  type HarnessStoreEntry,
+  type HarnessStoreFacts,
+  type StoreExportOutcome,
+  type StoreExportRequest,
+} from "#credentials/harness-store-strategy";
 
 /** An injected environment record; production passes the process environment. */
 export type CredentialEnvironment = Readonly<Record<string, string | undefined>>;
@@ -29,22 +86,40 @@ export type EnvironmentCredentialPortOptions = {
 };
 
 /**
- * Resolve a declared reference to its source key.
+ * Resolve a declared reference to its source-key identity.
  *
  * The mapping is declarative data on the reference: a literal key is used
- * verbatim, while an environment-prefixed key derives its prefix from the
- * branding seam supplied as data. No external system name participates.
+ * verbatim, an environment-prefixed key derives its prefix from the branding
+ * seam supplied as data, and the two execution styles carry their style
+ * identity (`command:<program>`, `harness-store:<integrationID>`). No external
+ * system name participates.
  */
 export const resolveCredentialSourceKey = (
   reference: CredentialReference,
   brand: BrandIdentity,
-): string =>
-  reference.sourceKey.style === "literal"
-    ? reference.sourceKey.name
-    : `${brand.environmentPrefix}${reference.sourceKey.suffix}`;
+): string => {
+  const key = reference.sourceKey;
+  if (key.style === "literal") return key.name;
+  if (key.style === "environment-prefixed") return `${brand.environmentPrefix}${key.suffix}`;
+  return key.style === "command" ? `command:${key.program}` : `harness-store:${key.integrationId}`;
+};
 
-/** The reified `config.credential.missing` identity. */
-const credentialMissing = (): CredentialResolutionFailure => ({
+/** The style-plus-source identity a failure carries for one declared key. */
+export const credentialSourceIdentity = (sourceKey: CredentialSourceKey): string => {
+  if (sourceKey.style === "literal") return `literal:${sourceKey.name}`;
+  if (sourceKey.style === "environment-prefixed") {
+    return `environment-prefixed:${sourceKey.suffix}`;
+  }
+  return sourceKey.style === "command"
+    ? `command:${sourceKey.program}`
+    : `harness-store:${sourceKey.integrationId}`;
+};
+
+/** The reified `config.credential.missing` identity with its projection fields. */
+const credentialMissing = (
+  sourceKey: CredentialSourceKey,
+  reason: CredentialFailureReason,
+): CredentialResolutionFailure => ({
   ok: false,
   code: "config.credential.missing",
   domainKind: "config",
@@ -52,19 +127,98 @@ const credentialMissing = (): CredentialResolutionFailure => ({
   retryable: false,
   consequence: "not_landed",
   projectionClass: "user-validation",
+  source: credentialSourceIdentity(sourceKey),
+  reason,
+  remedy: remedyText(reason, sourceKey.style),
 });
 
 /** An absent key and an empty-string value both fail; whitespace is a value. */
-const materialFrom = (value: string | undefined): CredentialResolution =>
-  value === undefined || value === "" ? credentialMissing() : { ok: true, material: { value } };
+const materialFrom = (
+  sourceKey: CredentialSourceKey,
+  value: string | undefined,
+): CredentialResolution =>
+  value === undefined || value === ""
+    ? credentialMissing(sourceKey, "variable-absent")
+    : { ok: true, material: { value } };
 
 /** Build a credential port over an injected environment record. */
 export const createEnvironmentCredentialPort = (
   options: EnvironmentCredentialPortOptions,
 ): CredentialPort => ({
-  resolve: (reference: CredentialReference): CredentialResolution =>
-    materialFrom(options.environment[resolveCredentialSourceKey(reference, options.brand)]),
+  resolve: (reference: CredentialReference): CredentialResolution => {
+    const key = reference.sourceKey;
+    if (key.style === "command" || key.style === "harness-store") {
+      return credentialMissing(key, "source-not-supported");
+    }
+    return materialFrom(
+      key,
+      options.environment[resolveCredentialSourceKey(reference, options.brand)],
+    );
+  },
 });
+
+/** The resolver's construction inputs: the governing record's four seams. */
+export type CredentialResolverOptions = {
+  /** The environment record every environment-style declaration reads. */
+  readonly environment: CredentialEnvironment;
+  /** The branding seam feeding derived environment keys. */
+  readonly brand: BrandIdentity;
+  /** The active harness identity a declared harness field must match. */
+  readonly harness: HarnessKind;
+  /** The child runner seam every allowlisted execution goes through. */
+  readonly runChild: ChildRunner;
+  /** The store facts seam the harness export reads through. */
+  readonly storeFacts: HarnessStoreFacts;
+  /** The register-on-materialize hook: invoked before any parse or throw. */
+  readonly registerSecret: (value: string) => void;
+};
+
+const memoKeyOf = (reference: CredentialReference): string =>
+  JSON.stringify({ referenceName: reference.referenceName, sourceKey: reference.sourceKey });
+
+/**
+ * Build the strategy resolver: one operation over all four closed styles, one
+ * success variant, one failure variant. Each reference resolves exactly once
+ * per process — the second resolve is a memory read — and every obtained
+ * material registers for redaction at the moment it is obtained.
+ */
+export const createCredentialResolver = (options: CredentialResolverOptions): CredentialPort => {
+  const memo = new Map<string, CredentialResolution>();
+  return {
+    resolve: (reference: CredentialReference): CredentialResolution => {
+      const memoKey = memoKeyOf(reference);
+      const memoized = memo.get(memoKey);
+      if (memoized !== undefined) return memoized;
+      const key = reference.sourceKey;
+      let resolution: CredentialResolution;
+      if (key.style === "command") {
+        resolution = resolveCommandSource(key, {
+          runChild: options.runChild,
+          parentEnvironment: options.environment,
+          registerSecret: options.registerSecret,
+        });
+      } else if (key.style === "harness-store") {
+        const classified = classifyHarnessStoreSource(key, {
+          activeHarness: options.harness,
+          storeFacts: options.storeFacts,
+          registerSecret: options.registerSecret,
+        });
+        resolution =
+          classified.status === "resolved"
+            ? { ok: true, material: classified.material }
+            : credentialMissing(key, classified.reason);
+      } else {
+        resolution = materialFrom(
+          key,
+          options.environment[resolveCredentialSourceKey(reference, options.brand)],
+        );
+        if (resolution.ok) options.registerSecret(resolution.material.value);
+      }
+      memo.set(memoKey, resolution);
+      return resolution;
+    },
+  };
+};
 
 /** The process environment supplied by the production composition edge. */
 const readProcessEnvironment = (): CredentialEnvironment => {
