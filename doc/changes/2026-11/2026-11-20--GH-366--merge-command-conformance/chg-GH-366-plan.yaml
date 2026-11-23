@@ -1879,6 +1879,8 @@ phases:
         - tests/structure/supervision-error-family.test.ts
         - tests/structure/port-contract-inventory.test.ts
         - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/checks/merge-landing-retirement.test.ts
+        - tests/checks/fixture-repo.ts
     interactions:
       - kind: generated-code
         target: .opencode/agent/pm.md
