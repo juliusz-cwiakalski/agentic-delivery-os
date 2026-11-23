@@ -20,7 +20,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-23T13:14:27.250Z }
   review_fix: { started: null, completed: 2026-11-23T13:24:52.871Z }
   quality_gates: { started: null, completed: 2026-11-23T13:57:41.754Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-23T13:59:59.945Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Mechanism choice delegated by the ticket ('choose one, declare it'). PM
@@ -521,5 +521,22 @@ notes:
       none, resolved commitlint binary node_modules/.bin/commitlint origin
       repository-local (ref refs/remotes/origin/main-tools). Both verdicts
       recorded per gate rules; no history action required."
+    type: decision
+    date: "2026-11-23"
+  - text: "DoD check (dod_check phase) — ALL CHECKS PASS, no reopen. (1) Phase
+      ledger: all nine prior phases completed with timestamps, registry verified
+      (7719 records, framing/terminal/sequence/checksum). (2) Plan completion:
+      every declared plan phase (1-6) has a pm-notes notes: entry naming the
+      plan phase id, its commit hash, and its test result (pm-notes plan-phase
+      entries; gate correction 4ccc7128 separately evidenced). (3) Acceptance
+      criteria: all seven spec criteria AC-T1-1..AC-T5-1 + AC-T4-2 satisfied
+      with delivered test evidence (TC-VGATES-071..075, TC-MERGE-040..046),
+      independently re-verified by the reviewer at iteration 1 including a fresh
+      capture-entry byte-identity run. (4) Current-truth documentation: complete
+      and accurate — @doc-syncer zero residual gaps, four targets reconciled,
+      distribution guard PASS, doc-conformance 61/0. (5) Quality gates:
+      aggregate pnpm check PASS exit 0 + range lint PASS 15/0. Deviations and
+      optional minors: disclosed in pm-notes and to be surfaced in the PR body;
+      none rise to a DoD gap. Ready for pr_creation."
     type: decision
     date: "2026-11-23"
