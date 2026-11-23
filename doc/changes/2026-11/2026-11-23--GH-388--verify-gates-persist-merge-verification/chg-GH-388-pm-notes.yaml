@@ -16,7 +16,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-23T11:17:49.235Z }
   delivery_planning: { started: null, completed: 2026-11-23T11:26:16.010Z }
   dor_check: { started: null, completed: 2026-11-23T11:34:09.196Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-23T13:06:30.407Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -222,10 +222,10 @@ notes:
       *.test.ts module); captured goldens matrix-cells.json (53 cells = 48
       corpus + narrowed-scope + suite-map-unmirrored + 2 config refusals +
       member-green, both modes, real append wired over a fixture store) and
-      production-success.json (production success cell, normalized), captured
-      at branch point ac9a62e5 BEFORE any production.ts edit. Test result:
-      capture entry verify mode byte-identical (exit 0); 5 adjacent delivered
-      suites (golden verify-gates, parity-suite-map, narrowed-scope,
+      production-success.json (production success cell, normalized), captured at
+      branch point ac9a62e5 BEFORE any production.ts edit. Test result: capture
+      entry verify mode byte-identical (exit 0); 5 adjacent delivered suites
+      (golden verify-gates, parity-suite-map, narrowed-scope,
       merge-verification-record, cross-repository-members) 41 pass / 0 fail;
       biome clean. Note: corpus expectedExit values are evaluator-level (the
       handler recomputes lifecycle from the fixture document); handler-level
@@ -240,46 +240,46 @@ notes:
       tests/behaviour/verify-gates-persistence.test.ts + the pm-notes carrying
       the phase-1 note as disclosed tracked drift). The fix: the verify-gates
       runtime call site now supplies appendVerification =
-      appendMergeGateVerification(store, { record, fenceToken: newFenceToken() })
-      mapped to the seam's ok/code result, mirroring edge.ts's merge ports
+      appendMergeGateVerification(store, { record, fenceToken: newFenceToken()
+      }) mapped to the seam's ok/code result, mirroring edge.ts's merge ports
       wiring; no handler/report/envelope/gate-rule change; no read added.
       TC-VGATES-071 primary arm: byte-identical machine+human bytes vs the
       phase-1 captured production goldens, exactly one record per evaluation
       with schema/key/changeRef/headSha/identity (schema version + 6-id
       sequence, order included)/5 battery verdicts with bounded citations/
-      tracker posture asserted, fence acquire->append->post-append
-      read->release observed through a recording store wrapper, no capsule
-      disclosure as delivered. Append-fault negative control on a FRESH STORE
-      ROOT (new harness instance, zero-records pre-assertion — DoR minor
-      finding honored): state.write.failed at exit 2, never consumable, the
-      follow-on merge refuses merge.state-unverified. TC-VGATES-072: repeat
-      production runs 1 then 2 records; member arm exactly one member-projected
-      record (gates carry exactly id/verdict/reason/citation) with the capsule
-      event appended once AFTER the record; narrowed and config refusals append
-      neither. Test result: 6 pass / 0 fail; capture entry verify mode post-fix
-      byte-identical (53 cells + production cell — the 0-byte delta proof with
-      persistence live); merge-verification-record + golden verify-gates +
-      parity-suite-map 22 pass / 0 fail; pnpm typecheck green; biome clean.
-      Reconciliation recorded: the fixed-verification-instant clause rides the
-      fixture-runtime arms (fixed injected clock); the production composition
-      reads the system clock by delivered design (clock fact production-
-      omitted), so the production arm asserts the observed instant's
-      integrity — never an output byte."
+      tracker posture asserted, fence acquire->append->post-append read->release
+      observed through a recording store wrapper, no capsule disclosure as
+      delivered. Append-fault negative control on a FRESH STORE ROOT (new
+      harness instance, zero-records pre-assertion — DoR minor finding honored):
+      state.write.failed at exit 2, never consumable, the follow-on merge
+      refuses merge.state-unverified. TC-VGATES-072: repeat production runs 1
+      then 2 records; member arm exactly one member-projected record (gates
+      carry exactly id/verdict/reason/citation) with the capsule event appended
+      once AFTER the record; narrowed and config refusals append neither. Test
+      result: 6 pass / 0 fail; capture entry verify mode post-fix byte-identical
+      (53 cells + production cell — the 0-byte delta proof with persistence
+      live); merge-verification-record + golden verify-gates + parity-suite-map
+      22 pass / 0 fail; pnpm typecheck green; biome clean. Reconciliation
+      recorded: the fixed-verification-instant clause rides the fixture-runtime
+      arms (fixed injected clock); the production composition reads the system
+      clock by delivered design (clock fact production- omitted), so the
+      production arm asserts the observed instant's integrity — never an output
+      byte."
     type: info
     date: "2026-11-23"
   - text: "Plan phase 3 complete (merge consumption cells + remediation byte-pin).
-      Commit 45404001f2eea0b7d3b91f5d74a60e41b45b564c (commit primitive;
-      staged tests/behaviour/merge-production-composition.test.ts,
+      Commit 45404001f2eea0b7d3b91f5d74a60e41b45b564c (commit primitive; staged
+      tests/behaviour/merge-production-composition.test.ts,
       tests/structure/merge-refusal-rows.test.ts, the shared fixture, and the
       pm-notes tracked drift). TC-MERGE-040: the native sequence verify gates
-      then plain merge through the one shipped composer lands result=merged
-      with the provider squash SHA; argv recording proves no --dry-run; the
+      then plain merge through the one shipped composer lands result=merged with
+      the provider squash SHA; argv recording proves no --dry-run; the
       verification count stays exactly one; the transaction exists once; one
       landing call at the expected head. TC-MERGE-041: the absence refusal is
       exit 2 merge.state-unverified with state=absent and
-      operation=delivery-registry as delivered; option (B) asserted absent
-      (zero verification appends, zero check-run reads, zero landing calls,
-      zero transaction/waiver records, no landing-decision read composed); the
+      operation=delivery-registry as delivered; option (B) asserted absent (zero
+      verification appends, zero check-run reads, zero landing calls, zero
+      transaction/waiver records, no landing-decision read composed); the
       remediation sequence converges and lands. TC-MERGE-042: the
       merge.state-unverified remediationHint pinned byte-exactly (equality +
       structural guards + mutation sensitivity + no --dry-run), both error-
@@ -290,58 +290,56 @@ notes:
       vocabulary was incomplete, exposed by TC-MERGE-040's declared provider-
       squash-SHA assertion; the success cell never lands so captured output
       bytes are unchanged — capture entry verify mode byte-identical post-
-      amendment). Test result: merge-production-composition +
-      merge-refusal-rows 41 pass / 0 fail; verify-gates-persistence 6 pass /
-      0 fail; capture entry byte-identical; biome clean."
+      amendment). Test result: merge-production-composition + merge-refusal-rows
+      41 pass / 0 fail; verify-gates-persistence 6 pass / 0 fail; capture entry
+      byte-identical; biome clean."
     type: info
     date: "2026-11-23"
-  - text: "Plan phase 4 complete (identity + recorded-verdict consumption cells
-      over shipped-produced records). Commit
-      69b0bdd113381773f6229d77227bbe472511c1a5 (commit primitive; staged the
-      three declared suites + the pm-notes tracked drift). Seeding pattern:
-      the shipped verify-gates handler over the merge harness's store via the
-      delivered real append (facts overridden to the merge ref/branch/head and
-      provider parity posture) — never the TC-MERGE-007 hand-built builder.
-      TC-MERGE-043: the shipped record resolved by persisted identity (ledger
-      key, changeRef, headSha) and accepted under total identity equality
-      (schema version + six-id sequence, exact array equality); the landing
-      proceeded. TC-MERGE-044: head H' (provider-asserted request head, not
-      the git seam) refuses naming both SHAs; at-bound and over-bound refuse
-      with age and bound; a one-id drop on the newest record (delivered
-      append) refuses gates-stale with the set delta naming the dropped id;
-      every arm zero consumption. TC-MERGE-045: recorded not-green ci-green
-      refuses with exactly one recorded attribution against a green probe
-      page; DISCLOSED reconciliation: the battery-only built-in arm uses the
-      owner-gate-present shape (the lifecycle-finalization fail shape is not
+  - text: "Plan phase 4 complete (identity + recorded-verdict consumption cells over
+      shipped-produced records). Commit 69b0bdd113381773f6229d77227bbe472511c1a5
+      (commit primitive; staged the three declared suites + the pm-notes tracked
+      drift). Seeding pattern: the shipped verify-gates handler over the merge
+      harness's store via the delivered real append (facts overridden to the
+      merge ref/branch/head and provider parity posture) — never the
+      TC-MERGE-007 hand-built builder. TC-MERGE-043: the shipped record resolved
+      by persisted identity (ledger key, changeRef, headSha) and accepted under
+      total identity equality (schema version + six-id sequence, exact array
+      equality); the landing proceeded. TC-MERGE-044: head H' (provider-asserted
+      request head, not the git seam) refuses naming both SHAs; at-bound and
+      over-bound refuse with age and bound; a one-id drop on the newest record
+      (delivered append) refuses gates-stale with the set delta naming the
+      dropped id; every arm zero consumption. TC-MERGE-045: recorded not-green
+      ci-green refuses with exactly one recorded attribution against a green
+      probe page; DISCLOSED reconciliation: the battery-only built-in arm uses
+      the owner-gate-present shape (the lifecycle-finalization fail shape is not
       expressible through the delivered fixture runtime's hardcoded complete
-      document + empty transitions without a fixture-harness change outside
-      the declared scope) and pins the delivered recorded-evidence contract —
-      the family refusal carries {gateId, detail} exactly, no attribution
-      member (attribution is the declared required-job contract, pinned by the
-      ci-green arm), no probe member, no timestamp. TC-MERGE-046: the
-      tracker-freshness transition refusal with transition + age inline over
-      the recorded posture, and the clean recorded landing at the delivered
-      probe budget (one work-item read, one check-run page). Test result:
-      merge-freshness 19 pass, merge-required-job-probe 23 pass, merge-probe
-      20 pass (4-suite battery with merge-verification-record: 70 pass /
-      0 fail); biome clean."
+      document + empty transitions without a fixture-harness change outside the
+      declared scope) and pins the delivered recorded-evidence contract — the
+      family refusal carries {gateId, detail} exactly, no attribution member
+      (attribution is the declared required-job contract, pinned by the ci-green
+      arm), no probe member, no timestamp. TC-MERGE-046: the tracker-freshness
+      transition refusal with transition + age inline over the recorded posture,
+      and the clean recorded landing at the delivered probe budget (one
+      work-item read, one check-run page). Test result: merge-freshness 19 pass,
+      merge-required-job-probe 23 pass, merge-probe 20 pass (4-suite battery
+      with merge-verification-record: 70 pass / 0 fail); biome clean."
     type: info
     date: "2026-11-23"
   - text: "Plan phase 5 complete (non-regression with persistence live). Commit
       dcec786d210dd330f6ef8f855e495161e354b261 (commit primitive; staged the
-      three declared suites + the pm-notes tracked drift). TC-VGATES-073:
-      every one of the 53 phase-1 captured matrix cells rebuilt with the
-      delivered real append over a fixture store reproduces byte-identical
+      three declared suites + the pm-notes tracked drift). TC-VGATES-073: every
+      one of the 53 phase-1 captured matrix cells rebuilt with the delivered
+      real append over a fixture store reproduces byte-identical
       stdout/stderr/exit in both modes (0-byte delta acceptance bar,
       regeneration forbidden); the committed success-data/human-success/
       failure-summary goldens hold with the append wired; the member cell's
       envelope data equals the committed member-form golden; replay
-      byte-equality on pass and fail cells. TC-VGATES-074: the production
-      budget proof — the pass cell exactly one read per provider source, no
-      pagination; fail cell same shape then fails; credential-unavailable
-      composes zero provider transport; the merge consumption path over a
-      shipped record keeps the per-source budget with one landing call; the
-      append contract's state reads counted as the append's own shape
+      byte-equality on pass and fail cells. TC-VGATES-074: the production budget
+      proof — the pass cell exactly one read per provider source, no pagination;
+      fail cell same shape then fails; credential-unavailable composes zero
+      provider transport; the merge consumption path over a shipped record keeps
+      the per-source budget with one landing call; the append contract's state
+      reads counted as the append's own shape
       (read-before/acquireFence/append/read-after/releaseFence, one each per
       append), never provider or configuration reads. TC-VGATES-075: planted
       canary facts over shipped-produced records (pass/fail single-target and
@@ -349,31 +347,105 @@ notes:
       allowlist unchanged; live mutation control; the five-gate regression
       suites stay green unchanged via the aggregate gate. §8.1 contingency
       checked: TC-VGATES-051's zero-writes guard stays green unchanged (the
-      fixture runtime's append default is injection-only, untouched by the
-      fix) — no reconciliation needed. Test result: golden verify-gates 9
-      pass, read-budget 12 pass, merge-privacy 8 pass (3-suite battery 29
-      pass / 0 fail); authority suites 29 pass / 0 fail; capture entry
-      byte-identical; pnpm typecheck green; biome clean."
+      fixture runtime's append default is injection-only, untouched by the fix)
+      — no reconciliation needed. Test result: golden verify-gates 9 pass,
+      read-budget 12 pass, merge-privacy 8 pass (3-suite battery 29 pass / 0
+      fail); authority suites 29 pass / 0 fail; capture entry byte-identical;
+      pnpm typecheck green; biome clean."
     type: info
     date: "2026-11-23"
-  - text: "Plan phase 6 complete (lockstep five-package minor changeset — the
-      final plan phase). Commit
-      c9e0af7310ef61371c235592f15a4a6c14d90b0d (commit primitive; staged
+  - text: "Plan phase 6 complete (lockstep five-package minor changeset — the final
+      plan phase). Commit c9e0af7310ef61371c235592f15a4a6c14d90b0d (commit
+      primitive; staged
       .changeset/gh-388-verify-gates-persist-merge-verification-minor.md + the
       pm-notes tracked drift + tests/behaviour/merge-freshness.test.ts).
-      DISCLOSED: the merge-freshness correction rode this commit — the
-      delivered TC-F1-014 population obligation (merge-suite-obligations)
-      forbids the counts.landing recorder token in the green suite, so the
-      phase-4 zero-consumption/accept landing assertions now read the recorded
+      DISCLOSED: the merge-freshness correction rode this commit — the delivered
+      TC-F1-014 population obligation (merge-suite-obligations) forbids the
+      counts.landing recorder token in the green suite, so the phase-4
+      zero-consumption/accept landing assertions now read the recorded
       harness.landings array (same evidence, same semantics; tests/structure
-      2022 pass / 0 fail after the fix). The changeset declares exactly the
-      five fixed-group packages at minor (programmatic parse assert: five
-      keys, all minor, prose present). Version bump and CHANGELOG tasks:
-      changesets owns versioning — no manual bump, no CHANGELOG edit (the
-      changelog is generated at release); validated against AGENTS.md. Test
-      result for the phase: bun test tests/structure 2022 pass / 0 fail;
+      2022 pass / 0 fail after the fix). The changeset declares exactly the five
+      fixed-group packages at minor (programmatic parse assert: five keys, all
+      minor, prose present). Version bump and CHANGELOG tasks: changesets owns
+      versioning — no manual bump, no CHANGELOG edit (the changelog is generated
+      at release); validated against AGENTS.md. Test result for the phase: bun
+      test tests/structure 2022 pass / 0 fail;
       tests/checks/error-table-sync.test.ts 108 pass / 0 fail; biome clean.
-      Aggregate gate: see the delivery report — pnpm check run on the clean
-      tree post-phase-6 (the lifecycle quality_gates phase runs its own)."
+      Aggregate gate: see the delivery report — pnpm check run on the clean tree
+      post-phase-6 (the lifecycle quality_gates phase runs its own)."
+    type: info
+    date: "2026-11-23"
+  - text: "Delivery correction + aggregate gate verdict. The first pnpm check run
+      (TMPDIR=$PWD/tmp/tmpdir, exit 1) caught one lint error: noUnreachable at
+      tests/fixtures/verify-gates/production-composition.ts: 230 — a duplicated
+      open-request return left behind by the phase-3 landing-reply amendment.
+      Corrected by dead-code removal in commit
+      4ccc7128d8de89a3a672bdcaebe4a80e39cb5060 (commit primitive; behavior
+      unchanged, proven by the capture entry verify mode byte-identical).
+      Corrected aggregate run: TMPDIR=$PWD/tmp/tmpdir pnpm check PASS, exit 0
+      (log
+      tmp/run-logs-runner/2026-11-23/134033-pnpm-check-gh-388-gate-rerun.log):
+      lint 0 errors / 133 warnings (pre-existing, non-gating); format clean;
+      typecheck clean (6 packages + tests/types); bun test 12571 pass / 4 skip /
+      0 fail across 1505 files; check:boundaries, check:memory,
+      check:forbidden-literals, check:namespace-tree, prompt-conformance,
+      help-guide-coverage, exports-parity all PASS. All six plan phases
+      committed: 1 f2116939, 2 586352ac, 3 45404001, 4 69b0bdd1, 5 dcec786d, 6
+      c9e0af73 (+ the 4ccc7128 gate correction). Delivery stops here per
+      contract: no phase complete run by @coder — the PM owns the delivery
+      lifecycle transition; the pm-notes phase-6/aggregate notes ride as tracked
+      pending work for the lifecycle boundary."
+    type: info
+    date: "2026-11-23"
+  - text: "Delivery phase outcome (PM validation of @coder's completion report):
+      COMPLETED_ALL — all 6 plan phases executed and committed via the commit
+      primitive (7 commits: f2116939, 586352ac, 45404001, 69b0bdd1, dcec786d,
+      c9e0af73, + 4ccc7128 gate correction). Aggregate pnpm check PASS exit 0
+      (12571 pass / 4 skip / 0 fail, 1505 files; TMPDIR=$PWD/tmp/tmpdir).
+      Production change exactly as declared: production.ts supplies
+      appendVerification wired to appendMergeGateVerification with the delivered
+      fence factory (+14 lines, the only production file). Goldens: 53 matrix
+      cells + production success cell captured at branch point ac9a62e5 BEFORE
+      the production edit, verified byte-identical after every subsequent change
+      (0-byte delta), NO regeneration. DoR minor finding honored (fresh store
+      root + zero-records pre-assertion). No doc/** file touched. Changeset five
+      fixed-group packages minor, programmatic-parse verified. Four deviations
+      disclosed in pm-notes (fixture sha-member amendment; owner-gate shape
+      substitution for the lifecycle-fail arm; observed-instant production arm;
+      harness.landings token fix per the TC-F1-014 obligation). Report validated
+      complete: per-phase id + commit + test result present for all six phases."
+    type: decision
+    date: "2026-11-23"
+  - text: "RETRO — fixture reply vocabulary vs adapter contract: the phase-1
+      production fixture's landing reply lacked the adapter-contract sha member
+      (the adapter reads the squash SHA from the PUT body's sha); exposed only
+      at phase 3 by TC-MERGE-040's declared provider-squash-SHA assertion,
+      costing an amendment commit and — worse — the amendment left a duplicated
+      unreachable return that the AGGREGATE lint then caught (fix commit
+      4ccc7128). Improvement for future plans: validate fixture reply shapes
+      against the adapter contract at fixture-authoring time (the test plan
+      could name the reply-vocabulary requirement), and treat any mid-chain
+      fixture amendment as gate-suspect until the aggregate lint re-runs."
+    type: retro
+    date: "2026-11-23"
+  - text: "RETRO — per-phase scoped biome runs are not the aggregate gate: phase 3
+      reported 'biome clean' while the amendment's unreachable code was present
+      (scoped/ordered differently than the aggregate lint), and the first full
+      pnpm check failed fast on noUnreachable. The aggregate gate is the only
+      authority; per-phase clean claims are advisory. One gate iteration + one
+      correction commit spent; acceptable, but the coder's per-phase gate should
+      include the aggregate lint when a prior phase's committed files are
+      amended later in the same delivery."
+    type: retro
+    date: "2026-11-23"
+  - text: "Fixture-runtime limitation noted for future test plans (not remediated —
+      out of declared scope): the delivered merge fixture runtime hardcodes the
+      lifecycle document as complete with empty transitions, so a
+      lifecycle-finalization FAIL is not expressible without a fixture-harness
+      change; TC-MERGE-045's battery-only arm was substituted with the
+      owner-gate-present shape preserving the requirement class (recorded family
+      refusal carries {gateId, detail}, no attribution/probe member). Any future
+      change needing a lifecycle-fail arm must extend the fixture harness
+      explicitly in its plan."
     type: info
     date: "2026-11-23"
