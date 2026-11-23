@@ -8,7 +8,7 @@ phases:
   clarify_scope: { started: "2026-11-23T23:32:00Z", completed: 2026-11-23T22:33:31.628Z }
   specification: { started: null, completed: 2026-11-23T22:41:27.780Z }
   test_planning: { started: null, completed: 2026-11-23T22:49:16.566Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-23T22:57:41.750Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -160,4 +160,32 @@ notes:
       to plan constants — grammar properties contractual. No upstream gap
       requires reopening clarify_scope."
     type: info
+    date: "2026-11-23"
+  - text: "Plan validated on return (7 phases, delivery.plan.v1, file-precise
+      scopes, golden-capture branch point in phase 1 so TC-COMPAT-001 pins
+      pre-change behaviour). Constants fixed: host slot max 253 / min 1,
+      integration id max 64 / min 1, stdout capture 256 KiB, session-bus facts
+      exactly DBUS_SESSION_BUS_ADDRESS + XDG_RUNTIME_DIR (forwarded only when
+      present), opencode window >=2.3.2 <3.0.0. Two flagged items for the DoR
+      gate to probe: (1) engine.ts forwarding tension — forwarding scope =
+      production/entrypoint/index/edge/harness-spawn-env/inference/mcp/doctor
+      only; TC-REMEDY-003's park/log-line arm must prove field survival WITHOUT
+      engine edits; delivery STOPs and reopens to PM if a reconstruction is
+      found inside engine.ts or daemon-compose.ts (owner lists engine.ts:285-306
+      as forward-looking #395); (2)
+      tests/checks/tracker-credential-provisioning-guide.test.ts pins 'only an
+      environment source' — the sentence this change reverses — so the companion
+      test update rides phase 7 scope with the guide reconciliation
+      (TC-DOCS-001/003 re-pinned); review phase 8 must verify this pairing
+      landed."
+    type: info
+    date: "2026-11-23"
+  - text: "Retro: first `plan validate GH-394` FAILED — tier.escalationTriggers
+      rejected ('expected an array of strings'). Root cause: both trigger
+      entries were UNQUOTED YAML scalars containing ': ' (F-4: STOP / any host:
+      stop), so each parsed as a mapping, not a string. Fix re-delegated to
+      @plan-writer (quote or rephrase; keep semantics). Validator contract:
+      array of non-empty plain strings (plan-validate.ts:455-467). No phase
+      complete landed until validate passes."
+    type: retro
     date: "2026-11-23"
