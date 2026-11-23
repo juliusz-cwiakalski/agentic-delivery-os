@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the shipped run's fenced, post-append-verified persistence of the EVT-1 gate-verification record with byte-identical verdicts and the full-declared-sequence gate-set identity that binds its consumption, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338", "GH-388"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338", "GH-388", "GH-386"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
@@ -93,7 +93,7 @@ specified in [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 |---|---|
 | `lifecycle-finalization` | The structured `VerifyLedgerEvaluation` is `finished` for the declared full or LITE variant. |
 | `ci-green` | The pushed head is resolved, the expected job set is valid, the check-run page is below the limit, at least one expected job succeeded, no run failed/canceled/is pending, and every expected job is present. |
-| `push-parity` | Attached branch, exactly one matching open delivery request, full 40/64-hex SHAs, and equal local/remote SHAs. |
+| `push-parity` | Attached branch, exactly one matching open delivery request, full 40/64-hex SHAs, and equal local/remote SHAs. GH-386: this equality is the shared parity definition with two consumers — verify gates computes it here as a gate, and the dispatch engine's derivation arm evaluates the same comparison (local branch head against the open delivery request's head) as its `pr-open` parity precondition with a bounded fast-forward ensure-push act; two consumers, one seam, documented on both pages so future changes keep them aligned. |
 | `owner-gate` | A readable work item without `hand-back` or `human-input-needed` (case-insensitive). |
 | `squash-preflight` | Open, non-draft, targeting `main-tools`, `mergeable`, with positive commit and changed-file counts. |
 

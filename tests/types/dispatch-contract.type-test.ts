@@ -12,13 +12,16 @@ import type {
   DispatchAuthorityView,
   DispatchComparisonClass,
   DispatchComparisonOutcome,
+  DispatchComparisonReason,
   DispatchComparisonRecord,
   DispatchCorroborationRecord,
   DispatchDivergenceRecord,
   DispatchEnvelopeData,
+  DispatchEnvelopePushBlock,
   DispatchEvidenceClass,
   DispatchHandoverRecord,
   DispatchHandoverState,
+  DispatchPushVerdict,
   DispatchSummaryData,
 } from "../../packages/core/src/contracts/dispatch";
 
@@ -184,4 +187,35 @@ export type Gh335Probes = [
   VersionVerdictFactIsClosed,
   ModeFactIsClosed,
   ModeOriginFactIsClosed,
+];
+
+/* GH-386: the additive envelope push block is optional, closed, and whole. */
+
+type PushBlockIsOptional = Expect<
+  Equal<DispatchEnvelopeData["push"], DispatchEnvelopePushBlock | undefined>
+>;
+type PushVerdictUnion = Expect<Equal<DispatchPushVerdict, "clean" | "pushed" | "failed">>;
+type UnknownPushVerdictRejected = Expect<
+  Equal<"forced" extends DispatchPushVerdict ? true : false, false>
+>;
+type PushBlockMembersAreClosed = Expect<
+  Equal<keyof DispatchEnvelopePushBlock, "verdict" | "localHead" | "remoteHead" | "parity">
+>;
+type PushVerdictIsTyped = Expect<Equal<DispatchEnvelopePushBlock["verdict"], DispatchPushVerdict>>;
+type PushParityIsBoolean = Expect<Equal<DispatchEnvelopePushBlock["parity"], boolean>>;
+type ComparisonReasonUnionIsExact = Expect<
+  Equal<
+    DispatchComparisonReason,
+    "dispatch-session-family" | "comparison-source-unavailable" | "push-parity-unmet"
+  >
+>;
+
+export type Gh386Probes = [
+  PushBlockIsOptional,
+  PushVerdictUnion,
+  UnknownPushVerdictRejected,
+  PushBlockMembersAreClosed,
+  PushVerdictIsTyped,
+  PushParityIsBoolean,
+  ComparisonReasonUnionIsExact,
 ];

@@ -7,7 +7,7 @@ last_updated: 2026-11-23
 owners: ["engineering"]
 summary: "Operating guide for engine-first delivery: the daily routine, the four per-reference inspection queries, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, the typed Mode A loop beside its shell fallback, and the declared residuals."
 links:
-  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388"]
+  related_changes: ["GH-293", "GH-348", "GH-354", "GH-388", "GH-386"]
   related_decisions: ["TDR-0031", "TDR-0056", "TDR-0057", "TDR-0058"]
 ---
 
@@ -212,6 +212,18 @@ The shell stack is the documented fallback, not a deprecated path:
   executable, and stdout is byte-identical across the two authority states.
 - Reversibility is read from the engine surface (`dispatch handover` data or the
   fleet row), never from shell output.
+
+**Parity enforcement is typed-lane behavior (GH-386).** The typed engine
+evaluates the `pr-open` parity precondition at its derivation arm — it reads the
+local branch head against the pull request's head, pushes the change branch
+fast-forward exactly once when the heads are unequal, re-reads parity once, and
+classifies an unresolvable push as a typed failure that retains the PR URL. The
+bash fallback gains **no** parity enforcement: its five-key tail, its exits, and
+its session-side push conventions are unchanged, and a fallback `pr-open`
+summary makes no parity claim. An operator who chooses the fallback owns the
+head check the typed lane performs by construction; the divergence is declared,
+never silent, and the fallback's documented status and retirement path are
+unchanged.
 
 ## 6. Declared residuals
 

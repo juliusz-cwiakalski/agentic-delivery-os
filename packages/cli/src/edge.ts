@@ -7745,6 +7745,12 @@ export type DispatchComposition = {
    * timer. Production binds a real one; the offline battery injects a recorder.
    */
   readonly delay?: DispatchPorts["delay"];
+  /**
+   * The one injected ensure-push capability (GH-386 F-1, DEC-1): composed at
+   * the production edge over the adapters push seam. Absent keeps the delivered
+   * no-act behavior for a composition that declares no act.
+   */
+  readonly pushParity?: DispatchPorts["pushParity"];
   readonly restartBudget?: number;
   /** The delivery's persisted restart count, read at run time (AC-F3-2). */
   readonly restartCount?: (ref: string) => number;
@@ -8195,6 +8201,7 @@ export const createDispatchCommandRuntime = (
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),
         ...(composition.delay === undefined ? {} : { delay: composition.delay }),
+        ...(composition.pushParity === undefined ? {} : { pushParity: composition.pushParity }),
         ...(composition.restartBudget === undefined
           ? {}
           : { restartBudget: composition.restartBudget }),

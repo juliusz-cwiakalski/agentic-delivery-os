@@ -1,0 +1,203 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-386
+tier:
+  name: full
+# ---------------------------------------------------------------------------
+# Plan-level accepted interpretations (pm-notes 2026-11-23, binding on every
+# phase below):
+#   - OQ-1 (spec interpretation, not a spec change): a spawn-level act failure
+#     (the git binary missing or failing to start) is `fails` under the F-3
+#     row — any non-successful act outcome is the ONE typed failure; asserted
+#     once alongside TC-PUSH-012; no second failure shape is invented
+#     (spec DEC-4; test plan §8.3).
+#   - OQ-2 (declared assumption, not a spec change): the no-upstream path is
+#     undeclared behavior and is NOT tested; if the implementation finds it
+#     reachable-and-unhandled, it is recorded as a declared deferred finding
+#     (spec §7.3 style), never a new failure class (spec §12; test plan §8.3).
+#
+# AC-F4-1 posture (binding, spec F-4, DEC-2, TC-LIVE-001): the post-merge
+# live-verification contract is traceable-but-executed-post-merge. NO plan
+# phase claims it, no phase scope names it, and no in-change live dispatch
+# exists anywhere in this plan. The in-merge gates for the ticket's
+# acceptance are TC-PUSH-001/002, TC-PUSH-013, TC-FAIL-001/002; the CEO/owner
+# lane records the two post-merge observations in the pm-notes `notes:` trail
+# and the DoD gate reads that trail. A divergent `pr-open` cannot pass
+# silently — it surfaces as the typed failure of F-3 (TC-FAIL-001).
+#
+# Decision-record posture (binding, pm-notes 2026-11-23): the authored
+# doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md is untracked
+# and doc/decisions/00-index.md already carries the TDR-0076 row (committed).
+# BOTH land via phase 1's declared scope at the delivery_planning phase
+# commit, healing the index/record transient the test_planning commit swept.
+# The record is status Proposed; the owner confirms at PR review; no delivery
+# phase edits it.
+#
+# Plan-wide delivery fences (binding), in force on every phase below:
+#   - vocabulary closure (NG-2, NG-7): no new result token, no new error
+#     identity, no new error-table row, no new derivation arm, no new
+#     corroboration source, and no new attempt-record field anywhere; the
+#     whole change is exactly one mapping row (failed / failed / exit 1 /
+#     exactly one attempt record / comparison not-applicable, token null,
+#     reason push-parity-unmet), one comparison-reason literal, the
+#     push:<verdict> evidence-reference family reserved ahead of the slice,
+#     and the additive optional machine-envelope push block; the one new
+#     failure class is expressed in the delivered failure-classification
+#     table shape (packages/core/src/domain/dispatch-result.ts), consistent
+#     with TC-FAIL-003's exactly-one-row pin;
+#   - act boundedness (NFR-1, NG-5): at most one push per classification, no
+#     retry; fast-forward-only; the change branch's configured upstream only;
+#     never the base branch or any other ref; no force-capable variant
+#     exists; fixed argv and a literal non-shell child process; 60 000 ms
+#     default timeout, injectable through the delivered seam, with no new
+#     configuration key on any path (NFR-4);
+#   - output stability (NFR-4, spec §8.5): text mode is byte-unchanged (the
+#     four-key contract); machine additions are bounded single-line, the
+#     whole push block within the delivered 256-character dispatch bound;
+#     pre-change attempts without push: references read unchanged and reads
+#     never fabricate parity facts;
+#   - offline posture (test plan §6): every case runs over injected parity
+#     facts and push outcomes through the delivered child-runner seam
+#     pattern — zero live network, zero real remotes, zero real child
+#     processes, zero wall-clock assertions; the live transport stays
+#     outside the battery's claims (the PARITY_PROOF_BOUNDARY NOT-PROVEN
+#     list is unchanged — exactly why AC-F4-1 is a live contract);
+#   - golden discipline (TC-PUSH-017, TC-FAIL-002): the delivered committed
+#     goldens are the read-only oracle — the existing four-key cells are
+#     never rewritten; the new push-outcome and push-failure cells are
+#     pinned once, and updates happen only by the explicit regeneration
+#     command for a declared change, never a blanket rewrite;
+#   - broad-sweep fence (test plan §7 broad note): every delivered suite
+#     whose scenario resolves `pr-open` gains injected equal-heads parity
+#     facts MECHANICALLY, through the declared fixture builders (phase 3
+#     truth builders, phase 5 parity fixtures); a delivered suite needing a
+#     direct edit beyond the declared sweep set is recorded in pm-notes
+#     `notes:` and reconciled at review, never silently;
+#   - gate evidence convention — TMPDIR=$PWD/tmp/tmpdir; `pnpm check` is the
+#     aggregate gate and belongs to the lifecycle quality_gates phase, not a
+#     plan phase; commits flow through the commit primitive; the PR targets
+#     main-tools and stops open; merge authority and tracker transitions
+#     belong to the lifecycle phases, not this plan.
+# ---------------------------------------------------------------------------
+phases:
+  - id: 1
+    title: Companion decision record TDR-0076 reconciled onto the branch
+    kind: planning
+    summary: "commit the authored, untracked decision record doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md (GH-386 DEC-1: the dispatch engine's first remote-write act — one bounded, fast-forward-only, change-branch-upstream ensure-push before pr-open classification on the delivered child-runner pattern, with the typed push failure through the one new mapping row) together with doc/decisions/00-index.md, which already carries the TDR-0076 row, so the record and its index row land atomically at the delivery_planning phase commit and the test_planning commit's accepted index/record transient is healed"
+    # TC ownership: none — this phase lands an authored artifact; TC-LIVE-001 and TC-FALLBACK-001 are NOT claimed here (AC-F4-1 is post-merge by DEC-2; TC-FALLBACK-001 belongs to phase 6's documentation reconciliation).
+    # Ordering: first, so every delivery phase below branches on an authorized act (spec DEC-1, RSK-1); no production code exists yet — the seam arrives in phase 2 and consumes this authorization, not this file's bytes.
+    scope:
+      files:
+        - doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md
+        - doc/decisions/00-index.md
+    interactions:
+      - kind: contract-file
+        target: doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md
+        role: producer
+  - id: 2
+    title: Adapters-layer push seam under the no-shell regime
+    kind: delivery
+    summary: "add the typed stack's first remote-write seam packages/adapters/src/git/push.ts on the delivered merge-transaction child-runner pattern — one fast-forward-only push of the change branch to its configured upstream, fixed argv, literal non-shell child process over an injectable execFile-shaped runner, 60 000 ms default timeout injectable through the seam options with no new configuration key, an outcome union of accepted/rejected/failed/timed-out with no force-capable variant and no ref beyond the change branch, one attempt and no retry — export it from packages/adapters/src/git/index.ts, and bring the new seam under the static no-shell invariant by adding it to DISPATCH_FLOW_SURFACE in scripts/checks/no-shell-dispatch.ts with the surface-list and planted-reference tests extended in tests/checks/no-shell-dispatch.test.ts, so NFR-1's act contract and NFR-3's surface coverage hold at the seam before any consumer exists (TC-BND-002's static half; F-1 act contract)"
+    # TC ownership: TC-BND-002 (static half: the surface list covers the seam and a planted shell reference fails by name); TC-PUSH-012's seam prerequisites (argv shape, injectable timeout, one-attempt posture) land here and are behavior-proven in phase 4.
+    # Boundaries: the delivered commit/merge/watchdog git seams stay authoritative and untouched; the local-only, no-network, no-remotes declarations of merge.ts and commit.ts are unchanged (spec §16); no consumer wiring exists yet — composition arrives in phase 4; NFR-2 cost accrues only when the act composes.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir pnpm check:no-shell; bun test tests/checks/no-shell-dispatch.test.ts; bun test tests/behaviour (git-seam suites stay green).
+    scope:
+      files:
+        - packages/adapters/src/git/push.ts
+        - packages/adapters/src/git/index.ts
+        - scripts/checks/no-shell-dispatch.ts
+        - tests/checks/no-shell-dispatch.test.ts
+    interactions:
+      - kind: generated-code
+        target: packages/adapters/src/git/push.ts
+        role: producer
+  - id: 3
+    title: Parity contracts, derivation arm-8 precondition, and the typed push-failure row with closure pins
+    kind: delivery
+    summary: "declare the parity vocabulary and bind it at the derivation — packages/core/src/contracts/dispatch.ts gains the injected parity-fact read (local branch head and pull-request head, full-hex), the closed push-verdict union clean/pushed/failed, the comparison-reason literal push-parity-unmet on the comparison record's optional reason, the additive optional machine-envelope push block types (verdict/localHead/remoteHead/parity, together-or-absent-together), and the push:<verdict> evidence-reference naming; packages/core/src/domain/dispatch-result.ts binds the arm-8 (open-pr) parity precondition — pr-open derives only from a readable equality, an unreadable parity read stays the delivered state-unverified at exit 2 and never lands in the new row, pr-open-unverified is untouched with no precondition, no evidence and no envelope block (DEC-5), remote-ahead and every non-successful act outcome classify the one new failure row in the delivered failure-classification table (failed / failed / exit 1 via the delivered user-validation projection / exactly one attempt record / comparison not-applicable, token null, reason push-parity-unmet; OQ-1 reading: a spawn-level act failure is `fails`), and resume re-enters the same arm so the precondition binds every classification; packages/core/src/domain/dispatch-comparison.ts carries the literal through the not-applicable record; tests/fixtures/dispatch/truth.ts extends the truth builders with equal-heads parity facts as the mechanical default so delivered arm-8 expectations hold (the broad sweep's pure-derivation half); tests/behaviour/dispatch-truth-derivation.test.ts proves the total arm-8 matrix over injected parity facts (clean no-act, ahead-then-equal, every failure direction, the unreadable boundary, the exclusion, remote-ahead); the closure pins extend additively — tests/checks/dispatch-contract-invariance.test.ts asserts exactly one new mapping row and one new reason literal with every other row byte-identical and no new error identity, token, domain kind, or error-table row, tests/structure/dispatch-token-home.test.ts keeps the eleven-token home total and ordered, and tests/types/dispatch-contract.type-test.ts pins the push block type surface (TC-FAIL-003; DM-3; NG-2/NG-7)"
+    # TC ownership: TC-FAIL-003 (the three closure suites); TC-PUSH-009/TC-PUSH-010 (derivation halves — behavior proof through runCli arrives in phase 4); TC-PUSH-013's totality property at domain altitude; TC-PUSH-001..008 expectations are pinned here at derivation level and behavior-proven in phase 4.
+    # Ordering: depends on phase 1 (the authorized act) and phase 2 (the seam's outcome union names the classes the classification consumes); the failure row must exist before phase 4's attempt records can carry it.
+    # Boundaries: no envelope rendering change yet (types only — rendering composes in phase 4); packages/cli/src/output/dispatch-text.ts is NOT in this change at all (text mode byte-unchanged, NFR-4); no attempt-record field is added (NG-7); the corroboration requirement map stays closed and pr-open still requires the tracker source only (DEC-3).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-truth-derivation.test.ts; bun test tests/checks/dispatch-contract-invariance.test.ts; bun test tests/structure/dispatch-token-home.test.ts; bun test tests/types/dispatch-contract.type-test.ts.
+    scope:
+      files:
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/domain/dispatch-result.ts
+        - packages/core/src/domain/dispatch-comparison.ts
+        - tests/fixtures/dispatch/truth.ts
+        - tests/behaviour/dispatch-truth-derivation.test.ts
+        - tests/checks/dispatch-contract-invariance.test.ts
+        - tests/structure/dispatch-token-home.test.ts
+        - tests/types/dispatch-contract.type-test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
+        role: producer
+      - kind: generated-code
+        target: packages/core/src/domain/dispatch-result.ts
+        role: producer
+  - id: 4
+    title: Ensure-push act, parity evidence, and envelope block live through the real command path
+    kind: delivery
+    summary: "compose the act and its evidence where the engine runs — packages/core/src/app/dispatch.ts performs the ensure-push post-session and pre-classification as one bounded injected capability: read parity (the local branch head against the pull request's head — the verify-gates push-parity definition), push fast-forward exactly once when the local head is ahead, re-read parity once, feed the parity facts to the derivation, reserve the push:<verdict> disclosure reference ahead of the 16-slice beside the delivered lane:append-failed reservation, record the typed failure's single attempt with the not-applicable comparison and the retained PR URL, and carry the additive optional envelope push block exactly when the precondition evaluated; packages/cli/src/production.ts constructs the production push capability over the adapters seam (60 000 ms default, injected like the delivered dispatchDelay binding) and packages/cli/src/edge.ts passes it into the dispatch ports; the parity fixture doubles land at their declared home — tests/fixtures/dispatch/parity/process-runner.ts gains the push-outcome double extending the delivered by-name shell refusal, tests/fixtures/dispatch/parity/harness.ts gains injectable head facts, the recording push runner with argv/count/call order, and the push-seam mounting, and tests/fixtures/dispatch/parity/seams.ts gains the SEAM_MANIFEST row proving the seam symbol is exported by its one production module; the new suites prove the behavior through real runCli invocations over injected facts — tests/behaviour/dispatch-push-parity.test.ts (TC-PUSH-001..008 the clean/ahead/rejection-class/timeout/stale-re-read/remote-ahead cells with the single-invocation recording on every failure path, TC-PUSH-009/010 the unreadable boundary and the exclusion cells, TC-PUSH-012 the full act contract, TC-PUSH-013's behavior half, TC-PUSH-018 pre-change records read unchanged with no fabricated parity facts, TC-BND-001 the one-extra-read budget and no-new-configuration-key proof), tests/behaviour/dispatch-push-evidence.test.ts (TC-PUSH-014 the reservation holding under a full evidence slice, TC-PUSH-015/016 behavior halves), tests/structure/dispatch-push-envelope.test.ts (TC-PUSH-015/016 structure halves — the presence matrix, together-or-absent-together, the 256-character bound, closed members, no payload or credential), and the golden suites extend once — tests/golden/dispatch-text.test.ts pins the new pr-open cells byte-identical to the four-key contract (TC-PUSH-017) and tests/golden/dispatch-errors.test.ts pins the push-failure cell with pr_url retained and no top-level error (TC-FAIL-002)"
+    # TC ownership: TC-PUSH-001..008, TC-PUSH-009, TC-PUSH-010, TC-PUSH-012, TC-PUSH-013 (behavior half), TC-PUSH-014..018, TC-BND-001, TC-FAIL-002 (behavior + golden halves) — the in-merge gates for the ticket's acceptance (TC-PUSH-001/002 for ticket AC-1, TC-PUSH-013 for requirement 4, TC-FAIL-001/002 for ticket AC-2) are all green at this phase's boundary except TC-FAIL-001's registry row, which lands in phase 5.
+    # Ordering: depends on phases 2-3 (the seam and the vocabulary); the fixture doubles must exist before the suites that consume them — hence they land IN this phase, not after it.
+    # Boundaries: packages/cli/src/output/dispatch-text.ts is NOT in scope anywhere in this plan (text mode byte-unchanged, NFR-4); the envelope block renders from the core run data through the delivered json pass-through — no renderer edit exists; the act never spawns, resumes, or restarts a session and consumes no restart ordinal (spec F-1 session posture); the stall ladder is unchanged.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/dispatch-push-parity.test.ts; bun test tests/behaviour/dispatch-push-evidence.test.ts; bun test tests/structure/dispatch-push-envelope.test.ts; bun test tests/golden/dispatch-text.test.ts; bun test tests/golden/dispatch-errors.test.ts.
+    scope:
+      files:
+        - packages/core/src/app/dispatch.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/dispatch/parity/process-runner.ts
+        - tests/fixtures/dispatch/parity/harness.ts
+        - tests/fixtures/dispatch/parity/seams.ts
+        - tests/behaviour/dispatch-push-parity.test.ts
+        - tests/behaviour/dispatch-push-evidence.test.ts
+        - tests/structure/dispatch-push-envelope.test.ts
+        - tests/golden/dispatch-text.test.ts
+        - tests/golden/dispatch-errors.test.ts
+    interactions:
+      - kind: generated-code
+        target: packages/core/src/app/dispatch.ts
+        role: producer
+  - id: 5
+    title: Parity battery registry integration and the real-path sweep
+    kind: delivery
+    summary: "join the parity battery as its designed evolution declares — tests/fixtures/dispatch/parity/cases.ts extends the closed PARITY_GROUPS and PARITY_SEAMS constants with the declared push-parity group and push seam and authors the registry rows (clean, pushed, each rejection class, timeout, stale re-read, remote ahead, the unreadable boundary, the exclusion, the typed failure row, and the defect-pin matrix row) with token/exit expectations proven once each through the real command path by the new owning suite tests/conformance/dispatch/dispatch-parity-push.test.ts; tests/fixtures/dispatch/parity/evidence.ts moves the push seam into PARITY_PROOF_BOUNDARY's PROVEN surfaces with the NOT-PROVEN list unchanged and the 11/11 class coverage intact (the new failure class maps to the existing failed token, so the class table still names one row per taxonomy token and the new rows are non-class rows); tests/fixtures/dispatch/parity/lane.ts extends the delivered resume-pr-open-lane scenario family with the equal-heads and local-ahead variants so the precondition binds every arm-8 classification fresh or resumed, idempotent on an equal branch with zero spawns charged (TC-PUSH-011); tests/conformance/dispatch/dispatch-parity-battery.test.ts holds the import-identity, seam-membership, two-run determinism (canonicalize) and unchanged class-coverage assertions over the extended registry; tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts and tests/conformance/dispatch/dispatch-parity-no-shell.test.ts cover the resume rows and the no-shell battery inventory with the push rows (TC-BND-002's battery half); and the delivered real-path pr-open scenarios gain their mechanical equal-heads facts — tests/behaviour/dispatch-resume.test.ts, tests/conformance/dispatch/dispatch-e2e.test.ts, tests/conformance/dispatch/dispatch-parity-tracker.test.ts, tests/behaviour/engine-first-cross-surface.test.ts (the broad sweep's declared set; stragglers go through the phase-3 truth builders per the header fence)"
+    # TC ownership: TC-BAT-001, TC-PUSH-011, TC-PUSH-013 (conformance half), TC-FAIL-001 (the registry row: row semantics, exposure counting, no divergence, comparison reason push-parity-unmet), TC-BND-002 (battery half).
+    # Ordering: depends on phases 2-4 (the rows drive the real command path over the composed act); the registry is the single-row registry — no suite re-expresses a scenario and no scenario is written twice.
+    # Boundaries: the delivered assertions of the battery, lane-resume, and no-shell suites are extended additively only; the permanent-suite invariant rules hold (never assert a branch diff, never assert growing counts); the stall-loop suite's loop rows read their parity facts from the phase-4 fixtures and the suite's own assertions hold unchanged.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/dispatch.
+    scope:
+      files:
+        - tests/fixtures/dispatch/parity/cases.ts
+        - tests/fixtures/dispatch/parity/evidence.ts
+        - tests/fixtures/dispatch/parity/lane.ts
+        - tests/conformance/dispatch/dispatch-parity-push.test.ts
+        - tests/conformance/dispatch/dispatch-parity-battery.test.ts
+        - tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
+        - tests/conformance/dispatch/dispatch-parity-no-shell.test.ts
+        - tests/behaviour/dispatch-resume.test.ts
+        - tests/conformance/dispatch/dispatch-e2e.test.ts
+        - tests/conformance/dispatch/dispatch-parity-tracker.test.ts
+        - tests/behaviour/engine-first-cross-surface.test.ts
+  - id: 6
+    title: Lockstep changeset and declared documentation reconciliation
+    kind: delivery
+    summary: "declare the release and reconcile the documentation — one lockstep changeset .changeset/gh-386-push-pr-evidence-before-pr-open-minor.md declaring the five fixed-group packages @delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode at minor (the standing lockstep invariant; the entries, not the filename, are the contract), and the declared doc-impact set lands: doc/spec/features/feature-dispatch-engine.md documents the arm-8 parity precondition, the one new failure-mapping row, the push:<verdict> evidence references, and the additive envelope push block (primary page); doc/spec/features/feature-quality-gates-and-pr.md carries the pr_creation tail cross-reference; doc/spec/features/feature-verify-gates.md documents the shared parity definition — two consumers, one seam; doc/spec/features/feature-autonomous-delivery.md and doc/guides/engine-first-operations.md declare the shell-fallback divergence — parity enforcement is typed-lane behavior and the bash fallback keeps its delivered five-key tail, exits, and push conventions (F-5, AC-F5-1, TC-FALLBACK-001); doc/quality/test-specs/test-spec-dispatch-engine.md gains the push-parity coverage rows and suites, joining this change's output to the enduring map (TC-FALLBACK-001 step 4); the reconciliation is written by @doc-syncer in the lifecycle system_spec_update phase against this declared scope, so the phase-7 writes land within the plan"
+    # TC ownership: TC-FALLBACK-001 (the fallback rows, the operations guide, the shared-parity note, the coverage map; content checks: markdown rendering, link/path integrity, git diff --check per the testing-strategy docs layer). TC-LIVE-001 is NOT claimed — it is post-merge by DEC-2 and lives in the pm-notes notes: trail.
+    # Release scope: the changeset is this phase's release artifact; the PR, merge authority, and tracker transitions belong to the lifecycle phases, not this plan. The changeset declares five packages at minor (version_impact: minor per the spec front matter) — a patch guess is not repeated (GH-381 retro).
+    # Verify: the changeset file parses as YAML front matter plus prose declaring the five packages at minor; the docs-layer checks run over the declared pages; bun test tests/structure (closed vocabulary) and tests/checks/error-table-sync.test.ts stay green — no vocabulary addition anywhere.
+    scope:
+      files:
+        - .changeset/gh-386-push-pr-evidence-before-pr-open-minor.md
+        - doc/spec/features/feature-dispatch-engine.md
+        - doc/spec/features/feature-quality-gates-and-pr.md
+        - doc/spec/features/feature-verify-gates.md
+        - doc/spec/features/feature-autonomous-delivery.md
+        - doc/guides/engine-first-operations.md
+        - doc/quality/test-specs/test-spec-dispatch-engine.md
+    interactions:
+      - kind: contract-file
+        target: doc/spec/features/feature-dispatch-engine.md
+        role: producer

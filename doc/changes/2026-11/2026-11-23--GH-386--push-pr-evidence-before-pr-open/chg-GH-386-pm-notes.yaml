@@ -1,0 +1,315 @@
+# PM notes for GH-386 — durable change memory (committed).
+# Phase timestamps are written only by the phase family; never hand-edit them.
+change_id: GH-386
+title: "M4-S23: The PR-creation evidence commit must be pushed before the lane
+  closes (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+branch: fix/GH-386/push-pr-evidence-before-pr-open
+phases:
+  clarify_scope: { started: null, completed: 2026-11-23T14:44:16.147Z }
+  specification: { started: null, completed: 2026-11-23T14:59:39.990Z }
+  test_planning: { started: null, completed: 2026-11-23T15:12:02.888Z }
+  delivery_planning: { started: null, completed: 2026-11-23T15:27:17.435Z }
+  dor_check: { started: null, completed: 2026-11-23T15:36:21.458Z }
+  delivery: { started: null, completed: 2026-11-23T20:27:04.416Z }
+  system_spec_update: { started: null, completed: 2026-11-23T20:45:12.435Z }
+  review_fix: { started: null, completed: 2026-11-23T21:08:28.036Z }
+  quality_gates: { started: null, completed: 2026-11-23T21:37:56.225Z }
+  dod_check: { started: null, completed: 2026-11-23T21:39:05.483Z }
+  pr_creation: { started: null, completed: 2026-11-23T21:44:15.102Z }
+decisions:
+  - text: "AC-3 live-proof logistics decided PM-autonomous (non-interactive run —
+      question tool cancelled; owner override point is the open-PR review):
+      post-merge live observation. AC-1/AC-2 fixtures gate the merge in-PR; the
+      first two consecutive natural dispatches after merge must end
+      local==remote at pr-open and are recorded as the live verification by the
+      CEO/owner lane. Drivers: in-change live dispatches would commit the owner
+      to two full unsolicited deliveries (needs owner-designated tickets —
+      cost-bearing scope is owner-stated); one-delivery-at-a-time discipline
+      preserved; requirement 3 makes a divergent pr-open a typed failure, so the
+      post-merge proof cannot pass silently and matches exactly the
+      twice-observed failure pattern. The spec must declare this AC-3
+      satisfaction contract explicitly so the DoD gate can evaluate it."
+    date: 2026-11-23
+  - text: "Test-plan OQ-1 accepted (spec interpretation, not a spec change): F-3's
+      failure enumeration ('rejected, fails, times out, or parity still unmet')
+      treats a spawn-level act failure (git binary missing/failing to start) as
+      'fails' under the same row — any non-successful act outcome is the typed
+      failure. Consistent with the row's semantics; no vocabulary or row change.
+      Carried into the plan and implementation reading; DoR gate may re-check."
+    date: 2026-11-23
+  - text: "Test-plan OQ-2 accepted (declared assumption, not a spec change): spec
+      §12 assumes an open PR implies a configured upstream; the no-upstream path
+      is undeclared behavior and is NOT tested. If @coder finds it
+      reachable-and-unhandled, record as a deferred finding (like GH-293's
+      declared residuals), never a new failure class."
+    date: 2026-11-23
+  - text: "DoR gate verdict: READY at iteration 1 (2026-11-23, readiness-review/
+      readiness-iter-1.md) — 10/10 facets PASS, no pause flag. All six
+      orchestrator items upheld (AC-3 contract coherent and DoD-evaluable;
+      vocabulary-closure reading defensible; OQ-1/OQ-2 re-checked accepted;
+      TDR-0076 Proposed sufficient; plan complete; standard bar met). Three
+      non-blocking findings: (1 minor) spec NG-2/DM-3 closure wording —
+      clarifying clause to be added by @coder in the docs phase and carried into
+      phase-7 dispatch-engine reconciliation; (2 nits) test-plan resume-family
+      label drift (resume-pr-open-lane -> resume-pr-open) and TC-PUSH-001
+      composition location note — remediate at next artifact touch, no delivery
+      impact."
+    date: 2026-11-23
+open_questions: []
+blockers: []
+notes:
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/403
+      (2026-11-23, @pr-manager). Title: fix(GH-386): push PR-creation evidence
+      before the lane closes (M4-S23). Base main-tools, head
+      fix/GH-386/push-pr-evidence-before-pr-open at dbcca06a, pushed with PARITY
+      ASSERTION PASS (local HEAD == origin head dbcca06a — the change's own
+      PR-creation flow satisfied its own contract before pr-open). Ticket:
+      assigned juliusz-cwiakalski, labels change+review, milestone M4 untouched;
+      one durable comment recording the AC-3 post-merge live-verification
+      contract + TDR-0076 acceptance pointer (issuecomment-7114834963). Range at
+      push: 18 commits, merge-base 8f557cfd still equals origin/main-tools
+      (16/16 range-lint verdict remains valid for the range it covered; +2
+      lifecycle commits since). STOP per ticket convention: PR open for owner
+      review/merge; merge authority is the owner's. Post-merge obligations live
+      in the ticket comment: AC-3 live verification (first two consecutive
+      natural dispatches, local==remote at pr-open, parity evidence both
+      attempts, CEO/owner lane records here) and TDR-0076 acceptance at review
+      (Proposed -> Accepted + decision_date on approval)."
+    type: info
+    date: 2026-11-23
+  - text: "DoD check PASS (2026-11-23, @pm-owned phase 10). Verified: pm-notes
+      exists, committed, lint conforms; all 10 prior phases completed in the
+      verified ledger (phase list, registry 7836 records). Plan completion:
+      every declared plan phase (1-6 + format polish) has a notes entry with
+      phase id, commit hash (2182e05e, 2255dfae, 3de8779b, aa39ec45, b00fef32,
+      a9121ba4, f9f8d44f) and test result. ACs: AC-F1-1 (TC-PUSH-001..013
+      green), AC-F1-2 (defect pin, totality matrix), AC-F2-1 (evidence refs +
+      envelope + byte-stable text mode), AC-F3-1 (TC-FAIL-001..003 + golden
+      pin), AC-F4-1 evaluated as the DECLARED CONTRACT per spec F-4/DEC-2 —
+      in-merge gates are the fixtures + defect pin; the live observation (two
+      consecutive post-merge dispatches, local==remote at pr-open, parity
+      evidence on both attempts) is executed by the CEO/owner lane after merge
+      and recorded in the notes trail — declared residual until then (RSK-7
+      daemon lane remains the known open surface), AC-F5-1 (fallback divergence
+      declared at four doc sites). Current-truth docs: doc-syncer residual gaps
+      EMPTY, tests/checks 1628-0. Review: PASS iter-2. Gates: pnpm check 12640-0
+      + range lint PASS 16/0. No gaps found; no phase reopen needed."
+    type: info
+    date: 2026-11-23
+  - text: "Quality gates PASS (2026-11-23, run tmp/run-logs-runner/2026-11-23/
+      220947-gh386-pnpm-check.log). Range lint gate verdict: PASS — 16 commits
+      in range (merge-base 8f557cfd = origin/main-tools, head 1c01dff2),
+      offending commits 0, mode none (no FAIL, so no SURGICAL REWORD /
+      CONDENSE-TO-ONE applies), resolved commitlint binary
+      node_modules/.bin/commitlint origin repository-local ref
+      refs/remotes/origin/main-tools. Aggregate gate: TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 — 12640 pass / 4 skip / 0 fail across 1509 files,
+      boundaries / memory-lint / forbidden-literals / namespace-tree /
+      prompt-conformance / help-guide-coverage / exports-parity all green. No
+      fixes were needed in this phase (first run passed)."
+    type: info
+    date: 2026-11-23
+  - text: "Review iter-2 verdict: PASS (2026-11-23, code-review/review-iter-2.yaml).
+      Remediation commit 23aadeb6 (spec-only, 7+/3−) resolved F-1/F-2 exactly as
+      prescribed and verified against code truth (daemon lane derives with no
+      pushParity; readOpenRequestHeadSha fresh bounded reads, fail-closed). F-3
+      resolved at baseline 3afb8db3; F-4/F-5 no-action info. Zero findings;
+      spec_compliance PASS, plan_compliance PASS, next step PROCEED. Record-only
+      optional minors (no action): §7.1 + glossary universal phrasing and
+      test-plan AC-F1-1 restatement could carry the composition qualifier at
+      next artifact touch. Review loop closed in one remediation iteration; both
+      review yamls + spec remediation land with the review_fix phase commit."
+    type: info
+    date: 2026-11-23
+  - text: "Review iter-1 verdict: FAIL (2026-11-23, code-review/review-iter-1.yaml).
+      0 code defects; 5 findings (2m/1l/1i shape; reviewer count line says 5,
+      letters F-1..F-4). F-1 (medium): canonical spec lacks the daemon-lane
+      capability exemption — F-1 claims the precondition 'binds every
+      classification reaching arm 8' and AC-F1-1 is unqualified, while
+      code/port-contract/feature-page scope it to compositions supplying parity
+      facts; remediation = composition-scoping clause mirroring the feature-page
+      sentence + scoped AC-F1-1 + daemon-lane residual recorded in §7.3/§11. F-2
+      (medium): §8.1 'provider reads unchanged in count and kind' vs
+      implementation's fresh bounded list reads (fail-closed, same
+      class/resolution as readPullTruth); remediation = declare the parity read
+      pair. F-3 (low): pm-notes delivery-deviation note (c) mischaracterized the
+      identity rename — git truth: provider.head.unresolved exists in NO commit
+      reachable from base; rename IS the compliance path (provider is a
+      DOMAIN_KIND, so keeping it would force a forbidden error-table row;
+      ERROR_TABLE diff empty; delivered state-unverified untouched) — corrective
+      note appended below. F-4 (info): golden TC-FAIL-002 home is the test
+      plan's own named suite; opportunistic fixture-file migration later.
+      Remediation is documentation-only; owning artifact = SPEC; reviewer next
+      step = CALL_CODER for doc-artifact edits then re-review iteration 2.
+      Reopen state: NO phase reopen — remediation is verbatim review-prescribed
+      change-folder doc surgery inside the review_fix loop, so the FAIL record
+      rides its own commit and the spec edits ride the remediation commit. All
+      flagged items ruled compliant otherwise (golden adaptation honest;
+      companion fixtures accurate and non-weakening; spec clause exactly as
+      prescribed; intermediate window acceptable; daemon declaration matches
+      code)."
+    type: info
+    date: 2026-11-23
+  - text: "Corrective note (F-3): the delivery-deviations note's item (c) above was
+      wrong to say the rename 'touches a delivered error identity name' —
+      provider.head.unresolved never existed on the base; it existed only in
+      this branch's intermediates (aa39ec45, b00fef32) before a9121ba4 renamed
+      it to pr.head-unresolved. The rename avoids the forbidden error-table row
+      (provider is a DOMAIN_KIND) and keeps NG-2 intact. Supersedes that
+      characterization; kept append-only."
+    type: resolved
+    date: 2026-11-23
+  - text: "Retro (review iter-1): two medium findings were both SPEC-accuracy
+      defects the artifact chain let through — §8.1's 'reads unchanged in count
+      and kind' was written without verifying the implementation's read
+      behavior, and the daemon-lane exemption lived in code + feature page but
+      not the canonical spec. Lesson for future changes: when a spec declares
+      I/O counts/kinds or universal binding ('every classification'), the
+      spec-writer must verify those claims against code truth the same way it
+      verifies mechanisms; DoR did not catch it because both sides (spec prose
+      vs port contract) were never diffed. Cost: one remediation iteration
+      (~re-review cycle). Consider a DoR checklist item: cross-diff universal
+      claims against the port contract."
+    type: retro
+    date: 2026-11-23
+  - text: "Phase 7 doc reconciliation complete (doc-syncer report 2026-11-23): 8
+      files edited / 0 created / residual gaps EMPTY / tests-checks 1628-0 /
+      doc-distribution guard green. Primary page got the 9-proven boundary fix,
+      post-merge live-verification clause, no-shell surface entry, 60000ms
+      bounds row, TDR-0076 linkage, GH-386 change record. Notable catches:
+      feature-adapter-ports + monorepo-scaffold-toolchain carried blanket
+      'contacts no network' / 'local-only' git-seam claims made false by the
+      first remote-write act — both now scoped (merge mutations stay
+      no-network/no-remotes; push is the family's one remote-write).
+      feature-closeout scoped (push exported but never exercised there).
+      Identity rename confirmed absent from current-truth docs. Edits land via
+      the plan-scoped system_spec_update phase commit (some pages are
+      tracked-drift sweeps outside the declared file list — expected, reasons in
+      the doc-sync report)."
+    type: info
+    date: 2026-11-23
+  - text: "Delivery complete (COMPLETED_ALL, @coder report 2026-11-23).
+      Per-plan-phase evidence for DoD: phase 1 (planning, TDR-0076 reconciled)
+      commit 2182e05e verified pre-existing, doc/decisions clean; phase 2
+      (adapters push seam) commit 2255dfae, no-shell 14/0 + behaviour 7935/0;
+      phase 3 (contracts, arm-8 precondition, failure row, closure pins) commit
+      3de8779b, truth-derivation 35/0 + contract-invariance 15/0 + token-home
+      7/0 + type probes clean + consumers 49/0; phase 4 (ensure-push act,
+      evidence, envelope) commit aa39ec45, new suites 17/0 + 8/0 + 4/0 + goldens
+      8/0, behaviour 7971/0, conformance 161/0; phase 5 (registry + real-path
+      sweep) commit b00fef32, dispatch-parity-push 19/0, conformance 182/0,
+      sweep 13/0; phase 6 (changeset + docs) commit a9121ba4, changeset checks
+      7/0, structure+checks 3656/0; gate-driven format polish commit f9f8d44f
+      (format-only, 4 files). Aggregate: pnpm check exit 0 on final tree —
+      12,640 pass / 0 fail across 1,509 files. TC-RELEASE-001 red in phases 2-5
+      by plan ordering, green from phase 6 (final tree green)."
+    type: info
+    date: 2026-11-23
+  - text: "Delivery deviations, disclosed and accepted: (a) TC-FAIL-002 golden pin
+      landed as a committed inline constant inside in-scope
+      tests/golden/dispatch-errors.test.ts instead of a new
+      tests/fixtures/dispatch/golden/errors/ file — commit staging refuses
+      untracked out-of-scope files; same byte discipline; rode phase-5 commit;
+      flagged for @reviewer awareness. (b) Companion invariant fixtures per repo
+      standards: content-inventory (+inventory.json), harness-imports
+      (node:child_process site), closeout-contracts-git re-anchor,
+      v1-contract-inventory.json. (c) FLAG FOR REVIEW: scanner-driven identity
+      rename provider.head.unresolved -> pr.head-unresolved (error-table-sync S1
+      rule; error-table-sync green, 172 entries) — touches a delivered error
+      identity name; spec says 'adds no error identity'; a rename is not an
+      addition but @reviewer must rule on it. (d) phase-3 barrel registration in
+      contracts/index.ts (mechanical export requirement, disclosed scopeDrift).
+      (e) DoR finding 1 clause added to spec NG-2/DM-3 + dispatch-engine page
+      (PM-directed, outside declared file list)."
+    type: info
+    date: 2026-11-23
+  - text: "Companion decision record authored:
+      doc/decisions/TDR-0076-engine-ensure-push-first-remote-write.md (id
+      verified free — highest was TDR-0075; index row added to
+      doc/decisions/00-index.md) for the precedent-setting first remote-write
+      act in the typed stack (spec DEC-1). Status Proposed; owner confirms at PR
+      review. Both files are untracked by design and land via plan scope at the
+      delivery_planning phase commit."
+    type: info
+    date: 2026-11-23
+  - text: "Retro: the test_planning phase commit swept the TRACKED
+      doc/decisions/00-index.md (drift-flagged, landed as scopeDrift) while the
+      UNTRACKED TDR-0076 record file was excluded — the branch briefly carries
+      an index row whose record is not yet committed. Accepted transient: the
+      record lands in the delivery_planning phase commit via declared plan scope
+      (the plan MUST declare both paths). Lesson: author decision records before
+      the phase that lands their index, or expect one phase of index/record
+      skew."
+    type: retro
+    date: 2026-11-23
+  - text: "Process (retro): clarify-scope owner question (AC-3 logistics) could not
+      be asked — non-interactive run, question tool cancelled. PM decided
+      autonomously per the run's fallback instruction and disclosed the decision
+      in pm-notes, ticket comment, and (later) the PR body; override point is
+      the open-PR human review."
+    type: retro
+    date: 2026-11-23
+  - text: "Intake 2026-11-23 (manual PM invocation, interactive). Observed state:
+      phase ledger empty (verified class, 7733 records), no branch/folder/PR for
+      GH-386; main-tools synced to origin at 8f557cfd. Ticket evidence: observed
+      twice on consecutive native deliveries (GH-381/PR #383, GH-384/PR #385) —
+      the branch's final commit (pr_creation completed + PR URL) existed only
+      locally at dispatch exit pr-open; the CEO pushed manually before merging,
+      invalidating CI on the PR head and costing a second CI cycle. Required
+      behaviour: (1) push final commit(s) before pr-open classification; (2)
+      terminal evidence names the pushed head and asserts local==remote parity
+      (the parity verify gates already checks); (3) push failure is a typed
+      non-pr-open result retaining the PR URL; (4) pr-open with local ahead of
+      PR head is a defect pinned by fixture. Milestone M4 attached at intake —
+      verified, no owner question needed."
+    type: info
+    date: 2026-11-23
+  - text: "Spec cross-check (doc/spec/features/feature-dispatch-engine.md): the
+      eleven-token vocabulary is closed — a failed push must map into an
+      existing token (PM indication: a new failure-class row mapping to failed,
+      outcome failed, exit 1, in the pinned failure-token mapping, adding no
+      token); derivation arm 8 (open PR -> pr-open) gains a parity precondition;
+      the pr-open corroboration requirement (currently tracker-only) may need
+      the parity evidence reference; machine envelope may gain additive optional
+      parity/pushed-head fields (precedent: detail.harness,
+      DISPATCH_MAX_ERROR_DETAIL_CHARS bounding). Mechanism choice (engine-side
+      push vs lifecycle-prompt push with dispatch-side verification) is the
+      spec-writer's to declare from code truth; PM indication: engine-side
+      deterministic push reusing the verify-gates parity seam (paved road,
+      deterministic, satisfies behaviours 1-4 without prompt reliance). Dispatch
+      explicitly has no merge port — push is not merge, so no contradiction, but
+      a push is new write I/O for the engine: if spec-writer confirms
+      engine-side, route the precedent-setting extension through
+      @decision-advisor for a decision record."
+    type: info
+    date: 2026-11-23
+  - text: "Open spec questions for @spec-writer: (1) shell fallback parity — the
+      typed lane is parity-complete with the shell's supervision semantics; does
+      push+parity extend to the still-executable deliver-ticket.sh fallback, or
+      is the divergence declared with the fallback's documented-fallback status?
+      (2) edge cases: push when remote is already at head (idempotent),
+      non-fast-forward rejection, push interaction with pr-open-unverified (no
+      URL resolved), resume of a recorded pr-open lane (is parity re-checked on
+      resume?), bounded attempt evidence reference naming (e.g. push:<verdict>),
+      and whether pr-open corroboration gains a parity requirement. (3) AC-3
+      wording is the owner question above. Doc impacts:
+      feature-dispatch-engine.md, feature-quality-gates-and-pr.md,
+      feature-verify-gates.md (shared parity seam),
+      feature-autonomous-delivery.md (fallback rows), engine-first operations
+      guide, doc/quality/test-specs/test-spec-dispatch-engine.md coverage map;
+      possible lifecycle-prompt wording change if a session-side push is chosen
+      (prompt conformance scans apply)."
+    type: info
+    date: 2026-11-23
+  - text: "Delivery conventions (from ticket): full 11-phase lifecycle; commits via
+      the commit primitive; gate evidence uses TMPDIR=$PWD/tmp/tmpdir; PR
+      targets main-tools; STOP with the PR open. Environment: harness binary is
+      delivery-os (PATH=$PWD/node_modules/.bin prefix in runner shells);
+      github-mcp writes fail (read-scoped token) so tracker/PR writes go through
+      gh CLI via @runner; changeset format follows the standing lockstep
+      invariant: five fixed-group packages, all minor."
+    type: info
+    date: 2026-11-23

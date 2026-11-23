@@ -61,7 +61,9 @@ import {
 import {
   createGitBranchSeam,
   createGitMergeSeam,
+  createGitPushSeam,
   type GitChildRunner,
+  type GitPushChildRunner,
 } from "@delivery-os/adapters/git";
 import {
   createGitHubClient,
@@ -244,11 +246,13 @@ import {
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   DISPATCH_PROBE_TOLERANCE_MS,
+  DISPATCH_PUSH_VERDICTS,
   type DispatchDelay,
   type DispatchLedgerVariant,
   type DispatchLogFileSystem,
   type DispatchOwnerProbe,
   type DispatchPhaseLedger,
+  type DispatchPushParityReading,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
@@ -847,6 +851,18 @@ export type ProductionCompositionFacts = {
    * inject branch and history facts without touching a checkout.
    */
   readonly gitChildRunner?: GitChildRunner;
+  /**
+   * The injected push child runner (GH-386 F-1). Production runs the adapters
+   * push seam's own non-shell default; tests inject a recording runner so the
+   * remote-write act is proven over scripted outcomes without a real remote.
+   */
+  readonly gitPushRunner?: GitPushChildRunner;
+  /**
+   * The injected ensure-push act budget (GH-386 NFR-1). The delivered default
+   * is the seam's 60 000 ms; tests inject a small value to prove injectability.
+   * No configuration key exists on any path.
+   */
+  readonly dispatchPushTimeoutMs?: number;
   /** The supervisor's own process id (the bin supplies `process.pid`). */
   readonly processId?: number;
   /**
@@ -3579,6 +3595,85 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
+    // GH-386 F-1 — the ensure-push capability. One bounded injected port: read
+    // parity (the local branch head against the open request's head — the
+    // verify-gates push-parity definition), push fast-forward exactly once when
+    // the heads are unequal, re-read parity once, and answer the terminal
+    // facts. The push seam is composed at this edge; no configuration key
+    // exists on any path.
+    const [PUSH_VERDICT_CLEAN, PUSH_VERDICT_PUSHED, PUSH_VERDICT_FAILED] = DISPATCH_PUSH_VERDICTS;
+    const pushGit = createGitPushSeam({
+      cwd,
+      ...(facts.dispatchPushTimeoutMs === undefined
+        ? {}
+        : { timeoutMs: facts.dispatchPushTimeoutMs }),
+      ...(facts.gitPushRunner === undefined ? {} : { childRunner: facts.gitPushRunner }),
+    });
+
+    /** One bounded open-request head read for the parity comparison. */
+    const readOpenRequestHeadSha = async (branch: string): Promise<string | undefined> => {
+      if (target === undefined) return undefined;
+      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT);
+      if (!open.ok) return undefined;
+      const match = open.value.items.find((item) => item.sourceRef === branch);
+      return match === undefined ? undefined : match.sourceHeadSha;
+    };
+
+    const dispatchPushParity = async (input: {
+      readonly ref: string;
+    }): Promise<DispatchPushParityReading> => {
+      const changeRef = input.ref;
+      const branch = await readChangeBranch(changeRef);
+      if ("identity" in branch) {
+        return { ok: false, reason: "unreadable", identity: branch.identity };
+      }
+      const branchName = branch.branch;
+      if (branchName === undefined) {
+        return { ok: false, reason: "unreadable", identity: "git.branch.unresolved" };
+      }
+      const localHead = branch.head;
+      if (localHead === undefined) {
+        return { ok: false, reason: "unreadable", identity: "git.head.unresolved" };
+      }
+      const remoteHead = await readOpenRequestHeadSha(branchName);
+      if (remoteHead === undefined) {
+        return { ok: false, reason: "unreadable", identity: "pr.head-unresolved" };
+      }
+      if (localHead === remoteHead) {
+        // Parity already holds: no push act is performed (the clean direction).
+        return {
+          ok: true,
+          facts: { localHead, remoteHead, verdict: PUSH_VERDICT_CLEAN, parity: true },
+        };
+      }
+      const act = await pushGit.pushChangeBranch({ branch: branchName });
+      if (act.outcome !== "accepted") {
+        // One attempt, no retry: every non-successful act outcome — rejection,
+        // spawn-level failure, or timeout — is the one typed failure direction.
+        return {
+          ok: true,
+          facts: { localHead, remoteHead, verdict: PUSH_VERDICT_FAILED, parity: false },
+        };
+      }
+      // Exactly one parity re-read after the performed push (NFR-2).
+      const recheck = await readChangeBranch(changeRef);
+      const recheckLocal = "identity" in recheck ? undefined : recheck.head;
+      const recheckRemote = await readOpenRequestHeadSha(branchName);
+      if (recheckLocal === undefined || recheckRemote === undefined) {
+        return { ok: false, reason: "unreadable", identity: "push-parity.reread-unreadable" };
+      }
+      const parity = recheckLocal === recheckRemote;
+      return {
+        ok: true,
+        facts: {
+          localHead: recheckLocal,
+          remoteHead: recheckRemote,
+          verdict: parity ? PUSH_VERDICT_PUSHED : PUSH_VERDICT_FAILED,
+          parity,
+        },
+      };
+    };
+
     /** The bounded refusal summary: one line, at most 240 characters. */
     const boundPreflightSummary = (text: string): string => {
       const single = text.replace(/[\r\n]+/gu, " ").trim();
@@ -3925,6 +4020,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // The one injected delay fact (GH-347 AC-F9-2): production binds the real
       // timer; no configuration key and no ambient timer lives in the engine.
       delay: dispatchDelay,
+      // The ensure-push capability (GH-386 F-1, DEC-1): composed at this edge
+      // over the adapters push seam, like the delivered spawn identity, delay,
+      // and terminate bindings.
+      pushParity: dispatchPushParity,
       // The lane policy is data: both the restart bound and the liveness cadence
       // come from the typed `lane` configuration branch.
       restartBudget: lane.restartBudget,

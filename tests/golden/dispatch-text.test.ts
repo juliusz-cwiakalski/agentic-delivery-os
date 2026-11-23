@@ -6,11 +6,28 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
-import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { createDispatchCommandDefinition } from "../../packages/cli/src/commands/dispatch";
+import {
+  createDispatchCommandRuntime,
+  type DispatchCommandRuntime,
+} from "../../packages/cli/src/edge";
+import { runCli } from "../../packages/cli/src/index";
+import { resolveBrandIdentity } from "../../packages/core/src/branding/index";
+import { createCommandScenario, FIXED_CLOCK, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  COMPLETED_EVIDENCE,
+  createDispatchState,
+  createScriptedHarness,
+} from "../fixtures/dispatch/harness";
 import { artifacts, ledger, prNone, readOk } from "../fixtures/dispatch/truth";
 
 const GOAL = join(process.cwd(), "tests/fixtures/dispatch/golden/text");
+
+const BRAND = (() => {
+  const resolved = resolveBrandIdentity({ workingName: "delivery-os" });
+  if (!resolved.ok) throw new Error("brand resolution failed");
+  return resolved.value;
+})();
 
 const KEY_LINE = /^([a-z_]+)=/;
 
@@ -87,4 +104,82 @@ describe("TC-DISP-007 exactly four ordered keys", () => {
       scenario.dispose();
     }
   });
+});
+
+/* ------------------------------------------------------------------------- */
+/* GH-386 (TC-PUSH-017) — text mode is byte-identical over the parity cells:  */
+/* the ensure-push act never changes a byte of the four-key contract.         */
+/* ------------------------------------------------------------------------- */
+
+const pushParityFacts = (verdict: "clean" | "pushed") =>
+  ({
+    ok: true,
+    facts: {
+      localHead: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      remoteHead: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+      verdict,
+      parity: true,
+    },
+  }) as const;
+
+describe("GH-386 the parity cells stay byte-identical in text mode", () => {
+  const runtime = (
+    label: string,
+    parity: ReturnType<typeof pushParityFacts>,
+  ): DispatchCommandRuntime => {
+    const state = createDispatchState(label);
+    const scripted = createScriptedHarness({ evidence: COMPLETED_EVIDENCE });
+    return createDispatchCommandRuntime({
+      store: state.store,
+      stateRoot: state.root,
+      fenceToken: state.fenceToken,
+      nowIso: () => "2026-11-08T10:00:00.000Z",
+      newAttemptId: () => `attempt-${label}`,
+      newDivergenceId: () => `DIV-${label}`,
+      harnesses: { opencode: scripted.port },
+      defaultHarness: "opencode",
+      descriptor: { kind: "host", workDirectory: state.root, environment: [] },
+      prompt: (ref) => `deliver ${ref}`,
+      repository: () => "github.com/owner/repo",
+      readTruth: async () => readsFrom(),
+      claimLease: () => ({ ok: true, leaseId: "lease-1" }),
+      releaseLease: () => true,
+      phaseLedger: () => ({ completed: 3, total: 9, variant: "full" }),
+      pushParity: async () => parity,
+    });
+  };
+
+  for (const verdict of ["clean", "pushed"] as const) {
+    test(`the ${verdict} parity cell is byte-identical to the pr-open golden`, async () => {
+      const out: string[] = [];
+      const exit = await runCli(
+        ["dispatch", "GH-301"],
+        {
+          stdout: { write: (chunk: string) => out.push(chunk) },
+          stderr: { write: () => undefined },
+        },
+        {
+          brand: BRAND,
+          clock: FIXED_CLOCK,
+          newRunId: () => "run-push-text",
+          secrets: [],
+          program: {
+            commands: {
+              dispatch: createDispatchCommandDefinition(
+                runtime(`push-text-${verdict}`, pushParityFacts(verdict)),
+              ),
+            },
+          },
+        },
+      );
+      const stdout = out.join("");
+      expect(exit).toBe(0);
+      assertFourKeys(stdout);
+      // Byte-identity with the committed golden: the parity facts do not enter
+      // text mode, and the arm's delivered four-key cell is unchanged.
+      expect(stdout).toBe(readFileSync(join(GOAL, "pr-open.txt"), "utf8"));
+      expect(stdout).not.toContain("a1b2c3d4");
+      expect(stdout).not.toContain("push");
+    });
+  }
 });

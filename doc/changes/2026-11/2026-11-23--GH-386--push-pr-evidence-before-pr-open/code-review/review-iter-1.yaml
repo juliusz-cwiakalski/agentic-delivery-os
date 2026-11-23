@@ -1,0 +1,177 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-386
+branch: fix/GH-386/push-pr-evidence-before-pr-open
+status: FAIL
+summary: >
+  The delivered engine-side ensure-push is correct, bounded, and honestly tested:
+  the arm-8 parity precondition, the one typed failure row, evidence reservation,
+  envelope block bounds, text-mode byte stability, and vocabulary closure all verify
+  against F-1/F-2/F-3, and the sample suites re-run green (22/0). Six orchestrator
+  scrutiny items rule compliant; the identity-rename premise is factually wrong (git
+  truth shows provider.head.unresolved never shipped outside this branch). FAIL is
+  recorded for two medium spec-compliance divergences only: the spec's F-1/AC-F1-1
+  universality is not true of the daemon lane (the exemption is declared in the port
+  contract and feature page but absent from the canonical spec, with no residual
+  entry), and spec §8.1's provider-read economy claim ("unchanged in count and kind;
+  consumes the derivation's read") diverges from the implementation's fresh bounded
+  list reads. Both remediations are documentation-only; no code defect exists.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 1
+  info: 1
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-386--push-pr-evidence-before-pr-open/chg-GH-386-spec.md (F-1 declared behaviors / AC-F1-1 / §7.3 / §11)
+    message: >
+      Spec F-1 declares the parity precondition "binds every classification that
+      reaches arm 8" and AC-F1-1's Then is unqualified, but the delivered daemon lane
+      (packages/core/src/app/daemon-dispatch-result.ts calls deriveDispatchResult with
+      no pushParity) keeps the delivered arm-8 classification — a daemon attempt can
+      still derive pr-open with the local head ahead. The exemption is honestly
+      declared in the port contract comment (contracts/dispatch.ts, DispatchPorts) and
+      the feature page ("A composition that supplies no parity facts (the daemon lane)
+      keeps the delivered classification of this arm") and is pinned by
+      tests/behaviour/dispatch-push-parity.test.ts ("no parity read, no act, no push
+      evidence, no envelope block"), but the spec itself never declares it — no
+      clause in F-1, no residual in §7.3, no row in §11 (the word "daemon" appears
+      nowhere in the spec).
+    suggestion: >
+      Documentation-only remediation: add one composition-scoping clause to spec F-1's
+      declared behaviors (mirroring the feature page sentence), scope AC-F1-1's Given
+      to classifications under the composed capability (or note the daemon-lane
+      exemption), and add a §7.3 deferred entry / §11 residual row declaring that the
+      defect pattern remains possible on the daemon lane until it composes the port.
+      Append a pm-notes disclosure. No code change.
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-386--push-pr-evidence-before-pr-open/chg-GH-386-spec.md (§8.1) vs packages/cli/src/production.ts:3610-3618
+    message: >
+      Spec §8.1 states "the engine's provider reads are unchanged in count and kind;
+      the parity comparison consumes the delivery-request detail read the derivation
+      already performs at arm 8." The implementation does neither: readOpenRequestHeadSha
+      performs its own fresh bounded listDeliveryRequests read (once pre-act, once in
+      the post-act re-read) instead of consuming the derivation's read. The behavior is
+      correct, fail-closed (unreadable → state-unverified, never a false pr-open), uses
+      the same read class and the same find-first-by-sourceRef resolution as the
+      delivered readPullTruth, and satisfies NFR-2's "no new provider read class" and
+      "one extra bounded parity read after a performed push" — but §8.1's count and
+      consumption claims are factually wrong for the delivered code.
+    suggestion: >
+      Amend spec §8.1 to declare the parity read pair explicitly (one fresh bounded
+      open-request list read at precondition evaluation, one fresh local+remote read
+      pair in the post-act re-read; same class and resolution semantics as the
+      derivation's read; unreadable degrades to state-unverified). No code change.
+  - id: F-3
+    severity: low
+    confidence: high
+    category: documentation-accuracy
+    location: doc/changes/2026-11/2026-11-23--GH-386--push-pr-evidence-before-pr-open/chg-GH-386-pm-notes.yaml (deviations note (c))
+    message: >
+      The disclosed deviation says the scanner-driven rename "touches a delivered
+      error identity name". Git truth: provider.head.unresolved exists in no commit
+      reachable from the base (08c28bf0) — only in this branch's own intermediate
+      commits (aa39ec45, b00fef32) before the rename landed in a9121ba4. No delivered
+      surface changed; the rename is the NG-2-compliant response to the error-table-sync
+      S1 scanner (provider is a registered DOMAIN_KIND, so provider.head.unresolved
+      would demand an error-table row that NG-2/OUT forbids; pr.head-unresolved is
+      scanner-ignored, and the delivered state-unverified identity is unchanged).
+    suggestion: >
+      Append one corrective (append-only) pm-notes note stating the rename applied to
+      an in-change identity literal that never shipped, so future readers do not audit
+      a phantom delivered-surface rename. No artifact rewrite.
+  - id: F-4
+    severity: info
+    confidence: high
+    category: test-convention
+    location: tests/golden/dispatch-errors.test.ts:121-162
+    message: >
+      TC-FAIL-002's golden cell is pinned as a committed inline constant in the
+      in-scope suite instead of a new fixture file under tests/fixtures/dispatch/golden/errors/.
+      Ruled honest: the test plan's suite map (line 905) names tests/golden/dispatch-errors.test.ts
+      as the TC-FAIL-002 golden home, the plan declared no fixture path (the commit
+      primitive would refuse one), the byte discipline is identical (trimmed
+      byte-equality against real runCli output with injected runId/clock), and the
+      deviation was disclosed before review.
+    suggestion: >
+      No action required for this change. At the next artifact touch, opportunistically
+      migrate the constant to the fixture-file golden home once a plan declares the path,
+      matching the delivered-goldens convention.
+  - id: F-5
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/adapters/src/git/push.ts:152
+    message: >
+      The fixed argv ("git push --ff-only HEAD:refs/heads/<branch>") names no remote;
+      git resolves the destination from the current branch's push configuration. In the
+      delivered delivery posture (checkout on the change branch, single configured
+      upstream) this is exactly the change branch's configured upstream, and spec §12
+      declares the no-upstream-discovery assumption — so this is compliant as
+      delivered. A multi-remote checkout where the current branch differs from the
+      change branch could resolve a different configured remote than the declared one.
+    suggestion: >
+      No action for this change (assumption-declared, fail-closed via --ff-only).
+      Optional future hardening when multi-remote checkouts become a supported posture:
+      resolve and pass the branch's configured upstream explicitly at the seam.
+reviewed_at: 2026-11-23T00:00:00Z
+next_step: CALL_CODER
+next_step_detail: >
+  Remediation is documentation-only (spec F-1 clause + AC-F1-1 scoping + §7.3/§11
+  residual for the daemon lane; spec §8.1 read-pair amendment; corrective pm-notes
+  note). No source code changes. After remediation, re-review (iteration 2) should
+  find spec_compliance PASS with no new code findings.
+orchestrator_items_ruled:
+  item_1_identity_rename: COMPLIANT — premise factually wrong; provider.head.unresolved
+    never shipped on any delivered branch; the rename is the NG-2-compliant scanner
+    response; no error identity added or changed (ERROR_TABLE diff is empty). Minor
+    pm-notes accuracy finding F-3.
+  item_2_golden_adaptation: HONEST TEST — matches the test plan's declared TC-FAIL-002
+    golden home (tests/golden/dispatch-errors.test.ts, suite-map line 905); plan declared
+    no fixture path; byte discipline identical; disclosed. Info finding F-4 only.
+  item_3_companion_fixtures: ACCURATE, NON-WEAKENING — content-inventory/inventory.json
+    and harness-imports register the new file/export/child-process site (mandatory
+    declaration, keeps coverage complete); v1-contract-inventory.json registers exactly
+    the seven new contract exports; closeout-contracts-git re-anchor is a precision fix
+    with an accurate comment (the pinned local-only property is now measured on the
+    removal implementation; the old slice-to-EOF would false-positive the
+    includes("push") assertion on the legitimate push export tail).
+  item_4_spec_clause: COMPLIANT — NG-2/DM-3 clauses state exactly what DoR finding 1
+    prescribed (kind = record/evidence kinds, not the failure-class union; the table is
+    the declaredly growing structure; exactly one row + one reason literal per Appendix B)
+    and the same interpretive note is carried into the feature page. Nothing more.
+  item_5_intermediate_window: ACCEPTABLE — TC-RELEASE-001 (changeset gate) is a release
+    artifact of plan phase 6 by declaration; each phase's verify commands never claimed
+    it; the aggregate gate belongs to the lifecycle quality_gates phase (plan fence);
+    the red window was disclosed in pm-notes with the final tree green. Retro-grade
+    note already recorded; no finding.
+  item_6_daemon_path: DECLARATION MATCHES CODE, NO MASKING — the port contract comment,
+    DispatchPorts comment, daemon-dispatch-result.ts (no pushParity), and the feature
+    page all name the daemon lane's delivered-classification exemption, and the
+    absent-port posture is pinned by a named test. The defect remains possible on the
+    daemon lane as a declared residual — but the canonical spec never declares it
+    (medium finding F-1).
+  item_7_core_contract: VERIFIED — parity precondition post-session pre-classification
+    (second derivation pass after the act); unreadable parity → state-unverified exit 2
+    (never the failure row); pr-open-unverified exclusion; resume re-evaluation
+    idempotent (lane-resume rows); push:clean|pushed|failed reserved ahead of the slice
+    beside lane:append-failed; envelope push block together-or-absent-together with the
+    256-character bound asserted (TC-PUSH-016); text mode byte-stable (dispatch-text.ts
+    untouched; goldens compared against existing committed fixture files); corroboration
+    map unchanged; ERROR_TABLE and DELIVERY_RESULT_TOKENS untouched; exactly one new
+    DISPATCH_FAILURE_KINDS entry (the mandated row) and one DISPATCH_COMPARISON_REASONS
+    literal. The one divergence is §8.1's read-economy wording (finding F-2).
+sample_evidence:
+  suites_rerun: "TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/dispatch-errors.test.ts tests/structure/dispatch-push-envelope.test.ts tests/checks/dispatch-contract-invariance.test.ts"
+  result: "22 pass / 0 fail, 146 expect() calls"
+  battery_pins: "PARITY_CASES length 43, PROOF_BOUNDARY proven 9 / notProven 6, class coverage 11 — asserted by dispatch-parity-battery.test.ts"

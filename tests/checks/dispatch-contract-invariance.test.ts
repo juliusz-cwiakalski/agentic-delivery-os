@@ -15,8 +15,18 @@ import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
+  DISPATCH_COMPARISON_REASONS,
+  DISPATCH_CORROBORATION_SOURCES,
+  DISPATCH_PUSH_VERDICTS,
   ERROR_TABLE,
+  dispatchPushEvidenceRef,
 } from "../../packages/core/src/contracts/index";
+import {
+  DISPATCH_FAILURE_KINDS,
+  type DispatchFailureKind,
+  classifyDispatchFailure,
+} from "../../packages/core/src/domain/dispatch-result";
+import { DISPATCH_READ_FAILURE_SOURCES } from "../../packages/core/src/domain/dispatch-result";
 import { LANE_BRANCH, PRODUCTION_CATALOG, resolveConfig } from "../../packages/core/src/index";
 
 const ROOT = process.cwd();
@@ -162,5 +172,80 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
     expect(projections("queue.lease-conflict")).toEqual({
       "queue.lease-conflict": "user-validation",
     });
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* TC-FAIL-003 (GH-386) — vocabulary closure: the whole change is exactly one */
+/* failure-mapping row and one comparison-reason literal; no token, error     */
+/* identity, error-table row, record kind, derivation arm, or corroboration   */
+/* source exists anywhere.                                                    */
+/* ------------------------------------------------------------------------- */
+
+describe("GH-386 the closed vocabulary stays closed (TC-FAIL-003)", () => {
+  test("the failure-classification table gained exactly one row and every delivered row is byte-identical", () => {
+    expect([...DISPATCH_FAILURE_KINDS]).toEqual([
+      "spawn-failed",
+      "state-unreadable",
+      "restart-budget-exceeded",
+      "resume-uneconomical",
+      "lifecycle-push-failure",
+    ]);
+    const row = classifyDispatchFailure({ kind: "lifecycle-push-failure" });
+    // The pinned row of spec Appendix B, verbatim, in the delivered table shape.
+    expect(row).toEqual({
+      kind: "lifecycle-push-failure",
+      code: null,
+      token: "failed",
+      outcome: "failed",
+      projectionClass: "user-validation",
+      attemptRecords: 1,
+      comparisonReason: "push-parity-unmet",
+    });
+    // Exit 1 arrives only through the delivered user-validation projection.
+    expect(exitOf(row.token)).toBe(1);
+  });
+
+  test("every delivered failure row keeps its identity; the new row carries none", () => {
+    const codes = (kind: DispatchFailureKind): string | null =>
+      classifyDispatchFailure({ kind }).code;
+    expect(codes("spawn-failed")).toBe("dispatch.session.spawn-failed");
+    expect(codes("state-unreadable")).toBe("dispatch.state-unverified");
+    expect(codes("restart-budget-exceeded")).toBe("dispatch.restart-budget-exceeded");
+    expect(codes("resume-uneconomical")).toBe("dispatch.resume-uneconomical");
+    expect(codes("lifecycle-push-failure")).toBeNull();
+  });
+
+  test("the comparison-reason vocabulary gained exactly the one declared literal", () => {
+    expect([...DISPATCH_COMPARISON_REASONS]).toEqual([
+      "dispatch-session-family",
+      "comparison-source-unavailable",
+      "push-parity-unmet",
+    ]);
+  });
+
+  test("the push-verdict union is closed and has exactly its three members", () => {
+    expect([...DISPATCH_PUSH_VERDICTS]).toEqual(["clean", "pushed", "failed"]);
+    expect(dispatchPushEvidenceRef("clean")).toBe("push:clean");
+    expect(dispatchPushEvidenceRef("pushed")).toBe("push:pushed");
+    expect(dispatchPushEvidenceRef("failed")).toBe("push:failed");
+  });
+
+  test("no error-table row, token, attempt schema, or corroboration source grew", () => {
+    // The delivered dispatch identity set is unchanged (no new error identity).
+    const codes = (prefix: string): readonly string[] =>
+      ERROR_TABLE.filter((row) => row.code.startsWith(prefix))
+        .map((row) => row.code)
+        .sort();
+    expect(codes("dispatch.")).toEqual([
+      "dispatch.restart-budget-exceeded",
+      "dispatch.resume-uneconomical",
+      "dispatch.session.spawn-failed",
+      "dispatch.state-unverified",
+    ]);
+    expect(DELIVERY_RESULT_TAXONOMY).toHaveLength(11);
+    expect(DISPATCH_ATTEMPT_PAYLOAD_SCHEMA).toBe("delivery.dispatch.attempt.v1");
+    expect([...DISPATCH_CORROBORATION_SOURCES]).toEqual(["pm-notes", "tracker", "ci"]);
+    expect([...DISPATCH_READ_FAILURE_SOURCES]).toEqual(["ledger", "tracker", "artifact", "state"]);
   });
 });

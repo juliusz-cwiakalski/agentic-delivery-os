@@ -82,10 +82,73 @@ export const DISPATCH_COMPARISON_OUTCOMES = ["match", "mismatch", "not-applicabl
 
 export type DispatchComparisonOutcome = (typeof DISPATCH_COMPARISON_OUTCOMES)[number];
 
+/**
+ * The closed push-verdict union (GH-386 DM-1): the one value the `push:<verdict>`
+ * evidence-reference family and the machine-envelope push block may carry.
+ */
+export const DISPATCH_PUSH_VERDICTS = ["clean", "pushed", "failed"] as const;
+
+export type DispatchPushVerdict = (typeof DISPATCH_PUSH_VERDICTS)[number];
+
+/**
+ * The `push:<verdict>` evidence-reference family (GH-386 DM-1): identifiers
+ * only, reserved ahead of the evidence slice, within the 16-reference budget.
+ */
+export const dispatchPushEvidenceRef = (verdict: DispatchPushVerdict): string => `push:${verdict}`;
+
+/**
+ * The injected terminal parity fact (GH-386 DM-1): the local branch head and
+ * the pull request's head, compared for equality — the verify-gates
+ * `push-parity` definition consumed at dispatch classification. Both heads are
+ * the full-hex reads the fact sources returned; no payload travels with them.
+ */
+export type DispatchPushParityFacts = {
+  readonly localHead: string;
+  readonly remoteHead: string;
+  readonly verdict: DispatchPushVerdict;
+  readonly parity: boolean;
+};
+
+/**
+ * The parity precondition's read (GH-386 F-1): the terminal facts, or the
+ * classified unreadable direction. An unreadable read is the delivered
+ * undecidable-truth semantics (`state-unverified` at exit 2), never the typed
+ * push failure.
+ */
+export type DispatchPushParityReading =
+  | { readonly ok: true; readonly facts: DispatchPushParityFacts }
+  | { readonly ok: false; readonly reason: "unreadable"; readonly identity?: string };
+
+/**
+ * The one injected ensure-push capability (GH-386 F-1, DEC-1): post-session and
+ * pre-classification, it reads the parity facts, pushes fast-forward exactly
+ * once when the heads are unequal, re-reads parity once, and answers the
+ * terminal facts. Production composes it over the adapters push seam; a
+ * composition that omits it declares no act and keeps the delivered
+ * classification.
+ */
+export type DispatchPushParityPort = (input: {
+  readonly ref: string;
+}) => Promise<DispatchPushParityReading>;
+
+/**
+ * The additive optional machine-envelope `push` block (GH-386 DM-2): present
+ * together-or-absent-together exactly when the parity precondition evaluated
+ * (the `pr-open` success and the typed push failure), bounded single-line
+ * members, the whole block within the delivered 256-character dispatch bound.
+ */
+export type DispatchEnvelopePushBlock = {
+  readonly verdict: DispatchPushVerdict;
+  readonly localHead: string;
+  readonly remoteHead: string;
+  readonly parity: boolean;
+};
+
 /** The two declared comparison reasons. */
 export const DISPATCH_COMPARISON_REASONS = [
   "dispatch-session-family",
   "comparison-source-unavailable",
+  "push-parity-unmet",
 ] as const;
 
 export type DispatchComparisonReason = (typeof DISPATCH_COMPARISON_REASONS)[number];
@@ -378,6 +441,13 @@ export type DispatchEnvelopeData = {
   readonly error?: DispatchEnvelopeError;
   /** Bounded, single-line, redacted summary; also feeds text `last_message=`. */
   readonly lastMessage: string;
+  /**
+   * Present exactly when the parity precondition evaluated (GH-386 DM-2): the
+   * `pr-open` success and the typed push failure. Additive optional — absent on
+   * every outcome where the precondition did not evaluate; text mode never
+   * carries it.
+   */
+  readonly push?: DispatchEnvelopePushBlock;
   /** Present only when a bounded field was truncated. */
   readonly truncation?: {
     readonly field: string;

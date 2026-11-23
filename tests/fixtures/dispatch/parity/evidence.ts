@@ -12,7 +12,7 @@ import { COMPLETED_EVIDENCE, SPAWN_REFUSED_EVIDENCE, TOOL_FAILURE_EVIDENCE } fro
 import { artifacts, prNone, prOpen, readFail, readOk, tracker } from "../truth";
 import type { ParityEnvelope, ParityObservation } from "./harness";
 
-/** The eight PROVEN surfaces, in the declared order. */
+/** The PROVEN surfaces, in the declared order (GH-386 adds the push seam). */
 export const PARITY_PROVEN_SURFACES = [
   "claim",
   "lane",
@@ -22,6 +22,7 @@ export const PARITY_PROVEN_SURFACES = [
   "loop",
   "class-coverage",
   "no-shell",
+  "push",
 ] as const;
 
 /** The six NOT-PROVEN surfaces, in the declared order (Appendix C). */

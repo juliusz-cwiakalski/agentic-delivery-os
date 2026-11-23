@@ -10,7 +10,11 @@
  * observes 1.
  */
 
-import type { GitChildRunner } from "../../../../packages/adapters/src/git/index";
+import type {
+  GitChildRunner,
+  GitPushChildRunner,
+  GitPushRunnerResult,
+} from "../../../../packages/adapters/src/git/index";
 import type {
   HarnessSpawnRunner,
   HarnessSpawnRunnerResult,
@@ -21,14 +25,19 @@ import { streamStarterFromRunner } from "../../harness/harness-io";
 /** The shell executables the guard refuses outright (basename match). */
 const SHELL_EXECUTABLES = new Set(["bash", "sh", "zsh", "dash", "cmd", "powershell"]);
 
-export type GuardedSeam = "harness" | "git";
+export type GuardedSeam = "harness" | "git" | "push";
 
 export type GuardedInvocation = {
   readonly seam: GuardedSeam;
   readonly file: string;
   readonly args: readonly string[];
   readonly stdin?: string;
+  /** The declared child timeout the push seam passed (the injectable budget). */
+  readonly timeout?: number;
 };
+
+/** The delivered fixture head literal: the local parity fact every row shares. */
+export const PARITY_FIXTURE_HEAD = "0123456789abcdef";
 
 /** Whether an argv element is a script path the dispatch flow must never use. */
 export const isScriptPath = (value: string): boolean =>
@@ -63,20 +72,31 @@ export type GuardedRunnerOptions = {
   readonly session?: (invocation: GuardedInvocation) => SessionScript;
   /** The scripted git facts; the default declares one change branch and 2 commits. */
   readonly git?: (invocation: GuardedInvocation) => HarnessSpawnRunnerResult;
+  /**
+   * The scripted push outcome (GH-386 F-1): the one remote-write act, recorded
+   * with argv/count/call order under the `push` seam. The default refuses an
+   * unexpected push loudly (status 1), so an act firing under equal heads is a
+   * loud defect, never a silent pass.
+   */
+  readonly push?: (invocation: GuardedInvocation) => GitPushRunnerResult;
   /** The change branch the default git script declares. */
   readonly branch?: string;
   readonly ahead?: number;
+  /** The full-hex head the default git script declares (the local parity fact). */
+  readonly head?: string;
 };
 
 export type GuardedRunner = {
   readonly runner: HarnessSpawnRunner;
   readonly starter: HarnessSpawnStarter;
   readonly gitRunner: GitChildRunner;
+  readonly pushRunner: GitPushChildRunner;
   readonly records: readonly GuardedInvocation[];
   readonly violations: readonly string[];
   readonly invocations: number;
   readonly spawns: number;
   readonly resumes: number;
+  readonly pushes: number;
   readonly realChildStarts: number;
   readonly shellInvocations: number;
   readonly scriptPathInvocations: number;
@@ -93,6 +113,7 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
   const violations: string[] = [];
   let spawns = 0;
   let resumes = 0;
+  let pushes = 0;
   let childStarts = 0;
 
   const guard = (seam: GuardedSeam, file: string, args: readonly string[]): void => {
@@ -157,7 +178,8 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
     const [verb] = args;
     if (verb === "for-each-ref") {
       const branch = options.branch ?? "feat/GH-347/parity";
-      return { stdout: `${branch} 0123456789abcdef\n`, stderr: "", status: 0, timedOut: false };
+      const head = options.head ?? PARITY_FIXTURE_HEAD;
+      return { stdout: `${branch} ${head}\n`, stderr: "", status: 0, timedOut: false };
     }
     if (verb === "rev-list") {
       return {
@@ -170,10 +192,34 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
     return { stdout: "", stderr: "unexpected git argv", status: 1, timedOut: false };
   };
 
+  // The push double (GH-386 F-1): records argv, count, call order, and the
+  // declared child timeout under the `push` seam, refuses a shell by name
+  // through the same guard, and scripts the declared outcome classes. An
+  // unexpected push is loud (status 1), so an act firing under equal heads can
+  // never pass silently.
+  const pushRunner: GitPushChildRunner = async (file, args, runnerOptions) => {
+    guard("push", file, args);
+    pushes += 1;
+    const last = records[records.length - 1];
+    if (last !== undefined) {
+      records[records.length - 1] = { ...last, timeout: runnerOptions.timeout };
+    }
+    if (!options.push) {
+      return {
+        stdout: "",
+        stderr: "unexpected push argv",
+        status: 1,
+        timedOut: false,
+      };
+    }
+    return options.push({ seam: "push", file, args: [...args] });
+  };
+
   return {
     runner,
     starter: streamStarterFromRunner(runner),
     gitRunner,
+    pushRunner,
     get records() {
       return records;
     },
@@ -189,6 +235,9 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
     get resumes() {
       return resumes;
     },
+    get pushes() {
+      return pushes;
+    },
     get realChildStarts() {
       return childStarts;
     },
@@ -203,6 +252,7 @@ export const createGuardedRunner = (options: GuardedRunnerOptions = {}): Guarded
       violations.length = 0;
       spawns = 0;
       resumes = 0;
+      pushes = 0;
       childStarts = 0;
     },
   };

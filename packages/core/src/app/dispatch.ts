@@ -22,10 +22,14 @@ import {
   type DispatchDelay,
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
+  type DispatchEnvelopePushBlock,
   type DispatchEvidenceClass,
   type DispatchHandoverState,
   type DispatchPhaseLedger,
+  type DispatchPushParityPort,
+  type DispatchPushParityReading,
   type DispatchResumeMode,
+  dispatchPushEvidenceRef,
   ERROR_TABLE,
   HARNESS_OUTCOMES,
   type HarnessEvidence,
@@ -351,6 +355,13 @@ export type DispatchPorts = {
     readonly reason: "watchdog.liveness-stalled";
     readonly recordedAt: string;
   }) => boolean;
+  /**
+   * The one injected ensure-push capability (GH-386 F-1, DEC-1): post-session
+   * and pre-classification, composed at the production edge over the adapters
+   * push seam. Absent keeps the delivered no-act behavior for a composition
+   * that declares no act (the daemon lane and pre-change compositions).
+   */
+  readonly pushParity?: DispatchPushParityPort;
 };
 
 /** The run result: classified data, or a pre-session/state refusal. */
@@ -804,6 +815,10 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       readonly urlResolved: boolean;
       readonly lastMessage: string;
       readonly evidenceRefs: readonly string[];
+      /** A disclosure reference reserved ahead of the 16-slice (GH-386 DM-1). */
+      readonly pushRef?: string;
+      /** The additive optional envelope push block (GH-386 DM-2). */
+      readonly push?: DispatchEnvelopePushBlock;
       readonly divergenceRef?: string;
       readonly detail?: NonNullable<DispatchEnvelopeError["detail"]>;
     }): DispatchRunResult => {
@@ -830,8 +845,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       }
       // Disclosure refs are RESERVED ahead of the 16-slice (GH-347 AC-F1-3,
       // NFR-7): a resumability disclosure is never silently truncated away.
+      // GH-386 joins the push parity verdict to the same reservation, beside
+      // the lane-append disclosure, so parity evidence is never truncated.
       const attemptEvidenceRefs = [
         ...(laneAppendFailed ? ["lane:append-failed"] : []),
+        ...(input.pushRef === undefined ? [] : [input.pushRef]),
         ...input.evidenceRefs,
       ].slice(0, DISPATCH_MAX_EVIDENCE_REFS);
       const attempt: DispatchAttemptRecord = {
@@ -900,6 +918,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
                     },
             }),
         lastMessage: boundLastMessage(input.lastMessage),
+        ...(input.push === undefined ? {} : { push: input.push }),
       };
       releaseCause = "completed";
       return { ok: true, data, attempt, projectionClass: projectionOf(input.token) };
@@ -1349,9 +1368,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       const harnessToken = classification.token;
 
       const reads = await ports.readTruth();
-      const derivation = deriveDispatchResult({
+      const derivationInput = {
         harness: {
-          ok: true,
+          ok: true as const,
           value: {
             outcome: classification.outcome,
             token: harnessToken,
@@ -1364,15 +1383,37 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         tracker: reads.tracker,
         restarts: { count: restarts, bound: budget },
         handoverState: ports.handoverState,
-      });
+      };
+      // GH-386 F-1: the ensure-push act runs post-session and pre-classification,
+      // exactly when the first derivation pass reaches the resolved open-PR arm.
+      // The ladder is deterministic over unchanged injected reads, so the second
+      // pass re-enters the same arm and the precondition binds every
+      // classification, fresh or resumed. A composition without the capability
+      // never evaluates the precondition (the daemon lane keeps its own path).
+      let derivation = deriveDispatchResult(derivationInput);
+      let pushParityReading: DispatchPushParityReading | undefined;
+      if (ports.pushParity !== undefined && derivation.token === po && derivation.urlResolved) {
+        pushParityReading = await ports.pushParity({ ref: ports.ref });
+        derivation = deriveDispatchResult({ ...derivationInput, pushParity: pushParityReading });
+      }
 
       const derivedToken = derivation.token;
-      const comparison = comparisonFor({
-        token: derivedToken,
-        ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
-        reads,
-        urlResolved: derivation.urlResolved,
-      });
+      // The typed push failure is dispatch-derived, not a truth disagreement:
+      // its comparison is not applicable with the one new declared reason
+      // (GH-386 DM-3), overriding the failed token's delivered verify pairing.
+      const comparison =
+        derivation.push !== undefined && derivedToken === f
+          ? buildComparisonRecord({
+              kind: "dispatch-derived-failure",
+              engineToken: f,
+              reason: "push-parity-unmet",
+            })
+          : comparisonFor({
+              token: derivedToken,
+              ...(derivation.errorCode === undefined ? {} : { errorCode: derivation.errorCode }),
+              reads,
+              urlResolved: derivation.urlResolved,
+            });
 
       let divergenceRef: string | undefined;
       let truthRef: string | undefined;
@@ -1463,9 +1504,11 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         !reads.tracker.ok && reads.tracker.identity === "tracker:exhausted"
           ? ["tracker:exhausted"]
           : [];
+      const parityUnreadable = pushParityReading !== undefined && !pushParityReading.ok;
       const evidenceRefs = [
         ...trackerExhausted,
         `attempt:${attemptId}`,
+        ...(parityUnreadable ? ["truth:unreadable:state"] : []),
         ...(truthRef === undefined ? [] : [truthRef]),
         ...(appendFailureCode === undefined ? [] : ["divergence:append-failed"]),
         ...livenessRefs,
@@ -1488,6 +1531,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         urlResolved: derivation.urlResolved,
         lastMessage,
         evidenceRefs,
+        ...(derivation.push === undefined
+          ? {}
+          : { pushRef: dispatchPushEvidenceRef(derivation.push.verdict), push: derivation.push }),
         ...(divergenceRef === undefined ? {} : { divergenceRef }),
       });
     }

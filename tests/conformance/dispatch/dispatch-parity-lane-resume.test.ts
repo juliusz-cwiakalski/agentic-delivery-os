@@ -231,6 +231,12 @@ describe("TC-RESUME-101/103/104 recorded-attempt resume", () => {
     return entry;
   };
 
+  const pushRow = (id: string) => {
+    const entry = parityCasesOf("push-parity").find((candidate) => candidate.id === id);
+    if (entry === undefined) throw new Error(`registry row ${id} is missing`);
+    return entry;
+  };
+
   test("a recorded pr-open lane resumes (zero spawns, one resume of the recorded session)", async () => {
     const observation = await row("resume-pr-open-lane").scenario();
     expect(observation.results[0]?.exit).toBe(0);
@@ -250,6 +256,38 @@ describe("TC-RESUME-101/103/104 recorded-attempt resume", () => {
     expect(resumed).toHaveLength(1);
     expect(resumed[0]?.sessionId).toBe("ses-347");
     expect(resumed[0]?.iterationOrdinal).toBe(1);
+  });
+
+  test("GH-386 the resumed classification re-evaluates parity: equal heads stay idempotent", async () => {
+    const observation = await pushRow("resume-pr-open-equal-heads").scenario();
+    expect(observation.results[0]?.exit).toBe(0);
+    expect(observation.token).toBe("pr-open");
+    expect(observation.spawns).toBe(0);
+    expect(observation.resumes).toBe(1);
+    const pushes = observation.invocations.filter((invocation) => invocation.seam === "push");
+    expect(pushes).toHaveLength(0);
+    expect(observation.attempts[0]?.resumeMode).toBe("attach-continue");
+    expect(observation.attempts[0]?.evidenceRefs).toContain("push:clean");
+    const data = observation.envelopes[0]?.data;
+    expect(data?.push).toEqual({
+      verdict: "clean",
+      localHead: "0123456789abcdef",
+      remoteHead: "0123456789abcdef",
+      parity: true,
+    });
+  });
+
+  test("GH-386 the resumed classification reconciles a local-ahead branch by one push", async () => {
+    const observation = await pushRow("resume-pr-open-local-ahead").scenario();
+    expect(observation.results[0]?.exit).toBe(0);
+    expect(observation.token).toBe("pr-open");
+    expect(observation.spawns).toBe(0);
+    expect(observation.resumes).toBe(1);
+    const pushes = observation.invocations.filter((invocation) => invocation.seam === "push");
+    expect(pushes).toHaveLength(1);
+    expect(observation.attempts[0]?.evidenceRefs).toContain("push:pushed");
+    const data = observation.envelopes[0]?.data;
+    expect(data?.push).toMatchObject({ verdict: "pushed", parity: true });
   });
 
   test("no recorded lane is an explicit fresh spawn carrying the operator text", async () => {

@@ -49,6 +49,9 @@ const FIXED_SURFACE = [
   // declared surface; the globbed loop modules are covered by the equality rule.
   "packages/core/src/state/loop.ts",
   "packages/cli/src/commands/loop.ts",
+  // GH-386: the push seam is a fixed (non-glob) member — the adapters git
+  // module family matches no dispatch glob, so its membership is declared here.
+  "packages/adapters/src/git/push.ts",
 ] as const;
 
 /** The declared entries the reachability guard starts from. */
@@ -355,6 +358,32 @@ describe("TC-SHELL-002 the static no-shell invariant", () => {
       // Both the plain literal (line 2) and the substituted template (line 3)
       // are reported, by rule and by line.
       expect(new Set(violations.map((violation) => violation.line)).size).toBeGreaterThanOrEqual(2);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("GH-386 a planted shell reference in the push seam fails by name and file:line", () => {
+    const base = join(ROOT, "tmp", "tmpdir");
+    mkdirSync(base, { recursive: true });
+    const root = mkdtempSync(join(base, "no-shell-push-"));
+    try {
+      const relative = "packages/adapters/src/git/push.ts";
+      mkdirSync(join(root, "packages", "adapters", "src", "git"), { recursive: true });
+      writeFileSync(
+        join(root, relative),
+        [
+          "import { execSync } from 'node:child_process';",
+          "export const marker = 'push seam';",
+          "export const run = () => execSync('git push --force');",
+          "",
+        ].join("\n"),
+      );
+      const violations = scan(root, [relative]);
+      const rules = violations.map((violation) => violation.rule);
+      expect(rules).toContain("shell-exec import");
+      expect(violations.every((violation) => violation.file === relative)).toBe(true);
+      expect(violations[0]?.line).toBe(1);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

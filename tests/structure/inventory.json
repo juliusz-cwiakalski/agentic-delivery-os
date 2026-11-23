@@ -341,6 +341,7 @@
     "src/git/commit.ts",
     "src/git/index.ts",
     "src/git/merge.ts",
+    "src/git/push.ts",
     "src/git/watchdog.ts",
     "src/github/capabilities.ts",
     "src/github/cli-transport.ts",

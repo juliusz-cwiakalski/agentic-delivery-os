@@ -1062,6 +1062,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DISPATCH_MAX_MACHINE_BYTES",
     "DISPATCH_MAX_NOTE_CHARS",
     "DISPATCH_MAX_SPAWN_TITLE_CHARS",
+    "DISPATCH_PUSH_VERDICTS",
     "DISPATCH_RESTART_BUDGET_KEY",
     "DISPATCH_RESUME_MODES",
     "DISPATCH_SPAWN_TITLE_PATTERN",
@@ -1071,6 +1072,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "dispatchDivergenceRecordKey",
     "dispatchHandoverRecordKey",
     "dispatchLaneRecordKey",
+    "dispatchPushEvidenceRef",
   ],
   "core/src/contracts/delivery-result.ts": [
     "DELIVERY_RESULT_DERIVATION_CLASSES",
@@ -3163,6 +3165,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "adapters/src/git/commit.ts": ["createGitCommitSeam", "parsePorcelainStatus"],
   "adapters/src/git/merge.ts": ["createGitMergeSeam", "MERGE_SEAM_OPERATIONS"],
+  "adapters/src/git/push.ts": ["PUSH_DEFAULT_TIMEOUT_MS", "createGitPushSeam"],
   "adapters/src/github/deploy-trace.ts": ["createGitHubDeployTraceReader", "normalizeDeployTrace"],
   "adapters/src/inference/index.ts": ["COMMIT_MESSAGE_SCHEMA", "createInferenceTransport"],
   "adapters/src/session/commit-one-shot.ts": ["createHarnessOneShotTransport", "readOneShotPrompt"],

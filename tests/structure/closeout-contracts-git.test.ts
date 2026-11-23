@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 describe("TC-CAP-039 worktree git seam", () => {
   test("removal uses fixed argv with no force, shell, or remote token", () => {
     const source = readFileSync("packages/adapters/src/git/index.ts", "utf8");
-    const removeBlock = source.slice(source.indexOf("removeWorktree:"));
+    // The slice is the IMPLEMENTATION's removal block only (the type member and
+    // the module tail both carry the name; GH-386's push-seam export tail
+    // legitimately names its own operation, so the local-only property this
+    // suite pins must be measured on the removal implementation itself).
+    const removeStart = source.lastIndexOf("removeWorktree:");
+    const removeBlock = source.slice(removeStart, source.indexOf("isClean:", removeStart));
     expect(removeBlock.includes('worktree", "remove"')).toBe(true);
     expect(removeBlock.includes("--force")).toBe(false);
     expect(removeBlock.includes('-f"')).toBe(false);
