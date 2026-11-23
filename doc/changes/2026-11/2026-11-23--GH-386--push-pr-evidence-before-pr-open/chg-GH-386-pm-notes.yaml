@@ -17,7 +17,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-23T21:08:28.036Z }
   quality_gates: { started: null, completed: 2026-11-23T21:37:56.225Z }
   dod_check: { started: null, completed: 2026-11-23T21:39:05.483Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-23T21:44:15.102Z }
 decisions:
   - text: "AC-3 live-proof logistics decided PM-autonomous (non-interactive run —
       question tool cancelled; owner override point is the open-PR review):
@@ -60,6 +60,26 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/403
+      (2026-11-23, @pr-manager). Title: fix(GH-386): push PR-creation evidence
+      before the lane closes (M4-S23). Base main-tools, head
+      fix/GH-386/push-pr-evidence-before-pr-open at dbcca06a, pushed with PARITY
+      ASSERTION PASS (local HEAD == origin head dbcca06a — the change's own
+      PR-creation flow satisfied its own contract before pr-open). Ticket:
+      assigned juliusz-cwiakalski, labels change+review, milestone M4 untouched;
+      one durable comment recording the AC-3 post-merge live-verification
+      contract + TDR-0076 acceptance pointer (issuecomment-7114834963). Range at
+      push: 18 commits, merge-base 8f557cfd still equals origin/main-tools
+      (16/16 range-lint verdict remains valid for the range it covered; +2
+      lifecycle commits since). STOP per ticket convention: PR open for owner
+      review/merge; merge authority is the owner's. Post-merge obligations live
+      in the ticket comment: AC-3 live verification (first two consecutive
+      natural dispatches, local==remote at pr-open, parity evidence both
+      attempts, CEO/owner lane records here) and TDR-0076 acceptance at review
+      (Proposed -> Accepted + decision_date on approval)."
+    type: info
+    date: 2026-11-23
   - text: "DoD check PASS (2026-11-23, @pm-owned phase 10). Verified: pm-notes
       exists, committed, lint conforms; all 10 prior phases completed in the
       verified ledger (phase list, registry 7836 records). Plan completion:
