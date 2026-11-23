@@ -6335,9 +6335,7 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": [
-    "CredentialPort"
-  ],
+  "credentialPort": ["CredentialPort"],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",
