@@ -94,8 +94,7 @@ export type DispatchPushVerdict = (typeof DISPATCH_PUSH_VERDICTS)[number];
  * The `push:<verdict>` evidence-reference family (GH-386 DM-1): identifiers
  * only, reserved ahead of the evidence slice, within the 16-reference budget.
  */
-export const dispatchPushEvidenceRef = (verdict: DispatchPushVerdict): string =>
-  `push:${verdict}`;
+export const dispatchPushEvidenceRef = (verdict: DispatchPushVerdict): string => `push:${verdict}`;
 
 /**
  * The injected terminal parity fact (GH-386 DM-1): the local branch head and

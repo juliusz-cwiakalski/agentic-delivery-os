@@ -199,14 +199,9 @@ type UnknownPushVerdictRejected = Expect<
   Equal<"forced" extends DispatchPushVerdict ? true : false, false>
 >;
 type PushBlockMembersAreClosed = Expect<
-  Equal<
-    keyof DispatchEnvelopePushBlock,
-    "verdict" | "localHead" | "remoteHead" | "parity"
-  >
+  Equal<keyof DispatchEnvelopePushBlock, "verdict" | "localHead" | "remoteHead" | "parity">
 >;
-type PushVerdictIsTyped = Expect<
-  Equal<DispatchEnvelopePushBlock["verdict"], DispatchPushVerdict>
->;
+type PushVerdictIsTyped = Expect<Equal<DispatchEnvelopePushBlock["verdict"], DispatchPushVerdict>>;
 type PushParityIsBoolean = Expect<Equal<DispatchEnvelopePushBlock["parity"], boolean>>;
 type ComparisonReasonUnionIsExact = Expect<
   Equal<

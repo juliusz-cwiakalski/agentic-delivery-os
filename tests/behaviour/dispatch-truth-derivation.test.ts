@@ -712,9 +712,7 @@ describe("TC-TRACKER-004 the ladder constants, the wait table, and the injected 
 
 describe("GH-386 the arm-8 parity precondition is total over the injected facts", () => {
   test("clean parity derives pr-open with the clean disclosure and no act claim", () => {
-    const result = deriveDispatchResult(
-      truthInput({ pushParity: pushParityClean() }),
-    );
+    const result = deriveDispatchResult(truthInput({ pushParity: pushParityClean() }));
     expect(result.token).toBe("pr-open");
     expect(result.projectionClass).toBe("success");
     expect(result.prUrl).toContain("pull/1");

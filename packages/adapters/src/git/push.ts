@@ -98,16 +98,18 @@ const localRunner: GitPushChildRunner = (file, args, options) =>
     let stdout = "";
     let stderr = "";
     let truncated = false;
-    const collect = (target: "stdout" | "stderr") => (chunk: Buffer | string): void => {
-      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-      const current = target === "stdout" ? stdout : stderr;
-      if (current.length + text.length > MAX_OUTPUT_BYTES) {
-        truncated = true;
-        return;
-      }
-      if (target === "stdout") stdout += text;
-      else stderr += text;
-    };
+    const collect =
+      (target: "stdout" | "stderr") =>
+      (chunk: Buffer | string): void => {
+        const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+        const current = target === "stdout" ? stdout : stderr;
+        if (current.length + text.length > MAX_OUTPUT_BYTES) {
+          truncated = true;
+          return;
+        }
+        if (target === "stdout") stdout += text;
+        else stderr += text;
+      };
     child.stdout?.setEncoding("utf8");
     child.stderr?.setEncoding("utf8");
     child.stdout?.on("data", collect("stdout"));

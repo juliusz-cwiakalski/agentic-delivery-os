@@ -194,8 +194,7 @@ const projectionOf = (value: DeliveryResultToken): ProjectionClass => {
 };
 
 /** The closed push-verdict union, destructured once (no literal in this module). */
-const [PUSH_VERDICT_CLEAN, PUSH_VERDICT_PUSHED, PUSH_VERDICT_FAILED] =
-  DISPATCH_PUSH_VERDICTS;
+const [PUSH_VERDICT_CLEAN, PUSH_VERDICT_PUSHED, PUSH_VERDICT_FAILED] = DISPATCH_PUSH_VERDICTS;
 
 /**
  * The arm-8 (open pull request, URL resolved) parity precondition (GH-386 F-1,
@@ -211,10 +210,7 @@ const [PUSH_VERDICT_CLEAN, PUSH_VERDICT_PUSHED, PUSH_VERDICT_FAILED] =
  * daemon lane and pre-change compositions; `pr-open-unverified` never reaches
  * this arm at all — no precondition, no evidence, no envelope block).
  */
-const deriveOpenPrWithParity = (
-  input: DispatchTruthInput,
-  url: string,
-): DispatchDerivation => {
+const deriveOpenPrWithParity = (input: DispatchTruthInput, url: string): DispatchDerivation => {
   const parity = input.pushParity;
   if (parity === undefined) {
     return base(input, {
