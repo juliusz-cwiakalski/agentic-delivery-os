@@ -771,6 +771,56 @@ export type MergeResolution =
   | { readonly kind: "refused"; readonly failure: MergeFailure };
 
 /**
+ * A candidate whose asserted head is present and a full hex SHA — the
+ * readable-head guard of F-1 step 2. An unreadable candidate is never read.
+ */
+const hasReadableHead = (candidate: DeliveryRequest): boolean =>
+  candidate.headSha !== undefined && FULL_SHA.test(candidate.headSha);
+
+/**
+ * The candidate set grouped by provider-asserted source ref, keeping only the
+ * same-ref groups of two or more members, each group in candidate order — the
+ * duplicate rule's population (spec §5.1 F-1 step 5).
+ */
+const duplicateCandidateGroups = (
+  candidates: readonly DeliveryRequest[],
+): readonly (readonly DeliveryRequest[])[] => {
+  const byRef = new Map<string, readonly DeliveryRequest[]>();
+  for (const candidate of candidates) {
+    const members = byRef.get(candidate.sourceRef);
+    byRef.set(candidate.sourceRef, members === undefined ? [candidate] : [...members, candidate]);
+  }
+  return [...byRef.values()].filter((members) => members.length > 1);
+};
+
+/**
+ * The duplicate-open abort (AC-F1-6): names EVERY duplicate identity and
+ * presents none of them as *the* request. The decision is page-decided, so the
+ * abort spends exactly the one bounded open-request list read.
+ */
+const duplicateOpenAbort = (input: {
+  readonly openCount: number;
+  readonly candidateCount: number;
+  readonly members: readonly DeliveryRequest[];
+}): MergeResolution => ({
+  kind: "refused",
+  failure: {
+    code: "merge.transaction-aborted",
+    domainKind: "merge",
+    exit: 1,
+    evidence: {
+      operation: "github-delivery-request-list",
+      requestReason: "duplicate-open-request",
+      openCount: input.openCount,
+      candidateCount: input.candidateCount,
+      matchedIdentities: input.members.map((candidate) =>
+        mergeIdentityToken(candidate.identity.entityId),
+      ),
+    },
+  },
+});
+
+/**
  * The change-branch resolution (F-1, Appendix A steps 1-6): the one bounded
  * open-list read, the candidate set under the declared caps and precedence, the
  * convergence attempt over the delivered merged read's matched identities, and
@@ -836,6 +886,21 @@ const resolveChangeBranch = async (input: {
         },
       },
     };
+  }
+  // A same-ref group holding an unreadable head aborts from the page alone
+  // (TC-MRG-055): the unreadable member can never be ruled out as a duplicate,
+  // so the group can never establish uniqueness, and the head-unresolved
+  // refusal must not fire first and mask the duplicate. Same-ref groups with
+  // readable heads are decided at step 5, where acceptance establishes the
+  // resolved branch.
+  for (const group of duplicateCandidateGroups(candidates)) {
+    if (group.some((candidate) => !hasReadableHead(candidate))) {
+      return duplicateOpenAbort({
+        openCount,
+        candidateCount: candidates.length,
+        members: group,
+      });
+    }
   }
   // A candidate whose asserted head is absent or not a full hex SHA refuses the
   // run and is never read: an unreadable member cannot establish uniqueness.
@@ -987,34 +1052,23 @@ const resolveChangeBranch = async (input: {
     findings.push(finding(verdict, read.path));
   }
 
-  // Step 5: the duplicate check runs before the distinct-refs ambiguity check,
-  // and its population is the accepted set: more than one accepted candidate
-  // whose source ref equals the resolved branch names each duplicate identity
-  // and never selects one.
-  const byRef = new Map<string, { readonly request: DeliveryRequest; readonly path: string }[]>();
-  for (const entry of accepted) {
-    const ref = entry.request.sourceRef;
-    byRef.set(ref, [...(byRef.get(ref) ?? []), entry]);
-  }
-  for (const group of byRef.values()) {
-    if (group.length > 1) {
-      return {
-        kind: "refused",
-        failure: {
-          code: "merge.transaction-aborted",
-          domainKind: "merge",
-          exit: 1,
-          evidence: {
-            operation: "github-delivery-request-list",
-            requestReason: "duplicate-open-request",
-            openCount,
-            candidateCount: candidates.length,
-            matchedIdentities: group.map((entry) =>
-              mergeIdentityToken(entry.request.identity.entityId),
-            ),
-          },
-        },
-      };
+  // Step 5: exactly one accepted candidate is the delivery request. The
+  // duplicate check runs before the distinct-refs ambiguity check, and its
+  // population is the candidate set (spec §5.1 F-1 step 5): more than one
+  // candidate whose provider-asserted source ref equals the resolved branch —
+  // the exact string equality acceptance establishes — names each duplicate
+  // identity and never selects one, so a same-ref pair with exactly one
+  // accepted entry aborts instead of silently resolving through that entry. A
+  // same-ref group holding an unreadable head never reaches this point: it
+  // aborts from the page alone above (TC-MRG-055).
+  const resolvedBranches = new Set(accepted.map((entry) => entry.request.sourceRef));
+  for (const group of duplicateCandidateGroups(candidates)) {
+    if (group.some((candidate) => resolvedBranches.has(candidate.sourceRef))) {
+      return duplicateOpenAbort({
+        openCount,
+        candidateCount: candidates.length,
+        members: group,
+      });
     }
   }
   if (accepted.length > 1) {

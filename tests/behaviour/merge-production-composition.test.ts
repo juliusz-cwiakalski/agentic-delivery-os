@@ -698,6 +698,121 @@ describe("GH-366 the change-branch resolution and convergence (phase 3)", () => 
     guard.restore();
   });
 
+  test("TC-MRG-055 a mixed duplicate pair — one accepted, one refused member — aborts naming both identities", async () => {
+    const guard = createNoNetworkGuard();
+    const entry = (input: {
+      readonly branch: string;
+      readonly sha?: string;
+      readonly number: number;
+    }) => ({
+      number: input.number,
+      state: "open",
+      head: { ref: input.branch, ...(input.sha === undefined ? {} : { sha: input.sha }) },
+      base: { ref: "main-tools" },
+    });
+
+    // The mixed duplicate pair: both source refs equal the resolved branch, one
+    // member accepted (declared branch, full-SHA head) and one refused (a head
+    // that is not a full hex SHA, the TC-MRG-007 input shape). The duplicate
+    // rule ranges over the candidate set (spec §5.1 F-1 step 5), so the pair
+    // aborts naming BOTH identities instead of silently resolving through its
+    // accepted member — and the refused member's head-unresolved reason never
+    // masks the abort.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-duplicate-mixed" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.headSha, number: 301 }),
+                entry({ branch: MERGE_PROD_BRANCH, sha: "abc123", number: 300 }),
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const run = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(run.exitCode).toBe(exitOf("merge.transaction-aborted"));
+        const error = envelopeOf(run).error ?? {};
+        expect(error.code).toBe("merge.transaction-aborted");
+        const summary = String(error.summary ?? "");
+        expect(summary).toContain("matched-identities=#301,#300");
+        expect(summary).toContain("operation=github-delivery-request-list");
+        expect(summary).toContain("request-reason=duplicate-open-request");
+        // The refused member's own reason does not surface: the duplicate abort
+        // governs the mixed pair rather than the head guard firing first.
+        expect(summary).not.toContain("head-unresolved");
+        expect(summary).not.toContain("merge.request-unresolved");
+        // Never resolved through the accepted member.
+        const serialized = `${run.stdout}\n${run.stderr}`;
+        expect(serialized).not.toContain("declared-at-head");
+        expect(envelopeOf(run).data?.replayed).toBeUndefined();
+        // The page-decided duplicate decision precedes every record read and
+        // spends exactly one provider request: the bounded open-request list.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          0,
+        );
+        expect(harness.transportRequests).toHaveLength(1);
+        // Nothing landed: zero appended transactions.
+        const transactions = readMergeTransactions(harness.store, MERGE_PROD_REF);
+        expect(transactions.ok && transactions.records).toHaveLength(0);
+        // The act-requiring duplicate cause refuses again on a plain re-run.
+        const again = await harness.run(["merge", MERGE_PROD_REF, "--json"]);
+        expect(again.exitCode).toBe(exitOf("merge.transaction-aborted"));
+        expect(envelopeOf(again).error?.code).toBe("merge.transaction-aborted");
+        expect(String(envelopeOf(again).error?.summary ?? "")).toContain(
+          "matched-identities=#301,#300",
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+
+    // Paired control (plan v17): a distinct-ref disagreement still resolves
+    // through its accepted member — the duplicate rule is keyed on the resolved
+    // branch's source ref, not on any refusal elsewhere in the candidate set.
+    {
+      const harness = createMergeProductionHarness({ label: "gh366-prod-distinct-disagrees" });
+      try {
+        harness.setReply((url) => {
+          if (url.includes("state=open")) {
+            return {
+              status: 200,
+              body: [
+                entry({ branch: MERGE_PROD_BRANCH, sha: harness.headSha, number: 301 }),
+                entry({
+                  branch: "fix/GH-293/duplicate",
+                  sha: harness.duplicateHeadSha,
+                  number: 300,
+                }),
+              ],
+            };
+          }
+          return harness.defaultReply(url);
+        });
+        const dry = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+        expect(dry.exitCode, dry.stderr).toBe(0);
+        expect(envelopeOf(dry).data?.resolution).toMatchObject({
+          source: "declared-at-head",
+          branch: MERGE_PROD_BRANCH,
+          requestIdentity: "#301",
+          candidateCount: 2,
+        });
+        // Per-path on a resolved dry run: exactly one provider request.
+        expect(harness.transportCalls.filter((url) => url.includes("state=open"))).toHaveLength(1);
+        expect(harness.transportCalls.filter((url) => url.includes("state=closed"))).toHaveLength(
+          0,
+        );
+      } finally {
+        harness.dispose();
+      }
+    }
+    guard.restore();
+  });
+
   test("TC-MRG-001/003 a base-checkout invocation resolves the request head and the declaration is read at that head", async () => {
     const guard = createNoNetworkGuard();
     const harness = createMergeProductionHarness({ label: "gh366-prod-resolution-facts" });
