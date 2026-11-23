@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-23
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and the freshness envelope that accepts records from both producers — the verify-gates battery projection and the merge dry-run merge-applicable projection — under total equality of the full-declared-sequence gate-set identity, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366", "GH-388"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -149,8 +149,9 @@ declared comparator is `>=`: at-bound is stale.
 Every full evaluation that is not refused for narrowed suite breadth appends
 exactly one fenced, post-append-verified record
 (`delivery.merge.gate-verification.v1`, record kind
-`merge.gate-verification`): `verify gates` records the battery entries and
-`merge --dry-run` records the merge-applicable entries. A `verify gates` run
+`merge.gate-verification`). The record has two producers: the shipped
+`verify gates` run records the battery entries, and `merge --dry-run` records
+the merge-applicable entries. A `verify gates` run
 refused with `verify.narrowed-scope` appends no record and no capsule event, so
 `merge`'s freshness read sees only the previous record. The record shape,
 schema, derivation, and the one-append counting for every non-refused evaluation
@@ -161,12 +162,40 @@ a classified state failure and is never consumable evidence. `verify gates`
 verdicts, citations, ordering, and human bytes are pinned byte-identically by
 goldens; the append is the only output effect.
 
+The gate-set identity both producers record is the schema version plus the full
+declared (or shipped-default) entry-id sequence, resolved by the one gate-set
+resolver shared by `verify gates` and `merge`. The envelope's binding rule is
+total equality of that identity; a surface projection — the battery projection
+for `verify gates`, the merge-applicable projection for `merge`/`--dry-run` —
+selects which entries a producer evaluates and which verdict records the
+payload carries, and never the identity the envelope binds. Under the shipped
+default the two projections resolve the same declared sequence, so a
+battery-surface record and a dry-run record carry identical identities, and
+`merge`'s newest-record-wins read treats them identically.
+
 `merge` reads the newest record and enforces: the record exists and is readable;
 age ≤ the bound (at-bound stale); the recorded head SHA equals the current head;
 the recorded gate-set identity equals the effective one. A violation refuses
 `merge.gates-stale` with the age, bound, SHAs, set delta, and any probe
 observation inline. Absent, torn, unreadable, or schema-incompatible state
-refuses `merge.state-unverified` at exit 2.
+refuses `merge.state-unverified` at exit 2; the row's remediation names the
+working sequence — produce the verification with `verify gates <ref>` for the
+same work item, then re-run `merge` — and that sentence is pinned byte-exactly
+by test.
+
+A record produced by `verify gates` carries all five battery verdicts, which
+makes the recorded-verdict consumption live: a recorded not-green `ci-green`
+refuses with the `recorded` attribution; a recorded fail on a battery-only
+built-in (`lifecycle-finalization`, `push-parity`, `owner-gate`,
+`squash-preflight`) refuses through the `merge.gate.<gate-id>.failed` family
+with the recorded evidence, which carries no attribution or probe member;
+`tracker-freshness` is freshly evaluated from the recorded tracker posture
+against the probe; a recorded green `ci-green` is re-probed. On a clean PR —
+every recorded battery verdict pass and a corroborating probe — the native
+merge sequence `verify gates <ref>` → `merge <ref>` lands with no intermediate
+step. `merge --dry-run` is an evaluation-only surface: it appends its
+merge-applicable verification record and lands nothing, and it is never a
+required pre-step on the landing path.
 
 ## Change-branch resolution and convergence
 
@@ -450,7 +479,7 @@ identity.
 
 ## Quality evidence
 
-The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The enduring coverage spans the production composition's reachability and classification (`merge-production-composition`, `merge-dry-run`, `merge-classification`, `merge-classification-conformance`), the landing mechanism and its crafted metadata (`merge-landing`, `merge-landing-metadata`, `merge-head-guard`, `merge-landing-retirement`), the refusal taxonomy (`merge-refusal-taxonomy`, `merge-refusal-surface`, `merge-refusal-rows`), the required-check contract and attribution (`merge-required-job-probe`, `merge-probe`, `merge-check-path-scan`), the retained git-seam capabilities (`merge-git-seam-capabilities`), idempotent replay (`merge-convergence`), and the named-defect regressions `defect-f1-merge-refusal-containment` and `defect-f8-serial-merge-churn`. The determinism, budget, bounds, state-write, privacy, and verify-gates rows of that specification are unchanged.
+The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The enduring coverage spans the production composition's reachability and classification (`merge-production-composition`, `merge-dry-run`, `merge-classification`, `merge-classification-conformance`), the landing mechanism and its crafted metadata (`merge-landing`, `merge-landing-metadata`, `merge-head-guard`, `merge-landing-retirement`), the refusal taxonomy (`merge-refusal-taxonomy`, `merge-refusal-surface`, `merge-refusal-rows`), the required-check contract and attribution (`merge-required-job-probe`, `merge-probe`, `merge-check-path-scan`), the retained git-seam capabilities (`merge-git-seam-capabilities`), idempotent replay (`merge-convergence`), and the named-defect regressions `defect-f1-merge-refusal-containment` and `defect-f8-serial-merge-churn`. The shipped verify-gates composition's record persistence and its counting and narrowed-refusal no-append posture (`verify-gates-persistence`), the native `verify gates` → `merge` landing sequence, the absence fail-closed cell, the byte-exact remediation pin, the shipped-record identity fixture, and the recorded-verdict consumption cells extend that map. The determinism, budget, bounds, state-write, privacy, and verify-gates rows of that specification are unchanged.
 
 ## Related
 

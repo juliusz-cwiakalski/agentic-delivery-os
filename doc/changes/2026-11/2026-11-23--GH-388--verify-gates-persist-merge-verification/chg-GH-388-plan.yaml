@@ -1,0 +1,134 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-388
+tier:
+  name: full
+# ---------------------------------------------------------------------------
+# Plan-level decision record (spec DEC-1..DEC-6, test plan §1/§6/§8): the
+# mechanism is option (A) — the shipped production composition supplies the
+# delivered fenced, post-append-verified merge.gate-verification append as the
+# verify-gates runtime's append seam; merge consumes it; option (B) (merge
+# composing its own verification when no record exists) is never delivered and
+# is asserted absent by TC-MERGE-041. The identity rule is total equality of
+# the gate-set identity (schema version plus the full declared or
+# shipped-default entry-id sequence, order included, from the one shared
+# resolver); surface projections select evaluated entries and the verdict
+# payload, never the identity — no projection, superset, or delta tolerance is
+# introduced anywhere (DEC-2, F-3).
+#
+# Plan-wide delivery fences (binding), in force on every phase below:
+#   - the ONE production change is the composition wiring in
+#     packages/cli/src/production.ts: the createVerifyGatesCommandRuntime call
+#     gains the appendVerification option wired to appendMergeGateVerification
+#     over the composition store with the delivered fence-token factory, mapped
+#     to the seam's ok/code result exactly as the merge composition's ports
+#     wiring in packages/cli/src/edge.ts already does. No handler change
+#     (packages/cli/src/commands/verify-gates.ts untouched), no report, record-
+#     shape, envelope, or gate-rule change; the runtime option default in
+#     edge.ts stays injection-only (the fixture harness relies on it — test
+#     plan §8.2); packages/cli/src/edge.ts is NOT in any scope below;
+#   - no new error-table rows, record kinds, key prefixes, payload schemas,
+#     envelope keys, or exit codes on any path (NG-3); no read added on any
+#     path — the state append's fence-scoped read-before/read-after is the
+#     delivered append contract, never a new NFR-1 read (NG-2, NFR-1);
+#   - no change to merge --dry-run, verify deploy, the capsule gate.outcome
+#     append semantics, the waiver/transaction ledgers, the landing mechanism,
+#     or the refusal taxonomy (NG-4..NG-7); no ledger mutation, migration,
+#     back-fill, or seeding anywhere (NG-10, G-6);
+#   - all acceptance criteria run over the shipped default gate set; the
+#     declared-custom-set surface parity stays deferred (NG-9, §7.3, OQ-1,
+#     RSK-2) and no case declares a merge.gates configuration;
+#   - golden discipline is capture-first and regeneratation-free: pre-change
+#     goldens are captured at the branch point (phase 1) through the explicit
+#     capture entry — never a blanket rewrite, never a *.test.ts-named module;
+#     byte-identity is enforced thereafter and a byte mismatch is a defect in
+#     the change, never a golden-update trigger — no regeneration is authorized
+#     by this plan (DEC-3, NFR-2; test plan §6 binding procedure);
+#   - Documentation reconciliation is NOT a plan phase — the phase-7 obligation
+#     (spec §22, DEC-6; test plan §1.2: the Verify Gates feature spec, the
+#     Merge and Verify Deploy feature spec, the engine-first operations
+#     guidance, and the merge/verify-deploy test spec) is owned by @doc-syncer
+#     in the lifecycle system_spec_update phase; no doc/** file is declared in
+#     any scope below and no doc edit may leak into any delivery commit (the
+#     one read-only documented-row assertion of TC-MERGE-042 is a test
+#     assertion over committed content, not a doc edit);
+#   - gate evidence convention — TMPDIR=$PWD/tmp/tmpdir; `pnpm check` is the
+#     aggregate gate and belongs to the lifecycle quality_gates phase, not a
+#     plan phase; commits flow through the commit primitive; the PR targeting
+#     main-tools, merge authority, and tracker transitions belong to the
+#     lifecycle phases, not this plan.
+# ---------------------------------------------------------------------------
+phases:
+  - id: 1
+    title: Verify-gates production-composition fixture family and pre-change matrix goldens captured at the branch point
+    kind: delivery
+    summary: "build the verify-gates production-composition fixture family — the new tests/fixtures/verify-gates/production-composition.ts reusing the delivered merge production-composition harness (createProductionComposer, temp-checkout/host helpers, createNoNetworkGuard) with the verify-gates arms: real temp checkout (integration base plus feature branch, full-SHA head H), complete pm-notes materialized for the fixture ref, CI workflow declaring the expected job names, clean-PR provider replies, injected configuration-filesystem and spawn seams, and the stateStoreWrap append-fault seam — and capture the pre-change outcome-matrix goldens at the branch point through the new explicit capture entry tests/fixtures/verify-gates/golden/matrix-golden-run.ts (a fixture module, never *.test.ts, writing only the cells it owns) for every matrix cell lacking a committed golden (fail reason classes, unavailable, narrowed-scope, config refusals, cross-repository member) while the shipped composition still holds delivered behavior — the committed goldens (success data, machine envelope, human report, failure summary) stay read-only; the captured artifacts are TC-VGATES-073's byte-identity oracle and the fixture world TC-VGATES-071/072 and TC-MERGE-040/041 ride"
+    # TC ownership: no TC lands in this phase; the production-composition fixture family, the capture entry and its captured cell goldens are the artifacts, and TC-VGATES-071/072 arrive with phase 2, TC-MERGE-040/041 with phase 3, and TC-VGATES-073's byte-identity arms with phase 5 against them.
+    # Ordering constraint (binding, test plan §5.2 TC-VGATES-073 preconditions and §6 golden-capture procedure): the capture entry MUST run at this change's branch point — BEFORE phase 2 edits the composition in packages/cli/src/production.ts — so the captured cell goldens are pre-change bytes; the committed goldens are already the pre-change oracle and are never touched.
+    # Placement discipline (test plan §4, §6): fixtures are never named *.test.ts; the capture entry is explicit, not a snapshot-rewrite command over the golden directory.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun tests/fixtures/verify-gates/golden/matrix-golden-run.ts (capture entry runs at the branch point and exits non-zero on drift); git status confirms only the declared fixture paths changed.
+    scope:
+      files:
+        - tests/fixtures/verify-gates/production-composition.ts
+        - tests/fixtures/verify-gates/golden/matrix-golden-run.ts
+      folders:
+        - tests/fixtures/verify-gates/golden
+  - id: 2
+    title: The production composition fix and the composition-level persistence suite
+    kind: delivery
+    summary: "fix the defect at its one broken seam — packages/cli/src/production.ts supplies the delivered fenced, post-append-verified merge-ledger append as the verify-gates runtime's appendVerification option (appendMergeGateVerification over the composition store with the delivered fence-token factory, mapped to the seam's ok/code result, exactly the merge composition's ports wiring pattern; both the single-target and cross-repository paths flow through the same handler and persist the record the handler already computes, the append silent) — and land the composition-level regression suite tests/behaviour/verify-gates-persistence.test.ts: TC-VGATES-071 (the shipped production verify gates run over injected transports and a real state store exits 0 with the byte-identical report against the committed success goldens and the ledger gains exactly one fenced, post-append-verified record — schema, key, changeRef, headSha, fixed instant, full shipped-default identity, five per-gate verdicts with bounded citations, tracker posture asserted exactly against the delivered schema; fence acquired/released and post-append read observed; capsule gate.outcome appended once; the append-fault negative control fails the run with the classified state-failure identity, never silent, never consumable, and the follow-on merge refuses merge.state-unverified) and TC-VGATES-072 (exactly one record per non-refused evaluation on repeat and cross-repository member arms in the delivered member-projected shape; a narrowed-scope refusal appends neither record nor capsule event; a configuration refusal, preceding evaluation, appends nothing) — the pin that fails on the shipped-default no-op append and passes only with the real append supplied"
+    # TC ownership: TC-VGATES-071, TC-VGATES-072 (F-1, F-5 counting/privacy posture, AC-T1-1 verify half, AC-T4-1 counting tail, EVT-1/EVT-2, DM-1/DM-3, NFR-2/NFR-4).
+    # Ordering: depends on phase 1's fixture family; the suite and the wiring land in ONE commit so the composition-level regression pin is green at its introduction (pre-fix it fails at the record-presence assertion — test plan §5.2 TC-VGATES-071).
+    # Boundaries: no handler change, no edge.ts change (the option default stays injection-only), no report/record-shape/gate-rule change, no read added; narrowed/config refusal ordering and capsule semantics untouched (NG-5); the delivered TC-MERGE-005/006 injected-seam matrix stays authoritative and is not re-run.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/verify-gates-persistence.test.ts; bun test tests/behaviour/merge-verification-record.test.ts (delivered injected-seam matrix stays green).
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - tests/behaviour/verify-gates-persistence.test.ts
+  - id: 3
+    title: Merge consumption cells at the production composition and the remediation byte-pin
+    kind: delivery
+    summary: "pin the merge command's consumption posture over the verify-gates record at the shipped composer: TC-MERGE-040 in tests/behaviour/merge-production-composition.test.ts (the native sequence verify gates then plain merge through the one shipped composer on one real state store lands result=merged with the provider squash SHA — argv recording proves no --dry-run anywhere, no merge.state-unverified refusal occurred, the verification count is still exactly one, the transaction record exists once, the landing call count is at most one at the expected head) and TC-MERGE-041 in the same suite (with no prior record, merge refuses merge.state-unverified at exit 2 with state=absent exactly as delivered, option (B) asserted absent — the ledger grows by zero verification records, the transport records zero check-run reads, zero landing calls, zero transaction and waiver records, nothing landed — and the remediation sequence verify gates then merge converges and lands per TC-MERGE-040's properties); TC-MERGE-042 in tests/structure/merge-refusal-rows.test.ts (the merge.state-unverified remediationHint pinned byte-exactly to the working sequence — producing command with same-work-item target, consuming re-run, no --dry-run, equality not containment, mutation-sensitive — with both committed error-table baseline fixtures byte-true and the documented sentence asserted read-only)"
+    # TC ownership: TC-MERGE-040, TC-MERGE-041 (F-2, F-4 convergence, AC-T1-1 merge half, AC-T2-1, EVT-1, DM-3, DEC-1, NG-8), TC-MERGE-042 (F-4, AC-T3-1, DEC-4).
+    # Read-only assertions over committed contracts: TC-MERGE-042 reads tests/fixtures/events/error-table-baseline.json, tests/fixtures/supervise/error-table-baseline.json and the documented row in doc/spec/features/feature-result-contract.md — it edits none of them; no doc file is in scope anywhere in this plan (phase-7 obligation, header fence).
+    # Boundaries: merge --dry-run behaviour untouched (NG-6) — TC-MERGE-028 stays authoritative; the delivered TC-MRG-051 rendered-refusal cell and TC-MERGE-011 state classes are the precedent, not re-pins; the zero-gate-evaluations assertion is transport-level (no check-run page on the refusal path).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-production-composition.test.ts; bun test tests/structure/merge-refusal-rows.test.ts.
+    scope:
+      files:
+        - tests/behaviour/merge-production-composition.test.ts
+        - tests/structure/merge-refusal-rows.test.ts
+  - id: 4
+    title: Identity and recorded-verdict consumption cells over shipped-produced records
+    kind: delivery
+    summary: "pin the identity rule and the recorded-verdict consumption where they bind — records the shipped handler produced, seeded through the fixture verify runtime with the delivered real append over the merge harness's store: TC-MERGE-043 in tests/behaviour/merge-freshness.test.ts (the ticket's identity fixture — the record resolved by its persisted identity against the merge read: key merge.gate-verification:<ref>, payload changeRef and headSha; the envelope accepts with head equal, age below the bound, and total identity equality of schema version plus the full shipped-default id sequence, order included as array equality; the landing proceeds) and TC-MERGE-044 in the same suite (the three refusal mutations refuse with the declared reasons and never consume — head H-prime names both SHAs, age at-bound and over-bound names age and bound, the one-id identity delta refuses merge.gates-stale with the set delta inline; every arm asserts zero landing calls, zero transaction records, zero waiver records, zero state change); TC-MERGE-045 in tests/behaviour/merge-required-job-probe.test.ts (a recorded not-green ci-green refuses through the delivered identity with the recorded attribution naming gate id and recorded reason; a failing battery-only built-in refuses through the merge.gate.<gate-id>.failed family with the recorded evidence; exactly one attribution per finding, never probe, never a silent pass); TC-MERGE-046 in tests/behaviour/merge-probe.test.ts (tracker-freshness refuses at the probe per the delivered transition rule over the recorded posture, transition and age inline; a clean recorded battery with a corroborating probe lands at the delivered probe budget — one work-item read and one check-run page, no additional reads)"
+    # TC ownership: TC-MERGE-043, TC-MERGE-044 (F-3, AC-T4-1 identity and mutation clauses, DM-2), TC-MERGE-045 (F-2, AC-T4-2, RSK-4), TC-MERGE-046 (F-2, AC-T4-2, NFR-1, RSK-3).
+    # Ordering: depends on phase 2 (records must be shipped-produced); the delivered mutation matrix over hand-built records (TC-MERGE-007..011) stays authoritative and is not re-run — these cells re-express accept and the three mutations over a shipped-produced record.
+    # Boundaries: no envelope code change anywhere — the freshness envelope, refusal identities, evidence shape, and newest-record-wins rule are delivered and consumed as-is; the member path is covered by phase 2's counting pin (TC-VGATES-072) and the consumption arms use single-target records per the declared fixture.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-freshness.test.ts; bun test tests/behaviour/merge-required-job-probe.test.ts; bun test tests/behaviour/merge-probe.test.ts.
+    scope:
+      files:
+        - tests/behaviour/merge-freshness.test.ts
+        - tests/behaviour/merge-required-job-probe.test.ts
+        - tests/behaviour/merge-probe.test.ts
+  - id: 5
+    title: Verify-gates non-regression with persistence live (goldens, read budget, privacy)
+    kind: delivery
+    summary: "prove the surface byte-identical, bounded, and secret-free with the append wired: TC-VGATES-073 in tests/golden/verify-gates.test.ts (the full outcome matrix — pass, each fail reason class, unavailable including credential-unavailable and head-unresolved, narrowed-scope refusal, each config refusal, cross-repository member — driven through the real append over a fixture store with byte equality per cell against the committed and phase-1 captured goldens, human bytes, machine envelope keys and ordering, verdicts, citations, and exits, plus replay byte-equality on the pass and fail cells; a 0-byte delta is the acceptance bar and any byte difference is a change defect, never a golden-update trigger) and TC-VGATES-074 in tests/behaviour/verify-gates-read-budget.test.ts (recording transport and counting configuration-resolution seam prove 0 added provider reads and 0 added configuration reads on the verify-gates pass, fail, and unavailable cells and on the merge consumption path — at most one page or item per provider source, one bounded configuration resolution, the state append's read-before/read-after counted as the delivered append contract and never conflated with provider or configuration reads; all bounds asserted structurally through call counts, no wall-clock assertion anywhere) and TC-VGATES-075 in tests/behaviour/merge-privacy.test.ts (planted-canary facts over shipped-produced records single-target and member-projected plus every output — human stdout, machine envelope, refusal summaries — zero canary hits, the delivered privacy allowlist unchanged, and the delivered five-gate regression fixtures passing unchanged)"
+    # TC ownership: TC-VGATES-073 (F-5, AC-T5-1, NFR-2, DEC-3), TC-VGATES-074 (F-5, AC-T5-1, NFR-1, NFR-3), TC-VGATES-075 (F-5, AC-T5-1, NFR-5, DM-1).
+    # Golden rule (binding, header fence): regeneration is forbidden — the spec declares no output change; the phase-1 captured cells and the committed goldens are the read-only oracle.
+    # Contingency (test plan §8.1 TC-VGATES-051 zero-writes note): if delivery finds the delivered read-budget guard composed onto a path the fix wires, its scoping is reconciled inside this same declared file (TC-VGATES-051 lives in tests/behaviour/verify-gates-read-budget.test.ts) without weakening the read-budget clause; the reconciliation is recorded as a pm-notes notes: entry, never as plan progress.
+    # Ordering: depends on phases 1-2 (captured goldens and the wired append); the delivered golden cases (TC-VGATES-044/045/052/063) and TC-SNARR's byte-pinned header stay authoritative — this phase adds the append-wired dimension and the cells without committed goldens, not their duplicates.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/verify-gates.test.ts; bun test tests/behaviour/verify-gates-read-budget.test.ts; bun test tests/behaviour/merge-privacy.test.ts.
+    scope:
+      files:
+        - tests/golden/verify-gates.test.ts
+        - tests/behaviour/verify-gates-read-budget.test.ts
+        - tests/behaviour/merge-privacy.test.ts
+  - id: 6
+    title: Lockstep five-package minor changeset
+    kind: delivery
+    summary: "declare the release — one lockstep changeset .changeset/gh-388-verify-gates-persist-merge-verification-minor.md declaring the five fixed-group packages @delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode at minor (spec §18 version metadata declared at specification time; the landed precedent GH-377/GH-381/GH-384 for cross-cutting CLI-behaviour changes — a patch guess failed the gates on GH-381 and is not repeated; the entries, not the filename, are the contract)"
+    # Release scope: the changeset is this phase's release artifact; the PR, merge authority, and tracker transitions belong to the lifecycle phases, not this plan. Documentation reconciliation is owned by @doc-syncer in the lifecycle system_spec_update phase (spec §22, DEC-6; header fence) — deliberately not declared in this plan.
+    # Verify: the changeset file parses as YAML front matter plus prose declaring the five packages at minor; bun test tests/structure (closed vocabulary suites) and tests/checks/error-table-sync.test.ts stay green — no vocabulary addition anywhere.
+    scope:
+      files:
+        - .changeset/gh-388-verify-gates-persist-merge-verification-minor.md

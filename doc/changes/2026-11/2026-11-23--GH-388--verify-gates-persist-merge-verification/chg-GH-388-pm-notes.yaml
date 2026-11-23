@@ -1,0 +1,563 @@
+# chg-GH-388-pm-notes.yaml — PM durable memory for this change (committed to git).
+# Live coordination + retrospective record. Phase state is written ONLY via the phase
+# command family; never hand-edit timestamps or the PR-URL field.
+change_id: GH-388
+title: "M4-S24: verify gates must persist the verification merge consumes (M4)"
+milestone: "M4: Jaiship-native delivery"
+delivery_mode: interactive
+branch: fix/GH-388/verify-gates-persist-merge-verification
+change_folder: doc/changes/2026-11/2026-11-23--GH-388--verify-gates-persist-merge-verification
+tracker:
+  url: https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/388
+  labels_observed_at_intake: [ "change" ]
+phases:
+  clarify_scope: { started: null, completed: 2026-11-23T10:47:01.513Z }
+  specification: { started: null, completed: 2026-11-23T11:02:35.617Z }
+  test_planning: { started: null, completed: 2026-11-23T11:17:49.235Z }
+  delivery_planning: { started: null, completed: 2026-11-23T11:26:16.010Z }
+  dor_check: { started: null, completed: 2026-11-23T11:34:09.196Z }
+  delivery: { started: null, completed: 2026-11-23T13:06:30.407Z }
+  system_spec_update: { started: null, completed: 2026-11-23T13:14:27.250Z }
+  review_fix: { started: null, completed: 2026-11-23T13:24:52.871Z }
+  quality_gates: { started: null, completed: 2026-11-23T13:57:41.754Z }
+  dod_check: { started: null, completed: 2026-11-23T13:59:59.945Z }
+  pr_creation: { started: null, completed: 2026-11-23T14:09:40.434Z }
+decisions:
+  - text: "Mechanism choice delegated by the ticket ('choose one, declare it'). PM
+      indication: option (A) — verify gates persists the merge.gate-verification
+      record it computed and merge consumes it. Drivers: (i) both current-truth
+      specs already declare A-shaped truth ('verify gates records the battery
+      entries … merge consumes the record'), so A converges runtime to spec;
+      (ii) the record is verify gates' own output — a printed-but-unrecorded
+      verification is not evidence (ticket's own framing); (iii) it makes the
+      merge.state-unverified remediation truthful ('verify gates <ref>' then
+      'merge <ref>') without a hidden --dry-run pre-step. Formal declaration of
+      A and the identity-reconciliation semantics happens in the spec. Option
+      (B) (merge composes when no record exists) rejected: it keeps verify gates
+      non-evidencing and doubles the verification composition on the landing
+      path."
+    date: "2026-11-23"
+open_questions: [] # none blocking owner input at intake
+blockers: []
+notes:
+  - text: "Intake observed state (2026-11-23): fresh start — phase ledger empty for
+      GH-388 (verified registry, 7646 records), no local/remote branch, no
+      change folder, no PR, zero open PRs repo-wide. main-tools ==
+      origin/main-tools at f5dc7a34 (0/0 post-fetch). Ticket open, label change,
+      milestone M4: Jaiship-native delivery attached (intake milestone
+      verification PASSED — no stop), no comments, no assignees. Branch
+      fix/GH-388/verify-gates-persist-merge-verification cut from main-tools
+      f5dc7a34; worktree carried only untracked .zed/ (not ours). Dependency
+      GH-366 satisfied on-base: PR #387 merged as f531c057 (present in
+      main-tools history under GH-389's f5dc7a34)."
+    type: info
+    date: "2026-11-23"
+  - text: "Clarify-scope cross-check vs system spec. DIVERGENCE:
+      feature-verify-gates.md and feature-merge-verify-deploy.md (Current,
+      last_updated 2026-11-18/2026-11-23) both state verify gates appends
+      exactly one fenced post-append-verified EVT-1 merge.gate-verification
+      record per full battery evaluation not refused for narrowed suite breadth;
+      the ticket's observed session (installed 7cc71cd, branch 7f283e8) shows NO
+      merge.gate-verification:GH-366 record after two verify gates runs — the
+      record appears only after merge --dry-run. Either the shipped verify-gates
+      composition lacks the state-append wiring merge reads, or the record lands
+      under an identity merge's read does not resolve. The delivery must
+      converge runtime to the declared contract; the spec-writer must pin code
+      truth first."
+    type: risk
+    date: "2026-11-23"
+  - text: "Identity seam for the spec to declare: merge enforces 'the recorded
+      gate-set identity equals the effective one' against its merge-applicable
+      set (default: ci-green + tracker-freshness), while verify gates records
+      the battery identity (5 built-ins). A battery-surface record under naive
+      equality refusal would flip state-unverified into gates-stale with a set
+      delta. Option A must reconcile the merge read (superset acceptance over
+      merge-applicable entries, a projected identity, or equivalent) while
+      keeping merge --dry-run's merge-applicable record semantics and the five
+      built-in ids reserved. Ticket AC pins the persisted record's identity
+      (changeRef + headSha) against the merge read."
+    type: info
+    date: "2026-11-23"
+  - text: "Requirements judged complete and consistent for artifact generation: ACs
+      are testable (A/B-conditional landing, remediation-names-working-sequence
+      pinned by test, record-identity fixture, verify gates bounded/secret-free
+      with no regression of its 5 gates); dependencies satisfied (GH-366
+      merged); mechanism choice explicitly delegated by the ticket author. No
+      owner questions required at intake."
+    type: info
+    date: "2026-11-23"
+  - text: "Documentation impacts anticipated for phase 7: feature-verify-gates.md
+      (record persistence/consumption language, read budget if unchanged),
+      feature-merge-verify-deploy.md (freshness envelope consumption +
+      state-unverified remediation text), doc/guides/engine-first-operations.md
+      (native merge sequence — the ticket names this documentation as blocked by
+      GH-388), quality/test-specs/test-spec-merge-verify-deploy.md (coverage
+      rows for the new persistence/consumption tests). No new error-table rows
+      expected: merge.state-unverified exists; only its remediation content is
+      pinned by test."
+    type: info
+    date: "2026-11-23"
+  - text: "Operational conventions carried into delivery: harness binary is
+      delivery-os (PATH=\"$PWD/node_modules/.bin:$PATH\" prefix in runner
+      shells); gate evidence uses TMPDIR=$PWD/tmp/tmpdir; commits via the commit
+      primitive; PR targets main-tools; STOP with the PR open; changeset format
+      precedent is five fixed-group packages minor (GH-377/GH-381) — verify
+      against scope before authoring."
+    type: info
+    date: "2026-11-23"
+  - text: "RESOLVED — intake identity-seam briefing corrected by code truth (spec
+      Appendix A): the briefed battery-vs-merge-applicable identity mismatch
+      does not exist. Both record producers resolve their gate set through the
+      one shared resolver and carry the schema version plus the FULL declared
+      (or shipped-default) entry-id sequence as the identity; surface
+      projections (batteryEntries/mergeEntries) select evaluated entries and
+      verdict payload only, never identity. Under the shipped default the
+      identities are exactly equal, so option A needs zero new tolerance and
+      cannot flip state-unverified into gates-stale. The REAL latent seam: the
+      production verify-gates composition resolves only the shipped default set
+      while merge resolves declared merge.gates — under a custom declared set
+      the envelope fail-closes gates-stale with the set delta. Deferred
+      fail-closed to a follow-up (spec OQ-1/RSK-2/DEC-5/NG-9); all ACs are
+      declared over the shipped default. Root cause of the observed defect is
+      one composition wiring point: the verify-gates handler builds the complete
+      record and calls its append seam, but the shipped production composition
+      never supplies the seam (default is a documented no-op); merge --dry-run
+      wires the identical append, which fully explains the ledger asymmetry."
+    type: resolved
+    date: "2026-11-23"
+  - text: "Specification phase outcome: chg-GH-388-spec.md v1.0 authored and PM-
+      validated (409 lines, template-conformant). Declared: option (A) with
+      production composition supplying the delivered fenced post-append-
+      verified append (DEC-1); total identity equality of the full declared
+      entry-id sequence from the shared resolver (DEC-2); silent append, goldens
+      untouched (DEC-3, NFR-2 0-byte delta); merge.state-unverified remediation
+      pinned byte-exactly by test — shipped text already names the working
+      sequence, no rewrite required (DEC-4, AC-T3-1); ACs over shipped default
+      set (DEC-5); docs strategy: feature specs already declare A-truth so phase
+      7 sharpens wording, engine-first guide rewritten to verify-gates → merge
+      native sequence (DEC-6). Ticket ACs traced 1:1 (AC-T1-1..AC-T5-1 + AC-T4-2
+      recorded-fail consumption; alternative-branch AC-2 resolved via declared
+      fail-closed path, not dropped). version_impact minor; changeset declared
+      as five fixed-group packages minor. No gaps — no phase reopen needed."
+    type: decision
+    date: "2026-11-23"
+  - text: "Test-planning phase outcome: chg-GH-388-test-plan.md v1.0 authored and
+      PM-validated (681 lines, 12 cases). Bidirectional traceability complete:
+      every AC (AC-T1-1..AC-T5-1) covered by ≥1 named case, every case traces to
+      exactly one AC; ticket ACs traced through spec Appendix B. ID series
+      re-verified in the delivered tree immediately before authoring: maxima
+      TC-VGATES-070 / TC-MERGE-039, plan consumes TC-VGATES-071..075 and
+      TC-MERGE-040..046 (TC-MRG sub-series deliberately untouched — GH-366's).
+      Key adversarial arms: TC-VGATES-071 is the composition-level regression
+      that fails on the shipped-default no-op append (the test that would have
+      caught GH-388); TC-MERGE-041 asserts option-B absence (zero appends, zero
+      gate evaluations, no landing); TC-MERGE-042 byte-exact remediation
+      equality pin (upgrades delivered containment pins); TC-MERGE-043/044
+      re-express envelope accept + three mutations over a shipped-produced
+      record. Golden procedure pinned: pre-change capture FIRST at branch point
+      via fixture module (never *.test.ts), byte-identity enforced, regeneration
+      forbidden (DEC-3 declares no output change). Six coverage gaps in
+      delivered suites named and closed (shipped-composition layer,
+      recording-seam counting, envelope over shipped records, recorded battery
+      verdicts, remediation equality, shipped-record privacy). No untestable AC
+      — no spec reopen. Plan flags §8.1 regeneration temptation as top risk;
+      delivery must not regenerate goldens."
+    type: decision
+    date: "2026-11-23"
+  - text: "Delivery-planning phase outcome: chg-GH-388-plan.yaml authored
+      (delivery.plan.v1, tier full, 6 phases), PM to run plan validate before
+      phase complete. Phase shape: (1) fixture family + PRE-CHANGE golden
+      capture at branch point (binding ordering: capture before composition
+      change); (2) the ONE production fix — production.ts supplies
+      appendVerification wired to appendMergeGateVerification with the delivered
+      fence factory, mirroring the merge composition's ports wiring (code-truth
+      anchors: production.ts:2507 no-op default, edge.ts:1438 seam default,
+      edge.ts:1562 pattern, fence factory production.ts:2006) — committed with
+      the new persistence suite TC-VGATES-071/072; (3) merge consumption +
+      remediation byte-pin (TC-MERGE-040/041/042); (4) identity +
+      recorded-verdict cells (TC-MERGE-043..046); (5) non-regression with
+      persistence live (TC-VGATES-073/074/075); (6) lockstep changeset five
+      fixed-group packages MINOR. Declared total scope: one production file
+      (packages/cli/src/production.ts), 1 new fixture module + capture entry +
+      captured goldens, 1 new suite + 8 delivered suites extended, 1 changeset.
+      Consistency check: no spec/test-plan inconsistency; doc edits excluded
+      (phase-7 @doc-syncer obligation per DEC-6); golden regeneration excluded
+      (byte mismatch is a change defect). edge.ts and the handler declared OUT
+      of scope; no new vocabulary/schema/reads; no option (B)."
+    type: decision
+    date: "2026-11-23"
+  - text: "CORRECTION to the delivery-planning note's code-truth shorthand: the
+      no-op append default is edge.ts:1438 ('absent leaves the evaluation
+      unrecorded'); production.ts:2507 is the omitting CALL SITE (the shipped
+      composition creating the runtime without supplying the seam); edge.ts:
+      1562 is the merge wiring pattern to mirror; fence factory production.ts:
+      2006. Substance of the plan unchanged; labels were swapped in my shorthand
+      only (flagged by DoR advisory)."
+    type: resolved
+    date: "2026-11-23"
+  - text: "DoR gate outcome: READY at iteration 1 (readiness-review/readiness-
+      iter-1.md, rides this commit). 10/10 facets PASS, zero blocking findings;
+      code-truth anchors adversarially verified in-tree (seam default, omitting
+      call site, merge wiring pattern, fence factory, handler seam calls at
+      verify-gates.ts:446/544, resolveMergeGateSet(undefined) confirming the
+      OQ-1 shipped-default boundary). Minor NON-BLOCKING finding carried to
+      @coder: TC-VGATES-071 steps 6-7 append-fault negative control requires a
+      FRESH STORE ROOT when the harness rebuilds — on the first arm's store the
+      already-persisted record would satisfy the envelope; the suite must state
+      and use a fresh root. Advisory (pre-existing, out of scope): dual
+      TC-VGATES-070 labels in tests/behaviour/verify-gates-ci.test.ts:88,236 —
+      harmless to 071+ consumption; not remediated in this change."
+    type: decision
+    date: "2026-11-23"
+  - text: "Plan phase 1 complete (fixture family + PRE-CHANGE golden capture at
+      branch point). Commit f21169398516e4198b47ac2311e2b6b06a4681f0 (commit
+      primitive; staged exactly the 4 declared fixture paths; .zed/ disclosed
+      stray). Artifacts: tests/fixtures/verify-gates/production-composition.ts
+      (real createProductionComposer verify-gates arms: temp checkout base +
+      change branch at full-SHA head, complete pm-notes materialized for the
+      fixture ref, CI workflow, clean-PR replies, injected config-fs/spawn/
+      credential seams, stateStoreWrap seam, argv recording, byte
+      normalization); tests/fixtures/verify-gates/golden/matrix-golden-run.ts
+      (explicit capture entry, capture-when-absent / verify-on-drift, never a
+      *.test.ts module); captured goldens matrix-cells.json (53 cells = 48
+      corpus + narrowed-scope + suite-map-unmirrored + 2 config refusals +
+      member-green, both modes, real append wired over a fixture store) and
+      production-success.json (production success cell, normalized), captured at
+      branch point ac9a62e5 BEFORE any production.ts edit. Test result: capture
+      entry verify mode byte-identical (exit 0); 5 adjacent delivered suites
+      (golden verify-gates, parity-suite-map, narrowed-scope,
+      merge-verification-record, cross-repository-members) 41 pass / 0 fail;
+      biome clean. Note: corpus expectedExit values are evaluator-level (the
+      handler recomputes lifecycle from the fixture document); handler-level
+      truth rides the captured bytes, matching the delivered parity-baseline
+      convention."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 2 complete (the production composition fix + the
+      composition-level persistence suite). Commit
+      586352acd7dbe01266432566ea7704e16a7a111a (commit primitive; staged
+      packages/cli/src/production.ts +
+      tests/behaviour/verify-gates-persistence.test.ts + the pm-notes carrying
+      the phase-1 note as disclosed tracked drift). The fix: the verify-gates
+      runtime call site now supplies appendVerification =
+      appendMergeGateVerification(store, { record, fenceToken: newFenceToken()
+      }) mapped to the seam's ok/code result, mirroring edge.ts's merge ports
+      wiring; no handler/report/envelope/gate-rule change; no read added.
+      TC-VGATES-071 primary arm: byte-identical machine+human bytes vs the
+      phase-1 captured production goldens, exactly one record per evaluation
+      with schema/key/changeRef/headSha/identity (schema version + 6-id
+      sequence, order included)/5 battery verdicts with bounded citations/
+      tracker posture asserted, fence acquire->append->post-append read->release
+      observed through a recording store wrapper, no capsule disclosure as
+      delivered. Append-fault negative control on a FRESH STORE ROOT (new
+      harness instance, zero-records pre-assertion — DoR minor finding honored):
+      state.write.failed at exit 2, never consumable, the follow-on merge
+      refuses merge.state-unverified. TC-VGATES-072: repeat production runs 1
+      then 2 records; member arm exactly one member-projected record (gates
+      carry exactly id/verdict/reason/citation) with the capsule event appended
+      once AFTER the record; narrowed and config refusals append neither. Test
+      result: 6 pass / 0 fail; capture entry verify mode post-fix byte-identical
+      (53 cells + production cell — the 0-byte delta proof with persistence
+      live); merge-verification-record + golden verify-gates + parity-suite-map
+      22 pass / 0 fail; pnpm typecheck green; biome clean. Reconciliation
+      recorded: the fixed-verification-instant clause rides the fixture-runtime
+      arms (fixed injected clock); the production composition reads the system
+      clock by delivered design (clock fact production- omitted), so the
+      production arm asserts the observed instant's integrity — never an output
+      byte."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 3 complete (merge consumption cells + remediation byte-pin).
+      Commit 45404001f2eea0b7d3b91f5d74a60e41b45b564c (commit primitive; staged
+      tests/behaviour/merge-production-composition.test.ts,
+      tests/structure/merge-refusal-rows.test.ts, the shared fixture, and the
+      pm-notes tracked drift). TC-MERGE-040: the native sequence verify gates
+      then plain merge through the one shipped composer lands result=merged with
+      the provider squash SHA; argv recording proves no --dry-run; the
+      verification count stays exactly one; the transaction exists once; one
+      landing call at the expected head. TC-MERGE-041: the absence refusal is
+      exit 2 merge.state-unverified with state=absent and
+      operation=delivery-registry as delivered; option (B) asserted absent (zero
+      verification appends, zero check-run reads, zero landing calls, zero
+      transaction/waiver records, no landing-decision read composed); the
+      remediation sequence converges and lands. TC-MERGE-042: the
+      merge.state-unverified remediationHint pinned byte-exactly (equality +
+      structural guards + mutation sensitivity + no --dry-run), both error-
+      table baselines byte-true (events rows parsed; supervise column 5), the
+      documented row asserted read-only. DISCLOSED fixture amendment: the
+      phase-1 production fixture's provider landing reply gains the sha member
+      (the adapter reads the squash SHA from the PUT body's sha; the reply
+      vocabulary was incomplete, exposed by TC-MERGE-040's declared provider-
+      squash-SHA assertion; the success cell never lands so captured output
+      bytes are unchanged — capture entry verify mode byte-identical post-
+      amendment). Test result: merge-production-composition + merge-refusal-rows
+      41 pass / 0 fail; verify-gates-persistence 6 pass / 0 fail; capture entry
+      byte-identical; biome clean."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 4 complete (identity + recorded-verdict consumption cells over
+      shipped-produced records). Commit 69b0bdd113381773f6229d77227bbe472511c1a5
+      (commit primitive; staged the three declared suites + the pm-notes tracked
+      drift). Seeding pattern: the shipped verify-gates handler over the merge
+      harness's store via the delivered real append (facts overridden to the
+      merge ref/branch/head and provider parity posture) — never the
+      TC-MERGE-007 hand-built builder. TC-MERGE-043: the shipped record resolved
+      by persisted identity (ledger key, changeRef, headSha) and accepted under
+      total identity equality (schema version + six-id sequence, exact array
+      equality); the landing proceeded. TC-MERGE-044: head H' (provider-asserted
+      request head, not the git seam) refuses naming both SHAs; at-bound and
+      over-bound refuse with age and bound; a one-id drop on the newest record
+      (delivered append) refuses gates-stale with the set delta naming the
+      dropped id; every arm zero consumption. TC-MERGE-045: recorded not-green
+      ci-green refuses with exactly one recorded attribution against a green
+      probe page; DISCLOSED reconciliation: the battery-only built-in arm uses
+      the owner-gate-present shape (the lifecycle-finalization fail shape is not
+      expressible through the delivered fixture runtime's hardcoded complete
+      document + empty transitions without a fixture-harness change outside the
+      declared scope) and pins the delivered recorded-evidence contract — the
+      family refusal carries {gateId, detail} exactly, no attribution member
+      (attribution is the declared required-job contract, pinned by the ci-green
+      arm), no probe member, no timestamp. TC-MERGE-046: the tracker-freshness
+      transition refusal with transition + age inline over the recorded posture,
+      and the clean recorded landing at the delivered probe budget (one
+      work-item read, one check-run page). Test result: merge-freshness 19 pass,
+      merge-required-job-probe 23 pass, merge-probe 20 pass (4-suite battery
+      with merge-verification-record: 70 pass / 0 fail); biome clean."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 5 complete (non-regression with persistence live). Commit
+      dcec786d210dd330f6ef8f855e495161e354b261 (commit primitive; staged the
+      three declared suites + the pm-notes tracked drift). TC-VGATES-073: every
+      one of the 53 phase-1 captured matrix cells rebuilt with the delivered
+      real append over a fixture store reproduces byte-identical
+      stdout/stderr/exit in both modes (0-byte delta acceptance bar,
+      regeneration forbidden); the committed success-data/human-success/
+      failure-summary goldens hold with the append wired; the member cell's
+      envelope data equals the committed member-form golden; replay
+      byte-equality on pass and fail cells. TC-VGATES-074: the production budget
+      proof — the pass cell exactly one read per provider source, no pagination;
+      fail cell same shape then fails; credential-unavailable composes zero
+      provider transport; the merge consumption path over a shipped record keeps
+      the per-source budget with one landing call; the append contract's state
+      reads counted as the append's own shape
+      (read-before/acquireFence/append/read-after/releaseFence, one each per
+      append), never provider or configuration reads. TC-VGATES-075: planted
+      canary facts over shipped-produced records (pass/fail single-target and
+      member-projected) plus all outputs scan zero canary hits; the delivered
+      allowlist unchanged; live mutation control; the five-gate regression
+      suites stay green unchanged via the aggregate gate. §8.1 contingency
+      checked: TC-VGATES-051's zero-writes guard stays green unchanged (the
+      fixture runtime's append default is injection-only, untouched by the fix)
+      — no reconciliation needed. Test result: golden verify-gates 9 pass,
+      read-budget 12 pass, merge-privacy 8 pass (3-suite battery 29 pass / 0
+      fail); authority suites 29 pass / 0 fail; capture entry byte-identical;
+      pnpm typecheck green; biome clean."
+    type: info
+    date: "2026-11-23"
+  - text: "Plan phase 6 complete (lockstep five-package minor changeset — the final
+      plan phase). Commit c9e0af7310ef61371c235592f15a4a6c14d90b0d (commit
+      primitive; staged
+      .changeset/gh-388-verify-gates-persist-merge-verification-minor.md + the
+      pm-notes tracked drift + tests/behaviour/merge-freshness.test.ts).
+      DISCLOSED: the merge-freshness correction rode this commit — the delivered
+      TC-F1-014 population obligation (merge-suite-obligations) forbids the
+      counts.landing recorder token in the green suite, so the phase-4
+      zero-consumption/accept landing assertions now read the recorded
+      harness.landings array (same evidence, same semantics; tests/structure
+      2022 pass / 0 fail after the fix). The changeset declares exactly the five
+      fixed-group packages at minor (programmatic parse assert: five keys, all
+      minor, prose present). Version bump and CHANGELOG tasks: changesets owns
+      versioning — no manual bump, no CHANGELOG edit (the changelog is generated
+      at release); validated against AGENTS.md. Test result for the phase: bun
+      test tests/structure 2022 pass / 0 fail;
+      tests/checks/error-table-sync.test.ts 108 pass / 0 fail; biome clean.
+      Aggregate gate: see the delivery report — pnpm check run on the clean tree
+      post-phase-6 (the lifecycle quality_gates phase runs its own)."
+    type: info
+    date: "2026-11-23"
+  - text: "Delivery correction + aggregate gate verdict. The first pnpm check run
+      (TMPDIR=$PWD/tmp/tmpdir, exit 1) caught one lint error: noUnreachable at
+      tests/fixtures/verify-gates/production-composition.ts: 230 — a duplicated
+      open-request return left behind by the phase-3 landing-reply amendment.
+      Corrected by dead-code removal in commit
+      4ccc7128d8de89a3a672bdcaebe4a80e39cb5060 (commit primitive; behavior
+      unchanged, proven by the capture entry verify mode byte-identical).
+      Corrected aggregate run: TMPDIR=$PWD/tmp/tmpdir pnpm check PASS, exit 0
+      (log
+      tmp/run-logs-runner/2026-11-23/134033-pnpm-check-gh-388-gate-rerun.log):
+      lint 0 errors / 133 warnings (pre-existing, non-gating); format clean;
+      typecheck clean (6 packages + tests/types); bun test 12571 pass / 4 skip /
+      0 fail across 1505 files; check:boundaries, check:memory,
+      check:forbidden-literals, check:namespace-tree, prompt-conformance,
+      help-guide-coverage, exports-parity all PASS. All six plan phases
+      committed: 1 f2116939, 2 586352ac, 3 45404001, 4 69b0bdd1, 5 dcec786d, 6
+      c9e0af73 (+ the 4ccc7128 gate correction). Delivery stops here per
+      contract: no phase complete run by @coder — the PM owns the delivery
+      lifecycle transition; the pm-notes phase-6/aggregate notes ride as tracked
+      pending work for the lifecycle boundary."
+    type: info
+    date: "2026-11-23"
+  - text: "Delivery phase outcome (PM validation of @coder's completion report):
+      COMPLETED_ALL — all 6 plan phases executed and committed via the commit
+      primitive (7 commits: f2116939, 586352ac, 45404001, 69b0bdd1, dcec786d,
+      c9e0af73, + 4ccc7128 gate correction). Aggregate pnpm check PASS exit 0
+      (12571 pass / 4 skip / 0 fail, 1505 files; TMPDIR=$PWD/tmp/tmpdir).
+      Production change exactly as declared: production.ts supplies
+      appendVerification wired to appendMergeGateVerification with the delivered
+      fence factory (+14 lines, the only production file). Goldens: 53 matrix
+      cells + production success cell captured at branch point ac9a62e5 BEFORE
+      the production edit, verified byte-identical after every subsequent change
+      (0-byte delta), NO regeneration. DoR minor finding honored (fresh store
+      root + zero-records pre-assertion). No doc/** file touched. Changeset five
+      fixed-group packages minor, programmatic-parse verified. Four deviations
+      disclosed in pm-notes (fixture sha-member amendment; owner-gate shape
+      substitution for the lifecycle-fail arm; observed-instant production arm;
+      harness.landings token fix per the TC-F1-014 obligation). Report validated
+      complete: per-phase id + commit + test result present for all six phases."
+    type: decision
+    date: "2026-11-23"
+  - text: "RETRO — fixture reply vocabulary vs adapter contract: the phase-1
+      production fixture's landing reply lacked the adapter-contract sha member
+      (the adapter reads the squash SHA from the PUT body's sha); exposed only
+      at phase 3 by TC-MERGE-040's declared provider-squash-SHA assertion,
+      costing an amendment commit and — worse — the amendment left a duplicated
+      unreachable return that the AGGREGATE lint then caught (fix commit
+      4ccc7128). Improvement for future plans: validate fixture reply shapes
+      against the adapter contract at fixture-authoring time (the test plan
+      could name the reply-vocabulary requirement), and treat any mid-chain
+      fixture amendment as gate-suspect until the aggregate lint re-runs."
+    type: retro
+    date: "2026-11-23"
+  - text: "RETRO — per-phase scoped biome runs are not the aggregate gate: phase 3
+      reported 'biome clean' while the amendment's unreachable code was present
+      (scoped/ordered differently than the aggregate lint), and the first full
+      pnpm check failed fast on noUnreachable. The aggregate gate is the only
+      authority; per-phase clean claims are advisory. One gate iteration + one
+      correction commit spent; acceptable, but the coder's per-phase gate should
+      include the aggregate lint when a prior phase's committed files are
+      amended later in the same delivery."
+    type: retro
+    date: "2026-11-23"
+  - text: "Fixture-runtime limitation noted for future test plans (not remediated —
+      out of declared scope): the delivered merge fixture runtime hardcodes the
+      lifecycle document as complete with empty transitions, so a
+      lifecycle-finalization FAIL is not expressible without a fixture-harness
+      change; TC-MERGE-045's battery-only arm was substituted with the
+      owner-gate-present shape preserving the requirement class (recorded family
+      refusal carries {gateId, detail}, no attribution/probe member). Any future
+      change needing a lifecycle-fail arm must extend the fixture harness
+      explicitly in its plan."
+    type: info
+    date: "2026-11-23"
+  - text: "System-spec-update phase outcome: @doc-syncer reconciled ALL FOUR
+      declared targets in-change, zero residual gaps. (1)
+      feature-verify-gates.md — shipped-run producer set, identity rule
+      (projections never bind identity), zero-read append, shipped-default
+      boundary for declared merge.gates (fail-closed, deferred parity); (2)
+      feature-merge-verify-deploy.md — two-producer envelope under total
+      full-declared-sequence identity, recorded battery verdicts live (recorded
+      attribution / per-gate family / tracker-freshness), native sequence
+      verify-gates → merge with no intermediate step, remediation test-pinned;
+      (3) engine-first-operations.md — THE ticket-named blocked doc: daily
+      routine is now dispatch → verify gates → merge, dry-run removed from the
+      routine and declared evaluation-only (repo-wide grep confirms no
+      current-truth doc still presents dry-run as required); (4)
+      test-spec-merge-verify-deploy.md — four new GH-388 coverage rows
+      (persistence, native landing, identity/recorded verdicts, non-regression).
+      Validation: distribution guard PASS (96 docs, no drift; guide keeps
+      ados_distribution: redistributable), doc-conformance 61/0, banned-phrase
+      scan clean, both feature specs' frontmatter gain GH-388 + last_updated.
+      Doc edits in working tree riding this phase transition.
+      spec_coverage_gaps: none (both areas had Current specs — reconciliation,
+      not authoring)."
+    type: decision
+    date: "2026-11-23"
+  - text: "CLARIFICATION (requested by review minor #1): TC-VGATES-071's primary arm
+      asserts capsule gate.outcome ABSENCE at the production layer because the
+      shipped composer wires no capsule producer port (truthful, NG-5-
+      conformant — the capsule append is non-gating and absent-without-port by
+      delivered design); capsule-ONCE with record-before-capsule ordering is
+      pinned at the handler layer by TC-VGATES-072's member arm. The plan's
+      phase-2 step-5 wording ('appended once on the delivered path') is
+      satisfied by that split: once-where-a-port-exists. No code change."
+    type: resolved
+    date: "2026-11-23"
+  - text: "Review outcome (review_fix): PASS at iteration 1, zero remediation
+      iteration required. Reviewer independently re-verified goldens (capture
+      entry verify mode byte-identical, 53 cells + production cell), suites (47
+      + 82 + 9 pass), the +14 production diff against the edge.ts:1562 pattern
+      and the handler seam contract, all four disclosed deviations as
+      requirement-class-preserving, constitutional constraints in code truth
+      (only production.ts changed in packages/**; edge.ts untouched; no
+      option-B; no new rows/schema/reads; no secrets; goldens exist only in
+      f2116939), and commit boundaries (docs rode only 9ee43bfa). Verdict:
+      Status PASS, Plan ALL_TASKS_DONE, remediation NONE (minors optional). 4
+      minors NOT remediated in-change (reviewer-graded optional; GH-377
+      precedent): (1) 071 capsule-absence vs plan step-5 wording — clarified in
+      pm-notes above; (2) merge-refusal-rows mutation assertions operate on the
+      local DECLARED_HINT constant rather than the resolved row (real protection
+      intact); (3) redundant toBeLessThanOrEqual(1) before toHaveLength(1) in
+      merge-production-composition; (4) pmNotesForRef replace of change_id:
+      GH-177 lacks a replacement-occurred assert. Minors 2-4 will be surfaced in
+      the PR body for owner visibility. Advisories: rebuildCell/capture-entry
+      duplication (fail-visible), .zed/ stray (never stage), pre-existing dual
+      TC-VGATES-070 labels, cross-consumer safety confirmed, plan fences
+      independently verified, docs current-truth conformant."
+    type: decision
+    date: "2026-11-23"
+  - text: "Quality gates (quality_gates phase) — BOTH GREEN, zero fix iterations in
+      this phase. Gate 1 aggregate: TMPDIR=$PWD/tmp/tmpdir pnpm check PASS exit
+      0 (log tmp/run-logs-runner/2026-11-23/142714-pnpm-check-aggregate-
+      gate.log): lint 0 errors (133 pre-existing non-gating warnings), format
+      clean, typecheck 6 packages + tests/types clean, bun test 12571 pass / 4
+      skip / 0 fail (1505 files), boundaries 520 modules no violations,
+      memory-lint clean, forbidden-literals 0, namespace-tree/prompt-
+      conformance/help-guide-coverage/exports-parity all PASS. Test-stage
+      sandbox git activity verified as fixture-internal with no repo residue (no
+      feat/GH-183* branches, single worktree, branch unchanged). Gate 2 range
+      lint: ./scripts/lint-commit-range.sh --base main-tools VERDICT PASS (log
+      .../145552-lint-commit-range-main-tools.log) — outcome PASS, commit count
+      15 (merge-base f5dc7a34..head 8cf24ce7), offending-commit count 0, mode
+      none, resolved commitlint binary node_modules/.bin/commitlint origin
+      repository-local (ref refs/remotes/origin/main-tools). Both verdicts
+      recorded per gate rules; no history action required."
+    type: decision
+    date: "2026-11-23"
+  - text: "DoD check (dod_check phase) — ALL CHECKS PASS, no reopen. (1) Phase
+      ledger: all nine prior phases completed with timestamps, registry verified
+      (7719 records, framing/terminal/sequence/checksum). (2) Plan completion:
+      every declared plan phase (1-6) has a pm-notes notes: entry naming the
+      plan phase id, its commit hash, and its test result (pm-notes plan-phase
+      entries; gate correction 4ccc7128 separately evidenced). (3) Acceptance
+      criteria: all seven spec criteria AC-T1-1..AC-T5-1 + AC-T4-2 satisfied
+      with delivered test evidence (TC-VGATES-071..075, TC-MERGE-040..046),
+      independently re-verified by the reviewer at iteration 1 including a fresh
+      capture-entry byte-identity run. (4) Current-truth documentation: complete
+      and accurate — @doc-syncer zero residual gaps, four targets reconciled,
+      distribution guard PASS, doc-conformance 61/0. (5) Quality gates:
+      aggregate pnpm check PASS exit 0 + range lint PASS 15/0. Deviations and
+      optional minors: disclosed in pm-notes and to be surfaced in the PR body;
+      none rise to a DoD gap. Ready for pr_creation."
+    type: decision
+    date: "2026-11-23"
+  - text: "PR created (pr_creation phase): https://github.com/juliusz-cwiakalski/
+      agentic-delivery-os/pull/392 — OPEN, non-draft, head
+      fix/GH-388/verify-gates-persist-merge-verification → base main-tools, 17
+      commits (merge-base f5dc7a34..head 77e03983), branch pushed to origin.
+      Body carries the problem, declared option A + total identity rule, AC
+      traceability, gate evidence, the four disclosed deviations and the four
+      optional review minors for reviewer visibility, and 'Closes #388'. Tracker
+      synced: labels change+review (in-progress removed), owner assigned,
+      PR-link comment (issue comment 7103514844). Range lint RE-RUN at the PR
+      head (the phase-time verdict covered 15 commits; the two later lifecycle
+      doc/changes-only commits arrived after): VERDICT PASS — 17 commits in
+      range, 0 offending, mode none, binary node_modules/.bin/commitlint origin
+      repository-local (log tmp/run-logs-runner/2026-11-23/
+      150846-lint-commit-range-main-tools.log). Merge authority stays with the
+      owner; STOP with the PR open. Anomaly for the record: github-mcp write
+      path (create_pull_request/update_issue) fails 'Requires Authentication'
+      (token appears read-scoped); all tracker/PR writes went through the gh CLI
+      via @runner per pr-instructions — MCP token scopes should be fixed before
+      the next pr_creation run."
+    type: info
+    date: "2026-11-23"

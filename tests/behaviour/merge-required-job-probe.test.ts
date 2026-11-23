@@ -19,6 +19,7 @@ import {
   MERGE_GATE_ERROR_SUFFIX,
   MERGE_REFUSAL_ATTRIBUTIONS,
   type MergeGateEntry,
+  type MergeGateVerificationRecord,
   type PipelineJobState,
 } from "../../packages/core/src/contracts/index";
 import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
@@ -31,15 +32,28 @@ import {
   runMergeTransaction,
 } from "../../packages/core/src/domain/merge-transaction";
 import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
+import {
   baseCheckRuns,
   baseRequest,
   createMergeHarness,
+  MERGE_BASE,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
   type MergeHarness,
   verificationFor,
   verificationRecord,
 } from "../fixtures/merge/harness";
+import {
+  baseFacts,
+  clone,
+  EXPECTED_JOBS,
+  run as verificationRun,
+  workItem,
+} from "../fixtures/verify-gates/cases/facts";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
@@ -543,6 +557,126 @@ describe("TC-F3-006 a provider-required refusal is classified, never retried or 
       await transactionOf(harness);
       expect(harness.counts.landing).toBe(1);
       expect(() => expect(2).toBe(harness.counts.landing)).toThrow();
+    } finally {
+      harness.cleanup();
+    }
+  });
+});
+
+describe("TC-MERGE-045 a recorded failing battery refuses with the recorded attribution", () => {
+  const MERGE_BRANCH = "feat/GH-301/merge";
+
+  /**
+   * Seed one SHIPPED-produced record over red facts: the verify-gates handler
+   * constructs the record (facts overridden to the merge harness's head and
+   * provider posture) and the delivered real append lands it over the
+   * harness's store. The refusal arms redden one battery verdict each; the
+   * merge harness's own page stays green, so the refusal attribution can only
+   * come from the recorded verdicts, never from the probe.
+   */
+  const seedShippedRedVerification = async (
+    harness: MergeHarness,
+    mutate: (facts: ReturnType<typeof baseFacts>) => void,
+  ): Promise<MergeGateVerificationRecord> => {
+    const facts = clone(baseFacts());
+    facts.repository = {
+      binding: "resolved",
+      head: { branch: MERGE_BRANCH, sha: MERGE_HEAD, detached: false },
+    };
+    const mergeRequest = baseRequest({
+      sourceRef: MERGE_BRANCH,
+      sourceHeadSha: MERGE_HEAD,
+      targetRef: MERGE_BASE,
+    });
+    facts.deliveryRequestDetail = { ok: true, value: { request: mergeRequest } };
+    facts.openPullRequests = { ok: true, value: { items: [mergeRequest], pageItemCount: 1 } };
+    mutate(facts);
+    const runtime = combinedRuntime({
+      facts,
+      appendVerification: (record) => {
+        const appended = appendMergeGateVerification(harness.store, {
+          record,
+          fenceToken: "fixture-shipped-red-verification",
+        });
+        return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+      },
+    });
+    const result = await runVerify(runtime, ["gates", harness.ref]);
+    // A red battery exits 1 (verify.gates.failed) by design: the record still
+    // landed — the truthful failing evidence is the merge-side subject.
+    if (result.exitCode !== 1) {
+      throw new Error(`the seeding red verify run did not fail: ${String(result.exitCode)}`);
+    }
+    const read = readMergeGateVerifications(harness.store, harness.ref);
+    if (!read.ok || read.records.length !== 1) {
+      throw new Error("the shipped red seed did not land exactly one record");
+    }
+    const record = read.records[0];
+    if (record === undefined) throw new Error("no seeded record");
+    return record;
+  };
+
+  test("arm (a) a recorded not-green ci-green refuses recorded against a green probe page", async () => {
+    const harness = createMergeHarness();
+    try {
+      const record = await seedShippedRedVerification(harness, (facts) => {
+        facts.checkRuns = {
+          ok: true,
+          value: {
+            items: EXPECTED_JOBS.map((name, index) =>
+              verificationRun(name, index === 0 ? "failed" : "succeeded"),
+            ),
+            pageItemCount: EXPECTED_JOBS.length,
+          },
+        };
+      });
+      const ciGate = record.gates.find((gate) => gate.id === "ci-green");
+      expect(ciGate?.verdict).toBe("fail");
+      expect(ciGate?.reason).toBe("ci-failed");
+      const { failure, summary } = await refusedOf(harness);
+      expect(failure.code).toBe("merge.gate.ci-green.failed");
+      expect(failure.evidence.attribution).toBe("recorded");
+      expect(failure.evidence.gateId).toBe("ci-green");
+      expect(failure.evidence.detail).toBe("ci-failed");
+      expect(attributionLines(summary)).toEqual(["attribution=recorded"]);
+      // Exactly one attribution value on the finding, and zero consumption.
+      expect(attributionKeys(failure.evidence as unknown as Record<string, unknown>)).toHaveLength(
+        1,
+      );
+      expect(harness.counts.landing).toBe(0);
+      expect(harness.transactions()).toHaveLength(0);
+      expect(harness.waivers()).toHaveLength(0);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("arm (b) a recorded failing battery-only built-in refuses through its own family row", async () => {
+    const harness = createMergeHarness();
+    try {
+      // The owner-gate fail shape: an owner-attention label present at
+      // verification. owner-gate is battery-only — no delivered case produced
+      // this recorded verdict before option (A).
+      const record = await seedShippedRedVerification(harness, (facts) => {
+        facts.workItem = { ok: true, value: { item: workItem(["change", "hand-back"]) } };
+      });
+      const ownerGate = record.gates.find((gate) => gate.id === "owner-gate");
+      expect(ownerGate?.verdict).toBe("fail");
+      expect(ownerGate?.reason).toBe("owner-gate-present");
+      const { failure, summary } = await refusedOf(harness);
+      expect(failure.code).toBe("merge.gate.owner-gate.failed");
+      // The delivered recorded-evidence contract for a battery-only built-in:
+      // the family refusal carries the persisted verdict's own identity —
+      // gate id plus the recorded reason — and no probe member and no
+      // timestamp ride it (the attribution field is the declared required-job
+      // contract, pinned by arm (a)).
+      expect(failure.evidence).toEqual({ gateId: "owner-gate", detail: "owner-gate-present" });
+      expect(JSON.stringify(failure.evidence)).not.toContain("probe");
+      expect(summary).toContain("gate=owner-gate");
+      expect(summary).toContain("evidence=owner-gate-present");
+      expect(harness.counts.landing).toBe(0);
+      expect(harness.transactions()).toHaveLength(0);
+      expect(harness.waivers()).toHaveLength(0);
     } finally {
       harness.cleanup();
     }

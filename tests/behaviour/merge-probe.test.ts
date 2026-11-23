@@ -15,13 +15,19 @@ import {
   evaluateVerifyGates,
 } from "../../packages/core/src/domain/index";
 import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
+import {
   baseCheckRuns,
   baseRequest,
   baseWorkItem,
   createFakeGit,
   createMergeHarness,
+  MERGE_BASE,
   MERGE_CLOCK_MS,
   MERGE_HEAD,
+  type MergeHarness,
   verificationRecord,
 } from "../fixtures/merge/harness";
 import {
@@ -31,6 +37,7 @@ import {
   REMOTE_SHA,
   run as verificationRun,
 } from "../fixtures/verify-gates/cases/facts";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
@@ -324,5 +331,97 @@ describe("TC-F3-001 queued and running are not-green with ci-pending on both sid
     expect(probe.reason).toBe("ci-pending");
     expect(mutated.reason).toBe("ci-green");
     expect(probe.reason).not.toBe(mutated.reason);
+  });
+});
+
+describe("TC-MERGE-046 tracker-freshness at the probe and the clean recorded landing", () => {
+  const MERGE_BRANCH = "feat/GH-301/merge";
+
+  /**
+   * Seed one SHIPPED-produced clean record over the harness's store: the
+   * verify-gates handler constructs it with the recorded tracker posture (no
+   * owner-attention labels observed at verification) and the delivered real
+   * append lands it.
+   */
+  const seedShippedCleanVerification = async (harness: MergeHarness): Promise<void> => {
+    const facts = clone(baseFacts());
+    facts.repository = {
+      binding: "resolved",
+      head: { branch: MERGE_BRANCH, sha: MERGE_HEAD, detached: false },
+    };
+    const mergeRequest = baseRequest({
+      sourceRef: MERGE_BRANCH,
+      sourceHeadSha: MERGE_HEAD,
+      targetRef: MERGE_BASE,
+    });
+    facts.deliveryRequestDetail = { ok: true, value: { request: mergeRequest } };
+    facts.openPullRequests = { ok: true, value: { items: [mergeRequest], pageItemCount: 1 } };
+    const runtime = combinedRuntime({
+      facts,
+      appendVerification: (record) => {
+        const appended = appendMergeGateVerification(harness.store, {
+          record,
+          fenceToken: "fixture-shipped-clean-verification",
+        });
+        return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+      },
+    });
+    const result = await runVerify(runtime, ["gates", harness.ref]);
+    if (result.exitCode !== 0) {
+      throw new Error(`the seeding verify run refused: ${String(result.exitCode)}`);
+    }
+    const read = readMergeGateVerifications(harness.store, harness.ref);
+    if (!read.ok || read.records.length !== 1) {
+      throw new Error("the shipped clean seed did not land exactly one record");
+    }
+  };
+
+  test("arm (a) a fresh tracker transition refuses per the delivered transition rule", async () => {
+    const harness = createMergeHarness({
+      workItem: baseWorkItem({
+        labels: ["change", "hand-back"],
+        updatedAt: isoAt(-1 * MINUTE),
+      }),
+    });
+    try {
+      await seedShippedCleanVerification(harness);
+      const result = await harness.run();
+      expect(result.exitCode).toBe(1);
+      expect(errorOf(result)?.code).toBe("merge.gate.tracker-freshness.failed");
+      const summary = String(errorOf(result)?.summary);
+      // The recorded posture is judged against the fresh probe observation:
+      // the transition is named and its age rides inline.
+      expect(summary).toContain("gate=tracker-freshness");
+      expect(summary).toContain("owner-transition=");
+      expect(summary).toContain("hand-back");
+      expect(summary).toContain("age=");
+      expect(summary).toContain("remediation=");
+      expect(harness.counts.workItem).toBe(1);
+      expect(harness.transactions()).toHaveLength(0);
+      expect(harness.waivers()).toHaveLength(0);
+      expect(harness.counts.landing).toBe(0);
+    } finally {
+      harness.cleanup();
+    }
+  });
+
+  test("arm (b) a clean recorded battery with a corroborating probe lands at the delivered probe budget", async () => {
+    const harness = createMergeHarness();
+    try {
+      await seedShippedCleanVerification(harness);
+      const result = await harness.run();
+      expect(result.exitCode).toBe(0);
+      expect(errorOf(result)).toBeUndefined();
+      // The recorded verdicts were consumed and the probe corroborated at the
+      // delivered budget: one work-item read and one check-run page, with no
+      // additional reads on the consumption path.
+      expect(harness.counts.workItem).toBe(1);
+      expect(harness.counts.checkRuns).toBe(1);
+      expect(harness.transactions()).toHaveLength(1);
+      expect(harness.counts.landing).toBe(1);
+      expect(harness.verifications()).toHaveLength(1);
+    } finally {
+      harness.cleanup();
+    }
   });
 });

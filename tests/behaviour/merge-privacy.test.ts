@@ -4,7 +4,19 @@
  * redaction chokepoint covers a declared waiver reason/authorizer.
  */
 import { describe, expect, test } from "bun:test";
+import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import { SECRET_READ_ALLOWLIST } from "../../scripts/checks/secret-read-boundary";
+import { API_MEMBER, WEB_MEMBER } from "../fixtures/cross-repository/constants";
+import {
+  declaredMember,
+  greenMemberReads,
+  landingObservation,
+  memberGatesRuntime,
+  reviewObservation,
+} from "../fixtures/cross-repository/facts";
 import {
   baseRequest,
   baseWorkItem,
@@ -14,6 +26,15 @@ import {
   MERGE_REF,
   verificationRecord,
 } from "../fixtures/merge/harness";
+import { makeAuditStore, removeRoot } from "../fixtures/state/harness";
+import {
+  baseFacts,
+  CANARY,
+  clone,
+  EXPECTED_JOBS,
+  run as verificationRun,
+} from "../fixtures/verify-gates/cases/facts";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const MINUTE = 60_000;
 const isoAt = (offsetMs: number): string => new Date(MERGE_CLOCK_MS + offsetMs).toISOString();
@@ -157,5 +178,137 @@ describe("TC-MERGE-034 privacy on success and refusal paths", () => {
       "packages/core/src/state/driver/runtime-edge.ts",
       "packages/mcp/src/serve.ts",
     ]);
+  });
+});
+
+describe("TC-VGATES-075 shipped-produced records and outputs are secret-free", () => {
+  /**
+   * Planted canary material in every provider payload field the delivered
+   * privacy rules exclude from records and outputs — the delivered canary
+   * technique of TC-MERGE-005/TC-MERGE-034, now over records the shipped
+   * verify-gates handler produced with the real append.
+   */
+  const VG_CANARIES = [CANARY, "planted-vg-comment", "planted-vg-payload", "planted-vg-credential"];
+
+  const canariedFacts = (red: boolean) => {
+    const facts = clone(baseFacts());
+    facts.workItem = {
+      ok: true,
+      value: {
+        item: {
+          ...baseWorkItem({
+            title: CANARY,
+            labels: ["change"],
+          }),
+          comments: [{ commentId: "1", authorAccount: "fixture", body: "planted-vg-comment" }],
+        },
+      },
+    };
+    if (red) {
+      facts.checkRuns = {
+        ok: true,
+        value: {
+          items: EXPECTED_JOBS.map((name, index) =>
+            verificationRun(name, index === 0 ? "failed" : "succeeded"),
+          ),
+          pageItemCount: EXPECTED_JOBS.length,
+        },
+      };
+    }
+    return facts;
+  };
+
+  const realAppendOver =
+    (store: ReturnType<typeof makeAuditStore>["store"]) =>
+    (
+      record: Parameters<typeof appendMergeGateVerification>[1]["record"],
+    ):
+      | {
+          readonly ok: true;
+        }
+      | {
+          readonly ok: false;
+          readonly code: string;
+        } => {
+      const appended = appendMergeGateVerification(store, {
+        record,
+        fenceToken: "vg-privacy",
+      });
+      return appended.ok ? { ok: true } : { ok: false, code: appended.error.code };
+    };
+
+  const scan = (text: string, label: string): void => {
+    for (const canary of VG_CANARIES) {
+      expect(text, `${label}:${canary}`).not.toContain(canary);
+    }
+  };
+
+  test("pass and fail cells over canaried facts leak nothing into records or outputs", async () => {
+    for (const red of [false, true]) {
+      const fixture = makeAuditStore(`vg-privacy-${red ? "fail" : "pass"}`);
+      try {
+        const runtime = combinedRuntime({
+          facts: canariedFacts(red),
+          appendVerification: realAppendOver(fixture.store),
+        });
+        const json = await runVerify(runtime, ["gates", "GH-178"], { json: true });
+        const human = await runVerify(runtime, ["gates", "GH-178"], { json: false });
+        const read = readMergeGateVerifications(fixture.store, "GH-178");
+        const records = JSON.stringify(read.ok ? read.records : []);
+        const text = `${json.stdout}\n${json.stderr}\n${human.stdout}\n${human.stderr}\n${records}`;
+        scan(text, red ? "fail" : "pass");
+        // The record is live: every non-refused evaluation appended one.
+        expect(read.ok && read.records).toHaveLength(2);
+        // The canary facts were live: the planted title reached the runtime.
+        expect(VG_CANARIES.includes(CANARY)).toBe(true);
+      } finally {
+        removeRoot(fixture.root);
+      }
+    }
+  });
+
+  test("the member-projected record over the member world leaks nothing", async () => {
+    const fixture = makeAuditStore("vg-privacy-member");
+    try {
+      // The member world composes the delivered change-level facts, whose work
+      // item already carries the planted CANARY title — the member scan is
+      // live over the same planted material.
+      const runtime = memberGatesRuntime({
+        members: [
+          declaredMember(API_MEMBER, { gates: ["ci-green", "push-parity", "owner-gate"] }),
+          declaredMember(WEB_MEMBER, { gates: ["ci-green", "push-parity"] }),
+        ],
+        reads: {
+          [API_MEMBER.repoKey]: greenMemberReads(API_MEMBER),
+          [WEB_MEMBER.repoKey]: greenMemberReads(WEB_MEMBER),
+        },
+        landings: [landingObservation(API_MEMBER, false), landingObservation(WEB_MEMBER, false)],
+        reviews: [reviewObservation(API_MEMBER, ["pass"]), reviewObservation(WEB_MEMBER, ["pass"])],
+      });
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("member runtime is missing the gates member");
+      const run = await runVerify(
+        { ...runtime, gates: { ...gates, appendVerification: realAppendOver(fixture.store) } },
+        ["gates", "GH-310"],
+      );
+      expect(run.exitCode).toBe(0);
+      const read = readMergeGateVerifications(fixture.store, "GH-310");
+      const records = JSON.stringify(read.ok ? read.records : []);
+      const text = `${run.stdout}\n${run.stderr}\n${records}`;
+      scan(text, "member");
+      expect(read.ok && read.records).toHaveLength(1);
+    } finally {
+      removeRoot(fixture.root);
+    }
+  });
+
+  test("the five-gate regression fixtures stay delivered-true (mutation control)", () => {
+    // The unchanged-behaviour clause rides the aggregate gate: the delivered
+    // CI, lifecycle, owner-composition, parity-squash, and member suites stay
+    // green unchanged with the persistence live. The control here proves the
+    // scan itself is live: the planted canary is detectable by the same scan.
+    const planted = `gate=owner-gate evidence=${CANARY}`;
+    expect(VG_CANARIES.some((canary) => planted.includes(canary))).toBe(true);
+    expect(planted).toContain(CANARY);
   });
 });

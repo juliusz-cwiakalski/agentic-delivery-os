@@ -34,6 +34,11 @@ import {
   type MergeProviderReply,
 } from "../fixtures/merge/production-composition";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
+import {
+  createVerifyGatesProductionHarness,
+  normalizeProductionBytes,
+  VG_PROD_REF,
+} from "../fixtures/verify-gates/production-composition";
 
 const exitOf = (code: string): number => {
   const row = ERROR_TABLE.find((entry) => entry.code === code);
@@ -1139,6 +1144,123 @@ describe("TC-ENGINE-054 the configuration-read branch is classified, never conta
       expect(guard.calls).toEqual([]);
     } finally {
       guard.restore();
+    }
+  });
+});
+
+describe("GH-388 the native merge sequence at the production composition", () => {
+  const productionGolden = (): { readonly machine: { readonly stdout: string } } =>
+    JSON.parse(
+      readFileSync(
+        join(process.cwd(), "tests/fixtures/verify-gates/golden/production-success.json"),
+        "utf8",
+      ),
+    ) as { readonly machine: { readonly stdout: string } };
+
+  test("TC-MERGE-040 verify gates then plain merge lands with no --dry-run anywhere", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createVerifyGatesProductionHarness({ label: "gh388-native-sequence" });
+    try {
+      // Step 1: verify gates — exit 0 with the byte-identical report.
+      const verify = await harness.run(["--json", "verify", "gates", VG_PROD_REF]);
+      expect(verify.exitCode, verify.stderr).toBe(0);
+      const golden = productionGolden();
+      const identity = {
+        headSha: harness.headSha,
+        checkout: harness.checkout,
+        hostRoot: harness.host.hostRoot,
+      };
+      expect(normalizeProductionBytes(verify.stdout, identity)).toBe(golden.machine.stdout);
+      // Step 2: the verification count is exactly one.
+      const records = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(records.ok && records.records).toHaveLength(1);
+      // Step 3: plain merge, no flags — the documented native sequence.
+      const merge = await harness.run(["--json", "merge", VG_PROD_REF]);
+      // Step 4: the landing proceeds with the provider squash SHA.
+      expect(merge.exitCode, merge.stderr).toBe(0);
+      const data = (merge.envelope?.data ?? {}) as Record<string, unknown>;
+      expect(data.result).toBe("merged");
+      expect(data.squashSha).toBe("c1d2e3f4a5b60718293a4b5c6d7e8f9012345678");
+      // Step 5a: no invocation's argv contains --dry-run (recorded, asserted).
+      expect(harness.invocations.length).toBe(2);
+      for (const argv of harness.invocations) {
+        expect(argv.join(" ")).not.toContain("--dry-run");
+      }
+      // Step 5b: the verification count is still exactly one — merge consumed
+      // the record and appended no verification of its own.
+      const after = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(after.ok && after.records).toHaveLength(1);
+      // Step 5c: the transaction record exists once; no waivers.
+      const transactions = readMergeTransactions(harness.store, VG_PROD_REF);
+      expect(transactions.ok && transactions.records).toHaveLength(1);
+      const waivers = readMergeWaivers(harness.store, VG_PROD_REF);
+      expect(waivers.ok && waivers.records).toEqual([]);
+      // Step 5d: the landing call count is exactly one, at the expected head.
+      const landingCalls = harness.transportRequests.filter((request) =>
+        request.url.endsWith("/merge"),
+      );
+      expect(landingCalls.length).toBeLessThanOrEqual(1);
+      expect(landingCalls).toHaveLength(1);
+      expect(landingCalls[0]?.body ?? "").toContain(harness.headSha);
+      // The landing read-back observes the merged request state.
+      const landing = data.landing as Record<string, unknown> | undefined;
+      expect(String(landing?.requestState ?? "")).toBe("merged");
+      expect(guard.calls).toEqual([]);
+    } finally {
+      guard.restore();
+      harness.dispose();
+    }
+  });
+
+  test("TC-MERGE-041 the absence refusal composes nothing and the remediation sequence converges", async () => {
+    const guard = createNoNetworkGuard();
+    const harness = createVerifyGatesProductionHarness({ label: "gh388-absence-fail-closed" });
+    try {
+      // A fresh harness whose ledger holds no verification record.
+      const before = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(before.ok && before.records).toEqual([]);
+      // Step 1: plain merge refuses state-unverified exactly as delivered.
+      const refusal = await harness.run(["--json", "merge", VG_PROD_REF]);
+      expect(refusal.exitCode).toBe(exitOf("merge.state-unverified"));
+      expect(refusal.exitCode).toBe(2);
+      const error = envelopeOf(refusal).error ?? {};
+      expect(error.code).toBe("merge.state-unverified");
+      const summary = String(error.summary ?? "");
+      expect(summary).toContain("state=absent");
+      expect(summary).toContain("operation=delivery-registry");
+      // Step 2: option (B) is absent — the refusal path composes nothing:
+      // zero verification appends, zero gate evaluations (no check-run page
+      // on the refusal path), zero landing calls, zero transaction and waiver
+      // records, and no landing decision read composed.
+      const after = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(after.ok && after.records).toEqual([]);
+      expect(harness.transportCalls.filter((url) => url.includes("/check-runs"))).toEqual([]);
+      expect(harness.transportCalls.filter((url) => url.endsWith("/merge"))).toEqual([]);
+      const transactions = readMergeTransactions(harness.store, VG_PROD_REF);
+      expect(transactions.ok && transactions.records).toEqual([]);
+      const waivers = readMergeWaivers(harness.store, VG_PROD_REF);
+      expect(waivers.ok && waivers.records).toEqual([]);
+      expect(harness.transportCalls.filter((url) => url.includes("/pulls/"))).toEqual([]);
+      // Step 3: the remediation, executed exactly — verify gates, then merge.
+      const verify = await harness.run(["--json", "verify", "gates", VG_PROD_REF]);
+      expect(verify.exitCode, verify.stderr).toBe(0);
+      const merge = await harness.run(["--json", "merge", VG_PROD_REF]);
+      expect(merge.exitCode, merge.stderr).toBe(0);
+      const data = (merge.envelope?.data ?? {}) as Record<string, unknown>;
+      expect(data.result).toBe("merged");
+      expect(data.squashSha).toBe("c1d2e3f4a5b60718293a4b5c6d7e8f9012345678");
+      // The sequence's verification count: exactly one (the remediation run).
+      const converged = readMergeGateVerifications(harness.store, VG_PROD_REF);
+      expect(converged.ok && converged.records).toHaveLength(1);
+      const transactionsAfter = readMergeTransactions(harness.store, VG_PROD_REF);
+      expect(transactionsAfter.ok && transactionsAfter.records).toHaveLength(1);
+      expect(
+        harness.transportRequests.filter((request) => request.url.endsWith("/merge")),
+      ).toHaveLength(1);
+      expect(guard.calls).toEqual([]);
+    } finally {
+      guard.restore();
+      harness.dispose();
     }
   });
 });
