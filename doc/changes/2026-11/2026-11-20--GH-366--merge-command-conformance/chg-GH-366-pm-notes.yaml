@@ -12,7 +12,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-21T07:07:37.520Z }
   delivery_planning: { started: null, completed: 2026-11-21T07:08:38.124Z }
   dor_check: { started: null, completed: 2026-11-22T20:00:52.044Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-23T02:08:39.651Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -88,79 +88,77 @@ open_questions: []
 blockers: []
 notes:
   - text: "Aggregate gate (plan phase 7 release obligation) — verified after the
-      suspension. Sequence: (1) the 2026-11-22T23:08Z full run (`tmp/pnpm-check-final.log`,
-      preserved for provenance) failed with 21 fails while remediation was
-      mid-flight on a dirty tree — the fail set (baseline/pin/inventory suites,
-      TC-F1-006/007/009, TC-F7-005, TC-XCTR-007, TC-SUP-070, TC-PORT-001, the
-      F8 serial-merge-churn block, TC-PILOT-002/003/006, TC-BATTLE-006) passed
-      116/0 in isolation AFTER the remediation commits (`189ea558`
-      merge-landing-retirement pin, `3fd8c3e5` fixture-repo, plus the
-      baseline/inventory fixes), so those fails were remediation dirt and
-      parallel-run interference, not delivered defects; (2) the coder's original
-      EXIT-0 claim had no surviving full-run evidence (its final run died with
-      the provider limit) and was rewritten by the PM into this verified note;
-      (3) the authoritative run: `tmp/pnpm-check-resume.log` —
-      **GATE_EXIT=0, 12 539 pass / 0 fail / 4 skip across 1 504 files**
-      (~24.2 min, lint + format + typecheck + test + boundaries + memory +
+      suspension. Sequence: (1) the 2026-11-22T23:08Z full run
+      (`tmp/pnpm-check-final.log`, preserved for provenance) failed with 21
+      fails while remediation was mid-flight on a dirty tree — the fail set
+      (baseline/pin/inventory suites, TC-F1-006/007/009, TC-F7-005, TC-XCTR-007,
+      TC-SUP-070, TC-PORT-001, the F8 serial-merge-churn block,
+      TC-PILOT-002/003/006, TC-BATTLE-006) passed 116/0 in isolation AFTER the
+      remediation commits (`189ea558` merge-landing-retirement pin, `3fd8c3e5`
+      fixture-repo, plus the baseline/inventory fixes), so those fails were
+      remediation dirt and parallel-run interference, not delivered defects; (2)
+      the coder's original EXIT-0 claim had no surviving full-run evidence (its
+      final run died with the provider limit) and was rewritten by the PM into
+      this verified note; (3) the authoritative run: `tmp/pnpm-check-resume.log`
+      — **GATE_EXIT=0, 12 539 pass / 0 fail / 4 skip across 1 504 files** (~24.2
+      min, lint + format + typecheck + test + boundaries + memory +
       forbidden-literals + namespace-tree + prompt-conformance +
       help-guide-coverage + exports-parity, zero fail lines). The five
-      privacy/namespace scanner suites that time out under the 12k-test
-      parallel load pass in isolation — disclosed as environment-flake, not
-      correctness. The inventory-JSON formatting drift (biome collapse) rides
-      this checkpoint."
+      privacy/namespace scanner suites that time out under the 12k-test parallel
+      load pass in isolation — disclosed as environment-flake, not correctness.
+      The inventory-JSON formatting drift (biome collapse) rides this
+      checkpoint."
     type: info
     date: "2026-11-23"
   - text: "PM-decided (numeric-anchor reconciliation, post-DoR): the delivery
       CONTRADICTED the spec/test-plan identity anchors — the artifacts pinned
-      170→173 machine / 169→172 delivered / +139 while the delivered tree
-      moves 169/168 → 172/171 with arithmetic `BASELINE_ROWS.length + 138`
-      (the tree's own outgoing-totals comment, green error-table-sync at
-      172/172, the error-table-sync suite's 172/171/+138/71 pins, and
-      doc-conformance's required doc strings all agree; the full gate is green
-      on exactly that state). Resolution: spec v2.6 and test plan v1.8 correct
-      the anchors to the delivered truth — the +3 row move (merge kind 9→12)
-      and the allowlist 68→71 were always right; the absolute base was
-      measured one too high at authoring time, and the arithmetic moves +2 on
-      a +3 table because the baseline snapshot absorbed one row (the GH-349
-      precedent: +130→+135 on a +6 table). No acceptance criterion, shape, or
-      ruling outcome changed, so the closed DoR is not re-run; the correction
-      is disclosed to the phase-8 reviewer with this evidence chain. The
-      pre-DoR gate verdict (iteration 6) audited the CHANGE DESIGN's
-      consistency; this correction reconciles absolute constants to the
-      delivered tree."
+      170→173 machine / 169→172 delivered / +139 while the delivered tree moves
+      169/168 → 172/171 with arithmetic `BASELINE_ROWS.length + 138` (the tree's
+      own outgoing-totals comment, green error-table-sync at 172/172, the
+      error-table-sync suite's 172/171/+138/71 pins, and doc-conformance's
+      required doc strings all agree; the full gate is green on exactly that
+      state). Resolution: spec v2.6 and test plan v1.8 correct the anchors to
+      the delivered truth — the +3 row move (merge kind 9→12) and the allowlist
+      68→71 were always right; the absolute base was measured one too high at
+      authoring time, and the arithmetic moves +2 on a +3 table because the
+      baseline snapshot absorbed one row (the GH-349 precedent: +130→+135 on a
+      +6 table). No acceptance criterion, shape, or ruling outcome changed, so
+      the closed DoR is not re-run; the correction is disclosed to the phase-8
+      reviewer with this evidence chain. The pre-DoR gate verdict (iteration 6)
+      audited the CHANGE DESIGN's consistency; this correction reconciles
+      absolute constants to the delivered tree."
     type: decision
     date: "2026-11-23"
   - text: "Retro (stale base, twice): the change has now mis-anchored absolute
-      totals twice — iteration 4's count-signal (authored against a read
-      surface that could not carry it) and the v2.4/v2.5 'confirmed by
-      recount' that anchored 170/169/+139 on a stale pre-change base (the real
-      outgoing totals were 169/168/+136, as the delivery's own test-authored
-      outgoing-totals comment records). Lesson: when an artifact pins absolute
-      constants, derive them from the delivery branch's own
-      outgoing/incoming-totals records and the sync checks at AUTHORING time —
-      a doc survey or a remembered count drifts as soon as another change
-      lands on the base."
+      totals twice — iteration 4's count-signal (authored against a read surface
+      that could not carry it) and the v2.4/v2.5 'confirmed by recount' that
+      anchored 170/169/+139 on a stale pre-change base (the real outgoing totals
+      were 169/168/+136, as the delivery's own test-authored outgoing-totals
+      comment records). Lesson: when an artifact pins absolute constants, derive
+      them from the delivery branch's own outgoing/incoming-totals records and
+      the sync checks at AUTHORING time — a doc survey or a remembered count
+      drifts as soon as another change lands on the base."
     type: retro
     date: "2026-11-23"
   - text: "[SUPERSEDED by the verified aggregate-gate note and the numeric-anchor
       reconciliation above — this was the suspended session's unverified claim,
       preserved as history. Its failure list (a)-(f) does not match the
-      preserved 21-fail log and its EXIT-0 had no surviving run.]
-      Aggregate gate (phase 7 release obligation): pnpm check on the COMMITTED
-      tree — lint, format:check, typecheck, test (12 543 tests across 1 504
-      files), check:boundaries, and the full invariant set incl. attw exports
-      parity — EXIT 0 with every check executed. The run before the final
-      remediation commits had failed on: (a) the operator contract baseline and
-      the supervise/cross-repository captured baselines still carrying the
-      pre-172 counts and the two pre-amendment rows (moved exactly per the
+      preserved 21-fail log and its EXIT-0 had no surviving run.] Aggregate gate
+      (phase 7 release obligation): pnpm check on the COMMITTED tree — lint,
+      format:check, typecheck, test (12 543 tests across 1 504 files),
+      check:boundaries, and the full invariant set incl. attw exports parity —
+      EXIT 0 with every check executed. The run before the final remediation
+      commits had failed on: (a) the operator contract baseline and the
+      supervise/cross-repository captured baselines still carrying the pre-172
+      counts and the two pre-amendment rows (moved exactly per the
       no-site-exempted rule, with the plan file declaring the five pin sites in
       phase-7 scope); (b) the v1 contract inventory missing the fourteen new
       contract exports; (c) merge-landing-retirement pinning the pre-366 git
       operation union; (d) one fixture formatting drift in the inventory JSON
       (biome --write applied); (e) the ambient-load timeouts on the five
       privacy/namespace scanner suites (5s caps under a 12k-test parallel run —
-      each passes in isolation and in the post-commit sequential sweep); and
-      (f) two committed-tree lint facts (the type-test import type in
+      each passes in isolation and in the post-commit sequential sweep); and (f)
+      two committed-tree lint facts (the type-test import type in
       tests/types/harness.type-test.ts — pre-existing since GH-347 — and the
       inventory JSON format). All resolved; the final run exits 0. The
       load-sensitive scanner timeouts are disclosed as environment-flake, not
@@ -168,7 +166,8 @@ notes:
     type: info
     date: "2026-11-23"
   - text: "Plan phase 7 COMPLETE (delivery): documentation reconciliation and the
-      release obligations landed in commit 2a666383b3317f0203ff97d851a3d9e1b002437d. Reconciled surfaces: the merge
+      release obligations landed in commit
+      2a666383b3317f0203ff97d851a3d9e1b002437d. Reconciled surfaces: the merge
       reference page (m1/commands/merge.md — the resolution-first DESCRIPTION
       with the read-at-head order, the honest per-path read budget (1/2/3, the
       thread query counted, never suppressible), the 256-character cap and six
@@ -184,60 +183,61 @@ notes:
       with expectedSetValid and the head-unresolved page rule); the merge test
       specification (the Change-branch-resolution and Required-check-awareness
       rows); nonfunctional.md (the merge read-budget row restated on the
-      merged-truth per-path counts); the provider-client current-truth page
-      (the shared read's matched-request-identities member and its
-      read-observation discriminator, closeout reads none of it); the
-      change-lifecycle artifact table (the branch declaration row with the cap
-      and the closed refusal reasons, declaration-free convergence);
-      the change-convention guide (a new `branch` declaration section);
-      the PM instruction surface (.ai/agent/pm-instructions.md) and the @pm
-      prompt (.opencode/agent/pm.md) stating the authoring obligation with the
-      cap and the refusal vocabulary, with .ados-claude/agents/pm.md
-      REGENERATED by scripts/build-claude-plugin.sh; feature-agents-and-commands
-      (the F-1 authoring rule named on the surface). Release obligations: the
-      changeset .changeset/gh-366-merge-command-conformance-minor.md naming
-      exactly the five fixed-group packages each minor with a non-empty body;
-      plan validate verdict=valid readyForDevelopment=true; pnpm build green;
-      the phase-7 suites green; the doc-distribution guard green (no drift,
-      96 in-scope docs); git diff --check clean; TC-MRG-038 re-run over the
-      reconciled surfaces (172/172/171/71/+138, merge kind 12, the identity
-      string unchanged, no stale total). Aggregate gate: pnpm check runs on the
-      committed tree (result recorded in the phase evidence appendix below —
-      the pre-commit run's failures were dirty-tree status-based tests and
-      mid-run edit races, resolved by the commit; the contract-baseline pin
-      moved 169 -> 172 per phase 2's no-site-exempted rule with the same
-      commit)."
+      merged-truth per-path counts); the provider-client current-truth page (the
+      shared read's matched-request-identities member and its read-observation
+      discriminator, closeout reads none of it); the change-lifecycle artifact
+      table (the branch declaration row with the cap and the closed refusal
+      reasons, declaration-free convergence); the change-convention guide (a new
+      `branch` declaration section); the PM instruction surface
+      (.ai/agent/pm-instructions.md) and the @pm prompt (.opencode/agent/pm.md)
+      stating the authoring obligation with the cap and the refusal vocabulary,
+      with .ados-claude/agents/pm.md REGENERATED by
+      scripts/build-claude-plugin.sh; feature-agents-and-commands (the F-1
+      authoring rule named on the surface). Release obligations: the changeset
+      .changeset/gh-366-merge-command-conformance-minor.md naming exactly the
+      five fixed-group packages each minor with a non-empty body; plan validate
+      verdict=valid readyForDevelopment=true; pnpm build green; the phase-7
+      suites green; the doc-distribution guard green (no drift, 96 in-scope
+      docs); git diff --check clean; TC-MRG-038 re-run over the reconciled
+      surfaces (172/172/171/71/+138, merge kind 12, the identity string
+      unchanged, no stale total). Aggregate gate: pnpm check runs on the
+      committed tree (result recorded in the phase evidence appendix below — the
+      pre-commit run's failures were dirty-tree status-based tests and mid-run
+      edit races, resolved by the commit; the contract-baseline pin moved 169 ->
+      172 per phase 2's no-site-exempted rule with the same commit)."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 6 COMPLETE (delivery): the evaluated gate projection, the
       bounds, the determinism sweep and the golden-set closure landed in commit
-      2f44266463a7650b5b8e3ee9451678272bd86366. Gate green: golden merge, merge-production-composition (with the
-      new TC-MRG-044 cell), merge-dry-run, merge-refusal-surface, merge-contract,
-      content-inventory, golden verify-gates, merge-determinism (TC-MRG-033's
-      delivered twenty-run byte-identity carrier), merge-bounds (TC-MRG-035's
-      delivered bounds carrier) — all fail; typecheck, build, git diff --check
-      clean. Delivered: the merged report renders the EVALUATED merge-applicable
-      projection — one entry per merge-applicable gate (ci-green,
-      tracker-freshness, plus any declared merge-surface required-ci-job) with
-      its verdict and reason — and never echoes the verification record's
-      battery gate list (the record keeps its own five-entry list); the success
-      golden renders gates=2/2 passed with the two projection lines and never
-      gates=5/5; the substituted five-entry battery list fails by name in the
-      TC-MRG-044 cell and the golden mutation control; the dry-run report states
-      the same projection; MergeReport gained the requiredChecks disclosure
-      (both export inventories registered the contract change); the bounds
-      cells moved to projection arithmetic (cap 20 over the evaluated
-      projection, +N marks intact, machine/human bounds intact); the
-      determinism cells moved to the projection order (declaration order, two
-      entries); GOLDEN SUBSET per the declared table — only the success trio
-      regenerated here, the other sixteen goldens read-only and byte-identical,
-      EXPECTED stays 19, byte comparisons stay 17; no record kind, key or event
-      schema added (TC-MRG-041: the shapes moved, nothing new)."
+      2f44266463a7650b5b8e3ee9451678272bd86366. Gate green: golden merge,
+      merge-production-composition (with the new TC-MRG-044 cell),
+      merge-dry-run, merge-refusal-surface, merge-contract, content-inventory,
+      golden verify-gates, merge-determinism (TC-MRG-033's delivered twenty-run
+      byte-identity carrier), merge-bounds (TC-MRG-035's delivered bounds
+      carrier) — all fail; typecheck, build, git diff --check clean. Delivered:
+      the merged report renders the EVALUATED merge-applicable projection — one
+      entry per merge-applicable gate (ci-green, tracker-freshness, plus any
+      declared merge-surface required-ci-job) with its verdict and reason — and
+      never echoes the verification record's battery gate list (the record keeps
+      its own five-entry list); the success golden renders gates=2/2 passed with
+      the two projection lines and never gates=5/5; the substituted five-entry
+      battery list fails by name in the TC-MRG-044 cell and the golden mutation
+      control; the dry-run report states the same projection; MergeReport gained
+      the requiredChecks disclosure (both export inventories registered the
+      contract change); the bounds cells moved to projection arithmetic (cap 20
+      over the evaluated projection, +N marks intact, machine/human bounds
+      intact); the determinism cells moved to the projection order (declaration
+      order, two entries); GOLDEN SUBSET per the declared table — only the
+      success trio regenerated here, the other sixteen goldens read-only and
+      byte-identical, EXPECTED stays 19, byte comparisons stay 17; no record
+      kind, key or event schema added (TC-MRG-041: the shapes moved, nothing
+      new)."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 5 COMPLETE (delivery): the runtime family declaration and the
-      totality proof landed in commit 673c026ee45ec87c36f2fd755bf376bfd1d17c2d. Gate green: defect-f1-merge-refusal-
-      containment, merge-classification-conformance, merge-classification,
+      totality proof landed in commit 673c026ee45ec87c36f2fd755bf376bfd1d17c2d.
+      Gate green: defect-f1-merge-refusal- containment,
+      merge-classification-conformance, merge-classification,
       merge-production-composition, content-inventory, golden merge — all fail;
       typecheck, build, and git diff --check clean. Delivered:
       MERGE_COMPOSITION_GATE_FAMILY — the RUNTIME declaration beside the exact-
@@ -261,83 +261,82 @@ notes:
       -dry-run/-landing/-refusal-surface/-refusal-taxonomy/-probe/
       -verification-record/-convergence + merge-contract/content-inventory/
       merge-check-path-scan/verify-gates behaviour+structure+goldens + golden
-      merge + the regression set) — 620 tests, 0 fail — and error-table-sync
-      OK. Delivered: ci-green merge-applicable in the shipped default set
-      (surface both; the entry-id sequence and the effective gate-set identity
-      UNCHANGED — the identity string still
+      merge + the regression set) — 620 tests, 0 fail — and error-table-sync OK.
+      Delivered: ci-green merge-applicable in the shipped default set (surface
+      both; the entry-id sequence and the effective gate-set identity UNCHANGED
+      — the identity string still
       delivery.merge.gates.v1:[lifecycle-finalization,ci-green,push-parity,
       owner-gate,squash-preflight,tracker-freshness]); the admitted-surface
-      contract data (MERGE_BUILTIN_ADMITTED_SURFACES: battery|both for
-      ci-green, battery alone for the other four) validated in the gate-set
-      resolver with built-in recipe/class immutability (surface free within
-      the admitted set — the declared battery ci-green is the reviewed opt-out);
-      the merge-applicable required-check set derived ONCE per invocation
-      (declared required-ci-job entries contribute job??id; ci-green
-      contributes the repository-declared expected job set through the SAME
-      delivered readCiWorkflowJobNames read the battery uses, validated by the
-      EXPORTED UNCHANGED expectedSetValid — no second predicate); each name
-      evaluated against the resolved head's check-run page through the single
-      delivered evaluateRequiredJobGate; recorded/probe attributions stay the
-      whole vocabulary; the page-not-head case refuses with the delivered
+      contract data (MERGE_BUILTIN_ADMITTED_SURFACES: battery|both for ci-green,
+      battery alone for the other four) validated in the gate-set resolver with
+      built-in recipe/class immutability (surface free within the admitted set —
+      the declared battery ci-green is the reviewed opt-out); the
+      merge-applicable required-check set derived ONCE per invocation (declared
+      required-ci-job entries contribute job??id; ci-green contributes the
+      repository-declared expected job set through the SAME delivered
+      readCiWorkflowJobNames read the battery uses, validated by the EXPORTED
+      UNCHANGED expectedSetValid — no second predicate); each name evaluated
+      against the resolved head's check-run page through the single delivered
+      evaluateRequiredJobGate; recorded/probe attributions stay the whole
+      vocabulary; the page-not-head case refuses with the delivered
       head-unresolved reason naming both SHAs and never passes; the CI read
-      fault and an invalid expected set each refuse by name and never pass;
-      THE LANDING DECISION'S MERGEABILITY SOURCE (LF-1): the delivered
-      single-request read of the resolved request via readDeliveryRequest —
-      the pinned oracle (TC-MRG-050) landed: a no-mergeability list entry plus
-      a clean single request LANDS once, the unknown-recovery re-read re-reads
-      the single request never the list, and a fault of that read names
+      fault and an invalid expected set each refuse by name and never pass; THE
+      LANDING DECISION'S MERGEABILITY SOURCE (LF-1): the delivered
+      single-request read of the resolved request via readDeliveryRequest — the
+      pinned oracle (TC-MRG-050) landed: a no-mergeability list entry plus a
+      clean single request LANDS once, the unknown-recovery re-read re-reads the
+      single request never the list, and a fault of that read names
       operation=github-delivery-request-detail from ERROR_TABLE; the
       per-invocation budget closed (the open-page-only landing run spends 2);
-      the dry run discloses the evaluated required-check count and set size;
-      the documented mergeability row's amended firing premise moved in the
-      same commit (the summary cell byte-unchanged — the sync check binds it —
-      with the premise in the kind prose); the battery goldens and verify
-      gates output byte-identical (NG-2). Fixture note: the production
-      fixture's configuration sandbox now passes non-config paths through to
-      the node fs so the delivered workflow read sees the real checkout, and
-      the fixture carries the planted workflow whose jobs match the green
-      check page; the healthy reply is stateful across one landing (the
-      mergeability read sees the open request, the post-landing read-back the
-      merged shape)."
+      the dry run discloses the evaluated required-check count and set size; the
+      documented mergeability row's amended firing premise moved in the same
+      commit (the summary cell byte-unchanged — the sync check binds it — with
+      the premise in the kind prose); the battery goldens and verify gates
+      output byte-identical (NG-2). Fixture note: the production fixture's
+      configuration sandbox now passes non-config paths through to the node fs
+      so the delivered workflow read sees the real checkout, and the fixture
+      carries the planted workflow whose jobs match the green check page; the
+      healthy reply is stateful across one landing (the mergeability read sees
+      the open request, the post-landing read-back the merged shape)."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 3 COMPLETE (delivery): the change-branch resolution, the
       convergence attempt and the resolved-head binding landed in commit
       8620cc4a. Gate green: merge-production-composition (19 cells incl. the
-      convergence matrix), merge-git-seam-capabilities (9), the behaviour
-      block, the provider suites (62), the golden suite (28), the
-      checks/structure block incl. the NEW merge-branch-read-scan ambient-read
-      absence scan (registered in merge-suite-discovery 5 -> 6), and
-      error-table-sync OK. Delivered: the fixed-order reads with saturation
-      precedence, the candidate cap, head-unresolved, the bounded record read
-      at the candidate's own head (new seam member read-change-record), the
-      delivered parse applied by the composition, duplicates before
-      ambiguity, the six closed reasons under the declared precedence; the
-      convergence attempt over findMergedDeliveryRequest VERBATIM with its ONE
-      additive optional member (matched request identities; empty = decidable
-      zero, absent = fault), one identity replaying with zero record reads,
-      many aborting naming EACH, and every fault class refusing provider.outage
-      with operation=github-delivery-request-list; the ambient reads deleted
-      with mandatory failing controls; the resolved head bound across
-      freshness, landing and reporting; the abort row's third cause in the
-      machine row and the documented counterpart in the same commit; exact
-      per-path multisets (1/2/3, the thread query counted, no suppression —
-      NG-8 controls planted); the meta-suite split 9/7 -> 10/6; TC-MRG-054's
-      closeout-consumes-none proof; goldens per the declared subset (success
-      trio + stale pair regenerated, branch/request pairs added, EXPECTED
-      15 -> 19, byte comparisons 13 -> 17); TC-MRG-009's branch-preservation
-      oracle (the no-op branch initially dropped the key — the fixture fix
-      landed before the phase closed); the 256/257 cap boundary proven. edge.ts
-      untouched: the resolution ports are additive OPTIONAL members wired by
-      the production composition's per-ref wrapper."
+      convergence matrix), merge-git-seam-capabilities (9), the behaviour block,
+      the provider suites (62), the golden suite (28), the checks/structure
+      block incl. the NEW merge-branch-read-scan ambient-read absence scan
+      (registered in merge-suite-discovery 5 -> 6), and error-table-sync OK.
+      Delivered: the fixed-order reads with saturation precedence, the candidate
+      cap, head-unresolved, the bounded record read at the candidate's own head
+      (new seam member read-change-record), the delivered parse applied by the
+      composition, duplicates before ambiguity, the six closed reasons under the
+      declared precedence; the convergence attempt over
+      findMergedDeliveryRequest VERBATIM with its ONE additive optional member
+      (matched request identities; empty = decidable zero, absent = fault), one
+      identity replaying with zero record reads, many aborting naming EACH, and
+      every fault class refusing provider.outage with
+      operation=github-delivery-request-list; the ambient reads deleted with
+      mandatory failing controls; the resolved head bound across freshness,
+      landing and reporting; the abort row's third cause in the machine row and
+      the documented counterpart in the same commit; exact per-path multisets
+      (1/2/3, the thread query counted, no suppression — NG-8 controls planted);
+      the meta-suite split 9/7 -> 10/6; TC-MRG-054's closeout-consumes-none
+      proof; goldens per the declared subset (success trio + stale pair
+      regenerated, branch/request pairs added, EXPECTED 15 -> 19, byte
+      comparisons 13 -> 17); TC-MRG-009's branch-preservation oracle (the no-op
+      branch initially dropped the key — the fixture fix landed before the phase
+      closed); the 256/257 cap boundary proven. edge.ts untouched: the
+      resolution ports are additive OPTIONAL members wired by the production
+      composition's per-ref wrapper."
     type: info
     date: "2026-11-22"
   - text: "Plan phase 2 COMPLETE (delivery): refusal identities and the diagnostics
       contract landed in commit 2a0d28c4. Gate (declared phase-2 suites) green:
       bun test over merge-refusal-surface/-taxonomy/-production-composition/
       -required-job-probe/-privacy/-convergence/-head-guard/
-      -coordinator-boundary/-waivers (90 tests), tests/golden/merge.test.ts (24),
-      merge-refusal-rows/error-table/supervision-error-socialization/
+      -coordinator-boundary/-waivers (90 tests), tests/golden/merge.test.ts
+      (24), merge-refusal-rows/error-table/supervision-error-socialization/
       doc-conformance/ceremony-contract/dispatch-attempts-taxonomy/
       ceremony-nonregression/verify-gates-suite-map-contract/content-inventory
       (392 tests), `bun run scripts/checks/error-table-sync.ts` OK, `pnpm
@@ -361,17 +360,17 @@ notes:
       ten refusal goldens regenerated in-phase; RESERVED_TWO_SEGMENT_CODES and
       its mirror widened to 71; the emittable set gains exactly the three codes.
       DECLARED DEVIATION (plan-vs-tree arithmetic, recorded for review): the
-      plan's identity move declares 170 -> 173 / 169 -> 172 delivered / 68 ->
-      71 / +136 -> +139 authored against base e1ebc76c, but the branch is
-      rebased on 7cc71cd1 where GH-365 removed `install.migration.unavailable`,
-      so the live base was 169 / 168 / 68 / +135. Adding exactly the plan's
-      three rows lands 172 / 171 / 71 / +138 with the merge kind at 12 — the
-      plan's own end-state allowlist (71) and merge-kind (12) values, with every
-      pin site, pinned page and the phrase table moved in the same commit per
-      the plan's binding invariant (stale totals banned; the `+ 135` arithmetic
-      and the outgoing 169/168 forms joined the legacy scan; the `138` bare
-      token retired from the token list because it is now the live arithmetic
-      tail, its total-wording forms kept banned). Evidence: `bun run
+      plan's identity move declares 170 -> 173 / 169 -> 172 delivered / 68 -> 71
+      / +136 -> +139 authored against base e1ebc76c, but the branch is rebased
+      on 7cc71cd1 where GH-365 removed `install.migration.unavailable`, so the
+      live base was 169 / 168 / 68 / +135. Adding exactly the plan's three rows
+      lands 172 / 171 / 71 / +138 with the merge kind at 12 — the plan's own
+      end-state allowlist (71) and merge-kind (12) values, with every pin site,
+      pinned page and the phrase table moved in the same commit per the plan's
+      binding invariant (stale totals banned; the `+ 135` arithmetic and the
+      outgoing 169/168 forms joined the legacy scan; the `138` bare token
+      retired from the token list because it is now the live arithmetic tail,
+      its total-wording forms kept banned). Evidence: `bun run
       scripts/checks/error-table-sync.ts` = entries=172 documented=172 OK; the
       plan's declared literals 173/172-delivered/+139 are unreachable on this
       base without improvising a fourth row, which the plan forbids."
