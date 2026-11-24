@@ -14,9 +14,9 @@ links:
   testing_strategy: .ai/rules/testing-strategy.md
 ---
 
-# Test Plan - M4-S39: Delivery vocabulary — project, project repository, main checkout, worktree, lane; credentials bind to the project's declared key (M4)
+# Test Plan - M4-S39: Delivery vocabulary: product, repository, main checkout, worktree, lane, clone identity; credentials bind to the product key (M4)
 
-> Title note: the change title field above keeps the ticket's own legacy wording — slugs, folder, branch and title stay as the ticket's records per spec DEC-6 (owner amendment §G). The delivered vocabulary is product-based; every assertion in this plan uses the amended nouns.
+> Title note: the change title field above is the tracker's renamed title — the owner renamed it at 2026-11-24T17:06:57Z alongside the vocabulary amendment (comment 7138707234); amendment §G covers only branch and change-folder slugs, not the title, and suite/file names remain unchanged identifiers per §G and Section 7. The delivered vocabulary is product-based; every assertion in this plan uses the amended nouns.
 
 ## 1. Scope and Objectives
 
@@ -856,6 +856,7 @@ None. Spec §14 records no open questions and the clarification resolved every r
 |---------|------|--------|---------|
 | 1.0 | 2026-11-24 | test-plan-writer agent | Initial test plan from chg-GH-406-spec.md (12 ACs, F-1..F-10, DM-1..3, NFR-1..7, fixtures G-1..G-3, Appendix B scope/exceptions) and .ai/rules/testing-strategy.md |
 | 1.1 | 2026-11-24 | test-plan-writer agent | Owner vocabulary amendment (comment 7138707234) applied end to end per spec v1.1 (test_planning phase reopened for this directed correction): contract names `DECLARED_PRODUCT_KEY_PATTERN` / `isDeclaredProductKey` / `declaredProductKey` replace the pre-amendment names in every assertion (`CLONE_KEY_PATTERN`/`cloneKey` unchanged; the legacy alias pair `PROJECT_KEY_PATTERN` ≡ `CLONE_KEY_PATTERN` keeps its shape per NFR-2); vocabulary nouns product / repository (long form "product repository" contrast-only) / product key everywhere, with "project" retired from the model's own vocabulary and "Jira project" for the tracker's word; headers `PRODUCT` / `REPOSITORY` / `CLONE` with `PROJECT REPOSITORY` asserted absent as a header (TC-DPKUI-001); retirement clause, "the tool" prose rule and neutral-examples rule (`acme`, `example.com`) added as asserted properties (TC-DPKVOC-002, AC-F1-1); ODR-0006 structural arms extended with the retirement clause (TC-DPKODR-001); G-2 noun swap — two clones of one repository resolve the same product key, different state roots (mechanism unchanged); wrapped-violation and wrapped-exception scanner arms pinned as delivered (TC-DPKCONF-002/003, review-iter-1 hardening); the reserved segment `projects` annotated as state-layout, not model vocabulary (TC-DPKKEY-002, TC-DPKCONF-003); suite file names explicitly kept — identifiers, not renamed by the amendment (§G); the bare legacy `projectKey` stays the naming-rule baseline's forbidden token; all 12 amended ACs still covered in §3.1; DM-1/NFR-1/NFR-2 reworded; TC IDs, scenario structure and file names unchanged |
+| 1.2 | 2026-11-24 | test-plan-writer agent | Amendment-fix (DoR iteration-3 finding 1, ride-along): title adoption only — H1 and the title-provenance note now carry the tracker's renamed title (owner renamed it at 2026-11-24T17:06:57Z alongside amendment comment 7138707234); the note's false provenance removed — amendment §G covers only branch and change-folder slugs, not the title, and suite/file names remain unchanged identifiers per §G and Section 7. Vocabulary content byte-intact: all v1.1 amendment content (contract names, headers PRODUCT / REPOSITORY / CLONE, retirement clause, TC coverage) unchanged |
 
 ## 10. Test Execution Log
 
