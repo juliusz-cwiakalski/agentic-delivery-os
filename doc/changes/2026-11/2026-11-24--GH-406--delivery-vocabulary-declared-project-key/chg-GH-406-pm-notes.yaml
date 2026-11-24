@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-24T10:39:32.435Z }
   delivery_planning: { started: null, completed: 2026-11-24T10:44:03.087Z }
   dor_check: { started: null, completed: 2026-11-24T10:48:55.722Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-24T16:40:57.684Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -144,40 +144,42 @@ notes:
       chain-literal re-pins in license-ci-binding (PINNED_CHECK), ci-checks, and
       privacy-ci-wiring (AGGREGATE), plus the milestone-gate check-script
       enumeration. Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
-      boundary - 13/13 stages, bun test 12794 pass / 4 skip / 0 fail;
-      OK new-code-naming: 2500 governed file(s) scanned, 0 violations, 2
-      baseline entry(ies); gate log
+      boundary - 13/13 stages, bun test 12794 pass / 4 skip / 0 fail; OK
+      new-code-naming: 2500 governed file(s) scanned, 0 violations, 2 baseline
+      entry(ies); gate log
       tmp/run-logs-runner/2026-11-24/115614-pnpm-check-aggregate-gate.log."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 2 complete (commit 0a780df4): additive core contracts landed -
       DECLARED_PROJECT_KEY_PATTERN (exact string pin, as const per the delivered
       contracts idiom), the predicate refusing reserved segments unbound and
-      projects exact-match with the closed four-reason vocabulary, CLONE_KEY_PATTERN
-      as the same-value alias of the untouched PROJECT_KEY_PATTERN declaration
-      (TC-GRPBOUND-002 literal intact), and the served cloneKey field on the
-      resolved project scope constructed in state-scope.ts (no new export there).
-      Conditional-sweep disclosures: tests/fixtures/ports/v1-contract-inventory.json
-      gained the 6 additive export entries (port-contract-inventory suite tripped
-      on the new exports; additive entries only, none removed) and the
-      DECLARED_PROJECT_KEY_PATTERN declaration aligned to the delivered
-      contracts string-constant idiom (branding-seam string-constant rule);
-      baseline entry added for tests/structure/declared-project-key.test.ts
-      (pins the delivered marker field name; naming-rule fence). Evidence:
-      TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary - 13/13 stages,
-      bun test 12805 pass / 4 skip / 0 fail; gate log
+      projects exact-match with the closed four-reason vocabulary,
+      CLONE_KEY_PATTERN as the same-value alias of the untouched
+      PROJECT_KEY_PATTERN declaration (TC-GRPBOUND-002 literal intact), and the
+      served cloneKey field on the resolved project scope constructed in
+      state-scope.ts (no new export there). Conditional-sweep disclosures:
+      tests/fixtures/ports/v1-contract-inventory.json gained the 6 additive
+      export entries (port-contract-inventory suite tripped on the new exports;
+      additive entries only, none removed) and the DECLARED_PROJECT_KEY_PATTERN
+      declaration aligned to the delivered contracts string-constant idiom
+      (branding-seam string-constant rule); baseline entry added for
+      tests/structure/declared-project-key.test.ts (pins the delivered marker
+      field name; naming-rule fence). Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm
+      check green at the boundary - 13/13 stages, bun test 12805 pass / 4 skip /
+      0 fail; gate log
       tmp/run-logs-runner/2026-11-24/130123-pnpm-check-quality-gate.log."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 3 boundary finding (ESCALATION, trigger-2 shape): the phase-3
-      gate (run tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log)
-      is green except ONE suite - tests/checks/privacy-release.test.ts
-      TC-RELEASE-001 (12804 pass / 4 skip / 1 fail; stages 5-13 short-circuited by
-      the && chain). The suite asserts a BRANCH-level release property: with no
-      changeset added on the branch vs origin/main-tools, the publishable diff
-      must be empty. Phases 2 (core) and 3 (cli) committed publishable changes;
-      the five-package minor changeset is plan phase 8's only artifact. The
-      suite cannot be greened wording-only (its expectation is the release
+      gate (run
+      tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log) is
+      green except ONE suite - tests/checks/privacy-release.test.ts
+      TC-RELEASE-001 (12804 pass / 4 skip / 1 fail; stages 5-13 short-circuited
+      by the && chain). The suite asserts a BRANCH-level release property: with
+      no changeset added on the branch vs origin/main-tools, the publishable
+      diff must be empty. Phases 2 (core) and 3 (cli) committed publishable
+      changes; the five-package minor changeset is plan phase 8's only artifact.
+      The suite cannot be greened wording-only (its expectation is the release
       property itself) and weakening it is forbidden. The suite turns green at
       the phase-8 boundary when the changeset lands. The phase-gate fence's
       green-at-every-boundary letter and the phase-8 changeset sequencing are
@@ -192,11 +194,11 @@ notes:
       repos header KEY to CLONE, board --project help says clone identity, the
       three m2 reference pages carry the noun corrections (clone identity for
       checkout identity/repository key prose; header examples updated), and the
-      delivered PROJECT_KEY_PATTERN reference on the repos page stays. Conditional
-      sweep: tests/behaviour/projects-groups-list.test.ts header pin refreshed
-      wording-only (GROUP/MEMBER to PROJECT/PROJECT REPOSITORY; payload
-      assertions untouched) - the trip and wording-only verdict recorded here per
-      the conditional-sweep rule. Boundary evidence: gate run
+      delivered PROJECT_KEY_PATTERN reference on the repos page stays.
+      Conditional sweep: tests/behaviour/projects-groups-list.test.ts header pin
+      refreshed wording-only (GROUP/MEMBER to PROJECT/PROJECT REPOSITORY;
+      payload assertions untouched) - the trip and wording-only verdict recorded
+      here per the conditional-sweep rule. Boundary evidence: gate run
       tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log - stages
       1-3 green, bun test 12804 pass / 4 skip / 1 known-deferred fail
       (TC-RELEASE-001, see escalation note above; its changeset precondition is
@@ -209,23 +211,23 @@ notes:
       vocabulary table landed in doc/overview/ubiquitous-language.md (new 'The
       delivery vocabulary' section with lifetimes; the two reversed sentences
       corrected - the repository/project-group disambiguation entry now speaks
-      the table's nouns) and doc/overview/glossary.md (eight Delivery
-      vocabulary rows with lifetimes; the watchdog Lane row aligned; Repository
-      key concept untouched; the stale aggregate-chain enumeration refreshed to
-      include the new-code naming rule). Both feature specs link the table;
+      the table's nouns) and doc/overview/glossary.md (eight Delivery vocabulary
+      rows with lifetimes; the watchdog Lane row aligned; Repository key concept
+      untouched; the stale aggregate-chain enumeration refreshed to include the
+      new-code naming rule). Both feature specs link the table;
       feature-projects.md's checkout-identity section is retitled 'Clone
       identity and the delivered names' with clone-identity wording and the
       delivered field names kept; feature-project-groups.md states the
-      declared-key mapping and drops the repository-is-one-checkout claim;
-      group keys carry no public pattern stays verbatim. New suite
+      declared-key mapping and drops the repository-is-one-checkout claim; group
+      keys carry no public pattern stays verbatim. New suite
       tests/structure/delivery-vocabulary.test.ts (TC-DPKVOC-001/002: presence
       plus lifetime in both docs, forbidden-claim substrings absent, links
       present, Repository key retained). Boundary evidence: gate run
-      tmp/run-logs-runner/2026-11-24/141211-quality-gate-pnpm-check.log -
-      stages 1-3 green, bun test 12819 pass / 4 skip / 1 known-deferred fail
-      (TC-RELEASE-001 only; no other failure), stage 9 green standalone
-      (OK new-code-naming 2502/0/3), stages 5-8 and 10-13 verified green
-      standalone (all OK, exit 0)."
+      tmp/run-logs-runner/2026-11-24/141211-quality-gate-pnpm-check.log - stages
+      1-3 green, bun test 12819 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only; no other failure), stage 9 green standalone (OK
+      new-code-naming 2502/0/3), stages 5-8 and 10-13 verified green standalone
+      (all OK, exit 0)."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 5 complete (commit 4ab411fd): ODR-0006 landed as
@@ -238,29 +240,28 @@ notes:
       locked-name mapping, the grammar, and the reading of ODR-0003 DC-4 and
       ODR-0004 C-2..C-5; frozen exceptions and GH-408 named). Only the three
       declared paths changed under doc/decisions/. Boundary evidence: the
-      phase-5 gate run short-circuited at a formatting nit in the extended
-      suite (fixed immediately; the runner's follow-up test stage then ran the
-      full bun suite on the identical tree: 12824 pass / 4 skip / 1
-      known-deferred TC-RELEASE-001, no other failure -
+      phase-5 gate run short-circuited at a formatting nit in the extended suite
+      (fixed immediately; the runner's follow-up test stage then ran the full
+      bun suite on the identical tree: 12824 pass / 4 skip / 1 known-deferred
+      TC-RELEASE-001, no other failure -
       tmp/run-logs-runner/2026-11-24/144327-bun-test-suite.log); typecheck and
-      stages 5-13 verified green standalone after the fix (all OK, exit 0;
-      OK new-code-naming 2502/0/3); biome format . clean (no fixes)."
+      stages 5-13 verified green standalone after the fix (all OK, exit 0; OK
+      new-code-naming 2502/0/3); biome format . clean (no fixes)."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 6 complete (commit bb7aa6ce): the narrowed vocabulary
-      conformance suite landed as
-      tests/structure/vocabulary-conformance.test.ts - pure detection core
-      (primary-checkout, checkout-identity, project-key-as-clone-identity with
-      declared-term/tracker/config-key sense exemptions), tree walk over
-      guides/tools/overview plus every milestone commands tree (42 pages
-      asserted), live header assertions (PROJECT/PROJECT REPOSITORY, CLONE,
-      flat alias KEY byte-identical), help-summary sweep, synthetic negative
-      proofs in memory and under the session temp root only, and the four
-      named exceptions individually exempt with near-misses flagging. The
-      sweep landed with its last docs: migration guide (primary checkout and
-      project key mislabels to main checkout and clone identity), local-install
-      guide, the m4 install page install.md:84 wording (primary to main
-      checkout), and the m2 attempts page's two checkout-identity phrases.
+      conformance suite landed as tests/structure/vocabulary-conformance.test.ts
+      - pure detection core (primary-checkout, checkout-identity,
+      project-key-as-clone-identity with declared-term/tracker/config-key sense
+      exemptions), tree walk over guides/tools/overview plus every milestone
+      commands tree (42 pages asserted), live header assertions (PROJECT/PROJECT
+      REPOSITORY, CLONE, flat alias KEY byte-identical), help-summary sweep,
+      synthetic negative proofs in memory and under the session temp root only,
+      and the four named exceptions individually exempt with near-misses
+      flagging. The sweep landed with its last docs: migration guide (primary
+      checkout and project key mislabels to main checkout and clone identity),
+      local-install guide, the m4 install page install.md:84 wording (primary to
+      main checkout), and the m2 attempts page's two checkout-identity phrases.
       Conditional sweep: tests/behaviour/projects-migration.test.ts
       TC-PROJ-028's required fragment refreshed wording-only (the guide's
       'primary project' sentence now reads 'main checkout'; intent unchanged) -
@@ -273,24 +274,41 @@ notes:
     date: "2026-11-24"
   - text: "Plan phase 7 complete (commit 732a16ea): the behaviour proof landed -
       tests/behaviour/projects-clone-key.test.ts (TC-DPKACC-001 behaviour half:
-      the production path serves cloneKey matching the marker and the
-      host-index entry; the direct field-name assertion pins the delivered
+      the production path serves cloneKey matching the marker and the host-index
+      entry; the direct field-name assertion pins the delivered
       marker/host-index field names; resolving twice is stable and writes
-      nothing) and tests/behaviour/clone-identity-fixtures.test.ts (G-1
-      worktree shares the main checkout's identity stable across reads; G-2
-      two clones resolve the same declared key with different identities and
-      state roots, disjoint namespaces asserted; G-3 out-of-grammar group key
-      Platform loads unchanged exit 0 with byte-identical configuration and
-      the grammar-valid twin loads identically - no-public-pattern preserved).
-      One production-behaviour discovery recorded for the narrative: repos
-      list is read-only and registers nothing - registration rides a
-      state-opening command (status), used in the suite. Baseline extension in
-      the same commit: tests/behaviour/projects-clone-key.test.ts (direct
-      field-name assertion; naming-rule fence). NFR-7 spot check: the fixture
-      suite ran twice, 3/3 pass both runs. Boundary evidence: gate run
-      tmp/run-logs-runner/2026-11-24/164358-pnpm-check-quality-gate.log -
-      stages 1-3 green, bun test 12844 pass / 4 skip / 1 known-deferred
-      TC-RELEASE-001 (only failure), stages 5-13 green standalone (all OK,
-      exit 0; OK new-code-naming 2505/0/4)."
+      nothing) and tests/behaviour/clone-identity-fixtures.test.ts (G-1 worktree
+      shares the main checkout's identity stable across reads; G-2 two clones
+      resolve the same declared key with different identities and state roots,
+      disjoint namespaces asserted; G-3 out-of-grammar group key Platform loads
+      unchanged exit 0 with byte-identical configuration and the grammar-valid
+      twin loads identically - no-public-pattern preserved). One
+      production-behaviour discovery recorded for the narrative: repos list is
+      read-only and registers nothing - registration rides a state-opening
+      command (status), used in the suite. Baseline extension in the same
+      commit: tests/behaviour/projects-clone-key.test.ts (direct field-name
+      assertion; naming-rule fence). NFR-7 spot check: the fixture suite ran
+      twice, 3/3 pass both runs. Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/164358-pnpm-check-quality-gate.log - stages
+      1-3 green, bun test 12844 pass / 4 skip / 1 known-deferred TC-RELEASE-001
+      (only failure), stages 5-13 green standalone (all OK, exit 0; OK
+      new-code-naming 2505/0/4)."
     type: info
+    date: "2026-11-24"
+  - text: "Plan phase 8 complete (commit 24dfdd07): the release changeset
+      .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md landed
+      declaring the five fixed-group packages (core, adapters, cli, mcp,
+      opencode) at minor; the commit contains the changeset plus the pm-notes
+      evidence rides (the disclosed pattern every phase commit used; the
+      declared feature-spec entries are DECLARATION ONLY for the lifecycle
+      system_spec_update phase - no coder task edited them here). The changeset
+      cleared TC-RELEASE-001: the phase-8 boundary gate ran the FULL 13-stage
+      chain green for the first time - TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0,
+      bun test 12845 pass / 4 skip / 0 fail, all stages 5-13 executed in-chain
+      (boundaries, tripwire, memory, forbidden-literals, new-code-naming
+      2505/0/4, namespace-tree, prompt-conformance 5 clean, help-guide coverage,
+      exports-parity 5 publishables); gate log
+      tmp/run-logs-runner/2026-11-24/171247-pnpm-check-gh406-gate.log. All eight
+      plan phases are complete and independently evidenced."
+    type: decision
     date: "2026-11-24"
