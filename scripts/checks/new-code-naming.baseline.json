@@ -14,6 +14,10 @@
     {
       "path": "tests/structure/declared-project-key.test.ts",
       "reason": "Pins the delivered persisted field name on the marker payload while asserting the served cloneKey equals the clone identity it carries (zero-rename fence, AC-F4-1)."
+    },
+    {
+      "path": "tests/behaviour/projects-clone-key.test.ts",
+      "reason": "TC-DPKACC-001 step 3's direct field-name assertion: pins the delivered marker and host-index persisted field names unchanged through the production path (zero-rename fence)."
     }
   ]
 }

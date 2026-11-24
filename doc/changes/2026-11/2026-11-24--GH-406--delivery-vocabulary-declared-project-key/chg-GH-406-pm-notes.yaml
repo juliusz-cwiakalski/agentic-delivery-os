@@ -247,3 +247,27 @@ notes:
       OK new-code-naming 2502/0/3); biome format . clean (no fixes)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 6 complete (commit bb7aa6ce): the narrowed vocabulary
+      conformance suite landed as
+      tests/structure/vocabulary-conformance.test.ts - pure detection core
+      (primary-checkout, checkout-identity, project-key-as-clone-identity with
+      declared-term/tracker/config-key sense exemptions), tree walk over
+      guides/tools/overview plus every milestone commands tree (42 pages
+      asserted), live header assertions (PROJECT/PROJECT REPOSITORY, CLONE,
+      flat alias KEY byte-identical), help-summary sweep, synthetic negative
+      proofs in memory and under the session temp root only, and the four
+      named exceptions individually exempt with near-misses flagging. The
+      sweep landed with its last docs: migration guide (primary checkout and
+      project key mislabels to main checkout and clone identity), local-install
+      guide, the m4 install page install.md:84 wording (primary to main
+      checkout), and the m2 attempts page's two checkout-identity phrases.
+      Conditional sweep: tests/behaviour/projects-migration.test.ts
+      TC-PROJ-028's required fragment refreshed wording-only (the guide's
+      'primary project' sentence now reads 'main checkout'; intent unchanged) -
+      the trip and wording-only verdict recorded here. Boundary evidence: gate
+      run tmp/run-logs-runner/2026-11-24/161022-pnpm-check-quality-gate.log -
+      stages 1-3 green, bun test 12838 pass / 4 skip / 1 known-deferred
+      TC-RELEASE-001 (only failure; verified no other), stages 5-8 and 10-13
+      green standalone (all OK, exit 0; OK new-code-naming 2503/0/3)."
+    type: info
+    date: "2026-11-24"
