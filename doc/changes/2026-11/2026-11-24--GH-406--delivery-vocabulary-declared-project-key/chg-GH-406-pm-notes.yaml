@@ -629,6 +629,41 @@ notes:
       pinned literals, 0 delta both modes."
     type: info
     date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 4 complete (commit
+      135f7909): the amended eight-term vocabulary table landed in
+      doc/overview/ubiquitous-language.md and doc/overview/glossary.md -
+      Product (one or more repositories forming a single deliverable, planned
+      and delivered as one), Repository (one git repository belonging to
+      exactly one product; the long form product repository contrast-only in
+      prose, never a header), Main checkout, Worktree, Lane (delivery in one
+      repository, keyed <ref>@<cloneKey>), Work item, Clone identity, and
+      Product key (groupKey locally, product.key in the GH-401 manifest; the
+      contract names keep the declared qualifier while the legacy names
+      exist). The retirement clause is recorded in BOTH documents (project
+      retired from the model's own vocabulary; Jira project for the tracker's
+      word; existing names containing project named legacy exceptions) and
+      both prose rules are recorded in BOTH documents (the tool rule -
+      where the docs say the product meaning the tool itself they say the
+      tool - and neutral public examples only: acme, example.com). The UL
+      disambiguation entry is re-worded Product / repository / workspace and
+      the standing-enforcement paragraph names the amendment's new-code name
+      declaredProductKey. Both feature specs link the table and their term
+      enumerations speak the amended nouns; their residual contract-truth
+      wording (renamed export mentions, header-column sentences) stays
+      doc-syncer's lifecycle scope per the documentation-split fence. The
+      glossary retains the distinct Repository key concept (NG-7) and gained
+      a Project (retired) row carrying the clauses.
+      tests/structure/delivery-vocabulary.test.ts proves it: eight amended
+      terms with lifetimes in both documents, retirement clause + both prose
+      rules + neutral examples asserted (wrap-tolerant), pre-amendment rows
+      asserted gone, product repository never a header row, links present,
+      Repository key retained. One format nit fixed before the boundary
+      (formatter's own multi-line print). Boundary evidence: gate run
+      233829-pnpm-check-gh406-amend-phase4-retry.log green end-to-end -
+      exit 0, 13/13 stages in-chain, bun test 12853 pass / 4 skip / 0 fail,
+      OK new-code-naming 2505/0/4."
+    type: info
+    date: "2026-11-24"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6

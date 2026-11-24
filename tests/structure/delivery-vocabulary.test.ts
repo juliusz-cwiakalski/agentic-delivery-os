@@ -182,20 +182,33 @@ describe("TC-DPKODR-001 the decision record's structural arms (automated half)",
   test("the body carries the vocabulary, the locked-name mapping, and the grammar", () => {
     expect(record).toContain("### The delivery vocabulary");
     expect(record).toContain("### The mapping of the locked names onto the vocabulary");
-    expect(record).toContain("### The declared project key");
+    expect(record).toContain("### The product key");
     expect(record).toContain("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$");
     for (const term of [
-      "Project",
-      "Project repository",
+      "Product",
+      "Repository",
       "Main checkout",
       "Worktree",
       "Lane",
       "Work item",
       "Clone identity",
-      "Declared project key",
+      "Product key",
     ]) {
       expect(record).toContain(`| ${term} |`);
     }
+    expect(record).toContain("DECLARED_PRODUCT_KEY_PATTERN");
+    expect(record).toContain("isDeclaredProductKey");
+  });
+
+  test("the body records the retirement clause and the amendment's supersession chain", () => {
+    expect(record).toContain("retired from the model's own vocabulary");
+    expect(record).toContain("Jira project");
+    expect(record).toContain("7138707234");
+    expect(record).toContain("7122871259");
+    // The amendment's mapping row A: product = a group, with named exceptions.
+    expect(record).toContain("named exceptions");
+    expect(record).toContain("`groupKey`");
+    expect(record).toContain("`projects.yaml`");
   });
 
   test("the body states its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5", () => {
