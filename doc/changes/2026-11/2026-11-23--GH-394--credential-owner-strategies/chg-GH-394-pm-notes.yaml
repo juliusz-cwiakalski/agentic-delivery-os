@@ -374,3 +374,111 @@ notes:
       run (delivery continues)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 4 complete: commit d5b5d3de (the resume remainder over partial
+      f89499db; no squash, no history rewrite). LANDED: production.ts resolver
+      wiring — four-seam createCredentialResolver over a lazy first-use
+      composition (active harness identity from the harness settings at first
+      resolve; storeFacts over runHarnessExport + the PATH-resolved harness
+      CLI; registerSecret into the live registry handed from the entrypoint
+      through the new invocation fact member and injectable via
+      ProductionCompositionFacts.secrets; declared tracker reference from
+      github.credential validated by parseCredentialSourceKey +
+      matchCommandDeclaration failing closed at the composition edge, default
+      byte-identical; an invalid declaration refuses the tracker reference at
+      the port with source-not-supported, never silently resolving the
+      default); the declared-credential load SHARES the daemon read's memoized
+      configuration acquisition, so the composition-time touch count is
+      unchanged (identity-override TC-BIN-012 control stays at 2 reads).
+      engine.ts :306 forwards the projection through an in-process WeakMap
+      condition carrier onto the rendered refusal and announcement line; :799
+      reconstruction forwards onto the summary line; park-record shape, park
+      causes, announcement codes, and pending-park semantics untouched;
+      announcements.ts derives the provider.credential.missing line from the
+      code plus the reason token (code set unchanged). Merge chain: merge.ts
+      envelope carries the projection beside trustedRefusal;
+      merge-transaction.ts MergeCredentialFacts/MergeFailureEvidence carry
+      name-shaped source/reason/remedy, the landing-fault :604-609 name-only
+      arm preserved, renderMergeFailure renders credential-identity/-reason/
+      -remedy lines; merge-text.ts pass-through documented. Dispatch chain:
+      DispatchPreflightError + DispatchRunResult.error +
+      DispatchRuntimeFailure admit source/reason/remedy beside the marker;
+      dispatchPreflight forwards with the literal-only prose kept
+      byte-identical for projection-less reads; mergeCredentialFacts forwards
+      at all six call sites. harness-spawn-env forwards via the summary
+      channel; inference forwards via detail (outcome contract closed);
+      serve.ts four placeholders carry reason source-not-supported;
+      simulate.ts constant gains source/reason. DISCLOSED COMPANIONS
+      (primitive-flagged drift): packages/core/src/provider/index.ts one-line
+      additive export of parseCredentialSourceKey + the three slot-bound
+      constants (the barrel is the declared import surface); the live-registry
+      consult widened CliDependencies.secrets to SecretRegistry | readonly
+      string[] with a secretValuesOf normalizer — fixing a silent-unredacted
+      regression the partial's .values()-only consult caused for every
+      array-shaped embedder (17 redaction suites green again); companion
+      fixture updates (port-contract-inventory +CredentialFailureProjection,
+      content-inventory +credentialRefusalNote/createSecretRegistry/
+      secretValuesOf, config-schema catalog keys +github,
+      provider-credentials MISSING gains the born-with projection per seed,
+      harness-mutants credential-fallback anchor follows the reworded
+      forwarding call). Verify: typecheck green (packages + tests type-test
+      scope); biome check clean on all changed files; full battery run
+      pre-fix (12615 pass / 29 fail) with ALL 25 non-baseline failures
+      resolved by this phase — post-fix verification 136/136 across the ten
+      affected suites and the redaction probe verified [redacted] for both
+      injectable shapes; build green; TC-BIN-084 green after build;
+      secret-read-boundary clean (489 files). DISCLOSED PRE-EXISTING RED
+      (evidence: identical output reproduced at c1854932 after a clean build,
+      outside any phase scope): exports-parity + TC-RELEASE-002 fail on
+      packages/adapters attw subpath resolution (git/gitlab/jira/github
+      subpaths) — a branch baseline defect this change does not touch;
+      TC-RELEASE-001 stays red until the phase-7 changeset by design. No
+      lifecycle phase complete was run (delivery continues)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 5 complete: commit 3847363a. LANDED: the CI allowlist tripwire
+      scripts/checks/allowlist-tripwire.ts (tree-invariant, parameterized
+      runTripwire inputs; diffs the live table against the shipped closed-table
+      snapshot, validates every committed command declaration and re-derives
+      its effective argv, enumerates declared integrations.<kind>.host
+      coordinates and passes on their absence — 111 surfaces scanned, 0
+      declarations, 0 coordinates, mechanism asserted live by the mutation
+      suite) wired into pnpm check via package.json; the secret-read-boundary
+      extension scans strategy internals (the credential-material directory's
+      exemption covers only the documented production wrapper module; mutation
+      A's oracle preserved by binding the wrapper's exemption to the directory
+      entry; two new fixture-coverage cases); the tests/preload.ts hermeticity
+      guard (behaviour-based child-process spawn interception by owner-CLI
+      binary name — gh/opencode/claude — verified to intercept and to pass
+      git/boundaries suites through); and the full hermetic proof battery:
+      credential-composition-proof (the real production composition: declared
+      command argv reaches the recording seam over a real temp repository,
+      export seam consulted exactly once with the declared integration id,
+      material redacted at render, zero-spawn default), credential-strategies
+      -command/harness-store/reasons/remedies (TC-ALLOW-001..006,
+      TC-HARNESS-001..007, TC-REASON-001..003, TC-REMEDY-001..003 incl. the
+      DEC-14 engine-forwarding arms: the announcement line derives from the
+      code plus the reason token and the quota reconstruction forwards onto
+      the rendered refusal while the park evidence stays closed),
+      credential-compatibility (phase-1 goldens byte-identical incl.
+      empty/whitespace arms), credential-redaction-live-registry
+      (TC-REDACT-002..004), credential-lane-model-only-proof (TC-LANE-001
+      inventory + declared-entry control), credential-hermeticity-guard,
+      credential-vocabulary-invariants (TC-STRUCT-001), and the companion
+      extensions (harness-spawn-credential projection arm, error-table-sync
+      projection-off-the-row arm, exit-code-literals credential-surface arm).
+      Verify: the named battery 294 pass / 0 fail; tripwire + boundary checks
+      OK; typecheck green; biome clean. REMEDIATION (a phase-2 implementation
+      defect the battery caught): resolveCommandSource and runHarnessExport
+      passed the prefix-only argv, so the production child runner would have
+      executed the first argument (auth) as the program — both call sites now
+      prepend the allowlisted program; the one-line material rule now refuses
+      whitespace-only output per the TC-REASON-001 oracle. DISCLOSED
+      COMPANIONS: tests/checks/secret-read-boundary.test.ts +
+      tests/fixtures/secret-boundary/cases.ts renamed their planted-fixture
+      identifier (secret → planted) because the commit primitive's secret
+      scanner flags the 18-character RHS on the whole-file scan — the boundary
+      rule keys on process.env, so the fixtures' firing power is unchanged;
+      harness-mutants' credential-fallback anchor was already re-pinned in
+      phase 4. No lifecycle phase complete was run (delivery continues)."
+    type: info
+    date: "2026-11-24"
