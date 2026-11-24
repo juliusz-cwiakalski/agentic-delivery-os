@@ -594,6 +594,41 @@ notes:
       16/16, pnpm typecheck clean."
     type: info
     date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 3 complete (commit
+      71f22a5b): `projects list` group-table headers now PRODUCT and REPOSITORY
+      (packages/cli/src/output/projects-text.ts GROUP_HEADER; the flat-alias
+      HEADER constant in the same file untouched byte for byte - it IS the
+      --flat text surface), repos header stays CLONE, board --project help
+      keeps its delivered clone-identity wording, and the m2 projects.md
+      reference page re-pinned its column sentence, description sentence, and
+      header example to the table's nouns (repos.md and board.md already
+      carried them; zero-diff on both is acceptable). Pins refreshed in the
+      SAME commit: tests/behaviour/projects-groups-list.test.ts header block
+      wording-only (payload assertions untouched - the delivered
+      conditional-sweep surface trips again under the amendment; trip and
+      wording-only verdict recorded here per the conditional-sweep rule),
+      tests/behaviour/projects-list-contract.test.ts gained the TC-DPKUI-001
+      arm (text table header exactly PRODUCT/REPOSITORY with
+      GROUP/MEMBER/PROJECT/PROJECT REPOSITORY asserted ABSENT, PRODUCT column
+      carries the group key, REPOSITORY column the member locator,
+      project-groups.v1 envelope + exit 0 unchanged), and
+      tests/structure/vocabulary-conformance.test.ts live-header literals
+      refreshed wording-only (PRODUCT/REPOSITORY exact + the four legacy
+      headers not.toContain; normalization and wrapped arms untouched - they
+      are phase 9's delivered output, preserved). Boundary evidence: gate run
+      225502-pnpm-check-gh406-amend-phase3-retry2.log green end-to-end -
+      exit 0, 13/13 stages in-chain, bun test 12849 pass / 4 skip / 0 fail,
+      OK new-code-naming 2505/0/4. Two earlier attempts disclosed: attempt 1
+      short-circuited at format:check (GROUP_HEADER single-line nit - fixed
+      by the formatter's own print); attempt 2's only failure was the
+      load-flaky TC-DAEMON-121 stop-latency first sample (252.06ms vs the
+      250ms budget, other four samples 232-236ms; green standalone twice and
+      in this green attempt - daemon timing, no causal path to the header
+      renames). Flat-alias byte-identity verified in this phase (constraint
+      (d)): projects-flat-alias.test.ts passed on its never-regenerated
+      pinned literals, 0 delta both modes."
+    type: info
+    date: "2026-11-24"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6

@@ -26,15 +26,15 @@ a workspace is an optional discovery root and is never required. Membership is
 **configuration only**: a group's members come from a validated configuration
 document, and no directory scan, host index, or inference ever adds a member.
 
-The delivery vocabulary — project, project repository, main checkout, worktree,
-lane, work item, clone identity, declared project key — is defined once in the
+The delivery vocabulary — product, repository, main checkout, worktree,
+lane, work item, clone identity, product key — is defined once in the
 [ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
-delivery vocabulary table; the declared project key is the group's own
-`groupKey` in the local `groups.v1` layer (`project.key` names it in the
+delivery vocabulary table; the product key is the group's own
+`groupKey` in the local `groups.v1` layer (`product.key` names it in the
 portable manifest, GH-401), and the members' `repoKey` values are clone
 identities. The two keys are different contracts in disjoint namespaces and are
-never compared: a clone identity differs per clone, the declared key names the
-project.
+never compared: a clone identity differs per clone, the product key names the
+product.
 
 `projects list [--json]` renders every configured group with its member
 repositories, their state, their health, and their daemon reachability under the

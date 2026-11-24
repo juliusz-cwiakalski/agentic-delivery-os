@@ -54,14 +54,26 @@ the identity or checkout layer owns it.
 
 | Term | Meaning | Lifetime |
 |---|---|---|
-| Project | The logical unit of work: one or more project repositories, possibly a whole organisation or group; declared in its manifest. | Durable |
-| Project repository | A git repository included in a project. | Durable |
+| Product | One or more repositories that together form a single deliverable, planned and delivered as one; declared in its manifest. | Durable |
+| Repository | One git repository belonging to exactly one product; the long form "product repository" is used only for contrast in prose and never as a header. | Durable |
 | Main checkout | The clone's primary working tree (the directory that holds `.git`); it stays on the base branch, whatever that branch is called. | Durable per worker |
 | Worktree | A linked git worktree of a main checkout, created for one work item; the word never includes the main checkout. | Temporary |
-| Lane | One work item's delivery in one project repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record; an attempt is never a lane. | Temporary |
+| Lane | One work item's delivery in one repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record; an attempt is never a lane. | Temporary |
 | Work item | A ticket. | Durable in the tracker |
 | Clone identity | The identity minted once per clone into the git-directory marker, shared by the main checkout and every linked worktree of that clone. | Per clone |
-| Declared project key | The project's own key: `groupKey` in the local `groups.v1` layer, `project.key` in the portable manifest (GH-401). | Durable |
+| Product key | The product's own key: `groupKey` in the local `groups.v1` layer, `product.key` in the portable manifest (GH-401); the contract names keep the *declared* qualifier while the legacy names exist. | Durable |
+
+The owner's vocabulary amendment (comment 7138707234) fixes the table's nouns:
+the delivery unit is the *product*, its member is the *repository*, and the
+product's own key is the *product key*. The noun *project* is retired from the
+model's own vocabulary: where the tracker's own word is meant, the
+documentation writes "Jira project", and existing names containing "project"
+(`repoKey`, `projectKey`, the `projects` command family, `--project-root`, the
+`<host root>/projects/` container, the `--flat` alias) are named legacy
+exceptions, not vocabulary. Two prose rules hold across this repository's
+documentation: where it says "the product" to mean the tool itself, it says
+"the tool"; and public examples are neutral only (`acme`, `example.com` — no
+real company, nothing private).
 
 The distinct *repository key* (`host/owner/name`) is a different contention
 domain and keeps its glossary meaning. The delivered names that denote the
@@ -80,7 +92,7 @@ family, the `<host root>/projects/` container, `--project-root`, and the
 a stage of the aggregate check) holds that a source file absent at the check's
 committed base may not contain the bare token `projectKey` unless a committed,
 reason-bearing baseline entry covers it; new code names the two concepts
-`cloneKey` and `declaredProjectKey`.
+`cloneKey` and `declaredProductKey`.
 
 ## Disambiguation at boundaries
 
@@ -96,17 +108,17 @@ reason-bearing baseline entry covers it; new code names the two concepts
   adapter boundary; resume/steer and liveness gaps are declared per adapter, and
   the dispatch engine selects the configured harness and drives sessions through
   the port. See the harness concept above.
-- **Project / project repository / workspace:** the project is the declared
-  unit of work and its key is the declared project key (`groupKey` in the
-  local configuration layer, whose membership is declared in
-  `<configDirectoryName>/projects.yaml`); a project repository is a git
-  repository included in the project through a member declaration; a workspace
-  is an optional discovery root and is never required. A project owns no
-  store, and a scan locates declared members only. The flat record set
-  enumerates checkouts by clone identity (`repos list`); the group surface
-  enumerates projects (`projects list`); the clone identity names the per-clone
-  marker, never the project. See the [delivery vocabulary](#the-delivery-vocabulary)
-  above, [Repositories and the Host Overview](../spec/features/feature-projects.md),
+- **Product / repository / workspace:** the product is the declared unit of
+  work and its key is the product key (`groupKey` in the local configuration
+  layer, whose membership is declared in `<configDirectoryName>/projects.yaml`);
+  a repository is a git repository included in the product through a member
+  declaration; a workspace is an optional discovery root and is never required.
+  A product owns no store, and a scan locates declared members only. The flat
+  record set enumerates checkouts by clone identity (`repos list`); the group
+  surface enumerates products (`projects list`); the clone identity names the
+  per-clone marker, never the product. See the
+  [delivery vocabulary](#the-delivery-vocabulary) above,
+  [Repositories and the Host Overview](../spec/features/feature-projects.md),
   and [Project Groups](../spec/features/feature-project-groups.md).
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles

@@ -21,17 +21,20 @@ const GROUPS_SPEC = "doc/spec/features/feature-project-groups.md";
 
 const read = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
 
-/** Term -> the lifetime classification the spec declares for it. */
+/** Term -> the lifetime classification the spec declares for it (amended). */
 const VOCABULARY: ReadonlyArray<readonly [string, string]> = [
-  ["Project", "durable"],
-  ["Project repository", "durable"],
+  ["Product", "durable"],
+  ["Repository", "durable"],
   ["Main checkout", "per worker"],
   ["Worktree", "temporary"],
   ["Lane", "temporary"],
   ["Work item", "durable"],
   ["Clone identity", "per clone"],
-  ["Declared project key", "durable"],
+  ["Product key", "durable"],
 ];
+
+/** Whitespace-flattened copy so wrap-tolerant phrase assertions hold. */
+const flat = (text: string): string => text.replace(/\s+/gu, " ").trim();
 
 /** A table row whose first cell is the term, with the lifetime in the row. */
 const vocabularyRow = (text: string, term: string): string | undefined =>
@@ -74,8 +77,13 @@ describe("TC-DPKVOC-001 the vocabulary table is present in both overview documen
 
 describe("TC-DPKVOC-002 the reversed sentences are corrected and the specs link the table", () => {
   const ul = read(UL);
+  const glossary = read(GLOSSARY);
   const projects = read(PROJECTS_SPEC);
   const groups = read(GROUPS_SPEC);
+  const both: ReadonlyArray<readonly [string, string]> = [
+    [UL, ul],
+    [GLOSSARY, glossary],
+  ];
 
   test("no overview sentence claims a repository is one checkout or the delivery unit", () => {
     expect(ul.toLowerCase()).not.toContain("one checkout");
@@ -84,6 +92,49 @@ describe("TC-DPKVOC-002 the reversed sentences are corrected and the specs link 
 
   test("no overview sentence keeps a repository meaning for the project key", () => {
     expect(ul).not.toContain("keeps its repository meaning");
+  });
+
+  test("the retirement clause is recorded in both documents (TC-DPKVOC-002)", () => {
+    for (const [name, text] of both) {
+      expect(flat(text), name).toContain("retired from the model's own vocabulary");
+      expect(flat(text), name).toContain("Jira project");
+    }
+  });
+
+  test("both prose rules are recorded in both documents: the tool, neutral examples", () => {
+    for (const [name, text] of both) {
+      expect(flat(text), name).toContain('it says "the tool"');
+      expect(flat(text), name).toContain("`acme`");
+      expect(flat(text), name).toContain("`example.com`");
+    }
+  });
+
+  test("the pre-amendment vocabulary rows are gone from both tables", () => {
+    for (const [name, text] of both) {
+      const rows = text.split("\n");
+      expect(
+        rows.some((line) => line.startsWith("| Project |")),
+        name,
+      ).toBe(false);
+      expect(
+        rows.some((line) => line.startsWith("| Project repository |")),
+        name,
+      ).toBe(false);
+      expect(
+        rows.some((line) => line.startsWith("| Declared project key |")),
+        name,
+      ).toBe(false);
+    }
+  });
+
+  test("the contrast form product repository is never a header row", () => {
+    for (const [name, text] of both) {
+      const rows = text.split("\n");
+      expect(
+        rows.some((line) => line.startsWith("| Product repository |")),
+        name,
+      ).toBe(false);
+    }
   });
 
   test("both feature specs link the vocabulary table", () => {

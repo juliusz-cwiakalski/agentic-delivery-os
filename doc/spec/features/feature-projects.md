@@ -24,8 +24,8 @@ clone-identity marker. The host root keeps only host-wide documents: the derived
 host index `host-index.json` and the host-wide owner-hold marker; a
 pre-migration store left at the host root is detected there, never read from it.
 
-The delivery vocabulary — project, project repository, main checkout, worktree,
-lane, work item, clone identity, declared project key — is defined once in the
+The delivery vocabulary — product, repository, main checkout, worktree,
+lane, work item, clone identity, product key — is defined once in the
 [ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
 delivery vocabulary table; this page states the delivered behaviour and keeps
 the delivered field names (`repoKey`, `projectKey`) until the mechanical rename.
