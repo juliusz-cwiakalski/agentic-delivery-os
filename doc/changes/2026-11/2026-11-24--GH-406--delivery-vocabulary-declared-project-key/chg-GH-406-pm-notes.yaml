@@ -205,3 +205,26 @@ notes:
       0-delta both modes."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 4 complete (commit bc6f64cc): the eight-term delivery
+      vocabulary table landed in doc/overview/ubiquitous-language.md (new 'The
+      delivery vocabulary' section with lifetimes; the two reversed sentences
+      corrected - the repository/project-group disambiguation entry now speaks
+      the table's nouns) and doc/overview/glossary.md (eight Delivery
+      vocabulary rows with lifetimes; the watchdog Lane row aligned; Repository
+      key concept untouched; the stale aggregate-chain enumeration refreshed to
+      include the new-code naming rule). Both feature specs link the table;
+      feature-projects.md's checkout-identity section is retitled 'Clone
+      identity and the delivered names' with clone-identity wording and the
+      delivered field names kept; feature-project-groups.md states the
+      declared-key mapping and drops the repository-is-one-checkout claim;
+      group keys carry no public pattern stays verbatim. New suite
+      tests/structure/delivery-vocabulary.test.ts (TC-DPKVOC-001/002: presence
+      plus lifetime in both docs, forbidden-claim substrings absent, links
+      present, Repository key retained). Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/141211-quality-gate-pnpm-check.log -
+      stages 1-3 green, bun test 12819 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001 only; no other failure), stage 9 green standalone
+      (OK new-code-naming 2502/0/3), stages 5-8 and 10-13 verified green
+      standalone (all OK, exit 0)."
+    type: info
+    date: "2026-11-24"

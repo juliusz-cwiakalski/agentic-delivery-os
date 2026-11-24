@@ -108,3 +108,59 @@ describe("TC-DPKVOC-002 the reversed sentences are corrected and the specs link 
     expect(projects).toContain("clone identity marker");
   });
 });
+
+describe("TC-DPKODR-001 the decision record's structural arms (automated half)", () => {
+  const RECORD = "doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md";
+  const INDEX = "doc/decisions/00-index.md";
+  const record = read(RECORD);
+  const index = read(INDEX);
+
+  test("the record exists and carries status Proposed with a null decision date", () => {
+    expect(record).toMatch(/^id: ODR-0006$/mu);
+    expect(record).toMatch(/^status: Proposed$/mu);
+    expect(record).toMatch(/^decision_date: null$/mu);
+    expect(record).toMatch(/^decision_type: odr$/mu);
+  });
+
+  test("the decision index lists ODR-0006", () => {
+    expect(index).toContain(
+      "| [ODR-0006](ODR-0006-delivery-vocabulary-declared-project-key.md) | ODR |",
+    );
+  });
+
+  test("the body carries the vocabulary, the locked-name mapping, and the grammar", () => {
+    expect(record).toContain("### The delivery vocabulary");
+    expect(record).toContain("### The mapping of the locked names onto the vocabulary");
+    expect(record).toContain("### The declared project key");
+    expect(record).toContain("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$");
+    for (const term of [
+      "Project",
+      "Project repository",
+      "Main checkout",
+      "Worktree",
+      "Lane",
+      "Work item",
+      "Clone identity",
+      "Declared project key",
+    ]) {
+      expect(record).toContain(`| ${term} |`);
+    }
+  });
+
+  test("the body states its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5", () => {
+    expect(record).toContain("### How the governing records read under this vocabulary");
+    expect(record).toContain("ODR-0003 DC-4");
+    expect(record).toContain("ODR-0004 C-2");
+    expect(record).toContain("C-3");
+    expect(record).toContain("C-4");
+    expect(record).toContain("C-5");
+    expect(record).toContain("No amendment to ODR-0003 or ODR-0004 is made or needed");
+  });
+
+  test("the record names the frozen exceptions and the mechanical rename", () => {
+    expect(record).toContain("`--project-root`");
+    expect(record).toContain("byte-identical");
+    expect(record).toContain("GH-408");
+    expect(record).toContain("never group-scoped");
+  });
+});
