@@ -3,10 +3,10 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-21
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-clone project root), the clone-identity marker and its minted key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
   related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293", "GH-365"]
   related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031"]
@@ -16,13 +16,19 @@ links:
 
 ## Overview
 
-Delivery state is scoped per repository. Two layers resolve it: the **host root**
+Delivery state is scoped per clone. Two layers resolve it: the **host root**
 — an absolute `<PREFIX>_STATE_DIR` environment override when set, otherwise the
 injected home plus `brand.stateDirectoryName` — and a **project state root**
-`<host root>/projects/<project key>` minted once from the checkout's identity
-marker. The host root keeps only host-wide documents: the derived host index
-`host-index.json` and the host-wide owner-hold marker; a pre-migration store left
-at the host root is detected there, never read from it.
+`<host root>/projects/<clone identity>` minted once from the checkout's
+clone-identity marker. The host root keeps only host-wide documents: the derived
+host index `host-index.json` and the host-wide owner-hold marker; a
+pre-migration store left at the host root is detected there, never read from it.
+
+The delivery vocabulary — project, project repository, main checkout, worktree,
+lane, work item, clone identity, declared project key — is defined once in the
+[ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
+delivery vocabulary table; this page states the delivered behaviour and keeps
+the delivered field names (`repoKey`, `projectKey`) until the mechanical rename.
 
 `repos list [--json]` is the flat record set of managed checkouts on the host:
 it reads the host index, derives every state location from its key, and projects
@@ -43,7 +49,7 @@ the flat record set is recorded in
 | Layer | Path | Holds |
 |---|---|---|
 | Host root | an absolute `<PREFIX>_STATE_DIR` override, else the current default root when it exists, else the prior-identity default root when it exists, else the current default root (first use) | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
-| Project root | `<host root>/projects/<project key>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
+| Project root | `<host root>/projects/<clone identity>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
 
 The state-scope policy lives once, in the app tier
 (`packages/core/src/app/state-scope.ts`), is exported from the existing
@@ -86,24 +92,25 @@ root that same rule selects changes. The operator-facing description is the
 [Local Install and Prior-Identity Transition](../../../guides/local-install.md)
 guide.
 
-## Checkout identity and the project key
+## Clone identity and the delivered names
 
-The **checkout identity marker** is one JSON document inside the checkout's git
+The **clone identity marker** is one JSON document inside the checkout's git
 **common** directory (`project-identity.json`, schema
-`delivery.projects.identity.v1`). It records the project key, a random 128-bit
-project identifier, and the mint-time basename. It is created once through an
-atomic synced sibling plus link at mode `0600`, is never rewritten, is shared by
-every linked worktree of the clone, and travels with a renamed or moved
-checkout.
+`delivery.projects.identity.v1`). It records the clone identity — delivered
+under the field name `projectKey` — a random 128-bit project identifier, and
+the mint-time basename. It is created once through an atomic synced sibling
+plus link at mode `0600`, is never rewritten, is shared by every linked
+worktree of the clone, and travels with a renamed or moved checkout.
 
-The key is `<sanitised mint-time basename>-<first eight lowercase hex of the
-identifier>`: the basename is lowercased, every run outside `[a-z0-9]` collapses
-to one `-`, leading and trailing separators are stripped, the result is at most
-32 characters, a basename that sanitises to nothing falls back to `project`, and
-the literal `unbound` is refused as a basename. Because the discriminator derives
-from the once-minted identifier, two checkouts of different repositories that
-share a basename mint different keys. Because the mint-time basename travels in
-the marker, a rename or a move changes only the reported checkout root.
+The clone identity is `<sanitised mint-time basename>-<first eight lowercase
+hex of the identifier>`: the basename is lowercased, every run outside
+`[a-z0-9]` collapses to one `-`, leading and trailing separators are stripped,
+the result is at most 32 characters, a basename that sanitises to nothing falls
+back to `project`, and the literal `unbound` is refused as a basename. Because
+the discriminator derives from the once-minted identifier, two checkouts of
+different repositories that share a basename mint different clone identities.
+Because the mint-time basename travels in the marker, a rename or a move
+changes only the reported checkout root.
 
 The identity outcome is a closed table:
 

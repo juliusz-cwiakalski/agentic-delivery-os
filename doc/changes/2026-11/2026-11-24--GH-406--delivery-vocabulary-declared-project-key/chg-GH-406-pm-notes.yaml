@@ -187,3 +187,21 @@ notes:
       declared/conditional suites; flat-alias byte-identity 0-delta verified)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 3 complete (commit b9354594): list headers GROUP/MEMBER to
+      PROJECT/PROJECT REPOSITORY (flat-alias HEADER untouched byte for byte),
+      repos header KEY to CLONE, board --project help says clone identity, the
+      three m2 reference pages carry the noun corrections (clone identity for
+      checkout identity/repository key prose; header examples updated), and the
+      delivered PROJECT_KEY_PATTERN reference on the repos page stays. Conditional
+      sweep: tests/behaviour/projects-groups-list.test.ts header pin refreshed
+      wording-only (GROUP/MEMBER to PROJECT/PROJECT REPOSITORY; payload
+      assertions untouched) - the trip and wording-only verdict recorded here per
+      the conditional-sweep rule. Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/133513-quality-gate-pnpm-check.log - stages
+      1-3 green, bun test 12804 pass / 4 skip / 1 known-deferred fail
+      (TC-RELEASE-001, see escalation note above; its changeset precondition is
+      plan phase 8's artifact), stages 5-13 verified green standalone (exit 0;
+      OK new-code-naming 2501/0/3). Flat-alias suite: zero diff, byte-identity
+      0-delta both modes."
+    type: info
+    date: "2026-11-24"

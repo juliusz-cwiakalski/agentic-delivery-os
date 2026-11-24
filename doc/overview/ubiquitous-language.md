@@ -3,7 +3,7 @@ ados_distribution: internal
 id: TOOLING-UBIQUITOUS-LANGUAGE
 status: Draft
 created: 2026-11-02
-last_updated: 2026-11-14
+last_updated: 2026-11-24
 owners: [engineering]
 area: domain
 document_classification: working-analysis
@@ -45,6 +45,30 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
 | Memory and change capsule | The change folder is the episode capsule: append-only events plus candidates. Closeout is the consolidation ceremony that records promotion decisions, home-writes canonical lessons/tacit records, and records sanctioned handoffs; the curator owns cross-folder maintenance, and one repository invariant enforces the record schema, coverage, budgets, and privacy over the committed tree. | [Memory records and lint](../spec/features/feature-memory-lint.md), [change capsule](../spec/features/feature-capsule.md), [closeout](../spec/features/feature-closeout.md), [`.ai/memory/README.md`](../../.ai/memory/README.md) |
 | Harness execution and surfaces | A host runs sessions; a surface exposes capabilities. Typed cross-harness adapter parity is delivered at the port boundary; the dispatch engine is the first production consumer of the session port. | [Harness adapters](../spec/features/feature-harness-adapters.md), [dispatch engine](../spec/features/feature-dispatch-engine.md) |
 
+## The delivery vocabulary
+
+The owner's delivery vocabulary (GH-406) is the one language for the delivery
+units. Lifetimes are declared with the terms: durable means the tracker, the
+configuration, or the repository layer owns it; per clone and per worker mean
+the identity or checkout layer owns it.
+
+| Term | Meaning | Lifetime |
+|---|---|---|
+| Project | The logical unit of work: one or more project repositories, possibly a whole organisation or group; declared in its manifest. | Durable |
+| Project repository | A git repository included in a project. | Durable |
+| Main checkout | The clone's primary working tree (the directory that holds `.git`); it stays on the base branch, whatever that branch is called. | Durable per worker |
+| Worktree | A linked git worktree of a main checkout, created for one work item; the word never includes the main checkout. | Temporary |
+| Lane | One work item's delivery in one project repository: the queue lane keyed `<ref>@<cloneKey>`, resumable across dispatch attempts through the `dispatch.lane` record; an attempt is never a lane. | Temporary |
+| Work item | A ticket. | Durable in the tracker |
+| Clone identity | The identity minted once per clone into the git-directory marker, shared by the main checkout and every linked worktree of that clone. | Per clone |
+| Declared project key | The project's own key: `groupKey` in the local `groups.v1` layer, `project.key` in the portable manifest (GH-401). | Durable |
+
+The distinct *repository key* (`host/owner/name`) is a different contention
+domain and keeps its glossary meaning. The delivered names that denote the
+clone identity (`repoKey`, `projectKey`, the marker field, the host-index key)
+keep their identifiers until the mechanical rename (GH-408); the vocabulary
+names the concepts, not yet the identifiers.
+
 ## Disambiguation at boundaries
 
 - **Primitive / engine / command / surface:** a primitive is a stable composable
@@ -59,15 +83,18 @@ ratified DDD contexts, new packages, or mandates for aggregates/entities/events.
   adapter boundary; resume/steer and liveness gaps are declared per adapter, and
   the dispatch engine selects the configured harness and drives sessions through
   the port. See the harness concept above.
-- **Repository / project group / workspace:** a repository is one checkout and
-  the delivery unit; a project group is a configured set of repositories whose
-  membership is declared in `<configDirectoryName>/projects.yaml`; a workspace is
-  an optional discovery root and is never required. A group owns no store, and a
-  scan locates declared members only. The flat record set enumerates checkouts
-  (`repos list`); the group surface enumerates groups (`projects list`); the
-  identifier `project key` keeps its repository meaning. See [Repositories and
-  the Host Overview](../spec/features/feature-projects.md) and [Project
-  Groups](../spec/features/feature-project-groups.md).
+- **Project / project repository / workspace:** the project is the declared
+  unit of work and its key is the declared project key (`groupKey` in the
+  local configuration layer, whose membership is declared in
+  `<configDirectoryName>/projects.yaml`); a project repository is a git
+  repository included in the project through a member declaration; a workspace
+  is an optional discovery root and is never required. A project owns no
+  store, and a scan locates declared members only. The flat record set
+  enumerates checkouts by clone identity (`repos list`); the group surface
+  enumerates projects (`projects list`); the clone identity names the per-clone
+  marker, never the project. See the [delivery vocabulary](#the-delivery-vocabulary)
+  above, [Repositories and the Host Overview](../spec/features/feature-projects.md),
+  and [Project Groups](../spec/features/feature-project-groups.md).
 - **Model profile / profile class:** a profile is a named agent-to-model mapping;
   a class groups profiles by task difficulty. Class working names are not profiles
   or newly frozen names. Model policy is planned. Current provider v1 evaluates

@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECT-GROUPS
 status: Current
 created: 2026-11-14
-last_updated: 2026-11-21
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
 summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) as an operator-local, git-ignored overlay with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
@@ -20,11 +20,17 @@ links:
 ## Overview
 
 A **project group** is a configured set of repositories that belong together. A
-repository is one checkout and the delivery unit; a group is the declared
-collection of repositories an operator or agent treats as one project; a
-workspace is an optional discovery root and is never required. Membership is
+project repository is a git repository included in the project; a group is the
+declared collection of repositories an operator or agent treats as one project;
+a workspace is an optional discovery root and is never required. Membership is
 **configuration only**: a group's members come from a validated configuration
 document, and no directory scan, host index, or inference ever adds a member.
+
+The delivery vocabulary — project, project repository, main checkout, worktree,
+lane, work item, clone identity, declared project key — is defined once in the
+[ubiquitous language](../../overview/ubiquitous-language.md#the-delivery-vocabulary)
+delivery vocabulary table; the declared project key is the group's own
+`groupKey`, and the members' `repoKey` values are clone identities.
 
 `projects list [--json]` renders every configured group with its member
 repositories, their state, their health, and their daemon reachability under the
@@ -36,7 +42,7 @@ waiting, and parked, applying the one aggregation clause this page defines.
 **Naming boundary.** `repos` names the flat record set of managed checkouts,
 documented in [Repositories and the Host Overview](feature-projects.md);
 `projects` names the group surface described here. `board --project` stays a
-repository key and the board is never group-scoped. The rename that establishes
+clone identity and the board is never group-scoped. The rename that establishes
 the boundary is recorded in
 [ODR-0004](../../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md).
 
