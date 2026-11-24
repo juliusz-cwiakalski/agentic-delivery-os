@@ -329,3 +329,29 @@ phases:
         - .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md
         - doc/spec/features/feature-projects.md
         - doc/spec/features/feature-project-groups.md
+  # Plan revision log:
+  #   rev 2 — 2026-11-24: review iteration 1 remediation (verdict
+  #           code-review/review-iter-1.yaml, FAIL; findings F-1..F-4, F-1
+  #           blocking, F-2/F-3/F-4 non-blocking). Phase 9 appended: reword the
+  #           line-wrapped "primary checkout" residue on the m4 install
+  #           reference page (spec §16 m4-install-page row, F-5/brief §D,
+  #           conformance fence's truthful-clean-pass rationale — the scanner's
+  #           single-line matching cannot see the wrap at lines 81-83), with a
+  #           PM-optional detection-core normalization companion and a
+  #           PM-optional fail-closed hardening of the naming check (F-2).
+  #           Review-time evidence TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3,
+  #           TC-DPKPIN-002 all PASS (verdicts in review-iter-1.yaml).
+  - id: 9
+    title: Code Review Remediation (Iteration 1)
+    kind: delivery
+    summary: "review-iter-1 (FAIL) remediation — (1) MANDATORY, clears the FAIL: doc/planning/oss-tooling/milestones/m4/commands/install.md:81-83 reword 'Build and install from the primary checkout or a prepared directory holding a released artifact; a lane worktree is deleted after merge.' to the main-checkout sentence already delivered verbatim in the four sibling renderings (error-table.ts remediationHint, feature-result-contract.md row, install.ts refusal body, local-install.md) — the banned phrase survives only because the markdown line wrap hides it from the conformance scanner's single-line matching (F-1; spec §16 in-scope wording completeness, F-5/brief §D); (2) PM-OPTIONAL companion, same commit if taken: whitespace-normalize the vocabulary-conformance detection core's input (match across wraps; the four named exceptions and near-miss semantics unchanged) and add a synthetic wrapped-violation arm to TC-DPKCONF-002 so the blind spot cannot recur — if declined, record the decline and its reason as a pm-notes notes: entry; (3) PM-OPTIONAL companion: fail-closed hardening of scripts/checks/new-code-naming.ts listGovernedFiles (return a failure outcome instead of [] on git ls-files non-zero, or assert scanned > 0 at the entrypoint) plus one mutation arm for the injected listFiles-failure seam (F-2) — if declined, record the decline as a pm-notes notes: entry; (4) record the review iteration 1 verdict and the review-time evidence results (TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — all PASS) as pm-notes notes: entries per the review-time evidence fence"
+    # TC ownership: TC-DPKCONF-001/002 re-run (F-1); TC-DPKNAM-001/002 extension arm if (3) is taken.
+    # Fences in force: zero-rename (the fix is wording only); the four named exceptions stay frozen — the optional normalization adds NO exception; no doc edit outside the declared scope; the committed tree stays violation-free after the fix (a wrap-tolerant scope scan must return zero hits).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/vocabulary-conformance.test.ts tests/behaviour/install-admission.test.ts; bun run scripts/checks/new-code-naming.ts; a newline-normalized scan of the declared scope returns zero primary-checkout/checkout-identity hits; TMPDIR=$PWD/tmp/tmpdir pnpm check green; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - doc/planning/oss-tooling/milestones/m4/commands/install.md
+        - tests/structure/vocabulary-conformance.test.ts
+        - scripts/checks/new-code-naming.ts
+        - tests/checks/new-code-naming.test.ts
+        - doc/changes/2026-11/2026-11-24--GH-406--delivery-vocabulary-declared-project-key/chg-GH-406-pm-notes.yaml

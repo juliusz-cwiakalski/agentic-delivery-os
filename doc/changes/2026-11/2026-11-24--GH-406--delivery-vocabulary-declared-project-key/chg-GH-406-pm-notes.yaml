@@ -398,3 +398,34 @@ notes:
       tmp/run-logs-runner/2026-11-24/182704-pnpm-check-gh406-quality-gate.log."
     type: decision
     date: "2026-11-24"
+  - text: "system_spec_update completed (772ea023) after doc-syncer re-verification:
+      zero unresolved documentation gaps; gap item closed via the A-extended
+      commit; repository-key prose observation confirmed as recorded GH-408
+      deferral, not an open gap."
+    type: info
+    date: "2026-11-24"
+  - text: "Review iter-1 verdict FAIL (code-review/review-iter-1.yaml): 4 findings
+      (0 critical / 0 high / 1 medium / 1 low / 2 info). Blocking F-1 (medium):
+      m4/commands/install.md:81-83 still renders 'Build and install from the
+      primary checkout...' SPLIT ACROSS A MARKDOWN LINE WRAP — invisible to the
+      vocabulary-conformance scanner's single-line matching (reviewer verified
+      via newline-normalized sweep of the whole declared scope: exactly this
+      one residual); line 84 was corrected but the wrapped sentence above it
+      was not. All three deferred review-time evidence rows PASS
+      (TC-DPKODR-001 step 5, TC-DPKPIN-001 step 3, TC-DPKPIN-002 — zero-rename
+      verified over the full diff, flat-alias suite zero-diff). All eight
+      fences otherwise hold; A-extended commit reviewed clean on its merits.
+      Non-blocking: F-2 (low) naming check fail-open arm on ls-files failure
+      (practically unreachable — DEFERRED with this reason, not remediated in
+      phase 9); F-3/F-4 informational (pre-existing m2 repos.md simplified
+      pattern; the deliberate 42-page tripwire pin). Remediation phase 9 ADDED
+      to the plan by the reviewer; plan still validates. PM accepted the
+      companion hardening: whitespace-normalize the scanner detection core +
+      synthetic wrapped-violation arm in TC-DPKCONF-002 — fixing only the
+      instance leaves the blind spot that let it through (NFR-4 intent).
+      Retro: a line-based text scanner's negative proofs must include wrapped
+      and multi-line violations, or its clean-tree pass is only as truthful as
+      the matcher's normalization — the wrapped phrasing sat directly beside a
+      corrected line and both author sweep and gate missed it."
+    type: retro
+    date: "2026-11-24"
