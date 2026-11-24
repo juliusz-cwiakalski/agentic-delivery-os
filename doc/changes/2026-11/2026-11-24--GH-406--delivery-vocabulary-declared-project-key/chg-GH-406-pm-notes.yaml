@@ -228,3 +228,22 @@ notes:
       standalone (all OK, exit 0)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 5 complete (commit 4ab411fd): ODR-0006 landed as
+      doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md with
+      status Proposed and decision_date null (no ados_distribution header;
+      project-specific record), the decision-index row added, and
+      TC-DPKODR-001's structural arms extended into
+      tests/structure/delivery-vocabulary.test.ts (record exists; front matter
+      Proposed + null date; index row; body sections for the vocabulary, the
+      locked-name mapping, the grammar, and the reading of ODR-0003 DC-4 and
+      ODR-0004 C-2..C-5; frozen exceptions and GH-408 named). Only the three
+      declared paths changed under doc/decisions/. Boundary evidence: the
+      phase-5 gate run short-circuited at a formatting nit in the extended
+      suite (fixed immediately; the runner's follow-up test stage then ran the
+      full bun suite on the identical tree: 12824 pass / 4 skip / 1
+      known-deferred TC-RELEASE-001, no other failure -
+      tmp/run-logs-runner/2026-11-24/144327-bun-test-suite.log); typecheck and
+      stages 5-13 verified green standalone after the fix (all OK, exit 0;
+      OK new-code-naming 2502/0/3); biome format . clean (no fixes)."
+    type: info
+    date: "2026-11-24"

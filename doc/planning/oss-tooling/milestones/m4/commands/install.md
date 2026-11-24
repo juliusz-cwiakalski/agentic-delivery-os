@@ -81,7 +81,7 @@ input** (an attempt is the delivered `fallback.invocation` grammar refusal).
   target directory and both git directories. Build and install from the primary
   checkout or a prepared directory holding a released artifact; a lane worktree
   is deleted after merge.
-- A primary checkout is recorded `verified`; a plain directory or a host without
+- A main checkout is recorded `verified`; a plain directory or a host without
   git metadata is recorded `unverified`.
 - A dirty tree is admitted; the token reports `<commit>-dirty`.
 - A run carrying no injected identity is a development run and is refused with

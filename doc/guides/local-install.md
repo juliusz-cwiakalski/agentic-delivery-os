@@ -12,7 +12,7 @@ This guide describes the operator cadence the product exists to make possible �
 
 ## The cadence
 
-1. **Build a release artifact.** In the primary checkout, run the additive build entry:
+1. **Build a release artifact.** In the main checkout, run the additive build entry:
 
    ```bash
    bun run build:binary
@@ -38,11 +38,11 @@ The install target is the running artifact **and the git checkout it resolves to
 
 | Origin | Provenance |
 |---|---|
-| The primary checkout | `verified` |
+| The main checkout | `verified` |
 | A non-worktree clone | `verified` |
 | A plain directory holding a released artifact, or a host without `git` | `unverified` |
 
-A **linked git worktree** — a lane worktree, where `git rev-parse --git-dir` differs from `--git-common-dir` — is refused with `install.target.worktree`, naming the target directory and both git directories. The reason is operational, not cosmetic: a lane worktree is **deleted after merge**, so an install that pointed into it would work until the merge and then break. Build and install from the primary checkout or a prepared directory holding a released artifact. The override route for per-iteration dogfood installs is a recorded deferred decision, not a hidden flag.
+A **linked git worktree** — a lane worktree, where `git rev-parse --git-dir` differs from `--git-common-dir` — is refused with `install.target.worktree`, naming the target directory and both git directories. The reason is operational, not cosmetic: a lane worktree is **deleted after merge**, so an install that pointed into it would work until the merge and then break. Build and install from the main checkout or a prepared directory holding a released artifact. The override route for per-iteration dogfood installs is a recorded deferred decision, not a hidden flag.
 
 A dirty tree is never an admission question. The rule is about *where* the target lives, never about its working-tree state.
 
