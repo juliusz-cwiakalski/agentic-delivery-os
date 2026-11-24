@@ -4,7 +4,7 @@ change:
   type: feat
   status: Proposed
   slug: delivery-vocabulary-declared-project-key
-  title: "M4-S39: Delivery vocabulary — project, project repository, main checkout, worktree, lane; credentials bind to the project's declared key (M4)"
+  title: "M4-S39: Delivery vocabulary: product, repository, main checkout, worktree, lane, clone identity; credentials bind to the product key (M4)"
   owners: ["Juliusz Ćwiąkalski"]
   service: "delivery vocabulary and product-scope contracts (ubiquitous language, declared product key grammar, clone identity)"
   milestone: "M4: Jaiship-native delivery"
@@ -282,7 +282,7 @@ Not applicable — no new telemetry. Existing state-layer telemetry is unchanged
 | DEC-3 | The clone identity is named *clone identity*, not *checkout identity* | Git calls every linked worktree a checkout; "checkout identity" would read as per-worktree, the opposite of the shared-marker fact | 2026-11-24 |
 | DEC-4 | The local `groups.v1` layer keeps "group keys carry no public pattern"; nothing migrates | Delivered contract stands; the declared product key grammar binds consumers only | 2026-11-24 |
 | DEC-5 | ODR-0006 is written in this change as `Proposed` with `decision_date: null`; earlier records are not edited | The owner accepts the vocabulary at the pull request | 2026-11-24 |
-| DEC-6 | The top-level noun is *product*, not project; the vocabulary term is *product key*; code names keep the *declared* qualifier (`DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`, `declaredProductKey`) while the legacy `PROJECT_KEY_PATTERN`/`projectKey` exist, because PRODUCT and PROJECT are two letters apart; `CLONE_KEY_PATTERN`/`cloneKey` are unchanged; `projects list` keeps its locked command name and prints `PRODUCT`/`REPOSITORY`; slugs, folder, branch and the change title field stay as the ticket's own records | Owner vocabulary amendment 7138707234, applied end to end per the reopened specification phase | 2026-11-24 |
+| DEC-6 | The top-level noun is *product*, not project; the vocabulary term is *product key*; code names keep the *declared* qualifier (`DECLARED_PRODUCT_KEY_PATTERN`, `isDeclaredProductKey`, `declaredProductKey`) while the legacy `PROJECT_KEY_PATTERN`/`projectKey` exist, because PRODUCT and PROJECT are two letters apart; `CLONE_KEY_PATTERN`/`cloneKey` are unchanged; `projects list` keeps its locked command name and prints `PRODUCT`/`REPOSITORY`; the change title is the tracker's renamed title (owner renamed it 2026-11-24T17:06:57Z alongside amendment comment 7138707234); amendment §G covers only branch and change-folder slugs, which stay unchanged | Owner vocabulary amendment 7138707234, applied end to end per the reopened specification phase | 2026-11-24 |
 
 ## 16. AFFECTED COMPONENTS (HIGH-LEVEL)
 
@@ -396,7 +396,8 @@ Not applicable. No personal data, credentials or secret material is introduced o
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-24 | spec-writer agent | Initial specification from ticket body + delivery brief 7122871259 |
-| 1.1 | 2026-11-24 | spec-writer agent | Owner vocabulary amendment 7138707234 applied end to end: top-level noun *product*; *repository* (long form "product repository" contrast-only); *product key* replaces "declared project key" as the vocabulary term; "project" retired from the model's own vocabulary ("Jira project" for the tracker's word); code names `DECLARED_PRODUCT_KEY_PATTERN` / `isDeclaredProductKey` / `declaredProductKey` with the *declared* qualifier kept while legacy names exist; `CLONE_KEY_PATTERN` / `cloneKey` unchanged; headers `PRODUCT` / `REPOSITORY` / `CLONE`; ODR-0006 records the retirement; "the tool" prose rule and neutral public examples (`acme`, `example.com`) recorded in the vocabulary notes; source order body < brief < amendment; slugs, folder, branch and change title unchanged; 12-AC decomposition intact |
+| 1.1 | 2026-11-24 | spec-writer agent | Owner vocabulary amendment 7138707234 applied end to end: top-level noun *product*; *repository* (long form "product repository" contrast-only); *product key* replaces "declared project key" as the vocabulary term; "project" retired from the model's own vocabulary ("Jira project" for the tracker's word); code names `DECLARED_PRODUCT_KEY_PATTERN` / `isDeclaredProductKey` / `declaredProductKey` with the *declared* qualifier kept while legacy names exist; `CLONE_KEY_PATTERN` / `cloneKey` unchanged; headers `PRODUCT` / `REPOSITORY` / `CLONE`; ODR-0006 records the retirement; "the tool" prose rule and neutral public examples (`acme`, `example.com`) recorded in the vocabulary notes; source order body < brief < amendment; slugs, folder and branch unchanged; 12-AC decomposition intact |
+| 1.2 | 2026-11-24 | spec-writer agent | Title provenance corrected: front matter `change.title` and DEC-6's title clause aligned with the tracker's renamed title — owner renamed the tracker title 2026-11-24T17:06:57Z, one second after posting amendment comment 7138707234, so the ticket's own record is the renamed title; amendment §G covers only branch and change-folder slugs, which stay unchanged; no v1.1 vocabulary content altered |
 
 ---
 
