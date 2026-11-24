@@ -1,7 +1,8 @@
 /**
  * GH-406 TC-DPKKEY-001/002, TC-DPKALI-001, TC-DPKACC-001 (unit half) — the
- * additive declared-project-key and clone-key contracts, proven at
- * introduction.
+ * additive declared-product-key and clone-key contracts, proven at
+ * introduction (the owner amendment 7138707234 names the exports:
+ * DECLARED_PRODUCT_KEY_PATTERN with the predicate isDeclaredProductKey).
  *
  * The grammar boundary matrix pins the exact pattern string and every rule of
  * the predicate (length, charset, hyphen position, reserved segment); the
@@ -18,9 +19,9 @@ import {
 } from "../../packages/core/src/app/state-scope";
 import {
   CLONE_KEY_PATTERN,
-  DECLARED_PROJECT_KEY_PATTERN,
-  DECLARED_PROJECT_KEY_REJECTIONS,
-  declaredProjectKeyVerdict,
+  DECLARED_PRODUCT_KEY_PATTERN,
+  DECLARED_PRODUCT_KEY_REJECTIONS,
+  isDeclaredProductKey,
   PROJECT_IDENTITY_SCHEMA,
   PROJECT_KEY_PATTERN,
   PROJECT_UNBOUND_SEGMENT,
@@ -65,10 +66,10 @@ const resolvedScope = () => {
   return { outcome: outcome.value, persisted };
 };
 
-describe("TC-DPKKEY-001 the declared-key grammar boundary matrix", () => {
-  test("the exported pattern is the exact pinned string", () => {
-    expect(DECLARED_PROJECT_KEY_PATTERN).toBe("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$");
-    expect([...DECLARED_PROJECT_KEY_REJECTIONS]).toEqual([
+describe("TC-DPKKEY-001 the declared product-key grammar boundary matrix", () => {
+  test("the exported pattern is the exact pinned string under its amended name", () => {
+    expect(DECLARED_PRODUCT_KEY_PATTERN).toBe("^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$");
+    expect([...DECLARED_PRODUCT_KEY_REJECTIONS]).toEqual([
       "length",
       "charset",
       "hyphen-position",
@@ -80,7 +81,7 @@ describe("TC-DPKKEY-001 the declared-key grammar boundary matrix", () => {
     const long = `a${"b".repeat(62)}a`;
     expect(long).toHaveLength(64);
     for (const key of ["ab", long, "a-b", "a--b", "0x-y9", "my-unbound", "projects-x"]) {
-      const verdict = declaredProjectKeyVerdict(key);
+      const verdict = isDeclaredProductKey(key);
       expect(verdict.valid, key).toBe(true);
     }
   });
@@ -100,7 +101,7 @@ describe("TC-DPKKEY-001 the declared-key grammar boundary matrix", () => {
       ["---", "hyphen-position"],
     ];
     for (const [key, rule] of rejects) {
-      const verdict = declaredProjectKeyVerdict(key);
+      const verdict = isDeclaredProductKey(key);
       expect(verdict.valid, key).toBe(false);
       if (!verdict.valid) expect(verdict.rejection, key).toBe(rule);
     }
@@ -110,7 +111,7 @@ describe("TC-DPKKEY-001 the declared-key grammar boundary matrix", () => {
 describe("TC-DPKKEY-002 the reserved state segments are refused", () => {
   test("unbound and projects are refused despite being grammar-valid", () => {
     for (const segment of [PROJECT_UNBOUND_SEGMENT, PROJECTS_CONTAINER_SEGMENT]) {
-      const verdict = declaredProjectKeyVerdict(segment);
+      const verdict = isDeclaredProductKey(segment);
       expect(verdict.valid, segment).toBe(false);
       if (!verdict.valid) expect(verdict.rejection, segment).toBe("reserved-segment");
     }
@@ -118,7 +119,7 @@ describe("TC-DPKKEY-002 the reserved state segments are refused", () => {
 
   test("the refusal is exact-match: substring-containing keys are accepted", () => {
     for (const key of ["projects-x", "my-unbound", "unbound-2"]) {
-      const verdict = declaredProjectKeyVerdict(key);
+      const verdict = isDeclaredProductKey(key);
       expect(verdict.valid, key).toBe(true);
     }
   });
@@ -126,7 +127,7 @@ describe("TC-DPKKEY-002 the reserved state segments are refused", () => {
   test("reserved-segment checking rides the lowercase grammar, not a case rule", () => {
     // The uppercase spellings are already refused by the grammar's charset rule.
     for (const key of ["UNBOUND", "PROJECTS"]) {
-      const verdict = declaredProjectKeyVerdict(key);
+      const verdict = isDeclaredProductKey(key);
       expect(verdict.valid, key).toBe(false);
       if (!verdict.valid) expect(verdict.rejection, key).toBe("charset");
     }

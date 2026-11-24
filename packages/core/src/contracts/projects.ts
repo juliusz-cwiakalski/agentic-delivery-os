@@ -60,32 +60,34 @@ export const PROJECT_KEY_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}
 export const CLONE_KEY_PATTERN = PROJECT_KEY_PATTERN;
 
 /**
- * The declared project key's grammar (GH-406 F-2, DM-1): exactly 2 to 64
- * characters of lowercase alphanumerics and hyphens with no leading or
- * trailing hyphen, path-safe by construction. The PATTERN is only the shape;
- * the REFUSAL of the reserved state segments lives in the predicate below,
- * exact-match on the whole key.
+ * The declared product key's grammar (GH-406 F-2, DM-1; owner amendment
+ * 7138707234 names the term PRODUCT KEY): exactly 2 to 64 characters of
+ * lowercase alphanumerics and hyphens with no leading or trailing hyphen,
+ * path-safe by construction. The PATTERN is only the shape; the REFUSAL of the
+ * reserved state segments lives in the predicate below, exact-match on the
+ * whole key.
  */
-export const DECLARED_PROJECT_KEY_PATTERN = "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$" as const;
+export const DECLARED_PRODUCT_KEY_PATTERN = "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$" as const;
 
-const DECLARED_PROJECT_KEY_REGEX = new RegExp(DECLARED_PROJECT_KEY_PATTERN, "u");
+const DECLARED_PRODUCT_KEY_REGEX = new RegExp(DECLARED_PRODUCT_KEY_PATTERN, "u");
 
 /** The closed refusal vocabulary: every rejection names the violated rule. */
-export const DECLARED_PROJECT_KEY_REJECTIONS = [
+export const DECLARED_PRODUCT_KEY_REJECTIONS = [
   "length",
   "charset",
   "hyphen-position",
   "reserved-segment",
 ] as const;
-export type DeclaredProjectKeyRejection = (typeof DECLARED_PROJECT_KEY_REJECTIONS)[number];
+export type DeclaredProductKeyRejection = (typeof DECLARED_PRODUCT_KEY_REJECTIONS)[number];
 
 /** The declared key's verdict: valid, or invalid with the rule it violated. */
-export type DeclaredProjectKeyVerdict =
+export type DeclaredProductKeyVerdict =
   | { readonly valid: true }
-  | { readonly valid: false; readonly rejection: DeclaredProjectKeyRejection };
+  | { readonly valid: false; readonly rejection: DeclaredProductKeyRejection };
 
 /**
- * The declared-project-key predicate (GH-406 F-2, NFR-1).
+ * The declared-product-key predicate (GH-406 F-2, NFR-1; the owner amendment
+ * names it isDeclaredProductKey).
  *
  * Grammar first: 2–64 lowercase alphanumerics and hyphens, no edge hyphen.
  * Then the reserved state segments `unbound` and `projects` are refused
@@ -94,9 +96,9 @@ export type DeclaredProjectKeyVerdict =
  * used as a declared key (the consumer changes); this contract only defines
  * the verdict.
  */
-export const declaredProjectKeyVerdict = (key: string): DeclaredProjectKeyVerdict => {
+export const isDeclaredProductKey = (key: string): DeclaredProductKeyVerdict => {
   if (key.length < 2 || key.length > 64) return { valid: false, rejection: "length" };
-  if (!DECLARED_PROJECT_KEY_REGEX.test(key)) {
+  if (!DECLARED_PRODUCT_KEY_REGEX.test(key)) {
     if (key.startsWith("-") || key.endsWith("-")) {
       return { valid: false, rejection: "hyphen-position" };
     }
