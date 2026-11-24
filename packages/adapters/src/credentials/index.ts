@@ -25,12 +25,9 @@ import type {
   CredentialSourceKey,
   HarnessKind,
 } from "@delivery-os/core/contracts";
-import { remedyText } from "#credentials/allowlist";
-import { type ChildRunner, resolveCommandSource } from "#credentials/command-strategy";
-import {
-  classifyHarnessStoreSource,
-  type HarnessStoreFacts,
-} from "#credentials/harness-store-strategy";
+import { remedyText } from "./allowlist.js";
+import { type ChildRunner, resolveCommandSource } from "./command-strategy.js";
+import { classifyHarnessStoreSource, type HarnessStoreFacts } from "./harness-store-strategy.js";
 
 export {
   type AllowlistEntry,
@@ -54,7 +51,7 @@ export {
   type SlotValidation,
   validateHostSlot,
   validateIntegrationIdSlot,
-} from "#credentials/allowlist";
+} from "./allowlist.js";
 export {
   type ChildRunner,
   type ChildRunOutcome,
@@ -65,7 +62,7 @@ export {
   reducedChildEnvironment,
   resolveCommandSource,
   runHarnessExport,
-} from "#credentials/command-strategy";
+} from "./command-strategy.js";
 export {
   classifyHarnessStoreSource,
   HARNESS_CLI_VERSION_WINDOW,
@@ -74,7 +71,7 @@ export {
   type HarnessStoreFacts,
   type StoreExportOutcome,
   type StoreExportRequest,
-} from "#credentials/harness-store-strategy";
+} from "./harness-store-strategy.js";
 
 /** An injected environment record; production passes the process environment. */
 export type CredentialEnvironment = Readonly<Record<string, string | undefined>>;
@@ -110,27 +107,38 @@ export const credentialSourceIdentity = (sourceKey: CredentialSourceKey): string
   if (sourceKey.style === "environment-prefixed") {
     return `environment-prefixed:${sourceKey.suffix}`;
   }
+  // The harness-store identity names the harness too (AC-F3-5): a shape-drift
+  // refusal must say WHICH store layout departed, never only the integration.
   return sourceKey.style === "command"
     ? `command:${sourceKey.program}`
-    : `harness-store:${sourceKey.integrationId}`;
+    : `harness-store:${sourceKey.harness}:${sourceKey.integrationId}`;
 };
 
-/** The reified `config.credential.missing` identity with its projection fields. */
+/**
+ * The reified `config.credential.missing` identity with its projection fields.
+ * A shape-drift refusal additionally carries the offending field name on the
+ * rendered source (AC-F3-5); drift fields are closed classifier tokens, never
+ * configuration text or child output.
+ */
 const credentialMissing = (
   sourceKey: CredentialSourceKey,
   reason: CredentialFailureReason,
-): CredentialResolutionFailure => ({
-  ok: false,
-  code: "config.credential.missing",
-  domainKind: "config",
-  category: "user",
-  retryable: false,
-  consequence: "not_landed",
-  projectionClass: "user-validation",
-  source: credentialSourceIdentity(sourceKey),
-  reason,
-  remedy: remedyText(reason, sourceKey.style),
-});
+  driftField?: string,
+): CredentialResolutionFailure => {
+  const identity = credentialSourceIdentity(sourceKey);
+  return {
+    ok: false,
+    code: "config.credential.missing",
+    domainKind: "config",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    projectionClass: "user-validation",
+    source: driftField === undefined ? identity : `${identity} field=${driftField}`,
+    reason,
+    remedy: remedyText(reason, sourceKey.style),
+  };
+};
 
 /** An absent key and an empty-string value both fail; whitespace is a value. */
 const materialFrom = (
@@ -206,7 +214,7 @@ export const createCredentialResolver = (options: CredentialResolverOptions): Cr
         resolution =
           classified.status === "resolved"
             ? { ok: true, material: classified.material }
-            : credentialMissing(key, classified.reason);
+            : credentialMissing(key, classified.reason, classified.field);
       } else {
         resolution = materialFrom(
           key,

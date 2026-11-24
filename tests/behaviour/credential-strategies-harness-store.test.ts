@@ -158,7 +158,7 @@ describe("TC-HARNESS-002 exactly one active entry or ambiguous-account", () => {
       registerSecret: () => undefined,
     }).resolve({ referenceName: "provider", sourceKey: DECLARED });
     if (!resolution.ok) {
-      expect(resolution.source).toBe("harness-store:deepseek");
+      expect(resolution.source).toBe("harness-store:opencode:deepseek");
       expect(resolution.reason).toBe("ambiguous-account");
       expect(resolution.remedy).toBe(remedyText("ambiguous-account", "harness-store"));
     }
@@ -184,7 +184,7 @@ describe("TC-HARNESS-003 no stored entry: empty-output with zero fall-through", 
     expect(resolution.ok).toBe(false);
     if (!resolution.ok) {
       expect(resolution.reason).toBe("empty-output");
-      expect(resolution.source).toBe("harness-store:deepseek");
+      expect(resolution.source).toBe("harness-store:opencode:deepseek");
     }
     // Zero fall-through: no child ran (the harness-store style never consults
     // the command runner) and the environment sentinel was never registered.
@@ -266,13 +266,18 @@ describe("TC-HARNESS-005 shape drift classified naming harness and field", () =>
       "value.type",
     ],
     ["unparseable output", "not-json{", "output"],
-  ])("%s refuses shape-drift naming the field", (_name, stdout, _field) => {
+  ])("%s refuses shape-drift naming the harness and the field", (_name, stdout, field) => {
     const classification = classify({
       exportEntries: () => ({ ok: true, stdout, stdoutTruncated: false }),
     });
     expect(classification.status).toBe("refused");
-    if (classification.status === "refused") expect(classification.reason).toBe("shape-drift");
-    // The drift never yields material and never falls through.
+    if (classification.status === "refused") {
+      expect(classification.reason).toBe("shape-drift");
+      expect(classification.field).toBe(field);
+    }
+    // The drift never yields material and never falls through; the resolved
+    // port failure names the harness identity and the offending field
+    // (AC-F3-5) on the rendered source.
     const resolution = createCredentialResolver({
       environment: { DEEPSEEK_API_KEY: "sentinel-fall-through" },
       brand: fixtureBrand,
@@ -282,7 +287,10 @@ describe("TC-HARNESS-005 shape drift classified naming harness and field", () =>
       registerSecret: () => undefined,
     }).resolve({ referenceName: "provider", sourceKey: DECLARED });
     expect(resolution.ok).toBe(false);
-    if (!resolution.ok) expect(resolution.reason).toBe("shape-drift");
+    if (!resolution.ok) {
+      expect(resolution.reason).toBe("shape-drift");
+      expect(resolution.source).toBe(`harness-store:opencode:deepseek field=${field}`);
+    }
   });
 
   test("control: the pinned key shape yields the key; truncated stdout is drift", () => {

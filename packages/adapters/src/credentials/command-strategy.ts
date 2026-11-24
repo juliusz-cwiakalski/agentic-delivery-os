@@ -28,7 +28,7 @@ import {
   constructArgv,
   matchCommandDeclaration,
   remedyText,
-} from "#credentials/allowlist";
+} from "./allowlist.js";
 
 /** An injected environment record; production passes the process environment. */
 export type CredentialEnvironment = Readonly<Record<string, string | undefined>>;

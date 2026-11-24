@@ -234,6 +234,16 @@ tier:
 #   packages/cli/src/index.ts — 2 literal sites: the renderer (live-registry
 #     consult, config-summary suppression exemption for credential refusals
 #     only, field rendering).
+# SUPPORTING FILES — no literal site (phase-4 projection carries; disclosed as
+#     undeclared-scope companions and classified in review F-4a, accepted):
+#   packages/core/src/contracts/status.ts — additive projection plumbing: the
+#     StatusReadFailure read result carries the projection as a nested
+#     credential member consumed by the mapped edge.ts status sites; no
+#     failure is constructed or collapsed here.
+#   packages/core/src/domain/verify-gates.ts — additive projection plumbing:
+#     the VerifyGatesReadFailure read result carries the same nested
+#     credential member for the verify-gates surface consumed by the mapped
+#     edge.ts sites; no failure is constructed or collapsed here.
 # NOT TOUCHED — named with reason:
 #   packages/core/src/contracts/harness.ts — 3 literal sites (:362, :374,
 #     :381): the harness contract's failure-cause union is a definition site —

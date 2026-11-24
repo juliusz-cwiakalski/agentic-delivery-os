@@ -420,12 +420,20 @@ notes:
       by this phase — post-fix verification 136/136 across the ten affected
       suites and the redaction probe verified [redacted] for both injectable
       shapes; build green; TC-BIN-084 green after build; secret-read-boundary
-      clean (489 files). DISCLOSED PRE-EXISTING RED (evidence: identical output
-      reproduced at c1854932 after a clean build, outside any phase scope):
-      exports-parity + TC-RELEASE-002 fail on packages/adapters attw subpath
-      resolution (git/gitlab/jira/github subpaths) — a branch baseline defect
-      this change does not touch; TC-RELEASE-001 stays red until the phase-7
-      changeset by design. No lifecycle phase complete was run (delivery
+      clean (489 files). DISCLOSED RED — RECLASSIFIED IN REMEDIATION (review
+      iter-1 F-1: the 'pre-existing' classification below was FALSE — the
+      c1854932 reproduction was mid-branch, not the merge-base; the reviewer
+      reproduced the check PASSING at merge-base 4f1a7ddc, making this a
+      DELIVERY REGRESSION introduced at this phase's 36fa3eeb, whose
+      '#credentials/*' imports-map specifiers in
+      packages/adapters/src/credentials/index.ts map to src/*.ts while 'files'
+      publishes only dist; the failing entrypoint is ./credentials, not the
+      git/gitlab/jira/github subpaths originally attributed): exports-parity +
+      TC-RELEASE-002 failed on packages/adapters attw subpath resolution;
+      FIXED in plan phase 8 by converting to the adapters' relative ./x.js
+      sibling-import convention (imports only, no behaviour change).
+      TC-RELEASE-001 stays red until the phase-7 changeset by design (green
+      since phase 7). No lifecycle phase complete was run (delivery
       continues)."
     type: info
     date: "2026-11-24"
@@ -509,12 +517,14 @@ notes:
       (lifecycle system_spec_update) — not authored here. Verify: TC-RELEASE-001
       green (exactly one changeset added, pre-existing files byte-identical);
       the phase-6 re-pinned guide check and doc-conformance stay green; the doc
-      distribution guard stays green. DISCLOSED PRE-EXISTING RED carried into
-      the lifecycle quality-gates phase: TC-RELEASE-002 fails on exports-parity
-      (packages/adapters attw subpath resolution), reproduced identical at
-      c1854932 after a clean build — a branch baseline defect outside this
-      change's declared scopes, recorded for the runner/reviewer phases rather
-      than blind-fixed here. All seven plan phases are complete: 374aa159 (1),
+      distribution guard stays green. DISCLOSED RED carried into the lifecycle
+      quality-gates phase — RECLASSIFIED IN REMEDIATION (review iter-1 F-1):
+      TC-RELEASE-002 failed on exports-parity (packages/adapters attw subpath
+      resolution); the 'branch baseline defect' claim was FALSE — it is a
+      delivery regression introduced at 36fa3eeb (the reviewer reproduced PASS
+      at merge-base 4f1a7ddc; the c1854932 output was mid-branch presence
+      only), fixed in plan phase 8. All seven plan phases are complete:
+      374aa159 (1),
       36fa3eeb (2), e57832fb (3), f89499db + d5b5d3de (4), 3847363a (5),
       f20a78d7 (6), 7da08fb4 (7)."
     type: info
@@ -528,9 +538,11 @@ notes:
       (serious catch — prefix-only argv would have executed 'auth' as program),
       boundary-fixture rename for the secret scanner, memoized
       declared-credential load. CARRIED into phase 9: exports-parity +
-      TC-RELEASE-002 red, reproduced pre-existing at c1854932 (adapters attw
-      subpath) — must be dispositioned at quality_gates (fix or owner-visible
-      pre-existing-defect record; never a silent waive). Next:
+      TC-RELEASE-002 red (adapters attw subpath) — CORRECTED IN REMEDIATION
+      (review iter-1 F-1): NOT pre-existing; a delivery regression introduced
+      at 36fa3eeb (review reproduced PASS at merge-base 4f1a7ddc; the
+      c1854932 reproduction was mid-branch presence only), fixed in plan
+      phase 8 rather than dispositioned as baseline. Next:
       system_spec_update via @doc-syncer."
     type: info
     date: "2026-11-24"
@@ -591,5 +603,24 @@ notes:
       (5) correct the two disposition notes (phase-3 + phase-4 entries and the
       carried-risk note) to delivery-regression truth. After coder: re-run
       doc-syncer (code changed), re-run reviewer iter-2, then quality_gates."
+    type: info
+    date: "2026-11-24"
+  - text: "(F-4 classification, review iter-1 — both groups ACCEPTED as disclosed
+      companions.) (F-4a) packages/core/src/contracts/status.ts and
+      packages/core/src/domain/verify-gates.ts were edited outside every phase
+      scope as additive projection plumbing: StatusReadFailure and
+      VerifyGatesReadFailure carry the projection as a nested credential
+      member consumed by the mapped edge.ts sites; neither constructs or
+      collapses a failure. Both are now enumerated as SUPPORTING FILES — no
+      literal site rows in the committed forwarding-site map (plan rev 3),
+      keeping the map the operative fence. (F-4b) doc/00-index.md,
+      doc/overview/glossary.md, and
+      doc/spec/features/feature-monorepo-scaffold-toolchain.md were edited
+      outside the phase-7 declared reconciliation set; they are doc-syncer's
+      contract-driven cross-link additions during lifecycle system_spec_update
+      (the 00-index row mirrors the phase-6 ADR/guide landing, the glossary
+      rows restate the changed port, the scaffold row mirrors the new adapters
+      credentials subpath), landed at 3c9d0d9f and accepted as current-truth
+      accuracy — classified here per review F-4b."
     type: info
     date: "2026-11-24"

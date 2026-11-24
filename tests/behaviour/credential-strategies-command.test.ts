@@ -249,15 +249,54 @@ describe("TC-ALLOW-003 unpermitted parameters and unknown declaration fields ref
     expect(slotFlag.ok).toBe(false);
   });
 
-  test("an unknown style and an unknown field on a known style refuse by name", () => {
+  test("an unknown style and a wrong-style known field refuse by name", () => {
     expect(parseCredentialSourceKey("t", { style: "vault", program: "/v" })).toBe("t.style");
+    // A known source-key field on a style that does not admit it refuses by
+    // name at configuration load (DM-1) — never a silent drop. One arm per
+    // style proves the per-style key sets.
+    expect(
+      parseCredentialSourceKey("t", { style: "literal", name: "K", program: "/usr/bin/gh" }),
+    ).toBe("t.program: the literal style does not admit program");
+    expect(
+      parseCredentialSourceKey("t", { style: "environment-prefixed", suffix: "X", program: "/v" }),
+    ).toBe("t.program: the environment-prefixed style does not admit program");
+    expect(
+      parseCredentialSourceKey("t", {
+        style: "command",
+        program: "/usr/bin/gh",
+        args: ["auth", "token"],
+        harness: "opencode",
+      }),
+    ).toBe("t.harness: the command style does not admit harness");
+    expect(
+      parseCredentialSourceKey("t", {
+        style: "harness-store",
+        harness: "opencode",
+        integrationId: "deepseek",
+        args: ["auth", "token"],
+      }),
+    ).toBe("t.args: the harness-store style does not admit args");
+    // `name` is the one exempt field: the DM-5 default declaration deep-merges
+    // with every user restyling at the same path, so the merged declaration
+    // legitimately carries the default's `name` beside its own keys — the
+    // merged shape TC-COMP-001 (AC-F1-1) resolves through the real
+    // composition. A wrong-style `name` is the config layer's synthesized
+    // member, not an operator error.
+    expect(
+      parseCredentialSourceKey("t", {
+        style: "command",
+        program: "/usr/bin/gh",
+        args: ["auth", "token"],
+        name: "GITHUB_TOKEN",
+      }),
+    ).toEqual({ style: "command", program: "/usr/bin/gh", args: ["auth", "token"] });
+    // Keys outside the source-key vocabulary are not wrong-style fields: they
+    // stay the config layer's refusal (TC-POL-SEC-002's pinned two-layer
+    // semantic — this raw layer ignores them, the catalog refuses them).
     expect(parseCredentialSourceKey("t", { style: "literal", name: "K", extra: "x" })).toEqual({
       style: "literal",
       name: "K",
     });
-    // The style-conditional strict pass (unknown field refusal) belongs to the
-    // composition layer; the two-layer semantic is pinned by TC-POL-SEC-002's
-    // suite and the config catalog's field table.
     const unknownField = matchCommandDeclaration({
       style: "command",
       program: "/usr/bin/gh",

@@ -247,22 +247,39 @@ const validateCredentialSlot = (
   return undefined;
 };
 
-/** The fields each closed style requires, beyond the discriminant itself. */
-const CREDENTIAL_STYLE_FIELDS: Readonly<Record<string, readonly string[]>> = {
-  literal: ["name"],
-  "environment-prefixed": ["suffix"],
-  command: ["program", "args"],
-  "harness-store": ["harness", "integrationId"],
+/**
+ * The closed per-style key sets (DM-1): the fields each style requires and the
+ * superset it admits, beyond the `style` discriminant itself. `command`'s
+ * allowed set adds its one optional field, `timeoutMs`.
+ */
+const CREDENTIAL_STYLE_KEYS: Readonly<
+  Record<string, { readonly required: readonly string[]; readonly allowed: readonly string[] }>
+> = {
+  literal: { required: ["name"], allowed: ["name"] },
+  "environment-prefixed": { required: ["suffix"], allowed: ["suffix"] },
+  command: { required: ["program", "args"], allowed: ["program", "args", "timeoutMs"] },
+  "harness-store": {
+    required: ["harness", "integrationId"],
+    allowed: ["harness", "integrationId"],
+  },
 };
+
+/** Every known source-key field across the four styles (DM-1's vocabulary). */
+const CREDENTIAL_SOURCE_KEY_VOCABULARY: readonly string[] = Object.values(
+  CREDENTIAL_STYLE_KEYS,
+).flatMap((keys) => keys.allowed);
 
 /**
  * The shared source-key validator (DM-1): one validator for the provider
  * credential map and the declarable tracker reference. An unknown style, a
  * missing required field, or a slot-grammar violation refuses by path,
- * failing closed at configuration load. Unknown extra keys stay the config
- * layer's refusal (the raw parser ignores them, GH-374 TC-POL-SEC-002's
- * pinned two-layer semantic); the style-conditional strict pass runs where
- * the composition validates declarations against the closed field sets.
+ * failing closed at configuration load. A known source-key field declared on
+ * a style that does not admit it refuses by name here at load — it never
+ * parses and never silently drops — with the one exemption the DM-5
+ * default-merge mechanism requires: `name`, the default declaration's
+ * synthesized member, rides every restyled sourceKey. Keys outside the
+ * vocabulary stay the config layer's refusal (the raw layer ignores them,
+ * GH-374 TC-POL-SEC-002's pinned two-layer semantic).
  */
 export const parseCredentialSourceKey = (
   path: string,
@@ -270,9 +287,28 @@ export const parseCredentialSourceKey = (
 ): CredentialSourceKey | string => {
   if (!isRecord(value)) return `${path}.style`;
   const style = value.style;
-  const required = typeof style === "string" ? CREDENTIAL_STYLE_FIELDS[style] : undefined;
-  if (required === undefined) return `${path}.style`;
-  for (const requiredField of required) {
+  const keys = typeof style === "string" ? CREDENTIAL_STYLE_KEYS[style] : undefined;
+  if (keys === undefined) return `${path}.style`;
+  for (const key of Object.keys(value)) {
+    // `name` is exempt from the wrong-style refusal: it is the one member the
+    // delivered configuration layer synthesizes onto a declared sourceKey —
+    // the DM-5 default declaration (defaults.ts: the literal tracker and
+    // credential defaults) deep-merges with every user restyling at the same
+    // path, so a declared command/harness-store sourceKey legitimately carries
+    // the default's `name` beside its own keys (TC-COMP-001 / AC-F1-1 resolve
+    // exactly that merged shape through the real composition). Refusing it
+    // would refuse every restyled declaration, not an operator error. Flagged
+    // for review: the cleaner long-term semantic — origins-aware trimming at
+    // the composition edge, or replace-on-style-change merge in the config
+    // layer — is outside this phase's declared scope.
+    if (key === "style" || key === "name" || !CREDENTIAL_SOURCE_KEY_VOCABULARY.includes(key)) {
+      continue;
+    }
+    if (!keys.allowed.includes(key)) {
+      return `${path}.${key}: the ${style} style does not admit ${key}`;
+    }
+  }
+  for (const requiredField of keys.required) {
     if (value[requiredField] === undefined) return `${path}.${requiredField}`;
   }
   if (style === "literal") {
