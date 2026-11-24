@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-24T10:44:03.087Z }
   dor_check: { started: null, completed: 2026-11-24T10:48:55.722Z }
   delivery: { started: null, completed: 2026-11-24T16:40:57.684Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-24T18:04:21.007Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -323,79 +323,78 @@ notes:
       ONE RESIDUAL GAP: doc/spec/features/feature-result-contract.md:310 still
       says 'primary checkout'; the doc fix breaks the GH-346 doc-conformance
       required literal pinned at tests/checks/doc-conformance.test.ts:737 —
-      doc-syncer reverted its edit to keep the tree green (write-root
-      boundary). Remediation routed to @coder: re-pin the literal to '...from
-      the main checkout' + the one-word doc edit, then doc-syncer re-verifies
-      before the phase completes. Observation deliberately not taken:
+      doc-syncer reverted its edit to keep the tree green (write-root boundary).
+      Remediation routed to @coder: re-pin the literal to '...from the main
+      checkout' + the one-word doc edit, then doc-syncer re-verifies before the
+      phase completes. Observation deliberately not taken:
       repository-key/repo-key field-value prose in board/plan-schema/supervise
       specs routes to GH-408 per spec RSK-5."
     type: info
     date: "2026-11-24"
   - text: "PM-DECIDED (to unblock, owner sees the diff at PR review): Option A
-      three-artifact remediation for the residual gap. First coder attempt
-      (doc row + doc-conformance pin only) STOPPED correctly before commit:
-      the error-table-sync invariant (scripts/checks/error-table-sync.ts)
-      enforces doc row hint == code remediationHint byte-equal, so
+      three-artifact remediation for the residual gap. First coder attempt (doc
+      row + doc-conformance pin only) STOPPED correctly before commit: the
+      error-table-sync invariant (scripts/checks/error-table-sync.ts) enforces
+      doc row hint == code remediationHint byte-equal, so
       packages/core/src/contracts/error-table.ts install.target.worktree
       remediationHint carries the same 'primary checkout' wording — a third
-      lockstep artifact the two-line mandate missed; full gate failed 34
-      tests across 5 files (all the same finding); tree reverted to green.
-      Decision drivers: (1) gap unresolvable doc-only — current-truth
-      accuracy requires the code string to move (the invariant's designed
-      motion); (2) wording-only rendered-remediation-text change — no
-      command/payload/persisted identifier touched, zero-rename fence holds;
-      (3) brief §D directive covers delivered user-facing text and an error
-      hint is user-facing; (4) RSK-5 opportunistic-correction clause; (5)
-      GH-408 owns identifier renames, not hint prose. Remediation scope is
-      bounded and invariant-driven: error-table.ts occurrences + the doc rows
-      error-table-sync names + the doc-conformance pins; hits outside that
-      class stop-and-report. The commit lands outside plan scope — advisory
-      scopeDrift accepted and recorded here (GH-381 precedent)."
+      lockstep artifact the two-line mandate missed; full gate failed 34 tests
+      across 5 files (all the same finding); tree reverted to green. Decision
+      drivers: (1) gap unresolvable doc-only — current-truth accuracy requires
+      the code string to move (the invariant's designed motion); (2)
+      wording-only rendered-remediation-text change — no
+      command/payload/persisted identifier touched, zero-rename fence holds; (3)
+      brief §D directive covers delivered user-facing text and an error hint is
+      user-facing; (4) RSK-5 opportunistic-correction clause; (5) GH-408 owns
+      identifier renames, not hint prose. Remediation scope is bounded and
+      invariant-driven: error-table.ts occurrences + the doc rows
+      error-table-sync names + the doc-conformance pins; hits outside that class
+      stop-and-report. The commit lands outside plan scope — advisory scopeDrift
+      accepted and recorded here (GH-381 precedent)."
     type: decision
     date: "2026-11-24"
   - text: "PM-DECIDED extension: A-EXTENDED (four artifacts, one commit). The
       coder's stop-fence fired correctly: the SAME failure code
-      (install.target.worktree) renders remediation text twice — the
-      error-table remediationHint (machine envelope) AND the CLI refusal body
-      at packages/cli/src/commands/install.ts:145 ('Install from the primary
+      (install.target.worktree) renders remediation text twice — the error-table
+      remediationHint (machine envelope) AND the CLI refusal body at
+      packages/cli/src/commands/install.ts:145 ('Install from the primary
       checkout or a prepared directory...'), pinned independently by
       tests/behaviour/install-admission.test.ts:100. The conformance scanner
-      does not scan packages source strings, so a three-artifact fix would
-      leave a same-code two-rendering divergence ('main checkout' in the
-      envelope, 'primary checkout' in the refusal) invisible to every gate —
-      strictly worse than the status quo. Drivers: same code path, same text
-      class as the recorded Option A decision; wording-only; zero-rename
-      intact; RSK-5 opportunistic correction on the same opportunity. Bounded
-      set: install.ts:145 + its install-admission.test.ts:100 pin join the
-      three planned artifacts; grep reported no further rendered-text hits
-      outside this set (install-admission:105 and install-replace:455 are
-      test titles only — left as-is)."
+      does not scan packages source strings, so a three-artifact fix would leave
+      a same-code two-rendering divergence ('main checkout' in the envelope,
+      'primary checkout' in the refusal) invisible to every gate — strictly
+      worse than the status quo. Drivers: same code path, same text class as the
+      recorded Option A decision; wording-only; zero-rename intact; RSK-5
+      opportunistic correction on the same opportunity. Bounded set:
+      install.ts:145 + its install-admission.test.ts:100 pin join the three
+      planned artifacts; grep reported no further rendered-text hits outside
+      this set (install-admission:105 and install-replace:455 are test titles
+      only — left as-is)."
     type: decision
     date: "2026-11-24"
   - text: "A-extended remediation (PM decision recorded): the primary-checkout
       vocabulary residue cleared across ALL FOUR renderings of the
       install.target.worktree remediation in one commit - error-table.ts:1934
-      remediationHint, feature-result-contract.md:310 doc row
-      (error-table-sync byte-equality holds, OK exit 0),
-      doc-conformance.test.ts:737 required literal re-pinned wording-only,
-      install.ts:145 CLI refusal body, install-admission.test.ts:100 summary
-      pin re-pinned wording-only. Why: brief section D bans 'primary checkout'
-      wording in user-facing text; the error-table-sync invariant binds doc
-      row to code hint, and the same code renders a second refusal string in
-      the CLI - moving all four prevents a same-code divergence no gate would
-      catch. First STOP resolved by PM: the install.ts hit was outside the
-      original two-line mandate; PM chose A-extended over deferring. Left
-      as-is per PM: install-admission.test.ts:105 and install-replace.test.ts:455
-      test titles, vocabulary-conformance scanner rule constants and synthetic
-      proofs, m4 install-model.md:45 (non-command page, outside the commands
-      glob), and doc/decisions/TDR-0046 (decision records, NG-5, never
-      amended). Advisory scopeDrift accepted: the files sit outside plan
-      scope; RSK-5 opportunistic-correction clause. Evidence: narrow ladder
-      443 pass / 0 fail across the ten named suites (after one stale-dist
-      rebuild - resolution tests read built contracts); full gate
-      TMPDIR=$PWD/tmp/tmpdir pnpm check green end-to-end, 13/13 in-chain,
-      exit 0, bun test 12845 pass / 4 skip / 0 fail, OK new-code-naming
-      2505/0/4; gate log
+      remediationHint, feature-result-contract.md:310 doc row (error-table-sync
+      byte-equality holds, OK exit 0), doc-conformance.test.ts:737 required
+      literal re-pinned wording-only, install.ts:145 CLI refusal body,
+      install-admission.test.ts:100 summary pin re-pinned wording-only. Why:
+      brief section D bans 'primary checkout' wording in user-facing text; the
+      error-table-sync invariant binds doc row to code hint, and the same code
+      renders a second refusal string in the CLI - moving all four prevents a
+      same-code divergence no gate would catch. First STOP resolved by PM: the
+      install.ts hit was outside the original two-line mandate; PM chose
+      A-extended over deferring. Left as-is per PM:
+      install-admission.test.ts:105 and install-replace.test.ts:455 test titles,
+      vocabulary-conformance scanner rule constants and synthetic proofs, m4
+      install-model.md:45 (non-command page, outside the commands glob), and
+      doc/decisions/TDR-0046 (decision records, NG-5, never amended). Advisory
+      scopeDrift accepted: the files sit outside plan scope; RSK-5
+      opportunistic-correction clause. Evidence: narrow ladder 443 pass / 0 fail
+      across the ten named suites (after one stale-dist rebuild - resolution
+      tests read built contracts); full gate TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green end-to-end, 13/13 in-chain, exit 0, bun test 12845 pass / 4 skip / 0
+      fail, OK new-code-naming 2505/0/4; gate log
       tmp/run-logs-runner/2026-11-24/182704-pnpm-check-gh406-quality-gate.log."
     type: decision
     date: "2026-11-24"
