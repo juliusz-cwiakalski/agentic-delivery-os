@@ -697,11 +697,12 @@ describe("GH-172 CI binding", () => {
     const manifest = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
       scripts: Record<string, string>;
     };
-    // Re-pinned (GH-394 review iter-2 F-7): the GH-394 allowlist tripwire is a
-    // deliberate chain member between check:boundaries and check:memory; the
-    // GH-172 exclusions and the exports-parity tail are unchanged.
+    // Re-pinned (GH-406 plan phase 1): the new-code naming rule is a
+    // deliberate chain member between check:forbidden-literals and
+    // check:namespace-tree; the GH-172 exclusions and the exports-parity tail
+    // are unchanged.
     expect(manifest.scripts.check).toBe(
-      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
+      "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && bun run scripts/checks/new-code-naming.ts && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts",
     );
     expect(manifest.scripts.check).not.toContain("error-table-sync");
     expect(manifest.scripts.check).not.toContain("exit-code-literals");
