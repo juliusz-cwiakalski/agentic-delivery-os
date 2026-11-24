@@ -74,6 +74,23 @@ export type ConfigCatalog = Readonly<Record<string, CatalogField>>;
 export const BOOTSTRAP_DESCRIPTOR = {
   workingName: { type: "string", required: true },
 } as const;
+/**
+ * The credential source-key declaration shape (DM-1): the four closed styles
+ * with their per-style explicit keys. The style-conditional field semantics
+ * (which keys a style requires and refuses) are validated at configuration
+ * load by the shared source-key validator.
+ */
+const CREDENTIAL_SOURCE_KEY_FIELDS = {
+  style: { type: "string", required: true },
+  name: { type: "string" },
+  suffix: { type: "string" },
+  program: { type: "string" },
+  args: { type: "array", items: { type: "string" } },
+  timeoutMs: { type: "number" },
+  harness: { type: "string" },
+  integrationId: { type: "string" },
+} as const;
+
 const PROVIDER_CREDENTIAL_VALUE = {
   type: "object",
   required: true,
@@ -81,10 +98,27 @@ const PROVIDER_CREDENTIAL_VALUE = {
     sourceKey: {
       type: "object",
       required: true,
+      fields: CREDENTIAL_SOURCE_KEY_FIELDS,
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
+ * The declarable tracker credential reference (DM-5). The shipped default is
+ * exactly the hard-coded value it replaces: the literal `GITHUB_TOKEN`
+ * environment variable (defaults.ts).
+ */
+const GITHUB_BRANCH = {
+  type: "object",
+  fields: {
+    credential: {
+      type: "object",
       fields: {
-        style: { type: "string", required: true },
-        name: { type: "string" },
-        suffix: { type: "string" },
+        sourceKey: {
+          type: "object",
+          required: true,
+          fields: CREDENTIAL_SOURCE_KEY_FIELDS,
+        },
       },
     },
   },
@@ -549,6 +583,7 @@ export const PRODUCTION_CATALOG = {
   },
   merge: MERGE_BRANCH,
   harness: HARNESS_BRANCH,
+  github: GITHUB_BRANCH,
   verify: VERIFY_BRANCH,
   metrics: METRICS_BRANCH,
   lane: LANE_BRANCH,

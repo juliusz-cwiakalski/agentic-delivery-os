@@ -156,15 +156,17 @@ describe("TC-CONFIG-017/025 deterministic packed config artifacts", () => {
 });
 
 describe("TC-BACKLOG-009 the shipped defaults carry no adapter or github node", () => {
-  test("no github- or adapter-named position exists in the packed defaults", () => {
+  test("no adapter-named position exists; the github position is the declarable credential reference", () => {
+    // GH-394 DM-5 supersedes the github half of this absence proof: the
+    // tracker credential reference became a declarable branch. The adapter
+    // absence still holds — no adapter-named node ships.
     const shipped = JSON.parse(
       readFileSync(join(ROOT, "packages/core/dist/config/defaults-positions.json"), "utf8"),
     ) as { positions: Record<string, number> };
-    expect(Object.keys(shipped.positions).filter((key) => /github|adapter/iu.test(key))).toEqual(
-      [],
-    );
-    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /github|adapter/iu.test(key))).toEqual(
-      [],
-    );
+    expect(Object.keys(shipped.positions).filter((key) => /adapter/iu.test(key))).toEqual([]);
+    const catalogKeys = Object.keys(PRODUCTION_CATALOG);
+    expect(catalogKeys.filter((key) => /adapter/iu.test(key))).toEqual([]);
+    expect(catalogKeys).toContain("github");
+    expect(Object.keys(shipped.positions)).toContain("github");
   });
 });

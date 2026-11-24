@@ -216,7 +216,18 @@ describe("TC-INDEP-003 no production module reads a legacy policy path", () => {
     if (key === undefined || key.type !== "object") {
       throw new Error("credentials.<name>.sourceKey is not an object");
     }
-    expect(Object.keys(key.fields).sort()).toEqual(["name", "style", "suffix"]);
+    // GH-394 DM-1: the four closed styles with their per-style explicit keys.
+    // The declaration still names keys only — no value leaf exists below.
+    expect(Object.keys(key.fields).sort()).toEqual([
+      "args",
+      "harness",
+      "integrationId",
+      "name",
+      "program",
+      "style",
+      "suffix",
+      "timeoutMs",
+    ]);
 
     const names: string[] = [];
     const walk = (field: CatalogField, path: string): void => {

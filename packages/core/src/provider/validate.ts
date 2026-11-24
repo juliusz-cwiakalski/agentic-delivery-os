@@ -7,6 +7,7 @@
  */
 import {
   type ConfigValue,
+  type CredentialSourceKey,
   PACING_CLASSES,
   PACING_GOAL_PRIORITIES,
   type PacingClass,
@@ -198,20 +199,145 @@ const parseEntry = (name: string, value: unknown): ProviderDescriptor | string =
   };
 };
 
-const parseCredential = (name: string, value: unknown): ProviderCredentialDeclaration | string => {
-  if (!isRecord(value) || !isRecord(value.sourceKey)) return `credentials.${name}.sourceKey`;
-  const style = value.sourceKey.style;
+/**
+ * The load-time credential slot bounds (plan constants, spec OQ-4): the RFC
+ * 1035 FQDN upper bound for a `<host>` slot and the declared integration-id
+ * bound, plus the per-execution hard bound a declared timeout may not exceed.
+ * The suites pin these values through the named constants, never literals.
+ */
+export const CREDENTIAL_HOST_SLOT_MAX_LENGTH = 253 as const;
+export const CREDENTIAL_INTEGRATION_ID_MAX_LENGTH = 64 as const;
+export const CREDENTIAL_COMMAND_TIMEOUT_MAX_MS = 30_000 as const;
+
+const CREDENTIAL_HOST_SLOT_PATTERN = /^[A-Za-z0-9.-]+$/;
+const CREDENTIAL_INTEGRATION_ID_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
+
+/** One load-time slot refusal: names the offending slot and the violated rule. */
+const credentialSlotRefusal = (
+  path: string,
+  slot: "host" | "integrationId",
+  detail: string,
+): string => `${path}.${slot}: ${detail}`;
+
+const validateCredentialSlot = (
+  path: string,
+  slot: "host" | "integrationId",
+  value: string,
+): string | undefined => {
+  if (value.length === 0) return credentialSlotRefusal(path, slot, "the slot is empty");
+  if (value.startsWith("-")) {
+    return credentialSlotRefusal(path, slot, "the slot must not start with '-'");
+  }
+  const bound =
+    slot === "host" ? CREDENTIAL_HOST_SLOT_MAX_LENGTH : CREDENTIAL_INTEGRATION_ID_MAX_LENGTH;
+  if (value.length > bound) {
+    return credentialSlotRefusal(path, slot, `the slot exceeds ${bound} characters`);
+  }
+  const pattern =
+    slot === "host" ? CREDENTIAL_HOST_SLOT_PATTERN : CREDENTIAL_INTEGRATION_ID_PATTERN;
+  if (!pattern.test(value)) {
+    return credentialSlotRefusal(
+      path,
+      slot,
+      slot === "host"
+        ? "the slot allows only [A-Za-z0-9.-]"
+        : "the slot allows only [a-z0-9][a-z0-9_-]*",
+    );
+  }
+  return undefined;
+};
+
+/** The fields each closed style requires, beyond the discriminant itself. */
+const CREDENTIAL_STYLE_FIELDS: Readonly<Record<string, readonly string[]>> = {
+  literal: ["name"],
+  "environment-prefixed": ["suffix"],
+  command: ["program", "args"],
+  "harness-store": ["harness", "integrationId"],
+};
+
+/**
+ * The shared source-key validator (DM-1): one validator for the provider
+ * credential map and the declarable tracker reference. An unknown style, a
+ * missing required field, or a slot-grammar violation refuses by path,
+ * failing closed at configuration load. Unknown extra keys stay the config
+ * layer's refusal (the raw parser ignores them, GH-374 TC-POL-SEC-002's
+ * pinned two-layer semantic); the style-conditional strict pass runs where
+ * the composition validates declarations against the closed field sets.
+ */
+export const parseCredentialSourceKey = (
+  path: string,
+  value: unknown,
+): CredentialSourceKey | string => {
+  if (!isRecord(value)) return `${path}.style`;
+  const style = value.style;
+  const required = typeof style === "string" ? CREDENTIAL_STYLE_FIELDS[style] : undefined;
+  if (required === undefined) return `${path}.style`;
+  for (const requiredField of required) {
+    if (value[requiredField] === undefined) return `${path}.${requiredField}`;
+  }
   if (style === "literal") {
-    const keyName = string(value.sourceKey.name);
-    if (keyName === undefined) return `credentials.${name}.sourceKey.name`;
-    return { sourceKey: { style: "literal", name: keyName } };
+    const keyName = string(value.name);
+    if (keyName === undefined) return `${path}.name`;
+    return { style: "literal", name: keyName };
   }
   if (style === "environment-prefixed") {
-    const suffix = string(value.sourceKey.suffix);
-    if (suffix === undefined) return `credentials.${name}.sourceKey.suffix`;
-    return { sourceKey: { style: "environment-prefixed", suffix } };
+    const suffix = string(value.suffix);
+    if (suffix === undefined) return `${path}.suffix`;
+    return { style: "environment-prefixed", suffix };
   }
-  return `credentials.${name}.sourceKey.style`;
+  if (style === "command") {
+    const program = string(value.program);
+    if (program === undefined) return `${path}.program`;
+    if (!program.startsWith("/")) {
+      return `${path}.program: the program path must be absolute`;
+    }
+    const rawArgs = value.args;
+    if (!Array.isArray(rawArgs) || rawArgs.length === 0) return `${path}.args`;
+    const args: string[] = [];
+    for (const arg of rawArgs) {
+      if (typeof arg !== "string") return `${path}.args`;
+      args.push(arg);
+    }
+    // The host slot grammar is closed at load, table-independently: a
+    // `--hostname` flag's value must satisfy the host grammar wherever it
+    // appears in the declared argv.
+    for (const [index, arg] of args.entries()) {
+      if (arg !== "--hostname") continue;
+      const host = args[index + 1];
+      if (host === undefined) return credentialSlotRefusal(path, "host", "the slot is empty");
+      const slotFailure = validateCredentialSlot(path, "host", host);
+      if (slotFailure !== undefined) return slotFailure;
+    }
+    let timeoutMs: number | undefined;
+    if (value.timeoutMs !== undefined) {
+      const requested = integer(value.timeoutMs);
+      if (requested === undefined || requested <= 0) return `${path}.timeoutMs`;
+      if (requested > CREDENTIAL_COMMAND_TIMEOUT_MAX_MS) {
+        return `${path}.timeoutMs: the declared timeout exceeds the ${CREDENTIAL_COMMAND_TIMEOUT_MAX_MS} ms hard bound`;
+      }
+      timeoutMs = requested;
+    }
+    return {
+      style: "command",
+      program,
+      args,
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    };
+  }
+  const harness = string(value.harness);
+  if (harness === undefined) return `${path}.harness`;
+  const integrationId = string(value.integrationId);
+  if (integrationId === undefined) return `${path}.integrationId`;
+  const slotFailure = validateCredentialSlot(path, "integrationId", integrationId);
+  if (slotFailure !== undefined) return slotFailure;
+  return { style: "harness-store", harness, integrationId };
+};
+
+const parseCredential = (name: string, value: unknown): ProviderCredentialDeclaration | string => {
+  if (!isRecord(value) || !isRecord(value.sourceKey)) return `credentials.${name}.sourceKey`;
+  const sourceKey = parseCredentialSourceKey(`credentials.${name}.sourceKey`, value.sourceKey);
+  if (typeof sourceKey === "string") return sourceKey;
+  return { sourceKey };
 };
 
 const parseChain = (name: string, value: unknown): ProviderChain | string => {

@@ -802,7 +802,9 @@
       "CoordinatorWakeView"
     ],
     "credentials.ts": [
+      "CREDENTIAL_FAILURE_REASONS",
       "CredentialFailureCode",
+      "CredentialFailureReason",
       "CredentialPort",
       "CredentialReference",
       "CredentialResolution",
@@ -2251,6 +2253,7 @@
       "CoordinatorWakeTickResult",
       "CoordinatorWakeView",
       "CredentialFailureCode",
+      "CredentialFailureReason",
       "CredentialPort",
       "CredentialReference",
       "CredentialResolution",

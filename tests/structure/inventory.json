@@ -292,6 +292,9 @@
   "adapters": [
     "src/azure/index.ts",
     "src/ci/index.ts",
+    "src/credentials/allowlist.ts",
+    "src/credentials/command-strategy.ts",
+    "src/credentials/harness-store-strategy.ts",
     "src/credentials/index.ts",
     "src/daemon/clock.ts",
     "src/daemon/errors.ts",

@@ -149,7 +149,10 @@ export const CONTRACT_BASELINE: ContractBaseline = {
   evidenceRefs: 16,
   attemptsHumanLines: 40,
   attemptsHumanBytes: 8192,
-  configurationKeyCount: 80,
+  // GH-394 DM-5: the declarable tracker credential reference grows the
+  // catalog by the github branch (the branch, its credential node, its
+  // source-key node, and the eight per-style keys).
+  configurationKeyCount: 91,
   opencode: {
     supportedOperations: [
       "spawn",

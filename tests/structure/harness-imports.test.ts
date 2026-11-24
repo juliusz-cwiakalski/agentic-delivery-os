@@ -24,6 +24,7 @@ const HARNESS_DIR = "packages/adapters/src/harness";
  * GH-233 addition; the rest pre-date the harness seam.
  */
 const DECLARED_CHILD_PROCESS_SITES = [
+  "packages/adapters/src/credentials/command-strategy.ts",
   "packages/adapters/src/daemon/process.ts",
   "packages/adapters/src/daemon/supervisor.ts",
   "packages/adapters/src/file/commitlint.ts",
