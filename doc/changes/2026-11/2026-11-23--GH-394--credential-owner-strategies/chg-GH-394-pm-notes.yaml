@@ -13,7 +13,7 @@ phases:
   delivery: { started: null, completed: 2026-11-24T01:35:13.451Z }
   system_spec_update: { started: null, completed: 2026-11-24T05:11:32.927Z }
   review_fix: { started: null, completed: 2026-11-24T05:20:35.607Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-24T05:59:49.218Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -821,5 +821,38 @@ notes:
       truth-read (baseline-preserved site, identifier-only, unification may ride
       #396 merge-facts); F-11 origins-aware trimming (follow-up candidate); F-12
       spec DM-2 e.g. cosmetic (optional). review_fix closes on this PASS."
+    type: info
+    date: "2026-11-24"
+  - text: "Quality gates iter-1: pnpm check FAILED at HEAD 9a786ef2 — single red:
+      TC-DAEMON-121 (daemon-foreground-stop-latency), one of five cancellation
+      samples at 250.98ms vs the hard <=250ms bound (miss 0.98ms; other four
+      232-235ms). Steps 1-3 (lint/format/typecheck) clean; steps 5-12 unreached;
+      range lint not yet run. Flake hypothesis (strong): the IDENTICAL code tree
+      passed the full suite 12780/0 at phase 9 (2ced93ca); between it and HEAD
+      only docs + pm-notes landed (zero code changes). Evidence plan: solo
+      re-runs of the failing suite, then a full aggregate re-run, then the range
+      lint. If the aggregate passes, gate evidence = the passing run plus a
+      flake observation disclosed in the PR description (load-marginal timing
+      bound — owner follow-up candidate; no ticket without owner approval). If
+      the failure reproduces deterministically, route to @fixer. A
+      knowingly-passing-on-retry gate is recorded with this observation trail,
+      never silently."
+    type: info
+    date: "2026-11-24"
+  - text: "Quality gates iter-2: BOTH GATES PASS (evidence = this passing run at
+      HEAD 9a786ef2). Flake evidence first: TC-DAEMON-121 solo re-runs 3/3 pass
+      (cancellationMs 231-235ms across all 15 samples — the iter-1 250.98ms
+      outlier was full-suite load; base latency ~232ms vs the 250ms bound leaves
+      ~7% headroom, thin under parallel load). FULL pnpm check PASS end-to-end
+      (17m25s, all 12 steps: lint OK, format OK, typecheck OK, test 12780/0,
+      boundaries OK 261+489 files + cruiser 524 modules/1688 deps clean,
+      tripwire OK 111 surfaces, memory OK records=3 areas=8, forbidden-literals
+      OK 7/7, namespace-tree OK, prompt-conformance 5 clean, help-guide-coverage
+      OK, exports-parity OK 5 publishables). RANGE LINT: PASS — base 4f1a7ddc,
+      merge-base resolved explicit, head 9a786ef2, 30 commits in range, 0
+      offending, 0 rules hit, mode none (passing), commitlint binary resolved
+      from repository-local node_modules/.bin. Flake observation carried to PR
+      description: TC-DAEMON-121 is a load-marginal timing bound (owner
+      follow-up candidate)."
     type: info
     date: "2026-11-24"
