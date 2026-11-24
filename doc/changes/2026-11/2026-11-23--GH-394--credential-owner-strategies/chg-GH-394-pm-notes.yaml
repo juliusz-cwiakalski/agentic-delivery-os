@@ -482,3 +482,45 @@ notes:
       phase 4. No lifecycle phase complete was run (delivery continues)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 6 complete: commit f20a78d7 — the ONE coder-owned commit (no
+      red window). ADR-0014 landed at
+      doc/decisions/ADR-0014-credential-strategies-store-ownership.md (674
+      lines) from the local draft with the DRAFT blockquote, the revision
+      banner, and the Draft Handling/revision-log section removed; front
+      matter otherwise intact with status: Proposed and decision_date: null —
+      never Accepted; no committed file references any local working-draft
+      path. The 00-index.md row landed after ADR-0013 and the 00-register.md
+      binding row (credential provisioning and source vocabulary topic) plus
+      the Proposed status-list mention landed in the same commit. The
+      provisioning guide reversal rode the same commit: the
+      only-an-environment-source absoluteness and the never-runs-the-token-read
+      twin deliberately reversed to the declared four-style posture with the
+      environment bridge documented as the knowingly-duplicated fallback, and
+      tests/checks/tracker-credential-provisioning-guide.test.ts re-pinned to
+      the reversed posture (TC-DOCS-001/003) — the redistributable marker, key
+      and reference names, shell-history hygiene, least privilege,
+      rotation/revocation, redaction, and 404-scope pins kept true. Verify:
+      the re-pinned suite 8 pass / 0 fail; bash scripts/.tests/test-doc-distribution.sh
+      no drift (96 docs); bun test tests/checks/doc-conformance.test.ts green
+      (61 tests); git diff --check clean; biome clean. No lifecycle phase
+      complete was run (delivery continues)."
+    type: info
+    date: "2026-11-24"
+  - text: "Plan phase 7 complete: commit 7da08fb4 — the release changeset only,
+      .changeset/gh-394-credential-owner-strategies-minor.md, declaring the
+      five fixed-group packages (core, adapters, cli, mcp, opencode) at minor;
+      the changeset parses as YAML front matter plus prose. The five
+      feature-spec reconciliation files in the phase-7 declared scope are
+      doc-syncer's (lifecycle system_spec_update) — not authored here. Verify:
+      TC-RELEASE-001 green (exactly one changeset added, pre-existing files
+      byte-identical); the phase-6 re-pinned guide check and doc-conformance
+      stay green; the doc distribution guard stays green. DISCLOSED
+      PRE-EXISTING RED carried into the lifecycle quality-gates phase:
+      TC-RELEASE-002 fails on exports-parity (packages/adapters attw subpath
+      resolution), reproduced identical at c1854932 after a clean build — a
+      branch baseline defect outside this change's declared scopes, recorded
+      for the runner/reviewer phases rather than blind-fixed here. All seven
+      plan phases are complete: 374aa159 (1), 36fa3eeb (2), e57832fb (3),
+      f89499db + d5b5d3de (4), 3847363a (5), f20a78d7 (6), 7da08fb4 (7)."
+    type: info
+    date: "2026-11-24"
