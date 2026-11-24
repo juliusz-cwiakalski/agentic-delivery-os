@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-23T23:19:37.091Z }
   dor_check: { started: null, completed: 2026-11-23T23:23:25.941Z }
   delivery: { started: null, completed: 2026-11-24T01:35:13.451Z }
-  system_spec_update: { started: null, completed: 2026-11-24T02:46:57.132Z }
+  system_spec_update: { started: null, completed: 2026-11-24T05:11:32.927Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -488,12 +488,11 @@ notes:
       scanner flags the 18-character RHS on the whole-file scan — the boundary
       rule keys on process.env, so the fixtures' firing power is unchanged;
       harness-mutants' credential-fallback anchor was already re-pinned in phase
-      4. No lifecycle phase complete was run (delivery continues).
-      RECLASSIFIED IN REMEDIATION (review iter-2 F-5): the 'anchor was already
-      re-pinned in phase 4' claim was FALSE — the anchor matched neither text,
-      the mutation was a silent no-op and TC-HARN-029 was red at HEAD;
-      re-pinned to the current single-line credentialFailure(...) call in plan
-      phase 9."
+      4. No lifecycle phase complete was run (delivery continues). RECLASSIFIED
+      IN REMEDIATION (review iter-2 F-5): the 'anchor was already re-pinned in
+      phase 4' claim was FALSE — the anchor matched neither text, the mutation
+      was a silent no-op and TC-HARN-029 was red at HEAD; re-pinned to the
+      current single-line credentialFailure(...) call in plan phase 9."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 6 complete: commit f20a78d7 — the ONE coder-owned commit (no
@@ -557,42 +556,41 @@ notes:
     type: info
     date: "2026-11-24"
   - text: "Review iter-2: FAIL (code-review/review-iter-2.yaml; plan rev 4 + Phase 9
-      remediation, 18 scoped files; 0c/4h/1m/1l/2i). F-1..F-4 ALL verified
-      fixed (exports-parity OK, TC-RELEASE 7/0, dispositions corrected).
-      Rulings: (a) resolver name-exemption ACCEPTED as delivered (both shipped
-      defaults literal => {style,name} is exactly the synthesizable set;
-      origins-aware trimming = info residual F-11, follow-up candidate);
-      (b) TC-HARN-029 in-iteration fix required (anchor re-pinned at phase 4
-      to a layout matching NEITHER text — no-op mutant; RECLASSIFIED
-      annotations on the inaccurate claims); (c) both out-of-format sites fix
-      IN-ITERATION — provenance defeats residual framing (production.ts:2494
-      added by d5b5d3de, doctor.ts:76 by f89499db — this change's own code);
-      (d) spec DM-2 e.g. example suffices, no reopen. BLOCKING: first FULL bun
-      test on the branch (12,784 tests, run twice, identical) exposed 18 red
-      arms / 9 suites + 2 live-tree privacy-literals violations, ALL in-branch
-      (phases 4-6, remediation 8), none pre-existing at merge base: F-5
-      TC-HARN-029 anchor; F-6 phase-5 preload guard blocks 10 pre-existing
-      stub-spawn arms (TC-CLI-014/015, TC-HDA-010/011/012/015/016/035) —
-      fixture-root exemption or seam injection without weakening the guard;
-      F-7 phase-5 check-chain insertion broke 4 byte-unchanged pin suites
-      (TC-GATE-001, TC-WIRE-001, GH-172 binding, TC-LICREG-020); F-8
-      privacy-literals: secret.credential-assignment sentinel in phase-5 test
-      + private.absolute-user-path in ADR-0014:535 prose — per registry
-      convention, never weaken rule classes; F-9 the two template literals;
-      F-10 plan scope self-edit recorded in rev 4. Phase 9 verify is BINDING:
-      full pnpm check green end-to-end; named batteries retired as sole
-      verify evidence."
+      remediation, 18 scoped files; 0c/4h/1m/1l/2i). F-1..F-4 ALL verified fixed
+      (exports-parity OK, TC-RELEASE 7/0, dispositions corrected). Rulings: (a)
+      resolver name-exemption ACCEPTED as delivered (both shipped defaults
+      literal => {style,name} is exactly the synthesizable set; origins-aware
+      trimming = info residual F-11, follow-up candidate); (b) TC-HARN-029
+      in-iteration fix required (anchor re-pinned at phase 4 to a layout
+      matching NEITHER text — no-op mutant; RECLASSIFIED annotations on the
+      inaccurate claims); (c) both out-of-format sites fix IN-ITERATION —
+      provenance defeats residual framing (production.ts:2494 added by d5b5d3de,
+      doctor.ts:76 by f89499db — this change's own code); (d) spec DM-2 e.g.
+      example suffices, no reopen. BLOCKING: first FULL bun test on the branch
+      (12,784 tests, run twice, identical) exposed 18 red arms / 9 suites + 2
+      live-tree privacy-literals violations, ALL in-branch (phases 4-6,
+      remediation 8), none pre-existing at merge base: F-5 TC-HARN-029 anchor;
+      F-6 phase-5 preload guard blocks 10 pre-existing stub-spawn arms
+      (TC-CLI-014/015, TC-HDA-010/011/012/015/016/035) — fixture-root exemption
+      or seam injection without weakening the guard; F-7 phase-5 check-chain
+      insertion broke 4 byte-unchanged pin suites (TC-GATE-001, TC-WIRE-001,
+      GH-172 binding, TC-LICREG-020); F-8 privacy-literals:
+      secret.credential-assignment sentinel in phase-5 test +
+      private.absolute-user-path in ADR-0014:535 prose — per registry
+      convention, never weaken rule classes; F-9 the two template literals; F-10
+      plan scope self-edit recorded in rev 4. Phase 9 verify is BINDING: full
+      pnpm check green end-to-end; named batteries retired as sole verify
+      evidence."
     type: info
     date: "2026-11-24"
   - text: "Retro: every delivery phase gate ran NAMED batteries only — the full
       suite (12,784 tests) was never run until review iter-2. My coder
-      delegations said 'run the phase's tests' per the test plan's named
-      battery definition. Lesson: a delivery of this size needs one full-suite
-      run before the review phase — cheap insurance that would have caught the
-      guard/pin-suite/privacy classes at phases 5/6 instead of at review.
-      Cost: one review iteration + a phase-9 remediation cycle. The reviewer
-      running the full suite itself is exactly the independence the gate
-      exists for."
+      delegations said 'run the phase's tests' per the test plan's named battery
+      definition. Lesson: a delivery of this size needs one full-suite run
+      before the review phase — cheap insurance that would have caught the
+      guard/pin-suite/privacy classes at phases 5/6 instead of at review. Cost:
+      one review iteration + a phase-9 remediation cycle. The reviewer running
+      the full suite itself is exactly the independence the gate exists for."
     type: retro
     date: "2026-11-24"
   - text: "Doc reconciliation complete (3c9d0d9f): six targets + three
@@ -745,15 +743,15 @@ notes:
     type: info
     date: "2026-11-24"
 
-  - text: "Plan phase 9 complete (review iter-2 remediation): commit 2ced93ca. LANDED:
-      (F-5) TC-HARN-029 anchor re-pinned to the single-line credentialFailure(...)
-      call (mutant applied, oracle fails by name, suite green); the phase-4/5
-      anchor claims annotated RECLASSIFIED above. (F-6) fixture-root exemption
-      in tests/preload.ts: an owner-CLI-name spawn is exempt only when the
-      invocation's declared env.PATH resolves the name inside the repo
-      tmp/tmpdir stub root (or resolves nowhere, preserving the off-PATH
-      control's natural ENOENT classification) or an explicit program path
-      resolves inside it; bare names over the ambient PATH stay intercepted
+  - text: "Plan phase 9 complete (review iter-2 remediation): commit 2ced93ca.
+      LANDED: (F-5) TC-HARN-029 anchor re-pinned to the single-line
+      credentialFailure(...) call (mutant applied, oracle fails by name, suite
+      green); the phase-4/5 anchor claims annotated RECLASSIFIED above. (F-6)
+      fixture-root exemption in tests/preload.ts: an owner-CLI-name spawn is
+      exempt only when the invocation's declared env.PATH resolves the name
+      inside the repo tmp/tmpdir stub root (or resolves nowhere, preserving the
+      off-PATH control's natural ENOENT classification) or an explicit program
+      path resolves inside it; bare names over the ambient PATH stay intercepted
       (TC-HERM-001's three teeth green) and real binaries on real PATHs stay
       blocked; all 10 arms restored green (TC-CLI-014 1, TC-CLI-015 2,
       TC-HDA-010/011/012/015/016/035 7). (F-7) the four baseline pin suites
@@ -771,34 +769,34 @@ notes:
       (tests/fixtures/privacy-literals/registry.ts — DISCLOSED COMPANION, named
       in the phase-9 scope per the F-10 lesson); the plan rev-4 summary's
       incidental literal quote of the same phrase reworded (declared plan file;
-      rev-log addendum records both execution amendments); check:privacy-literals
-      OK 5299 files / 0 violations; TC-WIRE-002 and TC-PRIVACY-020 green.
-      (F-9) production.ts's cold-refusal source uses the shared
-      credentialSourceIdentity helper; doctor.ts's sourceKeyDisplay builds the
-      identical harness-inclusive tokens inline because TC-DOCTOR-022 (the
-      baseline command-tier import rule) forbids adapters imports in command
-      files — the helper import tripped it in the first full run and was
+      rev-log addendum records both execution amendments);
+      check:privacy-literals OK 5299 files / 0 violations; TC-WIRE-002 and
+      TC-PRIVACY-020 green. (F-9) production.ts's cold-refusal source uses the
+      shared credentialSourceIdentity helper; doctor.ts's sourceKeyDisplay
+      builds the identical harness-inclusive tokens inline because TC-DOCTOR-022
+      (the baseline command-tier import rule) forbids adapters imports in
+      command files — the helper import tripped it in the first full run and was
       reverted to the review's own one-template-literal mechanism (disclosed
       deviation from the delegation's helper phrasing; same rendered format
       harness-store:<harness>:<integrationId>; no test pins the old format).
-      SECOND DISCLOSED COMPANION: tests/fixtures/ports/v1-contract-inventory.json
-      formatter fix — pre-existing phase-4-era formatting drift the first full
-      pnpm check run exposed at format:check (the aggregate had never been run
-      on this branch before); mechanical, no content change, named in the
-      phase-9 scope. Verify (BINDING, supersedes named batteries): pnpm build
-      green; FULL pnpm check PASS end-to-end (lint, format:check, typecheck,
-      test, boundaries, allowlist-tripwire OK 111 surfaces, memory,
-      forbidden-literals, namespace-tree, prompt-conformance 5 prompts clean,
-      help-guide-coverage, exports-parity OK 5 publishables); FULL bun test
-      12780 pass / 0 fail / 4 skip across 12784 tests in 1520 files (exit 0
-      verified explicitly); check:privacy-literals OK 5299 files;
-      secret-read-boundary OK 489 files; TC-RELEASE-001/002 7 pass / 0 fail.
-      Fences: pending-park region and daemon-compose untouched; vocabularies
-      unchanged; goldens read-only; no license headers; no .zed/ or .ai/local
-      staged (the commit envelope's untrackedNotStaged names both). Commit
-      note: the primitive landed its deterministic template subject (no
-      inference transport in this environment); the branch-range
-      commit-message gate owns the verdict. No phase complete was run
-      (review_fix closes on re-review PASS)."
+      SECOND DISCLOSED COMPANION:
+      tests/fixtures/ports/v1-contract-inventory.json formatter fix —
+      pre-existing phase-4-era formatting drift the first full pnpm check run
+      exposed at format:check (the aggregate had never been run on this branch
+      before); mechanical, no content change, named in the phase-9 scope. Verify
+      (BINDING, supersedes named batteries): pnpm build green; FULL pnpm check
+      PASS end-to-end (lint, format:check, typecheck, test, boundaries,
+      allowlist-tripwire OK 111 surfaces, memory, forbidden-literals,
+      namespace-tree, prompt-conformance 5 prompts clean, help-guide-coverage,
+      exports-parity OK 5 publishables); FULL bun test 12780 pass / 0 fail / 4
+      skip across 12784 tests in 1520 files (exit 0 verified explicitly);
+      check:privacy-literals OK 5299 files; secret-read-boundary OK 489 files;
+      TC-RELEASE-001/002 7 pass / 0 fail. Fences: pending-park region and
+      daemon-compose untouched; vocabularies unchanged; goldens read-only; no
+      license headers; no .zed/ or .ai/local staged (the commit envelope's
+      untrackedNotStaged names both). Commit note: the primitive landed its
+      deterministic template subject (no inference transport in this
+      environment); the branch-range commit-message gate owns the verdict. No
+      phase complete was run (review_fix closes on re-review PASS)."
     type: info
     date: "2026-11-24"
