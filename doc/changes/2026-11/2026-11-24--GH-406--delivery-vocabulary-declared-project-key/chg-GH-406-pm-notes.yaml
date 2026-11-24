@@ -1,6 +1,6 @@
 change_id: GH-406
-title: "M4-S39: Delivery vocabulary — project, project repository, main
-  checkout, worktree, lane; credentials bind to the project's declared key (M4)"
+title: "M4-S39: Delivery vocabulary: product, repository, main checkout,
+  worktree, lane, clone identity; credentials bind to the product key (M4)"
 branch: feat/GH-406/delivery-vocabulary-declared-project-key
 milestone: "M4: Jaiship-native delivery"
 delivery_mode: interactive
@@ -9,7 +9,7 @@ phases:
   specification: { started: null, completed: 2026-11-24T20:03:10.226Z }
   test_planning: { started: null, completed: 2026-11-24T20:05:06.059Z }
   delivery_planning: { started: null, completed: 2026-11-24T20:08:48.072Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-24T20:14:24.288Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -562,5 +562,23 @@ notes:
       e6490b82 on the change branch, exactly one unpushed commit (e6490b82), PR
       #411 OPEN base main-tools, labels change/planning (review removed at
       reopen)."
+    type: decision
+    date: "2026-11-24"
+  - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
+      blocking): iter-3 finding 1 verified remediated — renamed tracker title
+      adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6
+      corrected with the rename timestamp (2026-11-24T17:06:57Z, one second
+      after amendment comment 7138707234); zero false provenance phrases. iter-3
+      finding 2 verified remediated — plan phase 5 scopes the ODR-0006 re-word
+      to the WHOLE record (body + front matter: summary, business_impact,
+      customer_impact, governance.driver with the body < brief 7122871259 <
+      amendment 7138707234 chain) + the 00-index.md row title text. Fresh plan
+      validate verdict=valid. Non-blocking carried forward: rev-4 note
+      over-narrows front-matter fields (service: also carries old wording;
+      whole-record clause subsumes it, review-time diff backstops); four
+      spec-v1.1 citations in the plan post-v1.2 (content-accurate, optional
+      refresh). PM bookkeeping done: pm-notes title: field refreshed to the
+      renamed title at iter-4 close. Verdict artifact
+      readiness-review/readiness-iter-4.md. Amended delivery may execute."
     type: decision
     date: "2026-11-24"
