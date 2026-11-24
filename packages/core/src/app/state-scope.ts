@@ -499,6 +499,7 @@ const projectScopeOf = (
     kind: "project",
     hostRoot,
     projectKey: marker.projectKey,
+    cloneKey: marker.projectKey,
     projectIdentifier: marker.projectIdentifier,
     checkoutRoot,
     stateLocation: projectStateRoot(hostRoot, marker.projectKey),

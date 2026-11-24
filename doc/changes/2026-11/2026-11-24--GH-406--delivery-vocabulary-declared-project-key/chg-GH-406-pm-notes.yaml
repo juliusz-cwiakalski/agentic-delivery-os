@@ -136,3 +136,17 @@ notes:
       Delivery may begin."
     type: decision
     date: "2026-11-24"
+  - text: "Plan phase 1 complete (commit 0b49e404): the new-code naming rule landed
+      as scripts/checks/new-code-naming.ts with the committed reason-bearing
+      baseline (2 entries: the check's own forbidden-token literal, the mutation
+      suite's injected token), gate-chain registration in package.json between
+      check:forbidden-literals and check:namespace-tree, and wording-only
+      chain-literal re-pins in license-ci-binding (PINNED_CHECK), ci-checks, and
+      privacy-ci-wiring (AGGREGATE), plus the milestone-gate check-script
+      enumeration. Evidence: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
+      boundary - 13/13 stages, bun test 12794 pass / 4 skip / 0 fail;
+      OK new-code-naming: 2500 governed file(s) scanned, 0 violations, 2
+      baseline entry(ies); gate log
+      tmp/run-logs-runner/2026-11-24/115614-pnpm-check-aggregate-gate.log."
+    type: info
+    date: "2026-11-24"

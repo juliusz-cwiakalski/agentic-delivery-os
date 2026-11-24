@@ -2163,9 +2163,15 @@ export {
 // identity/daemon/handover vocabularies, and the three contract error
 // identities. Data and types only; the pure policy lives in the core app tier.
 export {
+  CLONE_KEY_PATTERN,
   DAEMON_REACHABILITY_REASONS,
   type DaemonReachability,
   type DaemonReachabilityReason,
+  DECLARED_PROJECT_KEY_PATTERN,
+  DECLARED_PROJECT_KEY_REJECTIONS,
+  type DeclaredProjectKeyRejection,
+  type DeclaredProjectKeyVerdict,
+  declaredProjectKeyVerdict,
   HANDOVER_STATES,
   type HandoverState,
   HOST_INDEX_ARTIFACT_NAME,

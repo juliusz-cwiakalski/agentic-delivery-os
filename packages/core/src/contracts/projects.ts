@@ -51,6 +51,63 @@ export const PROJECT_IDENTIFIER_HEX_LENGTH = 32 as const;
 /** The single-segment project key pattern (prefix, hyphen, discriminator). */
 export const PROJECT_KEY_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u;
 
+/**
+ * The clone-identity pattern under the delivery vocabulary's own name
+ * (GH-406 F-3, DM-2): the SAME delivered value as the export above, never a
+ * new grammar. The delivered name stays exported as the same-value alias
+ * (NFR-2) until the mechanical rename (GH-408).
+ */
+export const CLONE_KEY_PATTERN = PROJECT_KEY_PATTERN;
+
+/**
+ * The declared project key's grammar (GH-406 F-2, DM-1): exactly 2 to 64
+ * characters of lowercase alphanumerics and hyphens with no leading or
+ * trailing hyphen, path-safe by construction. The PATTERN is only the shape;
+ * the REFUSAL of the reserved state segments lives in the predicate below,
+ * exact-match on the whole key.
+ */
+export const DECLARED_PROJECT_KEY_PATTERN = "^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$" as const;
+
+const DECLARED_PROJECT_KEY_REGEX = new RegExp(DECLARED_PROJECT_KEY_PATTERN, "u");
+
+/** The closed refusal vocabulary: every rejection names the violated rule. */
+export const DECLARED_PROJECT_KEY_REJECTIONS = [
+  "length",
+  "charset",
+  "hyphen-position",
+  "reserved-segment",
+] as const;
+export type DeclaredProjectKeyRejection = (typeof DECLARED_PROJECT_KEY_REJECTIONS)[number];
+
+/** The declared key's verdict: valid, or invalid with the rule it violated. */
+export type DeclaredProjectKeyVerdict =
+  | { readonly valid: true }
+  | { readonly valid: false; readonly rejection: DeclaredProjectKeyRejection };
+
+/**
+ * The declared-project-key predicate (GH-406 F-2, NFR-1).
+ *
+ * Grammar first: 2–64 lowercase alphanumerics and hyphens, no edge hyphen.
+ * Then the reserved state segments `unbound` and `projects` are refused
+ * exact-match on the whole key — substring-containing keys (`projects-x`,
+ * `my-unbound`) are accepted (spec §21). Enforcement lives where a key is
+ * used as a declared key (the consumer changes); this contract only defines
+ * the verdict.
+ */
+export const declaredProjectKeyVerdict = (key: string): DeclaredProjectKeyVerdict => {
+  if (key.length < 2 || key.length > 64) return { valid: false, rejection: "length" };
+  if (!DECLARED_PROJECT_KEY_REGEX.test(key)) {
+    if (key.startsWith("-") || key.endsWith("-")) {
+      return { valid: false, rejection: "hyphen-position" };
+    }
+    return { valid: false, rejection: "charset" };
+  }
+  if (key === PROJECT_UNBOUND_SEGMENT || key === PROJECTS_CONTAINER_SEGMENT) {
+    return { valid: false, rejection: "reserved-segment" };
+  }
+  return { valid: true };
+};
+
 /** The inclusive host-index entry bound (F-2, NFR-4 bounded work). */
 export const HOST_INDEX_MAX_ENTRIES = 2_000 as const;
 
@@ -223,6 +280,13 @@ export type ProjectScope =
       readonly kind: "project";
       readonly hostRoot: string;
       readonly projectKey: string;
+      /**
+       * The served read of the clone identity (GH-406 F-4, DM-3): the same
+       * value the marker and the host index persist under the delivered
+       * field name, served here under the vocabulary's name. A served read
+       * only — no persisted document carries this name.
+       */
+      readonly cloneKey: string;
       readonly projectIdentifier: string;
       readonly checkoutRoot: string;
       readonly stateLocation: string;
