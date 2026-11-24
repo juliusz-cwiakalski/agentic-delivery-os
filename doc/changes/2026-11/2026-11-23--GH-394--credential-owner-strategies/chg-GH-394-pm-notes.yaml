@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-24T05:11:32.927Z }
   review_fix: { started: null, completed: 2026-11-24T05:20:35.607Z }
   quality_gates: { started: null, completed: 2026-11-24T05:59:49.218Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-24T06:01:50.695Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Authority chain fixed at intake: the ticket BODY is superseded by the
@@ -855,4 +855,25 @@ notes:
       description: TC-DAEMON-121 is a load-marginal timing bound (owner
       follow-up candidate)."
     type: info
+    date: "2026-11-24"
+  - text: "DoD check (phase 10) DISPOSITION: PASS. Ledger: all 9 prior phases
+      completed (verified, 8040 records, 4/4 checksums). Plan completion: all 9
+      plan phases carry pm-notes notes entries naming id + commit + test result
+      (374aa159, 36fa3eeb, e57832fb, f89499db+d5b5d3de, 3847363a, f20a78d7,
+      7da08fb4, 5dcc0fb2, 2ced93ca; ledger sweeps c1854932, 3affecb1, a62897ca,
+      24f8a179, 4cae7529). ACs: all 20 satisfied — coverage matrix complete,
+      full suite 12780/0 at phase 9 + aggregate re-run PASS at HEAD, review
+      iter-3 verified every remediation fix and all fences. Docs: three
+      doc-syncer passes, no unresolved gaps; distribution guard PASS on the
+      final tree (96 docs, no drift, fresh check this phase). ADR-0014 landed
+      Proposed + decision_date null + index/register rows. Range verdict PASS
+      over 30 commits at gate time; the 31st (c601e77f, gates-evidence sweep)
+      landed after, same conforming template shape — recorded here per the
+      evidence-first standard. Post-merge obligations (by design, recorded for
+      the PR): real-store end-to-end demonstration (manual, never CI); OQ-1/OQ-2
+      live confirmations on real hosts (lingered-unit export; locked-keyring
+      reason token) — typed classified outcomes shipped, live behavior
+      confirmation post-merge; TC-DAEMON-121 flake observation; owner residuals
+      F-11/F-13/F-14/F-15/F-12 disposition via PR description."
+    type: decision
     date: "2026-11-24"
