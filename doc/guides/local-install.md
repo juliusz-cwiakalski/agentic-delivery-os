@@ -8,7 +8,7 @@ links:
 ---
 # Local Install, Delivery, and Re-Install
 
-This guide describes the operator cadence the product exists to make possible — **install a release, deliver iterations through the installed binary, decide, re-install** — together with the admissible installation origins, the readiness requirements, upgrade and rollback, removal, the opt-in `PATH` block, and the ownership split between the installed binary and the shell installers. It also describes the transitional read that keeps the configuration and delivery state you created under the previous identity visible.
+This guide describes the operator cadence the tool exists to make possible — **install a release, deliver iterations through the installed binary, decide, re-install** — together with the admissible installation origins, the readiness requirements, upgrade and rollback, removal, the opt-in `PATH` block, and the ownership split between the installed binary and the shell installers. It also describes the transitional read that keeps the configuration and delivery state you created under the previous identity visible.
 
 ## The cadence
 
@@ -76,7 +76,7 @@ All four write paths accept `--dry-run`: each prints its complete plan with abso
 
 ## The opt-in `PATH` block
 
-By default the product writes no profile file. `--add-to-path` appends exactly one delimited block to one profile:
+By default the tool writes no profile file. `--add-to-path` appends exactly one delimited block to one profile:
 
 ```bash
 jaiship install --add-to-path
@@ -107,7 +107,7 @@ The compatibility alias (`delivery-os`) keeps its delivered behaviour with one d
 
 `install migrate [--dry-run] [--backup-dir <abs>] [--stop-daemon]` moves the three declared prior-identity roots — host configuration, host state, and the invoking project configuration — to the current Jaiship identity. It reuses the lifecycle admission gates: a linked worktree, a development build, or the non-owning compatibility alias refuses with nothing moved. Start with `install migrate --dry-run`: it prints `install.migration.plan.v1`-shaped data as one header per root class, one line per entry, the would-be backup path, and `daemon: unchecked`, and writes nothing. An applying run copies and digest-verifies every planned entry into `<backup>/<stamp>/manifest.json` (`install.migration.manifest.v1`) before the first move, so a move is reversible by hand from the backup. A differing entry is a `conflict` retained on both sides; a byte-identical duplicate is retained; a symlink entry is never followed; `--backup-dir` must be an absolute path outside every source root. The command writes **zero records of any kind** in every mode (the declared audit exception), never edits your shell profile (a managed `PATH` block under a prior root is reported with the remedy "re-run the installed artifact's `install`"), and a second run reports `already-migrated` with no move and no new backup.
 
-The default backup root is `<current configuration root>/migration-backups/<UTC stamp>/`; `--backup-dir <abs>` relocates it (a relative or in-source path is refused). The plan is decided per entry: a source-only entry is `moved`; a destination-only entry is `already-migrated`; a byte-identical duplicate is `duplicate-identical` and is retained on both sides; a differing entry is `conflict` and is retained on both sides; a source symlink is `blocked` and a destination symlink is `conflict`, and neither is ever followed or moved. The run verdict is `migrated` or `already-migrated` at exit `0`, and `partial`, `conflict`, or `blocked` at exit `1`. A live daemon is refused without `--stop-daemon`; with it the daemon is stopped before the first move and is not restarted, and a dry run never reads the daemon. A second run moves nothing, creates no backup, and reports `already-migrated`. To reverse a move by hand, copy the entries back from the backup directory using its `manifest.json` digests — the tool performs no automatic reversal. The report names a residual line for a prior launcher or prior record left in place and a residual line for a managed `PATH` block whose path is under a prior root, with the remedy "re-run the installed artifact's `install`"; the product never edits your shell profile. The install domain is ten identities: the delegation refusal is retired, and a negative migration verdict is data, not an error code. The loaded-path guarantee applies throughout: the current configuration file is the one read whenever it exists, the prior file is reported not used and never opened, and a migrated checkout and host emit no prior-identity notice.
+The default backup root is `<current configuration root>/migration-backups/<UTC stamp>/`; `--backup-dir <abs>` relocates it (a relative or in-source path is refused). The plan is decided per entry: a source-only entry is `moved`; a destination-only entry is `already-migrated`; a byte-identical duplicate is `duplicate-identical` and is retained on both sides; a differing entry is `conflict` and is retained on both sides; a source symlink is `blocked` and a destination symlink is `conflict`, and neither is ever followed or moved. The run verdict is `migrated` or `already-migrated` at exit `0`, and `partial`, `conflict`, or `blocked` at exit `1`. A live daemon is refused without `--stop-daemon`; with it the daemon is stopped before the first move and is not restarted, and a dry run never reads the daemon. A second run moves nothing, creates no backup, and reports `already-migrated`. To reverse a move by hand, copy the entries back from the backup directory using its `manifest.json` digests — the tool performs no automatic reversal. The report names a residual line for a prior launcher or prior record left in place and a residual line for a managed `PATH` block whose path is under a prior root, with the remedy "re-run the installed artifact's `install`"; the tool never edits your shell profile. The install domain is ten identities: the delegation refusal is retired, and a negative migration verdict is data, not an error code. The loaded-path guarantee applies throughout: the current configuration file is the one read whenever it exists, the prior file is reported not used and never opened, and a migrated checkout and host emit no prior-identity notice.
 
 If you use the shell fallback after migrating, its declared override still points at the prior host root until the M4-S8 wrapper cutover (DEC-13). Read the override variable's name from the header of `scripts/lib/dispatch-authority.sh` and point it at the current host state root; the installed example owner-hold hook keeps its declared marker default until then, and its own header is the authority for that path. Do not add a pre-freeze literal to a page or widen the ADR-0003 DEC-8 allowlist to make a gate pass — the gate is correct.
 
@@ -121,7 +121,7 @@ The launcher is the **transitional** surface: once the artifact is installed, th
 
 ## What the fallback notices mean
 
-When the current identity's configuration or state is absent and the prior identity's is present, the product reads the prior one and prints exactly one notice per source kind:
+When the current identity's configuration or state is absent and the prior identity's is present, the tool reads the prior one and prints exactly one notice per source kind:
 
 - `prior-identity-fallback: config-read` — the configuration was read from the prior identity's path because the current one is absent.
 - `prior-identity-fallback: state-read` — the host state root in effect is the prior identity's default root.
@@ -132,7 +132,7 @@ Nothing is moved, copied, or deleted by any of these reads. Machine-global layer
 
 ## Optional one-step move
 
-If you want the old namespace retired now, stop the product and run `install migrate` — plan it first with `install migrate --dry-run`, then keep the verified backup until you have confirmed the moved checkout and host. The migration verb performs the move and the retired `--migrate` flag performs nothing; it only names `install migrate` as the remedy. A reversal stays a manual copy-back from the backup, as described above.
+If you want the old namespace retired now, stop the tool and run `install migrate` — plan it first with `install migrate --dry-run`, then keep the verified backup until you have confirmed the moved checkout and host. The migration verb performs the move and the retired `--migrate` flag performs nothing; it only names `install migrate` as the remedy. A reversal stays a manual copy-back from the backup, as described above.
 
 ## What is not renamed in this slice
 

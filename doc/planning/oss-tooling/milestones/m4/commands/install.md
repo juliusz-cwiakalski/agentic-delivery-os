@@ -1,7 +1,7 @@
 # `install` — the install lifecycle family
 
 Status: **delivered in GH-346** (M4-S1); the migration verb is delivered by GH-365 (M4-S2). Owner of the artifact class: the
-product binary. Owner of repository artifacts: `scripts/install.sh`.
+tool binary. Owner of repository artifacts: `scripts/install.sh`.
 
 ## Identity
 
@@ -10,7 +10,7 @@ executables for exact family parity and **owned by the primary identity only**:
 the compatibility alias advertises the family and refuses every entry point with
 one typed line (`install.identity.not-owning`, exit `1`) naming the invoked
 identity, stating that installation is owned by the primary identity, and giving
-the documented remedy — run the lifecycle through the installed product binary,
+the documented remedy — run the lifecycle through the installed tool binary,
 as this page and the local install guide document it. The alias writes nothing.
 
 `--version` answers `<binary-name> <version> (build <token>)` on one line at

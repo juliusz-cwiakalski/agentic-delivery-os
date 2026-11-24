@@ -128,7 +128,7 @@ The CLI-independent shell fallback reads its **own** pre-freeze state-root
 variable, with its unchanged precedence: that variable first, then the
 repository-local default (`<checkout>/.ai/local/state`), then the home default.
 Its exact name is declared — and documented — at the top of
-`scripts/lib/dispatch-authority.sh`: the product's pre-freeze prefix plus
+`scripts/lib/dispatch-authority.sh`: the tool's pre-freeze prefix plus
 `DISPATCH_STATE_ROOT`. The typed commands read `<PREFIX>_STATE_DIR`. The two
 names are separate contracts, so on a host that sets the typed override you must
 also export the fallback's variable with the same absolute host root as its

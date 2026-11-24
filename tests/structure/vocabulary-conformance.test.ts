@@ -7,8 +7,13 @@
  * `--flat` alias header, a named exception), the guides tree, the tools
  * documentation tree, the overview tree, and every command reference page
  * under every milestone's commands tree (doc/planning/oss-tooling/milestones:
- * each milestone's commands directory). The four named exceptions are
- * frozen until GH-408. Negative proofs live entirely in synthetic in-memory
+ * each milestone's commands directory). The sense rules speak the owner
+ * amendment's vocabulary (comment 7138707234): the declared-term sense is the
+ * product key, the tracker sense reads "Jira project", and a clone identity
+ * presented as the product or as a product key flags. The four named
+ * exceptions are frozen until GH-408; the reserved segment `projects` and the
+ * exceptions are state-layout/command-surface identifiers, not model
+ * vocabulary. Negative proofs live entirely in synthetic in-memory
  * inputs and test-created temp trees — no violation is ever written into the
  * committed tree.
  */
@@ -34,7 +39,7 @@ export type Finding = {
 const PRIMARY_CHECKOUT = /primary checkout/gi;
 const CHECKOUT_IDENTITY = /checkout identity/gi;
 const PROJECT_KEY = /project[ -]keys?/gi;
-const DECLARED_TERM = /declared project[ -]keys?/gi;
+const DECLARED_TERM = /declared product[ -]keys?/gi;
 
 /**
  * Whitespace-normalized matching (review iter-1 F-1): a violation wrapped
@@ -81,13 +86,14 @@ const originalLineAt = (text: string, offset: number): string => {
 };
 
 /**
- * R3's declared sense exemptions, each review-visible: the owner's own term
- * "declared project key", the tracker-configuration sense (tracker project
- * keys are a different contention domain), and the per-project configuration
- * sense where the phrase names a configuration key spelled immediately after
- * it in backticks. Evaluated on the normalized text (declared spans and the
- * config-key lookahead), with the line-shaped exemptions read from the
- * ORIGINAL line at the match's start.
+ * R3's declared sense exemptions, each review-visible, speaking the owner
+ * amendment's vocabulary (comment 7138707234): the owner's own declared term
+ * "declared product key", the tracker senses (tracker project keys and "Jira
+ * project" — the tracker's own word — are a different contention domain), and
+ * the per-project configuration sense where the phrase names a configuration
+ * key spelled immediately after it in backticks. Evaluated on the normalized
+ * text (declared spans and the config-key lookahead), with the line-shaped
+ * exemptions read from the ORIGINAL line at the match's start.
  */
 const projectKeyExempt = (
   normalized: string,
@@ -110,6 +116,11 @@ const projectKeyExempt = (
   // tracker's own key name and its placeholder on one line — a different
   // contention domain, never the clone identity.
   if (/^\s*project_key\s*:/i.test(line)) return true;
+  // The tracker's own word: "Jira project" names the tracker's project, so a
+  // "project key" in that sense is the tracker's key, never the clone
+  // identity (the owner amendment retires "project" from the model's own
+  // vocabulary and reserves "Jira project" for the tracker's word).
+  if (/\bjira project\b/i.test(line)) return true;
   return false;
 };
 
@@ -368,7 +379,8 @@ describe("TC-DPKCONF-003 the four named exceptions are individually exempt", () 
   });
 
   test("the declared-term and sense exemptions are exact, not family-wide", () => {
-    expect(scanText("the declared project key names the project")).toEqual([]);
+    expect(scanText("the declared product key names the product")).toEqual([]);
+    expect(scanText("the Jira project key is the tracker's own word")).toEqual([]);
     expect(scanText("the project key `commit.phaseCommit: false` disables the commit")).toEqual([]);
     expect(scanText("| Tracker Configuration | connection details, project keys |")).toEqual([]);
     expect(
@@ -376,5 +388,8 @@ describe("TC-DPKCONF-003 the four named exceptions are individually exempt", () 
         (finding) => finding.rule,
       ),
     ).toEqual(["project-key-as-clone-identity"]);
+    expect(scanText("the project key names the product").map((finding) => finding.rule)).toEqual([
+      "project-key-as-clone-identity",
+    ]);
   });
 });

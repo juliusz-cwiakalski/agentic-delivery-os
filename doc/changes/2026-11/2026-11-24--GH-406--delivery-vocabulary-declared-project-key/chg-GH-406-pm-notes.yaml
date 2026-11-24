@@ -664,6 +664,37 @@ notes:
       OK new-code-naming 2505/0/4."
     type: info
     date: "2026-11-24"
+  - text: "OWNER VOCABULARY AMENDMENT re-execution, plan phase 5 complete (commit
+      d0c5c225): ODR-0006 re-worded as the WHOLE RECORD per the DoR iter-4
+      clause - the body AND the front matter. Front matter: summary,
+      business_impact, customer_impact and service re-worded off the
+      pre-amendment nouns (the delivered front matter printed PROJECT and
+      PROJECT REPOSITORY); governance.driver now cites the FULL supersession
+      chain ticket body < delivery brief (comment 7122871259) < VOCABULARY
+      AMENDMENT (comment 7138707234). Body: the amendment's product nouns
+      with the retirement clause (project retired from the model's own
+      vocabulary, Jira project for the tracker's word, legacy names as named
+      exceptions), the section retitled The product key with the renamed
+      contract names DECLARED_PRODUCT_KEY_PATTERN and isDeclaredProductKey,
+      the mapping row Product = a group with NAMED EXCEPTIONS (groupKey, the
+      delivery.projects.groups.v1 schema, projects.yaml - renaming them is
+      GH-408), the context recording the amendment's direction, and both
+      prose rules recorded. Status stays Proposed, decision_date stays null,
+      no ados_distribution header, no earlier record touched,
+      00-register.md untouched; the 00-index.md row keeps its mechanism with
+      only the TITLE TEXT re-worded to the product vocabulary.
+      TC-DPKODR-001's automated arms extended (renamed terms, product-key
+      section, retirement clause, supersession-chain comments, mapping-row
+      named exceptions, DECLARED_PRODUCT_KEY_PATTERN/isDeclaredProductKey
+      by name) - the re-worded front-matter prose and row title carry NO
+      automated assertion per the coverage posture; review-time diff
+      inspection backstops (scanner excludes doc/decisions/**). Boundary
+      evidence: gate run 000006-pnpm-check-gh406-amend-phase5.log green
+      end-to-end - exit 0, 13/13 stages in-chain, bun test 12854 pass / 4
+      skip / 0 fail, OK new-code-naming 2505/0/4. Exactly the three declared
+      paths changed under git status."
+    type: info
+    date: "2026-11-25"
   - text: "DoR iter-4 verdict READY (focused closure gate, 10/10 facets PASS, 0
       blocking): iter-3 finding 1 verified remediated — renamed tracker title
       adopted byte-exact in spec front matter, test-plan H1, plan header; DEC-6
