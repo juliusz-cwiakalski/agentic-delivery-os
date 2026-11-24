@@ -31,6 +31,16 @@ tier:
 #           with reasons. F7: seam wording aligned to the governing record's
 #           four construction inputs (active harness identity, child runner,
 #           environment record, store facts) per test plan rev 1.1 TA-1.
+#   rev 3 — 2026-11-24: review iteration 1 remediation (verdict
+#           code-review/review-iter-1.yaml, FAIL; findings F-1..F-4). Phase 8
+#           appended: fix the adapters #credentials/* packed-declaration
+#           resolution failure (exports-parity + TC-RELEASE-002 red — a
+#           DELIVERY REGRESSION introduced at 36fa3eeb, NOT pre-existing:
+#           review reproduced PASS at merge-base 4f1a7ddc in a clean build
+#           worktree), wire the missing style-conditional strict pass for
+#           wrong-style known source-key fields (F-1/DM-1), realize AC-F3-5's
+#           shape-drift harness-and-field naming on the rendered refusal, and
+#           record the undeclared-scope companions in pm-notes.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # Plan-level decision record (spec §15 DEC-1..DEC-14; ADR-0014, landing as
@@ -391,3 +401,18 @@ phases:
         - doc/spec/features/feature-doctor.md
         - doc/spec/features/feature-dispatch-engine.md
         - doc/spec/features/feature-merge-verify-deploy.md
+  - id: 8
+    title: Code Review Remediation (Iteration 1)
+    kind: delivery
+    summary: "review-iter-1 (FAIL) remediation — (1) packages/adapters/src/credentials/index.ts: replace the three #credentials/* sibling imports with relative ./allowlist.js / ./command-strategy.js / ./harness-store-strategy.js imports (the adapters subpath convention, cf. packages/adapters/src/git/index.ts), so dist/credentials/index.d.ts resolves inside the packed artifact and exports-parity + TC-RELEASE-002 pass again — the red gate is a delivery regression introduced at 36fa3eeb (review verified PASS at merge-base 4f1a7ddc in a clean build worktree), so the pre-existing-defect disposition is factually unavailable and must be corrected, never silently waived; (2) close the F-1/DM-1 gap: a known source-key field declared on a style that does not admit it must refuse by name at load — enforce per-style allowed-key sets in the shared validator (or split the catalog credential field tables per style), replacing the silently-dropping raw-parser behavior the current TC-ALLOW-003 arm pins, with wrong-style-field refusal cases added; (3) realize AC-F3-5 on the rendered failure: thread the harness-store classification's drift field (and harness identity) onto the projected refusal within the closed projection, or STOP-and-report the DM-2 source-format tension to PM for a deliberate spec amendment, and extend TC-HARNESS-005 to assert the naming on the resolved port failure, not only the reason token; (4) record the undeclared-scope companions (packages/core/src/contracts/status.ts, packages/core/src/domain/verify-gates.ts, doc/00-index.md, doc/overview/glossary.md, doc/spec/features/feature-monorepo-scaffold-toolchain.md) as pm-notes entries with the reason each was necessary, and extend the forwarding-site map's no-literal supporting-file enumeration accordingly"
+    # TC ownership: TC-ALLOW-003 and TC-HARNESS-005 extension arms land here; exports-parity and TC-RELEASE-002 must be green at this phase's verify.
+    # Fences in force: the strict pass stays in the credential source-key load path (no new ambient read, NFR-7); the fix in (1) changes no behaviour — imports only; (3) must not interpolate configuration text or child output into any rendered field (F-4/DM-2).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/credential-strategies-command.test.ts tests/behaviour/credential-strategies-harness-store.test.ts tests/behaviour/credential-port.test.ts; pnpm build && bun run scripts/checks/exports-parity.ts; bun test tests/checks/privacy-release.test.ts; bun run scripts/checks/secret-read-boundary.ts; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/adapters/src/credentials/index.ts
+        - packages/core/src/provider/validate.ts
+        - packages/core/src/config/catalog.ts
+        - tests/behaviour/credential-strategies-command.test.ts
+        - tests/behaviour/credential-strategies-harness-store.test.ts
+        - doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/chg-GH-394-pm-notes.yaml

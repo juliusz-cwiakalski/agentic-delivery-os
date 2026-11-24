@@ -534,3 +534,62 @@ notes:
       system_spec_update via @doc-syncer."
     type: info
     date: "2026-11-24"
+  - text: "Doc reconciliation complete (3c9d0d9f): six targets + three contract-driven
+      cross-link fixes (00-index row, glossary rows, scaffold subpath row) — the
+      three were accepted then as current-truth accuracy; the reviewer later
+      required them CLASSIFIED as scope additions (F-4b), done in this
+      remediation. Always-resolve judgment recorded: no new feature spec;
+      adapter-ports is the credential area's coherent home."
+    type: info
+    date: "2026-11-24"
+  - text: "Review iter-1: FAIL (review YAML in change folder; remediation Phase 8
+      added to plan rev 3; 0c/1h/2m/1l). (F-1 HIGH) exports-parity +
+      TC-RELEASE-002 is a DELIVERY REGRESSION, not pre-existing: reviewer
+      reproduced the check PASSING at merge-base 4f1a7ddc (fresh worktree,
+      frozen lockfile, clean build); root cause 36fa3eeb made
+      adapters credentials/index.ts import via '#credentials/*' subpath
+      specifiers — package.json maps them to src/*.ts while 'files' publishes
+      only dist, so dist d.ts carries unresolvable '#'-specifiers (attw
+      InternalResolutionError); failing entrypoint is ./credentials, NOT
+      git/gitlab/jira/github as the coder attributed. Fix: relative imports +
+      rebuild + correct the disposition notes. (F-2 MEDIUM) validate.ts:281 —
+      F-1/DM-1 unknown-field-on-known-style refusal never wired (raw parser
+      tolerant; composition-layer strict pass claimed in phase-3 design
+      correction but grep-verified absent). (F-3 MEDIUM) AC-F3-5 unmet:
+      shape-drift classification carries field but credentialMissing drops it;
+      DM-2 source format names only the integration id; TC-HARNESS-005 pins
+      reason only. (F-4 LOW) scope classification: contracts/status.ts +
+      domain/verify-gates.ts outside all phase scopes and absent from the
+      committed map (F-4a); the three doc files unclassified in pm-notes
+      (F-4b). Fences all verified holding; five disclosed deviations all
+      ACCEPTED; battery re-verified green under review (130+171+15, tripwire
+      111 surfaces, boundary 489 files)."
+    type: info
+    date: "2026-11-24"
+  - text: "Retro: I carried the coder's 'pre-existing at baseline c1854932' claim
+      without catching that c1854932 is a MID-BRANCH commit (post-phase-3), not
+      the merge-base 4f1a7ddc — so the reproduction proved nothing about
+      pre-existence. The reviewer, sent to verify the claim independently,
+      reproduced at the true merge-base and refuted it. Lesson: 'baseline'
+      evidence must anchor at the merge-base; a mid-branch reproduction is
+      presence evidence only. My delegation DID instruct merge-base
+      verification — the control worked; the miss was accepting the coder's
+      framing in my own pm-notes before review. Cost: one review iteration;
+      the false disposition would have survived to the owner."
+    type: retro
+    date: "2026-11-24"
+  - text: "Remediation state (review iter-1 FAIL): plan rev 3 Phase 8 authored by
+      reviewer (verify schema with plan validate before delegation). Fix list:
+      (1) relative imports in adapters/src/credentials/index.ts per the
+      ./x.js convention, rebuild, exports-parity + TC-RELEASE-002 green;
+      (2) composition-layer wrong-style-known-field refusal (validate.ts /
+      wiring) per F-1/DM-1 + fix TC-ALLOW-003 to pin the refusal;
+      (3) shape-drift failure carries harness+field through to rendered
+      surfaces; DM-2 source format includes the field; TC-HARNESS-005 asserts
+      the naming; (4) classify status.ts + verify-gates.ts into the forwarding
+      map (no-literal supporting files) and the three doc files in pm-notes;
+      (5) correct the two disposition notes (phase-3 + phase-4 entries and the
+      carried-risk note) to delivery-regression truth. After coder: re-run
+      doc-syncer (code changed), re-run reviewer iter-2, then quality_gates."
+    type: info
+    date: "2026-11-24"
