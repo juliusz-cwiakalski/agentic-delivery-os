@@ -271,3 +271,26 @@ notes:
       green standalone (all OK, exit 0; OK new-code-naming 2503/0/3)."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 7 complete (commit 732a16ea): the behaviour proof landed -
+      tests/behaviour/projects-clone-key.test.ts (TC-DPKACC-001 behaviour half:
+      the production path serves cloneKey matching the marker and the
+      host-index entry; the direct field-name assertion pins the delivered
+      marker/host-index field names; resolving twice is stable and writes
+      nothing) and tests/behaviour/clone-identity-fixtures.test.ts (G-1
+      worktree shares the main checkout's identity stable across reads; G-2
+      two clones resolve the same declared key with different identities and
+      state roots, disjoint namespaces asserted; G-3 out-of-grammar group key
+      Platform loads unchanged exit 0 with byte-identical configuration and
+      the grammar-valid twin loads identically - no-public-pattern preserved).
+      One production-behaviour discovery recorded for the narrative: repos
+      list is read-only and registers nothing - registration rides a
+      state-opening command (status), used in the suite. Baseline extension in
+      the same commit: tests/behaviour/projects-clone-key.test.ts (direct
+      field-name assertion; naming-rule fence). NFR-7 spot check: the fixture
+      suite ran twice, 3/3 pass both runs. Boundary evidence: gate run
+      tmp/run-logs-runner/2026-11-24/164358-pnpm-check-quality-gate.log -
+      stages 1-3 green, bun test 12844 pass / 4 skip / 1 known-deferred
+      TC-RELEASE-001 (only failure), stages 5-13 green standalone (all OK,
+      exit 0; OK new-code-naming 2505/0/4)."
+    type: info
+    date: "2026-11-24"
