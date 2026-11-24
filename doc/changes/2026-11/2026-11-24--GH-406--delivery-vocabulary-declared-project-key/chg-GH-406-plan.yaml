@@ -9,6 +9,7 @@ tier:
     - "the naming check's committed base constant (22b15d31) unreachable at run time means the check fails closed: stop and report — the constant is re-pointed only deliberately through review, never silently, and never widened to make the tree pass (F-7, TC-DPKNAM-001)"
     - "a new file that cannot carry its bare-token baseline reason is a naming-rule defect: the entry is mandatory reason-bearing (NFR-6) — stop and report rather than land an unexplained entry or an unspecified token use"
 # ---------------------------------------------------------------------------
+# Title (tracker title, owner-renamed 2026-11-24T17:06:57Z alongside the amendment, adopted verbatim): M4-S39: Delivery vocabulary: product, repository, main checkout, worktree, lane, clone identity; credentials bind to the product key (M4)
 # Plan-level decision record (spec §15 DEC-1..DEC-6): the owner's sources are
 # authoritative in the order ticket body < delivery brief (comment
 # 7122871259) < VOCABULARY AMENDMENT (comment 7138707234); the brief
@@ -32,8 +33,11 @@ tier:
 # locked command name (ODR-0003 DC-4) and prints PRODUCT / REPOSITORY;
 # "project" is RETIRED from the model's own vocabulary ("Jira project" for
 # the tracker's word); slugs, folder, branch, suite file names, the changeset
-# file name and the change title field stay as the change's own records —
-# identifiers are not vocabulary (amendment §G). ODR-0006 is the next free
+# file name stay as the change's own records — identifiers are not vocabulary
+# (amendment §G). The change TITLE is NOT one of these identifiers: the owner
+# renamed the tracker title 2026-11-24T17:06:57Z alongside the amendment
+# (amendment §G covers only branch + change-folder slugs) and the renamed
+# title is adopted verbatim at the top of this header. ODR-0006 is the next free
 # decision id, reserved by the brief (pm-notes; ODR-0001..0005 exist at base
 # 22b15d31).
 #
@@ -407,7 +411,7 @@ phases:
   - id: 5
     title: Decision record ODR-0006 and the decision-index row — re-worded to the amendment's product nouns with the retirement clause
     kind: delivery
-    summary: "AMENDED RE-EXECUTION (rev 3) — re-word the governing record doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md (file name KEPT — an identifier) to state the vocabulary with the amendment's product nouns AND the retirement clause: 'project' is retired from the model's own vocabulary and 'Jira project' names the tracker's own word — still with status Proposed and decision_date null, never Accepted; the owner accepts or rejects the vocabulary at the pull request; the mapping of the locked names keeps its delivered mechanism with the amendment's row A: product ≡ a group (groupKey, the delivery.projects.groups.v1 schema, the <configDirectoryName>/projects.yaml file — NAMED EXCEPTIONS denoting a product; renaming them is GH-408), repository ≡ the members[] declaration with root/repoKey as clone locators and `member` naming the declaration entry, clone identity ≡ repoKey and projectKey same value across the marker field, host-index key, public repos.v1 field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, board --project, group member locators, per-clone state root, main checkout ≡ the flat record set keyed by clone identity with root as the last invoking checkout; the product key with its grammar and reserved-segment refusal (DECLARED_PRODUCT_KEY_PATTERN, isDeclaredProductKey); and how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read under the new vocabulary WITHOUT any rename or amendment; the decision-index row in doc/decisions/00-index.md keeps its delivered mechanism unchanged (no ados_distribution header on the record — project-specific decision artifact; no earlier record and not 00-register.md is touched); extend tests/structure/delivery-vocabulary.test.ts with TC-DPKODR-001's structural arms — the record exists, its front matter carries status Proposed and decision_date null, the index lists it, and its body references the vocabulary with the product nouns, the locked-name mapping, the grammar, the RETIREMENT clause, and its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5 (presence-of-section assertions, not prose equality)"
+    summary: "AMENDED RE-EXECUTION (rev 3) — re-word the governing record doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md (file name KEPT — an identifier; the re-word covers the WHOLE RECORD: the body AND its front matter — the `summary`, `business_impact` and `customer_impact` fields re-worded off the pre-amendment nouns (the delivered front matter prints 'PROJECT and PROJECT REPOSITORY') and the `governance.driver` field citing the FULL supersession order ticket body < delivery brief (comment 7122871259) < VOCABULARY AMENDMENT (comment 7138707234) instead of the brief alone) to state the vocabulary with the amendment's product nouns AND the retirement clause: 'project' is retired from the model's own vocabulary and 'Jira project' names the tracker's own word — still with status Proposed and decision_date null, never Accepted; the owner accepts or rejects the vocabulary at the pull request; the mapping of the locked names keeps its delivered mechanism with the amendment's row A: product ≡ a group (groupKey, the delivery.projects.groups.v1 schema, the <configDirectoryName>/projects.yaml file — NAMED EXCEPTIONS denoting a product; renaming them is GH-408), repository ≡ the members[] declaration with root/repoKey as clone locators and `member` naming the declaration entry, clone identity ≡ repoKey and projectKey same value across the marker field, host-index key, public repos.v1 field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, board --project, group member locators, per-clone state root, main checkout ≡ the flat record set keyed by clone identity with root as the last invoking checkout; the product key with its grammar and reserved-segment refusal (DECLARED_PRODUCT_KEY_PATTERN, isDeclaredProductKey); and how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read under the new vocabulary WITHOUT any rename or amendment; the decision-index row in doc/decisions/00-index.md keeps its delivered mechanism unchanged while the row's TITLE TEXT is re-worded to carry the product vocabulary — the delivered row title still speaks the pre-amendment nouns (no ados_distribution header on the record — project-specific decision artifact; no earlier record and not 00-register.md is touched); extend tests/structure/delivery-vocabulary.test.ts with TC-DPKODR-001's structural arms — the record exists, its front matter carries status Proposed and decision_date null, the index lists it, and its body references the vocabulary with the product nouns, the locked-name mapping, the grammar, the RETIREMENT clause, and its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5 (presence-of-section assertions, not prose equality); TC-DPKODR-001's automated arms assert the body and the status/date front-matter fields and the conformance scanner excludes doc/decisions/** — the re-worded front-matter prose (summary, business_impact, customer_impact, governance.driver) and the row-title text carry NO automated assertion, so this whole-record clause is their binding direction"
     # AMENDMENT STATUS (rev 3): RE-EXECUTED — the delivered record (commit
     # 4ab411fd) states the pre-amendment nouns; amendment item E directs the
     # re-word with the retirement clause. Status Proposed / decision_date
@@ -598,3 +602,27 @@ phases:
 #           byte-identity verification stays inside phase 3, the
 #           header-touching phase; the amendment's ~45-line 'the tool'
 #           remainder and all identifier renames stay routed to GH-408.
+#   rev 4 — 2026-11-24: DoR iter-3 remediation (two fixes; all rev-3
+#           amendment content otherwise byte-intact — renames incl.
+#           declaredProjectKeyVerdict → isDeclaredProductKey, headers,
+#           re-execution accounting, fences):
+#           (1) phase 5's ODR-0006 re-word declared WHOLE-RECORD: the body
+#           AND the front matter (`summary`, `business_impact`,
+#           `customer_impact` re-worded off the pre-amendment nouns — the
+#           delivered front matter prints PROJECT and PROJECT REPOSITORY —
+#           and `governance.driver` citing the full supersession order
+#           ticket body < delivery brief 7122871259 < amendment 7138707234),
+#           AND the doc/decisions/00-index.md row TITLE TEXT carrying the
+#           product vocabulary while the row mechanism stays unchanged
+#           (status Proposed and decision_date null unchanged; no earlier
+#           record touched) — the delivered record carries pre-amendment
+#           content in exactly those front-matter fields and the row title,
+#           TC-DPKODR-001 asserts body-only and the conformance scanner
+#           excludes doc/decisions/**, so the whole-record clause is the
+#           binding direction of the re-word;
+#           (2) title provenance: the owner renamed the tracker title
+#           2026-11-24T17:06:57Z alongside the amendment (amendment §G
+#           covers only branch + change-folder slugs) — the renamed title
+#           is adopted verbatim at the top of the header comment and the
+#           'the change title field stays as the change's own records'
+#           identifier clause is corrected accordingly.
