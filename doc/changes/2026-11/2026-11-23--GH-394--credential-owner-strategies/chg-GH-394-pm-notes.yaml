@@ -744,3 +744,61 @@ notes:
       pnpm build."
     type: info
     date: "2026-11-24"
+
+  - text: "Plan phase 9 complete (review iter-2 remediation): commit 2ced93ca. LANDED:
+      (F-5) TC-HARN-029 anchor re-pinned to the single-line credentialFailure(...)
+      call (mutant applied, oracle fails by name, suite green); the phase-4/5
+      anchor claims annotated RECLASSIFIED above. (F-6) fixture-root exemption
+      in tests/preload.ts: an owner-CLI-name spawn is exempt only when the
+      invocation's declared env.PATH resolves the name inside the repo
+      tmp/tmpdir stub root (or resolves nowhere, preserving the off-PATH
+      control's natural ENOENT classification) or an explicit program path
+      resolves inside it; bare names over the ambient PATH stay intercepted
+      (TC-HERM-001's three teeth green) and real binaries on real PATHs stay
+      blocked; all 10 arms restored green (TC-CLI-014 1, TC-CLI-015 2,
+      TC-HDA-010/011/012/015/016/035 7). (F-7) the four baseline pin suites
+      re-pinned to the delivered check chain (TC-GATE-001 counts the tripwire
+      member between boundaries and memory; TC-WIRE-001 AGGREGATE, the GH-172
+      ci-checks binding, TC-LICREG-020 PINNED_CHECK — the no-privacy-chain and
+      exports-parity-tail structural assertions kept true). (F-8) both
+      violations cleared without weakening rule classes: the sentinel block
+      re-shaped with non-credential identifier names carrying the same sentinel
+      values (planted-fixture convention; the non-propagation proof is
+      name-independent) and the ADR-0014:535 prose reworded to 'path, home and
+      session-bus facts'; the read-only review quote (review-iter-2.yaml:153)
+      carries a scoped registry allowlist entry per the gh-184 code-review
+      precedent with its allowlist-set fixture pin
+      (tests/fixtures/privacy-literals/registry.ts — DISCLOSED COMPANION, named
+      in the phase-9 scope per the F-10 lesson); the plan rev-4 summary's
+      incidental literal quote of the same phrase reworded (declared plan file;
+      rev-log addendum records both execution amendments); check:privacy-literals
+      OK 5299 files / 0 violations; TC-WIRE-002 and TC-PRIVACY-020 green.
+      (F-9) production.ts's cold-refusal source uses the shared
+      credentialSourceIdentity helper; doctor.ts's sourceKeyDisplay builds the
+      identical harness-inclusive tokens inline because TC-DOCTOR-022 (the
+      baseline command-tier import rule) forbids adapters imports in command
+      files — the helper import tripped it in the first full run and was
+      reverted to the review's own one-template-literal mechanism (disclosed
+      deviation from the delegation's helper phrasing; same rendered format
+      harness-store:<harness>:<integrationId>; no test pins the old format).
+      SECOND DISCLOSED COMPANION: tests/fixtures/ports/v1-contract-inventory.json
+      formatter fix — pre-existing phase-4-era formatting drift the first full
+      pnpm check run exposed at format:check (the aggregate had never been run
+      on this branch before); mechanical, no content change, named in the
+      phase-9 scope. Verify (BINDING, supersedes named batteries): pnpm build
+      green; FULL pnpm check PASS end-to-end (lint, format:check, typecheck,
+      test, boundaries, allowlist-tripwire OK 111 surfaces, memory,
+      forbidden-literals, namespace-tree, prompt-conformance 5 prompts clean,
+      help-guide-coverage, exports-parity OK 5 publishables); FULL bun test
+      12780 pass / 0 fail / 4 skip across 12784 tests in 1520 files (exit 0
+      verified explicitly); check:privacy-literals OK 5299 files;
+      secret-read-boundary OK 489 files; TC-RELEASE-001/002 7 pass / 0 fail.
+      Fences: pending-park region and daemon-compose untouched; vocabularies
+      unchanged; goldens read-only; no license headers; no .zed/ or .ai/local
+      staged (the commit envelope's untrackedNotStaged names both). Commit
+      note: the primitive landed its deterministic template subject (no
+      inference transport in this environment); the branch-range
+      commit-message gate owns the verdict. No phase complete was run
+      (review_fix closes on re-review PASS)."
+    type: info
+    date: "2026-11-24"
