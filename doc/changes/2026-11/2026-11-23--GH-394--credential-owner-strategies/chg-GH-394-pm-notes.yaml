@@ -543,6 +543,45 @@ notes:
       than dispositioned as baseline. Next: system_spec_update via @doc-syncer."
     type: info
     date: "2026-11-24"
+  - text: "Review iter-2: FAIL (code-review/review-iter-2.yaml; plan rev 4 + Phase 9
+      remediation, 18 scoped files; 0c/4h/1m/1l/2i). F-1..F-4 ALL verified
+      fixed (exports-parity OK, TC-RELEASE 7/0, dispositions corrected).
+      Rulings: (a) resolver name-exemption ACCEPTED as delivered (both shipped
+      defaults literal => {style,name} is exactly the synthesizable set;
+      origins-aware trimming = info residual F-11, follow-up candidate);
+      (b) TC-HARN-029 in-iteration fix required (anchor re-pinned at phase 4
+      to a layout matching NEITHER text — no-op mutant; RECLASSIFIED
+      annotations on the inaccurate claims); (c) both out-of-format sites fix
+      IN-ITERATION — provenance defeats residual framing (production.ts:2494
+      added by d5b5d3de, doctor.ts:76 by f89499db — this change's own code);
+      (d) spec DM-2 e.g. example suffices, no reopen. BLOCKING: first FULL bun
+      test on the branch (12,784 tests, run twice, identical) exposed 18 red
+      arms / 9 suites + 2 live-tree privacy-literals violations, ALL in-branch
+      (phases 4-6, remediation 8), none pre-existing at merge base: F-5
+      TC-HARN-029 anchor; F-6 phase-5 preload guard blocks 10 pre-existing
+      stub-spawn arms (TC-CLI-014/015, TC-HDA-010/011/012/015/016/035) —
+      fixture-root exemption or seam injection without weakening the guard;
+      F-7 phase-5 check-chain insertion broke 4 byte-unchanged pin suites
+      (TC-GATE-001, TC-WIRE-001, GH-172 binding, TC-LICREG-020); F-8
+      privacy-literals: secret.credential-assignment sentinel in phase-5 test
+      + private.absolute-user-path in ADR-0014:535 prose — per registry
+      convention, never weaken rule classes; F-9 the two template literals;
+      F-10 plan scope self-edit recorded in rev 4. Phase 9 verify is BINDING:
+      full pnpm check green end-to-end; named batteries retired as sole
+      verify evidence."
+    type: info
+    date: "2026-11-24"
+  - text: "Retro: every delivery phase gate ran NAMED batteries only — the full
+      suite (12,784 tests) was never run until review iter-2. My coder
+      delegations said 'run the phase's tests' per the test plan's named
+      battery definition. Lesson: a delivery of this size needs one full-suite
+      run before the review phase — cheap insurance that would have caught the
+      guard/pin-suite/privacy classes at phases 5/6 instead of at review.
+      Cost: one review iteration + a phase-9 remediation cycle. The reviewer
+      running the full suite itself is exactly the independence the gate
+      exists for."
+    type: retro
+    date: "2026-11-24"
   - text: "Doc reconciliation complete (3c9d0d9f): six targets + three
       contract-driven cross-link fixes (00-index row, glossary rows, scaffold
       subpath row) — the three were accepted then as current-truth accuracy; the
