@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-24T18:47:57.274Z }
   quality_gates: { started: null, completed: 2026-11-24T19:07:40.291Z }
   dod_check: { started: null, completed: 2026-11-24T19:08:36.498Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-24T19:12:10.211Z }
 decisions: []
 open_questions: []
 blockers: []
@@ -510,4 +510,19 @@ notes:
       form (moves toward R3 intent; real tree unaffected; pin the delta at the
       next suite touch)."
     type: decision
+    date: "2026-11-24"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/411 — head
+      feat/GH-406/delivery-vocabulary-declared-project-key pushed first (24
+      commits, GH-386 lesson honored), base main-tools, range 22b15d31..73697b10
+      (59 files, +4873/−173). pr-manager re-verified range lint on the final
+      24-commit range: PASS, 0 offending. Ticket synced via gh CLI: labels
+      change/planning/review, assigned juliusz-cwiakalski, one ready-for-review
+      comment (issuecomment-7141736830). PR body carries evidence (DoR iter-1→2,
+      review iter-1 F-1 → iter-2 PASS, gates 13/13 + 12848/0/4, fixtures 3/3
+      double-run, range lint PASS), owner decisions (ODR-0006 Proposed, accept
+      or reject at review), dispositioned residuals (F-5, F-6, GH-408
+      deferrals), and the A-extended scopeDrift acceptance. Merge authority
+      stays with the owner; lifecycle stops at the open PR."
+    type: info
     date: "2026-11-24"
