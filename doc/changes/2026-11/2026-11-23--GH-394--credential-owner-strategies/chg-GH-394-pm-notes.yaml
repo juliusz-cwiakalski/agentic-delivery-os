@@ -624,3 +624,76 @@ notes:
       accuracy — classified here per review F-4b."
     type: info
     date: "2026-11-24"
+  - text: "Plan phase 8 complete: commit 5dcc0fb2. LANDED: (F-1) the '#credentials/*'
+      imports-map specifiers converted to the adapters' relative ./x.js
+      sibling-import convention in packages/adapters/src/credentials/index.ts
+      AND packages/adapters/src/credentials/command-strategy.ts — the latter is
+      the second site of the same 36fa3eeb defect (its runtime import of
+      allowlist values carried the same unresolvable specifier through dist);
+      exports-parity OK (5 publishables pass attw esm-only) and
+      TC-RELEASE-001/002 green (privacy-release 7 pass / 0 fail) after rebuild —
+      the delivery regression is closed and the false pre-existing dispositions
+      above are corrected. (F-2) the DM-1 wrong-style known-field refusal wired
+      in packages/core/src/provider/validate.ts: parseCredentialSourceKey
+      enforces per-style required+allowed key sets and refuses by name at
+      configuration load (e.g. 't.program: the literal style does not admit
+      program'); keys outside the source-key vocabulary keep TC-POL-SEC-002's
+      pinned two-layer semantic (raw layer ignores, config layer refuses).
+      DESIGN TENSION RESOLVED IN SCOPE, FLAGGED FOR REVIEWER ITER-2: the config
+      resolver deep-merges the DM-5 default declaration (defaults.ts literal
+      objects) with every user restyling at the same path, so a declared
+      command/harness-store sourceKey legitimately carries the default's `name`
+      member — the merged hybrid is exactly what TC-COMP-001/AC-F1-1 resolve
+      through the real composition (the review's own green battery pins it). An
+      unqualified strict pass refuses that hybrid, fails the tracker reference
+      back to the default literal, and turns TC-COMP-001 red; the strict pass
+      therefore exempts exactly `name` — the one member the config layer
+      synthesizes — and refuses every operator-introducible wrong-style field
+      (program/args/harness/integrationId/suffix/timeoutMs). TC-ALLOW-003
+      re-pinned: refusal arms literal+program, environment-prefixed+program,
+      command+harness, harness-store+args, plus the exemption pin and the
+      unknown-key tolerance pin. The cleaner long-term semantic
+      (origins-aware trimming at the composition edge, or
+      replace-on-style-change merge in the config resolver) touches
+      production.ts/resolver.ts — outside phase-8 declared scope; needs a
+      PM/reviewer ruling. (F-3) AC-F3-5 realized on the rendered failure:
+      credentialSourceIdentity's harness-store arm names the harness
+      (harness-store:<harness>:<integrationId>) and shape-drift refusals carry
+      the offending field on the rendered source (… field=<name>; closed
+      classifier tokens only, never configuration text or child output);
+      TC-HARNESS-005 extended to assert harness-and-field naming on the
+      resolved port failure and the classification's field member;
+      TC-HARNESS-002/003 source pins re-pinned to the extended format
+      (companion of the DM-2 extension, same file). KNOWN REMNANT (disclosed,
+      out of scope): packages/cli/src/production.ts:2494 (pre-composition cold
+      refusal) and packages/cli/src/commands/doctor.ts:76 (sourceKeyDisplay)
+      still build the harness-store identity as
+      harness-store:<integrationId> — a format inconsistency with the extended
+      DM-2 source for the same style; flagged for reviewer iter-2 / doc-syncer.
+      (F-4) both classifications appended (the F-4 note above) and the
+      forwarding-site map extended with the two no-literal supporting-file rows
+      (plan rev 3; envelope scopeDrift on the plan file accepted). Verify:
+      pnpm build; exports-parity OK; privacy-release 7 pass / 0 fail (the
+      F-1 gate); named credential battery 239 pass / 0 fail across 24 suites
+      (incl. TC-COMP-001..003 composition proofs, TC-POL-SEC-002 canary,
+      TC-HARNESS-001..007, TC-ALLOW-001..006, TC-REASON/TC-REMEDY/TC-REDACT
+      arms, the phase-6 guide re-pin suite); secret-read-boundary OK 489 files;
+      allowlist-tripwire OK 111 surfaces, 0 declarations, 0 coordinates — NO
+      snapshot refresh (imports-only change); typecheck green; biome clean on
+      all changed files. PRE-EXISTING RED DISCLOSED (reproduced at HEAD
+      f21c74eb, not caused by phase 8):
+      tests/checks/harness-mutants.test.ts TC-HARN-029 'credential fallback
+      mutant fails naming the reference' — the mutant's multiline
+      text.replace anchor no longer matches the single-line
+      credentialFailure(...) call (reworded in phase 4; the phase-4/5 notes'
+      'anchor re-pinned' claim is inaccurate — the anchor matches neither
+      text), so the mutation is a no-op and the unmutated build refuses,
+      tripping the oracle; the suite sits outside the phase-8 declared scope
+      and the named battery, so it is disclosed for the review_fix iteration
+      (re-anchor the mutant to the current call) rather than fixed here.
+      PROCESS NOTE: the first battery run failed TC-COMP-001 against a STALE
+      dist built mid-fix — the composition imports @delivery-os/* through dist,
+      so rebuild-before-battery is load-bearing for validator changes; the
+      final evidence battery ran after pnpm build."
+    type: info
+    date: "2026-11-24"
