@@ -36,26 +36,75 @@ const CHECKOUT_IDENTITY = /checkout identity/gi;
 const PROJECT_KEY = /project[ -]keys?/gi;
 const DECLARED_TERM = /declared project[ -]keys?/gi;
 
-const lineOf = (text: string, offset: number): number => text.slice(0, offset).split("\n").length;
+/**
+ * Whitespace-normalized matching (review iter-1 F-1): a violation wrapped
+ * across a markdown line wrap ("primary⏎checkout") must be found. Runs of
+ * whitespace — including newlines — collapse to one space; `lineAt` maps each
+ * normalized offset back to the ORIGINAL 1-based line of its character so
+ * findings keep reporting real lines. The collapse must not widen the named
+ * exceptions: no rule is whitespace-sensitive in a way the normalization
+ * newly fires, and the R3 sense exemptions are evaluated against the
+ * original line at the match's start (see `projectKeyExempt`).
+ */
+const buildNormalized = (
+  text: string,
+): { readonly normalized: string; readonly lineAt: readonly number[] } => {
+  let normalized = "";
+  const lineAt: number[] = [];
+  let currentLine = 1;
+  let pendingSpace = false;
+  for (const character of text) {
+    if (character === "\n") {
+      currentLine += 1;
+      pendingSpace = normalized.length > 0;
+      continue;
+    }
+    if (/\s/u.test(character)) {
+      pendingSpace = normalized.length > 0;
+      continue;
+    }
+    if (pendingSpace) {
+      normalized += " ";
+      lineAt.push(currentLine);
+      pendingSpace = false;
+    }
+    normalized += character;
+    lineAt.push(currentLine);
+  }
+  return { normalized, lineAt };
+};
+
+const originalLineAt = (text: string, offset: number): string => {
+  const start = text.lastIndexOf("\n", offset) + 1;
+  const end = text.indexOf("\n", offset);
+  return text.slice(start, end === -1 ? undefined : end);
+};
 
 /**
  * R3's declared sense exemptions, each review-visible: the owner's own term
  * "declared project key", the tracker-configuration sense (tracker project
  * keys are a different contention domain), and the per-project configuration
  * sense where the phrase names a configuration key spelled immediately after
- * it in backticks.
+ * it in backticks. Evaluated on the normalized text (declared spans and the
+ * config-key lookahead), with the line-shaped exemptions read from the
+ * ORIGINAL line at the match's start.
  */
-const projectKeyExempt = (text: string, offset: number, match: string): boolean => {
+const projectKeyExempt = (
+  normalized: string,
+  originalLines: readonly string[],
+  lineNumber: number,
+  offset: number,
+  match: string,
+): boolean => {
   const declaredSpans: Array<[number, number]> = [];
-  for (const declared of text.matchAll(DECLARED_TERM)) {
+  for (const declared of normalized.matchAll(DECLARED_TERM)) {
     declaredSpans.push([declared.index ?? 0, (declared.index ?? 0) + declared[0].length]);
   }
   if (declaredSpans.some(([start, end]) => offset >= start && offset < end)) return true;
-  if (/project[ -]keys?\s*`/i.test(text.slice(offset, offset + match.length + 2))) return true;
-  const line = text.slice(
-    text.lastIndexOf("\n", offset) + 1,
-    text.indexOf("\n", offset) + 1 || undefined,
-  );
+  if (/project[ -]keys?\s*`/i.test(normalized.slice(offset, offset + match.length + 2))) {
+    return true;
+  }
+  const line = originalLines[lineNumber - 1] ?? "";
   if (/\btracker\b/i.test(line)) return true;
   // A tracker configuration key assignment (`project_key: ...`) spells the
   // tracker's own key name and its placeholder on one line — a different
@@ -66,22 +115,24 @@ const projectKeyExempt = (text: string, offset: number, match: string): boolean 
 
 /** The pure detection core: every rule, one pass, line-precise findings. */
 export const scanText = (text: string): Finding[] => {
+  const { normalized, lineAt } = buildNormalized(text);
+  const originalLines = text.split("\n");
   const findings: Finding[] = [];
   for (const [rule, pattern] of [
     ["primary-checkout", PRIMARY_CHECKOUT],
     ["checkout-identity", CHECKOUT_IDENTITY],
   ] as const) {
-    for (const match of text.matchAll(pattern)) {
+    for (const match of normalized.matchAll(pattern)) {
       const at = match.index ?? 0;
-      findings.push({ rule, line: lineOf(text, at), match: match[0] });
+      findings.push({ rule, line: lineAt[at] ?? 1, match: match[0] });
     }
   }
-  for (const match of text.matchAll(PROJECT_KEY)) {
+  for (const match of normalized.matchAll(PROJECT_KEY)) {
     const at = match.index ?? 0;
-    if (projectKeyExempt(text, at, match[0])) continue;
+    if (projectKeyExempt(normalized, originalLines, lineAt[at] ?? 1, at, match[0])) continue;
     findings.push({
       rule: "project-key-as-clone-identity",
-      line: lineOf(text, at),
+      line: lineAt[at] ?? 1,
       match: match[0],
     });
   }
@@ -231,6 +282,35 @@ describe("TC-DPKCONF-002 planted violations fail non-zero on synthetic inputs", 
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  test("a violation wrapped across a markdown line wrap fails, named (review iter-1 F-1)", () => {
+    const findings = scanText(
+      [
+        "- A linked git worktree is refused with `install.target.worktree`, naming the",
+        "  target directory and both git directories. Build and install from the primary",
+        "  checkout or a prepared directory holding a released artifact.",
+      ].join("\n"),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.rule).toBe("primary-checkout");
+    expect(findings[0]?.match).toBe("primary checkout");
+    expect(findings[0]?.line).toBe(2);
+  });
+
+  test("a wrapped project-key mislabel fails the same way", () => {
+    const findings = scanText("the project\nkey is minted into the marker per clone");
+    expect(findings).toEqual([
+      { rule: "project-key-as-clone-identity", line: 1, match: "project key" },
+    ]);
+  });
+
+  test("a wrapped exception string stays exempt: normalization never widens the exceptions", () => {
+    expect(
+      scanText("the state root lives at `<host root>/projects/\ndelivery-a-1a2b3c4d`"),
+    ).toEqual([]);
+    expect(scanText("the refusal classifies under `projects.\nconfig-invalid`")).toEqual([]);
+    expect(scanText("point `--project-\nroot` at the repository checkout")).toEqual([]);
   });
 
   test("the committed tree is untouched by any negative proof", () => {

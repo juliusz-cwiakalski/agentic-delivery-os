@@ -78,9 +78,9 @@ to; the destination is derived from the brand install path and is **never an
 input** (an attempt is the delivered `fallback.invocation` grammar refusal).
 
 - A linked git worktree is refused with `install.target.worktree`, naming the
-  target directory and both git directories. Build and install from the primary
+  target directory and both git directories. Build and install from the main
   checkout or a prepared directory holding a released artifact; a lane worktree
-  is deleted after merge.
+  is deleted after merge, so nothing is written from it.
 - A main checkout is recorded `verified`; a plain directory or a host without
   git metadata is recorded `unverified`.
 - A dirty tree is admitted; the token reports `<commit>-dirty`.

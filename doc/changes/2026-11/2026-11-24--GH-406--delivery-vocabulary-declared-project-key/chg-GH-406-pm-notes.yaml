@@ -429,3 +429,31 @@ notes:
       corrected line and both author sweep and gate missed it."
     type: retro
     date: "2026-11-24"
+  - text: "Plan phase 9 complete (review remediation, review iter-1 F-1): the
+      wrapped primary-checkout residual on the m4 install page cleared - the
+      bullet now reads the canonical delivered sentence verbatim ('Build and
+      install from the main checkout or a prepared directory holding a
+      released artifact; a lane worktree is deleted after merge, so nothing is
+      written from it.' - the error-table.ts:1934 / feature-result-contract.md:310
+      form; the page's other required literals preserved). Scanner hardening
+      companion (PM-accepted): the vocabulary-conformance detection core now
+      matches whitespace-normalized text with an original-line map (wrapped
+      'primary\u23cecheckout' found, findings keep real line numbers; R3 sense
+      exemptions read the original line at the match's start so normalization
+      never widens the four named exceptions). New synthetic arms:
+      wrapped-violation (primary-checkout across a markdown wrap, named with
+      line) + wrapped project-key mislabel arm + wrapped-exception arm
+      (container/error-code/flag forms stay exempt under normalization). All
+      existing arms byte-intact; the 42-page pin and live header assertions
+      unchanged. Sweep check: the real-tree pass is clean under normalization -
+      NO additional wrapped residuals surfaced anywhere in the declared scope
+      (the onboarding tracker-config exemption held; the m4 install page was
+      the only wrapped residual). Boundary evidence: narrow ladder
+      vocabulary-conformance 17 pass / 0 fail (incl. the new wrapped arms),
+      delivery-vocabulary + doc-conformance 81 pass / 0 fail; full gate
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green end-to-end, 13/13 in-chain,
+      exit 0, bun test 12848 pass / 4 skip / 0 fail, OK new-code-naming
+      2505/0/4; gate log
+      tmp/run-logs-runner/2026-11-24/191658-pnpm-check-quality-gate-gh406.log."
+    type: decision
+    date: "2026-11-24"
