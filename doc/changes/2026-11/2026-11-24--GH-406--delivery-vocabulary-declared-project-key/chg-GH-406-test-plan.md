@@ -29,11 +29,11 @@ The core behaviors to protect are, in descending risk order: **byte-identity of 
 - Clone-key pattern name: `CLONE_KEY_PATTERN` exported and unit-tested; `PROJECT_KEY_PATTERN` still resolves to the identical value (AC-F3-1, NFR-2, DM-2).
 - Served accessor: the resolved project scope serves `cloneKey`; no persisted name (marker field, host-index field, `--flat` alias payload) changes (AC-F4-1, DM-3).
 - User-facing nouns: `projects list` headers `PROJECT` / `PROJECT REPOSITORY`; `repos list` header `CLONE`; help and reference text using the table's nouns; `board --project` help stating it takes a clone identity; "primary checkout" wording absent within the conformance scope; `--flat` alias payload and text byte-identical (AC-F5-1, NFR-3).
-- Narrowed conformance test: scope per Appendix B (CLI help summaries; text headers of `projects list` and `repos list`; guides tree; tools documentation tree; overview tree; milestone command-reference pages for repos, projects, board), named exceptions honoured (`projects.*` error codes, `<host root>/projects/` container, `--project-root`, `--flat` alias), passes on the clean tree, fails non-zero on a planted violation proven via synthetic test-owned inputs (AC-F6-1, NFR-4).
+- Narrowed conformance test: scope per Appendix B (CLI help summaries; text headers of `projects list` and `repos list`; guides tree; tools documentation tree; overview tree; every command reference page under `doc/planning/oss-tooling/milestones/*/commands/**` — all milestones' command pages, 42 at this change's base: m1 28, m2 12, m4 2), named exceptions honoured (`projects.*` error codes, `<host root>/projects/` container, `--project-root`, `--flat` alias), passes on the clean tree, fails non-zero on a planted violation proven via synthetic test-owned inputs (AC-F6-1, NFR-4). The three m2 pages (`repos`, `projects`, `board`) are pin surfaces inside this scope (brief §F), a subset of the sweep, never its definition. Known in-scope violation fixed in-change: `doc/planning/oss-tooling/milestones/m4/commands/install.md:84` reads "primary checkout" (banned by brief §D) — the sweep passes clean only after that wording becomes "main checkout".
 - New-code naming rule: repository check that files absent at this change's base (22b15d31) contain no bare `projectKey` token; committed reason-bearing baseline; no per-file counts on existing files; the check itself mutation-tested (AC-F7-1, NFR-6).
 - Fixtures: G-1 (linked worktree resolves the main checkout's clone identity), G-2 (two clones of one project repository resolve the same declared project key with different state roots), G-3 (existing configuration with an out-of-grammar group key loads unchanged, no migration) — deterministic on a single worker host (AC-F8-1/2/3, NFR-7).
 - ODR-0006: exists with `status: Proposed` and `decision_date: null`, listed in the decision index; earlier decision records untouched (AC-F9-1).
-- Pin surfaces, wording-only: `tests/structure/content-inventory.test.ts` (new exports added additively), `tests/structure/naming-boundary.test.ts` (TC-GRPBOUND-002, TC-GRPSREAD-003 — old wording refreshed, intent intact), `tests/behaviour/repos-list-contract.test.ts`, `tests/behaviour/projects-list-contract.test.ts`, `tests/behaviour/projects-flat-alias.test.ts` (header pins only; payload assertions unchanged), help suites that pin help summaries, and the milestone command-reference pages (AC-F10-1, NFR-5).
+- Pin surfaces, wording-only: `tests/structure/content-inventory.test.ts` (new exports added additively), `tests/structure/naming-boundary.test.ts` (TC-GRPBOUND-002, TC-GRPSREAD-003 — old wording refreshed, intent intact), `tests/behaviour/repos-list-contract.test.ts`, `tests/behaviour/projects-list-contract.test.ts`, `tests/behaviour/projects-flat-alias.test.ts` (header pins only; payload assertions unchanged), help suites that pin help summaries, and the three m2 command-reference pages (`repos`, `projects`, `board`) (AC-F10-1, NFR-5).
 - Quality gate: `TMPDIR=$PWD/tmp/tmpdir pnpm check` green before the PR opens.
 
 ### 1.2 Out of Scope & Known Gaps
@@ -53,7 +53,7 @@ The core behaviors to protect are, in descending risk order: **byte-identity of 
 ## 2. References
 
 - Change specification: `./chg-GH-406-spec.md` — ACs AC-F1-1…AC-F10-1 (§17); F-1…F-10 (§5); DM-1…DM-3 (§8.3); NFR-1…NFR-7 (§9); G-1…G-7 (§4); NG-1…NG-7 (§4.2); RSK-1…RSK-6 (§11); DEC-1…DEC-5 (§15); Appendix A (mapping of locked names), Appendix B (conformance scope and named exceptions), Appendix C (fixtures), Appendix D (sources).
-- Implementation plan: `./chg-GH-406-plan.yaml` — **pending** (phase 4 of the lifecycle). This plan constrains it: the plan must (a) pin the exact new test-suite file names (Section 7 proposes homes); (b) sequence the wording-only pin updates so the tree stays green at each phase boundary (spec §18); (c) land the committed naming-rule baseline with reasons in the same phase as the check; (d) keep `--flat` byte-identity verification inside the phase that touches the header code.
+- Implementation plan: `./chg-GH-406-plan.yaml` — exists and binds (validated `verdict=valid`, tier `full`, 8 phases; the four constraints below are adopted verbatim). This plan constrains it: the plan must (a) pin the exact new test-suite file names (Section 7 proposes homes); (b) sequence the wording-only pin updates so the tree stays green at each phase boundary (spec §18); (c) land the committed naming-rule baseline with reasons in the same phase as the check; (d) keep `--flat` byte-identity verification inside the phase that touches the header code.
 - Testing strategy: `.ai/rules/testing-strategy.md` (bun:test under `tests/**/*.test.ts`; structure suites under `tests/structure/`, behaviour suites under `tests/behaviour/`; repository invariants `bun run scripts/checks/*.ts` mutation-tested under `tests/checks/**`; invariant-test authoring — assert tree/HEAD properties, never a moving-base diff; goldens updated deliberately with an explicit command; aggregate gate `pnpm check`).
 - TypeScript rules: `.ai/rules/typescript.md` (bun:test authoring, injected fakes, deterministic tests, no ambient `$HOME`).
 - PM notes: `./chg-GH-406-pm-notes.yaml` — authoritative source order (brief comment 7122871259 wins; rename superseded), clarify-scope cross-check at base 22b15d31, phase 7 documentation impacts, ODR-0006 reservation.
@@ -380,7 +380,8 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 1. Assert `board --project` help states that the value is a clone identity (and the board is never group-scoped — intent kept, per TC-GRPSREAD-003's preserved intent).
 2. Assert help summaries for the `repos` and `projects` families use the table's nouns: no help text calls a clone identity a project or a project key.
 3. Assert no "primary checkout" wording remains within the conformance scope (Appendix B surfaces); "main checkout" is the term used.
-4. Assert the milestone command-reference pages (`doc/planning/oss-tooling/milestones/m2/commands/repos.md`, `projects.md`, `board.md`) use the corrected nouns.
+4. Assert the conformance sweep covers every command reference page under `doc/planning/oss-tooling/milestones/*/commands/**` (42 pages at base: m1 28, m2 12, m4 2), with reference pages for other milestones corrected wherever violations exist in scope — e.g., the m4 install page's "primary checkout" wording becomes "main checkout" (`install.md:84`).
+5. Assert the three m2 command-reference pages (`doc/planning/oss-tooling/milestones/m2/commands/repos.md`, `projects.md`, `board.md`) use the corrected nouns and additionally carry their wording-only pin updates (brief §F pin surfaces — a subset of the sweep scope, never its definition).
 
 **Expected Outcome**:
 
@@ -388,7 +389,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 
 **Notes / Clarifications**:
 
-- Steps 1–3 ride the standing conformance suite (TC-DPKCONF-001) plus the targeted help pins; step 4 is asserted by the conformance scope's command-reference coverage, and manually reviewed for rendering.
+- Steps 1–3 ride the standing conformance suite (TC-DPKCONF-001) plus the targeted help pins; steps 4–5 are asserted by the conformance scope's full commands-glob coverage — every milestone's reference pages in scope, with the three m2 pages additionally carrying their pin updates — and manually reviewed for rendering.
 
 #### TC-DPKUI-003 - `--flat` alias payload and text byte-identical
 
@@ -432,12 +433,12 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 
 **Preconditions**:
 
-- The narrowed conformance test exists with the Appendix B scope: CLI help summaries; text headers of `projects list` and `repos list`; the guides tree; the tools documentation tree; the overview tree; the milestone command-reference pages (repos, projects, board).
+- The narrowed conformance test exists with the Appendix B scope: CLI help summaries; text headers of `projects list` and `repos list`; the guides tree; the tools documentation tree; the overview tree; and every command reference page under `doc/planning/oss-tooling/milestones/*/commands/**` — all milestones' command pages (42 at this change's base: 28 in m1, 12 in m2, 2 in m4).
 
 **Steps**:
 
-1. Run the conformance scanner over the declared scope on the working tree as delivered.
-2. Assert it exits zero (passes) — the delivered text honours the vocabulary everywhere in scope.
+1. Run the conformance scanner over the declared scope on the working tree as delivered, including the entire commands tree `doc/planning/oss-tooling/milestones/*/commands/**` — assert the sweep walks 42 command reference pages at base (28 m1 + 12 m2 + 2 m4), not only the three m2 pin surfaces.
+2. Assert it exits zero (passes) — the delivered text honours the vocabulary everywhere in scope, including the in-change corrected m4 install wording (`install.md` no longer reads "primary checkout").
 
 **Expected Outcome**:
 
@@ -789,9 +790,9 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed change: TypeScript workspac
 | TC-DPKALI-001 | `tests/structure/declared-project-key.test.ts`; `tests/structure/content-inventory.test.ts` (update) | `bun test tests/structure/declared-project-key.test.ts tests/structure/content-inventory.test.ts` | None | To Implement + Existing – Update |
 | TC-DPKACC-001 | `tests/structure/declared-project-key.test.ts`; `tests/behaviour/projects-clone-key.test.ts` (new) | `bun test tests/structure/declared-project-key.test.ts tests/behaviour/projects-clone-key.test.ts` | Fixture clone with identity marker (`tests/fixtures/projects/` helpers) | To Implement |
 | TC-DPKUI-001 | `tests/behaviour/projects-list-contract.test.ts`, `tests/behaviour/repos-list-contract.test.ts` (updates) | `bun test tests/behaviour/projects-list-contract.test.ts tests/behaviour/repos-list-contract.test.ts` | Standard list fixture host (existing helpers) | Existing – Update (header pins) |
-| TC-DPKUI-002 | `tests/behaviour/repos-help.test.ts`, `tests/behaviour/projects-help.test.ts`, board help/selection suites (updates if pins trip); conformance suite covers reference pages | `bun test tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts` | None beyond existing fixtures | Existing – Update (conditional) + To Implement (conformance half) |
+| TC-DPKUI-002 | `tests/behaviour/repos-help.test.ts`, `tests/behaviour/projects-help.test.ts`, board help/selection suites (updates if pins trip); conformance suite covers every command reference page under `doc/planning/oss-tooling/milestones/*/commands/**` (three m2 pages also carry pin updates) | `bun test tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts` | None beyond existing fixtures | Existing – Update (conditional) + To Implement (conformance half) |
 | TC-DPKUI-003 | `tests/behaviour/projects-flat-alias.test.ts` (update; golden/literals untouched) | `bun test tests/behaviour/projects-flat-alias.test.ts` | Pinned pre-change payload/text literals (committed) | Existing – Update (wording-only discipline) |
-| TC-DPKCONF-001 | `tests/structure/vocabulary-conformance.test.ts` (new) | `bun test tests/structure/vocabulary-conformance.test.ts` | Scanner runs over the real tree (read-only) | To Implement |
+| TC-DPKCONF-001 | `tests/structure/vocabulary-conformance.test.ts` (new) | `bun test tests/structure/vocabulary-conformance.test.ts` | Scanner runs over the real tree's full Appendix B scope incl. all 42 pages under `doc/planning/oss-tooling/milestones/*/commands/**` (read-only) | To Implement |
 | TC-DPKCONF-002 | `tests/structure/vocabulary-conformance.test.ts` (same suite) | `bun test tests/structure/vocabulary-conformance.test.ts` | Synthetic in-memory inputs + test-created temp trees under the session temp root; pure-function scanner entrypoint | To Implement |
 | TC-DPKCONF-003 | `tests/structure/vocabulary-conformance.test.ts` (same suite) | `bun test tests/structure/vocabulary-conformance.test.ts` | Synthetic exception-shaped texts | To Implement |
 | TC-DPKNAM-001 | `scripts/checks/new-code-naming.ts` + committed baseline file (new); registered in the invariant battery | `bun run scripts/checks/new-code-naming.ts` | Committed reason-bearing baseline; pinned base constant (22b15d31) | To Implement |
