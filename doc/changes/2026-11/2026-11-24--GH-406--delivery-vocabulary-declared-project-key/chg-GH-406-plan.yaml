@@ -1,0 +1,324 @@
+schemaVersion: delivery.plan.v1
+workItemRef: GH-406
+tier:
+  name: full
+  escalationTriggers:
+    - "a `--flat` alias byte delta (payload or text) observed at any phase boundary is a change DEFECT: the pinned pre-change literals in tests/behaviour/projects-flat-alias.test.ts are never regenerated in this change — stop, fix the wording change that drifted the alias, re-run; a golden update is never the remedy (NFR-3, TC-DPKUI-003)"
+    - "a pre-existing suite that cannot be greened wording-only (a payload assertion, field name, or expectation value would have to change to pass) is evidence of a rename — forbidden (NG-1, NFR-5, DEC-2): stop and report to PM via a pm-notes entry; never weaken or delete the assertion to go green"
+    - "a clean-tree conformance failure whose correction cannot be stated in the vocabulary table's nouns inside the Appendix B scope, or whose fix appears to need a new exception: the four named exceptions are frozen until GH-408 — stop and report; never relax, extend, or re-shape the exception set to force the pass (F-6, NFR-4)"
+    - "the naming check's committed base constant (22b15d31) unreachable at run time means the check fails closed: stop and report — the constant is re-pointed only deliberately through review, never silently, and never widened to make the tree pass (F-7, TC-DPKNAM-001)"
+    - "a new file that cannot carry its bare-token baseline reason is a naming-rule defect: the entry is mandatory reason-bearing (NFR-6) — stop and report rather than land an unexplained entry or an unspecified token use"
+# ---------------------------------------------------------------------------
+# Plan-level decision record (spec §15 DEC-1..DEC-5): the owner's delivery
+# brief (comment 7122871259) is authoritative and supersedes comment
+# 7117829140 and the ticket body's AC list (DEC-1); NOTHING is renamed in
+# this change — the repos family, repoKey and projectKey keep their
+# identifiers and denote the clone identity as named exceptions until
+# GH-408's mechanical rename (DEC-2, NG-1); the clone identity is named
+# *clone identity*, never *checkout identity* (DEC-3); the local groups.v1
+# layer keeps "group keys carry no public pattern" and nothing migrates
+# (DEC-4, NG-4); ODR-0006 lands in this change as status Proposed with
+# decision_date null — never Accepted; the owner accepts or rejects the
+# vocabulary at the pull request, and no earlier decision record is edited
+# (DEC-5, NG-5). ODR-0006 is the next free decision id, reserved by the
+# brief (pm-notes; ODR-0001..0005 exist at base 22b15d31).
+#
+# Constants fixed by this plan (spec F-2/F-3/F-5, DM-1/DM-2, NFR-1/NFR-2;
+# observed at base 22b15d31):
+#   - base commit:            22b15d31 (pm-notes state detection) — encoded
+#                             as a committed constant in the naming check;
+#                             the check asserts tree-vs-pinned-base, a legal
+#                             permanent invariant, never a moving-base diff
+#   - declared-key grammar:   ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ — exactly
+#                             2..64 characters, lowercase alphanumerics and
+#                             hyphens, no leading/trailing hyphen
+#                             (path-safe by construction); the PREDICATE,
+#                             not the bare regex, additionally refuses the
+#                             reserved state segments `unbound` and
+#                             `projects`, exact-match on the whole key —
+#                             substring-containing keys (projects-x,
+#                             my-unbound) are accepted (spec §21,
+#                             TC-DPKKEY-002)
+#   - clone-key pattern:      CLONE_KEY_PATTERN is the NEW NAME of the
+#                             DELIVERED clone-identity pattern value
+#                             /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u
+#                             (packages/core/src/contracts/projects.ts:52 at
+#                             base) — never a new grammar; PROJECT_KEY_PATTERN
+#                             stays exported as the same-value alias
+#                             (String-equal, 0 difference, NFR-2)
+#   - header literals:        `projects list` group table GROUP→PROJECT and
+#                             MEMBER→PROJECT REPOSITORY
+#                             (packages/cli/src/output/projects-text.ts
+#                             GROUP_HEADER :19); `repos list` KEY→CLONE
+#                             (packages/cli/src/output/repos-text.ts HEADER
+#                             :16); the flat-alias HEADER in the SAME file
+#                             (projects-text.ts :17) is untouched byte for
+#                             byte — it IS the `--flat` text surface
+#   - suite file names:       the five new suites, the check, and its
+#                             mutation suite are pinned VERBATIM from test
+#                             plan §7 (constraint (a) satisfied by adoption —
+#                             no deviation, no reconciliation notes owed):
+#                             tests/structure/declared-project-key.test.ts,
+#                             tests/structure/delivery-vocabulary.test.ts,
+#                             tests/structure/vocabulary-conformance.test.ts,
+#                             tests/behaviour/projects-clone-key.test.ts,
+#                             tests/behaviour/clone-identity-fixtures.test.ts,
+#                             scripts/checks/new-code-naming.ts,
+#                             tests/checks/new-code-naming.test.ts
+#   - naming baseline:        scripts/checks/new-code-naming.baseline.json —
+#                             committed, reason per entry (follows the
+#                             forbidden-literals.registry.json precedent)
+#   - changeset:              .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md
+#                             declaring the five fixed-group packages
+#                             (@delivery-os/core, adapters, cli, mcp,
+#                             opencode) at minor (spec front matter
+#                             version_impact: minor; lockstep config)
+#
+# Plan-wide delivery fences (binding), in force on every phase below:
+#   - Zero-rename fence (NG-1, NFR-5, AC-F10-1): no command name, subcommand,
+#     payload field, envelope key, or persisted field (identity-marker field,
+#     host-index field, `--flat` alias payload field) is renamed, removed, or
+#     re-keyed anywhere in this change. The four named exceptions survive
+#     untouched: the `projects.*` error-code family, the `<host root>/projects/`
+#     container, `--project-root`, and the `--flat` alias. `board --project`
+#     keeps its flag name and its never-group-scoped behaviour (NG-6); only its
+#     HELP wording changes (it says clone identity). The header/help text
+#     renderings are the ONLY operator-visible change.
+#   - --flat byte-identity fence (NFR-3, constraint (d)): the alias payload AND
+#     text stay byte-identical to the pre-change output; verification lives in
+#     phase 3 — the one phase that touches the header code (the flat HEADER
+#     constant sits in the same file as the changed group header); the pinned
+#     pre-change literals in tests/behaviour/projects-flat-alias.test.ts are
+#     never regenerated; a delta is a defect, never a golden update.
+#   - Additive-contracts fence (F-2..F-4, NG-4, DEC-4, §8.5): the contracts are
+#     purely additive; the local groups.v1 layer enforces NO pattern (its
+#     no-public-pattern contract stands unamended); nothing migrates and no
+#     schema changes; the declared-key ENFORCEMENT POINTS are not created here —
+#     credential audiences/bindings/store scope/workspace base (GH-396/397/399)
+#     and manifest write/import (GH-401) consume the contract this change
+#     delivers; the declared key and the clone identity stay in disjoint
+#     namespaces and are never compared (spec §21).
+#   - Wording-only pin-update fence (constraint (b), F-10, TC-DPKPIN-001):
+#     every pre-existing suite update is wording-only — header-string literals,
+#     additive exported-name inventory entries, describe titles, wording
+#     comments — never a payload assertion, field name, or expectation value;
+#     pin updates land in the SAME phase as the wording they pin, so the tree
+#     is green at every phase boundary (spec §18); existing TC IDs from other
+#     changes (TC-GRPBOUND-002, TC-GRPSREAD-003, and all others) keep their IDs
+#     and intent — only their pinned wording refreshes; a pin that turns out to
+#     be unnameable in the new wording is the STOP trigger above, never a
+#     silent weakening.
+#   - Conditional-sweep rule (TC-DPKPIN-001 step 4): if a suite NOT declared in
+#     any scope below (candidates observed at base: tests/structure/state-scope.test.ts,
+#     tests/structure/projects-state-scope-policy.test.ts, tests/behaviour/entrypoint-help*.test.ts,
+#     the board-* contract suites) trips on the additive contracts or the noun
+#     corrections, its wording-only re-pin lands in the SAME phase as the change
+#     that tripped it, with the trip and the wording-only verdict recorded as a
+#     pm-notes notes: entry — never as plan progress, never deferred to a later
+#     phase (that would strand a red boundary).
+#   - Naming-rule fence (F-7, NFR-6, constraint (c)): the check, its committed
+#     reason-bearing baseline, its gate-chain wiring, and its mutation tests
+#     land as ONE commit (phase 1) and stay green at every later boundary; the
+#     rule is file-existence-at-the-pinned-base based — a file absent at
+#     22b15d31 may not contain the bare token `projectKey` without a baseline
+#     entry, pre-base files are exempt with no per-file counts consulted; every
+#     baseline entry carries a non-empty reason and is review-visible. The
+#     baseline's INITIAL entries cover the check's own forbidden-token literal
+#     and the mutation suite's injected token; later phases extend it only when
+#     a new file must spell the delivered persisted field names to pin them
+#     unchanged (expected: zero production-source entries; at most the new test
+#     suites' field-name assertions), each extension in the same commit as the
+#     file it covers.
+#   - Conformance fence (F-6, NFR-4, Appendix B): scope is exactly CLI help
+#     summaries; the text headers of `projects list` and `repos list`; the
+#     guides tree; the tools documentation tree; the overview tree; the
+#     milestone command-reference pages (repos, projects, board). The four
+#     named exceptions (projects.* error codes, <host root>/projects/ container,
+#     --project-root, --flat) are frozen until GH-408 and proven individually
+#     exempt; near-miss strings outside the list still flag. The scanner's
+#     detection core is a PURE FUNCTION callable over injected input
+#     text/files — the negative proof lives entirely in synthetic in-memory
+#     inputs and test-created temp trees under the session temp root; NO
+#     violation is ever planted in the committed tree (git status unchanged by
+#     any test). The scanner lands AFTER the overview (phase 4) and CLI/reference
+#     (phase 3) corrections and TOGETHER WITH the guides/tools sweep, so its
+#     clean-tree pass is truthful and meaningful at the phase boundary.
+#   - Decision-record fence (F-9, NG-5, AC-F9-1): under doc/decisions/ only
+#     ODR-0006 and its 00-index.md row are touched; no earlier record is
+#     edited; doc/decisions/00-register.md is NOT touched — no AC, spec
+#     component row, or pm-notes obligation names a register binding, and the
+#     owner's acceptance at the PR is the act that settles the vocabulary's
+#     standing (TC-DPKODR-001's unedited-earlier-records half is the review-time
+#     diff inspection). ODR-0006 carries no ados_distribution header (project-
+#     specific decision record, per the distribution marker rules and pm-notes).
+#   - Review-time evidence fence: TC-DPKODR-001 step 5 (earlier-records diff),
+#     TC-DPKPIN-001 step 3 (wording-only diff discipline), and TC-DPKPIN-002
+#     (zero-rename diff inspection vs base 22b15d31) execute at the
+#     review/quality-gate boundary, NOT inside any plan phase; their verdicts
+#     are logged in the test plan §10 and pm-notes.
+#   - Fixture fence (F-8, NFR-7, Appendix C): fixtures G-1..G-3 build on the
+#     tests/fixtures/projects/ helpers (temp repositories, identity markers,
+#     host fixtures, host-index readers, groups configuration), run entirely
+#     under the session-scoped temporary root (gate convention
+#     TMPDIR=$PWD/tmp/tmpdir), use no network, no wall clock, no hostname, and
+#     write nothing outside the temp root; G-3's legacy configuration case uses
+#     a committed case definition plus its grammar-valid twin; the committed
+#     tree stays clean.
+#   - Phase-gate fence: each phase below is ONE commit through the commit
+#     primitive on branch feat/GH-406/delivery-vocabulary-declared-project-key,
+#     and each phase boundary is green under TMPDIR=$PWD/tmp/tmpdir pnpm check
+#     (narrow suites during iteration; the full gate at the boundary); the PR
+#     targeting main-tools, merge authority, tracker transitions, and the
+#     lifecycle review/quality-gates phases belong to the lifecycle, not this
+#     plan; no doc edit outside a declared phase scope may leak into any commit.
+#   - Documentation-split fence: the overview/glossary/feature-spec/reference/
+#     guides doc edits that ACs AC-F1-1, AC-F5-1, AC-F6-1 assert through
+#     automated suites ARE delivery work and land in their declared phases
+#     below; phase 8's doc/spec/features entries are DECLARATION ONLY — the
+#     residual contract-truth reconciliation (grammar, alias, accessor wording
+#     beyond the AC-edits of phase 4) is executed by doc-syncer in the lifecycle
+#     system_spec_update phase; no coder task edits them in phase 8's commit
+#     (the changeset file is that commit's only artifact).
+# ---------------------------------------------------------------------------
+phases:
+  - id: 1
+    title: New-code naming invariant — check, committed reason-bearing baseline, mutation tests, gate-chain wiring
+    kind: delivery
+    summary: "land the new-code naming rule as scripts/checks/new-code-naming.ts — a file that did not exist at the committed base constant 22b15d31 may not contain the bare token `projectKey` unless a committed baseline entry covers it; the core accepts injected file-map/baseline inputs (test seam, forbidden-literals readRegistry precedent) so mutation cases need no repository writes; failures exit non-zero and name the offending file and baseline entry; pre-base files are exempt and no per-file counts are read for them; the committed baseline scripts/checks/new-code-naming.baseline.json lands in the SAME commit, every entry carrying a non-empty reason (initial entries: the check's own forbidden-token literal; the mutation suite's injected token) — and register it in the pnpm check aggregate via package.json, refreshing the three chain-pinning suites whose exact-string pins enumerate the chain (tests/checks/license-ci-binding.test.ts PINNED_CHECK, tests/checks/ci-checks.test.ts, tests/checks/privacy-ci-wiring.test.ts AGGREGATE — chain literal gains the new entry; the negative pins — no error-table-sync/exit-code-literals in the chain, no privacy entry — stay true) and the milestone-gate check-script enumeration if it trips; prove the check itself with tests/checks/new-code-naming.test.ts: reason-less baseline rejected naming the entry, unknown post-base offender rejected naming the file, pre-base file exempt with no counts consulted, clean post-base file accepted — all over injected inputs, no committed-tree writes"
+    # TC ownership: TC-DPKNAM-001, TC-DPKNAM-002 (F-7, AC-F7-1, NFR-6, RSK-4).
+    # Constraint (c): the baseline (reason per entry) lands with the check in this ONE commit. Constraint F-7 sequencing: the check exists BEFORE any later phase creates files, so every subsequent new file is governed from birth; later baseline extensions (if a new suite must spell the delivered persisted field names) are reason-bearing and land in the same commit as the file they cover.
+    # Ordering: first delivery phase by design — everything this change creates afterwards is subject to the standing rule (TC-DPKNAM-001 note: tree-vs-pinned-base is a legal permanent invariant after merge).
+    # Fences in force: the committed base constant 22b15d31 is never silently re-pointed; no per-file counts on existing files; the chain refresh is pin-literal-only (wording-only discipline).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/new-code-naming.ts; bun test tests/checks/new-code-naming.test.ts; bun test tests/checks/license-ci-binding.test.ts tests/checks/ci-checks.test.ts tests/checks/privacy-ci-wiring.test.ts tests/checks/milestone-gate.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - scripts/checks/new-code-naming.ts
+        - scripts/checks/new-code-naming.baseline.json
+        - package.json
+        - tests/checks/new-code-naming.test.ts
+        - tests/checks/license-ci-binding.test.ts
+        - tests/checks/ci-checks.test.ts
+        - tests/checks/privacy-ci-wiring.test.ts
+        - tests/checks/milestone-gate.test.ts
+  - id: 2
+    title: Additive core contracts — declared-project-key pattern and predicate, CLONE_KEY_PATTERN name, same-value alias, served cloneKey accessor
+    kind: delivery
+    summary: "extend packages/core/src/contracts/projects.ts purely additively — export DECLARED_PROJECT_KEY_PATTERN with the exact literal ^[a-z0-9][a-z0-9-]{0,62}[a-z0-9]$ and its predicate that refuses the reserved state segments `unbound` and `projects` exact-match on the whole key (substring keys accepted; refusal reasons name the violated rule — length, charset, hyphen position, or reserved segment), export CLONE_KEY_PATTERN as the NAME of the delivered clone-identity pattern value (/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?-[0-9a-f]{8}$/u, unchanged), and keep PROJECT_KEY_PATTERN exported as the same-value alias with its value untouched; re-export the new names through packages/core/src/contracts/index.ts beside the delivered PROJECT_KEY_PATTERN re-export; serve `cloneKey` on the resolved project scope in packages/core/src/app/state-scope.ts — a served read of the clone identity, writing nothing: the marker field, the host-index field, and the alias payload field keep their delivered names; extend tests/structure/content-inventory.test.ts additively (new export entries for projects.ts and state-scope.ts, no existing entry dropped — the delivered TC-GRPBOUND-002 contracts pins stay true because no pinned literal changes); prove the contracts at introduction in tests/structure/declared-project-key.test.ts — the grammar boundary matrix (exact string pin of the pattern; accept 2-char and 64-char keys, lowercase alnum, internal single and doubled hyphens; reject empty, 1-char, 65-char, uppercase, non-alphanumeric, leading/trailing hyphen, hyphen-only, each failure naming its rule), the reserved-segment refusals (unbound and projects refused despite being grammar-valid, case-exactness via the lowercase grammar rule, substring acceptance), the alias identity (String(PROJECT_KEY_PATTERN) === String(CLONE_KEY_PATTERN), 0 difference), and the accessor unit half (the resolved scope exposes cloneKey equal to the identity the marker carries, stable across repeated reads, no persisted field appearing)"
+    # TC ownership: TC-DPKKEY-001, TC-DPKKEY-002 (F-2, AC-F2-1, DM-1, NFR-1), TC-DPKALI-001 (F-3, AC-F3-1, DM-2, NFR-2), TC-DPKACC-001 unit half (F-4, AC-F4-1, DM-3).
+    # Ordering: contracts before the suites that import them — the unit suite lands in the SAME commit so the boundary is proven, not merely compiled.
+    # Fences in force: purely additive — the delivered PROJECT_KEY_PATTERN value, the marker/host-index/alias persisted names, and every TC-GRPBOUND-002 pinned literal are unchanged; the local groups.v1 layer gains no grammar (NG-4); enforcement points are consumer changes (GH-396/397/399/401), none created here; if the new suite must spell a delivered persisted field name verbatim, its reason-bearing baseline entry lands in this same commit (naming-rule fence).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/declared-project-key.test.ts tests/structure/content-inventory.test.ts tests/structure/naming-boundary.test.ts; bun run scripts/checks/new-code-naming.ts; pnpm typecheck; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/core/src/contracts/projects.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/app/state-scope.ts
+        - tests/structure/declared-project-key.test.ts
+        - tests/structure/content-inventory.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/projects.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/app/state-scope.ts
+        role: consumer
+  - id: 3
+    title: CLI noun corrections — list headers, board help, reference pages; wording-only pin updates with the --flat byte-identity verification
+    kind: delivery
+    summary: "correct the user-facing nouns where they live — packages/cli/src/output/projects-text.ts: the group-table header GROUP_HEADER becomes PROJECT and PROJECT REPOSITORY (the project's declared key; the member declaration's selector or locator) while the flat-alias HEADER constant in the SAME file is untouched byte for byte; packages/cli/src/output/repos-text.ts: the list header KEY becomes CLONE; packages/cli/src/help.ts: the board `--project` option help states the value is a clone identity (flag name and never-group-scoped behaviour unchanged), and the repos/projects-family summaries and option rows are swept so no help text calls a clone identity a project or a project key and no `primary checkout` wording remains (main checkout is the term); the milestone command-reference pages doc/planning/oss-tooling/milestones/m2/commands/repos.md, projects.md, board.md carry the same noun corrections; update the pins in the SAME commit — tests/behaviour/repos-list-contract.test.ts (header CLONE, envelope repos.v1 unchanged, exit 0), tests/behaviour/projects-list-contract.test.ts (headers PROJECT / PROJECT REPOSITORY, no GROUP/MEMBER residue, envelope project-groups.v1 unchanged), tests/behaviour/projects-flat-alias.test.ts (run the byte-identity verification HERE — payload and text byte-identical to the pinned pre-change literals, 0-byte delta both modes; the suite's own diff touches no payload or text assertion), tests/behaviour/repos-help.test.ts and tests/behaviour/projects-help.test.ts and tests/behaviour/board-help.test.ts and tests/behaviour/board-selection-project.test.ts (help-summary pins refreshed wording-only where they trip; zero-diff acceptable), and tests/structure/naming-boundary.test.ts (TC-GRPSREAD-003's board-page pins refresh to the clone-identity wording with the intent intact — takes-a-clone-identity, never enumerates groups, and the group-scoped negative scan stay true; TC-GRPBOUND-001's flat/group boundary sentences on the repos/projects pages and the migration guide stay true untouched)"
+    # TC ownership: TC-DPKUI-001, TC-DPKUI-002 (help/reference half), TC-DPKUI-003 (F-5, AC-F5-1, NFR-3), TC-DPKPIN-001 automated half for these suites (F-10, AC-F10-1, NFR-5).
+    # Constraint (b): every pin update rides the wording it pins in this ONE commit. Constraint (d): the --flat byte-identity verification runs in THIS phase because the flat HEADER lives in the file whose group header changes (projects-text.ts) — the pinned literals are never regenerated; a delta is a defect (escalation trigger 1).
+    # Fences in force: zero-rename — envelopes, payload fields, exit codes, the --project flag name and its behaviour are unchanged; wording-only discipline on every suite diff; TC-GRPBOUND-002 (contracts literals) needs no change here and stays green.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/repos-list-contract.test.ts tests/behaviour/projects-list-contract.test.ts tests/behaviour/projects-flat-alias.test.ts tests/behaviour/repos-help.test.ts tests/behaviour/projects-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/board-selection-project.test.ts tests/structure/naming-boundary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - packages/cli/src/output/projects-text.ts
+        - packages/cli/src/output/repos-text.ts
+        - packages/cli/src/help.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        - doc/planning/oss-tooling/milestones/m2/commands/projects.md
+        - doc/planning/oss-tooling/milestones/m2/commands/board.md
+        - tests/behaviour/repos-list-contract.test.ts
+        - tests/behaviour/projects-list-contract.test.ts
+        - tests/behaviour/projects-flat-alias.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/behaviour/projects-help.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/board-selection-project.test.ts
+        - tests/structure/naming-boundary.test.ts
+  - id: 4
+    title: Vocabulary documentation — the eight-term table, the two reversed sentences, the feature-spec links
+    kind: delivery
+    summary: "establish the owner's delivery vocabulary in the system spec and glossary — doc/overview/ubiquitous-language.md gains the eight-term table (project, project repository, main checkout, worktree, lane, work item, clone identity, declared project key) with the brief's meanings and lifetimes (worktree and lane temporary; project, project repository, work item and declared key durable; main checkout durable per worker; clone identity per clone) and the two committed sentences are REVERSED — 'a repository is one checkout and the delivery unit' and 'the identifier `project key` keeps its repository meaning' are corrected to the table's claims; the noun *repository* is reassigned to the project repository and *clone identity* (never *checkout identity*) names the shared marker; doc/overview/glossary.md carries the same eight entries with lifetimes while the distinct 'Repository key' (host/owner/name) concept is retained unchanged (NG-7); doc/spec/features/feature-projects.md links the table, stops naming the clone identity 'the project key' in its checkout-identity section, and makes no repository-is-one-checkout claim; doc/spec/features/feature-project-groups.md links the table with the declared-key mapping and drops the same claim; prove it at introduction in tests/structure/delivery-vocabulary.test.ts (new suite, naming-boundary tree-invariant precedent): all eight terms defined in BOTH documents with the spec's lifetime classifications (presence plus lifetime, not verbatim prose equality), the forbidden-claim substrings absent from the overview, both feature specs linking the table, and the Repository key concept still present"
+    # TC ownership: TC-DPKVOC-001, TC-DPKVOC-002 (F-1, AC-F1-1, G-1).
+    # Ordering: before the conformance scanner (phase 6) — the overview tree is scanner scope, so its corrections must be in place for the scanner's clean-tree pass to be truthful; the ODR record (phase 5) references this table.
+    # Fences in force: no behavioural change rides with the docs; the glossary's Repository key concept stays (NG-7); the conditional-sweep rule covers any undeclared suite that reads these documents.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/delivery-vocabulary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths changed.
+    scope:
+      files:
+        - doc/overview/ubiquitous-language.md
+        - doc/overview/glossary.md
+        - doc/spec/features/feature-projects.md
+        - doc/spec/features/feature-project-groups.md
+        - tests/structure/delivery-vocabulary.test.ts
+  - id: 5
+    title: Decision record ODR-0006 and the decision-index row
+    kind: delivery
+    summary: "land the governing record as doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md with status Proposed and decision_date null — never Accepted; acceptance is the owner's act at the pull request — carrying the vocabulary, the mapping of the locked names onto it (spec Appendix A: project ≡ groupKey and the groups.v1/manifest schemas; project repository ≡ the members[] declaration with root/repoKey as clone locators and `member` naming the declaration entry; clone identity ≡ repoKey and projectKey same value across the marker field, host-index key, public repos.v1 field, plan/closeout member refs, queue lane and lease keys, verify-gate rows, board --project, group member locators, per-clone state root; main checkout ≡ the flat record set keyed by clone identity with root as the last invoking checkout), the declared project key with its grammar and reserved-segment refusal, and how ODR-0003 DC-4 and ODR-0004 C-2..C-5 read under the new vocabulary WITHOUT any rename or amendment; add its row to doc/decisions/00-index.md (no ados_distribution header on the record — project-specific decision artifact; no earlier record and not 00-register.md is touched); extend tests/structure/delivery-vocabulary.test.ts with TC-DPKODR-001's structural arms — the record exists, its front matter carries status Proposed and decision_date null, the index lists it, and its body references the vocabulary, the locked-name mapping, the grammar, and its reading of ODR-0003 DC-4 and ODR-0004 C-2..C-5 (presence-of-section assertions, not prose equality)"
+    # TC ownership: TC-DPKODR-001 automated half (F-9, AC-F9-1, NG-5); step 5 (earlier-records diff inspection) is review-time, executed at the review/quality-gate boundary per the review-time evidence fence — never inside this phase.
+    # Ordering: after phase 4 (the record references the vocabulary table the docs phase establishes); before phase 6 (no dependency, but the decision content is settled before the standing sweep begins).
+    # Fences in force: decision-record fence — only ODR-0006 and its index row change under doc/decisions/; the review-time diff inspection is the enforcement of the unedited-earlier-records claim.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/delivery-vocabulary.test.ts; git status confirms only the three declared paths changed.
+    scope:
+      files:
+        - doc/decisions/ODR-0006-delivery-vocabulary-declared-project-key.md
+        - doc/decisions/00-index.md
+        - tests/structure/delivery-vocabulary.test.ts
+  - id: 6
+    title: Vocabulary conformance scanner — narrowed scope, named exceptions, synthetic negative proofs — with the guides/tools sweep
+    kind: delivery
+    summary: "land the narrowed conformance test as tests/structure/vocabulary-conformance.test.ts with the scanner's detection core co-located as a PURE FUNCTION callable over injected input text/files and a tree-walking entrypoint over the real Appendix B surfaces (CLI help summaries; the text headers of projects list and repos list; the guides tree; the tools documentation tree; the overview tree; the milestone command-reference pages repos, projects, board), implementing exactly the four named exceptions — the projects.* error-code family, the <host root>/projects/ container, --project-root, and the --flat alias — frozen until GH-408; the suite proves the clean tree passes (TC-DPKCONF-001), the negative proof via synthetic in-memory violation texts and a test-created temp-tree fixture under the session temp root fails non-zero naming input and match with NO violation ever written into the committed tree (TC-DPKCONF-002), and each named exception is individually exempt while near-miss strings (a different flag spelling, an error-code outside the projects.* family) still flag (TC-DPKCONF-003); and land IN THE SAME COMMIT the guides/tools/overview sweep the clean pass demands — the known in-scope mislabels observed at base are doc/guides/migrating-to-per-repository-state.md (primary checkout wording and project key used for the clone identity) and doc/guides/local-install.md (primary checkout wording), corrected to the table's nouns while the migration guide's pinned boundary sentences (repos list flat record set / projects list group surface / --flat transition alias) stay true so TC-GRPBOUND-001 remains green — the sweep extends to the rest of the declared trees as the scanner demands, each correction stated in the table's nouns"
+    # TC ownership: TC-DPKCONF-001, TC-DPKCONF-002, TC-DPKCONF-003 (F-6, AC-F6-1, NFR-4, RSK-3); TC-DPKUI-002's conformance half (help/reference nouns, no primary-checkout wording in scope, reference pages under the standing sweep).
+    # Ordering: AFTER phases 3 and 4 — every in-scope surface the scanner walks is already corrected (help summaries and headers and reference pages in phase 3, overview and feature specs in phase 4), so the clean-tree pass at this boundary is truthful and meaningful, and every later phase's content is born under the standing check; the scanner exists WITH the last docs it scans (the guides/tools sweep) per the sequencing constraint.
+    # Fences in force: conformance fence — exceptions frozen, synthetic-only negative proof, committed tree clean (git status unchanged by any test run); the sweep is confined to the declared folders; a correction that cannot be stated in the table's nouns is the STOP trigger, never an exception edit.
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/vocabulary-conformance.test.ts tests/structure/naming-boundary.test.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths/folders changed and the tree carries no planted violation.
+    scope:
+      files:
+        - tests/structure/vocabulary-conformance.test.ts
+      folders:
+        - doc/guides
+        - doc/tools
+        - doc/overview
+  - id: 7
+    title: Behaviour proof — the served accessor through the production path and the clone-identity fixtures G-1..G-3
+    kind: delivery
+    summary: "prove the resolved-scope and identity semantics through the production harness over fixture git repositories — tests/behaviour/projects-clone-key.test.ts (new): resolve the project scope for a fixture clone carrying the git-directory identity marker through the production resolution path and assert the served cloneKey matches what the marker and the host index carry, assert the persisted surfaces are unchanged by name (marker field, host-index field, alias payload field repoKey — the direct field-name assertion alongside the phase 2 unit half), and assert cloneKey is a served read: resolving twice yields the identical value and writes nothing (no new persisted field in host index or marker); then tests/behaviour/clone-identity-fixtures.test.ts (new, built on the tests/fixtures/projects/ helpers — temp repositories, identity markers, host-index readers, groups configuration — everything under the session-scoped temp root, no network): G-1 a linked worktree resolves the SAME clone identity as its main checkout through the production path, stable across repeated reads; G-2 one project repository cloned twice into two temp directories resolves the SAME declared project key from the groups.v1 declaration while the two clone identities and the two per-clone state roots differ, with the declared key never compared against the clone identity (disjoint fields/parent directories as delivered); G-3 an existing-shape groups.v1 configuration whose group key is OUTSIDE the declared-key grammar (uppercase or leading hyphen) loads unchanged through the production configuration path — group and members enumerate as declared, exit 0, no classified validation error, the configuration bytes on disk unchanged after the load, no rewritten or re-keyed configuration anywhere — and a grammar-valid twin loads identically, proving the local layer enforces no pattern (no-public-pattern contract preserved, DEC-4)"
+    # TC ownership: TC-DPKACC-001 behaviour half (F-4, AC-F4-1, DM-3), TC-DPKFIX-001 (F-8, AC-F8-1, DM-3, NFR-7), TC-DPKFIX-002 (F-8, AC-F8-2, DM-1, NFR-7), TC-DPKFIX-003 (F-8, AC-F8-3, NFR-5, DEC-4, NG-4).
+    # Ordering: fixtures LAST among the new behaviour suites — they exercise the resolved accessor (phase 2) and the declared-key contract against delivered identity semantics; helper extensions stay within tests/fixtures/projects/ without new isolation patterns (test plan §8.2 assumption).
+    # Fences in force: fixture fence — session-scoped temp root, deterministic (no wall-clock/hostname/network), committed tree clean; zero-rename — the persisted field-name assertions pin the delivered names, never new ones; if a fixture suite must spell a delivered persisted field name verbatim, its reason-bearing baseline entry lands in this same commit (naming-rule fence).
+    # Verify: TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/projects-clone-key.test.ts tests/behaviour/clone-identity-fixtures.test.ts (run the fixture suite twice when recording gate evidence — NFR-7 spot check); bun run scripts/checks/new-code-naming.ts; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary; git status confirms only the declared paths/folders changed and no residue outside the temp root.
+    scope:
+      files:
+        - tests/behaviour/projects-clone-key.test.ts
+        - tests/behaviour/clone-identity-fixtures.test.ts
+      folders:
+        - tests/fixtures/projects
+    interactions:
+      - kind: contract-file
+        target: tests/behaviour/projects-clone-key.test.ts
+        role: consumer
+      - kind: contract-file
+        target: tests/behaviour/clone-identity-fixtures.test.ts
+        role: consumer
+  - id: 8
+    title: Release changeset and the system-spec reconciliation declaration (doc-syncer scope)
+    kind: delivery
+    summary: "declare the release and the reconciliation boundary — commit .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md declaring the five fixed-group packages (@delivery-os/core, @delivery-os/adapters, @delivery-os/cli, @delivery-os/mcp, @delivery-os/opencode) at minor per the lockstep configuration (spec front matter version_impact: minor), and declare the system-spec reconciliation scope for the lifecycle system_spec_update phase: doc/spec/features/feature-projects.md and doc/spec/features/feature-project-groups.md carry the residual contract-truth reconciliation beyond phase 4's AC edits — the declared-key grammar and reserved-segment refusal, the CLONE_KEY_PATTERN name with the PROJECT_KEY_PATTERN same-value alias, and the served cloneKey accessor recorded as current truth with the zero-rename and no-migration posture — the entries below are DECLARATION ONLY: doc-syncer executes them in the lifecycle phase; no coder task edits them in this phase's commit, whose only artifact is the changeset file"
+    # Execution ownership (binding): the changeset file is this phase's release artifact committed through the commit primitive; the two feature-spec entries are doc-syncer's lifecycle scope declared here so the reconciliation lands inside the declared boundary (GH-394 phase-7 precedent); the PR targeting main-tools, merge authority, and tracker transitions belong to the lifecycle phases, not this plan.
+    # Scope note: phase 4 already landed the AC-asserted wording in these two files (TC-DPKVOC-002 runs green from that commit); this declaration covers only the residual contract-truth wording so doc-syncer's pass stays inside a declared scope.
+    # Verify: the changeset file parses as YAML front matter declaring the five fixed-group packages at minor; the phase commit contains exactly the changeset file; TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary.
+    scope:
+      files:
+        - .changeset/gh-406-delivery-vocabulary-declared-project-key-minor.md
+        - doc/spec/features/feature-projects.md
+        - doc/spec/features/feature-project-groups.md
