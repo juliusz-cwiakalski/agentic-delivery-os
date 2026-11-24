@@ -23,6 +23,7 @@ All decision records for this repository, ordered by type and number.
 | [ADR-0011](ADR-0011-canonical-memory-record-schema.md) | ADR | One Canonical Agent-Memory Record Schema — Required Spine, Closed Optional Set, Dispositions, and a One-Way Reconciliation Direction | Proposed | 2026-11-15 | Juliusz Ćwiąkalski |
 | [ADR-0012](ADR-0012-provider-side-merge-landing-path.md) | ADR | Provider-Side Landing Is the Lifecycle Merge Path — One Mechanism, Exact-Head Guards, and Typed Sync-Required Outcomes | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [ADR-0013](ADR-0013-zone-aware-peak-windows-iana-zone-resolution.md) | ADR | Zone-Aware Peak Windows — IANA Zone Names Resolved at the Composition Edge | Proposed | 2026-11-19 | Juliusz Ćwiąkalski |
+| [ADR-0014](ADR-0014-credential-strategies-store-ownership.md) | ADR | Credential Strategies — Store-Ownership Resolution Behind an Unchanged Port, Without Harness-Owned OAuth | Proposed | 2026-11-23 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
 | [ODR-0005](ODR-0005-closeout-milestone-synchronization.md) | ODR | Milestone Synchronization in `closeout --apply` — Attachment Verification and Exit-Review-Gated Closure | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |

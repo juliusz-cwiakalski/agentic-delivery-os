@@ -16,10 +16,17 @@ claims a queue lease or spawns a session. In the shipped configuration that
 reference maps to the exact environment key `GITHUB_TOKEN`.
 
 The mapping is declared data, not a convention the engine guesses: the reference
-carries its own source key, and only an environment source is supported. The
-engine reads exactly that key through the credential port. It never reads the
-OS keyring, never inherits an ambient variable implicitly, and declares no
-fallback key chain. Provisioning is an explicit operator act.
+carries its own source key, drawn from the closed shipped vocabulary —
+`literal`, `environment-prefixed`, `command`, and `harness-store` (ADR-0014).
+The two environment styles read exactly that declared key through the
+credential port: the engine never reads the OS keyring, never inherits an
+ambient variable implicitly, and declares no fallback key chain. The `command`
+and `harness-store` styles resolve from your own tools instead — the tracker
+CLI's token read, restricted to the shipped closed allowlist, and the harness
+store's export of one declared integration — each over injected construction
+inputs with grammar-closed slots. Every style still requires an explicit
+operator act: an exported variable or a declared source. The engine never
+discovers or chains sources.
 
 ## The explicit `gh` bridge
 
@@ -30,8 +37,14 @@ Command substitution keeps the value off the terminal and out of your history:
 export GITHUB_TOKEN="$(gh auth token)"
 ```
 
-Then re-run dispatch. The product never runs `gh auth token` and never reads your
-stored `gh` login: this command runs in your shell, under your control. The GitHub
+Then re-run dispatch — or declare the reference as a `command` source (the
+tracker CLI token read for your host, ADR-0014) and let the product run that
+one allowlisted read for you: exactly the declared program and pinned
+subcommand pair, closed stdin, a bounded capture, a reduced child environment,
+and a per-execution cap. The product never reads your stored `gh` login beyond
+that single declared read. The export above remains the knowingly-duplicated
+fallback: it keeps the token out of the product's execution entirely, and it
+is the fastest path when the environment is already provisioned. The GitHub
 provider adapter may separately invoke `gh api` as its preferred provider
 transport when the composition selects it; that invocation receives `GITHUB_TOKEN`
 resolved through the credential port as child-environment data, uses an isolated
@@ -89,11 +102,15 @@ The config-catalog path does not register the truth-read key for serialization
 redaction. The resolved key is registered for serialization redaction at the
 runtime edge whenever it is present, using the injected environment facts and
 the declared reference; this adds no ambient read and no new allowlist entry.
+A `command`- or `harness-store`-resolved credential registers the moment it is
+obtained, into the same live registry the serializer consults at render time.
 That registration is why a diagnostic cannot echo the value.
 
 ## Diagnostics are names only
 
-Refusals name the resolved key and the reference, never the value. If the engine
-reports that `GITHUB_TOKEN` is unset for `github-read`, the fix is the explicit
-export above or a declared credential reference that maps to another environment
-key.
+Refusals name the resolved source and the reference, never the value. A
+credential refusal carries its identifier-only source, one closed reason
+token, and the fixed remedy text for that `(reason, style)` cell — the one
+operator act that helps, whether that is the explicit export above, a declared
+command source, or a declared credential reference that maps to another
+environment key.
