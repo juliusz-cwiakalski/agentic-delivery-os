@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-23
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and the freshness envelope that accepts records from both producers — the verify-gates battery projection and the merge dry-run merge-applicable projection — under total equality of the full-declared-sequence gate-set identity, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and the freshness envelope that accepts records from both producers — the verify-gates battery projection and the merge dry-run merge-applicable projection — under total equality of the full-declared-sequence gate-set identity, the post-verification tracker and CI probe extended to every not-green declared required job with its recorded-or-probe attribution, owner-gate classification as merge authority, recorded authorized waivers, the one composed provider-side squash landing with crafted metadata and an exact-head guard, the total mergeability refusal taxonomy and its closed sync-required reason pair, the retained local landing and refresh capabilities with no composed caller, the recorded landing identity's provider provenance and the truthful `shaOnBase` third state, the verify deploy trace verdict taxonomy, the recorded merge commit that anchors closeout's merged-diff sweep, the credential-condition refusal's name-shaped evidence (the declared reference, the resolved source identity, and the classified source/reason/remedy projection — never material), and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366", "GH-388"]
-  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293", "GH-338", "GH-349", "GH-366", "GH-388", "GH-394"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0014", "PDR-0003", "TDR-0031", "TDR-0033", "ADR-0012"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
     - "packages/core/src/contracts/verify-deploy.ts"
@@ -297,6 +297,18 @@ a change branch that does not resolve from the change record at the request
 head refuses `merge.branch-unresolved` at exit `1` with one of its six closed
 reasons. No reference-resolution outcome reaches
 `merge.transaction-aborted`.
+
+A credential-condition refusal's evidence is name-shaped, and it stays
+name-shaped when the classified projection forwards (GH-394): beside the
+declared reference name and the resolved source key, the refusal evidence may
+carry the identifier-only source identity, the closed reason token, and the
+fixed `(reason, style)`-keyed remedy text from the credential port's failure —
+rendered on the refusal text as `credential-identity=`, `credential-reason=`,
+and `credential-remedy=` lines beside the delivered
+`credential-reference=`/`credential-source=` line. These are names and fixed
+table text, never credential material: the name-only evidence rule's scope is
+unchanged, and no secret can enter a landing-fault rendering because the
+projection itself carries none.
 
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and

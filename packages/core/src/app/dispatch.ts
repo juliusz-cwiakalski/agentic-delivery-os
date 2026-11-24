@@ -9,6 +9,7 @@
  */
 import {
   type CommandFailureHarnessDetail,
+  type CredentialFailureReason,
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
@@ -152,12 +153,18 @@ export type DispatchAdmission =
  * `trustedRefusal` is the narrow marker the CLI classifier honours only for
  * `config.credential.missing`; it lets the bounded credential prose past the
  * untrusted-config suppression. Provider and input refusals carry no marker.
+ * The optional projection members are the forwarded credential projection
+ * (DEC-14): they ride beside the marker as projection data on the reified
+ * refusal.
  */
 export type DispatchPreflightError = {
   readonly kind: "input" | "config" | "provider";
   readonly code: string;
   readonly summary?: string;
   readonly trustedRefusal?: true;
+  readonly source?: string;
+  readonly reason?: CredentialFailureReason;
+  readonly remedy?: string;
 };
 
 /**
@@ -384,6 +391,13 @@ export type DispatchRunResult =
         readonly eligibility?: readonly string[];
         /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
         readonly trustedRefusal?: true;
+        /**
+         * The forwarded credential projection (DEC-14): the three fields ride
+         * beside the marker as projection data on the reified refusal.
+         */
+        readonly source?: string;
+        readonly reason?: CredentialFailureReason;
+        readonly remedy?: string;
         /** The four pre-session harness facts (TDR-0041); the four refusals only. */
         readonly harness?: CommandFailureHarnessDetail;
       };

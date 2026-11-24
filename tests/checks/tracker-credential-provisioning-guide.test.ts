@@ -28,13 +28,25 @@ describe("TC-DOCS-001 the provisioning guide documents the sanctioned bridge", (
     expect(text()).toContain('export GITHUB_TOKEN="$(gh auth token)"');
   });
 
-  test("it states the declared-data, environment-only, no-keyring/no-ambient/no-fallback rule", () => {
+  test("it states the declared-data rule over the closed four-style vocabulary with no keyring, ambient, or fallback", () => {
     const guide = text().toLowerCase();
     expect(guide).toContain("declared data");
-    expect(guide).toContain("only an environment source");
+    // The declared command source is sanctioned (ADR-0014): the reversed
+    // posture replaces the only-an-environment-source absoluteness.
+    expect(guide).toContain("`literal`");
+    expect(guide).toContain("`command`");
+    expect(guide).toContain("`harness-store`");
+    expect(guide).toContain("shipped closed allowlist");
     expect(guide).toContain("keyring");
     expect(guide).toContain("ambient");
     expect(guide).toContain("fallback");
+    // The reversed posture, pinned: the environment bridge is the
+    // knowingly-duplicated fallback, and the declared command form is
+    // documented as the product running the one allowlisted read.
+    expect(guide).toContain("knowingly-duplicated");
+    expect(guide).toContain("one allowlisted read");
+    expect(guide).not.toContain("only an environment source is supported");
+    expect(guide).not.toContain("never runs `gh auth token`");
   });
 
   test("it carries shell-history hygiene, least privilege, and rotation/revocation guidance", () => {

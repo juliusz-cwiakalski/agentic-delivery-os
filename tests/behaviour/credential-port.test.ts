@@ -10,6 +10,11 @@ import {
 } from "../../packages/adapters/src/credentials/index";
 import { classifyDomainKind, classifyThrown } from "../../packages/cli/src/classify";
 import {
+  CREDENTIAL_FAILURE_REASONS,
+  type CredentialFailureReason,
+  type CredentialResolutionFailure,
+} from "../../packages/core/src/contracts/credentials";
+import {
   type CredentialReference,
   ERROR_TABLE,
   FALLBACK_INTERNAL_CODE,
@@ -163,5 +168,77 @@ describe("TC-PORT-008 declared reference and brand-neutral source key", () => {
     }).resolve(prefixedReference);
     expect(resolved.ok).toBe(true);
     if (resolved.ok) expect(resolved.material.value).toBe("derived-canary");
+  });
+});
+
+describe("GH-394 plan phase 1 — additive projection fields and the reserved reason", () => {
+  test("the delivered failure exposes the row identity and never the material", () => {
+    const failure = portFor({}).resolve(literalReference);
+    expect(failure.ok).toBe(false);
+    if (failure.ok) return;
+    for (const key of [
+      "code",
+      "domainKind",
+      "category",
+      "retryable",
+      "consequence",
+      "projectionClass",
+    ]) {
+      expect(key in failure, key).toBe(true);
+    }
+    expect("material" in failure).toBe(false);
+    const residue = JSON.stringify(failure);
+    expect(residue).not.toContain(CANARY);
+    expect(residue).not.toContain(JSON.stringify(CANARY).slice(1, -1));
+  });
+
+  test("the three projection fields are additive optional data on the variant", () => {
+    const failure: CredentialResolutionFailure = {
+      ok: false,
+      code: "config.credential.missing",
+      domainKind: "config",
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+      source: "literal:FIXTURE_CREDENTIAL",
+      reason: "variable-absent",
+      remedy: "declare the variable for the reference, then re-run",
+    };
+    // The projection rides beside the unchanged row identity.
+    expect(failure.code).toBe("config.credential.missing");
+    expect(failure.source).toBe("literal:FIXTURE_CREDENTIAL");
+    expect(failure.reason).toBe("variable-absent");
+    expect(failure.remedy).toBe("declare the variable for the reference, then re-run");
+    const parsed: Record<string, unknown> = JSON.parse(JSON.stringify(failure));
+    expect(parsed.source).toBe("literal:FIXTURE_CREDENTIAL");
+    expect(parsed.reason).toBe("variable-absent");
+    expect(parsed.remedy).toBe("declare the variable for the reference, then re-run");
+  });
+
+  test("the closed reason union declares exactly the ten declared members", () => {
+    expect(CREDENTIAL_FAILURE_REASONS).toHaveLength(10);
+    expect([...CREDENTIAL_FAILURE_REASONS]).toEqual([
+      "program-unavailable",
+      "timeout",
+      "non-zero-exit",
+      "empty-output",
+      "shape-drift",
+      "ambiguous-account",
+      "oauth-excluded",
+      "source-not-supported",
+      "variable-absent",
+      "resolution-pending",
+    ]);
+  });
+
+  test("the reserved `resolution-pending` member exists in the union and stays unobservable", () => {
+    const reserved: CredentialFailureReason = "resolution-pending";
+    expect(CREDENTIAL_FAILURE_REASONS).toContain(reserved);
+    // No shipped caller observes the reserved token: the environment port's
+    // refusals name a classified reason, never the reserved member.
+    const failure = portFor({}).resolve(prefixedReference);
+    expect(failure.ok).toBe(false);
+    if (!failure.ok) expect(failure.reason).not.toBe("resolution-pending");
   });
 });

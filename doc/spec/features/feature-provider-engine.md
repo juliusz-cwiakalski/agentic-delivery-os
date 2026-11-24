@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-PROVIDER-ENGINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-22
+last_updated: 2026-11-24
 owners: ["engineering"]
 service: delivery-os
-summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, the typed spend-ceiling budget gate over one ref-scoped totals read, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization, offline simulation and legacy policy migration, the seven-member `provider` CLI family mounted as the twenty-eighth and last prompt-required one, after `loop`, the five provider-engine error identities, and the pure-core / provider-quota / time-zone adapter boundaries."
+summary: "The provider v1 engine: the typed provider configuration branch and shipped defaults, deterministic subscription-first chain resolution with nine skip reasons, zone-aware peak and subscription-quota evaluation combined by MAX, the typed spend-ceiling budget gate over one ref-scoped totals read, named self-expiring parks persisted as provider.park ledger records and folded into provider-parks.json, fail-loud announcements, credential-port-only quota authorization over the closed four-style source vocabulary with the classified credential-failure projection riding the rendered refusal and the log line, offline simulation and legacy policy migration, the seven-member `provider` CLI family mounted as the twenty-eighth and last prompt-required one, after `loop`, the five provider-engine error identities, and the pure-core / provider-quota / time-zone adapter boundaries."
 links:
-  related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231", "GH-350", "GH-377"]
-  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0013", "PDR-0006", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062", "TDR-0063", "TDR-0064", "TDR-0075"]
+  related_changes: ["GH-182", "GH-234", "GH-175", "GH-176", "GH-224", "GH-231", "GH-350", "GH-377", "GH-394"]
+  related_decisions: ["ADR-0003", "ADR-0005", "ADR-0007", "ADR-0013", "ADR-0014", "PDR-0006", "TDR-0059", "TDR-0060", "TDR-0061", "TDR-0062", "TDR-0063", "TDR-0064", "TDR-0075"]
   contracts:
     - "packages/core/src/contracts/provider.ts"
     - "packages/core/src/contracts/provider-profile.ts"
@@ -54,9 +54,11 @@ Provider configuration is the typed `provider` branch of the layered catalog. Al
 | Element | Shape | Default |
 |---------|-------|---------|
 | `provider.defaultChain` | Chain name used when `--chain` is omitted. | absent; `resolve` then requires an explicit chain |
-| `provider.credentials.<name>.sourceKey.style` | `literal` or `environment-prefixed`. | required |
+| `provider.credentials.<name>.sourceKey.style` | One of the closed four-style vocabulary: `literal`, `environment-prefixed`, `command`, or `harness-store` (GH-394). | required |
 | `provider.credentials.<name>.sourceKey.name` | Source key used verbatim by a `literal` reference. | required for `literal` |
 | `provider.credentials.<name>.sourceKey.suffix` | Suffix appended to the branding environment prefix. | required for `environment-prefixed` |
+| `provider.credentials.<name>.sourceKey.program` / `.args` / `.timeoutMs` | The allowlisted absolute program path, its declared argv (pinned subcommand prefix plus permitted parameters), and an optional per-execution timeout bounded by the 30 000 ms hard bound. | `program` and `args` required for `command` |
+| `provider.credentials.<name>.sourceKey.harness` / `.integrationId` | The declared harness identity (validated against the active harness at resolution) and the integration id handed to the harness export's target selector; the integration id matches `[a-z0-9][a-z0-9_-]*` with no leading dash, at most 64 characters. | both required for `harness-store` |
 | `provider.entries.<name>.class` | `subscription` or `pay-per-token`. | required |
 | `provider.entries.<name>.enabled` | Boolean descriptor gate. | `true` |
 | `provider.entries.<name>.peak` | Optional zone-aware peak window. | absent; no peak condition |
@@ -192,11 +194,13 @@ Announcements surface in three places: inside `data.announcements` for `resolve`
 
 Quota authorization resolves the descriptor's `credentialRef` only through the `CredentialPort`. The resolved material is handed once to the quota transport for one request, used to build the authorization header in memory, and never cached, logged, persisted, or returned in evidence.
 
-- A declared credential reference that cannot resolve through the port produces a `credential-missing` park with TTL `credentialParkTtlSeconds`, a `provider.credential.missing` announcement, and `failureClass: config.credential.missing`. No fetch is attempted.
+- A declared credential reference that cannot resolve through the port produces a `credential-missing` park with TTL `credentialParkTtlSeconds`, a `provider.credential.missing` announcement, and `failureClass: config.credential.missing`. No fetch is attempted. The port failure's classified projection — `source` (style plus source identity), `reason` (one closed token), and `remedy` (fixed table text) — rides the parked condition as in-process data (GH-394): the announcement's message line derives from the code plus the reason token (`source <identity>, reason <token>` plus the fixed remedy), and a `provider quota` command reconstructing the refusal appends the same `(credential source …, reason …; remedy)` note to its rendered summary. The projection is never a park-record field: the park-record shape, its evidence allowlist, the cause set, the announcement code set, and the TTLs are unchanged, and the persisted announcement record carries the closed evidence projection only. No `resolution-pending` parking exists: every resolution failure parks today, and the pending-park semantics are specified forward.
 - HTTP 401/403 produces a `credential-rejected` park with TTL `credentialParkTtlSeconds` and a `provider.quota.auth_rejected` announcement.
 - A transport failure produces a `provider-outage` park with TTL `outageParkTtlSeconds` and a `provider.quota.unreachable` announcement.
 - A non-auth HTTP failure produces a `provider-outage` park and a `provider.quota.http_error` announcement.
 - A malformed response produces a `provider-outage` park and a `provider.quota.malformed` announcement.
+
+The offline simulation declares the same classified shape: the simulated missing-credential result mirrors the environment port's classification (`literal:<referenceName>`, reason `variable-absent`), so the forwarded projection reaches the park-evidence build and the log line in simulation exactly as in production.
 
 The secret-read boundary remains unchanged: the provider engine, the CLI provider command, and the quota transport add no ambient environment read and no allowlist entry.
 
@@ -395,3 +399,4 @@ Adding a provider is a descriptor plus a credential reference, not a code branch
 See also: [Provider Profiles and Watching](feature-provider-profiles.md), [Configuration Layer and Inspection](feature-config-layer.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [provider conditions and parks guide](../../guides/provider-conditions-and-parks.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0005](../../decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md), and [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md).
 
 **Change record:** `doc/changes/2026-10/2026-10-31--GH-182--provider-v1/`.
+**Credential-strategies change record:** `doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/` (ADR-0014).

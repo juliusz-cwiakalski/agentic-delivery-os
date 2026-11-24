@@ -8,12 +8,13 @@
  * or status-cap import exists in this module (DEC-10).
  */
 
+import type { CredentialFailureReason } from "./credentials.js";
+import type { OwnerHoldFact } from "./owner-hold.js";
 import type {
   ProviderAnnouncementRecord,
   ProviderConfiguration,
   ProviderParkRecord,
 } from "./provider.js";
-import type { OwnerHoldFact } from "./owner-hold.js";
 
 /** The five fixed check areas in their declared order (DM-2, Appendix A). */
 export const DOCTOR_AREAS = ["repo", "tracker", "provider", "state", "ci"] as const;
@@ -379,6 +380,12 @@ export type DoctorCredentialPresence =
       readonly ok: false;
       readonly failureCode?: "config.credential.missing";
       readonly envVar?: string;
+      /** Source identity shown for all four styles; `envVar` stays the two environment styles only. */
+      readonly source?: string;
+      /** One token from the closed credential reason set. */
+      readonly reason?: CredentialFailureReason;
+      /** The fixed `(reason, style)`-keyed remedy text. */
+      readonly remedy?: string;
     };
 
 /** One performed wiring read result (DM-4). */

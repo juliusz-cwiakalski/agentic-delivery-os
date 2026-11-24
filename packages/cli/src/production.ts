@@ -19,9 +19,15 @@ import {
 } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
+  type ChildRunner,
+  createCredentialResolver,
   createEnvironmentCredentialPort,
-  createProcessCredentialPort,
+  createSpawnChildRunner,
+  credentialSourceIdentity,
+  type HarnessStoreFacts,
+  matchCommandDeclaration,
   resolveCredentialSourceKey,
+  runHarnessExport,
 } from "@delivery-os/adapters/credentials";
 import { createNodeProcessPort, createUnixTransport } from "@delivery-os/adapters/daemon";
 import {
@@ -237,6 +243,8 @@ import {
   type ConfigPriorOutcome,
   type ConfigValue,
   type CoordinatorProgressState,
+  type CredentialFailureProjection,
+  type CredentialFailureReason,
   type CredentialPort,
   type CredentialReference,
   type DaemonReachability,
@@ -330,6 +338,7 @@ import {
   normaliseZoneName,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  parseCredentialSourceKey,
   selectProfile,
   UTC_ZONE_FACTS,
 } from "@delivery-os/core/provider";
@@ -395,6 +404,7 @@ import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.
 import { workingNameEnvironmentVariable } from "./entrypoint.js";
 import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
+import { createSecretRegistry, type SecretRegistry } from "./index.js";
 
 /**
  * The configuration-document codes the merge composition's configuration-read
@@ -670,10 +680,66 @@ const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
   };
 };
 
-/** The declared truth-read credential reference (names only, never material). */
+/** The declared truth-read credential reference (names only, never material).
+ * It is the shipped default (DM-5): the declared `github.credential` branch
+ * replaces its source key at the composition edge, byte-identical when
+ * undeclared.
+ */
 const githubReadReference: CredentialReference = {
   referenceName: "github-read",
   sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
+};
+
+/**
+ * The credential projection a provider read failure carries (DEC-14), if any.
+ * The read-failure union carries the three optional fields only on the
+ * reified credential failure; the helper narrows without re-deriving.
+ */
+const credentialProjectionOf = (read: unknown): CredentialFailureProjection | undefined => {
+  if (typeof read !== "object" || read === null) return undefined;
+  const failure = read as {
+    readonly code?: unknown;
+    readonly source?: unknown;
+    readonly reason?: unknown;
+    readonly remedy?: unknown;
+  };
+  if (failure.code !== "config.credential.missing") return undefined;
+  const source = typeof failure.source === "string" ? failure.source : undefined;
+  const reason = typeof failure.reason === "string" ? failure.reason : undefined;
+  const remedy = typeof failure.remedy === "string" ? failure.remedy : undefined;
+  if (source === undefined && reason === undefined && remedy === undefined) return undefined;
+  return {
+    ...(source === undefined ? {} : { source }),
+    ...(reason === undefined ? {} : { reason: reason as CredentialFailureReason }),
+    ...(remedy === undefined ? {} : { remedy }),
+  };
+};
+
+/**
+ * The absolute harness CLI path for the active identity, resolved from the
+ * injected environment's PATH (the first regular executable hit). It reads no
+ * credential material and is a composition-edge input of the store-facts seam,
+ * never a strategy-internal ambient read (NFR-7).
+ */
+const resolveHarnessCliPath = (
+  kind: HarnessKind,
+  environment: Readonly<Record<string, string | undefined>>,
+): string | undefined => {
+  const binary = kind === "opencode" ? "opencode" : undefined;
+  if (binary === undefined) return undefined;
+  const pathValue = environment.PATH;
+  if (typeof pathValue !== "string" || pathValue.length === 0) return undefined;
+  for (const directory of pathValue.split(":")) {
+    if (directory.length === 0) continue;
+    const candidate = `${directory}/${binary}`;
+    try {
+      const stat = statSync(candidate);
+      if (stat.isFile() && (stat.mode & 0o111) !== 0) return candidate;
+    } catch {
+      // Keep scanning the declared PATH.
+    }
+  }
+  return undefined;
 };
 
 /**
@@ -682,13 +748,13 @@ const githubReadReference: CredentialReference = {
  */
 export const DECLARED_CREDENTIAL_REFERENCES: readonly CredentialReference[] = [githubReadReference];
 
-const githubInstance = (): ExternalSystemInstance => ({
+const githubInstance = (reference: CredentialReference): ExternalSystemInstance => ({
   instanceName: "vcs-github",
   systemKind: "vcs",
   baseUrl: "https://api.github.com",
   authMethod: {
     mechanism: "credential-reference",
-    reference: githubReadReference,
+    reference,
   },
 });
 
@@ -972,6 +1038,26 @@ export type ProductionCompositionFacts = {
    * without an entrypoint may inject the same runtime fact here.
    */
   readonly registeredSecrets?: readonly string[];
+  /**
+   * The live redaction registry the resolver's register-on-materialize hook
+   * feeds (DM-7). The entrypoint path hands the invocation's registry here;
+   * an embedder that composes without an entrypoint may inject its own.
+   * Absent, the composition builds a local registry so the resolver contract
+   * always holds.
+   */
+  readonly secrets?: SecretRegistry;
+  /**
+   * The injected credential child-runner seam (TC-COMP-001): every allowlisted
+   * credential execution goes through it. Production defaults to the bounded
+   * host runner; the composition proof substitutes a recording seam.
+   */
+  readonly credentialChildRunner?: ChildRunner;
+  /**
+   * The injected store-facts seam (TC-COMP-002): the harness export reads
+   * through it. Production wires the seam over the bounded export child; the
+   * composition proof injects a recorded fixture seam.
+   */
+  readonly credentialStoreFacts?: HarnessStoreFacts;
   readonly operatorTranscript?: DispatchTranscriptRead;
   readonly operatorSupportsIntrospection?: (kind: HarnessKind) => boolean;
 };
@@ -1846,6 +1932,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // fact instead. The operator runtime redacts with this set BEFORE bounding,
     // so a credential straddling the 512-character cut cannot survive.
     const registeredSecrets = invocation?.registeredSecrets ?? facts.registeredSecrets;
+    // The live registry (DM-7) is injected below at the credential port; the
+    // declared fact order keeps the static set and the live registry distinct.
     // The configuration filesystem facts: production uses the node facts; a
     // test may inject counting facts so per-layer reads are observable.
     const localFs = facts.configurationFs ?? nodeFileSystemFacts();
@@ -2125,11 +2213,25 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       facts.dispatchLogFamilyRoot ?? dispatchLogsFamilyRoot(stateDirectory, workspaceId);
 
     /**
-     * Resolve the daemon settings and the lane restart bound over one
-     * configuration acquisition. A missing configuration resolves the same
-     * resolvers over an empty branch, so the shipped defaults apply; a resolved
-     * configuration whose daemon branch is invalid composes the unavailable
-     * runtime instead of a re-derived literal.
+     * The one composition-time configuration acquisition (GH-394 DM-5): the
+     * daemon settings read and the declared tracker credential load share this
+     * single memoized acquisition, so making the tracker reference declarable
+     * adds no composition-time configuration read (the delivered touch count
+     * is unchanged).
+     */
+    const projectConfigurationOnce = (() => {
+      const acquired = acquireProjectConfiguration(gitRootForConfig());
+      return acquired.ok
+        ? { acquired, resolved: resolveConfig({ sources: acquired.sources }) }
+        : { acquired, resolved: undefined };
+    })();
+
+    /**
+     * Resolve the daemon settings and the lane restart bound over the one
+     * shared configuration acquisition. A missing configuration resolves the
+     * same resolvers over an empty branch, so the shipped defaults apply; a
+     * resolved configuration whose daemon branch is invalid composes the
+     * unavailable runtime instead of a re-derived literal.
      */
     const readDaemonConfiguration = (
       directory: string,
@@ -2148,11 +2250,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             : PRODUCTION_DEFAULTS.lane["restart-budget"],
         };
       };
-      const gitRoot = gitRootForConfig();
-      const acquired = acquireProjectConfiguration(gitRoot);
-      if (!acquired.ok) return resolveOver({}, {});
-      const resolved = resolveConfig({ sources: acquired.sources });
-      if (!resolved.ok) return resolveOver({}, {});
+      const { acquired, resolved } = projectConfigurationOnce;
+      if (!acquired.ok || resolved === undefined || !resolved.ok) return resolveOver({}, {});
       return resolveOver(resolved.value.values, resolved.value.origins);
     };
 
@@ -2232,9 +2331,181 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     })();
 
-    const credentials = facts.credentials ?? createProcessCredentialPort(brand);
+    /**
+     * The declared tracker credential load (DM-5), once per composed program
+     * at the composition edge: the declared `github.credential.sourceKey` is
+     * validated by the shared load-time validator, and a `command` declaration
+     * must match the shipped allowlist (the style-conditional strict pass).
+     * Failing closed: an invalid declaration refuses the tracker credential
+     * with the classified projection when it resolves. Undeclared — and any
+     * absent or unreadable configuration document, the delivered
+     * no-declaration state — keeps the shipped default byte-identical.
+     */
+    const declaredTrackerCredential = (() => {
+      const { acquired, resolved } = projectConfigurationOnce;
+      if (!acquired.ok || resolved === undefined || !resolved.ok) {
+        return { ok: true as const, sourceKey: githubReadReference.sourceKey };
+      }
+      const branch = resolved.value.values.github;
+      const declared =
+        branch !== undefined &&
+        branch !== null &&
+        typeof branch === "object" &&
+        !Array.isArray(branch) &&
+        "credential" in branch
+          ? (branch as Record<string, unknown>).credential
+          : undefined;
+      if (declared === undefined || typeof declared !== "object" || Array.isArray(declared)) {
+        return { ok: true as const, sourceKey: githubReadReference.sourceKey };
+      }
+      const rawSourceKey = (declared as Record<string, unknown>).sourceKey;
+      if (rawSourceKey === undefined)
+        return { ok: true as const, sourceKey: githubReadReference.sourceKey };
+      const parsed = parseCredentialSourceKey("github.credential.sourceKey", rawSourceKey);
+      if (typeof parsed === "string") {
+        return {
+          ok: false as const,
+          source: undefined,
+          detail: `github.credential.sourceKey refuses the declaration (${parsed})`,
+        };
+      }
+      if (parsed.style === "command") {
+        const match = matchCommandDeclaration(parsed);
+        if (!match.ok) {
+          return {
+            ok: false as const,
+            source: `command:${parsed.program}`,
+            detail: `github.credential.sourceKey refuses the declaration: ${match.detail}`,
+          };
+        }
+      }
+      return { ok: true as const, sourceKey: parsed };
+    })();
+    const trackerReference: CredentialReference = {
+      referenceName: githubReadReference.referenceName,
+      sourceKey: declaredTrackerCredential.ok
+        ? declaredTrackerCredential.sourceKey
+        : githubReadReference.sourceKey,
+    };
+
+    /**
+     * The live redaction registry (DM-7): the resolver registers material at
+     * the moment it is obtained; the serializer consults `values()` at render
+     * time. The entrypoint hands its registry through the invocation fact; an
+     * embedder may inject its own; absent both, the composition builds a
+     * local registry so the resolver contract always holds.
+     */
+    const secretRegistry: SecretRegistry =
+      invocation?.secrets ?? facts.secrets ?? createSecretRegistry();
+
+    /**
+     * The credential port (C-2): the strategy resolver over the four injected
+     * construction-input seams. The active harness identity and the store
+     * facts resolve lazily on the first resolve — the composition never reads
+     * harness settings for a command that resolves no credential — and the
+     * resolver memoizes every reference per process. An invalid declared
+     * tracker credential refuses its reference at the port (failing closed at
+     * load), never silently resolving the default.
+     */
+    const credentials =
+      facts.credentials ??
+      (() => {
+        let composed: CredentialPort | undefined;
+        const composeResolver = (): CredentialPort => {
+          if (composed !== undefined) return composed;
+          const runChild: ChildRunner = facts.credentialChildRunner ?? createSpawnChildRunner();
+          const settingsResolution = resolveProductionHarnessSettings();
+          const activeHarness: HarnessKind | undefined = settingsResolution.ok
+            ? settingsResolution.settings.kind
+            : undefined;
+          const storeFacts: HarnessStoreFacts =
+            facts.credentialStoreFacts ??
+            (() => {
+              const programPath =
+                activeHarness === undefined
+                  ? undefined
+                  : resolveHarnessCliPath(activeHarness, environment);
+              return {
+                exportEntries: ({ integrationId, standalone }) => {
+                  if (programPath === undefined || activeHarness !== "opencode") {
+                    return { ok: false as const, reason: "program-unavailable" as const };
+                  }
+                  const run = runHarnessExport({
+                    programPath,
+                    integrationId,
+                    standalone,
+                    runChild,
+                    parentEnvironment: environment,
+                  });
+                  return run.ok
+                    ? {
+                        ok: true as const,
+                        stdout: run.stdout,
+                        stdoutTruncated: run.stdoutTruncated,
+                      }
+                    : { ok: false as const, reason: run.reason };
+                },
+              };
+            })();
+          composed = createCredentialResolver({
+            environment,
+            brand,
+            harness: activeHarness ?? "opencode",
+            runChild,
+            storeFacts,
+            registerSecret: (value) => secretRegistry.register(value),
+          });
+          return composed;
+        };
+        return {
+          resolve: (reference: CredentialReference) => {
+            if (
+              !declaredTrackerCredential.ok &&
+              reference.referenceName === githubReadReference.referenceName
+            ) {
+              const detail = declaredTrackerCredential;
+              return {
+                ok: false as const,
+                code: "config.credential.missing" as const,
+                domainKind: "config" as const,
+                category: "user" as const,
+                retryable: false as const,
+                consequence: "not_landed" as const,
+                projectionClass: "user-validation" as const,
+                ...(detail.source === undefined ? {} : { source: detail.source }),
+                reason: "source-not-supported" as const,
+                remedy:
+                  "declare a tracker credential source whose command pair is in the shipped allowlist, or remove the declaration to use the environment, then re-run",
+              };
+            }
+            if (reference.sourceKey.style === "harness-store") {
+              // The active harness identity is unresolved in this composition,
+              // so no store declaration can be confirmed: refuse cold (F-3),
+              // never borrowing another store's layout.
+              const settingsResolution = resolveProductionHarnessSettings();
+              if (!settingsResolution.ok) {
+                return {
+                  ok: false as const,
+                  code: "config.credential.missing" as const,
+                  domainKind: "config" as const,
+                  category: "user" as const,
+                  retryable: false as const,
+                  consequence: "not_landed" as const,
+                  projectionClass: "user-validation" as const,
+                  // The harness-inclusive normative identity (review iter-2
+                  // F-9): the source field names the declared harness too.
+                  source: credentialSourceIdentity(reference.sourceKey),
+                  reason: "source-not-supported" as const,
+                  remedy: "declare the supported harness identity in the source key, then re-run",
+                };
+              }
+            }
+            return composeResolver().resolve(reference);
+          },
+        };
+      })();
     const harnessCredentials = createEnvironmentCredentialPort({ environment, brand });
-    const instance = facts.githubInstance ?? githubInstance();
+    const instance = facts.githubInstance ?? githubInstance(trackerReference);
     const truthReadReference =
       instance.authMethod.mechanism === "credential-reference"
         ? instance.authMethod.reference
@@ -2626,16 +2897,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     /**
      * The non-secret credential facts a credential-condition refusal names
      * (AC-F3-2): the declared reference name and the environment variable of
-     * this composition's own credential reference. Absent for every other
+     * this composition's own credential reference, plus the forwarded failure
+     * projection (DEC-14) when the read failure carries it — identifier-only
+     * data and the fixed remedy text, never material. Absent for every other
      * fault class and when the instance authenticates without a reference.
      */
-    const mergeCredentialFacts = (code: string): MergeCredentialFacts | undefined => {
-      if (code !== "config.credential.missing" || truthReadCredential === undefined) {
+    const mergeCredentialFacts = (read: {
+      readonly code: string;
+    }): MergeCredentialFacts | undefined => {
+      if (read.code !== "config.credential.missing" || truthReadCredential === undefined) {
         return undefined;
       }
+      const projection = credentialProjectionOf(read);
       return {
         reference: truthReadCredential.referenceName,
         sourceKey: truthReadCredential.sourceKey,
+        ...(projection?.source === undefined ? {} : { source: projection.source }),
+        ...(projection?.reason === undefined ? {} : { reason: projection.reason }),
+        ...(projection?.remedy === undefined ? {} : { remedy: projection.remedy }),
       };
     };
 
@@ -2653,7 +2932,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // (AC-F3-4); the rendering site names the ref and `github-work-item`.
       if (read.code === "provider.not-found")
         return { ok: false, code: "merge.work-item-unresolved" };
-      const credential = mergeCredentialFacts(read.code);
+      const credential = mergeCredentialFacts(read);
       return {
         ok: false,
         code: mergeReadCodeOf(read),
@@ -2681,7 +2960,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           sha,
         };
       }
-      const credential = mergeCredentialFacts(read.code);
+      const credential = mergeCredentialFacts(read);
       return {
         ok: false,
         code: mergeReadCodeOf(read),
@@ -2709,7 +2988,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         includeGateFacts: true,
       });
       if (!read.ok) {
-        const credential = mergeCredentialFacts(read.code);
+        const credential = mergeCredentialFacts(read);
         return {
           ok: false,
           code: mergeReadCodeOf(read),
@@ -2819,7 +3098,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (entityId !== undefined && /^\d+$/u.test(entityId)) {
         const read = await client.readDeliveryRequest(Number(entityId));
         if (read.ok) return { ok: true, request: read.value };
-        const credential = mergeCredentialFacts(read.code);
+        const credential = mergeCredentialFacts(read);
         return {
           ok: false,
           code: mergeReadCodeOf(read),
@@ -2833,7 +3112,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         includeGateFacts: true,
       });
       if (!open.ok) {
-        const credential = mergeCredentialFacts(open.code);
+        const credential = mergeCredentialFacts(open);
         return {
           ok: false,
           code: mergeReadCodeOf(open),
@@ -2883,7 +3162,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (landed.code === "provider.payload.invalid" && landed.httpStatus === undefined) {
         return { ok: true as const, requestState: "unknown" };
       }
-      const credential = mergeCredentialFacts(landed.code);
+      const credential = mergeCredentialFacts(landed);
       return {
         ok: false as const,
         code: mergeReadCodeOf(landed),
@@ -3711,13 +3990,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (read.ok) return { ok: true };
       const status = "httpStatus" in read ? read.httpStatus : undefined;
       if (read.code === "config.credential.missing") {
+        // FORWARDING ONLY (DEC-14): the classified projection rides the
+        // rendered refusal beside the trusted-refusal marker; the literal-only
+        // prose keeps byte-identically for a projection-less read.
+        const projection = credentialProjectionOf(read);
+        const summary =
+          projection === undefined
+            ? `credential key ${sourceKey} is unset (reference ${referenceName}); export ${sourceKey}="$(gh auth token)" or configure a credential reference`
+            : `credential source ${projection.source ?? sourceKey} unavailable for reference ${referenceName} (reason ${projection.reason ?? "-"}); ${projection.remedy ?? "declare a credential source, then re-run"}`;
         return preflightRefusal({
           kind: "config",
           code: "config.credential.missing",
-          summary: boundPreflightSummary(
-            `credential key ${sourceKey} is unset (reference ${referenceName}); export ${sourceKey}="$(gh auth token)" or configure a credential reference`,
-          ),
+          summary: boundPreflightSummary(summary),
           trustedRefusal: true,
+          ...(projection?.source === undefined ? {} : { source: projection.source }),
+          ...(projection?.reason === undefined ? {} : { reason: projection.reason }),
+          ...(projection?.remedy === undefined ? {} : { remedy: projection.remedy }),
         });
       }
       if (read.code === "provider.not-found" || status === 404) {

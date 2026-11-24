@@ -39,6 +39,13 @@ export const PRODUCTION_DEFAULTS = {
   commit: {
     phaseCommit: true,
   },
+  github: {
+    credential: {
+      // The tracker credential reference default (DM-5): exactly the
+      // hard-coded value it replaces — the literal GITHUB_TOKEN variable.
+      sourceKey: { style: "literal", name: "GITHUB_TOKEN" },
+    },
+  },
   merge: {
     "gate-freshness": 1800,
   },

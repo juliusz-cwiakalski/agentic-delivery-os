@@ -432,8 +432,14 @@ export const createProviderSimulateZonePort = (
   };
 };
 
-/** The classified missing-credential result the delivered port returns. */
-const credentialMissing = () => ({
+/**
+ * The classified missing-credential result the delivered port returns (DEC-14):
+ * the simulated classification mirrors the delivered environment port — a
+ * missing variable on the reference's literal name — so the forwarded
+ * projection reaches the park-evidence build and the log line in simulation
+ * exactly as it does in production.
+ */
+const credentialMissing = (referenceName: string) => ({
   ok: false as const,
   code: "config.credential.missing" as const,
   domainKind: "config" as const,
@@ -441,6 +447,8 @@ const credentialMissing = () => ({
   retryable: false as const,
   consequence: "not_landed" as const,
   projectionClass: "user-validation" as const,
+  source: `literal:${referenceName}`,
+  reason: "variable-absent" as const,
 });
 
 /** One entry's declared outcome, defaulting to `resolved` for undeclared references. */
@@ -556,7 +564,7 @@ export const simulateProviderResolution = async (
     credentialPort: {
       resolve: (reference) =>
         credentialOutcome(fixture, reference.referenceName) === "missing"
-          ? credentialMissing()
+          ? credentialMissing(reference.referenceName)
           : { ok: true, material: { value: "" } },
     },
     transport: {

@@ -116,6 +116,26 @@ const isAllowed = (file: string, entries: readonly AllowlistEntry[]): boolean =>
     entry.kind === "file" ? file === entry.path : file.startsWith(`${entry.path}/`),
   );
 
+/**
+ * The credential-material directory (GH-394, TC-STRUCT-002): strategy
+ * internals are scanned like every other file — the directory allowlist
+ * exempts only the module hosting the documented production wrapper, so a
+ * direct ambient read inside any strategy module fails the boundary.
+ */
+const CREDENTIAL_MATERIAL_DIR = "packages/adapters/src/credentials";
+const CREDENTIAL_WRAPPER_MODULE = `${CREDENTIAL_MATERIAL_DIR}/index.ts`;
+
+const isExempt = (file: string, entries: readonly AllowlistEntry[]): boolean => {
+  // The wrapper module is sanctioned BY the credential-material directory
+  // entry: removing that entry makes its documented ambient read fire again
+  // (mutation A's oracle).
+  if (file === CREDENTIAL_WRAPPER_MODULE) {
+    return entries.some((entry) => entry.path === CREDENTIAL_MATERIAL_DIR);
+  }
+  if (file.startsWith(`${CREDENTIAL_MATERIAL_DIR}/`)) return false;
+  return isAllowed(file, entries);
+};
+
 const isSkippedIdentifierPosition = (node: ts.Identifier): boolean => {
   const parent = node.parent;
   if (!parent) return false;
@@ -195,7 +215,7 @@ export const scan = (
 ): SecretReadViolation[] => {
   const violations: SecretReadViolation[] = [];
   for (const file of scopedFiles(root)) {
-    if (isAllowed(file, entries)) continue;
+    if (isExempt(file, entries)) continue;
     for (const violation of sourceViolations(file, readFileSync(join(root, file), "utf8"))) {
       violations.push({ rule: SECRET_READ_RULE, file, ...violation });
     }

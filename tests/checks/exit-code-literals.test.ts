@@ -221,3 +221,35 @@ describe("TC-COORD-004 the coordinator surface carries no exit literal", () => {
     expect(messages(report.failures)).toContain("exitCode literal 2");
   });
 });
+
+describe("GH-394 the credential modules carry no exit literal", () => {
+  test("the live scan of the credential strategy surface is clean", () => {
+    // The credential strategies are delivered-surface files: they classify
+    // and return, never exit. The live scan covers them through the standard
+    // surface directories.
+    const { scan } = require("../../scripts/checks/secret-read-boundary") as {
+      scan: (root: string) => readonly unknown[];
+    };
+    void scan;
+    const report = scanRoot(process.cwd());
+    const credentialFailures = report.failures.filter((failure: string) =>
+      failure.includes("packages/adapters/src/credentials"),
+    );
+    expect(credentialFailures).toEqual([]);
+  });
+
+  test("an exit literal in a credential strategy module fails naming the file", () => {
+    const root = makeTempRoot();
+    appendFile(
+      root,
+      "packages/adapters/src/credentials/command-strategy.ts",
+      "\nexport const strategyExit = { exitCode: 2 };\n",
+    );
+    const report = scanRoot(root);
+    expect(
+      report.failures.some((failure: string) =>
+        failure.includes("packages/adapters/src/credentials/command-strategy.ts"),
+      ),
+    ).toBe(true);
+  });
+});

@@ -76,19 +76,36 @@ const configFailure = (read: {
   },
 });
 
-const failureEnvelope = (failure: MergeFailure, ref: string): MergeFailureEnvelope => ({
-  ok: false,
-  error: {
-    kind: failure.domainKind,
-    code: failure.code,
-    summary: renderMergeRefusal(failure, ref),
-    // The merge credential refusal's prose is identifier-only (the reference
-    // name, the environment variable, the operation), so the narrow
-    // trusted-refusal marker lets the summary through the config-shaped
-    // suppression instead of reducing it to the row's own summary (AC-F3-2).
-    ...(failure.code === "config.credential.missing" ? { trustedRefusal: true } : {}),
-  },
-});
+const failureEnvelope = (failure: MergeFailure, ref: string): MergeFailureEnvelope => {
+  // The forwarded credential projection (DEC-14) rides the envelope beside the
+  // trusted-refusal marker as projection data, so a scripted consumer reads the
+  // classified tokens without re-deriving them from the summary text.
+  const evidence = failure.evidence;
+  const projection =
+    evidence.credentialSource === undefined &&
+    evidence.credentialReason === undefined &&
+    evidence.credentialRemedy === undefined
+      ? undefined
+      : {
+          ...(evidence.credentialSource === undefined ? {} : { source: evidence.credentialSource }),
+          ...(evidence.credentialReason === undefined ? {} : { reason: evidence.credentialReason }),
+          ...(evidence.credentialRemedy === undefined ? {} : { remedy: evidence.credentialRemedy }),
+        };
+  return {
+    ok: false,
+    error: {
+      kind: failure.domainKind,
+      code: failure.code,
+      summary: renderMergeRefusal(failure, ref),
+      // The merge credential refusal's prose is identifier-only (the reference
+      // name, the environment variable, the operation), so the narrow
+      // trusted-refusal marker lets the summary through the config-shaped
+      // suppression instead of reducing it to the row's own summary (AC-F3-2).
+      ...(failure.code === "config.credential.missing" ? { trustedRefusal: true } : {}),
+      ...(projection === undefined ? {} : { credential: projection }),
+    },
+  };
+};
 
 const declarationOf = (
   flags: Readonly<Record<string, string | true>>,

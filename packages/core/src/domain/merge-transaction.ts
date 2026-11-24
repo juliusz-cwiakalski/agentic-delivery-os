@@ -89,11 +89,17 @@ export type MergeRead<T> =
 /**
  * The non-secret credential facts a credential-condition refusal names
  * (AC-F3-2): the declared reference name and the environment variable that
- * carries the material. Values only, never the secret itself.
+ * carries the material. Values only, never the secret itself. The optional
+ * projection members are the forwarded failure projection (DEC-14): the
+ * identifier-only source identity, the closed reason token, and the fixed
+ * remedy text — name-shaped data, never material.
  */
 export type MergeCredentialFacts = {
   readonly reference: string;
   readonly sourceKey: string;
+  readonly source?: string;
+  readonly reason?: string;
+  readonly remedy?: string;
 };
 
 /** The bounded check-run page consumed by the probe. */
@@ -326,6 +332,16 @@ export type MergeFailureEvidence = {
    */
   readonly credentialReference?: string;
   readonly credentialSourceKey?: string;
+  /**
+   * The forwarded credential-failure projection (DEC-14), carried as
+   * name-shaped data beside the reference facts: the identifier-only source
+   * identity, the closed reason token, and the fixed remedy text. The
+   * name-only evidence rule's substance stands — no credential material ever
+   * rides here.
+   */
+  readonly credentialSource?: string;
+  readonly credentialReason?: string;
+  readonly credentialRemedy?: string;
   /** The chosen closed reason of a `merge.branch-unresolved` refusal (F-1 step 7). */
   readonly branchReason?: string;
   /** Each read candidate's own cause and attempted tree path, capped at three. */
@@ -570,6 +586,15 @@ const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailu
   };
 };
 
+/** The evidence members one credential's forwarded projection contributes. */
+const credentialProjectionEvidence = (
+  credential: MergeCredentialFacts,
+): Partial<MergeFailureEvidence> => ({
+  ...(credential.source === undefined ? {} : { credentialSource: credential.source }),
+  ...(credential.reason === undefined ? {} : { credentialReason: credential.reason }),
+  ...(credential.remedy === undefined ? {} : { credentialRemedy: credential.remedy }),
+});
+
 const readFailure = (
   code: string,
   operation?: MergeRefusalOperation,
@@ -588,6 +613,7 @@ const readFailure = (
       ...(operation === undefined ? {} : { operation }),
       ...(credential === undefined ? {} : { credentialReference: credential.reference }),
       ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+      ...(credential === undefined ? {} : credentialProjectionEvidence(credential)),
     },
   };
 };
@@ -616,12 +642,15 @@ const landingFaultFailure = (portCode: string, credential?: MergeCredentialFacts
     domainKind: domainKindOf(row, "provider"),
     exit: exitOfRow(row),
     // The landing fault names the landing operation; the port's own failure
-    // token never reaches the evidence (AC-F3-3, NFR-7).
+    // token never reaches the evidence (AC-F3-3, NFR-7). The forwarded
+    // projection rides beside the reference facts as name-shaped data (DEC-14);
+    // the delivered name-only mapping arm above is preserved.
     evidence: {
       operation: "github-merge-delivery-request",
       detail: "landing-fault",
       ...(credential === undefined ? {} : { credentialReference: credential.reference }),
       ...(credential === undefined ? {} : { credentialSourceKey: credential.sourceKey }),
+      ...(credential === undefined ? {} : credentialProjectionEvidence(credential)),
     },
   };
 };
@@ -2093,6 +2122,18 @@ export const renderMergeFailure = (
     lines.push(
       `credential-reference=${evidence.credentialReference} credential-source=${evidence.credentialSourceKey ?? "-"}`,
     );
+  }
+  // The forwarded projection renders beside the reference facts (DEC-14):
+  // identifier-only source identity, the closed reason token, and the fixed
+  // remedy text — name-shaped lines, never material.
+  if (evidence.credentialSource !== undefined) {
+    lines.push(`credential-identity=${evidence.credentialSource}`);
+  }
+  if (evidence.credentialReason !== undefined) {
+    lines.push(`credential-reason=${evidence.credentialReason}`);
+  }
+  if (evidence.credentialRemedy !== undefined) {
+    lines.push(`credential-remedy=${evidence.credentialRemedy}`);
   }
   if (evidence.detail !== undefined) lines.push(`evidence=${evidence.detail}`);
   if (evidence.attribution !== undefined) lines.push(`attribution=${evidence.attribution}`);

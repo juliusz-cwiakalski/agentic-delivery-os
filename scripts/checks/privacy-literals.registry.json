@@ -177,6 +177,13 @@
       "reason": "Archival machine-readable review evidence quoting the F-1 path example; the review record is read-only and is not production content."
     },
     {
+      "id": "gh-394-code-review-iter-2-yaml",
+      "kind": "file",
+      "path": "doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/code-review/review-iter-2.yaml",
+      "rules": ["private.absolute-user-path"],
+      "reason": "Archival machine-readable review evidence quoting the F-8 prose example it requires reworded; the review record is read-only and is not production content."
+    },
+    {
       "id": "provider-chain-resolution-negative-fixture",
       "kind": "file",
       "path": "tests/behaviour/provider-chain-resolution.test.ts",

@@ -1,0 +1,275 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-394
+branch: feat/GH-394/credential-owner-strategies
+status: FAIL
+summary: >
+  Iteration-1 findings F-1..F-4 are verified FIXED: the relative ./x.js imports
+  landed at both #credentials/* sites (index.ts and the second site
+  command-strategy.ts:31), exports-parity (5 publishables, attw esm-only) and
+  TC-RELEASE-001/002 (7 pass / 0 fail) reproduced green on the current tree,
+  the three false "pre-existing at c1854932" dispositions are RECLASSIFIED in
+  pm-notes with the 4f1a7ddc refutation, the per-style wrong-style refusal is
+  wired at load with TC-ALLOW-003 re-pinned and TC-POL-SEC-002 preserved,
+  AC-F3-5 harness-and-field naming is realized end-to-end with TC-HARNESS-005
+  asserting it, and the F-4 map rows and classifications are in place. The
+  four rulings: (a) the resolver-merge `name` exemption is ACCEPTED as
+  delivered (the exemption set is exactly the synthesized set; TC-COMP-001 and
+  TC-ALLOW-003 are green under the full suite; origins-aware trimming is
+  recorded as a follow-up residual); (b) TC-HARN-029's no-op mutant anchor is
+  a CONFIRMED red caused by this change's own phase-4 rewording — require the
+  one-line re-pin in-iteration, not a quality_gates route, and correct the
+  inaccurate "anchor re-pinned" evidence claims; (c) both out-of-format
+  identity sites REQUIRE the in-iteration fix — provenance defeats the
+  residual framing because both were authored by this change's phase-4
+  commits, and production.ts:2494 violates the corrected normative identity
+  contract on a refusal surface; (d) the spec DM-2 "e.g." example SUFFICES —
+  no specification reopen, since the governing ADR D2 cell and all three
+  feature specs are corrected normatively. Blocking FAIL: this review ran the
+  full `bun test` suite for the first time on this branch (never run by any
+  phase gate, which all used named batteries) and found 18 red arms across 9
+  suites plus 2 live-tree privacy-literals violations, in four root classes
+  ALL introduced by this branch (phases 4-6 and remediation 8), none
+  pre-existing at merge base 4f1a7ddc: the no-op mutant anchor (F-5), the
+  phase-5 hermeticity guard breaking 10 pre-existing stub-spawn arms (F-6),
+  the phase-5 check-chain edit breaking 4 byte-unchanged baseline pin suites
+  (F-7), and the phase-5/6 privacy-literal content violations surfaced
+  through TC-WIRE-002/TC-PRIVACY-020 (F-8). Phase-9 remediation must close
+  all four classes plus F-9/F-10 and verify with FULL `pnpm check` green —
+  named batteries are hereby retired as the sole verify evidence for this
+  change.
+severity_breakdown:
+  critical: 0
+  high: 4
+  medium: 1
+  low: 1
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-5
+    severity: high
+    confidence: high
+    category: correctness
+    location: tests/checks/harness-mutants.test.ts:108
+    message: >
+      TC-HARN-029 "credential fallback mutant fails naming the reference" is
+      red at HEAD (reproduced: "mutant credential-fallback passed"). The
+      phase-4 commit d5b5d3de reworded the production call at
+      harness-spawn-env.ts:92 to a single line AND rewrote the mutant anchor
+      to a multiline layout matching neither the old nor the new text, so the
+      string-form text.replace() silently no-ops, the mutation is never
+      applied, the unmutated build refuses, and the non-vacuity oracle trips.
+      The phase-4/5 pm-notes claim that the anchor was "re-pinned" is
+      factually wrong. Root cause is inside this change's history, so this is
+      a delivery regression, not a baseline defect.
+    suggestion: >
+      Re-pin the anchor to the current single-line call `return
+      credentialFailure(entry.reference.referenceName, entry.name,
+      projectionOf(resolution));` (one line in the test file), run the suite
+      green (mutant applied and oracle fails by name), and append
+      RECLASSIFIED annotations to the phase-4/5 pm-notes claims, mirroring
+      the F-1 correction pattern. Ruling (b): fixing in-iteration, not
+      routing to quality_gates — a one-line in-scope test re-pin does not
+      belong to another phase, and quality_gates must inherit green gates,
+      not repair them.
+    suppressed: false
+  - id: F-6
+    severity: high
+    confidence: high
+    category: correctness
+    location: tests/preload.ts:44
+    message: >
+      The phase-5 hermeticity guard (this change's own delivery, landed at
+      3847363a) blocks every in-process spawn surface whose program basename
+      is gh/opencode/claude with no path exemption. Ten pre-existing,
+      untouched test arms that legitimately spawn stub owner binaries are
+      red: TC-CLI-014 (1 arm), TC-CLI-015 (2 arms — the scratch-dir
+      cleanliness arm and the deliberate real-spawn negative control),
+      TC-HDA-010/011/012/015/016/035 (7 arms across
+      dispatch-harness-default-detail.test.ts, harness-default-path.test.ts,
+      dispatch-harness-default-spawn.test.ts). The guard's own TC-HERM-001
+      suite stays green, so nothing observed the collision; the named
+      batteries never included these suites and `bun test` full runs were
+      never a phase gate on this branch.
+    suggestion: >
+      Restore all ten arms green without weakening TC-HERM-001: either add a
+      fixture-root exemption to the guard (allow programs resolving under the
+      repo's tmp stub root; TC-HERM-001 pins only bare-name blocking, so its
+      three teeth survive) or rewire the arms over the injected child-runner
+      seam — the coder chooses the mechanism, and the guard's behavioral
+      control for real binaries on real PATHs must remain intact. Ruling (c)
+      context: the same provenance standard applies — the guard is this
+      change's delivery, so the collision is a delivery regression, in-scope
+      for phase-9 remediation.
+    suppressed: false
+  - id: F-7
+    severity: high
+    confidence: high
+    category: correctness
+    location: package.json:20
+    message: >
+      The same phase-5 commit inserted `bun run
+      scripts/checks/allowlist-tripwire.ts` into the root `check` chain
+      without re-pinning the four baseline suites that pin
+      `manifest.scripts.check` byte-unchanged: TC-GATE-001
+      (milestone-gate.test.ts — now counts 6 named members against a pinned
+      5), TC-WIRE-001 (privacy-ci-wiring.test.ts:149), GH-172 CI binding
+      (ci-checks.test.ts:700), and TC-LICREG-020
+      (license-ci-binding.test.ts:113). All four are red at HEAD. These
+      suites exist precisely to make check-chain edits deliberate and
+      reviewed; the edit itself may be declared phase-5 scope, but shipping
+      the chain change with its pins red is an unreviewed baseline drift.
+    suggestion: >
+      Re-pin the four suites to the delivered chain through each suite's own
+      pinned-constant update (deliberate, reviewed, diff-visible), keeping
+      TC-WIRE-001's "does not chain the guard" and GH-172's "ends with the
+      exports parity gate" structural assertions true of the new string — or,
+      if PM prefers, re-route the tripwire out of the aggregate chain and
+      restore the pinned string; either way the four suites and CI-parity
+      checks must agree on one string.
+    suppressed: false
+  - id: F-8
+    severity: high
+    confidence: high
+    category: security
+    location: tests/behaviour/credential-strategies-command.test.ts:519
+    message: >
+      `pnpm check:privacy-literals` is red on the live tree with 2 violations
+      (reproduced): `secret.credential-assignment` at
+      tests/behaviour/credential-strategies-command.test.ts:519 (the
+      parent-environment sentinel block — `GH_TOKEN` / `AWS_SECRET_ACCESS_KEY`
+      credential-shaped assignments in a file this change created at phase 5;
+      values are sentinels, no real secret), and `private.absolute-user-path`
+      at doc/decisions/ADR-0014-credential-strategies-store-ownership.md:535
+      (the prose "path/home/session-bus facts" accidentally matches the
+      `/home/<segment>` rule; landed at phase 6). TC-WIRE-002 (both arms) and
+      TC-PRIVACY-020 fail as consequences of the same live-tree redness.
+      The phase gates ran secret-read-boundary (production files only) and
+      the tripwire, but never privacy-literals, so this surfaced only now.
+    suggestion: >
+      Resolve per the check's own registry convention: reword the ADR prose
+      ("path, home and session-bus facts") so the row stops literal-matching
+      the rule, and for the sentinel block either re-shape the assignments
+      (e.g. non-credential variable names carrying the sentinel values,
+      preserving the non-propagation proof) or add a scoped registry
+      allowlist entry with a reason following the gh-32 corpus precedent —
+      never weakening the rule classes themselves. Both violations gone,
+      check green, TC-WIRE-002 and TC-PRIVACY-020 green.
+    suppressed: false
+  - id: F-9
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:2494
+    message: >
+      Two sites still build the superseded harness-store identity
+      `harness-store:<integrationId>`: production.ts:2494 (the
+      source-not-supported cold refusal the phase-4 commit d5b5d3de added for
+      the tracker reference) and doctor.ts:76 (the harness-store display arm
+      the phase-4 commit f89499db wrote into sourceKeyDisplay). Ruling (c):
+      the residual/convergence-point framing fails on provenance — both
+      surfaces were AUTHORED by this change, and production.ts:2494
+      constructs the normative projection `source` field that the corrected
+      ADR-0014 D2 cell and the adapter-ports/dispatch-engine spec texts
+      (all corrected at d3ce4f77) define as
+      `harness-store:<harness>:<integrationId>`. Shipping the change with one
+      non-conforming refusal surface would contradict the change's own
+      corrected contract at merge time. No test pins the old format anywhere
+      (verified), and the `style === "harness-store"` guard at the site makes
+      `sourceKey.harness` accessible — the fix is one template literal per
+      site.
+    suggestion: >
+      Extend both identity constructions to name the harness
+      (`harness-store:${...harness}:${...integrationId}`) under a phase-9
+      scope amendment naming both files; re-run the doctor and production
+      suites plus the credential battery. doctor.ts:76's arm is display-only
+      (DM-6) and unpinned, but it is this change's own code rendering the
+      superseded format — fix it in the same pass rather than recording a
+      residual on a surface the change itself introduced.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/chg-GH-394-plan.yaml:459
+    message: >
+      Plan phase 8's declared scope list names index.ts, validate.ts,
+      catalog.ts, the two credential test files and pm-notes — but the
+      remediation commit 5dcc0fb2 also modified
+      packages/adapters/src/credentials/command-strategy.ts (the second F-1
+      site the coder found) and the plan file itself (the map extension,
+      disclosed as "envelope scopeDrift ... accepted" in pm-notes). The
+      command-strategy.ts edit is disclosed and review-directed in substance,
+      but the plan's phase-8 scope list — the operative fence whose verify
+      step reads "git status confirms only the declared paths changed" — was
+      not amended to name it. Same class as iteration-1 F-4: the operative
+      artifact must carry the classification, not only pm-notes.
+    suggestion: >
+      Amend the phase-8 scope list to name
+      packages/adapters/src/credentials/command-strategy.ts with a one-line
+      note (the second 36fa3eeb defect site, review-directed), and record the
+      plan-file self-edit as an accepted envelope deviation in the revision
+      log (rev 4).
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/provider/validate.ts:296
+    message: >
+      Ruling (a) — the resolver-merge design is ACCEPTED as delivered. The
+      config resolver deep-merges each DM-5 default declaration into every
+      restyled sourceKey, so a command/harness-store declaration legitimately
+      carries the default's `name`; the strict refusal pass exempts exactly
+      `name` (plus the `style` discriminant and out-of-vocabulary keys, which
+      keep TC-POL-SEC-002's two-layer semantic). Verified mechanically: both
+      shipped defaults are literal-style sourceKeys, so `name` is the ONLY
+      synthesizable member — the exemption is exactly necessary and
+      sufficient; TC-COMP-001 resolves the merged hybrid through the real
+      composition and TC-ALLOW-003 proves every operator-introducible
+      wrong-style field refuses by name while the parse drops the riding
+      `name` (no behavior leak into the typed key). The known residual: an
+      operator-typed `name` on a non-literal style silently drops —
+      documented, no resolution hazard (`name` is meaningless off literal).
+      The cleaner origins-aware trimming (the resolver already tracks
+      supplied origins) touches production.ts/resolver.ts merge semantics
+      that carry byte-identical default-resolution pins — out of remediation
+      scope; PM may fold it into a follow-up work item alongside the #396
+      binding work.
+    suggestion: >
+      No action for this change. Record the residual (this YAML is the
+      record); a follow-up work item for origins-aware trimming is
+      optional and PM-owned.
+    suppressed: false
+  - id: F-12
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/chg-GH-394-spec.md:214
+    message: >
+      Ruling (d) — the spec DM-2 examples SUFFICE; no specification reopen.
+      The DM-2 row's `harness-store:<integrationID>` appears inside an
+      "e.g."-framed illustration in a temporary change artifact
+      (doc/changes/**), while the durable truth is already corrected
+      normatively: the governing ADR-0014 D2 cell states
+      `harness-store:<harness>:<integrationID>` with the
+      `field=<drift-field>` note, and feature-adapter-ports,
+      feature-config-layer and feature-dispatch-engine all state the extended
+      format. The delivered format is a strict widening (names more, never
+      less), so the stale example cannot mislead an implementer reading the
+      corrected system spec.
+    suggestion: >
+      No reopen. A one-line cosmetic touch-up of the DM-2 example may ride
+      the phase-9 documentation pass; it is optional and non-blocking.
+    suppressed: false
+reviewed_at: 2026-11-24T04:55:00Z
+next_step: CALL_CODER

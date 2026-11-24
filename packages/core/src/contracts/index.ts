@@ -881,6 +881,8 @@ export {
 } from "./coordinator.js";
 export type {
   CredentialFailureCode,
+  CredentialFailureProjection,
+  CredentialFailureReason,
   CredentialPort,
   CredentialReference,
   CredentialResolution,
@@ -1125,6 +1127,7 @@ export {
   type DispatchDivergenceRecord,
   type DispatchEnvelopeData,
   type DispatchEnvelopeError,
+  type DispatchEnvelopePushBlock,
   type DispatchEvidenceClass,
   type DispatchEvidenceReference,
   type DispatchExcludedEvidenceClass,
@@ -1144,7 +1147,6 @@ export {
   type DispatchPushParityPort,
   type DispatchPushParityReading,
   type DispatchPushVerdict,
-  type DispatchEnvelopePushBlock,
   type DispatchResolveData,
   type DispatchResumeMode,
   type DispatchSummaryData,

@@ -1,0 +1,223 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-394
+branch: feat/GH-394/credential-owner-strategies
+status: PASS
+summary: >
+  Final iteration within the escalation budget. All iteration-2 blocking findings
+  are verified FIXED on the current tree: (F-5) the TC-HARN-029 mutant anchor is
+  re-pinned to the exact single-line credentialFailure(...) call at
+  harness-spawn-env.ts:92 with a explanatory comment, the harness-mutants suite
+  re-run green by this review (mutant applies, oracle trips by name), and the
+  phase-4/5 pm-notes anchor claims carry appended RECLASSIFIED annotations with
+  history untouched; (F-6) the tests/preload.ts fixture-root exemption is exactly
+  as narrow as claimed — an explicit program path is exempt only when resolved
+  inside the repo tmp/tmpdir stub root, a bare name is exempt only when the
+  invocation's OWN declared env.PATH resolves it inside the stub root or resolves
+  nowhere (preserving the off-PATH control's natural ENOENT), and bare names over
+  the ambient PATH or with no options bag stay intercepted (TC-HERM-001's three
+  teeth re-run green; all 10 previously blocked arms green in their four home
+  suites); (F-7) all four baseline pin suites are re-pinned to the delivered
+  chain with the tripwire member between check:boundaries and check:memory —
+  TC-GATE-001 still asserts full ordering and the +1 total length, TC-WIRE-001's
+  no-privacy-chain assertion stays true (the aggregate contains no privacy
+  command), the GH-172 binding keeps its exclusions and exports-parity tail,
+  TC-LICREG-020's PINNED_CHECK matches package.json byte-for-byte (verified
+  against the live manifest) — no pin was weakened to pass; (F-8) the sentinel
+  block uses non-credential identifier names carrying the same sentinel values
+  and the non-propagation proof is genuinely name-independent (it asserts the
+  reduced environment key set EXACTLY, so any undeclared parent variable's
+  absence is proven whatever its name), the ADR-0014 prose is reworded to
+  "path, home and session-bus facts", the scoped registry entry (gh-184
+  precedent) targets exactly the committed review-iter-2.yaml with the single
+  rule and carries a reason, the registry fixture pin rides consistently, no
+  rule class was disabled or narrowed, and check:privacy-literals re-run OK 5299
+  files / 0 violations; (F-9) production.ts's cold refusal uses the shared
+  credentialSourceIdentity helper and doctor.ts builds identical inline tokens —
+  both render harness-store:<harness>:<integrationId>, verified identical at the
+  string level, and the TC-DOCTOR-022 constraint is real (commandCoreOnly
+  admits only core and relative imports, so the adapters helper import is
+  inexpressible in a command file — the inline mechanism is forced, not
+  convenient); (F-10) the plan rev-4 amendments are in place (phase-8 scope
+  names command-strategy.ts; the envelope deviation is recorded). Spot-verify of
+  the binding evidence all green on the current tree: build, typecheck exit 0,
+  harness-mutants + hermeticity-guard + the four ex-blocked-arm suites (106
+  pass), the four pin suites + TC-RELEASE (75 pass), the credential/doctor/
+  production battery (89 pass), TC-PRIVACY-020 + doctor suites (78 pass),
+  privacy-literals 5299/0, tripwire 111 surfaces, exports-parity 5 publishables,
+  secret-read-boundary 489 files. Fences hold: daemon-compose, the pending-park
+  region, announcements, the error table and the goldens are untouched by all
+  three new commits; ADR-0014 stays Proposed with decision_date null; no branch
+  commit ever staged .zed/ or .ai/local; the 2ced93ca envelope is a strict
+  subset of the declared phase-9 scope; the 9f8e622b doc reconciliation matches
+  the delivered truth (chain enumerations with the tripwire member; feature-doctor
+  format pins extended). Four accepted residuals are recorded below for owner
+  disposition through the PR description — none blocks.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+findings:
+  - id: F-13
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/decisions/ADR-0014-credential-strategies-store-ownership.md:471
+    message: >
+      Residual ruling on the D7 failure-fields source bullet: its example list
+      still illustrates the harness-store identity in the superseded
+      integration-id-only form (harness-store:zai-coding-plan), inconsistent
+      with the record's own corrected D2 cell at :407 and with the delivered
+      rendering. ACCEPTED per the iteration-2 ruling (d) precedent, with two
+      aggravating facts weighed and found non-blocking: the stale example lives
+      in a DURABLE record rather than a temporary change artifact, but the
+      governing identity statement is corrected normatively in the SAME record
+      one section above (D2 states the harness-inclusive format with the
+      field=drift note), the delivered rendering is conformant and pinned by
+      tests on every code surface (F-9 verified), and the record lands status
+      Proposed whose acceptance is by fence the owner's own act at the PR
+      review — the residual cannot ship unnoticed. Doc-syncer's pass was
+      scope-limited and the review budget is exhausted; a FAIL here would
+      escalate for one stale example line in a Proposed, owner-gated record
+      while every gate, suite, fence, and code surface is green.
+    suggestion: >
+      No in-iteration action. PM carries this into the PR description as an
+      owner-disposition item: a one-line example touch-up to the
+      harness-inclusive form may ride the owner's acceptance edit of the ADR at
+      PR review. No ticket creation.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-14
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/credentials/index.ts:91
+    message: >
+      Residual ruling on the resolveCredentialSourceKey doc-comment: ACCEPTED
+      AS-IS, no fix required. The comment accurately describes its own function
+      (verified: the function returns the integration-id-only harness-store
+      form), and that helper is a deliberately distinct identity — the
+      environment-lookup/name-shaped baseline identity — not the failure
+      projection identity, which lives in credentialSourceIdentity (:114, the
+      F-9-fixed extended form). The execution-style arms of the helper are
+      unreachable in both live paths (the ambient environment port refuses
+      command and harness-store styles before the lookup; the resolver's
+      fallback arm is the environment-styles branch), its truth-read consumers
+      in production.ts are pre-existing baseline sites unchanged in content
+      since the merge base and fed the literal default, and no doc pins this
+      helper's format. No misleading comment, no hazard, no contract violated.
+    suggestion: >
+      No action. If a future change ever feeds an execution-style reference
+      into the truth-read or environment paths, that change must revisit this
+      helper's identity — the fail-closed source-not-supported refusal makes
+      today's posture safe.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-15
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/merge-transaction.ts:2123
+    message: >
+      Newly-possible dual identity rendering on the merge evidence surface:
+      once the change makes execution-style tracker references declarable, a
+      merge whose truth-read credential fails renders BOTH the preserved
+      baseline evidence line (credential-source=, fed by
+      resolveCredentialSourceKey's short integration-id-only form via
+      mergeCredentialFacts) AND the forwarded projection line
+      (credential-identity=, the conformant harness-inclusive form) in one
+      refusal. Both lines are identifier-only with no material leak and the
+      authoritative identity line conforms; the short-form line is a
+      baseline-preserved site whose plan fence the change explicitly honored
+      (the name-only evidence site PRESERVED, forwarded fields rendered beside
+      it) and whose literal-default rendering is byte-identical to the merge
+      base. Recorded as an owner-disposition residual, not a blocking defect:
+      no contract violation (the baseline field's contract predates the
+      declarable styles), no hazard, the harness-store value on the old line is
+      merely newly possible.
+    suggestion: >
+      No in-iteration action. PM adds this to the PR description residual list:
+      a follow-up may unify the merge evidence line onto the shared identity
+      helper when the #396 binding work touches the merge facts, so the two
+      lines spell the identity one way.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-16
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/code-review/review-iter-2.yaml
+    message: >
+      F-11 (iteration-2, info) disposition confirmed: the origins-aware
+      trimming residual is durably recorded in the committed review-iter-2.yaml
+      (the record, per its own suggestion) and echoed in pm-notes as a
+      follow-up candidate. This verdict confirms the carrier for owner
+      disposition is the PR description — no ticket creation, consistent with
+      the no-local-tracker-writes posture. The resolver's name exemption
+      remains accepted as delivered (ruling (a) stands: the exemption set is
+      exactly the synthesizable set, both shipped defaults are literal).
+    suggestion: >
+      No action for this change. PM carries the origins-aware trimming item
+      into the PR description residual list alongside F-13 and F-15; folding it
+      into the #396 binding follow-up remains optional and PM-owned.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-17
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/chg-GH-394-plan.yaml:456
+    message: >
+      Plan audit, format-aware: phase 9 (Code Review Remediation, Iteration 2)
+      is complete with full evidence — pm-notes names the commit (2ced93ca),
+      the binding verify results, and per-finding outcomes; the commit envelope
+      (15 files) is a strict subset of the declared phase-9 scope with the two
+      disclosed companions (registry fixture pin, contract-inventory formatter
+      fix) named in the scope; the five ex-blocked-arm suite files declared in
+      scope were deliberately untouched (the guard-level fix made arm edits
+      unnecessary — declared scope is an upper bound, satisfied). The 9f8e622b
+      third doc reconciliation is the lifecycle system_spec_update phase
+      re-executed after remediation changed truth (timestamp updated in
+      pm-notes), touching one phase-7-declared file plus the two accepted
+      companion files classified at iteration-1 F-4b, plus the review-iter-2
+      YAML capsule sweep — the designed flow, not coder scope drift. All nine
+      plan phases carry execution evidence; no OPEN_PHASES, no EVIDENCE_MISSING,
+      no SCOPE_DEVIATION. review_fix closes on this PASS.
+    suggestion: >
+      No plan changes required. Proceed to quality_gates (the binding verify
+      gate inherits FULL pnpm check green per the phase-9 amendment), then
+      dod_check with the per-phase evidence in pm-notes, then pr_creation with
+      the four residual items (F-13, F-15, F-16, and the optional DM-2 example
+      touch-up from iteration-2 F-12) in the PR description for owner
+      disposition.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-24T05:18:49Z
+next_step: PROCEED

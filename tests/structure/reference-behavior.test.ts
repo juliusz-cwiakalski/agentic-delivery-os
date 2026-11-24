@@ -692,9 +692,10 @@ describe("TC-FLOOR-007 the change respects the declared non-decisions", () => {
   });
 
   test("no configuration surface is added for the transport or the mapping", () => {
-    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /github|adapter/iu.test(key))).toEqual(
-      [],
-    );
+    // GH-394 DM-5: the declarable tracker credential reference is a declared
+    // github branch, not a transport or mapping surface. The adapter absence
+    // still holds.
+    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /adapter/iu.test(key))).toEqual([]);
     for (const file of listTs("packages/adapters/src/github")) {
       const text = read(file);
       for (const forbidden of ["process.env", "github.workflow", "PRODUCTION_CATALOG"]) {

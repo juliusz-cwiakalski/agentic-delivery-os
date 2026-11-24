@@ -64,10 +64,22 @@ const targetOf = (
 ): { readonly owner: string; readonly name: string } | undefined =>
   binding.state === "observed" ? { owner: binding.owner, name: binding.name } : undefined;
 
-const sourceKeyDisplay = (reference: CredentialReference, environmentPrefix: string): string =>
-  reference.sourceKey.style === "literal"
-    ? reference.sourceKey.name
-    : `${environmentPrefix}${reference.sourceKey.suffix}`;
+/**
+ * The source identity a credential renders (DM-6): the variable name for the
+ * two environment styles, the style-prefixed identity for the two execution
+ * styles — harness-inclusive for harness-store (review iter-2 F-9). Display
+ * only — no requirement derivation happens here. (The command-tier import
+ * rule keeps this file free of adapters imports, so the identity is built
+ * inline with the same closed tokens the shared helper emits.)
+ */
+const sourceKeyDisplay = (reference: CredentialReference, environmentPrefix: string): string => {
+  const key = reference.sourceKey;
+  if (key.style === "literal") return key.name;
+  if (key.style === "environment-prefixed") return `${environmentPrefix}${key.suffix}`;
+  return key.style === "command"
+    ? `command:${key.program}`
+    : `harness-store:${key.harness}:${key.integrationId}`;
+};
 
 /**
  * Build the `doctor` command definition over injected readers.

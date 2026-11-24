@@ -74,9 +74,41 @@ describe("TC-HARN-013 credential resolution", () => {
     expect(built.error.code).toBe("config.credential.missing");
     expect(built.error.reference).toBe(CREDENTIAL_REFERENCE.referenceName);
     expect(built.error.summary ?? "").toContain(CREDENTIAL_REFERENCE.referenceName);
+    // A projection-less read keeps the delivered summary byte-identical.
+    expect(built.error.summary ?? "").not.toContain("reason ");
     expect(codes.has(built.error.code)).toBe(true);
     expect(canonicalHarnessJson(built.error)).not.toContain(CANARY_CREDENTIAL_SOURCE);
     expect(canonicalHarnessJson(built.error)).not.toContain("synthetic-credential-material");
+  });
+
+  test("a projection-carrying refusal forwards onto the rendered summary (DEC-14)", () => {
+    const built = buildHarnessSpawnEnvironment({
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+      parentEnvironment: PARENT_ENVIRONMENT,
+      credentials: {
+        resolve: () => ({
+          ok: false as const,
+          code: "config.credential.missing" as const,
+          domainKind: "config" as const,
+          category: "user" as const,
+          retryable: false as const,
+          consequence: "not_landed" as const,
+          projectionClass: "user-validation" as const,
+          source: "literal:FIXTURE_CREDENTIAL",
+          reason: "variable-absent" as const,
+          remedy:
+            "declare the credential value in the environment variable named by the literal source key, then re-run",
+        }),
+      },
+    });
+    expect(built.ok).toBe(false);
+    if (built.ok) return;
+    // The forwarded projection rides the rendered summary: the identifier-only
+    // source, the closed reason token, and the fixed remedy.
+    expect(built.error.summary ?? "").toContain("reason variable-absent");
+    expect(built.error.summary ?? "").toContain(
+      "declare the credential value in the environment variable named by the literal source key, then re-run",
+    );
   });
 
   test("a missing declared non-credential variable fails closed and names it", () => {

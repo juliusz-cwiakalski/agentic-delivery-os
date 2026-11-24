@@ -21,6 +21,8 @@ describe("TC-CONFIG-023 pure root API and unchanged composition declaration", ()
       "commit",
       "merge",
       "harness",
+      // GH-394 DM-5: the declarable tracker credential reference.
+      "github",
       "verify",
       "metrics",
       "lane",
@@ -101,6 +103,9 @@ describe("TC-BACKLOG-009 no configuration surface is added for the mapping or th
       "commit",
       "merge",
       "harness",
+      // GH-394 DM-5: the declarable tracker credential reference. The branch
+      // carries the credential source key only — no adapter surface.
+      "github",
       "verify",
       "metrics",
       "lane",
@@ -109,9 +114,7 @@ describe("TC-BACKLOG-009 no configuration surface is added for the mapping or th
       "coordinator",
       "poll",
     ]);
-    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /github|adapter/iu.test(key))).toEqual(
-      [],
-    );
+    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /adapter/iu.test(key))).toEqual([]);
   });
 
   test("the GitHub subpath carries the map and the policy as construction data only", () => {

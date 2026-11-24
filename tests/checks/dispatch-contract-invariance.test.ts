@@ -18,15 +18,15 @@ import {
   DISPATCH_COMPARISON_REASONS,
   DISPATCH_CORROBORATION_SOURCES,
   DISPATCH_PUSH_VERDICTS,
-  ERROR_TABLE,
   dispatchPushEvidenceRef,
+  ERROR_TABLE,
 } from "../../packages/core/src/contracts/index";
 import {
-  DISPATCH_FAILURE_KINDS,
-  type DispatchFailureKind,
   classifyDispatchFailure,
+  DISPATCH_FAILURE_KINDS,
+  DISPATCH_READ_FAILURE_SOURCES,
+  type DispatchFailureKind,
 } from "../../packages/core/src/domain/dispatch-result";
-import { DISPATCH_READ_FAILURE_SOURCES } from "../../packages/core/src/domain/dispatch-result";
 import { LANE_BRANCH, PRODUCTION_CATALOG, resolveConfig } from "../../packages/core/src/index";
 
 const ROOT = process.cwd();
@@ -130,7 +130,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
     expect(DISPATCH_ATTEMPT_PAYLOAD_SCHEMA).toBe("delivery.dispatch.attempt.v1");
   });
 
-  test("the configuration branches are exactly the nine declared ones", () => {
+  test("the configuration branches are exactly the ten declared ones", () => {
     const resolved = resolveConfig({ sources: [] });
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) return;
@@ -138,6 +138,7 @@ describe("TC-CONTRACT-001 the closed dispatch surface is unchanged", () => {
       "commit",
       "coordinator",
       "daemon",
+      "github",
       "harness",
       "lane",
       "merge",

@@ -103,9 +103,13 @@ describe("TC-HARN-029 named guard mutants", () => {
     const mutant = await loadMutant(
       "packages/core/src/domain/harness-spawn-env.ts",
       "credential-fallback",
+      // Re-pinned (GH-394 review iter-2 F-5) to the current single-line call:
+      // the phase-4 rewording collapsed the statement onto one line and the
+      // previous multiline anchor matched neither text, silently no-op'ing the
+      // mutation and tripping this non-vacuity oracle.
       (text) =>
         text.replace(
-          "return credentialFailure(entry.reference.referenceName, entry.name);",
+          "return credentialFailure(entry.reference.referenceName, entry.name, projectionOf(resolution));",
           'environment[entry.name] = "parent-fallback"; continue;',
         ),
     );

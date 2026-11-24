@@ -33,7 +33,9 @@ import {
   type CliStreams,
   type CommandDefinition,
   type CommandProgram,
+  createSecretRegistry,
   runCli,
+  type SecretRegistry,
 } from "./index.js";
 
 /** The prior-identity working-name override's variable name. */
@@ -85,6 +87,15 @@ export type EntrypointInvocationFact = {
    * second discovery path for the values handed here.
    */
   readonly registeredSecrets?: readonly string[];
+  /**
+   * The live redaction registry (DM-7): the SAME registry the serializer
+   * consults at render time, handed to the composition so the resolver's
+   * register-on-materialize hook feeds it. The static `registeredSecrets`
+   * snapshot above stays for the operator redaction path's declared
+   * before-bounding behavior; every resolver materialization after composition
+   * lands here.
+   */
+  readonly secrets?: SecretRegistry;
   /**
    * The composition-scoped notice sink: every queued warning line the
    * composition would attach to a handler's outcome is also reported here, so a
@@ -322,7 +333,7 @@ const dependenciesFor = (
   entrypoint: Entrypoint,
   program: CommandProgram,
   runId: string,
-  secrets: readonly string[],
+  secrets: SecretRegistry,
 ): CliDependencies => ({
   brand: entrypoint.brand,
   clock: options.clock ?? { now: () => Date.now() },
@@ -351,7 +362,7 @@ const emitSelfDescription = (
     brand: entrypoint.brand,
     clock: options.clock ?? { now: () => Date.now() },
     newRunId: options.newRunId ?? (() => globalThis.crypto.randomUUID()),
-    secrets: options.secrets ?? [],
+    secrets: createSecretRegistry(options.secrets ?? []),
     program: {
       commands: {
         self: {
@@ -394,7 +405,7 @@ const emitNoIdentityContainment = (
     brand: containmentBrand(),
     clock: options.clock ?? { now: () => Date.now() },
     newRunId: options.newRunId ?? (() => globalThis.crypto.randomUUID()),
-    secrets: options.secrets ?? [],
+    secrets: createSecretRegistry(options.secrets ?? []),
     program: {
       commands: {
         self: {
@@ -475,7 +486,9 @@ export const runEntrypoint = async (
   // credential references resolved against the injected environment plus any
   // injected values. The composed program receives it as an invocation fact so
   // the operator runtime redacts with the same values the serializer does.
-  const registeredSecrets = entrypointSecrets(options, entrypoint.brand);
+  // The live registry (DM-7): the static environment-style registration the
+  // entrypoint keeps; the resolver registers material on materialization.
+  const registeredSecrets = createSecretRegistry(entrypointSecrets(options, entrypoint.brand));
   // The await stays inside the containment `try`: a rejected composition (a
   // synchronous throw or a rejected promise) yields the containment identity
   // instead of an unhandled rejection, exactly as the delivered sync path did.
@@ -485,7 +498,8 @@ export const runEntrypoint = async (
         command,
         runId,
         groupScoped: isGroupScopedInvocation(command, argv),
-        registeredSecrets,
+        registeredSecrets: registeredSecrets.values(),
+        secrets: registeredSecrets,
         ...(options.priorWorkingName === undefined
           ? {}
           : { priorWorkingName: options.priorWorkingName }),

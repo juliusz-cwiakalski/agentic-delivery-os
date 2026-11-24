@@ -25,7 +25,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     tc: "TC-SECRET-001",
     expect: "violation",
     rule: SECRET_READ_RULE,
-    files: providerFile("export const secret = process.env.SECRET;\n"),
+    files: providerFile("export const planted = process.env.SECRET;\n"),
     assertFile: "packages/adapters/src/github/provider.ts",
   },
   {
@@ -134,7 +134,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     tc: "TC-CRED-001",
     expect: "violation",
     rule: SECRET_READ_RULE,
-    files: providerFile("export const secret = process.env.SECRET;\n"),
+    files: providerFile("export const planted = process.env.SECRET;\n"),
     assertFile: "packages/adapters/src/github/provider.ts",
   },
   {
@@ -143,7 +143,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     expect: "violation",
     rule: SECRET_READ_RULE,
     files: {
-      "packages/adapters/src/gitlab/provider.ts": "export const secret = process.env.SECRET;\n",
+      "packages/adapters/src/gitlab/provider.ts": "export const planted = process.env.SECRET;\n",
     },
     assertFile: "packages/adapters/src/gitlab/provider.ts",
   },
@@ -164,7 +164,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     expect: "violation",
     rule: SECRET_READ_RULE,
     files: {
-      "packages/core/src/provider/probe.ts": "export const secret = process.env.SECRET;\n",
+      "packages/core/src/provider/probe.ts": "export const planted = process.env.SECRET;\n",
     },
     assertFile: "packages/core/src/provider/probe.ts",
   },
@@ -174,7 +174,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     expect: "violation",
     rule: SECRET_READ_RULE,
     files: {
-      "packages/cli/src/commands/provider.ts": "export const secret = process.env.SECRET;\n",
+      "packages/cli/src/commands/provider.ts": "export const planted = process.env.SECRET;\n",
     },
     assertFile: "packages/cli/src/commands/provider.ts",
   },
@@ -185,7 +185,7 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
     rule: SECRET_READ_RULE,
     files: {
       "packages/adapters/src/provider-quota/probe.ts":
-        "export const secret = process.env.SECRET;\n",
+        "export const planted = process.env.SECRET;\n",
     },
     assertFile: "packages/adapters/src/provider-quota/probe.ts",
   },
@@ -205,5 +205,28 @@ export const SECRET_READ_CASES: readonly SecretReadCase[] = [
       "packages/mcp/src/serve.ts": "export const environment = { ...process.env };\n",
     },
     assertFile: "packages/adapters/src/credentials/index.ts",
+  },
+  {
+    id: "gh394-strategy-internals-violation",
+    tc: "TC-STRUCT-002",
+    expect: "violation",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/adapters/src/credentials/command-strategy.ts":
+        "export const planted = process.env.SECRET;\n",
+    },
+    assertFile: "packages/adapters/src/credentials/command-strategy.ts",
+  },
+  {
+    id: "gh394-strategy-internals-clean",
+    tc: "TC-STRUCT-002",
+    expect: "clean",
+    rule: SECRET_READ_RULE,
+    files: {
+      "packages/adapters/src/credentials/index.ts":
+        "export const credential = process.env.CREDENTIAL;\n",
+      "packages/adapters/src/credentials/allowlist.ts": "export const table = [];\n",
+    },
+    assertFile: "packages/adapters/src/credentials/allowlist.ts",
   },
 ];
