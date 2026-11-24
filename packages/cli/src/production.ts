@@ -23,6 +23,7 @@ import {
   createCredentialResolver,
   createEnvironmentCredentialPort,
   createSpawnChildRunner,
+  credentialSourceIdentity,
   type HarnessStoreFacts,
   matchCommandDeclaration,
   resolveCredentialSourceKey,
@@ -2491,7 +2492,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
                   retryable: false as const,
                   consequence: "not_landed" as const,
                   projectionClass: "user-validation" as const,
-                  source: `harness-store:${reference.sourceKey.integrationId}`,
+                  // The harness-inclusive normative identity (review iter-2
+                  // F-9): the source field names the declared harness too.
+                  source: credentialSourceIdentity(reference.sourceKey),
                   reason: "source-not-supported" as const,
                   remedy: "declare the supported harness identity in the source key, then re-run",
                 };

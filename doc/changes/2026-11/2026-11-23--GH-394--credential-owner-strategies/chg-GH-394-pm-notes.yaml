@@ -433,7 +433,15 @@ notes:
       in plan phase 8 by converting to the adapters' relative ./x.js
       sibling-import convention (imports only, no behaviour change).
       TC-RELEASE-001 stays red until the phase-7 changeset by design (green
-      since phase 7). No lifecycle phase complete was run (delivery continues)."
+      since phase 7). No lifecycle phase complete was run (delivery continues).
+      ANCHOR CLAIM RECLASSIFIED IN REMEDIATION (review iter-2 F-5): the
+      companion claim that the 'harness-mutants credential-fallback anchor
+      follows the reworded forwarding call' was FALSE — the phase-4 reword
+      collapsed the production call onto a single line while the re-pinned
+      anchor was a multiline layout matching neither the old nor the new text,
+      so the mutation silently no-op'd and TC-HARN-029 tripped its non-vacuity
+      oracle; re-pinned to the current single-line credentialFailure(...) call
+      in plan phase 9 (mutant applied, oracle fails by name, suite green)."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 5 complete: commit 3847363a. LANDED: the CI allowlist tripwire
@@ -480,7 +488,12 @@ notes:
       scanner flags the 18-character RHS on the whole-file scan — the boundary
       rule keys on process.env, so the fixtures' firing power is unchanged;
       harness-mutants' credential-fallback anchor was already re-pinned in phase
-      4. No lifecycle phase complete was run (delivery continues)."
+      4. No lifecycle phase complete was run (delivery continues).
+      RECLASSIFIED IN REMEDIATION (review iter-2 F-5): the 'anchor was already
+      re-pinned in phase 4' claim was FALSE — the anchor matched neither text,
+      the mutation was a silent no-op and TC-HARN-029 was red at HEAD;
+      re-pinned to the current single-line credentialFailure(...) call in plan
+      phase 9."
     type: info
     date: "2026-11-24"
   - text: "Plan phase 6 complete: commit f20a78d7 — the ONE coder-owned commit (no

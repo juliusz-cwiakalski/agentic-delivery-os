@@ -19,7 +19,9 @@ const ROOT = process.cwd();
 const CI_PATH = ".github/workflows/ci.yml";
 const LICENSE_JOB = "ts-license-audit";
 const PINNED_CHECK =
-  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
+  // Re-pinned (GH-394 review iter-2 F-7): the GH-394 allowlist tripwire joined
+  // the aggregate chain between check:boundaries and check:memory.
+  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/allowlist-tripwire.ts && pnpm check:memory && pnpm check:forbidden-literals && pnpm check:namespace-tree && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
 
 type WorkflowJob = {
   permissions?: Record<string, unknown>;

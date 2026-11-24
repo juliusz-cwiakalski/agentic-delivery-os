@@ -515,8 +515,12 @@ describe("TC-EXEC-002 child execution posture", () => {
         HOME: "/home/op",
         DBUS_SESSION_BUS_ADDRESS: "unix:path=/dev/null",
         XDG_RUNTIME_DIR: "/run/user/1000",
-        GH_TOKEN: "sentinel-parent-secret",
-        AWS_SECRET_ACCESS_KEY: "sentinel-parent-secret-2",
+        // Non-credential identifier names carrying sentinel values (GH-394
+        // review iter-2 F-8, the planted-fixture convention): the proof is
+        // that undeclared parent variables and their values never propagate,
+        // which is name-independent.
+        UNDECLARED_PARENT_ONE: "sentinel-parent-secret",
+        UNDECLARED_PARENT_TWO: "sentinel-parent-secret-2",
       },
       registerSecret: INPUT.registerSecret,
     });

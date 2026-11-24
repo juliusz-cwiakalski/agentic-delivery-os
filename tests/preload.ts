@@ -16,9 +16,9 @@
  *    interception is the behavioural control; suites construct every strategy
  *    over the four injected construction-input seams and never take this path.
  */
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { join, resolve, sep } from "node:path";
 
 const ROOT = process.cwd();
 
@@ -33,6 +33,33 @@ const basenameOf = (program: unknown): string => {
   return segments[segments.length - 1] ?? "";
 };
 
+/** The repo-local scratch root every spawn fixture builds its stub binaries under. */
+const STUB_ROOT = join(ROOT, "tmp", "tmpdir");
+
+/** True when a resolved program path lies inside the fixture stub root. */
+const underStubRoot = (candidate: string): boolean =>
+  candidate === STUB_ROOT || candidate.startsWith(`${STUB_ROOT}${sep}`);
+
+/** The options bag of a spawn call, if one was passed (never the argv array or a callback). */
+const optionsOf = (args: readonly unknown[]): Record<string, unknown> | undefined => {
+  for (const arg of args.slice(1)) {
+    if (arg !== null && typeof arg === "object" && !Array.isArray(arg)) {
+      return arg as Record<string, unknown>;
+    }
+  }
+  return undefined;
+};
+
+/** Resolve a bare command name along a PATH list the way the OS would: first hit wins. */
+const resolveAlongPath = (name: string, pathValue: string): string | undefined => {
+  for (const directory of pathValue.split(":")) {
+    if (directory.length === 0) continue;
+    const candidate = join(directory, name);
+    if (existsSync(candidate)) return candidate;
+  }
+  return undefined;
+};
+
 const HERMETICITY_GUARD = "hermeticity-guard";
 
 const guardMessage = (surface: string, program: unknown): string =>
@@ -40,10 +67,44 @@ const guardMessage = (surface: string, program: unknown): string =>
   `"${basenameOf(program)}" — credential strategies run only through the ` +
   `injected child-runner seam; inject a recorded seam instead`;
 
+/**
+ * The fixture-root exemption (GH-394 review iter-2 F-6): pre-existing spawn
+ * suites (TC-CLI-014/015, TC-HDA-010..035) drive the real process edge against
+ * stub owner-CLI binaries built under tmp/tmpdir, declared FIRST on the
+ * child's own PATH — exactly what the OS would resolve. An owner-CLI name is
+ * exempt only when the invocation's declared env.PATH resolves it inside the
+ * stub root, or (bare name, declared PATH) when it resolves nowhere at all so
+ * the spawn fails with its natural ENOENT; an explicit program path is exempt
+ * only when it resolves inside the stub root. A bare name over the ambient
+ * PATH — TC-HERM-001's teeth pass no options — is always intercepted, as is
+ * any resolution to a real binary outside the stub root, so the guard's
+ * behavioral control for real binaries on real PATHs is intact.
+ */
+const isFixtureStubSpawn = (program: string, args: readonly unknown[]): boolean => {
+  if (program.includes("/") || program.includes("\\")) {
+    return underStubRoot(resolve(program));
+  }
+  const options = optionsOf(args);
+  const env = options?.env;
+  const declaredPath =
+    env !== null &&
+    typeof env === "object" &&
+    typeof (env as Record<string, unknown>).PATH === "string"
+      ? ((env as Record<string, unknown>).PATH as string)
+      : undefined;
+  if (declaredPath === undefined) return false;
+  const resolved = resolveAlongPath(program, declaredPath);
+  return resolved === undefined || underStubRoot(resolved);
+};
+
 const guarded = (surface: string, original: unknown) =>
   function guardedSpawn(this: unknown, ...args: unknown[]): unknown {
     const program = args[0];
-    if (OWNER_CLI_BINARIES.has(basenameOf(program))) {
+    if (
+      typeof program === "string" &&
+      OWNER_CLI_BINARIES.has(basenameOf(program)) &&
+      !isFixtureStubSpawn(program, args)
+    ) {
       throw new Error(guardMessage(surface, program));
     }
     return (original as (...innerArgs: unknown[]) => unknown).apply(this, args);

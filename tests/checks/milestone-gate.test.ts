@@ -1,9 +1,10 @@
 /**
  * TC-GATE-001 — the aggregate gate stays offline and ordered.
  *
- * The check chain keeps its five named steps and three trailing scans, gains no
- * milestone or network step, and no chain-reachable module imports the GitHub
- * adapter. The new suites ride the existing `bun test` discovery only.
+ * The check chain keeps its five named steps, the GH-394 allowlist tripwire,
+ * three trailing scans, gains no milestone or network step, and no
+ * chain-reachable module imports the GitHub adapter. The new suites ride the
+ * existing `bun test` discovery only.
  */
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
@@ -26,7 +27,7 @@ const modules = [
 ] as const;
 
 describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
-  test("the five named checks, the memory and two scan members, and the three trailing scans stay ordered", () => {
+  test("the five named checks, the tripwire and memory members, the two scan members, and the three trailing scans stay ordered", () => {
     const check = manifest().scripts?.check ?? "";
     const parts = check.split("&&").map((part) => part.trim());
     expect(
@@ -34,8 +35,11 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
         .slice(0, NAMED_CHECKS.length)
         .map((part, index) => part.includes(NAMED_CHECKS[index] ?? "")),
     ).toEqual(NAMED_CHECKS.map(() => true));
+    // Re-pinned (GH-394 review iter-2 F-7): the allowlist tripwire is a
+    // deliberate chain member between check:boundaries and check:memory.
+    expect(parts[NAMED_CHECKS.length]).toContain("scripts/checks/allowlist-tripwire.ts");
     const memoryIndex = parts.indexOf("pnpm check:memory");
-    expect(memoryIndex).toBe(NAMED_CHECKS.length);
+    expect(memoryIndex).toBe(NAMED_CHECKS.length + 1);
     expect(parts[memoryIndex + 1]).toContain("pnpm check:forbidden-literals");
     expect(parts[memoryIndex + 2]).toContain("pnpm check:namespace-tree");
     for (const scan of [
@@ -45,7 +49,7 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
     ]) {
       expect(parts.some((part) => part.includes(scan))).toBe(true);
     }
-    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 2 + 3);
+    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 1 + 2 + 3);
   });
 
   test("the chain contains no milestone token and no network command", () => {

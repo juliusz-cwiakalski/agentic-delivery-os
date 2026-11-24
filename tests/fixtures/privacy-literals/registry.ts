@@ -179,6 +179,12 @@ export const EXPECTED_ALLOWLIST: readonly ExpectedAllowlist[] = [
     rules: ["private.absolute-user-path"],
   },
   {
+    id: "gh-394-code-review-iter-2-yaml",
+    kind: "file",
+    path: "doc/changes/2026-11/2026-11-23--GH-394--credential-owner-strategies/code-review/review-iter-2.yaml",
+    rules: ["private.absolute-user-path"],
+  },
+  {
     id: "provider-chain-resolution-negative-fixture",
     kind: "file",
     path: "tests/behaviour/provider-chain-resolution.test.ts",
