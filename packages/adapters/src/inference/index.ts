@@ -14,10 +14,21 @@ import type {
   CommitTransportOutcome,
   CommitTransportPort,
   CommitTransportRequest,
+  CredentialFailureProjection,
   CredentialPort,
   CredentialReference,
 } from "@delivery-os/core/contracts";
 import type { ProviderTransport } from "../io/provider-transport.js";
+
+/**
+ * The forwarded projection's inline note (DEC-14): the outcome contract stays
+ * closed, so the classified tokens and the fixed remedy ride the detail text —
+ * identifier-only data, never raw child output or material.
+ */
+const projectionNote = (projection: CredentialFailureProjection): string =>
+  ` (source ${projection.source ?? "-"}, reason ${projection.reason ?? "-"}${
+    projection.remedy === undefined ? "" : `; ${projection.remedy}`
+  })`;
 
 /** The constrained response schema the request declares. */
 export const COMMIT_MESSAGE_SCHEMA = {
@@ -92,7 +103,14 @@ export const createInferenceTransport = (
 ): CommitTransportPort => ({
   generate: async (request: CommitTransportRequest): Promise<CommitTransportOutcome> => {
     const credential = options.credentials.resolve(options.credentialRef);
-    if (!credential.ok) return failure("config.credential.missing");
+    if (!credential.ok) {
+      const projection: CredentialFailureProjection = {
+        ...(credential.source === undefined ? {} : { source: credential.source }),
+        ...(credential.reason === undefined ? {} : { reason: credential.reason }),
+        ...(credential.remedy === undefined ? {} : { remedy: credential.remedy }),
+      };
+      return failure("config.credential.missing", projectionNote(projection));
+    }
     const payload = {
       model: options.model,
       temperature: request.temperature,

@@ -7,6 +7,7 @@
 import type {
   AnnouncementCode,
   AnnouncementSeverity,
+  CredentialFailureProjection,
   ParkCause,
   ProviderAnnouncementRecord,
   ProviderParkRecord,
@@ -64,6 +65,7 @@ const messageFor = (
   subjectName: string,
   code: AnnouncementCode,
   resumeAt?: string,
+  credential?: CredentialFailureProjection,
 ): string => {
   const subject = `${subjectKind} ${subjectName}`;
   if (code === "provider.resumed") return `${subject} resumed`;
@@ -73,8 +75,31 @@ const messageFor = (
   if (code === "provider.chain.exhausted") {
     return `${subject} chain is exhausted${resumeAt === undefined ? "" : ` until ${resumeAt}`}`;
   }
+  // The credential-missing line derives from the code plus the reason token
+  // (DEC-14): the classified projection rides the log line — identifier-only
+  // data and the fixed remedy text — never a park-record field.
+  if (code === "provider.credential.missing" && credential !== undefined) {
+    const remedy = credential.remedy === undefined ? "" : ` ${credential.remedy}`;
+    return (
+      `${subject} is parked (${code}; source ${credential.source ?? "-"}, ` +
+      `reason ${credential.reason ?? "-"})${remedy}${resumeAt === undefined ? "" : ` until ${resumeAt}`}`
+    );
+  }
   return `${subject} is parked (${code})${resumeAt === undefined ? "" : ` until ${resumeAt}`}`;
 };
+
+/**
+ * The rendered-refusal note for a reconstructed credential failure (DEC-14):
+ * the code stays the delivered identity; the projection rides the summary
+ * text, because the rendered refusal and the log line are the only reason
+ * carriers. Absent projection keeps the delivered line byte-identical.
+ */
+export const credentialRefusalNote = (credential?: CredentialFailureProjection): string =>
+  credential === undefined
+    ? ""
+    : ` (credential source ${credential.source ?? "-"}, reason ${credential.reason ?? "-"}${
+        credential.remedy === undefined ? "" : `; ${credential.remedy}`
+      })`;
 
 /**
  * The DEC-10 cost-sparsity note (GH-350). It rides the message only: the
@@ -126,13 +151,18 @@ export const budgetCrossedMessage = (
 export const createParkAnnouncement = (
   park: ProviderParkRecord,
   nowMs: number,
-  context: { readonly workItemRef?: string; readonly sparse?: boolean } = {},
+  context: {
+    readonly workItemRef?: string;
+    readonly sparse?: boolean;
+    /** The in-process credential projection (DEC-14); never persisted. */
+    readonly credential?: CredentialFailureProjection;
+  } = {},
 ): ProviderAnnouncementRecord => {
   const code = announcementCodeForCondition(park.cause, park.evidence.failureClass);
   const message =
     code === "provider.budget.parked"
       ? budgetParkMessage(park.subjectName, park, context)
-      : messageFor(park.subjectKind, park.subjectName, code, park.expiresAt);
+      : messageFor(park.subjectKind, park.subjectName, code, park.expiresAt, context.credential);
   return createAnnouncementRecord({
     subjectKind: park.subjectKind,
     subjectName: park.subjectName,

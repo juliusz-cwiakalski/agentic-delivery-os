@@ -75,7 +75,10 @@ const resolutionLine = (resolution: MergeDryRunReport["resolution"]): string =>
  * `operation=<token>` validated against the closed vocabulary at this rendering
  * site — an out-of-vocabulary token fails the rendering by name instead of
  * being passed through. Delegation keeps the evidence and remediation lines in
- * the one declared renderer.
+ * the one declared renderer, and it is the renderer pass-through step
+ * (TC-REMEDY-001): the forwarded credential projection (DEC-14) travels to the
+ * declared renderer inside the failure object and renders unmodified — no
+ * field is dropped, renamed, or re-derived here.
  */
 export const renderMergeRefusal = (failure: MergeFailure, ref: string): string =>
   renderMergeFailure(failure, { command: "merge", ref });

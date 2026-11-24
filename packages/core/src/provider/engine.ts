@@ -8,6 +8,7 @@
 import type {
   AnnouncementCode,
   CombinedProviderCondition,
+  CredentialFailureProjection,
   CredentialPort,
   CredentialReference,
   ProfileProbePort,
@@ -40,6 +41,7 @@ import { PROVIDER_DEFAULT_ZONE, type ProviderZoneFacts } from "#contracts";
 import {
   budgetCrossedMessage,
   createParkAnnouncement,
+  credentialRefusalNote,
   severityForAnnouncementCode,
 } from "./announcements.js";
 import {
@@ -244,6 +246,45 @@ type EntryEvaluation = {
   readonly condition: CombinedProviderCondition;
   readonly park?: ProviderParkRecord;
   readonly announcement?: ProviderAnnouncementRecord;
+  /**
+   * The forwarded credential projection (DEC-14), carried in-process from the
+   * park-evidence build to the rendered refusal and the announcement log line.
+   * Never persisted: the park-record shape gains no field.
+   */
+  readonly credentialProjection?: CredentialFailureProjection;
+};
+
+/**
+ * The DEC-14 in-process projection carrier: the three credential-failure
+ * fields ride the parked condition object as projection data so the failure is
+ * never collapsed to the failure-class-plus-reference evidence shape without
+ * them alongside. The park-record shape stays closed and nothing persisted
+ * carries them; the carrier lives exactly as long as the condition object.
+ */
+const credentialProjectionCarrier = new WeakMap<object, CredentialFailureProjection>();
+
+/** The projection a resolution failure carries, if any (DEC-14). */
+const credentialProjectionOf = (
+  resolved: Extract<ReturnType<CredentialPort["resolve"]>, { ok: false }>,
+): CredentialFailureProjection | undefined =>
+  resolved.source === undefined && resolved.reason === undefined && resolved.remedy === undefined
+    ? undefined
+    : {
+        ...(resolved.source === undefined ? {} : { source: resolved.source }),
+        ...(resolved.reason === undefined ? {} : { reason: resolved.reason }),
+        ...(resolved.remedy === undefined ? {} : { remedy: resolved.remedy }),
+      };
+
+/** The carried projection among one entry's condition results, if any. */
+const carriedCredentialProjection = (
+  results: readonly ProviderConditionResult[],
+): CredentialFailureProjection | undefined => {
+  for (const condition of results) {
+    if (condition.status !== "parked") continue;
+    const carried = credentialProjectionCarrier.get(condition);
+    if (carried !== undefined) return carried;
+  }
+  return undefined;
 };
 
 const credentialReference = (
@@ -295,7 +336,12 @@ const evaluateQuotaCondition = async (
   }
   const resolved = deps.credentialPort.resolve(reference);
   if (!resolved.ok) {
-    return parkedCondition(
+    // FORWARDING ONLY (DEC-14): the classified projection rides the parked
+    // condition as in-process data for the announcement line and the rendered
+    // refusal. The park-construction semantics are untouched (any failure
+    // parks today; pending-park stays reserved for #395) and the evidence
+    // keeps its closed shape.
+    const condition = parkedCondition(
       "credential-missing",
       quota.credentialParkTtlSeconds,
       nowMs,
@@ -307,6 +353,9 @@ const evaluateQuotaCondition = async (
         credentialRefName: quota.credentialRef,
       },
     );
+    const credential = credentialProjectionOf(resolved);
+    if (credential !== undefined) credentialProjectionCarrier.set(condition, credential);
+    return condition;
   }
   let result: QuotaTransportResult;
   try {
@@ -468,7 +517,9 @@ const evaluateEntry = async (
   const quota = await evaluateQuotaCondition(deps, config, descriptor, nowMs);
   if (quota !== undefined) results.push(quota);
   const condition = combineProviderConditions(results);
-  if (condition.status !== "parked") return { descriptor, condition };
+  const credentialProjection = carriedCredentialProjection(results);
+  const projectionEntries = credentialProjection === undefined ? {} : { credentialProjection };
+  if (condition.status !== "parked") return { descriptor, condition, ...projectionEntries };
   const park = createParkRecord({
     subjectKind: "provider",
     subjectName: descriptor.name,
@@ -482,7 +533,11 @@ const evaluateEntry = async (
     descriptor,
     condition,
     park,
-    announcement: createParkAnnouncement(park, nowMs, announcementContextFor(park, context)),
+    ...projectionEntries,
+    announcement: createParkAnnouncement(park, nowMs, {
+      ...announcementContextFor(park, context),
+      ...(credentialProjection === undefined ? {} : { credential: credentialProjection }),
+    }),
   };
 };
 
@@ -798,9 +853,16 @@ export const createProviderEngine = (deps: ProviderEngineDependencies): Provider
                 : condition.cause === "credential-missing"
                   ? "config.credential.missing"
                   : "provider.auth.rejected";
+            // FORWARDING ONLY (DEC-14): the reconstructed refusal carries the
+            // classified projection on the rendered line — the summary is the
+            // refusal's text channel; the code stays the delivered identity.
+            const credential =
+              condition.cause === "credential-missing"
+                ? evaluation.credentialProjection
+                : undefined;
             return failure(
               errorCode,
-              `${evaluation.descriptor.name}: ${condition.announcementCode}`,
+              `${evaluation.descriptor.name}: ${condition.announcementCode}${credentialRefusalNote(credential)}`,
               condition.announcementCode,
             );
           }

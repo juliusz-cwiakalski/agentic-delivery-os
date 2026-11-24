@@ -18,6 +18,7 @@ import {
   ATTEMPTS_MAX_LIMIT,
   ATTEMPTS_MIN_LIMIT,
   type CommandFailureHarnessDetail,
+  type CredentialFailureReason,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
   DISPATCH_LOG_TAIL_DEFAULT,
@@ -68,6 +69,13 @@ export type DispatchRuntimeFailure = {
   readonly eligibility?: readonly string[];
   /** The narrow trusted-refusal marker; set only for `config.credential.missing`. */
   readonly trustedRefusal?: true;
+  /**
+   * The forwarded credential projection (DEC-14): the three fields ride beside
+   * the marker as projection data on the reified refusal.
+   */
+  readonly source?: string;
+  readonly reason?: CredentialFailureReason;
+  readonly remedy?: string;
   /**
    * The four pre-session harness facts (TDR-0041); populated only on the four
    * harness refusals and never on the reused `provider.profile.invalid`

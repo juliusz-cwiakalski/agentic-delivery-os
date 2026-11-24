@@ -804,6 +804,7 @@
     "credentials.ts": [
       "CREDENTIAL_FAILURE_REASONS",
       "CredentialFailureCode",
+      "CredentialFailureProjection",
       "CredentialFailureReason",
       "CredentialPort",
       "CredentialReference",
@@ -2253,6 +2254,7 @@
       "CoordinatorWakeTickResult",
       "CoordinatorWakeView",
       "CredentialFailureCode",
+      "CredentialFailureProjection",
       "CredentialFailureReason",
       "CredentialPort",
       "CredentialReference",
@@ -2583,10 +2585,6 @@
       "DispatchEvidenceClass",
       "DispatchEvidenceReference",
       "DispatchExcludedEvidenceClass",
-      "DispatchPushParityFacts",
-      "DispatchPushParityPort",
-      "DispatchPushParityReading",
-      "DispatchPushVerdict",
       "DispatchGateVerdict",
       "DispatchHandoverCondition",
       "DispatchHandoverConditionsSnapshot",
@@ -2616,6 +2614,10 @@
       "DispatchOwnerProbe",
       "DispatchPhaseLedger",
       "DispatchProbeVerdict",
+      "DispatchPushParityFacts",
+      "DispatchPushParityPort",
+      "DispatchPushParityReading",
+      "DispatchPushVerdict",
       "DispatchResolveData",
       "DispatchResumeMode",
       "DispatchStatusData",
@@ -4528,6 +4530,7 @@
       "dispatchDivergenceRecordKey",
       "dispatchHandoverRecordKey",
       "dispatchLaneRecordKey",
+      "dispatchPushEvidenceRef",
       "isAuditRecordKind",
       "leaseClassForPhaseKind",
       "loopLogRelativePath",
@@ -4544,8 +4547,7 @@
       "retroEvidenceArtifactName",
       "retroEvidenceLockPath",
       "retroEvidencePath",
-      "validateTaxonomy",
-      "dispatchPushEvidenceRef"
+      "validateTaxonomy"
     ],
     "install.ts": [
       "INSTALL_DESTINATION_DISPOSITIONS",
@@ -6352,7 +6354,9 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": ["CredentialPort"],
+  "credentialPort": [
+    "CredentialPort"
+  ],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",

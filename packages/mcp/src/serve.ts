@@ -229,52 +229,48 @@ const buildSuiteMapRead = (
 const buildGateRuntime = (
   store: ReturnType<typeof createStateStore>,
   facts: ServeStateFacts,
-): GateReportToolRuntime => ({
-  readSuiteMap: buildSuiteMapRead(facts),
-  readLifecycle: (changeRef) => ({
-    document: pmNotesRead(facts.cwd, changeRef),
-    registry: registryRead(store, changeRef),
-  }),
-  readRepository: () => {
-    const repositoryFacts = readRepositoryFacts({ cwd: facts.cwd, io: nodeRepositoryIo() });
-    const parsed = parseGitHubRemote(repositoryFacts.originUrl);
-    return {
-      binding: parsed.ok
-        ? "resolved"
-        : parsed.reason === "remote-unsupported"
-          ? "remote-unsupported"
-          : "address-unresolved",
-      head: repositoryFacts.head,
-    };
-  },
-  readWorkflow: () => {
-    const read = readCiWorkflowJobNames({
-      baseDirectory: facts.cwd,
-      fs: nodeFileSystemFacts(),
-    });
-    return { outcome: read.outcome, names: read.names };
-  },
-  readOpenPullRequests: async () => ({
+): GateReportToolRuntime => {
+  // The serve composition declares no credential source (supervise-only, no
+  // credential consumer), so the placeholders refuse with the closed
+  // `source-not-supported` reason carried as projection data — the renderer
+  // never guesses (DEC-14).
+  const credentialUnavailable = {
     ok: false,
     reason: "credential-unavailable",
     failureCode: "config.credential.missing",
-  }),
-  readDeliveryRequestDetail: async () => ({
-    ok: false,
-    reason: "credential-unavailable",
-    failureCode: "config.credential.missing",
-  }),
-  readCheckRuns: async () => ({
-    ok: false,
-    reason: "credential-unavailable",
-    failureCode: "config.credential.missing",
-  }),
-  readWorkItem: async () => ({
-    ok: false,
-    reason: "credential-unavailable",
-    failureCode: "config.credential.missing",
-  }),
-});
+    credential: { reason: "source-not-supported" },
+  } as const;
+  return {
+    readSuiteMap: buildSuiteMapRead(facts),
+    readLifecycle: (changeRef) => ({
+      document: pmNotesRead(facts.cwd, changeRef),
+      registry: registryRead(store, changeRef),
+    }),
+    readRepository: () => {
+      const repositoryFacts = readRepositoryFacts({ cwd: facts.cwd, io: nodeRepositoryIo() });
+      const parsed = parseGitHubRemote(repositoryFacts.originUrl);
+      return {
+        binding: parsed.ok
+          ? "resolved"
+          : parsed.reason === "remote-unsupported"
+            ? "remote-unsupported"
+            : "address-unresolved",
+        head: repositoryFacts.head,
+      };
+    },
+    readWorkflow: () => {
+      const read = readCiWorkflowJobNames({
+        baseDirectory: facts.cwd,
+        fs: nodeFileSystemFacts(),
+      });
+      return { outcome: read.outcome, names: read.names };
+    },
+    readOpenPullRequests: async () => credentialUnavailable,
+    readDeliveryRequestDetail: async () => credentialUnavailable,
+    readCheckRuns: async () => credentialUnavailable,
+    readWorkItem: async () => credentialUnavailable,
+  };
+};
 
 /** The injected facts the serve state composition resolves from. */
 export type ServeStateFacts = {

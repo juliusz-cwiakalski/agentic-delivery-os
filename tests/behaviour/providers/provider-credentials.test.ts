@@ -37,6 +37,24 @@ const MISSING: CredentialResolution = {
   projectionClass: "user-validation",
 };
 
+/**
+ * The environment port's classified absent-value failure with its born-with
+ * projection (phase 2): the literal source identity, the closed
+ * `variable-absent` reason, and the fixed `(reason, style)` remedy cell —
+ * pinned verbatim per the shipped table.
+ */
+const missingFor = (instance: ExternalSystemInstance): CredentialResolution => {
+  const reference = declaredReference(instance);
+  const name = reference.sourceKey.style === "literal" ? reference.sourceKey.name : "";
+  return {
+    ...MISSING,
+    source: `literal:${name}`,
+    reason: "variable-absent",
+    remedy:
+      "declare the credential value in the environment variable named by the literal source key, then re-run",
+  };
+};
+
 const jiraInstance: ExternalSystemInstance = {
   instanceName: "tracker-primary",
   systemKind: "tracker",
@@ -210,7 +228,7 @@ describe("TC-CRED-002 unresolvable credential classified", () => {
       const absentPort = createEnvironmentCredentialPort({ environment: {}, brand: fixtureBrand });
       const absentTransport = createFixtureTransport([{ url: seed.url, body: seed.body }]);
       const absent = await seed.build(absentPort, absentTransport).read();
-      expect(absent).toEqual(MISSING);
+      expect(absent).toEqual(missingFor(seed.instance));
       expect(absentTransport.requests).toEqual([]);
 
       const emptyPort = createEnvironmentCredentialPort({
@@ -219,7 +237,7 @@ describe("TC-CRED-002 unresolvable credential classified", () => {
       });
       const emptyTransport = createFixtureTransport([{ url: seed.url, body: seed.body }]);
       const empty = await seed.build(emptyPort, emptyTransport).read();
-      expect(empty).toEqual(MISSING);
+      expect(empty).toEqual(missingFor(seed.instance));
       expect(emptyTransport.requests).toEqual([]);
     });
   }

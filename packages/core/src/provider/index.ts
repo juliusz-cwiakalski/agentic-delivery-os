@@ -207,6 +207,9 @@ export {
   simulateProviderResolution,
 } from "./simulate.js";
 export {
+  CREDENTIAL_COMMAND_TIMEOUT_MAX_MS,
+  CREDENTIAL_HOST_SLOT_MAX_LENGTH,
+  CREDENTIAL_INTEGRATION_ID_MAX_LENGTH,
   emptyProfileConfiguration,
   type ProfileConfigResult,
   type ProfileValidationError,
@@ -216,6 +219,7 @@ export {
   type ProviderValidationError,
   parseAndValidateProfileConfiguration,
   parseAndValidateProviderConfiguration,
+  parseCredentialSourceKey,
   parseProfileConfiguration,
   parseProviderBudgets,
   parseProviderConfiguration,

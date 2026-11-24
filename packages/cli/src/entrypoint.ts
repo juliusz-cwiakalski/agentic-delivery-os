@@ -88,6 +88,15 @@ export type EntrypointInvocationFact = {
    */
   readonly registeredSecrets?: readonly string[];
   /**
+   * The live redaction registry (DM-7): the SAME registry the serializer
+   * consults at render time, handed to the composition so the resolver's
+   * register-on-materialize hook feeds it. The static `registeredSecrets`
+   * snapshot above stays for the operator redaction path's declared
+   * before-bounding behavior; every resolver materialization after composition
+   * lands here.
+   */
+  readonly secrets?: SecretRegistry;
+  /**
    * The composition-scoped notice sink: every queued warning line the
    * composition would attach to a handler's outcome is also reported here, so a
    * composition that fails before returning a program still lets the entrypoint
@@ -490,6 +499,7 @@ export const runEntrypoint = async (
         runId,
         groupScoped: isGroupScopedInvocation(command, argv),
         registeredSecrets: registeredSecrets.values(),
+        secrets: registeredSecrets,
         ...(options.priorWorkingName === undefined
           ? {}
           : { priorWorkingName: options.priorWorkingName }),

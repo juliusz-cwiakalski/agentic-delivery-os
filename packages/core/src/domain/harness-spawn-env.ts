@@ -10,6 +10,7 @@
  * environment and accepts no value from an undeclared key.
  */
 import type {
+  CredentialFailureProjection,
   CredentialPort,
   HarnessExecutionEnvironmentDescriptor,
   HarnessFailure,
@@ -18,14 +19,42 @@ import type {
 
 const failure = (error: HarnessFailure): HarnessResult<never> => ({ ok: false, error });
 
-const credentialFailure = (reference: string, variable: string): HarnessResult<never> =>
+/**
+ * The forwarded projection's inline note (DEC-14): the closed identity tokens
+ * and the fixed remedy text ride the rendered summary — the only channel this
+ * site's closed harness contract exposes — never raw child output.
+ */
+const projectionNote = (projection?: CredentialFailureProjection): string =>
+  projection === undefined
+    ? ""
+    : ` (source ${projection.source ?? "-"}, reason ${projection.reason ?? "-"}${
+        projection.remedy === undefined ? "" : `; ${projection.remedy}`
+      })`;
+
+/** The projection a credential resolution failure carries, if any. */
+const projectionOf = (
+  resolved: Extract<ReturnType<CredentialPort["resolve"]>, { ok: false }>,
+): CredentialFailureProjection | undefined =>
+  resolved.source === undefined && resolved.reason === undefined && resolved.remedy === undefined
+    ? undefined
+    : {
+        ...(resolved.source === undefined ? {} : { source: resolved.source }),
+        ...(resolved.reason === undefined ? {} : { reason: resolved.reason }),
+        ...(resolved.remedy === undefined ? {} : { remedy: resolved.remedy }),
+      };
+
+const credentialFailure = (
+  reference: string,
+  variable: string,
+  projection?: CredentialFailureProjection,
+): HarnessResult<never> =>
   failure({
     kind: "config",
     code: "config.credential.missing",
     cause: "config.credential.missing",
     reference,
     field: variable,
-    summary: `declared credential reference ${reference} did not resolve for ${variable}`,
+    summary: `declared credential reference ${reference} did not resolve for ${variable}${projectionNote(projection)}`,
   });
 
 /**
@@ -60,7 +89,7 @@ export const buildHarnessSpawnEnvironment = (input: {
     }
     const resolution = input.credentials.resolve(entry.reference);
     if (!resolution.ok) {
-      return credentialFailure(entry.reference.referenceName, entry.name);
+      return credentialFailure(entry.reference.referenceName, entry.name, projectionOf(resolution));
     }
     environment[entry.name] = resolution.material.value;
   }

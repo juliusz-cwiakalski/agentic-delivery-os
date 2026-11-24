@@ -105,7 +105,11 @@ describe("TC-HARN-029 named guard mutants", () => {
       "credential-fallback",
       (text) =>
         text.replace(
-          "return credentialFailure(entry.reference.referenceName, entry.name);",
+          `return credentialFailure(
+        entry.reference.referenceName,
+        entry.name,
+        projectionOf(resolution),
+      );`,
           'environment[entry.name] = "parent-fallback"; continue;',
         ),
     );
